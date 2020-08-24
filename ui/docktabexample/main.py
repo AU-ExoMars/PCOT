@@ -20,7 +20,7 @@ class MainUI(tabs.DockableTabWindow):
             
     def __init__(self):
         # generic initialisation
-        super(tabs.DockableTabWindow, self).__init__()
+        super().__init__()
         # Load the main user interface, which must have a QTabWidget called
         # 'tabWidget'
         uic.loadUi('main.ui', self) 

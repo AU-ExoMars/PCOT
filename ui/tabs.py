@@ -29,7 +29,7 @@ class DockableTabWindow(QtWidgets.QMainWindow):
     
     # initialise this window
     def __init__(self):
-        super(MainUi, self).__init__() # Call the inherited classes __init__ method
+        super().__init__() # Call the inherited classes __init__ method
 
     # used to undock tab into a window
     def undock(self,i):
