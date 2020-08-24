@@ -44,5 +44,3 @@ class GraphView(QtWidgets.QGraphicsView):
             self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() + offset.x())
         else:
             super().mouseMoveEvent(event)
-        
-    

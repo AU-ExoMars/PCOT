@@ -1,8 +1,7 @@
 from PyQt5 import QtWidgets, uic
 import graphview
 import sys
-import xformgraph.xform
-from xformgraph.draw import makeScene,selectNode
+import xformgraph.xform,xformgraph.draw
 
 # dummy transform types
 
@@ -44,14 +43,16 @@ class MainUI(QtWidgets.QMainWindow):
         self.view = self.getUI(graphview.GraphView,'graphicsView')
         self.show()
         
+        # create a dummy graph
         self.graph=xformgraph.xform.XFormGraph()
         y = self.graph.create("split")
         x = self.graph.create("merge")
         x.connectIn(0,y,0) # connect input 0 of merge to output 0 of split
         x.connectIn(1,y,1) # connect input 1 of merge to output 1 of split
         x.connectIn(2,y,2) # connect input 2 of merge to output 2 of split
-        self.scene = makeScene(self.graph)
-        selectNode(self.scene,self.graph,x)
+
+        # and view it
+        self.scene = xformgraph.draw.XFormGraphScene(self.graph)
         self.view.setScene(self.scene)
         
 

@@ -6,7 +6,7 @@ from grandalf.graphs import *
 
 from PyQt5 import QtWidgets, uic, QtGui, QtCore
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor,QBrush,QLinearGradient,QFont
+from PyQt5.QtGui import QColor,QBrush,QLinearGradient,QFont,QTransform
 
 connectorFont = QFont()
 #connectorFont.setStyleHint(QFont.SansSerif)
@@ -94,30 +94,57 @@ def getBrush(typename):
         return brushDict[typename]
     else:
         return Qt.magenta
+        
+
+# basic shapes with extra data attached so we can get the node
+
+class GMainRect(QtWidgets.QGraphicsRectItem):
+    def __init__(self,x1,y1,x2,y2,node):
+        super().__init__(x1,y1,x2,y2)
+        self.node=node
+
+class GConnectRect(QtWidgets.QGraphicsRectItem):
+    def __init__(self,x1,y1,x2,y2,node,isInput,index):
+        super().__init__(x1,y1,x2,y2)
+        self.isInput = isInput
+        if isInput:
+            name,typename = node.type.inputConnectors[index]
+        else:
+            name,typename = node.type.outputConnectors[index]
+        self.setBrush(getBrush(typename))
+        self.index = index
+        self.name = name
+        self.node=node
+        
+class GText(QtWidgets.QGraphicsSimpleTextItem):
+    def __init__(self,s,node):
+        super().__init__(s)
+        self.node=node
+
+
 
 # add the necessary items to create a node
 # (assuming place has been called). Just the node, not the connections.
-# Also creates "group" and "rect" inside the node structure so we can
-# check for click and modify on select.
 def makeNodeGraphics(graph,scene,n):
     v = n.vert.view
     x,y = v.xy
-    items = []
     # draw basic rect, leaving room for connectors at top and bottom
-    rect = scene.addRect(x,y+CONNECTORHEIGHT,v.w,NODEHEIGHT-CONNECTORHEIGHT*2)
-    items.append(rect)
+    # We keep this rectangle in the node so we can change its colour
+    n.rect = GMainRect(x,y+CONNECTORHEIGHT,v.w,NODEHEIGHT-CONNECTORHEIGHT*2,n)
+    scene.addItem(n.rect)
     # draw text label
-    text=scene.addSimpleText(n.type.name)
-    items.append(text)
+    text=GText(n.type.name,n)
+    scene.addItem(text)
     text.setPos(x+XTEXTOFFSET,y+YTEXTOFFSET+CONNECTORHEIGHT)
     # and the connectors
     if len(n.inputs)>0:
         size = v.w/len(n.inputs)
         xx = 0
         for i in range(0,len(n.inputs)):
-            name,typename = n.type.inputConnectors[i]
-            items.append(scene.addRect(xx,y,size,CONNECTORHEIGHT,brush=getBrush(typename)))
-            text=scene.addSimpleText(name)
+            r = GConnectRect(xx,y,size,CONNECTORHEIGHT,n,True,i)
+            scene.addItem(r)
+            text=GText(r.name,n)
+            scene.addItem(text)
             text.setPos(xx+CONNECTORTEXTXOFF,y+INCONNECTORTEXTYOFF)
             text.setFont(connectorFont)
             text.setZValue(1)
@@ -126,47 +153,55 @@ def makeNodeGraphics(graph,scene,n):
         size = v.w/len(n.outputs)
         xx = 0
         for i in range(0,len(n.outputs)):
-            name,typename = n.type.outputConnectors[i]
-            items.append(scene.addRect(xx,y+NODEHEIGHT-CONNECTORHEIGHT,size,CONNECTORHEIGHT,brush=getBrush(typename)))
-            text=scene.addSimpleText(name)
+            r=GConnectRect(xx,y+NODEHEIGHT-CONNECTORHEIGHT,size,CONNECTORHEIGHT,n,False,i)
+            scene.addItem(r)
+            text=GText(r.name,n)
+            scene.addItem(text)
             text.setPos(xx+CONNECTORTEXTXOFF,y+NODEHEIGHT-CONNECTORHEIGHT+OUTCONNECTORTEXTYOFF)
             text.setFont(connectorFont)
             text.setZValue(1)
             xx += size
 
-    n.group = scene.createItemGroup(items)
-    n.rect = rect
-    
-# change the colour of a node's rectangle to indicate it is selected - will
-# change all the other nodes' rectangles to white
-def selectNode(scene,graph,n):
-    unselCol = Qt.white
-    selCol = QColor(200,200,255)
-    for nn in graph.nodes:
-        nn.rect.setBrush(selCol if nn is n else unselCol)
-    scene.update()
+# the custom scene, which can handle events on the scene.
 
-# turn the graph into a QGraphicsScene (place must have been called)
-def makeScene(graph):
-    # place everything, adding "vert" and "vert.view" data to the nodes
-    place(graph)
-    # returns a scene
-    scene = QtWidgets.QGraphicsScene()
-    for n in graph.nodes:
-        # makes the graphics for the node, and also sets the "rect" and "group"
-        # data in the node
-        makeNodeGraphics(graph,scene,n)
-    for n1,output,n2,input in graph.edges:
-        x1,y1 = n1.vert.view.xy # this is the "from" and should be on the output ctor
-        x2,y2 = n2.vert.view.xy # this is the "to" and should be on the input ctor
-        # draw lines
-        xoff = 3
-        insize = NODEWIDTH/len(n1.outputs)
-        outsize = NODEWIDTH/len(n2.inputs)
-        x1 = x1+insize*(input+0.5)
-        x2 = x2+outsize*(output+0.5)
-        y1+=NODEHEIGHT
-        scene.addLine(x1,y1,x2,y2)
-        # with a blob at the tail (yeah, should do arrows at the head)
-        scene.addEllipse(x1-3,y1-3,6,6,brush=Qt.black)
-    return scene
+class XFormGraphScene(QtWidgets.QGraphicsScene):
+    def __init__(self,graph):
+        super().__init__()
+        self.graph = graph
+        # place everything, adding "vert" and "vert.view" data to the nodes
+        place(graph)
+        # now create the graphics items
+        for n in graph.nodes:
+            # makes the graphics for the node
+            makeNodeGraphics(graph,self,n)
+        for n1,output,n2,input in graph.edges:
+            x1,y1 = n1.vert.view.xy # this is the "from" and should be on the output ctor
+            x2,y2 = n2.vert.view.xy # this is the "to" and should be on the input ctor
+            # draw lines
+            xoff = 3
+            insize = NODEWIDTH/len(n1.outputs)
+            outsize = NODEWIDTH/len(n2.inputs)
+            x1 = x1+insize*(input+0.5)
+            x2 = x2+outsize*(output+0.5)
+            y1+=NODEHEIGHT
+            self.addLine(x1,y1,x2,y2)
+            # with a blob at the tail (yeah, should do arrows at the head)
+            self.addEllipse(x1-3,y1-3,6,6,brush=Qt.black)
+            
+    # change the colour of a node's rectangle to indicate it is selected - will
+    # change all the other nodes' rectangles to white
+    def selectNode(self,n):
+        unselCol = Qt.white
+        selCol = QColor(200,200,255)
+        for nn in self.graph.nodes:
+            nn.rect.setBrush(selCol if nn is n else unselCol)
+        self.update()
+        
+    def mousePressEvent(self,event):
+        if event.button()==Qt.LeftButton:
+            p = event.scenePos()
+            for i in self.items(p,Qt.IntersectsItemShape,Qt.DescendingOrder,QTransform()):
+                if isinstance(i,GMainRect):
+                    self.selectNode(i.node)
+            
+    

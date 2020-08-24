@@ -18,7 +18,6 @@ class Singleton(type):
 
 class XFormType(metaclass=Singleton):
     def __init__(self,name):
-        print("BLART")
         self.name = name
         # add to the global dictionary
         if name in allTypes:
