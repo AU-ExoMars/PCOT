@@ -57,27 +57,42 @@ class XForm:
 
     # connect an input to an output on another xform
     def connectIn(self,input,other,output):
-        self.inputs[input] = (other,output)
-        other.outputs[output] = (self,input)
+        if input>=0 and input<len(self.inputs):
+            if output>=0 and output<len(other.outputs):
+                self.inputs[input] = (other,output)
+                other.outputs[output] = (self,input)
+            else:
+                raise Exception("output out of range in connectIn")
+        else:
+            raise Exception("input out of range in connectIn")
+        
         
     # connect an output to an input on another xform
-    def connectIn(self,output,other,input):
-        self.outputs[output] = (other,input)
-        other.inputs[input] = (self,output)
+    def connectOut(self,output,other,input):
+        if input>=0 and input<len(other.inputs):
+            if output>=0 and output<len(self.outputs):
+                self.outputs[output] = (other,input)
+                other.inputs[input] = (self,output)
+            else:
+                raise Exception("output out of range in connectIn")
+        else:
+            raise Exception("input out of range in connectIn")
 
     # disconnect an input and the corresponding output on the other xform        
     def disconnectIn(self,input):
-        if self.inputs[input] is not None:
-            other,output = self.inputs[input]
-            other.outputs[output]=None
-            self.inputs[input]=None
+        if input>=0 and input<len(self.inputs):
+            if self.inputs[input] is not None:
+                other,output = self.inputs[input]
+                other.outputs[output]=None
+                self.inputs[input]=None
 
     # disconnect an output and the corresponding input on the other xform        
     def disconnectOut(self,output):
-        if self.outputs[output] is not None:
-            other,input = self.outputs[outputs]
-            other.inputs[input] = None
-            self.outputs[output] = None
+        if output>=0 and output<len(self.outputs):
+            if self.outputs[output] is not None:
+                other,input = self.outputs[outputs]
+                other.inputs[input] = None
+                self.outputs[output] = None
             
     # perform the transformation; delegated to the type object
     def perform(self):
@@ -85,7 +100,7 @@ class XForm:
 
 
 # a graph of transformation nodes
-class Graph:
+class XFormGraph:
     def __init__(self):
         # all the nodes
         self.nodes = []
@@ -98,4 +113,5 @@ class Graph:
             self.nodes.append(xform)
         else:
             raise Exception("Transformation type not found: "+type)
-            
+        return xform        
+

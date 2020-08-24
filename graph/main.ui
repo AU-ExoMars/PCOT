@@ -30,7 +30,7 @@
      <enum>Qt::ScrollBarAsNeeded</enum>
     </property>
     <property name="dragMode">
-     <enum>QGraphicsView::ScrollHandDrag</enum>
+     <enum>QGraphicsView::RubberBandDrag</enum>
     </property>
    </widget>
   </widget>
