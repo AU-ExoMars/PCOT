@@ -53,29 +53,35 @@ class XForm:
         # these are None
         self.products = [None for x in type.outputConnectors]
         
+    def dump(self):
+        print("---DUMP of {}".format(self.type.name))
+        print("  INPUTS:")
+        for i in range(0,len(self.inputs)):
+            c = self.inputs[i]
+            if c:
+                other,j = c
+                print("    input {} : {} {}".format(i,other.type.name,j))
+        print("  OUTPUTS:")
+        for i in range(0,len(self.outputs)):
+            c = self.outputs[i]
+            if c:
+                other,j = c
+                print("    output {} : {} {}".format(i,other.type.name,j))
 
     # connect an input to an output on another xform
     def connectIn(self,input,other,output):
-        if input>=0 and input<len(self.inputs):
+        if input>=0 and input<len(self.inputs) and self is not other:
             if output>=0 and output<len(other.outputs):
                 self.inputs[input] = (other,output)
                 other.outputs[output] = (self,input)
-            else:
-                raise Exception("output out of range in connectIn")
-        else:
-            raise Exception("input out of range in connectIn")
         
         
     # connect an output to an input on another xform
     def connectOut(self,output,other,input):
-        if input>=0 and input<len(other.inputs):
+        if input>=0 and input<len(other.inputs) and self is not other:
             if output>=0 and output<len(self.outputs):
                 self.outputs[output] = (other,input)
                 other.inputs[input] = (self,output)
-            else:
-                raise Exception("output out of range in connectIn")
-        else:
-            raise Exception("input out of range in connectIn")
 
     # disconnect an input and the corresponding output on the other xform        
     def disconnectIn(self,input):

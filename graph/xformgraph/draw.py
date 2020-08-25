@@ -102,6 +102,7 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
         self.index = index
         self.name = name
         self.node=node
+
     # in the mouse press, we detect a click on the connection box.
     # We match that to a connection arrow (which contains all the details)
     # and start dragging the arrow. We only modify the underlying graph
@@ -123,11 +124,31 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
                         if a.n1 == self.node and a.output == self.index:
                             arrow = a
                 if arrow is not None:
+                    # and set that arrow to be dragging (note the inverted self.isInput)
                     self.scene().startDraggingArrow(arrow,not self.isInput,event)
             else:
-                pass # TODO: DEAL WITH THE CASE OF A NEW CONNECTION ARROW
+                print("SNARK")
+                # here we're trying to create a brand new connection. Create a "dummy"
+                # arrow which has one end of the connection set to (None,0) and add it
+                # to the scene and arrow list as usual.
+                x = event.scenePos().x()
+                y = event.scenePos().y()
+                if self.isInput:
+                    arrow = GArrow(x,y,x,y,None,0,self.node,self.index)
+                else:
+                    arrow = GArrow(x,y,x,y,self.node,self.index,None,0)
+                self.scene().addItem(arrow)
+                self.scene().arrows.append(arrow)
+                # and set that arrow to be dragging (note the NOT inverted self.isInput)
+                self.scene().startDraggingArrow(arrow,self.isInput,event)
         return super().mousePressEvent(event)
-    
+
+    # remove any connection here
+    def removeConnections(self):
+        if self.isInput:
+            self.node.disconnectIn(self.index)
+        else:
+            self.node.disconnectOut(self.index)
         
         
 class GText(QtWidgets.QGraphicsSimpleTextItem):
@@ -146,6 +167,10 @@ class GArrow(QtWidgets.QGraphicsLineItem):
         super().__init__(x1,y1,x2,y2)
         self.head=None
         self.makeHead()
+    def __str__(self):
+        name1 = "??" if self.n1 is None else self.n1.type.name
+        name2 = "??" if self.n2 is None else self.n2.type.name
+        return "{}/{} -> {}/{}".format(name1,self.output,name2,self.input)
 
     def makeHead(self):
         # make the arrowhead as a Path child of this line item, deleting any old one
@@ -203,7 +228,6 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
     # deal with that at render time.
     
     def place(self):
-        self.edges = [] # we'll build an edges array
         g = Graph() # grandalf graph, not one of ours!
         # add the vertices
         for n in self.graph.nodes:
@@ -219,8 +243,6 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     n1 = n.vert
                     n2 = other.vert
                     g.add_edge(Edge(n1,n2))
-                    # add the edge as input,output (with indices)
-                    self.edges.append( (other,output,n,input) )
         # build the layout separately for each unconnected
         # subgraph:
         
@@ -234,11 +256,12 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         for n in self.graph.nodes:
             x,y = n.vert.view.xy
             n.vert.view.xy = (x,cy-y)
-
+            
     # rebuild the entire scene from the graph
     def rebuild(self):
         # this will (obv.) change the rubberband selection, so you might get a crash
-        # if you do this with live objects
+        # if you do this with live objects; we clear the selection to avoid this
+        self.clearSelection()
         self.clear() 
         # create the graphics items
         for n in self.graph.nodes:
@@ -256,20 +279,24 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         for line in self.arrows:
             self.removeItem(line)
         self.arrows=[]
-        # and make the new ones from the internal edges built in place()
-        for n1,output,n2,input in self.edges:
-            x1,y1 = n1.vert.view.xy # this is the "from" and should be on the output ctor
-            x2,y2 = n2.vert.view.xy # this is the "to" and should be on the input ctor
-            # draw lines
-            xoff = 3
-            insize = NODEWIDTH/len(n1.outputs)
-            outsize = NODEWIDTH/len(n2.inputs)
-            x1 = x1+insize*(input+0.5)
-            x2 = x2+outsize*(output+0.5)
-            y1+=NODEHEIGHT
-            arrowItem = GArrow(x1,y1,x2,y2,n1,output,n2,input)
-            self.addItem(arrowItem)
-            self.arrows.append(arrowItem)
+        for n2 in self.graph.nodes: # n2 is the destination node
+            for input in range(0,len(n2.inputs)):
+                inp = n2.inputs[input]
+                if inp is not None:
+                    n1,output = inp # n1 is the source node
+                    
+                    x1,y1 = n1.vert.view.xy # this is the "from" and should be on the output ctor
+                    x2,y2 = n2.vert.view.xy # this is the "to" and should be on the input ctor
+                    # draw lines
+                    xoff = 3
+                    insize = NODEWIDTH/len(n1.outputs)
+                    outsize = NODEWIDTH/len(n2.inputs)
+                    x1 = x1+outsize*(output+0.5)
+                    x2 = x2+insize*(input+0.5)
+                    y1+=NODEHEIGHT
+                    arrowItem = GArrow(x1,y1,x2,y2,n1,output,n2,input)
+                    self.addItem(arrowItem)
+                    self.arrows.append(arrowItem)
 
     # add the necessary items to create a node
     # (assuming place has been called). Just the node, not the connections.
@@ -358,32 +385,36 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             if not x: # is empty? We are dragging to a place with no connector
                 # if there is an existing connection we are deleting it
                 if True: # TODO if a connection exists and we are removing it
-                    self.deleteArrow(self.draggingArrow)
+                    # remove the connection in the model and rebuild the arrows here
+                    self.draggingArrow.n1.disconnectOut(self.draggingArrow.output)
+                    self.rebuildArrows()
             else:
                 conn = x[0]
+                # remove existing connections at the connector we are dragging to
+                conn.removeConnections()
                 # We are dragging the connection to a new place.
-                # is there an existing connection? At the moment,
-                # there always is.
-                if True: # TODO if a connection exists and we are changing it
-                    if self.draggingArrowStart: # we are dragging an output connection
-                        # first, remove any existing connection
-                        conn.node.disconnectOut(conn.index)
-                        self.rebuildArrows()
-                        print(conn)
+                # is it an existing connection we are modifying?
+                # The case where it's a fresh output being dragged to an input
+                # works too.
+                if self.draggingArrow.n1 is not None:
+                    # disconnect the existing connection
+                    self.draggingArrow.n1.disconnectOut(self.draggingArrow.output)
+                if self.draggingArrowStart:
+                    # we are dragging an output, so we want to connect an input to
+                    # this new output
+                    n1 = conn.node
+                    output= conn.index
+                    n2 = self.draggingArrow.n2
+                    input = self.draggingArrow.input
+                else:
+                    # we are dragging an input, so we want to connect an output to the new input
+                    n2 = conn.node
+                    input = conn.index
+                    n1 = self.draggingArrow.n1
+                    output = self.draggingArrow.output
+                print(n1,input,n2,output)
+                n1.connectOut(output,n2,input)
+                self.rebuildArrows()
+            self.draggingArrow=None 
         super().mouseReleaseEvent(event)
 
-    # delete an edge and the arrow that goes with it, and rebuild all connectors
-    def deleteArrow(self,a):
-        # first delete from the internal edges list
-        edge=None
-        for x in self.edges:
-            n1,output,n2,input = x
-            if n1==a.n1 and n2==a.n2 and output==a.output and input==a.input:
-                edge=x
-        if edge:
-            self.edges.remove(edge)
-        # now remove it from the underlying data
-        n1.disconnectOut(a.output)
-        # and rebuild all connections
-        self.rebuildArrows()
-        

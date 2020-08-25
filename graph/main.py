@@ -36,21 +36,25 @@ class MainUI(QtWidgets.QMainWindow):
         if x is None:
             raise Exception('cannot find widget'+name)
         return x
+    def rebuild(self):
+        self.scene = xformgraph.draw.XFormGraphScene(self.graph,self.view)
     def __init__(self):
         super().__init__()
         uic.loadUi('main.ui',self)
+        
+        self.getUI(QtWidgets.QPushButton,'rebuildButton').clicked.connect(self.rebuild)
         
         self.view = self.getUI(graphview.GraphView,'graphicsView')
         self.show()
         
         # create a dummy graph
         self.graph=xformgraph.xform.XFormGraph()
-        y = self.graph.create("split")
-        x = self.graph.create("merge")
-        x.connectIn(0,y,0) # connect input 0 of merge to output 0 of split
-        x.connectIn(1,y,1) # connect input 1 of merge to output 1 of split
-        x.connectIn(2,y,2) # connect input 2 of merge to output 2 of split
+        x = self.graph.create("split")
+        y = self.graph.create("merge")
 
+        x.connectOut(0,y,1)
+        x.connectOut(1,y,2)
+        
         # and view it - this will also link to the view, which the scene needs
         # to know about so it can modify its drag mode.
         self.scene = xformgraph.draw.XFormGraphScene(self.graph,self.view)
