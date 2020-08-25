@@ -142,13 +142,6 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
                 self.scene().startDraggingArrow(arrow,self.isInput,event)
         return super().mousePressEvent(event)
 
-    # remove any connection here
-    def removeConnections(self):
-        if self.isInput:
-            self.node.disconnectIn(self.index)
-        else:
-            self.node.disconnectOut(self.index)
-        
         
 class GText(QtWidgets.QGraphicsSimpleTextItem):
     def __init__(self,parent,s,node):
@@ -389,7 +382,9 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             else:
                 conn = x[0]
                 # remove existing connections at the connector we are dragging to
-                conn.removeConnections()
+                # if it is an input
+                if conn.isInput:
+                    conn.node.disconnectIn(conn.index)
                 # We are dragging the connection to a new place.
                 # is it an existing connection we are modifying?
                 # The case where it's a fresh output being dragged to an input

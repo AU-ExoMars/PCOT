@@ -1,0 +1,3 @@
+It should be possible to have a single output connecting to multiple
+inputs, but not multiple outputs into a single input.
+The UI for this sort of works, but not quite.
