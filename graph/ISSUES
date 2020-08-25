@@ -1,3 +1,5 @@
 It should be possible to have a single output connecting to multiple
 inputs, but not multiple outputs into a single input.
-The UI for this sort of works, but not quite.
+The UI for this sort of works, but not quite; it's a bit messy to
+wire and deleting a wire (pulling the output away) often disconnects
+the wrong one.

@@ -408,7 +408,5 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 n1.connectOut(output,n2,input)
             self.rebuildArrows()
             self.draggingArrow=None 
-            for x in self.graph.nodes:
-                x.dump()
         super().mouseReleaseEvent(event)
 
