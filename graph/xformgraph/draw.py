@@ -281,8 +281,8 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     x2,y2 = n2.vert.view.xy # this is the "to" and should be on the input ctor
                     # draw lines
                     xoff = 3
-                    insize = NODEWIDTH/len(n1.outputs)
-                    outsize = NODEWIDTH/len(n2.inputs)
+                    outsize = NODEWIDTH/len(n1.outputs)
+                    insize = NODEWIDTH/len(n2.inputs)
                     x1 = x1+outsize*(output+0.5)
                     x2 = x2+insize*(input+0.5)
                     y1+=NODEHEIGHT
@@ -408,5 +408,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 n1.connectOut(output,n2,input)
             self.rebuildArrows()
             self.draggingArrow=None 
+            for x in self.graph.nodes:
+                x.dump()
         super().mouseReleaseEvent(event)
 

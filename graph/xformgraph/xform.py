@@ -60,13 +60,13 @@ class XForm:
             c = self.inputs[i]
             if c:
                 other,j = c
-                print("    input {} : {} {}".format(i,other.type.name,j))
+                print("    input {} <- {} {}".format(i,other.type.name,j))
         print("  OUTPUTS:")
         for i in range(0,len(self.outputs)):
             c = self.outputs[i]
             if c:
                 other,j = c
-                print("    output {} : {} {}".format(i,other.type.name,j))
+                print("    output {} -> {} {}".format(i,other.type.name,j))
 
     # connect an input to an output on another xform
     def connectIn(self,input,other,output):
