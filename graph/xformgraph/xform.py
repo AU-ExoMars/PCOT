@@ -89,7 +89,7 @@ class XForm:
     def disconnectOut(self,output):
         if output>=0 and output<len(self.outputs):
             if self.outputs[output] is not None:
-                other,input = self.outputs[outputs]
+                other,input = self.outputs[output]
                 other.inputs[input] = None
                 self.outputs[output] = None
             

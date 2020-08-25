@@ -51,9 +51,9 @@ class MainUI(QtWidgets.QMainWindow):
         x.connectIn(1,y,1) # connect input 1 of merge to output 1 of split
         x.connectIn(2,y,2) # connect input 2 of merge to output 2 of split
 
-        # and view it
-        self.scene = xformgraph.draw.XFormGraphScene(self.graph)
-        self.view.setScene(self.scene)
+        # and view it - this will also link to the view, which the scene needs
+        # to know about so it can modify its drag mode.
+        self.scene = xformgraph.draw.XFormGraphScene(self.graph,self.view)
         
 
 app = QtWidgets.QApplication(sys.argv) 
