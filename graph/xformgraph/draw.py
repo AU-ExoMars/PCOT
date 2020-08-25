@@ -5,8 +5,13 @@ from grandalf.layouts import SugiyamaLayout,VertexViewer
 from grandalf.graphs import *
 
 from PyQt5 import QtWidgets, uic, QtGui, QtCore
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt,QPointF
 from PyQt5.QtGui import QColor,QBrush,QLinearGradient,QFont,QTransform
+
+import math
+
+import xformgraph
+
 
 connectorFont = QFont()
 #connectorFont.setStyleHint(QFont.SansSerif)
@@ -14,8 +19,6 @@ connectorFont.setFamily('Sans Serif')
 connectorFont.setPixelSize(10)
 
 
-
-import xformgraph
 
 # constants for node drawing
 
@@ -27,14 +30,15 @@ YTEXTOFFSET=5
 CONNECTORHEIGHT=10 # height of connector box at bottom of node
 YPADDING=10 # additional space between nodes
 
-CONNECTORTEXTXOFF=2
-INCONNECTORTEXTYOFF=-14
-OUTCONNECTORTEXTYOFF=10
+CONNECTORTEXTXOFF=2       # x offset of connector label
+INCONNECTORTEXTYOFF=-14   # y offset of connector label on inputs
+OUTCONNECTORTEXTYOFF=10   # y offset of connector label on outputs
+ARROWHEADLENGTH=10        # length of arrowhead lines
+ARROWHEADANGLE=math.radians(15)
 
 # brushes for different connector types
 
 brushDict={}
-
 
 grad = QLinearGradient(0,0,20,0)
 grad.setColorAt(0,Qt.red)
@@ -45,6 +49,8 @@ grad.setColorAt(1,QColor(50,50,50))
 brushDict['img888']=grad
 brushDict['imggrey']=Qt.gray
 
+# convert all brushes to actual QBrush objects
+brushDict = { k:QBrush(v) for k,v in brushDict.items()}
 
 # try to generate a graph (or at least x,y coordinates inside
 # the xforms). This is going to be messy, there's no Right Way
@@ -82,11 +88,14 @@ def place(graph):
         sug.init_all()
         sug.draw(3) # 3 iterations of algorithm
                 
-    # invert y coordinates of nodes
+    # invert y coordinates of nodes so we have the source at the top
     cy = max([n.vert.view.xy[1] for n in graph.nodes])/2
     
+    snark=0    
     for n in graph.nodes:
         x,y = n.vert.view.xy
+        x+=snark # TESTING - shift each node a bit right
+        snark+=20
         n.vert.view.xy = (x,cy-y)
 
 def getBrush(typename):
@@ -100,81 +109,88 @@ def getBrush(typename):
 
 class GMainRect(QtWidgets.QGraphicsRectItem):
     def __init__(self,x1,y1,x2,y2,node):
+        self.offsetx = 0 # these are the distances from our original pos.
+        self.offsety = 0
         super().__init__(x1,y1,x2,y2)
+        self.setFlags(QtWidgets.QGraphicsItem.ItemIsSelectable | \
+            QtWidgets.QGraphicsItem.ItemIsMovable | \
+            QtWidgets.QGraphicsItem.ItemSendsGeometryChanges )
         self.node=node
+    # deal with items moving
+    def itemChange(self,change,value):
+        if change==QtWidgets.QGraphicsItem.ItemPositionChange:
+            dx = value.x()-self.offsetx
+            dy = value.y()-self.offsety
+            self.offsetx = value.x()
+            self.offsety = value.y()
+            # update the node position; reconstructing the scene should work
+            x,y = self.node.vert.view.xy
+            self.node.vert.view.xy = (x+dx,y+dy)
+            
+            # remake the connection arrows
+            self.scene().rebuildArrows()
+        return super().itemChange(change,value)
 
 class GConnectRect(QtWidgets.QGraphicsRectItem):
-    def __init__(self,x1,y1,x2,y2,node,isInput,index):
-        super().__init__(x1,y1,x2,y2)
+    def __init__(self,parent,x1,y1,x2,y2,node,isInput,index):
+        super().__init__(x1,y1,x2,y2,parent=parent)
         self.isInput = isInput
         if isInput:
             name,typename = node.type.inputConnectors[index]
         else:
             name,typename = node.type.outputConnectors[index]
-        self.setBrush(getBrush(typename))
+        brush = getBrush(typename)
+        t = QTransform().translate(x1,0) # need to translate brush patterns
+        brush.setTransform(t)
+        self.setBrush(brush)
         self.index = index
         self.name = name
         self.node=node
         
 class GText(QtWidgets.QGraphicsSimpleTextItem):
-    def __init__(self,s,node):
-        super().__init__(s)
+    def __init__(self,parent,s,node):
+        super().__init__(s,parent=parent)
         self.node=node
 
 
 
-# add the necessary items to create a node
-# (assuming place has been called). Just the node, not the connections.
-def makeNodeGraphics(graph,scene,n):
-    v = n.vert.view
-    x,y = v.xy
-    # draw basic rect, leaving room for connectors at top and bottom
-    # We keep this rectangle in the node so we can change its colour
-    n.rect = GMainRect(x,y+CONNECTORHEIGHT,v.w,NODEHEIGHT-CONNECTORHEIGHT*2,n)
-    scene.addItem(n.rect)
-    # draw text label
-    text=GText(n.type.name,n)
-    scene.addItem(text)
-    text.setPos(x+XTEXTOFFSET,y+YTEXTOFFSET+CONNECTORHEIGHT)
-    # and the connectors
-    if len(n.inputs)>0:
-        size = v.w/len(n.inputs)
-        xx = 0
-        for i in range(0,len(n.inputs)):
-            r = GConnectRect(xx,y,size,CONNECTORHEIGHT,n,True,i)
-            scene.addItem(r)
-            text=GText(r.name,n)
-            scene.addItem(text)
-            text.setPos(xx+CONNECTORTEXTXOFF,y+INCONNECTORTEXTYOFF)
-            text.setFont(connectorFont)
-            text.setZValue(1)
-            xx += size
-    if len(n.outputs)>0:
-        size = v.w/len(n.outputs)
-        xx = 0
-        for i in range(0,len(n.outputs)):
-            r=GConnectRect(xx,y+NODEHEIGHT-CONNECTORHEIGHT,size,CONNECTORHEIGHT,n,False,i)
-            scene.addItem(r)
-            text=GText(r.name,n)
-            scene.addItem(text)
-            text.setPos(xx+CONNECTORTEXTXOFF,y+NODEHEIGHT-CONNECTORHEIGHT+OUTCONNECTORTEXTYOFF)
-            text.setFont(connectorFont)
-            text.setZValue(1)
-            xx += size
 
-# the custom scene, which can handle events on the scene.
+# the custom scene. Note that
+# when serializing the nodes, the node.vert.view field should be dealt with.
 
 class XFormGraphScene(QtWidgets.QGraphicsScene):
     def __init__(self,graph):
         super().__init__()
         self.graph = graph
+        self.selectionChanged.connect(self.rubberBandSelChanged)
+        self.selection=[]
         # place everything, adding "vert" and "vert.view" data to the nodes
         place(graph)
-        # now create the graphics items
-        for n in graph.nodes:
+        # and make all the graphics
+        self.rebuild()
+        
+    # rebuild the entire scene from the graph
+    def rebuild(self):
+        # this will (obv.) change the rubberband selection, so you might get a crash
+        # if you do this with live objects
+        self.clear() 
+        # create the graphics items
+        for n in self.graph.nodes:
             # makes the graphics for the node
-            makeNodeGraphics(graph,self,n)
-        for n1,output,n2,input in graph.edges:
+            self.makeNodeGraphics(n)
+        # and make the arrows
+        self.arrows=[]
+        self.rebuildArrows()
+
+    # assuming that all the nodes have been placed and makeNodeGraphics has been called,
+    # connect them all up with arrows according to the connections.
+    def rebuildArrows(self):
+        # get rid of old arrows
+        for line in self.arrows:
+            self.removeItem(line)
+        self.arrows=[]
+        # and make the new ones
+        for n1,output,n2,input in self.graph.edges:
             x1,y1 = n1.vert.view.xy # this is the "from" and should be on the output ctor
             x2,y2 = n2.vert.view.xy # this is the "to" and should be on the input ctor
             # draw lines
@@ -184,24 +200,76 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             x1 = x1+insize*(input+0.5)
             x2 = x2+outsize*(output+0.5)
             y1+=NODEHEIGHT
-            self.addLine(x1,y1,x2,y2)
-            # with a blob at the tail (yeah, should do arrows at the head)
-            self.addEllipse(x1-3,y1-3,6,6,brush=Qt.black)
-            
-    # change the colour of a node's rectangle to indicate it is selected - will
-    # change all the other nodes' rectangles to white
-    def selectNode(self,n):
+            self.arrows.append(self.makeArrow(x1,y1,x2,y2))
+
+    #  create and add an arrow    
+    def makeArrow(self,x1,y1,x2,y2):
+        line = QtCore.QLineF(x1,y1,x2,y2)
+        lineItem = self.addLine(line)
+        vec = QtGui.QVector2D(line.p1()-line.p2()).normalized()
+        x = vec.x()
+        y = vec.y()
+        cs = math.cos(ARROWHEADANGLE)
+        sn = math.sin(ARROWHEADANGLE)
+        xa = x*cs-y*sn
+        ya = x*sn+y*cs
+        xb = x*cs+y*sn
+        yb = -x*sn+y*cs
+        poly = QtGui.QPolygonF()
+        poly << QPointF(x2,y2) << QPointF(x2+xa*ARROWHEADLENGTH,y2+ya*ARROWHEADLENGTH) << \
+            QPointF(x2+xb*ARROWHEADLENGTH,y2+yb*ARROWHEADLENGTH)
+        poly = QtWidgets.QGraphicsPolygonItem(poly,parent=lineItem)
+        poly.setBrush(Qt.black)
+        return lineItem
+
+    # add the necessary items to create a node
+    # (assuming place has been called). Just the node, not the connections.
+    def makeNodeGraphics(self,n):
+        v = n.vert.view
+        x,y = v.xy
+        # draw basic rect, leaving room for connectors at top and bottom
+        # We keep this rectangle in the node so we can change its colour
+        n.rect = GMainRect(x,y+CONNECTORHEIGHT,v.w,NODEHEIGHT-CONNECTORHEIGHT*2,n)
+        self.addItem(n.rect)
+        # draw text label
+        text=GText(n.rect,n.type.name,n)
+        text.setPos(x+XTEXTOFFSET,y+YTEXTOFFSET+CONNECTORHEIGHT)
+        # and the connectors
+        if len(n.inputs)>0:
+            size = v.w/len(n.inputs)
+            xx = x
+            for i in range(0,len(n.inputs)):
+                # connection rectangles are parented to the main rectangle
+                r = GConnectRect(n.rect,xx,y,size,CONNECTORHEIGHT,n,True,i)
+                text=GText(n.rect,r.name,n)
+                text.setPos(xx+CONNECTORTEXTXOFF,y+INCONNECTORTEXTYOFF)
+                text.setFont(connectorFont)
+                text.setZValue(1)
+                xx += size
+        if len(n.outputs)>0:
+            size = v.w/len(n.outputs)
+            xx = x
+            for i in range(0,len(n.outputs)):
+                # connection rectangles are parented to the main rectangle
+                r=GConnectRect(n.rect,xx,y+NODEHEIGHT-CONNECTORHEIGHT,size,CONNECTORHEIGHT,n,False,i)
+                text=GText(n.rect,r.name,n)
+                text.setPos(xx+CONNECTORTEXTXOFF,y+NODEHEIGHT-CONNECTORHEIGHT+OUTCONNECTORTEXTYOFF)
+                text.setFont(connectorFont)
+                text.setZValue(1)
+                xx += size
+
+    # handle selection by changing the colour of the main rect of the selected item
+    # and building the selection list of nodes.
+    def rubberBandSelChanged(self):
         unselCol = Qt.white
         selCol = QColor(200,200,255)
-        for nn in self.graph.nodes:
-            nn.rect.setBrush(selCol if nn is n else unselCol)
+        items = self.selectedItems()
+        self.selection=[]
+        for n in self.graph.nodes:
+            if n.rect in items:
+                self.selection.append(n)
+                c = selCol
+            else:
+                c = unselCol
+            n.rect.setBrush(c)
         self.update()
-        
-    def mousePressEvent(self,event):
-        if event.button()==Qt.LeftButton:
-            p = event.scenePos()
-            for i in self.items(p,Qt.IntersectsItemShape,Qt.DescendingOrder,QTransform()):
-                if isinstance(i,GMainRect):
-                    self.selectNode(i.node)
-            
-    
