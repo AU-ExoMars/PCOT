@@ -45,19 +45,30 @@ class GraphView(QtWidgets.QGraphicsView):
         else:
             super().mouseMoveEvent(event)
             
-    # events for handling reception of dragged palette buttons
+    # events for handling reception of dragged palette buttons - this
+    # interacts with the palette buttons in palette.py
 
     def dragMoveEvent(self, e):
         e.accept()
 
     def dragEnterEvent(self, e):
-        print(e.mimeData().formats())
         if e.mimeData().hasFormat('data/palette'):
             e.accept()
         else:
             e.ignore()
 
     def dropEvent(self, e):
-        print("DROP")
-        stream = QtCore.QDataStream(e.mimeData().data('data/palette'),QtCore.QIODevice.ReadOnly)
-        print("blart; ",stream.readQString())
+        bs = e.mimeData().data('data/palette')
+        # open the data stream and read the name
+        stream = QtCore.QDataStream(bs)
+        name = stream.readQString()
+        # now we need to make one of those and add it to the graph!
+        x = self.scene().graph.create(name)
+        # we have to fudge up a position for this; normally grandalf
+        # creates these. No need to set width and height.
+        pos = self.mapToScene(e.pos())
+        x.xy = (pos.x(),pos.y())
+        # and build the scene with the new objects
+        self.scene().rebuild()
+        
+                

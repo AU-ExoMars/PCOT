@@ -62,11 +62,13 @@ class MainUI(QtWidgets.QMainWindow):
         # connect buttons etc.        
         self.getUI(QtWidgets.QPushButton,'rebuildButton').clicked.connect(self.rebuild)
         self.getUI(QtWidgets.QPushButton,'dumpButton').clicked.connect(lambda: self.graph.dump())
+        # get a handle on the view
+        self.view = self.getUI(graphview.GraphView,'graphicsView')
         
         # set up the scrolling palette and get a list of the buttons therein
         scrollArea = self.getUI(QtWidgets.QScrollArea,'palette')
         scrollAreaContent = self.getUI(QtWidgets.QWidget,'paletteContents')
-        self.paletteButtons = palette.setup(scrollArea,scrollAreaContent)
+        self.paletteButtons = palette.setup(scrollArea,scrollAreaContent,self.view)
 
         
         # create a dummy graph
@@ -81,9 +83,6 @@ class MainUI(QtWidgets.QMainWindow):
         merge.connect(1,split,1)
         merge.connect(2,split,2)
         sink.connect(0,merge,0)
-        
-        # get a handle on the view
-        self.view = self.getUI(graphview.GraphView,'graphicsView')
         
         # and view it - this will also link to the view, which the scene needs
         # to know about so it can modify its drag mode.

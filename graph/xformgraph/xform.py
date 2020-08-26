@@ -54,9 +54,14 @@ class XForm:
         # there is also a data product generated for each output by "perform", initially
         # these are None
         self.products = [None for x in type.outputConnectors]
+        # on-screen geometry, which should be set before we try to draw it
+        self.xy = (0,0)
+        self.w = None # unset, will be set on draw
+        self.h = None
         
     def dump(self):
-        print("---DUMP of {}".format(self.type.name))
+        print("---DUMP of {}, geom {},{},{}x{}".format(self.type.name,
+            self.xy[0],self.xy[1],self.w,self.h))
         print("  INPUTS:")
         for i in range(0,len(self.inputs)):
             c = self.inputs[i]
