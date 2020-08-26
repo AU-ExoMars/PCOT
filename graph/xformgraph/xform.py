@@ -88,6 +88,7 @@ class XForm:
             if output>=0 and output<len(other.type.outputConnectors):
                 self.inputs[input] = (other,output)
                 other.increaseChildCount(self)
+                self.perform()
         
         
     # disconnect an input 
@@ -97,6 +98,7 @@ class XForm:
                 n,i = self.inputs[input]
                 n.decreaseChildCount(self)
                 self.inputs[input]=None
+                self.perform()
             
     # disconnect all inputs and outputs prior to removal
     def disconnectAll(self):
