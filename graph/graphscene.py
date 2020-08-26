@@ -413,18 +413,9 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     # remove the connection in the model
                     self.draggingArrow.n2.disconnect(self.draggingArrow.input)
             else:
-                conn = x[0]
-                # remove existing connections at the connector we are dragging to
-                # if it is an input
-                if conn.isInput:
-                    conn.node.disconnect(conn.index)
-                # We are dragging the connection to a new place.
-                # is it an existing connection we are modifying?
-                # The case where it's a fresh output being dragged to an input
-                # works too.
-                if self.draggingArrow.n2 is not None:
-                    # disconnect the existing connection
-                    self.draggingArrow.n2.disconnect(self.draggingArrow.input)
+                conn = x[0] # this is the GConnectRect we are connecting to/from
+
+                # get the connection data for the connection we want to make
                 if self.draggingArrowStart:
                     # we are dragging an output, so we want to connect an input to
                     # this new output
@@ -438,7 +429,26 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     input = conn.index
                     n1 = self.draggingArrow.n1
                     output = self.draggingArrow.output
-                n2.connect(input,n1,output)
+                    
+                # are they compatible?
+                outtype = n1.type.getOutputType(output)
+                intype = n2.type.getInputType(input)
+                
+                if outtype == intype:
+                    # remove existing connections at the connector we are dragging to
+                    # if it is an input
+                    if conn.isInput:
+                        conn.node.disconnect(conn.index)
+                    # We are dragging the connection to a new place.
+                    # is it an existing connection we are modifying?
+                    # The case where it's a fresh output being dragged to an input
+                    # works too.
+                    if self.draggingArrow.n2 is not None:
+                        # disconnect the existing connection
+                        self.draggingArrow.n2.disconnect(self.draggingArrow.input)
+                    n2.connect(input,n1,output)
+                else:
+                    print("incompatible types {} -> {}".format(outtype,intype))
             self.rebuildArrows()
             self.draggingArrow=None 
         super().mouseReleaseEvent(event)

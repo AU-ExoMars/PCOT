@@ -33,6 +33,17 @@ class XFormType():
     def addOutputConnector(self,name,typename):
         self.outputConnectors.append( (name,typename) )
         
+    def getInputType(self,i):
+        if i>=0 and i<len(self.inputConnectors):
+            return self.inputConnectors[i][1]
+        else:
+            return None
+    def getOutputType(self,i):
+        if i>=0 and i<len(self.outputConnectors):
+            return self.outputConnectors[i][1]
+        else:
+            return None
+        
     def all():
         return allTypes
         
