@@ -63,14 +63,16 @@ class MainUI(QtWidgets.QMainWindow):
         
         # create a dummy graph
         self.graph=xformgraph.xform.XFormGraph()
-        x = self.graph.create("split")
-        y = self.graph.create("merge")
-        z = self.graph.create("source")
-        zz = self.graph.create("sink")
-        z.connectOut(0,x,0)
-        x.connectOut(0,y,1)
-        x.connectOut(1,y,2)
-        y.connectOut(0,zz,0)
+        split = self.graph.create("split")
+        merge = self.graph.create("merge")
+        source = self.graph.create("source")
+        sink = self.graph.create("sink")
+        
+        split.connect(0,source,0)
+        merge.connect(0,split,0)
+        merge.connect(1,split,1)
+        merge.connect(2,split,2)
+        sink.connect(0,merge,0)
         
         # and view it - this will also link to the view, which the scene needs
         # to know about so it can modify its drag mode.

@@ -111,18 +111,17 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
     # check for if there is no effective change.
     def mousePressEvent(self,event):
         if event.button() == Qt.LeftButton:
-            # are we connected?
-            if (self.node.inputs[self.index] if self.isInput else self.node.outputs[self.index]) is not None:
+            # are we connected? Mostly we can only drag inputs (arrow heads); some of the rest
+            # of the code might contradict this because we used to be able to drag outputs
+            # too (until I realised an output might have more than one connection coming from it).
+            # However, this code is still needed because we can drag an unconnected output
+            # to an input.
+            if self.isInput and self.node.inputs[self.index] is not None:
                 # find the arrow; this is a bit ugly.
                 arrow = None
-                if self.isInput:
-                    for a in self.scene().arrows:
-                        if a.n2 == self.node and a.input == self.index:
-                            arrow = a
-                else:
-                    for a in self.scene().arrows:
-                        if a.n1 == self.node and a.output == self.index:
-                            arrow = a
+                for a in self.scene().arrows:
+                    if a.n2 == self.node and a.input == self.index:
+                        arrow = a
                 if arrow is not None:
                     # and set that arrow to be dragging (note the inverted self.isInput)
                     self.scene().startDraggingArrow(arrow,not self.isInput,event)
@@ -282,7 +281,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     x2,y2 = n2.vert.view.xy # this is the "to" and should be on the input ctor
                     # draw lines
                     xoff = 3
-                    outsize = NODEWIDTH/len(n1.outputs)
+                    outsize = NODEWIDTH/len(n1.type.outputConnectors)
                     insize = NODEWIDTH/len(n2.inputs)
                     x1 = x1+outsize*(output+0.5)
                     x2 = x2+insize*(input+0.5)
@@ -314,10 +313,11 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 text.setFont(connectorFont)
                 text.setZValue(1)
                 xx += size
-        if len(n.outputs)>0:
-            size = v.w/len(n.outputs)
+        nouts = len(n.type.outputConnectors)
+        if nouts>0:
+            size = v.w/nouts
             xx = x
-            for i in range(0,len(n.outputs)):
+            for i in range(0,nouts):
                 # connection rectangles are parented to the main rectangle
                 r=GConnectRect(n.rect,xx,y+NODEHEIGHT-CONNECTORHEIGHT,size,CONNECTORHEIGHT,n,False,i)
                 text=GText(n.rect,r.name,n)
@@ -378,22 +378,22 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             x = [x for x in self.items(event.scenePos()) if isinstance(x,GConnectRect)]
             if not x: # is empty? We are dragging to a place with no connector
                 # if there is an existing connection we are deleting it
-                if self.draggingArrow.n1 is not None: # if a connection exists and we are removing it
+                if self.draggingArrow.n2 is not None: # if a connection exists and we are removing it
                     # remove the connection in the model
-                    self.draggingArrow.n1.disconnectOut(self.draggingArrow.output)
+                    self.draggingArrow.n2.disconnect(self.draggingArrow.input)
             else:
                 conn = x[0]
                 # remove existing connections at the connector we are dragging to
                 # if it is an input
                 if conn.isInput:
-                    conn.node.disconnectIn(conn.index)
+                    conn.node.disconnect(conn.index)
                 # We are dragging the connection to a new place.
                 # is it an existing connection we are modifying?
                 # The case where it's a fresh output being dragged to an input
                 # works too.
-                if self.draggingArrow.n1 is not None:
+                if self.draggingArrow.n2 is not None:
                     # disconnect the existing connection
-                    self.draggingArrow.n1.disconnectOut(self.draggingArrow.output)
+                    self.draggingArrow.n2.disconnect(self.draggingArrow.input)
                 if self.draggingArrowStart:
                     # we are dragging an output, so we want to connect an input to
                     # this new output
@@ -407,7 +407,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     input = conn.index
                     n1 = self.draggingArrow.n1
                     output = self.draggingArrow.output
-                n1.connectOut(output,n2,input)
+                n2.connect(input,n1,output)
             self.rebuildArrows()
             self.draggingArrow=None 
         super().mouseReleaseEvent(event)

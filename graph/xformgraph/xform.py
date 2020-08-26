@@ -25,8 +25,8 @@ class XFormType(metaclass=Singleton):
         allTypes[name]=self
         # these contain tuples of (name,typename). Images have typenames which
         # start with "img"
-        self.inputConnectors = []
         self.outputConnectors = []
+        self.inputConnectors = []
 
     def addInputConnector(self,name,typename):
         self.inputConnectors.append( (name,typename) )
@@ -48,7 +48,6 @@ class XForm:
         # connected, the index is the index of the output connector on that xform for inputs,
         # or the input connector for outputs
         self.inputs = [None for x in type.inputConnectors]
-        self.outputs = [None for x in type.outputConnectors]
         # there is also a data product generated for each output by "perform", initially
         # these are None
         self.products = [None for x in type.outputConnectors]
@@ -61,46 +60,19 @@ class XForm:
             if c:
                 other,j = c
                 print("    input {} <- {} {}".format(i,other.type.name,j))
-        print("  OUTPUTS:")
-        for i in range(0,len(self.outputs)):
-            c = self.outputs[i]
-            if c:
-                other,j = c
-                print("    output {} -> {} {}".format(i,other.type.name,j))
 
     # connect an input to an output on another xform
-    def connectIn(self,input,other,output):
+    def connect(self,input,other,output):
         if input>=0 and input<len(self.inputs) and self is not other:
-            if output>=0 and output<len(other.outputs):
+            if output>=0 and output<len(other.type.outputConnectors):
                 self.inputs[input] = (other,output)
-                other.outputs[output] = (self,input)
         
         
-    # connect an output to an input on another xform
-    def connectOut(self,output,other,input):
-        if input>=0 and input<len(other.inputs) and self is not other:
-            if output>=0 and output<len(self.outputs):
-                self.outputs[output] = (other,input)
-                other.inputs[input] = (self,output)
-
-    # disconnect an input and the corresponding output on the other xform        
-    def disconnectIn(self,input):
+    # disconnect an input 
+    def disconnect(self,input):
         if input>=0 and input<len(self.inputs):
-            if self.inputs[input] is not None:
-                other,output = self.inputs[input]
-                other.outputs[output]=None
-                self.inputs[input]=None
+            self.inputs[input]=None
 
-    # disconnect an output and the corresponding input on the other xform        
-    def disconnectOut(self,output):
-        self.dump()
-        print("Disconnecting output ",output)
-        if output>=0 and output<len(self.outputs):
-            if self.outputs[output] is not None:
-                other,input = self.outputs[output]
-                other.inputs[input] = None
-                self.outputs[output] = None
-            
     # perform the transformation; delegated to the type object
     def perform(self):
         self.type.perform(self)
