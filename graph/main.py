@@ -8,7 +8,7 @@ from xformgraph.xform import singleton,XFormType
 import graphview,palette,graphscene
 
 # transform types
-import xformsource,xformsink
+import xformsource,xformsink,xformsplit,xformmerge
 
 # dummies
 @singleton
@@ -17,24 +17,6 @@ class XformGrey(XFormType):
         super().__init__("greyscale")
         self.addInputConnector("rgb","img888")
         self.addOutputConnector("grey","imggrey")
-
-@singleton
-class XformSplit(XFormType):
-    def __init__(self):
-        super().__init__("split")
-        self.addInputConnector("rgb","img888")
-        self.addOutputConnector("r","imggrey")
-        self.addOutputConnector("g","imggrey")
-        self.addOutputConnector("b","imggrey")
-
-@singleton
-class XformMerge(XFormType):
-    def __init__(self):
-        super().__init__("merge")
-        self.addInputConnector("r","imggrey")
-        self.addInputConnector("g","imggrey")
-        self.addInputConnector("b","imggrey")
-        self.addOutputConnector("rgb","img888")
 
 class MainUI(tabs.DockableTabWindow):
     def getUI(self,type,name):

@@ -1,7 +1,3 @@
-from PyQt5 import QtWidgets, uic, QtCore
-from PyQt5.QtWidgets import QTreeView,QFileSystemModel
-from PyQt5.QtCore import Qt,QDir
-
 import cv2 as cv
 import numpy as np
 
@@ -11,7 +7,7 @@ from xformgraph.xform import singleton,XFormType
 
 class TabSink(tabs.Tab):
     def __init__(self,mainui,node):
-        super().__init__(mainui,node,'tabsink.ui')
+        super().__init__(mainui,node,'tabimage.ui')
         self.canvas = self.getUI(canvas.Canvas,'canvas')
         # sync tab with node
         self.onNodeChanged()
