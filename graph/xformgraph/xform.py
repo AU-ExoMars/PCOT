@@ -52,6 +52,10 @@ class XFormType():
     def perform(self,xform):
         pass
         
+    # initialise any data fields (often to None)
+    def init(self,xform):
+        pass
+        
     # create a tab connected to this xform - also needs the main UI window.
     # Might return none, if this xform doesn't have a meaningful UI.
     def createTab(self,mainui,xform):
@@ -175,6 +179,7 @@ class XFormGraph:
             type = allTypes[type]
             xform = XForm(type)
             self.nodes.append(xform)
+            type.init(xform)
         else:
             raise Exception("Transformation type not found: "+type)
         return xform

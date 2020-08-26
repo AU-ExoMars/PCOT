@@ -8,15 +8,8 @@ from xformgraph.xform import singleton,XFormType
 import graphview,palette,graphscene
 
 # transform types
-import xformsource,xformsink,xformsplit,xformmerge
-
-# dummies
-@singleton
-class XformGrey(XFormType):
-    def __init__(self):
-        super().__init__("greyscale")
-        self.addInputConnector("rgb","img888")
-        self.addOutputConnector("grey","imggrey")
+import xformsource,xformsink,xformsplit,xformmerge,xformcontrast
+import xformhist
 
 class MainUI(tabs.DockableTabWindow):
     def getUI(self,type,name):
@@ -25,7 +18,7 @@ class MainUI(tabs.DockableTabWindow):
             raise Exception('cannot find widget "'+name+'"')
         return x
     def rebuild(self):
-        self.scene = graphscene.XFormGraphScene(self.graph,self.view)
+        self.scene = graphscene.XFormGraphScene(self)
     def __init__(self):
         super().__init__()
         uic.loadUi('main.ui',self)
@@ -58,7 +51,7 @@ class MainUI(tabs.DockableTabWindow):
         
         # and view it - this will also link to the view, which the scene needs
         # to know about so it can modify its drag mode.
-        self.scene = graphscene.XFormGraphScene(self)
+        self.rebuild() # builds the scene
         self.show()
 
     # this gets called from way down in the scene to open tabs for nodes

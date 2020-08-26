@@ -58,6 +58,9 @@ class XformSource(XFormType):
 
     def createTab(self,mainui,n):
         return TabSource(mainui,n)
+        
+    def init(self,node):
+        node.img = None
 
     # the "perform" of a source is just to output its data
     def perform(self,node):

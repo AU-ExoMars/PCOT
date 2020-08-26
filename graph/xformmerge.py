@@ -30,6 +30,9 @@ class XformMerge(XFormType):
     def createTab(self,mainui,n):
         return TabMerge(mainui,n)
 
+    def init(self,node):
+        node.img = None
+
     def perform(self,node):
         r = node.getInput(0)
         g = node.getInput(1)

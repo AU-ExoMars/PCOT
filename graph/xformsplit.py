@@ -34,6 +34,11 @@ class XformSplit(XFormType):
     def createTab(self,mainui,n):
         return TabSplit(mainui,n)
 
+    def init(self,node):
+        node.red = None
+        node.green = None
+        node.blue = None
+
     def perform(self,node):
         img = node.getInput(0)
         if img is not None:
