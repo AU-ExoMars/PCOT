@@ -28,13 +28,11 @@ class TabSource(tabs.Tab):
         self.treeView=tree
         self.canvas = self.getUI(canvas.Canvas,'canvas')
         # sync tab with node
-        self.sync()
+        self.onNodeChanged()
 
     # causes the tab to update itself from the node
-    # and vice versa - the tab is a view/controller for the node.
-    def sync(self):
-        self.canvas.display(self.node.products[0])
-        
+    def onNodeChanged(self):
+        self.canvas.display(self.node.outputs[0])
         
     # this sets the file IN THE NODE. We store all data in the node,
     # the tab is just a view on the node.
@@ -43,12 +41,13 @@ class TabSource(tabs.Tab):
             fname = self.dirModel.filePath(idx)
             img = cv.imread(fname)
             img = cv.cvtColor(img,cv.COLOR_BGR2RGB)
-            print("Image read")
             if img is None:
                 raise Exception('cannot read image')
-            self.node.products[0] = img
-            self.sync()
-            
+            # set the node's data
+            self.node.img = img
+            # and tell it to perform (outputting the data)
+            # This will also run onNodeChanged() in any attached tab
+            self.node.perform()
 
 @singleton
 class XformSource(XFormType):
@@ -56,6 +55,11 @@ class XformSource(XFormType):
         super().__init__("source")
         ## our connectors
         self.addOutputConnector("rgb","img888")
+
     def createTab(self,mainui,n):
         return TabSource(mainui,n)
 
+    # the "perform" of a source is just to output its data
+    def perform(self,node):
+        node.setOutput(0,node.img)
+    

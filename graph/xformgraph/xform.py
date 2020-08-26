@@ -36,7 +36,7 @@ class XFormType():
     def all():
         return allTypes
         
-    # perform the actual action of the transformation, will generate products
+    # perform the actual action of the transformation, will generate outputs
     # in that object.
     def perform(self,xform):
         pass
@@ -58,9 +58,9 @@ class XForm:
         self.inputs = [None for x in type.inputConnectors]
         # we keep a dict of those nodes which get inputs from us, and how many
         self.children = {}
-        # there is also a data product generated for each output by "perform", initially
+        # there is also a data output generated for each output by "perform", initially
         # these are None
-        self.products = [None for x in type.outputConnectors]
+        self.outputs = [None for x in type.outputConnectors]
         # on-screen geometry, which should be set before we try to draw it
         self.xy = (0,0)
         self.w = None # unset, will be set on draw
@@ -111,7 +111,14 @@ class XForm:
                         # to avoid a concurrent modification and also because
                         # the child counts are irrelevant and don't need updating
                         n.inputs[i]=None
-            
+
+    # change an output - typically caused by perform, this will cause all children
+    # to perform too, leading to recursive descent of the tree. May also be caused
+    # by source data change.
+    def setOutput(self,i,data):
+        self.outputs[i]=data
+        for n in self.children:
+            n.perform()
             
     def increaseChildCount(self,n):
         if n in self.children:
@@ -126,15 +133,22 @@ class XForm:
                 del self.children[n]
         else:
             raise Exception("child count <0 in node {}, child {}".format(self.name,n.name))
-            
 
-    # perform the transformation; delegated to the type object
+    # perform the transformation; delegated to the type object. Also tells
+    # any tab open on a node that its node has changed.
     def perform(self):
+        print("Performing ",self.name)
         self.type.perform(self)
+        if self.tab is not None:
+            self.tab.onNodeChanged()
         
     # get the value of an input
     def getInput(self,i):
-        return None
+        if self.inputs[i] is None:
+            return None
+        else:
+            n,i = self.inputs[i]
+            return n.outputs[i]
 
 # a graph of transformation nodes
 class XFormGraph:

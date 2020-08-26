@@ -14,11 +14,10 @@ class TabSink(tabs.Tab):
         super().__init__(mainui,node,'tabsink.ui')
         self.canvas = self.getUI(canvas.Canvas,'canvas')
         # sync tab with node
-        self.sync()
+        self.onNodeChanged()
 
     # causes the tab to update itself from the node
-    # and vice versa - the tab is a view/controller for the node.
-    def sync(self):
+    def onNodeChanged(self):
         self.canvas.display(self.node.getInput(0))
         
 

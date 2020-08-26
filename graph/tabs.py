@@ -111,3 +111,6 @@ class Tab(QtWidgets.QWidget):
         # store a ref to the main UI.
         self.mainui = mainui
         
+    # write this in implementations - updates the tab when the node's data has changed
+    def onNodeChanged():
+        pass
