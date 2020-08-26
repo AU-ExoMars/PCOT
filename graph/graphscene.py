@@ -443,3 +443,11 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             self.draggingArrow=None 
         super().mouseReleaseEvent(event)
 
+    def keyPressEvent(self,event):
+        if event.key() == Qt.Key_Delete:
+            print("DEL")
+            for n in self.selection:
+                # remove the nodes
+                self.graph.remove(n)
+            self.rebuild()
+    

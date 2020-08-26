@@ -7,16 +7,10 @@ import xformgraph.xform
 from xformgraph.xform import singleton,XFormType
 import graphview,palette,graphscene
 
-# dummy transform types
-import xformsource
+# transform types
+import xformsource,xformsink
 
-
-@singleton
-class XformSink(XFormType):
-    def __init__(self):
-        super().__init__("sink")
-        self.addInputConnector("rgb","img888")
-
+# dummies
 @singleton
 class XformGrey(XFormType):
     def __init__(self):

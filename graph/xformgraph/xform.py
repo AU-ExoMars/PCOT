@@ -56,6 +56,8 @@ class XForm:
         # connected, the index is the index of the output connector on that xform for inputs,
         # or the input connector for outputs
         self.inputs = [None for x in type.inputConnectors]
+        # we keep a dict of those nodes which get inputs from us, and how many
+        self.children = {}
         # there is also a data product generated for each output by "perform", initially
         # these are None
         self.products = [None for x in type.outputConnectors]
@@ -76,22 +78,63 @@ class XForm:
             if c:
                 other,j = c
                 print("    input {} <- {} {}".format(i,other.type.name,j))
+        print("   CHILDREN:")
+        for k,v in self.children.items():
+            print("    {} ({} connections)".format(k.name,v))
 
     # connect an input to an output on another xform
     def connect(self,input,other,output):
         if input>=0 and input<len(self.inputs) and self is not other:
             if output>=0 and output<len(other.type.outputConnectors):
                 self.inputs[input] = (other,output)
+                other.increaseChildCount(self)
         
         
     # disconnect an input 
     def disconnect(self,input):
         if input>=0 and input<len(self.inputs):
-            self.inputs[input]=None
+            if self.inputs[input] is not None:
+                n,i = self.inputs[input]
+                n.decreaseChildCount(self)
+                self.inputs[input]=None
+            
+    # disconnect all inputs and outputs prior to removal
+    def disconnectAll(self):
+        for i in range(0,len(self.inputs)):
+            self.disconnect(i)
+        for n,v in self.children.items():
+            # remove all inputs which reference this node
+            for i in range(0,len(n.inputs)):
+                if n.inputs[i] is not None:
+                    if n.inputs[i][0]==self:
+                        # do this directly, rather than with disconnect() both
+                        # to avoid a concurrent modification and also because
+                        # the child counts are irrelevant and don't need updating
+                        n.inputs[i]=None
+            
+            
+    def increaseChildCount(self,n):
+        if n in self.children:
+            self.children[n]+=1
+        else:
+            self.children[n]=1
+
+    def decreaseChildCount(self,n):
+        if n in self.children:
+            self.children[n]-=1
+            if self.children[n]==0:
+                del self.children[n]
+        else:
+            raise Exception("child count <0 in node {}, child {}".format(self.name,n.name))
+            
 
     # perform the transformation; delegated to the type object
     def perform(self):
         self.type.perform(self)
+        
+    # get the value of an input
+    def getInput(self,i):
+        return None
 
 # a graph of transformation nodes
 class XFormGraph:
@@ -107,7 +150,12 @@ class XFormGraph:
             self.nodes.append(xform)
         else:
             raise Exception("Transformation type not found: "+type)
-        return xform        
+        return xform
+        
+    def remove(self,node):
+        node.disconnectAll()
+        self.nodes.remove(node)
+        
 
     def dump(self):
         for n in self.nodes:

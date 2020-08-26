@@ -9,9 +9,6 @@ import tabs,canvas
 import xformgraph.xform
 from xformgraph.xform import singleton,XFormType
 
-# TIDY THIS UP so that the image is actually handled in the node, not the node's tab!
-
-
 class TabSource(tabs.Tab):
     def __init__(self,mainui,node):
         super().__init__(mainui,node,'tabsource.ui')
@@ -30,6 +27,7 @@ class TabSource(tabs.Tab):
         tree.doubleClicked.connect(self.fileClickedAction)
         self.treeView=tree
         self.canvas = self.getUI(canvas.Canvas,'canvas')
+        # sync tab with node
         self.sync()
 
     # causes the tab to update itself from the node
