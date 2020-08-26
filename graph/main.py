@@ -2,9 +2,9 @@ from PyQt5 import QtWidgets, uic, QtCore
 from PyQt5.QtCore import Qt
 import sys
 
-import xformgraph.xform,xformgraph.draw
+import xformgraph.xform
 from xformgraph.xform import singleton,XFormType
-import graphview,palette
+import graphview,palette,graphscene
 
 # dummy transform types
 
@@ -54,7 +54,7 @@ class MainUI(QtWidgets.QMainWindow):
             raise Exception('cannot find widget "'+name+'"')
         return x
     def rebuild(self):
-        self.scene = xformgraph.draw.XFormGraphScene(self.graph,self.view)
+        self.scene = graphscene.XFormGraphScene(self.graph,self.view)
     def __init__(self):
         super().__init__()
         uic.loadUi('main.ui',self)
@@ -86,7 +86,7 @@ class MainUI(QtWidgets.QMainWindow):
         
         # and view it - this will also link to the view, which the scene needs
         # to know about so it can modify its drag mode.
-        self.scene = xformgraph.draw.XFormGraphScene(self.graph,self.view)
+        self.scene = graphscene.XFormGraphScene(self.graph,self.view)
         self.show()
         
 
