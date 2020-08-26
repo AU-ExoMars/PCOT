@@ -1,8 +1,4 @@
-It should be possible to have a single output connecting to multiple
-inputs, but not multiple outputs into a single input.
-The UI for this sort of works, but not quite; it's a bit messy to
-wire and deleting a wire (pulling the output away) often disconnects
-the wrong one.
-
-This is because the two-way link in the model can't cope with
-one output going to multiple inputs!
+Drag and drop on palette items is actually quite hard, and
+an aesthetic thing, so I'm not doing it. It involves
+a) creating a QDrag with a pixmap to represent the widget
+b) hiding the widget as we drag it (maybe)

@@ -1,8 +1,10 @@
-from PyQt5 import QtWidgets, uic
-import graphview
+from PyQt5 import QtWidgets, uic, QtCore
+from PyQt5.QtCore import Qt
 import sys
+
 import xformgraph.xform,xformgraph.draw
 from xformgraph.xform import singleton,XFormType
+import graphview,palette
 
 # dummy transform types
 
@@ -49,19 +51,23 @@ class MainUI(QtWidgets.QMainWindow):
     def getUI(self,type,name):
         x = self.findChild(type,name)
         if x is None:
-            raise Exception('cannot find widget'+name)
+            raise Exception('cannot find widget "'+name+'"')
         return x
     def rebuild(self):
         self.scene = xformgraph.draw.XFormGraphScene(self.graph,self.view)
     def __init__(self):
         super().__init__()
         uic.loadUi('main.ui',self)
-        
+
+        # connect buttons etc.        
         self.getUI(QtWidgets.QPushButton,'rebuildButton').clicked.connect(self.rebuild)
         self.getUI(QtWidgets.QPushButton,'dumpButton').clicked.connect(lambda: self.graph.dump())
         
-        self.view = self.getUI(graphview.GraphView,'graphicsView')
-        self.show()
+        # set up the scrolling palette and get a list of the buttons therein
+        scrollArea = self.getUI(QtWidgets.QScrollArea,'palette')
+        scrollAreaContent = self.getUI(QtWidgets.QWidget,'paletteContents')
+        self.paletteButtons = palette.setup(scrollArea,scrollAreaContent)
+
         
         # create a dummy graph
         self.graph=xformgraph.xform.XFormGraph()
@@ -76,9 +82,13 @@ class MainUI(QtWidgets.QMainWindow):
         merge.connect(2,split,2)
         sink.connect(0,merge,0)
         
+        # get a handle on the view
+        self.view = self.getUI(graphview.GraphView,'graphicsView')
+        
         # and view it - this will also link to the view, which the scene needs
         # to know about so it can modify its drag mode.
         self.scene = xformgraph.draw.XFormGraphScene(self.graph,self.view)
+        self.show()
         
 
 app = QtWidgets.QApplication(sys.argv) 

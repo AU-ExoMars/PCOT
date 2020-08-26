@@ -33,6 +33,9 @@ class XFormType():
     def addOutputConnector(self,name,typename):
         self.outputConnectors.append( (name,typename) )
         
+    def all():
+        return allTypes
+        
     # perform the actual action of the transformation, will generate products
     # in that object.
     def perform(self,xform):

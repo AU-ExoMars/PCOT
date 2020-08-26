@@ -44,3 +44,20 @@ class GraphView(QtWidgets.QGraphicsView):
             self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() + offset.x())
         else:
             super().mouseMoveEvent(event)
+            
+    # events for handling reception of dragged palette buttons
+
+    def dragMoveEvent(self, e):
+        e.accept()
+
+    def dragEnterEvent(self, e):
+        print(e.mimeData().formats())
+        if e.mimeData().hasFormat('data/palette'):
+            e.accept()
+        else:
+            e.ignore()
+
+    def dropEvent(self, e):
+        print("DROP")
+        stream = QtCore.QDataStream(e.mimeData().data('data/palette'),QtCore.QIODevice.ReadOnly)
+        print("blart; ",stream.readQString())
