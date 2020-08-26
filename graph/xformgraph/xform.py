@@ -4,19 +4,19 @@ allTypes = dict()
 # Superclass for a transformation type. There is a singleton subclassed
 # from this for each type. 
 
-# we use a singleton metaclass here - while the class constructor must be referred to with
-# all its arguments in the first case (to set up the singleton), any subsequent
-# call to the constructor will return the singleton and doesn't require the
-# arguments.
-
-class Singleton(type):
-    _instances = {}
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
-
-class XFormType(metaclass=Singleton):
+# This is a singleton decorator which, unusually, is not lazy, because we
+# need the xforms to be registered at initialisation. Thus the class creation
+# forces an instance to be created.        
+class singleton:
+    def __init__(self,cls,*args,**kwargs):
+        self._cls=cls
+        self._instance = self._cls(*args,**kwargs)
+        
+    def __call__(self):
+        return self._instance
+    
+        
+class XFormType():
     def __init__(self,name):
         self.name = name
         # add to the global dictionary

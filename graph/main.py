@@ -2,46 +2,48 @@ from PyQt5 import QtWidgets, uic
 import graphview
 import sys
 import xformgraph.xform,xformgraph.draw
+from xformgraph.xform import singleton,XFormType
 
 # dummy transform types
 
-class XformSource(xformgraph.xform.XFormType):
+@singleton
+class XformSource(XFormType):
     def __init__(self):
         super().__init__("source")
         self.addOutputConnector("rgb","img888")
-XformSource() # force creation       
 
-class XformSink(xformgraph.xform.XFormType):
+
+@singleton
+class XformSink(XFormType):
     def __init__(self):
         super().__init__("sink")
         self.addInputConnector("rgb","img888")
-XformSink() # force creation       
     
 
-class XformGrey(xformgraph.xform.XFormType):
+@singleton
+class XformGrey(XFormType):
     def __init__(self):
         super().__init__("greyscale")
         self.addInputConnector("rgb","img888")
         self.addOutputConnector("grey","imggrey")
-XformGrey() # force creation       
 
-class XformSplit(xformgraph.xform.XFormType):
+@singleton
+class XformSplit(XFormType):
     def __init__(self):
         super().__init__("split")
         self.addInputConnector("rgb","img888")
         self.addOutputConnector("r","imggrey")
         self.addOutputConnector("g","imggrey")
         self.addOutputConnector("b","imggrey")
-XformSplit()
 
-class XformMerge(xformgraph.xform.XFormType):
+@singleton
+class XformMerge(XFormType):
     def __init__(self):
         super().__init__("merge")
-        self.addInputConnector("r","img888")
+        self.addInputConnector("r","imggrey")
         self.addInputConnector("g","imggrey")
         self.addInputConnector("b","imggrey")
         self.addOutputConnector("rgb","img888")
-XformMerge()
 
 class MainUI(QtWidgets.QMainWindow):
     def getUI(self,type,name):
