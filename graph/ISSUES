@@ -1,4 +1,3 @@
-Drag and drop on palette items is actually quite hard, and
-an aesthetic thing, so I'm not doing it. It involves
-a) creating a QDrag with a pixmap to represent the widget
-b) hiding the widget as we drag it (maybe)
+Optimisation: at the moment, setting an output causes a perform.
+This means that (say) split, which sets three outputs, causes merge
+to perform three times. It doesn't need to.
