@@ -86,6 +86,12 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
             # remake all the scene's connection arrows, which is rather inefficient!
             self.scene().rebuildArrows()
         return super().itemChange(change,value)
+        
+    # double click should find or open a tab, even to the extent
+    # of focussing another window (an expanded tab); an action
+    # delegated to the main window
+    def mouseDoubleClickEvent(self,event):
+        self.scene().mainWindow.openTab(self.node)
 
 class GConnectRect(QtWidgets.QGraphicsRectItem):
     def __init__(self,parent,x1,y1,x2,y2,node,isInput,index):
@@ -159,8 +165,8 @@ class GArrow(QtWidgets.QGraphicsLineItem):
         self.head=None
         self.makeHead()
     def __str__(self):
-        name1 = "??" if self.n1 is None else self.n1.type.name
-        name2 = "??" if self.n2 is None else self.n2.type.name
+        name1 = "??" if self.n1 is None else self.n1.name
+        name2 = "??" if self.n2 is None else self.n2.name
         return "{}/{} -> {}/{}".format(name1,self.output,name2,self.input)
 
     def makeHead(self):
@@ -196,11 +202,12 @@ class GArrow(QtWidgets.QGraphicsLineItem):
 # when serializing the nodes, the geometry fields should be dealt with.
 
 class XFormGraphScene(QtWidgets.QGraphicsScene):
-    def __init__(self,graph,view): # sadly we need to know about our view!
+    def __init__(self,mainWindow): 
         super().__init__()
-        self.graph = graph
+        self.mainWindow = mainWindow
+        self.graph = mainWindow.graph
+        self.view = mainWindow.view
         self.selectionChanged.connect(self.rubberBandSelChanged)
-        self.view = view
         self.prevDragMode = self.view.dragMode()
         self.selection=[]
         self.checkRubberBandChange=True
@@ -323,7 +330,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         n.rect = GMainRect(x,y+CONNECTORHEIGHT,n.w,n.h-YPADDING-CONNECTORHEIGHT*2,n)
         self.addItem(n.rect)
         # draw text label
-        text=GText(n.rect,n.type.name,n)
+        text=GText(n.rect,n.name,n)
         text.setPos(x+XTEXTOFFSET,y+YTEXTOFFSET+CONNECTORHEIGHT)
         if len(n.inputs)>0:
             size = n.w/len(n.inputs)

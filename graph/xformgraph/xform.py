@@ -41,6 +41,11 @@ class XFormType():
     def perform(self,xform):
         pass
         
+    # create a tab connected to this xform - also needs the main UI window.
+    # Might return none, if this xform doesn't have a meaningful UI.
+    def createTab(self,mainui,xform):
+        return None
+        
 
 # an actual instance of a transformation
 class XForm:
@@ -58,6 +63,9 @@ class XForm:
         self.xy = (0,0)
         self.w = None # unset, will be set on draw
         self.h = None
+        self.tab = None # no tab open
+        # this may have to be disambiguated
+        self.name = type.name
         
     def dump(self):
         print("---DUMP of {}, geom {},{},{}x{}".format(self.type.name,
@@ -84,7 +92,6 @@ class XForm:
     # perform the transformation; delegated to the type object
     def perform(self):
         self.type.perform(self)
-
 
 # a graph of transformation nodes
 class XFormGraph:

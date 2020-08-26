@@ -2,17 +2,13 @@ from PyQt5 import QtWidgets, uic, QtCore
 from PyQt5.QtCore import Qt
 import sys
 
+import tabs
 import xformgraph.xform
 from xformgraph.xform import singleton,XFormType
 import graphview,palette,graphscene
 
 # dummy transform types
-
-@singleton
-class XformSource(XFormType):
-    def __init__(self):
-        super().__init__("source")
-        self.addOutputConnector("rgb","img888")
+import xformsource
 
 
 @singleton
@@ -20,7 +16,6 @@ class XformSink(XFormType):
     def __init__(self):
         super().__init__("sink")
         self.addInputConnector("rgb","img888")
-    
 
 @singleton
 class XformGrey(XFormType):
@@ -47,7 +42,7 @@ class XformMerge(XFormType):
         self.addInputConnector("b","imggrey")
         self.addOutputConnector("rgb","img888")
 
-class MainUI(QtWidgets.QMainWindow):
+class MainUI(tabs.DockableTabWindow):
     def getUI(self,type,name):
         x = self.findChild(type,name)
         if x is None:
@@ -58,17 +53,18 @@ class MainUI(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         uic.loadUi('main.ui',self)
+        self.initTabs()
 
         # connect buttons etc.        
         self.getUI(QtWidgets.QPushButton,'rebuildButton').clicked.connect(self.rebuild)
         self.getUI(QtWidgets.QPushButton,'dumpButton').clicked.connect(lambda: self.graph.dump())
-        # get a handle on the view
+        # get a handle on various things
         self.view = self.getUI(graphview.GraphView,'graphicsView')
         
-        # set up the scrolling palette and get a list of the buttons therein
+        # set up the scrolling palette and make the buttons therein
         scrollArea = self.getUI(QtWidgets.QScrollArea,'palette')
         scrollAreaContent = self.getUI(QtWidgets.QWidget,'paletteContents')
-        self.paletteButtons = palette.setup(scrollArea,scrollAreaContent,self.view)
+        palette.setup(scrollArea,scrollAreaContent,self.view)
 
         
         # create a dummy graph
@@ -86,8 +82,19 @@ class MainUI(QtWidgets.QMainWindow):
         
         # and view it - this will also link to the view, which the scene needs
         # to know about so it can modify its drag mode.
-        self.scene = graphscene.XFormGraphScene(self.graph,self.view)
+        self.scene = graphscene.XFormGraphScene(self)
         self.show()
+
+    # this gets called from way down in the scene to open tabs for nodes
+    def openTab(self,node):
+        # has the node got a tab open already?
+        if node.tab is None:
+            # nope, ask the node type to make one
+            node.tab = node.type.createTab(self,node)
+            node.tab.node = node
+        # pull that tab to the front
+        self.tabWidget.setCurrentWidget(node.tab)
+    
         
 
 app = QtWidgets.QApplication(sys.argv) 
