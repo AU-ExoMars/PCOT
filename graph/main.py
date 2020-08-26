@@ -56,6 +56,7 @@ class MainUI(QtWidgets.QMainWindow):
         uic.loadUi('main.ui',self)
         
         self.getUI(QtWidgets.QPushButton,'rebuildButton').clicked.connect(self.rebuild)
+        self.getUI(QtWidgets.QPushButton,'dumpButton').clicked.connect(lambda: self.graph.dump())
         
         self.view = self.getUI(graphview.GraphView,'graphicsView')
         self.show()

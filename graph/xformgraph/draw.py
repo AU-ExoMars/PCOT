@@ -126,6 +126,7 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
                 if arrow is not None:
                     # and set that arrow to be dragging (note the inverted self.isInput)
                     self.scene().startDraggingArrow(arrow,not self.isInput,event)
+                    print(arrow)
             else:
                 # here we're trying to create a brand new connection. Create a "dummy"
                 # arrow which has one end of the connection set to (None,0) and add it
@@ -370,6 +371,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         # first, go back to normal dragging
         self.view.setDragMode(self.prevDragMode)
         if self.draggingArrow is not None:
+            print(self.draggingArrow)
             # first, make sure we close off the movement
             self.mouseMoveEvent(event)
             # get all the connectors at the event location. There should be one or none.
@@ -377,7 +379,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             if not x: # is empty? We are dragging to a place with no connector
                 # if there is an existing connection we are deleting it
                 if self.draggingArrow.n1 is not None: # if a connection exists and we are removing it
-                    # remove the connection in the model and rebuild the arrows here
+                    # remove the connection in the model
                     self.draggingArrow.n1.disconnectOut(self.draggingArrow.output)
             else:
                 conn = x[0]

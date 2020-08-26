@@ -93,6 +93,8 @@ class XForm:
 
     # disconnect an output and the corresponding input on the other xform        
     def disconnectOut(self,output):
+        self.dump()
+        print("Disconnecting output ",output)
         if output>=0 and output<len(self.outputs):
             if self.outputs[output] is not None:
                 other,input = self.outputs[output]
@@ -120,3 +122,6 @@ class XFormGraph:
             raise Exception("Transformation type not found: "+type)
         return xform        
 
+    def dump(self):
+        for n in self.nodes:
+            n.dump()

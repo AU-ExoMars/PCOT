@@ -3,3 +3,6 @@ inputs, but not multiple outputs into a single input.
 The UI for this sort of works, but not quite; it's a bit messy to
 wire and deleting a wire (pulling the output away) often disconnects
 the wrong one.
+
+This is because the two-way link in the model can't cope with
+one output going to multiple inputs!
