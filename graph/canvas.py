@@ -30,12 +30,18 @@ class Canvas(QtWidgets.QWidget):
         self.update()
     def paintEvent(self,event):
         p = QPainter(self)
-        p.eraseRect(event.rect())
+        p.fillRect(event.rect(),Qt.blue)
         w = self.size().width()
         h = self.size().height()
         if self.img is not None:
-            img = cv.resize(self.img,dsize=(w,h),interpolation=cv.INTER_CUBIC)
+            # we paint at the correct aspect ratio, leaving other
+            # parts of the rectangle blank
+            imgh,imgw,idepth = self.img.shape
+            aspect = imgw/imgh
+            if h*aspect>w:
+                size=(w,int(w/aspect))
+            else:
+                size=(int(h*aspect),h)
+            img = cv.resize(self.img,dsize=size,interpolation=cv.INTER_CUBIC)
             p.drawImage(0,0,img2qimage(img))
-        else:
-            p.fillRect(0,0,w,h,Qt.blue)
         p.end()
