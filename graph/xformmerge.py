@@ -4,18 +4,7 @@ import numpy as np
 import tabs,canvas
 import xformgraph.xform
 from xformgraph.xform import singleton,XFormType
-
-class TabMerge(tabs.Tab):
-    def __init__(self,mainui,node):
-        super().__init__(mainui,node,'tabimage.ui') # same UI as sink
-        self.canvas = self.getUI(canvas.Canvas,'canvas')
-        # sync tab with node
-        self.onNodeChanged()
-
-    # causes the tab to update itself from the node
-    def onNodeChanged(self):
-        self.canvas.display(self.node.img)
-        
+from xformimage import TabImage
 
 @singleton
 class XformMerge(XFormType):
@@ -28,7 +17,7 @@ class XformMerge(XFormType):
         self.addOutputConnector("rgb","img888")
         
     def createTab(self,mainui,n):
-        return TabMerge(mainui,n)
+        return TabImage(mainui,n)
 
     def init(self,node):
         node.img = None
