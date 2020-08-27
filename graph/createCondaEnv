@@ -1,0 +1,2 @@
+#!/bin/bash
+conda create -n dev pyqt opencv numpy scikit-image pyqtgraph
