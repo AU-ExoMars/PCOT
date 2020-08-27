@@ -86,7 +86,7 @@ class ExpandedTab(QtWidgets.QMainWindow):
         self.mainui.tabWidget.setCurrentIndex(idx)
         event.accept()
 
-    # window got focus
+    # window got focus. Tell the scene.
     def changeEvent(self,event):
         if event.type() == QtCore.QEvent.ActivationChange:
             if self.isActiveWindow():

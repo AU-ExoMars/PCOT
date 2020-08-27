@@ -29,27 +29,6 @@
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
       </property>
-      <widget class="QScrollArea" name="palette">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="widgetResizable">
-        <bool>true</bool>
-       </property>
-       <widget class="QWidget" name="paletteContents">
-        <property name="geometry">
-         <rect>
-          <x>0</x>
-          <y>0</y>
-          <width>68</width>
-          <height>748</height>
-         </rect>
-        </property>
-       </widget>
-      </widget>
       <widget class="QTabWidget" name="tabWidget">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -68,12 +47,12 @@
         </attribute>
        </widget>
       </widget>
-      <widget class="QWidget" name="">
+      <widget class="QWidget" name="layoutWidget">
        <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0">
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0">
           <item>
-           <widget class="QPushButton" name="rebuildButton">
+           <widget class="QPushButton" name="autolayoutButton">
             <property name="sizePolicy">
              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
               <horstretch>1</horstretch>
@@ -81,7 +60,7 @@
              </sizepolicy>
             </property>
             <property name="text">
-             <string>Rebuild</string>
+             <string>Autolayout</string>
             </property>
            </widget>
           </item>
@@ -123,6 +102,27 @@
          </widget>
         </item>
        </layout>
+      </widget>
+      <widget class="QScrollArea" name="palette">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="widgetResizable">
+        <bool>true</bool>
+       </property>
+       <widget class="QWidget" name="paletteContents">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>68</width>
+          <height>748</height>
+         </rect>
+        </property>
+       </widget>
       </widget>
      </widget>
     </item>

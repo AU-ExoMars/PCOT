@@ -15,7 +15,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         if x is None:
             raise Exception('cannot find widget "'+name+'"')
         return x
-    def rebuild(self):
+    def autoLayout(self):
         self.scene = graphscene.XFormGraphScene(self)
     def __init__(self):
         super().__init__()
@@ -23,7 +23,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.initTabs()
 
         # connect buttons etc.        
-        self.getUI(QtWidgets.QPushButton,'rebuildButton').clicked.connect(self.rebuild)
+        self.getUI(QtWidgets.QPushButton,'autolayoutButton').clicked.connect(self.autoLayout)
         self.getUI(QtWidgets.QPushButton,'dumpButton').clicked.connect(lambda: self.graph.dump())
         # get a handle on various things
         self.view = self.getUI(graphview.GraphView,'graphicsView')
@@ -43,7 +43,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         
         # and view it - this will also link to the view, which the scene needs
         # to know about so it can modify its drag mode.
-        self.rebuild() # builds the scene
+        self.autoLayout() # builds the scene
         self.show()
 
     # this gets called from way down in the scene to open tabs for nodes

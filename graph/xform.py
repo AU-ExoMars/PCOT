@@ -64,7 +64,7 @@ class XFormType():
 
 # an actual instance of a transformation
 class XForm:
-    def __init__(self,type):
+    def __init__(self,type,name):
         self.type = type
         # create unconnected connections. Connections are either None
         # or (Xform,index) tuples - the xform is the object to which we are
@@ -77,8 +77,8 @@ class XForm:
         # these are None
         self.outputs = [None for x in type.outputConnectors]
         self.comment = "" # nodes can have comments
-        # this may have to be disambiguated
-        self.name = type.name
+        # set the unique name
+        self.name = name
         
         # UI-DEPENDENT STUFF DOWN HERE
         
@@ -178,12 +178,25 @@ class XFormGraph:
     def __init__(self):
         # all the nodes
         self.nodes = []
+        self.nodeCountsByType={}
+        
+    def incNodeCountAndGet(self,type):
+        if type in self.nodeCountsByType:
+            val=self.nodeCountsByType[type]
+        else:
+            val=0
+        val+=1
+        self.nodeCountsByType[type]=val
+        return val
+        
 
     # create a new node, passing in a type name.
-    def create(self,type):
-        if type in allTypes:
-            type = allTypes[type]
-            xform = XForm(type)
+    def create(self,typename):
+        if typename in allTypes:
+            type = allTypes[typename]
+            # disambiguate node names
+            count = self.incNodeCountAndGet(type)
+            xform = XForm(type,"{} {}".format(typename,count))
             self.nodes.append(xform)
             type.init(xform)
         else:
