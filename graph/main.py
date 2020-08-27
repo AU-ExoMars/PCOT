@@ -2,16 +2,20 @@ from PyQt5 import QtWidgets, uic, QtCore
 from PyQt5.QtCore import Qt
 import sys
 
-import tabs
-import xformgraph.xform
-from xformgraph.xform import singleton,XFormType
+import ui.tabs
+import xforms.xform
+from xforms.xform import singleton,XFormType
 import graphview,palette,graphscene
 
 # transform types
-import xformsource,xformsink,xformsplit,xformmerge,xformcontrast
-import xformhist
+import xforms.xformsource
+import xforms.xformsink
+import xforms.xformsplit
+import xforms.xformmerge
+import xforms.xformcontrast
+import xforms.xformhist
 
-class MainUI(tabs.DockableTabWindow):
+class MainUI(ui.tabs.DockableTabWindow):
     def getUI(self,type,name):
         x = self.findChild(type,name)
         if x is None:
@@ -21,7 +25,7 @@ class MainUI(tabs.DockableTabWindow):
         self.scene = graphscene.XFormGraphScene(self)
     def __init__(self):
         super().__init__()
-        uic.loadUi('main.ui',self)
+        uic.loadUi('assets/main.ui',self)
         self.initTabs()
 
         # connect buttons etc.        
@@ -37,7 +41,7 @@ class MainUI(tabs.DockableTabWindow):
 
         
         # create a dummy graph
-        self.graph=xformgraph.xform.XFormGraph()
+        self.graph=xforms.xform.XFormGraph()
         split = self.graph.create("split")
         merge = self.graph.create("merge")
         source = self.graph.create("source")

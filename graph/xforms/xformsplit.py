@@ -1,16 +1,15 @@
 import cv2 as cv
 import numpy as np
 
-import tabs,canvas
-import xformgraph.xform
-from xformgraph.xform import singleton,XFormType
+import ui.tabs,ui.canvas
+from xforms.xform import singleton,XFormType
 
-class TabSplit(tabs.Tab):
+class TabSplit(ui.tabs.Tab):
     def __init__(self,mainui,node):
-        super().__init__(mainui,node,'tabsplit.ui')
-        self.canvRed = self.getUI(canvas.Canvas,'canvRed')
-        self.canvGreen = self.getUI(canvas.Canvas,'canvGreen')
-        self.canvBlue = self.getUI(canvas.Canvas,'canvBlue')
+        super().__init__(mainui,node,'assets/tabsplit.ui')
+        self.canvRed = self.getUI(ui.canvas.Canvas,'canvRed')
+        self.canvGreen = self.getUI(ui.canvas.Canvas,'canvGreen')
+        self.canvBlue = self.getUI(ui.canvas.Canvas,'canvBlue')
         # sync tab with node
         self.onNodeChanged()
 

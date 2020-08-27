@@ -1,14 +1,13 @@
-import tabs,canvas
-import xformgraph.xform
-from xformgraph.xform import singleton,XFormType
+import ui.tabs,ui.canvas
+from xforms.xform import singleton,XFormType
 
 # this is a tab type for transforms which just display an image. They
 # have one datum - "img" - in the node.
 
-class TabImage(tabs.Tab):
+class TabImage(ui.tabs.Tab):
     def __init__(self,mainui,node):
-        super().__init__(mainui,node,'tabimage.ui') # same UI as sink
-        self.canvas = self.getUI(canvas.Canvas,'canvas')
+        super().__init__(mainui,node,'assets/tabimage.ui') # same UI as sink
+        self.canvas = self.getUI(ui.canvas.Canvas,'canvas')
         # sync tab with node
         self.onNodeChanged()
 

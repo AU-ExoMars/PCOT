@@ -5,13 +5,12 @@ from PyQt5.QtCore import Qt,QDir
 import cv2 as cv
 import numpy as np
 
-import tabs,canvas
-import xformgraph.xform
-from xformgraph.xform import singleton,XFormType
+import ui.tabs,ui.canvas
+from xforms.xform import singleton,XFormType
 
-class TabSource(tabs.Tab):
+class TabSource(ui.tabs.Tab):
     def __init__(self,mainui,node):
-        super().__init__(mainui,node,'tabsource.ui')
+        super().__init__(mainui,node,'assets/tabsource.ui')
         # set up the file tree
         self.dirModel = QFileSystemModel()
         self.dirModel.setRootPath(QDir.currentPath())
@@ -26,7 +25,7 @@ class TabSource(tabs.Tab):
         tree.setColumnHidden(2,True)
         tree.doubleClicked.connect(self.fileClickedAction)
         self.treeView=tree
-        self.canvas = self.getUI(canvas.Canvas,'canvas')
+        self.canvas = self.getUI(ui.canvas.Canvas,'canvas')
         # sync tab with node
         self.onNodeChanged()
 

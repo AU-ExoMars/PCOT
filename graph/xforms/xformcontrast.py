@@ -4,9 +4,8 @@ from PyQt5.QtCore import Qt
 import cv2 as cv
 import numpy as np
 
-import tabs,canvas
-import xformgraph.xform
-from xformgraph.xform import singleton,XFormType
+import ui.tabs,ui.canvas
+from xforms.xform import singleton,XFormType
 
 def contrast(img,tol):
     B = img.astype(np.float)
@@ -19,10 +18,10 @@ def contrast(img,tol):
         B[:,:,b] = 255 * (B[:,:,b] - B[:,:,b].min())/(B[:,:,b].max() - B[:,:,b].min())
     return B.astype(np.uint8)
 
-class TabContrast(tabs.Tab):
+class TabContrast(ui.tabs.Tab):
     def __init__(self,mainui,node):
-        super().__init__(mainui,node,'tabcontrast.ui') # same UI as sink
-        self.canvas = self.getUI(canvas.Canvas,'canvas')
+        super().__init__(mainui,node,'assets/tabcontrast.ui') # same UI as sink
+        self.canvas = self.getUI(ui.canvas.Canvas,'canvas')
         self.dial = self.getUI(QtWidgets.QDial,'dial')
         self.dial.valueChanged.connect(self.setContrast)
 

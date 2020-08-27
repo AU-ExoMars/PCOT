@@ -10,8 +10,6 @@ from PyQt5.QtGui import QColor,QBrush,QLinearGradient,QFont,QTransform
 
 import math
 
-import xformgraph
-
 
 connectorFont = QFont()
 #connectorFont.setStyleHint(QFont.SansSerif)

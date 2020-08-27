@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>723</width>
-    <height>469</height>
+    <width>711</width>
+    <height>512</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,29 +17,13 @@
    <item>
     <widget class="Canvas" name="canvas" native="true"/>
    </item>
-   <item alignment="Qt::AlignTop">
-    <widget class="QDial" name="dial">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>80</width>
-       <height>80</height>
-      </size>
-     </property>
-    </widget>
-   </item>
   </layout>
  </widget>
  <customwidgets>
   <customwidget>
    <class>Canvas</class>
    <extends>QWidget</extends>
-   <header>canvas</header>
+   <header>ui.canvas</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
