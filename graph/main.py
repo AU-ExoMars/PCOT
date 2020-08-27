@@ -36,10 +36,13 @@ class MainUI(ui.tabs.DockableTabWindow):
         
         # create a dummy graph
         self.graph=xform.XFormGraph()
+#        source = self.graph.create("source")
+#        sink = self.graph.create("sink")
+#        sink.connect(0,source,0)
+
         source = self.graph.create("source")
-        sink = self.graph.create("sink")
-        
-        sink.connect(0,source,0)
+        curve = self.graph.create("curve")
+        curve.connect(0,source,0)
         
         # and view it - this will also link to the view, which the scene needs
         # to know about so it can modify its drag mode.
