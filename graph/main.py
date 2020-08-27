@@ -36,16 +36,10 @@ class MainUI(ui.tabs.DockableTabWindow):
         
         # create a dummy graph
         self.graph=xform.XFormGraph()
-        split = self.graph.create("split")
-        merge = self.graph.create("merge")
         source = self.graph.create("source")
         sink = self.graph.create("sink")
         
-        split.connect(0,source,0)
-        merge.connect(0,split,0)
-        merge.connect(1,split,1)
-        merge.connect(2,split,2)
-        sink.connect(0,merge,0)
+        sink.connect(0,source,0)
         
         # and view it - this will also link to the view, which the scene needs
         # to know about so it can modify its drag mode.
@@ -62,6 +56,16 @@ class MainUI(ui.tabs.DockableTabWindow):
         # pull that tab to the front
         self.tabWidget.setCurrentWidget(node.tab)
     
+    # tab changed (this is connected up in the superclass)
+    def currentChanged(self,index): # index is ignored
+        if self.tabWidget.currentWidget() is None:
+            # we've expanded or closed all widgets
+            w = None
+        else:
+            w = self.tabWidget.currentWidget().node
+        self.scene.currentChanged(w)
+            
+        
         
 
 app = QtWidgets.QApplication(sys.argv) 

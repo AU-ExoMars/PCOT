@@ -26,6 +26,8 @@ class DockableTabWindow(QtWidgets.QMainWindow):
         self.tabWidget.tabBar().tabBarDoubleClicked.connect(self.undock)
         # and the close for a tab
         self.tabWidget.tabBar().tabCloseRequested.connect(self.closeTab)
+        # and when we switch tab
+        self.tabWidget.currentChanged.connect(self.currentChanged)
 
         # store the tabs in an ordered dict, so we can iterate them in create order
         # when we reorder tabs in redocking.                
@@ -83,6 +85,12 @@ class ExpandedTab(QtWidgets.QMainWindow):
         idx = self.mainui.tabWidget.indexOf(self.tab)
         self.mainui.tabWidget.setCurrentIndex(idx)
         event.accept()
+
+    # window got focus
+    def changeEvent(self,event):
+        if event.type() == QtCore.QEvent.ActivationChange:
+            if self.isActiveWindow():
+                self.mainui.scene.currentChanged(self.tab.node)
     
 
 # A  tab to be loaded. We subclass this.

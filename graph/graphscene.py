@@ -205,10 +205,10 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         self.mainWindow = mainWindow
         self.graph = mainWindow.graph
         self.view = mainWindow.view
-        self.selectionChanged.connect(self.rubberBandSelChanged)
+        self.selectionChanged.connect(self.selChanged)
         self.prevDragMode = self.view.dragMode()
         self.selection=[]
-        self.checkRubberBandChange=True
+        self.checkSelChange=True
         # place everything, adding xy,w,h to all nodes
         self.place()
         # and make all the graphics
@@ -261,18 +261,20 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
     def rebuild(self):
         # this will (obv.) change the rubberband selection, so you might get a crash
         # if you do this with live objects; we clear the selection to avoid this
-        self.checkRubberBandChange=False
+        self.checkSelChange=False
         self.clearSelection() 
         self.clear() 
-        self.checkRubberBandChange=True
+        self.checkSelChange=True
         # create the graphics items
         for n in self.graph.nodes:
             # makes the graphics for the node
             self.makeNodeGraphics(n)
+            # no tab to front by default
         # and make the arrows
         self.arrows=[]
         self.draggingArrow=None
         self.rebuildArrows()
+        self.selChanged()
     
     # return a good position for a new item placed with no hint to where it should go    
     def getNewPosition(self):
@@ -356,21 +358,33 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 xx += size
 
     # handle selection by changing the colour of the main rect of the selected item
-    # and building the selection list of nodes.
-    def rubberBandSelChanged(self):
-        if self.checkRubberBandChange:
-            unselCol = Qt.white
-            selCol = QColor(200,200,255)
+    # and building the selection list of nodes. Now this is a bit complex because 
+    # there are two selections - the selected items in the view (selected by clicking
+    # and rubberband) and the currently shown tab.
+    def selChanged(self):
+        if self.checkSelChange:
             items = self.selectedItems()
             self.selection=[]
             for n in self.graph.nodes:
+                r = 255
+                g = 255
+                b = 255
                 if n.rect in items:
                     self.selection.append(n)
-                    c = selCol
-                else:
-                    c = unselCol
-                n.rect.setBrush(c)
+                    r-= 50
+                    g-= 50
+                if n.current:
+                    r-= 50
+                    b-= 50
+                n.rect.setBrush(QColor(r,g,b))
             self.update()
+            
+    # current tab has changed, set up the UI accordingly. May be passed None if all tabs
+    # are closed!
+    def currentChanged(self,node):
+        for n in self.graph.nodes:
+            n.current = n is node
+        self.selChanged()
 
     # start dragging an arrow - draggingArrowStart indicates whether we are
     # dragging the head (false) or tail (true). The event is the event which

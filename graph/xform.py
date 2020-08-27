@@ -76,14 +76,18 @@ class XForm:
         # there is also a data output generated for each output by "perform", initially
         # these are None
         self.outputs = [None for x in type.outputConnectors]
+        self.comment = "" # nodes can have comments
+        # this may have to be disambiguated
+        self.name = type.name
+        
+        # UI-DEPENDENT STUFF DOWN HERE
+        
         # on-screen geometry, which should be set before we try to draw it
         self.xy = (0,0)
         self.w = None # unset, will be set on draw
         self.h = None
         self.tab = None # no tab open
-        self.comment = "" # nodes can have comments
-        # this may have to be disambiguated
-        self.name = type.name
+        self.current = False
         
     def dump(self):
         print("---DUMP of {}, geom {},{},{}x{}".format(self.type.name,
@@ -167,6 +171,7 @@ class XForm:
         else:
             n,i = self.inputs[i]
             return n.outputs[i]
+            
 
 # a graph of transformation nodes
 class XFormGraph:
@@ -193,3 +198,4 @@ class XFormGraph:
     def dump(self):
         for n in self.nodes:
             n.dump()
+
