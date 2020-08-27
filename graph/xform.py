@@ -14,8 +14,10 @@ class singleton:
         
     def __call__(self):
         return self._instance
-    
-        
+
+# given two type names, is the output type compatible with the
+# input type?
+
 class XFormType():
     def __init__(self,name):
         self.name = name
@@ -200,7 +202,7 @@ class XFormGraph:
             self.nodes.append(xform)
             type.init(xform)
         else:
-            raise Exception("Transformation type not found: "+type)
+            raise Exception("Transformation type not found: "+typename)
         return xform
         
     def remove(self,node):

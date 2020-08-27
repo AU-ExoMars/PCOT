@@ -1,3 +1,17 @@
+Really stuck with how to do "polymorphic" transforms. Consider a transform
+which can take grey or RGB images, and then outputs a grey or RGB image.
+That output's connection type depends on what it's doing as it runs, making
+it hard to know what it can connect to.
+Or does it? It's actually determined when the xform is wired up - 
+some components change their output type depending on what their input
+type is (or, perhaps, other things).
+
+So perhaps input and output type should not be properties of the xformtype
+but of the xform itself? Something to think about.
+
+For now, there's a demonstration of a hack in curve, which produces two
+different xforms in the palette.
+
 Optimisation: at the moment, setting an output causes a perform.
 This means that (say) split, which sets three outputs, causes merge
 to perform three times. It doesn't need to.

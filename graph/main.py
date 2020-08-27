@@ -41,7 +41,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 #        sink.connect(0,source,0)
 
         source = self.graph.create("source")
-        curve = self.graph.create("curve")
+        curve = self.graph.create("curveRGB")
         curve.connect(0,source,0)
         
         # and view it - this will also link to the view, which the scene needs

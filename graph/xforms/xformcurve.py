@@ -12,17 +12,6 @@ NUMPOINTS=100
 # x-coords of table
 lutxcoords = np.linspace(0,255,NUMPOINTS)
 
-def contrast(img,tol):
-    B = img.astype(np.float)
-    for b in range(3):
-            # find lower and upper limit for contrast stretching
-        low, high = np.percentile(B[:,:,b], 100*tol), np.percentile(B[:,:,b], 100-100*tol)
-        B[B<low] = low
-        B[B>high] = high
-        # ...rescale the color values to 0..255
-        B[:,:,b] = 255 * (B[:,:,b] - B[:,:,b].min())/(B[:,:,b].max() - B[:,:,b].min())
-    return B.astype(np.uint8)
-
 class TabCurve(ui.tabs.Tab):
     def __init__(self,mainui,node):
         super().__init__(mainui,node,'assets/tabcurve.ui') # same UI as sink
@@ -65,12 +54,11 @@ class TabCurve(ui.tabs.Tab):
         self.canvas.display(self.node.img)
 
 
-@singleton
-class XformContrast(XFormType):
-    def __init__(self):
-        super().__init__("curve")
-        self.addInputConnector("in","imggrey")
-        self.addOutputConnector("out","imggrey")
+class XformCurveBase(XFormType):
+    def __init__(self,name,conntype):
+        super().__init__(name)
+        self.addInputConnector("in",conntype)
+        self.addOutputConnector("out",conntype)
         
     def createTab(self,mainui,n):
         return TabCurve(mainui,n)
@@ -96,3 +84,16 @@ class XformContrast(XFormType):
             print(node.img.shape)
 
         node.setOutput(0,node.img)
+
+
+@singleton
+class XformCurveRGB(XformCurveBase):
+    def __init__(self):
+        super().__init__('curveRGB','img888')
+
+@singleton
+class XformCurveGrey(XformCurveBase):
+    def __init__(self):
+        super().__init__('curvegrey','imggrey')
+        
+
