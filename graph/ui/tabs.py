@@ -1,4 +1,5 @@
-from PyQt5 import QtWidgets,uic
+from PyQt5 import QtWidgets,uic,QtCore
+from PyQt5.QtCore import Qt
 import collections
 
 # the main UI window class. Your application window should inherit from
@@ -84,8 +85,7 @@ class ExpandedTab(QtWidgets.QMainWindow):
         event.accept()
     
 
-# A  tab to be loaded. Note that this is a subclass of QWidget,
-# not QMainWindow. We subclass this.
+# A  tab to be loaded. We subclass this.
 
 class Tab(QtWidgets.QWidget):
     # this safely gets a widget reference
@@ -94,22 +94,56 @@ class Tab(QtWidgets.QWidget):
         if x is None:
             raise Exception('cannot find widget '+name)
         return x
+        
+    # the comment field changed, set the data in the node.
+    def commentChanged(self):
+        self.node.comment = self.comment.toPlainText().strip()
     
     def __init__(self,mainui,node,uifile):
         super(Tab,self).__init__()
         self.title=node.name
         self.expanded=None
         self.node=node
-        
 
-        # load the UI file
-        uic.loadUi(uifile,self)
-        # add the widget to the tab, keeping the index at which it was created
+        # set the entire tab to be a vertical layout (just there to contain
+        # everything, could be any layout)
+        lay = QtWidgets.QVBoxLayout()
+        self.setLayout(lay)
+
+        # create a splitter inside the tab and add both the main widget
+        # and the comment field to it
+        splitter = QtWidgets.QSplitter()
+        splitter.setOrientation(Qt.Vertical)
+        lay.addWidget(splitter)
+        mainwidg = QtWidgets.QWidget()
+        splitter.addWidget(mainwidg)
+        self.comment = QtWidgets.QTextEdit()
+        self.comment.setPlaceholderText("add a comment on this transformation here")
+        self.comment.setMinimumHeight(20)
+        self.comment.setMaximumHeight(150)
+        splitter.addWidget(self.comment)
+        self.comment.textChanged.connect(self.commentChanged)
+
+        # load the UI file into the main widget
+        uic.loadUi(uifile,mainwidg)
+        # add the containing widget (self) to the tabs,
+        # keeping the index at which it was created
         self.idx=mainui.tabWidget.addTab(self,self.title)
         # set the tab's entry in the main UI's dictionary
         mainui.tabs[self.title]=self
         # store a ref to the main UI.
         self.mainui = mainui
+        
+        # resize the splitter based on the existing sizes;
+        # have to show the widgets first - sizes() returns
+        # zero for invisible widgets
+        mainwidg.show()
+        self.comment.show()
+        splitter.show()
+        self.show()
+        total = sum(splitter.sizes())
+
+        splitter.setSizes([total*0.9,total*0.1])
         
     # write this in implementations - updates the tab when the node's data has changed
     def onNodeChanged():

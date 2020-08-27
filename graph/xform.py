@@ -81,6 +81,7 @@ class XForm:
         self.w = None # unset, will be set on draw
         self.h = None
         self.tab = None # no tab open
+        self.comment = "" # nodes can have comments
         # this may have to be disambiguated
         self.name = type.name
         
