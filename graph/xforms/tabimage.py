@@ -1,5 +1,4 @@
 import ui.tabs,ui.canvas
-from xforms.xform import singleton,XFormType
 
 # this is a tab type for transforms which just display an image. They
 # have one datum - "img" - in the node.

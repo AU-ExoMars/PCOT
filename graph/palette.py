@@ -1,6 +1,6 @@
 from PyQt5 import QtWidgets, uic, QtCore, QtGui
 from PyQt5.QtCore import Qt
-from xforms.xform import XFormType
+from xform import XFormType
 
 view = None
 

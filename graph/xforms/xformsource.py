@@ -6,7 +6,7 @@ import cv2 as cv
 import numpy as np
 
 import ui.tabs,ui.canvas
-from xforms.xform import singleton,XFormType
+from xform import singleton,XFormType
 
 class TabSource(ui.tabs.Tab):
     def __init__(self,mainui,node):

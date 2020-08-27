@@ -5,7 +5,7 @@ import cv2 as cv
 import numpy as np
 
 import ui.tabs,ui.canvas
-from xforms.xform import singleton,XFormType
+from xform import singleton,XFormType
 
 def contrast(img,tol):
     B = img.astype(np.float)

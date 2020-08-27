@@ -3,17 +3,11 @@ from PyQt5.QtCore import Qt
 import sys
 
 import ui.tabs
-import xforms.xform
-from xforms.xform import singleton,XFormType
+import xform
 import graphview,palette,graphscene
 
-# transform types
-import xforms.xformsource
-import xforms.xformsink
-import xforms.xformsplit
-import xforms.xformmerge
-import xforms.xformcontrast
-import xforms.xformhist
+# import all transform types (see the __init__.py there)
+from xforms import *
 
 class MainUI(ui.tabs.DockableTabWindow):
     def getUI(self,type,name):
@@ -41,7 +35,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
         
         # create a dummy graph
-        self.graph=xforms.xform.XFormGraph()
+        self.graph=xform.XFormGraph()
         split = self.graph.create("split")
         merge = self.graph.create("merge")
         source = self.graph.create("source")

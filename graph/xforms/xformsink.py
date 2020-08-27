@@ -2,8 +2,8 @@ import cv2 as cv
 import numpy as np
 
 import ui.tabs,ui.canvas
-from xforms.xform import singleton,XFormType
-from xforms.xformimage import TabImage
+from xform import singleton,XFormType
+from xforms.tabimage import TabImage
 
 @singleton
 class XformSink(XFormType):
