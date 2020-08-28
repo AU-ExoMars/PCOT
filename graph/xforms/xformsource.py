@@ -8,16 +8,27 @@ import numpy as np
 import ui.tabs,ui.canvas
 from xform import singleton,XFormType
 
+
+sn=0
+def snark():
+    global sn
+    print(sn)
+    sn+=1
+    
+
 class TabSource(ui.tabs.Tab):
     def __init__(self,mainui,node):
         super().__init__(mainui,node,'assets/tabsource.ui')
         # set up the file tree
         self.dirModel = QFileSystemModel()
-        self.dirModel.setRootPath(QDir.currentPath())
+        self.dirModel.setRootPath("/")
         self.dirModel.setNameFilters(["*.jpg","*.png"])
+        self.dirModel.setNameFilterDisables(False)
         tree = self.getUI(QtWidgets.QTreeView,'treeView')
         tree.setModel(self.dirModel)
-        tree.setRootIndex(self.dirModel.index(QDir.currentPath()))
+
+        idx = self.dirModel.index(QDir.currentPath())
+        tree.selectionModel().select(idx,QtCore.QItemSelectionModel.Select)
         tree.setIndentation(10)
         tree.setSortingEnabled(True)
         tree.setColumnWidth(0, tree.width() / 1.5)
@@ -26,6 +37,7 @@ class TabSource(ui.tabs.Tab):
         tree.doubleClicked.connect(self.fileClickedAction)
         self.treeView=tree
         self.canvas = self.getUI(ui.canvas.Canvas,'canvas')
+        tree.scrollTo(idx)
         # sync tab with node
         self.onNodeChanged()
 
