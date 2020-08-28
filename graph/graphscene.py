@@ -1,8 +1,15 @@
 #
 # How to draw XFormGraph and its nodes
 
-from grandalf.layouts import SugiyamaLayout,VertexViewer
-from grandalf.graphs import *
+try:
+    # we might have grandalf, but probably not.
+    from grandalf.layouts import SugiyamaLayout,VertexViewer
+    from grandalf.graphs import *
+    hasGrandalf=True
+except ImportError:
+    hasGrandalf=False
+
+print(hasGrandalf)    
 
 from PyQt5 import QtWidgets, uic, QtGui, QtCore
 from PyQt5.QtCore import Qt,QPointF
@@ -240,7 +247,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
     # the edge connections (inputs and outputs) together but we can
     # deal with that at render time.
     
-    def place(self):
+    def placeGrandalf(self):
         g = Graph() # grandalf graph, not one of ours!
         # add the vertices
         for n in self.graph.nodes:
@@ -272,6 +279,20 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             n.w = n.vert.view.w
             n.h = n.vert.view.h
             n.xy = (x,cy-y)
+    
+    def place(self):
+        if hasGrandalf:
+            self.placeGrandalf()
+        else:
+            x = 0
+            y = 0
+            # this is what we do if we don't have Grandalf
+            for n in self.graph.nodes:
+                n.w = NODEWIDTH
+                n.h = NODEHEIGHT+YPADDING
+                n.xy = (x,y)
+                y+=n.h+20
+            
             
     # rebuild the entire scene from the graph
     def rebuild(self):
