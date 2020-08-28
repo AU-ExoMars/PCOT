@@ -53,7 +53,11 @@ def setup(scrollArea,scrollAreaContent,view):
     layout = QtWidgets.QVBoxLayout()
     scrollAreaContent.setLayout(layout)
     buttons=[]
-    for k,v in XFormType.all().items():
+    # we want the keys in sorted order
+    all = XFormType.all()
+    ks = sorted(all.keys())
+    for k in ks:
+        v = all[k]
         b = PaletteButton(k,view)
         layout.addWidget(b)
         buttons.append(b)

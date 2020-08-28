@@ -15,36 +15,42 @@ class singleton:
     def __call__(self):
         return self._instance
 
-# given two type names, is the output type compatible with the
-# input type?
-
 class XFormType():
     def __init__(self,name):
         self.name = name
         # add to the global dictionary
         if name in allTypes:
             raise Exception("xform type name already in use: "+name)
+        # register the type
         allTypes[name]=self
-        # these contain tuples of (name,typename). Images have typenames which
+        # number of nodes of this type
+        self.count=0
+        # this contains tuples of (name,typename). Images have typenames which
         # start with "img"
-        self.outputConnectors = []
         self.inputConnectors = []
+        # this has the same format, but here the output type
+        # is the default type for that connection - when an xform is wired up
+        # it may override this type. This means that when we wire up an
+        # xform, a complicated little dance has to be done to determine the
+        # actual output type and then disconnect any connections which are
+        # no longer compatible.
+        self.outputConnectors = []
 
     def addInputConnector(self,name,typename):
         self.inputConnectors.append( (name,typename) )
     def addOutputConnector(self,name,typename):
         self.outputConnectors.append( (name,typename) )
         
-    def getInputType(self,i):
-        if i>=0 and i<len(self.inputConnectors):
-            return self.inputConnectors[i][1]
-        else:
-            return None
-    def getOutputType(self,i):
-        if i>=0 and i<len(self.outputConnectors):
-            return self.outputConnectors[i][1]
-        else:
-            return None
+    # this is overriden if a node might change its output type depending on its
+    # input types. It's called when an input connection is made or broken, and is followed
+    # by a check on existing connections to those outputs which may then be broken if 
+    # they are no longer compatible. It's called by XFormGraph.inputChanged(node).
+    #
+    # DO NOT modify the output type directly, use changeOutputType in the node. This
+    # will tell the on-screen connector rect to update its brush. See xforms/xformcurve for
+    # an example.
+    def generateOutputTypes(self,node):
+        pass
         
     def all():
         return allTypes
@@ -78,11 +84,15 @@ class XForm:
         # there is also a data output generated for each output by "perform", initially
         # these are None
         self.outputs = [None for x in type.outputConnectors]
+        # these are the overriding output types; none if we use the default
+        # given by the type object (see the comment on outputConnectors
+        # in XFormType)
+        self.outputTypes = [None for x in type.outputConnectors]
         self.comment = "" # nodes can have comments
         # set the unique name
         self.name = name
         
-        # UI-DEPENDENT STUFF DOWN HERE
+        # UI-DEPENDENT DATA DOWN HERE - this stuff shouldn't be serialized
         
         # on-screen geometry, which should be set before we try to draw it
         self.xy = (0,0)
@@ -90,7 +100,44 @@ class XForm:
         self.h = None
         self.tab = None # no tab open
         self.current = False
+        self.rect = None # the main GMainRect rectangle
+        self.inrects = [None for x in self.inputs] # input connector GConnectRects
+        self.outrects = [None for x in self.outputs] # output connector GConnectRects
         
+    def getInputType(self,i):
+        if i>=0 and i<len(self.inputs):
+            return self.type.inputConnectors[i][1]
+        else:
+            return None
+        
+    def getOutputType(self,i):
+        if i>=0 and i<len(self.outputs):
+            if self.outputTypes[i] is None:
+                return self.type.outputConnectors[i][1]
+            else:
+                return self.outputTypes[i]
+                
+    # this should be used to change an output type is generateOutputTypes
+    def changeOutputType(self,index,type):
+        self.outputTypes[index]=type
+        if self.outrects[index] is not None:
+            self.outrects[index].typeChanged()
+        
+    # this can be used in XFormType's generateOutputTypes if the polymorphism
+    # is simply that some outputs should match the types of some inputs. The
+    # input is a list of (out,in) tuples. Typical usage for a node with a single
+    # input and output is matchOutputsToInputs([(0,0)])
+    def matchOutputsToInputs(self,pairs):
+        # reset all types
+        self.outputTypes = [None for x in self.type.outputConnectors]
+        for o,i in pairs:
+            if self.inputs[i] is not None:
+                parent,pout = self.inputs[i]
+                # the output type should be the same as the actual input (which is the
+                # type of the output connected to that input)
+                self.changeOutputType(o,parent.getOutputType(pout))
+                self.outrects[o].typeChanged()
+    
     def dump(self):
         print("---DUMP of {}, geom {},{},{}x{}".format(self.type.name,
             self.xy[0],self.xy[1],self.w,self.h))
@@ -104,7 +151,8 @@ class XForm:
         for k,v in self.children.items():
             print("    {} ({} connections)".format(k.name,v))
 
-    # connect an input to an output on another xform
+    # connect an input to an output on another xform. Note that this doesn't
+    # check compatibility; that's done in the UI.
     def connect(self,input,other,output):
         if input>=0 and input<len(self.inputs) and self is not other:
             if output>=0 and output<len(other.type.outputConnectors):
@@ -173,31 +221,29 @@ class XForm:
         else:
             n,i = self.inputs[i]
             return n.outputs[i]
-            
+        
+# are two connectors compatible?
+def isCompatibleConnection(outtype,intype):
+    # image inputs accept all images
+    if intype == 'img':
+        return 'img' in outtype 
+    else:
+        # otherwise has to match exactly
+        return outtype==intype    
 
 # a graph of transformation nodes
 class XFormGraph:
     def __init__(self):
         # all the nodes
         self.nodes = []
-        self.nodeCountsByType={}
-        
-    def incNodeCountAndGet(self,type):
-        if type in self.nodeCountsByType:
-            val=self.nodeCountsByType[type]
-        else:
-            val=0
-        val+=1
-        self.nodeCountsByType[type]=val
-        return val
-        
-
+    
     # create a new node, passing in a type name.
     def create(self,typename):
         if typename in allTypes:
             type = allTypes[typename]
-            # disambiguate node names
-            count = self.incNodeCountAndGet(type)
+            # disambiguate node names using the count
+            count = type.count
+            type.count+=1
             xform = XForm(type,"{} {}".format(typename,count))
             self.nodes.append(xform)
             type.init(xform)
@@ -209,8 +255,32 @@ class XFormGraph:
         node.disconnectAll()
         self.nodes.remove(node)
         
-
     def dump(self):
         for n in self.nodes:
             n.dump()
+    
 
+    # a node's input has changed, which may change the output types. If it does,
+    # we need to check the output connections to see if they are still compatible.
+    def inputChanged(self,node):
+        # rebuild the types, perhaps replacing None (use the type default) with
+        # a type name
+        node.type.generateOutputTypes(node)
+        print("INPUTCHANGE on {}".format(node.type.name))
+        # now check the children for nodes which connect to this one
+        toDisconnect=[]
+        for child in node.children:
+            print(child.name)
+            for i in range(0,len(child.inputs)):
+                if child.inputs[i] is not None:
+                    parent,out = child.inputs[i]
+                    print("Parent is {}, node is {}".format(parent.name,node.name))
+                    if parent is node:
+                        outtype = node.getOutputType(out)
+                        intype = child.getInputType(i)
+                        print("{}/{} -> {}/{}".format(parent.name,
+                            out,child.name,i))
+                        if not isCompatibleConnection(outtype,intype):
+                            toDisconnect.append((child,i))
+        for child,i in toDisconnect:
+            child.disconnect(i)

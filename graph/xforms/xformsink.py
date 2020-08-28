@@ -10,7 +10,7 @@ class XformSink(XFormType):
     def __init__(self):
         super().__init__("sink")
         ## our connectors
-        self.addInputConnector("rgb","img888")
+        self.addInputConnector("","img")
     def createTab(self,mainui,n):
         return TabImage(mainui,n)
 

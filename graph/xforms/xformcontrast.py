@@ -7,16 +7,19 @@ import numpy as np
 import ui.tabs,ui.canvas
 from xform import singleton,XFormType
 
-def contrast(img,tol):
+def contrast1(img,tol):
     B = img.astype(np.float)
-    for b in range(3):
-            # find lower and upper limit for contrast stretching
-        low, high = np.percentile(B[:,:,b], 100*tol), np.percentile(B[:,:,b], 100-100*tol)
-        B[B<low] = low
-        B[B>high] = high
-        # ...rescale the color values to 0..255
-        B[:,:,b] = 255 * (B[:,:,b] - B[:,:,b].min())/(B[:,:,b].max() - B[:,:,b].min())
+    # find lower and upper limit for contrast stretching
+    low, high = np.percentile(B, 100*tol), np.percentile(B, 100-100*tol)
+    B[B<low] = low
+    B[B>high] = high
+    # ...rescale the color values to 0..255
+    B = 255 * (B - B.min())/(B.max() - B.min())
     return B.astype(np.uint8)
+
+def contrast(img,tol):
+    return cv.merge([contrast1(x,tol) for x in cv.split(img)])
+    
 
 class TabContrast(ui.tabs.Tab):
     def __init__(self,mainui,node):
@@ -42,12 +45,15 @@ class TabContrast(ui.tabs.Tab):
 class XformContrast(XFormType):
     def __init__(self):
         super().__init__("contrast stretch")
-        self.addInputConnector("rgb","img888")
-        self.addOutputConnector("rgb","img888")
+        self.addInputConnector("","img")
+        self.addOutputConnector("","img")
         
     def createTab(self,mainui,n):
         return TabContrast(mainui,n)
         
+    def generateOutputTypes(self,node):
+        node.matchOutputsToInputs([(0,0)])
+
     def init(self,node):
         node.img = None
         node.tol = 0.2
@@ -57,5 +63,8 @@ class XformContrast(XFormType):
         if img is None:
             node.img = None
         else:
-            node.img = contrast(img,node.tol)
+            if len(img.shape)==3:
+                node.img = contrast(img,node.tol)
+            else:
+                node.img = contrast1(img,node.tol)
         node.setOutput(0,node.img)

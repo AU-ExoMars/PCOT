@@ -34,16 +34,10 @@ class MainUI(ui.tabs.DockableTabWindow):
         palette.setup(scrollArea,scrollAreaContent,self.view)
 
         
-        # create a dummy graph
+        # create a dummy graph with just a source
         self.graph=xform.XFormGraph()
-#        source = self.graph.create("source")
-#        sink = self.graph.create("sink")
-#        sink.connect(0,source,0)
-
         source = self.graph.create("source")
-        curve = self.graph.create("curveRGB")
-        curve.connect(0,source,0)
-        
+
         # and view it - this will also link to the view, which the scene needs
         # to know about so it can modify its drag mode.
         self.autoLayout() # builds the scene

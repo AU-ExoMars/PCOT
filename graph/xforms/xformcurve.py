@@ -54,27 +54,34 @@ class TabCurve(ui.tabs.Tab):
         self.canvas.display(self.node.img)
 
 
-class XformCurveBase(XFormType):
-    def __init__(self,name,conntype):
-        super().__init__(name)
-        self.addInputConnector("in",conntype)
-        self.addOutputConnector("out",conntype)
+@singleton
+class XformCurve(XFormType):
+    def __init__(self):
+        super().__init__("curve")
+        self.addInputConnector("","img") # accept any image
+        self.addOutputConnector("","img") # produce any image, but will change on input connect
         
     def createTab(self,mainui,n):
         return TabCurve(mainui,n)
         
+    def genLut(self,node):
+        # generate the LUT
+        xb = (node.mul*(lutxcoords-127)+node.add)/255
+        node.lut = (255/(1+np.exp(-xb))).astype(np.ubyte)
+
+    # this xform can take different image types, but doing so changes
+    # the output types, overriding the generic one given in the constructor.
+    # This is called to make that happen if an input type (i.e. the type of the
+    # output connected to the input) changes.
+    def generateOutputTypes(self,node):
+        node.matchOutputsToInputs([(0,0)])
+    
     def init(self,node):
         node.img = None
         node.add = 0
         node.mul = 1
         self.genLut(node)
         
-    def genLut(self,node):
-        # generate the LUT
-        xb = (node.mul*(lutxcoords-127)+node.add)/255
-        node.lut = (255/(1+np.exp(-xb))).astype(np.ubyte)
-    
-
     def perform(self,node):
         img = node.getInput(0)
         if img is None:
@@ -85,15 +92,4 @@ class XformCurveBase(XFormType):
 
         node.setOutput(0,node.img)
 
-
-@singleton
-class XformCurveRGB(XformCurveBase):
-    def __init__(self):
-        super().__init__('curveRGB','img888')
-
-@singleton
-class XformCurveGrey(XformCurveBase):
-    def __init__(self):
-        super().__init__('curvegrey','imggrey')
-        
 

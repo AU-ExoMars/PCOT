@@ -10,6 +10,7 @@ from PyQt5.QtGui import QColor,QBrush,QLinearGradient,QFont,QTransform
 
 import math
 
+import xform
 
 connectorFont = QFont()
 #connectorFont.setStyleHint(QFont.SansSerif)
@@ -46,6 +47,7 @@ grad.setColorAt(1,QColor(50,50,50))
 
 brushDict['img888']=grad
 brushDict['imggrey']=Qt.gray
+brushDict['img']=Qt.blue
 
 # convert all brushes to actual QBrush objects
 brushDict = { k:QBrush(v) for k,v in brushDict.items()}
@@ -55,11 +57,16 @@ def getBrush(typename):
     if typename in brushDict:
         return brushDict[typename]
     else:
-        return Qt.magenta
+        print("Unknown type ",typename)
+        return QBrush(Qt.magenta)
+
+
+
         
 
 # basic shapes with extra data attached so we can get the node
 
+# core rectangle
 class GMainRect(QtWidgets.QGraphicsRectItem):
     def __init__(self,x1,y1,x2,y2,node):
         self.offsetx = 0 # these are the distances from our original pos.
@@ -91,21 +98,28 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
     def mouseDoubleClickEvent(self,event):
         self.scene().mainWindow.openTab(self.node)
 
+# connection rectangles at top and bottom
 class GConnectRect(QtWidgets.QGraphicsRectItem):
     def __init__(self,parent,x1,y1,x2,y2,node,isInput,index):
         super().__init__(x1,y1,x2,y2,parent=parent)
         self.isInput = isInput
-        if isInput:
+        self.index = index
+        self.node=node
+        self.name = self.typeChanged()
+        
+    def typeChanged(self):
+        index=self.index
+        node=self.node
+        if self.isInput:
             name,typename = node.type.inputConnectors[index]
         else:
-            name,typename = node.type.outputConnectors[index]
+            name,typename = (node.type.outputConnectors[index][0],node.getOutputType(index))
         brush = getBrush(typename)
-        t = QTransform().translate(x1,0) # need to translate brush patterns
+        t = QTransform().translate(self.rect().x(),0) # need to translate brush patterns
         brush.setTransform(t)
         self.setBrush(brush)
-        self.index = index
-        self.name = name
-        self.node=node
+        return name
+        
 
     # in the mouse press, we detect a click on the connection box.
     # We match that to a connection arrow (which contains all the details)
@@ -146,6 +160,7 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
         return super().mousePressEvent(event)
 
         
+# text in middle of main rect and on connections
 class GText(QtWidgets.QGraphicsSimpleTextItem):
     def __init__(self,parent,s,node):
         super().__init__(s,parent=parent)
@@ -342,6 +357,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 text.setPos(xx+CONNECTORTEXTXOFF,y+INCONNECTORTEXTYOFF)
                 text.setFont(connectorFont)
                 text.setZValue(1)
+                n.inrects[i]=r
                 xx += size
         nouts = len(n.type.outputConnectors)
         if nouts>0:
@@ -355,6 +371,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 text.setPos(xx+CONNECTORTEXTXOFF,yy+OUTCONNECTORTEXTYOFF)
                 text.setFont(connectorFont)
                 text.setZValue(1)
+                n.outrects[i]=r
                 xx += size
 
     # handle selection by changing the colour of the main rect of the selected item
@@ -424,6 +441,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 if self.draggingArrow.n2 is not None: # if a connection exists and we are removing it
                     # remove the connection in the model
                     self.draggingArrow.n2.disconnect(self.draggingArrow.input)
+                    self.graph.inputChanged(self.draggingArrow.n2)
             else:
                 conn = x[0] # this is the GConnectRect we are connecting to/from
 
@@ -443,14 +461,15 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     output = self.draggingArrow.output
                     
                 # are they compatible?
-                outtype = n1.type.getOutputType(output)
-                intype = n2.type.getInputType(input)
+                outtype = n1.getOutputType(output)
+                intype = n2.getInputType(input)
                 
-                if outtype == intype:
+                if xform.isCompatibleConnection(outtype,intype):
                     # remove existing connections at the connector we are dragging to
                     # if it is an input
                     if conn.isInput:
                         conn.node.disconnect(conn.index)
+                        self.graph.inputChanged(conn.node)
                     # We are dragging the connection to a new place.
                     # is it an existing connection we are modifying?
                     # The case where it's a fresh output being dragged to an input
@@ -458,7 +477,9 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     if self.draggingArrow.n2 is not None:
                         # disconnect the existing connection
                         self.draggingArrow.n2.disconnect(self.draggingArrow.input)
+                        self.graph.inputChanged(self.draggingArrow.n2)
                     n2.connect(input,n1,output)
+                    self.graph.inputChanged(n2)
                 else:
                     print("incompatible types {} -> {}".format(outtype,intype))
             self.rebuildArrows()
