@@ -48,6 +48,7 @@ grad.setColorAt(1,QColor(50,50,50))
 brushDict['img888']=grad
 brushDict['imggrey']=Qt.gray
 brushDict['img']=Qt.blue
+brushDict['ellipse']=Qt.cyan
 
 # convert all brushes to actual QBrush objects
 brushDict = { k:QBrush(v) for k,v in brushDict.items()}
