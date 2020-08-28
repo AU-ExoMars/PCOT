@@ -253,6 +253,8 @@ class XFormGraph:
         
     def remove(self,node):
         node.disconnectAll()
+        if node.tab is not None:
+            node.tab.nodeDeleted()
         self.nodes.remove(node)
         
     def dump(self):

@@ -85,7 +85,7 @@ class ExpandedTab(QtWidgets.QMainWindow):
         idx = self.mainui.tabWidget.indexOf(self.tab)
         self.mainui.tabWidget.setCurrentIndex(idx)
         event.accept()
-
+        
     # window got focus. Tell the scene.
     def changeEvent(self,event):
         if event.type() == QtCore.QEvent.ActivationChange:
@@ -152,6 +152,15 @@ class Tab(QtWidgets.QWidget):
         total = sum(splitter.sizes())
 
         splitter.setSizes([total*0.9,total*0.1])
+        
+    def nodeDeleted(self):
+        if self.expanded:
+            self.expanded.close()
+            self.expanded=None
+        idx = self.mainui.tabWidget.indexOf(self)
+        self.mainui.tabWidget.removeTab(idx)
+        self.node.tab=None
+
         
     # write this in implementations - updates the tab when the node's data has changed
     def onNodeChanged():
