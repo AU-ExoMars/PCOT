@@ -37,6 +37,15 @@ class XFormType():
         # actual output type and then disconnect any connections which are
         # no longer compatible.
         self.outputConnectors = []
+        # The type may create additional attributes in the xform, which
+        # can be listed here for automatic serialisation and deserialisation;
+        # they must be simple Python data. This happens in addition to, and
+        # before, the serialise() and deserialise() methods.
+        self.autoserialise=() # tuple or list of attribute names
+        
+    def doAutoserialise(self,node):
+        return {name:node.__dict__[name] for name in self.autoserialise}
+        
 
     def addInputConnector(self,name,typename):
         self.inputConnectors.append( (name,typename) )
@@ -66,11 +75,13 @@ class XFormType():
     def init(self,xform):
         pass
         
-    # return a dict of all values belonging to the node which should be saved
+    # return a dict of all values belonging to the node which should be saved.
+    # This happens in addition to autoserialisation/deserialisation
     def serialise(self,xform):
         pass
     
     # given a dictionary, set the values in the node from the dictionary    
+    # This happens in addition to autoserialisation/deserialisation
     def deserialise(self,xform,d):
         pass
         
@@ -130,8 +141,12 @@ class XForm:
         d['ins'] = [serialiseConn(c) for c in self.inputs]
         d['comment'] = self.comment
         d['outputTypes'] = self.outputTypes
-        # and the values which come from the type
-        d.update(self.type.serialise(self))
+        # add autoserialised data
+        d.update(self.type.doAutoserialise(self))
+        # and run the additional serialisation method
+        d2 = self.type.serialise(self)
+        if d2 is not None:
+            d.update(d2)
         return d
                 
         
@@ -322,6 +337,7 @@ class XFormGraph:
         d = {}
         for n in self.nodes:
             d[n.name] = n.serialise()
-        print(d)
+        with open('test.json','w') as f:
+            json.dump(d,f)
 
 

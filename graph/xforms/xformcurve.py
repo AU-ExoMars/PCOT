@@ -56,6 +56,7 @@ class XformCurve(XFormType):
         super().__init__("curve")
         self.addInputConnector("","img") # accept any image
         self.addOutputConnector("","img") # produce any image, but will change on input connect
+        self.autoserialise=('add','mul')
         
     def createTab(self,mainui,n):
         return TabCurve(mainui,n)
@@ -78,6 +79,7 @@ class XformCurve(XFormType):
         node.mul = 1
         self.genLut(node)
         
+    # given a dictionary, set the values in the node from the dictionary    
     def perform(self,node):
         img = node.getInput(0)
         if img is None:

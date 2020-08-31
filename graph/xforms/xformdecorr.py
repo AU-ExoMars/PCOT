@@ -90,6 +90,7 @@ class XformDecorr(XFormType):
         super().__init__("decorr stretch")
         self.addInputConnector("rgb","img888")
         self.addOutputConnector("rgb","img888")
+        self.autoserialise=('tol',)
         
     def createTab(self,mainui,n):
         return TabDecorr(mainui,n)

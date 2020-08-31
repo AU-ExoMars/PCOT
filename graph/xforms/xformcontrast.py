@@ -45,6 +45,7 @@ class XformContrast(XFormType):
         super().__init__("contrast stretch")
         self.addInputConnector("","img")
         self.addOutputConnector("","img")
+        self.autoserialise=('tol',)
         
     def createTab(self,mainui,n):
         return TabContrast(mainui,n)
@@ -55,7 +56,7 @@ class XformContrast(XFormType):
     def init(self,node):
         node.img = None
         node.tol = 0.2
-
+        
     def perform(self,node):
         img = node.getInput(0)
         if img is None:
