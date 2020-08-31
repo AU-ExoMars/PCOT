@@ -1,3 +1,5 @@
+import json
+
 # dictionary of name -> transformation type
 allTypes = dict()
 
@@ -64,11 +66,26 @@ class XFormType():
     def init(self,xform):
         pass
         
+    # return a dict of all values belonging to the node which should be saved
+    def serialise(self,xform):
+        pass
+    
+    # given a dictionary, set the values in the node from the dictionary    
+    def deserialise(self,xform,d):
+        pass
+        
     # create a tab connected to this xform - also needs the main UI window.
     # Might return none, if this xform doesn't have a meaningful UI.
     def createTab(self,mainui,xform):
         return None
-        
+
+# serialise a connection (xform,i) into (xformName,i)
+def serialiseConn(c):
+    if c:
+        x,i = c
+        return (x.name,i)
+    else:
+        return None
 
 # an actual instance of a transformation
 class XForm:
@@ -92,10 +109,11 @@ class XForm:
         # set the unique name
         self.name = name
         
-        # UI-DEPENDENT DATA DOWN HERE - this stuff shouldn't be serialized
+        # UI-DEPENDENT DATA DOWN HERE
+        self.xy = (0,0) # this SHOULD be serialised
         
+        # this stuff shouldn't be serialized
         # on-screen geometry, which should be set before we try to draw it
-        self.xy = (0,0)
         self.w = None # unset, will be set on draw
         self.h = None
         self.tab = None # no tab open
@@ -103,6 +121,19 @@ class XForm:
         self.rect = None # the main GMainRect rectangle
         self.inrects = [None for x in self.inputs] # input connector GConnectRects
         self.outrects = [None for x in self.outputs] # output connector GConnectRects
+        
+    def serialise(self):
+        # build a serialisable python dict of this node's values
+        d = {}
+        d['xy'] = self.xy
+        d['type'] = self.type.name
+        d['ins'] = [serialiseConn(c) for c in self.inputs]
+        d['comment'] = self.comment
+        d['outputTypes'] = self.outputTypes
+        # and the values which come from the type
+        d.update(self.type.serialise(self))
+        return d
+                
         
     def getInputType(self,i):
         if i>=0 and i<len(self.inputs):
@@ -221,7 +252,7 @@ class XForm:
         else:
             n,i = self.inputs[i]
             return n.outputs[i]
-        
+            
 # are two connectors compatible?
 def isCompatibleConnection(outtype,intype):
     # image inputs accept all images
@@ -236,7 +267,7 @@ class XFormGraph:
     def __init__(self):
         # all the nodes
         self.nodes = []
-    
+        
     # create a new node, passing in a type name.
     def create(self,typename):
         if typename in allTypes:
@@ -286,3 +317,11 @@ class XFormGraph:
                             toDisconnect.append((child,i))
         for child,i in toDisconnect:
             child.disconnect(i)
+
+    def serialise(self):
+        d = {}
+        for n in self.nodes:
+            d[n.name] = n.serialise()
+        print(d)
+
+

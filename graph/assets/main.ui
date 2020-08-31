@@ -80,7 +80,7 @@
          </layout>
         </item>
         <item>
-         <widget class="GraphView" name="graphicsView">
+         <widget class="GraphView" name="view">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
             <horstretch>0</horstretch>
@@ -103,7 +103,7 @@
         </item>
        </layout>
       </widget>
-      <widget class="QScrollArea" name="palette">
+      <widget class="QScrollArea" name="paletteArea">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
          <horstretch>0</horstretch>
@@ -137,8 +137,26 @@
      <height>20</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionSave"/>
+    <addaction name="actionLoad"/>
+   </widget>
+   <addaction name="menuFile"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionSave">
+   <property name="text">
+    <string>&amp;Save</string>
+   </property>
+  </action>
+  <action name="actionLoad">
+   <property name="text">
+    <string>&amp;Load</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>

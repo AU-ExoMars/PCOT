@@ -10,28 +10,30 @@ import graphview,palette,graphscene
 from xforms import *
 
 class MainUI(ui.tabs.DockableTabWindow):
-    def getUI(self,type,name):
-        x = self.findChild(type,name)
-        if x is None:
-            raise Exception('cannot find widget "'+name+'"')
-        return x
     def autoLayout(self):
         self.scene = graphscene.XFormGraphScene(self)
+        
+    def saveAction(self):
+        self.graph.serialise()
+        pass
+    def loadAction(self):
+        pass
+        
     def __init__(self):
         super().__init__()
         uic.loadUi('assets/main.ui',self)
         self.initTabs()
+        
+        print(self.actionSave)
 
         # connect buttons etc.        
-        self.getUI(QtWidgets.QPushButton,'autolayoutButton').clicked.connect(self.autoLayout)
-        self.getUI(QtWidgets.QPushButton,'dumpButton').clicked.connect(lambda: self.graph.dump())
-        # get a handle on various things
-        self.view = self.getUI(graphview.GraphView,'graphicsView')
+        self.autolayoutButton.clicked.connect(self.autoLayout)
+        self.dumpButton.clicked.connect(lambda: self.graph.dump())
+        self.actionSave.triggered.connect(self.saveAction)
+        self.actionLoad.triggered.connect(self.loadAction)
         
         # set up the scrolling palette and make the buttons therein
-        scrollArea = self.getUI(QtWidgets.QScrollArea,'palette')
-        scrollAreaContent = self.getUI(QtWidgets.QWidget,'paletteContents')
-        palette.setup(scrollArea,scrollAreaContent,self.view)
+        palette.setup(self.paletteArea,self.paletteContents,self.view)
 
         
         # create a dummy graph with just a source

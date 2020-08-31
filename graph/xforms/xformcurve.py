@@ -15,12 +15,8 @@ lutxcoords = np.linspace(0,255,NUMPOINTS)
 class TabCurve(ui.tabs.Tab):
     def __init__(self,mainui,node):
         super().__init__(mainui,node,'assets/tabcurve.ui') # same UI as sink
-        self.canvas = self.getUI(ui.canvas.Canvas,'canvas')
-        self.addDial = self.getUI(QtWidgets.QDial,'addDial')
-        self.mulDial = self.getUI(QtWidgets.QDial,'mulDial')
-        self.addDial.valueChanged.connect(self.setAdd)
-        self.mulDial.valueChanged.connect(self.setMul)
-        self.mpl = self.getUI(ui.mplwidget.MplWidget,'figure')
+        self.w.addDial.valueChanged.connect(self.setAdd)
+        self.w.mulDial.valueChanged.connect(self.setMul)
         self.plot = None # the matplotlib plot which we update
         # sync tab with node
         self.onNodeChanged()
@@ -36,22 +32,22 @@ class TabCurve(ui.tabs.Tab):
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
-        self.addDial.setValue(self.node.add/10+50)
-        self.mulDial.setValue(self.node.mul*10)
+        self.w.addDial.setValue(self.node.add/10+50)
+        self.w.mulDial.setValue(self.node.mul*10)
         self.node.type.genLut(self.node) # yeah, ugly.
         if self.plot is None:
             # set up the initial plot
             # doing stuff without pyplot is weird!
-            self.mpl.ax.set_xlim(0,255)
-            self.mpl.ax.set_ylim(0,255)
+            self.w.mpl.ax.set_xlim(0,255)
+            self.w.mpl.ax.set_ylim(0,255)
             # make the plot, store the zeroth plot (ours)
-            self.plot=self.mpl.ax.plot(lutxcoords,self.node.lut,'r')[0]
+            self.plot=self.w.mpl.ax.plot(lutxcoords,self.node.lut,'r')[0]
         else:
             self.plot.set_ydata(self.node.lut)
-        self.mpl.canvas.draw() # present drawing
+        self.w.mpl.canvas.draw() # present drawing
 
         # display image        
-        self.canvas.display(self.node.img)
+        self.w.canvas.display(self.node.img)
 
 
 @singleton

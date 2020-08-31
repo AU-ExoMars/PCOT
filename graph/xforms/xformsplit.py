@@ -7,17 +7,14 @@ from xform import singleton,XFormType
 class TabSplit(ui.tabs.Tab):
     def __init__(self,mainui,node):
         super().__init__(mainui,node,'assets/tabsplit.ui')
-        self.canvRed = self.getUI(ui.canvas.Canvas,'canvRed')
-        self.canvGreen = self.getUI(ui.canvas.Canvas,'canvGreen')
-        self.canvBlue = self.getUI(ui.canvas.Canvas,'canvBlue')
         # sync tab with node
         self.onNodeChanged()
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
-        self.canvRed.display(self.node.red)
-        self.canvGreen.display(self.node.green)
-        self.canvBlue.display(self.node.blue)
+        self.w.canvRed.display(self.node.red)
+        self.w.canvGreen.display(self.node.green)
+        self.w.canvBlue.display(self.node.blue)
         
 
 @singleton

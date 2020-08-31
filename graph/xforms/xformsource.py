@@ -24,26 +24,25 @@ class TabSource(ui.tabs.Tab):
         self.dirModel.setRootPath("/")
         self.dirModel.setNameFilters(["*.jpg","*.png"])
         self.dirModel.setNameFilterDisables(False)
-        tree = self.getUI(QtWidgets.QTreeView,'treeView')
-        tree.setModel(self.dirModel)
+        print(self.__dict__)
+        tree = self.w.treeView
+        self.w.treeView.setModel(self.dirModel)
 
         idx = self.dirModel.index(QDir.currentPath())
-        tree.selectionModel().select(idx,QtCore.QItemSelectionModel.Select)
-        tree.setIndentation(10)
-        tree.setSortingEnabled(True)
-        tree.setColumnWidth(0, tree.width() / 1.5)
-        tree.setColumnHidden(1,True)
-        tree.setColumnHidden(2,True)
-        tree.doubleClicked.connect(self.fileClickedAction)
-        self.treeView=tree
-        self.canvas = self.getUI(ui.canvas.Canvas,'canvas')
-        tree.scrollTo(idx)
+        self.w.treeView.selectionModel().select(idx,QtCore.QItemSelectionModel.Select)
+        self.w.treeView.setIndentation(10)
+        self.w.treeView.setSortingEnabled(True)
+        self.w.treeView.setColumnWidth(0, self.w.treeView.width() / 1.5)
+        self.w.treeView.setColumnHidden(1,True)
+        self.w.treeView.setColumnHidden(2,True)
+        self.w.treeView.doubleClicked.connect(self.fileClickedAction)
+        self.w.treeView.scrollTo(idx)
         # sync tab with node
         self.onNodeChanged()
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
-        self.canvas.display(self.node.outputs[0])
+        self.w.canvas.display(self.node.outputs[0])
         
     # this sets the file IN THE NODE. We store all data in the node,
     # the tab is just a view on the node.

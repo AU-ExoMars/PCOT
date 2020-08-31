@@ -12,9 +12,7 @@ from functools import reduce
 class TabDecorr(ui.tabs.Tab):
     def __init__(self,mainui,node):
         super().__init__(mainui,node,'assets/tabcontrast.ui') # same UI as contrast
-        self.canvas = self.getUI(ui.canvas.Canvas,'canvas')
-        self.dial = self.getUI(QtWidgets.QDial,'dial')
-        self.dial.valueChanged.connect(self.setContrast)
+        self.w.dial.valueChanged.connect(self.setContrast)
 
         # sync tab with node
         self.onNodeChanged()
@@ -26,8 +24,8 @@ class TabDecorr(ui.tabs.Tab):
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
-        self.dial.setValue(self.node.tol*200)        
-        self.canvas.display(self.node.img)
+        self.w.dial.setValue(self.node.tol*200)        
+        self.w.canvas.display(self.node.img)
 
 def decorrstretch(A, tol=None):
     """

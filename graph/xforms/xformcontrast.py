@@ -24,9 +24,7 @@ def contrast(img,tol):
 class TabContrast(ui.tabs.Tab):
     def __init__(self,mainui,node):
         super().__init__(mainui,node,'assets/tabcontrast.ui') # same UI as sink
-        self.canvas = self.getUI(ui.canvas.Canvas,'canvas')
-        self.dial = self.getUI(QtWidgets.QDial,'dial')
-        self.dial.valueChanged.connect(self.setContrast)
+        self.w.dial.valueChanged.connect(self.setContrast)
 
         # sync tab with node
         self.onNodeChanged()
@@ -38,8 +36,8 @@ class TabContrast(ui.tabs.Tab):
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
-        self.dial.setValue(self.node.tol*200)        
-        self.canvas.display(self.node.img)
+        self.w.dial.setValue(self.node.tol*200)        
+        self.w.canvas.display(self.node.img)
 
 @singleton
 class XformContrast(XFormType):

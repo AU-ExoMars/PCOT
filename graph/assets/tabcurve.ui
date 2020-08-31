@@ -95,7 +95,7 @@
        </size>
       </property>
      </widget>
-     <widget class="MplWidget" name="figure" native="true">
+     <widget class="MplWidget" name="mpl" native="true">
       <property name="geometry">
        <rect>
         <x>10</x>
