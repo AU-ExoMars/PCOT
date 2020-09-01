@@ -290,7 +290,7 @@ class XForm:
                 self.tab.onNodeChanged()
         except Exception as e:
             traceback.print_exc()
-            ui.mainui.msg("Exception in {}: {}".format(self.name,e))
+            ui.mainui.logXFormException(self,e)
         
     # get the value of an input
     def getInput(self,i):

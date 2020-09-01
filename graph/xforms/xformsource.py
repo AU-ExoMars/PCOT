@@ -65,10 +65,10 @@ class XformSource(XFormType):
 
     def loadImg(self,node):
         img = cv.imread(node.fname)
-        img = cv.cvtColor(img,cv.COLOR_BGR2RGB)
         if img is None:
             raise Exception('cannot read image {}'.format(node.fname))
         # set the node's data
+        img = cv.cvtColor(img,cv.COLOR_BGR2RGB)
         node.img = img
 
     # the "perform" of a source is to read the image if one hasn't 
