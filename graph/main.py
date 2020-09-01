@@ -40,8 +40,8 @@ class MainUI(ui.tabs.DockableTabWindow):
     def saveAsAction(self):
         res = QtWidgets.QFileDialog.getSaveFileName(self, 'Save file', '.',"JSON files (*.json)")
         if res[0]!='':
-            self.save(fname)
-            self.saveFileName = fname
+            self.save(res[0])
+            self.saveFileName = res[0]
             
     def saveAction(self):
         if self.saveFileName is None:

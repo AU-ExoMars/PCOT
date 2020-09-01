@@ -19,6 +19,8 @@ class Canvas(QtWidgets.QWidget):
     def __init__(self,parent):
         super(QtWidgets.QWidget,self).__init__(parent)
         self.img=None
+        self.paintHook=None # an object with a paintEvent() which can do extra drawing
+        self.mouseHook=None # an object with a set of mouse events for handling clicks and moves
     # handles 8-bit and 24-bit; also boolean arrays
     def display(self,img):
         if img is not None:
@@ -40,8 +42,34 @@ class Canvas(QtWidgets.QWidget):
             aspect = imgw/imgh
             if h*aspect>w:
                 size=(w,int(w/aspect))
+                self.scale = imgw/w
             else:
                 size=(int(h*aspect),h)
+                self.scale = imgh/h
+
             img = cv.resize(self.img,dsize=size,interpolation=cv.INTER_CUBIC)
             p.drawImage(0,0,img2qimage(img))
+            if self.paintHook is not None:
+                self.paintHook.canvasPaintHook(p)
         p.end()
+        
+    def mousePressEvent(self,e):
+        x= int(e.pos().x()*self.scale)
+        y= int(e.pos().y()*self.scale)
+        if self.mouseHook is not None:
+            self.mouseHook.canvasMousePressEvent(x,y,e)
+        return super().mousePressEvent(e)
+
+    def mouseMoveEvent(self,e):
+        x= int(e.pos().x()*self.scale)
+        y= int(e.pos().y()*self.scale)
+        if self.mouseHook is not None:
+            self.mouseHook.canvasMouseMoveEvent(x,y,e)
+        return super().mouseMoveEvent(e)
+
+    def mouseReleaseEvent(self,e):
+        x= int(e.pos().x()*self.scale)
+        y= int(e.pos().y()*self.scale)
+        if self.mouseHook is not None:
+            self.mouseHook.canvasMouseReleaseEvent(x,y,e)
+        return super().mouseReleaseEvent(e)
