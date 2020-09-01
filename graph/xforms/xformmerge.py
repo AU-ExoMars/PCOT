@@ -46,7 +46,6 @@ class XformMerge(XFormType):
         if s is None:
             node.setOutput(0,None)
             return
-        print(rs,gs,bs,s)
             
         # all that are present are the same size
         if (rs is not None and rs!=s) or (gs is not None and gs!=s) or (bs is not None and bs!=s):

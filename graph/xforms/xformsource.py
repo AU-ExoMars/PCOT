@@ -9,12 +9,6 @@ import ui.tabs,ui.canvas
 from xform import singleton,XFormType
 
 
-sn=0
-def snark():
-    global sn
-    print(sn)
-    sn+=1
-    
 
 class TabSource(ui.tabs.Tab):
     def __init__(self,mainui,node):
@@ -24,7 +18,6 @@ class TabSource(ui.tabs.Tab):
         self.dirModel.setRootPath("/")
         self.dirModel.setNameFilters(["*.jpg","*.png"])
         self.dirModel.setNameFilterDisables(False)
-        print(self.__dict__)
         tree = self.w.treeView
         self.w.treeView.setModel(self.dirModel)
 
@@ -44,19 +37,15 @@ class TabSource(ui.tabs.Tab):
     def onNodeChanged(self):
         self.w.canvas.display(self.node.outputs[0])
         
+        
     # this sets the file IN THE NODE. We store all data in the node,
     # the tab is just a view on the node.
     def fileClickedAction(self,idx):
         if not self.dirModel.isDir(idx):
+            self.node.img = None # forces perform to reload
             fname = self.dirModel.filePath(idx)
-            img = cv.imread(fname)
-            img = cv.cvtColor(img,cv.COLOR_BGR2RGB)
-            if img is None:
-                raise Exception('cannot read image')
-            # set the node's data
-            self.node.img = img
+            self.node.fname = fname
             # and tell it to perform (outputting the data)
-            # This will also run onNodeChanged() in any attached tab
             self.node.perform()
 
 @singleton
@@ -65,14 +54,27 @@ class XformSource(XFormType):
         super().__init__("source")
         ## our connectors
         self.addOutputConnector("rgb","img888")
+        self.autoserialise=('fname',)
 
     def createTab(self,mainui,n):
         return TabSource(mainui,n)
         
     def init(self,node):
         node.img = None
+        self.fname = None
 
-    # the "perform" of a source is just to output its data
+    def loadImg(self,node):
+        img = cv.imread(node.fname)
+        img = cv.cvtColor(img,cv.COLOR_BGR2RGB)
+        if img is None:
+            raise Exception('cannot read image {}'.format(node.fname))
+        # set the node's data
+        node.img = img
+
+    # the "perform" of a source is to read the image if one hasn't 
+    # been loaded, and output the image data.
     def perform(self,node):
+        if node.img is None and node.fname is not None:
+            self.loadImg(node)
         node.setOutput(0,node.img)
     

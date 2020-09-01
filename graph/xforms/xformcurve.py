@@ -86,7 +86,6 @@ class XformCurve(XFormType):
             node.img = None
         else:
             node.img = np.interp(img,lutxcoords,node.lut).astype(np.ubyte)
-            print(node.img.shape)
 
         node.setOutput(0,node.img)
 

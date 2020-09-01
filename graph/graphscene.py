@@ -5,11 +5,13 @@ try:
     # we might have grandalf, but probably not.
     from grandalf.layouts import SugiyamaLayout,VertexViewer
     from grandalf.graphs import *
+    print("Grandalf is present and will be used for autolayout.")
     hasGrandalf=True
 except ImportError:
+    print("Grandalf is not present, autolayout will be awful.")
     hasGrandalf=False
 
-print(hasGrandalf)    
+
 
 from PyQt5 import QtWidgets, uic, QtGui, QtCore
 from PyQt5.QtCore import Qt,QPointF
@@ -17,7 +19,7 @@ from PyQt5.QtGui import QColor,QBrush,QLinearGradient,QFont,QTransform
 
 import math
 
-import xform
+import xform,ui
 
 connectorFont = QFont()
 #connectorFont.setStyleHint(QFont.SansSerif)
@@ -291,9 +293,9 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         if hasGrandalf:
             self.placeGrandalf()
         else:
+            # this is what we do if we don't have Grandalf
             x = 0
             y = 0
-            # this is what we do if we don't have Grandalf
             for n in self.graph.nodes:
                 n.w = NODEWIDTH
                 n.h = NODEHEIGHT+YPADDING
@@ -510,14 +512,13 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     n2.connect(input,n1,output)
                     self.graph.inputChanged(n2)
                 else:
-                    print("incompatible types {} -> {}".format(outtype,intype))
+                    ui.mainui.msg("incompatible types {} -> {}".format(outtype,intype))
             self.rebuildArrows()
             self.draggingArrow=None 
         super().mouseReleaseEvent(event)
 
     def keyPressEvent(self,event):
         if event.key() == Qt.Key_Delete:
-            print("DEL")
             for n in self.selection:
                 # remove the nodes
                 self.graph.remove(n)

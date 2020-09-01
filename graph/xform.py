@@ -1,4 +1,6 @@
-import json
+import json,traceback
+from collections import deque
+import ui
 
 # dictionary of name -> transformation type
 allTypes = dict()
@@ -113,6 +115,7 @@ def serialiseConn(c):
 
 # an actual instance of a transformation
 class XForm:
+    recursePerform=True
     def __init__(self,type,name):
         self.type = type
         # create unconnected connections. Connections are either None
@@ -221,12 +224,13 @@ class XForm:
 
     # connect an input to an output on another xform. Note that this doesn't
     # check compatibility; that's done in the UI.
-    def connect(self,input,other,output):
+    def connect(self,input,other,output,autoPerform=True):
         if input>=0 and input<len(self.inputs) and self is not other:
             if output>=0 and output<len(other.type.outputConnectors):
                 self.inputs[input] = (other,output)
                 other.increaseChildCount(self)
-                self.perform()
+                if autoPerform:
+                    self.perform()
         
         
     # disconnect an input 
@@ -254,11 +258,12 @@ class XForm:
 
     # change an output - typically caused by perform, this will cause all children
     # to perform too, leading to recursive descent of the tree. May also be caused
-    # by source data change.
+    # by source data change. The recursive descent behaviour is not used in loading.
     def setOutput(self,i,data):
         self.outputs[i]=data
-        for n in self.children:
-            n.perform()
+        if XForm.recursePerform:
+            for n in self.children:
+                n.perform()
             
     def increaseChildCount(self,n):
         if n in self.children:
@@ -277,10 +282,15 @@ class XForm:
     # perform the transformation; delegated to the type object. Also tells
     # any tab open on a node that its node has changed.
     def perform(self):
-        print("Performing ",self.name)
-        self.type.perform(self)
-        if self.tab is not None:
-            self.tab.onNodeChanged()
+        ui.mainui.msg("Performing {}".format(self.name))
+        print("Performing {}".format(self.name))
+        try:
+            self.type.perform(self)
+            if self.tab is not None:
+                self.tab.onNodeChanged()
+        except Exception as e:
+            traceback.print_exc()
+            ui.mainui.msg("Exception in {}: {}".format(self.name,e))
         
     # get the value of an input
     def getInput(self,i):
@@ -336,20 +346,15 @@ class XFormGraph:
         # rebuild the types, perhaps replacing None (use the type default) with
         # a type name
         node.type.generateOutputTypes(node)
-        print("INPUTCHANGE on {}".format(node.type.name))
         # now check the children for nodes which connect to this one
         toDisconnect=[]
         for child in node.children:
-            print(child.name)
             for i in range(0,len(child.inputs)):
                 if child.inputs[i] is not None:
                     parent,out = child.inputs[i]
-                    print("Parent is {}, node is {}".format(parent.name,node.name))
                     if parent is node:
                         outtype = node.getOutputType(out)
                         intype = child.getInputType(i)
-                        print("{}/{} -> {}/{}".format(parent.name,
-                            out,child.name,i))
                         if not isCompatibleConnection(outtype,intype):
                             toDisconnect.append((child,i))
         for child,i in toDisconnect:
@@ -359,7 +364,7 @@ class XFormGraph:
         d = {}
         for n in self.nodes:
             d[n.name] = n.serialise()
-        json.dump(d,file)
+        json.dump(d,file,sort_keys=True,indent=4)
 
     # given a dictionary, build a graph based on it
     def deserialise(self,file):
@@ -382,6 +387,35 @@ class XFormGraph:
             for i in range(0,len(conns)):
                 oname,output = conns[i] # tuples of name,index: see serialiseConn()
                 other = deref[oname]
-                n.connect(i,other,output)
-        # we also have to tell all the nodes to update
+                n.connect(i,other,output,False) # don't automatically perform
+
+        # we also have to tell all the nodes to perform recursively, from roots down,
+        # omitting any already done in the process.
+        self.downRecursePerform()
         
+
+    def downRecursePerform(self):
+        XFormGraph.already=set()
+        for n in self.nodes:
+            # identify root nodes (no connected inputs)
+            if all(i is None for i in n.inputs):
+                self.bfs(n)
+
+    # breadth-first traversal, with extra "already visited" flag because we may visit
+    # several roots
+    def bfs(self,n):
+        XForm.recursePerform=False # turn off perform recursion in setOutput
+        try:
+            if not n in XFormGraph.already:
+                XFormGraph.already.add(n)
+                queue=deque()
+                queue.append(n)
+                while len(queue)>0:
+                    p = queue.popleft()
+                    p.perform() 
+                    for q in p.children:
+                        if not q in XFormGraph.already:
+                            XFormGraph.already.add(q)
+                            queue.append(q)
+        finally:
+            XForm.recursePerform=True # turn setOutput recursion back on whatever happens
