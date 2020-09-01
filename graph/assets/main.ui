@@ -36,6 +36,9 @@
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
+       <property name="currentIndex">
+        <number>1</number>
+       </property>
        <widget class="QWidget" name="tab">
         <attribute name="title">
          <string>Tab 1</string>
@@ -142,7 +145,7 @@
      <string>File</string>
     </property>
     <addaction name="actionSave"/>
-    <addaction name="actionLoad"/>
+    <addaction name="actionOpen"/>
    </widget>
    <addaction name="menuFile"/>
   </widget>
@@ -151,10 +154,16 @@
    <property name="text">
     <string>&amp;Save</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
   </action>
-  <action name="actionLoad">
+  <action name="actionOpen">
    <property name="text">
-    <string>&amp;Load</string>
+    <string>&amp;Open</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
    </property>
   </action>
  </widget>

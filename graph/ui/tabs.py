@@ -34,7 +34,18 @@ class DockableTabWindow(QtWidgets.QMainWindow):
         tab = self.tabWidget.widget(index)
         tab.node.tab = None
         self.tabWidget.removeTab(index)
+        self.tabs = {k:v for k, v in self.tabs.items() if v != tab }
             
+    def closeAllTabs(self):
+        # first, close all expanded tab windows
+        for t in self.tabs.values():
+            if t.expanded is not None:
+                print("Closing {}".format(t.expanded))
+                t.expanded.close()
+        # then close all the tabs
+        for t in self.tabs.values():
+            self.closeTab(self.tabWidget.indexOf(t))
+        
         
     # used to undock tab into a window
     def undock(self,i):

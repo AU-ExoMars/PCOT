@@ -29,12 +29,12 @@ class TabCurve(ui.tabs.Tab):
         # when a control changes, update node and perform
         self.node.mul = v/10
         self.node.perform()
-
+        
     # causes the tab to update itself from the node
     def onNodeChanged(self):
         self.w.addDial.setValue(self.node.add/10+50)
         self.w.mulDial.setValue(self.node.mul*10)
-        self.node.type.genLut(self.node) # yeah, ugly.
+        self.node.type.recalculate(self.node) # have to rebuild LUT
         if self.plot is None:
             # set up the initial plot
             # doing stuff without pyplot is weird!
@@ -60,11 +60,6 @@ class XformCurve(XFormType):
         
     def createTab(self,mainui,n):
         return TabCurve(mainui,n)
-        
-    def genLut(self,node):
-        # generate the LUT
-        xb = (node.mul*(lutxcoords-127)+node.add)/255
-        node.lut = (255/(1+np.exp(-xb))).astype(np.ubyte)
 
     # this xform can take different image types, but doing so changes
     # the output types, overriding the generic one given in the constructor.
@@ -77,7 +72,12 @@ class XformCurve(XFormType):
         node.img = None
         node.add = 0
         node.mul = 1
-        self.genLut(node)
+        self.recalculate(node)
+        
+    def recalculate(self,node):
+        # generate the LUT
+        xb = (node.mul*(lutxcoords-127)+node.add)/255
+        node.lut = (255/(1+np.exp(-xb))).astype(np.ubyte)
         
     # given a dictionary, set the values in the node from the dictionary    
     def perform(self,node):

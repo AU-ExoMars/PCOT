@@ -223,7 +223,7 @@ class GArrow(QtWidgets.QGraphicsLineItem):
 # when serializing the nodes, the geometry fields should be dealt with.
 
 class XFormGraphScene(QtWidgets.QGraphicsScene):
-    def __init__(self,mainWindow): 
+    def __init__(self,mainWindow,doPlace): 
         super().__init__()
         self.mainWindow = mainWindow
         self.graph = mainWindow.graph
@@ -233,7 +233,14 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         self.selection=[]
         self.checkSelChange=True
         # place everything, adding xy,w,h to all nodes
-        self.place()
+        if doPlace:
+            self.place()
+        else:
+            # or alternatively just set w,h (for loading data from a file)
+            for n in self.graph.nodes:
+                n.w = NODEWIDTH
+                n.h = NODEHEIGHT+YPADDING
+            
         # and make all the graphics
         self.rebuild()
         self.view.setScene(self)

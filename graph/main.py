@@ -11,26 +11,32 @@ from xforms import *
 
 class MainUI(ui.tabs.DockableTabWindow):
     def autoLayout(self):
-        self.scene = graphscene.XFormGraphScene(self)
+        self.scene = graphscene.XFormGraphScene(self,True)
         
     def saveAction(self):
-        self.graph.serialise()
-        pass
-    def loadAction(self):
-        pass
+        res = QtWidgets.QFileDialog.getSaveFileName(self, 'Save file', '.',"JSON files (*.json)")
+        if res[0]!='':
+            with open(res[0],'w') as f:
+                self.graph.serialise(f)
+    def openAction(self):
+        res = QtWidgets.QFileDialog.getOpenFileName(self, 'Open file', '.',"JSON files (*.json)")
+        if res[0]!='':
+            self.closeAllTabs()
+            with open(res[0]) as f:
+                self.graph.deserialise(f)
+            # now we need to "autolayout" but preserve the xy data
+            self.scene = graphscene.XFormGraphScene(self,False)
         
     def __init__(self):
         super().__init__()
         uic.loadUi('assets/main.ui',self)
         self.initTabs()
         
-        print(self.actionSave)
-
         # connect buttons etc.        
         self.autolayoutButton.clicked.connect(self.autoLayout)
         self.dumpButton.clicked.connect(lambda: self.graph.dump())
         self.actionSave.triggered.connect(self.saveAction)
-        self.actionLoad.triggered.connect(self.loadAction)
+        self.actionOpen.triggered.connect(self.openAction)
         
         # set up the scrolling palette and make the buttons therein
         palette.setup(self.paletteArea,self.paletteContents,self.view)

@@ -46,11 +46,19 @@ class XFormType():
     def doAutoserialise(self,node):
         return {name:node.__dict__[name] for name in self.autoserialise}
         
+    def doAutodeserialise(self,node,ent):
+        for name in self.autoserialise:
+            node.__dict__[name] = ent[name]
 
     def addInputConnector(self,name,typename):
         self.inputConnectors.append( (name,typename) )
     def addOutputConnector(self,name,typename):
         self.outputConnectors.append( (name,typename) )
+        
+    def all():
+        return allTypes
+        
+    # DOWN HERE ARE METHODS YOU MAY NEED TO OVERRIDE WHEN WRITING NODE TYPES
         
     # this is overriden if a node might change its output type depending on its
     # input types. It's called when an input connection is made or broken, and is followed
@@ -63,9 +71,6 @@ class XFormType():
     def generateOutputTypes(self,node):
         pass
         
-    def all():
-        return allTypes
-        
     # perform the actual action of the transformation, will generate outputs
     # in that object.
     def perform(self,xform):
@@ -73,6 +78,14 @@ class XFormType():
         
     # initialise any data fields (often to None)
     def init(self,xform):
+        pass
+        
+    # after control data has changed (either in a tab or by loading a file) it
+    # may be necessary to recalculate internal data (e.g. lookup tables). This
+    # can be overridden to do that: it happens when a node is deserialised,
+    # and should be called in the tab's onNodeChanged() AFTER the controls are read
+    # and BEFORE changing any status displays (see xformcurve for an example).
+    def recalculate(self,xform):
         pass
         
     # return a dict of all values belonging to the node which should be saved.
@@ -148,7 +161,16 @@ class XForm:
         if d2 is not None:
             d.update(d2)
         return d
-                
+    
+    def deserialise(self,d): 
+        # deserialise a node from a python dict. Some entries already dealt with.
+        self.xy = d['xy']
+        self.comment = d['comment']
+        self.outputTypes = d['outputTypes']
+        # autoserialised data
+        self.type.doAutodeserialise(self,d)
+        # run the additional deserialisation method
+        self.type.deserialise(self,d)
         
     def getInputType(self,i):
         if i>=0 and i<len(self.inputs):
@@ -333,11 +355,33 @@ class XFormGraph:
         for child,i in toDisconnect:
             child.disconnect(i)
 
-    def serialise(self):
+    def serialise(self,file):
         d = {}
         for n in self.nodes:
             d[n.name] = n.serialise()
-        with open('test.json','w') as f:
-            json.dump(d,f)
+        json.dump(d,file)
 
-
+    # given a dictionary, build a graph based on it
+    def deserialise(self,file):
+        # delete old graph - remember that the UI must close all open tabs!
+        d = json.load(file)
+        self.nodes = []
+        # temporary dictionary of nodename->node
+        deref={}
+        # first pass - build the nodes
+        for nodename,ent in d.items():
+            n = self.create(ent['type'])
+            n.name = nodename # override the default name
+            deref[nodename]=n
+            n.deserialise(ent) # will also deserialise type-specific data
+            n.type.recalculate(n) # recalculate internal data from controls
+        # that done, fix up the references
+        for nodename,ent in d.items():
+            n = deref[nodename]
+            conns = ent['ins']
+            for i in range(0,len(conns)):
+                oname,output = conns[i] # tuples of name,index: see serialiseConn()
+                other = deref[oname]
+                n.connect(i,other,output)
+        # we also have to tell all the nodes to update
+        
