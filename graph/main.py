@@ -23,7 +23,7 @@ class MainUI(ui.tabs.DockableTabWindow):
                 self.msg("File saved")
         except Exception as e:
             traceback.print_exc()
-            self.msg("cannot save file {}: {}".format(fname,e))
+            self.error("cannot save file {}: {}".format(fname,e))
     
     def load(self,fname):
         try:
@@ -35,7 +35,7 @@ class MainUI(ui.tabs.DockableTabWindow):
                 self.saveFileName = fname
         except Exception as e:
             traceback.print_exc()
-            self.msg("cannot open file {}: {}".format(fname,e))
+            self.error("cannot open file {}: {}".format(fname,e))
         
     def saveAsAction(self):
         res = QtWidgets.QFileDialog.getSaveFileName(self, 'Save file', '.',"JSON files (*.json)")
@@ -70,8 +70,14 @@ class MainUI(ui.tabs.DockableTabWindow):
     def log(self,s):
         self.logText.append(s)
         
+    def error(self,s):
+        app.beep()
+        self.msg("Error: {}".format(s))
+        self.log('<font color="red">Error: </font> {}'.format(s))
+        
     def logXFormException(self,node,e):
-        self.msg("Exception in {}: {}".format(node.name,e))
+        app.beep()
+        self.error("Exception in {}: {}".format(node.name,e))
         self.log('<font color="red">Exception in <b>{}</b>: </font> {}'.format(node.name,e))
         
     def __init__(self):
@@ -127,5 +133,6 @@ class MainUI(ui.tabs.DockableTabWindow):
 
 app = QtWidgets.QApplication(sys.argv) 
 window=MainUI() # Create an instance of our class
+window.app = app
 app.exec_() # Start the application
 

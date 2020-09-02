@@ -221,16 +221,30 @@ class XForm:
         print("   CHILDREN:")
         for k,v in self.children.items():
             print("    {} ({} connections)".format(k.name,v))
+            
+    # cycle detector - is "other" one of my children? We do a breadth-first
+    # search with a queue.
+    def cycle(self,other):
+        queue=deque()
+        queue.append(self)
+        while len(queue)>0:
+            p = queue.popleft()
+            if p is other:
+                return True
+            for q in p.children:
+                queue.append(q)
+        return False
 
     # connect an input to an output on another xform. Note that this doesn't
     # check compatibility; that's done in the UI.
     def connect(self,input,other,output,autoPerform=True):
         if input>=0 and input<len(self.inputs) and self is not other:
             if output>=0 and output<len(other.type.outputConnectors):
-                self.inputs[input] = (other,output)
-                other.increaseChildCount(self)
-                if autoPerform:
-                    self.perform()
+                if not self.cycle(other): # this is a double check, the UI checks too.
+                    self.inputs[input] = (other,output)
+                    other.increaseChildCount(self)
+                    if autoPerform:
+                        self.perform()
         
         
     # disconnect an input 
@@ -385,9 +399,10 @@ class XFormGraph:
             n = deref[nodename]
             conns = ent['ins']
             for i in range(0,len(conns)):
-                oname,output = conns[i] # tuples of name,index: see serialiseConn()
-                other = deref[oname]
-                n.connect(i,other,output,False) # don't automatically perform
+                if conns[i] is not None:
+                    oname,output = conns[i] # tuples of name,index: see serialiseConn()
+                    other = deref[oname]
+                    n.connect(i,other,output,False) # don't automatically perform
 
         # we also have to tell all the nodes to perform recursively, from roots down,
         # omitting any already done in the process.

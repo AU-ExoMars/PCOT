@@ -496,23 +496,26 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 intype = n2.getInputType(input)
                 
                 if xform.isCompatibleConnection(outtype,intype):
-                    # remove existing connections at the connector we are dragging to
-                    # if it is an input
-                    if conn.isInput:
-                        conn.node.disconnect(conn.index)
-                        self.graph.inputChanged(conn.node)
-                    # We are dragging the connection to a new place.
-                    # is it an existing connection we are modifying?
-                    # The case where it's a fresh output being dragged to an input
-                    # works too.
-                    if self.draggingArrow.n2 is not None:
-                        # disconnect the existing connection
-                        self.draggingArrow.n2.disconnect(self.draggingArrow.input)
-                        self.graph.inputChanged(self.draggingArrow.n2)
-                    n2.connect(input,n1,output)
-                    self.graph.inputChanged(n2)
+                    if n2.cycle(n1):
+                        ui.mainui.error("cannot create a cycle")
+                    else:
+                        # remove existing connections at the connector we are dragging to
+                        # if it is an input
+                        if conn.isInput:
+                            conn.node.disconnect(conn.index)
+                            self.graph.inputChanged(conn.node)
+                        # We are dragging the connection to a new place.
+                        # is it an existing connection we are modifying?
+                        # The case where it's a fresh output being dragged to an input
+                        # works too.
+                        if self.draggingArrow.n2 is not None:
+                            # disconnect the existing connection
+                            self.draggingArrow.n2.disconnect(self.draggingArrow.input)
+                            self.graph.inputChanged(self.draggingArrow.n2)
+                        n2.connect(input,n1,output)
+                        self.graph.inputChanged(n2)
                 else:
-                    ui.mainui.msg("incompatible types {} -> {}".format(outtype,intype))
+                    ui.mainui.error("incompatible types {} -> {}".format(outtype,intype))
             self.rebuildArrows()
             self.draggingArrow=None 
         super().mouseReleaseEvent(event)
