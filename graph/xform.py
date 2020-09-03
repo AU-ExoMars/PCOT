@@ -332,13 +332,13 @@ class XFormGraph:
     # create a new node, passing in a type name.
     def create(self,typename):
         if typename in allTypes:
-            type = allTypes[typename]
+            tp = allTypes[typename]
             # disambiguate node names using the count
-            count = type.count
-            type.count+=1
-            xform = XForm(type,"{} {}".format(typename,count))
+            count = tp.count
+            tp.count+=1
+            xform = XForm(tp,"{} {}".format(typename,count))
             self.nodes.append(xform)
-            type.init(xform)
+            tp.init(xform)
         else:
             raise Exception("Transformation type not found: "+typename)
         return xform

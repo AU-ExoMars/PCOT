@@ -6,3 +6,16 @@ Loading files in source isn't optimal - let's say you're compositing
 N different source greyscale files which aren't in the current directory.
 You have to browse down the file tree for each one.
 
+
+THINGS TO DO
+
+1. MD5 checksumming on nodes, to make sure that a graph saved with node X,
+when loaded, is using the same code it was saved with.
+
+2. What to do if the above fails, or a node doesn't exist (some kind of
+placeholder node with dead outputs?)
+
+3. Node documentation: should be in a string in the file. If we add a
+docstring to the class, we can access it with type(xformtypeobj).__doc__).
+We should check it exists when a class is registered. We should also be 
+able to open a non-modal popup containing it from all tabs.
