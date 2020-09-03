@@ -9,6 +9,7 @@ from xforms.tabimage import TabImage
 class XformHist(XFormType):
     def __init__(self):
         super().__init__("histequal")
+        self.ver="0.0.0"
         self.addInputConnector("","img")
         self.addOutputConnector("","img")
         

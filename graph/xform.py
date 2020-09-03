@@ -1,5 +1,6 @@
-import json,traceback
+import json,traceback,inspect,hashlib
 from collections import deque
+
 import ui
 
 # dictionary of name -> transformation type
@@ -14,10 +15,24 @@ allTypes = dict()
 class singleton:
     def __init__(self,cls,*args,**kwargs):
         self._cls=cls
-        self._instance = self._cls(*args,**kwargs)
+        # get the module so we can add an MD5 checksum of its source code to the type
+        # data, for version matching info
+        mod = inspect.getmodule(cls)
+        src = inspect.getsource(mod).encode('utf-8') # get the source
+        self._instance = self._cls(*args,**kwargs) # make the instance
+        self._instance._md5 = hashlib.md5(src).hexdigest() # add the checksum
+
         
     def __call__(self):
         return self._instance
+        
+# This exception is thrown if a loaded node's MD5 checksum (from the node source when the 
+# file was saved) disagrees with the node's current MD5: this means that the node's source
+# code has changed, and the node is not guaranteed to work as it did when saved.
+
+class BadVersionException(Exception):
+    def __init__(n):
+        self.message = "Node {} was saved with a different version of type {}".format(n.name,n.type.name)
 
 class XFormType():
     def __init__(self,name):
@@ -44,6 +59,11 @@ class XFormType():
         # they must be simple Python data. This happens in addition to, and
         # before, the serialise() and deserialise() methods.
         self.autoserialise=() # tuple or list of attribute names
+
+    def md5(self):
+        # returns a checksum of the sourcecode for the module defining the type,
+        # used to check versions
+        return self._md5
         
     def doAutoserialise(self,node):
         return {name:node.__dict__[name] for name in self.autoserialise}
@@ -118,6 +138,10 @@ class XForm:
     recursePerform=True
     def __init__(self,type,name):
         self.type = type
+        try:
+            self.savedver = type.ver
+        except AttributeError:
+            raise Exception("Node '{}' does not have a 'ver' field".format(type.name))
         # create unconnected connections. Connections are either None
         # or (Xform,index) tuples - the xform is the object to which we are
         # connected, the index is the index of the output connector on that xform for inputs,
@@ -157,6 +181,8 @@ class XForm:
         d['ins'] = [serialiseConn(c) for c in self.inputs]
         d['comment'] = self.comment
         d['outputTypes'] = self.outputTypes
+        d['md5'] = self.type.md5()
+        d['ver'] = self.type.ver # type.ver is version of type
         # add autoserialised data
         d.update(self.type.doAutoserialise(self))
         # and run the additional serialisation method
@@ -170,6 +196,7 @@ class XForm:
         self.xy = d['xy']
         self.comment = d['comment']
         self.outputTypes = d['outputTypes']
+        self.savedver = d['ver'] # ver is version node was saved with
         # autoserialised data
         self.type.doAutodeserialise(self,d)
         # run the additional deserialisation method
@@ -393,6 +420,8 @@ class XFormGraph:
             n.name = nodename # override the default name
             deref[nodename]=n
             n.deserialise(ent) # will also deserialise type-specific data
+            if n.type.md5() != ent['md5']:
+                ui.mainui.versionWarn(n)
             n.type.recalculate(n) # recalculate internal data from controls
         # that done, fix up the references
         for nodename,ent in d.items():

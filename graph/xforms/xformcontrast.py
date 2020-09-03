@@ -43,6 +43,7 @@ class TabContrast(ui.tabs.Tab):
 class XformContrast(XFormType):
     def __init__(self):
         super().__init__("contrast stretch")
+        self.ver="0.0.0"
         self.addInputConnector("","img")
         self.addOutputConnector("","img")
         self.autoserialise=('tol',)

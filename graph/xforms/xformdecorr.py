@@ -88,6 +88,7 @@ def decorrstretch(A, tol=None):
 class XformDecorr(XFormType):
     def __init__(self):
         super().__init__("decorr stretch")
+        self.ver="0.0.0"
         self.addInputConnector("rgb","img888")
         self.addOutputConnector("rgb","img888")
         self.autoserialise=('tol',)

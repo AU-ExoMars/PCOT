@@ -52,6 +52,7 @@ class TabSource(ui.tabs.Tab):
 class XformSource(XFormType):
     def __init__(self):
         super().__init__("source")
+        self.ver="0.0.0a"
         ## our connectors
         self.addOutputConnector("rgb","img888")
         self.autoserialise=('fname',)
@@ -61,7 +62,7 @@ class XformSource(XFormType):
         
     def init(self,node):
         node.img = None
-        self.fname = None
+        node.fname = None
 
     def loadImg(self,node):
         img = cv.imread(node.fname)

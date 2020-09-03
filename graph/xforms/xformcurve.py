@@ -54,6 +54,7 @@ class TabCurve(ui.tabs.Tab):
 class XformCurve(XFormType):
     def __init__(self):
         super().__init__("curve")
+        self.ver="0.0.0"
         self.addInputConnector("","img") # accept any image
         self.addOutputConnector("","img") # produce any image, but will change on input connect
         self.autoserialise=('add','mul')

@@ -21,6 +21,7 @@ class TabSplit(ui.tabs.Tab):
 class XformSplit(XFormType):
     def __init__(self):
         super().__init__("split")
+        self.ver="0.0.0"
         ## our connectors
         self.addInputConnector("rgb","img888")
         self.addOutputConnector("r","imggrey")

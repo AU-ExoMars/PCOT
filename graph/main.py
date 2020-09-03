@@ -7,6 +7,7 @@ import xform
 import graphview,palette,graphscene
 
 # import all transform types (see the __init__.py there)
+import xforms
 from xforms import *
 
 class MainUI(ui.tabs.DockableTabWindow):
@@ -75,10 +76,27 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.msg("Error: {}".format(s))
         self.log('<font color="red">Error: </font> {}'.format(s))
         
+    def warn(self,s):
+        app.beep()
+        QtWidgets.QMessageBox.warning(self,'WARNING',s)
+        
     def logXFormException(self,node,e):
         app.beep()
         self.error("Exception in {}: {}".format(node.name,e))
         self.log('<font color="red">Exception in <b>{}</b>: </font> {}'.format(node.name,e))
+        
+    # called when a graph saved with a different version of a node is loaded
+    def versionWarn(self,n):
+        self.log('<font color="red">Version clash</font> in node \'{}\', type \'{}\'. Current: {}, file: {}'
+            .format(n.name,n.type.name,n.type.ver,n.savedver))
+        
+        self.warn(
+        """
+Node '{}' was saved with a different version of the '{}' node's code.
+Current version: {}
+Version in file: {}
+        """
+        .format(n.name,n.type.name,n.type.ver,n.savedver))
         
     def __init__(self):
         super().__init__()

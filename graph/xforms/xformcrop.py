@@ -64,6 +64,7 @@ class TabCrop(ui.tabs.Tab):
 class XformCrop(XFormType):
     def __init__(self):
         super().__init__("crop")
+        self.ver="0.0.0"
         self.addInputConnector("","img")
         self.addOutputConnector("","img")
         self.autoserialise=('croprect',)

@@ -72,6 +72,7 @@ def ellipseDetect(img):
 class XformEllipse(XFormType):
     def __init__(self):
         super().__init__("ellipse")
+        self.ver="0.0.0"
         self.addInputConnector("","imggrey")
         self.addOutputConnector("img","img")
         self.addOutputConnector("data","ellipse")

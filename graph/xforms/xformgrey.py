@@ -2,6 +2,7 @@ import cv2 as cv
 import numpy as np
 
 import ui.tabs,ui.canvas
+
 from xform import singleton,XFormType
 from xforms.tabimage import TabImage
 
@@ -9,6 +10,7 @@ from xforms.tabimage import TabImage
 class XformGrey(XFormType):
     def __init__(self):
         super().__init__("greyscale")
+        self.ver="0.0.0"
         self.addInputConnector("","img888")
         self.addOutputConnector("","imggrey")
         
