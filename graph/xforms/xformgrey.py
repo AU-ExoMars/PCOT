@@ -3,10 +3,10 @@ import numpy as np
 
 import ui.tabs,ui.canvas
 
-from xform import singleton,XFormType
+from xform import xformtype,XFormType
 from xforms.tabimage import TabImage
 
-@singleton
+@xformtype
 class XformGrey(XFormType):
     def __init__(self):
         super().__init__("greyscale")

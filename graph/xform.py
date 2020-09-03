@@ -11,8 +11,9 @@ allTypes = dict()
 
 # This is a singleton decorator which, unusually, is not lazy, because we
 # need the xforms to be registered at initialisation. Thus the class creation
-# forces an instance to be created.        
-class singleton:
+# forces an instance to be created. We also use it to grab the source code
+# and generate an MD5 checksum, so we are *sure* versions match.
+class xformtype:
     def __init__(self,cls,*args,**kwargs):
         self._cls=cls
         # get the module so we can add an MD5 checksum of its source code to the type

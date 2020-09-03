@@ -2,22 +2,9 @@ import cv2 as cv
 import numpy as np
 
 import ui.tabs,ui.canvas
-from xform import singleton,XFormType
+from xform import xformtype,XFormType
 
-class TabSplit(ui.tabs.Tab):
-    def __init__(self,mainui,node):
-        super().__init__(mainui,node,'assets/tabsplit.ui')
-        # sync tab with node
-        self.onNodeChanged()
-
-    # causes the tab to update itself from the node
-    def onNodeChanged(self):
-        self.w.canvRed.display(self.node.red)
-        self.w.canvGreen.display(self.node.green)
-        self.w.canvBlue.display(self.node.blue)
-        
-
-@singleton
+@xformtype
 class XformSplit(XFormType):
     def __init__(self):
         super().__init__("split")
@@ -48,3 +35,16 @@ class XformSplit(XFormType):
             node.green=None
             node.blue=None
             
+class TabSplit(ui.tabs.Tab):
+    def __init__(self,mainui,node):
+        super().__init__(mainui,node,'assets/tabsplit.ui')
+        # sync tab with node
+        self.onNodeChanged()
+
+    # causes the tab to update itself from the node
+    def onNodeChanged(self):
+        self.w.canvRed.display(self.node.red)
+        self.w.canvGreen.display(self.node.green)
+        self.w.canvBlue.display(self.node.blue)
+        
+

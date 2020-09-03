@@ -5,7 +5,39 @@ import cv2 as cv
 import numpy as np
 
 import ui.tabs,ui.canvas
-from xform import singleton,XFormType
+from xform import xformtype,XFormType
+
+@xformtype
+class XformCrop(XFormType):
+    def __init__(self):
+        super().__init__("crop")
+        self.ver="0.0.0"
+        self.addInputConnector("","img")
+        self.addOutputConnector("","img")
+        self.autoserialise=('croprect',)
+        
+    def createTab(self,mainui,n):
+        return TabCrop(mainui,n)
+        
+    def generateOutputTypes(self,node):
+        node.matchOutputsToInputs([(0,0)])
+
+    def init(self,node):
+        node.img = None
+        node.croprect=None # would be (x,y,w,h) tuple
+        
+    def perform(self,node):
+        img = node.getInput(0)
+        # our image is always the input (but we draw on it), the output is the crop.
+        node.img = img
+        if node.croprect is not None:
+            x,y,w,h = node.croprect
+            print("CROPPING")
+            out = img[y:y+h,x:x+w]
+            ui.mainui.log("Cropped: x={} y={} w={} h={}".format(x,y,w,h))
+        else:
+            out = img
+        node.setOutput(0,out)
 
 class TabCrop(ui.tabs.Tab):
     def __init__(self,mainui,node):
@@ -60,34 +92,3 @@ class TabCrop(ui.tabs.Tab):
         self.mouseDown=False
 
 
-@singleton
-class XformCrop(XFormType):
-    def __init__(self):
-        super().__init__("crop")
-        self.ver="0.0.0"
-        self.addInputConnector("","img")
-        self.addOutputConnector("","img")
-        self.autoserialise=('croprect',)
-        
-    def createTab(self,mainui,n):
-        return TabCrop(mainui,n)
-        
-    def generateOutputTypes(self,node):
-        node.matchOutputsToInputs([(0,0)])
-
-    def init(self,node):
-        node.img = None
-        node.croprect=None # would be (x,y,w,h) tuple
-        
-    def perform(self,node):
-        img = node.getInput(0)
-        # our image is always the input (but we draw on it), the output is the crop.
-        node.img = img
-        if node.croprect is not None:
-            x,y,w,h = node.croprect
-            print("CROPPING")
-            out = img[y:y+h,x:x+w]
-            ui.mainui.log("Cropped: x={} y={} w={} h={}".format(x,y,w,h))
-        else:
-            out = img
-        node.setOutput(0,out)

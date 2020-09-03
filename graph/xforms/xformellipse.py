@@ -4,9 +4,36 @@ import numpy as np
 import ui.tabs,ui.canvas
 import utils.cluster
 
-from xform import singleton,XFormType
+from xform import xformtype,XFormType
 from xforms.tabimage import TabImage
 
+@xformtype
+class XformEllipse(XFormType):
+    def __init__(self):
+        super().__init__("ellipse")
+        self.ver="0.0.0"
+        self.addInputConnector("","imggrey")
+        self.addOutputConnector("img","img")
+        self.addOutputConnector("data","ellipse")
+        
+    def createTab(self,mainui,n):
+        return TabImage(mainui,n)
+
+    def generateOutputTypes(self,node):
+        node.matchOutputsToInputs([(0,0)])
+        
+    def init(self,node):
+        node.img = None
+        node.data = None
+
+    def perform(self,node):
+        img = node.getInput(0)
+        if img is None:
+            node.img = None
+        else:
+            node.img,node.data = ellipseDetect(img)
+        node.setOutput(0,node.img)
+        node.setOutput(1,node.data)
 
 def ellipseDetect(img):
     params = cv.SimpleBlobDetector_Params()
@@ -23,6 +50,7 @@ def ellipseDetect(img):
     # of blobs found (if it's less than 8)
     
     for maxthresh in range(20,225,10):
+        ui.mainui.msg("Threshold {}".format(maxthresh))
         params.thresholdStep = 10.0
         params.minThreshold = 10
         params.maxThreshold = maxthresh #220.0
@@ -63,35 +91,9 @@ def ellipseDetect(img):
         img = cv.drawKeypoints(img, keypoints, 
                 None, (255, 0, 0), 
                 cv.DrawMatchesFlags_DRAW_RICH_KEYPOINTS )
+        ui.mainui.msg("done, {} ellipses found".format(len(keypoints)))
     else:
         keypoints=list()
-        print("No ellipses found")
+        ui.mainui.msg("done, no ellipses found")
     return (img,keypoints)
 
-@singleton
-class XformEllipse(XFormType):
-    def __init__(self):
-        super().__init__("ellipse")
-        self.ver="0.0.0"
-        self.addInputConnector("","imggrey")
-        self.addOutputConnector("img","img")
-        self.addOutputConnector("data","ellipse")
-        
-    def createTab(self,mainui,n):
-        return TabImage(mainui,n)
-
-    def generateOutputTypes(self,node):
-        node.matchOutputsToInputs([(0,0)])
-        
-    def init(self,node):
-        node.img = None
-        node.data = None
-
-    def perform(self,node):
-        img = node.getInput(0)
-        if img is None:
-            node.img = None
-        else:
-            node.img,node.data = ellipseDetect(img)
-        node.setOutput(0,node.img)
-        node.setOutput(1,node.data)

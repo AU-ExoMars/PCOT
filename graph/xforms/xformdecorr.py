@@ -5,9 +5,33 @@ import cv2 as cv
 import numpy as np
 
 import ui.tabs,ui.canvas
-from xform import singleton,XFormType
+from xform import xformtype,XFormType
 
 from functools import reduce
+
+@xformtype
+class XformDecorr(XFormType):
+    def __init__(self):
+        super().__init__("decorr stretch")
+        self.ver="0.0.0"
+        self.addInputConnector("rgb","img888")
+        self.addOutputConnector("rgb","img888")
+        self.autoserialise=('tol',)
+        
+    def createTab(self,mainui,n):
+        return TabDecorr(mainui,n)
+        
+    def init(self,node):
+        node.img = None
+        node.tol = 0
+
+    def perform(self,node):
+        img = node.getInput(0)
+        if img is None:
+            node.img = None
+        else:
+            node.img = decorrstretch(img,node.tol)
+        node.setOutput(0,node.img)
 
 class TabDecorr(ui.tabs.Tab):
     def __init__(self,mainui,node):
@@ -84,26 +108,3 @@ def decorrstretch(A, tol=None):
     return B.astype(np.uint8)
 
 
-@singleton
-class XformDecorr(XFormType):
-    def __init__(self):
-        super().__init__("decorr stretch")
-        self.ver="0.0.0"
-        self.addInputConnector("rgb","img888")
-        self.addOutputConnector("rgb","img888")
-        self.autoserialise=('tol',)
-        
-    def createTab(self,mainui,n):
-        return TabDecorr(mainui,n)
-        
-    def init(self,node):
-        node.img = None
-        node.tol = 0
-
-    def perform(self,node):
-        img = node.getInput(0)
-        if img is None:
-            node.img = None
-        else:
-            node.img = decorrstretch(img,node.tol)
-        node.setOutput(0,node.img)

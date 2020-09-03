@@ -6,8 +6,40 @@ import cv2 as cv
 import numpy as np
 
 import ui.tabs,ui.canvas
-from xform import singleton,XFormType
+from xform import xformtype,XFormType
 
+@xformtype
+class XformSource(XFormType):
+    def __init__(self):
+        super().__init__("source")
+        self.ver="0.0.0a"
+        ## our connectors
+        self.addOutputConnector("rgb","img888")
+        self.autoserialise=('fname',)
+
+    def createTab(self,mainui,n):
+        return TabSource(mainui,n)
+        
+    def init(self,node):
+        node.img = None
+        node.fname = None
+
+    def loadImg(self,node):
+        img = cv.imread(node.fname)
+        if img is None:
+            raise Exception('cannot read image {}'.format(node.fname))
+        # set the node's data
+        img = cv.cvtColor(img,cv.COLOR_BGR2RGB)
+        ui.mainui.log("Image {} loaded: shape {}".format(node.fname,img.shape))
+        node.img = img
+
+    # the "perform" of a source is to read the image if one hasn't 
+    # been loaded, and output the image data.
+    def perform(self,node):
+        if node.img is None and node.fname is not None:
+            self.loadImg(node)
+        node.setOutput(0,node.img)
+    
 
 
 class TabSource(ui.tabs.Tab):
@@ -48,35 +80,3 @@ class TabSource(ui.tabs.Tab):
             # and tell it to perform (outputting the data)
             self.node.perform()
 
-@singleton
-class XformSource(XFormType):
-    def __init__(self):
-        super().__init__("source")
-        self.ver="0.0.0a"
-        ## our connectors
-        self.addOutputConnector("rgb","img888")
-        self.autoserialise=('fname',)
-
-    def createTab(self,mainui,n):
-        return TabSource(mainui,n)
-        
-    def init(self,node):
-        node.img = None
-        node.fname = None
-
-    def loadImg(self,node):
-        img = cv.imread(node.fname)
-        if img is None:
-            raise Exception('cannot read image {}'.format(node.fname))
-        # set the node's data
-        img = cv.cvtColor(img,cv.COLOR_BGR2RGB)
-        ui.mainui.log("Image {} loaded: shape {}".format(node.fname,img.shape))
-        node.img = img
-
-    # the "perform" of a source is to read the image if one hasn't 
-    # been loaded, and output the image data.
-    def perform(self,node):
-        if node.img is None and node.fname is not None:
-            self.loadImg(node)
-        node.setOutput(0,node.img)
-    
