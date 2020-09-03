@@ -107,7 +107,10 @@ class MainUI(ui.tabs.DockableTabWindow):
 
         self.show()
         self.msg("OK")
-        self.load("test.json")
+        if graphscene.hasGrandalf:
+            self.log("Grandalf found.")
+        else:
+            self.log("Grandalf not found - autolayout will be rubbish")
 
     # this gets called from way down in the scene to open tabs for nodes
     def openTab(self,node):
