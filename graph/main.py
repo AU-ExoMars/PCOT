@@ -89,12 +89,16 @@ class MainUI(ui.tabs.DockableTabWindow):
     def versionWarn(self,n):
         self.log('<font color="red">Version clash</font> in node \'{}\', type \'{}\'. Current: {}, file: {}'
             .format(n.name,n.type.name,n.type.ver,n.savedver))
+        self.log('<font color="blue">Current MD5 hash: </font> {}'.format(n.type.md5()))
+        self.log('<font color="blue"> MD5 hash in file:</font> {}'.format(n.savedmd5))
         
         self.warn(
         """
 Node '{}' was saved with a different version of the '{}' node's code.
 Current version: {}
 Version in file: {}
+If these are the same the file may have been modified without changing the \
+version numbers. See MD5 data in the log.
         """
         .format(n.name,n.type.name,n.type.ver,n.savedver))
         

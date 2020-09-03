@@ -197,6 +197,7 @@ class XForm:
         self.comment = d['comment']
         self.outputTypes = d['outputTypes']
         self.savedver = d['ver'] # ver is version node was saved with
+        self.savedmd5 = d['md5'] # and stash the MD5 we were saved with
         # autoserialised data
         self.type.doAutodeserialise(self,d)
         # run the additional deserialisation method
@@ -405,7 +406,12 @@ class XFormGraph:
         d = {}
         for n in self.nodes:
             d[n.name] = n.serialise()
-        json.dump(d,file,sort_keys=True,indent=4)
+        # we serialise to a string and then save the string rather than
+        # doing it in one step, to avoid errors in the former leaving us
+        # with an unreadable file.
+        s = json.dumps(d,sort_keys=True,indent=4)
+        file.write(s)
+        
 
     # given a dictionary, build a graph based on it
     def deserialise(self,file):
@@ -420,7 +426,7 @@ class XFormGraph:
             n.name = nodename # override the default name
             deref[nodename]=n
             n.deserialise(ent) # will also deserialise type-specific data
-            if n.type.md5() != ent['md5']:
+            if n.type.md5() != n.savedmd5:
                 ui.mainui.versionWarn(n)
             n.type.recalculate(n) # recalculate internal data from controls
         # that done, fix up the references
