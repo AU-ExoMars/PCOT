@@ -98,17 +98,14 @@ is made or broken, and uses either **changeOutputType(outindex,typeobj)**
 to achieve this, or more commonly **matchOutputsToInputs()**. This latter
 method takes a list of pairs of input and output indices and makes the 
 latter the same type as the former.
-
 * **recalculate(xform)** is used if internal data to a node should be changed
 after the node UI has been edited or it has been loaded (a typical example
 is lookup tables). It is called in onNodeChanged() in the tab class, and
 also when the node is loaded. In the former case this should be done after
 the controls in the tab are read, but before changing any status displays.
-
 * **serialise(xform)** is used to serialise additional data on saving.
 It should return a dict of names to plain data (see the JSON Python documentation
 for what can be serialised). It should be avoided if possible, see below.
-
 * **deserialise(xform,d)** is used to deserialise additional data serialised
 with serialise(). 
 
