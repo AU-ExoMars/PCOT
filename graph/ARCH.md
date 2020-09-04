@@ -1,0 +1,129 @@
+# Architecture for PCOT prototype
+
+This document briefly describes the architecture of the PCOT prototype,
+discussing the main classes and how certain complex operations are performed
+(e.g. serialisation and deserialisation, aka. saving and loading). It 
+does not discuss how to use the program and is intended for people who
+wish to write more plugin modules, fix bugs or add features.
+
+## Module and package architecture
+
+The main top-level modules of the program are:
+
+* **main** contains the main window user interface code.
+* **xform** contains the data model definition, i.e. how the nodes, node types
+and graph fit together. All UI code is in other modules. Note that the
+graph nodes are correctly referred to as **xform nodes** (transform nodes).
+* **graphscene** contains the code for managing the Qt Graphics Scene
+objects for the graph view panel, and handling user interface actions for
+those objects.
+* **graphview** contains code for managing view-level events for the graph
+view panel, and as such is tightly coupled to graphscene.
+* **palette** handles the note type palette - the list of node types visible
+next to the graph view.
+
+There the following subpackages:
+
+* **ui** contains user interface utility types for managing dockable tabs,
+matplotlib widgets, OpenCV canvas widgets etc.
+* **utils** contains utility classes which are not user interfaces
+(such as hierarchical clustering)
+* **xforms** contains the node type definitions, which are all automatically
+imported and registered. This will be described in more detail below.
+
+In addition, the **assets** directory contains the user interface **.ui**
+which describe the user interface layouts for various windows and tabs.
+These are XML files created in Qt Designer.
+
+## The Model
+
+### XForm nodes
+
+The data model is a directed acyclic graph consisting of transformation
+nodes which act on data. The entire graph is an object of class 
+**XFormGraph**. Each node is an object of type **XForm**.
+Each node type is a singleton subclass of **XFormType**, and each 
+individual node has a link to the appropriate node type object.
+Thus the different node type's behaviours are handled by node type
+object to which the node is connected, not by the node itself (this may
+seem a slightly odd architecture, but using inheritance polymorphism to
+achieve this - i.e. subclasses of XNode - introduces more problems).
+
+Each XForm node is primarily connected to others in the graph through its
+inputs: the **inputs** attribute contains a list of tuple pairs (node,index)
+where *node* is the connected node and *index* is the index of the output
+connection on that node. Each node also contains some information about
+its output connections in the **children** dict: this is a dictionary mapping
+from node to an integer number of connections. If there is no connection,
+there is no dictionary entry. Consider two nodes A and B.
+If node A's output 2 is connected to node B's input 1, the relevant
+data is:
+* Entry 1 in node B's inputs array will contain (A,2)
+* The children dictionary in node A will contain B:1, indicating that node
+A has a single outgoing connection to node B.
+
+### XFormType objects
+
+The **xforms** directory contains the node type definition modules. Each
+module contains the definition of an XFormType subclass, preceded by 
+the **@xformtype** decorator. This decorator automatically constructs
+the only instance of the class, redirects the constructor call to return
+this instance, and also calculates the MD5 checksum of the source code for
+the file, storing it in the singleton. The XFormType constructor also
+registers the class by name in the **allTypes** dictionary at startup.
+
+Therefore it should not be necessary to refer to any XFormType subclass
+in the code directly: when a node is created, the XForm constructor
+looks up the node in the dictionary and creates the required linkage.
+
+Each XFormType subclass **must** define the following methods:
+
+* **init(self,xform)**: given an XForm node, initialise attributes within the
+node which are private to this type. In other words, initialise the node.
+* **perform(self,xform)**: perform the node's action, reading inputs and
+generating outputs for that node. The former is done using **getInput**,
+the latter with **setOutput** on the node. Bear in mind that the latter will also cause the
+all nodes below this to perform their actions, and so the entire subtree will
+recursively run.
+* **createTab(self,xform)**: create the user interface tab. Occasionally
+a node type may omit this if there is no reasonable user interface at all,
+but his is very rare. The result should be a subclass of *ui.tabs.Tab*, a
+dockable tab.
+
+It may also implement:
+
+* **generateOutputTypes(self,xform)**: some nodes may change their output
+types depending on their inputs. This is called when an input connection
+is made or broken, and uses either **changeOutputType(outindex,typeobj)**
+to achieve this, or more commonly **matchOutputsToInputs()**. This latter
+method takes a list of pairs of input and output indices and makes the 
+latter the same type as the former.
+
+* **recalculate(xform)** is used if internal data to a node should be changed
+after the node UI has been edited or it has been loaded (a typical example
+is lookup tables). It is called in onNodeChanged() in the tab class, and
+also when the node is loaded. In the former case this should be done after
+the controls in the tab are read, but before changing any status displays.
+
+* **serialise(xform)** is used to serialise additional data on saving.
+It should return a dict of names to plain data (see the JSON Python documentation
+for what can be serialised). It should be avoided if possible, see below.
+
+* **deserialise(xform,d)** is used to deserialise additional data serialised
+with serialise(). 
+
+#### Automatic serialisation
+
+Any special data in the node which should be saved which is "plain data"
+(see the Python JSON docs) can be serialised and deserialised automaticaly
+by listing the attribute names in a tuple called **autoserialise**. This
+shiuld be set up in the XFormType's constructor. This approach is favoured
+over implementing the **serialise** and **deserialise** members, which
+should only be used when the data requires extra processing.
+
+### XFormType user interfaces 
+
+
+
+
+
