@@ -26,12 +26,12 @@ There the following subpackages:
 
 * **ui** contains user interface utility types for managing dockable tabs,
 matplotlib widgets, OpenCV canvas widgets etc.
-* **utils** contains utility classes which are not user interfaces
+* **utils** contains utility classes which are not user interface elements
 (such as hierarchical clustering)
 * **xforms** contains the node type definitions, which are all automatically
 imported and registered. This will be described in more detail below.
 
-In addition, the **assets** directory contains the user interface **.ui**
+In addition, the **assets** directory contains the user interface **.ui** files
 which describe the user interface layouts for various windows and tabs.
 These are XML files created in Qt Designer.
 
