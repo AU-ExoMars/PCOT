@@ -35,6 +35,10 @@ In addition, the **assets** directory contains the user interface **.ui** files
 which describe the user interface layouts for various windows and tabs.
 These are XML files created in Qt Designer.
 
+The **grandalf** package, if installed, will be used to perform automatic
+layout of nodes when requested. It is, however, a GPL product and is therefore
+not included by default. Without it, autolayout will be extremely crude.
+
 ## The Model
 
 ### XForm nodes
