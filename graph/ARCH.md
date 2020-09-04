@@ -44,7 +44,7 @@ nodes which act on data. The entire graph is an object of class
 **XFormGraph**. Each node is an object of type **XForm**.
 Each node type is a singleton subclass of **XFormType**, and each 
 individual node has a link to the appropriate node type object.
-Thus the different node type's behaviours are handled by node type
+Thus the different node type's behaviours are handled by the node type
 object to which the node is connected, not by the node itself (this may
 seem a slightly odd architecture, but using inheritance polymorphism to
 achieve this - i.e. subclasses of XNode - introduces more problems).
