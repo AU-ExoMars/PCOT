@@ -50,7 +50,7 @@ seem a slightly odd architecture, but using inheritance polymorphism to
 achieve this - i.e. subclasses of XNode - introduces more problems) (favour composition over inheritance).
 
 Each XForm node is primarily connected to others in the graph through its
-inputs: the **inputs** attribute contains a list of tuple pairs (node,index)
+inputs: the **inputs** attribute contains an array of tuple pairs (node,index)
 where *node* is the connected node and *index* is the index of the output
 connection on that node. Each node also contains some information about
 its output connections in the **children** dict: this is a dictionary mapping
@@ -86,10 +86,10 @@ node which are private to this type. In other words, initialise the node.
 generating outputs for that node. The former is done using **getInput**,
 the latter with **setOutput** on the node. Bear in mind that the latter will also cause the
 all nodes below this to perform their actions, and so the entire subtree will
-recursively run.
+recursively run. Typically this also stores the data in the node itself for display by the node's tab.
 * **createTab(self,xform)**: create the user interface tab. Occasionally
 a node type may omit this if there is no reasonable user interface at all,
-but his is very rare. The result should be a subclass of *ui.tabs.Tab*, a
+but his is very rare. The result should be a subclass of **ui.tabs.Tab**, a
 dockable tab.
 
 It may also implement:
@@ -106,37 +106,37 @@ is lookup tables). It is called in onNodeChanged() in the tab class, and
 also when the node is loaded. In the former case this should be done after
 the controls in the tab are read, but before changing any status displays.
 * **serialise(xform)** is used to serialise additional data on saving.
-It should return a dict of names to plain data (see the JSON Python documentation
+It should return a dict of names to plain data (see the [JSON Python documentation](https://docs.python.org/3/library/json.html)
 for what can be serialised). It should be avoided if possible, see below.
 * **deserialise(xform,d)** is used to deserialise additional data serialised
 with serialise(). 
 
 #### Automatic serialisation
 
-Any special data in the node which should be saved which is "plain data"
+Any "plain data" in the node which should be saved
 (see the Python JSON docs) can be serialised and deserialised automaticaly
 by listing the attribute names in a tuple called **autoserialise**. This
-shiuld be set up in the XFormType's constructor. This approach is favoured
+should be set up in the XFormType's constructor. This approach is favoured
 over implementing the **serialise** and **deserialise** members, which
 should only be used when the data requires extra processing.
 
 ### The xforms package
 
-All Python files in this package directory with names of the form **xform<name>.py** 
+All Python files in this package directory with names of the form **xform\<name\>.py** 
 are transform node (and associated UI) definitions, and are loaded automatically 
 from the **__init()\_\_** function of the package. This makes it easy to extend
 the program: simply write new node types in this directory. 
 
 #### Versioning
 
-This can introduce versioning problems: people may edit nodes, which may cause
+Users can edit node type code, which may cause
 data products to change. Two measures are taken to avoid this:
-* Each node type must provide a **ver** attribute, set in the node type constructor. This
+* Each node type must provide a **ver** attribute, set in the node type constructor. 
+This is not used for version checking, merely to provide a reference. This
 is a three part [semantic version](https://semver.org/):
     * MAJOR version when you make incompatible API changes,
     * MINOR version when you add functionality in a backwards compatible manner, and
     * PATCH version when you make backwards compatible bug fixes.
-This is not used for version checking, merely to provide a reference.
 * An MD5 checksum is automatically generated for each node type's source file as it
 is loaded, and these are saved when the graph is saved. If, on loading, the saved
 checksum of a node does not match the current checksum, a warning is shown along with
@@ -157,12 +157,14 @@ RGB image output).
 The subclass should implement **onNodeChanged**, which should update all the tab's
 controls from the actual data stored in the node. Similarly, the tab should contain
 code to update the node from the controls when they change (this can be achieved through
-Qt's signals/slots mechanism: see the code for examples). If complex internal data changes
-when controls are updated, the recalculate() method in the node type can be implemented.
+Qt's signals/slots mechanism: see the code for examples). 
 When the node is changed from the tab in this way it should be commanded to perform().
 The UI should be loaded from a Qt Designer file in the constructor by calling the superclass
 constructor with an appropriate filename. Note that it will actually be loaded into
-the **w** member - the tab widget - so controls should be accessed with **self.w.<name>**.
+the **w** member - the tab widget - so controls should be accessed with **self.w.\<name\>**.
+If complex internal data changes
+when controls are updated, the recalculate() method in the node type can be implemented.
+
 
 ### Examples
 A minimal example is **xforms/xformsink.py**, which simply displays an image. It is given in
@@ -208,7 +210,7 @@ class XformSink(XFormType):
 
 * A full example of a node type is given in **xforms/xformcontrast.py**, which has a single
 control, displays as image and performs a simple contrast stretch. It is fully commented.
-* The most complex node (from the point of view of user interface) is current **xformcrop.py**,
+* The most complex node (from the point of view of user interface) is currently **xformcrop.py**,
 which allows a user to draw a crop rectangle on the image canvas; the cropped image is sent
 to the output. This requires holding a **croprect** datum giving the crop rectangle position
 and size, and handling the extra painting and mouse events via setting the appropriate hooks
