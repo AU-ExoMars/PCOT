@@ -8,9 +8,8 @@ from xforms.tabimage import TabImage
 @xformtype
 class XformMerge(XFormType):
     def __init__(self):
-        super().__init__("merge")
+        super().__init__("merge","0.0.0")
         ## our connectors
-        self.ver="0.0.0"
         self.addInputConnector("r","imggrey")
         self.addInputConnector("g","imggrey")
         self.addInputConnector("b","imggrey")

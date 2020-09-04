@@ -9,8 +9,7 @@ from xforms.tabimage import TabImage
 @xformtype
 class XformGrey(XFormType):
     def __init__(self):
-        super().__init__("greyscale")
-        self.ver="0.0.0"
+        super().__init__("greyscale","0.0.0")
         self.addInputConnector("","img888")
         self.addOutputConnector("","imggrey")
         

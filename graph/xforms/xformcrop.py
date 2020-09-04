@@ -10,8 +10,7 @@ from xform import xformtype,XFormType
 @xformtype
 class XformCrop(XFormType):
     def __init__(self):
-        super().__init__("crop")
-        self.ver="0.0.0"
+        super().__init__("crop","0.0.0")
         self.addInputConnector("","img")
         self.addOutputConnector("","img")
         self.autoserialise=('croprect',)

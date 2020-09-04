@@ -12,8 +12,7 @@ from functools import reduce
 @xformtype
 class XformDecorr(XFormType):
     def __init__(self):
-        super().__init__("decorr stretch")
-        self.ver="0.0.0"
+        super().__init__("decorr stretch","0.0.0")
         self.addInputConnector("rgb","img888")
         self.addOutputConnector("rgb","img888")
         self.autoserialise=('tol',)

@@ -36,8 +36,9 @@ class BadVersionException(Exception):
         self.message = "Node {} was saved with a different version of type {}".format(n.name,n.type.name)
 
 class XFormType():
-    def __init__(self,name):
+    def __init__(self,name,ver):
         self.name = name
+        self.ver = ver
         # add to the global dictionary
         if name in allTypes:
             raise Exception("xform type name already in use: "+name)
@@ -139,10 +140,7 @@ class XForm:
     recursePerform=True
     def __init__(self,type,name):
         self.type = type
-        try:
-            self.savedver = type.ver
-        except AttributeError:
-            raise Exception("Node '{}' does not have a 'ver' field".format(type.name))
+        self.savedver = type.ver
         # create unconnected connections. Connections are either None
         # or (Xform,index) tuples - the xform is the object to which we are
         # connected, the index is the index of the output connector on that xform for inputs,

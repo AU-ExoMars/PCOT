@@ -15,8 +15,7 @@ lutxcoords = np.linspace(0,255,NUMPOINTS)
 @xformtype
 class XformCurve(XFormType):
     def __init__(self):
-        super().__init__("curve")
-        self.ver="0.0.0"
+        super().__init__("curve","0.0.0")
         self.addInputConnector("","img") # accept any image
         self.addOutputConnector("","img") # produce any image, but will change on input connect
         self.autoserialise=('add','mul')

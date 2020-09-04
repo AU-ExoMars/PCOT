@@ -7,8 +7,7 @@ from xform import xformtype,XFormType
 @xformtype
 class XformSplit(XFormType):
     def __init__(self):
-        super().__init__("split")
-        self.ver="0.0.0"
+        super().__init__("split","0.0.0")
         ## our connectors
         self.addInputConnector("rgb","img888")
         self.addOutputConnector("r","imggrey")

@@ -77,7 +77,9 @@ in the code directly: when a node is created, the XForm constructor
 looks up the node in the dictionary and creates the required linkage.
 
 Each XFormType subclass **must** define the following methods:
-
+* **__init\_\_(self,name,ver)**: the constructor for the type, which
+runs at startup. This should take a unique name for the type and a
+three-part version number (see Versioning below).
 * **init(self,xform)**: given an XForm node, initialise attributes within the
 node which are private to this type. In other words, initialise the node.
 * **perform(self,xform)**: perform the node's action, reading inputs and
@@ -118,10 +120,96 @@ shiuld be set up in the XFormType's constructor. This approach is favoured
 over implementing the **serialise** and **deserialise** members, which
 should only be used when the data requires extra processing.
 
+### The xforms package
+
+All Python files in this package directory with names of the form **xform<name>.py** 
+are transform node (and associated UI) definitions, and are loaded automatically 
+from the **__init()\_\_** function of the package. This makes it easy to extend
+the program: simply write new node types in this directory. 
+
+#### Versioning
+
+This can introduce versioning problems: people may edit nodes, which may cause
+data products to change. Two measures are taken to avoid this:
+* Each node type must provide a **ver** attribute, set in the node type constructor. This
+is a three part [semantic version](https://semver.org/):
+    * MAJOR version when you make incompatible API changes,
+    * MINOR version when you add functionality in a backwards compatible manner, and
+    * PATCH version when you make backwards compatible bug fixes.
+This is not used for version checking, merely to provide a reference.
+* An MD5 checksum is automatically generated for each node type's source file as it
+is loaded, and these are saved when the graph is saved. If, on loading, the saved
+checksum of a node does not match the current checksum, a warning is shown along with
+the version numbers for both saved and current nodes.
+
+**<font color="red">TODO: what happens with nodes with changing in/out counts between
+versions, or nodes that can't be loaded?</font>**
+
+
 ### XFormType user interfaces 
 
 Each XFormType object should be able to create a user interface for a node
-of its type with its **createTab** method.
+of its type with its **createTab** method. This should create a tab object
+of a subclass of **ui.tabs.Tab** defined in the xform's own module (however,
+the generic **xforms.TabImage** is available for nodes which have no controls and a single
+RGB image output). 
+
+The subclass should implement **onNodeChanged**, which should update all the tab's
+controls from the actual data stored in the node. Similarly, the tab should contain
+code to update the node from the controls when they change (this can be achieved through
+Qt's signals/slots mechanism: see the code for examples). If complex internal data changes
+when controls are updated, the recalculate() method in the node type can be implemented.
+When the node is changed from the tab in this way it should be commanded to perform().
+The UI should be loaded from a Qt Designer file in the constructor by calling the superclass
+constructor with an appropriate filename. Note that it will actually be loaded into
+the **w** member - the tab widget - so controls should be accessed with **self.w.<name>**.
+
+### Examples
+A minimal example is **xforms/xformsink.py**, which simply displays an image. It is given in
+its entirety below:
+```python
+import cv2 as cv
+import numpy as np
+
+import ui,ui.tabs,ui.canvas
+from xform import xformtype,XFormType
+from xforms.tabimage import TabImage
+
+# The node type itself, a subclass of XFormType with the @xformtype decorator which will
+# calculate a checksum of this source file and automatically create the only instance which
+# can exist of this class (it's a singleton).
+
+@xformtype
+class XformSink(XFormType):
+    def __init__(self):
+        # call superconstructor with the type name and version code
+        super().__init__("sink","0.0.0")
+        # set up a single input which takes an image of any type. The connector could have
+        # a name in more complex node types, but here we just have an empty string.
+        self.addInputConnector("","img")
+
+    # this creates a tab when we want to control or view a node of this type. This uses
+    # the built-in TabImage, which contains an OpenCV image viewer.
+    def createTab(self,n):
+        return TabImage(n)
+
+    # actually perform a node's action, which happens when any of the nodes "upstream" are changed
+    # and on loading.
+    def perform(self,node):
+        # get the input (index 0, our first and only input). That's all - we just store a reference
+        # to the image in the node. The TabImage knows how to display nodes with "img" attributes,
+        # and does the rest.
+        node.img = node.getInput(0)
+    def init(self,node):
+        # initialise the node by setting its img to None.
+        node.img = None
+```
 
 
-
+* A full example of a node type is given in **xforms/xformcontrast.py**, which has a single
+control, displays as image and performs a simple contrast stretch. It is fully commented.
+* The most complex node (from the point of view of user interface) is current **xformcrop.py**,
+which allows a user to draw a crop rectangle on the image canvas; the cropped image is sent
+to the output. This requires holding a **croprect** datum giving the crop rectangle position
+and size, and handling the extra painting and mouse events via setting the appropriate hooks
+in the canvas. See the code for details.

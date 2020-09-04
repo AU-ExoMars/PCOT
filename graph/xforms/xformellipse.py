@@ -10,8 +10,7 @@ from xforms.tabimage import TabImage
 @xformtype
 class XformEllipse(XFormType):
     def __init__(self):
-        super().__init__("ellipse")
-        self.ver="0.0.0"
+        super().__init__("ellipse","0.0.0")
         self.addInputConnector("","imggrey")
         self.addOutputConnector("img","img")
         self.addOutputConnector("data","ellipse")

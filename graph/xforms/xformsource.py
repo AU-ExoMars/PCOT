@@ -11,8 +11,7 @@ from xform import xformtype,XFormType
 @xformtype
 class XformSource(XFormType):
     def __init__(self):
-        super().__init__("source")
-        self.ver="0.0.0a"
+        super().__init__("source","0.0.0")
         ## our connectors
         self.addOutputConnector("rgb","img888")
         self.autoserialise=('fname',)

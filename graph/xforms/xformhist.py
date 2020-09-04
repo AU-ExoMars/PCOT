@@ -8,8 +8,7 @@ from xforms.tabimage import TabImage
 @xformtype
 class XformHist(XFormType):
     def __init__(self):
-        super().__init__("histequal")
-        self.ver="0.0.0"
+        super().__init__("histequal","0.0.0")
         self.addInputConnector("","img")
         self.addOutputConnector("","img")
         
