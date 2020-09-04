@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt
 import cv2 as cv
 import numpy as np
 
-import ui.tabs,ui.canvas,ui.mplwidget
+import ui,ui.tabs,ui.canvas,ui.mplwidget
 from xform import xformtype,XFormType
 
 # number of points in lookup table
@@ -21,8 +21,8 @@ class XformCurve(XFormType):
         self.addOutputConnector("","img") # produce any image, but will change on input connect
         self.autoserialise=('add','mul')
         
-    def createTab(self,mainui,n):
-        return TabCurve(mainui,n)
+    def createTab(self,n):
+        return TabCurve(n)
 
     # this xform can take different image types, but doing so changes
     # the output types, overriding the generic one given in the constructor.
@@ -54,8 +54,8 @@ class XformCurve(XFormType):
 
 
 class TabCurve(ui.tabs.Tab):
-    def __init__(self,mainui,node):
-        super().__init__(mainui,node,'assets/tabcurve.ui') # same UI as sink
+    def __init__(self,node):
+        super().__init__(ui.mainui,node,'assets/tabcurve.ui') # same UI as sink
         self.w.addDial.valueChanged.connect(self.setAdd)
         self.w.mulDial.valueChanged.connect(self.setMul)
         self.plot = None # the matplotlib plot which we update

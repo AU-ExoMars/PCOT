@@ -5,7 +5,7 @@ from PyQt5.QtCore import Qt,QDir
 import cv2 as cv
 import numpy as np
 
-import ui.tabs,ui.canvas
+import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
 
 @xformtype
@@ -17,8 +17,8 @@ class XformSource(XFormType):
         self.addOutputConnector("rgb","img888")
         self.autoserialise=('fname',)
 
-    def createTab(self,mainui,n):
-        return TabSource(mainui,n)
+    def createTab(self,n):
+        return TabSource(n)
         
     def init(self,node):
         node.img = None
@@ -43,8 +43,8 @@ class XformSource(XFormType):
 
 
 class TabSource(ui.tabs.Tab):
-    def __init__(self,mainui,node):
-        super().__init__(mainui,node,'assets/tabsource.ui')
+    def __init__(self,node):
+        super().__init__(ui.mainui,node,'assets/tabsource.ui')
         # set up the file tree
         self.dirModel = QFileSystemModel()
         self.dirModel.setRootPath("/")

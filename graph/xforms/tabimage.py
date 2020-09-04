@@ -1,11 +1,11 @@
-import ui.tabs,ui.canvas
+import ui,ui.tabs,ui.canvas
 
 # this is a tab type for transforms which just display an image. They
 # have one datum - "img" - in the node.
 
 class TabImage(ui.tabs.Tab):
-    def __init__(self,mainui,node):
-        super().__init__(mainui,node,'assets/tabimage.ui') # same UI as sink
+    def __init__(self,node):
+        super().__init__(ui.mainui,node,'assets/tabimage.ui') # same UI as sink
         # sync tab with node
         self.onNodeChanged()
 

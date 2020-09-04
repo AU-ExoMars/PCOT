@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt
 import cv2 as cv
 import numpy as np
 
-import ui.tabs,ui.canvas
+import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
 
 from functools import reduce
@@ -18,8 +18,8 @@ class XformDecorr(XFormType):
         self.addOutputConnector("rgb","img888")
         self.autoserialise=('tol',)
         
-    def createTab(self,mainui,n):
-        return TabDecorr(mainui,n)
+    def createTab(self,n):
+        return TabDecorr(n)
         
     def init(self,node):
         node.img = None
@@ -34,8 +34,8 @@ class XformDecorr(XFormType):
         node.setOutput(0,node.img)
 
 class TabDecorr(ui.tabs.Tab):
-    def __init__(self,mainui,node):
-        super().__init__(mainui,node,'assets/tabcontrast.ui') # same UI as contrast
+    def __init__(self,node):
+        super().__init__(ui.mainui,node,'assets/tabcontrast.ui') # same UI as contrast
         self.w.dial.valueChanged.connect(self.setContrast)
 
         # sync tab with node

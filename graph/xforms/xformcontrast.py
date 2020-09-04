@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt
 import cv2 as cv
 import numpy as np
 
-import ui.tabs,ui.canvas
+import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
 
 def contrast1(img,tol):
@@ -29,8 +29,8 @@ class XformContrast(XFormType):
         self.addOutputConnector("","img")
         self.autoserialise=('tol',)
         
-    def createTab(self,mainui,n):
-        return TabContrast(mainui,n)
+    def createTab(self,n):
+        return TabContrast(n)
         
     def generateOutputTypes(self,node):
         node.matchOutputsToInputs([(0,0)])
@@ -53,8 +53,8 @@ class XformContrast(XFormType):
 
 
 class TabContrast(ui.tabs.Tab):
-    def __init__(self,mainui,node):
-        super().__init__(mainui,node,'assets/tabcontrast.ui') # same UI as sink
+    def __init__(self,node):
+        super().__init__(ui.mainui,node,'assets/tabcontrast.ui') # same UI as sink
         self.w.dial.valueChanged.connect(self.setContrast)
 
         # sync tab with node

@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 
-import ui.tabs,ui.canvas
+import ui,ui.tabs,ui.canvas
 import utils.cluster
 
 from xform import xformtype,XFormType
@@ -16,8 +16,8 @@ class XformEllipse(XFormType):
         self.addOutputConnector("img","img")
         self.addOutputConnector("data","ellipse")
         
-    def createTab(self,mainui,n):
-        return TabImage(mainui,n)
+    def createTab(self,n):
+        return TabImage(n)
 
     def generateOutputTypes(self,node):
         node.matchOutputsToInputs([(0,0)])

@@ -139,7 +139,7 @@ version numbers. See MD5 data in the log.
         # has the node got a tab open already?
         if node.tab is None:
             # nope, ask the node type to make one
-            node.tab = node.type.createTab(self,node)
+            node.tab = node.type.createTab(node)
             node.tab.node = node
         # pull that tab to the front
         self.tabWidget.setCurrentWidget(node.tab)

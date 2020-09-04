@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 
-import ui.tabs,ui.canvas
+import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
 from xforms.tabimage import TabImage
 
@@ -13,8 +13,8 @@ class XformHist(XFormType):
         self.addInputConnector("","img")
         self.addOutputConnector("","img")
         
-    def createTab(self,mainui,n):
-        return TabImage(mainui,n)
+    def createTab(self,n):
+        return TabImage(n)
 
     def generateOutputTypes(self,node):
         node.matchOutputsToInputs([(0,0)])

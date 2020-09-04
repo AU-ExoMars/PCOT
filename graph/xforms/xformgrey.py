@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 
-import ui.tabs,ui.canvas
+import ui,ui.tabs,ui.canvas
 
 from xform import xformtype,XFormType
 from xforms.tabimage import TabImage
@@ -14,8 +14,8 @@ class XformGrey(XFormType):
         self.addInputConnector("","img888")
         self.addOutputConnector("","imggrey")
         
-    def createTab(self,mainui,n):
-        return TabImage(mainui,n)
+    def createTab(self,n):
+        return TabImage(n)
 
     def init(self,node):
         node.img = None

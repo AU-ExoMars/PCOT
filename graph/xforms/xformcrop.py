@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt
 import cv2 as cv
 import numpy as np
 
-import ui.tabs,ui.canvas
+import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
 
 @xformtype
@@ -16,8 +16,8 @@ class XformCrop(XFormType):
         self.addOutputConnector("","img")
         self.autoserialise=('croprect',)
         
-    def createTab(self,mainui,n):
-        return TabCrop(mainui,n)
+    def createTab(self,n):
+        return TabCrop(n)
         
     def generateOutputTypes(self,node):
         node.matchOutputsToInputs([(0,0)])
@@ -40,8 +40,8 @@ class XformCrop(XFormType):
         node.setOutput(0,out)
 
 class TabCrop(ui.tabs.Tab):
-    def __init__(self,mainui,node):
-        super().__init__(mainui,node,'assets/tabimage.ui')
+    def __init__(self,node):
+        super().__init__(ui.mainui,node,'assets/tabimage.ui')
         # set the paint hook in the canvas so we can draw on the image
         self.w.canvas.paintHook=self
         self.w.canvas.mouseHook=self
@@ -53,11 +53,12 @@ class TabCrop(ui.tabs.Tab):
     def onNodeChanged(self):
         # we make a copy of the image and draw the rectangle on that, it's more accurate
         # (at the cost of memory)
-        img = self.node.img.copy()
-        if self.node.croprect is not None:
-            x,y,w,h = self.node.croprect
-            cv.rectangle(img,(x,y),(x+w,y+h),(255,255,0))
-        self.w.canvas.display(img)
+        if self.node.img is not None:
+            img = self.node.img.copy()
+            if self.node.croprect is not None:
+                x,y,w,h = self.node.croprect
+                cv.rectangle(img,(x,y),(x+w,y+h),(255,255,0))
+            self.w.canvas.display(img)
 
     # extra drawing!
     def canvasPaintHook(self,p):

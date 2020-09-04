@@ -16,8 +16,8 @@ class XformMerge(XFormType):
         self.addInputConnector("b","imggrey")
         self.addOutputConnector("rgb","img888")
         
-    def createTab(self,mainui,n):
-        return TabImage(mainui,n)
+    def createTab(self,n):
+        return TabImage(n)
 
     def init(self,node):
         node.img = None

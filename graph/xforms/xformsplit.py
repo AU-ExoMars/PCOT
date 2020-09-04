@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 
-import ui.tabs,ui.canvas
+import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
 
 @xformtype
@@ -15,8 +15,8 @@ class XformSplit(XFormType):
         self.addOutputConnector("g","imggrey")
         self.addOutputConnector("b","imggrey")
         
-    def createTab(self,mainui,n):
-        return TabSplit(mainui,n)
+    def createTab(self,n):
+        return TabSplit(n)
 
     def init(self,node):
         node.red = None
@@ -36,8 +36,8 @@ class XformSplit(XFormType):
             node.blue=None
             
 class TabSplit(ui.tabs.Tab):
-    def __init__(self,mainui,node):
-        super().__init__(mainui,node,'assets/tabsplit.ui')
+    def __init__(self,node):
+        super().__init__(ui.mainui,node,'assets/tabsplit.ui')
         # sync tab with node
         self.onNodeChanged()
 

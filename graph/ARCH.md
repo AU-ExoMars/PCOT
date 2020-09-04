@@ -123,7 +123,8 @@ should only be used when the data requires extra processing.
 
 ### XFormType user interfaces 
 
-
+Each XFormType object should be able to create a user interface for a node
+of its type with its **createTab** method.
 
 
 

@@ -121,9 +121,9 @@ class XFormType():
     def deserialise(self,xform,d):
         pass
         
-    # create a tab connected to this xform - also needs the main UI window.
+    # create a tab connected to this xform, parented to the main UI,
     # Might return none, if this xform doesn't have a meaningful UI.
-    def createTab(self,mainui,xform):
+    def createTab(self,xform):
         return None
 
 # serialise a connection (xform,i) into (xformName,i)
