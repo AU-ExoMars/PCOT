@@ -44,6 +44,8 @@ OUTCONNECTORTEXTYOFF=10   # y offset of connector label on outputs
 ARROWHEADLENGTH=10        # length of arrowhead lines
 ARROWHEADANGLE=math.radians(15)
 
+PASTEOFFSET=20 # x,y offset for pasted copies of nodes
+
 # brushes for different connector types
 
 brushDict={}
@@ -231,7 +233,6 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         self.graph = mainWindow.graph
         self.view = mainWindow.view
         self.selectionChanged.connect(self.selChanged)
-        self.prevDragMode = self.view.dragMode()
         self.selection=[]
         self.checkSelChange=True
         # place everything, adding xy,w,h to all nodes
@@ -409,24 +410,32 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
     # and building the selection list of nodes. Now this is a bit complex because 
     # there are two selections - the selected items in the view (selected by clicking
     # and rubberband) and the currently shown tab.
+    def markSelected(self):
+        for n in self.graph.nodes:
+            r = 255
+            g = 255
+            b = 255
+            if n in self.selection:
+                r-= 50
+                g-= 50
+            if n.current:
+                r-= 50
+                b-= 50
+            if n.rect is not None: # might not have a brush yet (rebuild might need calling)
+                n.rect.setBrush(QColor(r,g,b))
+        self.update()
+
+
+    # handle the selection area being changed (this is a UI slot)    
     def selChanged(self):
         if self.checkSelChange:
             items = self.selectedItems()
             self.selection=[]
             for n in self.graph.nodes:
-                r = 255
-                g = 255
-                b = 255
                 if n.rect in items:
                     self.selection.append(n)
-                    r-= 50
-                    g-= 50
-                if n.current:
-                    r-= 50
-                    b-= 50
-                n.rect.setBrush(QColor(r,g,b))
-            self.update()
-            
+        self.markSelected()
+
     # current tab has changed, set up the UI accordingly. May be passed None if all tabs
     # are closed!
     def currentChanged(self,node):
@@ -442,7 +451,6 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         self.draggingArrow = arrow
         self.dragStartPos = event.pos()
         # temporarily disable drag-selection
-        self.prevDragMode = self.view.dragMode()
         self.view.setDragMode(QtWidgets.QGraphicsView.NoDrag)
 
     # here is where we handle actually dragging an arrow around. Dragging
@@ -461,7 +469,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
     # handle releasing the mouse button during arrow dragging
     def mouseReleaseEvent(self,event):
         # first, go back to normal dragging
-        self.view.setDragMode(self.prevDragMode)
+        self.view.setDragMode(QtWidgets.QGraphicsView.RubberBandDrag)
         if self.draggingArrow is not None:
             # first, make sure we close off the movement
             self.mouseMoveEvent(event)
@@ -515,7 +523,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                         n2.connect(input,n1,output)
                         self.graph.inputChanged(n2)
                 else:
-                    ui.mainui.error("incompatible types {} -> {}".format(outtype,intype))
+                    ui.mainui.error("incompatible MSR types {} -> {}".format(outtype,intype))
             self.rebuildArrows()
             self.draggingArrow=None 
         super().mouseReleaseEvent(event)
@@ -525,5 +533,32 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             for n in self.selection:
                 # remove the nodes
                 self.graph.remove(n)
+            self.selection=[]
             self.rebuild()
     
+
+    def copy(self):
+        self.graph.copy(self.selection)
+        
+    def paste(self):
+        # clear the selection area (UI controlled)
+        self.clearSelection()
+        # paste the nodes, offset them, and select them.
+        newnodes=self.graph.paste()
+        # offset all the nodes
+        for n in newnodes:
+            x,y = n.xy
+            n.xy = (x+PASTEOFFSET,y+PASTEOFFSET)
+        self.rebuild() # rebuild all nodes
+        self.selection=newnodes # set the selection to the new nodes
+        for n in newnodes:
+            n.rect.setSelected(True)
+        # colour selected nodes
+        self.markSelected()
+
+    def cut(self):
+        self.graph.copy(self.selection)
+        for n in self.selection:
+            self.graph.remove(n)
+        self.selection=[]
+        self.rebuild()

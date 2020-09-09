@@ -1,10 +1,13 @@
-import json,traceback,inspect,hashlib
+import json,traceback,inspect,hashlib,re,copy
 from collections import deque
 
 import ui
 
 # dictionary of name -> transformation type
 allTypes = dict()
+
+# pattern for detecting names of "name N" format
+nameNumberRegex = re.compile(r'(\w+)\s+([0-9]+)')
 
 # Superclass for a transformation type. There is a singleton subclassed
 # from this for each type. 
@@ -127,13 +130,16 @@ class XFormType():
     def createTab(self,xform):
         return None
 
-# serialise a connection (xform,i) into (xformName,i)
-def serialiseConn(c):
+# serialise a connection (xform,i) into (xformName,i).
+# Will only serialise connections into the set passed in. If None is passed
+# in all connections are OK.
+def serialiseConn(c,connSet):
     if c:
         x,i = c
-        return (x.name,i)
-    else:
-        return None
+        if (connSet is None) or (x in connSet):
+            return (x.name,i)
+    return None
+
 
 # an actual instance of a transformation
 class XForm:
@@ -172,12 +178,14 @@ class XForm:
         self.inrects = [None for x in self.inputs] # input connector GConnectRects
         self.outrects = [None for x in self.outputs] # output connector GConnectRects
         
-    def serialise(self):
-        # build a serialisable python dict of this node's values
+    def serialise(self,selection=None):
+        # build a serialisable python dict of this node's values, including
+        # only connections to/from the nodes in the selection (which may
+        # be None if you want to serialize the whole set)
         d = {}
         d['xy'] = self.xy
         d['type'] = self.type.name
-        d['ins'] = [serialiseConn(c) for c in self.inputs]
+        d['ins'] = [serialiseConn(c,selection) for c in self.inputs]
         d['comment'] = self.comment
         d['outputTypes'] = self.outputTypes
         d['md5'] = self.type.md5()
@@ -355,6 +363,8 @@ class XFormGraph:
     def __init__(self):
         # all the nodes
         self.nodes = []
+        # nothing in the clipboard
+        self.clipboard = []
         
     # create a new node, passing in a type name.
     def create(self,typename):
@@ -369,7 +379,20 @@ class XFormGraph:
         else:
             raise Exception("Transformation type not found: "+typename)
         return xform
+    
+    # copy selected items to the clipboard. This copies a serialized
+    # version, like that used for load/save. On deserialisation, node
+    # names will be changed to make them unique.
+    def copy(self,selection):
+        self.clipboard = self.serialise(selection)
         
+    # paste the clipboard. This involves deserialising, first ensuring
+    # that nodes in the clipboard don't have the same names as those
+    # in the actual graph. Returns a list of new nodes.
+    def paste(self):
+        return self.deserialise(self.clipboard)
+        
+    # remove a note from the graph, and close any tab/window
     def remove(self,node):
         node.disconnectAll()
         if node.tab is not None:
@@ -401,27 +424,37 @@ class XFormGraph:
         for child,i in toDisconnect:
             child.disconnect(i)
 
-    def serialise(self,file):
+    def serialise(self,items):
+        # just serialise all the nodes into a dict.
         d = {}
-        for n in self.nodes:
-            d[n.name] = n.serialise()
+        for n in items:
+            d[n.name] = n.serialise(items)
+        return d
+        
+    def save(self,file):
         # we serialise to a string and then save the string rather than
         # doing it in one step, to avoid errors in the former leaving us
         # with an unreadable file.
+        d = self.serialise(self.nodes)
         s = json.dumps(d,sort_keys=True,indent=4)
         file.write(s)
         
 
-    # given a dictionary, build a graph based on it
-    def deserialise(self,file):
-        # delete old graph - remember that the UI must close all open tabs!
-        d = json.load(file)
-        self.nodes = []
-        # temporary dictionary of nodename->node
+    # given a dictionary, build a graph based on it. Do not delete
+    # any existing nodes and do not perform the nodes. Returns a list
+    # of the new nodes.
+    
+    def deserialise(self,d):
+        # disambiguate nodes in the dict, to make sure they don't
+        # have the same nodes as ones already in the graph
+        d=self.disambiguate(d)        
+        # temporary dictionary of nodename->node.
         deref={}
+        newnodes=[]
         # first pass - build the nodes
         for nodename,ent in d.items():
             n = self.create(ent['type'])
+            newnodes.append(n)
             n.name = nodename # override the default name
             deref[nodename]=n
             n.deserialise(ent) # will also deserialise type-specific data
@@ -437,7 +470,66 @@ class XFormGraph:
                     oname,output = conns[i] # tuples of name,index: see serialiseConn()
                     other = deref[oname]
                     n.connect(i,other,output,False) # don't automatically perform
-
+        return newnodes
+        
+    # a really ugly thing for just scanning through and returning true if a node
+    # of a given name exists. The *correct* thing to do would be have a dict of
+    # nodes by name, of course. But this is plenty fast enough.
+    def nodeExists(self,name):
+        for n in self.nodes:
+            if n.name == name:
+                return True
+        return False
+        
+    # change the names of nodes in the dict which have the same names as
+    # nodes in the existing graph. Returns a new dict.
+    def disambiguate(self,d):
+        # we do this by creating a new dict. If there are no nodes in
+        # the current graph we can just skip it.
+        if len(self.nodes)==0:
+            return d
+            
+        newd={} # new dict to be returned
+        renamed={} # dict of renamed nodes: oldname->newname
+        newnames=[] # list of new names (values in the above dict)
+        for k,v in d.items():
+            oldname=k
+            # while there's still a node in the actual graph that's the same,
+            # or we've already renamed something to that
+            while self.nodeExists(k) or k in newnames:
+                # take our name and dissect it if possible into "name" "number".
+                m = nameNumberRegex.match(k)
+                if m is None: # there's no number element, probably. Tack one on.
+                    k=k+' 0'
+                else:
+                    # it's in the form "name 00" so dissect out the number and increment it.
+                    nameElement = m.group(1)
+                    numberElement = int(m.group(2))+1
+                    k = nameElement+' '+str(numberElement)
+            renamed[oldname]=k
+            newnames.append(k)
+            # this avoids modification of the clipboard objects, which is disastrous.
+            newd[k]=copy.deepcopy(v)
+        # first pass done, now we need to rename all connections;
+        # again, scan the entire new dictionary
+        for k,v in newd.items():
+            # scan all inputs; done by index
+            conns = v['ins']
+            for i in range(0,len(conns)):
+                if conns[i] is not None:
+                    oname,output = conns[i]
+                    if oname in renamed:
+                        conns[i]=(renamed[oname],output)
+            v['ins']=conns                        
+        # and pass back the new, disambiguated dict
+        return newd
+    
+    # load a serialised dictionary from a file and build a graph on it
+    def load(self,file):
+        # delete old graph - remember that the UI must close all open tabs!
+        d = json.load(file)
+        self.nodes = []
+        self.deserialise(d)
         # we also have to tell all the nodes to perform recursively, from roots down,
         # omitting any already done in the process.
         self.downRecursePerform()

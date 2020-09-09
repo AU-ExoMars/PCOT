@@ -20,7 +20,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     def save(self,fname):
         try:
             with open(fname,'w') as f:
-                self.graph.serialise(f)
+                self.graph.save(f)
                 self.msg("File saved")
         except Exception as e:
             traceback.print_exc()
@@ -29,7 +29,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     def load(self,fname):
         try:
             with open(fname) as f:
-                self.graph.deserialise(f)
+                self.graph.load(f)
                 # now we need to "autolayout" but preserve the xy data
                 self.scene = graphscene.XFormGraphScene(self,False)
                 self.msg("File loaded")
@@ -56,6 +56,13 @@ class MainUI(ui.tabs.DockableTabWindow):
             self.closeAllTabs()
             self.load(res[0])
             
+    def copyAction(self):
+        self.scene.copy()
+    def pasteAction(self):
+        self.scene.paste()
+    def cutAction(self):
+        self.scene.cut()
+            
     def newAction(self):
         # create a dummy graph with just a source
         self.graph=xform.XFormGraph()
@@ -69,6 +76,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.statusBar.showMessage(t)
         
     def log(self,s):
+        print("LOG:",s)
         self.logText.append(s)
         
     def error(self,s):
@@ -116,6 +124,9 @@ version numbers. See MD5 data in the log.
         self.action_New.triggered.connect(self.newAction)
         self.actionSave.triggered.connect(self.saveAction)
         self.actionOpen.triggered.connect(self.openAction)
+        self.actionCopy.triggered.connect(self.copyAction)
+        self.actionPaste.triggered.connect(self.pasteAction)
+        self.actionCut.triggered.connect(self.cutAction)
 
         # get and activate the status bar        
         self.statusBar = QtWidgets.QStatusBar()
