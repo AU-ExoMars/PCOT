@@ -21,8 +21,6 @@ def quickGrad(c1,c2,c3,finalC):
     grad.setColorAt(1,finalC)
     return grad
 
-
-
 brushDict['any']=Qt.red
 brushDict['img888']=quickGrad(Qt.red,Qt.green,Qt.blue,QColor(50,50,50))
 brushDict['imggrey']=Qt.gray

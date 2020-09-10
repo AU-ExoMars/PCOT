@@ -1,8 +1,8 @@
-from PyQt5 import QtWidgets, uic, QtCore
+from PyQt5 import QtWidgets, uic, QtCore, QtGui
 from PyQt5.QtCore import Qt
 import sys,traceback
 
-import ui.tabs
+import ui.tabs,ui.help
 import xform
 import graphview,palette,graphscene
 
@@ -163,7 +163,20 @@ version numbers. See MD5 data in the log.
             w = self.tabWidget.currentWidget().node
         self.scene.currentChanged(w)
             
-        
+
+    # open a window showing help for a node
+    def openHelp(self,node):
+        if node.helpwin is not None:
+            node.helpwin.close() # close existing window you may have left open :)
+        win = QtWidgets.QMainWindow()
+        wid = QtWidgets.QLabel()
+        win.setCentralWidget(wid)
+        win.setWindowTitle("Help for '{}'".format(node.type.name))
+        node.helpwin = win # just to stop GC
+        txt = ui.help.help(node.type)
+        wid.setText(txt)
+        win.setMinimumSize(400,50)
+        win.show()
         
 
 app = QtWidgets.QApplication(sys.argv) 

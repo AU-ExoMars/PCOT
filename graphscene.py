@@ -44,13 +44,21 @@ OUTCONNECTORTEXTYOFF=10   # y offset of connector label on outputs
 ARROWHEADLENGTH=10        # length of arrowhead lines
 ARROWHEADANGLE=math.radians(15)
 
+HELPBOXSIZE=10
+
 PASTEOFFSET=20 # x,y offset for pasted copies of nodes
 
 
 
-        
 
 # basic shapes with extra data attached so we can get the node
+
+# help box. This has no functionality, we can't make it catch clicks unless we make it
+# selectable (which we don't want). That has to be done in the GMainRect parent.
+class GHelpRect(QtWidgets.QGraphicsRectItem):
+    def __init__(self,x,y,node,parent):
+        super().__init__(x+node.w-CONNECTORHEIGHT,y,HELPBOXSIZE,HELPBOXSIZE,parent=parent)
+        self.setBrush(Qt.blue)
 
 # core rectangle
 class GMainRect(QtWidgets.QGraphicsRectItem):
@@ -62,6 +70,8 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
             QtWidgets.QGraphicsItem.ItemIsMovable | \
             QtWidgets.QGraphicsItem.ItemSendsGeometryChanges )
         self.node=node
+        # and add in the help box
+        self.helprect=GHelpRect(x1,y1,node,self)
         
     # deal with items moving
     def itemChange(self,change,value):
@@ -82,7 +92,10 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
     # of focussing another window (an expanded tab); an action
     # delegated to the main window
     def mouseDoubleClickEvent(self,event):
-        self.scene().mainWindow.openTab(self.node)
+        if self.helprect.boundingRect().contains(event.pos()):
+            ui.mainui.openHelp(self.node)
+        else:
+            self.scene().mainWindow.openTab(self.node)
 
 # connection rectangles at top and bottom
 class GConnectRect(QtWidgets.QGraphicsRectItem):

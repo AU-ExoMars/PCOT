@@ -25,7 +25,8 @@ class xformtype:
         src = inspect.getsource(mod).encode('utf-8') # get the source
         self._instance = self._cls(*args,**kwargs) # make the instance
         self._instance._md5 = hashlib.md5(src).hexdigest() # add the checksum
-
+        if self._instance.__doc__ == None:
+            print("WARNING: no documentation for xform type '{}'".format(self._instance.name))
         
     def __call__(self):
         return self._instance
@@ -84,6 +85,7 @@ class XFormType():
         
     def all():
         return allTypes
+        
         
     # DOWN HERE ARE METHODS YOU MAY NEED TO OVERRIDE WHEN WRITING NODE TYPES
         
@@ -177,6 +179,7 @@ class XForm:
         self.rect = None # the main GMainRect rectangle
         self.inrects = [None for x in self.inputs] # input connector GConnectRects
         self.outrects = [None for x in self.outputs] # output connector GConnectRects
+        self.helpwin = None # no help window
         
     def serialise(self,selection=None):
         # build a serialisable python dict of this node's values, including
