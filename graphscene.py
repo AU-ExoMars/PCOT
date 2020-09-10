@@ -19,7 +19,7 @@ from PyQt5.QtGui import QColor,QBrush,QLinearGradient,QFont,QTransform
 
 import math
 
-import xform,ui
+import xform,ui,conntypes
 
 connectorFont = QFont()
 #connectorFont.setStyleHint(QFont.SansSerif)
@@ -45,32 +45,6 @@ ARROWHEADLENGTH=10        # length of arrowhead lines
 ARROWHEADANGLE=math.radians(15)
 
 PASTEOFFSET=20 # x,y offset for pasted copies of nodes
-
-# brushes for different connector types
-
-brushDict={}
-
-grad = QLinearGradient(0,0,20,0)
-grad.setColorAt(0,Qt.red)
-grad.setColorAt(0.4,Qt.green)
-grad.setColorAt(0.8,Qt.blue)
-grad.setColorAt(1,QColor(50,50,50))
-
-brushDict['img888']=grad
-brushDict['imggrey']=Qt.gray
-brushDict['img']=Qt.blue
-brushDict['ellipse']=Qt.cyan
-
-# convert all brushes to actual QBrush objects
-brushDict = { k:QBrush(v) for k,v in brushDict.items()}
-
-
-def getBrush(typename):
-    if typename in brushDict:
-        return brushDict[typename]
-    else:
-        print("Unknown type ",typename)
-        return QBrush(Qt.magenta)
 
 
 
@@ -126,7 +100,7 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
             name,typename = node.type.inputConnectors[index]
         else:
             name,typename = (node.type.outputConnectors[index][0],node.getOutputType(index))
-        brush = getBrush(typename)
+        brush = conntypes.getBrush(typename)
         t = QTransform().translate(self.rect().x(),0) # need to translate brush patterns
         brush.setTransform(t)
         self.setBrush(brush)
@@ -503,7 +477,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 outtype = n1.getOutputType(output)
                 intype = n2.getInputType(input)
                 
-                if xform.isCompatibleConnection(outtype,intype):
+                if conntypes.isCompatibleConnection(outtype,intype):
                     if n2.cycle(n1):
                         ui.mainui.error("cannot create a cycle")
                     else:

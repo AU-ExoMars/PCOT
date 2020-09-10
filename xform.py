@@ -1,7 +1,7 @@
 import json,traceback,inspect,hashlib,re,copy
 from collections import deque
 
-import ui
+import ui,conntypes
 
 # dictionary of name -> transformation type
 allTypes = dict()
@@ -349,15 +349,6 @@ class XForm:
             n,i = self.inputs[i]
             return n.outputs[i]
             
-# are two connectors compatible?
-def isCompatibleConnection(outtype,intype):
-    # image inputs accept all images
-    if intype == 'img':
-        return 'img' in outtype 
-    else:
-        # otherwise has to match exactly
-        return outtype==intype    
-
 # a graph of transformation nodes
 class XFormGraph:
     def __init__(self):
@@ -419,7 +410,7 @@ class XFormGraph:
                     if parent is node:
                         outtype = node.getOutputType(out)
                         intype = child.getInputType(i)
-                        if not isCompatibleConnection(outtype,intype):
+                        if not conntypes.isCompatibleConnection(outtype,intype):
                             toDisconnect.append((child,i))
         for child,i in toDisconnect:
             child.disconnect(i)
