@@ -30,7 +30,7 @@ class XformCrop(XFormType):
         img = node.getInput(0)
         # our image is always the input (but we draw on it), the output is the crop.
         node.img = img
-        if node.croprect is not None:
+        if node.croprect is not None and img is not None:
             x,y,w,h = node.croprect
             print("CROPPING")
             out = img[y:y+h,x:x+w]

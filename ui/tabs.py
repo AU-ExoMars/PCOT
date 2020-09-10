@@ -109,6 +109,7 @@ class Tab(QtWidgets.QWidget):
         self.title=node.name
         self.expanded=None
         self.node=node
+        node.tab = self
 
         # set the entire tab to be a vertical layout (just there to contain
         # everything, could be any layout)

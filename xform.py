@@ -332,7 +332,7 @@ class XForm:
     # any tab open on a node that its node has changed.
     def perform(self):
         ui.mainui.msg("Performing {}".format(self.name))
-        print("Performing {}".format(self.name))
+        print("Performing {} hastab={}".format(self.name,self.tab is not None))
         try:
             self.type.perform(self)
             if self.tab is not None:

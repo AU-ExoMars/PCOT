@@ -17,7 +17,7 @@ class XformInset(XFormType):
         self.addInputConnector("inset","img")
         self.addInputConnector("rect","rect")
         self.addOutputConnector("","img")
-        self.autoserialise=('insetrect','caption','captiontop')
+        self.autoserialise=('insetrect','caption','captiontop','fontsize')
 
     def createTab(self,n):
         return TabInset(n)
@@ -41,7 +41,7 @@ class XformInset(XFormType):
         if inrect is None:
             inrect = node.insetrect
         
-        ui.mainui.log("Inrect {}, rubber: {}".format(inrect,node.insetrect))
+        ui.mainui.log("{}: Inrect {}, rubber: {}, img?: {}, inset?: {}".format(node.name,inrect,node.insetrect,image is not None,inset is not None))
         if inrect is None:
             out = image # neither rects are set, just dupe the input
         elif image is None:
@@ -53,10 +53,12 @@ class XformInset(XFormType):
             if inset is None:
                 # there's no inset image, draw a rectangle
                 cv.rectangle(out,(x,y),(x+w,y+h),(0,0,255),-1) # -1=filled
+                ui.mainui.log("BLUING")
             else:
                 # resize the inset
                 t = cv.resize(inset,dsize=(w,h),interpolation=cv.INTER_CUBIC)
                 out[y:y+h,x:x+w]=t
+                ui.mainui.log("DRAWING")
             # add in the caption
             if node.caption != '':
                 fs = node.fontsize/10
@@ -99,9 +101,11 @@ class TabInset(ui.tabs.Tab):
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
+        ui.mainui.log("{} NODECHANGE".format(self.node.name))
         # we just draw the composited image
         if self.node.img is not None:
             self.w.canvas.display(self.node.img)
+            ui.mainui.log("{} RENDER TO CANVAS".format(self.node.name))
         self.w.caption.setText(self.node.caption)
         self.w.fontsize.setValue(self.node.fontsize)
 
