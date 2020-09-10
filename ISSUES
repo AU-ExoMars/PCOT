@@ -9,8 +9,10 @@ You have to browse down the file tree for each one.
 
 THINGS TO DO
 
+0. Fix decorr stretch knob!
+
 1. MD5 checksumming on nodes, to make sure that a graph saved with node X,
-when loaded, is using the same code it was saved with.
+when loaded, is using the same code it was saved with. DONE
 
 2. What to do if the above fails, or a node doesn't exist (some kind of
 placeholder node with dead outputs?)
