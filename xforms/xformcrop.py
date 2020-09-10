@@ -10,9 +10,10 @@ from xform import xformtype,XFormType
 @xformtype
 class XformCrop(XFormType):
     def __init__(self):
-        super().__init__("crop","0.0.0")
+        super().__init__("crop","0.0.1")
         self.addInputConnector("","img")
-        self.addOutputConnector("","img")
+        self.addOutputConnector("cropped","img")
+        self.addOutputConnector("rect","rect")
         self.autoserialise=('croprect',)
         
     def createTab(self,n):
@@ -37,6 +38,7 @@ class XformCrop(XFormType):
         else:
             out = img
         node.setOutput(0,out)
+        node.setOutput(1,node.croprect)
 
 class TabCrop(ui.tabs.Tab):
     def __init__(self,node):

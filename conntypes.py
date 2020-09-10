@@ -10,19 +10,31 @@ from PyQt5.QtGui import QColor,QBrush,QLinearGradient
 
 brushDict={} # dictionary of name -> brush for connection pad drawing
 
-grad = QLinearGradient(0,0,20,0)
-grad.setColorAt(0,Qt.red)
-grad.setColorAt(0.4,Qt.green)
-grad.setColorAt(0.8,Qt.blue)
-grad.setColorAt(1,QColor(50,50,50))
+# creates a gradient consisting of three colours in quick succession
+# followed by a wide band of another colour. Used to mark connections such as RGB.
 
-brushDict['img888']=grad
+def quickGrad(c1,c2,c3,finalC):
+    grad = QLinearGradient(0,0,20,0)
+    grad.setColorAt(0,c1)
+    grad.setColorAt(0.4,c2)
+    grad.setColorAt(0.8,c3)
+    grad.setColorAt(1,finalC)
+    return grad
+
+
+
+brushDict['any']=Qt.red
+brushDict['img888']=quickGrad(Qt.red,Qt.green,Qt.blue,QColor(50,50,50))
 brushDict['imggrey']=Qt.gray
 brushDict['img']=Qt.blue
 brushDict['ellipse']=Qt.cyan
+brushDict['rect']=Qt.cyan
 
 # convert all brushes to actual QBrush objects
 brushDict = { k:QBrush(v) for k,v in brushDict.items()}
+
+# add brushes which are already QBrush down here
+
 
 # get a brush by name or magenta if no brush is found
 
@@ -39,6 +51,8 @@ def isCompatibleConnection(outtype,intype):
     # image inputs accept all images
     if intype == 'img':
         return 'img' in outtype 
+    elif intype == 'any': # accepts anything
+        return True
     else:
         # otherwise has to match exactly
         return outtype==intype    
