@@ -47,7 +47,7 @@ class TabSource(ui.tabs.Tab):
         # set up the file tree
         self.dirModel = QFileSystemModel()
         self.dirModel.setRootPath("/")
-        self.dirModel.setNameFilters(["*.jpg","*.png","*.ppm","*.tga"])
+        self.dirModel.setNameFilters(["*.jpg","*.png","*.ppm","*.tga","*.tif"])
         self.dirModel.setNameFilterDisables(False)
         tree = self.w.treeView
         self.w.treeView.setModel(self.dirModel)

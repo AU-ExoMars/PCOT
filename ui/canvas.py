@@ -51,6 +51,8 @@ class Canvas(QtWidgets.QWidget):
             p.drawImage(0,0,img2qimage(img))
             if self.paintHook is not None:
                 self.paintHook.canvasPaintHook(p)
+        else:
+            self.scale=1
         p.end()
         
     def mousePressEvent(self,e):

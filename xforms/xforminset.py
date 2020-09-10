@@ -17,7 +17,7 @@ class XformInset(XFormType):
         self.addInputConnector("inset","img")
         self.addInputConnector("rect","rect")
         self.addOutputConnector("","img")
-        self.autoserialise=('insetrect',)
+        self.autoserialise=('insetrect','caption','captiontop')
 
     def createTab(self,n):
         return TabInset(n)
@@ -28,6 +28,9 @@ class XformInset(XFormType):
     def init(self,node):
         node.img = None
         node.insetrect = None
+        node.caption = ''
+        node.captiontop = False
+        node.fontsize=10
         
     def perform(self,node):
         image = node.getInput(0)
@@ -41,6 +44,9 @@ class XformInset(XFormType):
         ui.mainui.log("Inrect {}, rubber: {}".format(inrect,node.insetrect))
         if inrect is None:
             out = image # neither rects are set, just dupe the input
+        elif image is None:
+            # if there's no image we can't put anything on it.
+            out = None
         else:
             x,y,w,h = inrect # get the rectangle
             out = image.copy()
@@ -51,6 +57,22 @@ class XformInset(XFormType):
                 # resize the inset
                 t = cv.resize(inset,dsize=(w,h),interpolation=cv.INTER_CUBIC)
                 out[y:y+h,x:x+w]=t
+            # add in the caption
+            if node.caption != '':
+                fs = node.fontsize/10
+                (tw,th),baseline = cv.getTextSize(node.caption,
+                    cv.FONT_HERSHEY_SIMPLEX,
+                    fs,2)
+                
+                if node.captiontop:
+                    ty=y-2
+                else:
+                    ty=y+h+th+baseline-2
+                cv.putText(out,node.caption,
+                    (x,ty),
+                    cv.FONT_HERSHEY_SIMPLEX,
+                    fs,
+                    (255,255,0),2)
 
         node.img = out
         node.setOutput(0,out)
@@ -58,19 +80,30 @@ class XformInset(XFormType):
 
 class TabInset(ui.tabs.Tab):
     def __init__(self,node):
-        super().__init__(ui.mainui,node,'assets/tabimage.ui')
+        super().__init__(ui.mainui,node,'assets/tabinset.ui')
         # set the paint hook in the canvas so we can draw on the image
         self.w.canvas.paintHook=self
         self.w.canvas.mouseHook=self
+        self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
+        self.w.caption.textChanged.connect(self.textChanged)
         # sync tab with node
         self.onNodeChanged()
         self.mouseDown=False
+        
+    def fontSizeChanged(self,i):
+        self.node.fontsize=i
+        self.node.perform()
+    def textChanged(self,t):
+        self.node.caption=t
+        self.node.perform()
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
         # we just draw the composited image
         if self.node.img is not None:
             self.w.canvas.display(self.node.img)
+        self.w.caption.setText(self.node.caption)
+        self.w.fontsize.setValue(self.node.fontsize)
 
     # extra drawing!
     def canvasPaintHook(self,p):
