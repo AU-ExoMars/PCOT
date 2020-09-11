@@ -6,18 +6,38 @@ Loading files in source isn't optimal - let's say you're compositing
 N different source greyscale files which aren't in the current directory.
 You have to browse down the file tree for each one.
 
+Fix decorr stretch knob!
+
+Fix fail-to-perform on inset
+
 
 THINGS TO DO
 
-0. Fix decorr stretch knob!
 
-1. MD5 checksumming on nodes, to make sure that a graph saved with node X,
-when loaded, is using the same code it was saved with. DONE
+What to do if a node doesn't exist (some kind of placeholder node with dead
+outputs?)
 
-2. What to do if the above fails, or a node doesn't exist (some kind of
-placeholder node with dead outputs?)
+Multiple source node (loads multiple greyscale files, output
+is a number of greyscale channels)
 
-3. Node documentation: should be in a string in the file. If we add a
-docstring to the class, we can access it with type(xformtypeobj).__doc__).
-We should check it exists when a class is registered. We should also be 
-able to open a non-modal popup containing it from all tabs.
+Single source node to output either GS or RGB. Needs renaming
+
+Demo of calibration workflow
+
+Demo of presets
+
+General ROI object type, which contains ref to original image
+and ROI data (more efficient) (maybe this should be the general image
+type, but that's potentially a lot of work).
+
+Better crop (shows cropped area better). Outputs ROI type. Just call it
+"rectangle". Can be annotated (like inset). Image output switchable between
+crop and whole annotated image.
+
+Ellipse and Path ROIs, same as rectangle in usage.
+
+Canvas zoom?
+
+Channel add and subtract
+
+Remap greyscale to colour gradient.
