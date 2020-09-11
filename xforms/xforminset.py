@@ -1,6 +1,10 @@
 import cv2 as cv
 import numpy as np
 
+from PyQt5 import QtWidgets,QtCore,QtGui
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QColor
+
 import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
 from xforms.tabimage import TabImage
@@ -17,7 +21,8 @@ class XformInset(XFormType):
         self.addInputConnector("inset","img")
         self.addInputConnector("rect","rect")
         self.addOutputConnector("","img")
-        self.autoserialise=('insetrect','caption','captiontop','fontsize')
+        self.autoserialise=('insetrect','caption','captiontop',
+            'fontsize','fontline','colour')
 
     def createTab(self,n):
         return TabInset(n)
@@ -31,6 +36,8 @@ class XformInset(XFormType):
         node.caption = ''
         node.captiontop = False
         node.fontsize=10
+        node.fontline=2
+        node.colour=(255,255,0)
         
     def perform(self,node):
         image = node.getInput(0)
@@ -64,7 +71,7 @@ class XformInset(XFormType):
                 fs = node.fontsize/10
                 (tw,th),baseline = cv.getTextSize(node.caption,
                     cv.FONT_HERSHEY_SIMPLEX,
-                    fs,2)
+                    fs,node.fontline)
                 
                 if node.captiontop:
                     ty=y-2
@@ -74,7 +81,7 @@ class XformInset(XFormType):
                     (x,ty),
                     cv.FONT_HERSHEY_SIMPLEX,
                     fs,
-                    (255,255,0),2)
+                    node.colour,node.fontline)
 
         node.img = out
         node.setOutput(0,out)
@@ -87,7 +94,9 @@ class TabInset(ui.tabs.Tab):
         self.w.canvas.paintHook=self
         self.w.canvas.mouseHook=self
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
+        self.w.fontline.valueChanged.connect(self.fontLineChanged)
         self.w.caption.textChanged.connect(self.textChanged)
+        self.w.colourButton.pressed.connect(self.colourPressed)
         # sync tab with node
         self.onNodeChanged()
         self.mouseDown=False
@@ -98,6 +107,19 @@ class TabInset(ui.tabs.Tab):
     def textChanged(self,t):
         self.node.caption=t
         self.node.perform()
+    def fontLineChanged(self,i):
+        self.node.fontline=i
+        self.node.perform()
+    def colourPressed(self):
+        r,g,b = self.node.colour
+        curcol = QColor(r,g,b)
+        col=QtWidgets.QColorDialog.getColor(curcol,ui.mainui)
+        if col.isValid():
+            self.node.colour = (col.red(),col.green(),col.blue())
+            self.node.perform()
+                    
+        
+    
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
@@ -108,6 +130,11 @@ class TabInset(ui.tabs.Tab):
             ui.mainui.log("{} RENDER TO CANVAS".format(self.node.name))
         self.w.caption.setText(self.node.caption)
         self.w.fontsize.setValue(self.node.fontsize)
+        self.w.fontline.setValue(self.node.fontline)
+
+        r,g,b = self.node.colour
+        self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r,g,b));
+        
 
     # extra drawing!
     def canvasPaintHook(self,p):
