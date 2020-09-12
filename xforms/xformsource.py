@@ -7,6 +7,7 @@ import numpy as np
 
 import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
+from pancamimage import Image
 
 @xformtype
 class XformSource(XFormType):
@@ -29,6 +30,7 @@ class XformSource(XFormType):
             raise Exception('cannot read image {}'.format(node.fname))
         # set the node's data
         img = cv.cvtColor(img,cv.COLOR_BGR2RGB)
+        
         ui.mainui.log("Image {} loaded: shape {}".format(node.fname,img.shape))
         node.img = img
 
