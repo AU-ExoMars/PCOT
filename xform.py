@@ -159,6 +159,8 @@ class XForm:
         # there is also a data output generated for each output by "perform", initially
         # these are None
         self.outputs = [None for x in type.outputConnectors]
+        # whether a given output is connected
+        self.outputsConnected = [False for x in type.outputConnectors]
         # these are the overriding output types; none if we use the default
         # given by the type object (see the comment on outputConnectors
         # in XFormType)
@@ -226,6 +228,10 @@ class XForm:
             else:
                 return self.outputTypes[i]
                 
+    # is an output connected?
+    def isOutputConnected(self,i)
+        return self.outputsConnected[i]
+                
     # this should be used to change an output type is generateOutputTypes
     def changeOutputType(self,index,type):
         self.outputTypes[index]=type
@@ -280,6 +286,7 @@ class XForm:
             if output>=0 and output<len(other.type.outputConnectors):
                 if not self.cycle(other): # this is a double check, the UI checks too.
                     self.inputs[input] = (other,output)
+                    other.outputsConnected[output]=True
                     other.increaseChildCount(self)
                     if autoPerform:
                         self.perform()
@@ -290,6 +297,7 @@ class XForm:
         if input>=0 and input<len(self.inputs):
             if self.inputs[input] is not None:
                 n,i = self.inputs[input]
+                n.outputsConnected[i]=False
                 n.decreaseChildCount(self)
                 self.inputs[input]=None
                 self.perform()
