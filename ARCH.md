@@ -88,9 +88,11 @@ three-part version number (see Versioning below).
 node which are private to this type. In other words, initialise the node.
 * **perform(self,xform)**: perform the node's action, reading inputs and
 generating outputs for that node. The former is done using **getInput**,
-the latter with **setOutput** on the node. Bear in mind that the latter will also cause the
-all nodes below this to perform their actions, and so the entire subtree will
-recursively run. Typically this also stores the data in the node itself for display by the node's tab.
+the latter with **setOutput** on the node. Typically this also stores the data in the node itself for display by the node's tab.
+Once perform() has run on a node (and all connected outputs are set), it is also run
+on the child nodes. Thus a change high up in the graph will percolate down.
+This may slow things down in complex graphs, and I'm looking into ways
+of ameliorating this.
 * **createTab(self,xform)**: create the user interface tab. Occasionally
 a node type may omit this if there is no reasonable user interface at all,
 but his is very rare. The result should be a subclass of **ui.tabs.Tab**, a
