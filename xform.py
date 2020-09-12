@@ -229,7 +229,7 @@ class XForm:
                 return self.outputTypes[i]
                 
     # is an output connected?
-    def isOutputConnected(self,i)
+    def isOutputConnected(self,i):
         return self.outputsConnected[i]
                 
     # this should be used to change an output type is generateOutputTypes
