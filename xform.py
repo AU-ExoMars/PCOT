@@ -154,13 +154,13 @@ class XForm:
         # connected, the index is the index of the output connector on that xform for inputs,
         # or the input connector for outputs
         self.inputs = [None for x in type.inputConnectors]
+        # the actual output connections as (Xform,index)
+        self.outputConnections = [None for x in type.outputConnectors]
         # we keep a dict of those nodes which get inputs from us, and how many
         self.children = {}
         # there is also a data output generated for each output by "perform", initially
         # these are None
         self.outputs = [None for x in type.outputConnectors]
-        # whether a given output is connected
-        self.outputsConnected = [False for x in type.outputConnectors]
         # these are the overriding output types; none if we use the default
         # given by the type object (see the comment on outputConnectors
         # in XFormType)
@@ -230,7 +230,14 @@ class XForm:
                 
     # is an output connected?
     def isOutputConnected(self,i):
-        return self.outputsConnected[i]
+        return self.outputConnections[i] is not None
+        
+    # get the node connected on this output
+    def getOutputNode(self,i):
+        if self.outputConnections[i] is None:
+            return None
+        else:
+            return self.outputConnections[i][0]
                 
     # this should be used to change an output type is generateOutputTypes
     def changeOutputType(self,index,type):
@@ -286,7 +293,7 @@ class XForm:
             if output>=0 and output<len(other.type.outputConnectors):
                 if not self.cycle(other): # this is a double check, the UI checks too.
                     self.inputs[input] = (other,output)
-                    other.outputsConnected[output]=True
+                    other.outputConnections[output]=(self,input)
                     other.increaseChildCount(self)
                     if autoPerform:
                         self.perform()
@@ -297,7 +304,7 @@ class XForm:
         if input>=0 and input<len(self.inputs):
             if self.inputs[input] is not None:
                 n,i = self.inputs[input]
-                n.outputsConnected[i]=False
+                n.outputConnections[i]=False
                 n.decreaseChildCount(self)
                 self.inputs[input]=None
                 self.perform()
@@ -316,14 +323,11 @@ class XForm:
                         # the child counts are irrelevant and don't need updating
                         n.inputs[i]=None
 
-    # change an output - typically caused by perform, this will cause all children
-    # to perform too, leading to recursive descent of the tree. May also be caused
-    # by source data change. The recursive descent behaviour is not used in loading.
+    # change an output. This should be called by the type's perform method,
+    # and used to call perform on children: now that's done in perform()
+    # itself to both avoid multiple calls and to avoid ordering problems.
     def setOutput(self,i,data):
         self.outputs[i]=data
-        if XForm.recursePerform:
-            for n in self.children:
-                n.perform()
             
     def increaseChildCount(self,n):
         if n in self.children:
@@ -344,10 +348,16 @@ class XForm:
     def perform(self):
         ui.mainui.msg("Performing {}".format(self.name))
         print("Performing {} hastab={}".format(self.name,self.tab is not None))
+#        traceback.print_stack()
         try:
             self.type.perform(self)
+            # tell the tab that this node has changed
             if self.tab is not None:
                 self.tab.onNodeChanged()
+            # now all outputs have been set, run connected child nodes.
+            # This is where recursion occurs.
+            for n in self.children:
+                n.perform()
         except Exception as e:
             traceback.print_exc()
             ui.mainui.logXFormException(self,e)

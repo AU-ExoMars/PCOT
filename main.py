@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets, uic, QtCore, QtGui
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt,QCommandLineOption,QCommandLineParser
 import sys,traceback
 
 import ui.tabs,ui.help
@@ -116,6 +116,7 @@ version numbers. See MD5 data in the log.
         uic.loadUi('assets/main.ui',self)
         self.initTabs()
         self.saveFileName = None
+        self.setWindowTitle(app.applicationName()+' '+app.applicationVersion())
         
         # connect buttons etc.        
         self.autolayoutButton.clicked.connect(self.autoLayout)
@@ -178,9 +179,25 @@ version numbers. See MD5 data in the log.
         win.setMinimumSize(400,50)
         win.show()
         
+if __name__ == "__main__":
+    app = QtWidgets.QApplication(sys.argv) 
+    app.setApplicationVersion("0.0.0")
+    app.setApplicationName("PCOT")
+    app.setOrganizationName('Aberystwyth University')
+    app.setOrganizationDomain('aber.ac.uk')
+    
+    parser = QCommandLineParser()
+    parser.addHelpOption()
+    parser.addVersionOption()
+    parser.addPositionalArgument("file", "A JSON graph file to open")
+    
+    
+    parser.process(app)
+    args = parser.positionalArguments() 
 
-app = QtWidgets.QApplication(sys.argv) 
-window=MainUI() # Create an instance of our class
-window.app = app
-app.exec_() # Start the application
+    window=MainUI() # Create an instance of our class
+    if len(args)>0:
+        window.load(args[0])
+    window.app = app
+    app.exec_() # Start the application
 
