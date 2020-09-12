@@ -5,6 +5,7 @@ import ui,ui.tabs,ui.canvas
 
 from xform import xformtype,XFormType
 from xforms.tabimage import TabImage
+from pancamimage import Image
 
 @xformtype
 class XformGrey(XFormType):
@@ -24,6 +25,6 @@ class XformGrey(XFormType):
         if img is None:
             node.img = None
         else:
-            node.img = cv.cvtColor(img,cv.COLOR_RGB2GRAY)
+            node.img = Image(cv.cvtColor(img.img,cv.COLOR_RGB2GRAY))
                 
         node.setOutput(0,node.img)

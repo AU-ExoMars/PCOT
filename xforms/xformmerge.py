@@ -4,6 +4,7 @@ import numpy as np
 import ui.tabs,ui.canvas
 from xform import xformtype,XFormType
 from xforms.tabimage import TabImage
+from pancamimage import Image
 
 @xformtype
 class XformMerge(XFormType):
@@ -27,7 +28,7 @@ class XformMerge(XFormType):
         b = node.getInput(2)
         node.img = None # preset the internal value
         
-        # get shapes            
+        # get shapes; this still works because Image has shape
         rs = None if r is None else r.shape
         gs = None if g is None else g.shape
         bs = None if b is None else b.shape
@@ -60,6 +61,6 @@ class XformMerge(XFormType):
             g = black
         if r is None:
             r = black
-        node.img = cv.merge([r,g,b])
+        node.img = Image(cv.merge([r.img,g.img,b.img]))
         node.setOutput(0,node.img)
             

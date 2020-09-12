@@ -6,6 +6,7 @@ import numpy as np
 
 import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
+from pancamimage import Image
 
 @xformtype
 class XformCrop(XFormType):
@@ -33,7 +34,7 @@ class XformCrop(XFormType):
         if node.croprect is not None and img is not None:
             x,y,w,h = node.croprect
             print("CROPPING")
-            out = img[y:y+h,x:x+w]
+            out = Image(img.img[y:y+h,x:x+w])
             ui.mainui.log("Cropped: x={} y={} w={} h={}".format(x,y,w,h))
         else:
             out = img
@@ -55,11 +56,12 @@ class TabCrop(ui.tabs.Tab):
         # we make a copy of the image and draw the rectangle on that, it's more accurate
         # (at the cost of memory)
         if self.node.img is not None:
-            img = self.node.img.copy()
+            # yeah, ugly. Node -> Image object -> numpy array -> copy.
+            img = self.node.img.img.copy()
             if self.node.croprect is not None:
                 x,y,w,h = self.node.croprect
                 cv.rectangle(img,(x,y),(x+w,y+h),(255,255,0))
-            self.w.canvas.display(img)
+            self.w.canvas.display(Image(img))
 
     # extra drawing!
     def canvasPaintHook(self,p):

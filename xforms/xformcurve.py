@@ -6,6 +6,7 @@ import numpy as np
 
 import ui,ui.tabs,ui.canvas,ui.mplwidget
 from xform import xformtype,XFormType
+from pancamimage import Image
 
 # number of points in lookup table
 NUMPOINTS=100
@@ -47,7 +48,7 @@ class XformCurve(XFormType):
         if img is None:
             node.img = None
         else:
-            node.img = np.interp(img,lutxcoords,node.lut).astype(np.ubyte)
+            node.img = Image(np.interp(img.img,lutxcoords,node.lut).astype(np.ubyte))
 
         node.setOutput(0,node.img)
 

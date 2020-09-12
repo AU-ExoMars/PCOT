@@ -6,6 +6,7 @@ import numpy as np
 
 import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
+from pancamimage import Image
 
 # performs contrast stretching on a single channel. The image is a (w,h) numpy array
 # which is converted to float, and converted back to 8 bit.
@@ -78,10 +79,10 @@ class XformContrast(XFormType):
             # otherwise, it depends on the image type. If it has three dimensions it must
             # be RGB888, so generate the node's image using contrast(), otherwise it must be
             # single channel, so use contrast1().
-            if len(img.shape)==3:
-                node.img = contrast(img,node.tol)
+            if img.channels==3:
+                node.img = Image(contrast(img.img,node.tol))
             else:
-                node.img = contrast1(img,node.tol)
+                node.img = Image(contrast1(img.img,node.tol))
         # Now we have generated the internally stored image, output it to output 0. This will
         # cause all nodes "downstream" to perform their actions.
         node.setOutput(0,node.img)

@@ -32,7 +32,7 @@ class XformSource(XFormType):
         img = cv.cvtColor(img,cv.COLOR_BGR2RGB)
         
         ui.mainui.log("Image {} loaded: shape {}".format(node.fname,img.shape))
-        node.img = img
+        node.img = Image(img)
 
     # the "perform" of a source is to read the image if one hasn't 
     # been loaded, and output the image data.

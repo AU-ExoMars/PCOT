@@ -6,6 +6,7 @@ import numpy as np
 
 import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
+from pancamimage import Image
 
 from functools import reduce
 
@@ -29,7 +30,7 @@ class XformDecorr(XFormType):
         if img is None:
             node.img = None
         else:
-            node.img = decorrstretch(img,node.tol)
+            node.img = Image(decorrstretch(img.img,node.tol))
         node.setOutput(0,node.img)
 
 class TabDecorr(ui.tabs.Tab):

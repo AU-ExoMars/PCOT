@@ -1,4 +1,5 @@
 import numpy as np
+import cv2 as cv
 
 #
 # Classes to encapsulate an image which can be any number of channels
@@ -39,6 +40,7 @@ class Image:
         if self.img.dtype != np.ubyte:
             raise Exception("Images must be 8-bit")
         self.roi = None  # no ROI
+        self.shape = img.shape
         # set the image type
         if len(img.shape)==2:
             # 2D image
@@ -49,6 +51,16 @@ class Image:
                 raise Exception("Images must be greyscale or RGB")
         self.w = img.shape[1]
         self.h = img.shape[0]
+        
+    # get a numpy image (not another Image) we can display on an RGB surface
+    def rgb(self):
+        # assume we're 8 bit
+        if self.channels==1:
+            return cv.merge([self.img,self.img,self.img]) # greyscale
+        elif self.channels==3:
+            return self.img # just fine as it is
+        else:
+            raise Exception("cannot convert {} to RGB".format(self))
         
     def __str__(self):        
         return "<Image {}x{} array:{} channels:{}>".format(self.w,self.h,

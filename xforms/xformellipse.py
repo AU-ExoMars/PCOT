@@ -6,6 +6,7 @@ import utils.cluster
 
 from xform import xformtype,XFormType
 from xforms.tabimage import TabImage
+from pancamimage import Image
 
 @xformtype
 class XformEllipse(XFormType):
@@ -30,7 +31,8 @@ class XformEllipse(XFormType):
         if img is None:
             node.img = None
         else:
-            node.img,node.data = ellipseDetect(img)
+            i,node.data = ellipseDetect(img.img)
+        node.img = Image(i)
         node.setOutput(0,node.img)
         node.setOutput(1,node.data)
 

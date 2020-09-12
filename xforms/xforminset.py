@@ -8,6 +8,7 @@ from PyQt5.QtGui import QColor
 import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
 from xforms.tabimage import TabImage
+from pancamimage import Image
 
 # this transform takes an image and places it at a position inside another image.
 # The inset position is taken either from a control, or if this isn't present,
@@ -50,22 +51,20 @@ class XformInset(XFormType):
         
         ui.mainui.log("{}: Inrect {}, rubber: {}, img?: {}, inset?: {}".format(node.name,inrect,node.insetrect,image is not None,inset is not None))
         if inrect is None:
-            out = image # neither rects are set, just dupe the input
+            out = image.img # neither rects are set, just dupe the input
         elif image is None:
             # if there's no image we can't put anything on it.
             out = None
         else:
             x,y,w,h = inrect # get the rectangle
-            out = image.copy()
+            out = image.rgb().copy() # get a numpy array copy of outer image as RGB
             if inset is None:
                 # there's no inset image, draw a rectangle
                 cv.rectangle(out,(x,y),(x+w,y+h),(0,0,255),-1) # -1=filled
-                ui.mainui.log("BLUING")
             else:
-                # resize the inset
-                t = cv.resize(inset,dsize=(w,h),interpolation=cv.INTER_CUBIC)
+                # resize the inset (and cvt to RGB if necessary)
+                t = cv.resize(inset.rgb(),dsize=(w,h),interpolation=cv.INTER_CUBIC)
                 out[y:y+h,x:x+w]=t
-                ui.mainui.log("DRAWING")
             # add in the caption
             if node.caption != '':
                 fs = node.fontsize/10
@@ -83,8 +82,8 @@ class XformInset(XFormType):
                     fs,
                     node.colour,node.fontline)
 
-        node.img = out
-        node.setOutput(0,out)
+        node.img = Image(out)
+        node.setOutput(0,node.img)
         
 
 class TabInset(ui.tabs.Tab):

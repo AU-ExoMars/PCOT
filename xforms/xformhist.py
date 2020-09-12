@@ -4,6 +4,7 @@ import numpy as np
 import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
 from xforms.tabimage import TabImage
+from pancamimage import Image
 
 @xformtype
 class XformHist(XFormType):
@@ -27,13 +28,13 @@ class XformHist(XFormType):
             node.img = None
         else:
             # deal with 3-channel and 1-channel images
-            if len(img.shape)==3:
-                r,g,b = cv.split(img)
+            if img.channels==3:
+                r,g,b = cv.split(img.img)
                 r = cv.equalizeHist(r)
                 g = cv.equalizeHist(g)
                 b = cv.equalizeHist(b)
-                node.img = cv.merge((r,g,b))
+                node.img = Image(cv.merge((r,g,b)))
             else:
-                node.img = cv.equalizeHist(img)
+                node.img = Image(cv.equalizeHist(img.img))
                 
         node.setOutput(0,node.img)

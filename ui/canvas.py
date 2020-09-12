@@ -21,24 +21,23 @@ class Canvas(QtWidgets.QWidget):
         self.img=None
         self.paintHook=None # an object with a paintEvent() which can do extra drawing
         self.mouseHook=None # an object with a set of mouse events for handling clicks and moves
-    # handles 8-bit and 24-bit; also boolean arrays
+    # handles 8-bit and 24-bit
     def display(self,img):
         if img is not None:
-            if img.dtype=='bool':
-                img = img.astype(np.ubyte)*255
-            if len(img.shape)==2:
-                img = cv.merge([img,img,img])
-        self.img=img
+            self.img = img.rgb() # convert to RGB
+        else:
+            self.img = None
         self.update()
     def paintEvent(self,event):
         p = QPainter(self)
         p.fillRect(event.rect(),Qt.blue)
         w = self.size().width()
         h = self.size().height()
+        # here self.img is a numpy image
         if self.img is not None:
             # we paint at the correct aspect ratio, leaving other
             # parts of the rectangle blank
-            imgh,imgw,idepth = self.img.shape
+            imgh,imgw = self.img.shape[0],self.img.shape[1]
             aspect = imgw/imgh
             if h*aspect>w:
                 size=(w,int(w/aspect))
