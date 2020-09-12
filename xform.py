@@ -230,6 +230,7 @@ class XForm:
                 
     # is an output connected?
     def isOutputConnected(self,i):
+        print(self)
         return self.outputConnections[i] is not None
         
     # get the node connected on this output
@@ -243,6 +244,7 @@ class XForm:
     def changeOutputType(self,index,type):
         self.outputTypes[index]=type
         if self.outrects[index] is not None:
+            print("MATCHING: {} becomes {}".format(index,type))
             self.outrects[index].typeChanged()
         
     # this can be used in XFormType's generateOutputTypes if the polymorphism
@@ -258,7 +260,8 @@ class XForm:
                 # the output type should be the same as the actual input (which is the
                 # type of the output connected to that input)
                 self.changeOutputType(o,parent.getOutputType(pout))
-                self.outrects[o].typeChanged()
+                if self.outrects[o] is not None:
+                    self.outrects[o].typeChanged()
     
     def dump(self):
         print("---DUMP of {}, geom {},{},{}x{}".format(self.type.name,
@@ -482,6 +485,9 @@ class XFormGraph:
                     oname,output = conns[i] # tuples of name,index: see serialiseConn()
                     other = deref[oname]
                     n.connect(i,other,output,False) # don't automatically perform
+        # and finally match output types
+        for n in newnodes:
+            n.type.generateOutputTypes(n)
         return newnodes
         
     # a really ugly thing for just scanning through and returning true if a node

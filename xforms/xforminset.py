@@ -65,7 +65,7 @@ class XformInset(XFormType):
                 # resize the inset (and cvt to RGB if necessary)
                 t = cv.resize(inset.rgb(),dsize=(w,h),interpolation=cv.INTER_CUBIC)
                 out[y:y+h,x:x+w]=t
-            # add in the caption
+            # add in the caption - REVISE THIS TO USE TEXT MODULES IN UTILS
             if node.caption != '':
                 fs = node.fontsize/10
                 (tw,th),baseline = cv.getTextSize(node.caption,

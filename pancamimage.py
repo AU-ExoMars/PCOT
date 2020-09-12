@@ -13,7 +13,7 @@ class ROI:
     # return an image cropped to the BB
     def crop(self,img):
         x,y,w,h = self.bb()
-        return img[y:y+h,x:x+w]
+        return img.img[y:y+h,x:x+w]
     # return a boolean mask which, when imposed on the cropped image,
     # gives the ROI.
     def mask(self,img):
@@ -27,6 +27,8 @@ class ROIRect(ROI):
         self.y=y
         self.w=w
         self.h=h
+    def bb(self):
+        return (self.x,self.y,self.w,self.h)
     def mask(self,img):
         # return a boolean array of True, same size as BB
         return np.full((self.h,self.w),True)
