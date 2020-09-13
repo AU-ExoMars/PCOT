@@ -27,6 +27,8 @@ class XformHist(XFormType):
         if img is None:
             node.img = None
         else:
+            # first extract the ROI
+            
             # deal with 3-channel and 1-channel images
             if img.channels==3:
                 r,g,b = cv.split(img.img)

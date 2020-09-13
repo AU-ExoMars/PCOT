@@ -154,9 +154,8 @@ class XForm:
         # connected, the index is the index of the output connector on that xform for inputs,
         # or the input connector for outputs
         self.inputs = [None for x in type.inputConnectors]
-        # the actual output connections as (Xform,index)
-        self.outputConnections = [None for x in type.outputConnectors]
-        # we keep a dict of those nodes which get inputs from us, and how many
+        # we keep a dict of those nodes which get inputs from us, and how many. We can't
+        # keep the actual output connections easily, because they are one->many.
         self.children = {}
         # there is also a data output generated for each output by "perform", initially
         # these are None
@@ -228,23 +227,21 @@ class XForm:
             else:
                 return self.outputTypes[i]
                 
-    # is an output connected?
+    # is an output connected? This is a bit messy.
     def isOutputConnected(self,i):
-        print(self)
-        return self.outputConnections[i] is not None
+        for outputnode in self.children:
+            for inp in outputnode.inputs:
+                if inp is not None:
+                    inpnode,o = inp
+                    if inpnode==self and o==i:
+                        return True
+        return False
         
-    # get the node connected on this output
-    def getOutputNode(self,i):
-        if self.outputConnections[i] is None:
-            return None
-        else:
-            return self.outputConnections[i][0]
-                
     # this should be used to change an output type is generateOutputTypes
     def changeOutputType(self,index,type):
         self.outputTypes[index]=type
         if self.outrects[index] is not None:
-            print("MATCHING: {} becomes {}".format(index,type))
+#            print("MATCHING: {} becomes {}".format(index,type))
             self.outrects[index].typeChanged()
         
     # this can be used in XFormType's generateOutputTypes if the polymorphism
@@ -275,6 +272,11 @@ class XForm:
         print("   CHILDREN:")
         for k,v in self.children.items():
             print("    {} ({} connections)".format(k.name,v))
+        s="CONNECTED OUTPUTS: "
+        for i in range(0,len(self.outputs)):
+            if self.isOutputConnected(i):
+                s+=str(i)+" "
+        print(s)
             
     # cycle detector - is "other" one of my children? We do a breadth-first
     # search with a queue.
@@ -296,10 +298,9 @@ class XForm:
             if output>=0 and output<len(other.type.outputConnectors):
                 if not self.cycle(other): # this is a double check, the UI checks too.
                     self.inputs[input] = (other,output)
-                    other.outputConnections[output]=(self,input)
                     other.increaseChildCount(self)
                     if autoPerform:
-                        self.perform()
+                        other.perform() # perform the input node; the output should perform
         
         
     # disconnect an input 
@@ -307,7 +308,6 @@ class XForm:
         if input>=0 and input<len(self.inputs):
             if self.inputs[input] is not None:
                 n,i = self.inputs[input]
-                n.outputConnections[i]=False
                 n.decreaseChildCount(self)
                 self.inputs[input]=None
                 self.perform()

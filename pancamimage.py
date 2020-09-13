@@ -13,12 +13,26 @@ class ROI:
     # return an image cropped to the BB
     def crop(self,img):
         x,y,w,h = self.bb()
+        print("Cropping to ",x,y,w,h)
         return img.img[y:y+h,x:x+w]
     # return a boolean mask which, when imposed on the cropped image,
-    # gives the ROI.
+    # gives the ROI. Or none, in which case there is no mask.
     def mask(self,img):
         return None
         
+# given an Image and list of ROIs, get the bounding box within the containing image as (x,y,w,h).
+# If no list is given, use that built into the Image.
+def getROIsBB(img,rois=None):
+    if rois is None:
+        rois = img.rois
+    bbs = [r.bb() for r in rois] # get bbs
+    x1 = min([b[0] for b in bbs])
+    y1 = min([b[1] for b in bbs])
+    x2 = max([b[0]+bb[2] for b in bbs])
+    y2 = max([b[1]+bb[3] for b in bbs])
+    return (x1,y1,x2-x1,y2-y1)
+    
+                    
 # a rectangle ROI
         
 class ROIRect(ROI):
@@ -41,7 +55,7 @@ class Image:
         # first, check the dtype is valid
         if self.img.dtype != np.ubyte:
             raise Exception("Images must be 8-bit")
-        self.roi = None  # no ROI
+        self.rois = []  # no ROI
         self.shape = img.shape
         # set the image type
         if len(img.shape)==2:
@@ -63,6 +77,9 @@ class Image:
             return self.img # just fine as it is
         else:
             raise Exception("cannot convert {} to RGB".format(self))
+            
+    # extract the bounding box of all ROIs
+    def getROI(self):
         
     def __str__(self):        
         return "<Image {}x{} array:{} channels:{}>".format(self.w,self.h,

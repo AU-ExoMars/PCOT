@@ -221,3 +221,31 @@ which allows a user to draw a crop rectangle on the image canvas; the cropped im
 to the output. This requires holding a **croprect** datum giving the crop rectangle position
 and size, and handling the extra painting and mouse events via setting the appropriate hooks
 in the canvas. See the code for details.
+
+## Images and regions of interest
+
+Images are passed as objects of class *Image* in the *pancamimages*
+package, rather than as raw numpy arrays. This is necessary to allow
+images to contain region of interest masks. To wrap a numpy image in
+an Image object, just call
+```python
+img = Image(numpy_array)
+```
+and to get the underlying image back, use
+```python
+img.img
+```
+Regions of interest add data to the Image object. Each ROI node type
+(rectangle, ellipse etc.) adds a new ROI and (optionally) an annotation
+is drawn into the image around it. Any subsequent operation on the image
+will act only on the ROIs, and remove them from the image.
+Thus we can have a sequence
+```
+source->rectangle->rectangle->histequal
+```
+which will perform histogram equalisation on the union of two rectangles.
+This doesn't always make sense, though: in cases like split and merge nodes, for example.
+Nodes are free to behave slightly differently, but when performing an action only
+on a region of an image does make sense, this should be done.
+
+Regions of interest are stored as an *rois* list attribute in the Image.
