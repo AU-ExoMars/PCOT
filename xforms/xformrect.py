@@ -50,30 +50,34 @@ class XformRect(XFormType):
         else:
             # need to generate image + ROI
             x,y,w,h = node.croprect
-            o = Image(img.img) # make image
+            # output image same as input image with same
+            # ROIs. I could just pass input to output, but this would
+            # mess things up if we go back up the tree again - it would
+            # potentially modify the image we passed in.
+            o = img.copy()
             roi = ROIRect(x,y,w,h) # create the ROI
             o.rois.append(roi) # and add to the image
             if node.isOutputConnected(0):
                 node.setOutput(0,o) # output image and ROI
             if node.isOutputConnected(1):
-                print("Node is connected")
                 # output cropped image: this uses the ROI rectangle to
                 # crop the image; we get a numpy image out which we wrap.
+                # with no ROIs
                 node.setOutput(1,Image(roi.crop(o))) 
-            else:
-                print("OP 1 not connected")
             
-            # now make the annotated image
+            # now make the annotated image, which we always do because it's what
+            # we display.
             annot = img.img.copy() # numpy copy of image
             # write on it
             cv.rectangle(annot,(x,y),(x+w,y+h),node.colour,thickness=node.fontline)
 
             ty = y if node.captiontop else y+h
-            utils.text.write(annot,"FOO",x,y,node.captiontop,node.fontsize,
+            utils.text.write(annot,node.caption,x,ty,node.captiontop,node.fontsize,
                 node.fontline,node.colour)
             # that's also the image displayed in the tab
             node.img = Image(annot)
-            # output the annotated image too
+            node.img.rois=o.rois # same ROI list as unannotated image
+            # output the annotated image
             node.setOutput(2,node.img)
             # and the raw cropped rectangle
             node.setOutput(3,node.croprect)
@@ -88,10 +92,14 @@ class TabRect(ui.tabs.Tab):
         self.w.fontline.valueChanged.connect(self.fontLineChanged)
         self.w.caption.textChanged.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
+        self.w.captionTop.toggled.connect(self.topChanged)
         # sync tab with node
         self.onNodeChanged()
         self.mouseDown=False
 
+    def topChanged(self,checked):
+        self.node.captiontop=checked
+        self.node.perform()
     def fontSizeChanged(self,i):
         self.node.fontsize=i
         self.node.perform()
@@ -116,6 +124,9 @@ class TabRect(ui.tabs.Tab):
         self.w.caption.setText(self.node.caption)
         self.w.fontsize.setValue(self.node.fontsize)
         self.w.fontline.setValue(self.node.fontline)
+        self.w.captionTop.setChecked(self.node.captiontop)
+        r,g,b = self.node.colour
+        self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r,g,b));
 
     # extra drawing!
     def canvasPaintHook(self,p):

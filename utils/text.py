@@ -19,7 +19,7 @@ def write(img,txt,x,y,above,fontsize,fontthickness,fontcol):
         fontsize/10,fontthickness)
         
     if above:   
-        ty=y-2
+        ty=y-4
     else:
         ty=y+th+baseline-2
     cv.putText(img,txt,(x,ty),cv.FONT_HERSHEY_SIMPLEX,

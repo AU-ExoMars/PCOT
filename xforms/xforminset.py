@@ -100,6 +100,9 @@ class TabInset(ui.tabs.Tab):
         self.onNodeChanged()
         self.mouseDown=False
         
+    def topChanged(self,checked):
+        self.node.captiontop=checked
+        self.node.perform()
     def fontSizeChanged(self,i):
         self.node.fontsize=i
         self.node.perform()
@@ -130,6 +133,7 @@ class TabInset(ui.tabs.Tab):
         self.w.caption.setText(self.node.caption)
         self.w.fontsize.setValue(self.node.fontsize)
         self.w.fontline.setValue(self.node.fontline)
+        self.w.captionTop.setChecked(self.node.captiontop)
 
         r,g,b = self.node.colour
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r,g,b));
