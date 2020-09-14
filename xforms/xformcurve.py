@@ -55,7 +55,7 @@ class XformCurve(XFormType):
 
 class TabCurve(ui.tabs.Tab):
     def __init__(self,node):
-        super().__init__(ui.mainui,node,'assets/tabcurve.ui') # same UI as sink
+        super().__init__(ui.mainui,node,'assets/tabcurve.ui')
         self.w.addDial.valueChanged.connect(self.setAdd)
         self.w.mulDial.valueChanged.connect(self.setMul)
         self.plot = None # the matplotlib plot which we update

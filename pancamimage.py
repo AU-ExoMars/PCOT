@@ -81,6 +81,8 @@ class SubImageROI:
 class Image:
     # create image from numpy array
     def __init__(self,img):
+        if img is None:
+            raise Exception("trying to initialise image from None")
         self.img = img # the image numpy array
         # first, check the dtype is valid
         if self.img.dtype != np.ubyte:
@@ -93,8 +95,6 @@ class Image:
             self.channels=1
         else:
             self.channels=img.shape[2]
-            if self.channels!=3:
-                raise Exception("Images must be greyscale or RGB")
         self.w = img.shape[1]
         self.h = img.shape[0]
         
@@ -106,7 +106,15 @@ class Image:
         elif self.channels==3:
             return self.img # just fine as it is
         else:
-            raise Exception("cannot convert {} to RGB".format(self))
+            # well, now we have something weird. If there are fewer than three, there must 
+            # be two - use red and blue. If there are more than three, just use the first three.
+            chans = cv.split(self.img)
+            if self.channels==2:
+                blk = np.zeros(self.img.shape[0:2]).astype(np.ubyte)
+                return cv.merge([chans[0],blk,chans[1]])
+            else:
+                return cv.merge(chans[0:3])
+            
             
     # extract the "subimage" - the image cropped to regions of interest,
     # with a mask for those ROIs

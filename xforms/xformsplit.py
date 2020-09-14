@@ -3,6 +3,7 @@ import numpy as np
 
 import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
+from pancamimage import Image,ROIRect
 
 @xformtype
 class XformSplit(XFormType):

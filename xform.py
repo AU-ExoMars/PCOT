@@ -112,7 +112,7 @@ class XFormType():
     # after control data has changed (either in a tab or by loading a file) it
     # may be necessary to recalculate internal data (e.g. lookup tables). This
     # can be overridden to do that: it happens when a node is deserialised,
-    # and should be called in the tab's onNodeChanged() AFTER the controls are read
+    # and should be called in the tab's onNodeChanged() AFTER the controls are set
     # and BEFORE changing any status displays (see xformcurve for an example).
     def recalculate(self,xform):
         pass

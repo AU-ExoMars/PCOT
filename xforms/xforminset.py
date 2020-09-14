@@ -82,7 +82,7 @@ class XformInset(XFormType):
                     fs,
                     node.colour,node.fontline)
 
-        node.img = Image(out)
+        node.img = None if out is None else Image(out)
         node.setOutput(0,node.img)
         
 

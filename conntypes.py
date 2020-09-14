@@ -24,6 +24,7 @@ def quickGrad(c1,c2,c3,finalC):
 brushDict['any']=Qt.red
 brushDict['img888']=quickGrad(Qt.red,Qt.green,Qt.blue,QColor(50,50,50))
 brushDict['imggrey']=Qt.gray
+brushDict['imgstrange']=QColor(100,100,200) # any image with neither 1 nor 3 channels
 brushDict['img']=Qt.blue
 brushDict['ellipse']=Qt.cyan
 brushDict['rect']=Qt.cyan
