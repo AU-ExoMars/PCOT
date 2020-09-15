@@ -16,6 +16,7 @@ from pancamimage import Image
 
 @xformtype
 class XformInset(XFormType):
+    """Inset an image inside another. Converts both images to RGB and does not honour regions of interest."""
     def __init__(self):
         super().__init__("inset","0.0.0")
         self.addInputConnector("img","img")

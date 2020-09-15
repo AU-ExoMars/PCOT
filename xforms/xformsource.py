@@ -11,6 +11,7 @@ from pancamimage import Image
 
 @xformtype
 class XformSource(XFormType):
+    """Load a file for use as an image source."""
     def __init__(self):
         super().__init__("source","0.0.0")
         ## our connectors

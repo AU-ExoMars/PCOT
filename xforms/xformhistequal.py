@@ -16,8 +16,6 @@ def equalize(img,mask):
     # algorithm source: https://docs.opencv.org/master/d5/daf/tutorial_py_histogram_equalization.html
     # get histogram; 256 bins of 0-256. Set the weight of all unmasked
     # pixels to zero so they don't get counted.
-    print(img.shape)
-    print(mask.shape)
     hist,bins = np.histogram(img,256,[0,256],weights=mask)
     # work out the cumulative dist. function and normalize it
     cdf = hist.cumsum()
@@ -33,6 +31,7 @@ def equalize(img,mask):
 
 @xformtype
 class XformHistEqual(XFormType):
+    """Perform histogram equalisation on all channels of the image separately. Honours ROIs."""
     def __init__(self):
         super().__init__("histequal","0.0.0")
         self.addInputConnector("","img")
@@ -65,14 +64,23 @@ class XformHistEqual(XFormType):
             # So the equalize() function above does that.
             
             # deal with 3-channel and 1-channel images
-            if img.channels==3:
+            if img.channels==1:
+                equalized = subimage.img.copy()
+                equalize(equalized,subimage.mask)
+            elif img.channels==3:
                 r,g,b = cv.split(subimage.img)
                 equalize(r,subimage.mask)
                 equalize(g,subimage.mask)
                 equalize(b,subimage.mask)
                 equalized = cv.merge((r,g,b))
             else:
-                equalized = cv.equalizeHist(subimage.img,subimage.mask)
+                lst=[]
+                for i in range(img.channels):
+                    c = subimage.img[:,:,i]
+                    equalize(c,subimage.mask)
+                    lst.append(c)
+                equalized=np.stack(lst,axis=-1)
+                    
             # make a copy of the image and paste the modified version of the subimage into it
             node.img = img.modifyWithSub(subimage,equalized)
         node.setOutput(0,node.img)

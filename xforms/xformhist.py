@@ -8,6 +8,10 @@ import ui,ui.tabs,ui.canvas,ui.mplwidget
 from xform import xformtype,XFormType
 from pancamimage import Image
 
+def gethistogram(chan,weights,bincount):
+    return np.histogram(chan,bincount,weights=weights)
+
+
 @xformtype
 class XFormHistogram(XFormType):
     """Produce a histogram for each channel in the data"""
@@ -27,7 +31,10 @@ class XFormHistogram(XFormType):
         print("PERFORM")
         img = node.getInput(0)
         if img is not None:
-            node.hists = [ np.histogram(chan,node.bincount) for chan in cv.split(img.img)]
+            subimg = img.subimage()
+            mask = ~subimg.mask
+            weights = subimg.mask.astype(np.ubyte)
+            node.hists = [ gethistogram(chan,weights,node.bincount) for chan in cv.split(subimg.img)]
 
 class TabHistogram(ui.tabs.Tab):
     def __init__(self,node):

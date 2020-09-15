@@ -7,6 +7,7 @@ from pancamimage import Image,ROIRect
 
 @xformtype
 class XformSplit(XFormType):
+    """Splits an RGB image into three greyscale images"""
     def __init__(self):
         super().__init__("split","0.0.0")
         ## our connectors

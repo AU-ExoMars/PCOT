@@ -9,9 +9,10 @@ from xforms.tabimage import TabImage
 from pancamimage import Image
 
 @xformtype
-class XformEllipse(XFormType):
+class XformEllipseDetect(XFormType):
+    """PANCAM target detection, work in progress."""
     def __init__(self):
-        super().__init__("ellipse","0.0.0")
+        super().__init__("ellipsedetect","0.0.0")
         self.addInputConnector("","imggrey")
         self.addOutputConnector("img","img")
         self.addOutputConnector("data","ellipse")
@@ -32,7 +33,7 @@ class XformEllipse(XFormType):
             node.img = None
         else:
             i,node.data = ellipseDetect(img.img)
-        node.img = Image(i)
+            node.img = Image(i)
         node.setOutput(0,node.img)
         node.setOutput(1,node.data)
 

@@ -13,19 +13,19 @@ def help(xt):
     if len(xt.inputConnectors)>0:
         s += '<br><br><font color="blue">Inputs</font><br>'
         s += '<table>'
-        s += tablerow(['Index','Name','Type'],'th')
+        s += tablerow(['Index','Name','Type','Description'],'th')
         for i in range(0,len(xt.inputConnectors)):
-            n,t = xt.inputConnectors[i]
-            s += tablerow([i,n,t],'td')
+            n,t,desc = xt.inputConnectors[i]
+            s += tablerow([i,n,t,desc],'td')
         s += '</table><br>'
 
     if len(xt.outputConnectors)>0:
         s += '<br><br><font color="blue">Outputs</font><br>'
         s += '<table>'
-        s += tablerow(['Index','Name','Type'],'th')
+        s += tablerow(['Index','Name','Type','Description'],'th')
         for i in range(0,len(xt.outputConnectors)):
-            n,t = xt.outputConnectors[i]
-            s += tablerow([i,n,t],'td')
+            n,t,desc = xt.outputConnectors[i]
+            s += tablerow([i,n,t,desc],'td')
         s += '</table><br>'
 
     return s

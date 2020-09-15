@@ -78,10 +78,10 @@ class XFormType():
         for name in self.autoserialise:
             node.__dict__[name] = ent[name]
 
-    def addInputConnector(self,name,typename):
-        self.inputConnectors.append( (name,typename) )
-    def addOutputConnector(self,name,typename):
-        self.outputConnectors.append( (name,typename) )
+    def addInputConnector(self,name,typename,desc=""):
+        self.inputConnectors.append( (name,typename,desc) )
+    def addOutputConnector(self,name,typename,desc=""):
+        self.outputConnectors.append( (name,typename,desc) )
         
     def all():
         return allTypes

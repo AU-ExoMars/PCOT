@@ -9,7 +9,8 @@ from pancamimage import Image
 @xformtype
 class XformMerge(XFormType):
     """Merge up to 3 channels into a single image. This is typically RGB but a 2-channel image can
-    be created by only connecting 2 channels and turning off the 'pad to 3 channels' option."""
+    be created by only connecting 2 channels and turning off the 'pad to 3 channels' option.
+    Merging only works on entire images - ROIs are ignored."""
     def __init__(self):
         super().__init__("merge","0.0.0")
         ## our connectors
@@ -28,7 +29,7 @@ class XformMerge(XFormType):
         ct=sum([0 if x is None else 1 for x in n.inputs])
         if ct==1:
             tp = 'imggrey'
-        elif ct==3:
+        elif ct==3 or n.addblack:
             tp = 'img888'
         else:
             tp = 'imgstrange'

@@ -8,25 +8,32 @@ import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
 from pancamimage import Image
 
-# performs contrast stretching on a single channel. The image is a (w,h) numpy array
-# which is converted to float, and converted back to 8 bit.
+# performs contrast stretching on a single channel. The image is a (h,w) numpy array
+# which is converted to float, and converted back to 8 bit. There is also a (h,w) array mask.
 
-def contrast1(img,tol):
-    print(img.shape)
+def contrast1(img,tol,mask):
     B = img.astype(np.float)
-    # find lower and upper limit for contrast stretching
-    low, high = np.percentile(B, 100*tol), np.percentile(B, 100-100*tol)
-    B[B<low] = low
-    B[B>high] = high
-    # ...rescale the color values to 0..255
-    B = 255 * (B - B.min())/(B.max() - B.min())
+    # get the masked data to calculate the percentiles
+    # need to compress it, because percentile ignores masks. 
+    # Note the negation of the mask; numpy is weird- True means masked.
+    # Make sure we make a copy.
+    masked = np.ma.masked_array(data=B.copy(),mask=~mask)
+    comp = masked.compressed()
+    
+    # find lower and upper limit for contrast stretching, and set those in the
+    # masked image
+    low, high = np.percentile(comp, 100*tol), np.percentile(comp, 100-100*tol)
+    masked[masked<low] = low
+    masked[masked>high] = high
+
+    # ...rescale the color values in the masked image to 0..255
+    masked = 255 * (masked - masked.min())/(masked.max() - masked.min())
+    
+    # that has actually written ALL the entries, not just the mask. Drop the
+    # masked entries back into the original array.
+    np.putmask(B,mask,masked)
+    
     return B.astype(np.uint8)
-
-# perform contrast mapping on each channel separately by using cv.split to split into
-# 3 channels, running contrast1() on each, then combining with cv.merge.
-
-def contrast(img,tol):
-    return cv.merge([contrast1(x,tol) for x in cv.split(img)])
 
 # The node type itself, a subclass of XFormType with the @xformtype decorator which will
 # calculate a checksum of this source file and automatically create the only instance which
@@ -78,11 +85,15 @@ class XformContrast(XFormType):
         else:
             # otherwise, it depends on the image type. If it has three dimensions it must
             # be RGB888, so generate the node's image using contrast(), otherwise it must be
-            # single channel, so use contrast1().
-            if img.channels==3:
-                node.img = Image(contrast(img.img,node.tol))
+            # single channel, so use contrast1(). First, though, we need to extract the subimage
+            # selected by the ROI (if any)
+            subimage = img.subimage()
+            if img.channels==1:
+                newsubimg = contrast1(subimage.img,node.tol,subimage.mask)
             else:
-                node.img = Image(contrast1(img.img,node.tol))
+                newsubimg = cv.merge([contrast1(x,node.tol,subimage.mask) for x in cv.split(subimage.img)])
+            # having got a modified subimage, we need to splice it in
+            node.img = img.modifyWithSub(subimage,newsubimg)
         # Now we have generated the internally stored image, output it to output 0. This will
         # cause all nodes "downstream" to perform their actions.
         node.setOutput(0,node.img)

@@ -1,9 +1,11 @@
 import numpy as np
 import cv2 as cv
 
-#
 # Classes to encapsulate an image which can be any number of channels
-# and also incorporates region-of-interest data.
+# and also incorporates region-of-interest data. At the moment, all images
+# are 8-bit and any number of channels. Conversions to and from float are
+# done in many operations. Avoiding floats saves memory and speeds things up,
+# but we could change things later.
 
 # definition of ROI interface
 class ROI:
@@ -70,6 +72,8 @@ class SubImageROI:
 #                xxx = self.mask.astype(np.ubyte)*255
 #                print(xxx)
 #                cv.imwrite("foo.png",cv.merge([xxx,xxx,xxx]))
+            if self.img.shape[:2] != self.mask.shape:
+                raise Exception("Mask not same shape as image: can happen when ROI is out of bounds. Have you loaded a new image?")
             
         else:
             self.img = img.img
@@ -77,7 +81,12 @@ class SubImageROI:
             self.mask = np.full((img.h,img.w),True) # full mask
 
 
-# an image - just a numpy image and a list of ROI objects
+# an image - just a numpy array (the image) and a list of ROI objects. The array 
+# has shape either (h,w) (for a single channel) or (h,w,n) for multiple channels.
+# In connections (see conntypes.py), single channel images are "imggrey" while
+# multiple channels are "img888" for 24-bit RGB images (3 channels) or "imgstrange"
+# for any other number of channels.
+
 class Image:
     # create image from numpy array
     def __init__(self,img):

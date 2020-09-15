@@ -5,6 +5,7 @@ from PyQt5.QtGui import QColor
 
 import cv2 as cv
 import numpy as np
+import math
 
 import ui,ui.tabs,ui.canvas
 import utils,utils.text
@@ -13,6 +14,8 @@ from pancamimage import Image,ROIRect
 
 @xformtype
 class XformRect(XFormType):
+    """Add a rectangular ROI to an image. At the next operation all ROIs will be grouped together
+    used to perform the operation and discarded."""
     def __init__(self):
         super().__init__("rect","0.0.0")
         self.addInputConnector("","img")
@@ -68,8 +71,10 @@ class XformRect(XFormType):
             # now make the annotated image, which we always do because it's what
             # we display.
             annot = img.img.copy() # numpy copy of image
-            # write on it
-            cv.rectangle(annot,(x,y),(x+w,y+h),node.colour,thickness=node.fontline)
+            # write on it - but we MUST WRITE OUTSIDE THE BOUNDS, otherwise we interfere
+            # with the image! This errs on the side of caution.
+            th = node.fontline
+            cv.rectangle(annot,(x-th,y-th),(x+w+th,y+h+th),node.colour,thickness=th)
 
             ty = y if node.captiontop else y+h
             utils.text.write(annot,node.caption,x,ty,node.captiontop,node.fontsize,

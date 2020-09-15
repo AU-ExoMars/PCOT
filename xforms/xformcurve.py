@@ -13,8 +13,16 @@ NUMPOINTS=100
 # x-coords of table
 lutxcoords = np.linspace(0,255,NUMPOINTS)
 
+def curve(img,mask,node):
+    masked = np.ma.masked_array(img,mask=~mask)
+    cp = img.copy()
+    np.putmask(cp,mask,np.interp(masked,lutxcoords,node.lut).astype(np.ubyte))
+    return cp
+    
+
 @xformtype
 class XformCurve(XFormType):
+    """Maps the image channel intensities to a curve. Honours regions of interest."""
     def __init__(self):
         super().__init__("curve","0.0.0")
         self.addInputConnector("","img") # accept any image
@@ -48,8 +56,13 @@ class XformCurve(XFormType):
         if img is None:
             node.img = None
         else:
-            node.img = Image(np.interp(img.img,lutxcoords,node.lut).astype(np.ubyte))
-
+            subimage = img.subimage()
+            if img.channels == 1:
+                newsubimg = curve(subimage.img,subimage.mask,node)
+            else:
+                newsubimg = cv.merge([curve(x,subimage.mask,node) for x in cv.split(subimage.img)])
+            node.img = img.modifyWithSub(subimage,newsubimg)
+            
         node.setOutput(0,node.img)
 
 

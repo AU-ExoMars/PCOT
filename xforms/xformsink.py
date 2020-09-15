@@ -12,6 +12,7 @@ from pancamimage import Image
 
 @xformtype
 class XformSink(XFormType):
+    """Simply view an image."""
     def __init__(self):
         # call superconstructor with the type name and version code
         super().__init__("sink","0.0.0")

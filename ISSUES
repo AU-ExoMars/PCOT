@@ -13,6 +13,9 @@ TabRect is largely the same as TabInset.
 
 THINGS TO DO
 
+Make sure all nodes:
+    process subimages or say if they don't
+    deal with all possible channel counts
 
 What to do if a node doesn't exist (some kind of placeholder node with dead
 outputs?)
