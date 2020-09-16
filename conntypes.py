@@ -22,7 +22,7 @@ def quickGrad(c1,c2,c3,finalC):
     return grad
 
 brushDict['any']=Qt.red
-brushDict['img888']=quickGrad(Qt.red,Qt.green,Qt.blue,QColor(50,50,50))
+brushDict['imgrgb']=quickGrad(Qt.red,Qt.green,Qt.blue,QColor(50,50,50))
 brushDict['imggrey']=Qt.gray
 brushDict['imgstrange']=QColor(100,100,200) # any image with neither 1 nor 3 channels
 brushDict['img']=Qt.blue
@@ -47,6 +47,11 @@ def getBrush(typename):
 # are two connectors compatible?
 
 def isCompatibleConnection(outtype,intype):
+    # this is a weird bug I would really like to catch.
+    if intype is None or outtype is None:
+        print("HIGH WEIRDNESS - a connectin type is None")
+        return None
+
     # image inputs accept all images
     if intype == 'img':
         return 'img' in outtype 

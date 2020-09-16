@@ -16,9 +16,8 @@ class XformDecorr(XFormType):
     """Perform a decorrelation stretch on an RGB image"""
     def __init__(self):
         super().__init__("decorr stretch","0.0.0")
-        self.addInputConnector("rgb","img888")
-        self.addOutputConnector("rgb","img888")
-        self.autoserialise=('tol',)
+        self.addInputConnector("rgb","imgrgb")
+        self.addOutputConnector("rgb","imgrgb")
         
     def createTab(self,n):
         return TabImage(n)
@@ -56,7 +55,7 @@ def decorrstretch(A, mask):
     # pixel 1 .
     # pixel 2   .
     #  . . .      .
-    A = A.reshape((-1,3)).astype(np.float)
+    A = A.reshape((-1,3)).astype(np.float64) 
     # build a mask the same shape as the data
     mask = mask.flatten()
     mask = np.repeat(mask,3).reshape(-1,3)
@@ -90,10 +89,10 @@ def decorrstretch(A, mask):
     B = maskedA.reshape(orig_shape)
     # for each color...
     for b in range(3):
-        # ...rescale the color values to 0..255
-        B[:,:,b] = 255 * (B[:,:,b] - B[:,:,b].min())/(B[:,:,b].max() - B[:,:,b].min())
-    # return it as uint8 (byte) image
-    B = B.astype(np.uint8)
+        # ...normalize
+        B[:,:,b] = (B[:,:,b] - B[:,:,b].min())/(B[:,:,b].max() - B[:,:,b].min())
+    # do any required conversion here
+    B = B.astype(np.float32)
     # paste masked area into original subimage, we do this with flattened version
     # of the images to match the flat mask we made.
     orig=orig.flatten()

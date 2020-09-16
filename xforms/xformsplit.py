@@ -11,7 +11,7 @@ class XformSplit(XFormType):
     def __init__(self):
         super().__init__("split","0.0.0")
         ## our connectors
-        self.addInputConnector("rgb","img888")
+        self.addInputConnector("rgb","imgrgb")
         self.addOutputConnector("r","imggrey")
         self.addOutputConnector("g","imggrey")
         self.addOutputConnector("b","imggrey")

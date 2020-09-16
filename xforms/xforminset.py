@@ -5,6 +5,7 @@ from PyQt5 import QtWidgets,QtCore,QtGui
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor
 
+import utils.text,utils.colour
 import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
 from xforms.tabimage import TabImage
@@ -39,7 +40,7 @@ class XformInset(XFormType):
         node.captiontop = False
         node.fontsize=10
         node.fontline=2
-        node.colour=(255,255,0)
+        node.colour=(1,1,0)
         
     def perform(self,node):
         image = node.getInput(0)
@@ -64,7 +65,7 @@ class XformInset(XFormType):
                 cv.rectangle(out,(x,y),(x+w,y+h),(0,0,255),-1) # -1=filled
             else:
                 # resize the inset (and cvt to RGB if necessary)
-                t = cv.resize(inset.rgb(),dsize=(w,h),interpolation=cv.INTER_CUBIC)
+                t = cv.resize(inset.rgb(),dsize=(w,h),interpolation=cv.INTER_AREA)
                 out[y:y+h,x:x+w]=t
             # add in the caption - REVISE THIS TO USE TEXT MODULES IN UTILS
             if node.caption != '':
@@ -114,15 +115,10 @@ class TabInset(ui.tabs.Tab):
         self.node.fontline=i
         self.node.perform()
     def colourPressed(self):
-        r,g,b = self.node.colour
-        curcol = QColor(r,g,b)
-        col=QtWidgets.QColorDialog.getColor(curcol,ui.mainui)
-        if col.isValid():
-            self.node.colour = (col.red(),col.green(),col.blue())
+        col = utils.colour.colDialog(self.node.colour)
+        if col is not None:
+            self.node.colour = col
             self.node.perform()
-                    
-        
-    
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
@@ -136,7 +132,7 @@ class TabInset(ui.tabs.Tab):
         self.w.fontline.setValue(self.node.fontline)
         self.w.captionTop.setChecked(self.node.captiontop)
 
-        r,g,b = self.node.colour
+        r,g,b = [x*255 for x in self.node.colour]
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r,g,b));
         
 

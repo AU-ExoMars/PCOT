@@ -3,16 +3,19 @@ from PyQt5.QtWidgets import QTreeView,QFileSystemModel
 from PyQt5.QtGui import QImage,QPainter
 from PyQt5.QtCore import Qt,QDir
 import cv2 as cv
+import numpy as np
 
 
 # Canvas widget for showing a CV image
 
 # convert a cv/numpy image to a Qt image
-# input must be 3 channel 8 bit
+# input must be 3 channels, 0-1 floats
 def img2qimage(img):
-    height, width, channel = img.shape
+    i = img*255.0
+    i = i.astype(np.ubyte)
+    height, width, channel = i.shape
     bytesPerLine = 3 * width
-    return QImage(img.data, width, height, 
+    return QImage(i.data, width, height, 
         bytesPerLine, QImage.Format_RGB888)
 
 class Canvas(QtWidgets.QWidget):
@@ -21,7 +24,7 @@ class Canvas(QtWidgets.QWidget):
         self.img=None
         self.paintHook=None # an object with a paintEvent() which can do extra drawing
         self.mouseHook=None # an object with a set of mouse events for handling clicks and moves
-    # handles 8-bit and 24-bit
+    # handles 1 and 3 channels
     def display(self,img):
         if img is not None:
             self.img = img.rgb() # convert to RGB
@@ -45,8 +48,8 @@ class Canvas(QtWidgets.QWidget):
             else:
                 size=(int(h*aspect),h)
                 self.scale = imgh/h
-
-            img = cv.resize(self.img,dsize=size,interpolation=cv.INTER_CUBIC)
+            # cubic produced odd artifacts on float images
+            img = cv.resize(self.img,dsize=size,interpolation=cv.INTER_AREA)
             p.drawImage(0,0,img2qimage(img))
             if self.paintHook is not None:
                 self.paintHook.canvasPaintHook(p)

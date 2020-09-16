@@ -30,7 +30,7 @@ class XformMerge(XFormType):
         if ct==1:
             tp = 'imggrey'
         elif ct==3 or n.addblack:
-            tp = 'img888'
+            tp = 'imgrgb'
         else:
             tp = 'imgstrange'
         n.changeOutputType(0,tp)
@@ -71,7 +71,7 @@ class XformMerge(XFormType):
             return
         if node.addblack:
             # make a black
-            black = Image(np.zeros(s,np.ubyte))
+            black = Image(np.zeros(s,np.float32))
             if b is None:
                 b = black
             if g is None:

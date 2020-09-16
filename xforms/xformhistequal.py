@@ -8,30 +8,35 @@ from pancamimage import Image
 
 # perform equalisation with a mask. Unfortunately cv.equalizeHist doesn't
 # support masks.
-# Takes a single-channel numpy array of ubyte
+# Takes a single-channel numpy array 
 # and a single-channel mask of booleans
+
+BINS = 2000
 
 def equalize(img,mask):
     mask = mask.astype(np.ubyte)
     # algorithm source: https://docs.opencv.org/master/d5/daf/tutorial_py_histogram_equalization.html
-    # get histogram; 256 bins of 0-256. Set the weight of all unmasked
+    # get histogram; N bins in range 0-1. Set the weight of all unmasked
     # pixels to zero so they don't get counted.
-    hist,bins = np.histogram(img,256,[0,256],weights=mask)
+    hist,bins = np.histogram(img,BINS,[0,1],weights=mask)
     # work out the cumulative dist. function and normalize it
     cdf = hist.cumsum()
     cdf_normalized = cdf * float(hist.max()) / cdf.max()
     # get a masked array, omitting zeroes, and use it to construct
     # a lookup table for old to new intensities
     cdf_m = np.ma.masked_equal(cdf,0)
-    cdf_m = (cdf_m - cdf_m.min())*255/(cdf_m.max()-cdf_m.min())
-    cdf = np.ma.filled(cdf_m,0).astype(np.ubyte)
+    cdf_m = (cdf_m - cdf_m.min())/(cdf_m.max()-cdf_m.min())
+    cdf = np.ma.filled(cdf_m,0)
+    # convert the image to effectively a lookup table - each pixel now indexes into
+    # the CDF for that level
+    i2 = (img*(BINS-1)).astype(np.int32)
     # and apply it to the masked region of the image
-    np.putmask(img,mask,cdf[img])
+    np.putmask(img,mask,cdf[i2].astype(np.float32))
     
 
 @xformtype
 class XformHistEqual(XFormType):
-    """Perform histogram equalisation on all channels of the image separately. Honours ROIs."""
+    """Perform histogram equalisation on all channels of the image separately. Honours ROIs. Currently set to 2000 bins, but I may add a control for that."""
     def __init__(self):
         super().__init__("histequal","0.0.0")
         self.addInputConnector("","img")

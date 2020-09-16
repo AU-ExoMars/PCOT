@@ -74,7 +74,6 @@ class SubImageROI:
 #                cv.imwrite("foo.png",cv.merge([xxx,xxx,xxx]))
             if self.img.shape[:2] != self.mask.shape:
                 raise Exception("Mask not same shape as image: can happen when ROI is out of bounds. Have you loaded a new image?")
-            
         else:
             self.img = img.img
             self.bb = (0,0,img.w,img.h) # whole image
@@ -84,8 +83,8 @@ class SubImageROI:
 # an image - just a numpy array (the image) and a list of ROI objects. The array 
 # has shape either (h,w) (for a single channel) or (h,w,n) for multiple channels.
 # In connections (see conntypes.py), single channel images are "imggrey" while
-# multiple channels are "img888" for 24-bit RGB images (3 channels) or "imgstrange"
-# for any other number of channels.
+# multiple channels are "imgrgb" for RGB images (3 channels) or "imgstrange"
+# for any other number of channels. Images are 32-bit float.
 
 class Image:
     # create image from numpy array
@@ -94,8 +93,8 @@ class Image:
             raise Exception("trying to initialise image from None")
         self.img = img # the image numpy array
         # first, check the dtype is valid
-        if self.img.dtype != np.ubyte:
-            raise Exception("Images must be 8-bit")
+        if self.img.dtype != np.float32:
+            raise Exception("Images must be floating point")
         self.rois = []  # no ROI
         self.shape = img.shape
         # set the image type
@@ -106,6 +105,21 @@ class Image:
             self.channels=img.shape[2]
         self.w = img.shape[1]
         self.h = img.shape[0]
+    
+    # class method for loading an image (using cv's imread)
+    @classmethod
+    def load(cls,fname):
+        img = cv.imread(fname)
+        if img is None:
+            raise Exception('cannot read image {}'.format(fname))
+        # convert from BGR to RGB (OpenCV is weird)
+        img = cv.cvtColor(img,cv.COLOR_BGR2RGB)
+        # convert to floats (32 bit)
+        img = img.astype(np.float32)
+        # scale to 0..1 (from 0..255)
+        img /= 255.0
+        # and construct the image
+        return cls(img)        
         
     # get a numpy image (not another Image) we can display on an RGB surface
     def rgb(self):
@@ -131,8 +145,8 @@ class Image:
         return SubImageROI(self)
         
     def __str__(self):        
-        return "<Image {}x{} array:{} channels:{}>".format(self.w,self.h,
-            str(self.img.shape),self.channels)
+        return "<Image {}x{} array:{} channels:{}, {} bytes>".format(self.w,self.h,
+            str(self.img.shape),self.channels,self.img.nbytes)
 
     def copy(self):
         i = Image(self.img.copy())

@@ -12,7 +12,7 @@ class XformGrey(XFormType):
     """Converts an RGB image to greyscale."""
     def __init__(self):
         super().__init__("greyscale","0.0.0")
-        self.addInputConnector("","img888")
+        self.addInputConnector("","imgrgb")
         self.addOutputConnector("","imggrey")
         
     def createTab(self,n):
@@ -26,7 +26,7 @@ class XformGrey(XFormType):
         if img is None:
             node.img = None
         else:
-            print(node.img)
+            print(img.img.shape,img.img.dtype)
             if img.channels != 3:
                 raise Exception("Image must be RGB for greyscale conversion")
             node.img = Image(cv.cvtColor(img.img,cv.COLOR_RGB2GRAY))

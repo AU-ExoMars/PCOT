@@ -11,12 +11,12 @@ from pancamimage import Image
 def gethistogram(chan,weights,bincount):
     return np.histogram(chan,bincount,weights=weights)
 
-
 @xformtype
 class XFormHistogram(XFormType):
     """Produce a histogram for each channel in the data"""
     def __init__(self):
         super().__init__("histogram","0.0.0")
+        self.autoserialise=(('bincount',))
         self.addInputConnector("","img")
 
     def createTab(self,n):
@@ -28,7 +28,6 @@ class XFormHistogram(XFormType):
         node.bincount = 256
         
     def perform(self,node):
-        print("PERFORM")
         img = node.getInput(0)
         if img is not None:
             subimg = img.subimage()
@@ -46,7 +45,6 @@ class TabHistogram(ui.tabs.Tab):
         
     def replot(self):
         # set up the plot
-        print(self.node.bincount)
         self.w.bins.setValue(self.node.bincount)
         if self.node.hists is not None:
             ui.mainui.log(self.node.comment)
@@ -56,8 +54,9 @@ class TabHistogram(ui.tabs.Tab):
             colct=0
             for xx in self.node.hists:
                 h,bins = xx
-                bins=bins[:-1]
-                self.w.mpl.ax.bar(bins,h,alpha=0.34,color=cols[colct])
+#                bw = (bins.max()-bins.min())/self.node.bincount
+#                self.w.mpl.ax.bar(bins,h,width=bw,alpha=0.34,color=cols[colct])
+                self.w.mpl.ax.hist(bins[:-1],bins,weights=h,alpha=0.34,color=cols[colct])
                 colct+=1
             self.w.mpl.draw()
         self.w.replot.setStyleSheet("")

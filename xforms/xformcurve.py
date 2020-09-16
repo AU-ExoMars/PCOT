@@ -9,14 +9,14 @@ from xform import xformtype,XFormType
 from pancamimage import Image
 
 # number of points in lookup table
-NUMPOINTS=100
+NUMPOINTS=1000
 # x-coords of table
-lutxcoords = np.linspace(0,255,NUMPOINTS)
+lutxcoords = np.linspace(0,1,NUMPOINTS)
 
 def curve(img,mask,node):
     masked = np.ma.masked_array(img,mask=~mask)
     cp = img.copy()
-    np.putmask(cp,mask,np.interp(masked,lutxcoords,node.lut).astype(np.ubyte))
+    np.putmask(cp,mask,np.interp(masked,lutxcoords,node.lut).astype(np.float32))
     return cp
     
 
@@ -47,8 +47,8 @@ class XformCurve(XFormType):
         
     def recalculate(self,node):
         # generate the LUT
-        xb = (node.mul*(lutxcoords-127)+node.add)/255
-        node.lut = (255/(1+np.exp(-xb))).astype(np.ubyte)
+        xb = node.mul*(lutxcoords-0.5)+node.add
+        node.lut = (1.0/(1.0+np.exp(-xb)))
         
     # given a dictionary, set the values in the node from the dictionary    
     def perform(self,node):
@@ -77,7 +77,7 @@ class TabCurve(ui.tabs.Tab):
 
     def setAdd(self,v):
         # when a control changes, update node and perform
-        self.node.add = (v-50)*10
+        self.node.add = (v-50)*0.1
         self.node.perform()
     def setMul(self,v):
         # when a control changes, update node and perform
@@ -86,14 +86,14 @@ class TabCurve(ui.tabs.Tab):
         
     # causes the tab to update itself from the node
     def onNodeChanged(self):
-        self.w.addDial.setValue(self.node.add/10+50)
+        self.w.addDial.setValue(self.node.add*10+50)
         self.w.mulDial.setValue(self.node.mul*10)
         self.node.type.recalculate(self.node) # have to rebuild LUT
         if self.plot is None:
             # set up the initial plot
             # doing stuff without pyplot is weird!
-            self.w.mpl.ax.set_xlim(0,255)
-            self.w.mpl.ax.set_ylim(0,255)
+            self.w.mpl.ax.set_xlim(0,1)
+            self.w.mpl.ax.set_ylim(0,1)
             # make the plot, store the zeroth plot (ours)
             self.plot=self.w.mpl.ax.plot(lutxcoords,self.node.lut,'r')[0]
         else:

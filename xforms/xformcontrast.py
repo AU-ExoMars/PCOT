@@ -8,16 +8,15 @@ import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
 from pancamimage import Image
 
-# performs contrast stretching on a single channel. The image is a (h,w) numpy array
-# which is converted to float, and converted back to 8 bit. There is also a (h,w) array mask.
+# performs contrast stretching on a single channel. The image is a (h,w) numpy array.
+# There is also a (h,w) array mask.
 
 def contrast1(img,tol,mask):
-    B = img.astype(np.float)
     # get the masked data to calculate the percentiles
     # need to compress it, because percentile ignores masks. 
     # Note the negation of the mask; numpy is weird- True means masked.
-    # Make sure we make a copy.
-    masked = np.ma.masked_array(data=B.copy(),mask=~mask)
+    B = img.copy()
+    masked = np.ma.masked_array(data=B,mask=~mask)
     comp = masked.compressed()
     
     # find lower and upper limit for contrast stretching, and set those in the
@@ -26,14 +25,13 @@ def contrast1(img,tol,mask):
     masked[masked<low] = low
     masked[masked>high] = high
 
-    # ...rescale the color values in the masked image to 0..255
-    masked = 255 * (masked - masked.min())/(masked.max() - masked.min())
+    # ...rescale the color values in the masked image to 0..1
+    masked = (masked - masked.min())/(masked.max() - masked.min())
     
     # that has actually written ALL the entries, not just the mask. Drop the
     # masked entries back into the original array.
     np.putmask(B,mask,masked)
-    
-    return B.astype(np.uint8)
+    return B
 
 # The node type itself, a subclass of XFormType with the @xformtype decorator which will
 # calculate a checksum of this source file and automatically create the only instance which
@@ -84,7 +82,7 @@ class XformContrast(XFormType):
             node.img = None
         else:
             # otherwise, it depends on the image type. If it has three dimensions it must
-            # be RGB888, so generate the node's image using contrast(), otherwise it must be
+            # be RGB, so generate the node's image using contrast(), otherwise it must be
             # single channel, so use contrast1(). First, though, we need to extract the subimage
             # selected by the ROI (if any)
             subimage = img.subimage()

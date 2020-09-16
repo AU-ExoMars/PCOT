@@ -15,7 +15,7 @@ class XformSource(XFormType):
     def __init__(self):
         super().__init__("source","0.0.0")
         ## our connectors
-        self.addOutputConnector("rgb","img888")
+        self.addOutputConnector("rgb","imgrgb")
         self.autoserialise=('fname',)
 
     def createTab(self,n):
@@ -26,14 +26,10 @@ class XformSource(XFormType):
         node.fname = None
 
     def loadImg(self,node):
-        img = cv.imread(node.fname)
-        if img is None:
-            raise Exception('cannot read image {}'.format(node.fname))
-        # set the node's data
-        img = cv.cvtColor(img,cv.COLOR_BGR2RGB)
-        
-        ui.mainui.log("Image {} loaded: shape {}".format(node.fname,img.shape))
-        node.img = Image(img)
+        # will throw exception if load failed
+        img = Image.load(node.fname)        
+        ui.mainui.log("Image {} loaded: {}".format(node.fname,img))
+        node.img = img
 
     # the "perform" of a source is to read the image if one hasn't 
     # been loaded, and output the image data.

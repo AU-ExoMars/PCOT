@@ -8,7 +8,7 @@ import numpy as np
 import math
 
 import ui,ui.tabs,ui.canvas
-import utils,utils.text
+import utils.text,utils.colour
 from xform import xformtype,XFormType
 from pancamimage import Image,ROIRect
 
@@ -38,7 +38,7 @@ class XformRect(XFormType):
         node.captiontop = False
         node.fontsize=10
         node.fontline=2
-        node.colour=(255,255,0)
+        node.colour=(1,1,0)
         
     def perform(self,node):
         img = node.getInput(0)
@@ -115,11 +115,9 @@ class TabRect(ui.tabs.Tab):
         self.node.fontline=i
         self.node.perform()
     def colourPressed(self):
-        r,g,b = self.node.colour
-        curcol = QColor(r,g,b)
-        col=QtWidgets.QColorDialog.getColor(curcol,ui.mainui)
-        if col.isValid():
-            self.node.colour = (col.red(),col.green(),col.blue())
+        col = utils.colour.colDialog(self.node.colour)
+        if col is not None:
+            self.node.colour = col
             self.node.perform()
 
     # causes the tab to update itself from the node
@@ -130,7 +128,7 @@ class TabRect(ui.tabs.Tab):
         self.w.fontsize.setValue(self.node.fontsize)
         self.w.fontline.setValue(self.node.fontline)
         self.w.captionTop.setChecked(self.node.captiontop)
-        r,g,b = self.node.colour
+        r,g,b = [x*255 for x in self.node.colour]
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r,g,b));
 
     # extra drawing!
