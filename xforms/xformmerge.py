@@ -49,7 +49,10 @@ class XformMerge(XFormType):
         rs = None if r is None else r.shape
         gs = None if g is None else g.shape
         bs = None if b is None else b.shape
-        
+
+        print("RED",r)
+        print("GREEN",g)
+        print("BLUE",b)
 
         # get the shape of one of them
         s = None

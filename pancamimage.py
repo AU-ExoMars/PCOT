@@ -109,15 +109,26 @@ class Image:
     # class method for loading an image (using cv's imread)
     @classmethod
     def load(cls,fname):
-        img = cv.imread(fname)
+        # imread with this argument will load any depth, any
+        # number of channels
+        img = cv.imread(fname,-1) 
         if img is None:
             raise Exception('cannot read image {}'.format(fname))
+        if len(img.shape)==2: # expand to RGB. Annoyingly we cut it down later sometimes.
+            img = cv.merge((img,img,img))
+        # get the scaling factor
+        if img.dtype == np.uint8:
+            scale = 255.0
+        elif img.dtype == np.uint16:
+            scale = 65535.0
+        else:
+            scale = 1.0
         # convert from BGR to RGB (OpenCV is weird)
         img = cv.cvtColor(img,cv.COLOR_BGR2RGB)
         # convert to floats (32 bit)
         img = img.astype(np.float32)
-        # scale to 0..1 (from 0..255)
-        img /= 255.0
+        # scale to 0..1 
+        img /= scale
         # and construct the image
         return cls(img)        
         

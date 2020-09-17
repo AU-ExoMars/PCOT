@@ -53,7 +53,8 @@ class XformInset(XFormType):
         
         ui.mainui.log("{}: Inrect {}, rubber: {}, img?: {}, inset?: {}".format(node.name,inrect,node.insetrect,image is not None,inset is not None))
         if inrect is None:
-            out = image.img # neither rects are set, just dupe the input
+            # neither rects are set, just dupe the input        
+            out = None if image is None else image.img
         elif image is None:
             # if there's no image we can't put anything on it.
             out = None
