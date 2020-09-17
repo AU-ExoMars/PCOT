@@ -46,45 +46,50 @@ class InnerCanvas(QtWidgets.QWidget):
             self.img = None
             self.reset()
         self.update()
+
     def paintEvent(self,event):
         p = QPainter(self)
         p.fillRect(event.rect(),Qt.blue)
-        w = self.size().width()
-        h = self.size().height()
+        widgw = self.size().width()   # widget dimensions
+        widgh = self.size().height()
         # here self.img is a numpy image
         if self.img is not None:
             imgh,imgw = self.img.shape[0],self.img.shape[1]
-            # cut out the part of the image that we want - from (x,y), with size
-            # width*zoomscale,height*zoomscale
-            cutw = int(imgw*self.zoomscale)
-            cuth = int(imgh*self.zoomscale)
+
+            # work out the "base scale" so that a zoomscale of 1 fits the entire
+            # image            
+            aspect = imgw/imgh
+            if widgh*aspect>widgw:
+                self.scale = imgw/widgw
+            else:
+                self.scale = imgh/widgh
+                
+            scale = self.zoomscale*self.scale
+
+            # work out the size of the widget in image pixel coordinates
+            cutw = int(widgw*scale)
+            cuth = int(widgh*scale)
+            # get the top-left coordinate and cut the area.            
             cutx = int(self.x)
             cuty = int(self.y)
-            print(cutx,cuty,cutw,cuth)
             img = self.img[cuty:cuty+cuth,cutx:cutx+cutw]
-            print(img.shape)
-            # we paint at the correct aspect ratio, leaving other
-            # parts of the rectangle blank
-            aspect = cutw/cuth
-            if h*aspect>w:
-                size=(w,int(w/aspect))
-                self.scale = cutw/w
-            else:
-                size=(int(h*aspect),h)
-                self.scale = cuth/h
+            # now get the size of the image that was actually cut (some areas may be out of range)
+            cuth,cutw = img.shape[:2]
+            # now resize the cut area up to fit the widget. Using area interpolation here:
             # cubic produced odd artifacts on float images
-            img = cv.resize(img,dsize=size,interpolation=cv.INTER_AREA)
+            img = cv.resize(img,dsize=(int(cutw/scale),int(cuth/scale)),interpolation=cv.INTER_AREA)
             p.drawImage(0,0,img2qimage(img))
             if self.canv.paintHook is not None:
                 self.canv.paintHook.canvasPaintHook(p)
         else:
             self.scale=1
         p.end()
-        
+
+
     # given point in the widget, return coords in the image. Takes a QPoint.
     def getImgCoords(self,p):
-        x = int(p.x()*(self.scale)+self.x)
-        y = int(p.y()*(self.scale)+self.y)
+        x = int(p.x()*(self.scale*self.zoomscale)+self.x)
+        y = int(p.y()*(self.scale*self.zoomscale)+self.y)
         return (x,y)
 
     def mousePressEvent(self,e):
@@ -196,7 +201,9 @@ class Canvas(QtWidgets.QWidget):
             self.scrollV.setValue(self.canvas.y)
         
     def vertScrollChanged(self,v):
-        pass
+        self.canvas.y=v
+        self.canvas.update()
     def horzScrollChanged(self,v):
-        pass
+        self.canvas.x=v
+        self.canvas.update()
 
