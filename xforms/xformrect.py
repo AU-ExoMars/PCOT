@@ -72,9 +72,10 @@ class XformRect(XFormType):
             # we display.
             annot = img.img.copy() # numpy copy of image
             # write on it - but we MUST WRITE OUTSIDE THE BOUNDS, otherwise we interfere
-            # with the image! This errs on the side of caution.
-            th = node.fontline
-            cv.rectangle(annot,(x-th,y-th),(x+w+th,y+h+th),node.colour,thickness=th)
+            # with the image! Doing this predictably with the thickness function
+            # in cv.rectangle is a pain, so I'm doing it by hand.
+            for i in range(node.fontline):
+                cv.rectangle(annot,(x-i-1,y-i-1),(x+w+i,y+h+i),node.colour,thickness=1)
 
             ty = y if node.captiontop else y+h
             utils.text.write(annot,node.caption,x,ty,node.captiontop,node.fontsize,
