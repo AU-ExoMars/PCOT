@@ -13,7 +13,7 @@ from pancamimage import Image
 class XformRGBFile(XFormType):
     """Load an RGB file for use as an image source."""
     def __init__(self):
-        super().__init__("rgbfile","0.0.0")
+        super().__init__("rgbfile","source","0.0.0")
         ## our connectors
         self.addOutputConnector("rgb","imgrgb")
         self.autoserialise=('fname',)

@@ -12,7 +12,7 @@ from pancamimage import Image
 class XformEllipseDetect(XFormType):
     """PANCAM target detection, work in progress."""
     def __init__(self):
-        super().__init__("ellipsedetect","0.0.0")
+        super().__init__("ellipsedetect","calibration","0.0.0")
         self.addInputConnector("","imggrey")
         self.addOutputConnector("img","img")
         self.addOutputConnector("data","ellipse")

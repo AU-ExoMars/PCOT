@@ -11,7 +11,7 @@ from pancamimage import Image
 class XformGrey(XFormType):
     """Converts an RGB image to greyscale."""
     def __init__(self):
-        super().__init__("greyscale","0.0.0")
+        super().__init__("greyscale","colour","0.0.0")
         self.addInputConnector("","imgrgb")
         self.addOutputConnector("","imggrey")
         

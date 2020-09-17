@@ -15,7 +15,7 @@ from functools import reduce
 class XformDecorr(XFormType):
     """Perform a decorrelation stretch on an RGB image"""
     def __init__(self):
-        super().__init__("decorr stretch","0.0.0")
+        super().__init__("decorr stretch","processing","0.0.0")
         self.addInputConnector("rgb","imgrgb")
         self.addOutputConnector("rgb","imgrgb")
         

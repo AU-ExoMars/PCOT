@@ -9,7 +9,7 @@ from xforms.tabimage import TabImage
 class XFormDump(XFormType):
     """Simple data dump: prints a string of its output into its window"""
     def __init__(self):
-        super().__init__("dump","0.0.0")
+        super().__init__("dump","data","0.0.0")
         self.addInputConnector("any","any")
         
     def createTab(self,n):

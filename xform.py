@@ -40,7 +40,8 @@ class BadVersionException(Exception):
         self.message = "Node {} was saved with a different version of type {}".format(n.name,n.type.name)
 
 class XFormType():
-    def __init__(self,name,ver):
+    def __init__(self,name,group,ver):
+        self.group = group
         self.name = name
         self.ver = ver
         # add to the global dictionary

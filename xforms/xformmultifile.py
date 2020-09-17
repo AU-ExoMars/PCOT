@@ -19,7 +19,7 @@ IMAGETYPERE = re.compile(r".*\.(?i:jpg|png|ppm|tga|tif)")
 class XFormMultiFile(XFormType):
     """Load multiple image files into greyscale channels"""
     def __init__(self):
-        super().__init__("multifile","0.0.0")
+        super().__init__("multifile","source","0.0.0")
         self.autoserialise=(('filters','dir','files'))
         for x in range(NUMOUTS):
             self.addOutputConnector("","imggrey")

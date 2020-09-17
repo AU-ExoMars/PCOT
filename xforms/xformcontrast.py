@@ -44,7 +44,7 @@ class XformContrast(XFormType):
     # type constructor run once at startup
     def __init__(self):
         # call superconstructor with the type name and version code
-        super().__init__("contrast stretch","0.0.0")
+        super().__init__("contrast stretch","processing","0.0.0")
         # set up a single input which takes an image of any type. The connector could have
         # a name in more complex node types, but here we just have an empty string.
         self.addInputConnector("","img")

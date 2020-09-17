@@ -24,7 +24,7 @@ def curve(img,mask,node):
 class XformCurve(XFormType):
     """Maps the image channel intensities to a curve. Honours regions of interest."""
     def __init__(self):
-        super().__init__("curve","0.0.0")
+        super().__init__("curve","processing","0.0.0")
         self.addInputConnector("","img") # accept any image
         self.addOutputConnector("","img") # produce any image, but will change on input connect
         self.autoserialise=('add','mul')

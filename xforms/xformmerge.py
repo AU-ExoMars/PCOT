@@ -12,7 +12,7 @@ class XformMerge(XFormType):
     be created by only connecting 2 channels and turning off the 'pad to 3 channels' option.
     Merging only works on entire images - ROIs are ignored."""
     def __init__(self):
-        super().__init__("merge","0.0.0")
+        super().__init__("merge","colour","0.0.0")
         ## our connectors
         self.addInputConnector("r","imggrey")
         self.addInputConnector("g","imggrey")

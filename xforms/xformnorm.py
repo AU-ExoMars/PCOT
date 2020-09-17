@@ -15,7 +15,7 @@ from pancamimage import Image
 class XformNormImage(XFormType):
     """Normalize the image to a single range taken from all three channels"""
     def __init__(self):
-        super().__init__("normimage","0.0.0")
+        super().__init__("normimage","processing","0.0.0")
         self.addInputConnector("","img")
         self.addOutputConnector("","img")
         

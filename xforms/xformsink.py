@@ -15,7 +15,7 @@ class XformSink(XFormType):
     """Simply view an image."""
     def __init__(self):
         # call superconstructor with the type name and version code
-        super().__init__("sink","0.0.0")
+        super().__init__("sink","utility","0.0.0")
         # set up a single input which takes an image of any type. The connector could have
         # a name in more complex node types, but here we just have an empty string.
         self.addInputConnector("","img")

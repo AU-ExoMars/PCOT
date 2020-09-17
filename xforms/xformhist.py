@@ -15,7 +15,7 @@ def gethistogram(chan,weights,bincount):
 class XFormHistogram(XFormType):
     """Produce a histogram for each channel in the data"""
     def __init__(self):
-        super().__init__("histogram","0.0.0")
+        super().__init__("histogram","data","0.0.0")
         self.autoserialise=(('bincount',))
         self.addInputConnector("","img")
 

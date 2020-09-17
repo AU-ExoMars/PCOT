@@ -17,7 +17,7 @@ class XformRect(XFormType):
     """Add a rectangular ROI to an image. At the next operation all ROIs will be grouped together
     used to perform the operation and discarded."""
     def __init__(self):
-        super().__init__("rect","0.0.0")
+        super().__init__("rect","regions","0.0.0")
         self.addInputConnector("","img")
         self.addOutputConnector("img","img") # image+roi
         self.addOutputConnector("crop","img") # cropped image

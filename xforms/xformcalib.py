@@ -12,7 +12,7 @@ class XformCalib(XFormType):
     """mock calibration: takes ellipse data (or more realistically calibration data
     generated from ellipses) and calibrates the image accordingly"""
     def __init__(self):
-        super().__init__("calib","0.0.0")
+        super().__init__("calib","calibration","0.0.0")
         self.addInputConnector("img","img")
         self.addInputConnector("data","ellipse")
         self.addOutputConnector("out","img")

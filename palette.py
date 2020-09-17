@@ -4,6 +4,8 @@ from xform import XFormType
 
 view = None
 
+groups = ["processing","calibration","data","colour","regions","source","utility"]
+
 class PaletteButton(QtWidgets.QPushButton):
     def __init__(self,name,view):
         super().__init__(name)
@@ -53,13 +55,27 @@ def setup(scrollArea,scrollAreaContent,view):
     layout = QtWidgets.QVBoxLayout()
     scrollAreaContent.setLayout(layout)
     buttons=[]
+    grouplists = {x:[] for x in groups}
     # we want the keys in sorted order
     all = XFormType.all()
     ks = sorted(all.keys())
+
+    # add xformtypes to a list for each group
     for k in ks:
         v = all[k]
-        b = PaletteButton(k,view)
-        layout.addWidget(b)
-        buttons.append(b)
+        if not v.group in groups:
+            raise Exception("node '{}' not in any group!".format(k))
+        grouplists[v.group].append(k)
 
+    # add buttons and separators for each group
+    for g in groups:
+        sep = QtWidgets.QLabel(g)
+        sep.setStyleSheet("background-color:rgb(200,200,200)")
+        layout.addWidget(sep)
+        for k in grouplists[g]:
+            v = all[k]
+            b = PaletteButton(k,view)
+            layout.addWidget(b)
+            buttons.append(b)
+        
     return buttons
