@@ -249,8 +249,8 @@ class XForm:
     # input is a list of (out,in) tuples. Typical usage for a node with a single
     # input and output is matchOutputsToInputs([(0,0)])
     def matchOutputsToInputs(self,pairs):
-        # reset all types
-        self.outputTypes = [None for x in self.type.outputConnectors]
+        # reset all types - doing it this way in case we add extra outputs!
+        self.outputTypes[:len(self.type.outputConnectors)] = [None for x in self.type.outputConnectors]
         for o,i in pairs:
             if self.inputs[i] is not None:
                 parent,pout = self.inputs[i]
