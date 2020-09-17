@@ -48,6 +48,9 @@ def ellipseDetect(img):
       
     bestcount = 0
     
+    # blob detect only works on 8-bit images
+    img = (img*255.0).astype(np.ubyte)
+    
     # use varying maximum threshold, keep the largest number
     # of blobs found (if it's less than 8)
     
@@ -76,6 +79,7 @@ def ellipseDetect(img):
         params.minDistBetweenBlobs= 10.0
 
         detector = cv.SimpleBlobDetector_create(params)
+        # blob detector only works on 8-bit
         keypoints = detector.detect(img)
         
         keypoints = utils.cluster.cluster(keypoints,5)
@@ -97,5 +101,7 @@ def ellipseDetect(img):
     else:
         keypoints=list()
         ui.mainui.msg("done, no ellipses found")
+        
+    img = (img.astype(np.float32))/255.0
     return (img,keypoints)
 
