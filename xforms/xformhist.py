@@ -9,7 +9,7 @@ from xform import xformtype,XFormType
 from pancamimage import Image
 
 def gethistogram(chan,weights,bincount):
-    return np.histogram(chan,bincount,weights=weights)
+    return np.histogram(chan,bincount,range=(0,1),weights=weights)
 
 @xformtype
 class XFormHistogram(XFormType):

@@ -10,16 +10,16 @@ from xform import xformtype,XFormType
 from pancamimage import Image
 
 @xformtype
-class XformSource(XFormType):
-    """Load a file for use as an image source."""
+class XformRGBFile(XFormType):
+    """Load an RGB file for use as an image source."""
     def __init__(self):
-        super().__init__("source","0.0.0")
+        super().__init__("rgbfile","0.0.0")
         ## our connectors
         self.addOutputConnector("rgb","imgrgb")
         self.autoserialise=('fname',)
 
     def createTab(self,n):
-        return TabSource(n)
+        return TabRGBFile(n)
         
     def init(self,node):
         node.img = None
@@ -40,9 +40,9 @@ class XformSource(XFormType):
     
 
 
-class TabSource(ui.tabs.Tab):
+class TabRGBFile(ui.tabs.Tab):
     def __init__(self,node):
-        super().__init__(ui.mainui,node,'assets/tabsource.ui')
+        super().__init__(ui.mainui,node,'assets/tabrgbfile.ui')
         # set up the file tree
         self.dirModel = QFileSystemModel()
         self.dirModel.setRootPath("/")

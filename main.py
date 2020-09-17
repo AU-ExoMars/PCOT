@@ -66,7 +66,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     def newAction(self):
         # create a dummy graph with just a source
         self.graph=xform.XFormGraph()
-        source = self.graph.create("source")
+        source = self.graph.create("rgbfile")
         self.saveFileName = None
         # set up its scene and view
         self.autoLayout() # builds the scene
