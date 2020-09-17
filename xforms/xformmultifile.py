@@ -10,7 +10,7 @@ import numpy as np
 import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
 from pancamimage import Image
-["*.jpg","*.png","*.ppm","*.tga","*.tif"]
+
 IMAGETYPERE = re.compile(r".*\.(?i:jpg|png|ppm|tga|tif)")
 
 @xformtype
@@ -69,6 +69,14 @@ class TabMultiFile(ui.tabs.Tab):
                self.model.appendRow(item)
         self.w.filelist.setModel(self.model)
         self.model.dataChanged.connect(self.checkedChanged)
+        self.w.filelist.activated.connect(self.itemActivated)
+        
+    def itemActivated(self,idx):
+        item = self.model.itemFromIndex(idx)
+        path = join(self.node.dir,item.text())
+        img = Image.load(path)
+        self.w.canvas.display(img)
+        
         
     def checkedChanged(self):
         self.node.files=[]
