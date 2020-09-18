@@ -54,6 +54,7 @@ def setup(scrollArea,scrollAreaContent,view):
     # Not fun at all. It might look straightforward now that I know...
     layout = QtWidgets.QVBoxLayout()
     scrollAreaContent.setLayout(layout)
+    scrollArea.setMinimumWidth(150)
     buttons=[]
     grouplists = {x:[] for x in groups}
     # we want the keys in sorted order

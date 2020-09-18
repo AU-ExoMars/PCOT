@@ -20,7 +20,7 @@ class XFormMultiFile(XFormType):
     """Load multiple image files into greyscale channels"""
     def __init__(self):
         super().__init__("multifile","source","0.0.0")
-        self.autoserialise=(('filters','dir','files'))
+        self.autoserialise=(('filters','dir','files','mult'))
         for x in range(NUMOUTS):
             self.addOutputConnector("","imggrey")
         
@@ -34,6 +34,8 @@ class XFormMultiFile(XFormType):
         node.dir='.'
         # files we have checked in the file list
         node.files=[]
+        # all data in all channels is multiplied by this (used for, say, 10 bit images)
+        node.multiplier=1
         self.clearImages(node)
         
     def clearImages(self,node): # clear stored images
@@ -49,6 +51,7 @@ class XFormMultiFile(XFormType):
                 path = join(node.dir,node.files[i])
                 if node.files[i] is not None and node.imgpaths[i]!=path:
                     img = Image.load(path)
+                    img.img *= node.mult # apply multiplier
                     # if it's not a single channel image
                     if img.channels!=1:
                         c = cv.split(img.img)
@@ -70,6 +73,7 @@ class TabMultiFile(ui.tabs.Tab):
         self.w.getinitial.clicked.connect(self.getInitial)
         self.w.filters.textChanged.connect(self.filtersChanged)
         self.w.filelist.activated.connect(self.itemActivated)
+        self.w.mult.currentTextChanged.connect(self.multChanged)
 
         # all the files in the current directory (which match the filters)
         self.allFiles=[]
@@ -98,6 +102,12 @@ class TabMultiFile(ui.tabs.Tab):
         # rebuild the filter list from the comma-sep string and rebuild the model
         self.node.filters=t.split(",")
         self.buildModel()
+        
+    def multChanged(self,s):
+        try:
+            self.node.mult=float(s)
+        except:
+            ui.mainui.error("Bad mult string in 'multifile': "+s)
 
     def onNodeChanged(self):
         # the node has changed - set the filters text widget and reselect the dir.
@@ -109,6 +119,8 @@ class TabMultiFile(ui.tabs.Tab):
             s+="{}:\t{}\n".format(i,self.node.files[i])
         s+="\n".join([str(x) for x in self.node.imgpaths])
         self.w.outputFiles.setPlainText(s)
+        i = self.w.mult.findText(str(int(self.node.mult)))
+        self.w.mult.setCurrentIndex(i)
                     
     def buildModel(self):
         # build the model that the list view uses
@@ -137,6 +149,7 @@ class TabMultiFile(ui.tabs.Tab):
         item = self.model.itemFromIndex(idx)
         path = join(self.node.dir,item.text())
         img = Image.load(path)
+        img.img *= self.node.mult
         self.w.canvas.display(img)
         
         

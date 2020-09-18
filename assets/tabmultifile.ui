@@ -102,6 +102,27 @@ elements</string>
          </property>
         </widget>
        </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="label_4">
+         <property name="text">
+          <string>Multiplier</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QComboBox" name="mult">
+         <item>
+          <property name="text">
+           <string>1</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>64</string>
+          </property>
+         </item>
+        </widget>
+       </item>
       </layout>
      </widget>
      <widget class="Canvas" name="canvas" native="true">

@@ -20,7 +20,7 @@ class XFormAdd(XFormType):
         self.addInputConnector("","img")
         self.addInputConnector("","img")
         self.addOutputConnector("","img")
-        self.autoserialise=('k','m1','m2','mode')
+        self.autoserialise=('k','m1','m2','postproc')
         
     def createTab(self,n):
         return TabMaths(n)
@@ -33,7 +33,7 @@ class XFormAdd(XFormType):
         node.m1 = 1
         node.m2 = 1
         node.k = 0
-        node.mode = 0
+        node.postproc = 0
         node.img = None
         
     def perform(self,node):
@@ -62,20 +62,20 @@ class XFormAdd(XFormType):
                     i2 = cv.resize(i2,(w,h))
                     
                 # cut out that second image using the ROI from image 1.
-                img2 = subimage1.cropother(img2)                
+                i2 = subimage1.cropother(img2).img
                     
                 img = i1*node.m1+i2*node.m2+node.k
 
                 print(img.shape)
                 print(subimage1.mask.shape)
                 # postprocess, normalising and clipping but only to the mask in subimage1
-                if node.mode == 0: # clip
+                if node.postproc == 0: # clip
                     mask = ~subimage1.fullmask()
                     masked = np.ma.masked_array(data=img,mask=mask)
                     masked[masked>1]=1
                     masked[masked<0]=0
                     np.putmask(img,~mask,masked)
-                elif node.mode == 1: # norm to output
+                elif node.postproc == 1: # norm to output
                     mask = ~subimage1.fullmask()
                     masked = np.ma.masked_array(data=img,mask=mask)
                     # calculate the output range
@@ -83,14 +83,14 @@ class XFormAdd(XFormType):
                     mx = node.m1+node.m2+node.k
                     masked = (masked-mn)/(mx-mn)
                     np.putmask(img,~mask,masked)
-                elif node.mode == 2: # norm to image max across all channels
+                elif node.postproc == 2: # norm to image max across all channels
                     mask = ~subimage1.fullmask()
                     masked = np.ma.masked_array(data=img,mask=mask)
                     mx = masked.max()
                     mn = masked.min()
                     masked = (masked-mn)/(mx-mn)
                     np.putmask(img,~mask,masked)
-                elif node.mode == 3: # do nothing
+                elif node.postproc == 3: # do nothing to it
                     pass
 
                 # apply the result to the subimage region for image 1
@@ -112,7 +112,7 @@ class TabMaths(ui.tabs.Tab):
         self.w.m2.editingFinished.connect(self.m2Changed)
         self.w.k.editingFinished.connect(self.kChanged)
 
-        self.w.mode.currentIndexChanged.connect(self.modeChanged)
+        self.w.postproc.currentIndexChanged.connect(self.postprocChanged)
 
         self.onNodeChanged()
         
@@ -123,8 +123,8 @@ class TabMaths(ui.tabs.Tab):
     def m2Changed(self):
         self.node.m2 = float(self.w.m2.text())
         self.node.perform()
-    def modeChanged(self,i):
-        self.node.mode = i
+    def postprocChanged(self,i):
+        self.node.postproc = i
         self.node.perform()
     def kChanged(self):
         self.node.k = float(self.w.k.text())
@@ -134,6 +134,7 @@ class TabMaths(ui.tabs.Tab):
         self.w.m1.setText(str(self.node.m1))
         self.w.m2.setText(str(self.node.m2))
         self.w.k.setText(str(self.node.k))
+        self.w.postproc.setCurrentIndex(self.node.postproc)
         self.w.canvas.display(self.node.img)
         
     

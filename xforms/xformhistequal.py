@@ -15,10 +15,13 @@ BINS = 2000
 
 def equalize(img,mask):
     mask = mask.astype(np.ubyte)
+    # first, clip the image to 0-1
+#    img[img<0]=0
+#    img[img>1]=1
     # algorithm source: https://docs.opencv.org/master/d5/daf/tutorial_py_histogram_equalization.html
     # get histogram; N bins in range 0-1. Set the weight of all unmasked
     # pixels to zero so they don't get counted.
-    hist,bins = np.histogram(img,BINS,[0,1],weights=mask)
+    hist,bins = np.histogram(img,BINS,weights=mask)
     # work out the cumulative dist. function and normalize it
     cdf = hist.cumsum()
     cdf_normalized = cdf * float(hist.max()) / cdf.max()
