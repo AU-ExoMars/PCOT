@@ -4,7 +4,7 @@ from xform import XFormType
 
 view = None
 
-groups = ["processing","calibration","data","colour","regions","source","utility"]
+groups = ["source","maths","processing","calibration","data","colour","regions","utility"]
 
 class PaletteButton(QtWidgets.QPushButton):
     def __init__(self,name,view):
@@ -64,7 +64,7 @@ def setup(scrollArea,scrollAreaContent,view):
     for k in ks:
         v = all[k]
         if not v.group in groups:
-            raise Exception("node '{}' not in any group!".format(k))
+            raise Exception("node '{}' not in any group defined in palette.py!".format(k))
         grouplists[v.group].append(k)
 
     # add buttons and separators for each group

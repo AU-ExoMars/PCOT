@@ -13,8 +13,11 @@ TabRect is largely the same as TabInset.
 
 THINGS TO DO
 
+Fix "add"
+
 Make sure all nodes:
     process subimages or say if they don't
+    pass on or DON'T pass on ROIs - which is it?
     deal with all possible channel counts
 
 What to do if a node doesn't exist (some kind of placeholder node with dead

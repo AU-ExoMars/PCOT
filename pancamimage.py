@@ -79,6 +79,23 @@ class SubImageROI:
             self.bb = (0,0,img.w,img.h) # whole image
             self.mask = np.full((img.h,img.w),True) # full mask
 
+    def fullmask(self):
+        # the main mask is just a single channel. This will generate a mask
+        # of the same number of channels, so an x,y image will make an x,y mask
+        # and an x,y,3 image will make an x,y,3 mask.
+        if len(self.img.shape)==2:
+            return self.mask # the existing mask is fine
+        else:
+            h,w,chans = self.img.shape
+            # flatten and repeat each element thrice
+            x = np.repeat(np.ravel(self.mask),3) 
+            # put into a h,w,3 array            
+            return np.reshape(x,(h,w,3))
+
+    def cropother(self,img2):
+        # use this ROI to crop the image in img2. Doesn't do masking, though.
+        x,y,w,h = self.bb
+        return Image(img2.img[y:y+h,x:x+w])
 
 # an image - just a numpy array (the image) and a list of ROI objects. The array 
 # has shape either (h,w) (for a single channel) or (h,w,n) for multiple channels.
@@ -169,5 +186,5 @@ class Image:
     def modifyWithSub(self,subimage,newimg):
         i = self.copy()
         x,y,w,h = subimage.bb
-        i.img[y:y+h,x:x+w]=newimg
+        i.img[y:y+h,x:x+w][subimage.mask]=newimg[subimage.mask]
         return i
