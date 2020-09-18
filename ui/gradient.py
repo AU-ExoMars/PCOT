@@ -4,6 +4,8 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import pyqtSignal as Signal
 
+from utils.colour import qcol2rgb,rgb2qcol
+
 class Gradient(QtWidgets.QWidget):
 
     gradientChanged = Signal()
@@ -17,8 +19,8 @@ class Gradient(QtWidgets.QWidget):
         )
 
         self._gradient = [
-            (0.0, '#000000'),
-            (1.0, '#ffffff'),
+            (0.0, (0,0,0)),
+            (1.0, (1,1,1)),
         ]
 
         # Stop point handle sizes.
@@ -35,7 +37,7 @@ class Gradient(QtWidgets.QWidget):
         # Draw the linear horizontal gradient.
         gradient = QtGui.QLinearGradient(0, 0, width, 0)
         for stop, color in self._gradient:
-            gradient.setColorAt(stop, QtGui.QColor(color))
+            gradient.setColorAt(stop, rgb2qcol(color))
 
         rect = QtCore.QRect(0, 0, width, height)
         painter.fillRect(rect, gradient)
@@ -83,7 +85,8 @@ class Gradient(QtWidgets.QWidget):
         self._gradient = gradient
         self._constrain_gradient()
         self._sort_gradient()
-        self.gradientChanged.emit()
+        # best not, ends with recursion.
+        #        self.gradientChanged.emit()
 
     def gradient(self):
         return self._gradient
@@ -122,10 +125,11 @@ class Gradient(QtWidgets.QWidget):
     def chooseColorAtPosition(self, n, current_color=None):
         dlg = QtWidgets.QColorDialog(self)
         if current_color:
-            dlg.setCurrentColor(QtGui.QColor(current_color))
+            dlg.setCurrentColor(rgb2qcol(current_color))
 
         if dlg.exec_():
-            self.setColorAtPosition(n, dlg.currentColor().name())
+            col = qcol2rgb(dlg.currentColor())
+            self.setColorAtPosition(n, col)
 
     def _find_stop_handle_for_event(self, e, to_exclude=None):
         width = self.width()
@@ -175,6 +179,7 @@ class Gradient(QtWidgets.QWidget):
             self._gradient[self._drag_position] = stop, color
             self._constrain_gradient()
             self.update()
+            self.gradientChanged.emit()
 
     def mouseDoubleClickEvent(self, e):
         # Calculate the position of the click relative 0..1 to the width.

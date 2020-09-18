@@ -57,6 +57,7 @@ class XformCurve(XFormType):
             node.img = None
         else:
             subimage = img.subimage()
+            
             if img.channels == 1:
                 newsubimg = curve(subimage.img,subimage.mask,node)
             else:
