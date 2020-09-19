@@ -173,8 +173,13 @@ class Image:
         return SubImageROI(self)
         
     def __str__(self):        
-        return "<Image {}x{} array:{} channels:{}, {} bytes>".format(self.w,self.h,
+        s = "<Image {}x{} array:{} channels:{}, {} bytes>".format(self.w,self.h,
             str(self.img.shape),self.channels,self.img.nbytes)
+            
+        x = [r.bb() for r in self.rois]
+        x = ["ROI {},{},{}x{}".format(x,y,w,h) for x,y,w,h in x]
+        s += "/".join(x)
+        return s
 
     def copy(self):
         i = Image(self.img.copy())

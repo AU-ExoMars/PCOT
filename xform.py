@@ -1,5 +1,6 @@
 import json,traceback,inspect,hashlib,re,copy
 from collections import deque
+from pancamimage import Image
 
 import ui,conntypes
 
@@ -355,6 +356,10 @@ class XForm:
 #        traceback.print_stack()
         try:
             self.type.perform(self)
+            for o in self.outputs:
+                if isinstance(o,Image):
+                    print("Out: ",o)
+                
             # tell the tab that this node has changed
             if self.tab is not None:
                 self.tab.onNodeChanged()

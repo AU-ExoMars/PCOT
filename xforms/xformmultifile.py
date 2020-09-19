@@ -35,7 +35,7 @@ class XFormMultiFile(XFormType):
         # files we have checked in the file list
         node.files=[]
         # all data in all channels is multiplied by this (used for, say, 10 bit images)
-        node.multiplier=1
+        node.mult=1
         self.clearImages(node)
         
     def clearImages(self,node): # clear stored images

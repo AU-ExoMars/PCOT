@@ -56,13 +56,14 @@ class XFormAdd(XFormType):
                 subimage1 = img1.subimage() 
                 i1 = subimage1.img
                 i2 = img2.img
+                # cut out that second image using the ROI from image 1.
+                i2 = subimage1.cropother(img2).img
             
                 if i1.shape[:2] != i2.shape[:2]:
                     h,w = i1.shape[:2]
                     i2 = cv.resize(i2,(w,h))
+                    print(i1.shape,i2.shape)
                     
-                # cut out that second image using the ROI from image 1.
-                i2 = subimage1.cropother(img2).img
                     
                 img = i1*node.m1+i2*node.m2+node.k
 
