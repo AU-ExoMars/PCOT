@@ -194,7 +194,7 @@ class Image:
         return s
     def getDesc(self):
         # just the filters
-        return "+".join(['?' if x[1] is None else x[1] for x in self.sources])
+        return ",".join(['?' if x[1] is None else x[1] for x in self.sources])
 
     def copy(self):
         srcs = self.sources.copy()

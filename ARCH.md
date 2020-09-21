@@ -225,7 +225,7 @@ in the canvas. See the code for details.
 ## Images and regions of interest
 
 Images are passed as objects of class *Image* in the *pancamimages*
-package, rather than as raw numpy arrays. This is necessary to allow
+module, rather than as raw numpy arrays. This is necessary to allow
 images to contain region of interest masks. To wrap a numpy image in
 an Image object, just call
 ```python
@@ -238,7 +238,7 @@ img.img
 Regions of interest add data to the Image object. Each ROI node type
 (rectangle, ellipse etc.) adds a new ROI and (optionally) an annotation
 is drawn into the image around it. Any subsequent operation on the image
-will act only on the ROIs, and remove them from the image.
+will act only on the ROIs, and may then remove them from the image.
 Thus we can have a sequence
 ```
 source->rectangle->rectangle->histequal
@@ -268,8 +268,8 @@ and there are some utility methods for working with them. A common pattern is:
             subimgmask = subimage.fullmask()
             
             # create a masked array; note the logical flip of the mask.
-            # Our mask has True meaning Unmasked the numpy masked array uses False
-            # to mean Unmasked.
+            # Our mask has True meaning Unmasked, while  the numpy masked
+            # array uses False to mean Unmasked.
             
             masked = np.ma.masked_array(subimgarray,mask=~subimgmask)
             
@@ -297,9 +297,11 @@ and there are some utility methods for working with them. A common pattern is:
 
 ## Image source data
 
-Images also contain a history of their original sources, where these are
-data. These are in the **sources** attribute, and consist of a set (not a list)
-of tuples, *(path,filter)*. These are automatically build in the sourcing
+Images also contain a history of their external original sources.
+These are in the **sources** attribute, and consist of a set (not a list)
+of tuples, *(path,filter)*. The **filter** term is a string
+identifying a Pancam filter, e.g. "L01".
+These are automatically build in the sourcing
 nodes, and should be rebuilt and added to as nodes construct or
 manipulate images. Many functions and methods, such as the **modifySubImage**,
 will do this for you. Otherwise you will need to work out how to modify the sources
