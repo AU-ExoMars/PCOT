@@ -248,4 +248,77 @@ This doesn't always make sense, though: in cases like split and merge nodes, for
 Nodes are free to behave slightly differently, but when performing an action only
 on a region of an image does make sense, this should be done.
 
-Regions of interest are stored as an *rois* list attribute in the Image.
+Regions of interest are stored as an *rois* list attribute in the Image,
+and there are some utility methods for working with them. A common pattern is:
+```python
+    def perform(self,node):
+        # read the image
+        img = node.getInput(0)
+        if img is not None:
+            # if all is well, extract the subimage object
+            subimage = img.subimage()
+            
+            # from the subimage, extract the actual numpy subimage 
+            # (which is a rect bounding all the ROIs) and the mask
+            # saying which pixels are actually in the ROIs. This is
+            # the full mask - expanded to as many channels as required.
+            # There is also a "mask" attribute which is single channel.
+
+            subimgarray = subimage.img
+            subimgmask = subimage.fullmask()
+            
+            # create a masked array; note the logical flip of the mask.
+            # Our mask has True meaning Unmasked the numpy masked array uses False
+            # to mean Unmasked.
+            
+            masked = np.ma.masked_array(subimgarray,mask=~subimgmask)
+            
+            # perform some manipulation on the subimage, here we'll divide it
+            # by 10.
+            
+            cp = subimgarray.copy() # the original subimage
+            masked = masked / 10.0  # divide the masked area
+            np.putmask(cp,subimgmask,masked) # put the changed area into the copy
+            
+            # now copy the modifed subimage back into the original image,
+            # making a new Image, which is our output
+            
+            node.img = img.modifyWithSub(subimage,cp)
+        else:
+
+            # there was no input image
+            
+            node.img = None
+        
+        node.setOutput(0,node.img)
+```
+
+
+
+## Image source data
+
+Images also contain a history of their original sources, where these are
+data. These are in the **sources** attribute, and consist of a set (not a list)
+of tuples, *(path,filter)*. These are automatically build in the sourcing
+nodes, and should be rebuilt and added to as nodes construct or
+manipulate images. Many functions and methods, such as the **modifySubImage**,
+will do this for you. Otherwise you will need to work out how to modify the sources
+and add them to the Image constructor.
+
+Here's what Merge does:
+
+```python
+        # lst is a list of Images - we create a union of all the source
+        # sets.
+
+        sources = set.union(*[x.sources for x in lst])
+
+        # and pass that to our new Image constructor.
+
+        node.img = Image(cv.merge([x.img for x in lst]),sources)
+```
+
+The golden rule is to **think about sources** when you construct a new Image. The constructor
+will happily accept no sources, however.
+
+

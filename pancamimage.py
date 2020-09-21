@@ -15,7 +15,6 @@ class ROI:
     # return an image cropped to the BB
     def crop(self,img):
         x,y,w,h = self.bb()
-        print("Cropping to ",x,y,w,h)
         return img.img[y:y+h,x:x+w]
     # return a boolean mask which, when imposed on the cropped image,
     # gives the ROI. Or none, in which case there is no mask.
@@ -95,17 +94,18 @@ class SubImageROI:
     def cropother(self,img2):
         # use this ROI to crop the image in img2. Doesn't do masking, though.
         x,y,w,h = self.bb
-        return Image(img2.img[y:y+h,x:x+w])
+        return Image(img2.img[y:y+h,x:x+w],img2.sources)
 
 # an image - just a numpy array (the image) and a list of ROI objects. The array 
 # has shape either (h,w) (for a single channel) or (h,w,n) for multiple channels.
 # In connections (see conntypes.py), single channel images are "imggrey" while
 # multiple channels are "imgrgb" for RGB images (3 channels) or "imgstrange"
 # for any other number of channels. Images are 32-bit float.
+# There is also a set of source tupled, (filename,filter)
 
 class Image:
     # create image from numpy array
-    def __init__(self,img):
+    def __init__(self,img,sources=set()):
         if img is None:
             raise Exception("trying to initialise image from None")
         self.img = img # the image numpy array
@@ -122,10 +122,18 @@ class Image:
             self.channels=img.shape[2]
         self.w = img.shape[1]
         self.h = img.shape[0]
+        # an image may have a set of source data attached to it.
+        # These are (filename,filter) tuples; filter may be None. If it
+        # isn't, filter is a filter name (e.g. R01).
+#        print("SOURCE ",sources)
+        self.sources = sources # make sure it's a set
+#        if len(sources)==0:
+#            raise Exception("No source")
     
     # class method for loading an image (using cv's imread)
+    # If the source is None, use (fname,None) (i.e. no filter)
     @classmethod
-    def load(cls,fname):
+    def load(cls,fname,source=None):
         # imread with this argument will load any depth, any
         # number of channels
         img = cv.imread(fname,-1) 
@@ -146,8 +154,11 @@ class Image:
         img = img.astype(np.float32)
         # scale to 0..1 
         img /= scale
+        # build the default sources if required
+        if source is None:
+            source=(fname,None)
         # and construct the image
-        return cls(img)        
+        return cls(img,{source})
         
     # get a numpy image (not another Image) we can display on an RGB surface
     def rgb(self):
@@ -173,17 +184,22 @@ class Image:
         return SubImageROI(self)
         
     def __str__(self):        
-        s = "<Image {}x{} array:{} channels:{}, {} bytes>".format(self.w,self.h,
+        s = "<Image {}x{} array:{} channels:{}, {} bytes, ".format(self.w,self.h,
             str(self.img.shape),self.channels,self.img.nbytes)
-            
+        xx = ";".join([str(x) for x in self.sources])
+        s += "src: [{}]".format(xx)
         x = [r.bb() for r in self.rois]
-        x = ["ROI {},{},{}x{}".format(x,y,w,h) for x,y,w,h in x]
-        s += "/".join(x)
+        x = [", ROI {},{},{}x{}".format(x,y,w,h) for x,y,w,h in x]
+        s += "/".join(x)+">"
         return s
+    def getDesc(self):
+        # just the filters
+        return "+".join(['?' if x[1] is None else x[1] for x in self.sources])
 
     def copy(self):
-        i = Image(self.img.copy())
-        i.rois = [x for x in self.rois]
+        srcs = self.sources.copy()
+        i = Image(self.img.copy(),srcs)
+        i.rois = self.rois.copy()
         return i
 
     # return a copy of the image, with the given spliced in at the

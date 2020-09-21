@@ -37,6 +37,7 @@ class InnerCanvas(QtWidgets.QWidget):
     # handles 1 and 3 channels
     def display(self,img):
         if img is not None:
+            self.desc = img.getDesc()
             img = img.rgb() # convert to RGB
             # only reset the image zoom if the shape has changed
             if self.img is None or self.img.shape[:2] != img.shape[:2]:
@@ -81,6 +82,11 @@ class InnerCanvas(QtWidgets.QWidget):
             p.drawImage(0,0,img2qimage(img))
             if self.canv.paintHook is not None:
                 self.canv.paintHook.canvasPaintHook(p)
+            p.setPen(Qt.yellow)
+            p.setBrush(Qt.yellow)
+            r = QtCore.QRect(0,widgh-20,widgw,20)
+            p.drawText(r,Qt.AlignLeft,self.desc)
+                
         else:
             self.scale=1
         p.end()

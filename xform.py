@@ -78,7 +78,11 @@ class XFormType():
         
     def doAutodeserialise(self,node,ent):
         for name in self.autoserialise:
-            node.__dict__[name] = ent[name]
+            # ignore key errors, for when we add data during development
+            try:
+                node.__dict__[name] = ent[name]
+            except KeyError:
+                pass
 
     def addInputConnector(self,name,typename,desc=""):
         self.inputConnectors.append( (name,typename,desc) )
@@ -356,9 +360,9 @@ class XForm:
 #        traceback.print_stack()
         try:
             self.type.perform(self)
-            for o in self.outputs:
-                if isinstance(o,Image):
-                    print("Out: ",o)
+#            for o in self.outputs:
+#                if isinstance(o,Image):
+#                    print("Out: ",o)
                 
             # tell the tab that this node has changed
             if self.tab is not None:

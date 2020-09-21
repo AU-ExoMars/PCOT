@@ -14,8 +14,8 @@ class Filter:
         return np.exp(-(x-mu)**2/(2*fwhm_to_sigma(fwhm)**2))
     def response_over(self, x: np.ndarray):
         return self._gaussian(x, self.cwl, self.fwhm)
-#
- Note: solar filters omitted for PanCam
+
+# Note: solar filters omitted
 PANCAM_FILTERS = [
     Filter(570, 12, .989, "L01", "G04"),
     Filter(530, 15, .957, "L02", "G03"),

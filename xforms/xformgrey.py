@@ -29,6 +29,6 @@ class XformGrey(XFormType):
             print(img.img.shape,img.img.dtype)
             if img.channels != 3:
                 raise Exception("Image must be RGB for greyscale conversion")
-            node.img = Image(cv.cvtColor(img.img,cv.COLOR_RGB2GRAY))
+            node.img = Image(cv.cvtColor(img.img,cv.COLOR_RGB2GRAY),img.sources)
                 
         node.setOutput(0,node.img)

@@ -70,6 +70,7 @@ def decorrstretch(A, mask):
     eigval, V = np.linalg.eig(cov)
     # fail if an eigenvalue is too small (monochrome image?)
     if min(abs(eigval))<0.00001:
+        ui.mainui.error("Eigenvalue too small for decorrelation stretch")
         return orig
     # stretch matrix
     S = np.diag(1/np.sqrt(eigval))

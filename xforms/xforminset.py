@@ -53,21 +53,30 @@ class XformInset(XFormType):
         
         ui.mainui.log("{}: Inrect {}, rubber: {}, img?: {}, inset?: {}".format(node.name,inrect,node.insetrect,image is not None,inset is not None))
         if inrect is None:
-            # neither rects are set, just dupe the input        
-            out = None if image is None else image.img
+            # neither rects are set, just dupe the input
+            if image is None:
+                out = None
+                sources = set()
+            else:
+                out = image.img
+                sources = image.sources
         elif image is None:
             # if there's no image we can't put anything on it.
             out = None
+            sources = set()
         else:
             x,y,w,h = inrect # get the rectangle
             out = image.rgb().copy() # get a numpy array copy of outer image as RGB
             if inset is None:
                 # there's no inset image, draw a rectangle
                 cv.rectangle(out,(x,y),(x+w,y+h),(0,0,255),-1) # -1=filled
+                insetsources = set()
             else:
+                insetsources = inset.sources
                 # resize the inset (and cvt to RGB if necessary)
                 t = cv.resize(inset.rgb(),dsize=(w,h),interpolation=cv.INTER_AREA)
                 out[y:y+h,x:x+w]=t
+            sources = set.union(insetsources,image.sources)
             # add in the caption - REVISE THIS TO USE TEXT MODULES IN UTILS
             if node.caption != '':
                 fs = node.fontsize/10
@@ -85,7 +94,7 @@ class XformInset(XFormType):
                     fs,
                     node.colour,node.fontline)
 
-        node.img = None if out is None else Image(out)
+        node.img = None if out is None else Image(out,sources)
         node.setOutput(0,node.img)
         
 

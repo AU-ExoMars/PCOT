@@ -66,7 +66,7 @@ class XformRect(XFormType):
                 # output cropped image: this uses the ROI rectangle to
                 # crop the image; we get a numpy image out which we wrap.
                 # with no ROIs
-                node.setOutput(1,Image(roi.crop(o))) 
+                node.setOutput(1,Image(roi.crop(o),o.sources)) 
             
             # now make the annotated image, which we always do because it's what
             # we display.
@@ -81,7 +81,7 @@ class XformRect(XFormType):
             utils.text.write(annot,node.caption,x,ty,node.captiontop,node.fontsize,
                 node.fontline,node.colour)
             # that's also the image displayed in the tab
-            node.img = Image(annot)
+            node.img = Image(annot,o.sources)
             node.img.rois=o.rois # same ROI list as unannotated image
             # output the annotated image
             node.setOutput(2,node.img)

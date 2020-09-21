@@ -27,7 +27,7 @@ class XformRGBFile(XFormType):
 
     def loadImg(self,node):
         # will throw exception if load failed
-        img = Image.load(node.fname)        
+        img = Image.load(node.fname)
         ui.mainui.log("Image {} loaded: {}".format(node.fname,img))
         node.img = img
 

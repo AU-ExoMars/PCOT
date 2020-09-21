@@ -21,7 +21,7 @@
      </property>
      <widget class="QWidget" name="layoutWidget">
       <layout class="QGridLayout" name="gridLayout_2">
-       <item row="2" column="0">
+       <item row="3" column="0">
         <widget class="QLabel" name="label_2">
          <property name="text">
           <string>Files
@@ -62,10 +62,20 @@ elements</string>
          </property>
         </widget>
        </item>
-       <item row="2" column="1" colspan="2">
+       <item row="3" column="1" colspan="2">
         <widget class="QListView" name="filelist">
          <property name="editTriggers">
           <set>QAbstractItemView::NoEditTriggers</set>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QPlainTextEdit" name="outputFiles">
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>200</height>
+          </size>
          </property>
         </widget>
        </item>
@@ -82,7 +92,7 @@ elements</string>
          </property>
         </widget>
        </item>
-       <item row="3" column="0">
+       <item row="4" column="0">
         <widget class="QLabel" name="label_3">
          <property name="text">
           <string>Selected files</string>
@@ -92,24 +102,7 @@ elements</string>
          </property>
         </widget>
        </item>
-       <item row="3" column="1">
-        <widget class="QPlainTextEdit" name="outputFiles">
-         <property name="maximumSize">
-          <size>
-           <width>16777215</width>
-           <height>200</height>
-          </size>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="0">
-        <widget class="QLabel" name="label_4">
-         <property name="text">
-          <string>Multiplier</string>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="1">
+       <item row="5" column="1">
         <widget class="QComboBox" name="mult">
          <item>
           <property name="text">
@@ -122,6 +115,24 @@ elements</string>
           </property>
          </item>
         </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="label_4">
+         <property name="text">
+          <string>Multiplier</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_5">
+         <property name="text">
+          <string>Filter name
+pattern</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLineEdit" name="filterpat"/>
        </item>
       </layout>
      </widget>

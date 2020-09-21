@@ -6,14 +6,27 @@ from xform import xformtype,XFormType
 from xforms.tabimage import TabImage
 from pancamimage import Image
 
-# Normalize the image to the 0-1 range,
-# across all channels (i.e. the max is taken from all three)
+# Normalize the image to the 0-1 range. The range is taken across all three channels.
 
+def norm(img,mask,node):
+    masked = np.ma.masked_array(img,mask=~mask)
+    cp = img.copy()
+    mn = masked.min()
+    mx = masked.max()
+    
+    if mn == mx:
+        ui.mainui.error("cannot normalize, image is a single value")
+        res = np.full(img.shape,(0,0,255))
+    else:
+        res = (masked-mn)/(mx-mn)
+
+    np.putmask(cp,mask,res)
+    return cp
     
 
 @xformtype
 class XformNormImage(XFormType):
-    """Normalize the image to a single range taken from all three channels"""
+    """Normalize the image to a single range taken from all channels. Honours ROIs"""
     def __init__(self):
         super().__init__("normimage","processing","0.0.0")
         self.addInputConnector("","img")
@@ -34,7 +47,8 @@ class XformNormImage(XFormType):
         img = node.getInput(0)
         node.img = None
         if img is not None:
-            maximum = img.img.max()
-            if maximum!=0.0:
-                node.img = Image(img.img/maximum)
+            subimage = img.subimage()
+            
+            newsubimg = norm(subimage.img,subimage.fullmask(),node)
+            node.img = img.modifyWithSub(subimage,newsubimg)
         node.setOutput(0,node.img)

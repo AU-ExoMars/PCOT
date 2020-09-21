@@ -5,6 +5,7 @@ import ui.tabs,ui.canvas
 from xform import xformtype,XFormType
 from xforms.tabimage import TabImage
 from pancamimage import Image
+import functools
 
 @xformtype
 class XformMerge(XFormType):
@@ -25,7 +26,6 @@ class XformMerge(XFormType):
         
     def generateOutputTypes(self,n):
         # count connected inputs
-        print(n)
         ct=sum([0 if x is None else 1 for x in n.inputs])
         if ct==1:
             tp = 'imggrey'
@@ -49,10 +49,6 @@ class XformMerge(XFormType):
         rs = None if r is None else r.shape
         gs = None if g is None else g.shape
         bs = None if b is None else b.shape
-
-        print("RED",r)
-        print("GREEN",g)
-        print("BLUE",b)
 
         # get the shape of one of them
         s = None
@@ -86,9 +82,10 @@ class XformMerge(XFormType):
             lst = [x for x in [r,g,b] if x is not None]
             
         if len(lst)==1:
-            node.img = Image(lst[0].img) # just merging one channel??
+            node.img = Image(lst[0].img,lst[0].sources) # just merging one channel??
         else:
-            node.img = Image(cv.merge([x.img for x in lst]))
+            sources = set.union(*[x.sources for x in lst])
+            node.img = Image(cv.merge([x.img for x in lst]),sources)
         node.setOutput(0,node.img)
             
 

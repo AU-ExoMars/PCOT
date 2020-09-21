@@ -60,7 +60,7 @@ class XformGradient(XFormType):
             if img.channels == 1:
                 subimage = img.subimage()
                 newsubimg = applyGradient(subimage.img,subimage.fullmask(),node.gradient)
-                outimg = Image(cv.merge((img.img,img.img,img.img)))
+                outimg = Image(img.rgb(),img.sources)
                 node.img = outimg.modifyWithSub(subimage,newsubimg)
                 print(node.img)
             else:

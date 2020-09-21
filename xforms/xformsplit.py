@@ -28,7 +28,7 @@ class XformSplit(XFormType):
         img = node.getInput(0)
         if img is not None:
             r,g,b = cv.split(img.rgb()) # kind of pointless on a greyscale..
-            node.red,node.green,node.blue = [Image(x) for x in [r,g,b]]
+            node.red,node.green,node.blue = [Image(x,img.sources) for x in [r,g,b]]
             node.setOutput(0,node.red)
             node.setOutput(1,node.green)
             node.setOutput(2,node.blue)

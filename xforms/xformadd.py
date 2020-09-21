@@ -62,13 +62,12 @@ class XFormAdd(XFormType):
                 if i1.shape[:2] != i2.shape[:2]:
                     h,w = i1.shape[:2]
                     i2 = cv.resize(i2,(w,h))
-                    print(i1.shape,i2.shape)
                     
                     
                 img = i1*node.m1+i2*node.m2+node.k
+                
+                sources = set.union(img1.sources,img2.sources)
 
-                print(img.shape)
-                print(subimage1.mask.shape)
                 # postprocess, normalising and clipping but only to the mask in subimage1
                 if node.postproc == 0: # clip
                     mask = ~subimage1.fullmask()
@@ -96,6 +95,7 @@ class XFormAdd(XFormType):
 
                 # apply the result to the subimage region for image 1
                 img = img1.modifyWithSub(subimage1,img)
+                img.sources = sources
         node.img = img         
         node.setOutput(0,img)
         

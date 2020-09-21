@@ -81,7 +81,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         
     def error(self,s):
         app.beep()
-        traceback.print_stack()
+#        traceback.print_stack()
         self.msg("Error: {}".format(s))
         self.log('<font color="red">Error: </font> {}'.format(s))
         
