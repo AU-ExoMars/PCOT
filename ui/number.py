@@ -5,7 +5,7 @@ MAXVAL=100
 
 class NumberWidget(QtWidgets.QWidget):
     # wire this up to fire when you get a notification of change.
-    changed = QtCore.Signal(float)
+    changed = QtCore.pyqtSignal(float)
     
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
