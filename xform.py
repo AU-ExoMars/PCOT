@@ -461,6 +461,7 @@ class XFormGraph:
         # doing it in one step, to avoid errors in the former leaving us
         # with an unreadable file.
         d = self.serialise(self.nodes)
+        d['MAINUI']=ui.mainui.serialise() # add mainUI stuff
         s = json.dumps(d,sort_keys=True,indent=4)
         file.write(s)
         
@@ -470,6 +471,11 @@ class XFormGraph:
     # of the new nodes.
     
     def deserialise(self,d):
+        # deserialise the main UI stuff
+        if 'MAINUI' in d:
+            ui.mainui.deserialise(d['MAINUI'])
+            del d['MAINUI'] # and remove; it's not a node!
+            
         # disambiguate nodes in the dict, to make sure they don't
         # have the same nodes as ones already in the graph
         d=self.disambiguate(d)        

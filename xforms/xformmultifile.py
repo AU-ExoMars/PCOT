@@ -178,7 +178,8 @@ class TabMultiFile(ui.tabs.Tab):
         # to preview it
         item = self.model.itemFromIndex(idx)
         path = join(self.node.dir,item.text())
-        img = Image.load(path)
+        source = (path,self.node.type.getFilterName(self.node,path))
+        img = Image.load(path,source)
         img.img *= self.node.mult
         self.w.canvas.display(img)
         

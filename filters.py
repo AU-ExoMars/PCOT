@@ -1,4 +1,5 @@
 import math
+import numpy as np
 
 class Filter:
     def __init__(self, cwl, fwhm, transmission, position=None, name=None):
@@ -36,25 +37,32 @@ PANCAM_FILTERS = [
     Filter(540, 80, .988, "R08", "C02R"),
     Filter(440, 120, .983, "R09", "C03R"),
 ]
+
+# I've added the lower-case letters myself; they were all G0 or G1
 AUPE_FILTERS = [
     Filter(440, 120, 1, "L01", "C03L"),
     Filter(540, 80, 1, "L02", "C02L"),
     Filter(640, 100, 1, "L03", "C01L"),
-    Filter(438, 24, 1, "L04", "G0"),
-    Filter(500, 24, 1, "L05", "G0"),
-    Filter(532, 10, 1, "L06", "G0"),
-    Filter(568, 10, 1, "L07", "G0"),
-    Filter(610, 10, 1, "L08", "G0"),
-    Filter(671, 10, 1, "L09", "G0"),
-    Filter(425, 25, 1, "L10", "G0"),
-    Filter(400, 50, 1, "L11", "G0"),
+    Filter(438, 24, 1, "L04", "G0a"),
+    Filter(500, 24, 1, "L05", "G0b"),
+    Filter(532, 10, 1, "L06", "G0c"),
+    Filter(568, 10, 1, "L07", "G0d"),
+    Filter(610, 10, 1, "L08", "G0e"),
+    Filter(671, 10, 1, "L09", "G0f"),
+    Filter(425, 25, 1, "L10", "G0g"),
+    Filter(400, 50, 1, "L11", "G0h"),
     Filter(440, 120, 1, "R01", "C03R"),
     Filter(540, 80, 1, "R02", "C02R"),
     Filter(640, 100, 1, "R03", "C01R"),
-    Filter(740, 13, 1, "R04", "G1"),
-    Filter(780, 37, 1, "R05", "G1"),
-    Filter(832, 10, 1, "R06", "G1"),
-    Filter(900, 50, 1, "R07", "G1"),
-    Filter(950, 50, 1, "R08", "G1"),
-    Filter(1000, 50, 1, "R09", "G1"),
+    Filter(740, 13, 1, "R04", "G1a"),
+    Filter(780, 37, 1, "R05", "G1b"),
+    Filter(832, 10, 1, "R06", "G1c"),
+    Filter(900, 50, 1, "R07", "G1d"),
+    Filter(950, 50, 1, "R08", "G1e"),
+    Filter(1000, 50, 1, "R09", "G1f"),
 ]
+
+AUPEfiltersByPosition = {x.position:x for x in AUPE_FILTERS}
+AUPEfiltersByName = {x.name:x for x in AUPE_FILTERS}
+PANCAMfiltersByPosition = {x.position:x for x in PANCAM_FILTERS}
+PANCAMfiltersByName = {x.name:x for x in PANCAM_FILTERS}

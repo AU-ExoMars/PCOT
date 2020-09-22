@@ -5,6 +5,7 @@ import sys,traceback
 import ui.tabs,ui.help
 import xform
 import graphview,palette,graphscene
+import filters
 
 # import all transform types (see the __init__.py there)
 import xforms
@@ -16,6 +17,20 @@ class MainUI(ui.tabs.DockableTabWindow):
         # visible action. Will delete the old scene and create a new scene,
         # linking the viewer to it.
         self.scene = graphscene.XFormGraphScene(self,True)
+        
+    # create a dictionary of general top-level stuff, gets saved
+    # in the graph
+    def serialise(self):
+        d={'cam':self.camera,'cap':self.captionType}
+        return d
+            
+    
+    # deserialise the top-level stuff from this dictionary, gets called
+    # from the graph deserialise.    
+    def deserialise(self,d):
+        self.setCamera(d['cam'])
+        self.setCaption(d['cap'])
+    
         
     def save(self,fname):
         try:
@@ -113,15 +128,21 @@ version numbers. See MD5 data in the log.
         
     def __init__(self):
         super().__init__()
+        self.graph = None
         ui.mainui = self
         uic.loadUi('assets/main.ui',self)
         self.initTabs()
         self.saveFileName = None
         self.setWindowTitle(app.applicationName()+' '+app.applicationVersion())
+
+        self.setCamera("PANCAM")
+        self.setCaption(0)        
         
         # connect buttons etc.        
         self.autolayoutButton.clicked.connect(self.autoLayout)
         self.dumpButton.clicked.connect(lambda: self.graph.dump())
+        self.capCombo.currentIndexChanged.connect(self.captionChanged)
+        self.camCombo.currentIndexChanged.connect(self.cameraChanged)
         self.actionSave_As.triggered.connect(self.saveAsAction)
         self.action_New.triggered.connect(self.newAction)
         self.actionSave.triggered.connect(self.saveAction)
@@ -129,7 +150,7 @@ version numbers. See MD5 data in the log.
         self.actionCopy.triggered.connect(self.copyAction)
         self.actionPaste.triggered.connect(self.pasteAction)
         self.actionCut.triggered.connect(self.cutAction)
-
+        
         # get and activate the status bar        
         self.statusBar = QtWidgets.QStatusBar()
         self.setStatusBar(self.statusBar)
@@ -165,6 +186,23 @@ version numbers. See MD5 data in the log.
             w = self.tabWidget.currentWidget().node
         self.scene.currentChanged(w)
             
+    def captionChanged(self,i):
+        self.captionType = i # best stored as an int, I think
+        
+    def setCaption(self,i):
+        self.captionType = i
+        self.capCombo.setCurrentIndex(i)
+        
+    def cameraChanged(self,i):
+        self.camera = self.camCombo.currentText()
+        self.performAll()
+        
+    def setCamera(self,cam):
+        i = self.camCombo.findText(cam)
+        if i>=0:
+            self.camera = cam
+            self.camCombo.setCurrentIndex(i)
+            self.performAll()
 
     # open a window showing help for a node
     def openHelp(self,node):
@@ -179,6 +217,10 @@ version numbers. See MD5 data in the log.
         wid.setText(txt)
         win.setMinimumSize(400,50)
         win.show()
+        
+    def performAll(self):
+        if self.graph is not None:
+            self.graph.downRecursePerform()
         
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv) 

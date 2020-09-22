@@ -1,6 +1,8 @@
 import numpy as np
 import cv2 as cv
 
+import ui,filters
+
 # Classes to encapsulate an image which can be any number of channels
 # and also incorporates region-of-interest data. At the moment, all images
 # are 8-bit and any number of channels. Conversions to and from float are
@@ -193,8 +195,22 @@ class Image:
         s += "/".join(x)+">"
         return s
     def getDesc(self):
-        # just the filters
-        return ",".join(['?' if x[1] is None else x[1] for x in self.sources])
+        tp = ui.mainui.captionType
+        positions = [x[1] for x in self.sources if x is not None]
+        positions = [x for x in positions if x is not None]
+        if tp == 0:
+            # wheel positions of filters; same as sources value
+            out = positions
+        elif tp == 1:
+            # filter names, get this by position from the appropriate dict
+            if ui.mainui.camera == 'PANCAM':
+                d = filters.PANCAMfiltersByPosition
+            else:
+                d = filters.AUPEfiltersByPosition
+            out = [d[x].name for x in positions]
+        elif tp == 2:
+            out = []
+        return ",".join(sorted(out))
 
     def copy(self):
         srcs = self.sources.copy()
