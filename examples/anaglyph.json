@@ -1,0 +1,145 @@
+{
+    "add 0": {
+        "comment": "",
+        "ins": [
+            [
+                "merge 0",
+                0
+            ],
+            [
+                "offset 1",
+                0
+            ]
+        ],
+        "k": 0.0,
+        "m1": 1,
+        "m2": 1,
+        "md5": "d1bde7b4d3eac0677947e1dda99423de",
+        "outputTypes": [
+            "imggrey"
+        ],
+        "postproc": 0,
+        "type": "add",
+        "ver": "0.0.0",
+        "xy": [
+            -34.50056003360181,
+            225.0084805088271
+        ]
+    },
+    "dump 0": {
+        "comment": "",
+        "ins": [
+            [
+                "add 0",
+                0
+            ]
+        ],
+        "md5": "ecb15f7c957d0a5a828f22b2cdb8fbc6",
+        "outputTypes": [],
+        "type": "dump",
+        "ver": "0.0.0",
+        "xy": [
+            -16.820162357890126,
+            302.0084805088271
+        ]
+    },
+    "merge 0": {
+        "addblack": true,
+        "comment": "",
+        "ins": [
+            [
+                "multifile 0",
+                0
+            ],
+            null,
+            null
+        ],
+        "md5": "dd72de5e88ea9ecf67faab8589e4948a",
+        "outputTypes": [
+            "imggrey"
+        ],
+        "type": "merge",
+        "ver": "0.0.0",
+        "xy": [
+            -85.50456027361457,
+            -177.0264015840845
+        ]
+    },
+    "merge 4": {
+        "addblack": true,
+        "comment": "",
+        "ins": [
+            null,
+            [
+                "multifile 0",
+                4
+            ],
+            [
+                "multifile 0",
+                5
+            ]
+        ],
+        "md5": "dd72de5e88ea9ecf67faab8589e4948a",
+        "outputTypes": [
+            "imgrgb"
+        ],
+        "type": "merge",
+        "ver": "0.0.0",
+        "xy": [
+            27.706632953531056,
+            -171.01368082084377
+        ]
+    },
+    "multifile 0": {
+        "comment": "",
+        "dir": "/home/white/PCOT/03",
+        "files": [
+            "sol01_03_LWAC07_T00_P00.png",
+            "sol01_03_LWAC08_T00_P00.png",
+            "sol01_03_LWAC09_T00_P00.png",
+            "sol01_03_RWAC07_T00_P00.png",
+            "sol01_03_RWAC08_T00_P00.png",
+            "sol01_03_RWAC09_T00_P00.png"
+        ],
+        "filterpat": ".*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*",
+        "ins": [],
+        "md5": "ad966271ec6d3648ab746a706c1dc571",
+        "mult": 64.0,
+        "namefilters": [],
+        "outputTypes": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ],
+        "type": "multifile",
+        "ver": "0.0.0",
+        "xy": [
+            -24.995999759987214,
+            -274.0002400144007
+        ]
+    },
+    "offset 1": {
+        "comment": "",
+        "ins": [
+            [
+                "merge 4",
+                0
+            ]
+        ],
+        "md5": "e2e6b85ef7dd3b65c0f7f0789f32ba01",
+        "outputTypes": [
+            "imgrgb"
+        ],
+        "type": "offset",
+        "ver": "0.0.0",
+        "x": -10,
+        "xy": [
+            28.37351296633177,
+            74.990319419169
+        ],
+        "y": 0
+    }
+}
