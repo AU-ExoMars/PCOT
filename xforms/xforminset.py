@@ -79,20 +79,10 @@ class XformInset(XFormType):
             sources = set.union(insetsources,image.sources)
             # add in the caption - REVISE THIS TO USE TEXT MODULES IN UTILS
             if node.caption != '':
-                fs = node.fontsize/10
-                (tw,th),baseline = cv.getTextSize(node.caption,
-                    cv.FONT_HERSHEY_SIMPLEX,
-                    fs,node.fontline)
-                
-                if node.captiontop:
-                    ty=y-2
-                else:
-                    ty=y+h+th+baseline-2
-                cv.putText(out,node.caption,
-                    (x,ty),
-                    cv.FONT_HERSHEY_SIMPLEX,
-                    fs,
-                    node.colour,node.fontline)
+                print(node.captiontop)
+                ty = y if node.captiontop else y+h
+                utils.text.write(out,node.caption,x,ty,node.captiontop,node.fontsize,
+                    node.fontline,node.colour)
 
         node.img = None if out is None else Image(out,sources)
         node.setOutput(0,node.img)
@@ -108,9 +98,11 @@ class TabInset(ui.tabs.Tab):
         self.w.fontline.valueChanged.connect(self.fontLineChanged)
         self.w.caption.textChanged.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
+        self.w.captionTop.toggled.connect(self.topChanged)
+        self.mouseDown=False
+        self.dontSetText=False
         # sync tab with node
         self.onNodeChanged()
-        self.mouseDown=False
         
     def topChanged(self,checked):
         self.node.captiontop=checked
@@ -120,7 +112,11 @@ class TabInset(ui.tabs.Tab):
         self.node.perform()
     def textChanged(self,t):
         self.node.caption=t
+        # this will cause perform, which will cause onNodeChanged, which will
+        # set the text again. We set a flag to stop the text being reset.
+        self.dontSetText=True
         self.node.perform()
+        self.dontSetText=False
     def fontLineChanged(self,i):
         self.node.fontline=i
         self.node.perform()
@@ -137,7 +133,8 @@ class TabInset(ui.tabs.Tab):
         if self.node.img is not None:
             self.w.canvas.display(self.node.img)
             ui.mainui.log("{} RENDER TO CANVAS".format(self.node.name))
-        self.w.caption.setText(self.node.caption)
+        if not self.dontSetText:
+            self.w.caption.setText(self.node.caption)
         self.w.fontsize.setValue(self.node.fontsize)
         self.w.fontline.setValue(self.node.fontline)
         self.w.captionTop.setChecked(self.node.captiontop)

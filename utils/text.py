@@ -15,13 +15,28 @@ import cv2 as cv
 
 def write(img,txt,x,y,above,fontsize,fontthickness,fontcol):
     print("text {} fontsize {} thickness {}".format(txt,fontsize,fontthickness))
-    (tw,th),baseline = cv.getTextSize(txt,cv.FONT_HERSHEY_SIMPLEX,
-        fontsize/10,fontthickness)
+    th=0
+    tw=0
+    lines = txt.split('\\n')
+    hs=[]
+    bls=[]
+    for s in lines:
+        (w,h),baseline = cv.getTextSize(txt,cv.FONT_HERSHEY_SIMPLEX,
+            fontsize/10,fontthickness)
+        print(s,w,h,baseline)
+        th+=h+baseline
+        hs.append(h)
+        bls.append(baseline)
+        tw=max(w,tw)
         
     if above:   
-        ty=y-4
+        ty=y-th+hs[0]
     else:
-        ty=y+th+baseline-2
-    cv.putText(img,txt,(x,ty),cv.FONT_HERSHEY_SIMPLEX,
-        fontsize/10,fontcol,fontthickness)
+        ty=y+hs[0]+2
+    i=0
+    for s in lines:
+        cv.putText(img,s,(x,ty),cv.FONT_HERSHEY_SIMPLEX,
+            fontsize/10,fontcol,fontthickness)
+        ty+=hs[i]+bls[i]
+        i+=1
         

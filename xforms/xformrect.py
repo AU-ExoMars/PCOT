@@ -99,9 +99,10 @@ class TabRect(ui.tabs.Tab):
         self.w.caption.textChanged.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
         self.w.captionTop.toggled.connect(self.topChanged)
+        self.mouseDown=False
+        self.dontSetText=False
         # sync tab with node
         self.onNodeChanged()
-        self.mouseDown=False
 
     def topChanged(self,checked):
         self.node.captiontop=checked
@@ -111,7 +112,11 @@ class TabRect(ui.tabs.Tab):
         self.node.perform()
     def textChanged(self,t):
         self.node.caption=t
+        # this will cause perform, which will cause onNodeChanged, which will
+        # set the text again. We set a flag to stop the text being reset.
+        self.dontSetText=True
         self.node.perform()
+        self.dontSetText=False
     def fontLineChanged(self,i):
         self.node.fontline=i
         self.node.perform()
@@ -125,7 +130,8 @@ class TabRect(ui.tabs.Tab):
     def onNodeChanged(self):
         if self.node.img is not None:
             self.w.canvas.display(self.node.img)
-        self.w.caption.setText(self.node.caption)
+        if not self.dontSetText:
+            self.w.caption.setText(self.node.caption)
         self.w.fontsize.setValue(self.node.fontsize)
         self.w.fontline.setValue(self.node.fontline)
         self.w.captionTop.setChecked(self.node.captiontop)
