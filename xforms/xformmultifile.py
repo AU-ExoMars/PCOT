@@ -37,6 +37,7 @@ class XFormMultiFile(XFormType):
         # all data in all channels is multiplied by this (used for, say, 10 bit images)
         node.mult=1
         node.filterpat=r'.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*'
+        node.filterre = None
         self.clearImages(node)
         
     def clearImages(self,node): # clear stored images
