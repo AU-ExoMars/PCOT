@@ -50,6 +50,8 @@ class XFormType():
             raise Exception("xform type name already in use: "+name)
         # register the type
         allTypes[name]=self
+        # does this node have an "enabled" button? Change in subclass if reqd.
+        self.hasEnable=False
         # number of nodes of this type
         self.count=0
         # this contains tuples of (name,typename). Images have typenames which
@@ -187,6 +189,14 @@ class XForm:
         self.inrects = [None for x in self.inputs] # input connector GConnectRects
         self.outrects = [None for x in self.outputs] # output connector GConnectRects
         self.helpwin = None # no help window
+        self.enabled = True # a lot of nodes won't use; see XFormType.
+        
+    def setEnabled(self,b):
+        if self.tab is not None:
+            self.tab.setNodeEnabled(b)
+        self.enabled=b
+        ui.mainui.scene.selChanged()
+        self.perform()
         
     def serialise(self,selection=None):
         # build a serialisable python dict of this node's values, including
@@ -200,6 +210,9 @@ class XForm:
         d['outputTypes'] = self.outputTypes
         d['md5'] = self.type.md5()
         d['ver'] = self.type.ver # type.ver is version of type
+        if self.type.hasEnable: # only save 'enabled' if the node uses it
+            d['enabled']=self.enabled
+            
         # add autoserialised data
         d.update(self.type.doAutoserialise(self))
         # and run the additional serialisation method
@@ -215,6 +228,14 @@ class XForm:
         self.outputTypes = d['outputTypes']
         self.savedver = d['ver'] # ver is version node was saved with
         self.savedmd5 = d['md5'] # and stash the MD5 we were saved with
+
+        # some nodes don't have this, in which case we just set it
+        # to true.
+        if 'enabled' in d:
+            self.enabled = d['enabled']
+        else:
+            self.enabled = True
+            
         # autoserialised data
         self.type.doAutodeserialise(self,d)
         # run the additional deserialisation method

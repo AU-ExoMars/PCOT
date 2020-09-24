@@ -126,9 +126,22 @@ class Tab(QtWidgets.QWidget):
         self.comment = QtWidgets.QTextEdit()
         self.comment.setPlaceholderText("add a comment on this transformation here")
         self.comment.setMinimumHeight(20)
-        self.comment.setMaximumHeight(150)
-        splitter.addWidget(self.comment)
+        self.comment.setMaximumHeight(150)  
+        widlower = QtWidgets.QWidget()
+        splitter.addWidget(widlower)
+        laylower = QtWidgets.QHBoxLayout()
+        widlower.setLayout(laylower)
+        laylower.addWidget(self.comment)
         self.comment.textChanged.connect(self.commentChanged)
+        
+        # most nodes don't have an enabled widget.
+        if node.type.hasEnable:
+            self.enable = QtWidgets.QRadioButton("enabled")
+            laylower.addWidget(self.enable)
+            self.enable.setChecked(node.enabled)
+            self.enable.toggled.connect(self.enableChanged)
+        else:
+            self.enable=None
 
         # load the UI file into the main widget
         uic.loadUi(uifile,self.w)
@@ -151,6 +164,13 @@ class Tab(QtWidgets.QWidget):
 
         splitter.setSizes([total*0.9,total*0.1])
         
+    def enableChanged(self,b):
+        self.node.setEnabled(b)
+        
+    def setNodeEnabled(self,b):
+        if self.enable is not None:
+            self.enable.setChecked(b)
+
     def nodeDeleted(self):
         if self.expanded:
             self.expanded.close()

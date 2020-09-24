@@ -15,7 +15,7 @@ except ImportError:
 
 from PyQt5 import QtWidgets, uic, QtGui, QtCore
 from PyQt5.QtCore import Qt,QPointF
-from PyQt5.QtGui import QColor,QBrush,QLinearGradient,QFont,QTransform
+from PyQt5.QtGui import QColor,QBrush,QPen,QLinearGradient,QFont,QTransform
 
 import math
 
@@ -62,10 +62,10 @@ class GHelpRect(QtWidgets.QGraphicsRectItem):
 
 # core rectangle
 class GMainRect(QtWidgets.QGraphicsRectItem):
-    def __init__(self,x1,y1,x2,y2,node):
+    def __init__(self,x1,y1,w,h,node):
         self.offsetx = 0 # these are the distances from our original pos.
         self.offsety = 0
-        super().__init__(x1,y1,x2,y2)
+        super().__init__(x1,y1,w,h)
         self.setFlags(QtWidgets.QGraphicsItem.ItemIsSelectable | \
             QtWidgets.QGraphicsItem.ItemIsMovable | \
             QtWidgets.QGraphicsItem.ItemSendsGeometryChanges )
@@ -96,6 +96,19 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
             ui.mainui.openHelp(self.node)
         else:
             self.scene().mainWindow.openTab(self.node)
+            
+
+    # context menu on nodes
+    def contextMenuEvent(self,event):
+        m = QtWidgets.QMenu()
+        if self.node.type.hasEnable:
+            togact = m.addAction("Disable" if self.node.enabled else "Enable")
+            
+        # only worth doing if there are menu items!
+        if not m.isEmpty():
+            action = m.exec_(event.screenPos())
+            if action == togact:
+                self.node.setEnabled(not self.node.enabled)
 
 # connection rectangles at top and bottom
 class GConnectRect(QtWidgets.QGraphicsRectItem):
@@ -363,9 +376,12 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         # We keep this rectangle in the node so we can change its colour
         n.rect = GMainRect(x,y+CONNECTORHEIGHT,n.w,n.h-YPADDING-CONNECTORHEIGHT*2,n)
         self.addItem(n.rect)
+        
+
         # draw text label
-        text=GText(n.rect,n.name,n)
-        text.setPos(x+XTEXTOFFSET,y+YTEXTOFFSET+CONNECTORHEIGHT)
+        n.rect.text=GText(n.rect,n.name,n)
+        n.rect.text.setPos(x+XTEXTOFFSET,y+YTEXTOFFSET+CONNECTORHEIGHT)
+        
         if len(n.inputs)>0:
             size = n.w/len(n.inputs)
             xx = x
@@ -410,6 +426,9 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 b-= 50
             if n.rect is not None: # might not have a brush yet (rebuild might need calling)
                 n.rect.setBrush(QColor(r,g,b))
+                outlinecol = QColor(0,0,0) if n.enabled else QColor(255,0,0)
+                n.rect.setPen(outlinecol)
+                n.rect.text.setBrush(outlinecol)
         self.update()
 
 

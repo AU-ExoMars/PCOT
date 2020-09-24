@@ -64,6 +64,7 @@ class XformGradient(XFormType):
         self.addInputConnector("","imggrey")
         self.addOutputConnector("","imgrgb")
         self.autoserialise=('gradient',)
+        self.hasEnable=True
     def createTab(self,n):
         return TabGradient(n)
         
@@ -74,7 +75,7 @@ class XformGradient(XFormType):
         img = node.getInput(0)
         if img is None:
             node.img = None
-        else:
+        elif node.enabled:
             if img.channels == 1:
                 subimage = img.subimage()
                 newsubimg = applyGradient(subimage.img,subimage.fullmask(),node.gradient)
@@ -83,6 +84,8 @@ class XformGradient(XFormType):
                 print(node.img)
             else:
                 node.img = None
+        else:
+            node.img = img
         node.setOutput(0,node.img)
         
         
