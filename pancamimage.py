@@ -207,7 +207,7 @@ class Image:
                 d = filters.PANCAMfiltersByPosition
             else:
                 d = filters.AUPEfiltersByPosition
-            out = [d[x].name for x in positions]
+            out = ["{}/{}".format(d[x].name,d[x].cwl) for x in positions]
         elif tp == 2:
             out = []
         return ",".join(sorted(out))
