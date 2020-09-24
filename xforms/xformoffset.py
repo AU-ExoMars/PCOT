@@ -17,6 +17,7 @@ class XFormOffset(XFormType):
         self.addInputConnector("","img")
         self.addOutputConnector("","img")
         self.autoserialise=('x','y')
+        self.hasEnable = True
 
     def createTab(self,n):
         return TabOffset(n)
@@ -33,6 +34,8 @@ class XFormOffset(XFormType):
         img = node.getInput(0)
         if img is None:
             node.img = None
+        elif not node.enabled:
+            node.img = img
         else:
             # make new image the size of the old one
             newimg = np.zeros(img.img.shape,dtype=np.float32)

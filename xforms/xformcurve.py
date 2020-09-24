@@ -28,6 +28,7 @@ class XformCurve(XFormType):
         self.addInputConnector("","img") # accept any image
         self.addOutputConnector("","img") # produce any image, but will change on input connect
         self.autoserialise=('add','mul')
+        self.hasEnable=True
         
     def createTab(self,n):
         return TabCurve(n)
@@ -52,6 +53,8 @@ class XformCurve(XFormType):
         img = node.getInput(0)
         if img is None:
             node.img = None
+        elif not node.enabled:
+            node.img = img
         else:
             subimage = img.subimage()
             

@@ -44,6 +44,7 @@ class XformHistEqual(XFormType):
         super().__init__("histequal","processing","0.0.0")
         self.addInputConnector("","img")
         self.addOutputConnector("","img")
+        self.hasEnable=True
         
     def createTab(self,n):
         return TabImage(n)
@@ -61,6 +62,8 @@ class XformHistEqual(XFormType):
         if img is None:
             # can't equalize a non-existent image!
             node.img = None
+        elif not node.enabled:
+            node.img = img        
         else:
             # first extract the ROI subimage; the rectangle which
             # contains the ROIS and a mask we should work on

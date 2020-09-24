@@ -31,6 +31,7 @@ class XformNormImage(XFormType):
         super().__init__("normimage","processing","0.0.0")
         self.addInputConnector("","img")
         self.addOutputConnector("","img")
+        self.hasEnable=True
         
     def createTab(self,n):
         return TabImage(n)
@@ -47,8 +48,10 @@ class XformNormImage(XFormType):
         img = node.getInput(0)
         node.img = None
         if img is not None:
-            subimage = img.subimage()
-            
-            newsubimg = norm(subimage.img,subimage.fullmask(),node)
-            node.img = img.modifyWithSub(subimage,newsubimg)
+            if node.enabled:
+                subimage = img.subimage()
+                newsubimg = norm(subimage.img,subimage.fullmask(),node)
+                node.img = img.modifyWithSub(subimage,newsubimg)
+            else:
+                node.img = img
         node.setOutput(0,node.img)

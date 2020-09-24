@@ -18,6 +18,7 @@ class XformDecorr(XFormType):
         super().__init__("decorr stretch","processing","0.0.0")
         self.addInputConnector("rgb","imgrgb")
         self.addOutputConnector("rgb","imgrgb")
+        self.hasEnable=True
         
     def createTab(self,n):
         return TabImage(n)
@@ -29,6 +30,8 @@ class XformDecorr(XFormType):
         img = node.getInput(0)
         if img is None:
             node.img = None
+        elif not node.enabled:
+            node.img = img
         else:
             subimage = img.subimage()
             newimg = decorrstretch(subimage.img,subimage.mask)

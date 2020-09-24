@@ -26,6 +26,7 @@ class XformInset(XFormType):
         self.addOutputConnector("","img")
         self.autoserialise=('insetrect','caption','captiontop',
             'fontsize','fontline','colour')
+        self.hasEnable=True
 
     def createTab(self,n):
         return TabInset(n)
@@ -71,13 +72,17 @@ class XformInset(XFormType):
                 # there's no inset image, draw a rectangle
                 cv.rectangle(out,(x,y),(x+w,y+h),(0,0,255),-1) # -1=filled
                 insetsources = set()
-            else:
+            elif node.enabled: # only add the inset if enabled
                 insetsources = inset.sources
                 # resize the inset (and cvt to RGB if necessary)
                 t = cv.resize(inset.rgb(),dsize=(w,h),interpolation=cv.INTER_AREA)
                 out[y:y+h,x:x+w]=t
+            else:
+                insetsources=set()
             sources = set.union(insetsources,image.sources)
-            # add in the caption - REVISE THIS TO USE TEXT MODULES IN UTILS
+            for i in range(node.fontline):
+                cv.rectangle(out,(x-i-1,y-i-1),(x+w+i,y+h+i),node.colour,thickness=1)
+            # add in the caption
             if node.caption != '':
                 print(node.captiontop)
                 ty = y if node.captiontop else y+h

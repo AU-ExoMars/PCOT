@@ -54,6 +54,7 @@ class XformContrast(XFormType):
         self.addOutputConnector("","img")
         # There is one data item which should be saved - the "tol" (tolerance) control value.
         self.autoserialise=('tol',)
+        self.hasEnable=True
         
     # this creates a tab when we want to control a node. See below for the class definition.
     def createTab(self,n):
@@ -80,6 +81,8 @@ class XformContrast(XFormType):
         if img is None:
             # there is no image, so the stored image (and output) will be no image
             node.img = None
+        elif not node.enabled:
+            node.img = img
         else:
             # otherwise, it depends on the image type. If it has three dimensions it must
             # be RGB, so generate the node's image using contrast(), otherwise it must be
