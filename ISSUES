@@ -10,42 +10,16 @@ Fix decorr stretch knob!
 
 Recalculate and curve
 
-TabRect is largely the same as TabInset.
-
 
 THINGS TO DO
 
-Fix "add"
+What to do if a loaded node doesn't exist (some kind of placeholder node with
+dead outputs?) Or just panic (as we do right now?)
 
-Make sure all nodes:
-    process subimages or say if they don't
-    pass on or DON'T pass on ROIs - which is it?
-    deal with all possible channel counts
 
-What to do if a node doesn't exist (some kind of placeholder node with dead
-outputs?)
+Macros. Dear God, macros.
 
-Multiple source node (loads multiple greyscale files, output
-is a number of greyscale channels)
 
-Single source node to output either GS or RGB. Needs renaming
-
-Demo of calibration workflow
-
-Demo of presets
-
-General ROI object type, which contains ref to original image
-and ROI data (more efficient) (maybe this should be the general image
-type, but that's potentially a lot of work).
-
-Better crop (shows cropped area better). Outputs ROI type. Just call it
-"rectangle". Can be annotated (like inset). Image output switchable between
-crop and whole annotated image.
 
 Ellipse and Path ROIs, same as rectangle in usage.
 
-Canvas zoom?
-
-Channel add and subtract
-
-Remap greyscale to colour gradient.

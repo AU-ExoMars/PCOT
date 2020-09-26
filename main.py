@@ -1,6 +1,6 @@
 from PyQt5 import QtWidgets, uic, QtCore, QtGui
 from PyQt5.QtCore import Qt,QCommandLineOption,QCommandLineParser
-import sys,traceback
+import os,sys,traceback,json,time,getpass
 
 import ui.tabs,ui.help
 import xform
@@ -11,6 +11,12 @@ import filters
 import xforms
 from xforms import *
 
+def getUserName():
+    if 'PCOT_USER' in os.environ:
+        return os.environ['PCOT_USER']
+    else:
+        return getpass.getuser()
+
 class MainUI(ui.tabs.DockableTabWindow):
     def autoLayout(self):
         # called autoLayout, because that's essentially the end-user
@@ -18,24 +24,34 @@ class MainUI(ui.tabs.DockableTabWindow):
         # linking the viewer to it.
         self.scene = graphscene.XFormGraphScene(self,True)
         
-    # create a dictionary of general top-level stuff, gets saved
-    # in the graph
+    # create a dictionary of everything in the app we need to save: global settings,
+    # the graph, macros etc.
     def serialise(self):
-        d={'cam':self.camera,'cap':self.captionType}
+        d={}
+        d['SETTINGS'] = {'cam':self.camera,'cap':self.captionType}
+        d['INFO'] = {'author':getUserName(),'date':time.time()}
+        d['GRAPH'] = self.graph.serialise()
         return d
             
     
-    # deserialise the top-level stuff from this dictionary, gets called
-    # from the graph deserialise.    
+    # deserialise everything from the given top-level dictionary
     def deserialise(self,d):
-        self.setCamera(d['cam'])
-        self.setCaption(d['cap'])
-    
+        settings = d['SETTINGS']
+        self.graph.deserialise(d['GRAPH'],True) # True to delete existing nodes first
+
+        self.setCamera(settings['cam'])
+        self.setCaption(settings['cap'])
+        self.graph.downRecursePerform() # and rerun everything
         
     def save(self,fname):
+        # we serialise to a string and then save the string rather than
+        # doing it in one step, to avoid errors in the former leaving us
+        # with an unreadable file.
         try:
             with open(fname,'w') as f:
-                self.graph.save(f)
+                d = self.serialise()
+                s = json.dumps(d,sort_keys=True,indent=4)
+                f.write(s)
                 self.msg("File saved")
         except Exception as e:
             traceback.print_exc()
@@ -44,8 +60,10 @@ class MainUI(ui.tabs.DockableTabWindow):
     def load(self,fname):
         try:
             with open(fname) as f:
-                self.graph.load(f)
-                # now we need to "autolayout" but preserve the xy data
+                d = json.load(f)
+                self.deserialise(d)
+                # now we need to reconstruct the scene with the new data
+                # (False means don't do autolayout, read xy data from the dict instead)
                 self.scene = graphscene.XFormGraphScene(self,False)
                 self.msg("File loaded")
                 self.saveFileName = fname

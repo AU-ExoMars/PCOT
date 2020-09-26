@@ -1,6 +1,4 @@
-from os import listdir
-import re
-from os.path import isfile,join
+import re,os
 from PyQt5 import QtWidgets, uic, QtCore, QtGui
 from PyQt5.QtCore import Qt,QDir
 
@@ -67,7 +65,9 @@ class XFormMultiFile(XFormType):
         for i in range(len(node.outputs)):
             if i<len(node.files):
                 imgname = node.files[i]
-                path = join(node.dir,node.files[i])
+                # we use the relative path here, it's more right that using the absolute path
+                # most of the time.
+                path = os.path.relpath(os.path.join(node.dir,node.files[i]))
                 if node.files[i] is not None and node.imgpaths[i]!=path:
                     # build source tuple : filename and filter name
                     source = (path,self.getFilterName(node,path),)
@@ -117,9 +117,10 @@ class TabMultiFile(ui.tabs.Tab):
             self.node.type.clearImages(self.node)
         self.w.dir.setText(dir)
         # get all the files in dir which are images
-        self.allFiles = sorted([f for f in listdir(dir) if isfile(join(dir, f))
+        self.allFiles = sorted([f for f in os.listdir(dir) if os.path.isfile(os.path.join(dir, f))
             and IMAGETYPERE.match(f) is not None])
-        self.node.dir = dir
+        # using the relative path (usually more right than using the absolute)
+        self.node.dir = os.path.relpath(dir)
         # rebuild the model
         self.buildModel()
         
@@ -178,7 +179,7 @@ class TabMultiFile(ui.tabs.Tab):
         # called when we "activate" an item, typically by doubleclicking: load the file
         # to preview it
         item = self.model.itemFromIndex(idx)
-        path = join(self.node.dir,item.text())
+        path = os.path.join(self.node.dir,item.text())
         source = (path,self.node.type.getFilterName(self.node,path))
         img = Image.load(path,source)
         img.img *= self.node.mult

@@ -1,4 +1,4 @@
-import json,traceback,inspect,hashlib,re,copy
+import traceback,inspect,hashlib,re,copy
 from collections import deque
 from pancamimage import Image
 
@@ -470,33 +470,20 @@ class XFormGraph:
         for child,i in toDisconnect:
             child.disconnect(i)
 
-    def serialise(self,items):
+    def serialise(self):
         # just serialise all the nodes into a dict.
         d = {}
-        for n in items:
-            d[n.name] = n.serialise(items)
+        for n in self.nodes:
+            d[n.name] = n.serialise(self.nodes)
         return d
         
-    def save(self,file):
-        # we serialise to a string and then save the string rather than
-        # doing it in one step, to avoid errors in the former leaving us
-        # with an unreadable file.
-        d = self.serialise(self.nodes)
-        d['MAINUI']=ui.mainui.serialise() # add mainUI stuff
-        s = json.dumps(d,sort_keys=True,indent=4)
-        file.write(s)
-        
-
     # given a dictionary, build a graph based on it. Do not delete
     # any existing nodes and do not perform the nodes. Returns a list
-    # of the new nodes.
+    # of the new nodes. 
     
-    def deserialise(self,d):
-        # deserialise the main UI stuff
-        if 'MAINUI' in d:
-            ui.mainui.deserialise(d['MAINUI'])
-            del d['MAINUI'] # and remove; it's not a node!
-            
+    def deserialise(self,d,deleteExistingNodes):
+        if deleteExistingNodes:
+            self.nodes=[]
         # disambiguate nodes in the dict, to make sure they don't
         # have the same nodes as ones already in the graph
         d=self.disambiguate(d)        
@@ -579,17 +566,6 @@ class XFormGraph:
         # and pass back the new, disambiguated dict
         return newd
     
-    # load a serialised dictionary from a file and build a graph on it
-    def load(self,file):
-        # delete old graph - remember that the UI must close all open tabs!
-        d = json.load(file)
-        self.nodes = []
-        self.deserialise(d)
-        # we also have to tell all the nodes to perform recursively, from roots down,
-        # omitting any already done in the process.
-        self.downRecursePerform()
-        
-
     def downRecursePerform(self):
         XFormGraph.already=set()
         for n in self.nodes:

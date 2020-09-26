@@ -122,6 +122,10 @@ class InnerCanvas(QtWidgets.QWidget):
         x,y = self.getImgCoords(e.pos())
         newzoom = self.zoomscale*math.exp(wheel*0.2)
         
+        # can't zoom when there's no image
+        if self.img is None:
+            return
+        
         # get image coords, and clip the event's coords to those
         # (to make sure we're not clicking on the background of the canvas)
         imgh,imgw = self.img.shape[0],self.img.shape[1]

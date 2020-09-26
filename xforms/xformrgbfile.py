@@ -2,6 +2,7 @@ from PyQt5 import QtWidgets, uic, QtCore
 from PyQt5.QtWidgets import QTreeView,QFileSystemModel
 from PyQt5.QtCore import Qt,QDir
 
+import os
 import cv2 as cv
 import numpy as np
 
@@ -73,7 +74,9 @@ class TabRGBFile(ui.tabs.Tab):
     def fileClickedAction(self,idx):
         if not self.dirModel.isDir(idx):
             self.node.img = None # forces perform to reload
-            fname = self.dirModel.filePath(idx)
+            # we use the relative path here, it's more right that using the absolute path
+            # most of the time.
+            fname = os.path.relpath(self.dirModel.filePath(idx))
             self.node.fname = fname
             # and tell it to perform (outputting the data)
             self.node.perform()
