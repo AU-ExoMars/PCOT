@@ -20,7 +20,7 @@ Then activate the **dev** environment with **conda activate dev**.
 ## Environment variables
 
 It's a good idea, but not mandatory, to set the environment variable
-**PCOTUSER** to a string of the form **name <email>**. For example,
+**PCOTUSER** to a string of the form **name \<email\>**. For example,
 in Linux I have added the following to my **.bashrc** file
 ```
 export PCOT_USER="Jim Finnis <jcf12@aber.ac.uk>"
