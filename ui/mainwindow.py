@@ -14,6 +14,55 @@ def getUserName():
         return getpass.getuser()
 
 class MainUI(ui.tabs.DockableTabWindow):
+    windows = [] # list of all main windows open
+
+    def __init__(self,app):
+        super().__init__()
+        MainUI.app = app # yes, it get rewritten every time.
+        self.graph = None
+        ui.mainui = self
+        uic.loadUi('assets/main.ui',self)
+        self.initTabs()
+        self.saveFileName = None
+        self.setWindowTitle(app.applicationName()+' '+app.applicationVersion())
+
+        self.setCamera("PANCAM")
+        self.setCaption(0)        
+        
+        # connect buttons etc.        
+        self.autolayoutButton.clicked.connect(self.autoLayout)
+        self.dumpButton.clicked.connect(lambda: self.graph.dump())
+        self.capCombo.currentIndexChanged.connect(self.captionChanged)
+        self.camCombo.currentIndexChanged.connect(self.cameraChanged)
+        self.actionSave_As.triggered.connect(self.saveAsAction)
+        self.action_New.triggered.connect(self.newAction)
+        self.actionSave.triggered.connect(self.saveAction)
+        self.actionOpen.triggered.connect(self.openAction)
+        self.actionCopy.triggered.connect(self.copyAction)
+        self.actionPaste.triggered.connect(self.pasteAction)
+        self.actionCut.triggered.connect(self.cutAction)
+        
+        # get and activate the status bar        
+        self.statusBar = QtWidgets.QStatusBar()
+        self.setStatusBar(self.statusBar)
+        
+        # set up the scrolling palette and make the buttons therein
+        palette.setup(self.paletteArea,self.paletteContents,self.view)
+
+        self.newAction() # create empty graph
+
+        self.show()
+        self.msg("OK")
+        if graphscene.hasGrandalf:
+            self.log("Grandalf found.")
+        else:
+            self.log("Grandalf not found - autolayout will be rubbish")
+        MainUI.windows.append(self)    
+        
+
+    def closeEvent(self,evt):
+        MainUI.windows.remove(self)
+        
     def autoLayout(self):
         # called autoLayout, because that's essentially the end-user
         # visible action. Will delete the old scene and create a new scene,
@@ -100,28 +149,36 @@ class MainUI(ui.tabs.DockableTabWindow):
         # set up its scene and view
         self.autoLayout() # builds the scene
         
-
+    @classmethod
     def msg(self,t): # show msg on status bar
-        self.statusBar.showMessage(t)
+        for x in MainUI.windows:
+            x.statusBar.showMessage(t)
         
+    @classmethod
     def log(self,s):
         print("LOG:",s)
-        self.logText.append(s)
+        for x in MainUI.windows:
+            x.logText.append(s)
         
+    @classmethod
     def error(self,s):
         self.app.beep()
 #        traceback.print_stack()
-        self.msg("Error: {}".format(s))
-        self.log('<font color="red">Error: </font> {}'.format(s))
+        for x in MainUI.windows:
+            x.msg("Error: {}".format(s))
+            x.log('<font color="red">Error: </font> {}'.format(s))
         
+    @classmethod
     def warn(self,s):
         self.app.beep()
-        QtWidgets.QMessageBox.warning(self,'WARNING',s)
+        QtWidgets.QMessageBox.warning(None,'WARNING',s)
         
+    @classmethod
     def logXFormException(self,node,e):
         self.app.beep()
-        self.error("Exception in {}: {}".format(node.name,e))
-        self.log('<font color="red">Exception in <b>{}</b>: </font> {}'.format(node.name,e))
+        for x in MainUI.windows:
+            x.error("Exception in {}: {}".format(node.name,e))
+            x.log('<font color="red">Exception in <b>{}</b>: </font> {}'.format(node.name,e))
         
     # called when a graph saved with a different version of a node is loaded
     def versionWarn(self,n):
@@ -140,48 +197,6 @@ version numbers. See MD5 data in the log.
         """
         .format(n.name,n.type.name,n.type.ver,n.savedver))
         
-    def __init__(self,app):
-        super().__init__()
-        self.app = app
-        self.graph = None
-        ui.mainui = self
-        uic.loadUi('assets/main.ui',self)
-        self.initTabs()
-        self.saveFileName = None
-        self.setWindowTitle(app.applicationName()+' '+app.applicationVersion())
-
-        self.setCamera("PANCAM")
-        self.setCaption(0)        
-        
-        # connect buttons etc.        
-        self.autolayoutButton.clicked.connect(self.autoLayout)
-        self.dumpButton.clicked.connect(lambda: self.graph.dump())
-        self.capCombo.currentIndexChanged.connect(self.captionChanged)
-        self.camCombo.currentIndexChanged.connect(self.cameraChanged)
-        self.actionSave_As.triggered.connect(self.saveAsAction)
-        self.action_New.triggered.connect(self.newAction)
-        self.actionSave.triggered.connect(self.saveAction)
-        self.actionOpen.triggered.connect(self.openAction)
-        self.actionCopy.triggered.connect(self.copyAction)
-        self.actionPaste.triggered.connect(self.pasteAction)
-        self.actionCut.triggered.connect(self.cutAction)
-        
-        # get and activate the status bar        
-        self.statusBar = QtWidgets.QStatusBar()
-        self.setStatusBar(self.statusBar)
-
-        
-        # set up the scrolling palette and make the buttons therein
-        palette.setup(self.paletteArea,self.paletteContents,self.view)
-
-        self.newAction() # create empty graph
-
-        self.show()
-        self.msg("OK")
-        if graphscene.hasGrandalf:
-            self.log("Grandalf found.")
-        else:
-            self.log("Grandalf not found - autolayout will be rubbish")
 
     # this gets called from way down in the scene to open tabs for nodes
     def openTab(self,node):

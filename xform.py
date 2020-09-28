@@ -436,7 +436,7 @@ class XFormGraph:
     # that nodes in the clipboard don't have the same names as those
     # in the actual graph. Returns a list of new nodes.
     def paste(self):
-        return self.deserialise(self.clipboard)
+        return self.deserialise(self.clipboard,False)
         
     # remove a note from the graph, and close any tab/window
     def remove(self,node):
@@ -470,11 +470,13 @@ class XFormGraph:
         for child,i in toDisconnect:
             child.disconnect(i)
 
-    def serialise(self):
-        # just serialise all the nodes into a dict.
+    def serialise(self,items=None):
+        # just serialise all the nodes into a dict, or those in a list.
         d = {}
-        for n in self.nodes:
-            d[n.name] = n.serialise(self.nodes)
+        if items is None:
+            items = self.nodes
+        for n in items:
+            d[n.name] = n.serialise(items)
         return d
         
     # given a dictionary, build a graph based on it. Do not delete
