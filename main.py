@@ -30,6 +30,5 @@ if __name__ == "__main__":
     window=ui.mainwindow.MainUI(app) # Create an instance of our class
     if len(args)>0:
         window.load(args[0])
-    window.app = app
     app.exec_() # Start the application
 
