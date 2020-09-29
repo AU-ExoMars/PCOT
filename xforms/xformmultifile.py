@@ -22,8 +22,8 @@ class XFormMultiFile(XFormType):
         for x in range(NUMOUTS):
             self.addOutputConnector("","imggrey")
         
-    def createTab(self,n):
-        return TabMultiFile(n)
+    def createTab(self,n,w):
+        return TabMultiFile(n,w)
         
     def init(self,node):
         # list of filter strings - strings which must be in any filenames
@@ -91,8 +91,8 @@ class XFormMultiFile(XFormType):
         
 
 class TabMultiFile(ui.tabs.Tab):
-    def __init__(self,node):
-        super().__init__(ui.mainui,node,'assets/tabmultifile.ui')
+    def __init__(self,node,w):
+        super().__init__(w,node,'assets/tabmultifile.ui')
 
         self.w.getinitial.clicked.connect(self.getInitial)
         self.w.filters.textChanged.connect(self.filtersChanged)
@@ -106,7 +106,7 @@ class TabMultiFile(ui.tabs.Tab):
         
     def getInitial(self):
         # select a directory
-        res = QtWidgets.QFileDialog.getExistingDirectory(ui.mainui,'Directory for images','.')
+        res = QtWidgets.QFileDialog.getExistingDirectory(None,'Directory for images','.')
         if res!='':
             self.selectDir(res)
 
@@ -138,7 +138,7 @@ class TabMultiFile(ui.tabs.Tab):
             self.node.mult=float(s)
             self.node.perform()
         except:
-            ui.mainui.error("Bad mult string in 'multifile': "+s)
+            ui.error("Bad mult string in 'multifile': "+s)
 
     def onNodeChanged(self):
         # the node has changed - set the filters text widget and reselect the dir.

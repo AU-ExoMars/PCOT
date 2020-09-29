@@ -12,8 +12,8 @@ class XFormDump(XFormType):
         super().__init__("dump","data","0.0.0")
         self.addInputConnector("any","any")
         
-    def createTab(self,n):
-        return TabDump(n)
+    def createTab(self,n,w):
+        return TabDump(n,w)
         
     def init(self,node):
         node.data = None
@@ -31,8 +31,8 @@ class XFormDump(XFormType):
             node.tp = "unconnected"
         
 class TabDump(ui.tabs.Tab):
-    def __init__(self,node):
-        super().__init__(ui.mainui,node,'assets/tabdump.ui')
+    def __init__(self,node,w):
+        super().__init__(w,node,'assets/tabdump.ui')
         self.onNodeChanged()
         
     def onNodeChanged(self):

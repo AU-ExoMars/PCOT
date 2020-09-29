@@ -65,8 +65,9 @@ class XformGradient(XFormType):
         self.addOutputConnector("","imgrgb")
         self.autoserialise=('gradient',)
         self.hasEnable=True
-    def createTab(self,n):
-        return TabGradient(n)
+
+    def createTab(self,n,w):
+        return TabGradient(n,w)
         
     def init(self,node):
         node.gradient = presetGradients['topo']
@@ -91,8 +92,8 @@ class XformGradient(XFormType):
         
 
 class TabGradient(ui.tabs.Tab):
-    def __init__(self,node):
-        super().__init__(ui.mainui,node,'assets/tabgrad.ui')
+    def __init__(self,node,w):
+        super().__init__(w,node,'assets/tabgrad.ui')
         self.w.gradient.gradientChanged.connect(self.gradientChanged)
         self.w.presetCombo.currentIndexChanged.connect(self.loadPreset)
         for n in presetGradients:

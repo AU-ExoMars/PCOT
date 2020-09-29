@@ -194,8 +194,9 @@ class Image:
         x = [", ROI {},{},{}x{}".format(x,y,w,h) for x,y,w,h in x]
         s += "/".join(x)+">"
         return s
-    def getDesc(self):
-        tp = ui.mainui.captionType
+    # the descriptor depends on the container in which this image is shown
+    def getDesc(self,mainwindow):
+        tp = mainwindow.captionType
         positions = [x[1] for x in self.sources if x is not None]
         positions = [x for x in positions if x is not None]
         if tp == 0:
@@ -203,7 +204,7 @@ class Image:
             out = positions
         elif tp == 1:
             # filter names, get this by position from the appropriate dict
-            if ui.mainui.camera == 'PANCAM':
+            if mainwindow.camera == 'PANCAM':
                 d = filters.PANCAMfiltersByPosition
             else:
                 d = filters.AUPEfiltersByPosition

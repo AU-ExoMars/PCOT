@@ -22,8 +22,8 @@ class XformSink(XFormType):
 
     # this creates a tab when we want to control or view a node of this type. This uses
     # the built-in TabImage, which contains an OpenCV image viewer.
-    def createTab(self,n):
-        return TabImage(n)
+    def createTab(self,n,w):
+        return TabImage(n,w)
 
     # actually perform a node's action, which happens when any of the nodes "upstream" are changed
     # and on loading.

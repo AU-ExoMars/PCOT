@@ -92,10 +92,11 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
     # of focussing another window (an expanded tab); an action
     # delegated to the main window
     def mouseDoubleClickEvent(self,event):
+        w = getEventWindow(event)
         if self.helprect.boundingRect().contains(event.pos()):
-            ui.mainui.openHelp(self.node)
+            w.openHelp(self.node)
         else:
-            self.scene().mainWindow.openTab(self.node)
+            w.openTab(self.node)
             
 
     # context menu on nodes
@@ -222,6 +223,20 @@ class GArrow(QtWidgets.QGraphicsLineItem):
         self.makeHead()
         
 
+# given some kind of QGraphicsSceneEvent, get the containing view.
+# We just walk up the receiving widget's tree until we find a view.
+def getEventView(evt):
+    w = evt.widget()
+    while w is not None and not isinstance(w,QtWidgets.QGraphicsView):
+        w = w.parent()
+    if w is None:
+        raise Exception("Cannot get scene event's view")
+    return w
+    
+# similarly, get the mainwindow associated with an event.
+def getEventWindow(evt):
+    return getEventView(evt).window
+        
 
 # the custom scene. Note that
 # when serializing the nodes, the geometry fields should be dealt with.
@@ -229,9 +244,8 @@ class GArrow(QtWidgets.QGraphicsLineItem):
 class XFormGraphScene(QtWidgets.QGraphicsScene):
     def __init__(self,mainWindow,doPlace): 
         super().__init__()
-        self.mainWindow = mainWindow
+        mainWindow.view.setScene(self)
         self.graph = mainWindow.graph
-        self.view = mainWindow.view
         self.selectionChanged.connect(self.selChanged)
         self.selection=[]
         self.checkSelChange=True
@@ -246,7 +260,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             
         # and make all the graphics
         self.rebuild()
-        self.view.setScene(self)
+        
         
     # try to generate a graph (or at least x,y coordinates inside
     # the xforms). This is going to be messy, there's no Right Way
@@ -376,6 +390,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         # We keep this rectangle in the node so we can change its colour
         n.rect = GMainRect(x,y+CONNECTORHEIGHT,n.w,n.h-YPADDING-CONNECTORHEIGHT*2,n)
         self.addItem(n.rect)
+        n.scene = self
         
 
         # draw text label
@@ -457,7 +472,8 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         self.draggingArrow = arrow
         self.dragStartPos = event.pos()
         # temporarily disable drag-selection
-        self.view.setDragMode(QtWidgets.QGraphicsView.NoDrag)
+        v = getEventView(event)
+        v.setDragMode(QtWidgets.QGraphicsView.NoDrag)
 
     # here is where we handle actually dragging an arrow around. Dragging
     # items is managed by the QGraphicsView.    
@@ -475,7 +491,8 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
     # handle releasing the mouse button during arrow dragging
     def mouseReleaseEvent(self,event):
         # first, go back to normal dragging
-        self.view.setDragMode(QtWidgets.QGraphicsView.RubberBandDrag)
+        v = getEventView(event)
+        v.setDragMode(QtWidgets.QGraphicsView.RubberBandDrag)
         if self.draggingArrow is not None:
             # first, make sure we close off the movement
             self.mouseMoveEvent(event)
@@ -511,7 +528,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 
                 if conntypes.isCompatibleConnection(outtype,intype):
                     if n2.cycle(n1):
-                        ui.mainui.error("cannot create a cycle")
+                        ui.error("cannot create a cycle")
                     else:
                         # remove existing connections at the connector we are dragging to
                         # if it is an input
@@ -529,7 +546,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                         n2.connect(input,n1,output)
                         self.graph.inputChanged(n2)
                 else:
-                    ui.mainui.error("incompatible MSR types {} -> {}".format(outtype,intype))
+                    ui.error("incompatible MSR types {} -> {}".format(outtype,intype))
             self.rebuildArrows()
             self.draggingArrow=None 
         super().mouseReleaseEvent(event)

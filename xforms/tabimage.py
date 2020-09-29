@@ -4,8 +4,8 @@ import ui,ui.tabs,ui.canvas
 # have one datum - "img" - in the node.
 
 class TabImage(ui.tabs.Tab):
-    def __init__(self,node):
-        super().__init__(ui.mainui,node,'assets/tabimage.ui') # same UI as sink
+    def __init__(self,node,w):
+        super().__init__(w,node,'assets/tabimage.ui') # same UI as sink
         # sync tab with node
         self.onNodeChanged()
 

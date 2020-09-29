@@ -21,8 +21,8 @@ class XformMerge(XFormType):
         self.addOutputConnector("","img") # output might not be RGB
         self.autoserialise=('addblack',)
         
-    def createTab(self,n):
-        return TabMerge(n)
+    def createTab(self,n,w):
+        return TabMerge(n,w)
         
     def generateOutputTypes(self,n):
         # count connected inputs
@@ -90,8 +90,8 @@ class XformMerge(XFormType):
             
 
 class TabMerge(ui.tabs.Tab):
-    def __init__(self,node):
-        super().__init__(ui.mainui,node,'assets/tabmerge.ui') 
+    def __init__(self,node,w):
+        super().__init__(w,node,'assets/tabmerge.ui') 
         self.w.addblack.toggled.connect(self.addBlackChanged)
         # sync tab with node
         self.onNodeChanged()

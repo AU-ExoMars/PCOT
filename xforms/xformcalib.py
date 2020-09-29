@@ -17,8 +17,8 @@ class XformCalib(XFormType):
         self.addInputConnector("data","ellipse")
         self.addOutputConnector("out","img")
 
-    def createTab(self,n):
-        return TabImage(n)
+    def createTab(self,n,w):
+        return TabImage(n,w)
 
     def generateOutputTypes(self,node):
         node.matchOutputsToInputs([(0,0)])

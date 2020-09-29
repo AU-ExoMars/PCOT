@@ -5,6 +5,7 @@ from PyQt5.QtGui import QImage,QPainter
 from PyQt5.QtCore import Qt,QDir
 import cv2 as cv
 import numpy as np
+import ui.tabs
 
 
 # Canvas widget for showing a CV image
@@ -34,10 +35,21 @@ class InnerCanvas(QtWidgets.QWidget):
         self.x=0
         self.y=0
         
+    def getMainWindow(self):
+        # this is ugly, but the only sane way of getting a backref to the containing main window.
+        # We scan up until we get the tab, and get the main window from that. This will work
+        # even when the tab has expanded.
+        w = self.parent()
+        while w is not None and not isinstance(w,ui.tabs.Tab):
+            w = w.parent()
+        if w is None:
+            raise Exception("can't get main window from canvas")
+        return w.window
+        
     # handles 1 and 3 channels
     def display(self,img):
         if img is not None:
-            self.desc = img.getDesc()
+            self.desc = img.getDesc(self.getMainWindow())
             img = img.rgb() # convert to RGB
             # only reset the image zoom if the shape has changed
             if self.img is None or self.img.shape[:2] != img.shape[:2]:
@@ -162,13 +174,13 @@ class Canvas(QtWidgets.QWidget):
         super(QtWidgets.QWidget,self).__init__(parent)
         self.paintHook=None # an object with a paintEvent() which can do extra drawing
         self.mouseHook=None # an object with a set of mouse events for handling clicks and moves
-
+        
         layout = QtWidgets.QGridLayout()
         self.setLayout(layout)
 
         self.canvas = InnerCanvas(self)
         layout.addWidget(self.canvas,0,0)
-        
+
         self.scrollV=QtWidgets.QScrollBar(Qt.Vertical)
         self.scrollV.valueChanged.connect(self.vertScrollChanged)
         layout.addWidget(self.scrollV,0,1)

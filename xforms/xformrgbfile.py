@@ -19,8 +19,8 @@ class XformRGBFile(XFormType):
         self.addOutputConnector("rgb","imgrgb")
         self.autoserialise=('fname',)
 
-    def createTab(self,n):
-        return TabRGBFile(n)
+    def createTab(self,n,w):
+        return TabRGBFile(n,w)
         
     def init(self,node):
         node.img = None
@@ -29,7 +29,7 @@ class XformRGBFile(XFormType):
     def loadImg(self,node):
         # will throw exception if load failed
         img = Image.load(node.fname)
-        ui.mainui.log("Image {} loaded: {}".format(node.fname,img))
+        ui.log("Image {} loaded: {}".format(node.fname,img))
         node.img = img
 
     # the "perform" of a source is to read the image if one hasn't 
@@ -42,8 +42,8 @@ class XformRGBFile(XFormType):
 
 
 class TabRGBFile(ui.tabs.Tab):
-    def __init__(self,node):
-        super().__init__(ui.mainui,node,'assets/tabrgbfile.ui')
+    def __init__(self,node,w):
+        super().__init__(w,node,'assets/tabrgbfile.ui')
         # set up the file tree
         self.dirModel = QFileSystemModel()
         self.dirModel.setRootPath("/")

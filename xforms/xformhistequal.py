@@ -46,8 +46,8 @@ class XformHistEqual(XFormType):
         self.addOutputConnector("","img")
         self.hasEnable=True
         
-    def createTab(self,n):
-        return TabImage(n)
+    def createTab(self,n,w):
+        return TabImage(n,w)
 
     def generateOutputTypes(self,node):
         # output type 0 should be the same as input type 0, so a greyscale makes a

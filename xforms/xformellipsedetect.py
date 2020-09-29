@@ -17,8 +17,8 @@ class XformEllipseDetect(XFormType):
         self.addOutputConnector("img","img")
         self.addOutputConnector("data","ellipse")
         
-    def createTab(self,n):
-        return TabImage(n)
+    def createTab(self,n,w):
+        return TabImage(n,w)
 
     def generateOutputTypes(self,node):
         node.matchOutputsToInputs([(0,0)])
@@ -55,7 +55,7 @@ def ellipseDetect(img):
     # of blobs found (if it's less than 8)
     
     for maxthresh in range(20,225,10):
-        ui.mainui.msg("Threshold {}".format(maxthresh))
+        ui.msg("Threshold {}".format(maxthresh))
         params.thresholdStep = 10.0
         params.minThreshold = 10
         params.maxThreshold = maxthresh #220.0
@@ -97,10 +97,10 @@ def ellipseDetect(img):
         img = cv.drawKeypoints(img, keypoints, 
                 None, (255, 0, 0), 
                 cv.DrawMatchesFlags_DRAW_RICH_KEYPOINTS )
-        ui.mainui.msg("done, {} ellipses found".format(len(keypoints)))
+        ui.msg("done, {} ellipses found".format(len(keypoints)))
     else:
         keypoints=list()
-        ui.mainui.msg("done, no ellipses found")
+        ui.msg("done, no ellipses found")
         
     img = (img.astype(np.float32))/255.0
     return (img,keypoints)

@@ -20,8 +20,8 @@ class XformDecorr(XFormType):
         self.addOutputConnector("rgb","imgrgb")
         self.hasEnable=True
         
-    def createTab(self,n):
-        return TabImage(n)
+    def createTab(self,n,w):
+        return TabImage(n,w)
         
     def init(self,node):
         node.img = None
@@ -73,7 +73,7 @@ def decorrstretch(A, mask):
     eigval, V = np.linalg.eig(cov)
     # fail if an eigenvalue is too small (monochrome image?)
     if min(abs(eigval))<0.00001:
-        ui.mainui.error("Eigenvalue too small for decorrelation stretch")
+        ui.error("Eigenvalue too small for decorrelation stretch")
         return orig
     # stretch matrix
     S = np.diag(1/np.sqrt(eigval))

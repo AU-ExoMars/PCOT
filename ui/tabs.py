@@ -66,7 +66,7 @@ class DockableTabWindow(QtWidgets.QMainWindow):
 
 # a tab which has been expanded into a full window
 class ExpandedTab(QtWidgets.QMainWindow):
-    def __init__(self,tab,mainui):
+    def __init__(self,tab,window):
         super(ExpandedTab,self).__init__()
         self.tab = tab
         self.setWindowTitle(tab.title)
@@ -74,26 +74,26 @@ class ExpandedTab(QtWidgets.QMainWindow):
         tab.show()
         self.resize(tab.size())
         self.show()
-        self.mainui=mainui
+        self.window=window
         # we also create a reference to this window, partly to avoid GC!
         self.tab.expanded=self
         
     def closeEvent(self,event):
         # move window back into tabs
-        self.mainui.tabWidget.addTab(self.tab,self.tab.title)
+        self.window.tabWidget.addTab(self.tab,self.tab.title)
         self.tab.expanded=None
         # and reorder all the tabs
-        self.mainui.reorderTabs()
+        self.window.reorderTabs()
         # but reselect this tab as the front one
-        idx = self.mainui.tabWidget.indexOf(self.tab)
-        self.mainui.tabWidget.setCurrentIndex(idx)
+        idx = self.window.tabWidget.indexOf(self.tab)
+        self.window.tabWidget.setCurrentIndex(idx)
         event.accept()
         
     # window got focus. Tell the scene.
     def changeEvent(self,event):
         if event.type() == QtCore.QEvent.ActivationChange:
             if self.isActiveWindow():
-                self.mainui.scene.currentChanged(self.tab.node)
+                self.window.scene.currentChanged(self.tab.node)
     
 
 # A tab to be loaded. We subclass this. Once loaded, all ui elements
@@ -104,12 +104,14 @@ class Tab(QtWidgets.QWidget):
     def commentChanged(self):
         self.node.comment = self.comment.toPlainText().strip()
     
-    def __init__(self,mainui,node,uifile):
+    def __init__(self,window,node,uifile):
         super(Tab,self).__init__()
         self.title=node.name
         self.expanded=None
         self.node=node
         node.tab = self
+        # store a ref to the main UI window which created the tab
+        self.window = window
 
         # set the entire tab to be a vertical layout (just there to contain
         # everything, could be any layout)
@@ -147,11 +149,9 @@ class Tab(QtWidgets.QWidget):
         uic.loadUi(uifile,self.w)
         # add the containing widget (self) to the tabs,
         # keeping the index at which it was created
-        self.idx=mainui.tabWidget.addTab(self,self.title)
+        self.idx=window.tabWidget.addTab(self,self.title)
         # set the tab's entry in the main UI's dictionary
-        mainui.tabs[self.title]=self
-        # store a ref to the main UI.
-        self.mainui = mainui
+        window.tabs[self.title]=self
         
         # resize the splitter based on the existing sizes;
         # have to show the widgets first - sizes() returns
@@ -175,8 +175,8 @@ class Tab(QtWidgets.QWidget):
         if self.expanded:
             self.expanded.close()
             self.expanded=None
-        idx = self.mainui.tabWidget.indexOf(self)
-        self.mainui.tabWidget.removeTab(idx)
+        idx = self.window.tabWidget.indexOf(self)
+        self.window.tabWidget.removeTab(idx)
         self.node.tab=None
 
         

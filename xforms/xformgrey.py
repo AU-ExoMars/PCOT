@@ -15,8 +15,8 @@ class XformGrey(XFormType):
         self.addInputConnector("","imgrgb")
         self.addOutputConnector("","imggrey")
         
-    def createTab(self,n):
-        return TabImage(n)
+    def createTab(self,n,w):
+        return TabImage(n,w)
 
     def init(self,node):
         node.img = None

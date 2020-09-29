@@ -15,7 +15,7 @@ def norm(img,mask,node):
     mx = masked.max()
     
     if mn == mx:
-        ui.mainui.error("cannot normalize, image is a single value")
+        ui.error("cannot normalize, image is a single value")
         res = np.full(img.shape,(0,0,255))
     else:
         res = (masked-mn)/(mx-mn)
@@ -33,8 +33,8 @@ class XformNormImage(XFormType):
         self.addOutputConnector("","img")
         self.hasEnable=True
         
-    def createTab(self,n):
-        return TabImage(n)
+    def createTab(self,n,w):
+        return TabImage(n,w)
 
     def generateOutputTypes(self,node):
         # output type 0 should be the same as input type 0, so a greyscale makes a

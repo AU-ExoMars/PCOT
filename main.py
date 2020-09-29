@@ -17,6 +17,7 @@ if __name__ == "__main__":
     app.setApplicationName("PCOT")
     app.setOrganizationName('Aberystwyth University')
     app.setOrganizationDomain('aber.ac.uk')
+    ui.app = app
     
     parser = QCommandLineParser()
     parser.addHelpOption()

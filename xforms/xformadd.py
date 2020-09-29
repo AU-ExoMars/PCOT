@@ -22,8 +22,8 @@ class XFormAdd(XFormType):
         self.addOutputConnector("","img")
         self.autoserialise=('k','m1','m2','postproc')
         
-    def createTab(self,n):
-        return TabMaths(n)
+    def createTab(self,n,w):
+        return TabMaths(n,w)
         
     def generateOutputTypes(self,node):
         # here, the output type matches input 0
@@ -103,8 +103,8 @@ class XFormAdd(XFormType):
         
 
 class TabMaths(ui.tabs.Tab):
-    def __init__(self,node):
-        super().__init__(ui.mainui,node,'assets/tabadd.ui')
+    def __init__(self,node,w):
+        super().__init__(w,node,'assets/tabadd.ui')
         self.w.m1.setValidator(QtGui.QDoubleValidator())
         self.w.m2.setValidator(QtGui.QDoubleValidator())
         self.w.k.setValidator(QtGui.QDoubleValidator())

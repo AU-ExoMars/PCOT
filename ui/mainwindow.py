@@ -18,13 +18,13 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     def __init__(self,app):
         super().__init__()
-        MainUI.app = app # yes, it get rewritten every time.
         self.graph = None
-        ui.mainui = self
         uic.loadUi('assets/main.ui',self)
         self.initTabs()
         self.saveFileName = None
         self.setWindowTitle(app.applicationName()+' '+app.applicationVersion())
+        # make sure the view has a link up to this window
+        self.view.window = self
 
         self.setCamera("PANCAM")
         self.setCaption(0)        
@@ -52,11 +52,11 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.newAction() # create empty graph
 
         self.show()
-        self.msg("OK")
+        ui.msg("OK")
         if graphscene.hasGrandalf:
-            self.log("Grandalf found.")
+            ui.log("Grandalf found.")
         else:
-            self.log("Grandalf not found - autolayout will be rubbish")
+            ui.log("Grandalf not found - autolayout will be rubbish")
         MainUI.windows.append(self)    
         
 
@@ -97,10 +97,10 @@ class MainUI(ui.tabs.DockableTabWindow):
                 d = self.serialise()
                 s = json.dumps(d,sort_keys=True,indent=4)
                 f.write(s)
-                self.msg("File saved")
+                ui.msg("File saved")
         except Exception as e:
             traceback.print_exc()
-            self.error("cannot save file {}: {}".format(fname,e))
+            ui.error("cannot save file {}: {}".format(fname,e))
     
     def load(self,fname):
         try:
@@ -110,11 +110,11 @@ class MainUI(ui.tabs.DockableTabWindow):
                 # now we need to reconstruct the scene with the new data
                 # (False means don't do autolayout, read xy data from the dict instead)
                 self.scene = graphscene.XFormGraphScene(self,False)
-                self.msg("File loaded")
+                ui.msg("File loaded")
                 self.saveFileName = fname
         except Exception as e:
             traceback.print_exc()
-            self.error("cannot open file {}: {}".format(fname,e))
+            ui.error("cannot open file {}: {}".format(fname,e))
         
     def saveAsAction(self):
         res = QtWidgets.QFileDialog.getSaveFileName(self, 'Save file', '.',"JSON files (*.json)")
@@ -149,53 +149,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         # set up its scene and view
         self.autoLayout() # builds the scene
         
-    @classmethod
-    def msg(self,t): # show msg on status bar
-        for x in MainUI.windows:
-            x.statusBar.showMessage(t)
         
-    @classmethod
-    def log(self,s):
-        print("LOG:",s)
-        for x in MainUI.windows:
-            x.logText.append(s)
-        
-    @classmethod
-    def error(self,s):
-        self.app.beep()
-#        traceback.print_stack()
-        for x in MainUI.windows:
-            x.msg("Error: {}".format(s))
-            x.log('<font color="red">Error: </font> {}'.format(s))
-        
-    @classmethod
-    def warn(self,s):
-        self.app.beep()
-        QtWidgets.QMessageBox.warning(None,'WARNING',s)
-        
-    @classmethod
-    def logXFormException(self,node,e):
-        self.app.beep()
-        for x in MainUI.windows:
-            x.error("Exception in {}: {}".format(node.name,e))
-            x.log('<font color="red">Exception in <b>{}</b>: </font> {}'.format(node.name,e))
-        
-    # called when a graph saved with a different version of a node is loaded
-    def versionWarn(self,n):
-        self.log('<font color="red">Version clash</font> in node \'{}\', type \'{}\'. Current: {}, file: {}'
-            .format(n.name,n.type.name,n.type.ver,n.savedver))
-        self.log('<font color="blue">Current MD5 hash: </font> {}'.format(n.type.md5()))
-        self.log('<font color="blue">MD5 hash in file:</font> {}'.format(n.savedmd5))
-        
-        self.warn(
-        """
-Node '{}' was saved with a different version of the '{}' node's code.
-Current version: {}
-Version in file: {}
-If these are the same the file may have been modified without changing the \
-version numbers. See MD5 data in the log.
-        """
-        .format(n.name,n.type.name,n.type.ver,n.savedver))
         
 
     # this gets called from way down in the scene to open tabs for nodes
@@ -203,7 +157,7 @@ version numbers. See MD5 data in the log.
         # has the node got a tab open already?
         if node.tab is None:
             # nope, ask the node type to make one (will set node.tab)
-            node.type.createTab(node)
+            node.type.createTab(node,self)
         # pull that tab to the front
         self.tabWidget.setCurrentWidget(node.tab)
     

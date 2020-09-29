@@ -135,9 +135,9 @@ class XFormType():
     def deserialise(self,xform,d):
         pass
         
-    # create a tab connected to this xform, parented to the main UI,
+    # create a tab connected to this xform, parented to a main window.
     # Might return none, if this xform doesn't have a meaningful UI.
-    def createTab(self,xform):
+    def createTab(self,xform,window):
         return None
 
 # serialise a connection (xform,i) into (xformName,i).
@@ -186,6 +186,7 @@ class XForm:
         self.tab = None # no tab open
         self.current = False
         self.rect = None # the main GMainRect rectangle
+        self.scene = None # the scene I'm in
         self.inrects = [None for x in self.inputs] # input connector GConnectRects
         self.outrects = [None for x in self.outputs] # output connector GConnectRects
         self.helpwin = None # no help window
@@ -195,7 +196,7 @@ class XForm:
         if self.tab is not None:
             self.tab.setNodeEnabled(b)
         self.enabled=b
-        ui.mainui.scene.selChanged()
+        self.scene.selChanged()
         self.perform()
         
     def serialise(self,selection=None):
@@ -376,7 +377,7 @@ class XForm:
     # perform the transformation; delegated to the type object. Also tells
     # any tab open on a node that its node has changed.
     def perform(self):
-        ui.mainui.msg("Performing {}".format(self.name))
+        ui.msg("Performing {}".format(self.name))
         print("Performing {} hastab={}".format(self.name,self.tab is not None))
 #        traceback.print_stack()
         try:
@@ -394,7 +395,7 @@ class XForm:
                 n.perform()
         except Exception as e:
             traceback.print_exc()
-            ui.mainui.logXFormException(self,e)
+            ui.logXFormException(self,e)
         
     # get the value of an input
     def getInput(self,i):
@@ -500,7 +501,7 @@ class XFormGraph:
             deref[nodename]=n
             n.deserialise(ent) # will also deserialise type-specific data
             if n.type.md5() != n.savedmd5:
-                ui.mainui.versionWarn(n)
+                ui.versionWarn(n)
             n.type.recalculate(n) # recalculate internal data from controls
         # that done, fix up the references
         for nodename,ent in d.items():

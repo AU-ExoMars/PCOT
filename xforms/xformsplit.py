@@ -16,8 +16,8 @@ class XformSplit(XFormType):
         self.addOutputConnector("g","imggrey")
         self.addOutputConnector("b","imggrey")
         
-    def createTab(self,n):
-        return TabSplit(n)
+    def createTab(self,n,w):
+        return TabSplit(n,w)
 
     def init(self,node):
         node.red = None
@@ -38,8 +38,8 @@ class XformSplit(XFormType):
             node.blue=None
             
 class TabSplit(ui.tabs.Tab):
-    def __init__(self,node):
-        super().__init__(ui.mainui,node,'assets/tabsplit.ui')
+    def __init__(self,node,w):
+        super().__init__(w,node,'assets/tabsplit.ui')
         # sync tab with node
         self.onNodeChanged()
 

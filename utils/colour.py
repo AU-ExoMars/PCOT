@@ -10,7 +10,7 @@ import ui
 
 def colDialog(init):
     col = rgb2qcol(init)
-    col=QtWidgets.QColorDialog.getColor(col,ui.mainui)
+    col=QtWidgets.QColorDialog.getColor(col,None)
     if col.isValid():
         return qcol2rgb(col)
     else:

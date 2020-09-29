@@ -25,8 +25,8 @@ class XformRect(XFormType):
         self.addOutputConnector("rect","rect") # rectangle (just the ROI)
         self.autoserialise=('croprect','caption','captiontop','fontsize','fontline','colour')
         
-    def createTab(self,n):
-        return TabRect(n)
+    def createTab(self,n,w):
+        return TabRect(n,w)
         
     def generateOutputTypes(self,node):
         node.matchOutputsToInputs([(0,0),(1,0),(2,0)])
@@ -89,8 +89,8 @@ class XformRect(XFormType):
             node.setOutput(3,node.croprect)
 
 class TabRect(ui.tabs.Tab):
-    def __init__(self,node):
-        super().__init__(ui.mainui,node,'assets/tabrect.ui')
+    def __init__(self,node,w):
+        super().__init__(w,node,'assets/tabrect.ui')
         # set the paint hook in the canvas so we can draw on the image
         self.w.canvas.paintHook=self
         self.w.canvas.mouseHook=self

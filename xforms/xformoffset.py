@@ -19,8 +19,8 @@ class XFormOffset(XFormType):
         self.autoserialise=('x','y')
         self.hasEnable = True
 
-    def createTab(self,n):
-        return TabOffset(n)
+    def createTab(self,n,w):
+        return TabOffset(n,w)
 
     def generateOutputTypes(self,node):
         node.matchOutputsToInputs([(0,0)])
@@ -56,8 +56,8 @@ class XFormOffset(XFormType):
         node.setOutput(0,node.img)
 
 class TabOffset(ui.tabs.Tab):
-    def __init__(self,node):
-        super().__init__(ui.mainui,node,'assets/taboffset.ui')
+    def __init__(self,node,w):
+        super().__init__(w,node,'assets/taboffset.ui')
         self.w.xoff.editingFinished.connect(self.xChanged)
         self.w.yoff.editingFinished.connect(self.yChanged)
         self.onNodeChanged()

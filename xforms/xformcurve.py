@@ -30,8 +30,8 @@ class XformCurve(XFormType):
         self.autoserialise=('add','mul')
         self.hasEnable=True
         
-    def createTab(self,n):
-        return TabCurve(n)
+    def createTab(self,n,w):
+        return TabCurve(n,w)
 
     # this xform can take different image types, but doing so changes
     # the output types, overriding the generic one given in the constructor.
@@ -68,8 +68,8 @@ class XformCurve(XFormType):
 
 
 class TabCurve(ui.tabs.Tab):
-    def __init__(self,node):
-        super().__init__(ui.mainui,node,'assets/tabcurve.ui')
+    def __init__(self,node,w):
+        super().__init__(w,node,'assets/tabcurve.ui')
         self.w.addDial.valueChanged.connect(self.setAdd)
         self.w.mulDial.valueChanged.connect(self.setMul)
         self.plot = None # the matplotlib plot which we update

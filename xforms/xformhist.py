@@ -19,8 +19,8 @@ class XFormHistogram(XFormType):
         self.autoserialise=(('bincount',))
         self.addInputConnector("","img")
 
-    def createTab(self,n):
-        return TabHistogram(n)        
+    def createTab(self,n,w):
+            return TabHistogram(n,w)
         
     def init(self,node):
         # the histogram data
@@ -36,8 +36,8 @@ class XFormHistogram(XFormType):
             node.hists = [ gethistogram(chan,weights,node.bincount) for chan in cv.split(subimg.img)]
 
 class TabHistogram(ui.tabs.Tab):
-    def __init__(self,node):
-        super().__init__(ui.mainui,node,'assets/tabhistogram.ui')
+    def __init__(self,node,w):
+        super().__init__(w,node,'assets/tabhistogram.ui')
         self.w.bins.editingFinished.connect(self.binsChanged)
         self.w.replot.clicked.connect(self.replot)
         self.w.save.clicked.connect(self.save)
@@ -47,7 +47,7 @@ class TabHistogram(ui.tabs.Tab):
         # set up the plot
         self.w.bins.setValue(self.node.bincount)
         if self.node.hists is not None:
-            ui.mainui.log(self.node.comment)
+            ui.log(self.node.comment)
             self.w.mpl.fig.suptitle(self.node.comment)
             self.w.mpl.ax.cla() # clear any previous plot
             cols=[ 'r','g','b']

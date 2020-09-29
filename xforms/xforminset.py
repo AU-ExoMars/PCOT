@@ -28,8 +28,8 @@ class XformInset(XFormType):
             'fontsize','fontline','colour')
         self.hasEnable=True
 
-    def createTab(self,n):
-        return TabInset(n)
+    def createTab(self,n,w):
+        return TabInset(n,w)
         
     def generateOutputTypes(self,node):
         node.matchOutputsToInputs([(0,0)])
@@ -52,7 +52,6 @@ class XformInset(XFormType):
         if inrect is None:
             inrect = node.insetrect
         
-        ui.mainui.log("{}: Inrect {}, rubber: {}, img?: {}, inset?: {}".format(node.name,inrect,node.insetrect,image is not None,inset is not None))
         if inrect is None:
             # neither rects are set, just dupe the input
             if image is None:
@@ -94,8 +93,8 @@ class XformInset(XFormType):
         
 
 class TabInset(ui.tabs.Tab):
-    def __init__(self,node):
-        super().__init__(ui.mainui,node,'assets/tabinset.ui')
+    def __init__(self,node,w):
+        super().__init__(w,node,'assets/tabinset.ui')
         # set the paint hook in the canvas so we can draw on the image
         self.w.canvas.paintHook=self
         self.w.canvas.mouseHook=self
@@ -133,11 +132,9 @@ class TabInset(ui.tabs.Tab):
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
-        ui.mainui.log("{} NODECHANGE".format(self.node.name))
         # we just draw the composited image
         if self.node.img is not None:
             self.w.canvas.display(self.node.img)
-            ui.mainui.log("{} RENDER TO CANVAS".format(self.node.name))
         if not self.dontSetText:
             self.w.caption.setText(self.node.caption)
         self.w.fontsize.setValue(self.node.fontsize)
