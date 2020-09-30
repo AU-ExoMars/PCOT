@@ -1,0 +1,37 @@
+MainUI
++graph
++scene
++view
+@owns +MainUI
+@owns GraphScene
+@owns XFormGraph
+@owns GraphView
+@owns Tab
+;
+
+Tab 
+@links XForm 
+@links MainUI
+;
+ExpandedTab @is Tab;
+
+XFormGraph
++nodes
++clipboard
+@owns +XForm
+;
+GraphScene
+@links XFormGraph
+;
+
+GraphView
+@links GraphScene
+;
+
+XForm
+@links XFormType
+;
+XFormType;
+
+
+end
