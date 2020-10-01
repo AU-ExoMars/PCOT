@@ -20,6 +20,13 @@ Make mainwindow support multiple mainwindows into a single scene:
     remove references to the view from inside the scene (OK)
     remove link from node to tab (node may now link several tabs!) (OK)
     make cut-and-paste work across windows
+    
+Macros:
+    optimisation is now required. Don't let nodes perform until
+    ALL connected inputs have data (mark all nodes input data as "unset"
+    (NOT none) at start of recursion, then set as you setOutput).
+    
+    
 
 What to do if a loaded node doesn't exist (some kind of placeholder node with
 dead outputs?) Or just panic (as we do right now?)
