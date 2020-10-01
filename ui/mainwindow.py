@@ -18,6 +18,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     def __init__(self,app):
         super().__init__()
+        self.app = app
         self.graph = None
         uic.loadUi('assets/main.ui',self)
         self.initTabs()
@@ -49,7 +50,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         # set up the scrolling palette and make the buttons therein
         palette.setup(self.paletteArea,self.paletteContents,self.view)
 
-        self.newAction() # create empty graph
+        self.reset() # create empty graph
 
         self.show()
         ui.msg("OK")
@@ -142,6 +143,9 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.scene.cut()
             
     def newAction(self):
+        MainUI(self.app) # create a new empty window
+        
+    def reset(self):
         # create a dummy graph with just a source
         self.graph = xform.XFormGraph()
         source = self.graph.create("rgbfile")
@@ -150,16 +154,21 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.autoLayout() # builds the scene
         
         
-        
 
     # this gets called from way down in the scene to open tabs for nodes
     def openTab(self,node):
-        # has the node got a tab open already?
-        if node.tab is None:
-            # nope, ask the node type to make one (will set node.tab)
-            node.type.createTab(node,self)
-        # pull that tab to the front
-        self.tabWidget.setCurrentWidget(node.tab)
+        # has the node got a tab open IN THIS WINDOW?
+        tab=None
+        for x in node.tabs:
+            if x.window == self:
+                tab = x
+        # nope, ask the node type to make one
+        if tab is None:
+            tab = node.type.createTab(node,self)
+            node.tabs.append(tab)
+        # pull the tab to the front (either the newly created one
+        # or the one we already had)
+        self.tabWidget.setCurrentWidget(tab)
     
     # tab changed (this is connected up in the superclass)
     def currentChanged(self,index): # index is ignored

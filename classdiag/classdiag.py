@@ -1,4 +1,4 @@
-import tokenize,argparse
+import tokenize,argparse,os,subprocess
 from tokenize import NUMBER,STRING,NAME,OP
 
 class LinkOut:
@@ -82,14 +82,15 @@ class Graph:
         self.classes=[]
         
     def render(self):
-        print("digraph {")
-        print("node [shape=record]")
-        print("edge [labeldistance=1.2]")
+        s="digraph {\n"
+        s+="node [shape=record]\n"
+        s+="edge [labeldistance=1.2]\n"
         for x in self.classes:
-            print(x.render())
+            s+=x.render()+"\n"
         for x in self.classes:
-            print(x.renderLinks())
-        print("}")
+            s+=x.renderLinks()+"\n"
+        s+="}\n"
+        return s
         
 
 def gettoken(path):
@@ -196,7 +197,7 @@ class Parser:
                     c.addLinks(dest,False,destmult)
                 elif linktype == 'uses':
                     c.addUses(dest)
-        self.graph.render()
+        return self.graph.render()
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description='Generate class diagram')
@@ -204,5 +205,8 @@ if __name__ == "__main__":
                    help='.uml file to read')
 
     args = p.parse_args()
-    Parser(args.file).render()
-
+    with open("/tmp/foo.dot","w") as f:
+        print(Parser(args.file).render(),file=f)
+    base,_ = os.path.splitext(args.file)
+    outname = base+".pdf"
+    subprocess.run(['/usr/bin/dot','-Tpdf','/tmp/foo.dot','-o',outname])

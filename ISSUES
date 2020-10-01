@@ -17,12 +17,9 @@ HIGH WEIRDNESS can be reproduced by just opening the program and clicking
 on the output of the default rgbfile.
 
 Make mainwindow support multiple mainwindows into a single scene:
-    remove references to the view from inside the scene
-    make the main window set the scene into the view
-    remove all references to mainui! This shouldn't exist!
-        (deal with log/error etc. as proper class methods:
-            ui.MainUI.log()..)
-
+    remove references to the view from inside the scene (OK)
+    remove link from node to tab (node may now link several tabs!) (OK)
+    make cut-and-paste work across windows
 
 What to do if a loaded node doesn't exist (some kind of placeholder node with
 dead outputs?) Or just panic (as we do right now?)

@@ -183,7 +183,7 @@ class XForm:
         # on-screen geometry, which should be set before we try to draw it
         self.w = None # unset, will be set on draw
         self.h = None
-        self.tab = None # no tab open
+        self.tabs = [] # no tabs open
         self.current = False
         self.rect = None # the main GMainRect rectangle
         self.scene = None # the scene I'm in
@@ -193,8 +193,8 @@ class XForm:
         self.enabled = True # a lot of nodes won't use; see XFormType.
         
     def setEnabled(self,b):
-        if self.tab is not None:
-            self.tab.setNodeEnabled(b)
+        for x in self.tabs:
+            x.setNodeEnabled(b)
         self.enabled=b
         self.scene.selChanged()
         self.perform()
@@ -378,17 +378,12 @@ class XForm:
     # any tab open on a node that its node has changed.
     def perform(self):
         ui.msg("Performing {}".format(self.name))
-        print("Performing {} hastab={}".format(self.name,self.tab is not None))
-#        traceback.print_stack()
         try:
             self.type.perform(self)
-#            for o in self.outputs:
-#                if isinstance(o,Image):
-#                    print("Out: ",o)
                 
             # tell the tab that this node has changed
-            if self.tab is not None:
-                self.tab.onNodeChanged()
+            for x in self.tabs:
+                x.onNodeChanged()
             # now all outputs have been set, run connected child nodes.
             # This is where recursion occurs.
             for n in self.children:
@@ -442,8 +437,8 @@ class XFormGraph:
     # remove a note from the graph, and close any tab/window
     def remove(self,node):
         node.disconnectAll()
-        if node.tab is not None:
-            node.tab.nodeDeleted()
+        for x in node.tabs:
+            x.nodeDeleted()
         self.nodes.remove(node)
         
     def dump(self):

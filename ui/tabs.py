@@ -32,7 +32,7 @@ class DockableTabWindow(QtWidgets.QMainWindow):
     # close a tab
     def closeTab(self,index):
         tab = self.tabWidget.widget(index)
-        tab.node.tab = None
+        tab.node.tabs.remove(tab)
         self.tabWidget.removeTab(index)
         self.tabs = {k:v for k, v in self.tabs.items() if v != tab }
             
@@ -109,7 +109,6 @@ class Tab(QtWidgets.QWidget):
         self.title=node.name
         self.expanded=None
         self.node=node
-        node.tab = self
         # store a ref to the main UI window which created the tab
         self.window = window
 
@@ -177,7 +176,7 @@ class Tab(QtWidgets.QWidget):
             self.expanded=None
         idx = self.window.tabWidget.indexOf(self)
         self.window.tabWidget.removeTab(idx)
-        self.node.tab=None
+        self.node.tabs.remove(self)
 
         
     # write this in implementations - updates the tab when the node's data has changed

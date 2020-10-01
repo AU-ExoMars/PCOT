@@ -2,11 +2,12 @@ MainUI
 +graph
 +scene
 +view
++tabs
 @owns +MainUI
 @owns GraphScene
 @owns XFormGraph
 @owns GraphView
-@owns Tab
+@owns +Tab
 ;
 
 Tab 
@@ -30,6 +31,7 @@ GraphView
 
 XForm
 @links XFormType
+@links +Tab
 ;
 XFormType;
 
