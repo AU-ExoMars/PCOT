@@ -403,14 +403,9 @@ class XForm:
             
 # a graph of transformation nodes
 class XFormGraph:
-    # nothing in the clipboard (which is a dict), and is global
-    # to all graphs so we can cut and paste between them
-    clipboard = {}
-    
     def __init__(self):
         # all the nodes
         self.nodes = []
-        XFormGraph.clipboard = {}
         
     # create a new node, passing in a type name.
     def create(self,typename):
