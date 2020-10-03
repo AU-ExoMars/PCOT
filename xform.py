@@ -1,6 +1,7 @@
 import traceback,inspect,hashlib,re,copy
 from collections import deque
 from pancamimage import Image
+import pyperclip,json
 
 import ui,conntypes
 
@@ -429,13 +430,19 @@ class XFormGraph:
     # version, like that used for load/save. On deserialisation, node
     # names will be changed to make them unique.
     def copy(self,selection):
-        XFormGraph.clipboard = self.serialise(selection)
+        # turn into JSON string
+        s = json.dumps(self.serialise(selection))
+        # copy to clipboard
+        pyperclip.copy(s)
         
     # paste the clipboard. This involves deserialising, first ensuring
     # that nodes in the clipboard don't have the same names as those
     # in the actual graph. Returns a list of new nodes.
     def paste(self):
-        return self.deserialise(XFormGraph.clipboard,False)
+        # get string from clipboard
+        s = pyperclip.paste()
+        d = json.loads(s) # convert to dict
+        return self.deserialise(d,False)
         
     # remove a note from the graph, and close any tab/window
     def remove(self,node):
