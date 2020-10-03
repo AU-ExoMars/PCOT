@@ -402,11 +402,14 @@ class XForm:
             
 # a graph of transformation nodes
 class XFormGraph:
+    # nothing in the clipboard (which is a dict), and is global
+    # to all graphs so we can cut and paste between them
+    clipboard = {}
+    
     def __init__(self):
         # all the nodes
         self.nodes = []
-        # nothing in the clipboard
-        self.clipboard = []
+        XFormGraph.clipboard = {}
         
     # create a new node, passing in a type name.
     def create(self,typename):
@@ -426,13 +429,13 @@ class XFormGraph:
     # version, like that used for load/save. On deserialisation, node
     # names will be changed to make them unique.
     def copy(self,selection):
-        self.clipboard = self.serialise(selection)
+        XFormGraph.clipboard = self.serialise(selection)
         
     # paste the clipboard. This involves deserialising, first ensuring
     # that nodes in the clipboard don't have the same names as those
     # in the actual graph. Returns a list of new nodes.
     def paste(self):
-        return self.deserialise(self.clipboard,False)
+        return self.deserialise(XFormGraph.clipboard,False)
         
     # remove a note from the graph, and close any tab/window
     def remove(self,node):
