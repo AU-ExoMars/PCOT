@@ -436,8 +436,14 @@ class XFormGraph:
     def paste(self):
         # get string from clipboard
         s = pyperclip.paste()
-        d = json.loads(s) # convert to dict
-        return self.deserialise(d,False)
+        if len(s)>0:
+            try:
+                d = json.loads(s) # convert to dict
+            except json.decoder.JSONDecodeError:
+                raise Exception("Clipboard does not contain valid data")
+            return self.deserialise(d,False)
+        else:
+            return []
         
     # remove a note from the graph, and close any tab/window
     def remove(self,node):
