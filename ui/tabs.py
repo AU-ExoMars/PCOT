@@ -163,6 +163,10 @@ class Tab(QtWidgets.QWidget):
 
         splitter.setSizes([total*0.9,total*0.1])
         
+    # perform the tab's node safely
+    def perform(self):
+        self.node.graph.perform(self.node)
+        
     def enableChanged(self,b):
         self.node.setEnabled(b)
         

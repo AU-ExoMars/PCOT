@@ -192,13 +192,14 @@ class XForm:
         self.outrects = [None for x in self.outputs] # output connector GConnectRects
         self.helpwin = None # no help window
         self.enabled = True # a lot of nodes won't use; see XFormType.
+        self.hasRun = False # used to mark a node as already having performed its stuff
         
     def setEnabled(self,b):
         for x in self.tabs:
             x.setNodeEnabled(b)
         self.enabled=b
         self.scene.selChanged()
-        self.perform()
+        self.graph.perform(self)
         
     def serialise(self,selection=None):
         # build a serialisable python dict of this node's values, including
@@ -329,7 +330,7 @@ class XForm:
                     self.inputs[input] = (other,output)
                     other.increaseChildCount(self)
                     if autoPerform:
-                        other.perform() # perform the input node; the output should perform
+                        other.graph.perform(other) # perform the input node; the output should perform
         
         
     # disconnect an input 
@@ -339,7 +340,7 @@ class XForm:
                 n,i = self.inputs[input]
                 n.decreaseChildCount(self)
                 self.inputs[input]=None
-                self.perform()
+                self.graph.perform(self) # run perform safely
             
     # disconnect all inputs and outputs prior to removal
     def disconnectAll(self):
@@ -355,9 +356,7 @@ class XForm:
                         # the child counts are irrelevant and don't need updating
                         n.inputs[i]=None
 
-    # change an output. This should be called by the type's perform method,
-    # and used to call perform on children: now that's done in perform()
-    # itself to both avoid multiple calls and to avoid ordering problems.
+    # change an output. This should be called by the type's perform method.
     def setOutput(self,i,data):
         self.outputs[i]=data
             
@@ -378,17 +377,38 @@ class XForm:
     # perform the transformation; delegated to the type object. Also tells
     # any tab open on a node that its node has changed.
     def perform(self):
+        if not self.graph.OKToPerform:
+            raise Exception("Do not call perform directly on a node!")
+            
         ui.msg("Performing {}".format(self.name))
         try:
-            self.type.perform(self)
-                
-            # tell the tab that this node has changed
-            for x in self.tabs:
-                x.onNodeChanged()
-            # now all outputs have been set, run connected child nodes.
-            # This is where recursion occurs.
-            for n in self.children:
-                n.perform()
+            # must clear this with prePerform on the graph, or nodes will
+            # only run once!
+            if self.hasRun:
+                print("Skipping {}, run already this action".format(self.name))
+            else:    
+                print("Performing {}".format(self.name))
+                # first clear all outputs
+                self.outputs = [None for x in self.type.outputConnectors]
+                # now run the node. This may call setOutput, which will cause
+                # all child nodes to be iterated - those which have all their
+                # inputs set will run.
+                self.type.perform(self)
+                self.hasRun = True
+                    
+                # tell the tab that this node has changed
+                for x in self.tabs:
+                    x.onNodeChanged()
+                # for each child..
+                for n in self.children:
+                    # are all the connected inputs set?
+                    for inp in n.inputs:
+                        if inp is not None: # check connected
+                            out,index = inp
+                            if out.outputs[index] is None:
+                                break # exit the child loop, we can't run
+                    # we can run this child
+                    n.perform()
         except Exception as e:
             traceback.print_exc()
             ui.logXFormException(self,e)
@@ -406,6 +426,8 @@ class XFormGraph:
     def __init__(self):
         # all the nodes
         self.nodes = []
+        # used to stop perform being called out of context
+        self.OKToPerform = False
         
     # create a new node, passing in a type name.
     def create(self,typename):
@@ -416,6 +438,7 @@ class XFormGraph:
             tp.count+=1
             xform = XForm(tp,"{} {}".format(typename,count))
             self.nodes.append(xform)
+            xform.graph = self
             tp.init(xform)
         else:
             raise Exception("Transformation type not found: "+typename)
@@ -455,7 +478,18 @@ class XFormGraph:
     def dump(self):
         for n in self.nodes:
             n.dump()
-    
+
+    # we are about to perform some nodes due to a UI change.
+    def prePerform(self):
+        for n in self.nodes:
+            n.hasRun = False
+            
+    # perform an action on a node; all children should run only once.
+    def perform(self,node):
+        self.prePerform()
+        self.OKToPerform=True
+        node.perform()
+        self.OKToPerform=False
 
     # a node's input has changed, which may change the output types. If it does,
     # we need to check the output connections to see if they are still compatible.
@@ -577,10 +611,13 @@ class XFormGraph:
     
     def downRecursePerform(self):
         XFormGraph.already=set()
+        self.OKToPerform=True
+        self.prePerform()
         for n in self.nodes:
             # identify root nodes (no connected inputs)
             if all(i is None for i in n.inputs):
                 self.bfs(n)
+        self.OKToPerform=False
 
     # breadth-first traversal, with extra "already visited" flag because we may visit
     # several roots

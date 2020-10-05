@@ -121,7 +121,7 @@ class TabContrast(ui.tabs.Tab):
     # tolerance by scaling the value down. We then call perform().
     def setContrast(self,v):
         self.node.tol = v/200
-        self.node.perform()
+        self.perform()
 
     # This is called from the tab constructor and from the loading system: it updates the
     # tab's controls with the values in the node. In this case, it also displays the stored

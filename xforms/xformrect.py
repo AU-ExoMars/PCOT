@@ -106,25 +106,25 @@ class TabRect(ui.tabs.Tab):
 
     def topChanged(self,checked):
         self.node.captiontop=checked
-        self.node.perform()
+        self.perform()
     def fontSizeChanged(self,i):
         self.node.fontsize=i
-        self.node.perform()
+        self.perform()
     def textChanged(self,t):
         self.node.caption=t
         # this will cause perform, which will cause onNodeChanged, which will
         # set the text again. We set a flag to stop the text being reset.
         self.dontSetText=True
-        self.node.perform()
+        self.perform()
         self.dontSetText=False
     def fontLineChanged(self,i):
         self.node.fontline=i
-        self.node.perform()
+        self.perform()
     def colourPressed(self):
         col = utils.colour.colDialog(self.node.colour)
         if col is not None:
             self.node.colour = col
-            self.node.perform()
+            self.perform()
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
@@ -155,7 +155,7 @@ class TabRect(ui.tabs.Tab):
             if h<10:
                 h=10
             self.node.croprect=(x,y,w,h)
-            self.node.perform()
+            self.perform()
         self.w.canvas.update()
         
     def canvasMousePressEvent(self,x,y,e):
@@ -164,7 +164,7 @@ class TabRect(ui.tabs.Tab):
         h = 10
         self.mouseDown=True
         self.node.croprect=(x,y,w,h)
-        self.node.perform()
+        self.perform()
         self.w.canvas.update()
 
     def canvasMouseReleaseEvent(self,x,y,e):

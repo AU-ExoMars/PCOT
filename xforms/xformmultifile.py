@@ -126,7 +126,7 @@ class TabMultiFile(ui.tabs.Tab):
         
     def patChanged(self):
         self.node.filterpat=self.w.filterpat.text()
-        self.node.perform()
+        self.perform()
          
     def filtersChanged(self,t):
         # rebuild the filter list from the comma-sep string and rebuild the model
@@ -136,7 +136,7 @@ class TabMultiFile(ui.tabs.Tab):
     def multChanged(self,s):
         try:
             self.node.mult=float(s)
-            self.node.perform()
+            self.perform()
         except:
             ui.error("Bad mult string in 'multifile': "+s)
 
@@ -194,4 +194,4 @@ class TabMultiFile(ui.tabs.Tab):
             item = self.model.item(i)
             if item.checkState()==Qt.Checked:
                 self.node.files.append(item.text())
-        self.node.perform()        
+        self.perform()        
