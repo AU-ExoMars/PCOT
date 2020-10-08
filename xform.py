@@ -154,7 +154,6 @@ def serialiseConn(c,connSet):
 
 # an actual instance of a transformation
 class XForm:
-    recursePerform=True
     def __init__(self,type,name):
         self.type = type
         self.savedver = type.ver
@@ -373,41 +372,42 @@ class XForm:
                 del self.children[n]
         else:
             raise Exception("child count <0 in node {}, child {}".format(self.name,n.name))
+            
+    def canRun(self):
+        for inp in self.inputs:
+            if inp is not None:
+                out,index=inp
+                if out.outputs[index] is None:
+                    return False
+        return True                    
 
     # perform the transformation; delegated to the type object. Also tells
     # any tab open on a node that its node has changed.
     def perform(self):
-        if not self.graph.OKToPerform:
+        # used to stop perform being called out of context; it should
+        # only be called inside the graph's perform.
+        if not self.graph.performingGraph:
             raise Exception("Do not call perform directly on a node!")
-            
         ui.msg("Performing {}".format(self.name))
         try:
             # must clear this with prePerform on the graph, or nodes will
             # only run once!
             if self.hasRun:
-                print("Skipping {}, run already this action".format(self.name))
-            else:    
-                print("Performing {}".format(self.name))
+                print("----Skipping {}, run already this action".format(self.name))
+            elif not self.canRun():
+                print("----Skipping {}, it can't run (unset inputs)".format(self.name))
+            else:
+                print("--------------------------------------Performing {}".format(self.name))
                 # first clear all outputs
                 self.outputs = [None for x in self.type.outputConnectors]
-                # now run the node. This may call setOutput, which will cause
-                # all child nodes to be iterated - those which have all their
-                # inputs set will run.
+                # now run the node.
                 self.type.perform(self)
                 self.hasRun = True
-                    
                 # tell the tab that this node has changed
                 for x in self.tabs:
                     x.onNodeChanged()
-                # for each child..
+                # run each child
                 for n in self.children:
-                    # are all the connected inputs set?
-                    for inp in n.inputs:
-                        if inp is not None: # check connected
-                            out,index = inp
-                            if out.outputs[index] is None:
-                                break # exit the child loop, we can't run
-                    # we can run this child
                     n.perform()
         except Exception as e:
             traceback.print_exc()
@@ -426,8 +426,7 @@ class XFormGraph:
     def __init__(self):
         # all the nodes
         self.nodes = []
-        # used to stop perform being called out of context
-        self.OKToPerform = False
+        self.performingGraph = False
         
     # create a new node, passing in a type name.
     def create(self,typename):
@@ -484,12 +483,26 @@ class XFormGraph:
         for n in self.nodes:
             n.hasRun = False
             
-    # perform an action on a node; all children should run only once.
-    def perform(self,node):
+    def perform(self,node=None):
+        # if we are already running this method, exit. This
+        # will be atomic because GIL. The use case here can
+        # happen because turning a knob quickly will fire
+        # off events quicker than we can run code. It seems.
+        # It happens, anyway.
+        if self.performingGraph:
+            return
+            
         self.prePerform()
-        self.OKToPerform=True
-        node.perform()
-        self.OKToPerform=False
+        self.performingGraph=True
+        if node is None:
+            for n in self.nodes:
+                # identify root nodes (no connected inputs)
+                if all(i is None for i in n.inputs):
+                    n.perform()
+        else:
+            node.perform()
+        self.performingGraph=False
+
 
     # a node's input has changed, which may change the output types. If it does,
     # we need to check the output connections to see if they are still compatible.
@@ -609,31 +622,3 @@ class XFormGraph:
         # and pass back the new, disambiguated dict
         return newd
     
-    def downRecursePerform(self):
-        XFormGraph.already=set()
-        self.OKToPerform=True
-        self.prePerform()
-        for n in self.nodes:
-            # identify root nodes (no connected inputs)
-            if all(i is None for i in n.inputs):
-                self.bfs(n)
-        self.OKToPerform=False
-
-    # breadth-first traversal, with extra "already visited" flag because we may visit
-    # several roots
-    def bfs(self,n):
-        XForm.recursePerform=False # turn off perform recursion in setOutput
-        try:
-            if not n in XFormGraph.already:
-                XFormGraph.already.add(n)
-                queue=deque()
-                queue.append(n)
-                while len(queue)>0:
-                    p = queue.popleft()
-                    p.perform() 
-                    for q in p.children:
-                        if not q in XFormGraph.already:
-                            XFormGraph.already.add(q)
-                            queue.append(q)
-        finally:
-            XForm.recursePerform=True # turn setOutput recursion back on whatever happens

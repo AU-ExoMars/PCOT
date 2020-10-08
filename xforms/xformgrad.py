@@ -23,7 +23,6 @@ def applyGradient(img,mask,grad):
     bs = np.interp(masked,xs,bs)
     # and stack them into a single image. To do this, though, we
     # need the full 3 channel mask.
-    print(mask.shape)
     h,w = mask.shape
     # flatten and repeat each element thrice
     mask3 = np.repeat(np.ravel(mask),3) 
@@ -71,6 +70,7 @@ class XformGradient(XFormType):
         
     def init(self,node):
         node.gradient = presetGradients['topo']
+        node.img = None
         
     def perform(self,node):
         img = node.getInput(0)
@@ -82,7 +82,6 @@ class XformGradient(XFormType):
                 newsubimg = applyGradient(subimage.img,subimage.fullmask(),node.gradient)
                 outimg = Image(img.rgb(),img.sources)
                 node.img = outimg.modifyWithSub(subimage,newsubimg)
-                print(node.img)
             else:
                 node.img = None
         else:
@@ -95,14 +94,13 @@ class TabGradient(ui.tabs.Tab):
     def __init__(self,node,w):
         super().__init__(w,node,'assets/tabgrad.ui')
         self.w.gradient.gradientChanged.connect(self.gradientChanged)
-        self.w.presetCombo.currentIndexChanged.connect(self.loadPreset)
         for n in presetGradients:
             self.w.presetCombo.insertItem(1000,n)
+        self.w.presetCombo.currentIndexChanged.connect(self.loadPreset)
         self.onNodeChanged()
         
     def loadPreset(self):
         name = self.w.presetCombo.currentText()
-        print(name)
         if name in presetGradients:
             self.w.gradient.setGradient(presetGradients[name])
             self.w.gradient.update()

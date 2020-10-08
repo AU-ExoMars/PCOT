@@ -87,7 +87,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
         self.setCamera(settings['cam'])
         self.setCaption(settings['cap'])
-        self.graph.downRecursePerform() # and rerun everything
+        self.graph.perform() # and rerun everything
         
     def save(self,fname):
         # we serialise to a string and then save the string rather than
@@ -213,5 +213,5 @@ class MainUI(ui.tabs.DockableTabWindow):
         
     def performAll(self):
         if self.graph is not None:
-            self.graph.downRecursePerform()
+            self.graph.perform()
         
