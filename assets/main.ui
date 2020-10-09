@@ -132,7 +132,7 @@
            <x>0</x>
            <y>0</y>
            <width>68</width>
-           <height>550</height>
+           <height>534</height>
           </rect>
          </property>
         </widget>
@@ -172,7 +172,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QWidget" name="widget" native="true">
+         <widget class="QWidget" name="extraCtrls" native="true">
           <property name="minimumSize">
            <size>
             <width>250</width>
@@ -187,7 +187,7 @@
           </property>
           <layout class="QGridLayout" name="gridLayout_2">
            <item row="0" column="0">
-            <widget class="QLabel" name="label">
+            <widget class="QLabel" name="camlabel">
              <property name="text">
               <string>Camera</string>
              </property>
@@ -214,7 +214,7 @@
             </widget>
            </item>
            <item row="1" column="0">
-            <widget class="QLabel" name="label_2">
+            <widget class="QLabel" name="caplabel">
              <property name="text">
               <string>Caption</string>
              </property>
@@ -271,6 +271,7 @@
     <addaction name="actionSave"/>
     <addaction name="actionSave_As"/>
     <addaction name="action_New"/>
+    <addaction name="actionNew_Macro"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -332,6 +333,11 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+X</string>
+   </property>
+  </action>
+  <action name="actionNew_Macro">
+   <property name="text">
+    <string>New Macro</string>
    </property>
   </action>
  </widget>

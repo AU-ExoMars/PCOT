@@ -2,8 +2,10 @@ from PyQt5 import QtWidgets, uic, QtCore, QtGui
 from PyQt5.QtCore import Qt,QCommandLineOption,QCommandLineParser
 import os,sys,traceback,json,time,getpass
 
+
 import ui.tabs,ui.help
 import xform
+import macros
 import graphview,palette,graphscene
 import filters
 
@@ -12,11 +14,11 @@ def getUserName():
         return os.environ['PCOT_USER']
     else:
         return getpass.getuser()
-
+        
 class MainUI(ui.tabs.DockableTabWindow):
     windows = [] # list of all main windows open
 
-    def __init__(self,app):
+    def __init__(self,app,macroWindow=False):
         super().__init__()
         self.app = app
         self.graph = None
@@ -37,6 +39,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.camCombo.currentIndexChanged.connect(self.cameraChanged)
         self.actionSave_As.triggered.connect(self.saveAsAction)
         self.action_New.triggered.connect(self.newAction)
+        self.actionNew_Macro.triggered.connect(self.newMacroAction)
         self.actionSave.triggered.connect(self.saveAction)
         self.actionOpen.triggered.connect(self.openAction)
         self.actionCopy.triggered.connect(self.copyAction)
@@ -50,7 +53,27 @@ class MainUI(ui.tabs.DockableTabWindow):
         # set up the scrolling palette and make the buttons therein
         palette.setup(self.paletteArea,self.paletteContents,self.view)
 
-        self.reset() # create empty graph
+
+        if macroWindow:        
+            # and remove some things which don't apply to macro windows
+            self.menuFile.setEnabled(False)
+            self.setWindowTitle(self.app.applicationName()+' '+self.app.applicationVersion()+" [MACRO]")
+            self.capCombo.setVisible(False)
+            self.camCombo.setVisible(False)
+            self.camlabel.setVisible(False)
+            self.caplabel.setVisible(False)
+            # add some extra widgets
+            b = QtWidgets.QPushButton("Add input")
+            self.extraCtrls.layout().addWidget(b,0,0)
+            b = QtWidgets.QPushButton("Add output")
+            self.extraCtrls.layout().addWidget(b,0,1)
+            # create a new macro prototype and use its graph
+            self.macroPrototype = macros.MacroPrototype()
+            self.graph = self.macroPrototype.graph
+        else:
+            self.reset() # create empty "standard" graph
+            self.macroPrototype = None # we are not a macro
+
 
         self.show()
         ui.msg("OK")
@@ -144,6 +167,9 @@ class MainUI(ui.tabs.DockableTabWindow):
             
     def newAction(self):
         MainUI(self.app) # create a new empty window
+        
+    def newMacroAction(self):
+        w=MainUI(self.app,True) # create a new empty macro window
         
     def reset(self):
         # create a dummy graph with just a source
