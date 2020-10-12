@@ -175,8 +175,8 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
         
 # text in middle of main rect and on connections
 class GText(QtWidgets.QGraphicsSimpleTextItem):
-    def __init__(self,parent,s,node):
-        super().__init__(s,parent=parent)
+    def __init__(self,parent,text,node):
+        super().__init__(text,parent=parent)
         self.node=node
 
 # a line with an arrow on the end
@@ -242,10 +242,9 @@ def getEventWindow(evt):
 # when serializing the nodes, the geometry fields should be dealt with.
 
 class XFormGraphScene(QtWidgets.QGraphicsScene):
-    def __init__(self,mainWindow,doPlace): 
+    def __init__(self,graph,doPlace): 
         super().__init__()
-        mainWindow.view.setScene(self)
-        self.graph = mainWindow.graph
+        self.graph = graph
         self.selectionChanged.connect(self.selChanged)
         self.selection=[]
         self.checkSelChange=True
@@ -272,6 +271,9 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
     # deal with that at render time.
     
     def placeGrandalf(self):
+        if len(self.graph.nodes)==0: # no nodes to place
+            return
+            
         g = Graph() # grandalf graph, not one of ours!
         # add the vertices
         for n in self.graph.nodes:
@@ -390,11 +392,9 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         # We keep this rectangle in the node so we can change its colour
         n.rect = GMainRect(x,y+CONNECTORHEIGHT,n.w,n.h-YPADDING-CONNECTORHEIGHT*2,n)
         self.addItem(n.rect)
-        n.scene = self
-        
 
-        # draw text label
-        n.rect.text=GText(n.rect,n.name,n)
+        # draw text label, using the display name
+        n.rect.text=GText(n.rect,n.displayName,n)
         n.rect.text.setPos(x+XTEXTOFFSET,y+YTEXTOFFSET+CONNECTORHEIGHT)
         
         if len(n.inputs)>0:

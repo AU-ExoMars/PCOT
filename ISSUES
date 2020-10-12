@@ -38,3 +38,11 @@ Macros. Dear God, macros.
 
 Ellipse and Path ROIs, same as rectangle in usage.
 
+Graphs now own their scenes, which is a better idea but causes an
+interesting problem given that scenes own the selection data. This
+means that selection data will be shared across all windows open
+on the same graph.
+
+Autonaming counters should be stored in the files (so we don't start
+naming macros and nodes at 0 again on load)
+

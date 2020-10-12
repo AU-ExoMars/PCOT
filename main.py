@@ -28,7 +28,7 @@ if __name__ == "__main__":
     parser.process(app)
     args = parser.positionalArguments() 
 
-    window=ui.mainwindow.MainUI(app) # Create an instance of our class
+    window=ui.mainwindow.MainUI() # Create an instance of a main window
     if len(args)>0:
         window.load(args[0])
     app.exec_() # Start the application

@@ -3,7 +3,7 @@ from collections import deque
 from pancamimage import Image
 import pyperclip,json
 
-import ui,conntypes
+import ui,conntypes,graphscene
 
 # dictionary of name -> transformation type
 allTypes = dict()
@@ -175,6 +175,8 @@ class XForm:
         self.comment = "" # nodes can have comments
         # set the unique name
         self.name = name
+        # and the display name, which is the same by default
+        self.displayName = name
         
         # UI-DEPENDENT DATA DOWN HERE
         self.xy = (0,0) # this SHOULD be serialised
@@ -186,7 +188,6 @@ class XForm:
         self.tabs = [] # no tabs open
         self.current = False
         self.rect = None # the main GMainRect rectangle
-        self.scene = None # the scene I'm in
         self.inrects = [None for x in self.inputs] # input connector GConnectRects
         self.outrects = [None for x in self.outputs] # output connector GConnectRects
         self.helpwin = None # no help window
@@ -197,7 +198,7 @@ class XForm:
         for x in self.tabs:
             x.setNodeEnabled(b)
         self.enabled=b
-        self.scene.selChanged()
+        self.graph.scene.selChanged()
         self.graph.perform(self)
         
     def serialise(self,selection=None):
@@ -427,7 +428,12 @@ class XFormGraph:
         # all the nodes
         self.nodes = []
         self.performingGraph = False
+        self.scene = None # the graph's scene is created by autoLayout
+
+    def constructScene(self,doAutoLayout):
+        self.scene = graphscene.XFormGraphScene(self,doAutoLayout)
         
+    
     # create a new node, passing in a type name.
     def create(self,typename):
         if typename in allTypes:
@@ -534,8 +540,8 @@ class XFormGraph:
         return d
         
     # given a dictionary, build a graph based on it. Do not delete
-    # any existing nodes and do not perform the nodes. Returns a list
-    # of the new nodes. 
+    # any existing nodes unless asked and do not perform the nodes.
+    # Returns a list of the new nodes. 
     
     def deserialise(self,d,deleteExistingNodes):
         if deleteExistingNodes:

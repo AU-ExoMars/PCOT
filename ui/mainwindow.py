@@ -2,7 +2,7 @@ from PyQt5 import QtWidgets, uic, QtCore, QtGui
 from PyQt5.QtCore import Qt,QCommandLineOption,QCommandLineParser
 import os,sys,traceback,json,time,getpass
 
-
+import ui
 import ui.tabs,ui.help
 import xform
 import macros
@@ -17,15 +17,13 @@ def getUserName():
         
 class MainUI(ui.tabs.DockableTabWindow):
     windows = [] # list of all main windows open
-
-    def __init__(self,app,macroWindow=False):
+    def __init__(self,macroWindow=False):
         super().__init__()
-        self.app = app
         self.graph = None
         uic.loadUi('assets/main.ui',self)
         self.initTabs()
         self.saveFileName = None
-        self.setWindowTitle(app.applicationName()+' '+app.applicationVersion())
+        self.setWindowTitle(ui.app.applicationName()+' '+ui.app.applicationVersion())
         # make sure the view has a link up to this window
         self.view.window = self
 
@@ -33,7 +31,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.setCaption(0)        
         
         # connect buttons etc.        
-        self.autolayoutButton.clicked.connect(self.autoLayout)
+        self.autolayoutButton.clicked.connect(self.autoLayoutButton)
         self.dumpButton.clicked.connect(lambda: self.graph.dump())
         self.capCombo.currentIndexChanged.connect(self.captionChanged)
         self.camCombo.currentIndexChanged.connect(self.cameraChanged)
@@ -57,7 +55,6 @@ class MainUI(ui.tabs.DockableTabWindow):
         if macroWindow:        
             # and remove some things which don't apply to macro windows
             self.menuFile.setEnabled(False)
-            self.setWindowTitle(self.app.applicationName()+' '+self.app.applicationVersion()+" [MACRO]")
             self.capCombo.setVisible(False)
             self.camCombo.setVisible(False)
             self.camlabel.setVisible(False)
@@ -67,9 +64,6 @@ class MainUI(ui.tabs.DockableTabWindow):
             self.extraCtrls.layout().addWidget(b,0,0)
             b = QtWidgets.QPushButton("Add output")
             self.extraCtrls.layout().addWidget(b,0,1)
-            # create a new macro prototype and use its graph
-            self.macroPrototype = macros.MacroPrototype()
-            self.graph = self.macroPrototype.graph
         else:
             self.reset() # create empty "standard" graph
             self.macroPrototype = None # we are not a macro
@@ -82,16 +76,25 @@ class MainUI(ui.tabs.DockableTabWindow):
         else:
             ui.log("Grandalf not found - autolayout will be rubbish")
         MainUI.windows.append(self)    
-        
+
+    @staticmethod
+    def createMacroWindow(proto,isNewMacro):
+        w = MainUI(True) # create macro window
+        # create a new macro prototype and use its graph
+        w.macroPrototype = proto
+        w.graph = proto.graph
+        w.setWindowTitle(ui.app.applicationName()+
+            ' '+ui.app.applicationVersion()+
+            " [MACRO {}]".format(proto.name))
+        w.graph.constructScene(isNewMacro) # builds the scene
+        w.view.setScene(w.graph.scene)
 
     def closeEvent(self,evt):
         MainUI.windows.remove(self)
         
-    def autoLayout(self):
-        # called autoLayout, because that's essentially the end-user
-        # visible action. Will delete the old scene and create a new scene,
-        # linking the viewer to it.
-        self.scene = graphscene.XFormGraphScene(self,True)
+    def autoLayoutButton(self):
+        self.graph.constructScene(True)
+        self.view.setScene(self.graph.scene)
         
     # create a dictionary of everything in the app we need to save: global settings,
     # the graph, macros etc.
@@ -100,14 +103,19 @@ class MainUI(ui.tabs.DockableTabWindow):
         d['SETTINGS'] = {'cam':self.camera,'cap':self.captionType}
         d['INFO'] = {'author':getUserName(),'date':time.time()}
         d['GRAPH'] = self.graph.serialise()
+        # now we also have to serialise the macros
+        d['MACROS'] = macros.MacroPrototype.serialiseAll()
         return d
             
     
     # deserialise everything from the given top-level dictionary
     def deserialise(self,d):
-        settings = d['SETTINGS']
+        # deserialise macros before graph!
+        if 'MACROS' in d:
+            macros.MacroPrototype.deserialiseAll(d['MACROS'])
         self.graph.deserialise(d['GRAPH'],True) # True to delete existing nodes first
 
+        settings = d['SETTINGS']
         self.setCamera(settings['cam'])
         self.setCaption(settings['cap'])
         self.graph.perform() # and rerun everything
@@ -117,14 +125,17 @@ class MainUI(ui.tabs.DockableTabWindow):
         # doing it in one step, to avoid errors in the former leaving us
         # with an unreadable file.
         try:
-            with open(fname,'w') as f:
-                d = self.serialise()
-                s = json.dumps(d,sort_keys=True,indent=4)
-                f.write(s)
-                ui.msg("File saved")
+            d = self.serialise()
+            s = json.dumps(d,sort_keys=True,indent=4)
+            try:
+                with open(fname,'w') as f:
+                        f.write(s)
+            except Exception as e:
+                ui.error("cannot save file {}: {}".format(fname,e))
+            ui.msg("File saved")
         except Exception as e:
             traceback.print_exc()
-            ui.error("cannot save file {}: {}".format(fname,e))
+            ui.error("cannot generate save data: {}".format(e))
     
     def load(self,fname):
         try:
@@ -133,7 +144,8 @@ class MainUI(ui.tabs.DockableTabWindow):
                 self.deserialise(d)
                 # now we need to reconstruct the scene with the new data
                 # (False means don't do autolayout, read xy data from the dict instead)
-                self.scene = graphscene.XFormGraphScene(self,False)
+                self.graph.constructScene(False)
+                self.view.setScene(self.graph.scene)
                 ui.msg("File loaded")
                 self.saveFileName = fname
         except Exception as e:
@@ -159,17 +171,18 @@ class MainUI(ui.tabs.DockableTabWindow):
             self.load(res[0])
             
     def copyAction(self):
-        self.scene.copy()
+        self.graph.scene.copy()
     def pasteAction(self):
-        self.scene.paste()
+        self.graph.scene.paste()
     def cutAction(self):
-        self.scene.cut()
+        self.graph.scene.cut()
             
     def newAction(self):
-        MainUI(self.app) # create a new empty window
+        MainUI() # create a new empty window
         
     def newMacroAction(self):
-        w=MainUI(self.app,True) # create a new empty macro window
+        p=macros.MacroPrototype()
+        MainUI.createMacroWindow(p,True)
         
     def reset(self):
         # create a dummy graph with just a source
@@ -177,7 +190,8 @@ class MainUI(ui.tabs.DockableTabWindow):
         source = self.graph.create("rgbfile")
         self.saveFileName = None
         # set up its scene and view
-        self.autoLayout() # builds the scene
+        self.graph.constructScene(True)
+        self.view.setScene(self.graph.scene)
         
         
 
@@ -203,7 +217,7 @@ class MainUI(ui.tabs.DockableTabWindow):
             w = None
         else:
             w = self.tabWidget.currentWidget().node
-        self.scene.currentChanged(w)
+        self.graph.scene.currentChanged(w)
             
     def captionChanged(self,i):
         self.captionType = i # best stored as an int, I think

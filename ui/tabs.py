@@ -106,7 +106,7 @@ class Tab(QtWidgets.QWidget):
     
     def __init__(self,window,node,uifile):
         super(Tab,self).__init__()
-        self.title=node.name
+        self.title=node.displayName
         self.expanded=None
         self.node=node
         # store a ref to the main UI window which created the tab
