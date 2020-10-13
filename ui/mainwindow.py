@@ -1,6 +1,7 @@
 from PyQt5 import QtWidgets, uic, QtCore, QtGui
 from PyQt5.QtCore import Qt,QCommandLineOption,QCommandLineParser
 import os,sys,traceback,json,time,getpass
+from typing import List, Set, Dict, Tuple, Optional, Any, OrderedDict, ClassVar
 
 import ui
 import ui.tabs,ui.help
@@ -15,7 +16,25 @@ def getUserName():
     else:
         return getpass.getuser()
         
+class MainUI: # annoying forward decl for type hints
+    pass
+    
 class MainUI(ui.tabs.DockableTabWindow):
+    windows: ClassVar[List[MainUI]]         # list of all windows
+    graph: xform.XFormGraph                 # the graph I am showing
+    macroPrototype: macros.MacroPrototype   # if I am showing a macro, the macro prototype (else None)
+    view: graphview.GraphView               # my view of the scene (which is in the graph)
+    tabs: OrderedDict[str,ui.tabs.Tab]      # inherited from DockableTabWindow, dict of tabs by title
+    saveFileName: str                       # if I have saved/loaded, the name of the file
+    camera: str                             # camera type (PANCAM/AUPE)
+    captionType: int                        # caption type for images (index into combobox)
+    
+    # (most UI elements omitted)
+    tabWidget: QtWidgets.QTabWidget         # container for tabs
+    extraCtrls: QtWidgets.QWidget           # containing for macro controls
+    
+
+
     windows = [] # list of all main windows open
     def __init__(self,macroWindow=False):
         super().__init__()

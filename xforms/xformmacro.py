@@ -45,6 +45,7 @@ class TabMacro(ui.tabs.Tab):
         super().__init__(w,node,'assets/tabmacro.ui')
         self.w.macro.currentIndexChanged.connect(self.macroChanged)
         self.w.openProto.pressed.connect(self.openProto)
+        print(utils.deb.show(node))
         # populate the combobox
         for x in MacroPrototype.protos:
             self.w.macro.addItem(x)

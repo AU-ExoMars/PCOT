@@ -1,9 +1,20 @@
+import PyQt5 # just for the type hint
 import traceback,inspect,hashlib,re,copy
 from collections import deque
 from pancamimage import Image
 import pyperclip,json
+from typing import List, Set, Dict, Tuple, Optional, Any
 
 import ui,conntypes,graphscene
+
+# ugly forward declarations so the type hints work
+
+class XForm:
+    pass
+class XFormGraph:
+    pass
+
+
 
 # dictionary of name -> transformation type
 allTypes = dict()
@@ -42,6 +53,17 @@ class BadVersionException(Exception):
         self.message = "Node {} was saved with a different version of type {}".format(n.name,n.type.name)
 
 class XFormType():
+
+    name: str                   # name of the xform (node) type
+    group: str                  # the palette group it belongs to
+    ver: str                    # the version number
+    hasEnable: bool             # does it have an enable button?
+    count: int                  # number of nodes of this type (for unique naming)
+    inputConnectors: List[Tuple[str,str,str]] # the inputs (name,connection type name,description)
+    outputConnectors: List[Tuple[str,str,str]] # the outputs (name,connection type name,description)
+    autoserialise: Tuple[str]   # tuple of autoserialisable attributes in each node of this type
+    _md5: str                   # MD5 hash of source code (generated automatically)
+    
     def __init__(self,name,group,ver):
         self.group = group
         self.name = name
@@ -151,9 +173,40 @@ def serialiseConn(c,connSet):
             return (x.name,i)
     return None
 
-
 # an actual instance of a transformation
 class XForm:
+    # type hints for attributes, here mainly as documentation
+    type: XFormType  # the type of the node (this does the actual work)
+    savedver: str    # the version number this node's type was saved with
+    # list of tuples/none, each is the node we connect to and the output 
+    # to which we are connected on that node
+    inputs: List[Tuple[XForm,int]] 
+    # dictionary of nodes we output to and how many connections we have
+    children: Dict[XForm,int]
+    # the actual output data from this node
+    outputs: List[Any]
+    # the "overriding" output type (since an "img" output (say) may become
+    # an "imgrgb") when the perform happens
+    outputTypes: List[str]
+    comment: str    # a helpful comment
+    # the unique name of the node, which can be overriden with displayName
+    name: str 
+    # the name as displayed in the graph (and in the tab) if not None
+    displayName: str
+    enabled: bool   # should this node perform?
+    hasRun: bool    # has this node run already in this graph.perform cycle?
+    graph: XFormGraph # the graph to which I belong
+
+    xy: Tuple[int,int] # the screen coordinates
+    w: int
+    h: int
+    tabs: List[ui.tabs.Tab] # a list of open tabs
+    current: bool   # is this the currently selected node?
+    rect: [graphscene.GMainRect] # the main rectangle for the node in the scene
+    inrects: List[graphscene.GConnectRect] # input connector rectangles
+    outrects: List[graphscene.GConnectRect] # output connector rectangles
+    helpwin:  PyQt5.QtWidgets.QMainWindow # an open help window, or None
+    
     def __init__(self,type,name):
         self.type = type
         self.savedver = type.ver
@@ -424,6 +477,12 @@ class XForm:
             
 # a graph of transformation nodes
 class XFormGraph:
+    nodes: List[XForm]      # all my nodes
+    scene: graphscene.XFormGraphScene # my graphical representation
+    # true when I'm recursively performing my nodes. Avoids parallel
+    # attempts to run a graph in different threads.
+    performingGraph: bool
+
     def __init__(self):
         # all the nodes
         self.nodes = []

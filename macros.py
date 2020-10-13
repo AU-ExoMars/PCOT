@@ -1,11 +1,26 @@
 import xform
 from xform import XFormType
 import ui,conntypes
+from typing import List, Set, Dict, Tuple, Optional, Any, OrderedDict, ClassVar
+
+# annoying forward decls for type hints
+class MacroInstance: 
+    pass
+class MacroPrototype: 
+    pass
 
 # a macro consists of a graph and links to any macro instances,
 # so that changes in the prototype can be reflected in the instances.
 
 class MacroPrototype:
+
+    protos: ClassVar[Dict[str,MacroPrototype]]  # dictionary of all macros by name
+    counter: ClassVar[int]                      # counter for macros for naming
+
+    name: str                                   # prototype's unique name
+    graph: xform.XFormGraph                     # the graph for this prototype
+    instances: List[MacroInstance]              # list of all my instances
+    
     protos = {} # dictionary of all macro prototypes
     counter= 0  # counter for new prototypes
     def __init__(self,name=None):
