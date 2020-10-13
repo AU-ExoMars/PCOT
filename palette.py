@@ -65,8 +65,12 @@ def setup(scrollArea,scrollAreaContent,view):
     for k in ks:
         v = all[k]
         if not v.group in groups:
-            raise Exception("node '{}' not in any group defined in palette.py!".format(k))
-        grouplists[v.group].append(k)
+            # "hidden" is a special group which doesn't appear in the palette, used for 
+            # things like macro connectors.
+            if v.group != 'hidden':
+                raise Exception("node '{}' not in any group defined in palette.py!".format(k))
+        else:
+            grouplists[v.group].append(k)
 
     # add buttons and separators for each group
     for g in groups:

@@ -61,8 +61,10 @@ class MainUI(ui.tabs.DockableTabWindow):
             self.caplabel.setVisible(False)
             # add some extra widgets
             b = QtWidgets.QPushButton("Add input")
+            b.pressed.connect(self.addMacroInput)
             self.extraCtrls.layout().addWidget(b,0,0)
             b = QtWidgets.QPushButton("Add output")
+            b.pressed.connect(self.addMacroOutput)
             self.extraCtrls.layout().addWidget(b,0,1)
         else:
             self.reset() # create empty "standard" graph
@@ -76,11 +78,14 @@ class MainUI(ui.tabs.DockableTabWindow):
         else:
             ui.log("Grandalf not found - autolayout will be rubbish")
         MainUI.windows.append(self)    
+        
+    def isMacro(self):
+        return self.macroPrototype is not None
 
     @staticmethod
     def createMacroWindow(proto,isNewMacro):
         w = MainUI(True) # create macro window
-        # create a new macro prototype and use its graph
+        # link the window to the prototype
         w.macroPrototype = proto
         w.graph = proto.graph
         w.setWindowTitle(ui.app.applicationName()+
@@ -250,6 +255,30 @@ class MainUI(ui.tabs.DockableTabWindow):
         wid.setText(txt)
         win.setMinimumSize(400,50)
         win.show()
+        
+    def addMacroConnector(self,type):
+        # create the node inside the prototype
+        n = self.graph.create(type)
+        n.xy = self.graph.scene.getNewPosition()
+        assert(self.isMacro())
+        assert(self.macroPrototype is not None)
+        n.proto = self.macroPrototype
+        # reset the connectors
+        n.proto.setConnectors()
+        # rebuild the visual components inside the prototype
+        self.graph.scene.rebuild()
+        # we also have to rebuild any graphs the macro is in, because
+        # the number of connectors will have changed.
+        for inst in n.proto.instances:
+            inst.graph.scene.rebuild()
+        
+        
+        
+    def addMacroInput(self):
+        self.addMacroConnector('in')
+        
+    def addMacroOutput(self):
+        self.addMacroConnector('out')
         
     def performAll(self):
         if self.graph is not None:

@@ -16,6 +16,20 @@ class MacroPrototype:
         self.name = name
         self.instances=[]
         MacroPrototype.protos[name]=self
+    
+    # used when the number of connectors has changed - we
+    # need to change the connectors on the macro block used in other
+    # graphs    
+    def setConnectors(self):
+        inputs=0
+        outputs=0
+        for n in self.graph.nodes:
+            if n.type.name=='in':
+                inputs+=1
+            elif n.type.name=='out':
+                outputs+=1
+        raise Exception("SET CONNECTORS")                
+    
 
     @staticmethod
     def serialiseAll():
@@ -50,17 +64,23 @@ class MacroInstance:
 
 
 # these are the connections for macros, which should only be added to macros.
-# For that readson they are not decorated with @xformtype.
-
+# For that readson they are not decorated with @xformtype. However, they do
+# get added to allTypes.
+#
+# Additional fields:
+# - proto points to the containing MacroPrototype
 
 class XFormMacroIn(XFormType):
     def __init__(self):
-        super().__init__(self,name,"in","macroconnect","0.0.0")
+        super().__init__("in","hidden","0.0.0")
         self.addOutputConnector("","any")
         
 
 class XFormMacroOut(XFormType):
     def __init__(self):
-        super().__init__(self,name,"out","macroconnect","0.0.0")
+        super().__init__("out","hidden","0.0.0")
         self.addInputConnector("","any")
 
+# register them
+XFormMacroIn()
+XFormMacroOut()
