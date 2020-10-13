@@ -16,8 +16,10 @@ except ImportError:
 from PyQt5 import QtWidgets, uic, QtGui, QtCore
 from PyQt5.QtCore import Qt,QPointF
 from PyQt5.QtGui import QColor,QBrush,QPen,QLinearGradient,QFont,QTransform
+from typing import List, Set, Dict, Tuple, Optional, Any
 
 import math
+import utils.deb
 
 import xform,ui,conntypes
 
@@ -48,9 +50,6 @@ HELPBOXSIZE=10
 
 PASTEOFFSET=20 # x,y offset for pasted copies of nodes
 
-
-
-
 # basic shapes with extra data attached so we can get the node
 
 # help box. This has no functionality, we can't make it catch clicks unless we make it
@@ -62,6 +61,13 @@ class GHelpRect(QtWidgets.QGraphicsRectItem):
 
 # core rectangle
 class GMainRect(QtWidgets.QGraphicsRectItem):
+    # x,y,w,h are inherited
+    # offset from original position x,y
+    offsetx: int
+    offsety: int
+    helprect: GHelpRect     # help rectangle (top-right corner)
+    node: xform.XForm       # node to which I refer
+    
     def __init__(self,x1,y1,w,h,node):
         self.offsetx = 0 # these are the distances from our original pos.
         self.offsety = 0
@@ -113,6 +119,12 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
 
 # connection rectangles at top and bottom
 class GConnectRect(QtWidgets.QGraphicsRectItem):
+
+    isInput: bool       # true if this is an input
+    node: xform.XForm   # the node I'm on
+    index: int          # the index of the input/output
+    name: str           # the name shown next to the rect (could be "")
+
     def __init__(self,parent,x1,y1,x2,y2,node,isInput,index):
         super().__init__(x1,y1,x2,y2,parent=parent)
         self.isInput = isInput
@@ -179,8 +191,14 @@ class GText(QtWidgets.QGraphicsSimpleTextItem):
         super().__init__(text,parent=parent)
         self.node=node
 
-# a line with an arrow on the end
+# a line with an arrow on the end, connecting two nodes
 class GArrow(QtWidgets.QGraphicsLineItem):
+    n1: xform.XForm     # "from" connection
+    n2: xform.XForm     # "to" connection
+    output: int         # index of output ("from")
+    input: int          # index of input ("to")
+    head: QtWidgets.QGraphicsPolygonItem # the arrowhead shape
+
     # we keep track of the nodes and connection indices
     def __init__(self,x1,y1,x2,y2,n1,output,n2,input):
         self.n1 = n1
@@ -242,6 +260,13 @@ def getEventWindow(evt):
 # when serializing the nodes, the geometry fields should be dealt with.
 
 class XFormGraphScene(QtWidgets.QGraphicsScene):
+
+    graph: xform.XFormGraph         # my graph
+    selection: List[xform.XForm]    # selected nodes
+    checkSelChange: bool            # check selected nodes if the selection changes
+    arrows: List[GArrow]            # list of arrows
+    draggingArrow: GArrow           # dragging arrow or none if no arrow being dragged
+
     def __init__(self,graph,doPlace): 
         super().__init__()
         self.graph = graph
@@ -562,6 +587,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
 
     def copy(self):
         self.graph.copy(self.selection)
+        utils.deb.show(self)
         
     def paste(self):
         # clear the selection area (UI controlled)

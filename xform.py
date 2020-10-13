@@ -5,7 +5,7 @@ from pancamimage import Image
 import pyperclip,json
 from typing import List, Set, Dict, Tuple, Optional, Any
 
-import ui,conntypes,graphscene
+import ui,conntypes
 
 # ugly forward declarations so the type hints work
 
@@ -175,6 +175,7 @@ def serialiseConn(c,connSet):
 
 # an actual instance of a transformation
 class XForm:
+    import graphscene # deferred import avoiding circular import
     # type hints for attributes, here mainly as documentation
     type: XFormType  # the type of the node (this does the actual work)
     savedver: str    # the version number this node's type was saved with
@@ -477,6 +478,7 @@ class XForm:
             
 # a graph of transformation nodes
 class XFormGraph:
+    import graphscene # deferred import avoiding circular import
     nodes: List[XForm]      # all my nodes
     scene: graphscene.XFormGraphScene # my graphical representation
     # true when I'm recursively performing my nodes. Avoids parallel
@@ -490,6 +492,7 @@ class XFormGraph:
         self.scene = None # the graph's scene is created by autoLayout
 
     def constructScene(self,doAutoLayout):
+        import graphscene # deferred import avoiding circular import
         self.scene = graphscene.XFormGraphScene(self,doAutoLayout)
         
     
