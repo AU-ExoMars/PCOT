@@ -47,40 +47,43 @@ class PaletteButton(QtWidgets.QPushButton):
         # rebuild the scene
         self.view.scene().rebuild()
 
-# set up the scrolling palette and return a list of the buttons created
 
-def setup(scrollArea,scrollAreaContent,view):
-    # now we set up the palette. I'd just like to say that this was not fun.
-    # Not fun at all. It might look straightforward now that I know...
-    layout = QtWidgets.QVBoxLayout()
-    scrollAreaContent.setLayout(layout)
-    scrollArea.setMinimumWidth(150)
-    buttons=[]
-    grouplists = {x:[] for x in groups}
-    # we want the keys in sorted order
-    all = XFormType.all()
-    ks = sorted(all.keys())
+class Palette:
 
-    # add xformtypes to a list for each group
-    for k in ks:
-        v = all[k]
-        if not v.group in groups:
-            # "hidden" is a special group which doesn't appear in the palette, used for 
-            # things like macro connectors.
-            if v.group != 'hidden':
-                raise Exception("node '{}' not in any group defined in palette.py!".format(k))
-        else:
-            grouplists[v.group].append(k)
+    # set up the scrolling palette as part of view initialisation, will populate
+    # with initial data
+    def __init__(self,scrollArea,scrollAreaContent,view):
+        layout = QtWidgets.QVBoxLayout()
+        scrollAreaContent.setLayout(layout)
+        scrollArea.setMinimumWidth(150)
+        self.scrollAreaContent=scrollAreaContent
+        self.view = view
+        self.layout = layout
+        self.populate()
 
-    # add buttons and separators for each group
-    for g in groups:
-        sep = QtWidgets.QLabel(g)
-        sep.setStyleSheet("background-color:rgb(200,200,200)")
-        layout.addWidget(sep)
-        for k in grouplists[g]:
+    def populate(self):    
+        grouplists = {x:[] for x in groups}
+        # we want the keys in sorted order
+        all = XFormType.all()
+        ks = sorted(all.keys())
+        # add xformtypes to a list for each group
+        for k in ks:
             v = all[k]
-            b = PaletteButton(k,view)
-            layout.addWidget(b)
-            buttons.append(b)
-        
-    return buttons
+            if not v.group in groups:
+                # "hidden" is a special group which doesn't appear in the palette, used for 
+                # things like macro connectors.
+                if v.group != 'hidden':
+                    raise Exception("node '{}' not in any group defined in palette.py!".format(k))
+            else:
+                grouplists[v.group].append(k)
+    
+        # add buttons and separators for each group
+        for g in groups:
+            sep = QtWidgets.QLabel(g)
+            sep.setStyleSheet("background-color:rgb(200,200,200)")
+            self.layout.addWidget(sep)
+            for k in grouplists[g]:
+                v = all[k]
+                b = PaletteButton(k,self.view)
+                self.layout.addWidget(b)
+            

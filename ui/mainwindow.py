@@ -28,6 +28,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     saveFileName: str                       # if I have saved/loaded, the name of the file
     camera: str                             # camera type (PANCAM/AUPE)
     captionType: int                        # caption type for images (index into combobox)
+    palette: palette.Palette                # the node palette on the right
     
     # (most UI elements omitted)
     tabWidget: QtWidgets.QTabWidget         # container for tabs
@@ -68,7 +69,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.setStatusBar(self.statusBar)
         
         # set up the scrolling palette and make the buttons therein
-        palette.setup(self.paletteArea,self.paletteContents,self.view)
+        self.palette = palette.Palette(self.paletteArea,self.paletteContents,self.view)
 
 
         if macroWindow:        
