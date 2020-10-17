@@ -59,9 +59,12 @@ class XFormType():
     ver: str                    # the version number
     hasEnable: bool             # does it have an enable button?
     count: int                  # number of nodes of this type (for unique naming)
+    instances: List[XForm]      # all instances in all graphs
+
     # name is the name which appears in the graph view
     # connection type name is 'any', 'imgrgb' etc.: the internal type name
     # desc is used in the help window
+
     inputConnectors: List[Tuple[str,str,str]] # the inputs (name,connection type name,description)
     outputConnectors: List[Tuple[str,str,str]] # the outputs (name,connection type name,description)
     autoserialise: Tuple[str]   # tuple of autoserialisable attributes in each node of this type
@@ -71,6 +74,7 @@ class XFormType():
         self.group = group
         self.name = name
         self.ver = ver
+        self.instances = [] 
         # add to the global dictionary
         if name in allTypes:
             raise Exception("xform type name already in use: "+name)
@@ -96,6 +100,9 @@ class XFormType():
         # before, the serialise() and deserialise() methods.
         self.autoserialise=() # tuple or list of attribute names
 
+    def remove(self,node):
+        self.instances.remove(node)
+        
     def md5(self):
         # returns a checksum of the sourcecode for the module defining the type,
         # used to check versions
@@ -166,6 +173,7 @@ class XFormType():
     def createTab(self,xform,window):
         return None
 
+
 # serialise a connection (xform,i) into (xformName,i).
 # Will only serialise connections into the set passed in. If None is passed
 # in all connections are OK.
@@ -214,26 +222,17 @@ class XForm:
     def __init__(self,type,name):
         self.type = type
         self.savedver = type.ver
-        # create unconnected connections. Connections are either None
-        # or (Xform,index) tuples - the xform is the object to which we are
-        # connected, the index is the index of the output connector on that xform for inputs,
-        # or the input connector for outputs
-        self.inputs = [None for x in type.inputConnectors]
         # we keep a dict of those nodes which get inputs from us, and how many. We can't
         # keep the actual output connections easily, because they are one->many.
         self.children = {}
-        # there is also a data output generated for each output by "perform", initially
-        # these are None
-        self.outputs = [None for x in type.outputConnectors]
-        # these are the overriding output types; none if we use the default
-        # given by the type object (see the comment on outputConnectors
-        # in XFormType)
-        self.outputTypes = [None for x in type.outputConnectors]
         self.comment = "" # nodes can have comments
         # set the unique name
         self.name = name
         # and the display name, which is the same by default
         self.displayName = name
+        # set up things which are dependent on the number of connectors,
+        # which can change in macros
+        self.connCountChanged()
         
         # UI-DEPENDENT DATA DOWN HERE
         self.xy = (0,0) # this SHOULD be serialised
@@ -245,11 +244,31 @@ class XForm:
         self.tabs = [] # no tabs open
         self.current = False
         self.rect = None # the main GMainRect rectangle
-        self.inrects = [None for x in self.inputs] # input connector GConnectRects
-        self.outrects = [None for x in self.outputs] # output connector GConnectRects
         self.helpwin = None # no help window
         self.enabled = True # a lot of nodes won't use; see XFormType.
         self.hasRun = False # used to mark a node as already having performed its stuff
+        type.instances.append(self)
+        
+    def connCountChanged(self):
+        # called when the connector count changes to set up the necessary
+        # lists.
+        # create unconnected connections. Connections are either None
+        # or (Xform,index) tuples - the xform is the object to which we are
+        # connected, the index is the index of the output connector on that xform for inputs,
+        # or the input connector for outputs
+        self.inputs = [None for x in self.type.inputConnectors]
+        # there is also a data output generated for each output by "perform", initially
+        # these are None
+        self.outputs = [None for x in self.type.outputConnectors]
+        # these are the overriding output types; none if we use the default
+        # given by the type object (see the comment on outputConnectors
+        # in XFormType)
+        self.outputTypes = [None for x in self.type.outputConnectors]
+        self.inrects = [None for x in self.inputs] # input connector GConnectRects
+        self.outrects = [None for x in self.outputs] # output connector GConnectRects
+        
+    def onRemove(self):
+        self.type.remove(self)
         
     def setEnabled(self,b):
         for x in self.tabs:
@@ -544,6 +563,7 @@ class XFormGraph:
         for x in node.tabs:
             x.nodeDeleted()
         self.nodes.remove(node)
+        node.onRemove()
         
     def dump(self):
         for n in self.nodes:

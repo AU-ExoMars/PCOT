@@ -39,14 +39,12 @@ class MacroPrototype:
         if name in MacroPrototype.protos:
             raise Exception("macro {} already exists".format(name))
         self.name = name
-        # create a new XFormType object
-        self.type = XFormMacro(name)
         # we have no instances
         self.instances=[]
         # register with the class dictionary
         MacroPrototype.protos[name]=self
-        # add us to the palettes
-        ui.mainwindow.MainUI.rebuildPalettes()
+        # create a new XFormType object
+        self.type = XFormMacro(name)
     
     # used when the number of connectors has changed - we
     # need to change the connectors on the macro block used in other
@@ -60,8 +58,6 @@ class MacroPrototype:
             elif n.type.name=='out':
                 outputs+=1
         self.type.setConnectors(inputs,outputs)
-        raise Exception("SET CONNECTORS")
-    
 
     @staticmethod
     def serialiseAll():
@@ -105,12 +101,14 @@ class MacroInstance:
 class XFormMacroIn(XFormType):
     def __init__(self):
         super().__init__("in","hidden","0.0.0")
+        self._md5='' # we ignore the MD5 checksum for versioning
         self.addOutputConnector("","any")
         
 
 class XFormMacroOut(XFormType):
     def __init__(self):
         super().__init__("out","hidden","0.0.0")
+        self._md5='' # we ignore the MD5 checksum for versioning
         self.addInputConnector("","any")
         
 
@@ -127,7 +125,11 @@ class XFormMacro(XFormType):
     
     def __init__(self,name):
         super().__init__(name,"utility","0.0.0")
+        self._md5='' # we ignore the MD5 checksum for versioning
         self.hasEnable=True
+        # initialise the (empty) connectors and will also add us to
+        # the palette
+        self.setConnectors(0,0)
         
     def createTab(self,n,w):
         return TabMacro(n,w)
@@ -142,7 +144,16 @@ class XFormMacro(XFormType):
         # and we're also going to have to rebuild the palette, so inform all main
         # windows
         ui.mainwindow.MainUI.rebuildPalettes()
-        
+        # and rebuild absolutely everything
+        ui.mainwindow.MainUI.rebuildAll()
+        for n in self.instances:
+            n.connCountChanged()
+
+    def remove(self,node):
+        super().remove(node)
+        if node.instance is not None:
+            node.instance.proto.instances.remove(node.instance)
+                
         
         
     def serialise(self,node):
@@ -173,7 +184,6 @@ class TabMacro(ui.tabs.Tab):
         super().__init__(w,node,'assets/tabmacro.ui')
         self.w.macro.currentIndexChanged.connect(self.macroChanged)
         self.w.openProto.pressed.connect(self.openProto)
-        print(utils.deb.show(node))
         # populate the combobox
         for x in MacroPrototype.protos:
             self.w.macro.addItem(x)

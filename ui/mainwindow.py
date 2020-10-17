@@ -121,6 +121,12 @@ class MainUI(ui.tabs.DockableTabWindow):
         for w in MainUI.windows:
             w.palette.populate()
 
+    # rebuild the graphics in all main windows
+    @staticmethod
+    def rebuildAll():
+        for w in MainUI.windows:
+            w.graph.scene.rebuild()
+
     def closeEvent(self,evt):
         MainUI.windows.remove(self)
         
