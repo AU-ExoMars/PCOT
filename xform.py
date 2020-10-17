@@ -200,6 +200,8 @@ class XForm:
     # the "overriding" output type (since an "img" output (say) may become
     # an "imgrgb") when the perform happens
     outputTypes: List[str]
+    # similarly, overriding input types are required on macros
+    inputTypes: List[str]
     comment: str    # a helpful comment
     # the unique name of the node, which can be overriden with displayName
     name: str 
@@ -264,10 +266,12 @@ class XForm:
         # given by the type object (see the comment on outputConnectors
         # in XFormType)
         self.outputTypes = [None for x in self.type.outputConnectors]
+        self.inputTypes = [None for x in self.type.inputConnectors]
         self.inrects = [None for x in self.inputs] # input connector GConnectRects
         self.outrects = [None for x in self.outputs] # output connector GConnectRects
         
     def onRemove(self):
+        # called when a node is deleted
         self.type.remove(self)
         
     def setEnabled(self,b):
@@ -287,6 +291,7 @@ class XForm:
         d['ins'] = [serialiseConn(c,selection) for c in self.inputs]
         d['comment'] = self.comment
         d['outputTypes'] = self.outputTypes
+        d['inputTypes'] = self.inputTypes
         d['md5'] = self.type.md5()
         d['ver'] = self.type.ver # type.ver is version of type
         if self.type.hasEnable: # only save 'enabled' if the node uses it
@@ -305,6 +310,7 @@ class XForm:
         self.xy = d['xy']
         self.comment = d['comment']
         self.outputTypes = d['outputTypes']
+        self.inputTypes = d['inputTypes']
         self.savedver = d['ver'] # ver is version node was saved with
         self.savedmd5 = d['md5'] # and stash the MD5 we were saved with
 
@@ -332,6 +338,13 @@ class XForm:
                 return self.type.outputConnectors[i][1]
             else:
                 return self.outputTypes[i]
+
+    def getInputType(self,i):
+        if i>=0 and i<len(self.inputs):
+            if self.inputTypes[i] is None:
+                return self.type.inputConnectors[i][1]
+            else:
+                return self.inputTypes[i]
                 
     # is an output connected? This is a bit messy.
     def isOutputConnected(self,i):

@@ -29,6 +29,9 @@ brushDict['img']=Qt.blue
 brushDict['ellipse']=Qt.cyan
 brushDict['rect']=Qt.cyan
 
+# build list of types
+types = [x for x in brushDict]
+
 # convert all brushes to actual QBrush objects
 brushDict = { k:QBrush(v) for k,v in brushDict.items()}
 

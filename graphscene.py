@@ -136,7 +136,8 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
         index=self.index
         node=self.node
         if self.isInput:
-            name,typename,desc = node.type.inputConnectors[index]
+            # ugly stuff.
+            name,typename,desc = (node.type.inputConnectors[index][0],node.getInputType(index),node.type.inputConnectors[index][2])
         else:
             name,typename = (node.type.outputConnectors[index][0],node.getOutputType(index))
         brush = conntypes.getBrush(typename)

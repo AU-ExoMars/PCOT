@@ -184,5 +184,5 @@ class Tab(QtWidgets.QWidget):
 
         
     # write this in implementations - updates the tab when the node's data has changed
-    def onNodeChanged():
+    def onNodeChanged(self):
         pass

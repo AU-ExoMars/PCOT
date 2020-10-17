@@ -22,7 +22,7 @@ class MainUI: # annoying forward decl for type hints
 class MainUI(ui.tabs.DockableTabWindow):
     windows: ClassVar[List[MainUI]]         # list of all windows
     graph: xform.XFormGraph                 # the graph I am showing
-    macroPrototype: macros.MacroPrototype   # if I am showing a macro, the macro prototype (else None)
+    macroPrototype: macros.XFormMacro       # if I am showing a macro, the macro prototype (else None)
     view: graphview.GraphView               # my view of the scene (which is in the graph)
     tabs: OrderedDict[str,ui.tabs.Tab]      # inherited from DockableTabWindow, dict of tabs by title
     saveFileName: str                       # if I have saved/loaded, the name of the file
@@ -142,7 +142,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         d['INFO'] = {'author':getUserName(),'date':time.time()}
         d['GRAPH'] = self.graph.serialise()
         # now we also have to serialise the macros
-        d['MACROS'] = macros.MacroPrototype.serialiseAll()
+        d['MACROS'] = macros.XFormMacro.serialiseAll()
         return d
             
     
@@ -150,7 +150,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     def deserialise(self,d):
         # deserialise macros before graph!
         if 'MACROS' in d:
-            macros.MacroPrototype.deserialiseAll(d['MACROS'])
+            macros.XFormMacro.deserialiseAll(d['MACROS'])
         self.graph.deserialise(d['GRAPH'],True) # True to delete existing nodes first
 
         settings = d['SETTINGS']
@@ -219,7 +219,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         MainUI() # create a new empty window
         
     def newMacroAction(self):
-        p=macros.MacroPrototype()
+        p=macros.XFormMacro(None)
         MainUI.createMacroWindow(p,True)
         
     def reset(self):
@@ -243,10 +243,12 @@ class MainUI(ui.tabs.DockableTabWindow):
         # nope, ask the node type to make one
         if tab is None:
             tab = node.type.createTab(node,self)
-            node.tabs.append(tab)
+            if tab is not None:
+                node.tabs.append(tab)
         # pull the tab to the front (either the newly created one
         # or the one we already had)
-        self.tabWidget.setCurrentWidget(tab)
+        if tab is not None:
+            self.tabWidget.setCurrentWidget(tab)
     
     # tab changed (this is connected up in the superclass)
     def currentChanged(self,index): # index is ignored
@@ -292,6 +294,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     def addMacroConnector(self,type):
         # create the node inside the prototype
         n = self.graph.create(type)
+        n.conntype = 'any'
         n.xy = self.graph.scene.getNewPosition()
         assert(self.isMacro())
         assert(self.macroPrototype is not None)
@@ -304,8 +307,6 @@ class MainUI(ui.tabs.DockableTabWindow):
         # the number of connectors will have changed.
         for inst in n.proto.instances:
             inst.graph.scene.rebuild()
-        
-        
         
     def addMacroInput(self):
         self.addMacroConnector('in')
