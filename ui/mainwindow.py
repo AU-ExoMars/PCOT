@@ -113,6 +113,13 @@ class MainUI(ui.tabs.DockableTabWindow):
             " [MACRO {}]".format(proto.name))
         w.graph.constructScene(isNewMacro) # builds the scene
         w.view.setScene(w.graph.scene)
+        
+    # run through all the palettes on all main windows,
+    # repopulating them. Done typically when macros are added and removed.
+    @staticmethod
+    def rebuildPalettes():
+        for w in MainUI.windows:
+            w.palette.populate()
 
     def closeEvent(self,evt):
         MainUI.windows.remove(self)

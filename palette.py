@@ -49,7 +49,6 @@ class PaletteButton(QtWidgets.QPushButton):
 
 
 class Palette:
-
     # set up the scrolling palette as part of view initialisation, will populate
     # with initial data
     def __init__(self,scrollArea,scrollAreaContent,view):
@@ -77,6 +76,12 @@ class Palette:
             else:
                 grouplists[v.group].append(k)
     
+        # clear previous buttons and seps - we do this by going
+        # backwards (so we keep the indices the same) and setting
+        # each item's parent to none. Ugh.
+        for i in reversed(range(self.layout.count())): 
+            self.layout.itemAt(i).widget().setParent(None)        
+
         # add buttons and separators for each group
         for g in groups:
             sep = QtWidgets.QLabel(g)

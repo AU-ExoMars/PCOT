@@ -59,6 +59,9 @@ class XFormType():
     ver: str                    # the version number
     hasEnable: bool             # does it have an enable button?
     count: int                  # number of nodes of this type (for unique naming)
+    # name is the name which appears in the graph view
+    # connection type name is 'any', 'imgrgb' etc.: the internal type name
+    # desc is used in the help window
     inputConnectors: List[Tuple[str,str,str]] # the inputs (name,connection type name,description)
     outputConnectors: List[Tuple[str,str,str]] # the outputs (name,connection type name,description)
     autoserialise: Tuple[str]   # tuple of autoserialisable attributes in each node of this type
