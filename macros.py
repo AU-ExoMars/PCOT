@@ -33,6 +33,7 @@ class MacroInstance:
 class XFormMacroConnector(XFormType):
     def __init__(self,name):
         super().__init__(name,"hidden","0.0.0")
+        self.displayName = '??' # forces a rename in setConnectors first time
         self._md5='' # we ignore the MD5 checksum for versioning
         self.autoserialise=('idx','conntype')
 
@@ -50,6 +51,11 @@ class XFormMacroConnector(XFormType):
         # when we remove a connector, the connectors for the prototype
         # will change.
         node.proto.setConnectors()
+        
+    def rename(self,node,name):
+        super().rename(node,name)
+        node.proto.setConnectors() # forces rename of connectors on instance nodes
+
     def createTab(self,node,window):
         return TabConnector(node,window)
         
@@ -85,20 +91,17 @@ class XFormMacro(XFormType):
     """Encapsulates an instance of a macro and its prototype graph"""
     
     protos: ClassVar[Dict[str,XFormMacro]]  # dictionary of all macros by name
-    counter: ClassVar[int]                  # counter for macros for naming
 
     name: str                                   # prototype's unique name
     graph: xform.XFormGraph                     # the graph for this prototype
     type: XFormMacro                            # the node type object
     
     protos = {} # dictionary of all macro prototypes
-    counter= 0  # counter for new prototypes
 
     def __init__(self,name):
         # generate name if none provided
         if name is None:
-            name = "untitled{}".format(XFormMacro.counter)
-            XFormMacro.counter+=1
+            name = XFormMacro.getUniqueUntitledName()
         # superinit
         super().__init__(name,"utility","0.0.0")
         self._md5='' # we ignore the MD5 checksum for versioning
@@ -114,9 +117,20 @@ class XFormMacro(XFormType):
         # the palette
         self.setConnectors()
         
+    @staticmethod
+    def getUniqueUntitledName():
+        ct=0
+        while True:
+            name='untitled'+str(ct)
+            if not name in XFormMacro.protos:
+                return name
+            ct+=1
+        
     def init(self,node):
+        # create the macro instance (a lot of which could probably be folded into here,
+        # but it's like this for historical reasons actually going waaaay back to
+        # the 90s)
         node.instance = MacroInstance(self,node)
-        # add the NODE - not the MacroInstance - to the prototype's list
         
     def setConnectors(self):
         # count input and output connectors. Potential issue: the graphic labelling of
@@ -125,30 +139,36 @@ class XFormMacro(XFormType):
         outputs=0
         self.inputConnectors = []
         self.outputConnectors = []
-        # sort by real name, and we modify the display name and index of each IO node.
+        # We modify the display name and index of each IO node.
         # We also add it to this type's connectors.
-        nodes = sorted(self.graph.nodes,key=lambda x:x.name)
-        for n in nodes:
+        # The nodes list must be in create order, so that when we do connCountChanged on
+        # the instance objects any new nodes get put at the end.
+        for n in self.graph.nodes:
             if n.type.name=='in':
-                n.displayName = "in "+str(inputs)
+                # only rename if name is still "??" (set in ctor)
+                if n.displayName == '??':
+                    n.displayName = "in "+str(inputs)
                 n.idx = inputs
-                print("Connect type: ",n.conntype)
                 # set the connector on the macro object
-                self.inputConnectors.append((str(n.idx),n.conntype,'macro input'))
+                self.inputConnectors.append((n.displayName,n.conntype,'macro input'))
                 # set the connector on the node itself
                 n.inputTypes[0] = n.conntype
                 n.outputTypes[0] = n.conntype
                 inputs+=1
             elif n.type.name=='out':
-                n.displayName = "out "+str(outputs)
+                if n.displayName == '??':
+                    n.displayName = "out "+str(outputs)
                 n.idx = outputs
-                self.outputConnectors.append((str(n.idx),n.conntype,'macro output'))
+                self.outputConnectors.append((n.displayName,n.conntype,'macro output'))
                 n.inputTypes[0] = n.conntype # set the overrides
                 n.outputTypes[0] = n.conntype
                 outputs+=1
         # rebuild the various connector structures in each instance
         for n in self.instances:
             n.connCountChanged()
+        # make sure all connections in the graph are still valid, disconnecting
+        # bad ones
+        self.graph.ensureConnectionsValid()
         # and we're also going to have to rebuild the palette, so inform all main
         # windows
         ui.mainwindow.MainUI.rebuildPalettes()

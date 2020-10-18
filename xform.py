@@ -123,6 +123,11 @@ class XFormType():
         self.inputConnectors.append( (name,typename,desc) )
     def addOutputConnector(self,name,typename,desc=""):
         self.outputConnectors.append( (name,typename,desc) )
+
+    # rename a node. Subclassed in connector nodes because they are messy.
+    # even though we're only changing the display name
+    def rename(self,node,name):
+        node.displayName = name
         
     def all():
         return allTypes
@@ -233,7 +238,8 @@ class XForm:
         # and the display name, which is the same by default
         self.displayName = name
         # set up things which are dependent on the number of connectors,
-        # which can change in macros
+        # which can change in macros. Initialise the inputs, though.
+        self.inputs=[None]*len(type.inputConnectors)
         self.connCountChanged()
         
         # UI-DEPENDENT DATA DOWN HERE
@@ -251,14 +257,31 @@ class XForm:
         self.hasRun = False # used to mark a node as already having performed its stuff
         type.instances.append(self)
         
+    def dumpInputs(self,t):
+        print('--------',t)
+        for i in range(0,len(self.inputs)):
+            inp = self.inputs[i]
+            if inp is not None:
+                tp = self.inputTypes[i]
+                print("{}: {}/{}/{}".format(i,inp[0],inp[1],tp))
+        
     def connCountChanged(self):
         # called when the connector count changes to set up the necessary
         # lists.
         # create unconnected connections. Connections are either None
         # or (Xform,index) tuples - the xform is the object to which we are
         # connected, the index is the index of the output connector on that xform for inputs,
-        # or the input connector for outputs
-        self.inputs = [None for x in self.type.inputConnectors]
+        # or the input connector for outputs. This has to respect any existing connections,
+        # otherwise editing becomes really painful.
+        n = len(self.type.inputConnectors)
+        if n>len(self.inputs):
+            # there are more input connectors than inputs, add more to list
+            self.inputs+=[None]*(n-len(self.inputs))
+        elif n<len(self.inputs):
+            # there are fewer, truncate the inputs
+            self.inputs=self.inputs[:n]
+        # otherwise just leave it.
+
         # there is also a data output generated for each output by "perform", initially
         # these are None
         self.outputs = [None for x in self.type.outputConnectors]
@@ -288,6 +311,7 @@ class XForm:
         d = {}
         d['xy'] = self.xy
         d['type'] = self.type.name
+        d['displayName'] = self.displayName
         d['ins'] = [serialiseConn(c,selection) for c in self.inputs]
         d['comment'] = self.comment
         d['outputTypes'] = self.outputTypes
@@ -313,6 +337,7 @@ class XForm:
         self.inputTypes = d['inputTypes']
         self.savedver = d['ver'] # ver is version node was saved with
         self.savedmd5 = d['md5'] # and stash the MD5 we were saved with
+        self.displayName = d['displayName']
 
         # some nodes don't have this, in which case we just set it
         # to true.
@@ -325,12 +350,6 @@ class XForm:
         self.type.doAutodeserialise(self,d)
         # run the additional deserialisation method
         self.type.deserialise(self,d)
-        
-    def getInputType(self,i):
-        if i>=0 and i<len(self.inputs):
-            return self.type.inputConnectors[i][1]
-        else:
-            return None
         
     def getOutputType(self,i):
         if i>=0 and i<len(self.outputs):
@@ -510,6 +529,21 @@ class XForm:
         else:
             n,i = self.inputs[i]
             return n.outputs[i]
+            
+    # ensure connections are valid and break them if not
+    def ensureConnectionsValid(self):
+        for i in range(0,len(self.inputs)):
+            inp = self.inputs[i]
+            if inp is not None:
+                n,idx = inp
+                outtype = n.getOutputType(idx)
+                intype = self.getInputType(i)
+                if not conntypes.isCompatibleConnection(outtype,intype):
+                    self.disconnect(i)
+
+    def rename(self,name):
+        # defer to type, because connector nodes have to rebuild all views.
+        self.type.rename(self,name)
             
 # a graph of transformation nodes
 class XFormGraph:
@@ -726,3 +760,7 @@ class XFormGraph:
         # and pass back the new, disambiguated dict
         return newd
     
+    def ensureConnectionsValid(self):
+        for n in self.nodes:
+            n.ensureConnectionsValid()
+        

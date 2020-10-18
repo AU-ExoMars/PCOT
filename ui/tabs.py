@@ -63,6 +63,20 @@ class DockableTabWindow(QtWidgets.QMainWindow):
                 src = self.tabWidget.indexOf(t) # get current position
                 self.tabWidget.tabBar().moveTab(src,dest)
                 dest=dest+1    
+                
+    def retitleTabs(self):
+        # remake the entire dictionary with new titles, each of which
+        # come from the tab itself
+        newdict = collections.OrderedDict()
+        for k,v in self.tabs.items():
+            newtitle = v.retitle()
+            newdict[newtitle]=v
+            if v.expanded is not None:
+                v.expanded.setWindowTitle(newtitle)
+            else:
+                idx = self.tabWidget.indexOf(v)
+                self.tabWidget.setTabText(idx,newtitle)
+        self.tabs=newdict
 
 # a tab which has been expanded into a full window
 class ExpandedTab(QtWidgets.QMainWindow):
@@ -93,8 +107,10 @@ class ExpandedTab(QtWidgets.QMainWindow):
     def changeEvent(self,event):
         if event.type() == QtCore.QEvent.ActivationChange:
             if self.isActiveWindow():
-                self.window.scene.currentChanged(self.tab.node)
+                self.window.scene().currentChanged(self.tab.node)
     
+    def retitle(self):
+        self.setWindowTitle(tab.title)
 
 # A tab to be loaded. We subclass this. Once loaded, all ui elements
 # are in the 'w' widget
@@ -182,6 +198,11 @@ class Tab(QtWidgets.QWidget):
         self.window.tabWidget.removeTab(idx)
         self.node.tabs.remove(self)
 
+    # force update of tab title and return new title
+    def retitle(self):
+        self.title = self.node.displayName
+        return self.title
+        
         
     # write this in implementations - updates the tab when the node's data has changed
     def onNodeChanged(self):

@@ -22,6 +22,7 @@ import math
 import utils.deb
 
 import xform,ui,conntypes
+import ui.namedialog
 
 connectorFont = QFont()
 #connectorFont.setStyleHint(QFont.SansSerif)
@@ -108,14 +109,25 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
     # context menu on nodes
     def contextMenuEvent(self,event):
         m = QtWidgets.QMenu()
+        rename = m.addAction("Rename")
         if self.node.type.hasEnable:
             togact = m.addAction("Disable" if self.node.enabled else "Enable")
+        else:
+            togact = None
+        
             
         # only worth doing if there are menu items!
         if not m.isEmpty():
             action = m.exec_(event.screenPos())
-            if action == togact:
+            if action is None:
+                return
+            elif action == togact:
                 self.node.setEnabled(not self.node.enabled)
+            elif action == rename:
+                changed,newname=ui.namedialog.do(self.node.name)
+                if changed:
+                    self.node.rename(newname)
+                    ui.mainwindow.MainUI.rebuildAll()
 
 # connection rectangles at top and bottom
 class GConnectRect(QtWidgets.QGraphicsRectItem):

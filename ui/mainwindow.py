@@ -101,6 +101,9 @@ class MainUI(ui.tabs.DockableTabWindow):
         
     def isMacro(self):
         return self.macroPrototype is not None
+        
+    def scene(self):
+        return self.graph.scene
 
     @staticmethod
     def createMacroWindow(proto,isNewMacro):
@@ -121,11 +124,13 @@ class MainUI(ui.tabs.DockableTabWindow):
         for w in MainUI.windows:
             w.palette.populate()
 
-    # rebuild the graphics in all main windows
+    # rebuild the graphics in all main windows and also all the tab titles
+    # (since they may have been renamed)
     @staticmethod
     def rebuildAll():
         for w in MainUI.windows:
             w.graph.scene.rebuild()
+            w.retitleTabs()
 
     def closeEvent(self,evt):
         MainUI.windows.remove(self)
