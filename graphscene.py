@@ -124,7 +124,7 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
             elif action == togact:
                 self.node.setEnabled(not self.node.enabled)
             elif action == rename:
-                changed,newname=ui.namedialog.do(self.node.name)
+                changed,newname=ui.namedialog.do(self.node.displayName)
                 if changed:
                     self.node.rename(newname)
                     ui.mainwindow.MainUI.rebuildAll()

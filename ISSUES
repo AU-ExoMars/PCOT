@@ -43,6 +43,3 @@ interesting problem given that scenes own the selection data. This
 means that selection data will be shared across all windows open
 on the same graph.
 
-Autonaming counters should be stored in the files (so we don't start
-naming macros and nodes at 0 again on load)
-

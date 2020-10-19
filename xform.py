@@ -2,7 +2,7 @@ import PyQt5 # just for the type hint
 import traceback,inspect,hashlib,re,copy
 from collections import deque
 from pancamimage import Image
-import pyperclip,json
+import pyperclip,json,uuid
 from typing import List, Set, Dict, Tuple, Optional, Any
 
 import ui,conntypes
@@ -18,9 +18,6 @@ class XFormGraph:
 
 # dictionary of name -> transformation type
 allTypes = dict()
-
-# pattern for detecting names of "name N" format
-nameNumberRegex = re.compile(r'(\w+)\s+([0-9]+)')
 
 # Superclass for a transformation type. There is a singleton subclassed
 # from this for each type. 
@@ -58,7 +55,6 @@ class XFormType():
     group: str                  # the palette group it belongs to
     ver: str                    # the version number
     hasEnable: bool             # does it have an enable button?
-    count: int                  # number of nodes of this type (for unique naming)
     instances: List[XForm]      # all instances in all graphs
 
     # name is the name which appears in the graph view
@@ -82,8 +78,6 @@ class XFormType():
         allTypes[name]=self
         # does this node have an "enabled" button? Change in subclass if reqd.
         self.hasEnable=False
-        # number of nodes of this type
-        self.count=0
         # this contains tuples of (name,typename). Images have typenames which
         # start with "img"
         self.inputConnectors = []
@@ -208,9 +202,9 @@ class XForm:
     # similarly, overriding input types are required on macros
     inputTypes: List[str]
     comment: str    # a helpful comment
-    # the unique name of the node, which can be overriden with displayName
+    # the unique name of the node, which is internal only. The name the user sees is displayName.
     name: str 
-    # the name as displayed in the graph (and in the tab) if not None
+    # the name as displayed in the graph (and in the tab)
     displayName: str
     enabled: bool   # should this node perform?
     hasRun: bool    # has this node run already in this graph.perform cycle?
@@ -226,17 +220,17 @@ class XForm:
     outrects: List[graphscene.GConnectRect] # output connector rectangles
     helpwin:  PyQt5.QtWidgets.QMainWindow # an open help window, or None
     
-    def __init__(self,type,name):
+    def __init__(self,type,dispname):
         self.type = type
         self.savedver = type.ver
         # we keep a dict of those nodes which get inputs from us, and how many. We can't
         # keep the actual output connections easily, because they are one->many.
         self.children = {}
         self.comment = "" # nodes can have comments
-        # set the unique name
-        self.name = name
-        # and the display name, which is the same by default
-        self.displayName = name
+        # set the unique ID
+        self.name = uuid.uuid4().hex
+        # and the display name
+        self.displayName = dispname
         # set up things which are dependent on the number of connectors,
         # which can change in macros. Initialise the inputs, though.
         self.inputs=[None]*len(type.inputConnectors)
@@ -397,16 +391,19 @@ class XForm:
                 self.changeOutputType(o,parent.getOutputType(pout))
                 if self.outrects[o] is not None:
                     self.outrects[o].typeChanged()
-    
+
+    def debugName(self):
+        return "{}/{}/{}".format(self.type.name,self.name,self.displayName)
+        
     def dump(self):
-        print("---DUMP of {}, geom {},{},{}x{}".format(self.type.name,
+        print("---DUMP of {}, geom {},{},{}x{}".format(self.debugName(),
             self.xy[0],self.xy[1],self.w,self.h))
         print("  INPUTS:")
         for i in range(0,len(self.inputs)):
             c = self.inputs[i]
             if c:
                 other,j = c
-                print("    input {} <- {} {}".format(i,other.type.name,j))
+                print("    input {} <- {} {}".format(i,other.debugName(),j))
         print("   CHILDREN:")
         for k,v in self.children.items():
             print("    {} ({} connections)".format(k.name,v))
@@ -480,7 +477,7 @@ class XForm:
             if self.children[n]==0:
                 del self.children[n]
         else:
-            raise Exception("child count <0 in node {}, child {}".format(self.name,n.name))
+            raise Exception("child count <0 in node {}, child {}".format(self.debugName(),n.debugName()))
             
     def canRun(self):
         for inp in self.inputs:
@@ -497,16 +494,16 @@ class XForm:
         # only be called inside the graph's perform.
         if not self.graph.performingGraph:
             raise Exception("Do not call perform directly on a node!")
-        ui.msg("Performing {}".format(self.name))
+        ui.msg("Performing {}".format(self.debugName()))
         try:
             # must clear this with prePerform on the graph, or nodes will
             # only run once!
             if self.hasRun:
-                print("----Skipping {}, run already this action".format(self.name))
+                print("----Skipping {}, run already this action".format(self.debugName()))
             elif not self.canRun():
-                print("----Skipping {}, it can't run (unset inputs)".format(self.name))
+                print("----Skipping {}, it can't run (unset inputs)".format(self.debugName()))
             else:
-                print("--------------------------------------Performing {}".format(self.name))
+                print("--------------------------------------Performing {}".format(self.debugName()))
                 # first clear all outputs
                 self.outputs = [None for x in self.type.outputConnectors]
                 # now run the node.
@@ -569,10 +566,8 @@ class XFormGraph:
     def create(self,typename):
         if typename in allTypes:
             tp = allTypes[typename]
-            # disambiguate node names using the count
-            count = tp.count
-            tp.count+=1
-            xform = XForm(tp,"{} {}".format(typename,count))
+            # display name is just the type name to start with.
+            xform = XForm(tp,tp.name)
             self.nodes.append(xform)
             xform.graph = self
             tp.init(xform)
@@ -581,17 +576,15 @@ class XFormGraph:
         return xform
     
     # copy selected items to the clipboard. This copies a serialized
-    # version, like that used for load/save. On deserialisation, node
-    # names will be changed to make them unique.
+    # version, like that used for load/save.
     def copy(self,selection):
         # turn into JSON string
         s = json.dumps(self.serialise(selection))
         # copy to clipboard
         pyperclip.copy(s)
         
-    # paste the clipboard. This involves deserialising, first ensuring
-    # that nodes in the clipboard don't have the same names as those
-    # in the actual graph. Returns a list of new nodes.
+    # paste the clipboard. This involves deserialising.
+    # Returns a list of new nodes.
     def paste(self):
         # get string from clipboard
         s = pyperclip.paste()
@@ -688,7 +681,7 @@ class XFormGraph:
         for nodename,ent in d.items():
             n = self.create(ent['type'])
             newnodes.append(n)
-            n.name = nodename # override the default name
+            n.name = nodename # override the default name (which is just a random UUID anyway)
             deref[nodename]=n
             n.deserialise(ent) # will also deserialise type-specific data
             if n.type.md5() != n.savedmd5:
@@ -728,26 +721,21 @@ class XFormGraph:
         newd={} # new dict to be returned
         renamed={} # dict of renamed nodes: oldname->newname
         newnames=[] # list of new names (values in the above dict)
+
         for k,v in d.items():
             oldname=k
             # while there's still a node in the actual graph that's the same,
             # or we've already renamed something to that
             while self.nodeExists(k) or k in newnames:
-                # take our name and dissect it if possible into "name" "number".
-                m = nameNumberRegex.match(k)
-                if m is None: # there's no number element, probably. Tack one on.
-                    k=k+' 0'
-                else:
-                    # it's in the form "name 00" so dissect out the number and increment it.
-                    nameElement = m.group(1)
-                    numberElement = int(m.group(2))+1
-                    k = nameElement+' '+str(numberElement)
+                k = uuid.uuid4().hex # generate a UUID
             renamed[oldname]=k
             newnames.append(k)
-            # this avoids modification of the clipboard objects, which is disastrous.
+            # this avoids modification of the clipboard objects, which is disastrous(?)
             newd[k]=copy.deepcopy(v)
+            
         # first pass done, now we need to rename all connections;
         # again, scan the entire new dictionary
+
         for k,v in newd.items():
             # scan all inputs; done by index
             conns = v['ins']
