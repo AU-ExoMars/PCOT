@@ -4,7 +4,7 @@ import os,sys,traceback,json,time,getpass
 from typing import List, Set, Dict, Tuple, Optional, Any, OrderedDict, ClassVar
 
 import ui
-import ui.tabs,ui.help
+import ui.tabs,ui.help,ui.namedialog
 import xform
 import macros
 import graphview,palette,graphscene
@@ -86,6 +86,9 @@ class MainUI(ui.tabs.DockableTabWindow):
             b = QtWidgets.QPushButton("Add output")
             b.pressed.connect(self.addMacroOutput)
             self.extraCtrls.layout().addWidget(b,0,1)
+            b = QtWidgets.QPushButton("Rename macro")
+            b.pressed.connect(self.renameMacro)
+            self.extraCtrls.layout().addWidget(b,0,2)
         else:
             self.reset() # create empty "standard" graph
             self.macroPrototype = None # we are not a macro
@@ -318,6 +321,13 @@ class MainUI(ui.tabs.DockableTabWindow):
         
     def addMacroOutput(self):
         self.addMacroConnector('out')
+        
+    def renameMacro(self):
+        assert(self.isMacro())
+        assert(self.macroPrototype is not None)
+        changed,newname=ui.namedialog.do(self.macroPrototype.name)
+        if changed:
+            self.macroPrototype.renameType(newname)
         
     def performAll(self):
         if self.graph is not None:

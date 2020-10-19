@@ -4,7 +4,7 @@ from xform import XFormType
 
 view = None
 
-groups = ["source","maths","processing","calibration","data","colour","regions","utility"]
+groups = ["source","macros","maths","processing","calibration","data","colour","regions","utility"]
 
 class PaletteButton(QtWidgets.QPushButton):
     def __init__(self,name,view):

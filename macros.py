@@ -103,7 +103,7 @@ class XFormMacro(XFormType):
         if name is None:
             name = XFormMacro.getUniqueUntitledName()
         # superinit
-        super().__init__(name,"utility","0.0.0")
+        super().__init__(name,"macros","0.0.0")
         self._md5='' # we ignore the MD5 checksum for versioning
         self.hasEnable=True
         # create our graph 
@@ -174,6 +174,19 @@ class XFormMacro(XFormType):
         ui.mainwindow.MainUI.rebuildPalettes()
         # and rebuild absolutely everything
         ui.mainwindow.MainUI.rebuildAll()
+    
+    # renaming a macro - we have to update more things than default XFormType rename
+    def renameType(self,newname):
+        # rename all instances if their displayName is the same as the old type name
+        for x in self.instances:
+            if x.displayName == self.name:
+                x.displayName = newname
+        # do the default
+        # then rename in the macro dictionary
+        del XFormMacro.protos[self.name]
+        super().renameType(newname)
+        XFormMacro.protos[newname]=self
+    
 
     # this serialises all the macro prototypes
     @staticmethod

@@ -93,7 +93,7 @@ class XFormType():
         # they must be simple Python data. This happens in addition to, and
         # before, the serialise() and deserialise() methods.
         self.autoserialise=() # tuple or list of attribute names
-
+        
     def remove(self,node):
         self.instances.remove(node)
         
@@ -122,6 +122,18 @@ class XFormType():
     # even though we're only changing the display name
     def rename(self,node,name):
         node.displayName = name
+
+    # rename the type, used to rename a macro. Let's hope that
+    # we don't reference types by name anywhere else.
+    def renameType(self,newname):
+        del allTypes[self.name]
+        self.name = newname
+        allTypes[newname]=self
+        ui.mainwindow.MainUI.rebuildPalettes()
+        ui.mainwindow.MainUI.rebuildAll()
+        
+        
+
         
     def all():
         return allTypes
