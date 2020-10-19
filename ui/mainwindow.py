@@ -44,8 +44,6 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.initTabs()
         self.saveFileName = None
         self.setWindowTitle(ui.app.applicationName()+' '+ui.app.applicationVersion())
-        # make sure the view has a link up to this window
-        self.view.window = self
 
         self.setCamera("PANCAM")
         self.setCaption(0)        
@@ -93,6 +91,9 @@ class MainUI(ui.tabs.DockableTabWindow):
             self.reset() # create empty "standard" graph
             self.macroPrototype = None # we are not a macro
 
+        # make sure the view has a link up to this window,
+        # also will tint the view if we are a macro
+        self.view.setWindow(self,macroWindow)
 
         self.show()
         ui.msg("OK")

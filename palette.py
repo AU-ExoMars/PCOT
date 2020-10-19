@@ -90,5 +90,7 @@ class Palette:
             for k in grouplists[g]:
                 v = all[k]
                 b = PaletteButton(k,self.view)
+                if g=='macros':
+                    b.setStyleSheet("background-color:rgb(220,220,140)")
                 self.layout.addWidget(b)
             

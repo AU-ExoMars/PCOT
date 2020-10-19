@@ -5,6 +5,12 @@ class GraphView(QtWidgets.QGraphicsView):
     def __init__(self,parent=None):
         super().__init__(parent)
         
+    def setWindow(self,win,macroWindow):
+        self.window = win
+        if macroWindow:
+            self.setStyleSheet("background-color:rgb(255,255,220)")
+        
+        
     # handle mouse wheel zooming
     
     def wheelEvent(self, evt):
