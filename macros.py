@@ -11,7 +11,7 @@ class MacroInstance:
     def __init__(self,proto,node):
         self.proto=proto
         self.node=node # backpointer to the XForm containing me
-        self.graph = xform.XFormGraph() # create an empty graph
+        self.graph = xform.XFormGraph(False) # create an empty graph, not a macro prototype
         self.copyProto() # copy the graph from the prototype
 
     # this serialises and then deserialises the prototype's
@@ -106,8 +106,8 @@ class XFormMacro(XFormType):
         super().__init__(name,"macros","0.0.0")
         self._md5='' # we ignore the MD5 checksum for versioning
         self.hasEnable=True
-        # create our graph 
-        self.graph = xform.XFormGraph()
+        # create our prototype graph 
+        self.graph = xform.XFormGraph(True)
         # ensure unique name
         if name in XFormMacro.protos:
             raise Exception("macro {} already exists".format(name))
@@ -129,7 +129,9 @@ class XFormMacro(XFormType):
     def init(self,node):
         # create the macro instance (a lot of which could probably be folded into here,
         # but it's like this for historical reasons actually going waaaay back to
-        # the 90s)
+        # the 90s).
+        # Remember that this is called to create an instance of the XForm type, which in
+        # this case is an instance of the macro.
         node.instance = MacroInstance(self,node)
         
     def setConnectors(self):

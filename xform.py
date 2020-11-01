@@ -559,15 +559,17 @@ class XFormGraph:
     import graphscene # deferred import avoiding circular import
     nodes: List[XForm]      # all my nodes
     scene: graphscene.XFormGraphScene # my graphical representation
+    isMacro: bool # true if this is a macro prototype, will be false for instances
     # true when I'm recursively performing my nodes. Avoids parallel
     # attempts to run a graph in different threads.
     performingGraph: bool
 
-    def __init__(self):
+    def __init__(self,isMacro):
         # all the nodes
         self.nodes = []
         self.performingGraph = False
         self.scene = None # the graph's scene is created by autoLayout
+        self.isMacro = isMacro
 
     def constructScene(self,doAutoLayout):
         import graphscene # deferred import avoiding circular import

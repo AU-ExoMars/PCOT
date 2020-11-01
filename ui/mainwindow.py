@@ -104,7 +104,9 @@ class MainUI(ui.tabs.DockableTabWindow):
         MainUI.windows.append(self)    
         
     def isMacro(self):
-        return self.macroPrototype is not None
+        # these two had better agree!
+        assert (self.macroPrototype is not None) == self.graph.isMacro
+        return self.graph.isMacro
         
     def scene(self):
         return self.graph.scene
@@ -233,7 +235,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         
     def reset(self):
         # create a dummy graph with just a source
-        self.graph = xform.XFormGraph()
+        self.graph = xform.XFormGraph(False)
         source = self.graph.create("rgbfile")
         self.saveFileName = None
         # set up its scene and view
