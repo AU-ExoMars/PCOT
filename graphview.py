@@ -1,18 +1,26 @@
+## @package graphview
+# This package deals with the widget which displays the graphical scene which 
+# represents a graph (graphscene).
+
 from PyQt5 import QtWidgets,QtCore
 from PyQt5.QtCore import Qt
 
+## The graphical view widget
+
 class GraphView(QtWidgets.QGraphicsView):
+    ## constructor, taking the widget parent
     def __init__(self,parent=None):
         super().__init__(parent)
         
+    ## sets the window this view is in, and also colours the view
+    # if it is showing a macro.
     def setWindow(self,win,macroWindow):
         self.window = win
         if macroWindow:
             self.setStyleSheet("background-color:rgb(255,255,220)")
         
         
-    # handle mouse wheel zooming
-    
+    ## handle mouse wheel zooming
     def wheelEvent(self, evt):
         #Remove possible Anchors
         self.setTransformationAnchor(QtWidgets.QGraphicsView.NoAnchor)
@@ -31,16 +39,16 @@ class GraphView(QtWidgets.QGraphicsView):
         # Translate back
         self.translate(-target_viewport_pos.x(),-target_viewport_pos.y())
 
-    # handle right mouse button panning (when zoomed) - this works by
+    ## handle right mouse button panning (when zoomed). This works by
     # looking at the delta from right mouse button events and applying it
     # to the scroll bar.
-    
     def mousePressEvent(self, event):
         if event.button() == Qt.RightButton:
             self.__prevMousePos = event.pos()
         else:
             super().mousePressEvent(event)
 
+    ## handle the mouse move event, doing panning if RMB down.
     def mouseMoveEvent(self, event):
         if event.buttons() == Qt.RightButton: 
             offset = self.__prevMousePos - event.pos()
@@ -54,15 +62,18 @@ class GraphView(QtWidgets.QGraphicsView):
     # events for handling reception of dragged palette buttons - this
     # interacts with the palette buttons in palette.py
 
+    ## handle a drag move event from the palette
     def dragMoveEvent(self, e):
         e.accept()
 
+    ## handle starting a drag
     def dragEnterEvent(self, e):
         if e.mimeData().hasFormat('data/palette'):
             e.accept()
         else:
             e.ignore()
 
+    ## handle dropping a palette xform
     def dropEvent(self, e):
         bs = e.mimeData().data('data/palette')
         # open the data stream and read the name

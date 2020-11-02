@@ -1,28 +1,40 @@
+## @package macros
+# Code dealing with macros and macro prototypes
+
 import xform
 from xform import XFormType
 import ui,conntypes
 from PyQt5 import QtWidgets, uic, QtCore, QtGui
 from typing import List, Set, Dict, Tuple, Optional, Any, OrderedDict, ClassVar
 
-# This is the instance of a macro, containing its copy of the graph
+## This is the instance of a macro, containing its copy of the graph
 # and some metadata
 
 class MacroInstance:
+    ## @var proto
+    # The XFormMacro object which is the macro prototype
+    ## @var node
+    # The XForm node which holds this macro instance
+    ## @var graph
+    # The XFormGraph which is this instance of the macro - not to be confused
+    # with the macro's prototype graph, which is stored in proto.graph.
+    
+    ## construct, taking the XFormMacro prototype object and the XForm I am inside.
     def __init__(self,proto,node):
         self.proto=proto
         self.node=node # backpointer to the XForm containing me
         self.graph = xform.XFormGraph(False) # create an empty graph, not a macro prototype
         self.copyProto() # copy the graph from the prototype
 
-    # this serialises and then deserialises the prototype's
+    ## this serialises and then deserialises the prototype's
     # graph, giving us a fresh copy of the nodes.
     def copyProto(self):
         d = self.proto.graph.serialise()
         self.graph.deserialise(d,True)
 
 
-# these are the connections for macros, which should only be added to macros.
-# For that readson they are not decorated with @xformtype. However, they do
+## these are the connections for macros, which should only be added to macros.
+# For that reason they are not decorated with @xformtype. However, they do
 # get added to allTypes.
 #
 # Additional fields in the XForms:
@@ -37,9 +49,11 @@ class XFormMacroConnector(XFormType):
         self._md5='' # we ignore the MD5 checksum for versioning
         self.autoserialise=('idx','conntype')
 
+    ## called from XForm.serialise, saves the macro name
     def serialise(self,node):
         return {'macro':node.proto.name}
         
+    ## called from XForm.deserialise, finds the macro
     def deserialise(self,node,d):
         name = d['macro']
         if not name in XFormMacro.protos:
@@ -47,19 +61,21 @@ class XFormMacroConnector(XFormType):
         node.proto = XFormMacro.protos[name]
         node.proto.setConnectors()
     
+    ## when connectors are removed, the prototype's connectors must change (and
+    # thus those of all the instances)
     def remove(self,node):
-        # when we remove a connector, the connectors for the prototype
-        # will change.
         node.proto.setConnectors()
-        
+
+    ## force renaming of connectors on instance nodes and in the prototype        
     def rename(self,node,name):
         super().rename(node,name)
         node.proto.setConnectors() # forces rename of connectors on instance nodes
 
+    ## create the edit tab
     def createTab(self,node,window):
         return TabConnector(node,window)
         
-    
+## The macro input connector (used inside macro prototypes)    
 class XFormMacroIn(XFormMacroConnector):
     def __init__(self):
         super().__init__("in")
@@ -67,6 +83,7 @@ class XFormMacroIn(XFormMacroConnector):
         self.addInputConnector("","any")
         
 
+## The macro output connector (used inside macro prototypes)    
 class XFormMacroOut(XFormMacroConnector):
     def __init__(self):
         super().__init__("out")
@@ -80,7 +97,7 @@ XFormMacroOut()
 class XFormMacro(XFormType):
     pass
 
-# the actual macro xform type - this doesn't get autoregistered
+## the actual macro xform type - this doesn't get autoregistered
 # because a new one is created for each individual macro prototype.
 # A macro consists of a graph and links to any macro instances,
 # so that changes in the prototype can be reflected in the instances.
@@ -88,16 +105,16 @@ class XFormMacro(XFormType):
 # but with a unique name and different connectors.
 
 class XFormMacro(XFormType):
-    """Encapsulates an instance of a macro and its prototype graph"""
-    
     protos: ClassVar[Dict[str,XFormMacro]]  # dictionary of all macros by name
 
-    name: str                                   # prototype's unique name
-    graph: xform.XFormGraph                     # the graph for this prototype
-    type: XFormMacro                            # the node type object
+    ## @var graph
+    # the graph for this prototype
+    graph: xform.XFormGraph
     
+    ## dictionary of all macros by name    
     protos = {} # dictionary of all macro prototypes
 
+    ## initialise, creating a new unique name if none provided.
     def __init__(self,name):
         # generate name if none provided
         if name is None:
@@ -117,6 +134,7 @@ class XFormMacro(XFormType):
         # the palette
         self.setConnectors()
         
+    ## generates a new unique name for this macro. TODO: MAY NOT WORK ON LOAD/RELOAD.
     @staticmethod
     def getUniqueUntitledName():
         ct=0
@@ -126,6 +144,9 @@ class XFormMacro(XFormType):
                 return name
             ct+=1
         
+    ## This creates an instance of the macro by setting the node's instance value to a
+    # new MacroInstance. Other aspects of the xform's macro behaviour are, of course,
+    # controlled by setting the node's type, which is done elsewhere.
     def init(self,node):
         # create the macro instance (a lot of which could probably be folded into here,
         # but it's like this for historical reasons actually going waaaay back to
@@ -134,6 +155,9 @@ class XFormMacro(XFormType):
         # this case is an instance of the macro.
         node.instance = MacroInstance(self,node)
         
+    ## Counts the input/output connectors inside the macro and sets the XFormType's
+    # inputs and outputs accordingly, finally changing connector counts and types on
+    # the instances.
     def setConnectors(self):
         # count input and output connectors. Potential issue: the graphic labelling of
         # the connectors has to match the indices!
@@ -177,7 +201,7 @@ class XFormMacro(XFormType):
         # and rebuild absolutely everything
         ui.mainwindow.MainUI.rebuildAll()
     
-    # renaming a macro - we have to update more things than default XFormType rename
+    ## renaming a macro - we have to update more things than default XFormType rename
     def renameType(self,newname):
         # rename all instances if their displayName is the same as the old type name
         for x in self.instances:
@@ -190,20 +214,22 @@ class XFormMacro(XFormType):
         XFormMacro.protos[newname]=self
     
 
-    # this serialises all the macro prototypes
+    ## this serialises all the macro prototypes
     @staticmethod
     def serialiseAll():
         d={}
         for k,v in XFormMacro.protos.items():
             d[k] = v.graph.serialise()
         return d
-        
+      
+    ## deserialises all macro prototypes  
     @staticmethod
     def deserialiseAll(d):
         for k,v in d.items():
             p = XFormMacro(k)
             p.graph.deserialise(v,True)
 
+    ## serialise an individual macro instance node by storing the macro name
     def serialise(self,node):
         if node.instance is not None:
             name = node.instance.proto.name
@@ -211,6 +237,8 @@ class XFormMacro(XFormType):
             name = None
         return {'proto': name}
 
+    ## deserialise an individual macro instance node by dereferencing the macro
+    # name and creating a new MacroInstance
     def deserialise(self,node,d):
         name = d['proto']
         if name is None:
@@ -221,13 +249,15 @@ class XFormMacro(XFormType):
             else:
                 ui.error("Cannot find macro {} in internal dict".format(name))
         
+    ## creates edit tab
     def createTab(self,n,w):
         return TabMacro(n,w)
         
+    ## perform the macro!
     def perform(self,node):
         pass
 
-# this is the UI for macros, and it should probably not be here.
+## this is the UI for macros, and it should probably not be here.
         
 class TabMacro(ui.tabs.Tab):
     def __init__(self,node,w):
@@ -238,7 +268,9 @@ class TabMacro(ui.tabs.Tab):
     def openProto(self):
         if self.node.instance is not None:
             w=ui.mainwindow.MainUI.createMacroWindow(self.node.instance.proto,False)
-            
+ 
+## the UI for macro connectors
+           
 class TabConnector(ui.tabs.Tab):
     def __init__(self,node,w):
         super().__init__(w,node,'assets/tabconnector.ui')

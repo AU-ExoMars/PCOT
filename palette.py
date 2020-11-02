@@ -1,12 +1,21 @@
+## @package palette
+# The palette widget package, which handles the palette of
+# nodes on the right hand side.
+
 from PyQt5 import QtWidgets, uic, QtCore, QtGui
 from PyQt5.QtCore import Qt
 from xform import XFormType
 
+
 view = None
 
+## The groups into which the buttons are sorted - it's a constant.
 groups = ["source","macros","maths","processing","calibration","data","colour","regions","utility"]
 
+## The palette items, which are buttons which can be either clicked or dragged (with RMB)
+
 class PaletteButton(QtWidgets.QPushButton):
+    ## constructor, taking button name and view into which they should be inserted.
     def __init__(self,name,view):
         super().__init__(name)
         self.name = name
@@ -16,6 +25,7 @@ class PaletteButton(QtWidgets.QPushButton):
     # https://stackoverflow.com/questions/57224812/pyqt5-move-button-on-mainwindow-with-drag-drop
     # This stuff interacts with the graph view (graphview.py)
     
+    ## handle a mouse down event
     def mousePressEvent(self,event):
         super().mousePressEvent(event)
         if event.button() == Qt.LeftButton:
@@ -23,6 +33,7 @@ class PaletteButton(QtWidgets.QPushButton):
         elif event.button() == Qt.RightButton:
             self.mousePos = event.pos() # save click position for dragging
             
+    ## handle mouse move for dragging with RMB
     def mouseMoveEvent(self,event):
         if event.buttons() != QtCore.Qt.RightButton:
             return
@@ -40,6 +51,7 @@ class PaletteButton(QtWidgets.QPushButton):
         drag.setHotSpot(self.mousePos - self.rect().topLeft())
         drag.exec_(Qt.MoveAction)  
         
+    ## handle a single LMB click
     def click(self):
         # create a new item at a position decided by the scene
         x = self.view.scene().graph.create(self.name)
@@ -47,9 +59,11 @@ class PaletteButton(QtWidgets.QPushButton):
         # rebuild the scene
         self.view.scene().rebuild()
 
+## the palette itself, which isn't a widget but a plain class containing all the necessary
+# widgets etc.
 
 class Palette:
-    # set up the scrolling palette as part of view initialisation, will populate
+    ## set up the scrolling palette as part of view initialisation, will populate
     # with initial data
     def __init__(self,scrollArea,scrollAreaContent,view):
         layout = QtWidgets.QVBoxLayout()
@@ -60,6 +74,7 @@ class Palette:
         self.layout = layout
         self.populate()
 
+    ## populate the palette with items
     def populate(self):    
         grouplists = {x:[] for x in groups}
         # we want the keys in sorted order

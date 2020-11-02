@@ -1,22 +1,46 @@
 import math
 import numpy as np
 
+## @package filters
+# This package deals with the physical multispectral filters for the PANCAM and AUPE cameras
+
+## The filter class describes a single filter's parameters
 class Filter:
+    ## @var cwl
+    # centre wavelength
+    cwl: float
+    ## @var fwhm
+    # full-width at half-maximum
+    fwhm: float
+    ## @var transmission
+    # transmission ratio
+    transmission: float
+    ## @var position
+    # position of filter in camera (L/R+number)
+    position: str
+    ## @var name
+    # name of filter (e.g. G01 for "geology 1")
+    name: str
+    
+    ## constructor
     def __init__(self, cwl, fwhm, transmission, position=None, name=None):
         self.cwl = cwl
         self.fwhm = fwhm
         self.transmission = transmission
         self.name = name if name is not None else str(cwl)
         self.position = position
+
     @staticmethod
     def _gaussian(x, mu, fwhm):
         def fwhm_to_sigma(fwhm):
             return fwhm/(2*math.sqrt(2*math.log(2)))  # ~= 2.35482
         return np.exp(-(x-mu)**2/(2*fwhm_to_sigma(fwhm)**2))
+
+    ## generate a response curve from an input array of frequencies (I think)
     def response_over(self, x: np.ndarray):
         return self._gaussian(x, self.cwl, self.fwhm)
 
-# Note: solar filters omitted
+## Array of Pancam filters - note: solar filters omitted
 PANCAM_FILTERS = [
     Filter(570, 12, .989, "L01", "G04"),
     Filter(530, 15, .957, "L02", "G03"),
@@ -38,7 +62,8 @@ PANCAM_FILTERS = [
     Filter(440, 120, .983, "R09", "C03R"),
 ]
 
-# I've added the lower-case letters myself; they were all G0 or G1
+## Array of AUPE filters - I've added the lower-case letters myself;
+# they were all G0 or G1
 AUPE_FILTERS = [
     Filter(440, 120, 1, "L01", "C03L"),
     Filter(540, 80, 1, "L02", "C02L"),
@@ -62,7 +87,16 @@ AUPE_FILTERS = [
     Filter(1000, 50, 1, "R09", "G1f"),
 ]
 
+## dictionary of AUPE filters by position (L/R+number)
 AUPEfiltersByPosition = {x.position:x for x in AUPE_FILTERS}
+
+## dictionary of AUPE filters by name - e.g. G01 (geology 1),
+# C01L (colour 1 left)
 AUPEfiltersByName = {x.name:x for x in AUPE_FILTERS}
+
+## dictionary of PANCAM filters by position (L/R+number)
 PANCAMfiltersByPosition = {x.position:x for x in PANCAM_FILTERS}
+
+## dictionary of PANCAM filters by name - e.g. G01 (geology 1),
+# C01L (colour 1 left)
 PANCAMfiltersByName = {x.name:x for x in PANCAM_FILTERS}
