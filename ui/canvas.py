@@ -1,3 +1,6 @@
+## @package ui.canvas
+# Canvas widget for showing a CV image
+#
 import math
 from PyQt5 import QtWidgets, uic, QtCore
 from PyQt5.QtWidgets import QTreeView,QFileSystemModel
@@ -8,9 +11,8 @@ import numpy as np
 import ui.tabs
 
 
-# Canvas widget for showing a CV image
 
-# convert a cv/numpy image to a Qt image
+## convert a cv/numpy image to a Qt image
 # input must be 3 channels, 0-1 floats
 def img2qimage(img):
     i = img*255.0
@@ -20,13 +22,29 @@ def img2qimage(img):
     return QImage(i.data, width, height, 
         bytesPerLine, QImage.Format_RGB888)
 
-# the actual drawing widget
+## the actual drawing widget, contained within the Canvas widget
 class InnerCanvas(QtWidgets.QWidget):
+    ## @var img
+    # the numpy image we are rendering (1 or 3 chans)
+    ## @var canv
+    # our main Canvas widget, which contains this widget
+    ## @var zoomscale
+    # the current zoom level: 1 to contain the entire image onscreen
+    ## @var scale
+    # defines the zoom factor which scales the canvas to hold the image
+    ## @var x
+    # offset of top left pixel in canvas
+    ## @var y
+    # offset of top left pixel in canvas
+    
+
+    ## constructor
     def __init__(self,canv,parent=None):
         super(QtWidgets.QWidget,self).__init__(parent)
         self.img=None
         self.canv=canv
         self.reset()
+    ## resets the canvas to zoom level 1, top left pan
     def reset(self):
         # not the same as self.scale, which defines the scale of the image 
         # to fit in the on-screen window at 1x resolution.
@@ -35,6 +53,7 @@ class InnerCanvas(QtWidgets.QWidget):
         self.x=0
         self.y=0
         
+    ## returns the main window for this canvas
     def getMainWindow(self):
         # this is ugly, but the only sane way of getting a backref to the containing main window.
         # We scan up until we get the tab, and get the main window from that. This will work
@@ -46,7 +65,8 @@ class InnerCanvas(QtWidgets.QWidget):
             raise Exception("can't get main window from canvas")
         return w.window
         
-    # handles 1 and 3 channels
+    ## display an image (handles 1 and 3 channels) next time paintEvent
+    # happens, and update to cause that.
     def display(self,img):
         if img is not None:
             self.desc = img.getDesc(self.getMainWindow())
@@ -60,6 +80,7 @@ class InnerCanvas(QtWidgets.QWidget):
             self.reset()
         self.update()
 
+    ## the paint event
     def paintEvent(self,event):
         p = QPainter(self)
         p.fillRect(event.rect(),Qt.blue)
@@ -104,30 +125,34 @@ class InnerCanvas(QtWidgets.QWidget):
         p.end()
 
 
-    # given point in the widget, return coords in the image. Takes a QPoint.
+    ## given point in the widget, return coords in the image. Takes a QPoint.
     def getImgCoords(self,p):
         x = int(p.x()*(self.scale*self.zoomscale)+self.x)
         y = int(p.y()*(self.scale*self.zoomscale)+self.y)
         return (x,y)
 
+    ## mouse press handler, can delegate to a hook
     def mousePressEvent(self,e):
         x,y = self.getImgCoords(e.pos())
         if self.canv.mouseHook is not None:
             self.canv.mouseHook.canvasMousePressEvent(x,y,e)
         return super().mousePressEvent(e)
 
+    ## mouse move handler, can delegate to a hook
     def mouseMoveEvent(self,e):
         x,y = self.getImgCoords(e.pos())
         if self.canv.mouseHook is not None:
             self.canv.mouseHook.canvasMouseMoveEvent(x,y,e)
         return super().mouseMoveEvent(e)
 
+    ## mouse release handler, can delegate to a hook
     def mouseReleaseEvent(self,e):
         x,y = self.getImgCoords(e.pos())
         if self.canv.mouseHook is not None:
             self.canv.mouseHook.canvasMouseReleaseEvent(x,y,e)
         return super().mouseReleaseEvent(e)
         
+    ## mouse wheel handler, changes zoom
     def wheelEvent(self,e):
         # get the mousepos in the image and calculate the new zoom
         wheel = 1 if e.angleDelta().y()<0 else -1
@@ -169,11 +194,19 @@ class InnerCanvas(QtWidgets.QWidget):
         self.update()
 
         
+## the containing widget, holding scroll bars and InnerCanvas widget
+
 class Canvas(QtWidgets.QWidget):
+    ## @var paintHook
+    # an object with a paintEvent() which can do extra drawing (or None)
+    ## @var mouseHook
+    # an object with a set of mouse events for handling clicks and moves (or None)
+    
+    ## constructor
     def __init__(self,parent):
         super(QtWidgets.QWidget,self).__init__(parent)
-        self.paintHook=None # an object with a paintEvent() which can do extra drawing
-        self.mouseHook=None # an object with a set of mouse events for handling clicks and moves
+        self.paintHook=None
+        self.mouseHook=None
         
         layout = QtWidgets.QGridLayout()
         self.setLayout(layout)
@@ -192,19 +225,20 @@ class Canvas(QtWidgets.QWidget):
         self.resetButton=QtWidgets.QPushButton()
         layout.addWidget(self.resetButton,1,1)
         self.resetButton.clicked.connect(self.reset)
-        
-        
+
+    ## set this canvas (actually the InnerCanvas) to hold an image        
     def display(self,img):
         self.canvas.display(img)
         self.setScrollBarsFromCanvas()
         
+    ## reset the canvas to x1 magnification
     def reset(self):
         self.canvas.reset()
         self.canvas.update()
         
+    ## set the scroll bars from the position and zoom of the underlying canvas
+    # first, we set the min and max of the bars to the pixel range, minus the size of the bar itself
     def setScrollBarsFromCanvas(self):
-        # set the scroll bars from the position and zoom of the underlying canvas
-        # first, we set the min and max of the bars to the pixel range, minus the size of the bar itself
         self.scrollH.setMinimum(0)
         self.scrollV.setMinimum(0)
         img = self.canvas.img
@@ -221,10 +255,12 @@ class Canvas(QtWidgets.QWidget):
             # and the position
             self.scrollH.setValue(self.canvas.x)
             self.scrollV.setValue(self.canvas.y)
-        
+     
+    ## vertical scrollbar handler   
     def vertScrollChanged(self,v):
         self.canvas.y=v
         self.canvas.update()
+    ## horizontal scrollbar handler   
     def horzScrollChanged(self,v):
         self.canvas.x=v
         self.canvas.update()

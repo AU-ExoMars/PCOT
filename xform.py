@@ -672,7 +672,7 @@ class XFormGraph:
     # true if this is a macro prototype, will be false for instances
     isMacro: bool 
 
-    @var performingGraph    
+    ## @var performingGraph    
     # true when I'm recursively performing my nodes. Avoids parallel
     # attempts to run a graph in different threads.
     performingGraph: bool

@@ -1,4 +1,5 @@
-# Adapted from https://www.learnpyqt.com/widgets/gradient/
+## @package ui.gradient
+# A colour gradient widget, adapted from https://www.learnpyqt.com/widgets/gradient/
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
@@ -6,6 +7,7 @@ from PyQt5.QtCore import pyqtSignal as Signal
 
 from utils.colour import qcol2rgb,rgb2qcol
 
+# A colour gradient widget, adapted from https://www.learnpyqt.com/widgets/gradient/
 class Gradient(QtWidgets.QWidget):
 
     gradientChanged = Signal()
@@ -80,6 +82,7 @@ class Gradient(QtWidgets.QWidget):
             for stop, color in self._gradient
         ]
 
+    ## sets up the stored gradient, call this in initialisation
     def setGradient(self, gradient):
         assert all([0.0 <= stop <= 1.0 for stop, _ in gradient])
         self._gradient = gradient
@@ -88,6 +91,7 @@ class Gradient(QtWidgets.QWidget):
         # best not, ends with recursion.
         #        self.gradientChanged.emit()
 
+    ## return the resulting gradient
     def gradient(self):
         return self._gradient
 

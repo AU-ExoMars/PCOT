@@ -1,8 +1,8 @@
-#
+## @package ui.help
 # Generating help text
 #
 
-# generate full help given an XFormType
+## generate full help given an XFormType
 def help(xt):
     if xt.__doc__ is None:
         s= '<font color="red">No help text is available</font>'
@@ -32,7 +32,6 @@ def help(xt):
 
 
 
-# helpers for HTML
-
+## helper for HTML table rows - takes a list of strings and generates a table row.
 def tablerow(lst,tag):
     return '<tr>'+''.join(['<{}>{}</{}>'.format(tag,x,tag) for x in lst])+'</tr>'
