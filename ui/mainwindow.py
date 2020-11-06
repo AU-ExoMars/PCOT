@@ -1,3 +1,8 @@
+## @package ui.mainwindow
+# Code for the main windows, which hold a scene representing the 
+# "patch" or a macro prototype, a palette of transforms, and an area
+# for tabs controlling transforms.
+
 from PyQt5 import QtWidgets, uic, QtCore, QtGui
 from PyQt5.QtCore import Qt,QCommandLineOption,QCommandLineParser
 import os,sys,traceback,json,time,getpass
@@ -10,6 +15,9 @@ import macros
 import graphview,palette,graphscene
 import filters
 
+## return the current username, whichis either obtained from the OS
+# or from the PCOT_USER environment variable
+
 def getUserName():
     if 'PCOT_USER' in os.environ:
         return os.environ['PCOT_USER']
@@ -18,25 +26,61 @@ def getUserName():
         
 class MainUI: # annoying forward decl for type hints
     pass
-    
+
+## The main window class    
 class MainUI(ui.tabs.DockableTabWindow):
-    windows: ClassVar[List[MainUI]]         # list of all windows
-    graph: xform.XFormGraph                 # the graph I am showing
-    macroPrototype: macros.XFormMacro       # if I am showing a macro, the macro prototype (else None)
-    view: graphview.GraphView               # my view of the scene (which is in the graph)
-    tabs: OrderedDict[str,ui.tabs.Tab]      # inherited from DockableTabWindow, dict of tabs by title
-    saveFileName: str                       # if I have saved/loaded, the name of the file
-    camera: str                             # camera type (PANCAM/AUPE)
-    captionType: int                        # caption type for images (index into combobox)
-    palette: palette.Palette                # the node palette on the right
+
+    ##@var windows
+    # list of all windows
+    windows: ClassVar[List[MainUI]]
+
+    ##@var graph
+    # the graph I am showing
+    graph: xform.XFormGraph
+    
+    ##@var macroPrototype
+    # if I am showing a macro, the macro prototype (else None)
+    macroPrototype: macros.XFormMacro
+    
+    ##@var view
+    # my view of the scene (representing the graph)
+    view: graphview.GraphView               
+    
+    ##@var tabs
+    # inherited from DockableTabWindow, dict of tabs by title
+    tabs: OrderedDict[str,ui.tabs.Tab]
+
+    ##@var saveFileName
+    # if I have saved/loaded, the name of the file
+    saveFileName: str
+    
+    ##@var camera
+    # camera type (PANCAM/AUPE)
+    camera: str
+
+    ##@var captionType
+    # caption type for images (index into combobox)
+    captionType: int
+
+    ##@var palette
+    # the node palette on the right
+    palette: palette.Palette
     
     # (most UI elements omitted)
-    tabWidget: QtWidgets.QTabWidget         # container for tabs
-    extraCtrls: QtWidgets.QWidget           # containing for macro controls
+    
+    ##@var tabWidget
+    # container for tabs
+    tabWidget: QtWidgets.QTabWidget
+
+    ##@var extraCtrls
+    # containing for macro controls
+    extraCtrls: QtWidgets.QWidget
     
 
 
     windows = [] # list of all main windows open
+    
+    ## constructor, takes true if is for a macro prototype
     def __init__(self,macroWindow=False):
         super().__init__()
         self.graph = None
@@ -103,14 +147,17 @@ class MainUI(ui.tabs.DockableTabWindow):
             ui.log("Grandalf not found - autolayout will be rubbish")
         MainUI.windows.append(self)    
         
+    ## is this a macro?
     def isMacro(self):
         # these two had better agree!
         assert (self.macroPrototype is not None) == self.graph.isMacro
         return self.graph.isMacro
         
+    ## return the scene (stored in the graph)
     def scene(self):
         return self.graph.scene
 
+    ## create a new macro window - pass true when this is a new macro.
     @staticmethod
     def createMacroWindow(proto,isNewMacro):
         w = MainUI(True) # create macro window
@@ -123,14 +170,14 @@ class MainUI(ui.tabs.DockableTabWindow):
         w.graph.constructScene(isNewMacro) # builds the scene
         w.view.setScene(w.graph.scene)
         
-    # run through all the palettes on all main windows,
+    ## run through all the palettes on all main windows,
     # repopulating them. Done typically when macros are added and removed.
     @staticmethod
     def rebuildPalettes():
         for w in MainUI.windows:
             w.palette.populate()
 
-    # rebuild the graphics in all main windows and also all the tab titles
+    ## rebuild the graphics in all main windows and also all the tab titles
     # (since they may have been renamed)
     @staticmethod
     def rebuildAll():
@@ -138,14 +185,16 @@ class MainUI(ui.tabs.DockableTabWindow):
             w.graph.scene.rebuild()
             w.retitleTabs()
 
+    ## close event handler
     def closeEvent(self,evt):
         MainUI.windows.remove(self)
         
+    ## autolayout button handler
     def autoLayoutButton(self):
         self.graph.constructScene(True)
         self.view.setScene(self.graph.scene)
         
-    # create a dictionary of everything in the app we need to save: global settings,
+    ## create a dictionary of everything in the app we need to save: global settings,
     # the graph, macros etc.
     def serialise(self):
         d={}
@@ -157,7 +206,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         return d
             
     
-    # deserialise everything from the given top-level dictionary
+    ## deserialise everything from the given top-level dictionary
     def deserialise(self,d):
         # deserialise macros before graph!
         if 'MACROS' in d:
@@ -168,7 +217,8 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.setCamera(settings['cam'])
         self.setCaption(settings['cap'])
         self.graph.perform() # and rerun everything
-        
+      
+    ## saving to a file  
     def save(self,fname):
         # we serialise to a string and then save the string rather than
         # doing it in one step, to avoid errors in the former leaving us
@@ -186,6 +236,7 @@ class MainUI(ui.tabs.DockableTabWindow):
             traceback.print_exc()
             ui.error("cannot generate save data: {}".format(e))
     
+    ## loading from a file
     def load(self,fname):
         try:
             with open(fname) as f:
@@ -201,38 +252,48 @@ class MainUI(ui.tabs.DockableTabWindow):
             traceback.print_exc()
             ui.error("cannot open file {}: {}".format(fname,e))
         
+    ## the "save as" menu handler
     def saveAsAction(self):
         res = QtWidgets.QFileDialog.getSaveFileName(self, 'Save file', '.',"JSON files (*.json)")
         if res[0]!='':
             self.save(res[0])
             self.saveFileName = res[0]
             
+    ## the "save" menu handler
     def saveAction(self):
         if self.saveFileName is None:
             self.saveAsAction()
         else:
             self.save(self.saveFileName)
                 
+    ## the "open" menu handler
     def openAction(self):
         res = QtWidgets.QFileDialog.getOpenFileName(self, 'Open file', '.',"JSON files (*.json)")
         if res[0]!='':
             self.closeAllTabs()
             self.load(res[0])
             
+    ## "copy" menu/keypress
     def copyAction(self):
         self.graph.scene.copy()
+    ## "paste" menu/keypress
     def pasteAction(self):
         self.graph.scene.paste()
+    ## "cut menu/keypress
     def cutAction(self):
         self.graph.scene.cut()
             
+    ## "new" menu/keypress, will create a new top-level "patch"
     def newAction(self):
         MainUI() # create a new empty window
         
+    ## "new macro" menu/keypress, will create a new macro prototype stored
+    # in this patch
     def newMacroAction(self):
         p=macros.XFormMacro(None)
         MainUI.createMacroWindow(p,True)
         
+    ## create a new dummy graph with a single source
     def reset(self):
         # create a dummy graph with just a source
         self.graph = xform.XFormGraph(False)
@@ -244,7 +305,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         
         
 
-    # this gets called from way down in the scene to open tabs for nodes
+    ## this gets called from way down in the scene to open tabs for nodes
     def openTab(self,node):
         # has the node got a tab open IN THIS WINDOW?
         tab=None
@@ -261,7 +322,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         if tab is not None:
             self.tabWidget.setCurrentWidget(tab)
     
-    # tab changed (this is connected up in the superclass)
+    ## tab changed (this is connected up in the superclass)
     def currentChanged(self,index): # index is ignored
         if self.tabWidget.currentWidget() is None:
             # we've expanded or closed all widgets
@@ -269,18 +330,22 @@ class MainUI(ui.tabs.DockableTabWindow):
         else:
             w = self.tabWidget.currentWidget().node
         self.graph.scene.currentChanged(w)
-            
+      
+    ## caption type has been changed in widget
     def captionChanged(self,i):
         self.captionType = i # best stored as an int, I think
         
+    ## set the caption type
     def setCaption(self,i):
         self.captionType = i
         self.capCombo.setCurrentIndex(i)
         
+    ## camera has been changed in widget
     def cameraChanged(self,i):
         self.camera = self.camCombo.currentText()
         self.performAll()
         
+    ## set the camera type
     def setCamera(self,cam):
         i = self.camCombo.findText(cam)
         if i>=0:
@@ -288,7 +353,7 @@ class MainUI(ui.tabs.DockableTabWindow):
             self.camCombo.setCurrentIndex(i)
             self.performAll()
 
-    # open a window showing help for a node
+    ## open a window showing help for a node
     def openHelp(self,node):
         if node.helpwin is not None:
             node.helpwin.close() # close existing window you may have left open :)
@@ -301,7 +366,8 @@ class MainUI(ui.tabs.DockableTabWindow):
         wid.setText(txt)
         win.setMinimumSize(400,50)
         win.show()
-        
+     
+    ## add a macro connector, only should be used on macro prototypes   
     def addMacroConnector(self,type):
         # create the node inside the prototype
         n = self.graph.create(type)
@@ -319,12 +385,15 @@ class MainUI(ui.tabs.DockableTabWindow):
         for inst in n.proto.instances:
             inst.graph.scene.rebuild()
         
+    ## add a macro in connector, only should be used on macro prototypes   
     def addMacroInput(self):
         self.addMacroConnector('in')
         
+    ## add a macro out connector, only should be used on macro prototypes   
     def addMacroOutput(self):
         self.addMacroConnector('out')
         
+    ## opens a dialog to rename a macro, called on "rename macro" UI
     def renameMacro(self):
         assert(self.isMacro())
         assert(self.macroPrototype is not None)
@@ -332,6 +401,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         if changed:
             self.macroPrototype.renameType(newname)
         
+    ## perform all in the graph (not to be run on macros)
     def performAll(self):
         if self.graph is not None:
             self.graph.perform()

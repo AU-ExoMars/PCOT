@@ -46,6 +46,7 @@ class XformCurve(XFormType):
         node.mul = 1
         
     def recalculate(self,node):
+        print("RECALC")
         # recalculate the LUT each time - need to get recalculate() working
         xb = node.mul*(lutxcoords-0.5)+node.add
         node.lut = (1.0/(1.0+np.exp(-xb)))

@@ -1,12 +1,18 @@
+## @package ui.number
+# Number widget made up of a dial and text
+
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
 MAXVAL=100
 
+## Number widget made up of a dial and text
 class NumberWidget(QtWidgets.QWidget):
     # wire this up to fire when you get a notification of change.
     changed = QtCore.pyqtSignal(float)
     
+    ## constructor, generally called automatically from the .ui loader;
+    # use init() to set up the widget after creation.
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
 
@@ -46,7 +52,7 @@ class NumberWidget(QtWidgets.QWidget):
         self.text.editingFinished.connect(self.textChanged)
         
 
-    # call from inside a tab constructor to set min,max and initial value
+    ## call from inside a tab constructor to set min,max and initial value
     def init(self,title,mn,mx,v):
         self.title.setText(title)
         self.setRange(mn,mx)
@@ -61,24 +67,28 @@ class NumberWidget(QtWidgets.QWidget):
         self.dial.setValue(v*MAXVAL)
     def _setText(self,v):
         self.text.setText("{0:.3g}".format(v))
-        
+
+    ## set widget range        
     def setRange(self,mn,mx):
         self.mn = mn
         self.mx = mx
         self.mintext.setText("{0:.3g}".format(self.mn))
         self.maxtext.setText("{0:.3g}".format(self.mx))
         
+    ## set widget value externally
     def setValue(self,v):
         self._setText(v)
         self._setDial(v)
         self.value = v
         self.changed.emit(v)
         
+    ## dial changed signal handler
     def dialChanged(self,v):
         self.value = self._getDial()
         self.changed.emit(self.value)
         self._setText(self.value)
         
+    ## text change signal handler
     def textChanged(self):
         self.value = float(self.text.text())
         self.changed.emit(self.value)

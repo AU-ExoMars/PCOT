@@ -19,10 +19,10 @@ class XformRect(XFormType):
     def __init__(self):
         super().__init__("rect","regions","0.0.0")
         self.addInputConnector("","img")
-        self.addOutputConnector("img","img") # image+roi
-        self.addOutputConnector("crop","img") # cropped image
-        self.addOutputConnector("ann","img") # annotated image
-        self.addOutputConnector("rect","rect") # rectangle (just the ROI)
+        self.addOutputConnector("img","img","image with ROI") # image+roi
+        self.addOutputConnector("crop","img","image cropped to ROI") # cropped image
+        self.addOutputConnector("ann","img","image with ROI, with added annotations around ROI") # annotated image
+        self.addOutputConnector("rect","rect","the rectangle data") # rectangle (just the ROI)
         self.autoserialise=('croprect','caption','captiontop','fontsize','fontline','colour')
         
     def createTab(self,n,w):

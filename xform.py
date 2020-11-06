@@ -198,9 +198,10 @@ class XFormType():
         pass
         
     ## maybe override - after control data has changed (either in a tab or by loading a file) it
-    # may be necessary to recalculate internal data (e.g. lookup tables). This
-    # can be overridden to do that: it happens when a node is deserialised,
-    # and should be called in the tab's onNodeChanged() AFTER the controls are set
+    # may be necessary to recalculate internal data (e.g. lookup tables). Typically done when
+    # internal data relies on a combination of controls. This
+    # can be overridden to do that: it happens when a node is deserialised, when a node is created,
+    # and should also be called in the tab's onNodeChanged() AFTER the controls are set
     # and BEFORE changing any status displays (see xformcurve for an example).
     def recalculate(self,xform):
         pass
@@ -700,6 +701,10 @@ class XFormGraph:
             self.nodes.append(xform)
             xform.graph = self
             tp.init(xform)
+            # force a recalc in those nodes that require it,
+            # will generate internal data dependent on a combination
+            # of all controls
+            tp.recalculate(xform)
         else:
             raise Exception("Transformation type not found: "+typename)
         return xform
