@@ -82,11 +82,11 @@ class TabCurve(ui.tabs.Tab):
     def setAdd(self,v):
         # when a control changes, update node and perform
         self.node.add = (v-50)*0.1
-        self.perform()
+        self.changed()
     def setMul(self,v):
         # when a control changes, update node and perform
         self.node.mul = v/10
-        self.perform()
+        self.changed()
         
     # causes the tab to update itself from the node
     def onNodeChanged(self):

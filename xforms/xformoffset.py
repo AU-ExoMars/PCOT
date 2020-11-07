@@ -64,10 +64,10 @@ class TabOffset(ui.tabs.Tab):
         
     def xChanged(self):
         self.node.x = int(self.w.xoff.text())
-        self.perform()
+        self.changed()
     def yChanged(self):
         self.node.y = int(self.w.yoff.text())
-        self.perform()
+        self.changed()
 
     def onNodeChanged(self):
         self.w.xoff.setText(str(self.node.x))

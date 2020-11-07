@@ -120,16 +120,16 @@ class TabMaths(ui.tabs.Tab):
 
     def m1Changed(self):
         self.node.m1 = float(self.w.m1.text())
-        self.perform()
+        self.changed()
     def m2Changed(self):
         self.node.m2 = float(self.w.m2.text())
-        self.perform()
+        self.changed()
     def postprocChanged(self,i):
         self.node.postproc = i
-        self.perform()
+        self.changed()
     def kChanged(self):
         self.node.k = float(self.w.k.text())
-        self.perform()
+        self.changed()
 
     def onNodeChanged(self):
         self.w.m1.setText(str(self.node.m1))

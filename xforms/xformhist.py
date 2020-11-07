@@ -66,7 +66,7 @@ class TabHistogram(ui.tabs.Tab):
         
     def binsChanged(self):
         self.node.bincount=self.w.bins.value()
-        self.perform()
+        self.changed()
 
     def onNodeChanged(self):
         # this is done in replot - the user replots this node manually because it takes

@@ -185,8 +185,10 @@ class Tab(QtWidgets.QWidget):
 
         splitter.setSizes([total*0.9,total*0.1])
         
-    ## perform the tab's node safely
-    def perform(self):
+    ## The tab's widgets have changed the data, we need
+    # to perform the node
+    # (or all instance nodes of a macro prototype)
+    def changed(self):
         self.node.graph.perform(self.node)
       
     ## enabled has changed  

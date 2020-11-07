@@ -610,6 +610,7 @@ class XForm:
 
     ## perform the transformation; delegated to the type object - recurses down the children.
     # Also tells any tab open on a node that its node has changed.
+    # DO NOT CALL DIRECTLY
     def perform(self):
         # used to stop perform being called out of context; it should
         # only be called inside the graph's perform.
