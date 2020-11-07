@@ -27,10 +27,13 @@ class MacroInstance:
         self.copyProto() # copy the graph from the prototype
 
     ## this serialises and then deserialises the prototype's
-    # graph, giving us a fresh copy of the nodes.
+    # graph, giving us a fresh copy of the nodes. However, the UUID "names"
+    # are the same so that corresponding nodes in instance and copy
+    # have the same UUID (not really "U", but you get the idea)
     def copyProto(self):
         d = self.proto.graph.serialise()
         self.graph.deserialise(d,True)
+
 
 
 ## these are the connections for macros, which should only be added to macros.

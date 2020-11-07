@@ -273,7 +273,10 @@ class XForm:
     comment: str
     
     ## @var name
-    # the unique name of the node, which is internal only. The name the user sees is displayName.
+    # the unique name of the node within the graph, which is internal only.
+    # Note that in macros, corresponding nodes in the prototype graph
+    # and instance graphs need to have the same name.
+    # The name the user sees is displayName.
     name: str 
 
     ## @var displayName
@@ -331,7 +334,11 @@ class XForm:
         # keep the actual output connections easily, because they are one->many.
         self.children = {}
         self.comment = "" # nodes can have comments
-        # set the unique ID
+        # set the unique ID - unique to this graph, that is. This is rather
+        # overkill, since it only needs to be unique within the graph and
+        # indeed sometimes should be duplicated in other graphs (nodes in
+        # macro instances should have the same name is the corresponding
+        # node in the prototype)
         self.name = uuid.uuid4().hex
         # and the display name
         self.displayName = dispname
