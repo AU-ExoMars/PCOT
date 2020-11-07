@@ -262,6 +262,7 @@ class XFormMacro(XFormType):
         # 2 - copy the inputs from the node's inputs into the input connector nodes
         # 3 - run the macro 
         # 4 - copy the output from the output connectors nodes into the node's outputs
+        pass
 
 ## this is the UI for macros, and it should probably not be here.
         
