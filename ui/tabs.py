@@ -189,7 +189,7 @@ class Tab(QtWidgets.QWidget):
     # to perform the node
     # (or all instance nodes of a macro prototype)
     def changed(self):
-        self.node.graph.perform(self.node)
+        self.node.graph.changed(self.node)
       
     ## enabled has changed  
     def enableChanged(self,b):

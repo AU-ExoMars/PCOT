@@ -216,7 +216,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         settings = d['SETTINGS']
         self.setCamera(settings['cam'])
         self.setCaption(settings['cap'])
-        self.graph.perform() # and rerun everything
+        self.graph.changed() # and rerun everything
       
     ## saving to a file  
     def save(self,fname):
@@ -343,7 +343,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     ## camera has been changed in widget
     def cameraChanged(self,i):
         self.camera = self.camCombo.currentText()
-        self.performAll()
+        self.runAll()
         
     ## set the camera type
     def setCamera(self,cam):
@@ -351,7 +351,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         if i>=0:
             self.camera = cam
             self.camCombo.setCurrentIndex(i)
-            self.performAll()
+            self.runAll()
 
     ## open a window showing help for a node
     def openHelp(self,node):
@@ -401,8 +401,8 @@ class MainUI(ui.tabs.DockableTabWindow):
         if changed:
             self.macroPrototype.renameType(newname)
         
-    ## perform all in the graph (not to be run on macros)
-    def performAll(self):
+    ## perform all in the graph
+    def runAll(self):
         if self.graph is not None:
-            self.graph.perform()
+            self.graph.changed()
         

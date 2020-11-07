@@ -410,7 +410,7 @@ class XForm:
             x.setNodeEnabled(b)
         self.enabled=b
         self.graph.scene.selChanged()
-        self.graph.perform(self)
+        self.graph.changed(self)
         
     ## build a serialisable python dict of this node's values, including
     # only connections to/from the nodes in the selection (which may
@@ -553,7 +553,7 @@ class XForm:
                     self.inputs[input] = (other,output)
                     other.increaseChildCount(self)
                     if autoPerform:
-                        other.graph.perform(other) # perform the input node; the output should perform
+                        other.graph.changed(other) # perform the input node; the output should perform
         
         
     ## disconnect an input 
@@ -563,7 +563,7 @@ class XForm:
                 n,i = self.inputs[input]
                 n.decreaseChildCount(self)
                 self.inputs[input]=None
-                self.graph.perform(self) # run perform safely
+                self.graph.changed(self) # run perform safely
             
     ## disconnect all inputs and outputs prior to removal
     def disconnectAll(self):
@@ -756,10 +756,19 @@ class XFormGraph:
     def prePerform(self):
         for n in self.nodes:
             n.hasRun = False
+            
+    ## Called when a control in a node has changed, and the node needs to rerun (as do all its children
+    # recursively). If called on a normal graph, will perform the graph or a single node within it,
+    # and all dependent nodes; called on a macro will do the same thing in instances, starting at the
+    # counterpart node for that in the macro prototype.
+    def changed(self,node=None):
+        # todo - macro
+        self.performNodes(node)
+    
       
     ## perform the entire graph, or all those nodes below a given node.
     # If the entire graph, performs a traversal from the root nodes.
-    def perform(self,node=None):
+    def performNodes(self,node=None):
         # if we are already running this method, exit. This
         # will be atomic because GIL. The use case here can
         # happen because turning a knob quickly will fire

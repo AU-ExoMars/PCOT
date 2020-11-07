@@ -114,4 +114,4 @@ class TabGradient(ui.tabs.Tab):
 
     def gradientChanged(self):
         self.node.gradient = self.w.gradient.gradient()
-        self.perform()
+        self.changed()

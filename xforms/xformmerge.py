@@ -98,7 +98,7 @@ class TabMerge(ui.tabs.Tab):
 
     def addBlackChanged(self,b):
         self.node.addblack=b
-        self.perform()
+        self.changed()
         
     # causes the tab to update itself from the node
     def onNodeChanged(self):
