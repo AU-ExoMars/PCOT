@@ -8,7 +8,9 @@ from PyQt5 import QtWidgets, uic, QtCore, QtGui
 from typing import List, Set, Dict, Tuple, Optional, Any, OrderedDict, ClassVar
 
 ## This is the instance of a macro, containing its copy of the graph
-# and some metadata
+# and some metadata. Refactoring note - this class used to be a lot bigger
+# and things gradually got moved into the node itself. That's now probably
+# the best place for them, although copyProto is a problem.
 
 class MacroInstance:
     ## @var proto
@@ -24,7 +26,6 @@ class MacroInstance:
         self.proto=proto
         self.node=node # backpointer to the XForm containing me
         self.graph = xform.XFormGraph(False) # create an empty graph, not a macro prototype
-        self.copyProto() # copy the graph from the prototype
 
     ## this serialises and then deserialises the prototype's
     # graph, giving us a fresh copy of the nodes. However, the UUID "names"
@@ -151,6 +152,8 @@ class XFormMacro(XFormType):
         self.hasEnable=True
         # create our prototype graph 
         self.graph = xform.XFormGraph(True)
+        # backpointer to this type object
+        self.graph.proto = self
         # ensure unique name
         if name in XFormMacro.protos:
             raise Exception("macro {} already exists".format(name))
@@ -180,6 +183,7 @@ class XFormMacro(XFormType):
         # Remember that this is called to create an instance of the XForm type, which in
         # this case is an instance of the macro.
         node.instance = MacroInstance(self,node)
+        node.instance.copyProto() # copy the graph from the prototype
         
     ## Counts the input/output connectors inside the macro and sets the XFormType's
     # inputs and outputs accordingly, finally changing connector counts and types on
@@ -283,7 +287,7 @@ class XFormMacro(XFormType):
     ## creates edit tab
     def createTab(self,n,w):
         return TabMacro(n,w)
-        
+    
     ## perform the macro!
     def perform(self,node):
         # get the instance graph's node dictionary
@@ -312,7 +316,6 @@ class XFormMacro(XFormType):
         # root nodes.
         print("PERFORMING MACRO")
         node.instance.graph.performNodes()
-        
         # 4 - copy the output from the output connectors nodes into the node's outputs
         for i in range(0,len(node.outputs)):
             # get the output connector name

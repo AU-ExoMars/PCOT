@@ -564,16 +564,17 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         v = getEventView(event)
         v.setDragMode(QtWidgets.QGraphicsView.RubberBandDrag)
         if self.draggingArrow is not None:
+            arrow = self.draggingArrow # disconnects seem to remove this?
             # first, make sure we close off the movement
             self.mouseMoveEvent(event)
             # get all the connectors at the event location. There should be one or none.
             x = [x for x in self.items(event.scenePos()) if isinstance(x,GConnectRect)]
             if not x: # is empty? We are dragging to a place with no connector
                 # if there is an existing connection we are deleting it
-                if self.draggingArrow.n2 is not None: # if a connection exists and we are removing it
-                    # remove the connection in the model
-                    self.draggingArrow.n2.disconnect(self.draggingArrow.input)
-                    self.graph.inputChanged(self.draggingArrow.n2)
+                if arrow.n2 is not None: # if a connection exists and we are removing it
+                    # remove the connection in the model (n2 might get changed)
+                    arrow.n2.disconnect(arrow.input)
+                    self.graph.inputChanged(arrow)
             else:
                 conn = x[0] # this is the GConnectRect we are connecting to/from
 
@@ -583,14 +584,14 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     # this new output
                     n1 = conn.node
                     output= conn.index
-                    n2 = self.draggingArrow.n2
-                    input = self.draggingArrow.input
+                    n2 = arrow.n2
+                    input = arrow.input
                 else:
                     # we are dragging an input, so we want to connect an output to the new input
                     n2 = conn.node
                     input = conn.index
-                    n1 = self.draggingArrow.n1
-                    output = self.draggingArrow.output
+                    n1 = arrow.n1
+                    output = arrow.output
                     
                 # are they compatible?
                 outtype = n1.getOutputType(output)
@@ -609,10 +610,10 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                         # is it an existing connection we are modifying?
                         # The case where it's a fresh output being dragged to an input
                         # works too.
-                        if self.draggingArrow.n2 is not None:
+                        if arrow.n2 is not None:
                             # disconnect the existing connection
-                            self.draggingArrow.n2.disconnect(self.draggingArrow.input)
-                            self.graph.inputChanged(self.draggingArrow.n2)
+                            arrow.n2.disconnect(arrow.input)
+                            self.graph.inputChanged(arrow.n2)
                         n2.connect(input,n1,output)
                         self.graph.inputChanged(n2)
                 else:

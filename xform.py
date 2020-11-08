@@ -776,8 +776,16 @@ class XFormGraph:
     def changed(self,node=None):
         if self.autoRun:
             if self.isMacro:
-                # todo - macro
-                ui.error("Node is a macro, cannot yet distribute changes",False)
+                # distribute changes in macro prototype to instances.
+                # what we do here is go through all instances of the macro. 
+                # We copy the changed prototype to the instances, then run the instances
+                # them in their respective graphs, which should also run the nodes
+                # dependent on the macro outputs.
+                # This could be optimised to run only the relevant (changed) component
+                # within the macro, but that's very hairy.
+                for inst in self.proto.instances:
+                    inst.instance.copyProto()
+                    inst.graph.performNodes(inst)
             else:
                 self.performNodes(node)
         else:
