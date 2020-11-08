@@ -46,6 +46,7 @@ class MacroInstance:
 # - proto points to the containing XFormMacro
 # - idx indexes the connector
 # - conntype is the type of the connection (a string)
+# - data is the data stored
 
 class XFormMacroConnector(XFormType):
     def __init__(self,name):
@@ -79,12 +80,19 @@ class XFormMacroConnector(XFormType):
     ## create the edit tab
     def createTab(self,node,window):
         return TabConnector(node,window)
+
         
 ## The macro input connector (used inside macro prototypes)    
 class XFormMacroIn(XFormMacroConnector):
     def __init__(self):
         super().__init__("in")
         self.addOutputConnector("","any")
+    ## perform sets the output from data set in XFormMacro.perform())
+    def perform(self,node):
+        node.setOutput(0,node.data)
+        print("DUMP OF INCONNECTOR ",node.name,node)
+        node.dump()
+        print("CONNECTOR OUTPUT",node.data)
         
 
 ## The macro output connector (used inside macro prototypes)    
@@ -92,6 +100,13 @@ class XFormMacroOut(XFormMacroConnector):
     def __init__(self):
         super().__init__("out")
         self.addInputConnector("","any")
+    ## perform stores its input in its data field, ready for
+    # XFormMacro.perform() to read it
+    def perform(self,node):
+        node.data = node.getInput(0)
+        print("DUMP OF INCONNECTOR ",node.name,node)
+        node.dump()
+        print("CONNECTOR OUTPUT",node.data)
 
 # register them
 XFormMacroIn()
@@ -287,12 +302,15 @@ class XFormMacro(XFormType):
                 print("Looking for",connName)
                 print("Keys are",nodedict.keys())
                 ui.error("cannot find input node in instance graph of macro")
-            # set the input connector's output value; only has one output at idx 0
-            conn.setOutput(0,data)
+            # set the input connector's data ready for its perform() to copy
+            # into the output
+            print("SETTING OUTPUT IN CONNECTOR",conn," TO ",data)
+            conn.data = data
 
         # 3 - run the macro. You might think you could do this by just running the inputs
         # as you set them (recursively running their children) but that would omit non-input
         # root nodes.
+        print("PERFORMING MACRO")
         node.instance.graph.performNodes()
         
         # 4 - copy the output from the output connectors nodes into the node's outputs
@@ -304,10 +322,9 @@ class XFormMacro(XFormType):
                 conn = nodedict[connName]
             else:
                 ui.error("cannot find output node in instance graph of macro")
-            # get that output's data from its only input
-            data = conn.getInput(0)
-            # set the node's output
-            node.setOutput(i,conn)
+            # the output connector will have set its data field to its input
+            # set the node's output to that data
+            node.setOutput(i,conn.data)
 
 ## this is the UI for macros, and it should probably not be here.
         

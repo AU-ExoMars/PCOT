@@ -838,31 +838,28 @@ class XFormGraph:
         # disambiguate nodes in the dict, to make sure they don't
         # have the same nodes as ones already in the graph
         d=self.disambiguate(d)        
-        # temporary dictionary of nodename->node.
-        deref={}
         newnodes=[]
         # first pass - build the nodes
         for nodename,ent in d.items():
             n = self.create(ent['type'])
             newnodes.append(n)
             # remove the old name from the nodeDict
-            del nodeDict[n.name]
+            del self.nodeDict[n.name]
             n.name = nodename # override the default name (which is just a random UUID anyway)
             # and add the new name to the nodeDict
-            nodeDict[nodename]=n
-            deref[nodename]=n
+            self.nodeDict[nodename]=n
             n.deserialise(ent) # will also deserialise type-specific data
             if n.type.md5() != n.savedmd5:
                 ui.versionWarn(n)
             n.type.recalculate(n) # recalculate internal data from controls
         # that done, fix up the references
         for nodename,ent in d.items():
-            n = deref[nodename]
+            n = self.nodeDict[nodename]
             conns = ent['ins']
             for i in range(0,len(conns)):
                 if conns[i] is not None:
                     oname,output = conns[i] # tuples of name,index: see serialiseConn()
-                    other = deref[oname]
+                    other = self.nodeDict[oname]
                     n.connect(i,other,output,False) # don't automatically perform
         # and finally match output types
         for n in newnodes:
