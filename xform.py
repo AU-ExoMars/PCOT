@@ -70,7 +70,7 @@ class XFormType():
     # does it have an enable button?
     hasEnable: bool
     ## @var instances
-    # all instances in all graphs
+    # all instances of this type in all graphs
     instances: List[XForm]
     
     ## @var inputConnectors
@@ -686,6 +686,10 @@ class XFormGraph:
     # attempts to run a graph in different threads.
     performingGraph: bool
 
+    ## @var nodeDict
+    # dictionary of UUID to node, used to get instance nodes from prototypes
+    nodeDict: Dict[str,XForm]
+
     ## constructor, takes whether the graph is a macro prototype or not
     def __init__(self,isMacro):
         # all the nodes
@@ -693,6 +697,7 @@ class XFormGraph:
         self.performingGraph = False
         self.scene = None # the graph's scene is created by autoLayout
         self.isMacro = isMacro
+        self.nodeDict = {}
 
     ## construct a graphical representation for this graph
     def constructScene(self,doAutoLayout):
@@ -709,6 +714,7 @@ class XFormGraph:
             self.nodes.append(xform)
             xform.graph = self
             tp.init(xform)
+            self.nodeDict[xform.name]=xform
             # force a recalc in those nodes that require it,
             # will generate internal data dependent on a combination
             # of all controls
@@ -745,6 +751,7 @@ class XFormGraph:
         for x in node.tabs:
             x.nodeDeleted()
         self.nodes.remove(node)
+        del self.nodeDict[node.name]
         node.onRemove()
         
     ## debugging dump of entire graph
@@ -762,8 +769,11 @@ class XFormGraph:
     # and all dependent nodes; called on a macro will do the same thing in instances, starting at the
     # counterpart node for that in the macro prototype.
     def changed(self,node=None):
-        # todo - macro
-        self.performNodes(node)
+        if self.isMacro:
+            # todo - macro
+            ui.error("Node is a macro, cannot yet distribute changes",False)
+        else:
+            self.performNodes(node)
     
       
     ## perform the entire graph, or all those nodes below a given node.
@@ -835,7 +845,11 @@ class XFormGraph:
         for nodename,ent in d.items():
             n = self.create(ent['type'])
             newnodes.append(n)
+            # remove the old name from the nodeDict
+            del nodeDict[n.name]
             n.name = nodename # override the default name (which is just a random UUID anyway)
+            # and add the new name to the nodeDict
+            nodeDict[nodename]=n
             deref[nodename]=n
             n.deserialise(ent) # will also deserialise type-specific data
             if n.type.md5() != n.savedmd5:

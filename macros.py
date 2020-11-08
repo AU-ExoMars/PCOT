@@ -32,6 +32,8 @@ class MacroInstance:
     # have the same UUID (not really "U", but you get the idea)
     def copyProto(self):
         d = self.proto.graph.serialise()
+        self.proto.graph.dump()
+        print("PROTOTYPE keys",self.proto.graph.nodeDict.keys())
         self.graph.deserialise(d,True)
 
 
@@ -83,7 +85,6 @@ class XFormMacroIn(XFormMacroConnector):
     def __init__(self):
         super().__init__("in")
         self.addOutputConnector("","any")
-        self.addInputConnector("","any")
         
 
 ## The macro output connector (used inside macro prototypes)    
@@ -91,7 +92,6 @@ class XFormMacroOut(XFormMacroConnector):
     def __init__(self):
         super().__init__("out")
         self.addInputConnector("","any")
-        self.addOutputConnector("","any")
 
 # register them
 XFormMacroIn()
@@ -113,6 +113,14 @@ class XFormMacro(XFormType):
     ## @var graph
     # the graph for this prototype
     graph: xform.XFormGraph
+    
+    ## @var inputNodeNames
+    # the UUIDs for input nodes in the prototype
+    inputNodes: List[str]
+
+    ## @var outputNodeNames
+    # the UUIDs for output nodes in the prototype
+    outputNodes: List[str]
     
     ## dictionary of all macros by name    
     protos = {} # dictionary of all macro prototypes
@@ -168,6 +176,9 @@ class XFormMacro(XFormType):
         outputs=0
         self.inputConnectors = []
         self.outputConnectors = []
+        self.inputNodes = []
+        self.outputNodes = []
+        
         # We modify the display name and index of each IO node.
         # We also add it to this type's connectors.
         # The nodes list must be in create order, so that when we do connCountChanged on
@@ -180,6 +191,7 @@ class XFormMacro(XFormType):
                 n.idx = inputs
                 # set the connector on the macro object
                 self.inputConnectors.append((n.displayName,n.conntype,'macro input'))
+                self.inputNodes.append(n.name)
                 # set the connector on the node itself
                 n.inputTypes[0] = n.conntype
                 n.outputTypes[0] = n.conntype
@@ -189,6 +201,7 @@ class XFormMacro(XFormType):
                     n.displayName = "out "+str(outputs)
                 n.idx = outputs
                 self.outputConnectors.append((n.displayName,n.conntype,'macro output'))
+                self.outputNodes.append(n.name)
                 n.inputTypes[0] = n.conntype # set the overrides
                 n.outputTypes[0] = n.conntype
                 outputs+=1
@@ -258,11 +271,43 @@ class XFormMacro(XFormType):
         
     ## perform the macro!
     def perform(self,node):
-        # 1 - find the input and output connector nodes in the instance graph
-        # 2 - copy the inputs from the node's inputs into the input connector nodes
-        # 3 - run the macro 
+        # get the instance graph's node dictionary
+        nodedict = node.instance.graph.nodeDict
+
+        # copy the inputs from the node's inputs into the input connector nodes 
+        for i in range(0,len(node.inputs)):
+            # get the input data
+            data = node.getInput(i)
+            # get the connector node name
+            connName = self.inputNodes[i]
+            # get the corresponding node in the instance
+            if connName in nodedict:
+                conn = nodedict[connName]
+            else:
+                print("Looking for",connName)
+                print("Keys are",nodedict.keys())
+                ui.error("cannot find input node in instance graph of macro")
+            # set the input connector's output value; only has one output at idx 0
+            conn.setOutput(0,data)
+
+        # 3 - run the macro. You might think you could do this by just running the inputs
+        # as you set them (recursively running their children) but that would omit non-input
+        # root nodes.
+        node.instance.graph.performNodes()
+        
         # 4 - copy the output from the output connectors nodes into the node's outputs
-        pass
+        for i in range(0,len(node.outputs)):
+            # get the output connector name
+            connName = self.outputNodes[i]
+            # get the corresponding node in the instance
+            if connName in self.outputNodes:
+                conn = nodedict[connName]
+            else:
+                ui.error("cannot find output node in instance graph of macro")
+            # get that output's data from its only input
+            data = conn.getInput(0)
+            # set the node's output
+            node.setOutput(i,conn)
 
 ## this is the UI for macros, and it should probably not be here.
         
