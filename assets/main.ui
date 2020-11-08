@@ -186,6 +186,13 @@
            </size>
           </property>
           <layout class="QGridLayout" name="gridLayout_2">
+           <item row="1" column="0">
+            <widget class="QLabel" name="caplabel">
+             <property name="text">
+              <string>Caption</string>
+             </property>
+            </widget>
+           </item>
            <item row="0" column="0">
             <widget class="QLabel" name="camlabel">
              <property name="text">
@@ -213,10 +220,10 @@
              </item>
             </widget>
            </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="caplabel">
+           <item row="2" column="1">
+            <widget class="QCheckBox" name="autoRun">
              <property name="text">
-              <string>Caption</string>
+              <string>Auto-run on change</string>
              </property>
             </widget>
            </item>
@@ -243,6 +250,13 @@
                <string>None</string>
               </property>
              </item>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QPushButton" name="runAllButton">
+             <property name="text">
+              <string>Run all</string>
+             </property>
             </widget>
            </item>
           </layout>

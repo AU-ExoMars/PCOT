@@ -9,7 +9,7 @@ import traceback,inspect,hashlib,re,copy
 from collections import deque
 from pancamimage import Image
 import pyperclip,json,uuid
-from typing import List, Set, Dict, Tuple, Optional, Any
+from typing import List, Set, Dict, Tuple, Optional, Any, ClassVar
 
 import ui,conntypes
 
@@ -689,6 +689,11 @@ class XFormGraph:
     ## @var nodeDict
     # dictionary of UUID to node, used to get instance nodes from prototypes
     nodeDict: Dict[str,XForm]
+    
+    ## @var autorun
+    # should graphs be autorun
+    autoRun: ClassVar[bool]
+    autoRun = True
 
     ## constructor, takes whether the graph is a macro prototype or not
     def __init__(self,isMacro):
@@ -769,11 +774,14 @@ class XFormGraph:
     # and all dependent nodes; called on a macro will do the same thing in instances, starting at the
     # counterpart node for that in the macro prototype.
     def changed(self,node=None):
-        if self.isMacro:
-            # todo - macro
-            ui.error("Node is a macro, cannot yet distribute changes",False)
+        if self.autoRun:
+            if self.isMacro:
+                # todo - macro
+                ui.error("Node is a macro, cannot yet distribute changes",False)
+            else:
+                self.performNodes(node)
         else:
-            self.performNodes(node)
+            ui.msg("Autorun not enabled")
     
       
     ## perform the entire graph, or all those nodes below a given node.

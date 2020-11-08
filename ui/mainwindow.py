@@ -105,6 +105,8 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.actionCopy.triggered.connect(self.copyAction)
         self.actionPaste.triggered.connect(self.pasteAction)
         self.actionCut.triggered.connect(self.cutAction)
+        self.runAllButton.pressed.connect(self.runAllAction)
+        self.autoRun.toggled.connect(self.autorunChanged)
         
         # get and activate the status bar        
         self.statusBar = QtWidgets.QStatusBar()
@@ -146,6 +148,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         else:
             ui.log("Grandalf not found - autolayout will be rubbish")
         MainUI.windows.append(self)    
+        MainUI.updateAutorun()
         
     ## is this a macro?
     def isMacro(self):
@@ -282,6 +285,11 @@ class MainUI(ui.tabs.DockableTabWindow):
     ## "cut menu/keypress
     def cutAction(self):
         self.graph.scene.cut()
+        
+    ## "run all" action, typically used when you have auto-run turned off (editing a macro,
+    # perhaps)
+    def runAllAction(self):
+        self.runAll()
             
     ## "new" menu/keypress, will create a new top-level "patch"
     def newAction(self):
@@ -344,6 +352,23 @@ class MainUI(ui.tabs.DockableTabWindow):
     def cameraChanged(self,i):
         self.camera = self.camCombo.currentText()
         self.runAll()
+        
+    ## autorun has been changed in widget. This is global,
+    # so all windows must agree.
+    def autorunChanged(self,i):
+        xform.XFormGraph.autoRun = self.autoRun.isChecked()
+        # I'll set autorun on all graphs
+        MainUI.updateAutorun()
+        # but only rerun this one
+        if xform.XFormGraph.autoRun:
+            self.runAll()
+            
+    ## update autorun checkbox states from class variable
+    @staticmethod
+    def updateAutorun():
+        for w in MainUI.windows:
+            print("Setting autorun to ",xform.XFormGraph.autoRun)
+            w.autoRun.setChecked(xform.XFormGraph.autoRun)
         
     ## set the camera type
     def setCamera(self,cam):
