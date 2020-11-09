@@ -316,6 +316,12 @@ class XFormMacro(XFormType):
         # root nodes.
         print("PERFORMING MACRO")
         node.instance.graph.performNodes()
+
+        # 3a - if there's a sink, copy the data to the instance node
+        for n in node.instance.graph.nodes:
+            if n.type.name == "sink":
+                node.sinkimg = n.img
+                
         # 4 - copy the output from the output connectors nodes into the node's outputs
         for i in range(0,len(node.outputs)):
             # get the output connector name
@@ -340,6 +346,10 @@ class TabMacro(ui.tabs.Tab):
     def openProto(self):
         if self.node.instance is not None:
             w=ui.mainwindow.MainUI.createMacroWindow(self.node.instance.proto,False)
+            
+    def onNodeChanged(self):
+        self.w.canvas.display(self.node.sinkimg)
+        
  
 ## the UI for macro connectors
            
