@@ -184,6 +184,7 @@ class XFormMacro(XFormType):
         # this case is an instance of the macro.
         node.instance = MacroInstance(self,node)
         node.instance.copyProto() # copy the graph from the prototype
+        node.sinkimg = None
         
     ## Counts the input/output connectors inside the macro and sets the XFormType's
     # inputs and outputs accordingly, finally changing connector counts and types on
@@ -212,7 +213,6 @@ class XFormMacro(XFormType):
                 self.inputConnectors.append((n.displayName,n.conntype,'macro input'))
                 self.inputNodes.append(n.name)
                 # set the connector on the node itself
-                n.inputTypes[0] = n.conntype
                 n.outputTypes[0] = n.conntype
                 inputs+=1
             elif n.type.name=='out':
@@ -222,7 +222,6 @@ class XFormMacro(XFormType):
                 self.outputConnectors.append((n.displayName,n.conntype,'macro output'))
                 self.outputNodes.append(n.name)
                 n.inputTypes[0] = n.conntype # set the overrides
-                n.outputTypes[0] = n.conntype
                 outputs+=1
         # rebuild the various connector structures in each instance
         for n in self.instances:
