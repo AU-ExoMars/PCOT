@@ -116,9 +116,15 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.palette = palette.Palette(self.paletteArea,self.paletteContents,self.view)
 
 
+        # and remove some things which don't apply to macro windows
         if macroWindow:        
-            # and remove some things which don't apply to macro windows
+            # first turn off the file menu
             self.menuFile.setEnabled(False)
+            # annoyingly have to do this too, or we'll still be able
+            # to use kbd shortcuts!
+            for action in self.menuFile.actions():
+                action.setEnabled(False)
+
             self.capCombo.setVisible(False)
             self.camCombo.setVisible(False)
             self.camlabel.setVisible(False)
