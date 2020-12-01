@@ -574,7 +574,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 if arrow.n2 is not None: # if a connection exists and we are removing it
                     # remove the connection in the model (n2 might get changed)
                     arrow.n2.disconnect(arrow.input)
-                    self.graph.inputChanged(arrow)
+                    self.graph.inputChanged(arrow.n2)
             else:
                 conn = x[0] # this is the GConnectRect we are connecting to/from
 

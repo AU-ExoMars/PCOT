@@ -96,6 +96,7 @@ class SubImageROI:
             return np.reshape(x,(h,w,chans))
 
     ## use this ROI to crop the image in img2. Doesn't do masking, though.
+    # Copies the sources list from that image.
     def cropother(self,img2):
         x,y,w,h = self.bb
         return Image(img2.img[y:y+h,x:x+w],img2.sources)
@@ -105,11 +106,11 @@ class SubImageROI:
 # In connections (see conntypes.py), single channel images are "imggrey" while
 # multiple channels are "imgrgb" for RGB images (3 channels) or "imgstrange"
 # for any other number of channels. Images are 32-bit float.
-# There is also a set of source tupled, (filename,filter)
+# There is also a list of source tuples, (filename,filter), indexed by channel.
 
 class Image:
     # create image from numpy array
-    def __init__(self,img,sources=set()):
+    def __init__(self,img,sources=[]):
         if img is None:
             raise Exception("trying to initialise image from None")
         self.img = img # the image numpy array
@@ -126,18 +127,20 @@ class Image:
             self.channels=img.shape[2]
         self.w = img.shape[1]
         self.h = img.shape[0]
-        # an image may have a set of source data attached to it.
+        # an image may have a list of source data attached to it indexed
+        # by channel.
         # These are (filename,filter) tuples; filter may be None. If it
         # isn't, filter is a filter name (e.g. R01).
 #        print("SOURCE ",sources)
-        self.sources = sources # make sure it's a set
+        self.sources = sources
 #        if len(sources)==0:
 #            raise Exception("No source")
     
     ## class method for loading an image (using cv's imread)
-    # If the source is None, use (fname,None) (i.e. no filter)
+    # If the source is None, use (fname,None) (i.e. no filter).
+    # Always builds an RGB image.
     @classmethod
-    def load(cls,fname,source=None):
+    def load(cls,fname,sources=None):
         # imread with this argument will load any depth, any
         # number of channels
         img = cv.imread(fname,-1) 
@@ -152,17 +155,18 @@ class Image:
             scale = 65535.0
         else:
             scale = 1.0
+        print(sources)
         # convert from BGR to RGB (OpenCV is weird)
         img = cv.cvtColor(img,cv.COLOR_BGR2RGB)
         # convert to floats (32 bit)
         img = img.astype(np.float32)
         # scale to 0..1 
         img /= scale
-        # build the default sources if required
-        if source is None:
-            source=(fname,None)
+        # build the default sources if required. This always builds an RGB image.
+        if sources is None:
+            sources=[(fname,None),(fname,None),(fname,None)]
         # and construct the image
-        return cls(img,{source})
+        return cls(img,sources)
         
     ## get a numpy image (not another Image) we can display on an RGB surface
     def rgb(self):
@@ -200,8 +204,8 @@ class Image:
     ## the descriptor is a string which can vary depending on main window settings
     def getDesc(self,mainwindow):
         tp = mainwindow.captionType
-        positions = [x[1] for x in self.sources if x is not None]
-        positions = [x for x in positions if x is not None]
+        positions = [x[1] if x is not None else "?" for x in self.sources]
+        positions = [x if x is not None else "?" for x in positions]
         if tp == 0:
             # wheel positions of filters; same as sources value
             out = positions
@@ -214,7 +218,8 @@ class Image:
             out = ["{}/{}".format(d[x].name,d[x].cwl) for x in positions]
         elif tp == 2:
             out = []
-        return ",".join(sorted(out))
+        desc = ",".join(out)
+        return desc
 
     ## copy an image
     def copy(self):
