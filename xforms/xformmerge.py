@@ -84,7 +84,9 @@ class XformMerge(XFormType):
         if len(lst)==1:
             node.img = Image(lst[0].img,lst[0].sources) # just merging one channel??
         else:
-            sources = set.union(*[x.sources for x in lst])
+            # here we assume there can only be one channel in each source image,
+            # and we just bundle sources together. We use None for images with no source.
+            sources = [x.sources[0] if len(x.sources)>0 else None for x in lst]
             node.img = Image(cv.merge([x.img for x in lst]),sources)
         node.setOutput(0,node.img)
             

@@ -69,12 +69,15 @@ class XFormMultiFile(XFormType):
                 # most of the time.
                 path = os.path.relpath(os.path.join(node.dir,node.files[i]))
                 if node.files[i] is not None and node.imgpaths[i]!=path:
-                    # build source tuple : filename and filter name
+                    # build sources tuple : filename and filter name
                     source = (path,self.getFilterName(node,path),)
-                    img = Image.load(path,source)
+                    img = Image.load(path,[source,source,source])
+                    # aaaand this pretty much always happens, because load always
+                    # loads as BGR.
                     if img.channels!=1:
                         c = cv.split(img.img)
-                        img = Image(c[0],{source})
+                        img = Image(c[0],[source])
+                        print("SNARK: ",img.sources)
                     node.imgs[i]=img
                     node.imgpaths[i]=path
                     print(node.filters[i])
@@ -181,7 +184,7 @@ class TabMultiFile(ui.tabs.Tab):
         item = self.model.itemFromIndex(idx)
         path = os.path.join(self.node.dir,item.text())
         source = (path,self.node.type.getFilterName(self.node,path))
-        img = Image.load(path,source)
+        img = Image.load(path,[source])
         img.img *= self.node.mult
         self.w.canvas.display(img)
         
