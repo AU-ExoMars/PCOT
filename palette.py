@@ -1,12 +1,21 @@
+## @package palette
+# The palette widget package, which handles the palette of
+# nodes on the right hand side.
+
 from PyQt5 import QtWidgets, uic, QtCore, QtGui
 from PyQt5.QtCore import Qt
 from xform import XFormType
 
+
 view = None
 
-groups = ["source","maths","processing","calibration","data","colour","regions","utility"]
+## The groups into which the buttons are sorted - it's a constant.
+groups = ["source","macros","maths","processing","calibration","data","colour","regions","utility"]
+
+## The palette items, which are buttons which can be either clicked or dragged (with RMB)
 
 class PaletteButton(QtWidgets.QPushButton):
+    ## constructor, taking button name and view into which they should be inserted.
     def __init__(self,name,view):
         super().__init__(name)
         self.name = name
@@ -16,6 +25,7 @@ class PaletteButton(QtWidgets.QPushButton):
     # https://stackoverflow.com/questions/57224812/pyqt5-move-button-on-mainwindow-with-drag-drop
     # This stuff interacts with the graph view (graphview.py)
     
+    ## handle a mouse down event
     def mousePressEvent(self,event):
         super().mousePressEvent(event)
         if event.button() == Qt.LeftButton:
@@ -23,6 +33,7 @@ class PaletteButton(QtWidgets.QPushButton):
         elif event.button() == Qt.RightButton:
             self.mousePos = event.pos() # save click position for dragging
             
+    ## handle mouse move for dragging with RMB
     def mouseMoveEvent(self,event):
         if event.buttons() != QtCore.Qt.RightButton:
             return
@@ -40,6 +51,7 @@ class PaletteButton(QtWidgets.QPushButton):
         drag.setHotSpot(self.mousePos - self.rect().topLeft())
         drag.exec_(Qt.MoveAction)  
         
+    ## handle a single LMB click
     def click(self):
         # create a new item at a position decided by the scene
         x = self.view.scene().graph.create(self.name)
@@ -47,36 +59,53 @@ class PaletteButton(QtWidgets.QPushButton):
         # rebuild the scene
         self.view.scene().rebuild()
 
-# set up the scrolling palette and return a list of the buttons created
+## the palette itself, which isn't a widget but a plain class containing all the necessary
+# widgets etc.
 
-def setup(scrollArea,scrollAreaContent,view):
-    # now we set up the palette. I'd just like to say that this was not fun.
-    # Not fun at all. It might look straightforward now that I know...
-    layout = QtWidgets.QVBoxLayout()
-    scrollAreaContent.setLayout(layout)
-    scrollArea.setMinimumWidth(150)
-    buttons=[]
-    grouplists = {x:[] for x in groups}
-    # we want the keys in sorted order
-    all = XFormType.all()
-    ks = sorted(all.keys())
+class Palette:
+    ## set up the scrolling palette as part of view initialisation, will populate
+    # with initial data
+    def __init__(self,scrollArea,scrollAreaContent,view):
+        layout = QtWidgets.QVBoxLayout()
+        scrollAreaContent.setLayout(layout)
+        scrollArea.setMinimumWidth(150)
+        self.scrollAreaContent=scrollAreaContent
+        self.view = view
+        self.layout = layout
+        self.populate()
 
-    # add xformtypes to a list for each group
-    for k in ks:
-        v = all[k]
-        if not v.group in groups:
-            raise Exception("node '{}' not in any group defined in palette.py!".format(k))
-        grouplists[v.group].append(k)
-
-    # add buttons and separators for each group
-    for g in groups:
-        sep = QtWidgets.QLabel(g)
-        sep.setStyleSheet("background-color:rgb(200,200,200)")
-        layout.addWidget(sep)
-        for k in grouplists[g]:
+    ## populate the palette with items
+    def populate(self):    
+        grouplists = {x:[] for x in groups}
+        # we want the keys in sorted order
+        all = XFormType.all()
+        ks = sorted(all.keys())
+        # add xformtypes to a list for each group
+        for k in ks:
             v = all[k]
-            b = PaletteButton(k,view)
-            layout.addWidget(b)
-            buttons.append(b)
-        
-    return buttons
+            if not v.group in groups:
+                # "hidden" is a special group which doesn't appear in the palette, used for 
+                # things like macro connectors.
+                if v.group != 'hidden':
+                    raise Exception("node '{}' not in any group defined in palette.py!".format(k))
+            else:
+                grouplists[v.group].append(k)
+    
+        # clear previous buttons and seps - we do this by going
+        # backwards (so we keep the indices the same) and setting
+        # each item's parent to none. Ugh.
+        for i in reversed(range(self.layout.count())): 
+            self.layout.itemAt(i).widget().setParent(None)        
+
+        # add buttons and separators for each group
+        for g in groups:
+            sep = QtWidgets.QLabel(g)
+            sep.setStyleSheet("background-color:rgb(200,200,200)")
+            self.layout.addWidget(sep)
+            for k in grouplists[g]:
+                v = all[k]
+                b = PaletteButton(k,self.view)
+                if g=='macros':
+                    b.setStyleSheet("background-color:rgb(220,220,140)")
+                self.layout.addWidget(b)
+            

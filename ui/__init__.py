@@ -2,25 +2,30 @@ import traceback
 from ui.mainwindow import MainUI
 from PyQt5 import QtWidgets
 
-def msg(t): # show msg on status bar
+## show a message on the status bar
+def msg(t):
     for x in MainUI.windows:
         x.statusBar.showMessage(t)
-    
+
+## show a message in all window logs
 def log(s):
-    print("LOG:",s)
     for x in MainUI.windows:
         x.logText.append(s)
     
-def error(s):
+## show error on status bar, and log in red; will dump traceback to stdout if requested.
+def error(s,tb=True):
     app.beep()
-    traceback.print_stack()
+    if tb:
+        traceback.print_stack()
     msg("Error: {}".format(s))
     log('<font color="red">Error: </font> {}'.format(s))
     
+## show a warning dialog 
 def warn(s):
     app.beep()
     QtWidgets.QMessageBox.warning(None,'WARNING',s)
     
+## log an XFormException
 def logXFormException(node,e):
     app.beep()
     error("Exception in {}: {}".format(node.name,e))

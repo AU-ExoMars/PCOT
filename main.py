@@ -1,3 +1,6 @@
+## @package main
+# The main function with command line parsing and very little else.
+
 from PyQt5 import QtWidgets, uic, QtCore, QtGui
 from PyQt5.QtCore import Qt,QCommandLineOption,QCommandLineParser
 import os,sys,traceback,json,time,getpass
@@ -11,7 +14,10 @@ import filters
 import xforms
 from xforms import *
 
-if __name__ == "__main__":
+## the main function: parses command line, loads any files specified,
+# opens a mainwindow and runs its code.
+
+def main():
     app = QtWidgets.QApplication(sys.argv) 
     app.setApplicationVersion("0.0.0")
     app.setApplicationName("PCOT")
@@ -28,8 +34,11 @@ if __name__ == "__main__":
     parser.process(app)
     args = parser.positionalArguments() 
 
-    window=ui.mainwindow.MainUI(app) # Create an instance of our class
+    window=ui.mainwindow.MainUI() # Create an instance of a main window
     if len(args)>0:
         window.load(args[0])
     app.exec_() # Start the application
+    
 
+if __name__ == "__main__":
+    main()

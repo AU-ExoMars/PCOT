@@ -1,13 +1,17 @@
+## @package ui.tabs
+# Dockable tab handling code. Windows which have dockable tabs
+# should inherit DockableTabWindow.
+
+
 from PyQt5 import QtWidgets,uic,QtCore
 from PyQt5.QtCore import Qt
 import collections
 
-# the main UI window class. Your application window should inherit from
-# this to use dockable tabs.
-
+## the main UI window class. Your application window should inherit from
+# this to use dockable tabs, and have a tabWidget tab container.
 class DockableTabWindow(QtWidgets.QMainWindow):
 
-    # call this from your subclass after loading the UI file
+    ## call this from your subclass after loading the UI file
     def initTabs(self):
         # create the tab widget (assumes a tabWidget exists in the UI)
         self.tabWidget.removeTab(0) # remove the default tabs you can't remove in the designer
@@ -25,17 +29,18 @@ class DockableTabWindow(QtWidgets.QMainWindow):
         # when we reorder tabs in redocking.                
         self.tabs=collections.OrderedDict()
     
-    # initialise this window
+    ## constructor
     def __init__(self):
         super().__init__() # Call the inherited classes __init__ method
 
-    # close a tab
+    ## close a tab
     def closeTab(self,index):
         tab = self.tabWidget.widget(index)
         tab.node.tabs.remove(tab)
         self.tabWidget.removeTab(index)
         self.tabs = {k:v for k, v in self.tabs.items() if v != tab }
-            
+     
+    ## close every tab and expanded tab window       
     def closeAllTabs(self):
         # first, close all expanded tab windows
         for t in self.tabs.values():
@@ -47,14 +52,14 @@ class DockableTabWindow(QtWidgets.QMainWindow):
             self.closeTab(self.tabWidget.indexOf(t))
         
         
-    # used to undock tab into a window
+    ## used to undock tab into a window
     def undock(self,i):
         # get the tab contents
         w = self.tabWidget.widget(i)
         # and move them into a new "expanded tab" window
         wnd = ExpandedTab(w,self)
 
-    # reorder all the tabs back to create order, used when a tab is re-docked
+    ## reorder all the tabs back to create order, used when a tab is re-docked
     def reorderTabs(self):
         dest = 0 # current tab destination position
         # go through all the tabs in create order
@@ -63,8 +68,22 @@ class DockableTabWindow(QtWidgets.QMainWindow):
                 src = self.tabWidget.indexOf(t) # get current position
                 self.tabWidget.tabBar().moveTab(src,dest)
                 dest=dest+1    
+      
+    ## remake the entire dictionary with new titles, each of which
+    # come from the tab itself
+    def retitleTabs(self):
+        newdict = collections.OrderedDict()
+        for k,v in self.tabs.items():
+            newtitle = v.retitle()
+            newdict[newtitle]=v
+            if v.expanded is not None:
+                v.expanded.setWindowTitle(newtitle)
+            else:
+                idx = self.tabWidget.indexOf(v)
+                self.tabWidget.setTabText(idx,newtitle)
+        self.tabs=newdict
 
-# a tab which has been expanded into a full window
+## a tab which has been expanded into a full window
 class ExpandedTab(QtWidgets.QMainWindow):
     def __init__(self,tab,window):
         super(ExpandedTab,self).__init__()
@@ -77,7 +96,7 @@ class ExpandedTab(QtWidgets.QMainWindow):
         self.window=window
         # we also create a reference to this window, partly to avoid GC!
         self.tab.expanded=self
-        
+ 
     def closeEvent(self,event):
         # move window back into tabs
         self.window.tabWidget.addTab(self.tab,self.tab.title)
@@ -89,24 +108,27 @@ class ExpandedTab(QtWidgets.QMainWindow):
         self.window.tabWidget.setCurrentIndex(idx)
         event.accept()
         
-    # window got focus. Tell the scene.
+    ## window got focus. Tell the scene.
     def changeEvent(self,event):
         if event.type() == QtCore.QEvent.ActivationChange:
             if self.isActiveWindow():
-                self.window.scene.currentChanged(self.tab.node)
+                self.window.scene().currentChanged(self.tab.node)
     
+    ## retitle window from tab
+    def retitle(self):
+        self.setWindowTitle(tab.title)
 
-# A tab to be loaded. We subclass this. Once loaded, all ui elements
+## A tab to be loaded. We subclass this. Once loaded, all ui elements
 # are in the 'w' widget
-
 class Tab(QtWidgets.QWidget):
-    # the comment field changed, set the data in the node.
+    ## the comment field changed, set the data in the node.
     def commentChanged(self):
         self.node.comment = self.comment.toPlainText().strip()
     
+    ## constructor, which should be called by the subclass ctor
     def __init__(self,window,node,uifile):
         super(Tab,self).__init__()
-        self.title=node.name
+        self.title=node.displayName
         self.expanded=None
         self.node=node
         # store a ref to the main UI window which created the tab
@@ -163,17 +185,22 @@ class Tab(QtWidgets.QWidget):
 
         splitter.setSizes([total*0.9,total*0.1])
         
-    # perform the tab's node safely
-    def perform(self):
-        self.node.graph.perform(self.node)
-        
+    ## The tab's widgets have changed the data, we need
+    # to perform the node
+    # (or all instance nodes of a macro prototype)
+    def changed(self):
+        self.node.graph.changed(self.node)
+      
+    ## enabled has changed  
     def enableChanged(self,b):
         self.node.setEnabled(b)
         
+    ## set node enabled (if the node type has that feature)
     def setNodeEnabled(self,b):
         if self.enable is not None:
             self.enable.setChecked(b)
 
+    ## node has been deleted, remove from tabs
     def nodeDeleted(self):
         if self.expanded:
             self.expanded.close()
@@ -182,7 +209,13 @@ class Tab(QtWidgets.QWidget):
         self.window.tabWidget.removeTab(idx)
         self.node.tabs.remove(self)
 
+    ## force update of tab title and return new title
+    def retitle(self):
+        self.title = self.node.displayName
+        return self.title
         
-    # write this in implementations - updates the tab when the node's data has changed
-    def onNodeChanged():
+        
+    ## write this in subclasses - 
+    # should update the tab when the node's data has changed
+    def onNodeChanged(self):
         pass

@@ -79,5 +79,5 @@ class TabRGBFile(ui.tabs.Tab):
             fname = os.path.relpath(self.dirModel.filePath(idx))
             self.node.fname = fname
             # and tell it to perform (outputting the data)
-            self.perform()
+            self.changed()
 

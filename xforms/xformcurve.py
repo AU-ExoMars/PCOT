@@ -45,11 +45,14 @@ class XformCurve(XFormType):
         node.add = 0
         node.mul = 1
         
-    # given a dictionary, set the values in the node from the dictionary    
-    def perform(self,node):
+    def recalculate(self,node):
+        print("RECALC")
         # recalculate the LUT each time - need to get recalculate() working
         xb = node.mul*(lutxcoords-0.5)+node.add
         node.lut = (1.0/(1.0+np.exp(-xb)))
+        
+    # given a dictionary, set the values in the node from the dictionary    
+    def perform(self,node):
         img = node.getInput(0)
         if img is None:
             node.img = None
@@ -79,16 +82,17 @@ class TabCurve(ui.tabs.Tab):
     def setAdd(self,v):
         # when a control changes, update node and perform
         self.node.add = (v-50)*0.1
-        self.perform()
+        self.changed()
     def setMul(self,v):
         # when a control changes, update node and perform
         self.node.mul = v/10
-        self.perform()
+        self.changed()
         
     # causes the tab to update itself from the node
     def onNodeChanged(self):
         self.w.addDial.setValue(self.node.add*10+50)
         self.w.mulDial.setValue(self.node.mul*10)
+        self.node.type.recalculate(self.node)
         if self.plot is None:
             # set up the initial plot
             # doing stuff without pyplot is weird!

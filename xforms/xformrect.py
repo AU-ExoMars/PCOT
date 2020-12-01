@@ -19,10 +19,10 @@ class XformRect(XFormType):
     def __init__(self):
         super().__init__("rect","regions","0.0.0")
         self.addInputConnector("","img")
-        self.addOutputConnector("img","img") # image+roi
-        self.addOutputConnector("crop","img") # cropped image
-        self.addOutputConnector("ann","img") # annotated image
-        self.addOutputConnector("rect","rect") # rectangle (just the ROI)
+        self.addOutputConnector("img","img","image with ROI") # image+roi
+        self.addOutputConnector("crop","img","image cropped to ROI") # cropped image
+        self.addOutputConnector("ann","img","image with ROI, with added annotations around ROI") # annotated image
+        self.addOutputConnector("rect","rect","the rectangle data") # rectangle (just the ROI)
         self.autoserialise=('croprect','caption','captiontop','fontsize','fontline','colour')
         
     def createTab(self,n,w):
@@ -106,25 +106,25 @@ class TabRect(ui.tabs.Tab):
 
     def topChanged(self,checked):
         self.node.captiontop=checked
-        self.perform()
+        self.changed()
     def fontSizeChanged(self,i):
         self.node.fontsize=i
-        self.perform()
+        self.changed()
     def textChanged(self,t):
         self.node.caption=t
         # this will cause perform, which will cause onNodeChanged, which will
         # set the text again. We set a flag to stop the text being reset.
         self.dontSetText=True
-        self.perform()
+        self.changed()
         self.dontSetText=False
     def fontLineChanged(self,i):
         self.node.fontline=i
-        self.perform()
+        self.changed()
     def colourPressed(self):
         col = utils.colour.colDialog(self.node.colour)
         if col is not None:
             self.node.colour = col
-            self.perform()
+            self.changed()
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
@@ -155,7 +155,7 @@ class TabRect(ui.tabs.Tab):
             if h<10:
                 h=10
             self.node.croprect=(x,y,w,h)
-            self.perform()
+            self.changed()
         self.w.canvas.update()
         
     def canvasMousePressEvent(self,x,y,e):
@@ -164,7 +164,7 @@ class TabRect(ui.tabs.Tab):
         h = 10
         self.mouseDown=True
         self.node.croprect=(x,y,w,h)
-        self.perform()
+        self.changed()
         self.w.canvas.update()
 
     def canvasMouseReleaseEvent(self,x,y,e):

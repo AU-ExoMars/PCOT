@@ -1,10 +1,8 @@
 MainUI
 +graph
-+scene
 +view
 +tabs
 @owns +MainUI
-@owns GraphScene
 @owns XFormGraph
 @owns GraphView
 @owns +Tab
@@ -18,8 +16,10 @@ ExpandedTab @is Tab;
 
 XFormGraph
 +nodes
++scene
 +clipboard
 @owns +XForm
+@owns GraphScene
 ;
 GraphScene
 @links XFormGraph
@@ -35,5 +35,17 @@ XForm
 ;
 XFormType;
 
+MacroPrototype
+@owns +MacroInstance
+@owns XFormGraph;
+
+MacroInstance
+@links MacroPrototype
+@links XFormMacro
+;
+XFormMacro
+@is XForm
+@links MacroInstance
+;
 
 end

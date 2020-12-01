@@ -1,30 +1,31 @@
-import numpy as np
-import cv2 as cv
-
-import ui,filters
-
+## @package pancamimage
 # Classes to encapsulate an image which can be any number of channels
 # and also incorporates region-of-interest data. At the moment, all images
 # are 8-bit and any number of channels. Conversions to and from float are
 # done in many operations. Avoiding floats saves memory and speeds things up,
 # but we could change things later.
 
-# definition of ROI interface
+import numpy as np
+import cv2 as cv
+
+import ui,filters
+
+## definition of interface for regions of interest
 class ROI:
-    # return a (x,y,w,h) tuple describing the bounding box for this ROI
+    ## return a (x,y,w,h) tuple describing the bounding box for this ROI
     def bb(self):
         pass
-    # return an image cropped to the BB
+    ## return an image cropped to the BB
     def crop(self,img):
         x,y,w,h = self.bb()
         return img.img[y:y+h,x:x+w]
-    # return a boolean mask which, when imposed on the cropped image,
+    ## return a boolean mask which, when imposed on the cropped image,
     # gives the ROI. Or none, in which case there is no mask.
     def mask(self):
         pass
 
                     
-# a rectangle ROI
+## a rectangle ROI
         
 class ROIRect(ROI):
     def __init__(self,x,y,w,h):
@@ -40,7 +41,7 @@ class ROIRect(ROI):
     def __str__(self):
         return "{} {} {}x{}".format(self.x,self.y,self.w,self.h)
 
-# this is the parts of an image which are covered by the active ROIs
+## this is the parts of an image which are covered by the active ROIs
 # in that image. It consists of
 # * the image cropped to the bounding box of the ROIs. NOTE THAT this
 #   is a VIEW INTO THE ORIGINAL IMAGE
@@ -80,34 +81,36 @@ class SubImageROI:
             self.bb = (0,0,img.w,img.h) # whole image
             self.mask = np.full((img.h,img.w),True) # full mask
 
+    ## the main mask is just a single channel - this will generate a mask
+    # of the same number of channels, so an x,y image will make an x,y mask
+    # and an x,y,n image will make an x,y,n mask.
     def fullmask(self):
-        # the main mask is just a single channel. This will generate a mask
-        # of the same number of channels, so an x,y image will make an x,y mask
-        # and an x,y,3 image will make an x,y,3 mask.
         if len(self.img.shape)==2:
             return self.mask # the existing mask is fine
         else:
+            print("SPECIAL")
             h,w,chans = self.img.shape
             # flatten and repeat each element thrice
-            x = np.repeat(np.ravel(self.mask),3) 
+            x = np.repeat(np.ravel(self.mask),chans) 
             # put into a h,w,3 array            
-            return np.reshape(x,(h,w,3))
+            return np.reshape(x,(h,w,chans))
 
+    ## use this ROI to crop the image in img2. Doesn't do masking, though.
+    # Copies the sources list from that image.
     def cropother(self,img2):
-        # use this ROI to crop the image in img2. Doesn't do masking, though.
         x,y,w,h = self.bb
         return Image(img2.img[y:y+h,x:x+w],img2.sources)
 
-# an image - just a numpy array (the image) and a list of ROI objects. The array 
+## an image - just a numpy array (the image) and a list of ROI objects. The array 
 # has shape either (h,w) (for a single channel) or (h,w,n) for multiple channels.
 # In connections (see conntypes.py), single channel images are "imggrey" while
 # multiple channels are "imgrgb" for RGB images (3 channels) or "imgstrange"
 # for any other number of channels. Images are 32-bit float.
-# There is also a set of source tupled, (filename,filter)
+# There is also a list of source tuples, (filename,filter), indexed by channel.
 
 class Image:
     # create image from numpy array
-    def __init__(self,img,sources=set()):
+    def __init__(self,img,sources=[]):
         if img is None:
             raise Exception("trying to initialise image from None")
         self.img = img # the image numpy array
@@ -124,18 +127,20 @@ class Image:
             self.channels=img.shape[2]
         self.w = img.shape[1]
         self.h = img.shape[0]
-        # an image may have a set of source data attached to it.
+        # an image may have a list of source data attached to it indexed
+        # by channel.
         # These are (filename,filter) tuples; filter may be None. If it
         # isn't, filter is a filter name (e.g. R01).
 #        print("SOURCE ",sources)
-        self.sources = sources # make sure it's a set
+        self.sources = sources
 #        if len(sources)==0:
 #            raise Exception("No source")
     
-    # class method for loading an image (using cv's imread)
-    # If the source is None, use (fname,None) (i.e. no filter)
+    ## class method for loading an image (using cv's imread)
+    # If the source is None, use (fname,None) (i.e. no filter).
+    # Always builds an RGB image.
     @classmethod
-    def load(cls,fname,source=None):
+    def load(cls,fname,sources=None):
         # imread with this argument will load any depth, any
         # number of channels
         img = cv.imread(fname,-1) 
@@ -150,19 +155,20 @@ class Image:
             scale = 65535.0
         else:
             scale = 1.0
+        print(sources)
         # convert from BGR to RGB (OpenCV is weird)
         img = cv.cvtColor(img,cv.COLOR_BGR2RGB)
         # convert to floats (32 bit)
         img = img.astype(np.float32)
         # scale to 0..1 
         img /= scale
-        # build the default sources if required
-        if source is None:
-            source=(fname,None)
+        # build the default sources if required. This always builds an RGB image.
+        if sources is None:
+            sources=[(fname,None),(fname,None),(fname,None)]
         # and construct the image
-        return cls(img,{source})
+        return cls(img,sources)
         
-    # get a numpy image (not another Image) we can display on an RGB surface
+    ## get a numpy image (not another Image) we can display on an RGB surface
     def rgb(self):
         # assume we're 8 bit
         if self.channels==1:
@@ -180,7 +186,7 @@ class Image:
                 return cv.merge(chans[0:3])
             
             
-    # extract the "subimage" - the image cropped to regions of interest,
+    ## extract the "subimage" - the image cropped to regions of interest,
     # with a mask for those ROIs
     def subimage(self):
         return SubImageROI(self)
@@ -194,11 +200,12 @@ class Image:
         x = [", ROI {},{},{}x{}".format(x,y,w,h) for x,y,w,h in x]
         s += "/".join(x)+">"
         return s
-    # the descriptor depends on the container in which this image is shown
+
+    ## the descriptor is a string which can vary depending on main window settings
     def getDesc(self,mainwindow):
         tp = mainwindow.captionType
-        positions = [x[1] for x in self.sources if x is not None]
-        positions = [x for x in positions if x is not None]
+        positions = [x[1] if x is not None else "?" for x in self.sources]
+        positions = [x if x is not None else "?" for x in positions]
         if tp == 0:
             # wheel positions of filters; same as sources value
             out = positions
@@ -211,16 +218,18 @@ class Image:
             out = ["{}/{}".format(d[x].name,d[x].cwl) for x in positions]
         elif tp == 2:
             out = []
-        return ",".join(sorted(out))
+        desc = ",".join(out)
+        return desc
 
+    ## copy an image
     def copy(self):
         srcs = self.sources.copy()
         i = Image(self.img.copy(),srcs)
         i.rois = self.rois.copy()
         return i
 
-    # return a copy of the image, with the given spliced in at the
-    # subimage's coordinates.
+    ## return a copy of the image, with the given image spliced in at the
+    # subimage's coordinates and masked according to the subimage
     def modifyWithSub(self,subimage,newimg):
         i = self.copy()
         x,y,w,h = subimage.bb

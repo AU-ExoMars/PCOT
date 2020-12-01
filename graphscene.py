@@ -1,6 +1,9 @@
-#
-# How to draw XFormGraph and its nodes
+## @package graphscene
+# This package deals with constructing and modifying the Qt Graphics View scene
+# which represents the objects in an XFormGraph.
 
+## do we have the Grandalf package for automatic graph layout?
+hasGrandalf = True
 try:
     # we might have grandalf, but probably not.
     from grandalf.layouts import SugiyamaLayout,VertexViewer
@@ -16,11 +19,15 @@ except ImportError:
 from PyQt5 import QtWidgets, uic, QtGui, QtCore
 from PyQt5.QtCore import Qt,QPointF
 from PyQt5.QtGui import QColor,QBrush,QPen,QLinearGradient,QFont,QTransform
+from typing import List, Set, Dict, Tuple, Optional, Any
 
 import math
+import utils.deb
 
 import xform,ui,conntypes
+import ui.namedialog
 
+## the font we use for the connectors (actually for everything)
 connectorFont = QFont()
 #connectorFont.setStyleHint(QFont.SansSerif)
 connectorFont.setFamily('Sans Serif')
@@ -30,38 +37,56 @@ connectorFont.setPixelSize(10)
 
 # constants for node drawing
 
+## width of a node in pixels
 NODEWIDTH=100
-NODEHEIGHT=50 # including connectors
-XTEXTOFFSET=5 # offset of text into box
+## height of a node in pixels (including connectors)
+NODEHEIGHT=50 
+
+## offset of xform name text into box
+XTEXTOFFSET=5
+## offset of xform name text into box
 YTEXTOFFSET=5
 
-CONNECTORHEIGHT=10 # height of connector box at bottom of node
-YPADDING=10 # additional space between nodes
+## height of connector boxes
+CONNECTORHEIGHT=10 
+## additional space between nodes in autolayouts
+YPADDING=10
 
-CONNECTORTEXTXOFF=2       # x offset of connector label
-INCONNECTORTEXTYOFF=-14   # y offset of connector label on inputs
-OUTCONNECTORTEXTYOFF=10   # y offset of connector label on outputs
-ARROWHEADLENGTH=10        # length of arrowhead lines
+## x offset of connector label
+CONNECTORTEXTXOFF=2       
+## y offset of connector label on inputs
+INCONNECTORTEXTYOFF=-14   
+## y offset of connector label on outputs
+OUTCONNECTORTEXTYOFF=10   
+## length of arrowhead lines
+ARROWHEADLENGTH=10        
+## angle between arrowhead lines and main line
 ARROWHEADANGLE=math.radians(15)
 
+## size of help box at top-right of main box
 HELPBOXSIZE=10
 
-PASTEOFFSET=20 # x,y offset for pasted copies of nodes
-
-
-
+## x,y offset for pasted copies of nodes
+PASTEOFFSET=20 
 
 # basic shapes with extra data attached so we can get the node
 
-# help box. This has no functionality, we can't make it catch clicks unless we make it
+## Help box. This has no functionality, we can't make it catch clicks unless we make it
 # selectable (which we don't want). That has to be done in the GMainRect parent.
 class GHelpRect(QtWidgets.QGraphicsRectItem):
     def __init__(self,x,y,node,parent):
         super().__init__(x+node.w-CONNECTORHEIGHT,y,HELPBOXSIZE,HELPBOXSIZE,parent=parent)
         self.setBrush(Qt.blue)
 
-# core rectangle
+## core rectangle for a node, is parent of connectors and texts (and possibly other things too)
 class GMainRect(QtWidgets.QGraphicsRectItem):
+    # x,y,w,h are inherited
+    # offset from original position x,y
+    offsetx: int
+    offsety: int
+    helprect: GHelpRect     # help rectangle (top-right corner)
+    node: xform.XForm       # node to which I refer
+    
     def __init__(self,x1,y1,w,h,node):
         self.offsetx = 0 # these are the distances from our original pos.
         self.offsety = 0
@@ -73,7 +98,7 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
         # and add in the help box
         self.helprect=GHelpRect(x1,y1,node,self)
         
-    # deal with items moving
+    ## deal with items moving
     def itemChange(self,change,value):
         if change==QtWidgets.QGraphicsItem.ItemPositionChange:
             dx = value.x()-self.offsetx
@@ -88,7 +113,7 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
             self.scene().rebuildArrows()
         return super().itemChange(change,value)
         
-    # double click should find or open a tab, even to the extent
+    ## double click should find or open a tab, even to the extent
     # of focussing another window (an expanded tab); an action
     # delegated to the main window
     def mouseDoubleClickEvent(self,event):
@@ -99,20 +124,38 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
             w.openTab(self.node)
             
 
-    # context menu on nodes
+    ## context menu event on nodes
     def contextMenuEvent(self,event):
         m = QtWidgets.QMenu()
+        rename = m.addAction("Rename")
         if self.node.type.hasEnable:
             togact = m.addAction("Disable" if self.node.enabled else "Enable")
+        else:
+            togact = None
+        
             
         # only worth doing if there are menu items!
         if not m.isEmpty():
             action = m.exec_(event.screenPos())
-            if action == togact:
+            if action is None:
+                return
+            elif action == togact:
                 self.node.setEnabled(not self.node.enabled)
+            elif action == rename:
+                changed,newname=ui.namedialog.do(self.node.displayName)
+                if changed:
+                    self.node.rename(newname)
+                    ui.mainwindow.MainUI.rebuildAll()
 
-# connection rectangles at top and bottom
+## connection rectangles at top and bottom of node
 class GConnectRect(QtWidgets.QGraphicsRectItem):
+
+    isInput: bool       # true if this is an input
+    node: xform.XForm   # the node I'm on
+    index: int          # the index of the input/output
+    name: str           # the name shown next to the rect (could be "")
+
+    ## construct, giving parent object (GMainRect), rectangle data, node data, input/output and index.
     def __init__(self,parent,x1,y1,x2,y2,node,isInput,index):
         super().__init__(x1,y1,x2,y2,parent=parent)
         self.isInput = isInput
@@ -120,11 +163,13 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
         self.node=node
         self.name = self.typeChanged()
         
+    ## called when the type of the connector changes, returns the connector name
     def typeChanged(self):
         index=self.index
         node=self.node
         if self.isInput:
-            name,typename,desc = node.type.inputConnectors[index]
+            # ugly stuff.
+            name,typename,desc = (node.type.inputConnectors[index][0],node.getInputType(index),node.type.inputConnectors[index][2])
         else:
             name,typename = (node.type.outputConnectors[index][0],node.getOutputType(index))
         brush = conntypes.getBrush(typename)
@@ -134,8 +179,8 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
         return name
         
 
-    # in the mouse press, we detect a click on the connection box.
-    # We match that to a connection arrow (which contains all the details)
+    ## Called when the mouse is clicked on a connector.
+    # We match the event to a connection arrow (which contains all the details)
     # and start dragging the arrow. We only modify the underlying graph
     # when we release the mouse, to delete the underlying connection
     # and make a new one if we landed on a connection box. We should also
@@ -173,15 +218,31 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
         return super().mousePressEvent(event)
 
         
-# text in middle of main rect and on connections
+## text in middle of main rect and on connections
 class GText(QtWidgets.QGraphicsSimpleTextItem):
-    def __init__(self,parent,s,node):
-        super().__init__(s,parent=parent)
+    def __init__(self,parent,text,node):
+        super().__init__(text,parent=parent)
         self.node=node
 
-# a line with an arrow on the end
+## a line with an arrow on the end, connecting two nodes
 class GArrow(QtWidgets.QGraphicsLineItem):
-    # we keep track of the nodes and connection indices
+    ## @var n1
+    # "from" xform node
+    n1: xform.XForm
+    ## @var n2
+    # "to" xform node
+    n2: xform.XForm
+    ## @var output
+    # index of output in n1
+    output: int
+    ## @var input
+    # index of input in n2
+    input: int
+    ## @var head
+    # the arrowhead shape
+    head: QtWidgets.QGraphicsPolygonItem
+
+    ## Constructor - keep track of the nodes and connection indices
     def __init__(self,x1,y1,x2,y2,n1,output,n2,input):
         self.n1 = n1
         self.output = output
@@ -190,13 +251,14 @@ class GArrow(QtWidgets.QGraphicsLineItem):
         super().__init__(x1,y1,x2,y2)
         self.head=None
         self.makeHead()
+    ## convert to string (debugging and dumping)
     def __str__(self):
         name1 = "??" if self.n1 is None else self.n1.name
         name2 = "??" if self.n2 is None else self.n2.name
         return "{}/{} -> {}/{}".format(name1,self.output,name2,self.input)
 
+    ## make the arrowhead as a Path child of this line item, deleting any old one
     def makeHead(self):
-        # make the arrowhead as a Path child of this line item, deleting any old one
         if self.head is not None:
             self.head.setParentItem(None) # not removeItem(), apparently
         line = self.line()
@@ -217,13 +279,13 @@ class GArrow(QtWidgets.QGraphicsLineItem):
         self.head = QtWidgets.QGraphicsPolygonItem(poly,parent=self)
         self.head.setBrush(Qt.black)
         
+    ## whenever we change the line, rebuild the head
     def setLine(self,line):
-        # whenever we change the line, rebuild the head
         super().setLine(line)
         self.makeHead()
         
 
-# given some kind of QGraphicsSceneEvent, get the containing view.
+## given some kind of QGraphicsSceneEvent, get the containing view.
 # We just walk up the receiving widget's tree until we find a view.
 def getEventView(evt):
     w = evt.widget()
@@ -233,19 +295,31 @@ def getEventView(evt):
         raise Exception("Cannot get scene event's view")
     return w
     
-# similarly, get the mainwindow associated with an event.
+## Get the mainwindow associated with an event.
 def getEventWindow(evt):
     return getEventView(evt).window
         
 
-# the custom scene. Note that
-# when serializing the nodes, the geometry fields should be dealt with.
+## The custom scene. Note that when serializing the nodes,
+#the geometry fields should be dealt with.
 
 class XFormGraphScene(QtWidgets.QGraphicsScene):
-    def __init__(self,mainWindow,doPlace): 
+
+    ## the graph I represent
+    graph: xform.XFormGraph         
+    ## selected nodes
+    selection: List[xform.XForm]
+    ## check selected nodes if the selection changes
+    checkSelChange: bool
+    ## list of arrows
+    arrows: List[GArrow]
+    ## dragging arrow or none if no arrow being dragged
+    draggingArrow: GArrow
+
+    ## initialise to a graph, and do autolayout if doPlace is true
+    def __init__(self,graph,doPlace): 
         super().__init__()
-        mainWindow.view.setScene(self)
-        self.graph = mainWindow.graph
+        self.graph = graph
         self.selectionChanged.connect(self.selChanged)
         self.selection=[]
         self.checkSelChange=True
@@ -262,16 +336,13 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         self.rebuild()
         
         
-    # try to generate a graph (or at least x,y coordinates inside
-    # the xforms). This is going to be messy, there's no Right Way
-    # to do it. There exist algorithms for n-ary trees, such as 
-    # Reingold-Tilford, but this isn't a tree.
-    
-    # At the moment I'm using grandalf; this will combine all
-    # the edge connections (inputs and outputs) together but we can
-    # deal with that at render time.
+    ## try to autolayout a graph using Grandalf (or at least x,y coordinates inside
+    # the xforms).
     
     def placeGrandalf(self):
+        if len(self.graph.nodes)==0: # no nodes to place
+            return
+            
         g = Graph() # grandalf graph, not one of ours!
         # add the vertices
         for n in self.graph.nodes:
@@ -303,7 +374,8 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             n.w = n.vert.view.w
             n.h = n.vert.view.h
             n.xy = (x,cy-y)
-    
+
+    ## autolayout a graph, using Grandalf if available or something dumb if it isn't    
     def place(self):
         if hasGrandalf:
             self.placeGrandalf()
@@ -318,7 +390,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 y+=n.h+20
             
             
-    # rebuild the entire scene from the graph
+    ## rebuild the entire scene from the graph
     def rebuild(self):
         # this will (obv.) change the rubberband selection, so you might get a crash
         # if you do this with live objects; we clear the selection to avoid this
@@ -337,7 +409,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         self.rebuildArrows()
         self.selChanged()
     
-    # return a good position for a new item placed with no hint to where it should go    
+    ## return a good position for a new item placed with no hint to where it should go    
     def getNewPosition(self):
         if len(self.graph.nodes)>0:
             xs = [n.xy[0] for n in self.graph.nodes]
@@ -351,8 +423,8 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         
     
 
-    # assuming that all the nodes have been placed and makeNodeGraphics has been called,
-    # connect them all up with arrows according to the connections.
+    ## assuming that all the nodes have been placed and makeNodeGraphics has been called,
+    ## connect them all up with arrows according to the connections.
     def rebuildArrows(self):
         # get rid of old arrows
         for line in self.arrows:
@@ -377,8 +449,8 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     self.addItem(arrowItem)
                     self.arrows.append(arrowItem)
 
-    # add the necessary items to create a node
-    # (assuming place has been called). Just the node, not the connections.
+    ## add the necessary items to create a node
+    ## (assuming place has been called). Just the node, not the connections.
     def makeNodeGraphics(self,n):
         x,y = n.xy
         # if the node doesn't have width and height yet, set them. This happens
@@ -390,11 +462,9 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         # We keep this rectangle in the node so we can change its colour
         n.rect = GMainRect(x,y+CONNECTORHEIGHT,n.w,n.h-YPADDING-CONNECTORHEIGHT*2,n)
         self.addItem(n.rect)
-        n.scene = self
-        
 
-        # draw text label
-        n.rect.text=GText(n.rect,n.name,n)
+        # draw text label, using the display name
+        n.rect.text=GText(n.rect,n.displayName,n)
         n.rect.text.setPos(x+XTEXTOFFSET,y+YTEXTOFFSET+CONNECTORHEIGHT)
         
         if len(n.inputs)>0:
@@ -424,7 +494,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 n.outrects[i]=r
                 xx += size
 
-    # handle selection by changing the colour of the main rect of the selected item
+    ## handle selection by changing the colour of the main rect of the selected item
     # and building the selection list of nodes. Now this is a bit complex because 
     # there are two selections - the selected items in the view (selected by clicking
     # and rubberband) and the currently shown tab.
@@ -447,7 +517,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         self.update()
 
 
-    # handle the selection area being changed (this is a UI slot)    
+    ## handle the selection area being changed (this is a UI slot)    
     def selChanged(self):
         if self.checkSelChange:
             items = self.selectedItems()
@@ -457,14 +527,14 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     self.selection.append(n)
         self.markSelected()
 
-    # current tab has changed, set up the UI accordingly. May be passed None if all tabs
+    ## current tab has changed, set up the UI accordingly. May be passed None if all tabs
     # are closed!
     def currentChanged(self,node):
         for n in self.graph.nodes:
             n.current = n is node
         self.selChanged()
 
-    # start dragging an arrow - draggingArrowStart indicates whether we are
+    ## start dragging an arrow - draggingArrowStart indicates whether we are
     # dragging the head (false) or tail (true). The event is the event which
     # triggered the drag - a mouse press on a connection.
     def startDraggingArrow(self,arrow,draggingArrowStart,event):
@@ -475,7 +545,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         v = getEventView(event)
         v.setDragMode(QtWidgets.QGraphicsView.NoDrag)
 
-    # here is where we handle actually dragging an arrow around. Dragging
+    ## here is where we handle actually dragging an arrow around. Dragging
     # items is managed by the QGraphicsView.    
     def mouseMoveEvent(self,event):
         if self.draggingArrow is not None:
@@ -488,22 +558,23 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             self.draggingArrow.setLine(line)
         super().mouseMoveEvent(event)
 
-    # handle releasing the mouse button during arrow dragging
+    ## handle releasing the mouse button during arrow dragging
     def mouseReleaseEvent(self,event):
         # first, go back to normal dragging
         v = getEventView(event)
         v.setDragMode(QtWidgets.QGraphicsView.RubberBandDrag)
         if self.draggingArrow is not None:
+            arrow = self.draggingArrow # disconnects seem to remove this?
             # first, make sure we close off the movement
             self.mouseMoveEvent(event)
             # get all the connectors at the event location. There should be one or none.
             x = [x for x in self.items(event.scenePos()) if isinstance(x,GConnectRect)]
             if not x: # is empty? We are dragging to a place with no connector
                 # if there is an existing connection we are deleting it
-                if self.draggingArrow.n2 is not None: # if a connection exists and we are removing it
-                    # remove the connection in the model
-                    self.draggingArrow.n2.disconnect(self.draggingArrow.input)
-                    self.graph.inputChanged(self.draggingArrow.n2)
+                if arrow.n2 is not None: # if a connection exists and we are removing it
+                    # remove the connection in the model (n2 might get changed)
+                    arrow.n2.disconnect(arrow.input)
+                    self.graph.inputChanged(arrow.n2)
             else:
                 conn = x[0] # this is the GConnectRect we are connecting to/from
 
@@ -513,14 +584,14 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     # this new output
                     n1 = conn.node
                     output= conn.index
-                    n2 = self.draggingArrow.n2
-                    input = self.draggingArrow.input
+                    n2 = arrow.n2
+                    input = arrow.input
                 else:
                     # we are dragging an input, so we want to connect an output to the new input
                     n2 = conn.node
                     input = conn.index
-                    n1 = self.draggingArrow.n1
-                    output = self.draggingArrow.output
+                    n1 = arrow.n1
+                    output = arrow.output
                     
                 # are they compatible?
                 outtype = n1.getOutputType(output)
@@ -539,10 +610,10 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                         # is it an existing connection we are modifying?
                         # The case where it's a fresh output being dragged to an input
                         # works too.
-                        if self.draggingArrow.n2 is not None:
+                        if arrow.n2 is not None:
                             # disconnect the existing connection
-                            self.draggingArrow.n2.disconnect(self.draggingArrow.input)
-                            self.graph.inputChanged(self.draggingArrow.n2)
+                            arrow.n2.disconnect(arrow.input)
+                            self.graph.inputChanged(arrow.n2)
                         n2.connect(input,n1,output)
                         self.graph.inputChanged(n2)
                 else:
@@ -551,6 +622,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             self.draggingArrow=None 
         super().mouseReleaseEvent(event)
 
+    ## handle key presses
     def keyPressEvent(self,event):
         if event.key() == Qt.Key_Delete:
             for n in self.selection:
@@ -560,9 +632,12 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             self.rebuild()
     
 
+    ## copy operation, serialises the items to the system clipboard
     def copy(self):
         self.graph.copy(self.selection)
+        utils.deb.show(self)
         
+    ## paste operation, deserialises items from the system clipboard
     def paste(self):
         # clear the selection area (UI controlled)
         self.clearSelection()
@@ -579,6 +654,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         # colour selected nodes
         self.markSelected()
 
+    ## cut operation, serialises items to system clipboard and deletes them
     def cut(self):
         self.graph.copy(self.selection)
         for n in self.selection:

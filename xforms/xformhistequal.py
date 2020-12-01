@@ -21,7 +21,9 @@ def equalize(img,mask):
     # algorithm source: https://docs.opencv.org/master/d5/daf/tutorial_py_histogram_equalization.html
     # get histogram; N bins in range 0-1. Set the weight of all unmasked
     # pixels to zero so they don't get counted.
-    hist,bins = np.histogram(img,BINS,weights=mask)
+
+    hist,bins = np.histogram(img,BINS,weights=mask,range=[0,1])
+
     # work out the cumulative dist. function and normalize it
     cdf = hist.cumsum()
     cdf_normalized = cdf * float(hist.max()) / cdf.max()
@@ -35,7 +37,6 @@ def equalize(img,mask):
     i2 = (img*(BINS-1)).astype(np.int32)
     # and apply it to the masked region of the image
     np.putmask(img,mask,cdf[i2].astype(np.float32))
-    
 
 @xformtype
 class XformHistEqual(XFormType):

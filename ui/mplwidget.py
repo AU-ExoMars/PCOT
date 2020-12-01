@@ -1,16 +1,21 @@
+## @package ui.mplwidget
+# a widget which can contain a Matplotlib figure
+# See xformcurve for an example.
+#
+# This page is useful
+# https://www.learnpyqt.com/courses/graphics-plotting/plotting-matplotlib/
+
 from PyQt5 import QtWidgets,QtCore
 from PyQt5.QtCore import Qt
 
 import matplotlib
 matplotlib.use('Qt5Agg')
 
-# This page is useful
-# https://www.learnpyqt.com/courses/graphics-plotting/plotting-matplotlib/
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as Canvas
 from matplotlib.figure import Figure
 
-# Matplotlib canvas class containing a single figure
+## Matplotlib canvas class containing a single figure
 class MplCanvas(Canvas):
     def __init__(self):
         self.fig = Figure()
@@ -19,8 +24,9 @@ class MplCanvas(Canvas):
         Canvas.setSizePolicy(self, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         Canvas.updateGeometry(self)
 
-# matplotlib widget.
+## the matplotlib widget proper.
 class MplWidget(QtWidgets.QWidget):
+    ## widget constructor taking parent
     def __init__(self, parent=None):
         QtWidgets.QWidget.__init__(self, parent)   # Inherit from QWidget
         self.canvas = MplCanvas()                  # Create canvas object
@@ -30,7 +36,7 @@ class MplWidget(QtWidgets.QWidget):
         self.fig = self.canvas.fig # convenience
         self.ax = self.canvas.ax
 
-    # called when we want to save a figure
+    ## called when we want to save a figure
     def save(self):
         # I'd like to be able to add more options to the dialog,
         # but we're using the OS's dialog so No Can Do unless I
@@ -41,9 +47,9 @@ class MplWidget(QtWidgets.QWidget):
         if res[0]!='':
             self.fig.savefig(res[0])
 
-    # clear all drawings
+    ## clear all drawings
     def clear(self):
         self.ax.cla()
-    # force redraw
+    ## force redraw
     def draw(self):
         self.canvas.draw()
