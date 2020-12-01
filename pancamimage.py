@@ -83,16 +83,17 @@ class SubImageROI:
 
     ## the main mask is just a single channel - this will generate a mask
     # of the same number of channels, so an x,y image will make an x,y mask
-    # and an x,y,3 image will make an x,y,3 mask.
+    # and an x,y,n image will make an x,y,n mask.
     def fullmask(self):
         if len(self.img.shape)==2:
             return self.mask # the existing mask is fine
         else:
+            print("SPECIAL")
             h,w,chans = self.img.shape
             # flatten and repeat each element thrice
-            x = np.repeat(np.ravel(self.mask),3) 
+            x = np.repeat(np.ravel(self.mask),chans) 
             # put into a h,w,3 array            
-            return np.reshape(x,(h,w,3))
+            return np.reshape(x,(h,w,chans))
 
     ## use this ROI to crop the image in img2. Doesn't do masking, though.
     def cropother(self,img2):
