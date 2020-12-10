@@ -5,6 +5,8 @@
 from PyQt5 import QtWidgets, uic, QtCore, QtGui
 from PyQt5.QtCore import Qt
 from xform import XFormType
+from macros import XFormMacro
+import ui
 
 
 view = None
@@ -12,14 +14,28 @@ view = None
 ## The groups into which the buttons are sorted - it's a constant.
 groups = ["source","macros","maths","processing","calibration","data","colour","regions","utility"]
 
+
 ## The palette items, which are buttons which can be either clicked or dragged (with RMB)
 
 class PaletteButton(QtWidgets.QPushButton):
-    ## constructor, taking button name and view into which they should be inserted.
-    def __init__(self,name,view):
+    ## constructor, taking button name, xformtype, and view into which they should be inserted.
+    def __init__(self,name,xformtype,view):
         super().__init__(name)
         self.name = name
         self.view = view
+        self.xformtype = xformtype
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.contextMenu)
+
+    def contextMenu(self,e):
+        menu = QtWidgets.QMenu()
+        if isinstance(self.xformtype,XFormMacro):
+            openProtoAct = menu.addAction("Open prototype")
+            act = menu.exec_(self.mapToGlobal(e))
+            if act == openProtoAct:
+                ui.mainwindow.MainUI.createMacroWindow(self.xformtype,False)
+
+
 
     # drag handling: nabbed from
     # https://stackoverflow.com/questions/57224812/pyqt5-move-button-on-mainwindow-with-drag-drop
@@ -58,6 +74,8 @@ class PaletteButton(QtWidgets.QPushButton):
         x.xy = self.view.scene().getNewPosition()
         # rebuild the scene
         self.view.scene().rebuild()
+
+
 
 ## the palette itself, which isn't a widget but a plain class containing all the necessary
 # widgets etc.
@@ -104,8 +122,9 @@ class Palette:
             self.layout.addWidget(sep)
             for k in grouplists[g]:
                 v = all[k]
-                b = PaletteButton(k,self.view)
+                b = PaletteButton(k,all[k],self.view)
                 if g=='macros':
                     b.setStyleSheet("background-color:rgb(220,220,140)")
                 self.layout.addWidget(b)
-            
+
+    
