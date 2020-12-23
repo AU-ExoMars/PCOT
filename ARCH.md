@@ -307,7 +307,7 @@ manipulate images. Many functions and methods, such as the **modifySubImage**,
 will do this for you. Otherwise you will need to work out how to modify the sources
 and add them to the Image constructor.
 
-Here's what Merge does:
+Here's what Merge does (note, source handling is out of date now)
 
 ```python
         # lst is a list of Images - we create a union of all the source

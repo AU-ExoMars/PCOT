@@ -131,7 +131,7 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>68</width>
+           <width>69</width>
            <height>534</height>
           </rect>
          </property>
@@ -247,6 +247,11 @@
              </item>
              <item>
               <property name="text">
+               <string>File+Filter</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
                <string>None</string>
               </property>
              </item>
@@ -274,7 +279,7 @@
      <x>0</x>
      <y>0</y>
      <width>1244</width>
-     <height>20</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
