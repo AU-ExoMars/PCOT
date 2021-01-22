@@ -4,7 +4,7 @@ import numpy as np
 import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
 from xforms.tabimage import TabImage
-from pancamimage import Image
+from pancamimage import ImageCube
 
 # The node type itself, a subclass of XFormType with the @xformtype decorator which will
 # calculate a checksum of this source file and automatically create the only instance which

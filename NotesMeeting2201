@@ -2,6 +2,10 @@ Todo:
 
 1) Refactor image -> cube
 
+1b) Modify the source system so that multifile knows whether the images are PANCAM/AUPE, and
+    thus we store the correct data in the source at that point.
+
+
 2) Remove cube(image) types, and split, merge, grey nodes.
     add new node: recombine. Takes up to 3 cubes, produces a single
     cube assembled from channels of the 3. 
@@ -13,7 +17,8 @@ Todo:
     If there are not enough channels, the last channel is duplicated
     (so a 2-channel RB image is shown as RBB).
     Recombine also acts as a general purpose viewing node.
-    
+
+
 3) parameterisation:
     yeah, just turn parameters into inputs.
     Allow numeric type (int/float)

@@ -7,7 +7,7 @@ import numpy as np
 import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
 from xforms.tabimage import TabImage
-from pancamimage import Image
+from pancamimage import ImageCube
 
 from functools import reduce
 

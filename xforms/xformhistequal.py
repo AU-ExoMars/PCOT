@@ -4,7 +4,7 @@ import numpy as np
 import ui, ui.tabs, ui.canvas
 from xform import xformtype, XFormType
 from xforms.tabimage import TabImage
-from pancamimage import Image
+from pancamimage import ImageCube
 
 # perform equalisation with a mask. Unfortunately cv.equalizeHist doesn't
 # support masks.

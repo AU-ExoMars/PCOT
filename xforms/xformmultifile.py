@@ -7,7 +7,7 @@ import numpy as np
 
 import ui, ui.tabs, ui.canvas
 from xform import xformtype, XFormType
-from pancamimage import Image, Source
+from pancamimage import ImageCube, ChannelSource
 
 NUMOUTS = 6
 
@@ -72,13 +72,13 @@ class XFormMultiFile(XFormType):
                 path = os.path.relpath(os.path.join(node.dir, node.files[i]))
                 if node.files[i] is not None and node.imgpaths[i] != path:
                     # build sources data : filename and filter name
-                    source = {Source(path, self.getFilterName(node, path))}
-                    img = Image.load(path, [source, source, source])
+                    source = {ChannelSource(path, self.getFilterName(node, path))}
+                    img = ImageCube.load(path, [source, source, source])
                     # aaaand this pretty much always happens, because load always
                     # loads as BGR.
                     if img.channels != 1:
                         c = cv.split(img.img)
-                        img = Image(c[0], [source])
+                        img = ImageCube(c[0], [source])
                         print("SNARK: ", img.sources)
                     node.imgs[i] = img
                     node.imgpaths[i] = path
@@ -90,7 +90,7 @@ class XFormMultiFile(XFormType):
             # slightly messy, post-multiplying the image like this
             # rather than on load, but multiplying on load would mean
             # reloading when the multiplier changed.
-            img = None if node.imgs[i] is None else Image(node.imgs[i].img * node.mult, node.imgs[i].sources)
+            img = None if node.imgs[i] is None else ImageCube(node.imgs[i].img * node.mult, node.imgs[i].sources)
             node.setOutput(i, img)
 
 
@@ -184,8 +184,8 @@ class TabMultiFile(ui.tabs.Tab):
         # to preview it
         item = self.model.itemFromIndex(idx)
         path = os.path.join(self.node.dir, item.text())
-        source = {Source(path, self.node.type.getFilterName(self.node, path))}
-        img = Image.load(path, [source])
+        source = {ChannelSource(path, self.node.type.getFilterName(self.node, path))}
+        img = ImageCube.load(path, [source])
         img.img *= self.node.mult
         self.w.canvas.display(img)
 

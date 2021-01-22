@@ -9,7 +9,7 @@ import utils.text, utils.colour
 import ui, ui.tabs, ui.canvas
 from xform import xformtype, XFormType
 from xforms.tabimage import TabImage
-from pancamimage import Image
+from pancamimage import ImageCube
 
 
 # this transform takes an image and places it at a position inside another image.
@@ -75,7 +75,7 @@ class XformInset(XFormType):
                 out[y:y + h, x:x + w] = t
 
             # sources could now be multiple images in each channel
-            sources = Image.buildSources([image, inset])
+            sources = ImageCube.buildSources([image, inset])
             for i in range(node.fontline):
                 cv.rectangle(out, (x - i - 1, y - i - 1), (x + w + i, y + h + i), node.colour, thickness=1)
             # add in the caption
@@ -85,7 +85,7 @@ class XformInset(XFormType):
                 utils.text.write(out, node.caption, x, ty, node.captiontop, node.fontsize,
                                  node.fontline, node.colour)
 
-        node.img = None if out is None else Image(out, sources)
+        node.img = None if out is None else ImageCube(out, sources)
         node.setOutput(0, node.img)
 
 

@@ -8,7 +8,7 @@ import numpy as np
 
 import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
-from pancamimage import Image
+from pancamimage import ImageCube
 
 @xformtype
 class XformRGBFile(XFormType):
@@ -28,7 +28,7 @@ class XformRGBFile(XFormType):
 
     def loadImg(self,node):
         # will throw exception if load failed
-        img = Image.load(node.fname)
+        img = ImageCube.load(node.fname)
         ui.log("Image {} loaded: {}".format(node.fname,img))
         node.img = img
 

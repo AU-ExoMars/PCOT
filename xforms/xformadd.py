@@ -5,7 +5,7 @@ import numpy as np
 import ui, ui.tabs, ui.canvas, ui.number
 from xform import xformtype, XFormType
 from xforms.tabimage import TabImage
-from pancamimage import Image
+from pancamimage import ImageCube
 
 
 @xformtype
@@ -45,9 +45,9 @@ class XFormAdd(XFormType):
             img = None
         else:
             if img1 is None:
-                img1 = Image(np.zeros(img2.img.shape, dtype=np.float32))
+                img1 = ImageCube(np.zeros(img2.img.shape, dtype=np.float32))
             elif img2 is None:
-                img2 = Image(np.zeros(img1.img.shape, dtype=np.float32))
+                img2 = ImageCube(np.zeros(img1.img.shape, dtype=np.float32))
 
             if img1.channels != img2.channels:
                 img = None
@@ -68,7 +68,7 @@ class XFormAdd(XFormType):
 
                 # the sources for each channel get messy here, because each channel can now come from
                 # multiple sources.
-                sources = Image.buildSources([img1, img2])
+                sources = ImageCube.buildSources([img1, img2])
 
                 # postprocess, normalising and clipping but only to the mask in subimage1
                 if node.postproc == 0:  # clip

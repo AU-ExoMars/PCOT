@@ -6,7 +6,7 @@ import numpy as np
 
 import ui,ui.tabs,ui.canvas,ui.mplwidget
 from xform import xformtype,XFormType
-from pancamimage import Image
+from pancamimage import ImageCube
 
 # number of points in lookup table
 NUMPOINTS=1000

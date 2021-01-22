@@ -6,7 +6,7 @@ import numpy as np
 
 import ui,ui.tabs,ui.canvas,ui.mplwidget
 from xform import xformtype,XFormType
-from pancamimage import Image
+from pancamimage import ImageCube
 
 def applyGradient(img,mask,grad):
     masked = np.ma.masked_array(img,mask=~mask)
@@ -80,7 +80,7 @@ class XformGradient(XFormType):
             if img.channels == 1:
                 subimage = img.subimage()
                 newsubimg = applyGradient(subimage.img,subimage.fullmask(),node.gradient)
-                outimg = Image(img.rgb(),img.sources)
+                outimg = ImageCube(img.rgb(), img.sources)
                 node.img = outimg.modifyWithSub(subimage,newsubimg)
             else:
                 node.img = None

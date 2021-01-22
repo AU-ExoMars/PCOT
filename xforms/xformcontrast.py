@@ -6,7 +6,7 @@ import numpy as np
 
 import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
-from pancamimage import Image
+from pancamimage import ImageCube
 
 # performs contrast stretching on a single channel. The image is a (h,w) numpy array.
 # There is also a (h,w) array mask.

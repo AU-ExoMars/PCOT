@@ -1,7 +1,6 @@
 ## @package pancamimage
-# Classes to encapsulate an image which can be any number of channels
-# and also incorporates region-of-interest data. At the moment, all images
-# are 8-bit and any number of channels. Conversions to and from float are
+# Classes to encapsulate an image data cube which can be any number of channels
+# and also incorporates region-of-interest data.  Conversions to and from float are
 # done in many operations. Avoiding floats saves memory and speeds things up,
 # but we could change things later.
 
@@ -14,7 +13,7 @@ import filters
 
 # a source for a channel - each channel in an image has a set of these, representing
 # filename and filter.
-class Source:
+class ChannelSource:
     file: str  # filename
     filterPos: str  # filter position
 
@@ -116,7 +115,7 @@ class ROIRect(ROI):
         return "{} {} {}x{}".format(self.x, self.y, self.w, self.h)
 
 
-## this is the parts of an image which are covered by the active ROIs
+## this is the parts of an image cube which are covered by the active ROIs
 # in that image. It consists of
 # * the image cropped to the bounding box of the ROIs. NOTE THAT this
 #   is a VIEW INTO THE ORIGINAL IMAGE
@@ -124,7 +123,7 @@ class ROIRect(ROI):
 # * a boolean mask the same size as the BB, True for pixels which
 #   should be manipulated in any operation.
 
-class SubImageROI:
+class SubImageCubeROI:
     def __init__(self, img):
         if len(img.rois) > 0:
             bbs = [r.bb() for r in img.rois]  # get bbs
@@ -175,7 +174,7 @@ class SubImageROI:
     # Copies the sources list from that image.
     def cropother(self, img2):
         x, y, w, h = self.bb
-        return Image(img2.img[y:y + h, x:x + w], img2.sources)
+        return ImageCube(img2.img[y:y + h, x:x + w], img2.sources)
 
 
 ## an image - just a numpy array (the image) and a list of ROI objects. The array
@@ -185,7 +184,7 @@ class SubImageROI:
 # for any other number of channels. Images are 32-bit float.
 # There is also a list of source tuples, (filename,filter), indexed by channel.
 
-class Image:
+class ImageCube:
     # create image from numpy array
     def __init__(self, img, sources=[]):
         if img is None:
@@ -242,7 +241,7 @@ class Image:
         img /= scale
         # build the default sources if required. This always builds an RGB image.
         if sources is None:
-            sources = [{Source(fname, "RED")}, {Source(fname, "GREEN")}, {Source(fname, "BLUE")}]
+            sources = [{ChannelSource(fname, "RED")}, {ChannelSource(fname, "GREEN")}, {ChannelSource(fname, "BLUE")}]
         # and construct the image
         return cls(img, sources)
 
@@ -282,12 +281,12 @@ class Image:
     ## extract the "subimage" - the image cropped to regions of interest,
     # with a mask for those ROIs
     def subimage(self):
-        return SubImageROI(self)
+        return SubImageCubeROI(self)
 
     def __str__(self):
         s = "<Image {}x{} array:{} channels:{}, {} bytes, ".format(self.w, self.h,
                                                                    str(self.img.shape), self.channels, self.img.nbytes)
-        xx = ";".join([Source.stringForSet(x) for x in self.sources])
+        xx = ";".join([ChannelSource.stringForSet(x) for x in self.sources])
         s += "src: [{}]".format(xx)
         x = [r.bb() for r in self.rois]
         x = [", ROI {},{},{}x{}".format(x, y, w, h) for x, y, w, h in x]
@@ -299,14 +298,14 @@ class Image:
     def getDesc(self, mainwindow):
         if mainwindow.captionType == 3:
             return ""
-        out = [Source.stringForSet(s, mainwindow) for s in self.sources]
+        out = [ChannelSource.stringForSet(s, mainwindow) for s in self.sources]
         desc = " ".join(["[" + s + "]" for s in out])
         return desc
 
     ## copy an image
     def copy(self):
         srcs = self.sources.copy()
-        i = Image(self.img.copy(), srcs)
+        i = ImageCube(self.img.copy(), srcs)
         i.rois = self.rois.copy()
         return i
 

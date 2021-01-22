@@ -3,7 +3,7 @@ import numpy as np
 
 import ui, ui.tabs, ui.canvas
 from xform import xformtype, XFormType
-from pancamimage import Image, ROIRect
+from pancamimage import ImageCube, ROIRect
 
 
 @xformtype
@@ -32,9 +32,9 @@ class XformSplit(XFormType):
             # image MUST have three sources - the input type should insure this,
             # because we only accept RGB
             r, g, b = cv.split(img.rgb())  # kind of pointless on a greyscale..
-            node.red = Image(r, [img.sources[0]])
-            node.green = Image(g, [img.sources[1]])
-            node.blue = Image(b, [img.sources[2]])
+            node.red = ImageCube(r, [img.sources[0]])
+            node.green = ImageCube(g, [img.sources[1]])
+            node.blue = ImageCube(b, [img.sources[2]])
             node.setOutput(0, node.red)
             node.setOutput(1, node.green)
             node.setOutput(2, node.blue)

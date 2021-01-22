@@ -4,7 +4,7 @@ import numpy as np
 import ui.tabs, ui.canvas
 from xform import xformtype, XFormType
 from xforms.tabimage import TabImage
-from pancamimage import Image, Source
+from pancamimage import ImageCube, ChannelSource
 import functools
 
 
@@ -72,7 +72,7 @@ class XformMerge(XFormType):
             return
         if node.addblack:
             # make a black
-            black = Image(np.zeros(s, np.float32), [{Source(None, "BLACK")}])
+            black = ImageCube(np.zeros(s, np.float32), [{ChannelSource(None, "BLACK")}])
             if b is None:
                 b = black
             if g is None:
@@ -84,12 +84,12 @@ class XformMerge(XFormType):
             lst = [x for x in [r, g, b] if x is not None]
 
         if len(lst) == 1:
-            node.img = Image(lst[0].img, lst[0].sources)  # just merging one channel??
+            node.img = ImageCube(lst[0].img, lst[0].sources)  # just merging one channel??
         else:
             # here we assume there can only be one channel in each source image,
             # and we just bundle sources together. We use None for images with no source.
             sources = [x.sources[0] for x in lst]
-            node.img = Image(cv.merge([x.img for x in lst]), sources)
+            node.img = ImageCube(cv.merge([x.img for x in lst]), sources)
         node.setOutput(0, node.img)
 
 

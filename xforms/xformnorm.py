@@ -4,7 +4,7 @@ import numpy as np
 import ui,ui.tabs,ui.canvas
 from xform import xformtype,XFormType
 from xforms.tabimage import TabImage
-from pancamimage import Image
+from pancamimage import ImageCube
 
 # Normalize the image to the 0-1 range. The range is taken across all three channels.
 

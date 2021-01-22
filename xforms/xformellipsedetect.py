@@ -6,7 +6,7 @@ import utils.cluster
 
 from xform import xformtype,XFormType
 from xforms.tabimage import TabImage
-from pancamimage import Image
+from pancamimage import ImageCube
 
 @xformtype
 class XformEllipseDetect(XFormType):
@@ -33,7 +33,7 @@ class XformEllipseDetect(XFormType):
             node.img = None
         else:
             i,node.data = ellipseDetect(img.img)
-            node.img = Image(i)
+            node.img = ImageCube(i)
         node.setOutput(0,node.img)
         node.setOutput(1,node.data)
 
