@@ -6,76 +6,12 @@
 
 import cv2 as cv
 import numpy as np
-from typing import List, Dict, Tuple, Any, ClassVar, Set
+from channelsource import IChannelSource, FileChannelSourceRed, FileChannelSourceGreen, FileChannelSourceBlue
 
 import filters
 
 
-# a source for a channel - each channel in an image has a set of these, representing
-# filename and filter.
-class ChannelSource:
-    file: str  # filename
-    filterPos: str  # filter position
 
-    def __init__(self, file, fpos):
-        self.file = file
-        self.filterPos = fpos
-
-    def getFile(self):
-        if self.file is None:
-            return '?'
-        else:
-            return self.file
-
-    def getFilterPos(self):
-        if self.filterPos is None:
-            return '?'
-        else:
-            return self.filterPos
-
-    # this gets the string for a single source; you probably want stringForSet().
-    def string(self, mainwindow):
-        f = self.getFilterPos()
-        if mainwindow.captionType == 0:
-            pass  # leave unchanged
-        elif mainwindow.captionType == 1:
-            # show filter name, get this by position from the appropriate dict
-            if mainwindow.camera == 'PANCAM':
-                d = filters.PANCAMfiltersByPosition
-            else:
-                d = filters.AUPEfiltersByPosition
-            if f in d:
-                f = "{}/{}".format(d[f].name, d[f].cwl)
-            else:
-                f = "{}/{}".format(f, '?')
-
-        if mainwindow.captionType == 2:
-            out = self.getFile() + "|" + f
-        else:
-            out = f
-
-        return out
-
-    def __str__(self):
-        return self.getFile() + "|" + self.getFilterPos()
-
-    # pass a set of these objects to this method to get a string
-
-    @classmethod
-    def stringForSet(cls, s, mainwindow=None):
-        if mainwindow is not None:
-            l = [x.string(mainwindow) for x in s]
-        else:
-            l = [str(x) for x in s]
-        return "&".join(l)
-
-    # these objects are going to be in sets, so we need hash and equality operators.
-
-    def __eq__(self, other):
-        return self.file == other.file and self.filterPos == other.filterPos
-
-    def __hash__(self):
-        return hash((self.file, self.filterPos))
 
 
 ## definition of interface for regions of interest
@@ -241,7 +177,9 @@ class ImageCube:
         img /= scale
         # build the default sources if required. This always builds an RGB image.
         if sources is None:
-            sources = [{ChannelSource(fname, "RED")}, {ChannelSource(fname, "GREEN")}, {ChannelSource(fname, "BLUE")}]
+            sources = [{FileChannelSourceRed(fname)},
+                       {FileChannelSourceGreen(fname)},
+                       {FileChannelSourceBlue(fname)}]
         # and construct the image
         return cls(img, sources)
 
@@ -286,7 +224,7 @@ class ImageCube:
     def __str__(self):
         s = "<Image {}x{} array:{} channels:{}, {} bytes, ".format(self.w, self.h,
                                                                    str(self.img.shape), self.channels, self.img.nbytes)
-        xx = ";".join([ChannelSource.stringForSet(x) for x in self.sources])
+        xx = ";".join([IChannelSource.stringForSet(x, 0) for x in self.sources])  ## caption type 0 is filter positions only
         s += "src: [{}]".format(xx)
         x = [r.bb() for r in self.rois]
         x = [", ROI {},{},{}x{}".format(x, y, w, h) for x, y, w, h in x]
@@ -298,7 +236,7 @@ class ImageCube:
     def getDesc(self, mainwindow):
         if mainwindow.captionType == 3:
             return ""
-        out = [ChannelSource.stringForSet(s, mainwindow) for s in self.sources]
+        out = [IChannelSource.stringForSet(s, mainwindow.captionType) for s in self.sources]
         desc = " ".join(["[" + s + "]" for s in out])
         return desc
 

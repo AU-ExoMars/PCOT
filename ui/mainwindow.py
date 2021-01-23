@@ -89,14 +89,12 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.saveFileName = None
         self.setWindowTitle(ui.app.applicationName()+' '+ui.app.applicationVersion())
 
-        self.setCamera("PANCAM")
-        self.setCaption(0)        
+        self.setCaption(0)
         
         # connect buttons etc.        
         self.autolayoutButton.clicked.connect(self.autoLayoutButton)
         self.dumpButton.clicked.connect(lambda: self.graph.dump())
         self.capCombo.currentIndexChanged.connect(self.captionChanged)
-        self.camCombo.currentIndexChanged.connect(self.cameraChanged)
         self.actionSave_As.triggered.connect(self.saveAsAction)
         self.action_New.triggered.connect(self.newAction)
         self.actionNew_Macro.triggered.connect(self.newMacroAction)
@@ -126,8 +124,6 @@ class MainUI(ui.tabs.DockableTabWindow):
                 action.setEnabled(False)
 
             self.capCombo.setVisible(False)
-            self.camCombo.setVisible(False)
-            self.camlabel.setVisible(False)
             self.caplabel.setVisible(False)
             # add some extra widgets
             b = QtWidgets.QPushButton("Add input")
@@ -207,7 +203,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     # the graph, macros etc.
     def serialise(self):
         d={}
-        d['SETTINGS'] = {'cam':self.camera,'cap':self.captionType}
+        d['SETTINGS'] = {'cap':self.captionType}
         d['INFO'] = {'author':getUserName(),'date':time.time()}
         d['GRAPH'] = self.graph.serialise()
         # now we also have to serialise the macros
@@ -223,7 +219,6 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.graph.deserialise(d['GRAPH'],True) # True to delete existing nodes first
 
         settings = d['SETTINGS']
-        self.setCamera(settings['cam'])
         self.setCaption(settings['cap'])
         self.graph.changed() # and rerun everything
       
@@ -353,12 +348,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     def setCaption(self,i):
         self.captionType = i
         self.capCombo.setCurrentIndex(i)
-        
-    ## camera has been changed in widget
-    def cameraChanged(self,i):
-        self.camera = self.camCombo.currentText()
-        self.runAll()
-        
+
     ## autorun has been changed in widget. This is global,
     # so all windows must agree.
     def autorunChanged(self,i):
@@ -376,14 +366,6 @@ class MainUI(ui.tabs.DockableTabWindow):
             print("Setting autorun to ",xform.XFormGraph.autoRun)
             w.autoRun.setChecked(xform.XFormGraph.autoRun)
         
-    ## set the camera type
-    def setCamera(self,cam):
-        i = self.camCombo.findText(cam)
-        if i>=0:
-            self.camera = cam
-            self.camCombo.setCurrentIndex(i)
-            self.runAll()
-
     ## open a window showing help for a node
     def openHelp(self,node):
         if node.helpwin is not None:

@@ -7,7 +7,8 @@ import numpy as np
 
 import ui, ui.tabs, ui.canvas
 from xform import xformtype, XFormType
-from pancamimage import ImageCube, ChannelSource
+from pancamimage import ImageCube
+from channelsource import FileChannelSource
 
 NUMOUTS = 6
 
@@ -20,7 +21,7 @@ class XFormMultiFile(XFormType):
 
     def __init__(self):
         super().__init__("multifile", "source", "0.0.0")
-        self.autoserialise = (('namefilters', 'dir', 'files', 'mult', 'filterpat'))
+        self.autoserialise = (('namefilters', 'dir', 'files', 'mult', 'filterpat', 'camera'))
         for x in range(NUMOUTS):
             self.addOutputConnector("", "imggrey")
 
@@ -36,6 +37,7 @@ class XFormMultiFile(XFormType):
         node.files = []
         # all data in all channels is multiplied by this (used for, say, 10 bit images)
         node.mult = 1
+        node.camera = "PANCAM"
         node.filterpat = r'.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*'
         node.filterre = None
         self.clearImages(node)
@@ -55,12 +57,16 @@ class XFormMultiFile(XFormType):
             n = m['n'] if 'n' in m else ''
             return lens + n
 
-    def perform(self, node):
+    @staticmethod
+    def compileRegex(node):
         # compile the regexp that gets the filter ID out.
         try:
             node.filterre = re.compile(node.filterpat)
         except re.error:
             node.filterre = None
+
+    def perform(self, node):
+        self.compileRegex(node)
 
         # perform takes the first N images checked in the file list and outputs them,
         # N is the number of outputs!
@@ -72,7 +78,7 @@ class XFormMultiFile(XFormType):
                 path = os.path.relpath(os.path.join(node.dir, node.files[i]))
                 if node.files[i] is not None and node.imgpaths[i] != path:
                     # build sources data : filename and filter name
-                    source = {ChannelSource(path, self.getFilterName(node, path))}
+                    source = {FileChannelSource(path, self.getFilterName(node, path), node.camera=='AUPE')}
                     img = ImageCube.load(path, [source, source, source])
                     # aaaand this pretty much always happens, because load always
                     # loads as BGR.
@@ -103,10 +109,18 @@ class TabMultiFile(ui.tabs.Tab):
         self.w.filelist.activated.connect(self.itemActivated)
         self.w.filterpat.editingFinished.connect(self.patChanged)
         self.w.mult.currentTextChanged.connect(self.multChanged)
+        self.w.camCombo.currentIndexChanged.connect(self.cameraChanged)
 
         # all the files in the current directory (which match the filters)
         self.allFiles = []
         self.onNodeChanged()
+
+    def cameraChanged(self,i):
+        if i==0:
+            self.node.camera = "PANCAM"
+        else:
+            self.node.camera = "AUPE"
+        self.changed()
 
     def getInitial(self):
         # select a directory
@@ -157,6 +171,10 @@ class TabMultiFile(ui.tabs.Tab):
         i = self.w.mult.findText(str(int(self.node.mult)))
         self.w.mult.setCurrentIndex(i)
         self.w.filterpat.setText(self.node.filterpat)
+        if self.node.camera == 'AUPE':
+            self.w.camCombo.setCurrentIndex(1)
+        else:
+            self.w.camCombo.setCurrentIndex(0)
 
     def buildModel(self):
         # build the model that the list view uses
@@ -184,7 +202,8 @@ class TabMultiFile(ui.tabs.Tab):
         # to preview it
         item = self.model.itemFromIndex(idx)
         path = os.path.join(self.node.dir, item.text())
-        source = {ChannelSource(path, self.node.type.getFilterName(self.node, path))}
+        self.node.type.compileRegex(self.node)
+        source = {FileChannelSource(path, self.node.type.getFilterName(self.node, path),self.node.camera == 'AUPE')}
         img = ImageCube.load(path, [source])
         img.img *= self.node.mult
         self.w.canvas.display(img)

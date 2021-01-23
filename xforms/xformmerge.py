@@ -2,9 +2,10 @@ import cv2 as cv
 import numpy as np
 
 import ui.tabs, ui.canvas
+from channelsource import BLUEINTERNALSOURCE, GREENINTERNALSOURCE, REDINTERNALSOURCE
 from xform import xformtype, XFormType
 from xforms.tabimage import TabImage
-from pancamimage import ImageCube, ChannelSource
+from pancamimage import ImageCube
 import functools
 
 
@@ -72,13 +73,13 @@ class XformMerge(XFormType):
             return
         if node.addblack:
             # make a black
-            black = ImageCube(np.zeros(s, np.float32), [{ChannelSource(None, "BLACK")}])
+            black = np.zeros(s, np.float32)
             if b is None:
-                b = black
+                b = ImageCube(black, [{BLUEINTERNALSOURCE}])
             if g is None:
-                g = black
+                g = ImageCube(black, [{GREENINTERNALSOURCE}])
             if r is None:
-                r = black
+                r = ImageCube(black, [{REDINTERNALSOURCE}])
             lst = [r, g, b]
         else:
             lst = [x for x in [r, g, b] if x is not None]

@@ -1,6 +1,7 @@
 import math
 import numpy as np
 
+
 ## @package filters
 # This package deals with the physical multispectral filters for the PANCAM and AUPE cameras
 
@@ -21,7 +22,7 @@ class Filter:
     ## @var name
     # name of filter (e.g. G01 for "geology 1")
     name: str
-    
+
     ## constructor
     def __init__(self, cwl, fwhm, transmission, position=None, name=None):
         self.cwl = cwl
@@ -33,12 +34,14 @@ class Filter:
     @staticmethod
     def _gaussian(x, mu, fwhm):
         def fwhm_to_sigma(fwhm):
-            return fwhm/(2*math.sqrt(2*math.log(2)))  # ~= 2.35482
-        return np.exp(-(x-mu)**2/(2*fwhm_to_sigma(fwhm)**2))
+            return fwhm / (2 * math.sqrt(2 * math.log(2)))  # ~= 2.35482
+
+        return np.exp(-(x - mu) ** 2 / (2 * fwhm_to_sigma(fwhm) ** 2))
 
     ## generate a response curve from an input array of frequencies (I think)
     def response_over(self, x: np.ndarray):
         return self._gaussian(x, self.cwl, self.fwhm)
+
 
 ## Array of Pancam filters - note: solar filters omitted
 PANCAM_FILTERS = [
@@ -87,16 +90,19 @@ AUPE_FILTERS = [
     Filter(1000, 50, 1, "R09", "G1f"),
 ]
 
+## dummy filter for when we have trouble finding the value
+DUMMY_FILTER = Filter(0, 0, 0, "??", "??")
+
 ## dictionary of AUPE filters by position (L/R+number)
-AUPEfiltersByPosition = {x.position:x for x in AUPE_FILTERS}
+AUPEfiltersByPosition = {x.position: x for x in AUPE_FILTERS}
 
 ## dictionary of AUPE filters by name - e.g. G01 (geology 1),
 # C01L (colour 1 left)
-AUPEfiltersByName = {x.name:x for x in AUPE_FILTERS}
+AUPEfiltersByName = {x.name: x for x in AUPE_FILTERS}
 
 ## dictionary of PANCAM filters by position (L/R+number)
-PANCAMfiltersByPosition = {x.position:x for x in PANCAM_FILTERS}
+PANCAMfiltersByPosition = {x.position: x for x in PANCAM_FILTERS}
 
 ## dictionary of PANCAM filters by name - e.g. G01 (geology 1),
 # C01L (colour 1 left)
-PANCAMfiltersByName = {x.name:x for x in PANCAM_FILTERS}
+PANCAMfiltersByName = {x.name: x for x in PANCAM_FILTERS}
