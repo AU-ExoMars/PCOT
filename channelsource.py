@@ -76,7 +76,7 @@ class ChannelSourceWithFilter(IChannelSource):
         return self.id
 
     def getFilterPos(self):
-        return self.pos
+        return self.filter.position
 
     def getFilterName(self):
         return self.filter.name
