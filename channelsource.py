@@ -67,7 +67,7 @@ class IChannelSource(ABC):
 # A flag indicates if the data is real or not, so nodes can check.
 
 class ChannelSourceWithFilter(IChannelSource):
-    def __init__(self, ident, pos, filt, fake=True):
+    def __init__(self, ident, filt, fake=True):
         self.id = ident  # identifying string for source, e.g. filename
         self.filter = filt
         self.fake = fake  # are these real filters or faked (e.g. just RGB)?
@@ -113,7 +113,7 @@ class InternalChannelSource(ChannelSourceWithFilter):
     # to the red channel in an RGB image
 
     def __init__(self, name, filt):
-        super().__init__("internal", name, filt, True)
+        super().__init__("internal", filt, True)
 
     def string(self, capType):
         return self.getFilterPos()
@@ -132,7 +132,7 @@ BLUEINTERNALSOURCE = InternalChannelSource("BLUE", FAKEBLUEFILTER)
 
 class FileChannelSourceNoFilter(ChannelSourceWithFilter):
     def __init__(self, file, filt):
-        super().__init__(file, filt.name, filt, True)
+        super().__init__(file, filt, True)
 
     def fullStr(self):
         return self.getFilterPos() + "+++" + self.getID()
@@ -174,7 +174,7 @@ class FileChannelSource(ChannelSourceWithFilter):
             filt = d[fpos]
         else:
             filt = filters.DUMMY_FILTER
-        super().__init__(file, fpos, filt, False)
+        super().__init__(file, filt, False)
 
     def fullStr(self):
         return self.getFilterPos() + "++" + self.getID()
