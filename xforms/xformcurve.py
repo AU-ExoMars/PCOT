@@ -105,6 +105,6 @@ class TabCurve(ui.tabs.Tab):
         self.w.mpl.canvas.draw() # present drawing
 
         # display image        
-        self.w.canvas.display(self.node.img)
+        self.w.canvas.display(self.node, self.node.img)
 
 

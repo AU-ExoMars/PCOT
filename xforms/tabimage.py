@@ -11,5 +11,5 @@ class TabImage(ui.tabs.Tab):
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
-        self.w.canvas.display(self.node.img)
+        self.w.canvas.display(self.node, self.node.img)
 

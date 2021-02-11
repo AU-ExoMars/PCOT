@@ -129,5 +129,5 @@ class TabContrast(ui.tabs.Tab):
     # images.
     def onNodeChanged(self):
         self.w.dial.setValue(self.node.tol*200)        
-        self.w.canvas.display(self.node.img)
+        self.w.canvas.display(self.node, self.node.img)
 

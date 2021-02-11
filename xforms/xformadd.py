@@ -140,4 +140,4 @@ class TabMaths(ui.tabs.Tab):
         self.w.m2.setText(str(self.node.m2))
         self.w.k.setText(str(self.node.k))
         self.w.postproc.setCurrentIndex(self.node.postproc)
-        self.w.canvas.display(self.node.img)
+        self.w.canvas.display(self.node, self.node.img)

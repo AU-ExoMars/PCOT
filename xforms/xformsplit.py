@@ -52,6 +52,6 @@ class TabSplit(ui.tabs.Tab):
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
-        self.w.canvRed.display(self.node.red)
-        self.w.canvGreen.display(self.node.green)
-        self.w.canvBlue.display(self.node.blue)
+        self.w.canvRed.display(self.node, self.node.red)
+        self.w.canvGreen.display(self.node, self.node.green)
+        self.w.canvBlue.display(self.node, self.node.blue)

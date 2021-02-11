@@ -110,7 +110,7 @@ class TabGradient(ui.tabs.Tab):
             
     def onNodeChanged(self):
         self.w.gradient.setGradient(self.node.gradient)
-        self.w.canvas.display(self.node.img)
+        self.w.canvas.display(self.node, self.node.img)
 
     def gradientChanged(self):
         self.node.gradient = self.w.gradient.gradient()

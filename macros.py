@@ -357,7 +357,7 @@ class TabMacro(ui.tabs.Tab):
             w = ui.mainwindow.MainUI.createMacroWindow(self.node.instance.proto, False)
 
     def onNodeChanged(self):
-        self.w.canvas.display(self.node.sinkimg)
+        self.w.canvas.display(self.node, self.node.sinkimg)
 
 
 ## the UI for macro connectors

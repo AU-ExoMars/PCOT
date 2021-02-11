@@ -72,4 +72,4 @@ class TabOffset(ui.tabs.Tab):
     def onNodeChanged(self):
         self.w.xoff.setText(str(self.node.x))
         self.w.yoff.setText(str(self.node.y))
-        self.w.canvas.display(self.node.img)
+        self.w.canvas.display(self.node, self.node.img)

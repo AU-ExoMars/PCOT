@@ -334,6 +334,12 @@ class XForm:
     # an open help window, or None
     helpwin: PyQt5.QtWidgets.QMainWindow
 
+    ## @var chanAssignments
+    # a triple of integers used by nodes which have a canvas.Canvas. They indicate which channels
+    # in the viewed image cube map onto R, G and B (in that order) in the Canvas. Starts at None,
+    # and is set to default values by the first call to display() on the canvas.
+    chanAssignments: Tuple[int]
+
     ## constructor, takes type and displayname
     def __init__(self, type, dispname):
         self.type = type
@@ -354,6 +360,7 @@ class XForm:
         # which can change in macros. Initialise the inputs, though.
         self.inputs = [None] * len(type.inputConnectors)
         self.connCountChanged()
+        self.chanAssignments = None
 
         # UI-DEPENDENT DATA DOWN HERE
         self.xy = (0, 0)  # this SHOULD be serialised

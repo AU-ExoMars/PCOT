@@ -206,7 +206,7 @@ class TabMultiFile(ui.tabs.Tab):
         source = {FileChannelSource(path, self.node.type.getFilterName(self.node, path),self.node.camera == 'AUPE')}
         img = ImageCube.load(path, [source])
         img.img *= self.node.mult
-        self.w.canvas.display(img)
+        self.w.canvas.display(self.node, img)
 
     def checkedChanged(self):
         # the checked items have changed, reset the list and regenerate

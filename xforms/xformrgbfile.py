@@ -66,7 +66,7 @@ class TabRGBFile(ui.tabs.Tab):
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
-        self.w.canvas.display(self.node.outputs[0])
+        self.w.canvas.display(self.node, self.node.outputs[0])
         
         
     # this sets the file IN THE NODE. We store all data in the node,
