@@ -64,6 +64,7 @@ class XformCurve(XFormType):
             if img.channels == 1:
                 newsubimg = curve(subimage.img,subimage.mask,node)
             else:
+                # TODO won't work on non-RGB
                 newsubimg = cv.merge([curve(x,subimage.mask,node) for x in cv.split(subimage.img)])
             node.img = img.modifyWithSub(subimage,newsubimg)
             

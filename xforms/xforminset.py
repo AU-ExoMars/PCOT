@@ -46,9 +46,9 @@ class XformInset(XFormType):
         node.colour = (1, 1, 0)
 
     def perform(self, node):
-        image = node.getInput(0)
-        inset = node.getInput(1)
-        inrect = node.getInput(2)
+        image = node.getInput(0)    # this is the main image
+        inset = node.getInput(1)    # this is the thing we're going to insert
+        inrect = node.getInput(2)   # this is the rectangle
 
         # if there is no input rect we use the rubberbanded one set by the tab
         if inrect is None:
@@ -65,13 +65,15 @@ class XformInset(XFormType):
             out = None
         else:
             x, y, w, h = inrect  # get the rectangle
-            out = image.rgb().copy()  # get a numpy array copy of outer image as RGB
+            # TODO this won't work with images which aren't RGB!
+            out = image.rgb((0, 1, 2)).copy()  # get a numpy array copy of outer image as RGB
             if inset is None:
                 # there's no inset image, draw a rectangle
                 cv.rectangle(out, (x, y), (x + w, y + h), (0, 0, 255), -1)  # -1=filled
             elif node.enabled:  # only add the inset if enabled
                 # resize the inset (and cvt to RGB if necessary)
-                t = cv.resize(inset.rgb(), dsize=(w, h), interpolation=cv.INTER_AREA)
+                # TODO this won't work with images which aren't RGB!
+                t = cv.resize(inset.rgb((0, 1, 2)), dsize=(w, h), interpolation=cv.INTER_AREA)
                 out[y:y + h, x:x + w] = t
 
             # sources could now be multiple images in each channel

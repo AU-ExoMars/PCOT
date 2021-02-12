@@ -46,6 +46,10 @@ class InnerCanvas(QtWidgets.QWidget):
     def __init__(self, canv, parent=None):
         super().__init__(parent)
         self.img = None
+        self.desc = ""
+        self.zoomscale = 1
+        self.x = 0
+        self.y = 0
         self.canv = canv
         self.reset()
 
@@ -72,10 +76,10 @@ class InnerCanvas(QtWidgets.QWidget):
 
     ## display an image (handles 1 and 3 channels) next time paintEvent
     # happens, and update to cause that. Allow it to handle None too.
-    def display(self, img: ImageCube):
+    def display(self, img: ImageCube, chanAssignments: tuple[int]):
         if img is not None:
-            self.desc = img.getDesc(self.getMainWindow())
-            img = img.rgb()  # convert to RGB
+            self.desc = img.getDesc(self.getMainWindow(), chanAssignments)
+            img = img.rgb(chanAssignments)  # convert to RGB
             # only reset the image zoom if the shape has changed
             if self.img is None or self.img.shape[:2] != img.shape[:2]:
                 self.reset()
@@ -289,9 +293,8 @@ class Canvas(QtWidgets.QWidget):
             self.greenChan.setCurrentIndex(node.chanAssignments[1])
             self.blueChan.setCurrentIndex(node.chanAssignments[2])
             self.setScrollBarsFromCanvas()
-        # TODO - use the channel assignments to select RGB for display.
         # This will clear, so allow it to be called with None
-        self.canvas.display(img)
+        self.canvas.display(img, node.chanAssignments)
 
     ## reset the canvas to x1 magnification
     def reset(self):
@@ -331,4 +334,6 @@ class Canvas(QtWidgets.QWidget):
     @staticmethod
     def defaultChannelAssignments(img: ImageCube):
         # TODO actually do this right
-        return tuple(range(0, img.channels))
+        qq= tuple([img.channels - 1 if x >= img.channels else x for x in range(0, 3)])
+        print(qq)
+        return qq

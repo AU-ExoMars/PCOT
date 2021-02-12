@@ -11,13 +11,18 @@ import graphview,palette,graphscene
 import filters
 
 # import all transform types (see the __init__.py there)
+# ACTUALLY REQUIRED despite what the IDE says!
 import xforms
 from xforms import *
+
+
+app = None
 
 ## the main function: parses command line, loads any files specified,
 # opens a mainwindow and runs its code.
 
 def main():
+    global app
     app = QtWidgets.QApplication(sys.argv) 
     app.setApplicationVersion("0.0.0")
     app.setApplicationName("PCOT")

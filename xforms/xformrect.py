@@ -69,9 +69,10 @@ class XformRect(XFormType):
                 # with no ROIs
                 node.setOutput(1, ImageCube(roi.crop(o), o.sources))
 
-                # now make the annotated image, which we always do because it's what
+            # now make the annotated image, which we always do because it's what
             # we display.
-            annot = img.img.copy()  # numpy copy of image
+            # TODO this must be an RGB copy!
+            annot = img.rgb().img.copy()  # numpy copy of image
             # write on it - but we MUST WRITE OUTSIDE THE BOUNDS, otherwise we interfere
             # with the image! Doing this predictably with the thickness function
             # in cv.rectangle is a pain, so I'm doing it by hand.

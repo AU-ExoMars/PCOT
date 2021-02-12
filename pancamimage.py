@@ -11,9 +11,6 @@ from channelsource import IChannelSource, FileChannelSourceRed, FileChannelSourc
 import filters
 
 
-
-
-
 ## definition of interface for regions of interest
 class ROI:
     ## return a (x,y,w,h) tuple describing the bounding box for this ROI
@@ -99,11 +96,10 @@ class SubImageCubeROI:
         if len(self.img.shape) == 2:
             return self.mask  # the existing mask is fine
         else:
-            print("SPECIAL")
             h, w, chans = self.img.shape
-            # flatten and repeat each element thrice
+            # flatten and repeat each element for each channel
             x = np.repeat(np.ravel(self.mask), chans)
-            # put into a h,w,3 array            
+            # put into a h,w,chans array
             return np.reshape(x, (h, w, chans))
 
     ## use this ROI to crop the image in img2. Doesn't do masking, though.
@@ -200,21 +196,20 @@ class ImageCube:
         return out
 
     ## get a numpy image (not another Image) we can display on an RGB surface
-    def rgb(self):
+    # Requires a 3-tuple of channel assignments, indicating which source index is used for
+    # red, green, blue (e.g. (0,1,2) for a standard RGB image)
+    def rgb(self, chanAssignments):
         # assume we're 8 bit
-        if self.channels == 1:
-            return cv.merge([self.img, self.img, self.img])  # greyscale
-        elif self.channels == 3:
-            return self.img  # just fine as it is
+        if self.channels==1:
+            # single channel images are a special case, rather than
+            # [chans,w,h] they are just [w,h]
+            return cv.merge([self.img,self.img,self.img])
         else:
-            # well, now we have something weird. If there are fewer than three, there must 
-            # be two - use red and blue. If there are more than three, just use the first three.
-            chans = cv.split(self.img)
-            if self.channels == 2:
-                blk = np.zeros(self.img.shape[0:2]).astype(np.ubyte)
-                return cv.merge([chans[0], blk, chans[1]])
-            else:
-                return cv.merge(chans[0:3])
+            red = self.img[:, :, chanAssignments[0]]
+            green = self.img[:, :, chanAssignments[1]]
+            blue = self.img[:, :, chanAssignments[2]]
+
+        return cv.merge([red, green, blue])
 
     ## extract the "subimage" - the image cropped to regions of interest,
     # with a mask for those ROIs
@@ -224,19 +219,28 @@ class ImageCube:
     def __str__(self):
         s = "<Image {}x{} array:{} channels:{}, {} bytes, ".format(self.w, self.h,
                                                                    str(self.img.shape), self.channels, self.img.nbytes)
-        xx = ";".join([IChannelSource.stringForSet(x, 0) for x in self.sources])  ## caption type 0 is filter positions only
+        # caption type 0 is filter positions only
+        xx = ";".join([IChannelSource.stringForSet(x, 0) for x in self.sources])
+
         s += "src: [{}]".format(xx)
         x = [r.bb() for r in self.rois]
         x = [", ROI {},{},{}x{}".format(x, y, w, h) for x, y, w, h in x]
         s += "/".join(x) + ">"
         return s
 
-    ## the descriptor is a string which can vary depending on main window settings
+    ## the descriptor is a string which can vary depending on main window settings.
+    # If channel assignments are provided (e.g. [0,1,2]) select those channels and
+    # show the descriptors for only those. Used in canvas. Not sure about it: on the one
+    # hand we lose information (if we're viewing 3 channels from 11) but on the other hand
+    # 11 channels is far too many to show in the descriptor at the bottom of the canvas!
 
-    def getDesc(self, mainwindow):
+    def getDesc(self, mainwindow, chanAssignments=None):
         if mainwindow.captionType == 3:
             return ""
         out = [IChannelSource.stringForSet(s, mainwindow.captionType) for s in self.sources]
+        # if there are channel assignments, show only the assigned channels. Not sure about this.
+        if chanAssignments is not None:
+            out = [out[x] for x in chanAssignments]
         desc = " ".join(["[" + s + "]" for s in out])
         return desc
 

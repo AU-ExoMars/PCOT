@@ -92,6 +92,7 @@ class XformContrast(XFormType):
             if img.channels==1:
                 newsubimg = contrast1(subimage.img,node.tol,subimage.mask)
             else:
+                # TODO won't work on non-RGB (see comment)
                 newsubimg = cv.merge([contrast1(x,node.tol,subimage.mask) for x in cv.split(subimage.img)])
             # having got a modified subimage, we need to splice it in
             node.img = img.modifyWithSub(subimage,newsubimg)

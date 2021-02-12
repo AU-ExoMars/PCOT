@@ -31,7 +31,8 @@ class XformSplit(XFormType):
         if img is not None:
             # image MUST have three sources - the input type should insure this,
             # because we only accept RGB
-            r, g, b = cv.split(img.rgb())  # kind of pointless on a greyscale..
+            # TODO this won't work with images which aren't RGB; of course split is going away soon.
+            r, g, b = cv.split(img.rgb((0, 1, 2)))  # kind of pointless on a greyscale..
             node.red = ImageCube(r, [img.sources[0]])
             node.green = ImageCube(g, [img.sources[1]])
             node.blue = ImageCube(b, [img.sources[2]])
