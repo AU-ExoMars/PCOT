@@ -8,6 +8,7 @@ from PyQt5 import QtWidgets
 import conntypes
 import ui
 import xform
+from pancamimage import ChannelMapping
 from xform import XFormType
 
 
@@ -172,6 +173,7 @@ class XFormMacro(XFormType):
         # initialise the (empty) connectors and will also add us to
         # the palette
         self.setConnectors()
+        self.autoserialise = ('mapping',)
 
     ## generates a new unique name for this macro. TODO: MAY NOT WORK ON LOAD/RELOAD.
     @staticmethod
@@ -194,6 +196,7 @@ class XFormMacro(XFormType):
         # this case is an instance of the macro.
         node.instance = MacroInstance(self, node)
         node.instance.copyProto()  # copy the graph from the prototype
+        node.mapping = ChannelMapping()  # RGB channel mapping for image
         node.sinkimg = None
 
     ## Counts the input/output connectors inside the macro and sets the XFormType's
@@ -357,7 +360,7 @@ class TabMacro(ui.tabs.Tab):
             w = ui.mainwindow.MainUI.createMacroWindow(self.node.instance.proto, False)
 
     def onNodeChanged(self):
-        self.w.canvas.display(self.node, self.node.sinkimg)
+        self.w.canvas.display(self.node.mapping, self.node.sinkimg)
 
 
 ## the UI for macro connectors

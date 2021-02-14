@@ -28,11 +28,11 @@ class XformSplit(XFormType):
 
     def perform(self, node):
         img = node.getInput(0)
-        if img is not None:
+        if img is not None and img.channels == 3:
             # image MUST have three sources - the input type should insure this,
             # because we only accept RGB
             # TODO this won't work with images which aren't RGB; of course split is going away soon.
-            r, g, b = cv.split(img.rgb((0, 1, 2)))  # kind of pointless on a greyscale..
+            r, g, b = cv.split(img.img)  # kind of pointless on a greyscale..
             node.red = ImageCube(r, [img.sources[0]])
             node.green = ImageCube(g, [img.sources[1]])
             node.blue = ImageCube(b, [img.sources[2]])
@@ -48,11 +48,13 @@ class XformSplit(XFormType):
 class TabSplit(ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'assets/tabsplit.ui')
+        self.w.canvas.setMapping(node.mapping)
         # sync tab with node
         self.onNodeChanged()
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
-        self.w.canvRed.display(self.node, self.node.red)
-        self.w.canvGreen.display(self.node, self.node.green)
-        self.w.canvBlue.display(self.node, self.node.blue)
+        # we don't actually care about the mapping here because it's always greyscale
+        self.w.canvRed.display(self.node.red)
+        self.w.canvGreen.display(self.node.green)
+        self.w.canvBlue.display(self.node.blue)

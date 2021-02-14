@@ -61,12 +61,13 @@ class TabRGBFile(ui.tabs.Tab):
         self.w.treeView.setColumnHidden(2,True)
         self.w.treeView.doubleClicked.connect(self.fileClickedAction)
         self.w.treeView.scrollTo(idx)
+        self.w.canvas.setMapping(node.mapping)
         # sync tab with node
         self.onNodeChanged()
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
-        self.w.canvas.display(self.node, self.node.outputs[0])
+        self.w.canvas.display(self.node.outputs[0])
         
         
     # this sets the file IN THE NODE. We store all data in the node,

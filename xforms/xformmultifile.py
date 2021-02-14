@@ -110,6 +110,7 @@ class TabMultiFile(ui.tabs.Tab):
         self.w.filterpat.editingFinished.connect(self.patChanged)
         self.w.mult.currentTextChanged.connect(self.multChanged)
         self.w.camCombo.currentIndexChanged.connect(self.cameraChanged)
+        self.w.canvas.setMapping(node.mapping)
 
         # all the files in the current directory (which match the filters)
         self.allFiles = []
@@ -206,7 +207,7 @@ class TabMultiFile(ui.tabs.Tab):
         source = {FileChannelSource(path, self.node.type.getFilterName(self.node, path),self.node.camera == 'AUPE')}
         img = ImageCube.load(path, [source])
         img.img *= self.node.mult
-        self.w.canvas.display(self.node, img)
+        self.w.canvas.display(img)
 
     def checkedChanged(self):
         # the checked items have changed, reset the list and regenerate

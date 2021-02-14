@@ -102,6 +102,7 @@ class TabRect(ui.tabs.Tab):
         self.w.caption.textChanged.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
         self.w.captionTop.toggled.connect(self.topChanged)
+        self.w.canvas.setMapping(node.mapping)
         self.mouseDown = False
         self.dontSetText = False
         # sync tab with node
@@ -136,7 +137,7 @@ class TabRect(ui.tabs.Tab):
     # causes the tab to update itself from the node
     def onNodeChanged(self):
         if self.node.img is not None:
-            self.w.canvas.display(self.node, self.node.img)
+            self.w.canvas.display(self.node.img)
         if not self.dontSetText:
             self.w.caption.setText(self.node.caption)
         self.w.fontsize.setValue(self.node.fontsize)

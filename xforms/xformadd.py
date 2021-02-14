@@ -4,8 +4,7 @@ import numpy as np
 
 import ui, ui.tabs, ui.canvas, ui.number
 from xform import xformtype, XFormType
-from xforms.tabimage import TabImage
-from pancamimage import ImageCube
+from pancamimage import ImageCube, ChannelMapping
 
 
 @xformtype
@@ -116,7 +115,7 @@ class TabMaths(ui.tabs.Tab):
         self.w.k.editingFinished.connect(self.kChanged)
 
         self.w.postproc.currentIndexChanged.connect(self.postprocChanged)
-
+        self.w.canvas.setMapping(node.mapping)
         self.onNodeChanged()
 
     def m1Changed(self):
@@ -140,4 +139,4 @@ class TabMaths(ui.tabs.Tab):
         self.w.m2.setText(str(self.node.m2))
         self.w.k.setText(str(self.node.k))
         self.w.postproc.setCurrentIndex(self.node.postproc)
-        self.w.canvas.display(self.node, self.node.img)
+        self.w.canvas.display(self.node.img)

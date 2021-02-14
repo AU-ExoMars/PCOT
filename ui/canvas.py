@@ -10,7 +10,7 @@ import cv2 as cv
 import numpy as np
 import ui.tabs
 from channelsource import IChannelSource
-from pancamimage import ImageCube
+from pancamimage import ImageCube, ChannelMapping
 from xform import XForm
 
 
@@ -76,10 +76,10 @@ class InnerCanvas(QtWidgets.QWidget):
 
     ## display an image (handles 1 and 3 channels) next time paintEvent
     # happens, and update to cause that. Allow it to handle None too.
-    def display(self, img: ImageCube, chanAssignments: tuple[int]):
+    def display(self, img: ImageCube, mapping: ChannelMapping):
         if img is not None:
-            self.desc = img.getDesc(self.getMainWindow(), chanAssignments)
-            img = img.rgb(chanAssignments)  # convert to RGB
+            self.desc = img.getDesc(self.getMainWindow(), mapping)
+            img = img.rgb(mapping)  # convert to RGB
             # only reset the image zoom if the shape has changed
             if self.img is None or self.img.shape[:2] != img.shape[:2]:
                 self.reset()
@@ -237,12 +237,15 @@ class Canvas(QtWidgets.QWidget):
 
         # these are the actual widgets specifying which channel in the cube is viewed.
         # We need to deal with these carefully.
-        self.redChan = QtWidgets.QComboBox()
-        topbar.addWidget(self.redChan, 1, 0)
-        self.greenChan = QtWidgets.QComboBox()
-        topbar.addWidget(self.greenChan, 1, 1)
-        self.blueChan = QtWidgets.QComboBox()
-        topbar.addWidget(self.blueChan, 1, 2)
+        self.redChanCombo = QtWidgets.QComboBox()
+        self.redChanCombo.currentIndexChanged.connect(self.redIndexChanged)
+        topbar.addWidget(self.redChanCombo, 1, 0)
+        self.greenChanCombo = QtWidgets.QComboBox()
+        self.greenChanCombo.currentIndexChanged.connect(self.greenIndexChanged)
+        topbar.addWidget(self.greenChanCombo, 1, 1)
+        self.blueChanCombo = QtWidgets.QComboBox()
+        self.blueChanCombo.currentIndexChanged.connect(self.blueIndexChanged)
+        topbar.addWidget(self.blueChanCombo, 1, 2)
 
         layout = QtWidgets.QGridLayout()
         outerlayout.addLayout(layout)
@@ -262,39 +265,66 @@ class Canvas(QtWidgets.QWidget):
         layout.addWidget(self.resetButton, 1, 1)
         self.resetButton.clicked.connect(self.reset)
 
-        self.prevImgSourceString = ""
+        # the mapping we are using - the node owns this, we just get a ref. when
+        # the tab is created
+        self.mapping = None
+        # previous image (in case mapping changes)
+        self.previmg = None
+
+    def setMapping(self, mapping):
+        self.mapping = mapping
+
+    def redIndexChanged(self, i):
+        print("RED CHANGED TO", i)
+        self.mapping.red = i
+        self.redisplay()
+
+    def greenIndexChanged(self, i):
+        print("GREEN CHANGED TO", i)
+        self.mapping.green = i
+        self.redisplay()
+
+    def blueIndexChanged(self, i):
+        print("BLUE CHANGED TO", i)
+        self.mapping.blue = i
+        self.redisplay()
 
     ## this initialises a combo box, setting the possible values to be the channels in the image
     # input
     def addChannelsToChannelCombo(self, combo: QtWidgets.QComboBox, img: ImageCube):
+        combo.blockSignals(True) # temporarily disable signals to avoid indexChanged calls
         combo.clear()
         for i in range(0, img.channels):
             # adds descriptor string and integer channels index
             combo.addItem(IChannelSource.stringForSet(img.sources[i],
                                                       self.canvas.getMainWindow().captionType))  # ugly
+        combo.blockSignals(False)
 
-    ## set this canvas (actually the InnerCanvas) to hold an image. We need to know the calling node too,
-    # because it holds the channel assignments
-    def display(self, node: XForm, img: ImageCube):
+    def setCombosToImageChannels(self, img):
+        self.addChannelsToChannelCombo(self.redChanCombo, img)
+        self.addChannelsToChannelCombo(self.greenChanCombo, img)
+        self.addChannelsToChannelCombo(self.blueChanCombo, img)
+
+    ## set this canvas (actually the InnerCanvas) to hold an image.
+
+    def display(self, img: ImageCube):
         if img is not None:
-            # we build a string from the sources just for identification, so the captiontype doesn't matter.
-            sourceStr = "^".join([IChannelSource.stringForSet(x, 0) for x in img.sources])
-            if node.chanAssignments is None or self.prevImgSourceString != sourceStr:
-                # no channel assignments yet, or the image channels have changed.
-                # Need to construct new set from the sources
-                self.prevImgSourceString = sourceStr
-                node.chanAssignments = Canvas.defaultChannelAssignments(img)
+            # ensure there is a valid mapping
+            self.mapping.ensureValid(img)
             # now make the combo box options match the sources in the image
-            self.addChannelsToChannelCombo(self.redChan, img)
-            self.addChannelsToChannelCombo(self.greenChan, img)
-            self.addChannelsToChannelCombo(self.blueChan, img)
             # and finally make the selection each each box match the actual channel assignment
-            self.redChan.setCurrentIndex(node.chanAssignments[0])
-            self.greenChan.setCurrentIndex(node.chanAssignments[1])
-            self.blueChan.setCurrentIndex(node.chanAssignments[2])
+            self.setCombosToImageChannels(img)
+            self.redChanCombo.setCurrentIndex(self.mapping.red)
+            self.greenChanCombo.setCurrentIndex(self.mapping.green)
+            self.blueChanCombo.setCurrentIndex(self.mapping.blue)
             self.setScrollBarsFromCanvas()
-        # This will clear, so allow it to be called with None
-        self.canvas.display(img, node.chanAssignments)
+        # cache the image in case the mapping changes
+        self.previmg = img
+        # This will clear the screen if img is None
+        self.redisplay()
+
+    def redisplay(self):
+        self.canvas.display(self.previmg, self.mapping)
 
     ## reset the canvas to x1 magnification
     def reset(self):
@@ -330,10 +360,3 @@ class Canvas(QtWidgets.QWidget):
     def horzScrollChanged(self, v):
         self.canvas.x = v
         self.canvas.update()
-
-    @staticmethod
-    def defaultChannelAssignments(img: ImageCube):
-        # TODO actually do this right
-        qq= tuple([img.channels - 1 if x >= img.channels else x for x in range(0, 3)])
-        print(qq)
-        return qq

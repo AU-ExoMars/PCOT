@@ -88,41 +88,23 @@ New imagecubes:
    Change pancamimages images to hold filter descriptors in an array
     and not a set; order is important.
 
+Notes on channel mappings:
+Many nodes need to view their output images, which may have any number of channels. Thus a node needs a way of mapping
+the output image(s) onto RGB in a way that the user can modify. To this end, we have the ChannelMapping class which
+essentially encapsulates a triple of indices (red,green,blue) into the source image channel. ImageCube.rgb() takes
+this mapping. The mappings initialise in a null state. When ChannelMapping.ensureValid is called, we set up a default
+mapping if one doesn't exist, or if the channels in the image (encoded into a string) have changed since last time.
 
-Canvas:
-    should display the channels in the cube selected for RGB
-    should automatically select correct channels on initialisation
-    RGB channels should be persistent
-    
-    How this works:
-        Comboboxes at the top of the canvas, (red,green,blue)chan.
-        In Canvas.display(img) these are set to the names of the channels
-        in the image by calling addChannelsToChannelCombo.
+Every node gets a ChannelMapping, even though it might not use it. ChannelMappings also persist.
 
-NOT DONE YET:        
+While the mapping is stored in the node, the Canvas also gets a link to it.
 
-        display() is the key method: provided the channels are right
-        when this is called, we're fine.
-        
-        Need to view image according to channel selection (I think
-        this is done, via calling img.rgb() with the channel assignments)
-        
-        Need to be able to change channel assignments - connect up
-        the comboboxes to note change, and save changed into chan
-        assignments and call display() when they change. Could be
-        nasty.
-        Also read initial chan assignments into comboboxes
-        (that's done in display() already).
-        
-        MASSIVE problem:
-        * Many nodes assume RGB. They can't.
-        * These nodes have to be able to get an rgb image
-        * They have to use the channel assignments stored in the node?
-        * That might not exist - probably need a way to do this, creating
-          a default.
-        * replace chanAssignments with a getter that will create one?
-        * In some cases the image might not exist yet
-        
-        Channel assignments are now stored in the node.
-        
-        We need to save/load the triple.
+Some notes I was working from:
+* each output image (or possibly just monitoring image) needs a channel mapping
+* updating channel mappings when the image is new, or its channels change
+* getting an RGB image based on a channel mapping : covered by rgb() in ImageCube
+* Storing one or more channel mappings inside a node
+* generating a default channel mapping from an image
+* linking a channel mapping into a Canvas:
+    * transferring a channel mapping into the Canvas controls
+    * transferring Canvas controls into a channel mapping

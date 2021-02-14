@@ -109,6 +109,45 @@ class SubImageCubeROI:
         return ImageCube(img2.img[y:y + h, x:x + w], img2.sources)
 
 
+## A mapping from a multichannel image into RGB. All nodes have one of these, although some may have more and some
+# might not even use this one. That's because most (or at least many) nodes generate a single image and show it
+# in their tab. Ideally, I should create one of these in just those nodes but I'm lazy.
+
+class ChannelMapping:
+    def __init__(self):
+        # the mapping itself : channels to use in the source image for red,green,blue
+        self.red = -1
+        self.green = -1
+        self.blue = -1
+        # used to identify the previous mapping - when a new image arrives, we compare
+        # the channels to see if the old mapping can still be valid.
+        self.prevMappingString = ""
+
+    # generate a default mapping
+    def generateDefaultMapping(self, img):
+        # TODO - do this properly, looking at filters
+        self.red, self.green, self.blue = [img.channels - 1 if x >= img.channels else x for x in range(0, 3)]
+
+    # generate a mapping from a new image if required - or keep using the old mapping
+    # if we can.
+    def ensureValid(self, img):
+        sourceStr = "^".join([IChannelSource.stringForSet(x, 0) for x in img.sources])
+        if self.red < 0 or self.prevMappingString != sourceStr:
+            # no channel assignments yet, or the image channels have changed.
+            # Need to construct new set from the sources
+            self.generateDefaultMapping(img)
+            self.prevMappingString = sourceStr
+
+    def serialise(self):
+        return [self.red, self.green, self.blue]
+
+    @staticmethod
+    def deserialise(lst):
+        m = ChannelMapping()
+        m.red, m.green, m.blue = lst
+        return m
+
+
 ## an image - just a numpy array (the image) and a list of ROI objects. The array
 # has shape either (h,w) (for a single channel) or (h,w,n) for multiple channels.
 # In connections (see conntypes.py), single channel images are "imggrey" while
@@ -196,18 +235,16 @@ class ImageCube:
         return out
 
     ## get a numpy image (not another Image) we can display on an RGB surface
-    # Requires a 3-tuple of channel assignments, indicating which source index is used for
-    # red, green, blue (e.g. (0,1,2) for a standard RGB image)
-    def rgb(self, chanAssignments):
+    def rgb(self, mapping: ChannelMapping):
         # assume we're 8 bit
-        if self.channels==1:
+        if self.channels == 1:
             # single channel images are a special case, rather than
             # [chans,w,h] they are just [w,h]
-            return cv.merge([self.img,self.img,self.img])
+            return cv.merge([self.img, self.img, self.img])
         else:
-            red = self.img[:, :, chanAssignments[0]]
-            green = self.img[:, :, chanAssignments[1]]
-            blue = self.img[:, :, chanAssignments[2]]
+            red = self.img[:, :, mapping.red]
+            green = self.img[:, :, mapping.green]
+            blue = self.img[:, :, mapping.blue]
 
         return cv.merge([red, green, blue])
 
@@ -234,13 +271,13 @@ class ImageCube:
     # hand we lose information (if we're viewing 3 channels from 11) but on the other hand
     # 11 channels is far too many to show in the descriptor at the bottom of the canvas!
 
-    def getDesc(self, mainwindow, chanAssignments=None):
+    def getDesc(self, mainwindow, mapping=None):
         if mainwindow.captionType == 3:
             return ""
         out = [IChannelSource.stringForSet(s, mainwindow.captionType) for s in self.sources]
         # if there are channel assignments, show only the assigned channels. Not sure about this.
-        if chanAssignments is not None:
-            out = [out[x] for x in chanAssignments]
+        if mapping is not None:
+            out = [out[x] for x in [mapping.red, mapping.green, mapping.blue]]
         desc = " ".join(["[" + s + "]" for s in out])
         return desc
 

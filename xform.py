@@ -21,6 +21,8 @@ import ui
 
 
 # ugly forward declarations so the type hints work
+from pancamimage import ChannelMapping
+
 
 class XForm:
     pass
@@ -375,6 +377,8 @@ class XForm:
         self.helpwin = None  # no help window
         self.enabled = True  # a lot of nodes won't use; see XFormType.
         self.hasRun = False  # used to mark a node as already having performed its stuff
+        # all nodes have a channel mapping, because it's easier. See docs for that class.
+        self.mapping = ChannelMapping()
         type.instances.append(self)
 
     ## debugging
@@ -440,6 +444,7 @@ class XForm:
         d['inputTypes'] = self.inputTypes
         d['md5'] = self.type.md5()
         d['ver'] = self.type.ver  # type.ver is version of type
+        d['mapping'] = self.mapping.serialise()
         if self.type.hasEnable:  # only save 'enabled' if the node uses it
             d['enabled'] = self.enabled
 
@@ -460,6 +465,7 @@ class XForm:
         self.savedver = d['ver']  # ver is version node was saved with
         self.savedmd5 = d['md5']  # and stash the MD5 we were saved with
         self.displayName = d['displayName']
+        self.mapping = ChannelMapping.deserialise(d['mapping'])
 
         # some nodes don't have this, in which case we just set it
         # to true.
@@ -731,7 +737,7 @@ class XFormGraph:
             xform = XForm(tp, tp.name)
             self.nodes.append(xform)
             xform.graph = self
-            tp.init(xform)
+            tp.init(xform)  # run the init
             self.nodeDict[xform.name] = xform
             # force a recalc in those nodes that require it,
             # will generate internal data dependent on a combination

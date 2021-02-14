@@ -98,6 +98,7 @@ class TabMerge(ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'assets/tabmerge.ui')
         self.w.addblack.toggled.connect(self.addBlackChanged)
+        self.w.canvas.setMapping(node.mapping)
         # sync tab with node
         self.onNodeChanged()
 
@@ -108,4 +109,4 @@ class TabMerge(ui.tabs.Tab):
     # causes the tab to update itself from the node
     def onNodeChanged(self):
         self.w.addblack.setChecked(self.node.addblack)
-        self.w.canvas.display(self.node, self.node.img)
+        self.w.canvas.display(self.node.img)
