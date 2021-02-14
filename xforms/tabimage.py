@@ -7,7 +7,7 @@ import ui.tabs
 class TabImage(ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'assets/tabimage.ui')  # same UI as sink
-        w.canvas.setMapping(node.mapping)
+        self.w.canvas.setMapping(node.mapping)
         # sync tab with node
         self.onNodeChanged()
 

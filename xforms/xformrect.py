@@ -17,6 +17,12 @@ class XformRect(XFormType):
     """Add a rectangular ROI to an image. At the next operation all ROIs will be grouped together
     used to perform the operation and discarded."""
 
+    # constants enumerating the outputs
+    OUT_IMG = 0
+    OUT_CROP = 1
+    OUT_ANNOT = 2
+    OUT_RECT = 3
+
     def __init__(self):
         super().__init__("rect", "regions", "0.0.0")
         self.addInputConnector("", "img")
@@ -43,52 +49,59 @@ class XformRect(XFormType):
 
     def perform(self, node):
         img = node.getInput(0)
-        # we do a number of different things depending on which outputs are connected.
-        if node.croprect is None or img is None:
-            # no rectangle yet or no image
-            node.setOutput(0, img)
-            node.setOutput(1, img)
-            node.setOutput(2, img)
-            node.img = img
-            node.setOutput(3, None)
+        if img is None:
+            # no image
+            node.setOutput(self.OUT_IMG, None)
+            node.setOutput(self.OUT_CROP, None)
+            node.setOutput(self.OUT_ANNOT, None)
+            node.setOutput(self.OUT_RECT, None)
         else:
-            # need to generate image + ROI
-            x, y, w, h = node.croprect
-            # output image same as input image with same
-            # ROIs. I could just pass input to output, but this would
-            # mess things up if we go back up the tree again - it would
-            # potentially modify the image we passed in.
-            o = img.copy()
-            roi = ROIRect(x, y, w, h)  # create the ROI
-            o.rois.append(roi)  # and add to the image
-            if node.isOutputConnected(0):
-                node.setOutput(0, o)  # output image and ROI
-            if node.isOutputConnected(1):
-                # output cropped image: this uses the ROI rectangle to
-                # crop the image; we get a numpy image out which we wrap.
-                # with no ROIs
-                node.setOutput(1, ImageCube(roi.crop(o), o.sources))
+            # we need to generate the RGB image for the node's current mapping, determined by the mapping
+            # controls in the canvas.
+            rgb = img.rgbImage(node.mapping)
+            if node.croprect is None:
+                # no rectangle, but we still need to use the RGB for annotation
+                node.img = img
+                node.setOutput(self.OUT_IMG, img)
+                node.setOutput(self.OUT_CROP, img)
+                node.setOutput(self.OUT_ANNOT, rgb)
+                node.setOutput(self.OUT_RECT, None)
+            else:
+                # need to generate image + ROI
+                x, y, w, h = node.croprect
+                # output image same as input image with same
+                # ROIs. I could just pass input to output, but this would
+                # mess things up if we go back up the tree again - it would
+                # potentially modify the image we passed in.
+                o = img.copy()
+                roi = ROIRect(x, y, w, h)  # create the ROI
+                o.rois.append(roi)  # and add to the image
+                if node.isOutputConnected(self.OUT_IMG):
+                    node.setOutput(0, o)  # output image and ROI
+                if node.isOutputConnected(self.OUT_CROP):
+                    # output cropped image: this uses the ROI rectangle to
+                    # crop the image; we get a numpy image out which we wrap.
+                    # with no ROIs
+                    node.setOutput(self.OUT_CROP, ImageCube(roi.crop(o), o.sources))
 
-            # now make the annotated image, which we always do because it's what
-            # we display.
-            # TODO this must be an RGB copy!
-            annot = img.rgb().img.copy()  # numpy copy of image
-            # write on it - but we MUST WRITE OUTSIDE THE BOUNDS, otherwise we interfere
-            # with the image! Doing this predictably with the thickness function
-            # in cv.rectangle is a pain, so I'm doing it by hand.
-            for i in range(node.fontline):
-                cv.rectangle(annot, (x - i - 1, y - i - 1), (x + w + i, y + h + i), node.colour, thickness=1)
+                # now make an annotated image by drawing on the RGB image we got earlier
+                annot = rgb.img
+                # write on it - but we MUST WRITE OUTSIDE THE BOUNDS, otherwise we interfere
+                # with the image! Doing this predictably with the thickness function
+                # in cv.rectangle is a pain, so I'm doing it by hand.
+                for i in range(node.fontline):
+                    cv.rectangle(annot, (x - i - 1, y - i - 1), (x + w + i, y + h + i), node.colour, thickness=1)
 
-            ty = y if node.captiontop else y + h
-            utils.text.write(annot, node.caption, x, ty, node.captiontop, node.fontsize,
-                             node.fontline, node.colour)
-            # that's also the image displayed in the tab
-            node.img = ImageCube(annot, o.sources)
-            node.img.rois = o.rois  # same ROI list as unannotated image
-            # output the annotated image
-            node.setOutput(2, node.img)
-            # and the raw cropped rectangle
-            node.setOutput(3, node.croprect)
+                ty = y if node.captiontop else y + h
+                utils.text.write(annot, node.caption, x, ty, node.captiontop, node.fontsize,
+                                 node.fontline, node.colour)
+                # that's also the image displayed in the tab
+                node.img = ImageCube(annot, o.sources)
+                node.img.rois = o.rois  # same ROI list as unannotated image
+                # output the annotated image
+                node.setOutput(self.OUT_ANNOT, node.img)
+                # and the raw cropped rectangle
+                node.setOutput(self.OUT_RECT, node.croprect)
 
 
 class TabRect(ui.tabs.Tab):

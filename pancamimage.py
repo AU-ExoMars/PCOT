@@ -234,7 +234,8 @@ class ImageCube:
             out.append(s)
         return out
 
-    ## get a numpy image (not another Image) we can display on an RGB surface
+    ## get a numpy image (not another ImageCube) we can display on an RGB surface - see
+    # rgbImage if you want an imagecube.
     def rgb(self, mapping: ChannelMapping):
         # assume we're 8 bit
         if self.channels == 1:
@@ -247,6 +248,10 @@ class ImageCube:
             blue = self.img[:, :, mapping.blue]
 
         return cv.merge([red, green, blue])
+
+    ## as rgb, but wraps in an ImageCube.
+    def rgbImage(self,mapping: ChannelMapping):
+        return ImageCube(self.rgb(mapping), self.sources)
 
     ## extract the "subimage" - the image cropped to regions of interest,
     # with a mask for those ROIs

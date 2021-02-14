@@ -292,18 +292,21 @@ class Canvas(QtWidgets.QWidget):
     ## this initialises a combo box, setting the possible values to be the channels in the image
     # input
     def addChannelsToChannelCombo(self, combo: QtWidgets.QComboBox, img: ImageCube):
-        combo.blockSignals(True)  # temporarily disable signals to avoid indexChanged calls
         combo.clear()
         for i in range(0, img.channels):
             # adds descriptor string and integer channels index
             combo.addItem("{}) {}".format(i, IChannelSource.stringForSet(img.sources[i],
                                                                          self.canvas.getMainWindow().captionType)))  # ugly
-        combo.blockSignals(False)
 
     def setCombosToImageChannels(self, img):
         self.addChannelsToChannelCombo(self.redChanCombo, img)
         self.addChannelsToChannelCombo(self.greenChanCombo, img)
         self.addChannelsToChannelCombo(self.blueChanCombo, img)
+
+    def blockSignalsOnComboBoxes(self, b):
+        self.redChanCombo.blockSignals(b)
+        self.greenChanCombo.blockSignals(b)
+        self.blueChanCombo.blockSignals(b)
 
     ## set this canvas (actually the InnerCanvas) to hold an image.
 
@@ -313,10 +316,12 @@ class Canvas(QtWidgets.QWidget):
             self.mapping.ensureValid(img)
             # now make the combo box options match the sources in the image
             # and finally make the selection each each box match the actual channel assignment
+            self.blockSignalsOnComboBoxes(True)  # temporarily disable signals to avoid indexChanged calls
             self.setCombosToImageChannels(img)
             self.redChanCombo.setCurrentIndex(self.mapping.red)
             self.greenChanCombo.setCurrentIndex(self.mapping.green)
             self.blueChanCombo.setCurrentIndex(self.mapping.blue)
+            self.blockSignalsOnComboBoxes(False) # and enable signals again
             self.setScrollBarsFromCanvas()
         # cache the image in case the mapping changes
         self.previmg = img
