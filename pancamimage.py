@@ -139,12 +139,12 @@ class ChannelMapping:
             self.prevMappingString = sourceStr
 
     def serialise(self):
-        return [self.red, self.green, self.blue]
+        return [self.red, self.green, self.blue, self.prevMappingString]
 
     @staticmethod
     def deserialise(lst):
         m = ChannelMapping()
-        m.red, m.green, m.blue = lst
+        m.red, m.green, m.blue, m.prevMappingString = lst
         return m
 
 

@@ -292,12 +292,12 @@ class Canvas(QtWidgets.QWidget):
     ## this initialises a combo box, setting the possible values to be the channels in the image
     # input
     def addChannelsToChannelCombo(self, combo: QtWidgets.QComboBox, img: ImageCube):
-        combo.blockSignals(True) # temporarily disable signals to avoid indexChanged calls
+        combo.blockSignals(True)  # temporarily disable signals to avoid indexChanged calls
         combo.clear()
         for i in range(0, img.channels):
             # adds descriptor string and integer channels index
-            combo.addItem(IChannelSource.stringForSet(img.sources[i],
-                                                      self.canvas.getMainWindow().captionType))  # ugly
+            combo.addItem("{}) {}".format(i, IChannelSource.stringForSet(img.sources[i],
+                                                                         self.canvas.getMainWindow().captionType)))  # ugly
         combo.blockSignals(False)
 
     def setCombosToImageChannels(self, img):
