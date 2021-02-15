@@ -108,3 +108,6 @@ Some notes I was working from:
 * linking a channel mapping into a Canvas:
     * transferring a channel mapping into the Canvas controls
     * transferring Canvas controls into a channel mapping
+
+Rect is straightforward. Inset is more problematic, because we really want to compose the RGBs for the images
+as output by the previous nodes.

@@ -55,28 +55,32 @@ class XformInset(XFormType):
             inrect = node.insetrect
 
         if inrect is None:
-            # neither rects are set, just dupe the input
+            # neither rects are set, just dupe the input as RGB
             if image is None:
                 out = None
             else:
-                out = image.img
+                # we're outputting only RGB, because nothing else really makes sense with
+                # an inset
+                # TODO this is currently *this node's* mapping. Should be the previous node's.
+                out = image.rgbImage(node.mapping)
         elif image is None:
             # if there's no image we can't put anything on it.
             out = None
         else:
             x, y, w, h = inrect  # get the rectangle
-            # TODO this won't work with images which aren't RGB!
-            out = image.rgb((0, 1, 2)).copy()  # get a numpy array copy of outer image as RGB
+            # TODO this is currently *this node's* mapping. Should be the previous node's.
+            # get a numpy array copy of outer image as RGB
+            out = image.rgb(node.mapping)
             if inset is None:
                 # there's no inset image, draw a rectangle
                 cv.rectangle(out, (x, y), (x + w, y + h), (0, 0, 255), -1)  # -1=filled
             elif node.enabled:  # only add the inset if enabled
                 # resize the inset (and cvt to RGB if necessary)
-                # TODO this won't work with images which aren't RGB!
+                # TODO Need to get the previous node's mapping
                 t = cv.resize(inset.rgb((0, 1, 2)), dsize=(w, h), interpolation=cv.INTER_AREA)
                 out[y:y + h, x:x + w] = t
 
-            # sources could now be multiple images in each channel
+            # sources could now be multiple images in each channel - TODO - need to use suitable sources or just R,G,B
             sources = ImageCube.buildSources([image, inset])
             for i in range(node.fontline):
                 cv.rectangle(out, (x - i - 1, y - i - 1), (x + w + i, y + h + i), node.colour, thickness=1)
