@@ -268,7 +268,7 @@ class Canvas(QtWidgets.QWidget):
         # the mapping we are using - the node owns this, we just get a ref. when
         # the tab is created
         self.mapping = None
-        # previous image (in case mapping changes)
+        # previous image (in case mapping changes and we need to redisplay the old image with a new mapping)
         self.previmg = None
 
     def setMapping(self, mapping):

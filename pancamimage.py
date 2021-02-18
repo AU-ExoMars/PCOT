@@ -295,7 +295,7 @@ class ImageCube:
 
     ## return a copy of the image, with the given image spliced in at the
     # subimage's coordinates and masked according to the subimage
-    def modifyWithSub(self, subimage, newimg):
+    def modifyWithSub(self, subimage: SubImageCubeROI, newimg: np.ndarray):
         i = self.copy()
         x, y, w, h = subimage.bb
         i.img[y:y + h, x:x + w][subimage.mask] = newimg[subimage.mask]

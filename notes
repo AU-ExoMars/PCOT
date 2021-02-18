@@ -110,4 +110,32 @@ Some notes I was working from:
     * transferring Canvas controls into a channel mapping
 
 Rect is straightforward. Inset is more problematic, because we really want to compose the RGBs for the images
-as output by the previous nodes.
+as output by the previous nodes. And now I suddenly realise a thing - the mappings don't really belong to nodes at all!
+They belong to images! That would make inset easy, as well as multi-image nodes. But I need to see how well it fits
+the pattern, since in a sense they *do* belong to nodes (since the canvas is part of the node).
+
+OK, I think I see - nodes do own the channel mappings, but the channel mapping (or rather the RGB?) is stored in
+the image too. This would let inset grab the RGBs for its inputs. There's a problem: what happens if an image ends up
+with two mappings? Can an image end up with two mappings? Two ways around this:
+* image.rgb(mapping) cannot run twice on an image with different mappings
+* The mapping is assigned in the constructor
+Both of these have a problem with ordering? Currently the mapping is done in the canvas! But if one of the outputs goes
+to an inset, the inset would need to reperform, so the node needs to reperform!
+
+I think I'm going to have to be more strict about this. The current sequence is:
+Node performs.
+onNodeChanged runs on open tabs.
+    display is called on canvas with image
+        ensurevalid runs on canvas' mapping with image (the canvas' mapping is set in tab's ctor), which may generate a new default mapping
+        redisplay is called on canvas
+            display is called on inner canvas with image and canvas mapping
+                description obtained with image, window and mapping
+                rgb obtained with image and mapping
+                state changed
+                update called
+
+
+
+
+
+There's another problem - current display() does the RGB magic. This won't run if a node's tab isn't open!
