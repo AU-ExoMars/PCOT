@@ -52,7 +52,7 @@ class XFormOffset(XFormType):
             s = img.img[ys:ys + h, xs:xs + w]
             newimg[yd:yd + h, xd:xd + w] = s
             # remember to copy ROI            
-            node.img = ImageCube(newimg, img.sources)
+            node.img = ImageCube(newimg, node.mapping, img.sources)
 
         node.setOutput(0, node.img)
 

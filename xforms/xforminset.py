@@ -7,9 +7,10 @@ from PyQt5.QtGui import QColor
 
 import utils.text, utils.colour
 import ui, ui.tabs, ui.canvas
+from channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, BLUEINTERNALSOURCE
 from xform import xformtype, XFormType
 from xforms.tabimage import TabImage
-from pancamimage import ImageCube
+from pancamimage import ImageCube, ChannelMapping
 
 
 # this transform takes an image and places it at a position inside another image.
@@ -46,9 +47,9 @@ class XformInset(XFormType):
         node.colour = (1, 1, 0)
 
     def perform(self, node):
-        image = node.getInput(0)    # this is the main image
-        inset = node.getInput(1)    # this is the thing we're going to insert
-        inrect = node.getInput(2)   # this is the rectangle
+        image = node.getInput(0)  # this is the main image
+        inset = node.getInput(1)  # this is the thing we're going to insert
+        inrect = node.getInput(2)  # this is the rectangle
 
         # if there is no input rect we use the rubberbanded one set by the tab
         if inrect is None:
@@ -60,28 +61,25 @@ class XformInset(XFormType):
                 out = None
             else:
                 # we're outputting only RGB, because nothing else really makes sense with
-                # an inset
-                # TODO this is currently *this node's* mapping. Should be the previous node's.
-                out = image.rgbImage(node.mapping)
+                # an inset. This will get the RGB image for the input, with which it was mapped
+                # in the previous node.
+                out = image.rgb()
         elif image is None:
             # if there's no image we can't put anything on it.
             out = None
         else:
             x, y, w, h = inrect  # get the rectangle
-            # TODO this is currently *this node's* mapping. Should be the previous node's.
-            # get a numpy array copy of outer image as RGB
-            out = image.rgb(node.mapping)
+            # Similarly, this will get the RGB for the image as mapped in the previous node.
+            out = image.rgb()
             if inset is None:
                 # there's no inset image, draw a rectangle
                 cv.rectangle(out, (x, y), (x + w, y + h), (0, 0, 255), -1)  # -1=filled
             elif node.enabled:  # only add the inset if enabled
-                # resize the inset (and cvt to RGB if necessary)
-                # TODO Need to get the previous node's mapping
-                t = cv.resize(inset.rgb((0, 1, 2)), dsize=(w, h), interpolation=cv.INTER_AREA)
+                # resize the inset (and cvt to RGB if necessary); note that we're again
+                # using the RGB mapping it should have been given in the previous node.
+                t = cv.resize(inset.rgb(), dsize=(w, h), interpolation=cv.INTER_AREA)
                 out[y:y + h, x:x + w] = t
 
-            # sources could now be multiple images in each channel - TODO - need to use suitable sources or just R,G,B
-            sources = ImageCube.buildSources([image, inset])
             for i in range(node.fontline):
                 cv.rectangle(out, (x - i - 1, y - i - 1), (x + w + i, y + h + i), node.colour, thickness=1)
             # add in the caption
@@ -91,7 +89,12 @@ class XformInset(XFormType):
                 utils.text.write(out, node.caption, x, ty, node.captiontop, node.fontsize,
                                  node.fontline, node.colour)
 
-        node.img = None if out is None else ImageCube(out, sources)
+        # this just builds an rgb image with an inset, using fake sources
+        node.img = None if out is None else ImageCube(out,
+                                                      node.mapping,
+                                                      [{REDINTERNALSOURCE},
+                                                       {GREENINTERNALSOURCE},
+                                                       {BLUEINTERNALSOURCE}])
         node.setOutput(0, node.img)
 
 

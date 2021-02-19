@@ -123,6 +123,7 @@ Both of these have a problem with ordering? Currently the mapping is done in the
 to an inset, the inset would need to reperform, so the node needs to reperform!
 
 I think I'm going to have to be more strict about this. The current sequence is:
+
 Node performs.
 onNodeChanged runs on open tabs.
     display is called on canvas with image
@@ -134,8 +135,38 @@ onNodeChanged runs on open tabs.
                 state changed
                 update called
 
+OK, the way it's going now, it looks like the the canvas, node and image might end up having references to the mapping.
+Node and image is fair enough. Canvas also needs it because it needs to be able to modify it, but can't the canvas
+just use the one which belongs to whichever image it gets (which will be the appropriate one in the node?)
+This should deal with the problem that the current display() does the RGB magic.
+
+Step 1: add a reference to the mapping to the image, passing it into the ctor and making rgb() use it (and cache the rgb image)
+
+    remove parameters to rgb and rgbImage
+    add parameters to imageCube
+
+Step 2: remove the mapping passed into InnerCanvas.display(), we don't need to pass it into rgb()
+Step 3: we're keeping the mapping reference in the canvas; sometimes the canvas might not have an image!
+
+Step 5: we can now use rgb() to get the mapping from the images input into inset
+
+Step 6: make sure ensureValid happens even when display() doesn't! This can be done by setting the mapping in the image
+        with setMapping(), which is also done in the image ctor.
+
+Test gradient - it's really messy. OK
+Test inset, obviously. OK
+Test ellipse detect. Not sure what the output format is and what mapping and sources should be. OK (once I'd remembered that drawing keypoints expands to rgb)
+Add is hairy because of where it's getting the mapping from, but I think it works.
+
+So here's the new idea:
+Each node (XForm) holds a ChannelMapping for each image it outputs to a canvas, typically one - so helpfully we
+create a default one. When we output an image, we create it with the appropriate mapping - typically like this:
+            node.img = ImageCube(newimg, node.mapping, img.sources)
+although we can also set the mapping with img.setMapping. This gives the image a reference to the same mapping - careful now!
+This part isn't idea - when we display an image in a canvas, we do this:
+        self.w.canvas.setMapping(node.mapping)
+This tells the canvas to use the mapping - we have to do this, we can't just use the one in the image because there might
+not be an image yet. The canvas will now know which mapping to edit, which will be the same one as in any image.
 
 
 
-
-There's another problem - current display() does the RGB magic. This won't run if a node's tab isn't open!

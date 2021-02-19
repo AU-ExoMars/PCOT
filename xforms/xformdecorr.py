@@ -40,6 +40,8 @@ class XformDecorr(XFormType):
             subimage = img.subimage()
             newimg = decorrstretch(subimage.img, subimage.mask)
             node.img = img.modifyWithSub(subimage, newimg)
+        if node.img is not None:
+            node.img.setMapping(node.mapping)
         node.setOutput(0, node.img)
 
 

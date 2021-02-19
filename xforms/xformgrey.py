@@ -33,6 +33,8 @@ class XformGrey(XFormType):
                 raise Exception("Image must be RGB for greyscale conversion")
             # all the sources get merged - all three channels' sources appear in all the output channels
             sources = set.union(img.sources[0], img.sources[1], img.sources[2])
-            node.img = ImageCube(cv.cvtColor(img.img, cv.COLOR_RGB2GRAY), [sources, sources, sources])
+            node.img = ImageCube(cv.cvtColor(img.img, cv.COLOR_RGB2GRAY),
+                                 node.mapping,
+                                 [sources, sources, sources])
 
         node.setOutput(0, node.img)

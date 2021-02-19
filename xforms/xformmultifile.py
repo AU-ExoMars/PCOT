@@ -79,13 +79,12 @@ class XFormMultiFile(XFormType):
                 if node.files[i] is not None and node.imgpaths[i] != path:
                     # build sources data : filename and filter name
                     source = {FileChannelSource(path, self.getFilterName(node, path), node.camera=='AUPE')}
-                    img = ImageCube.load(path, [source, source, source])
+                    img = ImageCube.load(path, node.mapping, [source, source, source])
                     # aaaand this pretty much always happens, because load always
                     # loads as BGR.
                     if img.channels != 1:
                         c = cv.split(img.img)
-                        img = ImageCube(c[0], [source])
-                        print("SNARK: ", img.sources)
+                        img = ImageCube(c[0], node.mapping, [source])
                     node.imgs[i] = img
                     node.imgpaths[i] = path
                     print(node.filters[i])
@@ -96,7 +95,7 @@ class XFormMultiFile(XFormType):
             # slightly messy, post-multiplying the image like this
             # rather than on load, but multiplying on load would mean
             # reloading when the multiplier changed.
-            img = None if node.imgs[i] is None else ImageCube(node.imgs[i].img * node.mult, node.imgs[i].sources)
+            img = None if node.imgs[i] is None else ImageCube(node.imgs[i].img * node.mult, node.mapping, node.imgs[i].sources)
             node.setOutput(i, img)
 
 

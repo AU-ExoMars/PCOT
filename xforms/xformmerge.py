@@ -75,22 +75,22 @@ class XformMerge(XFormType):
             # make a black
             black = np.zeros(s, np.float32)
             if b is None:
-                b = ImageCube(black, [{BLUEINTERNALSOURCE}])
+                b = ImageCube(black, None, [{BLUEINTERNALSOURCE}])
             if g is None:
-                g = ImageCube(black, [{GREENINTERNALSOURCE}])
+                g = ImageCube(black, None, [{GREENINTERNALSOURCE}])
             if r is None:
-                r = ImageCube(black, [{REDINTERNALSOURCE}])
+                r = ImageCube(black, None, [{REDINTERNALSOURCE}])
             lst = [r, g, b]
         else:
             lst = [x for x in [r, g, b] if x is not None]
 
         if len(lst) == 1:
-            node.img = ImageCube(lst[0].img, lst[0].sources)  # just merging one channel??
+            node.img = ImageCube(lst[0].img, node.mapping, lst[0].sources)  # just merging one channel??
         else:
             # here we assume there can only be one channel in each source image,
             # and we just bundle sources together. We use None for images with no source.
             sources = [x.sources[0] for x in lst]
-            node.img = ImageCube(cv.merge([x.img for x in lst]), sources)
+            node.img = ImageCube(cv.merge([x.img for x in lst]), node.mapping, sources)
         node.setOutput(0, node.img)
 
 

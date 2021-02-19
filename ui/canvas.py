@@ -76,10 +76,10 @@ class InnerCanvas(QtWidgets.QWidget):
 
     ## display an image (handles 1 and 3 channels) next time paintEvent
     # happens, and update to cause that. Allow it to handle None too.
-    def display(self, img: ImageCube, mapping: ChannelMapping):
+    def display(self, img: ImageCube):
         if img is not None:
-            self.desc = img.getDesc(self.getMainWindow(), mapping)
-            img = img.rgb(mapping)  # convert to RGB
+            self.desc = img.getDesc(self.getMainWindow())
+            img = img.rgb()  # convert to RGB
             # only reset the image zoom if the shape has changed
             if self.img is None or self.img.shape[:2] != img.shape[:2]:
                 self.reset()
@@ -265,12 +265,14 @@ class Canvas(QtWidgets.QWidget):
         layout.addWidget(self.resetButton, 1, 1)
         self.resetButton.clicked.connect(self.reset)
 
-        # the mapping we are using - the node owns this, we just get a ref. when
+        # the mapping we are using - the image owns this, we just get a ref. when
         # the tab is created
         self.mapping = None
         # previous image (in case mapping changes and we need to redisplay the old image with a new mapping)
         self.previmg = None
 
+    # these sets a reference to the mapping this canvas is using - bear in mind this class can mutate
+    # that mapping!
     def setMapping(self, mapping):
         self.mapping = mapping
 
@@ -311,6 +313,8 @@ class Canvas(QtWidgets.QWidget):
     ## set this canvas (actually the InnerCanvas) to hold an image.
 
     def display(self, img: ImageCube):
+        if self.mapping is None:
+            raise Exception("Mapping not set in ui.canvas.Canvas.display() - should be done in tab's ctor")
         if img is not None:
             # ensure there is a valid mapping
             self.mapping.ensureValid(img)
@@ -321,7 +325,7 @@ class Canvas(QtWidgets.QWidget):
             self.redChanCombo.setCurrentIndex(self.mapping.red)
             self.greenChanCombo.setCurrentIndex(self.mapping.green)
             self.blueChanCombo.setCurrentIndex(self.mapping.blue)
-            self.blockSignalsOnComboBoxes(False) # and enable signals again
+            self.blockSignalsOnComboBoxes(False)  # and enable signals again
             self.setScrollBarsFromCanvas()
         # cache the image in case the mapping changes
         self.previmg = img
@@ -329,7 +333,7 @@ class Canvas(QtWidgets.QWidget):
         self.redisplay()
 
     def redisplay(self):
-        self.canvas.display(self.previmg, self.mapping)
+        self.canvas.display(self.previmg)
 
     ## reset the canvas to x1 magnification
     def reset(self):

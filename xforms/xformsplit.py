@@ -3,7 +3,7 @@ import numpy as np
 
 import ui, ui.tabs, ui.canvas
 from xform import xformtype, XFormType
-from pancamimage import ImageCube, ROIRect
+from pancamimage import ImageCube, ROIRect, ChannelMapping
 
 
 @xformtype
@@ -21,10 +21,16 @@ class XformSplit(XFormType):
     def createTab(self, n, w):
         return TabSplit(n, w)
 
+
     def init(self, node):
         node.red = None
         node.green = None
         node.blue = None
+        # the green channel uses the "default" mapping that the XForm has built in.
+        # We have to add two more mappings for the other two canvases. They'll always
+        # be single-channel, so we don't need to worry about serialisation.
+        node.mappingR = ChannelMapping()
+        node.mappingB = ChannelMapping()
 
     def perform(self, node):
         img = node.getInput(0)
@@ -33,9 +39,10 @@ class XformSplit(XFormType):
             # because we only accept RGB
             # TODO this won't work with images which aren't RGB; of course split is going away soon.
             r, g, b = cv.split(img.img)  # kind of pointless on a greyscale..
-            node.red = ImageCube(r, [img.sources[0]])
-            node.green = ImageCube(g, [img.sources[1]])
-            node.blue = ImageCube(b, [img.sources[2]])
+            # We don't specify mappings here, it's pointless - they're single channel
+            node.red = ImageCube(r, None, [img.sources[0]])
+            node.green = ImageCube(g, None, [img.sources[1]])
+            node.blue = ImageCube(b, None, [img.sources[2]])
             node.setOutput(0, node.red)
             node.setOutput(1, node.green)
             node.setOutput(2, node.blue)
@@ -48,7 +55,9 @@ class XformSplit(XFormType):
 class TabSplit(ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'assets/tabsplit.ui')
-        self.w.canvas.setMapping(node.mapping)
+        self.w.canvRed.setMapping(node.mappingR)
+        self.w.canvGreen.setMapping(node.mapping)
+        self.w.canvBlue.setMapping(node.mappingB)
         # sync tab with node
         self.onNodeChanged()
 

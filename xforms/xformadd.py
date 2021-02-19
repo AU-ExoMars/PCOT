@@ -43,6 +43,7 @@ class XFormAdd(XFormType):
         if img1 is None and img2 is None:
             img = None
         else:
+            # having the RGB mapping and more particularly the sources as empty here might cause problems?
             if img1 is None:
                 img1 = ImageCube(np.zeros(img2.img.shape, dtype=np.float32))
             elif img2 is None:
@@ -96,6 +97,8 @@ class XFormAdd(XFormType):
 
                 # apply the result to the subimage region for image 1
                 img = img1.modifyWithSub(subimage1, img)
+                # here I set the mapping up for the output
+                img.setMapping(node.mapping)
                 img.sources = sources
         node.img = img
         node.setOutput(0, img)

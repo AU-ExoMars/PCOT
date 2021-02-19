@@ -97,6 +97,8 @@ class XformContrast(XFormType):
             node.img = img.modifyWithSub(subimage, newsubimg)
         # Now we have generated the internally stored image, output it to output 0. This will
         # cause all nodes "downstream" to perform their actions.
+        if node.img is not None:
+            node.img.setMapping(node.mapping)
         node.setOutput(0, node.img)
 
 

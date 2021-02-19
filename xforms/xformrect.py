@@ -56,9 +56,9 @@ class XformRect(XFormType):
             node.setOutput(self.OUT_ANNOT, None)
             node.setOutput(self.OUT_RECT, None)
         else:
-            # we need to generate the RGB image for the node's current mapping, determined by the mapping
-            # controls in the canvas.
-            rgb = img.rgbImage(node.mapping)
+            # for the annotated image, we just get the RGB for the image in the
+            # input node.
+            rgb = img.rgbImage()
             if node.croprect is None:
                 # no rectangle, but we still need to use the RGB for annotation
                 node.img = img
@@ -82,7 +82,7 @@ class XformRect(XFormType):
                     # output cropped image: this uses the ROI rectangle to
                     # crop the image; we get a numpy image out which we wrap.
                     # with no ROIs
-                    node.setOutput(self.OUT_CROP, ImageCube(roi.crop(o), o.sources))
+                    node.setOutput(self.OUT_CROP, ImageCube(roi.crop(o), node.mapping, o.sources))
 
                 # now make an annotated image by drawing on the RGB image we got earlier
                 annot = rgb.img
@@ -96,7 +96,7 @@ class XformRect(XFormType):
                 utils.text.write(annot, node.caption, x, ty, node.captiontop, node.fontsize,
                                  node.fontline, node.colour)
                 # that's also the image displayed in the tab
-                node.img = ImageCube(annot, o.sources)
+                node.img = rgb
                 node.img.rois = o.rois  # same ROI list as unannotated image
                 # output the annotated image
                 node.setOutput(self.OUT_ANNOT, node.img)

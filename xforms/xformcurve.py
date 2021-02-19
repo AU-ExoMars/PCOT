@@ -60,6 +60,7 @@ class XformCurve(XFormType):
             node.img = None
         elif not node.enabled:
             node.img = img
+            node.img.setMapping(node.mapping)
         else:
             subimage = img.subimage()
 
@@ -69,7 +70,7 @@ class XformCurve(XFormType):
                 # TODO won't work on non-RGB
                 newsubimg = cv.merge([curve(x, subimage.mask, node) for x in cv.split(subimage.img)])
             node.img = img.modifyWithSub(subimage, newsubimg)
-
+            node.img.setMapping(node.mapping)
         node.setOutput(0, node.img)
 
 

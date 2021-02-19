@@ -7,7 +7,7 @@ import numpy as np
 import ui, ui.tabs, ui.canvas, ui.mplwidget
 from channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, BLUEINTERNALSOURCE
 from xform import xformtype, XFormType
-from pancamimage import ImageCube
+from pancamimage import ImageCube, ChannelMapping
 
 
 def applyGradient(img, mask, grad):
@@ -82,10 +82,9 @@ class XformGradient(XFormType):
             if img.channels == 1:
                 subimage = img.subimage()
                 newsubimg = applyGradient(subimage.img, subimage.fullmask(), node.gradient)
-                # there can only be one channel, we don't need to provide a channel assignment to
-                # map the N channels onto 3. We have to rig fake sources; the colours won't come from
-                # the original image!
-                outimg = ImageCube(img.rgb((0,)), [
+                # Here we make an RGB image from the input image. We then slap the gradient
+                # onto the ROI. We use the default channel mapping and standard "fake" sources.
+                outimg = ImageCube(img.rgb(), node.mapping, [
                     {REDINTERNALSOURCE},
                     {GREENINTERNALSOURCE},
                     {BLUEINTERNALSOURCE}])
