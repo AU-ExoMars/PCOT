@@ -1,0 +1,389 @@
+% arara: pdflatex
+% arara: biber
+% arara: pdflatex
+
+\documentclass[a4paper]{article}
+\usepackage[toc,page]{appendix}
+%\usepackage{wrapfig}
+\usepackage[pdftex]{graphicx}
+%\usepackage[version=3]{mhchem}
+\usepackage{fancyvrb}
+%\usepackage{multirow}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{amssymb}
+%package for this is ``algorithms''
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{framed}
+
+% this uses the IEEE naming conventions (apart from Procedure)
+% \floatname{algorithm}{Procedure}
+\renewcommand{\algorithmicrequire}{\textbf{Input:}}
+\renewcommand{\algorithmicensure}{\textbf{Output:}}
+
+% Making appendix work as part.
+\usepackage{bookmark}
+
+
+%\usepackage{threeparttable}
+\author{Jim Finnis}
+
+\newcommand{\todo}[1]{
+    \begin{center}
+    \fbox{\parbox{4in}{\textbf{To Do}\vspace*{1em} \\#1}}
+    \end{center}}
+
+\newenvironment{important}
+{\begin{quote}\color{red}\large%
+\begin{center}{\Large \textbf{IMPORTANT}}\end{center}}
+{\end{quote}}
+
+\newenvironment{notebox}[1][]
+{\begin{framed}%
+\ifthenelse{\equal{#1}{}}{}{%
+    \begin{center}%
+    {\Large \textbf{#1}}%
+    \end{center}%
+    }%
+    }%    
+{\end{framed}}
+
+
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+%\DeclareMathOperator*{\max}{arg\,max}
+%\DeclareMathOperator*{\min}{arg\,max}
+\DeclareMathOperator{\rand}{rand}
+                                                                                           
+% different commands for left and right margin notes                                                                                                   
+\newcommand{\weeboxL}[1]{\rule{15mm}{0.5pt}\\ \parbox[t]{15mm}{\raggedright\footnotesize#1}}                                                                         
+\newcommand{\weeboxR}[1]{\rule{15mm}{0.5pt}\\ \parbox[t]{15mm}{\raggedleft\footnotesize#1}}
+                                                                                                                                                       
+% this selects which command to use for margin notes                                                                                                   
+\newcommand{\marg}[1]{\marginpar[\weeboxL{#1}]{\weeboxR{#1}}}
+
+%\newcommand{\marg}[1]{\marginpar{\raggedright\footnotesize #1}}
+
+% In math mode, put a word into text inside anglebrackets. Used for BNF, sometimes.
+\newcommand{\angb}[1]{\text{$<$\\#1$>$}}
+
+% so we can do 3\e{4} to do 3x10^4
+\providecommand{\e}[1]{\ensuremath{\times 10^{#1}}}
+
+\newenvironment{prettycode}
+{\begin{quote}\ttfamily\small}
+{\end{quote}}
+
+\newenvironment{idescription}%
+  {\begin{list}{}{\setlength{\labelwidth}{-10pt}
+   \setlength{\itemindent}{-\leftmargin}
+   \setlength{\listparindent}{\parindent}
+   \renewcommand{\makelabel}{\descriptionlabel}}}%
+  {\end{list}}
+
+
+\DefineVerbatimEnvironment{v}{Verbatim}{
+    %numbers=left,numbersep=5pt,
+    %frame=lines,framerule=0.5mm,
+    fontsize=\small,xleftmargin=15pt}
+\DefineVerbatimEnvironment{vv}{Verbatim}{
+    %numbers=left,numbersep=5pt,
+    %frame=lines,framerule=0.5mm,
+    fontsize=\small,xleftmargin=15pt}
+\DefineVerbatimEnvironment{v2}{Verbatim}{
+    %numbers=left,numbersep=5pt,
+    %frame=lines,framerule=0.5mm,
+    fontsize=\scriptsize,xleftmargin=0pt}
+\DefineVerbatimEnvironment{v3}{Verbatim}{
+    %numbers=left,numbersep=5pt,
+    %frame=lines,framerule=0.5mm,
+    fontsize=\tiny,xleftmargin=0pt}
+\DefineVerbatimEnvironment{bv2}{BVerbatim}{
+    %numbers=left,numbersep=5pt,
+    %frame=lines,framerule=0.5mm,
+    fontsize=\scriptsize,xleftmargin=0pt}
+\DefineVerbatimEnvironment{bv}{BVerbatim}{
+    %numbers=left,numbersep=5pt,
+    %frame=lines,framerule=0.5mm,
+    fontsize=\scriptsize,xleftmargin=0pt}
+\DefineVerbatimEnvironment{bvc}{BVerbatim}{
+    %numbers=left,numbersep=5pt,
+    %frame=lines,framerule=0.5mm
+    commandchars=+\[\],
+    fontsize=\scriptsize,xleftmargin=0pt}
+
+\setcounter{secnumdepth}{5}
+\setcounter{tocdepth}{5}
+
+%\usepackage[hmargin=2.5cm,vmargin=3.5cm]{geometry}
+\usepackage[hmargin=3cm,
+    vmargin=5cm,
+    marginparwidth=2.0cm,
+    ]{geometry}
+\usepackage{multicol}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{boldline}
+\usepackage{multirow}
+\usepackage{pdflscape}
+\usepackage{afterpage}
+\usepackage{amsmath}
+\usepackage[all]{xy}
+\usepackage{letltxmacro}
+% uncomment this to enable internal automatic hyperlinks
+\usepackage{hyperref}
+\hypersetup{colorlinks}
+\usepackage{listings}
+\usepackage[usenames,dvipsnames]{color}
+%Citation uses biber, and we set the style here
+\usepackage[backend=biber,style=numeric,url=false]{biblatex}
+
+\addbibresource{bib.bib}
+\usepackage[font=small,labelfont=bf,margin=3em]{caption}
+%\usepackage[LGR,T1]{fontenc}
+%\newcommand{\textgreek}[1]{\begingroup\fontencoding{LGR}\selectfont#1\endgroup}
+\usepackage{tikz}
+%\usetikzlibrary{positioning}
+\lstdefinelanguage{angort}{
+morekeywords={for,if,then,else,leave,dup,call,global,swap,drop,not,
+and,or,ifleave,const,over,defer,each,include,stop,dumplist,get,set,len,remove,shift,unshift,pop,push,map,reduce,filter,in,version,
+barewords,dump,snark,none,p,x,rawp,nl,quit,debug,disasm,assertdebug,assert,assertmode,
+abs,neg,isnone,gccount,range,srange,frange,frangesteps,i,j,k,iter,save,load,clear,
+list,help,type,srand,rand,gc,format},
+sensitive=false,
+morecomment=[l]{\#},
+morestring=[b]"
+}
+\lstdefinestyle{ang}{
+  belowcaptionskip=1\baselineskip,
+  breaklines=true,
+  frame=L,
+  xleftmargin=\parindent,
+  language=angort,
+  showstringspaces=false,
+  basicstyle=\scriptsize,
+  stringstyle=\slshape,
+}
+\lstdefinestyle{c++}{
+  belowcaptionskip=1\baselineskip,
+  breaklines=true,
+  frame=L,
+  xleftmargin=\parindent,
+  language=c++,
+  showstringspaces=false,
+  basicstyle=\scriptsize,
+  stringstyle=\slshape,
+}
+
+% patch fullcite to include the citation key
+\LetLtxMacro\oldfullcite\fullcite
+\renewcommand{\fullcite}[1]{\cite{#1}: \oldfullcite{#1}}
+
+% This is a command to do subfigures easily. It's based on a
+% stackoverflow hack : http://tex.stackexchange.com/questions/72902/new-command-with-variable-number-of-parameters
+% The basic idea:
+%
+% The macro \twoimages really has no argument; it simply starts the
+% business by opening the figure environment and calls the real command,
+% \@twoimagesi. This command checks whether it's followed by
+% \stopimages; if it is, it calls \@twoimagesend that ends the
+% environment; otherwise it executes \@twoimagesii that has the job of
+% printing a row, after having absorbed its six arguments. It does so in
+% an indirect way, so that we can write only once the same minipage,
+% using the first three arguments and the last three.
+% Then \@twoimagesii restarts the recursion by calling \@twoimagesi again.
+%
+% Usage:
+% \twoimages{caption}{label}
+% {filename}{subcaption}
+% {filename}{subcaption}
+% {filename}{subcaption}
+% \stopimages
+%
+% Labels will also be generated for each image, which are the filenames
+% of the images.
+%
+% Optional command for image size multiplier
+
+\makeatletter % we need to use kernel commands
+\newcommand{\twoimages}[3][1]{%
+  \def\jcf@tmpsiz{#1}
+  \def\jcf@tmpcap{#2}
+  \def\jcf@tmplab{#3}
+  \begin{figure}[!htb]
+  \@twoimagesi
+}
+\newcommand\@twoimagesi{\@ifnextchar\stopimages{\@twoimagesend}{\@twoimagesii}}
+
+\newcommand\@twoimagesii[4]{%
+  \@twoimagesiii{#1}{#2}\hfill
+  \@twoimagesiii{#3}{#4}\\[\bigskipamount]
+  \@twoimagesi % restart the recursion
+}
+\newcommand\@twoimagesiii[2]{%
+  \begin{subfigure}{0.49\linewidth}
+    \centering
+    \includegraphics[width=\jcf@tmpsiz\textwidth]{#1}
+    \caption{#2}\label{#1}
+  \end{subfigure}}
+\newcommand\@twoimagesend[1]{% The argument is \stopimages
+  \vspace*{-\bigskipamount}
+  \caption{\jcf@tmpcap \textit{(Label: \jcf@tmplab)}}\label{\jcf@tmplab}
+  \end{figure}}
+\makeatother
+
+% similar but each line also takes a label
+\makeatletter % we need to use kernel commands
+\newcommand{\twoimageslabel}[3][1]{%
+  \def\jcf@tmpsiz{#1}
+  \def\jcf@tmpcap{#2}
+  \def\jcf@tmplab{#3}
+  \begin{figure}[!htb]
+  \@twoimageslabeli
+}
+\newcommand\@twoimageslabeli{\@ifnextchar\stopimages{\@twoimageslabelend}{\@twoimageslabelii}}
+
+\newcommand\@twoimageslabelii[6]{%
+  \@twoimageslabeliii{#1}{#2}{#3}\hfill
+  \@twoimageslabeliii{#4}{#5}{#6}\\[\bigskipamount]
+  \@twoimageslabeli % restart the recursion
+}
+\newcommand\@twoimageslabeliii[3]{%
+  \begin{subfigure}{0.49\linewidth}
+    \centering
+    \includegraphics[width=\jcf@tmpsiz\textwidth]{#1}
+    \caption{#2}\label{#3}
+  \end{subfigure}}
+\newcommand\@twoimageslabelend[1]{% The argument is \stopimages
+  \vspace*{-\bigskipamount}
+  \caption{\jcf@tmpcap \textit{(Label: \jcf@tmplab)}}\label{\jcf@tmplab}
+  \end{figure}}
+\makeatother
+
+% similar but each line is unlabelled
+\makeatletter % we need to use kernel commands
+\newcommand{\twoimagesnolabel}[3][1]{%
+  \def\jcf@tmpsiz{#1}
+  \def\jcf@tmpcap{#2}
+  \def\jcf@tmplab{#3}
+  \begin{figure}[!htb]
+  \@twoimagesnolabeli
+}
+\newcommand\@twoimagesnolabeli{\@ifnextchar\stopimages{\@twoimagesnolabelend}{\@twoimagesnolabelii}}
+
+\newcommand\@twoimagesnolabelii[4]{%
+  \@twoimagesnolabeliii{#1}{#2}\hfill
+  \@twoimagesnolabeliii{#3}{#4}\\[\bigskipamount]
+  \@twoimagesnolabeli % restart the recursion
+}
+\newcommand\@twoimagesnolabeliii[2]{%
+  \begin{subfigure}{0.49\linewidth}
+    \centering
+    \includegraphics[width=\jcf@tmpsiz\textwidth]{#1}
+    \caption{#2}
+  \end{subfigure}}
+\newcommand\@twoimagesnolabelend[1]{% The argument is \stopimages
+  \vspace*{-\bigskipamount}
+  \caption{\jcf@tmpcap \textit{(Label: \jcf@tmplab)}}\label{\jcf@tmplab}
+  \end{figure}}
+\makeatother
+
+
+% similar, but for three parallel images. More is just silly.
+
+
+\makeatletter % we need to use kernel commands
+\newcommand{\threeimages}[2]{%
+  \def\jcf@tmpcap{#1}
+  \def\jcf@tmplab{#2}
+  \begin{figure}[!htb]
+  \@threeimagesi
+}
+\newcommand\@threeimagesi{\@ifnextchar\stopimages{\@threeimagesend}{\@threeimagesii}}
+
+\newcommand\@threeimagesii[6]{%
+  \@threeimagesiii{#1}{#2}\hfill
+  \@threeimagesiii{#3}{#4}\hfill
+  \@threeimagesiii{#5}{#6}\\[\bigskipamount]
+  \@threeimagesi % restart the recursion
+}
+\newcommand\@threeimagesiii[2]{%
+  \begin{subfigure}{0.33\linewidth}
+    \centering
+    \includegraphics[width=\textwidth]{#1}
+    \caption{#2}\label{#1}
+  \end{subfigure}}
+\newcommand\@threeimagesend[1]{% The argument is \stopimages
+  \vspace*{-\bigskipamount}
+  \caption{\jcf@tmpcap \textit{(Label: \jcf@tmplab)}}\label{\jcf@tmplab}
+  \end{figure}}
+\makeatother
+
+
+% similar but takes any number of images and just puts them on subsequent lines at a given
+% scale of the linewidth (the third argument).
+
+\makeatletter % we need to use kernel commands
+\newcommand{\multiimages}[3]{%
+  \def\jcf@tmpcap{#1}
+  \def\jcf@tmplab{#2}
+  \def\jcf@tmpwidth{#3}
+  \begin{figure}[!htb]
+  \@multiimagesi
+}
+\newcommand\@multiimagesi{\@ifnextchar\stopimages{\@multiimagesend}{\@multiimagesii}}
+
+\newcommand\@multiimagesii[2]{%
+  \@multiimagesiii{#1}{#2} \\[\bigskipamount]
+  \@multiimagesi % restart the recursion
+}
+\newcommand\@multiimagesiii[2]{%
+  \begin{subfigure}{\linewidth}
+    \centering
+    \includegraphics[width=\jcf@tmpwidth\textwidth]{#1}
+    \caption{#2}\label{#1}
+  \end{subfigure}}
+\newcommand\@multiimagesend[1]{% The argument is \stopimages
+  \vspace*{-\bigskipamount}
+  \caption{\jcf@tmpcap \textit{(Label: \jcf@tmplab)}}\label{\jcf@tmplab}
+  \end{figure}}
+\makeatother
+
+% permits equation numbering in starred environments, so we can then
+% label with \numberthis\label..
+
+\newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}}
+
+
+\title{PCOT design notes}
+\author{James Finnis (jcf1@aber.ac.uk)}
+
+\begin{document}
+\maketitle
+\LetLtxMacro\oldincludegraphics\includegraphics
+% Stuff to redefine includegraphics to show the document file
+% underneath; useful for referencing.
+\renewcommand{\includegraphics}[2][]{%
+%    \rotatebox[origin=tr]{270}{\tiny #2} %
+    \oldincludegraphics[#1]{#2}%
+    \\{\scriptsize #2}%
+}
+
+
+
+%Why is this even here?
+%\nobibliography*
+\tableofcontents
+
+
+\input{intro.tex}
+\input{model.tex}
+
+%\bibliographystyle{plain}
+%\bibliographystyle{alpha}
+%\bibliography{bib}
+%\printbibliography
+
+\end{document}

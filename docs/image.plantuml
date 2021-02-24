@@ -1,0 +1,41 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+abstract class ROI <<abstract>> {
+}
+
+class ROIRect extends ROI {
+}
+
+class SubImageCubeROI {
+}
+
+SubImageCubeROI o-- ImageCube:img
+
+class ChannelMapping {
+}
+
+abstract class IChannelSource {
+}
+abstract class ChannelSourceWithFilter extends IChannelSource {
+}
+class InternalChannelSource extends ChannelSourceWithFilter {
+}
+class FileChannelSourceNoFilter extends ChannelSourceWithFilter {
+}
+class FileChannelSource extends ChannelSourceWithFilter {
+}
+
+
+
+class ImageCube {
+}
+
+ImageCube *-- "1..*" IChannelSource: sources
+ImageCube o-- "0..1" ChannelMapping: rgbMapping
+ImageCube *-- ndarray : img
+ImageCube *-- "0..*" ROI : rois
+
+
+@enduml
+
