@@ -98,5 +98,6 @@ class XformHistEqual(XFormType):
 
             # make a copy of the image and paste the modified version of the subimage into it
             node.img = img.modifyWithSub(subimage, equalized)
-        node.img.setMapping(node.mapping)
+        if node.img is not None:
+            node.img.setMapping(node.mapping)
         node.setOutput(0, node.img)
