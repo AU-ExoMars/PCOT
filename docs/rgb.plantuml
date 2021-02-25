@@ -1,0 +1,33 @@
+@startuml
+skinparam classAttributeIconSize 0
+left to right direction
+
+class ChannelMapping {
+    +red:int
+    +green:int
+    +blue:int
+}
+
+class ImageCube {
+}    
+
+
+class XForm {
+}
+
+ImageCube o-- "0..1" ChannelMapping: mapping
+
+XForm *-- "0..1" ChannelMapping: mapping
+XForm ..|> Tab: subclass creates
+XForm ..|> ImageCube: subclass creates
+
+Tab o-- XForm:node
+
+
+
+Tab *-- "0..1" Canvas:w.canvas
+
+Canvas o-- ChannelMapping:mapping
+
+
+@enduml
