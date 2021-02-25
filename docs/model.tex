@@ -9,7 +9,71 @@ from the point of view of this document is the image data, which ties
 into the user interface in complex ways. Other forms of data do exist,
 but these are much simpler.
 
-\subsection{ImageCube}
+
+\subsection{Graph and nodes}
+The graph is a directed graph of nodes represented by the 
+\texttt{XFormGraph} class. Each node is an instance of \texttt{XForm}
+(short for ``transform node''). The function of each node is
+determined by its \texttt{type} field, which references an
+\texttt{XFormType} singleton. See Fig.~\ref{xform.png} for an overview.
+
+\begin{figure}[ht]
+\center
+\includegraphics[width=3in]{xform.png}
+\caption{\texttt{XForm} and graph model}
+\label{xform.png}
+\end{figure}
+
+\subsubsection{XFormType and type registration}
+Each node type is represented by a subclass of \texttt{XFormType},
+and each subclass has a singleton to which nodes of that type link.
+For example, the \emph{rect} node's behaviour is specified by
+the \texttt{XformRect} class, which has a singleton instance. All
+\texttt{XForm} nodes which are \emph{rect} nodes have a \texttt{type} field
+pointing to this singleton.
+
+The singletons are automatically created and registered when the class
+is defined, through the \texttt{@xformtype} decorator. This does the
+following:
+\begin{itemize}
+\item Creates an instance of the class;
+\item Creates an MD5 hash of the class' source code which is stored
+inside the type singleton for version control;
+\item Changes the semantics of the class constructor so that
+it always returns the instance we just created (thus making the class
+a singleton).
+\end{itemize}
+The base constructor for \texttt{XFormType} adds the singleton
+to a dictionary class variable \texttt{allTypes}, so we can always
+obtain the singleton object and create new nodes which perform that
+node type.
+
+\subsubsection{XFormType methods}
+In order to perform a node's action, the type classes must contain
+the following methods:
+\begin{itemize}
+\item \texttt{init(node:XForm)} : initialise any extra data inside
+the node required to perform this type's behaviour
+\item \texttt{perform(node:XForm)} : perform this node's behaviour ---
+read any inputs, manipulate the data, set the outputs.
+\item \texttt{createTab(node:XForm, window:MainWindow)} : create a UI tab to edit/view this node.
+\end{itemize}
+Several other methods may optionally be overridden.
+
+\subsubsection{Linkage}
+\texttt{XForm} node objects are linked together by their inputs.
+Each \texttt{XForm} contains an \texttt{inputs} list indexed by
+input number. The length of this list is determined by the number
+of inputs the type object specifies. Each entry is a $(node,output)$
+tuple where $node$ is a reference to another \texttt{XForm} and
+$output$ is the index of an output on that \texttt{XForm}.
+
+Methods are provided in \texttt{XForm} for connecting and disconnecting nodes
+(also checking for cycles and providing basic type checking), and getting inputs
+and setting outputs inside the the type's \texttt{perform()} method.
+
+
+\subsection{Image data}
 Most classes making up the image data 
 model are described in the \texttt{pancamimage.py} file, including the main \texttt{ImageCube}
 class. Some additional classes describing where images can come from are in \texttt{channelsource.py}.
@@ -37,7 +101,7 @@ beyond system memory.
 \end{notebox}
 
 
-\subsection{IChannelSource and implementations}
+\subsection{IChannelSource and its implementations}
 Each \texttt{ImageCube} has a number of channels, and for each channel there must be a corresponding
 entry in the \texttt{sources} list. This describes where that channel came from, so that (typically) filter
 information can be preserved, where appropriate, through the graph. The sources for each channel are a set
@@ -117,8 +181,6 @@ output by the nodes which feed in.
 \end{itemize}
 
 
-
-
 \subsection{Regions of interest}
 Regions of interest belong to images, and modify how nodes process those images. They are added to 
 images by region of interest nodes such as \emph{rect}. Figs.~\ref{app.png} and \ref{graph.png}
@@ -186,3 +248,7 @@ will have the same channel sources, the same ROIs and the same RGB mapping.
 Much of the ROI system is work in progress, particularly combining
 multiple ROIs. This documentation might change.
 \end{notebox}
+
+
+\subsection{Macros}
+
