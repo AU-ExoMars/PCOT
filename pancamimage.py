@@ -7,6 +7,7 @@
 import cv2 as cv
 import numpy as np
 from channelsource import IChannelSource, FileChannelSourceRed, FileChannelSourceGreen, FileChannelSourceBlue
+from typing import List, Set, Optional
 
 import filters
 
@@ -23,7 +24,7 @@ class ROI:
         return img.img[y:y + h, x:x + w]
 
     ## return a boolean mask which, when imposed on the cropped image,
-    # gives the ROI. Or none, in which case there is no mask.
+    # gives the ROI. Or none,( in which case there is no mask.
     def mask(self):
         pass
 
@@ -106,7 +107,7 @@ class SubImageCubeROI:
     # Copies the sources list from that image.
     def cropother(self, img2):
         x, y, w, h = self.bb
-        return ImageCube(img2.img[y:y + h, x:x + w], img2.rgbMapping, img2.sources)
+        return ImageCube(img2.img[y:y + h, x:x + w], img2.mapping, img2.sources)
 
 
 ## A mapping from a multichannel image into RGB. All nodes have one of these, although some may have more and some
@@ -160,6 +161,32 @@ class ChannelMapping:
 # There is also a list of source tuples, (filename,filter), indexed by channel.
 
 class ImageCube:
+
+    ## @var img
+    # the numpy array containing the image data
+    img: np.ndarray
+
+    ## @var rois
+    # the regions of interest
+    rois: List[ROI]
+
+    ## @var shape
+    # the shape of the image array (i.e. the .shape field) - a single channel image will be a 2D array,
+    # a multichannel image will be 3D.
+    shape: np.ndarray
+
+    ## @var channels
+    # how many channels the image has.
+    channels: int
+
+    ## @var sources
+    # a list of sets of sources - one set for each channel - describing where this data came from
+    sources: List[Set[IChannelSource]]
+
+    ## @var mapping
+    # The RGB mapping to convert this image into RGB. May be None
+    mapping: Optional[ChannelMapping]
+
     # create image from numpy array
     def __init__(self, img: np.ndarray, rgbMapping: ChannelMapping = None, sources=[]):
 
@@ -195,7 +222,7 @@ class ImageCube:
 
     # Set the RGB mapping for this image, and create default channel mappings if necessary.
     def setMapping(self, mapping: ChannelMapping):
-        self.rgbMapping = mapping
+        self.mapping = mapping
         if mapping is not None:
             mapping.ensureValid(self)
 
@@ -259,24 +286,24 @@ class ImageCube:
             # [chans,w,h] they are just [w,h]
             return cv.merge([self.img, self.img, self.img])
         else:
-            if self.rgbMapping is None:
+            if self.mapping is None:
                 raise Exception("trying to get rgb of an imagecube with no mapping")
-            red = self.img[:, :, self.rgbMapping.red]
-            green = self.img[:, :, self.rgbMapping.green]
-            blue = self.img[:, :, self.rgbMapping.blue]
+            red = self.img[:, :, self.mapping.red]
+            green = self.img[:, :, self.mapping.green]
+            blue = self.img[:, :, self.mapping.blue]
 
         return cv.merge([red, green, blue])
 
     ## as rgb, but wraps in an ImageCube. Also works out the sources, which should be for
     # the channels in the result.
     def rgbImage(self):
-        sources = [self.sources[self.rgbMapping.red],
-                   self.sources[self.rgbMapping.green],
-                   self.sources[self.rgbMapping.blue]]
+        sources = [self.sources[self.mapping.red],
+                   self.sources[self.mapping.green],
+                   self.sources[self.mapping.blue]]
         # making a copy of the rgbMapping here to avoid situations where we try to use the same rgbMapping for images
         # of different depths (consider getting an rgbImage of a 1-channel image; what will happen to that mapping in
         # ensureValid?)
-        return ImageCube(self.rgb(), self.rgbMapping.copy(), sources)
+        return ImageCube(self.rgb(), self.mapping.copy(), sources)
 
     ## extract the "subimage" - the image cropped to regions of interest,
     # with a mask for those ROIs
@@ -306,8 +333,8 @@ class ImageCube:
             return ""
         out = [IChannelSource.stringForSet(s, mainwindow.captionType) for s in self.sources]
         # if there are channel assignments, show only the assigned channels. Not sure about this.
-        if self.rgbMapping is not None:
-            out = [out[x] for x in [self.rgbMapping.red, self.rgbMapping.green, self.rgbMapping.blue]]
+        if self.mapping is not None:
+            out = [out[x] for x in [self.mapping.red, self.mapping.green, self.mapping.blue]]
         desc = " ".join(["[" + s + "]" for s in out])
         return desc
 
@@ -317,8 +344,8 @@ class ImageCube:
         # it's probably best that this is a copy too - but if you notice
         # that you're changing the RGB mappings in a canvas and the image isn't changing,
         # it might be because of this.
-        if self.rgbMapping is not None:
-            m = self.rgbMapping.copy()
+        if self.mapping is not None:
+            m = self.mapping.copy()
         else:
             m = None
         i = ImageCube(self.img.copy(), m, srcs)
