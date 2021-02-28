@@ -11,11 +11,12 @@ class XFormType {
 
 XFormType *-- "0..n" XFormType : allTypes
 
-XFormGraph *-- "0..n" XForm
+XFormGraph *-- "0..n" XForm : nodes
 
 XFormType o-- "0..n" XForm : instances
 
 XForm o-- XFormType : type 
+XForm o-- XFormGraph : graph
 
 XformNormImage -up-|> XFormType
 XformRect -up-|> XFormType
