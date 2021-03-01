@@ -45,3 +45,63 @@ showing the output of the histogram equalisation.
 \end{figure}
 
 
+\subsection{Notes on type checking}
+Python is dynamically typed, but there are a lot of ``type annotations''
+in the code. Unfortunately, Python's import rules mean there's also some
+odd stuff going on. Annotations like
+\begin{lstlisting}
+class XFormType:
+    ## @var name
+    # name of the type
+    name: str
+    ## @var group
+    # the palette group to which it belongs
+    group: str
+    ## @var ver
+    # version number
+    ver: str
+    ## @var hasEnable
+    # does it have an enable button?
+\end{lstlisting}
+are straightforward (and note the Doxygen annotations): we have three
+string fields (\texttt{name}, \texttt{group} and \texttt{ver}) and
+a boolean field (\texttt{hasEnable}). The next annotation, however,
+is a link to a class defined further down the file, which in turn has
+a field which is \texttt{XFormType}: a cyclic dependency. In such cases,
+the standard PEP 0484 tactic is to use a string literal --- the type
+checker will resolve this successfully and give appropriate warnings:
+\begin{lstlisting}
+    ## @var instances
+    # all instances of this type in all graphs
+    instances: List['XForm']
+\end{lstlisting}
+defines \texttt{instances} as a list of \texttt{XForm}.
+
+Another oddity you may see in some of the files is this (from the top
+of \texttt{xform.py} like the previous example):
+\begin{lstlisting}
+if TYPE_CHECKING:
+    import graphscene
+    import PyQt5.QtWidgets
+\end{lstlisting}
+These lines are only run when type checking, and are used to ensure
+that appropriate classes are imported for type hints like this:
+\begin{lstlisting}
+    ## @var rect
+    # the main rectangle for the node in the scene
+    rect: [graphscene.GMainRect]
+    ## @var inrects
+    # input connector rectangles
+    inrects: List[graphscene.GConnectRect]
+    ## @var outrects
+    # output connector rectangles
+    outrects: List[graphscene.GConnectRect]
+    ## @var helpwin
+    # an open help window, or None
+    helpwin: PyQt5.QtWidgets.QMainWindow
+\end{lstlisting}
+Without the \texttt{TYPE\_CHECKING} guard the program will not run, because
+these imports are actually cyclic. However, they are only needed at 
+compile time, so the \texttt{if}-statement is added to stop the import
+at run-time.
+
