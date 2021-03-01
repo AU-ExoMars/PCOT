@@ -9,28 +9,22 @@ import hashlib
 import inspect
 import traceback
 from collections import deque
-from typing import List, Dict, Tuple, Any, ClassVar
+from typing import List, Dict, Tuple, Any, ClassVar, Optional, TYPE_CHECKING
 
-import PyQt5  # just for the type hint
 import json
 import pyperclip
 import uuid
 
 import conntypes
-import ui
+import ui.tabs
 
+if TYPE_CHECKING:
+    import graphscene
+    import PyQt5.QtWidgets
+    from macros import XFormMacro, MacroInstance
 
 # ugly forward declarations so the type hints work
 from pancamimage import ChannelMapping
-
-
-class XForm:
-    pass
-
-
-class XFormGraph:
-    pass
-
 
 ## dictionary of name -> transformation type (XFormType)
 allTypes = dict()
@@ -42,6 +36,10 @@ allTypes = dict()
 # need the xforms to be registered at initialisation. Thus the class creation
 # forces an instance to be created. We also use it to grab the source code
 # and generate an MD5 checksum, so we are *sure* versions match.
+
+# I'm suppressing a name warning because I prefer it like this!
+
+# noinspection PyPep8Naming
 class xformtype:
     def __init__(self, cls, *args, **kwargs):
         self._cls = cls
@@ -51,7 +49,7 @@ class xformtype:
         src = inspect.getsource(mod).encode('utf-8')  # get the source
         self._instance = self._cls(*args, **kwargs)  # make the instance
         self._instance._md5 = hashlib.md5(src).hexdigest()  # add the checksum
-        if self._instance.__doc__ == None:
+        if self._instance.__doc__ is None:
             print("WARNING: no documentation for xform type '{}'".format(self._instance.name))
 
     def __call__(self):
@@ -63,7 +61,7 @@ class xformtype:
 # code has changed, and the node is not guaranteed to work as it did when saved.
 
 class BadVersionException(Exception):
-    def __init__(self,n):
+    def __init__(self, n):
         self.message = "Node {} was saved with a different version of type {}".format(n.name, n.type.name)
 
 
@@ -83,7 +81,7 @@ class XFormType:
     hasEnable: bool
     ## @var instances
     # all instances of this type in all graphs
-    instances: List[XForm]
+    instances: List['XForm']
 
     ## @var inputConnectors
     # input connectors, a list of triples (name,connection type name, description)
@@ -238,14 +236,12 @@ def serialiseConn(c, connSet):
     if c:
         x, i = c
         if (connSet is None) or (x in connSet):
-            return (x.name, i)
+            return x.name, i
     return None
 
 
 ## an actual instance of a transformation, often called a "node".
 class XForm:
-    import graphscene  # deferred import avoiding circular import
-
     # type hints for attributes, here mainly as documentation
 
     ## @var type
@@ -259,11 +255,11 @@ class XForm:
     ## @var inputs
     # list of tuples/none, each is the node we connect to and the output 
     # to which we are connected on that node
-    inputs: List[Tuple[XForm, int]]
+    inputs: List[Optional[Tuple['XForm', int]]]
 
     ## @var children
     # dictionary of nodes we output to and how many connections we have
-    children: Dict[XForm, int]
+    children: Dict['XForm', int]
 
     ## @var outputs
     # the actual output data from this node
@@ -272,11 +268,11 @@ class XForm:
     ## @var outputTypes
     # the "overriding" output type (since an "img" output (say) may become
     # an "imgrgb") when the perform happens
-    outputTypes: List[str]
+    outputTypes: List[Optional[str]]
 
     ## @var inputTypes
     # the "overriding" input types (used in macros)
-    inputTypes: List[str]
+    inputTypes: List[Optional[str]]
 
     ## @var comment
     # a helpful comment
@@ -303,7 +299,17 @@ class XForm:
 
     ## @var graph
     # the graph to which I belong
-    graph: XFormGraph
+    graph: 'XFormGraph'
+
+    ## @var savedmd5
+    # only valid on nodes which are in the process of loading - stored
+    # the MD5 value from the file
+    savedmd5: Optional[str]
+
+    ## @var instance
+    # The macro instance if this is a macro - contains the instance graph
+    # and some metadata
+    instance: Optional['MacroInstance']
 
     # display data
 
@@ -312,10 +318,10 @@ class XForm:
     xy: Tuple[int, int]
     ## var w
     # screen width
-    w: int
+    w: Optional[int]
     ## var h
     # screen height
-    h: int
+    h: Optional[int]
 
     ## @var tabs
     # a list of open tabs
@@ -325,27 +331,29 @@ class XForm:
     current: bool
     ## @var rect
     # the main rectangle for the node in the scene
-    rect: [graphscene.GMainRect]
+    rect: ['graphscene.GMainRect']
     ## @var inrects
     # input connector rectangles
-    inrects: List[graphscene.GConnectRect]
+    inrects: List[Optional['graphscene.GConnectRect']]
     ## @var outrects
     # output connector rectangles
-    outrects: List[graphscene.GConnectRect]
+    outrects: List[Optional['graphscene.GConnectRect']]
     ## @var helpwin
     # an open help window, or None
-    helpwin: PyQt5.QtWidgets.QMainWindow
+    helpwin: Optional['PyQt5.QtWidgets.QMainWindow']
 
     ## @var chanAssignments
     # a triple of integers used by nodes which have a canvas.Canvas. They indicate which channels
     # in the viewed image cube map onto R, G and B (in that order) in the Canvas. Starts at None,
     # and is set to default values by the first call to display() on the canvas.
-    chanAssignments: Tuple[int]
+    chanAssignments: Optional[Tuple[int]]
 
     ## constructor, takes type and displayname
-    def __init__(self, type, dispname):
-        self.type = type
-        self.savedver = type.ver
+    def __init__(self, tp, dispname):
+        self.instance = None
+        self.type = tp
+        self.savedver = tp.ver
+        self.savedmd5 = None
         # we keep a dict of those nodes which get inputs from us, and how many. We can't
         # keep the actual output connections easily, because they are one->many.
         self.children = {}
@@ -360,7 +368,7 @@ class XForm:
         self.displayName = dispname
         # set up things which are dependent on the number of connectors,
         # which can change in macros. Initialise the inputs, though.
-        self.inputs = [None] * len(type.inputConnectors)
+        self.inputs = [None] * len(tp.inputConnectors)
         self.connCountChanged()
         self.chanAssignments = None
 
@@ -379,7 +387,7 @@ class XForm:
         self.hasRun = False  # used to mark a node as already having performed its stuff
         # all nodes have a channel mapping, because it's easier. See docs for that class.
         self.mapping = ChannelMapping()
-        type.instances.append(self)
+        tp.instances.append(self)
 
     ## debugging
     def dumpInputs(self, t):
@@ -409,14 +417,14 @@ class XForm:
 
         # there is also a data output generated for each output by "perform", initially
         # these are None
-        self.outputs = [None for x in self.type.outputConnectors]
+        self.outputs = [None for _ in self.type.outputConnectors]
         # these are the overriding output types; none if we use the default
         # given by the type object (see the comment on outputConnectors
         # in XFormType)
-        self.outputTypes = [None for x in self.type.outputConnectors]
-        self.inputTypes = [None for x in self.type.inputConnectors]
-        self.inrects = [None for x in self.inputs]  # input connector GConnectRects
-        self.outrects = [None for x in self.outputs]  # output connector GConnectRects
+        self.outputTypes = [None for _ in self.type.outputConnectors]
+        self.inputTypes = [None for _ in self.type.inputConnectors]
+        self.inrects = [None for _ in self.inputs]  # input connector GConnectRects
+        self.outrects = [None for _ in self.outputs]  # output connector GConnectRects
 
     ## called when a node is deleted
     def onRemove(self):
@@ -434,17 +442,16 @@ class XForm:
     # only connections to/from the nodes in the selection (which may
     # be None if you want to serialize the whole set)
     def serialise(self, selection=None):
-        d = {}
-        d['xy'] = self.xy
-        d['type'] = self.type.name
-        d['displayName'] = self.displayName
-        d['ins'] = [serialiseConn(c, selection) for c in self.inputs]
-        d['comment'] = self.comment
-        d['outputTypes'] = self.outputTypes
-        d['inputTypes'] = self.inputTypes
-        d['md5'] = self.type.md5()
-        d['ver'] = self.type.ver  # type.ver is version of type
-        d['mapping'] = self.mapping.serialise()
+        d = {'xy': self.xy,
+             'type': self.type.name,
+             'displayName': self.displayName,
+             'ins': [serialiseConn(c, selection) for c in self.inputs],
+             'comment': self.comment,
+             'outputTypes': self.outputTypes,
+             'inputTypes': self.inputTypes,
+             'md5': self.type.md5(),
+             'ver': self.type.ver,
+             'mapping': self.mapping.serialise()}
         if self.type.hasEnable:  # only save 'enabled' if the node uses it
             d['enabled'] = self.enabled
 
@@ -453,7 +460,8 @@ class XForm:
         # and run the additional serialisation method
         d2 = self.type.serialise(self)
         if d2 is not None:
-            d.update(d2)
+            # avoids a type check problem
+            d.update(d2 or {})
         return d
 
     ## deserialise a node from a python dict. Some entries already dealt with.
@@ -481,7 +489,7 @@ class XForm:
 
     ## return the actual type of an output, taking account of overrides (node outputTypes)
     def getOutputType(self, i):
-        if i >= 0 and i < len(self.outputs):
+        if 0 <= i < len(self.outputs):
             if self.outputTypes[i] is None:
                 return self.type.outputConnectors[i][1]
             else:
@@ -489,7 +497,7 @@ class XForm:
 
     ## return the actual type of an input, taking account of overrides (node inputTypes)
     def getInputType(self, i):
-        if i >= 0 and i < len(self.inputs):
+        if 0 <= i < len(self.inputs):
             if self.inputTypes[i] is None:
                 return self.type.inputConnectors[i][1]
             else:
@@ -506,8 +514,8 @@ class XForm:
         return False
 
     ## this should be used to change an output type is generateOutputTypes
-    def changeOutputType(self, index, type):
-        self.outputTypes[index] = type
+    def changeOutputType(self, index, tp):
+        self.outputTypes[index] = tp
         if self.outrects[index] is not None:
             #            print("MATCHING: {} becomes {}".format(index,type))
             self.outrects[index].typeChanged()
@@ -518,7 +526,7 @@ class XForm:
     # input and output is matchOutputsToInputs([(0,0)])
     def matchOutputsToInputs(self, pairs):
         # reset all types - doing it this way in case we add extra outputs!
-        self.outputTypes[:len(self.type.outputConnectors)] = [None for x in self.type.outputConnectors]
+        self.outputTypes[:len(self.type.outputConnectors)] = [None for _ in self.type.outputConnectors]
         for o, i in pairs:
             if self.inputs[i] is not None:
                 parent, pout = self.inputs[i]
@@ -566,22 +574,22 @@ class XForm:
 
     ## connect an input to an output on another xform. Note that this doesn't
     # check compatibility; that's done in the UI.
-    def connect(self, input, other, output, autoPerform=True):
-        if input >= 0 and input < len(self.inputs) and self is not other:
-            if output >= 0 and output < len(other.type.outputConnectors):
+    def connect(self, inputIdx, other, output, autoPerform=True):
+        if 0 <= inputIdx < len(self.inputs) and self is not other:
+            if 0 <= output < len(other.type.outputConnectors):
                 if not self.cycle(other):  # this is a double check, the UI checks too.
-                    self.inputs[input] = (other, output)
+                    self.inputs[inputIdx] = (other, output)
                     other.increaseChildCount(self)
                     if autoPerform:
                         other.graph.changed(other)  # perform the input node; the output should perform
 
     ## disconnect an input 
-    def disconnect(self, input):
-        if input >= 0 and input < len(self.inputs):
-            if self.inputs[input] is not None:
-                n, i = self.inputs[input]
+    def disconnect(self, inputIdx):
+        if 0 <= inputIdx < len(self.inputs):
+            if self.inputs[inputIdx] is not None:
+                n, i = self.inputs[inputIdx]
                 n.decreaseChildCount(self)
-                self.inputs[input] = None
+                self.inputs[inputIdx] = None
                 self.graph.changed(self)  # run perform safely
 
     ## disconnect all inputs and outputs prior to removal
@@ -646,7 +654,7 @@ class XForm:
             else:
                 print("--------------------------------------Performing {}".format(self.debugName()))
                 # first clear all outputs
-                self.outputs = [None for x in self.type.outputConnectors]
+                self.outputs = [None for _ in self.type.outputConnectors]
                 # now run the node.
                 self.type.perform(self)
                 self.hasRun = True
@@ -687,15 +695,13 @@ class XForm:
 
 ## a graph of transformation nodes
 class XFormGraph:
-    import graphscene  # deferred import avoiding circular import
-
     ## @var nodes
     # all my nodes
     nodes: List[XForm]
 
     ## @var scene
     # my graphical representation
-    scene: graphscene.XFormGraphScene
+    scene: Optional['graphscene.XFormGraphScene']
 
     ## @var isMacro
     # true if this is a macro prototype, will be false for instances
@@ -710,6 +716,11 @@ class XFormGraph:
     # dictionary of UUID to node, used to get instance nodes from prototypes
     nodeDict: Dict[str, XForm]
 
+    ## @var proto
+    # If this is a macro, the type object for the macro prototype (a singleton of
+    # XFormMacro, itself a subclass of XFormType)
+    proto: Optional['XFormMacro']
+
     ## @var autorun
     # should graphs be autorun
     autoRun: ClassVar[bool]
@@ -718,6 +729,7 @@ class XFormGraph:
     ## constructor, takes whether the graph is a macro prototype or not
     def __init__(self, isMacro):
         # all the nodes
+        self.proto = None
         self.nodes = []
         self.performingGraph = False
         self.scene = None  # the graph's scene is created by autoLayout

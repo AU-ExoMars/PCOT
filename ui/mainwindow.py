@@ -201,12 +201,12 @@ class MainUI(ui.tabs.DockableTabWindow):
     ## create a dictionary of everything in the app we need to save: global settings,
     # the graph, macros etc.
     def serialise(self):
-        d = {}
-        d['SETTINGS'] = {'cap': self.captionType}
-        d['INFO'] = {'author': getUserName(), 'date': time.time()}
-        d['GRAPH'] = self.graph.serialise()
+        d = {'SETTINGS': {'cap': self.captionType},
+             'INFO': {'author': getUserName(),
+                      'date': time.time()},
+             'GRAPH': self.graph.serialise(),
+             'MACROS': macros.XFormMacro.serialiseAll()}
         # now we also have to serialise the macros
-        d['MACROS'] = macros.XFormMacro.serialiseAll()
         return d
 
     ## deserialise everything from the given top-level dictionary

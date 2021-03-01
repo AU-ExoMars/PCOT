@@ -6,7 +6,7 @@ from typing import List, Dict, ClassVar
 from PyQt5 import QtWidgets
 
 import conntypes
-import ui
+import ui.tabs
 import xform
 from pancamimage import ChannelMapping
 from xform import XFormType
@@ -121,12 +121,6 @@ XFormMacroIn()
 XFormMacroOut()
 
 
-# Forward declaration required for XFormType.protos
-
-class XFormMacro(XFormType):
-    pass
-
-
 ## the actual macro xform type - this doesn't get autoregistered
 # because a new one is created for each individual macro prototype.
 # A macro consists of a graph and links to any macro instances,
@@ -135,7 +129,7 @@ class XFormMacro(XFormType):
 # but with a unique name and different connectors.
 
 class XFormMacro(XFormType):
-    protos: ClassVar[Dict[str, XFormMacro]]  # dictionary of all macros by name
+    protos: ClassVar[Dict[str, 'XFormMacro']]  # dictionary of all macros by name
 
     ## @var graph
     # the graph for this prototype
@@ -173,7 +167,6 @@ class XFormMacro(XFormType):
         # initialise the (empty) connectors and will also add us to
         # the palette
         self.setConnectors()
-        self.autoserialise = ('mapping',)
 
     ## generates a new unique name for this macro. TODO: MAY NOT WORK ON LOAD/RELOAD.
     @staticmethod
@@ -181,7 +174,7 @@ class XFormMacro(XFormType):
         ct = 0
         while True:
             name = 'untitled' + str(ct)
-            if not name in XFormMacro.protos:
+            if name not in XFormMacro.protos:
                 return name
             ct += 1
 
@@ -331,7 +324,8 @@ class XFormMacro(XFormType):
         # 3a - if there's a sink, copy the data to the instance node
         for n in node.instance.graph.nodes:
             if n.type.name == "sink":
-                node.sinkimg = n.img
+                node.sinkimg = n.img.copy()
+                node.sinkimg.setMapping(node.mapping)
 
         # 4 - copy the output from the output connectors nodes into the node's outputs
         for i in range(0, len(node.outputs)):
@@ -353,6 +347,7 @@ class TabMacro(ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'assets/tabmacro.ui')
         self.w.openProto.pressed.connect(self.openProto)
+        self.w.canvas.setMapping(node.mapping)
         self.onNodeChanged()
 
     def openProto(self):
