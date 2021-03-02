@@ -70,8 +70,69 @@ $output$ is the index of an output on that \texttt{XForm}.
 
 Methods are provided in \texttt{XForm} for connecting and disconnecting nodes
 (also checking for cycles and providing basic type checking), and getting inputs
-and setting outputs inside the the type's \texttt{perform()} method.
+and setting outputs inside the type's \texttt{perform()} method.
 
+\subsection{Performing the graph}
+\label{graphperform}
+The graph needs to be ``performed'' --- its nodes executed --- whenever
+the data changes, which is generally whenever the graph is edited or
+a node control changed in a tab.
+This is done by calling \texttt{changed()} on the node's tab, which calls 
+\texttt{changed()} on the tab's node's graph, passing in the node. Here is the 
+relevant code in \texttt{ui.tabs.Tab}:
+\begin{lstlisting}
+    def changed(self):
+        self.node.graph.changed(self.node)
+\end{lstlisting}
+The \texttt{XFormGraph.changed()} method takes a node, and either calls
+\texttt{performNodes()} on the main graph passing in that node, or, if the
+node is inside a macro prototype graph (q.v.), copies the prototype graph to
+all its instances and runs \texttt{performNodes()} for all those instances
+(see Sec.~\ref{macroineff} for why this is a problem).
+
+The \texttt{XFormGraph.performNodes()} method itself takes a single argument and performs
+either the entire graph or a portion of the graph starting at a particular node.
+If the argument is None, the internal list of all nodes in the graph is traversed looking
+for nodes with no inputs and these are performed. If the argument is not None that node
+is performed. Nodes are performed by calling their \texttt{perform()} method. This will
+recursively run the child nodes, but only when they are ready to run. 
+
+\clearpage
+\subsubsection{Performing a node}
+The \texttt{XForm.perform()} method will run a node, and recursively run all child nodes, although
+there are some complexities here (mainly to accommodate macros). It will not perform the node if it 
+has already run in this call to \texttt{performNodes()} or if it is not ready to run (some inputs do not yet have values):
+\begin{algorithmic}
+\IF{node has not already run \textbf{and} node is ready to run}
+\STATE clear all outputs
+\STATE run the node type singleton's \texttt{perform()} method on the node
+\STATE mark node as having run
+\FORALL{$t$ in open tabs for this node}
+\STATE $t$\texttt{.onNodeChanged()}
+\ENDFOR
+\FORALL{$c$ in child nodes}
+\STATE perform node $c$
+\ENDFOR
+\ENDIF
+\end{algorithmic}
+A node is ready to run if it has no inputs which do not yet have values set. This is
+determined by checking the outputs of the nodes from which the inputs come to see if
+they have yet been set with values. The \texttt{performNodes()} method is called from only two places:
+\begin{itemize}
+\item \texttt{XFormGraph.changed(node)}: when the graph or a node in a graph has been changed. This is the most
+frequent call, and is typically called with a node to avoid running the whole graph. The node is passed down into
+\texttt{performNodes()}).
+\item \texttt{XFormMacro.perform(node)}: when a node which contains a macro instance is being performed (see
+Sec.~\ref{macros} for more details).
+\end{itemize}
+The \texttt{XFormGraph.changed()} method is called from several places:
+\begin{itemize}
+\item \texttt{XFormGraph.runAll()} : called when a graph is explicitly run.
+\item \texttt{XForm.disconnect()} and \texttt{XForm.connect()}: when connections between nodes are made or broken.
+\item \texttt{XForm.setEnabled()}: when a node is enabled or disabled.
+\item \texttt{Tab.changed()}: when a tab signals that a node it controls has had a parameter change.
+\item \texttt{XFormGraph.deserialise()}: when a graph has been loaded.
+\end{itemize}
 
 \subsection{Image data}
 Most classes making up the image data 
@@ -251,4 +312,83 @@ multiple ROIs. This documentation might change.
 
 
 \subsection{Macros}
+\label{macros}
+Macros are one of the more complex parts of the PCOT data model, so it's
+important that they are documented here. First, a quick description
+of how they work from a user standpoint.
 
+Users can create a new macro, which will open a window with a new graph in it.
+This is distinguished from the main window by its slightly different
+background colour. The user can create and manipulate transform nodes inside
+this graph, as usual. This is the \textbf{prototype graph} for the macro.
+The user should create special input and output nodes inside this graph
+to allow data to flow into and out of the macro.
+
+When a new macro is created, a button for that macro appears in the ``palette''
+on the right of the app window. Clicking on this button will create
+an \textbf{instance} of the macro inside the main graph. This is a
+node which contains a copy of the prototype graph --- it must be a copy,
+because multiple instances of the macro with different data may exist.
+When the user edits the prototype graph (including the parameters of 
+any nodes within it) the changes are copied to the instance graphs for
+that macro. Consider the situation in Fig.~\ref{macroobjs.pdf}.
+\begin{figure}[ht]
+\center
+\includegraphics[width=5in]{macroobjs.pdf}
+\caption{An example of a graph containing macros}
+\label{macroobjs.pdf}
+\end{figure}
+This contains three instance nodes of a single macro. 
+I have ``zoomed in'' on one of the instances, showing that it is connected
+to three other nodes: two on its inputs, one on its outputs.
+When this main graph runs, the following happens:
+\begin{itemize}
+\item Node 1 is able to run, does so, and sets its output
+\item The macro instance cannot yet run
+\item Node 2 is able to run, does so, and sets its output
+\item The macro instance can now run:
+\begin{itemize}
+\item The macro instance node copies its input data
+into the input nodes contained within the instance graph
+\item The input nodes in the instance graph are run
+\item The nodes dependent on those input nodes are run (i.e.\ the
+instance graph proper)
+\item The output nodes in the instance graph are run, copying their
+inputs into the macro instance node's outputs
+\item the instance now has now completed its run
+\end{itemize}
+\item Node 3 can now run, reading its inputs from the macro instance node.
+\end{itemize}
+
+\subsubsection{Macro inefficiencies}
+\label{macroineff}
+As noted above in Sec.~\ref{graphperform}, all the nodes in all instance
+graphs are run whenever the prototype graph is changed. This is very
+inefficient and may cause considerable delays. It's done simply by forcing all
+\texttt{XFormMacro} nodes which are instances of the macro to perform themselves. Here
+is the relevant part of \texttt{XFormGraph.changed()}:
+\begin{lstlisting}
+    # distribute changes in macro prototype to instances.
+    # what we do here is go through all instances of the macro. 
+    # We copy the changed prototype to the instances, then run
+    # the instances in the graphs which contain them (usually the
+    # main graph).
+    # This could be optimised to run only the relevant (changed) component
+    # within the macro, but that's very hairy.
+
+    for inst in self.proto.instances:
+        inst.instance.copyProto()
+        inst.graph.performNodes(inst)
+\end{lstlisting}
+Here, \texttt{inst} is an XFormMacro node inside the graph which contains the
+macro, it is not the instance graph inside the \texttt{inst} node. Thus
+\texttt{inst.graph} will be the main graph (for an non-nested macro). The
+\texttt{self} value, however, is the macro prototype graph, because this
+method was called on an object inside that graph. This code therefore calls
+\texttt{performNodes()} on the main graph to run the XFormMacro node inside
+that graph. 
+
+In an ideal world, this process --- calling \texttt{changed()} --- would identify
+the instance node which corresponds to the prototype node which was changed, and only
+run that inside the instance graph for the macro. The child nodes of the instance node
+would then need to be run.
