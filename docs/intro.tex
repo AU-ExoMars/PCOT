@@ -89,19 +89,20 @@ that appropriate classes are imported for type hints like this:
 \begin{lstlisting}
     ## @var rect
     # the main rectangle for the node in the scene
-    rect: [graphscene.GMainRect]
+    rect: ['graphscene.GMainRect']
     ## @var inrects
     # input connector rectangles
-    inrects: List[graphscene.GConnectRect]
+    inrects: List[Optional['graphscene.GConnectRect']]
     ## @var outrects
     # output connector rectangles
-    outrects: List[graphscene.GConnectRect]
+    outrects: List[Optional['graphscene.GConnectRect']]
     ## @var helpwin
     # an open help window, or None
-    helpwin: PyQt5.QtWidgets.QMainWindow
+    helpwin: Optional['PyQt5.QtWidgets.QMainWindow']
 \end{lstlisting}
 Without the \texttt{TYPE\_CHECKING} guard the program will not run, because
 these imports are actually cyclic. However, they are only needed at 
 compile time, so the \texttt{if}-statement is added to stop the import
-at run-time.
+at run time. Note the quotes: they are there to stop Python trying to
+resolve the symbols at run time.
 

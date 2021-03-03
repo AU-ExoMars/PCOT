@@ -1,0 +1,28 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+MacroInstance o-- XFormMacro:proto
+XFormMacro --|> XFormType
+
+MacroInstance *-- XFormGraph:graph
+note right on link
+This is the instance graph,
+copied from the prototype
+end note
+MacroInstance o-- XForm:node
+
+XFormMacro *-- XFormGraph:graph
+note right on link
+This is the prototype graph
+end note
+XFormMacro *-- "1..*" XFormMacro:protos
+
+XForm *-- MacroInstance:instance
+XForm o-- XFormMacro:type
+note right of XForm
+This is an XForm with type
+XFormMacro: each macro
+has its own type object.
+end note
+
+@enduml
