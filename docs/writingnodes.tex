@@ -1,0 +1,95 @@
+% Created by Jim Finnis
+% Date Wed Mar 3 15:15:17 2021
+
+
+\section{Anatomy of an \texttt{XForm}: how to write nodes}
+As noted above and shown in Fig.~\ref{xform.pdf}, all nodes are 
+implemented as subclasses of \texttt{XFormType}. Each node 
+is an \texttt{XForm} with a link to an \texttt{XFormType} object
+controlling its behaviour\footnote{an example of ``favouring
+composition over inheritance.''}.
+There is only one object of each \texttt{XFormType} class; they
+are singletons. The data differentiating each instance of 
+a given node type is stored in the \texttt{XForm} itself.
+
+To write a new node type we need to write a new \texttt{XFormType},
+create a singleton object of that class, and register it with the system
+(so the user can see it). The last two steps are dealt with automatically;
+all we need do is write the class inside the \texttt{xforms} directory
+and make sure it has the \texttt{@xformtype} annotation to ensure
+it is registered and is a singleton, as described in 
+Sec.~\ref{xformtype}.
+
+In addition to an \texttt{XFormType}, it may be necessary to write
+a subclass of \texttt{ui.tabs.Tab} to display its controls and output.
+If the new node only displays
+an image and has no extra controls, the built-in \texttt{TabImage}
+can be used: I will discuss this case first.
+
+\subsection{An example}
+The required methods are described in Sec.~\ref{xformtype}. This
+section will give an example of how to build an image manipulation
+node --- an image normalisation node, which will normalise all channels
+to the range [0,1]. It will also honour regions of interest:
+only pixels inside the currently active ROI will be processed. This makes
+image processing a little more complicated.
+
+First, we need to write function to normalise the image as a 3D numpy array,
+taking into account a boolean mask of pixels to ignore (for the region
+of interest). The declaration is simple:
+\begin{lstlisting}
+def norm(img, mask):
+\end{lstlisting}
+Now we need to generate a numpy masked array from the image and mask.
+Note that the mask passed in uses True to indicate array elements which should
+be used --- this is intuitively more obvious, but the construction
+of a masked array uses True to indicate elements which are masked out. Thus
+we need to negate the mask:
+\begin{lstlisting}
+    masked = np.ma.masked_array(img, mask=~mask)
+\end{lstlisting}
+Now we need to create a copy of the array to write the data to because we
+don't want to modify the original image:
+\begin{lstlisting}
+    cp = img.copy()
+\end{lstlisting}
+Next we want to find the minimum and maximum of the pixels in the masked
+image (i.e.\ ignoring unmasked pixels):
+\begin{lstlisting}
+    mn = masked.min()
+    mx = masked.max()
+\end{lstlisting}
+If the range is zero, we generate an error --- we'll return this and deal
+with it in \texttt{perform()}, our node's actual work function. We also
+generate a zero image as the result.
+If the range is OK, the exception is None and the result image is
+the input image normalised
+to the range of the masked pixels:
+\begin{lstlisting}
+    if mn == mx:
+        ex = XFormException("DATA", "cannot normalize, image is a single value")
+        res = np.zeros(img.shape,np.float32)
+    else:
+        ex = None
+        res = (masked - mn) / (mx - mn)
+\end{lstlisting}
+We now put the result image into the image copy we generated earlier,
+but this time we don't negate the mask (because \texttt{putmask} works
+the right way --- pixels which are True in the mask are written). We 
+then return the exception and the modified image copy.
+\begin{lstlisting}
+    np.putmask(cp, mask, res)
+    return ex, cp
+\end{lstlisting}
+As you can see, error handling and dealing with regions of interest
+is often the most complicated part of a node!
+
+Now we can start to write the actual node class.
+
+
+
+Error handling:
+    Can either throw an xformexception
+    Or actually do the processing but still set an error state
+    Need a method to set an error state
+    

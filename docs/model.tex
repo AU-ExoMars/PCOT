@@ -15,16 +15,17 @@ The graph is a directed graph of nodes represented by the
 \texttt{XFormGraph} class. Each node is an instance of \texttt{XForm}
 (short for ``transform node''). The function of each node is
 determined by its \texttt{type} field, which references an
-\texttt{XFormType} singleton. See Fig.~\ref{xform.png} for an overview.
+\texttt{XFormType} singleton. See Fig.~\ref{xform.pdf} for an overview.
 
 \begin{figure}[ht]
 \center
-\includegraphics[width=3in]{xform.png}
+\includegraphics[width=4in]{xform.pdf}
 \caption{\texttt{XForm} and graph model}
-\label{xform.png}
+\label{xform.pdf}
 \end{figure}
 
 \subsubsection{XFormType and type registration}
+\label{xformtype}
 Each node type is represented by a subclass of \texttt{XFormType},
 and each subclass has a singleton to which nodes of that type link.
 For example, the \emph{rect} node's behaviour is specified by
@@ -138,14 +139,14 @@ The \texttt{XFormGraph.changed()} method is called from several places:
 Most classes making up the image data 
 model are described in the \texttt{pancamimage.py} file, including the main \texttt{ImageCube}
 class. Some additional classes describing where images can come from are in \texttt{channelsource.py}.
-The model is shown in outline in Fig.~\ref{image.png} although some links to channel sources
+The model is shown in outline in Fig.~\ref{image.pdf} although some links to channel sources
 and mapping from nodes are omitted; these will be explained later.
 
 \begin{figure}[ht]
 \center
-\includegraphics[width=5in]{image.png}
+\includegraphics[width=6in]{image.pdf}
 \caption{Outline UML class diagram of image model}
-\label{image.png}
+\label{image.pdf}
 \end{figure}
 
 The main class is \texttt{ImageCube}: this encapsulates a numpy array
@@ -162,7 +163,7 @@ beyond system memory.
 \end{notebox}
 
 
-\subsection{IChannelSource and its implementations}
+\subsubsection{IChannelSource and its implementations}
 Each \texttt{ImageCube} has a number of channels, and for each channel there must be a corresponding
 entry in the \texttt{sources} list. This describes where that channel came from, so that (typically) filter
 information can be preserved, where appropriate, through the graph. The sources for each channel are a set
@@ -199,18 +200,18 @@ contains a ``canvas'' displaying an image. Above the canvas are three combo boxe
 and these are typically labelled by a string generated from the source data for each channel (along with the index). Sources are also used
 to select channels to combine and manipulate in those nodes which do so.
 
-\subsection{RGB channel mappings}
+\subsubsection{RGB channel mappings}
 The previous section briefly mentions the three RGB mapping combo boxes at the
 top of the canvas component in the node controls in Fig~\ref{app.png}. In
 canvases --- components which display images --- a multi-channel image cube
 must be displayed as RGB data. The combo boxes control how this is done, and
-the data is made persistent in a slightly complicated way, as shown in Fig.~\ref{rgb.png}.
+the data is made persistent in a slightly complicated way, as shown in Fig.~\ref{rgb.pdf}.
 
 \begin{figure}[ht]
 \center
-\includegraphics[width=5in]{rgb.png}
+\includegraphics[width=6in]{rgb.pdf}
 \caption{RGB mapping classes}
-\label{rgb.png}
+\label{rgb.pdf}
 \end{figure}
 
 The relationships will hopefully become clearer when I come to describe how nodes work in more
@@ -242,10 +243,10 @@ output by the nodes which feed in.
 \end{itemize}
 
 
-\subsection{Regions of interest}
-Regions of interest belong to images, and modify how nodes process those images. They are added to 
-images by region of interest nodes such as \emph{rect}. Figs.~\ref{app.png} and \ref{graph.png}
-show this in action:
+\subsubsection{Regions of interest}
+Regions of interest belong to images, and modify how nodes process those
+images. They are added to images by region of interest nodes such as
+\emph{rect}. Figs.~\ref{app.png} and \ref{graph.png} show this in action:
 \begin{itemize}
 \item A file is read in, producing an image cube
 \item A \emph{rect} node adds a region of interest to this image. The outputs are:
@@ -261,7 +262,7 @@ stretch --- but only on the regions of interest in the image (in this case, insi
 \item a \emph{histequal} node performs a histogram equalisation, again honouring the regions of interest
 which have been passed through the previous node unchanged.
 \end{itemize}
-As shown in Fig.~\ref{image.png}, each image contains a list of \texttt{ROI} objects,
+As shown in Fig.~\ref{image.pdf}, each image contains a list of \texttt{ROI} objects,
 each of which is an instantiation of a subclass of \texttt{ROI}. 
 
 To honouring regions of interest inside a node's \texttt{perform()} method:
@@ -392,3 +393,67 @@ In an ideal world, this process --- calling \texttt{changed()} --- would identif
 the instance node which corresponds to the prototype node which was changed, and only
 run that inside the instance graph for the macro. The child nodes of the instance node
 would then need to be run.
+
+
+\subsection{User interface}
+The user interface is mainly in the \texttt{ui} package, although each
+node type's file contains its UI code (a subclass of \texttt{ui.tabs.Tab}.
+A reasonably full view of the system is shown as a class diagram
+in Fig.~\ref{ui.pdf}.
+The main files involved are:
+\begin{itemize}
+\item \texttt{ui/mainwindow.py}: the main window classes;
+\item \texttt{ui/tabs.py}: the \texttt{DocktableTabWindow} and \texttt{Tab}
+classes (also the \texttt{ExpandedTab} class for when a tab is undocked);
+\item \texttt{ui/canvas.py}: the Canvas widget for viewing image cube slices;
+\item \texttt{graphview.py}: contains \texttt{GraphView}, the
+\texttt{QGraphicsView} subclass which encapulates a view on the graph scene;
+\item \texttt{graphscene.py}: contains \texttt{XFormGraphScene},
+the \texttt{QGraphicsScene} subclass which contains a set of 2D objects
+representing an \texttt{XFormGraph} and its nodes. It also contains the
+classes representing those 2D objects (subclasses of various Qt graphics item
+classes).
+\end{itemize}
+
+\begin{figure}[ht]
+\center
+\includegraphics[width=4in]{ui.pdf}
+\caption{UI class diagram}
+\label{ui.pdf}
+\end{figure}
+
+
+\clearpage
+\subsubsection{The main window}
+The main window class is \texttt{ui.mainwindow.MainUI}. They contain the
+following main widgets:
+\begin{itemize}
+\item a \texttt{QTabWidget} to hold the dockable tabs (tab docking is
+handled by the \texttt{DocktableTab} superclass);
+\item a \texttt{GraphView} widget to manage viewing and manipulating
+the graph;
+\item a \texttt{Palette} to contain the buttons to create new nodes
+\end{itemize}
+The bottom pane contains various widgets, such as the log console and
+caption control combo box.
+
+Main windows are created:
+\begin{itemize}
+\item when the application opens the first empty main graph in \texttt{main.py}
+\item when a new, empty main graph window is created
+\item when a window for a macro prototype graph is created
+via \texttt{createMacroWindow()}.
+\end{itemize}
+There are some ownership oddities here. In the first two cases
+the \texttt{MainUI} constructor is called with no arguments. This will
+cause it to create a new \texttt{XFormGraph} which the window will own.
+In the last case, the constructor is informed that the graph is a macro
+prototype. This causes the UI to be created slightly differently. 
+The \texttt{createMacroWindow()} method then sets the graph to the macro's
+prototype, which is owned by the \texttt{XFormMacro}.
+
+In both cases, the \texttt{XFormGraphScene} contains a Qt Graphics Scene
+which is constructed and updated from the graph. This is viewed in
+the main window through the \texttt{GraphView} class. Both these classes
+accept various user actions and use them to modify the graph.
+

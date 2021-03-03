@@ -1,0 +1,51 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam nodesep 1
+skinparam ranksep 2
+
+'left to right direction
+
+MainUI *-- "0..n" MainUI : windows
+
+MainUI o-- XFormGraph : graph
+
+XFormGraph *-- XFormGraphScene : scene
+note top on link
+constructed by
+constructScene
+in XFormGraph
+end note
+
+MainUI o-- "0..1" XFormMacro : macro
+note top on link
+only if a macro,
+not for main window
+end note
+
+XFormMacro *-- XFormGraph : graph
+
+XFormGraphScene *-- "0..*" GMainRect : items()
+GMainRect o-- XForm : node
+XFormGraph *-- "0..*" XForm : nodes
+
+
+MainUI *-- GraphView : view
+GraphView o-- MainUI : window
+GraphView ..> XFormGraphScene : via scene()
+XFormGraphScene ..> GraphView : via getEventView()
+XFormGraphScene o-- XFormGraph : graph
+
+MainUI ..|> DockableTabWindow
+
+DockableTabWindow *-- "0..*" Tab : tabs
+note right on link
+Dict of title to tab
+end note
+
+Tab o-- XForm : node
+XForm o-- "0..*" Tab : tabs
+Tab o-- MainUI : window
+ExpandedTab o-- Tab : tab
+Tab o-- "0..1" ExpandedTab : expanded
+
+@enduml
