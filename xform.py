@@ -809,13 +809,21 @@ class XFormGraph:
             if self.isMacro:
                 # distribute changes in macro prototype to instances.
                 # what we do here is go through all instances of the macro. 
-                # We copy the changed prototype to the instances, then run the instances
-                # them in their respective graphs, which should also run the nodes
-                # dependent on the macro outputs.
+                # We copy the changed prototype to the instances, then run
+                # the instances in the graphs which contain them (usually the
+                # main graph).
                 # This could be optimised to run only the relevant (changed) component
                 # within the macro, but that's very hairy.
+
                 for inst in self.proto.instances:
                     inst.instance.copyProto()
+                    # "inst" is an XFormMacro node inside the graph which contains the macro,
+                    # it is not the instance graph inside the "inst" node. Not sure how this
+                    # will work if macros are inside macros!
+                    # Anyway, inst.graph will be the main graph (for an non-nested macro).
+                    # Self, however, is the macro prototype graph, because this method was called
+                    # on an object inside that graph. We need to call performNodes() on the main graph
+                    # to run the XFormMacro node inside that graph.
                     inst.graph.performNodes(inst)
             else:
                 self.performNodes(node)

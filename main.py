@@ -54,7 +54,6 @@ def main():
         if loadfile is not None:
             window.load(os.path.expanduser(loadfile))
 
-
     app.exec_()  # Start the application
 
 

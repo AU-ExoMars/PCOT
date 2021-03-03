@@ -3,17 +3,24 @@
 # "patch" or a macro prototype, a palette of transforms, and an area
 # for tabs controlling transforms.
 
-from PyQt5 import QtWidgets, uic, QtCore, QtGui
-from PyQt5.QtCore import Qt, QCommandLineOption, QCommandLineParser
-import os, sys, traceback, json, time, getpass
-from typing import List, Set, Dict, Tuple, Optional, Any, OrderedDict, ClassVar
+import getpass
+import json
+import os
+import time
+import traceback
+from typing import List, Optional, OrderedDict, ClassVar
 
-import ui
-import ui.tabs, ui.help, ui.namedialog
-import xform
+from PyQt5 import QtWidgets, uic
+
+import graphscene
+import graphview
 import macros
-import graphview, palette, graphscene
-import filters
+import palette
+import ui
+import ui.help
+import ui.namedialog
+import ui.tabs
+import xform
 
 
 ## return the current username, whichis either obtained from the OS
@@ -26,55 +33,51 @@ def getUserName():
         return getpass.getuser()
 
 
-class MainUI:  # annoying forward decl for type hints
-    pass
-
-
 ## The main window class
 class MainUI(ui.tabs.DockableTabWindow):
-    ##@var windows
+    ## @var windows
     # list of all windows
-    windows: ClassVar[List[MainUI]]
+    windows: ClassVar[List['MainUI']]
 
-    ##@var graph
-    # the graph I am showing
-    graph: xform.XFormGraph
+    ## @var graph
+    # the graph I am showing - might be None, but only briefly, when creating a window for a macro prototype
+    graph: Optional[xform.XFormGraph]
 
-    ##@var macroPrototype
+    ## @var macroPrototype
     # if I am showing a macro, the macro prototype (else None)
-    macroPrototype: macros.XFormMacro
+    macroPrototype: Optional[macros.XFormMacro]
 
-    ##@var view
+    ## @var view
     # my view of the scene (representing the graph)
     view: graphview.GraphView
 
-    ##@var tabs
+    ## @var tabs
     # inherited from DockableTabWindow, dict of tabs by title
     tabs: OrderedDict[str, ui.tabs.Tab]
 
-    ##@var saveFileName
+    ## @var saveFileName
     # if I have saved/loaded, the name of the file
-    saveFileName: str
+    saveFileName: Optional[str]
 
-    ##@var camera
+    ## @var camera
     # camera type (PANCAM/AUPE)
     camera: str
 
-    ##@var captionType
+    ## @var captionType
     # caption type for images (index into combobox)
     captionType: int
 
-    ##@var palette
+    ## @var palette
     # the node palette on the right
     palette: palette.Palette
 
     # (most UI elements omitted)
 
-    ##@var tabWidget
+    ## @var tabWidget
     # container for tabs
     tabWidget: QtWidgets.QTabWidget
 
-    ##@var extraCtrls
+    ## @var extraCtrls
     # containing for macro controls
     extraCtrls: QtWidgets.QWidget
 
