@@ -33,6 +33,7 @@ class DockableTabWindow(QtWidgets.QMainWindow):
     ## constructor
     def __init__(self):
         super().__init__()  # Call the inherited classes __init__ method
+        self.tabs = None
 
     ## close a tab
     def closeTab(self, index):

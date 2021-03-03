@@ -2,27 +2,28 @@ import cv2 as cv
 import numpy as np
 
 import ui, ui.tabs, ui.canvas
-from xform import xformtype, XFormType
+from xform import xformtype, XFormType, XFormException
 from xforms.tabimage import TabImage
 from pancamimage import ImageCube
 
 
 # Normalize the image to the 0-1 range. The range is taken across all three channels.
 
-def norm(img, mask, node):
+def norm(img, mask):
     masked = np.ma.masked_array(img, mask=~mask)
     cp = img.copy()
     mn = masked.min()
     mx = masked.max()
 
     if mn == mx:
-        ui.error("cannot normalize, image is a single value")
-        res = np.full(img.shape, (0, 0, 255))
+        ex = XFormException("DATA", "cannot normalize, image is a single value")
+        res = np.zeros(img.shape, np.float32)
     else:
+        ex = None
         res = (masked - mn) / (mx - mn)
 
     np.putmask(cp, mask, res)
-    return cp
+    return ex, cp
 
 
 @xformtype
@@ -52,7 +53,9 @@ class XformNormImage(XFormType):
         if img is not None:
             if node.enabled:
                 subimage = img.subimage()
-                newsubimg = norm(subimage.img, subimage.fullmask(), node)
+                ex, newsubimg = norm(subimage.img, subimage.fullmask())
+                if ex is not None:
+                    node.setError(ex)
                 node.img = img.modifyWithSub(subimage, newsubimg)
             else:
                 node.img = img

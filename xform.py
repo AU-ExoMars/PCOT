@@ -30,6 +30,26 @@ from pancamimage import ChannelMapping
 allTypes = dict()
 
 
+## custom exception which will cause an XForm to go into error
+# state when thrown or set into setError().
+
+class XFormException(Exception):
+    ## @var code
+    # A four-letter code for the message to display in the node's box
+    # Codes:
+    # DATA = bad data
+    code: str
+
+    ## @var message
+    # a string message
+    message: str
+
+    def __init__(self, code: str, message: str):
+        super().__init__(message)
+        self.code = code
+        self.message = message
+
+
 ## Decorator for a transformation type. There is a singleton subclassed
 # from this for each type. 
 # This is a singleton decorator which, unusually, is not lazy, because we
@@ -341,6 +361,9 @@ class XForm:
     ## @var helpwin
     # an open help window, or None
     helpwin: Optional['PyQt5.QtWidgets.QMainWindow']
+    ## @var error
+    # error state consisting of (code,message) or None. See XFormException for codes.
+    error: Tuple[str, str]
 
     ## @var chanAssignments
     # a triple of integers used by nodes which have a canvas.Canvas. They indicate which channels
@@ -371,6 +394,7 @@ class XForm:
         self.inputs = [None] * len(tp.inputConnectors)
         self.connCountChanged()
         self.chanAssignments = None
+        self.error = None
 
         # UI-DEPENDENT DATA DOWN HERE
         self.xy = (0, 0)  # this SHOULD be serialised
@@ -397,6 +421,13 @@ class XForm:
             if inp is not None:
                 tp = self.inputTypes[i]
                 print("{}: {}/{}/{}".format(i, inp[0], inp[1], tp))
+
+    ## called to set an error state. Can either be called directly or invoked via
+    # an exception. Takes an XFormException which may not necessarily have ever been raised.
+    # Will result in the UI representation changing and a log message.
+    def setError(self, ex: XFormException):
+        ui.error(ex.message)
+        self.error = ex
 
     ## called when the connector count changes to set up the necessary
     # lists.

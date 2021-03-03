@@ -12,7 +12,8 @@ import graphview, palette, graphscene
 import filters
 
 # import all transform types (see the __init__.py there)
-# ACTUALLY REQUIRED despite what the IDE says!
+# ACTUALLY REQUIRED despite what the IDE says! DO NOT
+# REMOVE THESE LINES!
 
 import xforms
 from xforms import *
