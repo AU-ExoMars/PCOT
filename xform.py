@@ -362,8 +362,8 @@ class XForm:
     # an open help window, or None
     helpwin: Optional['PyQt5.QtWidgets.QMainWindow']
     ## @var error
-    # error state consisting of (code,message) or None. See XFormException for codes.
-    error: Tuple[str, str]
+    # error state or None. See XFormException for codes.
+    error: Optional[XFormException]
 
     ## @var chanAssignments
     # a triple of integers used by nodes which have a canvas.Canvas. They indicate which channels
@@ -426,8 +426,14 @@ class XForm:
     # an exception. Takes an XFormException which may not necessarily have ever been raised.
     # Will result in the UI representation changing and a log message.
     def setError(self, ex: XFormException):
-        ui.error(ex.message)
         self.error = ex
+        ui.error(ex.message)
+        if self.graph.scene is not None:
+            self.graph.scene.rebuild()
+
+    ## called to clear the error state
+    def clearError(self):
+        self.error = None
 
     ## called when the connector count changes to set up the necessary
     # lists.
@@ -668,7 +674,7 @@ class XForm:
 
     ## perform the transformation; delegated to the type object - recurses down the children.
     # Also tells any tab open on a node that its node has changed.
-    # DO NOT CALL DIRECTLY
+    # DO NOT CALL DIRECTLY - called either from itself or from performNodes.
     def perform(self):
         # used to stop perform being called out of context; it should
         # only be called inside the graph's perform.
@@ -692,6 +698,7 @@ class XForm:
                 # tell the tab that this node has changed
                 for x in self.tabs:
                     x.onNodeChanged()
+                    x.updateError()
                 # run each child
                 for n in self.children:
                     n.perform()
@@ -829,6 +836,7 @@ class XFormGraph:
     ## we are about to perform some nodes due to a UI change.
     def prePerform(self):
         for n in self.nodes:
+            n.clearError()
             n.hasRun = False
 
     ## Called when a control in a node has changed, and the node needs to rerun (as do all its children

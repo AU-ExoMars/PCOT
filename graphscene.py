@@ -14,6 +14,7 @@ try:
 except ImportError:
     print("Grandalf is not present, autolayout will be awful.")
 
+
     # dummy class defs for when grandalf isn't present, to avoid rogue errors in type checking
 
     class Graph:
@@ -41,11 +42,17 @@ import utils.deb
 import xform, ui, conntypes
 import ui.namedialog
 
-## the font we use for the connectors (actually for everything)
-connectorFont = QFont()
-# connectorFont.setStyleHint(QFont.SansSerif)
-connectorFont.setFamily('Sans Serif')
-connectorFont.setPixelSize(10)
+## the font we use for most things
+mainFont = QFont()
+mainFont.setFamily('Sans Serif')
+mainFont.setPixelSize(10)
+
+## the font for error codes
+errorFont = QFont()
+errorFont.setFamily('Sans Serif')
+errorFont.setBold(True)
+errorFont.setPixelSize(12)
+
 
 # constants for node drawing
 
@@ -58,6 +65,10 @@ NODEHEIGHT = 50
 XTEXTOFFSET = 5
 ## offset of xform name text into box
 YTEXTOFFSET = 5
+
+## offset of error code
+YERROROFFSET = 10
+XERROROFFSET = 20
 
 ## height of connector boxes
 CONNECTORHEIGHT = 10
@@ -289,7 +300,7 @@ class GArrow(QtWidgets.QGraphicsLineItem):
         x2 = line.p2().x()
         y2 = line.p2().y()
         poly << QPointF(x2, y2) << QPointF(x2 + xa * ARROWHEADLENGTH, y2 + ya * ARROWHEADLENGTH) << \
-            QPointF(x2 + xb * ARROWHEADLENGTH, y2 + yb * ARROWHEADLENGTH)
+        QPointF(x2 + xb * ARROWHEADLENGTH, y2 + yb * ARROWHEADLENGTH)
         self.head = QtWidgets.QGraphicsPolygonItem(poly, parent=self)
         self.head.setBrush(Qt.black)
 
@@ -475,6 +486,13 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         n.rect.text = GText(n.rect, n.displayName, n)
         n.rect.text.setPos(x + XTEXTOFFSET, y + YTEXTOFFSET + CONNECTORHEIGHT)
 
+        # if there's an error, add the code
+        if n.error is not None:
+            error = GText(n.rect, "err:"+n.error.code, n)
+            error.setFont(errorFont)
+            error.setBrush(QColor(255, 0, 0))
+            error.setPos(x + XTEXTOFFSET + XERROROFFSET, y + YTEXTOFFSET + CONNECTORHEIGHT + YERROROFFSET)
+
         if len(n.inputs) > 0:
             size = n.w / len(n.inputs)
             xx = x
@@ -483,7 +501,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 r = GConnectRect(n.rect, xx, y, size, CONNECTORHEIGHT, n, True, i)
                 text = GText(n.rect, r.name, n)
                 text.setPos(xx + CONNECTORTEXTXOFF, y + INCONNECTORTEXTYOFF)
-                text.setFont(connectorFont)
+                text.setFont(mainFont)
                 text.setZValue(1)
                 n.inrects[i] = r
                 xx += size
@@ -497,16 +515,16 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 r = GConnectRect(n.rect, xx, yy, size, CONNECTORHEIGHT, n, False, i)
                 text = GText(n.rect, r.name, n)
                 text.setPos(xx + CONNECTORTEXTXOFF, yy + OUTCONNECTORTEXTYOFF)
-                text.setFont(connectorFont)
+                text.setFont(mainFont)
                 text.setZValue(1)
                 n.outrects[i] = r
                 xx += size
 
-    ## handle selection by changing the colour of the main rect of the selected item
-    # and building the selection list of nodes. Now this is a bit complex because 
+    ## handle selection and other state by changing the colour of the main rect of the selected item
+    # Now this is a bit complex because we have to show a colour change for the error state and
     # there are two selections - the selected items in the view (selected by clicking
     # and rubberband) and the currently shown tab.
-    def markSelected(self):
+    def setColourToState(self):
         for n in self.graph.nodes:
             r = 255
             g = 255
@@ -516,6 +534,10 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 g -= 50
             if n.current:
                 r -= 50
+                b -= 50
+            if n.error is not None:
+                r = 255
+                g -= 50
                 b -= 50
             if n.rect is not None:  # might not have a brush yet (rebuild might need calling)
                 n.rect.setBrush(QColor(r, g, b))
@@ -532,7 +554,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             for n in self.graph.nodes:
                 if n.rect in items:
                     self.selection.append(n)
-        self.markSelected()
+        self.setColourToState()
 
     ## current tab has changed, set up the UI accordingly. May be passed None if all tabs
     # are closed!
@@ -658,7 +680,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         for n in newnodes:
             n.rect.setSelected(True)
         # colour selected nodes
-        self.markSelected()
+        self.setColourToState()
 
     ## cut operation, serialises items to system clipboard and deletes them
     def cut(self):

@@ -10,6 +10,9 @@ import collections
 
 ## the main UI window class. Your application window should inherit from
 # this to use dockable tabs, and have a tabWidget tab container.
+from PyQt5.QtGui import QFont
+
+
 class DockableTabWindow(QtWidgets.QMainWindow):
 
     ## call this from your subclass after loading the UI file
@@ -122,6 +125,12 @@ class ExpandedTab(QtWidgets.QMainWindow):
         self.setWindowTitle(self.tab.title)
 
 
+tabErrorFont = QFont()
+tabErrorFont.setFamily('Sans Serif')
+tabErrorFont.setBold(True)
+tabErrorFont.setPixelSize(15)
+
+
 ## A tab to be loaded. We subclass this. Once loaded, all ui elements
 # are in the 'w' widget
 class Tab(QtWidgets.QWidget):
@@ -152,19 +161,35 @@ class Tab(QtWidgets.QWidget):
         splitter.addWidget(self.w)
         self.comment = QtWidgets.QTextEdit()
         self.comment.setPlaceholderText("add a comment on this transformation here")
-        self.comment.setMinimumHeight(20)
+        self.comment.setMinimumHeight(30)
         self.comment.setMaximumHeight(150)
         widlower = QtWidgets.QWidget()
         splitter.addWidget(widlower)
-        laylower = QtWidgets.QHBoxLayout()
+        laylower = QtWidgets.QVBoxLayout()
         widlower.setLayout(laylower)
-        laylower.addWidget(self.comment)
+        laylower.setContentsMargins(1,1,1,1)
+
+        widCommentAndEnable = QtWidgets.QWidget()
+        layCommentAndEnable = QtWidgets.QHBoxLayout()
+        layCommentAndEnable.setContentsMargins(1,1,1,1)
+        widCommentAndEnable.setLayout(layCommentAndEnable)
+        laylower.addWidget(widCommentAndEnable)
+
+        layCommentAndEnable.addWidget(self.comment)
         self.comment.textChanged.connect(self.commentChanged)
+
+        # default invisible error
+        self.errorText = QtWidgets.QLabel("")
+        self.errorText.setVisible(False)
+        self.errorText.setFont(tabErrorFont)
+        self.errorText.setStyleSheet("QLabel{color: rgb(200, 0, 0);}")
+
+        laylower.addWidget(self.errorText)
 
         # most nodes don't have an enabled widget.
         if node.type.hasEnable:
             self.enable = QtWidgets.QRadioButton("enabled")
-            laylower.addWidget(self.enable)
+            layCommentAndEnable.addWidget(self.enable)
             self.enable.setChecked(node.enabled)
             self.enable.toggled.connect(self.enableChanged)
         else:
@@ -217,6 +242,13 @@ class Tab(QtWidgets.QWidget):
     def retitle(self):
         self.title = self.node.displayName
         return self.title
+
+    def updateError(self):
+        if self.node.error is not None:
+            self.errorText.setText("Error "+self.node.error.code+": "+self.node.error.message)
+            self.errorText.setVisible(True)
+        else:
+            self.errorText.setVisible(False)
 
     ## write this in subclasses - 
     # should update the tab when the node's data has changed

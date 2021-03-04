@@ -331,6 +331,8 @@ class MainUI(ui.tabs.DockableTabWindow):
         # or the one we already had)
         if tab is not None:
             self.tabWidget.setCurrentWidget(tab)
+            # tell the tab to update its error state
+            tab.updateError()
 
     ## tab changed (this is connected up in the superclass)
     def currentChanged(self, index):  # index is ignored
@@ -376,7 +378,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         win.setCentralWidget(wid)
         win.setWindowTitle("Help for '{}'".format(node.type.name))
         node.helpwin = win  # just to stop GC
-        txt = ui.help.help(node.type)
+        txt = ui.help.help(node.type, node.error)
         wid.setText(txt)
         win.setMinimumSize(400, 50)
         win.show()
