@@ -135,6 +135,36 @@ The \texttt{XFormGraph.changed()} method is called from several places:
 \item \texttt{XFormGraph.deserialise()}: when a graph has been loaded.
 \end{itemize}
 
+\subsubsection{Error handling}
+Error handling is generally required in three cases:
+\begin{itemize}
+\item connection type mismatch discovered at connect time,
+\item connection type mismatch discovered at perform time,
+\item other errors at perform time.
+\end{itemize}
+The first is dealt with using the connection type system
+in \texttt{conntypes.py}: each connection (input and output) has a string
+type and the connections must match, or they will not be made. An input
+of type ``any'' can accept any type. Additional checks are made to avoid
+cycles.
+
+The other types of error are both handled inside the node's \texttt{perform()},
+and take two forms:
+\begin{itemize}
+\item either the type's \texttt{perform()} throws an \texttt{XFormException}, which
+is handled by \texttt{XForm.perform},
+\item or \texttt{perform()} completes but perhaps shows an empty image,
+and calls \texttt{setError(exception)} to set the error state.
+\end{itemize}
+In both cases \texttt{setError()} will print a message to console and
+set an error state in the node. This error state
+will have been cleared in all nodes before the graph is performed. A redraw of the
+entire graph is done after the graph is performed to
+draw those nodes in an error state differently, showing the 
+brief error code passed into \texttt{XFormException}. The error
+will also be shown in the tab for that node and in its ``help box''
+(opened by clicking the box in the corner).
+
 \subsection{Image data}
 Most classes making up the image data 
 model are described in the \texttt{pancamimage.py} file, including the main \texttt{ImageCube}
@@ -151,8 +181,9 @@ and mapping from nodes are omitted; these will be explained later.
 
 The main class is \texttt{ImageCube}: this encapsulates a numpy array
 \texttt{img}
-which is the actual image data cube in the form
-of a $w \times h \times depth$ array. The data type is 32-bit floating
+which is the actual image data cube. This is either a 
+$w \times h \times depth$ array for genuine cubes with multiple channels,
+or a $w \times h$ array for a single channel image. The data type is 32-bit floating
 point, and images are typically normalized to the range [0,1].
 
 \begin{notebox}
@@ -165,7 +196,7 @@ beyond system memory.
 
 \subsubsection{IChannelSource and its implementations}
 Each \texttt{ImageCube} has a number of channels, and for each channel there must be a corresponding
-entry in the \texttt{sources} list. This describes where that channel came from, so that (typically) filter
+entry in its \texttt{sources} list. This describes where that channel came from, so that (typically) filter
 information can be preserved, where appropriate, through the graph. The sources for each channel are a set
 of \texttt{IChannelSource} objects. For example, if an image was loaded through the RGB loader, it might
 have three ``fake'' channel sources for red, green and blue. Thus the sources will be 
@@ -221,7 +252,7 @@ detail, but for now:
 the channels in an image cube to display in the red, green and blue channels on screen.
 \item An \texttt{XForm} (i.e.\ a node) may need to show an image on a canvas. If so, it 
 will use the \texttt{mapping} field in \texttt{XForm} to store a mapping. This is provided
-as a convenience, not all node classes will use it, and some may need to create more if they 
+as a convenience, not all node classes will use it. Some may need to create more if they 
 display more than one image.
 \item When an \texttt{XForm} creates an image for display or passes
 one through, it sets the mapping of the image to the mapping of the node. This is used in the
@@ -232,9 +263,9 @@ This will contain a \texttt{Canvas}, which is given a reference to the mapping i
 \end{itemize}
 This may seem rather redundant, but
 \begin{itemize}
-\item We need the mapping to be owned by the node, so it can be serialised and persists when
+\item The mapping must be be owned by the node, so it can be serialised and persists when
 there is no image and no open tab.
-\item We need to have a reference to the mapping in the canvas, so it can be manipulated by
+\item We must have a reference to the mapping in the canvas, so it can be manipulated by
 the combo boxes even when no image is present.
 \item Finally, we need a reference to the mapping in the image so that \texttt{rgb()} can be called
 on the image when it is input into another node. This is used in nodes like \emph{inset}, which
@@ -332,7 +363,15 @@ node which contains a copy of the prototype graph --- it must be a copy,
 because multiple instances of the macro with different data may exist.
 When the user edits the prototype graph (including the parameters of 
 any nodes within it) the changes are copied to the instance graphs for
-that macro. Consider the situation in Fig.~\ref{macroobjs.pdf}.
+that macro. Thus the user now has a single graph which can be changed,
+which represents a set of nodes inside a single node. Multiple instances
+of the macro can be made which will all share the same parameters.
+
+\subsubsection{Macro internals}
+Each macro node contains an instance graph copied from the prototype
+graph, which has a set of components interfacing between the instance
+graph and the graph in which the instance is embedded.
+Consider the situation in Fig.~\ref{macroobjs.pdf}.
 \begin{figure}[ht]
 \center
 \includegraphics[width=5in]{macroobjs.pdf}
@@ -365,7 +404,7 @@ inputs into the macro instance node's outputs
 \label{macroineff}
 As noted above in Sec.~\ref{graphperform}, all the nodes in all instance
 graphs are run whenever the prototype graph is changed. This is very
-inefficient and may cause considerable delays. It's done simply by forcing all
+inefficient and may cause considerable delays. It's done by simply forcing all
 \texttt{XFormMacro} nodes which are instances of the macro to perform themselves. Here
 is the relevant part of \texttt{XFormGraph.changed()}:
 \begin{lstlisting}
@@ -381,12 +420,11 @@ is the relevant part of \texttt{XFormGraph.changed()}:
         inst.instance.copyProto()
         inst.graph.performNodes(inst)
 \end{lstlisting}
-Here, \texttt{inst} is an XFormMacro node inside the graph which contains the
-macro, it is not the instance graph inside the \texttt{inst} node. Thus
+Here, \texttt{inst} is each \texttt{XFormMacro} node inside the main graph. Thus
 \texttt{inst.graph} will be the main graph (for an non-nested macro). The
-\texttt{self} value, however, is the macro prototype graph, because this
+\texttt{self} value is the macro prototype graph, because this
 method was called on an object inside that graph. This code therefore calls
-\texttt{performNodes()} on the main graph to run the XFormMacro node inside
+\texttt{performNodes()} on the main graph to run the \texttt{XFormMacro} node inside
 that graph. 
 
 In an ideal world, this process --- calling \texttt{changed()} --- would identify
@@ -436,7 +474,6 @@ the graph;
 \end{itemize}
 The bottom pane contains various widgets, such as the log console and
 caption control combo box.
-
 Main windows are created:
 \begin{itemize}
 \item when the application opens the first empty main graph in \texttt{main.py}
@@ -449,11 +486,12 @@ the \texttt{MainUI} constructor is called with no arguments. This will
 cause it to create a new \texttt{XFormGraph} which the window will own.
 In the last case, the constructor is informed that the graph is a macro
 prototype. This causes the UI to be created slightly differently. 
-The \texttt{createMacroWindow()} method then sets the graph to the macro's
+The \texttt{createMacroWindow()} static method then sets the graph to the macro's
 prototype, which is owned by the \texttt{XFormMacro}.
 
 In both cases, the \texttt{XFormGraphScene} contains a Qt Graphics Scene
-which is constructed and updated from the graph. This is viewed in
+which is constructed and regularly updated from the graph (by calling
+its \texttt{rebuild()} method). This is viewed in
 the main window through the \texttt{GraphView} class. Both these classes
 accept various user actions and use them to modify the graph.
 

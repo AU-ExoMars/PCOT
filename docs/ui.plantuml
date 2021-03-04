@@ -1,7 +1,5 @@
 @startuml
 skinparam classAttributeIconSize 0
-skinparam nodesep 1
-skinparam ranksep 2
 
 'left to right direction
 

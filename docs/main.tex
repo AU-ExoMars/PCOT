@@ -176,6 +176,16 @@ morestring=[b]"
   basicstyle=\scriptsize,
   stringstyle=\slshape,
 }
+\lstdefinestyle{Python}{
+  belowcaptionskip=1\baselineskip,
+  breaklines=true,
+  frame=L,
+  xleftmargin=\parindent,
+  language=Python,
+  showstringspaces=false,
+  basicstyle=\scriptsize,
+  stringstyle=\slshape,
+}
 % patch fullcite to include the citation key
 \LetLtxMacro\oldfullcite\fullcite
 \renewcommand{\fullcite}[1]{\cite{#1}: \oldfullcite{#1}}
@@ -360,7 +370,7 @@ morestring=[b]"
 \author{James Finnis (jcf1@aber.ac.uk)}
 
 \begin{document}
-\lstset{language=Python}
+\lstset{style=Python}
 \maketitle
 \LetLtxMacro\oldincludegraphics\includegraphics
 % Stuff to redefine includegraphics to show the document file

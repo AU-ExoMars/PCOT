@@ -18,8 +18,8 @@ class XForm {
 ImageCube o-- "0..1" ChannelMapping: mapping
 
 XForm *-- "0..1" ChannelMapping: mapping
-XForm ..|> Tab: subclass creates
-XForm ..|> ImageCube: subclass creates
+XForm ..|> Tab: creates
+XForm ..|> ImageCube: creates
 
 Tab o-- XForm:node
 
