@@ -424,12 +424,11 @@ class XForm:
 
     ## called to set an error state. Can either be called directly or invoked via
     # an exception. Takes an XFormException which may not necessarily have ever been raised.
-    # Will result in the UI representation changing and a log message.
+    # Will result in a log message. After the perform has occurred, may also result in a
+    # scene graph rebuild.
     def setError(self, ex: XFormException):
         self.error = ex
         ui.error(ex.message)
-        if self.graph.scene is not None:
-            self.graph.scene.rebuild()
 
     ## called to clear the error state
     def clearError(self):
@@ -692,14 +691,18 @@ class XForm:
                 print("--------------------------------------Performing {}".format(self.debugName()))
                 # first clear all outputs
                 self.outputs = [None for _ in self.type.outputConnectors]
-                # now run the node.
-                self.type.perform(self)
+                # now run the node, catching any XFormException
+                try:
+                    self.type.perform(self)
+                except XFormException as e:
+                    # exception caught, set the error. Children will still run.
+                    self.setError(e)
                 self.hasRun = True
                 # tell the tab that this node has changed
                 for x in self.tabs:
                     x.onNodeChanged()
                     x.updateError()
-                # run each child
+                # run each child (could turn off child processing?)
                 for n in self.children:
                     n.perform()
         except Exception as e:
@@ -884,12 +887,16 @@ class XFormGraph:
         self.performingGraph = True
         if node is None:
             for n in self.nodes:
-                # identify root nodes (no connected inputs)
+                # identify root nodes (no connected inputs).
                 if all(i is None for i in n.inputs):
                     n.perform()
         else:
             node.perform()
         self.performingGraph = False
+        # force a rebuild of the scene; error states may have changed.
+        if self.scene is not None:
+            self.scene.rebuild()
+
 
     ## a node's input has changed, which may change the output types. If it does,
     # we need to check the output connections to see if they are still compatible.

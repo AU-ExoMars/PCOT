@@ -5,7 +5,7 @@ import cv2 as cv
 import numpy as np
 
 import ui, ui.tabs, ui.canvas
-from xform import xformtype, XFormType
+from xform import xformtype, XFormType, XFormException
 from xforms.tabimage import TabImage
 from pancamimage import ImageCube
 
@@ -35,7 +35,7 @@ class XformDecorr(XFormType):
         elif not node.enabled:
             node.img = img
         elif img.channels != 3:
-            ui.error("Can't decorr stretch images with other than 3 channels")
+            raise XFormException("DATA", "can only decorr stretch images with 3 channels")
         else:
             subimage = img.subimage()
             newimg = decorrstretch(subimage.img, subimage.mask)
@@ -79,8 +79,7 @@ def decorrstretch(A, mask):
     eigval, V = np.linalg.eig(cov)
     # fail if an eigenvalue is too small (monochrome image?)
     if min(abs(eigval)) < 0.00001:
-        ui.error("Eigenvalue too small for decorrelation stretch")
-        return orig
+        raise XFormException("DATA", "Eigenvalue too small for decorrelation stretch")
     # stretch matrix
     S = np.diag(1 / np.sqrt(eigval))
     # compute mean of each color in the masked area

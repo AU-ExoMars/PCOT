@@ -6,7 +6,7 @@ import cv2 as cv
 import numpy as np
 
 import ui, ui.tabs, ui.canvas
-from xform import xformtype, XFormType
+from xform import xformtype, XFormType, XFormException
 from pancamimage import ImageCube
 from channelsource import FileChannelSource
 
@@ -21,7 +21,7 @@ class XFormMultiFile(XFormType):
 
     def __init__(self):
         super().__init__("multifile", "source", "0.0.0")
-        self.autoserialise = (('namefilters', 'dir', 'files', 'mult', 'filterpat', 'camera'))
+        self.autoserialise = ('namefilters', 'dir', 'files', 'mult', 'filterpat', 'camera')
         for x in range(NUMOUTS):
             self.addOutputConnector("", "imggrey")
 
@@ -72,14 +72,15 @@ class XFormMultiFile(XFormType):
         # N is the number of outputs!
         for i in range(len(node.outputs)):
             if i < len(node.files):
-                imgname = node.files[i]
                 # we use the relative path here, it's more right that using the absolute path
                 # most of the time.
                 path = os.path.relpath(os.path.join(node.dir, node.files[i]))
+                # annoying - this is supposed to see if the file changes to avoid reloads, but unfortunately
+                # doesn't take into account the caption setup changing.
                 if node.files[i] is not None and node.imgpaths[i] != path:
                     # build sources data : filename and filter name
-                    source = {FileChannelSource(path, self.getFilterName(node, path), node.camera=='AUPE')}
-                    img = ImageCube.load(path, node.mapping, [source, source, source])
+                    source = {FileChannelSource(path, self.getFilterName(node, path), node.camera == 'AUPE')}
+                    img = ImageCube.load(path, node.mapping, [source, source, source])  # always RGB at this point
                     # aaaand this pretty much always happens, because load always
                     # loads as BGR.
                     if img.channels != 1:
@@ -88,6 +89,12 @@ class XFormMultiFile(XFormType):
                     node.imgs[i] = img
                     node.imgpaths[i] = path
                     print(node.filters[i])
+                # rebuild the source (even though we just did it) to make sure it's up to date even if the
+                # image hasn't changed, and set it into the image. The mapping should still be OK.
+                if node.files[i] is not None:
+                    source = {FileChannelSource(path, self.getFilterName(node, path), node.camera == 'AUPE')}
+                    node.imgs[i].sources = [source]
+                    node.imgs[i].setMapping(node.mapping)
             else:
                 node.imgs[i] = None
                 node.imgpaths[i] = None
@@ -95,7 +102,8 @@ class XFormMultiFile(XFormType):
             # slightly messy, post-multiplying the image like this
             # rather than on load, but multiplying on load would mean
             # reloading when the multiplier changed.
-            img = None if node.imgs[i] is None else ImageCube(node.imgs[i].img * node.mult, node.mapping, node.imgs[i].sources)
+            img = None if node.imgs[i] is None else ImageCube(node.imgs[i].img * node.mult, node.mapping,
+                                                              node.imgs[i].sources)
             node.setOutput(i, img)
 
 
@@ -115,8 +123,8 @@ class TabMultiFile(ui.tabs.Tab):
         self.allFiles = []
         self.onNodeChanged()
 
-    def cameraChanged(self,i):
-        if i==0:
+    def cameraChanged(self, i):
+        if i == 0:
             self.node.camera = "PANCAM"
         else:
             self.node.camera = "AUPE"
@@ -155,8 +163,8 @@ class TabMultiFile(ui.tabs.Tab):
         try:
             self.node.mult = float(s)
             self.changed()
-        except:
-            ui.error("Bad mult string in 'multifile': " + s)
+        except (ValueError, OverflowError):
+            raise XFormException("CTRL", "Bad mult string in 'multifile': " + s)
 
     def onNodeChanged(self):
         # the node has changed - set the filters text widget and reselect the dir.
@@ -203,8 +211,8 @@ class TabMultiFile(ui.tabs.Tab):
         item = self.model.itemFromIndex(idx)
         path = os.path.join(self.node.dir, item.text())
         self.node.type.compileRegex(self.node)
-        source = {FileChannelSource(path, self.node.type.getFilterName(self.node, path),self.node.camera == 'AUPE')}
-        img = ImageCube.load(path, [source])
+        source = {FileChannelSource(path, self.node.type.getFilterName(self.node, path), self.node.camera == 'AUPE')}
+        img = ImageCube.load(path, self.node.mapping, [source, source, source])  # RGB image
         img.img *= self.node.mult
         self.w.canvas.display(img)
 
