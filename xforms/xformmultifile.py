@@ -10,8 +10,6 @@ from xform import xformtype, XFormType, XFormException
 from pancamimage import ImageCube
 from channelsource import FileChannelSource
 
-NUMOUTS = 6
-
 IMAGETYPERE = re.compile(r".*\.(?i:jpg|png|ppm|tga|tif)")
 
 
@@ -22,8 +20,7 @@ class XFormMultiFile(XFormType):
     def __init__(self):
         super().__init__("multifile", "source", "0.0.0")
         self.autoserialise = ('namefilters', 'dir', 'files', 'mult', 'filterpat', 'camera')
-        for x in range(NUMOUTS):
-            self.addOutputConnector("", "imggrey")
+        self.addOutputConnector("", "img")
 
     def createTab(self, n, w):
         return TabMultiFile(n, w)
@@ -40,12 +37,6 @@ class XFormMultiFile(XFormType):
         node.camera = "PANCAM"
         node.filterpat = r'.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*'
         node.filterre = None
-        self.clearImages(node)
-
-    def clearImages(self, node):  # clear stored images
-        node.imgs = [None for i in range(NUMOUTS)]  # slots for enough images
-        node.imgpaths = [None for i in range(NUMOUTS)]  # slots for names (see perform)
-        node.filters = [None for i in range(NUMOUTS)]  # filter names
 
     @staticmethod
     def getFilterName(node, path):
@@ -68,43 +59,32 @@ class XFormMultiFile(XFormType):
     def perform(self, node):
         self.compileRegex(node)
 
-        # perform takes the first N images checked in the file list and outputs them,
-        # N is the number of outputs!
-        for i in range(len(node.outputs)):
-            if i < len(node.files):
+        sources = []  # array of source sets for each image
+        imgs = []  # array of actual images (greyscale, numpy)
+
+        # perform takes all the images in the outputs and bundles them into a single image.
+        # They all have to be the same size, and they're all converted to greyscale.
+        for i in range(len(node.files)):
+            if node.files[i] is not None:
                 # we use the relative path here, it's more right that using the absolute path
                 # most of the time.
                 path = os.path.relpath(os.path.join(node.dir, node.files[i]))
-                # annoying - this is supposed to see if the file changes to avoid reloads, but unfortunately
-                # doesn't take into account the caption setup changing.
-                if node.files[i] is not None and node.imgpaths[i] != path:
-                    # build sources data : filename and filter name
-                    source = {FileChannelSource(path, self.getFilterName(node, path), node.camera == 'AUPE')}
-                    img = ImageCube.load(path, node.mapping, [source, source, source])  # always RGB at this point
-                    # aaaand this pretty much always happens, because load always
-                    # loads as BGR.
-                    if img.channels != 1:
-                        c = cv.split(img.img)
-                        img = ImageCube(c[0], node.mapping, [source])
-                    node.imgs[i] = img
-                    node.imgpaths[i] = path
-                    print(node.filters[i])
-                # rebuild the source (even though we just did it) to make sure it's up to date even if the
-                # image hasn't changed, and set it into the image. The mapping should still be OK.
-                if node.files[i] is not None:
-                    source = {FileChannelSource(path, self.getFilterName(node, path), node.camera == 'AUPE')}
-                    node.imgs[i].sources = [source]
-                    node.imgs[i].setMapping(node.mapping)
-            else:
-                node.imgs[i] = None
-                node.imgpaths[i] = None
-                node.imgs[i] = None
-            # slightly messy, post-multiplying the image like this
-            # rather than on load, but multiplying on load would mean
-            # reloading when the multiplier changed.
-            img = None if node.imgs[i] is None else ImageCube(node.imgs[i].img * node.mult, node.mapping,
-                                                              node.imgs[i].sources)
-            node.setOutput(i, img)
+                # build sources data : filename and filter name
+                source = {FileChannelSource(path, self.getFilterName(node, path), node.camera == 'AUPE')}
+                # use image cube loader even though we're just going to use the numpy image - just easier.
+                img = ImageCube.load(path, None, None)  # always RGB at this point
+                # aaaand this pretty much always happens, because load always
+                # loads as BGR.
+                if img.channels != 1:
+                    c = cv.split(img.img)[0]  # just use channel 0
+                    img = ImageCube(c, None, None)
+                imgs.append(img.img)  # store numpy image
+                sources.append(source)
+
+        # assemble the images - cv.merge can cope with non-3 channels
+        img = cv.merge(imgs)
+        img = ImageCube(img * node.mult, node.mapping, sources)
+        node.setOutput(0, img)
 
 
 class TabMultiFile(ui.tabs.Tab):

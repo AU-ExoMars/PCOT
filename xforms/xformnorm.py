@@ -29,7 +29,7 @@ def norm(img, mask):
 @xformtype
 class XformNormImage(XFormType):
     """Normalize the image to a single range taken from all channels. Honours ROIs"""
-
+    
     def __init__(self):
         super().__init__("normimage", "processing", "0.0.0")
         self.addInputConnector("", "img")
