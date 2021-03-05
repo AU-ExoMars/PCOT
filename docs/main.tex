@@ -3,6 +3,13 @@
 % arara: pdflatex
 
 \documentclass[a4paper]{article}
+\usepackage[lighttt]{lmodern}
+\ttfamily
+
+% this is to fix a bug in the lmodern
+\DeclareFontShape{OT1}{lmtt}{m}{it}
+     {<->sub*lmtt/m/sl}{}
+     
 \usepackage[toc,page]{appendix}
 %\usepackage{wrapfig}
 \usepackage[pdftex]{graphicx}
@@ -70,10 +77,6 @@
 
 % so we can do 3\e{4} to do 3x10^4
 \providecommand{\e}[1]{\ensuremath{\times 10^{#1}}}
-
-\newenvironment{prettycode}
-{\begin{quote}\ttfamily\small}
-{\end{quote}}
 
 \newenvironment{idescription}%
   {\begin{list}{}{\setlength{\labelwidth}{-10pt}
@@ -156,26 +159,6 @@ sensitive=false,
 morecomment=[l]{\#},
 morestring=[b]"
 }
-\lstdefinestyle{ang}{
-  belowcaptionskip=1\baselineskip,
-  breaklines=true,
-  frame=L,
-  xleftmargin=\parindent,
-  language=angort,
-  showstringspaces=false,
-  basicstyle=\scriptsize,
-  stringstyle=\slshape,
-}
-\lstdefinestyle{c++}{
-  belowcaptionskip=1\baselineskip,
-  breaklines=true,
-  frame=L,
-  xleftmargin=\parindent,
-  language=c++,
-  showstringspaces=false,
-  basicstyle=\scriptsize,
-  stringstyle=\slshape,
-}
 \lstdefinestyle{Python}{
   belowcaptionskip=1\baselineskip,
   breaklines=true,
@@ -183,7 +166,7 @@ morestring=[b]"
   xleftmargin=\parindent,
   language=Python,
   showstringspaces=false,
-  basicstyle=\scriptsize,
+  basicstyle=\ttfamily\scriptsize,
   stringstyle=\slshape,
 }
 % patch fullcite to include the citation key
@@ -367,7 +350,7 @@ morestring=[b]"
 
 
 \title{PCOT design notes}
-\author{James Finnis (jcf1@aber.ac.uk)}
+\author{James Finnis (jcf12@aber.ac.uk)}
 
 \begin{document}
 \lstset{style=Python}

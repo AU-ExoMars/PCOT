@@ -4,14 +4,33 @@ skinparam classAttributeIconSize 0
 abstract class ROI <<abstract>> {
 }
 
+note top of ROI
+region of interest
+abstract class
+end note
+
 class ROIRect extends ROI {
 }
+note bottom of ROIRect
+example concrete
+region class
+end note
 
 class ChannelMapping {
 }
+note bottom of ChannelMapping
+defines how an image
+is viewed as RGB
+end note
 
 abstract class IChannelSource {
 }
+note right of IChannelSource
+family of types
+defining where each
+channel comes from
+end note
+
 abstract class ChannelSourceWithFilter extends IChannelSource {
 }
 class InternalChannelSource extends ChannelSourceWithFilter {
@@ -25,12 +44,22 @@ class FileChannelSource extends ChannelSourceWithFilter {
 
 class ImageCube {
 }
+note right of ImageCube
+the image / data cube
+core type: the most
+common data passed
+between nodes
+end note
 
-ImageCube *-- "1..*" IChannelSource: sources
+ImageCube *-- "1..*" IChannelSource: "sources: set of sources\nper channel"
 ImageCube o-- "0..1" ChannelMapping: rgbMapping
 ImageCube *-- ndarray : img
 ImageCube *-- "0..*" ROI : rois
 
+note bottom of ndarray
+numpy array 
+storing image
+end note
 
 @enduml
 

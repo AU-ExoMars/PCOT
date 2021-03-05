@@ -4,10 +4,19 @@ skinparam classAttributeIconSize 0
 class XForm {
     +inputs:List<Tuple<XForm,int>>
 }
+note right of XForm
+A node in the graph - behaviour
+determined by type
+end note
 
 class XFormType {
     +{static} allTypes: XFormType
 }
+note right of XFormType
+superclass for
+singletons controlling
+node behaviour
+end note
 
 XFormType *-- "0..n" XFormType : allTypes
 
@@ -18,8 +27,20 @@ XFormType o-- "0..n" XForm : instances
 XForm o-- XFormType : type 
 XForm o-- XFormGraph : graph
 
+note right of XFormGraph
+the graph
+of nodes
+end note
+
 XformNormImage -up-|> XFormType
 XformRect -up-|> XFormType
+
+note right of XformNormImage
+example singleton
+end note
+note right of XformRect
+example singleton
+end note
 
 XformRect ..|> TabRect: creates
 XformNormImage ..|> TabImage: creates
@@ -29,6 +50,10 @@ TabRect -up-|> Tab
 
 
 Tab o-- XForm:node
+note right of Tab
+UI controls
+for XForm
+end note
 
 XForm *-- "0..n" Tab
 
