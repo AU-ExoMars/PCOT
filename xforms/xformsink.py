@@ -33,8 +33,10 @@ class XformSink(XFormType):
         # get the input (index 0, our first and only input). That's all - we just store a reference
         # to the image in the node. The TabImage knows how to display nodes with "img" attributes,
         # and does the rest.
-        node.img = node.getInput(0)
-        node.img.setMapping(node.mapping)
+        img = node.getInput(0)
+        if img is not None:
+            img = ImageCube(img.img, node.mapping, img.sources)
+        node.img = img
 
     def init(self, node):
         # initialise the node by setting its img to None.
