@@ -34,7 +34,10 @@ to the range [0,1]. It will also honour regions of interest:
 only pixels inside the currently active ROI will be processed. This makes
 image processing a little more complicated.
 
-First, we need to write function to normalise the image as a 3D numpy array,
+\subsubsection{Writing the operation}
+We will be working in a file inside the \texttt{xforms} directory, which is
+imported by \texttt{main.py}. We'll call this file \texttt{xformnorm.py}.
+First, we need to write a function to normalise the image as a 3D numpy array,
 taking into account a boolean mask of pixels to ignore (for the region
 of interest). The declaration is simple:
 \begin{lstlisting}
@@ -83,13 +86,111 @@ then return the exception and the modified image copy.
 \end{lstlisting}
 As you can see, error handling and dealing with regions of interest
 is often the most complicated part of a node!
-
 Now we can start to write the actual node class.
+\subsubsection{The \texttt{XFormType} subclass}
+As described above in Sec.~\ref{xformtype}, the behaviour of an \texttt{XForm} node is determined
+by the \texttt{XFormType} singleton to which it is linked. The code for this class will start like this:
+\begin{lstlisting}
+@xformtype
+class XformNormImage(XFormType):
+\end{lstlisting}
+We're creating a new subclass of \texttt{XFormType} and giving it the \texttt{@xformtype} annotation,
+which will create an instance and register it automatically with the application. Because of this,
+the declaration is the only place where the name of the class is used.
+Now the constructor:
+\begin{lstlisting}
+    def __init__(self):
+        super().__init__("normimage", "processing", "0.0.0")
+        self.addInputConnector("", "img")
+        self.addOutputConnector("", "img")
+        self.hasEnable = True
+\end{lstlisting}
+The superconstructor call sets the node name, the group under which it appears in the palette, and 
+a version number.
+The next two lines define an input and output connector. These have optional names, which are both empty
+in this example. This is the usual approach: names are only used to annotate the nodes in the graph, and
+are left empty where they are obvious. In the code, connectors are referenced by index in order of creation.
+Both connectors here are images, with type ``img.'' See \texttt{conntypes.py} for all the types.
+The final line sets the node to have an \texttt{enabled} value and associated toggle button. This is
+used in nodes which may be computationally intensive, to temporarily ``turn them off.'' This will usually be handled
+by passing through the data unchanged.
+
+The next method is \texttt{createTab()}, which is used to create a tab for a particular node. Like most
+methods in this class, it takes a reference to the node. It also takes a reference to the main window
+in which the tab should be created:
+\begin{lstlisting}
+    def createTab(self, n, w):
+        return TabImage(n, w)
+\end{lstlisting}
+In this class, we are using the built-in \texttt{TabImage} tab which has a single canvas widget
+displaying an image. Many node types use this.
+
+The \texttt{init()} method is used to initialise an \texttt{XForm} node to be a
+particular class (beyond setting the \texttt{type} field, which is done
+elsewhere). It therefore takes a node, and typically sets up private data
+this type requires inside the node object. This uses an advantage of
+Python\footnote{Although from a software engineering point of view it is also
+a weakness.}: we can add fields to objects after they have been instantiated.
+Here we just add a \texttt{img} field to store the normalised image,
+initialising it to None (the
+canvas widget will display a None image as a blue empty rectangle):
+\begin{lstlisting}
+    def init(self, node):
+        node.img = None
+\end{lstlisting}
+Finally we come to the \texttt{perform()} method, which describes how this type of node performs its operation.
+Again, it requires a reference to the \texttt{XForm} node object which contains the node state, and its
+first action is to pre-set the output image to None and then fetch the input image:
+\begin{lstlisting}
+    def perform(self, node):
+        node.img = None    
+        img = node.getInput(0)
+\end{lstlisting}
+This will get a reference to the image stored in the output field of the node 
+connected to this node's zeroth input (the first
+added in the type constructor). If there is no connection, None will be returned.
+We then check to see if the input is None. If it is, we do nothing (leaving \texttt{node.img} as None). We
+also check to see if the node has been disabled (this node has an Enabled button):
+\begin{lstlisting}
+        if img is not None:
+            if node.enabled:
+\end{lstlisting}
+Assuming these are both true, we use the \texttt{ImageCube.subimage()} method to fetch
+a \texttt{SubImageCubeROI} object containing information about which parts of the image are
+in the current region of interest: the rectangle of pixels bounding the region and the mask
+describing which pixels within that bounding box are in the region. We can then pass these two numpy
+arrays into the normalization function we wrote earlier, obtaining another numpy array: the 
+bounded image normalized. We then call \texttt{modifyWithSub()}, which creates a new ImageCube
+in which the section described by the region of interest (taking into account the mask)
+has been replaced by the new, normalized image data:
+\begin{lstlisting}
+                subimage = img.subimage()
+                ex, newsubimg = norm(subimage.img, subimage.fullmask())
+                if ex is not None:
+                    node.setError(ex)
+                node.img = img.modifyWithSub(subimage, newsubimg)
+\end{lstlisting}
+Note the error check: our normalization function returns an exception and an
+image. If the exception exists (is not None), we set the error state in the
+node (see Sec~\ref{errorhandling}). It's still fine to patch in the subimage,
+though. This entire process is shown in Fig.~\ref{norm.pdf}.
+
+\begin{figure}[ht]
+\center
+\includegraphics[width=5in]{norm.pdf}
+\caption{The image processing in the norm node}
+\label{norm.pdf}
+\end{figure}
+\clearpage
+Finally, if the node was not enabled we set \texttt{node.img} (our output)
+to be the input image:
+\begin{lstlisting}
+            else:
+                node.img = img
+\end{lstlisting}
+and output the image to the node's zeroth (and only) output:
+\begin{lstlisting}
+        node.setOutput(0, node.img)
+\end{lstlisting}
 
 
-
-Error handling:
-    Can either throw an xformexception
-    Or actually do the processing but still set an error state
-    Need a method to set an error state
-    

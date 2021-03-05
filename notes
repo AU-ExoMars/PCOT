@@ -169,4 +169,10 @@ This tells the canvas to use the mapping - we have to do this, we can't just use
 not be an image yet. The canvas will now know which mapping to edit, which will be the same one as in any image.
 
 
+04/03
+OK, here's what's going on. Some time ago I realised that images could be any depth, not just rgb/grey. 
+That means we can't use the current type system - there can only be one "image" type, really. That means that
+type checking has to be more dynamic, and that's why I've expanded the error handling system - to make errors
+more visible.
 
+We can also remove the output-matching thing, which will cause a lot of current niggles to Go Away.
