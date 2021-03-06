@@ -37,6 +37,8 @@ class XFormMultiFile(XFormType):
         node.camera = "PANCAM"
         node.filterpat = r'.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*'
         node.filterre = None
+        # dict of files we currently have, fullpath -> imagecube
+        node.cachedFiles = {}
 
     @staticmethod
     def getFilterName(node, path):
@@ -61,7 +63,7 @@ class XFormMultiFile(XFormType):
 
         sources = []  # array of source sets for each image
         imgs = []  # array of actual images (greyscale, numpy)
-
+        newCachedFiles = {}  # will replace the old cache data
         # perform takes all the images in the outputs and bundles them into a single image.
         # They all have to be the same size, and they're all converted to greyscale.
         for i in range(len(node.files)):
@@ -71,24 +73,36 @@ class XFormMultiFile(XFormType):
                 path = os.path.relpath(os.path.join(node.dir, node.files[i]))
                 # build sources data : filename and filter name
                 source = {FileChannelSource(path, self.getFilterName(node, path), node.camera == 'AUPE')}
-                # use image cube loader even though we're just going to use the numpy image - just easier.
-                img = ImageCube.load(path, None, None)  # always RGB at this point
-                # aaaand this pretty much always happens, because load always
-                # loads as BGR.
-                if img.channels != 1:
-                    c = cv.split(img.img)[0]  # just use channel 0
-                    img = ImageCube(c, None, None)
+                # is it in the cache?
+                if path in node.cachedFiles:
+                    img = node.cachedFiles[path]
+                else:
+                    # use image cube loader even though we're just going to use the numpy image - just easier.
+                    img = ImageCube.load(path, None, None)  # always RGB at this point
+                    # aaaand this pretty much always happens, because load always
+                    # loads as BGR.
+                    if img.channels != 1:
+                        c = cv.split(img.img)[0]  # just use channel 0
+                        img = ImageCube(c, None, None)
+                # store in cache
+                newCachedFiles[path] = img
                 imgs.append(img.img)  # store numpy image
                 sources.append(source)
 
+        # replace the old cache dict with the new one we have built
+        node.cachedFiles = newCachedFiles
         # assemble the images - cv.merge can cope with non-3 channels
-        img = cv.merge(imgs)
+        if len(imgs) > 0:
+            img = cv.merge(imgs)
+        else:
+            raise XFormException('CTRL', 'No images specified in multifile')
         img = ImageCube(img * node.mult, node.mapping, sources)
         node.setOutput(0, img)
 
 
 class TabMultiFile(ui.tabs.Tab):
     def __init__(self, node, w):
+        self.model = None
         super().__init__(w, node, 'assets/tabmultifile.ui')
 
         self.w.getinitial.clicked.connect(self.getInitial)
@@ -98,6 +112,13 @@ class TabMultiFile(ui.tabs.Tab):
         self.w.mult.currentTextChanged.connect(self.multChanged)
         self.w.camCombo.currentIndexChanged.connect(self.cameraChanged)
         self.w.canvas.setMapping(node.mapping)
+        self.w.canvas.setMono()
+
+        # these record the image last clicked on - we need to do that so we can
+        # regenerate it with new sources if the camera setting is change.d
+
+        self.activatedImagePath = None
+        self.activatedImage = None
 
         # all the files in the current directory (which match the filters)
         self.allFiles = []
@@ -163,6 +184,7 @@ class TabMultiFile(ui.tabs.Tab):
             self.w.camCombo.setCurrentIndex(1)
         else:
             self.w.camCombo.setCurrentIndex(0)
+        self.displayActivatedImage()
 
     def buildModel(self):
         # build the model that the list view uses
@@ -170,7 +192,7 @@ class TabMultiFile(ui.tabs.Tab):
         for x in self.allFiles:
             add = True
             for f in self.node.namefilters:
-                if not f in x:
+                if f not in x:
                     add = False  # only add a file if all the filters are present
                     break
             if add:
@@ -191,10 +213,19 @@ class TabMultiFile(ui.tabs.Tab):
         item = self.model.itemFromIndex(idx)
         path = os.path.join(self.node.dir, item.text())
         self.node.type.compileRegex(self.node)
-        source = {FileChannelSource(path, self.node.type.getFilterName(self.node, path), self.node.camera == 'AUPE')}
-        img = ImageCube.load(path, self.node.mapping, [source, source, source])  # RGB image
+        img = ImageCube.load(path, self.node.mapping, None)  # RGB image
         img.img *= self.node.mult
-        self.w.canvas.display(img)
+        self.activatedImagePath = path
+        self.activatedImage = img
+        self.displayActivatedImage()
+
+    def displayActivatedImage(self):
+        if self.activatedImage:
+            source = {FileChannelSource(self.activatedImagePath,
+                                        self.node.type.getFilterName(self.node, self.activatedImagePath),
+                                        self.node.camera == 'AUPE')}
+            self.activatedImage.sources = [source, source, source]
+            self.w.canvas.display(self.activatedImage)
 
     def checkedChanged(self):
         # the checked items have changed, reset the list and regenerate

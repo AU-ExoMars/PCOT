@@ -205,6 +205,7 @@ class InnerCanvas(QtWidgets.QWidget):
 def makeTopBarLabel(t):
     lab = QtWidgets.QLabel(t)
     lab.setMaximumHeight(15)
+    lab.setMinimumWidth(100)
     return lab
 
 
@@ -228,12 +229,18 @@ class Canvas(QtWidgets.QWidget):
 
         # the topbar is a grid, with labels on top (red,green,blue)
         # and channel name comboboxes below
+        self.topbarwidget = QtWidgets.QWidget()
         topbar = QtWidgets.QGridLayout()
-        outerlayout.addLayout(topbar)
+        self.topbarwidget.setLayout(topbar)
+
+        outerlayout.addWidget(self.topbarwidget)
+        topbar.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
 
         topbar.addWidget(makeTopBarLabel("RED source"), 0, 0)
         topbar.addWidget(makeTopBarLabel("GREEN source"), 0, 1)
         topbar.addWidget(makeTopBarLabel("BLUE source"), 0, 2)
+        self.topbarwidget.setContentsMargins(0, 0, 0, 0)
+        topbar.setContentsMargins(0, 0, 0, 0)
 
         # these are the actual widgets specifying which channel in the cube is viewed.
         # We need to deal with these carefully.
@@ -270,6 +277,11 @@ class Canvas(QtWidgets.QWidget):
         self.mapping = None
         # previous image (in case mapping changes and we need to redisplay the old image with a new mapping)
         self.previmg = None
+
+    ## call this if this is only ever going to display single channel images
+    # (obviating the need for source drop-downs)
+    def setMono(self):
+        self.topbarwidget.setVisible(False)
 
     # these sets a reference to the mapping this canvas is using - bear in mind this class can mutate
     # that mapping!

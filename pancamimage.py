@@ -231,6 +231,7 @@ class ImageCube:
     # Always builds an RGB image.
     @classmethod
     def load(cls, fname, mapping, sources=None):
+        print("ImageCube.load: "+fname)
         # imread with this argument will load any depth, any
         # number of channels
         img = cv.imread(fname, -1)
@@ -245,7 +246,6 @@ class ImageCube:
             scale = 65535.0
         else:
             scale = 1.0
-        print(sources)
         # convert from BGR to RGB (OpenCV is weird)
         img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
         # convert to floats (32 bit)
