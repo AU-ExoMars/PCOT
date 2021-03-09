@@ -11,7 +11,6 @@ import numpy as np
 import ui.tabs
 from channelsource import IChannelSource
 from pancamimage import ImageCube, ChannelMapping
-from xform import XForm
 
 
 ## convert a cv/numpy image to a Qt image

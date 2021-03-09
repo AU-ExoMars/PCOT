@@ -17,6 +17,7 @@ import uuid
 
 import conntypes
 import ui.tabs
+from inputs.inputs import InputManager
 
 if TYPE_CHECKING:
     import graphscene
@@ -767,6 +768,10 @@ class XFormGraph:
     autoRun: ClassVar[bool]
     autoRun = True
 
+    ## @var inputs
+    # The data inputs this system has
+    inputMgr: InputManager
+
     ## constructor, takes whether the graph is a macro prototype or not
     def __init__(self, isMacro):
         # all the nodes
@@ -776,6 +781,7 @@ class XFormGraph:
         self.scene = None  # the graph's scene is created by autoLayout
         self.isMacro = isMacro
         self.nodeDict = {}
+        self.inputMgr = InputManager(self)
 
     ## construct a graphical representation for this graph
     def constructScene(self, doAutoLayout):
@@ -897,7 +903,6 @@ class XFormGraph:
         if self.scene is not None:
             self.scene.rebuild()
 
-
     ## a node's input has changed, which may change the output types. If it does,
     # we need to check the output connections to see if they are still compatible.
     def inputChanged(self, node):
@@ -926,6 +931,7 @@ class XFormGraph:
             items = self.nodes
         for n in items:
             d[n.name] = n.serialise(items)
+
         return d
 
     ## given a dictionary, build a graph based on it. Do not delete

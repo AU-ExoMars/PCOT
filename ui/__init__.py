@@ -46,6 +46,9 @@ def versionWarn(n):
     log('<font color="blue">Current MD5 hash: </font> {}'.format(n.type.md5()))
     log('<font color="blue">MD5 hash in file:</font> {}'.format(n.savedmd5))
 
+    log("WARNING DIALOG DISABLED")
+    return
+
     warn(
         """
 Node '{}' was saved with a different version of the '{}' node's code.

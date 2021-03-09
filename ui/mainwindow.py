@@ -33,6 +33,14 @@ def getUserName():
         return getpass.getuser()
 
 
+class InputSelectButton(QtWidgets.QPushButton):
+    def __init__(self, n, inp):
+        text = "Input "+str(n)
+        self.input = inp
+        super().__init__(text=text)
+        self.clicked.connect(lambda: self.input.openWindow())
+
+
 ## The main window class
 class MainUI(ui.tabs.DockableTabWindow):
     ## @var windows
@@ -140,6 +148,11 @@ class MainUI(ui.tabs.DockableTabWindow):
         else:
             self.reset()  # create empty "standard" graph
             self.macroPrototype = None  # we are not a macro
+            # now create the input selector buttons
+            isfLayout = QtWidgets.QHBoxLayout()
+            self.inputSelectorFrame.setLayout(isfLayout)
+            for x in range(0, len(self.graph.inputMgr.inputs)):
+                isfLayout.addWidget(InputSelectButton(x, self.graph.inputMgr.inputs[x]))
 
         # make sure the view has a link up to this window,
         # also will tint the view if we are a macro
@@ -195,6 +208,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     ## close event handler
     def closeEvent(self, evt):
         MainUI.windows.remove(self)
+        self.graph.inputMgr.closeAllWindows()
 
     ## autolayout button handler
     def autoLayoutButton(self):
@@ -208,6 +222,7 @@ class MainUI(ui.tabs.DockableTabWindow):
              'INFO': {'author': getUserName(),
                       'date': time.time()},
              'GRAPH': self.graph.serialise(),
+             'INPUTS': self.graph.inputMgr.serialise(),
              'MACROS': macros.XFormMacro.serialiseAll()}
         # now we also have to serialise the macros
         return d
