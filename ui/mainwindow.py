@@ -71,10 +71,6 @@ class MainUI(ui.tabs.DockableTabWindow):
     # camera type (PANCAM/AUPE)
     camera: str
 
-    ## @var captionType
-    # caption type for images (index into combobox)
-    captionType: int
-
     ## @var palette
     # the node palette on the right
     palette: palette.Palette
@@ -100,9 +96,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.saveFileName = None
         self.setWindowTitle(ui.app.applicationName() + ' ' + ui.app.applicationVersion())
 
-        self.setCaption(0)
-
-        # connect buttons etc.        
+        # connect buttons etc.
         self.autolayoutButton.clicked.connect(self.autoLayoutButton)
         self.dumpButton.clicked.connect(lambda: self.graph.dump())
         self.capCombo.currentIndexChanged.connect(self.captionChanged)
@@ -157,6 +151,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         # make sure the view has a link up to this window,
         # also will tint the view if we are a macro
         self.view.setWindow(self, macroWindow)
+        self.setCaption(0)
 
         self.show()
         ui.msg("OK")
@@ -218,7 +213,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     ## create a dictionary of everything in the app we need to save: global settings,
     # the graph, macros etc.
     def serialise(self):
-        d = {'SETTINGS': {'cap': self.captionType},
+        d = {'SETTINGS': {'cap': self.graph.captionType},
              'INFO': {'author': getUserName(),
                       'date': time.time()},
              'GRAPH': self.graph.serialise(),
@@ -360,11 +355,12 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     ## caption type has been changed in widget
     def captionChanged(self, i):
-        self.captionType = i  # best stored as an int, I think
+        self.graph.captionType = i  # best stored as an int, I think
+        self.graph.performNodes()
 
     ## set the caption type
     def setCaption(self, i):
-        self.captionType = i
+        self.graph.captionType = i
         self.capCombo.setCurrentIndex(i)
 
     ## autorun has been changed in widget. This is global,

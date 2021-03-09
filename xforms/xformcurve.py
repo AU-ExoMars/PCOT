@@ -80,6 +80,8 @@ class TabCurve(ui.tabs.Tab):
         self.w.addDial.valueChanged.connect(self.setAdd)
         self.w.mulDial.valueChanged.connect(self.setMul)
         self.w.canvas.setMapping(node.mapping)
+        self.w.canvas.setGraph(node.graph)
+
         self.plot = None  # the matplotlib plot which we update
         # sync tab with node
         self.onNodeChanged()

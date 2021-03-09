@@ -105,6 +105,8 @@ class TabGradient(ui.tabs.Tab):
             self.w.presetCombo.insertItem(1000, n)
         self.w.presetCombo.currentIndexChanged.connect(self.loadPreset)
         self.w.canvas.setMapping(node.mapping)
+        self.w.canvas.setGraph(node.graph)
+
         self.onNodeChanged()
 
     def loadPreset(self):

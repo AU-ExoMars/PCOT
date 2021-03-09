@@ -119,6 +119,7 @@ class TabMaths(ui.tabs.Tab):
 
         self.w.postproc.currentIndexChanged.connect(self.postprocChanged)
         self.w.canvas.setMapping(node.mapping)
+        self.w.canvas.setGraph(node.graph)
         self.onNodeChanged()
 
     def m1Changed(self):

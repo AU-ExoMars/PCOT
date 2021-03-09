@@ -112,7 +112,9 @@ class TabMultiFile(ui.tabs.Tab):
         self.w.mult.currentTextChanged.connect(self.multChanged)
         self.w.camCombo.currentIndexChanged.connect(self.cameraChanged)
         self.w.canvas.setMapping(node.mapping)
-        self.w.canvas.setMono()
+        self.w.canvas.setGraph(node.graph)
+
+        self.w.canvas.hideMapping()
 
         # these record the image last clicked on - we need to do that so we can
         # regenerate it with new sources if the camera setting is change.d

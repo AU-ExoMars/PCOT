@@ -8,6 +8,7 @@ class TabImage(ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'assets/tabimage.ui')  # same UI as sink
         self.w.canvas.setMapping(node.mapping)
+        self.w.canvas.setGraph(node.graph)
         # sync tab with node
         self.onNodeChanged()
 

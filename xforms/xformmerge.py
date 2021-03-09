@@ -99,6 +99,8 @@ class TabMerge(ui.tabs.Tab):
         super().__init__(w, node, 'assets/tabmerge.ui')
         self.w.addblack.toggled.connect(self.addBlackChanged)
         self.w.canvas.setMapping(node.mapping)
+        self.w.canvas.setGraph(node.graph)
+
         # sync tab with node
         self.onNodeChanged()
 

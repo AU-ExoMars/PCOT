@@ -115,6 +115,8 @@ class TabContrast(ui.tabs.Tab):
         # into a subwidget called "w".
         self.w.dial.valueChanged.connect(self.setContrast)
         self.w.canvas.setMapping(node.mapping)
+        self.w.canvas.setGraph(node.graph)
+
         # We call onNodeChanged to set the tab with the initial values from the node.
         self.onNodeChanged()
 

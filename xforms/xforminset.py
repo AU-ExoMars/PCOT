@@ -109,7 +109,11 @@ class TabInset(ui.tabs.Tab):
         self.w.caption.textChanged.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
         self.w.captionTop.toggled.connect(self.topChanged)
-        self.w.canvas.setMapping(node.mapping)
+        self.w.canvas.setGraph(node.graph)
+        # the image is always RGB, so we shouldn't be able to remap it
+        self.w.canvas.setMapping(ChannelMapping(0, 1, 2))
+        self.w.canvas.hideMapping()
+
         self.mouseDown = False
         self.dontSetText = False
         # sync tab with node

@@ -126,6 +126,7 @@ class ChannelMapping:
 
     # generate a default mapping
     def generateDefaultMapping(self, img):
+        print("DEFAULT MAPPING")
         # TODO - do this properly, looking at filters
         self.red, self.green, self.blue = [img.channels - 1 if x >= img.channels else x for x in range(0, 3)]
 
@@ -149,7 +150,14 @@ class ChannelMapping:
         return m
 
     def copy(self):
-        return ChannelMapping(self.red, self.green, self.blue)
+        # we need to copy the prevmappingstring too, because we don't want
+        # a simple copy to think that the actual sources have changed.
+        m = ChannelMapping(self.red, self.green, self.blue)
+        m.prevMappingString = self.prevMappingString
+        return m
+
+    def __str__(self):
+        return "r{} g{} b{} prev {}".format(self.red, self.green, self.blue, self.prevMappingString)
 
 
 ## an image - just a numpy array (the image) and a list of ROI objects. The array
@@ -161,7 +169,6 @@ class ChannelMapping:
 # There is also a list of source tuples, (filename,filter), indexed by channel.
 
 class ImageCube:
-
     ## @var img
     # the numpy array containing the image data
     img: np.ndarray
@@ -231,7 +238,7 @@ class ImageCube:
     # Always builds an RGB image.
     @classmethod
     def load(cls, fname, mapping, sources=None):
-        print("ImageCube.load: "+fname)
+        print("ImageCube.load: " + fname)
         # imread with this argument will load any depth, any
         # number of channels
         img = cv.imread(fname, -1)
@@ -300,10 +307,8 @@ class ImageCube:
         sources = [self.sources[self.mapping.red],
                    self.sources[self.mapping.green],
                    self.sources[self.mapping.blue]]
-        # making a copy of the rgbMapping here to avoid situations where we try to use the same rgbMapping for images
-        # of different depths (consider getting an rgbImage of a 1-channel image; what will happen to that mapping in
-        # ensureValid?)
-        return ImageCube(self.rgb(), self.mapping.copy(), sources)
+        # The RGB mapping here should be just [0,1,2], since this output is the RGB representation.
+        return ImageCube(self.rgb(), ChannelMapping(0, 1, 2), sources)
 
     ## extract the "subimage" - the image cropped to regions of interest,
     # with a mask for those ROIs
@@ -328,10 +333,10 @@ class ImageCube:
     # hand we lose information (if we're viewing 3 channels from 11) but on the other hand
     # 11 channels is far too many to show in the descriptor at the bottom of the canvas!
 
-    def getDesc(self, mainwindow):
-        if mainwindow.captionType == 3:
+    def getDesc(self, graph):
+        if graph.captionType == 3:
             return ""
-        out = [IChannelSource.stringForSet(s, mainwindow.captionType) for s in self.sources]
+        out = [IChannelSource.stringForSet(s, graph.captionType) for s in self.sources]
         # if there are channel assignments, show only the assigned channels. Not sure about this.
         if self.mapping is not None:
             out = [out[x] for x in [self.mapping.red, self.mapping.green, self.mapping.blue]]

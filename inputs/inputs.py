@@ -1,5 +1,8 @@
 ## the abstract class from which all input types come
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from xform import XFormGraph
 
 import ui
 from pancamimage import ImageCube, ChannelMapping
@@ -22,7 +25,6 @@ class Input:
     # to use the null method.
 
     def __init__(self, mgr):
-        self.nodes = []
         self.mgr = mgr
         self.activeMethod = 0
         self.window = None
@@ -55,6 +57,12 @@ class Input:
 
     def onWindowClosed(self):
         self.window = None
+
+    # in an ideal world this would only perform those nodes in the graph
+    # which descend from the input nodes for this input. That's hairy,
+    # so I'll just perform the entire graph.
+    def performGraph(self):
+        self.mgr.graph.performNodes()
 
     def serialise(self):
         raise Exception("NOT YET IMPLEMENTED")
@@ -150,6 +158,7 @@ NUMINPUTS = 4
 
 class InputManager:
     inputs: List[Input]
+    graph: 'XFormGraph'
 
     def __init__(self, graph):
         self.graph = graph

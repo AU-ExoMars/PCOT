@@ -10,7 +10,7 @@ import cv2 as cv
 import numpy as np
 import ui.tabs
 from channelsource import IChannelSource
-from pancamimage import ImageCube, ChannelMapping
+from pancamimage import ImageCube
 
 
 ## convert a cv/numpy image to a Qt image
@@ -61,23 +61,15 @@ class InnerCanvas(QtWidgets.QWidget):
         self.x = 0
         self.y = 0
 
-    ## returns the main window for this canvas
-    def getMainWindow(self):
-        # this is ugly, but the only sane way of getting a backref to the containing main window.
-        # We scan up until we get the tab, and get the main window from that. This will work
-        # even when the tab has expanded.
-        w = self.parent()
-        while w is not None and not isinstance(w, ui.tabs.Tab):
-            w = w.parent()
-        if w is None:
-            raise Exception("can't get main window from canvas")
-        return w.window
+    ## returns the graph this canvas is part of
+    def getGraph(self):
+        return self.canv.graph
 
     ## display an image (handles 1 and 3 channels) next time paintEvent
     # happens, and update to cause that. Allow it to handle None too.
     def display(self, img: ImageCube):
         if img is not None:
-            self.desc = img.getDesc(self.getMainWindow())
+            self.desc = img.getDesc(self.getGraph())
             img = img.rgb()  # convert to RGB
             # only reset the image zoom if the shape has changed
             if self.img is None or self.img.shape[:2] != img.shape[:2]:
@@ -215,12 +207,15 @@ class Canvas(QtWidgets.QWidget):
     # an object with a paintEvent() which can do extra drawing (or None)
     ## @var mouseHook
     # an object with a set of mouse events for handling clicks and moves (or None)
+    ## @var graph
+    # the graph of which I am a part
 
     ## constructor
     def __init__(self, parent):
         super(QtWidgets.QWidget, self).__init__(parent)
         self.paintHook = None
         self.mouseHook = None
+        self.graph = None
 
         # outer layout is a vertical box - the topbar and canvas+scrollbars are in this
         outerlayout = QtWidgets.QVBoxLayout()
@@ -278,14 +273,18 @@ class Canvas(QtWidgets.QWidget):
         self.previmg = None
 
     ## call this if this is only ever going to display single channel images
-    # (obviating the need for source drop-downs)
-    def setMono(self):
+    # or annotated RGB images (obviating the need for source drop-downs)
+    def hideMapping(self):
         self.topbarwidget.setVisible(False)
 
     # these sets a reference to the mapping this canvas is using - bear in mind this class can mutate
     # that mapping!
     def setMapping(self, mapping):
         self.mapping = mapping
+
+    # set the graph I'm part of
+    def setGraph(self, g):
+        self.graph = g
 
     def redIndexChanged(self, i):
         print("RED CHANGED TO", i)
@@ -309,7 +308,7 @@ class Canvas(QtWidgets.QWidget):
         for i in range(0, img.channels):
             # adds descriptor string and integer channels index
             combo.addItem("{}) {}".format(i, IChannelSource.stringForSet(img.sources[i],
-                                                                         self.canvas.getMainWindow().captionType)))  # ugly
+                                                                         self.graph.captionType)))  # ugly
 
     def setCombosToImageChannels(self, img):
         self.addChannelsToChannelCombo(self.redChanCombo, img)

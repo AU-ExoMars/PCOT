@@ -63,6 +63,8 @@ class TabOffset(ui.tabs.Tab):
         self.w.xoff.editingFinished.connect(self.xChanged)
         self.w.yoff.editingFinished.connect(self.yChanged)
         self.w.canvas.setMapping(node.mapping)
+        self.w.canvas.setGraph(node.graph)
+
         self.onNodeChanged()
 
     def xChanged(self):

@@ -65,6 +65,8 @@ class TabRGBFile(ui.tabs.Tab):
         self.w.treeView.doubleClicked.connect(self.fileClickedAction)
         self.w.treeView.scrollTo(idx)
         self.w.canvas.setMapping(node.mapping)
+        self.w.canvas.setGraph(node.graph)
+
         # sync tab with node
         self.onNodeChanged()
 

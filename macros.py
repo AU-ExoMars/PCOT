@@ -344,10 +344,11 @@ class XFormMacro(XFormType):
 ## this is the UI for macros, and it should probably not be here.
 
 class TabMacro(ui.tabs.Tab):
-    def __init__(self, node, w):
+    def __init__(self, node:XFormMacro, w):
         super().__init__(w, node, 'assets/tabmacro.ui')
         self.w.openProto.pressed.connect(self.openProto)
         self.w.canvas.setMapping(node.mapping)
+        self.w.canvas.setGraph(node.graph)
         self.onNodeChanged()
 
     def openProto(self):

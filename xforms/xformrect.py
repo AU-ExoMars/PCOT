@@ -1,15 +1,13 @@
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor
+import cv2 as cv
 
 import cv2 as cv
-import numpy as np
-import math
 
-import ui, ui.tabs, ui.canvas
-import utils.text, utils.colour
+import ui.canvas
+import ui.tabs
+import utils.colour
+import utils.text
+from pancamimage import ImageCube, ROIRect, ChannelMapping
 from xform import xformtype, XFormType
-from pancamimage import ImageCube, ROIRect
 
 
 @xformtype
@@ -58,6 +56,8 @@ class XformRect(XFormType):
         else:
             # for the annotated image, we just get the RGB for the image in the
             # input node.
+            img = img.copy()
+            img.setMapping(node.mapping)
             rgb = img.rgbImage()
             if node.croprect is None:
                 # no rectangle, but we still need to use the RGB for annotation
@@ -115,7 +115,11 @@ class TabRect(ui.tabs.Tab):
         self.w.caption.textChanged.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
         self.w.captionTop.toggled.connect(self.topChanged)
-        self.w.canvas.setMapping(node.mapping)
+        self.w.canvas.setGraph(node.graph)
+        # the image is always RGB, so we shouldn't be able to remap it
+        self.w.canvas.setMapping(ChannelMapping(0, 1, 2))
+        self.w.canvas.hideMapping()
+
         self.mouseDown = False
         self.dontSetText = False
         # sync tab with node

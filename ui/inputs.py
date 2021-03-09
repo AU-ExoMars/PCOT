@@ -107,6 +107,8 @@ class RGBMethodWidget(MethodWidget):
         self.dirModel.setNameFilterDisables(False)
         tree = self.treeView
         self.treeView.setModel(self.dirModel)
+        self.treeView.setMinimumWidth(300)
+        self.setMinimumSize(1000, 500)
 
         idx = self.dirModel.index(QDir.currentPath())
         self.treeView.selectionModel().select(idx, QtCore.QItemSelectionModel.Select)
@@ -118,10 +120,15 @@ class RGBMethodWidget(MethodWidget):
         self.treeView.doubleClicked.connect(self.fileClickedAction)
         self.treeView.scrollTo(idx)
         self.canvas.setMapping(m.mapping)
+        # the canvas gets its "caption display" setting from the graph, so
+        # we need to get it from the manager, which we get from the input,
+        # which we get from the method. Ugh.
+        self.canvas.setGraph(self.method.input.mgr.graph)
         self.onInputChanged()
 
     def onInputChanged(self):
         self.canvas.display(self.method.img)
+        self.method.input.performGraph()
 
     def fileClickedAction(self, idx):
         if not self.dirModel.isDir(idx):
