@@ -61,7 +61,8 @@ class XformRect(XFormType):
             rgb = img.rgbImage()
             if node.croprect is None:
                 # no rectangle, but we still need to use the RGB for annotation
-                node.img = img
+                node.rgbImage = rgb # the RGB image shown in the canvas (using the "premapping" idea)
+                node.img = img  # the original image
                 node.setOutput(self.OUT_IMG, img)
                 node.setOutput(self.OUT_CROP, img)
                 node.setOutput(self.OUT_ANNOT, rgb)
@@ -96,10 +97,12 @@ class XformRect(XFormType):
                 utils.text.write(annot, node.caption, x, ty, node.captiontop, node.fontsize,
                                  node.fontline, node.colour)
                 # that's also the image displayed in the tab
-                node.img = rgb
-                node.img.rois = o.rois  # same ROI list as unannotated image
+                node.rgbImage = rgb
+                node.rgbImage.rois = o.rois  # with same ROI list as unannotated image
+                # but we still store the original
+                node.img = img
                 # output the annotated image
-                node.setOutput(self.OUT_ANNOT, node.img)
+                node.setOutput(self.OUT_ANNOT, node.rgbImage)
                 # and the raw cropped rectangle
                 node.setOutput(self.OUT_RECT, node.croprect)
 
@@ -116,9 +119,9 @@ class TabRect(ui.tabs.Tab):
         self.w.colourButton.pressed.connect(self.colourPressed)
         self.w.captionTop.toggled.connect(self.topChanged)
         self.w.canvas.setGraph(node.graph)
-        # the image is always RGB, so we shouldn't be able to remap it
-        self.w.canvas.setMapping(ChannelMapping(0, 1, 2))
-        self.w.canvas.hideMapping()
+        # but we still need to be able to edit it
+        self.w.canvas.setMapping(node.mapping)
+        self.w.canvas.redisplayNode = node
 
         self.mouseDown = False
         self.dontSetText = False
@@ -154,7 +157,9 @@ class TabRect(ui.tabs.Tab):
     # causes the tab to update itself from the node
     def onNodeChanged(self):
         if self.node.img is not None:
-            self.w.canvas.display(self.node.img)
+            # the image is always RGB, so the canvas shouldn't do it again
+            self.w.canvas.setAlreadyRGBMapped(self.node.img)  # this is given the SOURCE image
+            self.w.canvas.display(self.node.rgbImage)
         if not self.dontSetText:
             self.w.caption.setText(self.node.caption)
         self.w.fontsize.setValue(self.node.fontsize)

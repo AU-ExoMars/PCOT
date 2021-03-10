@@ -2,15 +2,19 @@
 # Canvas widget for showing a CV image
 #
 import math
+from typing import TYPE_CHECKING, Optional
+
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtGui import QImage, QPainter
 from PyQt5.QtCore import Qt
 
 import cv2 as cv
 import numpy as np
-import ui.tabs
 from channelsource import IChannelSource
-from pancamimage import ImageCube
+from pancamimage import ImageCube, ChannelMapping
+
+if TYPE_CHECKING:
+    from xform import XFormGraph
 
 
 ## convert a cv/numpy image to a Qt image
@@ -70,7 +74,11 @@ class InnerCanvas(QtWidgets.QWidget):
     def display(self, img: ImageCube):
         if img is not None:
             self.desc = img.getDesc(self.getGraph())
-            img = img.rgb()  # convert to RGB
+            if not self.canv.alreadyRGBMapped:
+                img = img.rgb()  # convert to RGB
+            else:
+                img = img.img  # already done
+
             # only reset the image zoom if the shape has changed
             if self.img is None or self.img.shape[:2] != img.shape[:2]:
                 self.reset()
@@ -205,17 +213,44 @@ def makeTopBarLabel(t):
 class Canvas(QtWidgets.QWidget):
     ## @var paintHook
     # an object with a paintEvent() which can do extra drawing (or None)
+    paintHook: Optional[object]
+
     ## @var mouseHook
     # an object with a set of mouse events for handling clicks and moves (or None)
+    mouseHook: Optional[object]
+
     ## @var graph
-    # the graph of which I am a part
+    # the graph of which I am a part. Not really optional, but I have to set it after construction.
+    graph: Optional['XFormGraph']
+
+    ## @var alreadyRGBMapped
+    # if true, the image to be displayed has already been converted to the node mapping into RGB
+    alreadyRGBMapped: bool
+
+    ## @var alreadyRGBMappedSourceImage
+    # if the above is true, we need to provide the original source image so we can populate
+    # combo boxes etc.
+    alreadyRGBMappedSource: Optional[ImageCube]
+
+    ## @var mapping
+    # the mapping we are editing, and using to display/generate the RGB representation. Unless we're in 'alreadyRGBMapped'
+    # in which case it's just a mapping we are editing - we display an image mapped elsewhere. Again, not actually
+    # optional - we have to set it in the containing window's init.
+    mapping: Optional[ChannelMapping]
+
+    ## @var previmg
+    # previous image, so we can avoid redisplay.
+    previmg: Optional[ImageCube]
 
     ## constructor
     def __init__(self, parent):
-        super(QtWidgets.QWidget, self).__init__(parent)
+        super().__init__(parent)
         self.paintHook = None
         self.mouseHook = None
         self.graph = None
+        self.alreadyRGBMapped = False
+        self.alreadyRGBMappedSourceImage = None
+        self.redisplayNode = None
 
         # outer layout is a vertical box - the topbar and canvas+scrollbars are in this
         outerlayout = QtWidgets.QVBoxLayout()
@@ -277,6 +312,12 @@ class Canvas(QtWidgets.QWidget):
     def hideMapping(self):
         self.topbarwidget.setVisible(False)
 
+    ## call this if the input is a pre-mapped RGB image, mapped using the mapping we have been set with.
+    # We need to provide the actual source image before the mapping took place. This is a nasty little dance...
+    def setAlreadyRGBMapped(self, img):
+        self.alreadyRGBMapped = True
+        self.alreadyRGBMappedSourceImage = img
+
     # these sets a reference to the mapping this canvas is using - bear in mind this class can mutate
     # that mapping!
     def setMapping(self, mapping):
@@ -326,12 +367,15 @@ class Canvas(QtWidgets.QWidget):
         if self.mapping is None:
             raise Exception("Mapping not set in ui.canvas.Canvas.display() - should be done in tab's ctor")
         if img is not None:
-            # ensure there is a valid mapping
-            self.mapping.ensureValid(img)
+            # ensure there is a valid mapping (only do this if not already mapped)
+            if not self.alreadyRGBMapped:
+                self.mapping.ensureValid(img)
             # now make the combo box options match the sources in the image
             # and finally make the selection each each box match the actual channel assignment
             self.blockSignalsOnComboBoxes(True)  # temporarily disable signals to avoid indexChanged calls
-            self.setCombosToImageChannels(img)
+            # In fact, these should be the channels from the original image - not the "premapped". I think those
+            # are going to need to be passed into setAlreadyRGBMapped
+            self.setCombosToImageChannels(self.alreadyRGBMappedSourceImage if self.alreadyRGBMapped else img)
             self.redChanCombo.setCurrentIndex(self.mapping.red)
             self.greenChanCombo.setCurrentIndex(self.mapping.green)
             self.blueChanCombo.setCurrentIndex(self.mapping.blue)
@@ -343,6 +387,8 @@ class Canvas(QtWidgets.QWidget):
         self.redisplay()
 
     def redisplay(self):
+        if self.redisplayNode is not None:
+            self.graph.performNodes(self.redisplayNode)
         self.canvas.display(self.previmg)
 
     ## reset the canvas to x1 magnification
