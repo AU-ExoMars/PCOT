@@ -241,7 +241,7 @@ class Canvas(QtWidgets.QWidget):
 
     ## @var isPremapped
     # is this a premapped image?
-    isPremapped : bool
+    isPremapped: bool
 
     canvas: InnerCanvas
 

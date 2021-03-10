@@ -1,16 +1,12 @@
 import cv2 as cv
-import numpy as np
 
-from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor
 
-import utils.text, utils.colour
-import ui, ui.tabs, ui.canvas
+import ui.tabs
+import utils.colour
+import utils.text
 from channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, BLUEINTERNALSOURCE
-from xform import xformtype, XFormType
-from xforms.tabimage import TabImage
 from pancamimage import ImageCube, ChannelMapping
+from xform import xformtype, XFormType
 
 
 # this transform takes an image and places it at a position inside another image.
@@ -157,7 +153,7 @@ class TabInset(ui.tabs.Tab):
         self.w.captionTop.setChecked(self.node.captiontop)
 
         r, g, b = [x * 255 for x in self.node.colour]
-        self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
+        self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b))
 
     # extra drawing!
     def canvasPaintHook(self, p):

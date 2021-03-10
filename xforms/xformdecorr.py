@@ -18,8 +18,8 @@ class XformDecorr(XFormType):
 
     def __init__(self):
         super().__init__("decorr stretch", "processing", "0.0.0")
-        self.addInputConnector("rgb", "imgrgb")
-        self.addOutputConnector("rgb", "imgrgb")
+        self.addInputConnector("rgb", "img")
+        self.addOutputConnector("rgb", "img")
         self.hasEnable = True
 
     def createTab(self, n, w):
