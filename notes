@@ -175,4 +175,75 @@ That means we can't use the current type system - there can only be one "image" 
 type checking has to be more dynamic, and that's why I've expanded the error handling system - to make errors
 more visible.
 
-We can also remove the output-matching thing, which will cause a lot of current niggles to Go Away.
+We can also remove the output-matching thing, which will cause a lot of
+current niggles to Go Away.
+
+
+08/03
+Over the weekend I thought about templates and ease of use. My idea
+for templates is that for common operations the user can create an entire graph
+from stored data in one or two clicks. This is great, but it can be difficult
+to edit inputs. Consider the following story:
+* user wants to do a Flange Wobble on an image. Creates template, has
+  to locate and go into the input node to set the input.
+* user now wants to run a Polarity Inversion on the same image. Now
+  they have to create the template and edit the input *again*.
+  
+That seems like a pain. What I'd like is this:
+
+* User wants to do a Flange Wobble on image Q.
+* Loads PCOT. Clicks the button for Input 1 which opens either a dialog or tab
+  and sets it up.
+* Clicks the template for Flange Wobble. Done!
+* Now wants to do a Polarity Inversion on the same image.
+* Just click on a different template!
+* Now wants to change image - just reopen the tab/dialog and change it!
+
+So organisation of the code:
+
+* Inputs are a Thing, and there's an array of them. I'm tempted to say 4.
+  Each Input is one of a number of types, so it's tempted to do that
+  as an interface. But that would cause problems switching input types
+  (you'd lose data). So all input types need to exist simultaneously
+  with only one being used. So inside each Input are a number of
+  InputMethod objects, with one being "active" (selected by index).
+  
+* There will be an Input Manager owning all the inputs, itself owned by
+  the main graph.
+  
+* Each Input may also have an InputWindow. This contains widgets for
+  all the InputMethods, but only one is visible at any time (the active
+  one).
+  
+* A main graph (NOT macro protos) owns an input manager, and loads/saves
+  the input data. It is NOT loaded when a template is loaded, though
+  (that's a key difference between templates and graph saves)
+  
+
+OK, what's going on with RGB on rect?
+
+Consider that you're adding a rect to an RGB, and you modify 
+the mapping. What you want to happen is this:
+
+    Image is fetched, converted to RGB using node mapping.
+
+    Image is then displayed in the canvas, showing that mapping,
+    which can be edited.
+
+What actually seems to happen is this:
+
+    Image is fetched, converted to RGB using node mapping.
+
+    Image is then sent to canvas where it is converted AGAIN
+    
+I've fixed this by adding an alreadyRGBMapped flag - if that's 
+set, the incoming image is assumed to be RGB and won't be remapped.
+There's a problem, though: the mapping is now happening inside the
+corresponding node's perform, which means that changing the
+comboboxes (which just triggers a canvas redisplay) won't cause
+the mapping to change. Instead, in this case we need to reperform
+the node when the canvas mapping changes.
+
+Argh. I've tried to add a thing called "redisplayNode", which gets
+called to perform a node in redisplay, but it's not working right.
+

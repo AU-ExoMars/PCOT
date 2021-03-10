@@ -283,7 +283,11 @@ on the image when it is input into another node. This is used in nodes like \emp
 operate entirely on RGB representations --- it's much neater if these are the RGB representations
 output by the nodes which feed in.
 \end{itemize}
-
+A few nodes have an extra complication --- they may output an RGB representation. In this case, the RGB conversion
+needs to be done inside the node itself for output, rather than inside the canvas solely for display. A good node
+to study for details on how to do this is \emph{rect}. In essence, the Canvas is told to display the ``premapped''
+RGB image generated inside the node's \texttt{perform()} method. It is also given a node reference so that
+the node can be performed again (thus regenerating the RGB image) whenever a mapping combo box is changed.
 
 \subsubsection{Regions of interest}
 Regions of interest belong to images, and modify how nodes process those

@@ -1,0 +1,43 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class InputManager {
+    +openWindow(idx:int):void
+}
+
+XFormGraph *--o "0..1" InputManager: inputManager
+note right on link
+Only when not
+macro prototype
+end note
+
+abstract class Input {
+    -activeMethod:int
+    +get():ImageCube
+}
+
+InputManager *--o "4" Input : inputs
+
+Input *--o "0..*" InputMethod : methods
+
+InputMethod <|-- MultifileInput
+InputMethod <|-- RGBInput
+InputMethod <|-- NullInput
+
+XFormGraph *-- "0..*" XForm: nodes
+XFormInput ..> Input: "reads from"
+
+abstract class XForm {
+}
+
+XFormInput --|> XForm
+
+Input *--o "0..1" InputWindow : window
+
+class XFormInput {
+    +inputIdx:int
+    -getInput():Input
+}
+
+XFormInput ..> InputManager: "can fetch"
+@enduml

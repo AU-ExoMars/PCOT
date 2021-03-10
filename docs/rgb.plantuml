@@ -18,8 +18,11 @@ class XForm {
 ImageCube o-- "0..1" ChannelMapping: mapping
 
 XForm *-- "0..1" ChannelMapping: mapping
-XForm ..|> Tab: creates
-XForm ..|> ImageCube: creates
+XForm ..> Tab: creates
+XForm ..> ImageCube: creates
+
+abstract class Tab {
+}
 
 Tab o-- XForm:node
 
@@ -28,6 +31,20 @@ Tab o-- XForm:node
 Tab *-- "0..1" Canvas:w.canvas
 
 Canvas o-- ChannelMapping:mapping
+Canvas o-- XFormGraph:graph
 
+note top on link
+The caption type for
+images is stored in
+the graph
+end note
+
+Canvas o-- "0..1" XForm:performNode
+note top on link
+Only if displaying
+"premapped" image
+end note
+
+Canvas ..> ImageCube: displays
 
 @enduml

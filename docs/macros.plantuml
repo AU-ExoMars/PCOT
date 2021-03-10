@@ -1,6 +1,9 @@
 @startuml
 skinparam classAttributeIconSize 0
 
+abstract class XFormType {
+}
+
 MacroInstance o-- XFormMacro:proto
 XFormMacro --|> XFormType
 

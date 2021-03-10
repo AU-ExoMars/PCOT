@@ -1,7 +1,7 @@
 @startuml
 skinparam classAttributeIconSize 0
 
-abstract class ROI <<abstract>> {
+abstract class ROI {
 }
 
 note top of ROI

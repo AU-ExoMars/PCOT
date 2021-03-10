@@ -3,7 +3,7 @@ skinparam classAttributeIconSize 0
 
 'left to right direction
 
-MainUI *-- "0..n" MainUI : windows
+MainUI *-- "0..*" MainUI : windows
 
 MainUI o-- XFormGraph : graph
 
@@ -39,6 +39,9 @@ DockableTabWindow *-- "0..*" Tab : tabs
 note right on link
 Dict of title to tab
 end note
+
+abstract class Tab {
+}
 
 Tab o-- XForm : node
 XForm o-- "0..*" Tab : tabs

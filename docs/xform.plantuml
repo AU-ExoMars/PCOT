@@ -9,7 +9,7 @@ A node in the graph - behaviour
 determined by type
 end note
 
-class XFormType {
+abstract class XFormType {
     +{static} allTypes: XFormType
 }
 note right of XFormType
@@ -18,11 +18,11 @@ singletons controlling
 node behaviour
 end note
 
-XFormType *-- "0..n" XFormType : allTypes
+XFormType *-- "0..*" XFormType : allTypes
 
-XFormGraph *-- "0..n" XForm : nodes
+XFormGraph *-- "0..*" XForm : nodes
 
-XFormType o-- "0..n" XForm : instances
+XFormType o-- "0..*" XForm : instances
 
 XForm o-- XFormType : type 
 XForm o-- XFormGraph : graph
@@ -45,6 +45,9 @@ end note
 XformRect ..|> TabRect: creates
 XformNormImage ..|> TabImage: creates
 
+abstract class Tab {
+}
+
 TabImage -up-|> Tab
 TabRect -up-|> Tab
 
@@ -55,7 +58,7 @@ UI controls
 for XForm
 end note
 
-XForm *-- "0..n" Tab
+XForm *-- "0..*" Tab
 
 
 @enduml
