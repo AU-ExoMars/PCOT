@@ -772,6 +772,11 @@ class XFormGraph:
     # The data inputs this system has
     inputMgr: InputManager
 
+    ## @var captionType
+    # integer indexing the caption type for canvases in this graph: see the box in MainWindow's ui for meanings.
+    captionType: int
+
+
     ## constructor, takes whether the graph is a macro prototype or not
     def __init__(self, isMacro):
         # all the nodes
@@ -781,6 +786,7 @@ class XFormGraph:
         self.scene = None  # the graph's scene is created by autoLayout
         self.isMacro = isMacro
         self.nodeDict = {}
+        self.captionType = None
         self.inputMgr = InputManager(self)
 
     ## construct a graphical representation for this graph

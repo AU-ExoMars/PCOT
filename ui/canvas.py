@@ -14,7 +14,7 @@ from channelsource import IChannelSource
 from pancamimage import ImageCube, ChannelMapping
 
 if TYPE_CHECKING:
-    from xform import XFormGraph
+    from xform import XFormGraph, XForm
 
 
 ## convert a cv/numpy image to a Qt image
@@ -51,6 +51,7 @@ class InnerCanvas(QtWidgets.QWidget):
         self.img = None
         self.desc = ""
         self.zoomscale = 1
+        self.scale = 1
         self.x = 0
         self.y = 0
         self.canv = canv
@@ -69,12 +70,12 @@ class InnerCanvas(QtWidgets.QWidget):
     def getGraph(self):
         return self.canv.graph
 
-    ## display an image (handles 1 and 3 channels) next time paintEvent
+    ## display an image next time paintEvent
     # happens, and update to cause that. Allow it to handle None too.
-    def display(self, img: ImageCube):
+    def display(self, img: ImageCube, isPremapped: bool):
         if img is not None:
             self.desc = img.getDesc(self.getGraph())
-            if not self.canv.alreadyRGBMapped:
+            if not isPremapped:
                 img = img.rgb()  # convert to RGB
             else:
                 img = img.img  # already done
@@ -223,15 +224,6 @@ class Canvas(QtWidgets.QWidget):
     # the graph of which I am a part. Not really optional, but I have to set it after construction.
     graph: Optional['XFormGraph']
 
-    ## @var alreadyRGBMapped
-    # if true, the image to be displayed has already been converted to the node mapping into RGB
-    alreadyRGBMapped: bool
-
-    ## @var alreadyRGBMappedSourceImage
-    # if the above is true, we need to provide the original source image so we can populate
-    # combo boxes etc.
-    alreadyRGBMappedSource: Optional[ImageCube]
-
     ## @var mapping
     # the mapping we are editing, and using to display/generate the RGB representation. Unless we're in 'alreadyRGBMapped'
     # in which case it's just a mapping we are editing - we display an image mapped elsewhere. Again, not actually
@@ -242,15 +234,24 @@ class Canvas(QtWidgets.QWidget):
     # previous image, so we can avoid redisplay.
     previmg: Optional[ImageCube]
 
+    ## @var nodeToPerform
+    # Node to perform whenever we redisplay an image (the mapping may have changed, and in the case of premapped
+    # images it's the node that applies the mapping)
+    nodeToPerform: Optional['XForm']
+
+    ## @var isPremapped
+    # is this a premapped image?
+    isPremapped : bool
+
+    canvas: InnerCanvas
+
     ## constructor
     def __init__(self, parent):
         super().__init__(parent)
         self.paintHook = None
         self.mouseHook = None
         self.graph = None
-        self.alreadyRGBMapped = False
-        self.alreadyRGBMappedSourceImage = None
-        self.redisplayNode = None
+        self.nodeToPerform = None
 
         # outer layout is a vertical box - the topbar and canvas+scrollbars are in this
         outerlayout = QtWidgets.QVBoxLayout()
@@ -307,16 +308,12 @@ class Canvas(QtWidgets.QWidget):
         # previous image (in case mapping changes and we need to redisplay the old image with a new mapping)
         self.previmg = None
 
+        self.isPremapped = False
+
     ## call this if this is only ever going to display single channel images
     # or annotated RGB images (obviating the need for source drop-downs)
     def hideMapping(self):
         self.topbarwidget.setVisible(False)
-
-    ## call this if the input is a pre-mapped RGB image, mapped using the mapping we have been set with.
-    # We need to provide the actual source image before the mapping took place. This is a nasty little dance...
-    def setAlreadyRGBMapped(self, img):
-        self.alreadyRGBMapped = True
-        self.alreadyRGBMappedSourceImage = img
 
     # these sets a reference to the mapping this canvas is using - bear in mind this class can mutate
     # that mapping!
@@ -362,20 +359,24 @@ class Canvas(QtWidgets.QWidget):
         self.blueChanCombo.blockSignals(b)
 
     ## set this canvas (actually the InnerCanvas) to hold an image.
+    # In the normal case (where the Canvas does the RGB mapping) just call with the image.
+    # In the premapped case, call with the premapped RGB image, the source image, and the node.
 
-    def display(self, img: ImageCube):
+    def display(self, img: ImageCube, alreadyRGBMappedImageSource=None, nodeToPerform=None):
         if self.mapping is None:
             raise Exception("Mapping not set in ui.canvas.Canvas.display() - should be done in tab's ctor")
         if img is not None:
             # ensure there is a valid mapping (only do this if not already mapped)
-            if not self.alreadyRGBMapped:
+            if alreadyRGBMappedImageSource is None:
                 self.mapping.ensureValid(img)
             # now make the combo box options match the sources in the image
             # and finally make the selection each each box match the actual channel assignment
             self.blockSignalsOnComboBoxes(True)  # temporarily disable signals to avoid indexChanged calls
-            # In fact, these should be the channels from the original image - not the "premapped". I think those
-            # are going to need to be passed into setAlreadyRGBMapped
-            self.setCombosToImageChannels(self.alreadyRGBMappedSourceImage if self.alreadyRGBMapped else img)
+            # is this a premapped image? We need to remember that for redisplay()
+            self.isPremapped = alreadyRGBMappedImageSource is not None
+            self.setCombosToImageChannels(alreadyRGBMappedImageSource
+                                          if alreadyRGBMappedImageSource is not None
+                                          else img)
             self.redChanCombo.setCurrentIndex(self.mapping.red)
             self.greenChanCombo.setCurrentIndex(self.mapping.green)
             self.blueChanCombo.setCurrentIndex(self.mapping.blue)
@@ -383,13 +384,17 @@ class Canvas(QtWidgets.QWidget):
             self.setScrollBarsFromCanvas()
         # cache the image in case the mapping changes
         self.previmg = img
+        # When we're using a "premapped" image, whenever we redisplay, we'll have to recalculate the node:
+        # when we change the mapping (which is why we would redisplay) it's the node code which regenerates
+        # the remapped image.
+        self.nodeToPerform = nodeToPerform
         # This will clear the screen if img is None
         self.redisplay()
 
     def redisplay(self):
-        if self.redisplayNode is not None:
-            self.graph.performNodes(self.redisplayNode)
-        self.canvas.display(self.previmg)
+        if self.nodeToPerform is not None:
+            self.graph.performNodes(self.nodeToPerform)
+        self.canvas.display(self.previmg, self.isPremapped)
 
     ## reset the canvas to x1 magnification
     def reset(self):

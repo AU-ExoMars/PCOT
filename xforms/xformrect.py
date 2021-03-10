@@ -157,9 +157,15 @@ class TabRect(ui.tabs.Tab):
     # causes the tab to update itself from the node
     def onNodeChanged(self):
         if self.node.img is not None:
-            # the image is always RGB, so the canvas shouldn't do it again
-            self.w.canvas.setAlreadyRGBMapped(self.node.img)  # this is given the SOURCE image
-            self.w.canvas.display(self.node.rgbImage)
+            # We're displaying a "premapped" image : this node's perform code is
+            # responsible for doing the RGB mapping, unlike most other nodes where it's
+            # done in the canvas for display purposes only. This is so that we can
+            # actually output the RGB.
+            # To render this, we call display in its three-argument form:
+            # mapped RGB image, source image, node.
+            # We need to node so we can force it to perform (and regenerate the mapped image)
+            # when the mappings change.
+            self.w.canvas.display(self.node.rgbImage, self.node.img, self.node)
         if not self.dontSetText:
             self.w.caption.setText(self.node.caption)
         self.w.fontsize.setValue(self.node.fontsize)
