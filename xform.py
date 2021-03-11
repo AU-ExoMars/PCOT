@@ -164,7 +164,10 @@ class XFormType:
 
     ## run autoserialisation for a node
     def doAutoserialise(self, node):
-        return {name: node.__dict__[name] for name in self.autoserialise}
+        try:
+            return {name: node.__dict__[name] for name in self.autoserialise}
+        except KeyError as e:
+            raise Exception("autoserialise value not in node {}: {}".format(self.name, e.args[0]))
 
     ## run autodeserialisation for a node
     def doAutodeserialise(self, node, ent):
@@ -776,7 +779,6 @@ class XFormGraph:
     # integer indexing the caption type for canvases in this graph: see the box in MainWindow's ui for meanings.
     captionType: int
 
-
     ## constructor, takes whether the graph is a macro prototype or not
     def __init__(self, isMacro):
         # all the nodes
@@ -786,7 +788,7 @@ class XFormGraph:
         self.scene = None  # the graph's scene is created by autoLayout
         self.isMacro = isMacro
         self.nodeDict = {}
-        self.captionType = None
+        self.captionType = 0
         self.inputMgr = InputManager(self)
 
     ## construct a graphical representation for this graph
@@ -860,6 +862,8 @@ class XFormGraph:
     # counterpart node for that in the macro prototype.
     def changed(self, node=None):
         if self.autoRun:
+            if self.inputMgr is not None:
+                self.inputMgr.getAll()  # reread all inputs
             if self.isMacro:
                 # distribute changes in macro prototype to instances.
                 # what we do here is go through all instances of the macro. 

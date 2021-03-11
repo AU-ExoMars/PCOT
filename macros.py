@@ -60,6 +60,9 @@ class XFormMacroConnector(XFormType):
         self._md5 = ''  # we ignore the MD5 checksum for versioning
         self.autoserialise = ('idx', 'conntype')
 
+    def init(self, node):
+        node.data = None
+
     ## called from XForm.serialise, saves the macro name
     def serialise(self, node):
         return {'macro': node.proto.name}

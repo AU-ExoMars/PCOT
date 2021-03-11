@@ -151,6 +151,8 @@ class MainUI(ui.tabs.DockableTabWindow):
         # make sure the view has a link up to this window,
         # also will tint the view if we are a macro
         self.view.setWindow(self, macroWindow)
+        # This only does something when you already have a graph, which macro protos don't,
+        # but that's OK because they don't have a caption control either.
         self.setCaption(0)
 
         self.show()
@@ -222,12 +224,18 @@ class MainUI(ui.tabs.DockableTabWindow):
         # now we also have to serialise the macros
         return d
 
-    ## deserialise everything from the given top-level dictionary
-    def deserialise(self, d):
+    ## deserialise everything from the given top-level dictionary.
+    # Deserialising the inputs is optional : we don't do it if we are loading templates
+    # or if there is no INPUTS entry in the file, or there's no input manager (shouldn't
+    # happen unless we're doing something weird like loading a macro prototype graph)
+    def deserialise(self, d, deserialiseInputs=True):
         # deserialise macros before graph!
         if 'MACROS' in d:
             macros.XFormMacro.deserialiseAll(d['MACROS'])
         self.graph.deserialise(d['GRAPH'], True)  # True to delete existing nodes first
+
+        if 'INPUTS' in d and deserialiseInputs and self.graph.inputMgr is not None:
+            self.graph.inputMgr.deserialise(d['INPUTS'])
 
         settings = d['SETTINGS']
         self.setCaption(settings['cap'])
@@ -246,7 +254,7 @@ class MainUI(ui.tabs.DockableTabWindow):
                     f.write(s)
             except Exception as e:
                 ui.error("cannot save file {}: {}".format(fname, e))
-            ui.msg("File saved")
+            ui.msg("File saved : "+fname)
         except Exception as e:
             traceback.print_exc()
             ui.error("cannot generate save data: {}".format(e))
@@ -358,10 +366,11 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.graph.captionType = i  # best stored as an int, I think
         self.graph.performNodes()
 
-    ## set the caption type
+    ## set the caption type (for actual main windows, not macros)
     def setCaption(self, i):
-        self.graph.captionType = i
-        self.capCombo.setCurrentIndex(i)
+        if self.graph is not None:
+            self.graph.captionType = i
+            self.capCombo.setCurrentIndex(i)
 
     ## autorun has been changed in widget. This is global,
     # so all windows must agree.

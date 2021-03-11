@@ -6,7 +6,6 @@ class XFormInput(XFormType):
     def __init__(self, idx):
         super().__init__("input " + str(idx), "source", "0.0.0")
         self.addOutputConnector("img", "img", "image")
-        self.autoserialise = ('imgidx',)
         self.idx = idx
 
     def createTab(self, n, w):

@@ -58,20 +58,42 @@ class Input:
     def onWindowClosed(self):
         self.window = None
 
-    # in an ideal world this would only perform those nodes in the graph
+    ## in an ideal world this would only perform those nodes in the graph
     # which descend from the input nodes for this input. That's hairy,
     # so I'll just perform the entire graph.
     def performGraph(self):
         self.mgr.graph.performNodes()
 
+    ## serialise the input, or rather produce a "serialisable" data structure. We
+    # do this by producing a list of two elements: the input type and that input type's
+    # data.
     def serialise(self):
-        raise Exception("NOT YET IMPLEMENTED")
-        return None
+        out = {'active': self.activeMethod,
+               'methods': [[type(x).__name__, x.serialise()] for x in self.methods]
+               }
+        return out
+
+    ## rebuild this input from given data structure produced by serialise().
+    # We could just deserialise the data into the existing objects, but this is
+    # probably safer, avoiding stale data.
+    def deserialise(self, d):
+        self.activeMethod = d['active']
+        self.methods = [self.createMethod(name, data) for name, data in d['methods']]
+
+    ## create a method given its type name, and initialise it with some data.
+    def createMethod(self, name, data=None):
+        klass = globals()[name]  # get type by name. Lawks!
+        m = klass(self)  # construct object
+        assert (isinstance(m, InputMethod))
+        if data is not None:
+            m.deserialise(data)  # and deserialise its data
+        return m
 
 
 class InputMethod:
     def __init__(self, inp):
         self.input = inp
+        self.name = ''
 
     def isActive(self):
         return self.input.isActive(self)
@@ -80,10 +102,13 @@ class InputMethod:
         pass
 
     def getName(self):
-        pass
+        return self.name
 
     def createWidget(self):
         pass
+
+    def deserialise(self, data):
+        raise Exception("InputMethod does not have a deserialise method")
 
 
 ## the Null input, which does nothing and outputs None
@@ -96,17 +121,23 @@ class NullInputMethod(InputMethod):
         return None
 
     def getName(self):
-        return "null"
+        return "Null"
 
     def createWidget(self):
         return PlaceholderMethodWidget(self)
+
+    def serialise(self):
+        pass
+
+    def deserialise(self, data):
+        pass
 
 
 ## the RGB input method
 
 class RGBInputMethod(InputMethod):
-    img: ImageCube
-    fname: str
+    img: Optional[ImageCube]
+    fname: Optional[str]
     mapping: ChannelMapping
 
     def __init__(self, inp):
@@ -132,6 +163,12 @@ class RGBInputMethod(InputMethod):
     def createWidget(self):
         return RGBMethodWidget(self)
 
+    def serialise(self):
+        return self.fname
+
+    def deserialise(self, data):
+        self.fname = data
+
 
 ## the Multifile input method
 
@@ -147,6 +184,12 @@ class MultifileInputMethod(InputMethod):
 
     def createWidget(self):
         return PlaceholderMethodWidget(self)
+
+    def serialise(self):
+        pass
+
+    def deserialise(self, data):
+        pass
 
 
 ## how many inputs the system can have
@@ -173,3 +216,21 @@ class InputManager:
 
     def get(self, idx):
         return self.inputs[idx].get()
+
+    ## serialise the inputs, returning a structure which can be converted into
+    # JSON (i.e. just primitive, dict and list types). This will contain a block
+    # of data for each input.
+    def serialise(self):
+        out = [x.serialise() for x in self.inputs]
+        return out
+
+    ## given a list like that produced by serialise(), generate the inputs. This will
+    # pass each block of data to each input
+    def deserialise(self, lst):
+        for inp, data in zip(self.inputs, lst):
+            inp.deserialise(data)
+
+    ## force reread of all inputs, typically on graph.changed().
+    def getAll(self):
+        for x in self.inputs:
+            x.get()
