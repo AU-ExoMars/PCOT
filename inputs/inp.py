@@ -1,12 +1,15 @@
 ## the abstract class from which all input types come
 from typing import List, Optional, TYPE_CHECKING
 
+from inputs.inputmethod import InputMethod
+from inputs.multifile import MultifileInputMethod
+from inputs.nullinput import NullInputMethod
+from inputs.rgb import RGBInputMethod
+
 if TYPE_CHECKING:
     from xform import XFormGraph
 
-import ui
-from pancamimage import ImageCube, ChannelMapping
-from ui.inputs import InputWindow, PlaceholderMethodWidget, RGBMethodWidget
+from ui.inputs import InputWindow
 
 
 ## This is an input, of which there are (probably) 4 or so.
@@ -88,108 +91,6 @@ class Input:
         if data is not None:
             m.deserialise(data)  # and deserialise its data
         return m
-
-
-class InputMethod:
-    def __init__(self, inp):
-        self.input = inp
-        self.name = ''
-
-    def isActive(self):
-        return self.input.isActive(self)
-
-    def get(self):
-        pass
-
-    def getName(self):
-        return self.name
-
-    def createWidget(self):
-        pass
-
-    def deserialise(self, data):
-        raise Exception("InputMethod does not have a deserialise method")
-
-
-## the Null input, which does nothing and outputs None
-
-class NullInputMethod(InputMethod):
-    def __init__(self, inp):
-        super().__init__(inp)
-
-    def get(self):
-        return None
-
-    def getName(self):
-        return "Null"
-
-    def createWidget(self):
-        return PlaceholderMethodWidget(self)
-
-    def serialise(self):
-        pass
-
-    def deserialise(self, data):
-        pass
-
-
-## the RGB input method
-
-class RGBInputMethod(InputMethod):
-    img: Optional[ImageCube]
-    fname: Optional[str]
-    mapping: ChannelMapping
-
-    def __init__(self, inp):
-        super().__init__(inp)
-        self.img = None
-        self.fname = None
-        self.mapping = ChannelMapping()
-
-    def loadImg(self):
-        # will throw exception if load failed
-        img = ImageCube.load(self.fname, self.mapping)
-        ui.log("Image {} loaded: {}".format(self.fname, img))
-        self.img = img
-
-    def get(self):
-        if self.img is None and self.fname is not None:
-            self.loadImg()
-        return self.img
-
-    def getName(self):
-        return "RGB"
-
-    def createWidget(self):
-        return RGBMethodWidget(self)
-
-    def serialise(self):
-        return self.fname
-
-    def deserialise(self, data):
-        self.fname = data
-
-
-## the Multifile input method
-
-class MultifileInputMethod(InputMethod):
-    def __init__(self, inp):
-        super().__init__(inp)
-
-    def get(self):
-        return None
-
-    def getName(self):
-        return "Multifile"
-
-    def createWidget(self):
-        return PlaceholderMethodWidget(self)
-
-    def serialise(self):
-        pass
-
-    def deserialise(self, data):
-        pass
 
 
 ## how many inputs the system can have

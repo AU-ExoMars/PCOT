@@ -17,7 +17,7 @@ import uuid
 
 import conntypes
 import ui.tabs
-from inputs.inputs import InputManager
+from inputs.inp import InputManager
 
 if TYPE_CHECKING:
     import graphscene

@@ -143,7 +143,6 @@ class TabMultiFile(ui.tabs.Tab):
         # called when we want to load a new directory, or when the node has changed (on loading)
         if self.node.dir != dir:  # if the directory has changed reset the selected file list
             self.node.files = []
-            self.node.type.clearImages(self.node)
         self.w.dir.setText(dir)
         # get all the files in dir which are images
         self.allFiles = sorted([f for f in os.listdir(dir) if os.path.isfile(os.path.join(dir, f))

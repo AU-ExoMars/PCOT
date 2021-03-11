@@ -16,6 +16,8 @@ class XFormInput(XFormType):
 
     def perform(self, node):
         node.img = node.graph.inputMgr.inputs[self.idx].get()
+        if node.img is not None:
+            node.img.setMapping(node.mapping)
         node.setOutput(0, node.img)
 
 

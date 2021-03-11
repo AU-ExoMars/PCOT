@@ -1,14 +1,17 @@
 import os
+import re
 from typing import TYPE_CHECKING, List
 
-from PyQt5 import QtWidgets, uic, QtCore
-from PyQt5.QtCore import QDir
+from PyQt5 import QtWidgets, uic, QtCore, QtGui
+from PyQt5.QtCore import QDir, Qt
 from PyQt5.QtWidgets import QFileSystemModel
 
 import ui
+from channelsource import FileChannelSource
+from pancamimage import ImageCube
 
 if TYPE_CHECKING:
-    from inputs.inputs import Input, InputMethod
+    from inputs.inp import Input, InputMethod
 
 
 class MethodSelectButton(QtWidgets.QPushButton):
@@ -92,48 +95,3 @@ class PlaceholderMethodWidget(MethodWidget):
         self.setLayout(layout)
         text = m.getName() + " PLACEHOLDER"
         layout.addWidget(QtWidgets.QLabel(text))
-
-
-class RGBMethodWidget(MethodWidget):
-    def __init__(self, m):
-        super().__init__(m)
-        uic.loadUi('assets/tabrgbfile.ui', self)
-        # set up the file tree
-        self.dirModel = QFileSystemModel()
-        # pretty ugly way to get hold of the config, done to avoid cyclic imports
-        print(ui.app.config.get('Locations', 'images'))
-        self.dirModel.setRootPath(os.path.expanduser(ui.app.config.get('Locations', 'images')))
-        self.dirModel.setNameFilters(["*.jpg", "*.png", "*.ppm", "*.tga", "*.tif"])
-        self.dirModel.setNameFilterDisables(False)
-        tree = self.treeView
-        self.treeView.setModel(self.dirModel)
-        self.treeView.setMinimumWidth(300)
-        self.setMinimumSize(1000, 500)
-
-        idx = self.dirModel.index(QDir.currentPath())
-        self.treeView.selectionModel().select(idx, QtCore.QItemSelectionModel.Select)
-        self.treeView.setIndentation(10)
-        self.treeView.setSortingEnabled(True)
-        self.treeView.setColumnWidth(0, self.treeView.width() / 1.5)
-        self.treeView.setColumnHidden(1, True)
-        self.treeView.setColumnHidden(2, True)
-        self.treeView.doubleClicked.connect(self.fileClickedAction)
-        self.treeView.scrollTo(idx)
-        self.canvas.setMapping(m.mapping)
-        # the canvas gets its "caption display" setting from the graph, so
-        # we need to get it from the manager, which we get from the input,
-        # which we get from the method. Ugh.
-        self.canvas.setGraph(self.method.input.mgr.graph)
-        self.onInputChanged()
-
-    def onInputChanged(self):
-        self.canvas.display(self.method.img)
-        self.method.input.performGraph()
-
-    def fileClickedAction(self, idx):
-        if not self.dirModel.isDir(idx):
-            self.method.img = None
-            self.method.fname = os.path.relpath(self.dirModel.filePath(idx))
-            self.method.get()
-            self.onInputChanged()
-

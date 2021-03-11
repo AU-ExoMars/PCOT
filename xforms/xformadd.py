@@ -3,7 +3,7 @@ import cv2 as cv
 import numpy as np
 
 import ui, ui.tabs, ui.canvas, ui.number
-from xform import xformtype, XFormType
+from xform import xformtype, XFormType, XFormException
 from pancamimage import ImageCube, ChannelMapping
 
 
@@ -51,6 +51,7 @@ class XFormAdd(XFormType):
 
             if img1.channels != img2.channels:
                 img = None
+                node.setError(XFormException('DATA', 'channel count mismatch'))
             else:
                 # we only use the ROI on image 1 but we use it to cut out the image
                 # on img 2. The images will be the same size.
