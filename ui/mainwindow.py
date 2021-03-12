@@ -327,7 +327,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     def reset(self):
         # create a dummy graph with just a source
         self.graph = xform.XFormGraph(False)
-        source = self.graph.create("rgbfile")
+        source = self.graph.create("input 0")
         self.saveFileName = None
         # set up its scene and view
         self.graph.constructScene(True)

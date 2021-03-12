@@ -811,7 +811,8 @@ class XFormGraph:
             # of all controls
             tp.recalculate(xform)
         else:
-            raise Exception("Transformation type not found: " + typename)
+            ui.warn("Transformation type not found: " + typename)
+            return self.create("dummy")
         return xform
 
     ## copy selected items to the clipboard. This copies a serialized

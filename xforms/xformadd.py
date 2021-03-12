@@ -1,10 +1,11 @@
-from PyQt5 import QtCore, QtGui
 import cv2 as cv
 import numpy as np
+from PyQt5 import QtGui
 
-import ui, ui.tabs, ui.canvas, ui.number
+import ui.number
+import ui.tabs
+from pancamimage import ImageCube
 from xform import xformtype, XFormType, XFormException
-from pancamimage import ImageCube, ChannelMapping
 
 
 @xformtype
