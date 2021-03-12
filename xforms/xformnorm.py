@@ -39,11 +39,6 @@ class XformNormImage(XFormType):
     def createTab(self, n, w):
         return TabImage(n, w)
 
-    def generateOutputTypes(self, node):
-        # output type 0 should be the same as input type 0, so a greyscale makes a
-        # greyscale and an RGB makes an RGB..
-        node.matchOutputsToInputs([(0, 0)])
-
     def init(self, node):
         node.img = None
 

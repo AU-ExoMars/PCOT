@@ -24,9 +24,6 @@ class XFormOffset(XFormType):
     def createTab(self, n, w):
         return TabOffset(n, w)
 
-    def generateOutputTypes(self, node):
-        node.matchOutputsToInputs([(0, 0)])
-
     def init(self, node):
         node.img = None
         node.x = 0

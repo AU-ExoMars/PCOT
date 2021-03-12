@@ -15,7 +15,10 @@ from xform import xformtype, XFormType
 
 @xformtype
 class XformInset(XFormType):
-    """Inset an image inside another. Converts both images to RGB and does not honour regions of interest."""
+    """Inset an image inside another. Uses RGB versions of both images, as defined by the
+     RGB mapping set in the previous nodes. Does not honour regions of interest. Note that
+     there is no RGB mapping in the canvas for the tab - RGB mappings should be set in
+     the input nodes."""
 
     def __init__(self):
         super().__init__("inset", "regions", "0.0.0")
@@ -29,9 +32,6 @@ class XformInset(XFormType):
 
     def createTab(self, n, w):
         return TabInset(n, w)
-
-    def generateOutputTypes(self, node):
-        node.matchOutputsToInputs([(0, 0)])
 
     def init(self, node):
         node.img = None

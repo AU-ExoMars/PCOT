@@ -35,13 +35,6 @@ class XformCurve(XFormType):
     def createTab(self, n, w):
         return TabCurve(n, w)
 
-    # this xform can take different image types, but doing so changes
-    # the output types, overriding the generic one given in the constructor.
-    # This is called to make that happen if an input type (i.e. the type of the
-    # output connected to the input) changes.
-    def generateOutputTypes(self, node):
-        node.matchOutputsToInputs([(0, 0)])
-
     def init(self, node):
         node.img = None
         node.add = 0

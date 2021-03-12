@@ -59,12 +59,6 @@ class XformContrast(XFormType):
     def createTab(self, n, w):
         return TabContrast(n, w)
 
-    # When we connect an input, we want the output type to be changed to match it - currently
-    # the output is just "some kind of image". This will do this by making output 0 match the
-    # type of input 0.
-    def generateOutputTypes(self, node):
-        node.matchOutputsToInputs([(0, 0)])
-
     # set up each individual node when it is created: there will be no image (since we haven't
     # read the input yet) and the default tolerance is 0.2. Note this sets values in the node,
     # not in "self" which is the type singleton.

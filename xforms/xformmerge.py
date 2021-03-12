@@ -27,17 +27,6 @@ class XformMerge(XFormType):
     def createTab(self, n, w):
         return TabMerge(n, w)
 
-    def generateOutputTypes(self, n):
-        # count connected inputs
-        ct = sum([0 if x is None else 1 for x in n.inputs])
-        if ct == 1:
-            tp = 'imggrey'
-        elif ct == 3 or n.addblack:
-            tp = 'imgrgb'
-        else:
-            tp = 'imgstrange'
-        n.changeOutputType(0, tp)
-
     def init(self, node):
         node.img = None
         node.addblack = True

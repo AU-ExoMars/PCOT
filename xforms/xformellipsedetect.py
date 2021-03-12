@@ -23,9 +23,6 @@ class XformEllipseDetect(XFormType):
     def createTab(self, n, w):
         return TabImage(n, w)
 
-    def generateOutputTypes(self, node):
-        node.matchOutputsToInputs([(0, 0)])
-
     def init(self, node):
         node.img = None
         node.data = None

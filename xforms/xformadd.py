@@ -26,10 +26,6 @@ class XFormAdd(XFormType):
     def createTab(self, n, w):
         return TabMaths(n, w)
 
-    def generateOutputTypes(self, node):
-        # here, the output type matches input 0
-        node.matchOutputsToInputs([(0, 0)])
-
     def init(self, node):
         node.m1 = 1
         node.m2 = 1

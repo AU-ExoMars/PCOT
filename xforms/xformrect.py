@@ -33,9 +33,6 @@ class XformRect(XFormType):
     def createTab(self, n, w):
         return TabRect(n, w)
 
-    def generateOutputTypes(self, node):
-        node.matchOutputsToInputs([(0, 0), (1, 0), (2, 0)])
-
     def init(self, node):
         node.img = None
         node.croprect = None  # would be (x,y,w,h) tuple
