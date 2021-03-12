@@ -5,9 +5,43 @@ from PyQt5.QtWidgets import QGridLayout, QComboBox, QLabel
 
 import ui
 from channelsource import IChannelSource
-from xform import xformtype, XFormType
+from pancamimage import ImageCube
+from xform import xformtype, XFormType, XFormException
+import cv2 as cv
 
 NUMCHANS = 6
+
+
+def extractChannel(node, idx, w, h):
+    if idx == 0:
+        # no image, use the zeroes.
+        img = np.zeros((h, w), dtype=np.float32)
+        source = set()
+    else:
+        # remember to subtract 1 from the index, then get the (imgidx,channel)
+        # pair and read that image
+        imgidx, chan = node.chanIdxLists[idx - 1]
+        img = node.getInput(imgidx)
+        if img is None:
+            raise XFormException('BUG', "Unable to read image from input")
+        source = img.sources[chan]
+        # extract the channel
+        img = img.img[:, :, chan]
+        if h != img.shape[0] or w != img.shape[1]:
+            # resize required
+            img = cv.resize(img, (w, h))
+    return img, source
+
+
+def performOp(op, img1, img2):
+    if op == 0:  # zero
+        return np.zeros(img1.shape, dtype=np.float32)
+    elif op == 1:  # add
+        return img1 + img2
+    elif op == 2:  # sub
+        return img1 - img2
+    elif op == 3:  # mult
+        return img1 * img2
 
 
 @xformtype
@@ -17,7 +51,7 @@ class XFormCombine(XFormType):
         for x in range(0, NUMCHANS):
             self.addInputConnector(str(x), "img")
         self.addOutputConnector("", "img")
-        self.autoserialise = ()
+        self.autoserialise = ('op1chan', 'op2chan', 'operators')
 
     def createTab(self, n, w):
         return TabCombine(n, w)
@@ -31,10 +65,11 @@ class XFormCombine(XFormType):
     def perform(self, node):
         # this is a list, for each image, of a list of channels.
         node.imgChannelStrings = []
-
+        # A list mapping combo box indices into (imgidx,chan) tuples
+        node.chanIdxLists = []
         # populate channel list for combo boxes, for later.
         # We also look at the operators to work out the size of the output
-        maxchan = 0
+        maxchan = -1
         # work out max size too
         w, h = 0, 0
         for i in range(NUMCHANS):
@@ -44,31 +79,44 @@ class XFormCombine(XFormType):
                 # combo boxes later.
                 chanStringList = [IChannelSource.stringForSet(s, node.graph.captionType) for s in inp.sources]
                 node.imgChannelStrings.append(chanStringList)
+                # and we're also going to populate a private list converting the index of the combo box into
+                # (image,chan) index tuples.. if image 2 has 3 channels this will go [(2,0),(2,1),(2,2)]
+                chanIdxList = zip([i] * inp.channels, list(range(inp.channels)))
+                node.chanIdxLists += chanIdxList
                 if inp.w > w:
                     w = inp.w
                 if inp.h > h:
                     h = inp.h
             else:
                 node.imgChannelStrings.append([])
+                node.chanIdxLists.append([])
             if node.operators[i] > 0:
                 maxchan = i
 
         # we're doing nowt
-        if maxchan == 0:
+        if maxchan < 0:
             out = None
         else:
-            # prepare a zeroes array
-            zeroes = np.zeros((h,w))
-            # for each channel..
-            for i in range(NUMCHANS):
+            imgchans = []
+            imgsources = []
+            # for each channel, we have an index into the chanIdxLists set up
+            # above, which comes from the comboboxes. Yes, this is messy.
+            for i in range(maxchan + 1):
                 idx1 = node.op1chan[i]
                 idx2 = node.op2chan[i]
                 op = node.operators[i]
-                ## TODO this is fucking horrible, because the data in op1chan/op2chan is just indices...
-                ## the actual data is in the item attached to the combo box as (imgidx,chan) tuples. Hm.
-#                if idx1 != 0:
-#                    img1 = extractChannel(node,)
 
+                img1, source1 = extractChannel(node, idx1, w, h)
+                img2, source2 = extractChannel(node, idx2, w, h)
+
+                imgchans.append(performOp(op, img1, img2))
+                imgsources.append(set.union(source1, source2))
+            # we now have channels to join together
+            out = np.stack(imgchans, axis=-1)
+
+            out = ImageCube(out, node.mapping, sources=imgsources)
+            node.img = out
+            node.setOutput(0, out)
 
 
 def shortLab(s):

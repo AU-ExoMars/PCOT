@@ -54,4 +54,5 @@ class XformNormImage(XFormType):
                 node.img = img.modifyWithSub(subimage, newsubimg)
             else:
                 node.img = img
+            node.img.setMapping(node.mapping)
         node.setOutput(0, node.img)
