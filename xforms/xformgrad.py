@@ -6,7 +6,7 @@ import numpy as np
 
 import ui, ui.tabs, ui.canvas, ui.mplwidget
 from channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, BLUEINTERNALSOURCE
-from xform import xformtype, XFormType
+from xform import xformtype, XFormType, XFormException
 from pancamimage import ImageCube, ChannelMapping
 
 
@@ -91,7 +91,7 @@ class XformGradient(XFormType):
 
                 node.img = outimg.modifyWithSub(subimage, newsubimg)
             else:
-                node.img = None
+                raise XFormException('DATA', 'Ellipse detection must be on greyscale images')
         else:
             node.img = img
         node.setOutput(0, node.img)

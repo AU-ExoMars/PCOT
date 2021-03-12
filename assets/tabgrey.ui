@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>711</width>
+    <height>548</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QHBoxLayout" name="horizontalLayout">
+   <item>
+    <widget class="QWidget" name="widget_2" native="true">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>218</height>
+      </size>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <item>
+       <widget class="Canvas" name="canvas" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>400</width>
+          <height>400</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item alignment="Qt::AlignTop">
+       <widget class="QWidget" name="widget" native="true">
+        <property name="maximumSize">
+         <size>
+          <width>300</width>
+          <height>200</height>
+         </size>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_2">
+         <property name="sizeConstraint">
+          <enum>QLayout::SetMinimumSize</enum>
+         </property>
+         <item>
+          <widget class="QLabel" name="label_2">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>200</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>300</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If the below is enabled, the input image must have three channels and the calculation will be&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Y = 0.299*R + 0.587 * G + 0.144 * B&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;(i.e. the standard OpenCV RGB-&amp;gt;GREY conversion)&lt;/p&gt;&lt;p&gt;Otherwise, the simple mean of all channels will be taken.&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="greyBox">
+           <property name="text">
+            <string>Use OpenCV coefficients</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>Canvas</class>
+   <extends>QWidget</extends>
+   <header>ui.canvas</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

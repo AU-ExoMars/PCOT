@@ -1,12 +1,14 @@
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import Qt
-
 import cv2 as cv
 import numpy as np
 
-import ui, ui.tabs, ui.canvas, ui.mplwidget
+import ui
+import ui.canvas
+import ui.mplwidget
+import ui.tabs
+from channelsource import IChannelSource
 from xform import xformtype, XFormType
-from pancamimage import ImageCube
+
+from matplotlib import cm
 
 
 def gethistogram(chan, weights, bincount):
@@ -36,7 +38,18 @@ class XFormHistogram(XFormType):
             subimg = img.subimage()
             mask = ~subimg.mask
             weights = subimg.mask.astype(np.ubyte)
-            node.hists = [gethistogram(chan, weights, node.bincount) for chan in cv.split(subimg.img)]
+            # OK, brace yourself..
+
+            # generate a list of labels, one for each channel
+            labels = [IChannelSource.stringForSet(s, node.graph.captionType) for s in img.sources]
+            # generate a (weights,bins) tuple for each channel
+            hists = [gethistogram(chan, weights, node.bincount) for chan in cv.split(subimg.img)]
+            # they must be the same size
+            assert (len(labels) == len(hists))
+            # unzips the (weights,bins) tuple list into two lists of weights and bins
+            unzipped = list(zip(*hists))
+            # zips the labels, weights and bins together into a list of (label,weights,bins) for each channel!
+            node.hists = list(zip(labels, *unzipped))
 
 
 class TabHistogram(ui.tabs.Tab):
@@ -54,14 +67,16 @@ class TabHistogram(ui.tabs.Tab):
             ui.log(self.node.comment)
             self.w.mpl.fig.suptitle(self.node.comment)
             self.w.mpl.ax.cla()  # clear any previous plot
-            cols = ['r', 'g', 'b']
+            cols = cm.get_cmap('Dark2').colors
             colct = 0
             for xx in self.node.hists:
-                h, bins = xx
+                lab, h, bins = xx
                 #                bw = (bins.max()-bins.min())/self.node.bincount
                 #                self.w.mpl.ax.bar(bins,h,width=bw,alpha=0.34,color=cols[colct])
-                self.w.mpl.ax.hist(bins[:-1], bins, weights=h, alpha=0.34, color=cols[colct])
+                _, _, handle = self.w.mpl.ax.hist(bins[:-1], bins, weights=h, alpha=0.34, label=lab,
+                                                  color=cols[colct % len(cols)])
                 colct += 1
+            self.w.mpl.ax.legend()
             self.w.mpl.draw()
         self.w.replot.setStyleSheet("")
 

@@ -5,7 +5,7 @@ import ui, ui.tabs, ui.canvas
 import utils.cluster
 from channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, BLUEINTERNALSOURCE
 
-from xform import xformtype, XFormType
+from xform import xformtype, XFormType, XFormException
 from xforms.tabimage import TabImage
 from pancamimage import ImageCube
 
@@ -16,7 +16,7 @@ class XformEllipseDetect(XFormType):
 
     def __init__(self):
         super().__init__("ellipsedetect", "calibration", "0.0.0")
-        self.addInputConnector("", "imggrey")
+        self.addInputConnector("", "img")
         self.addOutputConnector("img", "img")
         self.addOutputConnector("data", "ellipse")
 
@@ -35,6 +35,10 @@ class XformEllipseDetect(XFormType):
         if img is None:
             node.img = None
         else:
+            img = img.img
+            if img.channels != 1:
+                raise XFormException('DATA', 'Ellipse detection must be on greyscale images')
+
             i, node.data = ellipseDetect(img.img)
             # Here, we're slapping RED all over a greyscale image so we don't really know what
             # the sources should be - I'm using the fake RGB setup.

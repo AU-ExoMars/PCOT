@@ -142,8 +142,7 @@ class Gradient(QtWidgets.QWidget):
 
         # Are we inside a stop point? First check y.
         if (
-            e.y() >= midpoint - self._handle_h and
-            e.y() <= midpoint + self._handle_h
+                midpoint - self._handle_h <= e.y() <= midpoint + self._handle_h
         ):
 
             for n, (stop, color) in enumerate(self._gradient):
@@ -151,8 +150,7 @@ class Gradient(QtWidgets.QWidget):
                     # Allow us to skip the extreme ends of the gradient.
                     continue
                 if (
-                    e.x() >= stop * width - self._handle_w and
-                    e.x() <= stop * width + self._handle_w
+                        stop * width - self._handle_w <= e.x() <= stop * width + self._handle_w
                 ):
                     return n
 

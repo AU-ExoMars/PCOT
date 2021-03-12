@@ -364,3 +364,5 @@ class ImageCube:
         x, y, w, h = subimage.bb
         i.img[y:y + h, x:x + w][subimage.mask] = newimg[subimage.mask]
         return i
+
+
