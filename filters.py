@@ -43,6 +43,55 @@ class Filter:
         return self._gaussian(x, self.cwl, self.fwhm)
 
 
+## This is a VERY CRUDE wavelength to RGB converter, for visualisation use only!
+# Originally from an algorithm in FORTRAN by Dan Bruton.
+def wav2RGB(wavelength):
+    w = int(wavelength)
+
+    # colour
+    if 380 <= w < 440:
+        R = -(w - 440.) / (440. - 350.)
+        G = 0.0
+        B = 1.0
+    elif 440 <= w < 490:
+        R = 0.0
+        G = (w - 440.) / (490. - 440.)
+        B = 1.0
+    elif 490 <= w < 510:
+        R = 0.0
+        G = 1.0
+        B = -(w - 510.) / (510. - 490.)
+    elif 510 <= w < 580:
+        R = (w - 510.) / (580. - 510.)
+        G = 1.0
+        B = 0.0
+    elif 580 <= w < 645:
+        R = 1.0
+        G = -(w - 645.) / (645. - 580.)
+        B = 0.0
+    elif 645 <= w <= 780:
+        R = 1.0
+        G = 0.0
+        B = 0.0
+    else:
+        R = 0.0
+        G = 0.0
+        B = 0.0
+
+    # intensity correction
+    if 380 <= w < 420:
+        SSS = 0.3 + 0.7*(w - 350) / (420 - 350)
+    elif 420 <= w <= 700:
+        SSS = 1.0
+    elif 700 < w <= 780:
+        SSS = 0.3 + 0.7*(780 - w) / (780 - 700)
+    else:
+        SSS = 0.0
+#    SSS *= 255
+
+    return [(SSS*R), (SSS*G), (SSS*B)]
+
+
 ## Array of Pancam filters - note: solar filters omitted
 PANCAM_FILTERS = [
     Filter(570, 12, .989, "L01", "G04"),

@@ -13,7 +13,7 @@ NUMCHANS = 6
 
 
 def extractChannel(node, idx, w, h):
-    if idx == 0:
+    if idx == 0 or node.chanIdxLists[idx - 1] is None:
         # no image, use the zeroes.
         img = np.zeros((h, w), dtype=np.float32)
         source = set()
@@ -89,7 +89,7 @@ class XFormCombine(XFormType):
                     h = inp.h
             else:
                 node.imgChannelStrings.append([])
-                node.chanIdxLists.append([])
+                node.chanIdxLists.append(None)
             if node.operators[i] > 0:
                 maxchan = i
 

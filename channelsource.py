@@ -20,7 +20,7 @@ class IChannelSource(ABC):
 
     @abstractmethod
     def getFilter(self):
-        pass
+        return None
 
     # this gets the string for a single source; you probably want stringForSet().
 
@@ -97,11 +97,9 @@ def fakeFilter(name, cwl):
     return filters.Filter(cwl, 1, 1, position=name, name=name)
 
 
-FAKEREDFILTER = fakeFilter("RED", 10000)
-FAKEGREENFILTER = fakeFilter("GREEN", 90000)
-FAKEBLUEFILTER = fakeFilter("BLUE", 8000)
-FAKEBLACKFILTER = fakeFilter("BLACK", 100)
-FAKEGREYFILTER = fakeFilter("GREY", 200)
+FAKEREDFILTER = fakeFilter("RED", 700)
+FAKEGREENFILTER = fakeFilter("GREEN", 530)
+FAKEBLUEFILTER = fakeFilter("BLUE", 470)
 
 
 ## this is used for internal sources of individual RGB channels. Don't use the class,
