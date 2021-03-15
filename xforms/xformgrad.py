@@ -62,8 +62,8 @@ class XformGradient(XFormType):
 
     def __init__(self):
         super().__init__("gradient", "data", "0.0.0")
-        self.addInputConnector("", "imggrey")
-        self.addOutputConnector("", "imgrgb")
+        self.addInputConnector("", "img")
+        self.addOutputConnector("", "img")
         self.autoserialise = ('gradient',)
         self.hasEnable = True
 
@@ -81,7 +81,7 @@ class XformGradient(XFormType):
         elif node.enabled:
             if img.channels == 1:
                 subimage = img.subimage()
-                newsubimg = applyGradient(subimage.img, subimage.fullmask(), node.gradient)
+                newsubimg = applyGradient(subimage.img, subimage.mask, node.gradient)
                 # Here we make an RGB image from the input image. We then slap the gradient
                 # onto the ROI. We use the default channel mapping and standard "fake" sources.
                 outimg = ImageCube(img.rgb(), node.mapping, [
