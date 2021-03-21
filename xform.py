@@ -369,11 +369,7 @@ class XForm:
     # error state or None. See XFormException for codes.
     error: Optional[XFormException]
 
-    ## @var chanAssignments
-    # a triple of integers used by nodes which have a canvas.Canvas. They indicate which channels
-    # in the viewed image cube map onto R, G and B (in that order) in the Canvas. Starts at None,
-    # and is set to default values by the first call to display() on the canvas.
-    chanAssignments: Optional[Tuple[int]]
+
 
     ## constructor, takes type and displayname
     def __init__(self, tp, dispname):
@@ -397,7 +393,6 @@ class XForm:
         # which can change in macros. Initialise the inputs, though.
         self.inputs = [None] * len(tp.inputConnectors)
         self.connCountChanged()
-        self.chanAssignments = None
         self.error = None
 
         # UI-DEPENDENT DATA DOWN HERE
