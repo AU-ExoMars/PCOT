@@ -2,6 +2,20 @@
 # This package deals with constructing and modifying the Qt Graphics View scene
 # which represents the objects in an XFormGraph.
 
+
+import math
+from typing import List, Optional
+
+from PyQt5 import QtWidgets, QtGui
+from PyQt5.QtCore import Qt, QPointF
+from PyQt5.QtGui import QColor, QFont, QTransform
+
+import conntypes
+import ui
+import ui.namedialog
+import utils.deb
+import xform
+
 ## do we have the Grandalf package for automatic graph layout?
 hasGrandalf = True
 try:
@@ -30,16 +44,6 @@ except ImportError:
 
     hasGrandalf = False
 
-from PyQt5 import QtWidgets, uic, QtGui, QtCore
-from PyQt5.QtCore import Qt, QPointF
-from PyQt5.QtGui import QColor, QBrush, QPen, QLinearGradient, QFont, QTransform
-from typing import List, Set, Dict, Tuple, Optional, Any
-
-import math
-import utils.deb
-
-import xform, ui, conntypes
-import ui.namedialog
 
 ## the font we use for most things
 mainFont = QFont()

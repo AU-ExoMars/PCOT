@@ -12,8 +12,7 @@ from typing import List, Optional, OrderedDict, ClassVar
 
 from PyQt5 import QtWidgets, uic
 
-import graphscene
-import graphview
+from ui import graphscene, graphview
 import macros
 import palette
 import ui

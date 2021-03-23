@@ -2,14 +2,11 @@
 # The main function with command line parsing and very little else.
 import configparser
 
-from PyQt5 import QtWidgets, uic, QtCore, QtGui
-from PyQt5.QtCore import Qt, QCommandLineOption, QCommandLineParser
-import os, sys, traceback, json, time, getpass
+from PyQt5 import QtWidgets
+from PyQt5.QtCore import QCommandLineParser
+import os, sys
 
 import ui.tabs, ui.help, ui.mainwindow
-import xform
-import graphview, palette, graphscene
-import filters
 
 # import all transform types (see the __init__.py there)
 # ACTUALLY REQUIRED despite what the IDE says! DO NOT

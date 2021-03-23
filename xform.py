@@ -17,10 +17,10 @@ import uuid
 
 import conntypes
 import ui.tabs
+from ui import graphscene
 from inputs.inp import InputManager
 
 if TYPE_CHECKING:
-    import graphscene
     import PyQt5.QtWidgets
     from macros import XFormMacro, MacroInstance
 
@@ -788,7 +788,6 @@ class XFormGraph:
 
     ## construct a graphical representation for this graph
     def constructScene(self, doAutoLayout):
-        import graphscene  # deferred import avoiding circular import
         self.scene = graphscene.XFormGraphScene(self, doAutoLayout)
 
     ## create a new node, passing in a type name.

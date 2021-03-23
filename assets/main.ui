@@ -340,7 +340,7 @@
   <customwidget>
    <class>GraphView</class>
    <extends>QGraphicsView</extends>
-   <header>graphview</header>
+   <header>ui.graphview</header>
   </customwidget>
  </customwidgets>
  <resources/>
