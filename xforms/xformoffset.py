@@ -1,12 +1,9 @@
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import Qt
-
-import cv2 as cv
 import numpy as np
 
-import ui, ui.tabs, ui.canvas, ui.mplwidget
-from xform import xformtype, XFormType
+import ui.mplwidget
+import ui.tabs
 from pancamimage import ImageCube
+from xform import xformtype, XFormType
 
 
 @xformtype

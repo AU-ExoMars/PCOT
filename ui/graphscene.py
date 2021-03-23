@@ -28,6 +28,7 @@ try:
 except ImportError:
     print("Grandalf is not present, autolayout will be awful.")
 
+
     # dummy class defs for when grandalf isn't present, to avoid rogue errors in type checking
 
     class Graph:
@@ -43,7 +44,6 @@ except ImportError:
 
 
     hasGrandalf = False
-
 
 ## the font we use for most things
 mainFont = QFont()
@@ -110,6 +110,9 @@ class GText(QtWidgets.QGraphicsSimpleTextItem):
     def __init__(self, parent, text, node):
         super().__init__(text, parent=parent)
         self.node = node
+
+    def setColour(self, col):
+        self.setBrush(col)
 
 
 ## core rectangle for a node, is parent of connectors and texts (and possibly other things too)
@@ -374,9 +377,9 @@ def makeNodeGraphics(n):
     n.rect = GMainRect(x, y + CONNECTORHEIGHT, n.w, n.h - YPADDING - CONNECTORHEIGHT * 2, n)
 
     # draw text label, using the display name. Need to keep a handle on the text
-    # so we can change the colour in setColourToState().
-    n.rect.text = GText(n.rect, n.displayName, n)
-    n.rect.text.setPos(x + XTEXTOFFSET, y + YTEXTOFFSET + CONNECTORHEIGHT)
+    # so we can change the colour in setColourToState(). This is drawn using a method
+    # in the type, which we can override if we want to do Odd Things (editable text)
+    n.rect.text = n.type.buildText(n)
 
     makeConnectors(n, x, y)
 
@@ -556,7 +559,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 n.rect.setBrush(QColor(r, g, b))
                 outlinecol = QColor(0, 0, 0) if n.enabled else QColor(255, 0, 0)
                 n.rect.setPen(outlinecol)
-                n.rect.text.setBrush(outlinecol)
+                n.rect.text.setColour(outlinecol)
         self.update()
 
     ## handle the selection area being changed (this is a UI slot)
@@ -663,15 +666,6 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             self.rebuildArrows()
             self.draggingArrow = None
         super().mouseReleaseEvent(event)
-
-    ## handle key presses
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Delete:
-            for n in self.selection:
-                # remove the nodes
-                self.graph.remove(n)
-            self.selection = []
-            self.rebuild()
 
     ## copy operation, serialises the items to the system clipboard
     def copy(self):

@@ -88,3 +88,19 @@ class GraphView(QtWidgets.QGraphicsView):
         x.xy = (pos.x(), pos.y())
         # and build the scene with the new objects
         self.scene().rebuild()
+
+    ## handle key presses
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Delete:
+            scene = self.scene()
+            for n in scene.selection:
+                # remove the nodes
+                scene.graph.remove(n)
+            scene.selection = []
+            scene.rebuild()
+            event.accept()
+        else:
+            event.ignore()
+            # pass the event into the standard handler,
+            # where it will be passed into any items that need it
+            super().keyPressEvent(event)

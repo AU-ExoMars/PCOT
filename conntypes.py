@@ -40,6 +40,7 @@ brushDict['imgstrange'] = QColor(100, 100, 200)  # any image with neither 1 nor 
 brushDict['img'] = Qt.blue
 brushDict['ellipse'] = Qt.cyan
 brushDict['rect'] = Qt.cyan
+brushDict['number'] = Qt.darkGreen
 
 ## complete list of all types
 types = [x for x in brushDict]

@@ -252,6 +252,15 @@ class XFormType:
     def createTab(self, xform, window):
         return None
 
+    ## build the text element of the graph scene object for the node. By default, this
+    # will just create static text, but can be overridden.
+    @staticmethod
+    def buildText(n):
+        x, y = n.xy
+        text = ui.graphscene.GText(n.rect, n.displayName, n)
+        text.setPos(x + ui.graphscene.XTEXTOFFSET, y + ui.graphscene.YTEXTOFFSET + ui.graphscene.CONNECTORHEIGHT)
+        return text
+
 
 ## serialise a connection (xform,i) into (xformName,i).
 # Will only serialise connections into the set passed in. If None is passed
@@ -368,8 +377,6 @@ class XForm:
     ## @var error
     # error state or None. See XFormException for codes.
     error: Optional[XFormException]
-
-
 
     ## constructor, takes type and displayname
     def __init__(self, tp, dispname):
