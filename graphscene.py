@@ -14,7 +14,6 @@ try:
 except ImportError:
     print("Grandalf is not present, autolayout will be awful.")
 
-
     # dummy class defs for when grandalf isn't present, to avoid rogue errors in type checking
 
     class Graph:
@@ -326,7 +325,7 @@ def getEventWindow(evt):
     return getEventView(evt).window
 
 
-## add connector graphics
+## add connector graphics to a node, assuming its n.rect has already been created.
 def makeConnectors(n, x, y):
     if len(n.inputs) > 0:
         size = n.w / len(n.inputs)
