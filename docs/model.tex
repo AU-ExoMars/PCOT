@@ -19,7 +19,7 @@ determined by its \texttt{type} field, which references an
 
 \begin{figure}[ht]
 \center
-\includegraphics[width=5in]{xform.pdf}
+\includegraphics[width=6in]{xform.pdf}
 \caption{\texttt{XForm} and graph model}
 \label{xform.pdf}
 \end{figure}
@@ -91,22 +91,24 @@ optional (used by the UI to show a hint).
 \subsection{Performing the graph}
 \label{graphperform}
 The graph needs to be ``performed'' --- its nodes executed --- whenever
-the data changes, which is generally whenever the graph is edited or
-a node control changed in a tab.
+the data changes, which is generally whenever the graph is edited,
+a node control changed in a tab, or an input is changed (see Sec.~\ref{inputs}
+below).
 This is done by calling \texttt{changed()} on the node's graph.
-The \texttt{XFormGraph.changed(node)} method takes a node, and either calls
+The \texttt{XFormGraph.changed()} method takes a node, and either calls
 \texttt{performNodes()} on the main graph passing in that node, or, if the
 node is inside a macro prototype graph (q.v.), copies the prototype graph to
 all its instances and runs \texttt{performNodes()} for all those instances
 (see Sec.~\ref{macroineff} for why this is a problem).
 
-The \texttt{XFormGraph.performNodes(node=None)} method itself takes a single argument and performs
-either the entire graph or a portion of the graph starting at a particular node.
-If the argument is None, the internal list of all nodes in the graph is traversed looking
-for nodes with no inputs and these are performed. If the argument is not None that node
-is performed. Nodes are performed by calling their \texttt{perform()} method. This will
-recursively run the child nodes, but only when they are ``ready to run''
-(all their inputs have been set). 
+The \texttt{XFormGraph.performNodes(node=None)} method itself takes a single
+argument and performs either the entire graph or a portion of the graph
+starting at a particular node. If the argument is None, the internal list of
+all nodes in the graph is traversed looking for nodes with no inputs and these
+are performed. If the argument is not None that node is performed. Nodes are
+performed by calling their \texttt{perform()} method. This will recursively
+run the child nodes, but only when they are ``ready to run'' (all their inputs
+have been set). 
 
 \clearpage
 \subsubsection{Performing a node}
@@ -176,6 +178,56 @@ brief error code passed into \texttt{XFormException}. The error
 will also be shown in the tab for that node and in its ``help box''
 (opened by clicking the box in the corner).
 
+\subsection{Inputs}
+\label{inputs}
+Inputs are components which take external data from the DAR or from files and
+bring them into PCOT. While they are part of the
+data processing setup which is saved in a graph file, they are not
+part of graph of nodes which appears in the right-hand pane. This may sound
+like an odd choice, but there are good reasons for it:
+\begin{itemize}
+\item We can change the graph without changing the input files: this
+means we can set up an input from the DAR (which may be complex) and
+then load an entirely different processing graph to view it a different way.
+This also permits the use of ``template'' graphs, which can be loaded
+to perform a piece of standardised processing but do not change the inputs.
+\item Conversely, we can change the inputs without changing the graph.
+This means we don't have to play ``hunt the input node'' if we want
+to process another piece of data.
+\end{itemize}
+Clicking on an input at the top of the window will open the the editor for
+that input. This consists for some buttons, one for each input method, and a
+panel for editing the current method's data. By default the method is
+``null'', which means ``no input.'' Clicking on another button will change the
+active input method and allow it to be edited.
+To bring the data into the graph, an \emph{input} node can be created from
+the palette.
+How inputs work is summarised in Fig.~\ref{inputs.pdf}:
+\begin{figure}[ht]
+\center
+\includegraphics[width=5in]{inputs.pdf}
+\caption{Input system}
+\label{inputs.pdf}
+\end{figure}
+\begin{itemize}
+\item Graphs which are not macro prototypes own an \texttt{InputManager}.
+\item The \texttt{InputManager} owns one \texttt{Input} object for each input.
+\item Each \texttt{Input} has a number of input method objects,
+each of which is of a different subclass of \texttt{InputMethod}.
+These handle different kinds of input: RGB file, multifile, null (does nothing)
+and eventually different kinds of DAR input. Although all these methods are
+always present (for persistence reasons), only one is active. An index
+to the active method is stored in \texttt{Input}.
+\item the \texttt{Input} may also have an \texttt{InputWindow}, if its
+UI window is open. This will contain a set of widgets, each of which is
+subclass of \texttt{MethodWidget}, one for each input method. Only the widget
+corresponding to the active method will be visible.
+\end{itemize}
+Code for the inputs is the \texttt{inputs} directory, except for the UI
+code which is in \texttt{ui/inputs.py}.
+
+
+\clearpage
 \subsection{Image data}
 Most classes making up the image data 
 model are declared in the \texttt{pancamimage.py} file, including the main \texttt{ImageCube}
@@ -185,7 +237,7 @@ and mapping from nodes are omitted; these will be explained later.
 
 \begin{figure}[ht]
 \center
-\includegraphics[width=6.5in]{image.pdf}
+\includegraphics[width=7in]{image.pdf}
 \caption{Outline UML class diagram of image model}
 \label{image.pdf}
 \end{figure}
@@ -231,16 +283,22 @@ that much of this information will be ``fake'' for images loaded from plain RGB 
 \item methods for getting string descriptors for this source.
 \end{itemize}
 
-Nodes generate and process this information in different ways. For example, a \emph{gradient} node takes a single channel and converts it into an RGB image with
-a colour gradient: here, the output image's sources are ``internal RGB'' sources with no identifier or sensible filter data because the output's colour
-is entirely artificial. In contrast, a the \emph{curve} for performing a sigmoid function on all channels of an image will give the output image the
+Nodes generate and process this information in different ways. For example, a
+\emph{gradient} node takes a single channel and converts it into an RGB image
+with a colour gradient: here, the output image's sources are ``internal RGB''
+sources with no identifier or sensible filter data because the output's colour
+is entirely artificial. In contrast, a the \emph{curve} for performing a
+sigmoid function on all channels of an image will give the output image the
 same sources as the input image.
 
-Sources are used to keep track of each channel as it moves through the graph so they can be processed and displayed appropriately:
-Fig.~\ref{app.png} shows a typical node in the ``node controls and output'' section. This section, as it does in many nodes,
-contains a ``canvas'' displaying an image. Above the canvas are three combo boxes which select the channels in the image cube to display on the canvas,
-and these are typically labelled by a string generated from the source data for each channel (along with the index). Sources are also used
-to select channels to combine and manipulate in those nodes which do so.
+Sources are used to keep track of each channel as it moves through the graph
+so they can be processed and displayed appropriately: Fig.~\ref{app.png} shows
+a typical node in the ``node controls and output'' section. This section, as
+it does in many nodes, contains a ``canvas'' displaying an image. Above the
+canvas are three combo boxes which select the channels in the image cube to
+display on the canvas, and these are typically labelled by a string generated
+from the source data for each channel (along with the index). Sources are also
+used to select channels to combine and manipulate in those nodes which do so.
 
 \subsubsection{RGB channel mappings}
 The previous section briefly mentions the three RGB mapping combo boxes at the
@@ -467,6 +525,9 @@ representing an \texttt{XFormGraph} and its nodes. It also contains the
 classes representing those 2D objects (subclasses of various Qt graphics item
 classes).
 \end{itemize}
+The input system's UI is not discussed here --- it's a separate
+system in \texttt{ui/inputs.py}. See Sec.~\ref{inputs} for more details.
+
 
 \begin{figure}[ht]
 \center

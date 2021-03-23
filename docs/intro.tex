@@ -24,29 +24,24 @@ in Fig.~\ref{graph.png}.
 
 \begin{figure}[ht]
 \center
-\includegraphics[width=5in]{app.png}
+\includegraphics[width=6in]{app.png}
 \caption{The PCOT application}
 \label{app.png}
 \end{figure}
 
-\clearpage
-This will take an RGB image from a file, perform a decorrelation stretch,
-and then a histogram equalisation on the three channels. It will
-only do this to a rectangular portion of the image (defined by the
-\texttt{rect} node), annotating the region with some text defined in
-the \texttt{rect} node's controls. The control region is currently
-showing the output of the histogram equalisation.
-
-\begin{notebox}
-\textbf{Note:} These screenshots come from the current version of
-PCOT, in which RGB, greyscale and ``other'' images are different
-data types. This is currently being refactored into a single type
-to provide a better fit with the application data.
-\end{notebox}
+\clearpage This will take an image from one of the data inputs --- these
+exist independently of the graph proper and are configured with the four buttons
+at the top of the window, see Sec.~\ref{inputs} ---
+and perform a decorrelation stretch followed by a histogram
+equalisation on the three channels selected in the \texttt{rect} node.
+It will only do this to a rectangular
+portion of the image (defined by the \texttt{rect} node), annotating the
+region with some text defined in that node's controls. The
+control region is currently showing the output of the histogram equalisation.
 
 \begin{figure}[ht]
 \center
-\includegraphics[width=1in]{graph.png}
+\includegraphics[width=1.4in]{graph.png}
 \caption{An example graph}
 \label{graph.png}
 \end{figure}
