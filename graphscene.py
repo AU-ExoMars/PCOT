@@ -53,7 +53,6 @@ errorFont.setFamily('Sans Serif')
 errorFont.setBold(True)
 errorFont.setPixelSize(12)
 
-
 # constants for node drawing
 
 ## width of a node in pixels
@@ -327,6 +326,67 @@ def getEventWindow(evt):
     return getEventView(evt).window
 
 
+## add connector graphics
+def makeConnectors(n, x, y):
+    if len(n.inputs) > 0:
+        size = n.w / len(n.inputs)
+        xx = x
+        for i in range(0, len(n.inputs)):
+            # connection rectangles are parented to the main rectangle
+            r = GConnectRect(n.rect, xx, y, size, CONNECTORHEIGHT, n, True, i)
+            text = GText(n.rect, r.name, n)
+            text.setPos(xx + CONNECTORTEXTXOFF, y + INCONNECTORTEXTYOFF)
+            text.setFont(mainFont)
+            text.setZValue(1)
+            n.inrects[i] = r
+            xx += size
+    nouts = len(n.type.outputConnectors)
+    if nouts > 0:
+        size = n.w / nouts
+        xx = x
+        for i in range(0, nouts):
+            # connection rectangles are parented to the main rectangle
+            yy = y + n.h - YPADDING - CONNECTORHEIGHT
+            r = GConnectRect(n.rect, xx, yy, size, CONNECTORHEIGHT, n, False, i)
+            text = GText(n.rect, r.name, n)
+            text.setPos(xx + CONNECTORTEXTXOFF, yy + OUTCONNECTORTEXTYOFF)
+            text.setFont(mainFont)
+            text.setZValue(1)
+            n.outrects[i] = r
+            xx += size
+
+
+## create the necessary items to create a node
+## (assuming place has been called). Just the node, not the connections.
+def makeNodeGraphics(n):
+    x, y = n.xy
+    # if the node doesn't have width and height yet, set them. This happens
+    # when a node is not created in place().
+    if n.w is None:
+        n.w = NODEWIDTH
+        n.h = NODEHEIGHT + YPADDING
+
+    # draw basic rect, leaving room for connectors at top and bottom
+    # We keep this rectangle in the node so we can change its colour
+    n.rect = GMainRect(x, y + CONNECTORHEIGHT, n.w, n.h - YPADDING - CONNECTORHEIGHT * 2, n)
+
+    # draw text label, using the display name. Need to keep a handle on the text
+    # so we can change the colour in setColourToState().
+    n.rect.text = GText(n.rect, n.displayName, n)
+    n.rect.text.setPos(x + XTEXTOFFSET, y + YTEXTOFFSET + CONNECTORHEIGHT)
+
+    makeConnectors(n, x, y)
+
+    # if there's an error, add the code
+    if n.error is not None:
+        error = GText(n.rect, "err:" + n.error.code, n)
+        error.setFont(errorFont)
+        error.setBrush(QColor(255, 0, 0))
+        error.setPos(x + XTEXTOFFSET + XERROROFFSET, y + YTEXTOFFSET + CONNECTORHEIGHT + YERROROFFSET)
+
+    return n.rect
+
+
 ## The custom scene. Note that when serializing the nodes,
 # the geometry fields should be dealt with.
 
@@ -425,7 +485,8 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         # create the graphics items
         for n in self.graph.nodes:
             # makes the graphics for the node
-            self.makeNodeGraphics(n)
+            gfx = makeNodeGraphics(n)
+            self.addItem(gfx)
             # no tab to front by default
         # and make the arrows
         self.arrows = []
@@ -468,59 +529,6 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     arrowItem = GArrow(x1, y1, x2, y2, n1, output, n2, inputIdx)
                     self.addItem(arrowItem)
                     self.arrows.append(arrowItem)
-
-    ## add the necessary items to create a node
-    ## (assuming place has been called). Just the node, not the connections.
-    def makeNodeGraphics(self, n):
-        x, y = n.xy
-        # if the node doesn't have width and height yet, set them. This happens
-        # when a node is not created in place().
-        if n.w is None:
-            n.w = NODEWIDTH
-            n.h = NODEHEIGHT + YPADDING
-        # draw basic rect, leaving room for connectors at top and bottom
-        # We keep this rectangle in the node so we can change its colour
-        n.rect = GMainRect(x, y + CONNECTORHEIGHT, n.w, n.h - YPADDING - CONNECTORHEIGHT * 2, n)
-        self.addItem(n.rect)
-
-        # draw text label, using the display name. Need to keep a handle on the text
-        # so we can change the colour in setColourToState().
-        n.rect.text = GText(n.rect, n.displayName, n)
-        n.rect.text.setPos(x + XTEXTOFFSET, y + YTEXTOFFSET + CONNECTORHEIGHT)
-
-        # if there's an error, add the code
-        if n.error is not None:
-            error = GText(n.rect, "err:"+n.error.code, n)
-            error.setFont(errorFont)
-            error.setBrush(QColor(255, 0, 0))
-            error.setPos(x + XTEXTOFFSET + XERROROFFSET, y + YTEXTOFFSET + CONNECTORHEIGHT + YERROROFFSET)
-
-        if len(n.inputs) > 0:
-            size = n.w / len(n.inputs)
-            xx = x
-            for i in range(0, len(n.inputs)):
-                # connection rectangles are parented to the main rectangle
-                r = GConnectRect(n.rect, xx, y, size, CONNECTORHEIGHT, n, True, i)
-                text = GText(n.rect, r.name, n)
-                text.setPos(xx + CONNECTORTEXTXOFF, y + INCONNECTORTEXTYOFF)
-                text.setFont(mainFont)
-                text.setZValue(1)
-                n.inrects[i] = r
-                xx += size
-        nouts = len(n.type.outputConnectors)
-        if nouts > 0:
-            size = n.w / nouts
-            xx = x
-            for i in range(0, nouts):
-                # connection rectangles are parented to the main rectangle
-                yy = y + n.h - YPADDING - CONNECTORHEIGHT
-                r = GConnectRect(n.rect, xx, yy, size, CONNECTORHEIGHT, n, False, i)
-                text = GText(n.rect, r.name, n)
-                text.setPos(xx + CONNECTORTEXTXOFF, yy + OUTCONNECTORTEXTYOFF)
-                text.setFont(mainFont)
-                text.setZValue(1)
-                n.outrects[i] = r
-                xx += size
 
     ## handle selection and other state by changing the colour of the main rect of the selected item
     # Now this is a bit complex because we have to show a colour change for the error state and
