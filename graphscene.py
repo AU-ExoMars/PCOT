@@ -103,6 +103,13 @@ class GHelpRect(QtWidgets.QGraphicsRectItem):
         self.setBrush(Qt.blue)
 
 
+## text in middle of main rect and on connections
+class GText(QtWidgets.QGraphicsSimpleTextItem):
+    def __init__(self, parent, text, node):
+        super().__init__(text, parent=parent)
+        self.node = node
+
+
 ## core rectangle for a node, is parent of connectors and texts (and possibly other things too)
 class GMainRect(QtWidgets.QGraphicsRectItem):
     # x,y,w,h are inherited
@@ -111,6 +118,7 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
     offsety: int
     helprect: GHelpRect  # help rectangle (top-right corner)
     node: xform.XForm  # node to which I refer
+    text: GText  # text field
 
     def __init__(self, x1, y1, w, h, node):
         self.offsetx = 0  # these are the distances from our original pos.
@@ -239,13 +247,6 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
                 # and set that arrow to be dragging (note the NOT inverted self.isInput)
                 self.scene().startDraggingArrow(arrow, self.isInput, event)
         return super().mousePressEvent(event)
-
-
-## text in middle of main rect and on connections
-class GText(QtWidgets.QGraphicsSimpleTextItem):
-    def __init__(self, parent, text, node):
-        super().__init__(text, parent=parent)
-        self.node = node
 
 
 ## a line with an arrow on the end, connecting two nodes
@@ -482,7 +483,8 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         n.rect = GMainRect(x, y + CONNECTORHEIGHT, n.w, n.h - YPADDING - CONNECTORHEIGHT * 2, n)
         self.addItem(n.rect)
 
-        # draw text label, using the display name
+        # draw text label, using the display name. Need to keep a handle on the text
+        # so we can change the colour in setColourToState().
         n.rect.text = GText(n.rect, n.displayName, n)
         n.rect.text.setPos(x + XTEXTOFFSET, y + YTEXTOFFSET + CONNECTORHEIGHT)
 
