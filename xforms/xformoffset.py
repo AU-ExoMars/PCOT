@@ -1,9 +1,10 @@
 import numpy as np
 
+import conntypes
 import ui.mplwidget
 import ui.tabs
 from pancamimage import ImageCube
-from xform import xformtype, XFormType
+from xform import xformtype, XFormType, Datum
 
 
 @xformtype
@@ -27,7 +28,7 @@ class XFormOffset(XFormType):
         node.y = 0
 
     def perform(self, node):
-        img = node.getInput(0)
+        img = node.getInput(0, conntypes.IMG)
         if img is None:
             node.img = None
         elif not node.enabled:
@@ -48,7 +49,7 @@ class XFormOffset(XFormType):
             # remember to copy ROI            
             node.img = ImageCube(newimg, node.mapping, img.sources)
 
-        node.setOutput(0, node.img)
+        node.setOutput(0, Datum(conntypes.IMG, node.img))
 
 
 class TabOffset(ui.tabs.Tab):

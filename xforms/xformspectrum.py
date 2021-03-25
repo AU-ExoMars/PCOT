@@ -3,6 +3,7 @@ from functools import partial
 import numpy as np
 from matplotlib import cm
 
+import conntypes
 import ui
 from channelsource import IChannelSource
 from filters import wav2RGB
@@ -41,7 +42,7 @@ class XFormSpectrum(XFormType):
         node.data = None
 
     def perform(self, node):
-        img = node.getInput(0)
+        img = node.getInput(0, conntypes.IMG)
         if img is not None:
             # first, generate a list of indices of channels with a single source which has a wavelength,
             # and a list of those wavelengths

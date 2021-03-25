@@ -2,9 +2,10 @@ import cv2 as cv
 import numpy as np
 from PyQt5 import QtGui, QtCore
 
+import conntypes
 import ui, ui.tabs, ui.canvas
 
-from xform import xformtype, XFormType, XFormException
+from xform import xformtype, XFormType, XFormException, Datum
 from xforms.tabimage import TabImage
 from pancamimage import ImageCube
 
@@ -26,7 +27,7 @@ class XformGrey(XFormType):
         node.useCVConversion = False
 
     def perform(self, node):
-        img = node.getInput(0)
+        img = node.getInput(0, conntypes.IMG)
         if img is None:
             node.img = None
         else:
@@ -46,7 +47,7 @@ class XformGrey(XFormType):
                 out = cv.transform(img.img, mat)
                 node.img = ImageCube(out, node.mapping, [sources])
 
-        node.setOutput(0, node.img)
+        node.setOutput(0, Datum(conntypes.IMG, node.img))
 
 
 class TabGrey(ui.tabs.Tab):

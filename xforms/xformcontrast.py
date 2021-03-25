@@ -1,8 +1,9 @@
 import cv2 as cv
 import numpy as np
 
+import conntypes
 import ui.tabs
-from xform import xformtype, XFormType
+from xform import xformtype, XFormType, Datum
 
 
 # performs contrast stretching on a single channel. The image is a (h,w) numpy array.
@@ -70,7 +71,7 @@ class XformContrast(XFormType):
     # and on loading.
     def perform(self, node):
         # get the input (index 0, our first and only input)
-        img = node.getInput(0)
+        img = node.getInput(0, conntypes.IMG)
         if img is None:
             # there is no image, so the stored image (and output) will be no image
             node.img = None
@@ -93,7 +94,7 @@ class XformContrast(XFormType):
         # cause all nodes "downstream" to perform their actions.
         if node.img is not None:
             node.img.setMapping(node.mapping)
-        node.setOutput(0, node.img)
+        node.setOutput(0, Datum(conntypes.IMG, node.img))
 
 
 # This is the user interface for the node type, which is created when we double click on a node.

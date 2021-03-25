@@ -92,7 +92,7 @@ def wav2RGB(wavelength):
     return [(SSS*R), (SSS*G), (SSS*B)]
 
 
-## Array of Pancam filters - note: solar filters omitted
+## Array of Pancam filters - data from Coates, A. J., et al. "The PanCam instrument for the ExoMars rover." Astrobiology 17.6-7 (2017): 511-541
 PANCAM_FILTERS = [
     Filter(570, 12, .989, "L01", "G04"),
     Filter(530, 15, .957, "L02", "G03"),
@@ -103,6 +103,9 @@ PANCAM_FILTERS = [
     Filter(640, 100, .993, "L07", "C01L"),
     Filter(540, 80, .988, "L08", "C02L"),
     Filter(440, 120, .983, "L09", "C03L"),
+    Filter(925, 5, 0.000000552, "L10", "S01"),
+    Filter(935, 5, 0.000000854, "L11", "S02"),
+
     Filter(840, 25, .989, "R01", "G09"),
     Filter(780, 20, .981, "R02", "G08"),
     Filter(740, 15, .983, "R03", "G07"),
@@ -112,6 +115,8 @@ PANCAM_FILTERS = [
     Filter(640, 100, .993, "R07", "C01R"),
     Filter(540, 80, .988, "R08", "C02R"),
     Filter(440, 120, .983, "R09", "C03R"),
+    Filter(450, 5, 0.000001356, "R10", "S03"),
+    Filter(670, 5, 0.000000922, "R11", "S04")
 ]
 
 ## Array of AUPE filters - I've added the lower-case letters myself;
@@ -120,6 +125,7 @@ AUPE_FILTERS = [
     Filter(440, 120, 1, "L01", "C03L"),
     Filter(540, 80, 1, "L02", "C02L"),
     Filter(640, 100, 1, "L03", "C01L"),
+
     Filter(438, 24, 1, "L04", "G0a"),
     Filter(500, 24, 1, "L05", "G0b"),
     Filter(532, 10, 1, "L06", "G0c"),
@@ -128,15 +134,19 @@ AUPE_FILTERS = [
     Filter(671, 10, 1, "L09", "G0f"),
     Filter(425, 25, 1, "L10", "G0g"),
     Filter(400, 50, 1, "L11", "G0h"),
+
     Filter(440, 120, 1, "R01", "C03R"),
     Filter(540, 80, 1, "R02", "C02R"),
     Filter(640, 100, 1, "R03", "C01R"),
+
     Filter(740, 13, 1, "R04", "G1a"),
     Filter(780, 37, 1, "R05", "G1b"),
     Filter(832, 10, 1, "R06", "G1c"),
     Filter(900, 50, 1, "R07", "G1d"),
     Filter(950, 50, 1, "R08", "G1e"),
     Filter(1000, 50, 1, "R09", "G1f"),
+
+    Filter(525, 50, 1, "R10", "GUESS"),  # THIS IS A GUESS
 ]
 
 ## dummy filter for when we have trouble finding the value

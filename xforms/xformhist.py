@@ -1,6 +1,7 @@
 import cv2 as cv
 import numpy as np
 
+import conntypes
 import ui
 import ui.canvas
 import ui.mplwidget
@@ -33,7 +34,7 @@ class XFormHistogram(XFormType):
         node.bincount = 256
 
     def perform(self, node):
-        img = node.getInput(0)
+        img = node.getInput(0, conntypes.IMG)
         if img is not None:
             subimg = img.subimage()
             mask = ~subimg.mask

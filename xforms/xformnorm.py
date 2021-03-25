@@ -1,8 +1,9 @@
 import cv2 as cv
 import numpy as np
 
+import conntypes
 import ui, ui.tabs, ui.canvas
-from xform import xformtype, XFormType, XFormException
+from xform import xformtype, XFormType, XFormException, Datum
 from xforms.tabimage import TabImage
 from pancamimage import ImageCube
 
@@ -43,7 +44,7 @@ class XformNormImage(XFormType):
         node.img = None
 
     def perform(self, node):
-        img = node.getInput(0)
+        img = node.getInput(0, conntypes.IMG)
         node.img = None
         if img is not None:
             if node.enabled:
@@ -55,4 +56,4 @@ class XformNormImage(XFormType):
             else:
                 node.img = img
             node.img.setMapping(node.mapping)
-        node.setOutput(0, node.img)
+        node.setOutput(0, Datum(conntypes.IMG, node.img))

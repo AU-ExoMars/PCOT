@@ -3,10 +3,11 @@ from functools import partial
 import numpy as np
 from PyQt5.QtWidgets import QGridLayout, QComboBox, QLabel
 
+import conntypes
 import ui
 from channelsource import IChannelSource
 from pancamimage import ImageCube
-from xform import xformtype, XFormType, XFormException
+from xform import xformtype, XFormType, XFormException, Datum
 import cv2 as cv
 
 NUMCHANS = 6
@@ -21,7 +22,7 @@ def extractChannel(node, idx, w, h):
         # remember to subtract 1 from the index, then get the (imgidx,channel)
         # pair and read that image
         imgidx, chan = node.chanIdxLists[idx - 1]
-        img = node.getInput(imgidx)
+        img = node.getInput(imgidx, conntypes.IMG)
         if img is None:
             raise XFormException('BUG', "Unable to read image from input")
         source = img.sources[chan]
@@ -46,11 +47,13 @@ def performOp(op, img1, img2):
 
 @xformtype
 class XFormCombine(XFormType):
+    """Generates a new image whose channels are arithmetical operations of channels of
+    input images"""
     def __init__(self):
         super().__init__("combine", "maths", "0.0.0")
         for x in range(0, NUMCHANS):
-            self.addInputConnector(str(x), "img")
-        self.addOutputConnector("", "img")
+            self.addInputConnector(str(x), "img", 'input image '+str(x))
+        self.addOutputConnector("", "img",'the output image')
         self.autoserialise = ('op1chan', 'op2chan', 'operators')
 
     def createTab(self, n, w):
@@ -73,7 +76,7 @@ class XFormCombine(XFormType):
         # work out max size too
         w, h = 0, 0
         for i in range(NUMCHANS):
-            inp = node.getInput(i)
+            inp = node.getInput(i, conntypes.IMG)
             if inp is not None:
                 # there's an image, grand. We have to populate a list for each image, so it's there for the
                 # combo boxes later.
@@ -116,7 +119,7 @@ class XFormCombine(XFormType):
 
             out = ImageCube(out, node.mapping, sources=imgsources)
             node.img = out
-            node.setOutput(0, out)
+            node.setOutput(0, Datum(conntypes.IMG, node.img))
 
 
 def shortLab(s):

@@ -11,10 +11,20 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QBrush, QLinearGradient
 
 # Here is where new connection types are registered and tested
-# for compatibility: some types may be a "subclass" of others (notably
-# the "img" types). I'm aware that this should really be model-only,
+# for compatibility: I'm aware that this should really be model-only,
 # but there's UI stuff in here too because (a) I don't want to separate it out and
 # (b) there isn't much more to a type than its name.
+
+ANY = 'any'
+
+IMG = 'img'
+IMGRGB = 'imgrgb'
+IMGGREY = 'imggrey'
+
+ELLIPSE = 'ellipse'
+RECT = 'rect'
+NUMBER = 'number'
+
 
 ## dictionary of name -> brush for connection pad drawing
 
@@ -33,14 +43,13 @@ def quickGrad(c1, c2, c3, finalC):
     return grad
 
 
-brushDict['any'] = Qt.red
-brushDict['imgrgb'] = quickGrad(Qt.red, Qt.green, Qt.blue, QColor(50, 50, 50))
-brushDict['imggrey'] = Qt.gray
-brushDict['imgstrange'] = QColor(100, 100, 200)  # any image with neither 1 nor 3 channels
-brushDict['img'] = Qt.blue
-brushDict['ellipse'] = Qt.cyan
-brushDict['rect'] = Qt.cyan
-brushDict['number'] = Qt.darkGreen
+brushDict[ANY] = Qt.red
+brushDict[IMGRGB] = quickGrad(Qt.red, Qt.green, Qt.blue, QColor(50, 50, 50))
+brushDict[IMGGREY] = Qt.gray
+brushDict[IMG] = Qt.blue
+brushDict[ELLIPSE] = Qt.cyan
+brushDict[RECT] = Qt.cyan
+brushDict[NUMBER] = Qt.darkGreen
 
 ## complete list of all types
 types = [x for x in brushDict]
@@ -68,9 +77,9 @@ def isCompatibleConnection(outtype, intype):
         return None
 
     # image inputs accept all images
-    if intype == 'img':
+    if intype == IMG:
         return 'img' in outtype
-    elif intype == 'any':  # accepts anything
+    elif intype == ANY:  # accepts anything
         return True
     else:
         # otherwise has to match exactly

@@ -162,9 +162,7 @@ class ChannelMapping:
 
 ## an image - just a numpy array (the image) and a list of ROI objects. The array
 # has shape either (h,w) (for a single channel) or (h,w,n) for multiple channels.
-# In connections (see conntypes.py), single channel images are "imggrey" while
-# multiple channels are "imgrgb" for RGB images (3 channels) or "imgstrange"
-# for any other number of channels. Images are 32-bit float.
+# Images are 32-bit float.
 # An RGB mapping can be provided, saying how the image should be represented in RGB (via the rgb() method)
 # There is also a list of source tuples, (filename,filter), indexed by channel.
 

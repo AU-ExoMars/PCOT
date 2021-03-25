@@ -1,11 +1,12 @@
 import cv2 as cv
 import numpy as np
 
+import conntypes
 import ui, ui.tabs, ui.canvas
 import utils.cluster
 from channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, BLUEINTERNALSOURCE
 
-from xform import xformtype, XFormType, XFormException
+from xform import xformtype, XFormType, XFormException, Datum
 from xforms.tabimage import TabImage
 from pancamimage import ImageCube
 
@@ -28,7 +29,7 @@ class XformEllipseDetect(XFormType):
         node.data = None
 
     def perform(self, node):
-        img = node.getInput(0)
+        img = node.getInput(0, conntypes.IMG)
         if img is None:
             node.img = None
         else:
@@ -42,8 +43,8 @@ class XformEllipseDetect(XFormType):
             node.img = ImageCube(i, rgbMapping=node.mapping, sources=[{REDINTERNALSOURCE},
                                                                       {GREENINTERNALSOURCE},
                                                                       {BLUEINTERNALSOURCE}])
-        node.setOutput(0, node.img)
-        node.setOutput(1, node.data)
+        node.setOutput(0, Datum(conntypes.IMG, node.img))
+        node.setOutput(1, Datum(conntypes.RECT, node.data))
 
 
 def ellipseDetect(img):

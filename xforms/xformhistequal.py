@@ -1,8 +1,9 @@
 import cv2 as cv
 import numpy as np
 
+import conntypes
 import ui, ui.tabs, ui.canvas
-from xform import xformtype, XFormType
+from xform import xformtype, XFormType, Datum
 from xforms.tabimage import TabImage
 from pancamimage import ImageCube
 
@@ -57,7 +58,7 @@ class XformHistEqual(XFormType):
         node.img = None
 
     def perform(self, node):
-        img = node.getInput(0)
+        img = node.getInput(0, conntypes.IMG)
         if img is None:
             # can't equalize a non-existent image!
             node.img = None
@@ -95,4 +96,4 @@ class XformHistEqual(XFormType):
             node.img = img.modifyWithSub(subimage, equalized)
         if node.img is not None:
             node.img.setMapping(node.mapping)
-        node.setOutput(0, node.img)
+        node.setOutput(0, Datum(conntypes.IMG, node.img))

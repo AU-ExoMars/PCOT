@@ -1,6 +1,7 @@
+import conntypes
 import pancamimage
 
-from xform import xformtype, XFormType
+from xform import xformtype, XFormType, Datum
 from xforms.tabimage import TabImage
 
 
@@ -23,5 +24,5 @@ class XformCalib(XFormType):
         node.data = None
 
     def perform(self, node):
-        node.img = node.getInput(0)
-        node.setOutput(0, node.img)
+        node.img = node.getInput(0, conntypes.IMG)
+        node.setOutput(0, Datum(conntypes.IMG, node.img))

@@ -4,9 +4,10 @@ from PyQt5.QtCore import Qt
 import cv2 as cv
 import numpy as np
 
+import conntypes
 import ui, ui.tabs, ui.canvas, ui.mplwidget
 from channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, BLUEINTERNALSOURCE
-from xform import xformtype, XFormType, XFormException
+from xform import xformtype, XFormType, XFormException, Datum
 from pancamimage import ImageCube, ChannelMapping
 
 
@@ -75,7 +76,7 @@ class XformGradient(XFormType):
         node.img = None
 
     def perform(self, node):
-        img = node.getInput(0)
+        img = node.getInput(0, conntypes.IMG)
         if img is None:
             node.img = None
         elif node.enabled:
@@ -94,7 +95,7 @@ class XformGradient(XFormType):
                 raise XFormException('DATA', 'Ellipse detection must be on greyscale images')
         else:
             node.img = img
-        node.setOutput(0, node.img)
+        node.setOutput(0, Datum(conntypes.IMG, node.img))
 
 
 class TabGradient(ui.tabs.Tab):

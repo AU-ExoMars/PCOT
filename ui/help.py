@@ -4,9 +4,12 @@
 
 from xform import XFormException
 
+TABLEHEADERATTRS = 'width="100" align="left"'
+TABLEROWATTRS = 'width="100" align="left"'
+
 
 ## generate full help given an XFormType and any error message
-def help(xt, errorState: XFormException):
+def getHelpHTML(xt, errorState: XFormException):
     if xt.__doc__ is None:
         s = '<font color="red">No help text is available</font>'
     else:
@@ -16,19 +19,23 @@ def help(xt, errorState: XFormException):
     if len(xt.inputConnectors) > 0:
         s += '<br><br><font color="blue">Inputs</font><br>'
         s += '<table>'
-        s += tablerow(['Index', 'Name', 'Type', 'Description'], 'th')
+        s += tablerow(['Index', 'Name', 'Type', 'Description'], 'th', attrs=TABLEHEADERATTRS)
         for i in range(0, len(xt.inputConnectors)):
             n, t, desc = xt.inputConnectors[i]
-            s += tablerow([i, n, t, desc], 'td')
+            s += tablerow([i, n, t, desc], 'td', attrs=TABLEROWATTRS)
         s += '</table><br>'
 
     if len(xt.outputConnectors) > 0:
         s += '<br><br><font color="blue">Outputs</font><br>'
         s += '<table>'
-        s += tablerow(['Index', 'Name', 'Type', 'Description'], 'th')
+        s += tablerow(['Index', 'Name', 'Type', 'Description'], 'th', attrs=TABLEHEADERATTRS)
         for i in range(0, len(xt.outputConnectors)):
             n, t, desc = xt.outputConnectors[i]
-            s += tablerow([i, n, t, desc], 'td')
+            if n == "":
+                n = "(none)"
+            if desc == "":
+                desc = "(none)"
+            s += tablerow([i, n, t, desc], 'td', attrs=TABLEROWATTRS)
         s += '</table><br>'
 
     if errorState is not None:
@@ -37,5 +44,7 @@ def help(xt, errorState: XFormException):
 
 
 ## helper for HTML table rows - takes a list of strings and generates a table row.
-def tablerow(lst, tag):
-    return '<tr>' + ''.join(['<{}>{}</{}>'.format(tag, x, tag) for x in lst]) + '</tr>'
+def tablerow(lst, tag, attrs=""):
+    s = '<tr>' + ''.join(['<{}>{}</{}>'.format(tag+' '+attrs, x, tag) for x in lst]) + '</tr>'
+#    print(s)
+    return s

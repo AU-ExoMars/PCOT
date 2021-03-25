@@ -1,9 +1,10 @@
 import cv2 as cv
 import numpy as np
 
+import conntypes
 import ui.tabs, ui.canvas
 from channelsource import BLUEINTERNALSOURCE, GREENINTERNALSOURCE, REDINTERNALSOURCE
-from xform import xformtype, XFormType
+from xform import xformtype, XFormType, Datum
 from xforms.tabimage import TabImage
 from pancamimage import ImageCube
 import functools
@@ -32,9 +33,10 @@ class XformMerge(XFormType):
         node.addblack = True
 
     def perform(self, node):
-        r = node.getInput(0)
-        g = node.getInput(1)
-        b = node.getInput(2)
+        r = node.getInput(0, conntypes.IMG)
+        g = node.getInput(1, conntypes.IMG)
+        b = node.getInput(2, conntypes.IMG)
+
         node.img = None  # preset the internal value
 
         # get shapes; this still works because Image has shape
@@ -80,7 +82,7 @@ class XformMerge(XFormType):
             # and we just bundle sources together. We use None for images with no source.
             sources = [x.sources[0] for x in lst]
             node.img = ImageCube(cv.merge([x.img for x in lst]), node.mapping, sources)
-        node.setOutput(0, node.img)
+        node.setOutput(0, Datum(conntypes.IMG, node.img))
 
 
 class TabMerge(ui.tabs.Tab):

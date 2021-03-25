@@ -1,12 +1,12 @@
 import cv2 as cv
 
-
+import conntypes
 import ui.tabs
 import utils.colour
 import utils.text
 from channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, BLUEINTERNALSOURCE
 from pancamimage import ImageCube, ChannelMapping
-from xform import xformtype, XFormType
+from xform import xformtype, XFormType, Datum
 
 
 # this transform takes an image and places it at a position inside another image.
@@ -43,9 +43,9 @@ class XformInset(XFormType):
         node.colour = (1, 1, 0)
 
     def perform(self, node):
-        image = node.getInput(0)  # this is the main image
-        inset = node.getInput(1)  # this is the thing we're going to insert
-        inrect = node.getInput(2)  # this is the rectangle
+        image = node.getInput(0, conntypes.IMG)  # this is the main image
+        inset = node.getInput(1, conntypes.IMG)  # this is the thing we're going to insert
+        inrect = node.getInput(2, conntypes.RECT)  # this is the rectangle
 
         # if there is no input rect we use the rubberbanded one set by the tab
         if inrect is None:
@@ -91,7 +91,7 @@ class XformInset(XFormType):
                                                       [{REDINTERNALSOURCE},
                                                        {GREENINTERNALSOURCE},
                                                        {BLUEINTERNALSOURCE}])
-        node.setOutput(0, node.img)
+        node.setOutput(0, Datum(conntypes.IMG, node.img))
 
 
 class TabInset(ui.tabs.Tab):

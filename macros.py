@@ -61,7 +61,7 @@ class XFormMacroConnector(XFormType):
         self.autoserialise = ('idx', 'conntype')
 
     def init(self, node):
-        node.data = None
+        node.datum = None
 
     ## called from XForm.serialise, saves the macro name
     def serialise(self, node):
@@ -94,29 +94,29 @@ class XFormMacroConnector(XFormType):
 class XFormMacroIn(XFormMacroConnector):
     def __init__(self):
         super().__init__("in")
-        self.addOutputConnector("", "any")
+        self.addOutputConnector("", conntypes.ANY)
 
     ## perform sets the output from data set in XFormMacro.perform())
     def perform(self, node):
-        node.setOutput(0, node.data)
+        node.setOutput(0, node.datum)
         print("DUMP OF INCONNECTOR ", node.name, node)
         node.dump()
-        print("CONNECTOR OUTPUT", node.data)
+        print("CONNECTOR OUTPUT", node.datum)
 
 
 ## The macro output connector (used inside macro prototypes)    
 class XFormMacroOut(XFormMacroConnector):
     def __init__(self):
         super().__init__("out")
-        self.addInputConnector("", "any")
+        self.addInputConnector("", conntypes.ANY)
 
     ## perform stores its input in its data field, ready for
     # XFormMacro.perform() to read it
     def perform(self, node):
-        node.data = node.getInput(0)
+        node.datum = node.getInput(0)
         print("DUMP OF INCONNECTOR ", node.name, node)
         node.dump()
-        print("CONNECTOR OUTPUT", node.data)
+        print("CONNECTOR OUTPUT", node.datum)
 
 
 # register them
@@ -316,7 +316,7 @@ class XFormMacro(XFormType):
             # set the input connector's data ready for its perform() to copy
             # into the output
             print("SETTING OUTPUT IN CONNECTOR", conn, " TO ", data)
-            conn.data = data
+            conn.datum = data
 
         # 3 - run the macro. You might think you could do this by just running the inputs
         # as you set them (recursively running their children) but that would omit non-input
@@ -341,7 +341,7 @@ class XFormMacro(XFormType):
                 ui.error("cannot find output node in instance graph of macro")
             # the output connector will have set its data field to its input
             # set the node's output to that data
-            node.setOutput(i, conn.data)
+            node.setOutput(i, conn.datum)
 
 
 ## this is the UI for macros, and it should probably not be here.

@@ -4,8 +4,9 @@ from PyQt5.QtCore import Qt
 import cv2 as cv
 import numpy as np
 
+import conntypes
 import ui, ui.tabs, ui.canvas
-from xform import xformtype, XFormType, XFormException
+from xform import xformtype, XFormType, XFormException, Datum
 from xforms.tabimage import TabImage
 from pancamimage import ImageCube
 
@@ -29,7 +30,7 @@ class XformDecorr(XFormType):
         node.img = None
 
     def perform(self, node):
-        img = node.getInput(0)
+        img = node.getInput(0, conntypes.IMG)
         if img is None:
             node.img = None
         elif not node.enabled:
@@ -42,7 +43,7 @@ class XformDecorr(XFormType):
             node.img = img.modifyWithSub(subimage, newimg)
         if node.img is not None:
             node.img.setMapping(node.mapping)
-        node.setOutput(0, node.img)
+        node.setOutput(0, Datum(conntypes.IMG, node.img))
 
 
 def decorrstretch(A, mask):

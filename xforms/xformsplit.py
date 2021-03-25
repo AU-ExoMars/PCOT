@@ -1,8 +1,9 @@
 import cv2 as cv
 import numpy as np
 
+import conntypes
 import ui, ui.tabs, ui.canvas
-from xform import xformtype, XFormType
+from xform import xformtype, XFormType, Datum
 from pancamimage import ImageCube, ROIRect, ChannelMapping
 
 
@@ -33,7 +34,7 @@ class XformSplit(XFormType):
         node.mappingB = ChannelMapping()
 
     def perform(self, node):
-        img = node.getInput(0)
+        img = node.getInput(0, conntypes.IMG)
         if img is not None and img.channels == 3:
             # image MUST have three sources - the input type should insure this,
             # because we only accept RGB
@@ -43,9 +44,9 @@ class XformSplit(XFormType):
             node.red = ImageCube(r, None, [img.sources[0]])
             node.green = ImageCube(g, None, [img.sources[1]])
             node.blue = ImageCube(b, None, [img.sources[2]])
-            node.setOutput(0, node.red)
-            node.setOutput(1, node.green)
-            node.setOutput(2, node.blue)
+            node.setOutput(0, Datum(conntypes.IMG,node.red))
+            node.setOutput(1, Datum(conntypes.IMG,node.green))
+            node.setOutput(2, Datum(conntypes.IMG,node.blue))
         else:
             node.red = None
             node.green = None

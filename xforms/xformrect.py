@@ -2,18 +2,19 @@ import cv2 as cv
 
 import cv2 as cv
 
+import conntypes
 import ui.canvas
 import ui.tabs
 import utils.colour
 import utils.text
 from pancamimage import ImageCube, ROIRect, ChannelMapping
-from xform import xformtype, XFormType
+from xform import xformtype, XFormType, Datum
 
 
 @xformtype
 class XformRect(XFormType):
-    """Add a rectangular ROI to an image. At the next operation all ROIs will be grouped together
-    used to perform the operation and discarded."""
+    """Add a rectangular ROI to an image. At the next node all ROIs will be grouped together,
+    used to perform the operation, and discarded."""
 
     # constants enumerating the outputs
     OUT_IMG = 0
@@ -26,7 +27,8 @@ class XformRect(XFormType):
         self.addInputConnector("", "img")
         self.addOutputConnector("img", "img", "image with ROI")  # image+roi
         self.addOutputConnector("crop", "img", "image cropped to ROI")  # cropped image
-        self.addOutputConnector("ann", "img", "image with ROI, with added annotations around ROI")  # annotated image
+        self.addOutputConnector("ann", "img",
+                                "image as RGB with ROI, with added annotations around ROI")  # annotated image
         self.addOutputConnector("rect", "rect", "the rectangle data")  # rectangle (just the ROI)
         self.autoserialise = ('croprect', 'caption', 'captiontop', 'fontsize', 'fontline', 'colour')
 
@@ -43,7 +45,7 @@ class XformRect(XFormType):
         node.colour = (1, 1, 0)
 
     def perform(self, node):
-        img = node.getInput(0)
+        img = node.getInput(0, conntypes.IMG)
         if img is None:
             # no image
             node.setOutput(self.OUT_IMG, None)
@@ -58,11 +60,11 @@ class XformRect(XFormType):
             rgb = img.rgbImage()
             if node.croprect is None:
                 # no rectangle, but we still need to use the RGB for annotation
-                node.rgbImage = rgb # the RGB image shown in the canvas (using the "premapping" idea)
+                node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
                 node.img = img  # the original image
-                node.setOutput(self.OUT_IMG, img)
-                node.setOutput(self.OUT_CROP, img)
-                node.setOutput(self.OUT_ANNOT, rgb)
+                node.setOutput(self.OUT_IMG, Datum(conntypes.IMG, img))
+                node.setOutput(self.OUT_CROP, Datum(conntypes.IMG, img))
+                node.setOutput(self.OUT_ANNOT, Datum(conntypes.IMG, rgb))
                 node.setOutput(self.OUT_RECT, None)
             else:
                 # need to generate image + ROI
@@ -75,12 +77,13 @@ class XformRect(XFormType):
                 roi = ROIRect(x, y, w, h)  # create the ROI
                 o.rois.append(roi)  # and add to the image
                 if node.isOutputConnected(self.OUT_IMG):
-                    node.setOutput(0, o)  # output image and ROI
+                    node.setOutput(0, Datum(conntypes.IMG, o))  # output image and ROI
                 if node.isOutputConnected(self.OUT_CROP):
                     # output cropped image: this uses the ROI rectangle to
                     # crop the image; we get a numpy image out which we wrap.
                     # with no ROIs
-                    node.setOutput(self.OUT_CROP, ImageCube(roi.crop(o), node.mapping, o.sources))
+                    node.setOutput(self.OUT_CROP,
+                                   Datum(conntypes.IMG, ImageCube(roi.crop(o), node.mapping, o.sources)))
 
                 # now make an annotated image by drawing on the RGB image we got earlier
                 annot = rgb.img
@@ -99,9 +102,9 @@ class XformRect(XFormType):
                 # but we still store the original
                 node.img = img
                 # output the annotated image
-                node.setOutput(self.OUT_ANNOT, node.rgbImage)
+                node.setOutput(self.OUT_ANNOT, Datum(conntypes.IMG, node.rgbImage))
                 # and the raw cropped rectangle
-                node.setOutput(self.OUT_RECT, node.croprect)
+                node.setOutput(self.OUT_RECT, Datum(conntypes.RECT, node.croprect))
 
 
 class TabRect(ui.tabs.Tab):

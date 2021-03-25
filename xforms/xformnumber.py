@@ -1,8 +1,9 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import Qt
 
+import conntypes
 import ui
-from xform import xformtype, XFormType
+from xform import xformtype, XFormType, Datum
 
 validKeys = {Qt.Key_0, Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5, Qt.Key_6, Qt.Key_7, Qt.Key_8, Qt.Key_9,
              Qt.Key_Period, Qt.Key_Minus,
@@ -27,10 +28,11 @@ class GNumberText(QtWidgets.QGraphicsTextItem):
         # return means "go!"
         if event.key() == Qt.Key_Return:
             try:
-                print("BLAP")
                 v = self.toPlainText()
                 self.node.val = float(v)
                 self.clearFocus()
+                # we also have to tell the graph to perform from here
+                self.node.graph.performNodes(self.node)
             except ValueError:
                 ui.error("cannot convert text")
             event.accept()
@@ -46,11 +48,11 @@ class GNumberText(QtWidgets.QGraphicsTextItem):
 
 @xformtype
 class XFormNumber(XFormType):
+    """Generates a numeric value which can be typed directly into the node's box in the graph"""
     def __init__(self):
         super().__init__("number", "maths", "0.0.0")
         self.addOutputConnector("", "number")
         self.autoserialise = ('val',)
-        self.hasEnable = True
 
     ## build the text element of the graph scene object for the node. By default, this
     # will just create static text, but can be overridden.
@@ -68,4 +70,4 @@ class XFormNumber(XFormType):
         node.val = 0
 
     def perform(self, node):
-        node.setOutput(0, node.val)
+        node.setOutput(0, Datum(conntypes.NUMBER, node.val))

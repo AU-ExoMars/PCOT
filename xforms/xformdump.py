@@ -20,16 +20,15 @@ class XFormDump(XFormType):
         node.tp = "unconnected"
         
     def perform(self,node):
-        # copy the input
-        node.data = node.getInput(0)
-        # but now we want to know the actual type. We hack into the model a bit here.
-        x = node.inputs[0]
-        if x is not None:
-            n,i = x
-            node.tp = n.getOutputType(i)
-        else:
+        d = node.getInput(0)
+        if d is None:
             node.tp = "unconnected"
-        
+            node.data = "None"
+        else:
+            node.tp = d.tp
+            node.data = str(d.val)
+
+
 class TabDump(ui.tabs.Tab):
     def __init__(self,node,w):
         super().__init__(w,node,'assets/tabdump.ui')

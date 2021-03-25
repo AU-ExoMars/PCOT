@@ -1,6 +1,7 @@
 import cv2 as cv
 import numpy as np
 
+import conntypes
 import ui, ui.tabs, ui.canvas
 from xform import xformtype, XFormType
 from xforms.tabimage import TabImage
@@ -33,7 +34,7 @@ class XformSink(XFormType):
         # get the input (index 0, our first and only input). That's all - we just store a reference
         # to the image in the node. The TabImage knows how to display nodes with "img" attributes,
         # and does the rest.
-        img = node.getInput(0)
+        img = node.getInput(0, conntypes.IMG)
         if img is not None:
             img = ImageCube(img.img, node.mapping, img.sources)
         node.img = img

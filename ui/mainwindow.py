@@ -10,7 +10,8 @@ import time
 import traceback
 from typing import List, Optional, OrderedDict, ClassVar
 
-from PyQt5 import QtWidgets, uic
+from PyQt5 import QtWidgets, uic, QtGui
+from PyQt5.QtCore import Qt
 
 from ui import graphscene, graphview
 import macros
@@ -34,10 +35,30 @@ def getUserName():
 
 class InputSelectButton(QtWidgets.QPushButton):
     def __init__(self, n, inp):
-        text = "Input "+str(n)
+        text = "Input " + str(n)
         self.input = inp
         super().__init__(text=text)
         self.clicked.connect(lambda: self.input.openWindow())
+
+
+class HelpWindow(QtWidgets.QDialog):
+    def __init__(self, parent, node):
+        super().__init__(parent=parent)
+        self.setModal(True)
+        node.helpwin = self
+        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        layout = QtWidgets.QVBoxLayout(self)
+        txt = ui.help.getHelpHTML(node.type, node.error)
+        self.setWindowTitle("Help for '{}'".format(node.type.name))
+        wid = QtWidgets.QLabel()
+        wid.setText(txt)
+        layout.addWidget(wid)
+
+#        button = QtWidgets.QPushButton("Close")
+#        button.clicked.connect(lambda: self.close())
+#        layout.addWidget(button)
+
+        self.show()
 
 
 ## The main window class
@@ -253,7 +274,7 @@ class MainUI(ui.tabs.DockableTabWindow):
                     f.write(s)
             except Exception as e:
                 ui.error("cannot save file {}: {}".format(fname, e))
-            ui.msg("File saved : "+fname)
+            ui.msg("File saved : " + fname)
         except Exception as e:
             traceback.print_exc()
             ui.error("cannot generate save data: {}".format(e))
@@ -392,15 +413,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     def openHelp(self, node):
         if node.helpwin is not None:
             node.helpwin.close()  # close existing window you may have left open :)
-        win = QtWidgets.QMainWindow()
-        wid = QtWidgets.QLabel()
-        win.setCentralWidget(wid)
-        win.setWindowTitle("Help for '{}'".format(node.type.name))
-        node.helpwin = win  # just to stop GC
-        txt = ui.help.help(node.type, node.error)
-        wid.setText(txt)
-        win.setMinimumSize(400, 50)
-        win.show()
+        win = HelpWindow(self, node)
 
     ## add a macro connector, only should be used on macro prototypes   
     def addMacroConnector(self, type):

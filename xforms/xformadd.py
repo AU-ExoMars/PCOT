@@ -2,10 +2,11 @@ import cv2 as cv
 import numpy as np
 from PyQt5 import QtGui
 
+import conntypes
 import ui.number
 import ui.tabs
 from pancamimage import ImageCube
-from xform import xformtype, XFormType, XFormException
+from xform import xformtype, XFormType, XFormException, Datum
 
 
 @xformtype
@@ -34,8 +35,8 @@ class XFormAdd(XFormType):
         node.img = None
 
     def perform(self, node):
-        img1 = node.getInput(0)
-        img2 = node.getInput(1)
+        img1 = node.getInput(0, conntypes.IMG)
+        img2 = node.getInput(1, conntypes.IMG)
 
         if img1 is None and img2 is None:
             img = None
@@ -99,7 +100,7 @@ class XFormAdd(XFormType):
                 img.setMapping(node.mapping)
                 img.sources = sources
         node.img = img
-        node.setOutput(0, img)
+        node.setOutput(0, Datum(conntypes.IMG, img))
 
         # TODO - ROIs
 

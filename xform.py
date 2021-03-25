@@ -273,6 +273,24 @@ def serialiseConn(c, connSet):
     return None
 
 
+# we might change this later, but at the moment a data type is just a string.
+DatumType = str
+
+
+## a piece of data sitting in a node's output, to be read by its input.
+class Datum:
+    ## @var tp
+    # the data type
+    tp: DatumType
+    ## @var val
+    # the data value
+    val: Any
+
+    def __init__(self, t: DatumType, v: Any):
+        self.tp = t
+        self.val = v
+
+
 ## an actual instance of a transformation, often called a "node".
 class XForm:
     # type hints for attributes, here mainly as documentation
@@ -295,8 +313,8 @@ class XForm:
     children: Dict['XForm', int]
 
     ## @var outputs
-    # the actual output data from this node
-    outputs: List[Any]
+    # the actual output data from this node as a Datum object.
+    outputs: List[Datum]
 
     ## @var outputTypes
     # the "overriding" output type (since an "img" output (say) may become
@@ -529,7 +547,8 @@ class XForm:
         # run the additional deserialisation method
         self.type.deserialise(self, d)
 
-    ## return the actual type of an output, taking account of overrides (node outputTypes)
+    ## return the actual type of an output, taking account of overrides (node outputTypes). Note that
+    # this returns the *connection* type, not the *datum* type stored in that connection.
     def getOutputType(self, i):
         if 0 <= i < len(self.outputs):
             if self.outputTypes[i] is None:
@@ -537,7 +556,9 @@ class XForm:
             else:
                 return self.outputTypes[i]
 
-    ## return the actual type of an input, taking account of overrides (node inputTypes)
+    ## return the actual type of an input, taking account of overrides (node inputTypes). Again, this is
+    # the *connection* type, not the *datum* type stored in that connection (or rather the output to
+    # which it is connected)
     def getInputType(self, i):
         if 0 <= i < len(self.inputs):
             if self.inputTypes[i] is None:
@@ -555,7 +576,7 @@ class XForm:
                         return True
         return False
 
-    ## this should be used to change an output type is generateOutputTypes
+    ## this should be used to change an output type in generateOutputTypes
     def changeOutputType(self, index, tp):
         self.outputTypes[index] = tp
         if self.outrects[index] is not None:
@@ -648,8 +669,8 @@ class XForm:
                         # the child counts are irrelevant and don't need updating
                         n.inputs[i] = None
 
-    ## change an output. This should be called by the type's perform method.
-    def setOutput(self, i, data):
+    ## change an output. This should be called by the type's perform method. Takes the type and datum.
+    def setOutput(self, i:int, data:Datum):
         self.outputs[i] = data
 
     ## used in connection            
@@ -715,13 +736,21 @@ class XForm:
             traceback.print_exc()
             ui.logXFormException(self, e)
 
-    ## get the value of an input
-    def getInput(self, i):
+    ## get the value of an input. Optional type; if passed in will check for that type and dereference the contents if
+    # matched, else returning null.
+    def getInput(self, i: int, tp=None) -> Datum:
         if self.inputs[i] is None:
             return None
         else:
             n, i = self.inputs[i]
-            return n.outputs[i]
+            o = n.outputs[i]
+            if tp is not None:
+                if o.tp == tp:
+                    return o.val
+                else:
+                    return None
+            else:
+                return o
 
     ## ensure connections are valid and break them if not
     def ensureConnectionsValid(self):
