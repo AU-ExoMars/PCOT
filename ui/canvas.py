@@ -10,6 +10,8 @@ from PyQt5.QtCore import Qt
 
 import cv2 as cv
 import numpy as np
+
+import ui
 from channelsource import IChannelSource
 from pancamimage import ImageCube, ChannelMapping
 
@@ -77,8 +79,13 @@ class InnerCanvas(QtWidgets.QWidget):
             self.desc = img.getDesc(self.getGraph())
             if not isPremapped:
                 img = img.rgb()  # convert to RGB
+                if img is None:
+                    ui.error("Unusual - the RGB representation is None")
             else:
                 img = img.img  # already done
+                if img is None:
+                    ui.error("Unusual - the image has no numpy array")
+
 
             # only reset the image zoom if the shape has changed
             if self.img is None or self.img.shape[:2] != img.shape[:2]:
@@ -364,7 +371,9 @@ class Canvas(QtWidgets.QWidget):
 
     def display(self, img: ImageCube, alreadyRGBMappedImageSource=None, nodeToPerform=None):
         if self.mapping is None:
-            raise Exception("Mapping not set in ui.canvas.Canvas.display() - should be done in tab's ctor")
+            raise Exception("Mapping not set in ui.canvas.Canvas.display() - should be done in tab's ctor with setMapping()")
+        if self.graph is None:
+            raise Exception("Graph not set in ui.canvas.Canvas.display() - should be done in tab's ctor with setGraph()")
         if img is not None:
             # ensure there is a valid mapping (only do this if not already mapped)
             if alreadyRGBMappedImageSource is None:

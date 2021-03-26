@@ -191,6 +191,10 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
     index: int  # the index of the input/output
     name: str  # the name shown next to the rect (could be "")
 
+    def isVariant(self):
+        tp = self.node.getInputType(self.index) if self.isInput else self.node.getOutputType(self.index)
+        return tp == conntypes.VARIANT
+
     ## construct, giving parent object (GMainRect), rectangle data, node data, input/output and index.
     def __init__(self, parent, x1, y1, x2, y2, node, isInput, index):
         super().__init__(x1, y1, x2, y2, parent=parent)
@@ -223,6 +227,9 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
     # check for if there is no effective change.
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
+            if self.isVariant():  # can't connect variant connectors
+                return
+
             # are we connected? Mostly we can only drag inputs (arrow heads); some of the rest
             # of the code might contradict this because we used to be able to drag outputs
             # too (until I realised an output might have more than one connection coming from it).

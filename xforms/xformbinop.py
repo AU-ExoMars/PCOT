@@ -1,42 +1,44 @@
 import cv2 as cv
 import numpy as np
-from PyQt5 import QtGui
+from PyQt5 import QtGui, QtWidgets
 
 import conntypes
 import ui.number
 import ui.tabs
 from pancamimage import ImageCube
+from utils import binop
 from xform import xformtype, XFormType, XFormException, Datum
 
 
-@xformtype
-class XFormAdd(XFormType):
-    """Add two images, optionally multiplying each by a constant and adding a constant.
-    The output may be optionally clipped or normalized, either to the calculated range
-    of the result or to the range of the output image. Both images must have the same
-    depth. The second image will be resized to match first image size if they are different
-    sizes."""
+class XFormBinop(XFormType):
 
-    def __init__(self):
-        super().__init__("add", "maths", "0.0.0")
-        self.addInputConnector("", "img")
-        self.addInputConnector("", "img")
-        self.addOutputConnector("", "img")
-        self.autoserialise = ('k', 'm1', 'm2', 'postproc')
+    def __init__(self, name):
+        super().__init__(name, "maths", "0.0.0")
+        self.addInputConnector("", conntypes.ANY)
+        self.addInputConnector("", conntypes.ANY)
+        self.addOutputConnector("", conntypes.VARIANT)
 
     def createTab(self, n, w):
-        return TabMaths(n, w)
+        return TabBinop(n, w)
 
     def init(self, node):
-        node.m1 = 1
-        node.m2 = 1
-        node.k = 0
-        node.postproc = 0
-        node.img = None
+        pass
 
     def perform(self, node):
-        img1 = node.getInput(0, conntypes.IMG)
-        img2 = node.getInput(1, conntypes.IMG)
+        a = node.getInput(0)
+        b = node.getInput(1)
+
+        res = binop.binop(a, b, self.op, node.getOutputType(0))
+        if res is not None and res.isImage():
+            res.val.setMapping(node.mapping)
+            node.img = res.val
+        else:
+            node.img = None
+        node.setOutput(0, res)
+
+    def OLDperform(self, node):
+        img1 = node.getInput(0)
+        img2 = node.getInput(1)
 
         if img1 is None and img2 is None:
             img = None
@@ -105,41 +107,63 @@ class XFormAdd(XFormType):
         # TODO - ROIs
 
 
-class TabMaths(ui.tabs.Tab):
+@xformtype
+class XFormAdd(XFormBinop):
+    def __init__(self):
+        super().__init__("add")
+        self.op = lambda x, y: x+y
+
+
+@xformtype
+class XFormSub(XFormBinop):
+    def __init__(self):
+        super().__init__("subtract")
+        self.op = lambda x, y: x-y
+
+
+@xformtype
+class XFormMul(XFormBinop):
+    def __init__(self):
+        super().__init__("multiply")
+        self.op = lambda x, y: x*y
+
+
+@xformtype
+class XFormDiv(XFormBinop):
+    def __init__(self):
+        super().__init__("divide")
+        self.op = lambda x, y: x/y
+
+
+class TabBinop(ui.tabs.Tab):
     def __init__(self, node, w):
-        super().__init__(w, node, 'assets/tabadd.ui')
-        self.w.m1.setValidator(QtGui.QDoubleValidator())
-        self.w.m2.setValidator(QtGui.QDoubleValidator())
-        self.w.k.setValidator(QtGui.QDoubleValidator())
-
-        self.w.m1.editingFinished.connect(self.m1Changed)
-        self.w.m2.editingFinished.connect(self.m2Changed)
-        self.w.k.editingFinished.connect(self.kChanged)
-
-        self.w.postproc.currentIndexChanged.connect(self.postprocChanged)
+        super().__init__(w, node, 'assets/tabbinop.ui')
+        # populate with types
+        layout = QtWidgets.QVBoxLayout()
+        self.buttons = []
+        idx = 0
+        for x in conntypes.types:
+            b = QtWidgets.QRadioButton(x)
+            layout.addWidget(b)
+            self.buttons.append(b)
+            b.idx = idx
+            idx += 1
+            b.toggled.connect(self.buttonToggled)
         self.w.canvas.setMapping(node.mapping)
         self.w.canvas.setGraph(node.graph)
+        self.w.type.setLayout(layout)
         self.onNodeChanged()
 
-    def m1Changed(self):
-        self.node.m1 = float(self.w.m1.text())
-        self.changed()
-
-    def m2Changed(self):
-        self.node.m2 = float(self.w.m2.text())
-        self.changed()
-
-    def postprocChanged(self, i):
-        self.node.postproc = i
-        self.changed()
-
-    def kChanged(self):
-        self.node.k = float(self.w.k.text())
-        self.changed()
-
     def onNodeChanged(self):
-        self.w.m1.setText(str(self.node.m1))
-        self.w.m2.setText(str(self.node.m2))
-        self.w.k.setText(str(self.node.k))
-        self.w.postproc.setCurrentIndex(self.node.postproc)
+        # set the current type
+        i = conntypes.types.index(self.node.getOutputType(0))
+        self.buttons[i].setChecked(True)
         self.w.canvas.display(self.node.img)
+
+    def buttonToggled(self, checked):
+        for b in self.buttons:
+            if b.isChecked():
+                self.node.outputTypes[0] = conntypes.types[b.idx]
+                self.node.graph.ensureConnectionsValid()
+                self.changed()
+                break

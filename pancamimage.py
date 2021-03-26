@@ -193,7 +193,7 @@ class ImageCube:
     mapping: Optional[ChannelMapping]
 
     # create image from numpy array
-    def __init__(self, img: np.ndarray, rgbMapping: ChannelMapping = None, sources=[]):
+    def __init__(self, img: np.ndarray, rgbMapping: ChannelMapping = None, sources: List[Set[IChannelSource]] = []):
 
         if img is None:
             raise Exception("trying to initialise image from None")
@@ -269,7 +269,7 @@ class ImageCube:
     # combined with channel 0 in another image, and so on).
 
     @classmethod
-    def buildSources(cls, images):
+    def buildSources(cls, images: List['ImageCube']):
         images = [x for x in images if x is not None]  # filter null images
         numChannels = max([x.channels for x in images])
         out = []

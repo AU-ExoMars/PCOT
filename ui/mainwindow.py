@@ -419,7 +419,6 @@ class MainUI(ui.tabs.DockableTabWindow):
     def addMacroConnector(self, type):
         # create the node inside the prototype
         n = self.graph.create(type)
-        n.conntype = 'any'
         n.xy = self.graph.scene.getNewPosition()
         assert (self.isMacro())
         assert (self.macroPrototype is not None)
@@ -427,11 +426,11 @@ class MainUI(ui.tabs.DockableTabWindow):
         # reset the connectors
         n.proto.setConnectors()
         # rebuild the visual components inside the prototype
-        self.graph.scene.rebuild()
+        self.graph.rebuildGraphics()
         # we also have to rebuild any graphs the macro is in, because
         # the number of connectors will have changed.
         for inst in n.proto.instances:
-            inst.graph.scene.rebuild()
+            inst.graph.rebuildGraphics()
 
     ## add a macro in connector, only should be used on macro prototypes   
     def addMacroInput(self):

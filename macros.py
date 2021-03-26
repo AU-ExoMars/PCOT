@@ -62,6 +62,7 @@ class XFormMacroConnector(XFormType):
 
     def init(self, node):
         node.datum = None
+        node.conntype = conntypes.VARIANT
 
     ## called from XForm.serialise, saves the macro name
     def serialise(self, node):
@@ -94,10 +95,13 @@ class XFormMacroConnector(XFormType):
 class XFormMacroIn(XFormMacroConnector):
     def __init__(self):
         super().__init__("in")
-        self.addOutputConnector("", conntypes.ANY)
+        # does not appear until specified by the user
+        self.addOutputConnector("", conntypes.VARIANT)
 
     ## perform sets the output from data set in XFormMacro.perform())
     def perform(self, node):
+        if node.getOutputType(0) == conntypes.VARIANT:
+            raise xform.XFormException('TYPE', 'output type of macro input node must be specified')
         node.setOutput(0, node.datum)
         print("DUMP OF INCONNECTOR ", node.name, node)
         node.dump()
@@ -108,11 +112,14 @@ class XFormMacroIn(XFormMacroConnector):
 class XFormMacroOut(XFormMacroConnector):
     def __init__(self):
         super().__init__("out")
-        self.addInputConnector("", conntypes.ANY)
+        # does not appear until specified by the user
+        self.addInputConnector("", conntypes.VARIANT)
 
     ## perform stores its input in its data field, ready for
     # XFormMacro.perform() to read it
     def perform(self, node):
+        if node.getInputType(0) == conntypes.VARIANT:
+            raise xform.XFormException('TYPE', 'input type of macro output node must be specified')
         node.datum = node.getInput(0)
         print("DUMP OF INCONNECTOR ", node.name, node)
         node.dump()
@@ -235,9 +242,15 @@ class XFormMacro(XFormType):
         # rebuild the various connector structures in each instance
         for n in self.instances:
             n.connCountChanged()
+
         # make sure all connections in the graph are still valid, disconnecting
         # bad ones
         self.graph.ensureConnectionsValid()
+        # and do the same thing in all the graphs which use this macro, but only
+        # once on each one!
+        for x in set([y.graph for y in self.instances]):
+            x.ensureConnectionsValid()
+
         # and we're also going to have to rebuild the palette, so inform all main
         # windows
         ui.mainwindow.MainUI.rebuildPalettes()
@@ -324,11 +337,14 @@ class XFormMacro(XFormType):
         print("PERFORMING MACRO")
         node.instance.graph.performNodes()
 
-        # 3a - if there's a sink, copy the data to the instance node
+        # 3a - if there's a sink, copy the data to the instance node. Also check node error states,
+        # and report (hopefully there will only be one!)
         for n in node.instance.graph.nodes:
             if n.type.name == "sink":
                 node.sinkimg = n.img.copy()
                 node.sinkimg.setMapping(node.mapping)
+            if n.error is not None:
+                node.error = n.error
 
         # 4 - copy the output from the output connectors nodes into the node's outputs
         for i in range(0, len(node.outputs)):

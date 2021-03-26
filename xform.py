@@ -273,22 +273,21 @@ def serialiseConn(c, connSet):
     return None
 
 
-# we might change this later, but at the moment a data type is just a string.
-DatumType = str
-
-
 ## a piece of data sitting in a node's output, to be read by its input.
 class Datum:
     ## @var tp
     # the data type
-    tp: DatumType
+    tp: conntypes.Type
     ## @var val
     # the data value
     val: Any
 
-    def __init__(self, t: DatumType, v: Any):
+    def __init__(self, t: conntypes.Type, v: Any):
         self.tp = t
         self.val = v
+
+    def isImage(self):
+        return conntypes.isImage(self.tp)
 
 
 ## an actual instance of a transformation, often called a "node".
@@ -555,6 +554,8 @@ class XForm:
                 return self.type.outputConnectors[i][1]
             else:
                 return self.outputTypes[i]
+        else:
+            return None
 
     ## return the actual type of an input, taking account of overrides (node inputTypes). Again, this is
     # the *connection* type, not the *datum* type stored in that connection (or rather the output to
@@ -565,6 +566,8 @@ class XForm:
                 return self.type.inputConnectors[i][1]
             else:
                 return self.inputTypes[i]
+        else:
+            return None
 
     ## is an output connected? This is a bit messy.
     def isOutputConnected(self, i):
@@ -941,6 +944,9 @@ class XFormGraph:
             node.perform()
         self.performingGraph = False
         # force a rebuild of the scene; error states may have changed.
+        self.rebuildGraphics()
+
+    def rebuildGraphics(self):
         if self.scene is not None:
             self.scene.rebuild()
 

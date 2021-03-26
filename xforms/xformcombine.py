@@ -49,11 +49,12 @@ def performOp(op, img1, img2):
 class XFormCombine(XFormType):
     """Generates a new image whose channels are arithmetical operations of channels of
     input images"""
+
     def __init__(self):
         super().__init__("combine", "maths", "0.0.0")
         for x in range(0, NUMCHANS):
-            self.addInputConnector(str(x), "img", 'input image '+str(x))
-        self.addOutputConnector("", "img",'the output image')
+            self.addInputConnector(str(x), "img", 'input image ' + str(x))
+        self.addOutputConnector("", "img", 'the output image')
         self.autoserialise = ('op1chan', 'op2chan', 'operators')
 
     def createTab(self, n, w):
@@ -97,7 +98,7 @@ class XFormCombine(XFormType):
                 maxchan = i
 
         # we're doing nowt
-        if maxchan < 0:
+        if maxchan < 0 or w == 0 or h == 0:
             out = None
         else:
             imgchans = []
@@ -118,8 +119,8 @@ class XFormCombine(XFormType):
             out = np.stack(imgchans, axis=-1)
 
             out = ImageCube(out, node.mapping, sources=imgsources)
-            node.img = out
-            node.setOutput(0, Datum(conntypes.IMG, node.img))
+        node.img = out
+        node.setOutput(0, Datum(conntypes.IMG, node.img))
 
 
 def shortLab(s):

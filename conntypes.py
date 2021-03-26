@@ -15,6 +15,8 @@ from PyQt5.QtGui import QColor, QBrush, QLinearGradient
 # but there's UI stuff in here too because (a) I don't want to separate it out and
 # (b) there isn't much more to a type than its name.
 
+Type = str
+
 ANY = 'any'
 
 IMG = 'img'
@@ -24,6 +26,15 @@ IMGGREY = 'imggrey'
 ELLIPSE = 'ellipse'
 RECT = 'rect'
 NUMBER = 'number'
+
+## this special type means the node must have its output/input type specified
+# by the user. They don't appear on the graph until this has happened.
+
+VARIANT = 'variant'
+
+
+def isImage(t: Type):
+    return "img" in t
 
 
 ## dictionary of name -> brush for connection pad drawing
@@ -50,6 +61,7 @@ brushDict[IMG] = Qt.blue
 brushDict[ELLIPSE] = Qt.cyan
 brushDict[RECT] = Qt.cyan
 brushDict[NUMBER] = Qt.darkGreen
+brushDict[VARIANT] = QBrush(Qt.black, Qt.DiagCrossPattern)
 
 ## complete list of all types
 types = [x for x in brushDict]
@@ -74,7 +86,12 @@ def isCompatibleConnection(outtype, intype):
     # this is a weird bug I would really like to catch.
     if intype is None or outtype is None:
         print("HIGH WEIRDNESS - a connectin type is None")
-        return None
+        return False
+
+    # variants - used where a node must have a connection type
+    # set by the user - cannot connect until they have been so set.
+    if intype == VARIANT or outtype == VARIANT:
+        return False
 
     # image inputs accept all images
     if intype == IMG:
