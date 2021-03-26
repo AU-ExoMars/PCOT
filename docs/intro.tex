@@ -83,7 +83,7 @@ Another oddity you may see in some of the files is this (from the top
 of \texttt{xform.py} like the previous example):
 \begin{lstlisting}
 if TYPE_CHECKING:
-    import graphscene
+    from ui import graphscene
     import PyQt5.QtWidgets
 \end{lstlisting}
 These lines are only run when type checking, and are used to ensure
