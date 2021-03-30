@@ -1,6 +1,15 @@
 % Created by Jim Finnis
 % Date Wed Feb 24 13:48:57 2021
 
+\begin{todoblock}
+\begin{itemize}
+\item Change getInput and getOutput docs
+\item update conntypes doc
+\item add Datum details
+\end{itemize}
+
+\end{todoblock}
+
 
 \section{The data model}
 The data model consists of two parts --- the data itself (largely
@@ -62,6 +71,7 @@ read any inputs, manipulate the data, set the outputs.
 Several other methods may optionally be overridden.
 
 \subsubsection{Linkage}
+\label{linkage}
 \texttt{XForm} node objects are linked together by their inputs.
 Each \texttt{XForm} contains an \texttt{inputs} list indexed by
 input number. The length of this list is determined by the number
@@ -70,8 +80,8 @@ tuple where $node$ is a reference to another \texttt{XForm} and
 $output$ is the index of an output on that \texttt{XForm}.
 
 Methods are provided in \texttt{XForm} for connecting and disconnecting nodes
-(also checking for cycles and providing basic type checking), and getting inputs
-and setting outputs inside the type's \texttt{perform()} method.
+(also checking for cycles and providing basic type checking), and getting
+inputs and setting outputs inside the type's \texttt{perform()} method.
 
 The number and types of inputs and outputs is set inside the 
 constructor for the \texttt{XFormType} singleton, by using methods
@@ -80,13 +90,41 @@ For example, the \emph{inset} \texttt{XFormType} has the constructor:
 \begin{lstlisting}
     def __init__(self):
         super().__init__("inset", "regions", "0.0.0")
-        self.addInputConnector("img", "img")        # input 0
-        self.addInputConnector("inset", "img")      # input 1
-        self.addInputConnector("rect", "rect")      # input 2
+        self.addInputConnector("img", conntypes.IMG)    # input 0
+        self.addInputConnector("inset", conntypes.IMG)  # input 1
+        self.addInputConnector("rect", conntypes.RECT)  # input 2
         self.addOutputConnector("", "img")
 \end{lstlisting}
-The arguments for these methods are $(name,type)$ where the name is 
-optional (used by the UI to show a hint).
+The arguments for these methods are $(name,type,description)$ where the name
+is often empty (it just shows a hint) and the description is optional (it appears
+in help text). The type is a \texttt{conntypes.Type} value.
+
+Within an executing graph, the data between nodes is stored as an \texttt{xform.Datum}
+object containing the type and value. Inside the node type's \texttt{perform()} method,
+we typically do something like:
+\begin{lstlisting}
+    node.setOutput(0, Datum(conntypes.IMG, img))
+\end{lstlisting}
+which sets output 0 to hold the image (i.e.\ \texttt{ImageCube}) stored in \texttt{img}.
+Fetching data from an input is also done in \texttt{perform()}, and takes two forms. The
+first returns a \texttt{Datum}:
+\begin{lstlisting}
+    datum = node.getInput(0)
+\end{lstlisting}
+while the second examines the datum internally, and returns the value field if
+the type matches or None if it doesn't:
+\begin{lstlisting}
+    image = node.getInput(0, conntypes.IMG)
+\end{lstlisting}
+Note that None is a permissible value in \texttt{setOutput()}, which \texttt{getInput()} will
+always return as None.
+
+\subsubsection{Overriding types and the variant type}
+It is possible for an individual \texttt{XForm} node to override the input and output types
+set in its \texttt{XFormType}, by setting values in the \texttt{inputTypes} and \texttt{outputTypes}
+array. This is used in macros and mathematical operations. Often the ``default'' type is \texttt{conntypes.VARIANT},
+which is a special type which must be overriden by some user action before the node becomes useful. A variant connection
+shows as crosshatched, and cannot be connected until its type is changed.
 
 \subsection{Performing the graph}
 \label{graphperform}
@@ -94,7 +132,7 @@ The graph needs to be ``performed'' --- its nodes executed --- whenever
 the data changes, which is generally whenever the graph is edited,
 a node control changed in a tab, or an input is changed (see Sec.~\ref{inputs}
 below).
-This is done by calling \texttt{changed()} on the node's graph.
+This is done by calling \texttt{changed()} on the node's graph (or on the tab itself).
 The \texttt{XFormGraph.changed()} method takes a node, and either calls
 \texttt{performNodes()} on the main graph passing in that node, or, if the
 node is inside a macro prototype graph (q.v.), copies the prototype graph to
@@ -225,7 +263,6 @@ corresponding to the active method will be visible.
 \end{itemize}
 Code for the inputs is the \texttt{inputs} directory, except for the UI
 code which is in \texttt{ui/inputs.py}.
-
 
 \clearpage
 \subsection{Image data}
@@ -383,7 +420,7 @@ cube, using the \texttt{modifyWithSub} method.
 This example shows the operation of the decorrelation stretch:
 \begin{lstlisting}[language=Python]
     def perform(self,node):
-        img = node.getInput(0)
+        img = node.getInput(0, conntypes.IMG)
         if img is None:
             node.img = None
         elif not node.enabled:
@@ -396,7 +433,7 @@ This example shows the operation of the decorrelation stretch:
             node.img = img.modifyWithSub(subimage, newimg)
         if node.img is not None:
             node.img.setMapping(node.mapping)
-        node.setOutput(0, node.img)
+        node.setOutput(0, Datum(conntypes.IMG, node.img))
 \end{lstlisting}
 There are several checks for whether the node is actually enabled, and whether there is an image
 present to stretch, but the core lines are these:
@@ -517,9 +554,9 @@ The main files involved are:
 \item \texttt{ui/tabs.py}: the \texttt{DocktableTabWindow} and \texttt{Tab}
 classes (also the \texttt{ExpandedTab} class for when a tab is undocked);
 \item \texttt{ui/canvas.py}: the Canvas widget for viewing image cube slices;
-\item \texttt{graphview.py}: contains \texttt{GraphView}, the
+\item \texttt{ui/graphview.py}: contains \texttt{GraphView}, the
 \texttt{QGraphicsView} subclass which encapulates a view on the graph scene;
-\item \texttt{graphscene.py}: contains \texttt{XFormGraphScene},
+\item \texttt{ui/graphscene.py}: contains \texttt{XFormGraphScene},
 the \texttt{QGraphicsScene} subclass which contains a set of 2D objects
 representing an \texttt{XFormGraph} and its nodes. It also contains the
 classes representing those 2D objects (subclasses of various Qt graphics item

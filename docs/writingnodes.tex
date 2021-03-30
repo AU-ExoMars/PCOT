@@ -94,26 +94,28 @@ by the \texttt{XFormType} singleton to which it is linked. The code for this cla
 @xformtype
 class XformNormImage(XFormType):
 \end{lstlisting}
-We're creating a new subclass of \texttt{XFormType} and giving it the \texttt{@xformtype} annotation,
-which will create an instance and register it automatically with the application. Because of this,
-the declaration is the only place where the name of the class is used.
-Now the constructor:
+We're creating a new subclass of \texttt{XFormType} and giving it the
+\texttt{@xformtype} annotation, which will create an instance and register it
+automatically with the application. Because of this, the declaration is the
+only place where the name of the class is used. Now the constructor:
 \begin{lstlisting}
     def __init__(self):
         super().__init__("normimage", "processing", "0.0.0")
-        self.addInputConnector("", "img")
-        self.addOutputConnector("", "img")
+        self.addInputConnector("", conntypes.IMG)
+        self.addOutputConnector("", conntypes.IMG)
         self.hasEnable = True
 \end{lstlisting}
-The superconstructor call sets the node name, the group under which it appears in the palette, and 
-a version number.
-The next two lines define an input and output connector. These have optional names, which are both empty
-in this example. This is the usual approach: names are only used to annotate the nodes in the graph, and
-are left empty where they are obvious. In the code, connectors are referenced by index in order of creation.
-Both connectors here are images, with type ``img.'' See \texttt{conntypes.py} for all the types.
-The final line sets the node to have an \texttt{enabled} value and associated toggle button. This is
-used in nodes which may be computationally intensive, to temporarily ``turn them off.'' This will usually be handled
-by passing through the data unchanged.
+The superconstructor call sets the node name, the group under which it appears
+in the palette, and a version number. The next two lines define an input and
+output connector. These have optional names, which are both empty in this
+example. This is the usual approach: names are only used to annotate the nodes
+in the graph, and are left empty where they are obvious. In the code,
+connectors are referenced by index in order of creation. Both connectors here
+are images, with type \texttt{IMG}. See \texttt{conntypes.py} for all the
+types. The final line sets the node to have an \texttt{enabled} value and
+associated toggle button. This is used in nodes which may be computationally
+intensive, to temporarily ``turn them off.'' This will usually be handled by
+passing through the data unchanged.
 
 The next method is \texttt{createTab()}, which is used to create a tab for a particular node. Like most
 methods in this class, it takes a reference to the node. It also takes a reference to the main window
@@ -138,19 +140,22 @@ canvas widget will display a None image as a blue empty rectangle):
     def init(self, node):
         node.img = None
 \end{lstlisting}
-Finally we come to the \texttt{perform()} method, which describes how this type of node performs its operation.
-Again, it requires a reference to the \texttt{XForm} node object which contains the node state, and its
-first action is to pre-set the output image to None and then fetch the input image:
+Finally we come to the \texttt{perform()} method, which describes how this
+type of node performs its operation. Again, it requires a reference to the
+\texttt{XForm} node object which contains the node state, and its first action
+is to pre-set the output image to None and then fetch the input image:
 \begin{lstlisting}
     def perform(self, node):
         node.img = None    
-        img = node.getInput(0)
+        img = node.getInput(0, conntypes.IMG)
 \end{lstlisting}
-This will get a reference to the image stored in the output field of the node 
-connected to this node's zeroth input (the first
-added in the type constructor). If there is no connection, None will be returned.
-We then check to see if the input is None. If it is, we do nothing (leaving \texttt{node.img} as None). We
-also check to see if the node has been disabled (this node has an Enabled button):
+This will get a reference to the image stored in the output field of the node
+connected to this node's zeroth input (the first added in the type
+constructor). If there is no connection, None will be returned. None will also
+be returned if the type is not \texttt{IMG}: this version of \texttt{getInput()} will
+unwrap the \texttt{Datum} and type-check (see Sec.~\ref{linkage}). We then check to see if the input
+is None. If it is, we do nothing (leaving \texttt{node.img} as None). We also
+check to see if the node has been disabled (this node has an Enabled button):
 \begin{lstlisting}
         if img is not None:
             if node.enabled:
@@ -188,9 +193,10 @@ to be the input image:
             else:
                 node.img = img
 \end{lstlisting}
-and output the image to the node's zeroth (and only) output:
+and output the image to the node's zeroth (and only) output, wrapping it in
+a \texttt{Datum}:
 \begin{lstlisting}
-        node.setOutput(0, node.img)
+        node.setOutput(0, Datum(conntypes.IMG, node.img))
 \end{lstlisting}
 
 
