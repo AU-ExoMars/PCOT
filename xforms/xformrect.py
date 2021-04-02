@@ -121,7 +121,6 @@ class TabRect(ui.tabs.Tab):
         self.w.canvas.setGraph(node.graph)
         # but we still need to be able to edit it
         self.w.canvas.setMapping(node.mapping)
-        self.w.canvas.redisplayNode = node
 
         self.mouseDown = False
         self.dontSetText = False

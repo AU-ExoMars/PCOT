@@ -137,7 +137,13 @@ class ChannelMapping:
         if self.red < 0 or self.prevMappingString != sourceStr:
             # no channel assignments yet, or the image channels have changed.
             # Need to construct new set from the sources
-            self.generateDefaultMapping(img)
+            if self.prevMappingString != '':
+                # What this *should* do is make sure we don't blithely rebuild a default
+                # mapping when this has been called the first time: it may well contain a
+                # perfectly good mapping we've specified (such as the "default bands" mapping
+                # in the ENVI input).
+                # I am really not sure about this functionality. Need to analyse the flow!
+                self.generateDefaultMapping(img)
             self.prevMappingString = sourceStr
 
     def serialise(self):

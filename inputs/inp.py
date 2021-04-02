@@ -1,6 +1,7 @@
 ## the abstract class from which all input types come
 from typing import List, Optional, TYPE_CHECKING
 
+from inputs.envi import ENVIInputMethod
 from inputs.inputmethod import InputMethod
 from inputs.multifile import MultifileInputMethod
 from inputs.nullinput import NullInputMethod
@@ -34,7 +35,8 @@ class Input:
         self.methods = [
             NullInputMethod(self),  # null method must be first
             RGBInputMethod(self),
-            MultifileInputMethod(self)
+            MultifileInputMethod(self),
+            ENVIInputMethod(self)
         ]
 
     def get(self):

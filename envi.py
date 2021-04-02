@@ -21,18 +21,26 @@
 # DEALINGS IN THE SOFTWARE. 
 
 import os
+import sys
+
 import numpy as np
 
+import ui
+from channelsource import ChannelSourceWithFilter
 from filters import Filter
+from pancamimage import ChannelMapping, ImageCube
+
 
 def parseHeader(lines):
-    dict = {}
+    d = {}
     have_nonlowercase_param = False
     try:
         while lines:
             line = lines.pop(0)
-            if line.find('=') == -1: continue
-            if line[0] == ';': continue
+            if line.find('=') == -1:
+                continue
+            if line[0] == ';':
+                continue
 
             (key, sep, val) = line.partition('=')
             key = key.strip()
@@ -41,26 +49,26 @@ def parseHeader(lines):
                 key = key.lower()
             val = val.strip()
             if val and val[0] == '{':
-                str = val.strip()
-                while str[-1] != '}':
+                ss = val.strip()
+                while ss[-1] != '}':
                     line = lines.pop(0)
                     if line[0] == ';': continue
 
-                    str += '\n' + line.strip()
+                    ss += '\n' + line.strip()
                 if key == 'description':
-                    dict[key] = str.strip('{}').strip()
+                    d[key] = ss.strip('{}').strip()
                 else:
-                    vals = str[1:-1].split(',')
+                    vals = ss[1:-1].split(',')
                     for j in range(len(vals)):
                         vals[j] = vals[j].strip()
-                    dict[key] = vals
+                    d[key] = vals
             else:
-                dict[key] = val
+                d[key] = val
 
         if have_nonlowercase_param:
-            ui.warn('Parameters with non-lowercase names encountered '\
+            ui.warn('Parameters with non-lowercase names encountered '
                     'and converted to lowercase.')
-        return dict
+        return d
     except:
         raise Exception('ENVI parsing error')
 
@@ -76,90 +84,98 @@ class ENVIHeader:
             if not isENVI:
                 f.close()
                 raise Exception('File is not an ENVI file (no "ENVI" on first line)')
-        
+
         lines = f.readlines()
         f.close()
-        dict = parseHeader(lines)
-        
+        d = parseHeader(lines)
+
         # get the important data out into fields
-        
+
         # some odd nomeclature I will accept, but calling "width" and
         # "height" by these names seems needlessly obtuse.
-        
-        self.w = int(dict['samples'])
-        self.h = int(dict['lines'])
-        self.bands = int(dict['bands'])
-                
-        self.headerOffset = [int(dict['headerOffset']) if 'headerOffset' in dict else 0]
-        self.littleEndian = dict['byte order']=='0'
-        if dict['interleave'] != 'bsq':
+
+        self.w = int(d['samples'])
+        self.h = int(d['lines'])
+        self.bands = int(d['bands'])
+
+        self.headerOffset = [int(d['headerOffset']) if 'headerOffset' in d else 0]
+        self.byteorder = 'little' if d['byte order'] == '0' else 'big'
+
+        if d['interleave'] != 'bsq':
             raise Exception("Only BSQ interleave is supported")
-        if dict['data type'] != '4':
+        if d['data type'] != '4':
             raise Exception("Data type must be 32-bit float")
-            
-        if 'default bands' in dict:
-            self.defaultBands = [int(x) for x in dict['default bands']]
+
+        if 'default bands' in d:
+            # based at one, for heaven's sake.
+            self.defaultBands = [int(x)-1 for x in d['default bands']]
         else:
-            self.defaultBands = [0,1,2]
-        
-        if 'band names' in dict:
-            bandNames = dict['band names']
+            self.defaultBands = [0, 1, 2]
+
+        if 'band names' in d:
+            bandNames = d['band names']
         else:
             bandNames = [str(x) for x in range(self.bands)]
 
-        if 'wavelength' in dict:
-            wavelengths = [float(x) for x in dict['wavelength']]
-            if 'fwhm' in dict:
-                fwhm = [float(x) for x in dict['fwhm']]
+        if 'wavelength' in d:
+            wavelengths = [float(x) for x in d['wavelength']]
+            if 'fwhm' in d:
+                fwhm = [float(x) for x in d['fwhm']]
             else:
                 fwhm = [0 for _ in wavelengths]
 
-            if 'data gain values' in dict:
-                gain = [float(x) for x in dict['data gain values']]
+            if 'data gain values' in d:
+                gain = [float(x) for x in d['data gain values']]
             else:
                 gain = [0 for _ in wavelengths]
-                
-            self.filters=[]
-            for w,f,g,n in zip(wavelengths,fwhm,gain,bandNames):
-                self.filters.append(Filter(w,f,g,n,n))
 
-        if 'data ignore value' in dict:
-            self.ignoreValue = float(dict['data ignore value'])
+            self.filters = []
+            for w, f, g, n in zip(wavelengths, fwhm, gain, bandNames):
+                self.filters.append(Filter(w, f, g, n, n))
+
+        if 'data ignore value' in d:
+            self.ignoreValue = float(d['data ignore value'])
         else:
             self.ignoreValue = None
 
 
-def load(fn):
+def load(fn, mapping: ChannelMapping) -> ImageCube:
     with open(fn) as f:
         h = ENVIHeader(f)
 
-    (path,_) = os.path.splitext(fn)
+    (path, _) = os.path.splitext(fn)
 
     datfile = None
-    for x in ['.img','.dat','.IMG','.DAT']:
-        if os.path.isfile(path+x):
-            datfile=path+x
+    for x in ['.img', '.dat', '.IMG', '.DAT']:
+        if os.path.isfile(path + x):
+            datfile = path + x
             break
-            
+
     if datfile is None:
         raise Exception("cannot find ENVI data file")
-    
+
     size = os.stat(datfile).st_size
-    
+
     # remember, we only support float format BSQ right now.
-    
+
     requiredSize = 4 * h.bands * h.w * h.h
     print(requiredSize)
-    
+
     if size != requiredSize:
         raise Exception("Size of ENVI data file is incorrect")
-        
+
     bands = []
-    with open(datfile,"rb") as f:
-        for i in range(0,h.bands):
-            band = np.fromfile(f,np.float32,h.w*h.h).reshape(h.h,h.w)
+    with open(datfile, "rb") as f:
+        for i in range(0, h.bands):
+            band = np.fromfile(f, np.float32, h.w * h.h).reshape(h.h, h.w)
+            if sys.byteorder != h.byteorder:
+                band = band.byteswap()
             bands.append(band)
-            
+
     # now have list of 6 bands. Interleave.
-    img = np.stack(bands,axis=-1)
-            
+    img = np.stack(bands, axis=-1)
+
+    # construct the source data
+    sources = [{ChannelSourceWithFilter(fn, f, False)} for f in h.filters]
+
+    return ImageCube(img, ChannelMapping(*h.defaultBands), sources)

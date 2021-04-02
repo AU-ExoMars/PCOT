@@ -84,11 +84,23 @@ class ChannelSourceWithFilter(IChannelSource):
     def getFilter(self):
         return self.filter
 
-    def string(self, capType):   # implemented in sub
-        pass
+    def string(self, capType):
+        fname = self.getFilterName()
+        fpos = self.getFilterPos()
+        filt = self.getFilter()
+        if capType == 0:  # filter position only
+            return fpos
+        elif capType == 1:  # filter position and name
+            # show filter name and CWL
+            return "{}/{}".format(fname, filt.cwl)
+        elif capType == 2:  # file and filter pos
+            # file and filter pos
+            return self.getID() + "|" + fpos
+        else:
+            return fname
 
-    def fullStr(self):  # implemented in sub
-        pass
+    def fullStr(self):
+        return self.getFilterPos() + "++" + self.getID()
 
 
 # create fake filter data for when we load in (say) RGB files.
@@ -174,20 +186,3 @@ class FileChannelSource(ChannelSourceWithFilter):
             filt = filters.DUMMY_FILTER
         super().__init__(file, filt, False)
 
-    def fullStr(self):
-        return self.getFilterPos() + "++" + self.getID()
-
-    def string(self, capType):
-        fname = self.getFilterName()
-        fpos = self.getFilterPos()
-        filt = self.getFilter()
-        if capType == 0:  # filter position only
-            return fpos
-        elif capType == 1:  # filter position and name
-            # show filter name and CWL
-            return "{}/{}".format(fname, filt.cwl)
-        elif capType == 2:  # file and filter pos
-            # file and filter pos
-            return self.getID() + "|" + fpos
-        else:
-            return fname
