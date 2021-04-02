@@ -20,6 +20,9 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE. 
 
+import os
+import numpy as np
+
 from filters import Filter
 
 def parseHeader(lines):
@@ -116,16 +119,47 @@ class ENVIHeader:
             else:
                 gain = [0 for _ in wavelengths]
                 
-            filters=[]
+            self.filters=[]
             for w,f,g,n in zip(wavelengths,fwhm,gain,bandNames):
-                filters.append(Filter(w,f,g,n,n))
+                self.filters.append(Filter(w,f,g,n,n))
 
         if 'data ignore value' in dict:
             self.ignoreValue = float(dict['data ignore value'])
         else:
             self.ignoreValue = None
 
-                 
-if __name__ == '__main__':
-    with open('RStar_AUPE/AUPE_LWAC_P03T01.hdr') as f:
-        d = ENVIHeader(f)
+
+def load(fn):
+    with open(fn) as f:
+        h = ENVIHeader(f)
+
+    (path,_) = os.path.splitext(fn)
+
+    datfile = None
+    for x in ['.img','.dat','.IMG','.DAT']:
+        if os.path.isfile(path+x):
+            datfile=path+x
+            break
+            
+    if datfile is None:
+        raise Exception("cannot find ENVI data file")
+    
+    size = os.stat(datfile).st_size
+    
+    # remember, we only support float format BSQ right now.
+    
+    requiredSize = 4 * h.bands * h.w * h.h
+    print(requiredSize)
+    
+    if size != requiredSize:
+        raise Exception("Size of ENVI data file is incorrect")
+        
+    bands = []
+    with open(datfile,"rb") as f:
+        for i in range(0,h.bands):
+            band = np.fromfile(f,np.float32,h.w*h.h).reshape(h.h,h.w)
+            bands.append(band)
+            
+    # now have list of 6 bands. Interleave.
+    img = np.stack(bands,axis=-1)
+            
