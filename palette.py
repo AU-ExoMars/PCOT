@@ -4,6 +4,9 @@
 
 from PyQt5 import QtWidgets, uic, QtCore, QtGui
 from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QMessageBox
+
+import macros
 from xform import XFormType
 from macros import XFormMacro
 import ui
@@ -30,9 +33,15 @@ class PaletteButton(QtWidgets.QPushButton):
         menu = QtWidgets.QMenu()
         if isinstance(self.xformtype, XFormMacro):
             openProtoAct = menu.addAction("Open prototype")
+            deleteMacroAct = menu.addAction("Delete macro")
             act = menu.exec_(self.mapToGlobal(e))
             if act == openProtoAct:
                 ui.mainwindow.MainUI.createMacroWindow(self.xformtype, False)
+            elif act == deleteMacroAct:
+                if QMessageBox.question(self.parent(), "Delete macro", "Are you sure?",
+                                        QMessageBox.Yes | QMessageBox.No):
+                    macros.XFormMacro.deleteMacro(self.xformtype)
+                    ui.mainwindow.MainUI.rebuildPalettes()
 
     # drag handling: nabbed from
     # https://stackoverflow.com/questions/57224812/pyqt5-move-button-on-mainwindow-with-drag-drop

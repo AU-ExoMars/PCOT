@@ -304,6 +304,21 @@ class XFormMacro(XFormType):
             else:
                 ui.error("Cannot find macro {} in internal dict".format(name))
 
+    ## delete a macro
+    @staticmethod
+    def deleteMacro(xformtype):
+        # delete all instances
+        toRebuild = set()
+        for x in xformtype.instances:
+            x.graph.remove(x)
+            toRebuild.add(x.graph)
+        for x in toRebuild:
+            x.rebuildGraphics()
+        # and now the macro itself
+        del XFormMacro.protos[xformtype.name]
+        xformtype.delType()
+        # caller rebuilds palettes
+
     ## creates edit tab
     def createTab(self, n, w):
         return TabMacro(n, w)

@@ -192,6 +192,10 @@ class XFormType:
     def rename(self, node, name):
         node.displayName = name
 
+    ## delete a type! Used to delete old macros
+    def delType(self):
+        del allTypes[self.name]
+
     ## rename the type, used to rename a macro. Let's hope that
     # we don't reference types by name anywhere else.
     def renameType(self, newname):
@@ -673,7 +677,7 @@ class XForm:
                         n.inputs[i] = None
 
     ## change an output. This should be called by the type's perform method. Takes the type and datum.
-    def setOutput(self, i:int, data:Datum):
+    def setOutput(self, i: int, data: Datum):
         self.outputs[i] = data
 
     ## used in connection            
