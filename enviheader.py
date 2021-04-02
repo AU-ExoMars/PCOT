@@ -20,6 +20,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE. 
 
+from filters import Filter
 
 def parseHeader(lines):
     dict = {}
@@ -75,11 +76,56 @@ class ENVIHeader:
         
         lines = f.readlines()
         f.close()
-        self.dict = parseHeader(lines)
-
+        dict = parseHeader(lines)
+        
+        # get the important data out into fields
+        
+        # some odd nomeclature I will accept, but calling "width" and
+        # "height" by these names seems needlessly obtuse.
+        
+        self.w = int(dict['samples'])
+        self.h = int(dict['lines'])
+        self.bands = int(dict['bands'])
+                
+        self.headerOffset = [int(dict['headerOffset']) if 'headerOffset' in dict else 0]
+        self.littleEndian = dict['byte order']=='0'
+        if dict['interleave'] != 'bsq':
+            raise Exception("Only BSQ interleave is supported")
+        if dict['data type'] != '4':
+            raise Exception("Data type must be 32-bit float")
             
+        if 'default bands' in dict:
+            self.defaultBands = [int(x) for x in dict['default bands']]
+        else:
+            self.defaultBands = [0,1,2]
+        
+        if 'band names' in dict:
+            bandNames = dict['band names']
+        else:
+            bandNames = [str(x) for x in range(self.bands)]
+
+        if 'wavelength' in dict:
+            wavelengths = [float(x) for x in dict['wavelength']]
+            if 'fwhm' in dict:
+                fwhm = [float(x) for x in dict['fwhm']]
+            else:
+                fwhm = [0 for _ in wavelengths]
+
+            if 'data gain values' in dict:
+                gain = [float(x) for x in dict['data gain values']]
+            else:
+                gain = [0 for _ in wavelengths]
+                
+            filters=[]
+            for w,f,g,n in zip(wavelengths,fwhm,gain,bandNames):
+                filters.append(Filter(w,f,g,n,n))
+
+        if 'data ignore value' in dict:
+            self.ignoreValue = float(dict['data ignore value'])
+        else:
+            self.ignoreValue = None
 
                  
 if __name__ == '__main__':
-    with open('AUPE_LWAC_P03T01.hdr') as f:
-        d = ENVIHeader(f).dict
+    with open('RStar_AUPE/AUPE_LWAC_P03T01.hdr') as f:
+        d = ENVIHeader(f)
