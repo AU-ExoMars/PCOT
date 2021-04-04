@@ -86,7 +86,6 @@ class InnerCanvas(QtWidgets.QWidget):
                 if img is None:
                     ui.error("Unusual - the image has no numpy array")
 
-
             # only reset the image zoom if the shape has changed
             if self.img is None or self.img.shape[:2] != img.shape[:2]:
                 self.reset()

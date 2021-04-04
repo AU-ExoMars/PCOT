@@ -27,7 +27,7 @@ class ENVIInputMethod(InputMethod):
     def loadImg(self):
         # will throw exception if load failed
         img = envi.load(self.fname, self.mapping)
-        ui.log("Image {} loaded: {}".format(self.fname, img))
+        ui.log("Image {} loaded: {}, mapping is {}".format(self.fname, img, self.mapping))
         self.img = img
 
     def get(self):
@@ -73,6 +73,7 @@ class ENVIMethodWidget(MethodWidget):
         self.treeView.setColumnHidden(2, True)
         self.treeView.doubleClicked.connect(self.fileClickedAction)
         self.treeView.scrollTo(idx)
+        # ensure canvas is using my mapping
         self.canvas.setMapping(m.mapping)
         # the canvas gets its "caption display" setting from the graph, so
         # we need to get it from the manager, which we get from the input,
@@ -81,6 +82,10 @@ class ENVIMethodWidget(MethodWidget):
         self.onInputChanged()
 
     def onInputChanged(self):
+        # ensure image is also using my mapping.
+        if self.method.img is not None:
+            self.method.img.setMapping(self.method.mapping)
+        print("Displaying image {}, mapping {}".format(self.method.img,self.method.mapping))
         self.canvas.display(self.method.img)
         self.method.input.performGraph()
 

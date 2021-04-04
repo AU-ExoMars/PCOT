@@ -121,11 +121,18 @@ class ChannelMapping:
         self.green = green
         self.blue = blue
 
+    def set(self, r, g, b):
+        self.red = r
+        self.green = g
+        self.blue = b
+
     # generate a default mapping
     def generateDefaultMapping(self, img):
-        print("DEFAULT MAPPING")
-        # TODO - do this properly, looking at filters
-        self.red, self.green, self.blue = [img.channels - 1 if x >= img.channels else x for x in range(0, 3)]
+        if img.defaultMapping is not None:
+            self.set(img.defaultMapping.red, img.defaultMapping.green, img.defaultMapping.blue)
+        else:
+            # TODO - do this properly, looking at filters
+            self.red, self.green, self.blue = [img.channels - 1 if x >= img.channels else x for x in range(0, 3)]
 
     # generate a mapping from a new image if required - or keep using the old mapping
     # if we can.
@@ -148,7 +155,7 @@ class ChannelMapping:
         return m
 
     def __str__(self):
-        return "r{} g{} b{}".format(self.red, self.green, self.blue)
+        return "ChannelMapping-{} r{} g{} b{}".format(id(self), self.red, self.green, self.blue)
 
 
 ## an image - just a numpy array (the image) and a list of ROI objects. The array
@@ -184,7 +191,8 @@ class ImageCube:
     mapping: Optional[ChannelMapping]
 
     # create image from numpy array
-    def __init__(self, img: np.ndarray, rgbMapping: ChannelMapping = None, sources: List[Set[IChannelSource]] = []):
+    def __init__(self, img: np.ndarray, rgbMapping: ChannelMapping = None, sources: List[Set[IChannelSource]] = [],
+                 defaultMapping: ChannelMapping = None):
 
         if img is None:
             raise Exception("trying to initialise image from None")
@@ -208,9 +216,11 @@ class ImageCube:
         # one for each filter. Thus each channel can come from more than one filter.
         #
         self.sources = sources
+        self.defaultMapping = defaultMapping
 
         # get the mapping sorted, which may be None (in which case rgb() might not work).
         # Has to be done after the sources are set.
+        self.mapping = None  # stops complaints...
         self.setMapping(rgbMapping)
 
     #        if len(sources)==0:
@@ -218,6 +228,7 @@ class ImageCube:
 
     # Set the RGB mapping for this image, and create default channel mappings if necessary.
     def setMapping(self, mapping: ChannelMapping):
+        print("{} changing mapping to {}".format(self, self.mapping))
         self.mapping = mapping
         if mapping is not None:
             mapping.ensureValid(self)
@@ -305,8 +316,9 @@ class ImageCube:
         return SubImageCubeROI(self)
 
     def __str__(self):
-        s = "<Image {}x{} array:{} channels:{}, {} bytes, ".format(self.w, self.h,
-                                                                   str(self.img.shape), self.channels, self.img.nbytes)
+        s = "<Image-{} {}x{} array:{} channels:{}, {} bytes, ".format(id(self), self.w, self.h,
+                                                                      str(self.img.shape), self.channels,
+                                                                      self.img.nbytes)
         # caption type 0 is filter positions only
         xx = ";".join([IChannelSource.stringForSet(x, 0) for x in self.sources])
 
@@ -342,7 +354,8 @@ class ImageCube:
             m = self.mapping.copy()
         else:
             m = None
-        i = ImageCube(self.img.copy(), m, srcs)
+        # we should be able to copy the default mapping reference OK, it won't change.
+        i = ImageCube(self.img.copy(), m, srcs, defaultMapping=self.defaultMapping)
         i.rois = self.rois.copy()
         return i
 
@@ -353,5 +366,3 @@ class ImageCube:
         x, y, w, h = subimage.bb
         i.img[y:y + h, x:x + w][subimage.mask] = newimg[subimage.mask]
         return i
-
-

@@ -6,6 +6,7 @@ from inputs.inputmethod import InputMethod
 from inputs.multifile import MultifileInputMethod
 from inputs.nullinput import NullInputMethod
 from inputs.rgb import RGBInputMethod
+from pancamimage import ImageCube
 
 if TYPE_CHECKING:
     from xform import XFormGraph
@@ -40,7 +41,13 @@ class Input:
         ]
 
     def get(self):
-        return self.methods[self.activeMethod].get()
+        # This needs to get a copy, otherwise its mapping will overwrite the mapping
+        # in the input method itself.
+        i = self.methods[self.activeMethod].get()
+        if isinstance(i, ImageCube):
+            return i.copy()
+        else:
+            return i
 
     def isActive(self, method):
         return self.methods[self.activeMethod] == method
