@@ -15,13 +15,13 @@ def norm(img, mode, mask):
     cp = img.copy()
     mn = masked.min()
     mx = masked.max()
+    ex = None
 
     if mode == 0:  # normalize
         if mn == mx:
             ex = XFormException("DATA", "cannot normalize, image is a single value")
             res = np.zeros(img.shape, np.float32)
         else:
-            ex = None
             res = (masked - mn) / (mx - mn)
     elif mode == 1:  # clip
         masked[masked > 1] = 1

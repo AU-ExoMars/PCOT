@@ -33,7 +33,6 @@ class XformGrey(XFormType):
         else:
             # all sources in one channel
             sources = set.union(*img.sources)
-            #sources = set.union(img.sources[0], img.sources[1], img.sources[2])
 
             if node.useCVConversion:
                 if img.channels != 3:

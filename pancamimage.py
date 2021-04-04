@@ -86,7 +86,7 @@ class SubImageCubeROI:
                 raise Exception(
                     "Mask not same shape as image: can happen when ROI is out of bounds. Have you loaded a new image?")
         else:
-            self.img = img.img
+            self.img = np.copy(img.img)  # make a copy to avoid descendant nodes changing their input nodes' outputs
             self.bb = (0, 0, img.w, img.h)  # whole image
             self.mask = np.full((img.h, img.w), True)  # full mask
 
@@ -120,9 +120,6 @@ class ChannelMapping:
         self.red = red
         self.green = green
         self.blue = blue
-        # used to identify the previous mapping - when a new image arrives, we compare
-        # the channels to see if the old mapping can still be valid.
-        self.prevMappingString = ""
 
     # generate a default mapping
     def generateDefaultMapping(self, img):
@@ -133,37 +130,25 @@ class ChannelMapping:
     # generate a mapping from a new image if required - or keep using the old mapping
     # if we can.
     def ensureValid(self, img):
-        sourceStr = "^".join([IChannelSource.stringForSet(x, 0) for x in img.sources])
-        if self.red < 0 or self.prevMappingString != sourceStr:
-            # no channel assignments yet, or the image channels have changed.
-            # Need to construct new set from the sources
-            if self.prevMappingString != '':
-                # What this *should* do is make sure we don't blithely rebuild a default
-                # mapping when this has been called the first time: it may well contain a
-                # perfectly good mapping we've specified (such as the "default bands" mapping
-                # in the ENVI input).
-                # I am really not sure about this functionality. Need to analyse the flow!
-                self.generateDefaultMapping(img)
-            self.prevMappingString = sourceStr
+        # make sure there is a mapping, and that it's in range. If not, regenerate.
+        if self.red < 0 or self.red >= img.channels or self.green >= img.channels or self.blue >= img.channels:
+            self.generateDefaultMapping(img)
 
     def serialise(self):
-        return [self.red, self.green, self.blue, self.prevMappingString]
+        return [self.red, self.green, self.blue]
 
     @staticmethod
     def deserialise(lst):
         m = ChannelMapping()
-        m.red, m.green, m.blue, m.prevMappingString = lst
+        m.red, m.green, m.blue = lst
         return m
 
     def copy(self):
-        # we need to copy the prevmappingstring too, because we don't want
-        # a simple copy to think that the actual sources have changed.
         m = ChannelMapping(self.red, self.green, self.blue)
-        m.prevMappingString = self.prevMappingString
         return m
 
     def __str__(self):
-        return "r{} g{} b{} prev {}".format(self.red, self.green, self.blue, self.prevMappingString)
+        return "r{} g{} b{}".format(self.red, self.green, self.blue)
 
 
 ## an image - just a numpy array (the image) and a list of ROI objects. The array
