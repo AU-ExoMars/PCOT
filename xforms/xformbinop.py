@@ -34,6 +34,7 @@ class XFormBinop(XFormType):
             node.img = res.val
         else:
             node.img = None
+        print("{} : inputs {} {}, output {} ".format(node.displayName, a, b, res))
         node.setOutput(0, res)
 
 

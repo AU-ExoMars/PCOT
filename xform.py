@@ -9,7 +9,7 @@ import hashlib
 import inspect
 import traceback
 from collections import deque
-from typing import List, Dict, Tuple, Any, ClassVar, Optional, TYPE_CHECKING
+from typing import List, Dict, Tuple, Any, ClassVar, Optional, TYPE_CHECKING, Callable
 
 import json
 import pyperclip
@@ -293,6 +293,9 @@ class Datum:
     def isImage(self):
         return conntypes.isImage(self.tp)
 
+    def __str__(self):
+        return "[DATUM type {} value {}]".format(self.tp, self.val)
+
 
 ## an actual instance of a transformation, often called a "node".
 class XForm:
@@ -317,7 +320,7 @@ class XForm:
 
     ## @var outputs
     # the actual output data from this node as a Datum object.
-    outputs: List[Datum]
+    outputs: List[Optional[Datum]]
 
     ## @var outputTypes
     # the "overriding" output type (since an "img" output (say) may become
@@ -461,6 +464,11 @@ class XForm:
     def clearError(self):
         self.error = None
 
+    ## clear all the node's outputs, required on all nodes before we run the graph
+    # (it's how we check a node can run - are all its input nodes' outputs set?)
+    def clearOutputs(self):
+        self.outputs = [None for _ in self.type.outputConnectors]
+
     ## called when the connector count changes to set up the necessary
     # lists.
     def connCountChanged(self):
@@ -480,7 +488,7 @@ class XForm:
 
         # there is also a data output generated for each output by "perform", initially
         # these are None
-        self.outputs = [None for _ in self.type.outputConnectors]
+        self.clearOutputs()
         # these are the overriding output types; none if we use the default
         # given by the type object (see the comment on outputConnectors
         # in XFormType)
@@ -724,7 +732,7 @@ class XForm:
             else:
                 print("--------------------------------------Performing {}".format(self.debugName()))
                 # first clear all outputs
-                self.outputs = [None for _ in self.type.outputConnectors]
+                self.clearOutputs()
                 # now run the node, catching any XFormException
                 try:
                     self.type.perform(self)
@@ -774,6 +782,9 @@ class XForm:
     def rename(self, name):
         # defer to type, because connector nodes have to rebuild all views.
         self.type.rename(self, name)
+
+    def __str__(self):
+        return "XForm-{}-{}-{}".format(id(self), self.displayName, self.type.name)
 
 
 ## a graph of transformation nodes
@@ -888,10 +899,22 @@ class XFormGraph:
         for n in self.nodes:
             n.dump()
 
-    ## we are about to perform some nodes due to a UI change.
-    def prePerform(self):
-        for n in self.nodes:
+    def visit(self, root: Optional[XForm], fn: Callable[[XForm], None]):
+        fn(root)
+        for n in root.children:
+            self.visit(n, fn)
+
+    ## we are about to perform some nodes due to a UI change, so reset errors, hasRun flag, and outputs
+    # of the descendants of the node we are running (or all nodes if we are running the entire graph)
+    def prePerform(self, root: Optional[XForm]):
+        nodeset = set()
+        if root is not None:
+            self.visit(root, lambda x: nodeset.add(x))
+        else:
+            nodeset = set(self.nodes)
+        for n in nodeset:
             n.clearError()
+            n.clearOutputs()
             n.hasRun = False
 
     ## Called when a control in a node has changed, and the node needs to rerun (as do all its children
@@ -937,7 +960,7 @@ class XFormGraph:
         if self.performingGraph:
             return
 
-        self.prePerform()
+        self.prePerform(node)
         self.performingGraph = True
         if node is None:
             for n in self.nodes:
