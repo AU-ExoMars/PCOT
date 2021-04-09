@@ -22,8 +22,6 @@ def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: conntypes.
     if outType != conntypes.IMG and (a.isImage() or b.isImage()):
         raise XFormException('DATA', 'Output type must be image if either input is image')
 
-    qqq = a.isImage()
-    print(qqq)
     if a.isImage() and b.isImage():
         # get actual images
         imga = a.val.img

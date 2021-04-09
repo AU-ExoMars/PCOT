@@ -2,13 +2,13 @@
 # The core model module, containing definitions of the xforms (nodes), the graph, and the
 # type objects. The basic idea is that all XForms are the same, with the exception of additional data.
 # Their behaviour is controlled by the XFormType object to which they link via their "type" member.
-
-
+import base64
 import copy
 import hashlib
 import inspect
 import traceback
 from collections import deque
+from io import BytesIO
 from typing import List, Dict, Tuple, Any, ClassVar, Optional, TYPE_CHECKING, Callable
 
 import json
@@ -19,6 +19,7 @@ import conntypes
 import ui.tabs
 from ui import graphscene
 from inputs.inp import InputManager
+from utils import archive
 
 if TYPE_CHECKING:
     import PyQt5.QtWidgets
@@ -864,21 +865,32 @@ class XFormGraph:
         return xform
 
     ## copy selected items to the clipboard. This copies a serialized
-    # version, like that used for load/save.
+    # version, like that used for load/save - but it's hairier than it might seem because
+    # there might be numpy data in there. So we build a ZIP archive of the JSON and numpy arrays,
+    # convert that to b64 and store that string. Ugh.
     def copy(self, selection):
-        # turn into JSON string
-        s = json.dumps(self.serialise(selection))
-        # copy to clipboard
+        # turn into binary data
+        with archive.MemoryArchive() as a:
+            a.writeJson("clipboard", self.serialise(selection))
+        # make sure we have closed the archive (the outdent here will do it)
+
+        # copy to clipboard as a string; this is ugly and may be slow. Particularly if we
+        # end up serialising lots of numpy data! However, it is still compressed with DEFLATE.
+        s = base64.b64encode(a.get().getvalue()).decode()  # get memory from bytesio, encode as b64, convert to string.
         pyperclip.copy(s)
 
     ## paste the clipboard. This involves deserialising.
     # Returns a list of new nodes.
     def paste(self):
-        # get string from clipboard
+        # get data from clipboard as a b64 encoded string
         s = pyperclip.paste()
         if len(s) > 0:
             try:
-                d = json.loads(s)  # convert to dict
+                # decode the b64 string into bytes
+                s = base64.b64decode(s)
+                # make a memory archive out of these bytes and read it
+                with archive.MemoryArchive(BytesIO(s)) as a:
+                    d = a.readJson("clipboard")
             except json.decoder.JSONDecodeError:
                 raise Exception("Clipboard does not contain valid data")
             return self.deserialise(d, False)

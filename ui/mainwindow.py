@@ -26,6 +26,8 @@ import xform
 
 ## return the current username, whichis either obtained from the OS
 # or from the PCOT_USER environment variable
+from utils import archive
+
 
 def getUserName():
     if 'PCOT_USER' in os.environ:
@@ -268,37 +270,32 @@ class MainUI(ui.tabs.DockableTabWindow):
         # doing it in one step, to avoid errors in the former leaving us
         # with an unreadable file.
         try:
-            d = self.serialise()
-            s = json.dumps(d, sort_keys=True, indent=4)
-            try:
-                with open(fname, 'w') as f:
-                    f.write(s)
-            except Exception as e:
-                ui.error("cannot save file {}: {}".format(fname, e))
+            with archive.FileArchive(fname, 'w') as arc:
+                arc.writeJson("JSON", self.serialise())
             ui.msg("File saved : " + fname)
         except Exception as e:
             traceback.print_exc()
-            ui.error("cannot generate save data: {}".format(e))
+            ui.error("cannot save file {}: {}".format(fname, e))
 
     ## loading from a file
     def load(self, fname):
         try:
-            with open(fname) as f:
-                d = json.load(f)
-                self.deserialise(d)
-                # now we need to reconstruct the scene with the new data
-                # (False means don't do autolayout, read xy data from the dict instead)
-                self.graph.constructScene(False)
-                self.view.setScene(self.graph.scene)
-                ui.msg("File loaded")
-                self.saveFileName = fname
+            with archive.FileArchive(fname) as arc:
+                d = arc.readJson("JSON")
+            self.deserialise(d)
+            # now we need to reconstruct the scene with the new data
+            # (False means don't do autolayout, read xy data from the dict instead)
+            self.graph.constructScene(False)
+            self.view.setScene(self.graph.scene)
+            ui.msg("File loaded")
+            self.saveFileName = fname
         except Exception as e:
             traceback.print_exc()
             ui.error("cannot open file {}: {}".format(fname, e))
 
     ## the "save as" menu handler
     def saveAsAction(self):
-        res = QtWidgets.QFileDialog.getSaveFileName(self, 'Save file', '.', "JSON files (*.json)")
+        res = QtWidgets.QFileDialog.getSaveFileName(self, 'Save file', '.', "PCOT files (*.pcot)")
         if res[0] != '':
             self.save(res[0])
             self.saveFileName = res[0]
@@ -312,7 +309,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     ## the "open" menu handler
     def openAction(self):
-        res = QtWidgets.QFileDialog.getOpenFileName(self, 'Open file', '.', "JSON files (*.json)")
+        res = QtWidgets.QFileDialog.getOpenFileName(self, 'Open file', '.', "PCOT files (*.pcot)")
         if res[0] != '':
             self.closeAllTabs()
             self.load(res[0])
