@@ -46,7 +46,7 @@ class ROIRect(ROI):
         return np.full((self.h, self.w), True)
 
     def __str__(self):
-        return "{} {} {}x{}".format(self.x, self.y, self.w, self.h)
+        return "ROI-RECT {} {} {}x{}".format(self.x, self.y, self.w, self.h)
 
 
 ## this is the parts of an image cube which are covered by the active ROIs
@@ -71,13 +71,14 @@ class SubImageCubeROI:
             self.mask = np.full((y2 - y1, x2 - x1), False)
             # and OR the ROIs into it
             for r in img.rois:
+                rx,ry,rw,rh = r.bb()
                 # calculate ROI's position inside subimage
-                x = r.x - x1
-                y = r.y - y1
+                x = rx - x1
+                y = ry - y1
                 # get ROI's mask
                 roimask = r.mask()
                 # add it at that position
-                self.mask[y:y + r.h, x:x + r.w] = roimask
+                self.mask[y:y + rh, x:x + rw] = roimask
                 # debugging code to let us see the submask
             #                xxx = self.mask.astype(np.ubyte)*255
             #                print(xxx)
