@@ -36,7 +36,6 @@ class ROIFreeHand(ROI):
             self.map = d['map']
             self.bbrect = d['rect']
 
-
     def mask(self):
         # return a boolean array, same size as BB
         return self.map > 0

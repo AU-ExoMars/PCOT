@@ -1,9 +1,14 @@
 
 import json
+import os
+import shutil
+import tempfile
 
 import numpy as np
 import zipfile
 from io import BytesIO
+
+import ui
 
 
 class Archive:
@@ -60,7 +65,7 @@ class Archive:
             raise Exception("Archive is not open")
         b = BytesIO()
         np.save(b, a)
-        print("Archive written as {}".format(name))
+        print("Array written as {}".format(name))
         self.zip.writestr(name, b.getvalue())
 
     def writeArrayAndGenerateName(self, a: np.ndarray):
@@ -145,8 +150,24 @@ class FileArchive(Archive):
         self.arrayct = 0
 
     def __enter__(self):
-        self.zip = zipfile.ZipFile(self.name, self.mode, compression=zipfile.ZIP_DEFLATED)
+        if self.mode == 'w':
+            self.tempdir = tempfile.mkdtemp()
+            self.tempfilename = os.path.join(self.tempdir,'temp.pcot')
+            self.zip = zipfile.ZipFile(self.tempfilename, self.mode, compression=zipfile.ZIP_DEFLATED)
+        else:
+            self.zip = zipfile.ZipFile(self.name, self.mode, compression=zipfile.ZIP_DEFLATED)
         return self
+
+    def __exit__(self, tp, value, traceback):
+        if self.zip is not None:
+            self.zip.close()
+            self.zip = None
+            if self.mode == 'w':
+                if tp is None:  # we ONLY write the destination archive if there were no exceptions!
+                    shutil.move(self.tempfilename, self.name)
+                else:
+                    ui.warn("File did not save due to an exception.")
+                shutil.rmtree(self.tempdir)
 
 
 class MemoryArchive(Archive):
