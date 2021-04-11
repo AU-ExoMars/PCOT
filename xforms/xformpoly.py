@@ -1,102 +1,135 @@
 import cv2 as cv
 import numpy as np
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QGuiApplication
+
 import conntypes
 import ui.tabs
 import utils.colour
 import utils.text
-from scipy import ndimage
+
 from pancamimage import ImageCube, ROI
 from xform import xformtype, XFormType, Datum
 
-BRUSHRADIUS = 20
 
+## a polygon ROI
 
-## a freehand (well, brush-based) ROI
-
-class ROIFreeHand(ROI):
+class ROIPoly(ROI):
     def __init__(self):
-        self.bbrect = None
-        self.map = None
         self.img = None
+        self.points = []
+        self.selectedPoint = None
+
+    def hasPoly(self):
+        return len(self.points) > 2
 
     def setImage(self, img):
         self.img = img
 
     def bb(self):
-        return self.bbrect
+        if not self.hasPoly():
+            return None
+
+        xmin = min([p[0] for p in self.points])
+        xmax = max([p[0] for p in self.points])
+        ymin = min([p[1] for p in self.points])
+        ymax = max([p[1] for p in self.points])
+
+        return xmin, ymin, xmax - xmin, ymax - ymin
 
     def serialise(self):
         return {
-            'rect': self.bbrect,
-            'map': self.map
+            'points': self.points,
         }
 
     def deserialise(self, d):
-        if 'map' in d:
-            self.map = d['map']
-            self.bbrect = d['rect']
+        if 'points' in d:
+            pts = d['points']
+            # points will be saved as lists, turn back into tuples
+            self.points = [tuple(x) for x in pts]
 
     def mask(self):
-        # return a boolean array, same size as BB
-        return self.map > 0
+        # return a boolean array, same size as BB. We use opencv here to build a uint8 image
+        # which we convert into a boolean array.
 
-    def draw(self, img, colour):
-        # draw into an RGB image
-        # first, get the slice into the real image
-        x, y, w, h = self.bb()
-        imgslice = img[y:y + h, x:x + w]
+        if not self.hasPoly():
+            return
 
-        # now get the mask and run sobel edge-detection on it
-        mask = self.mask()
-        sx = ndimage.sobel(mask, axis=0, mode='constant')
-        sy = ndimage.sobel(mask, axis=1, mode='constant')
-        mask = np.hypot(sx, sy)
+        # First, we need to build a polygon relative to the bounding box
+        xmin, ymin, w, h = self.bb()
+        poly = [(x - xmin, y - ymin) for (x, y) in self.points]
 
-        # flatten and repeat each element of the mask for each channel
-        x = np.repeat(np.ravel(mask), 3)
-        # and reshape into the same shape as the image slice
-        x = np.reshape(x, imgslice.shape)
+        # now create an empty image
+        polyimg = np.zeros((h, w), dtype=np.uint8)
+        # draw the polygon in it (we have enough points)
+        pts = np.array(poly, np.int32)
+        pts = pts.reshape((-1, 1, 2))
+        cv.fillPoly(polyimg, [pts], 255)
+        # convert to boolean
+        return polyimg > 0
 
-        # write a colour
-        np.putmask(imgslice, x, colour)
+    def draw(self, img, colour, thickness):
+        # first write the points in the actual image
+        for p in self.points:
+            cv.circle(img, p, 7, colour, thickness)
 
-    def addCircle(self, x, y, r):
-        if self.img is not None:
-            # There's a clever way of doing this I'm sure, but I'm going to do it the dumb way.
-            # 1) create a map the size of the image and put the existing ROI into it
-            # 2) extend the ROI with a new circle, just drawing it into the image
-            # 3) crop the image back down again by finding a new bounding box and cutting the mask out of it.
-            # It should hopefully be fast enough.
+        if self.selectedPoint is not None:
+            if self.selectedPoint >= len(self.points):
+                self.selectedPoint = None
+            else:
+                p = self.points[self.selectedPoint]
+                cv.circle(img, p, 20, colour, thickness + 1)
 
-            # create full size map
-            fullsize = np.zeros((self.img.w, self.img.h))
-            # splice in existing data, if there is any!
-            if self.bbrect is not None:
-                bbx, bby, bbw, bbh = self.bbrect
-                fullsize[bby:bby + bbh, bbx:bbx + bbw] = self.map
-            # add the new circle
-            cv.circle(fullsize, (x, y), r, 255, -1)
-            # calculate new bounding box
-            cols = np.any(fullsize, axis=0)
-            rows = np.any(fullsize, axis=1)
-            ymin, ymax = np.where(rows)[0][[0, -1]]
-            xmin, xmax = np.where(cols)[0][[0, -1]]
-            xmax += 1
-            ymax += 1
-            # cut out the new data
-            self.map = fullsize[ymin:ymax, xmin:xmax]
-            # construct the new BB
-            self.bbrect = (int(xmin), int(ymin), int(xmax - xmin), int(ymax - ymin))
+        if not self.hasPoly():
+            return
+
+        # draw the polygon
+        pts = np.array(self.points, np.int32)
+        pts = pts.reshape((-1, 1, 2))
+        cv.polylines(img, [pts], True, colour, thickness=thickness)
+
+    def addPoint(self, x, y):
+        self.points.append((x, y))
+
+    def selPoint(self, x, y):
+        mindist = None
+        self.selectedPoint = None
+        for idx in range(len(self.points)):
+            p = self.points[idx]
+            dx = p[0] - x
+            dy = p[1] - y
+            dsq = dx * dx + dy * dy
+            print(dsq)
+            if dsq < 1000 and (mindist is None or dsq < mindist):
+                self.selectedPoint = idx
+                mindist = dsq
+
+    def moveSelPoint(self, x, y):
+        if self.selectedPoint is not None:
+            self.points[self.selectedPoint] = (x, y)
+            return True
+        else:
+            return False
+
+    def delSelPoint(self):
+        if self.selectedPoint is not None:
+            del self.points[self.selectedPoint]
+            self.selectedPoint = None
+            return True
+        else:
+            return False
+
 
     def __str__(self):
-        if not self.bbrect:
-            return "ROI-FREEHAND (no points)"
-        return "ROI-FREEHAND {} {} {}x{}".format(self.bbrect.x, self.bbrect.y, self.bbrect.w, self.bbrect.h)
+        if not self.hasPoly():
+            return "ROI-POLY (no points)"
+        x, y, w, h = self.bb()
+        return "ROI-POLY {} {} {}x{}".format(x, y, w, h)
 
 
 @xformtype
-class XformFreehand(XFormType):
-    """Add a freehand ROI to an image."""
+class XformPoly(XFormType):
+    """Add a polygonal ROI to an image."""
 
     # constants enumerating the outputs
     OUT_IMG = 0
@@ -105,7 +138,7 @@ class XformFreehand(XFormType):
     OUT_RECT = 3
 
     def __init__(self):
-        super().__init__("freehand", "regions", "0.0.0")
+        super().__init__("poly", "regions", "0.0.0")
         self.addInputConnector("", "img")
         self.addOutputConnector("img", "img", "image with ROI")  # image+roi
         self.addOutputConnector("crop", "img", "image cropped to ROI")  # cropped image
@@ -115,7 +148,7 @@ class XformFreehand(XFormType):
         self.autoserialise = ('caption', 'captiontop', 'fontsize', 'fontline', 'colour')
 
     def createTab(self, n, w):
-        return TabFreehand(n, w)
+        return TabPoly(n, w)
 
     def init(self, node):
         node.img = None
@@ -128,7 +161,7 @@ class XformFreehand(XFormType):
         # initialise the ROI data, which will consist of a bounding box within the image and
         # a 2D boolean map of pixels within the image - True pixels are in the ROI.
 
-        node.roi = ROIFreeHand()
+        node.roi = ROIPoly()
 
     def serialise(self, node):
         return node.roi.serialise()
@@ -146,12 +179,17 @@ class XformFreehand(XFormType):
             node.setOutput(self.OUT_ANNOT, None)
             node.setOutput(self.OUT_RECT, None)
         else:
+
             # for the annotated image, we just get the RGB for the image in the
             # input node.
             img = img.copy()
             img.setMapping(node.mapping)
             rgb = img.rgbImage()
             bb = node.roi.bb()
+            # now make an annotated image by drawing on the RGB image we got earlier
+            annot = rgb.img
+            # Note how this differs from some other ROIs - we might not have a BB, but still need to draw
+            node.roi.draw(annot, node.colour, node.fontline)
             if bb is None:
                 # no ROI, but we still need to use the RGB
                 node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
@@ -178,8 +216,6 @@ class XformFreehand(XFormType):
                     node.setOutput(self.OUT_CROP,
                                    Datum(conntypes.IMG, ImageCube(node.roi.crop(o), node.mapping, o.sources)))
 
-                # now make an annotated image by drawing on the RGB image we got earlier
-                annot = rgb.img
                 # Write the bounding box. I may remove this.
                 # We MUST WRITE OUTSIDE THE BOUNDS, otherwise we interfere
                 # with the image! Doing this predictably with the thickness function
@@ -187,8 +223,6 @@ class XformFreehand(XFormType):
                 for i in range(node.fontline):
                     x, y, w, h = bb
                     cv.rectangle(annot, (x - i - 1, y - i - 1), (x + w + i, y + h + i), node.colour, thickness=1)
-
-                node.roi.draw(annot, node.colour)
 
                 # write the caption
                 ty = y if node.captiontop else y + h
@@ -205,12 +239,13 @@ class XformFreehand(XFormType):
                 node.setOutput(self.OUT_RECT, Datum(conntypes.RECT, bb))
 
 
-class TabFreehand(ui.tabs.Tab):
+class TabPoly(ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'assets/tabrect.ui')
         # set the paint hook in the canvas so we can draw on the image
         self.w.canvas.paintHook = self
         self.w.canvas.mouseHook = self
+        self.w.canvas.keyHook = self
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
         self.w.fontline.valueChanged.connect(self.fontLineChanged)
         self.w.caption.textChanged.connect(self.textChanged)
@@ -279,15 +314,21 @@ class TabFreehand(ui.tabs.Tab):
 
     def canvasMouseMoveEvent(self, x, y, e):
         if self.mouseDown:
-            self.node.roi.addCircle(x, y, BRUSHRADIUS)
-            self.changed()
-            self.w.canvas.update()
+            if self.node.roi.moveSelPoint(x, y):
+                self.changed()
 
     def canvasMousePressEvent(self, x, y, e):
         self.mouseDown = True
-        self.node.roi.addCircle(x, y, BRUSHRADIUS)
+        if e.modifiers() & Qt.ShiftModifier:
+            self.node.roi.addPoint(x, y)
+        else:
+            self.node.roi.selPoint(x, y)
         self.changed()
         self.w.canvas.update()
 
     def canvasMouseReleaseEvent(self, x, y, e):
         self.mouseDown = False
+
+    def canvasKeyPressEvent(self,e):
+        self.node.roi.delSelPoint()
+        self.changed()

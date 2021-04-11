@@ -57,6 +57,8 @@ class InnerCanvas(QtWidgets.QWidget):
         self.x = 0
         self.y = 0
         self.canv = canv
+        # needs to do this to get key events
+        self.setFocusPolicy(QtCore.Qt.ClickFocus)
         self.reset()
 
     ## resets the canvas to zoom level 1, top left pan
@@ -145,6 +147,11 @@ class InnerCanvas(QtWidgets.QWidget):
         y = int(p.y() * (self.scale * self.zoomscale) + self.y)
         return x, y
 
+    def keyPressEvent(self, e):
+        if self.canv.keyHook is not None:
+            self.canv.keyHook.canvasKeyPressEvent(e)
+        return super().keyPressEvent(e)
+
     ## mouse press handler, can delegate to a hook
     def mousePressEvent(self, e):
         x, y = self.getImgCoords(e.pos())
@@ -226,6 +233,10 @@ class Canvas(QtWidgets.QWidget):
     # an object with a set of mouse events for handling clicks and moves (or None)
     mouseHook: Optional[object]
 
+    ## @var keyHook
+    # an object with an event for key handling
+    keyHook: Optional[object]
+
     ## @var graph
     # the graph of which I am a part. Not really optional, but I have to set it after construction.
     graph: Optional['XFormGraph']
@@ -256,6 +267,7 @@ class Canvas(QtWidgets.QWidget):
         super().__init__(parent)
         self.paintHook = None
         self.mouseHook = None
+        self.keyHook = None
         self.graph = None
         self.nodeToPerform = None
 

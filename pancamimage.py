@@ -229,7 +229,7 @@ class ImageCube:
 
     # Set the RGB mapping for this image, and create default channel mappings if necessary.
     def setMapping(self, mapping: ChannelMapping):
-        print("{} changing mapping to {}".format(self, self.mapping))
+#        print("{} changing mapping to {}".format(self, self.mapping))
         self.mapping = mapping
         if mapping is not None:
             mapping.ensureValid(self)

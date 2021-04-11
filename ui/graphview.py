@@ -100,7 +100,6 @@ class GraphView(QtWidgets.QGraphicsView):
             scene.rebuild()
             event.accept()
         else:
-            event.ignore()
             # pass the event into the standard handler,
             # where it will be passed into any items that need it
             super().keyPressEvent(event)
