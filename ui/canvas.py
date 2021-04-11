@@ -115,7 +115,7 @@ class InnerCanvas(QtWidgets.QWidget):
             else:
                 self.scale = imgh / widgh
 
-            scale = self.zoomscale * self.scale
+            scale = self.getScale()
 
             # work out the size of the widget in image pixel coordinates
             cutw = int(widgw * scale)
@@ -141,10 +141,13 @@ class InnerCanvas(QtWidgets.QWidget):
             self.scale = 1
         p.end()
 
+    def getScale(self):
+        return self.scale * self.zoomscale
+
     ## given point in the widget, return coords in the image. Takes a QPoint.
     def getImgCoords(self, p: QtCore.QPoint):
-        x = int(p.x() * (self.scale * self.zoomscale) + self.x)
-        y = int(p.y() * (self.scale * self.zoomscale) + self.y)
+        x = int(p.x() * (self.getScale()) + self.x)
+        y = int(p.y() * (self.getScale()) + self.y)
         return x, y
 
     def keyPressEvent(self, e):
@@ -382,9 +385,11 @@ class Canvas(QtWidgets.QWidget):
 
     def display(self, img: ImageCube, alreadyRGBMappedImageSource=None, nodeToPerform=None):
         if self.mapping is None:
-            raise Exception("Mapping not set in ui.canvas.Canvas.display() - should be done in tab's ctor with setMapping()")
+            raise Exception(
+                "Mapping not set in ui.canvas.Canvas.display() - should be done in tab's ctor with setMapping()")
         if self.graph is None:
-            raise Exception("Graph not set in ui.canvas.Canvas.display() - should be done in tab's ctor with setGraph()")
+            raise Exception(
+                "Graph not set in ui.canvas.Canvas.display() - should be done in tab's ctor with setGraph()")
         if img is not None:
             # ensure there is a valid mapping (only do this if not already mapped)
             if alreadyRGBMappedImageSource is None:

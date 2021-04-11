@@ -39,7 +39,7 @@ class PaletteButton(QtWidgets.QPushButton):
                 ui.mainwindow.MainUI.createMacroWindow(self.xformtype, False)
             elif act == deleteMacroAct:
                 if QMessageBox.question(self.parent(), "Delete macro", "Are you sure?",
-                                        QMessageBox.Yes | QMessageBox.No):
+                                        QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
                     macros.XFormMacro.deleteMacro(self.xformtype)
                     ui.mainwindow.MainUI.rebuildPalettes()
 

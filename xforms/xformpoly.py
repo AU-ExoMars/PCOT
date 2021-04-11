@@ -2,6 +2,7 @@ import cv2 as cv
 import numpy as np
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QGuiApplication
+from PyQt5.QtWidgets import QMessageBox
 
 import conntypes
 import ui.tabs
@@ -17,6 +18,10 @@ from xform import xformtype, XFormType, Datum
 class ROIPoly(ROI):
     def __init__(self):
         self.img = None
+        self.points = []
+        self.selectedPoint = None
+
+    def clear(self):
         self.points = []
         self.selectedPoint = None
 
@@ -68,17 +73,18 @@ class ROIPoly(ROI):
         # convert to boolean
         return polyimg > 0
 
-    def draw(self, img, colour, thickness):
+    def draw(self, img, colour, thickness, drawPoints):
         # first write the points in the actual image
-        for p in self.points:
-            cv.circle(img, p, 7, colour, thickness)
+        if drawPoints:
+            for p in self.points:
+                cv.circle(img, p, 7, colour, thickness)
 
         if self.selectedPoint is not None:
             if self.selectedPoint >= len(self.points):
                 self.selectedPoint = None
             else:
                 p = self.points[self.selectedPoint]
-                cv.circle(img, p, 20, colour, thickness + 1)
+                cv.circle(img, p, 10, colour, thickness + 1)
 
         if not self.hasPoly():
             return
@@ -119,7 +125,6 @@ class ROIPoly(ROI):
         else:
             return False
 
-
     def __str__(self):
         if not self.hasPoly():
             return "ROI-POLY (no points)"
@@ -145,7 +150,7 @@ class XformPoly(XFormType):
         self.addOutputConnector("ann", "img",
                                 "image as RGB with ROI, with added annotations around ROI")  # annotated image
         self.addOutputConnector("rect", "rect", "the crop rectangle data")  # rectangle (just the ROI's bounding box)
-        self.autoserialise = ('caption', 'captiontop', 'fontsize', 'fontline', 'colour')
+        self.autoserialise = ('caption', 'captiontop', 'fontsize', 'fontline', 'colour', 'drawMode')
 
     def createTab(self, n, w):
         return TabPoly(n, w)
@@ -157,6 +162,7 @@ class XformPoly(XFormType):
         node.fontsize = 10
         node.fontline = 2
         node.colour = (1, 1, 0)
+        node.drawMode = 0
 
         # initialise the ROI data, which will consist of a bounding box within the image and
         # a 2D boolean map of pixels within the image - True pixels are in the ROI.
@@ -179,6 +185,15 @@ class XformPoly(XFormType):
             node.setOutput(self.OUT_ANNOT, None)
             node.setOutput(self.OUT_RECT, None)
         else:
+            if node.drawMode == 0:
+                drawPoints = True
+                drawBox = True
+            elif node.drawMode == 1:
+                drawPoints = True
+                drawBox = False
+            else:
+                drawPoints = False
+                drawBox = False
 
             # for the annotated image, we just get the RGB for the image in the
             # input node.
@@ -189,7 +204,7 @@ class XformPoly(XFormType):
             # now make an annotated image by drawing on the RGB image we got earlier
             annot = rgb.img
             # Note how this differs from some other ROIs - we might not have a BB, but still need to draw
-            node.roi.draw(annot, node.colour, node.fontline)
+            node.roi.draw(annot, node.colour, node.fontline, drawPoints)
             if bb is None:
                 # no ROI, but we still need to use the RGB
                 node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
@@ -220,9 +235,10 @@ class XformPoly(XFormType):
                 # We MUST WRITE OUTSIDE THE BOUNDS, otherwise we interfere
                 # with the image! Doing this predictably with the thickness function
                 # in cv.rectangle is a pain, so I'm doing it by hand.
-                for i in range(node.fontline):
-                    x, y, w, h = bb
-                    cv.rectangle(annot, (x - i - 1, y - i - 1), (x + w + i, y + h + i), node.colour, thickness=1)
+                x, y, w, h = bb
+                if drawBox:
+                    for i in range(node.fontline):
+                        cv.rectangle(annot, (x - i - 1, y - i - 1), (x + w + i, y + h + i), node.colour, thickness=1)
 
                 # write the caption
                 ty = y if node.captiontop else y + h
@@ -241,7 +257,7 @@ class XformPoly(XFormType):
 
 class TabPoly(ui.tabs.Tab):
     def __init__(self, node, w):
-        super().__init__(w, node, 'assets/tabrect.ui')
+        super().__init__(w, node, 'assets/tabpoly.ui')
         # set the paint hook in the canvas so we can draw on the image
         self.w.canvas.paintHook = self
         self.w.canvas.mouseHook = self
@@ -250,7 +266,9 @@ class TabPoly(ui.tabs.Tab):
         self.w.fontline.valueChanged.connect(self.fontLineChanged)
         self.w.caption.textChanged.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
+        self.w.clearButton.pressed.connect(self.clearPressed)
         self.w.captionTop.toggled.connect(self.topChanged)
+        self.w.drawMode.currentIndexChanged.connect(self.drawModeChanged)
         self.w.canvas.setGraph(node.graph)
         # but we still need to be able to edit it
         self.w.canvas.setMapping(node.mapping)
@@ -259,6 +277,10 @@ class TabPoly(ui.tabs.Tab):
         self.dontSetText = False
         # sync tab with node
         self.onNodeChanged()
+
+    def drawModeChanged(self, idx):
+        self.node.drawMode = idx
+        self.changed()
 
     def topChanged(self, checked):
         self.node.captiontop = checked
@@ -286,6 +308,12 @@ class TabPoly(ui.tabs.Tab):
             self.node.colour = col
             self.changed()
 
+    def clearPressed(self):
+        if QMessageBox.question(self.parent(), "Clear region", "Are you sure?",
+                                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+            self.node.roi.clear()
+            self.changed()
+
     # causes the tab to update itself from the node
     def onNodeChanged(self):
         if self.node.img is not None:
@@ -303,6 +331,7 @@ class TabPoly(ui.tabs.Tab):
         self.w.fontsize.setValue(self.node.fontsize)
         self.w.fontline.setValue(self.node.fontline)
         self.w.captionTop.setChecked(self.node.captiontop)
+        self.w.drawMode.setCurrentIndex(self.node.drawMode)
         r, g, b = [x * 255 for x in self.node.colour]
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
 
@@ -329,6 +358,6 @@ class TabPoly(ui.tabs.Tab):
     def canvasMouseReleaseEvent(self, x, y, e):
         self.mouseDown = False
 
-    def canvasKeyPressEvent(self,e):
+    def canvasKeyPressEvent(self, e):
         self.node.roi.delSelPoint()
         self.changed()
