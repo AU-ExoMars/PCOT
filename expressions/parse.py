@@ -1,3 +1,7 @@
+# This is the core of the expression parsing system, and none of it
+# is application-specific. The actual operations etc. are in eval.py.
+
+
 from io import BytesIO
 from tokenize import tokenize, TokenInfo, NUMBER, NAME, OP, ENCODING, ENDMARKER, NEWLINE
 from typing import List, Any, Optional, Callable, Dict, Tuple
@@ -140,6 +144,8 @@ def execute(seq: List[Instruction], stack: Stack) -> float:
                 print(x)
     return stack[0]
 
+def defaultInstNumberFactory(num:float) -> Instruction:
+    return InstNumber(num)
 
 # https://stackoverflow.com/questions/16380234/handling-extra-operators-in-shunting-yard/16392115
 
@@ -169,6 +175,12 @@ class Parser:
     def registerVar(self, name: str, fn: Callable[[], Any]):
         self.varRegistry[name] = fn
 
+    ## register the function which outputs a number instruction given a float.
+    # By default this uses the built-in InstNumber, but we sometimes need to override it
+    # (PCOT does to allow numbers to be stacked as Datums)
+    def registerNumInstFactory(self, fn : Callable[[float],Instruction]):
+        self.numInstFactory = fn
+
     ## other functions are names mapped to functions
     ## which take a list of args and return an arg
     funcRegistry: Dict[str, Callable[[List[Any]], Any]]
@@ -188,6 +200,7 @@ class Parser:
         self.varRegistry = dict()
         self.funcRegistry = dict()
         self.toks = []
+        self.numInstFactory = defaultInstNumberFactory
 
         self.nakedIdents = nakedIdents
 
@@ -237,7 +250,7 @@ class Parser:
                 #     add it to the output queue
                 #     goto have_operand
                 elif t.type == NUMBER:
-                    self.out(InstNumber(float(t.string)))
+                    self.out(self.numInstFactory(float(t.string)))
                     wantOperand = False
                 elif t.type == NAME:
                     if t.string in self.varRegistry:

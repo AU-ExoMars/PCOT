@@ -8,9 +8,14 @@ from pancamimage import ImageCube
 from xform import Datum, XFormException
 
 
+class BinopException(Exception):
+    def __init__(self, msg):
+        super().__init__(msg)
+
+
 # The problem with binary operation NODES is that we have to set an output type:
 # ANY is no use. So in this, we have to check that the type being generated is
-# correct.
+# correct. Of course, in an expression we don't do that.
 
 def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: conntypes.Type) -> Datum:
     # if either input is None, the output will be None
@@ -18,9 +23,10 @@ def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: conntypes.
         return None
 
     # if either input is an image, the output will be an image, so check the output type
-    # is correct.
-    if outType != conntypes.IMG and (a.isImage() or b.isImage()):
-        raise XFormException('DATA', 'Output type must be image if either input is image')
+    # is correct. But only do the check if there IS an output type.
+
+    if outType is not None and outType != conntypes.IMG and (a.isImage() or b.isImage()):
+        raise BinopException('Output type must be image if either input is image')
 
     if a.isImage() and b.isImage():
         # get actual images
@@ -28,7 +34,7 @@ def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: conntypes.
         imgb = b.val.img
         # check images are same size/depth
         if imga.shape != imgb.shape:
-            raise XFormException('DATA', 'Images must be same shape')
+            raise BinopException('Images must be same shape')
         # perform calculation
         img = op(imga, imgb)  # will generate a numpy array
         # generate the image
@@ -45,5 +51,7 @@ def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: conntypes.
     elif a.tp == conntypes.NUMBER and b.tp == conntypes.NUMBER:
         # easy case:  op(number,number)->number
         r = Datum(conntypes.NUMBER, op(a.val, b.val))
+    else:
+        raise BinopException("incompatible types")
 
     return r
