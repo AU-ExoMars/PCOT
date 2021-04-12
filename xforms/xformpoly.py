@@ -17,7 +17,8 @@ from xform import xformtype, XFormType, Datum
 
 class ROIPoly(ROI):
     def __init__(self):
-        self.img = None
+        self.imgw = None
+        self.imgh = None
         self.points = []
         self.selectedPoint = None
 
@@ -28,8 +29,13 @@ class ROIPoly(ROI):
     def hasPoly(self):
         return len(self.points) > 2
 
-    def setImage(self, img):
-        self.img = img
+    def setImageSize(self, imgw, imgh):
+        if self.imgw is not None:
+            if self.imgw != imgw or self.imgh != imgh:
+                self.clear()
+
+        self.imgw = imgw
+        self.imgh = imgh
 
     def bb(self):
         if not self.hasPoly():
@@ -177,14 +183,15 @@ class XformPoly(XFormType):
 
     def perform(self, node):
         img = node.getInput(0, conntypes.IMG)
-        node.roi.setImage(img)
         if img is None:
+            node.roi.clear()
             # no image
             node.setOutput(self.OUT_IMG, None)
             node.setOutput(self.OUT_CROP, None)
             node.setOutput(self.OUT_ANNOT, None)
             node.setOutput(self.OUT_RECT, None)
         else:
+            node.roi.setImageSize(img.w, img.h)
             if node.drawMode == 0:
                 drawPoints = True
                 drawBox = True

@@ -19,14 +19,20 @@ class ROIPainted(ROI):
     def __init__(self):
         self.bbrect = None
         self.map = None
-        self.img = None
+        self.imgw = None
+        self.imgh = None
 
     def clear(self):
         self.map = None
         self.bbrect = None
 
-    def setImage(self, img):
-        self.img = img
+    def setImageSize(self, imgw, imgh):
+        if self.imgw is not None:
+            if self.imgw != imgw or self.imgh != imgh:
+                self.clear()
+
+        self.imgw = imgw
+        self.imgh = imgh
 
     def bb(self):
         return self.bbrect
@@ -69,7 +75,7 @@ class ROIPainted(ROI):
 
     ## fill a circle in the ROI, or clear it (if delete is true)
     def setCircle(self, x, y, brushSize, delete=False):
-        if self.img is not None:
+        if self.imgw is not None:
             # There's a clever way of doing this I'm sure, but I'm going to do it the dumb way.
             # 1) create a map the size of the image and put the existing ROI into it
             # 2) extend the ROI with a new circle, just drawing it into the image
@@ -77,13 +83,13 @@ class ROIPainted(ROI):
             # It should hopefully be fast enough.
 
             # create full size map
-            fullsize = np.zeros((self.img.w, self.img.h))
+            fullsize = np.zeros((self.imgh, self.imgw))
             # splice in existing data, if there is any!
             if self.bbrect is not None:
                 bbx, bby, bbw, bbh = self.bbrect
                 fullsize[bby:bby + bbh, bbx:bbx + bbw] = self.map
             # add the new circle
-            r = int(getRadiusFromSlider(brushSize, self.img))
+            r = int(getRadiusFromSlider(brushSize, self.imgw, self.imgh))
             cv.circle(fullsize, (x, y), r, 0 if delete else 255, -1)
             # calculate new bounding box
             cols = np.any(fullsize, axis=0)
@@ -103,8 +109,8 @@ class ROIPainted(ROI):
         return "ROI-PAINTED {} {} {}x{}".format(self.bbrect.x, self.bbrect.y, self.bbrect.w, self.bbrect.h)
 
 
-def getRadiusFromSlider(sliderVal, img):
-    v = max(img.w,img.h)
+def getRadiusFromSlider(sliderVal, imgw, imgh):
+    v = max(imgw, imgh)
     return (v/400) * sliderVal
 
 
@@ -155,7 +161,7 @@ class XFormPainted(XFormType):
 
     def perform(self, node):
         img = node.getInput(0, conntypes.IMG)
-        node.roi.setImage(img)
+        node.roi.setImageSize(img.w, img.h)
 
         if node.drawMode == 0:
             drawEdge = True
@@ -183,7 +189,7 @@ class XFormPainted(XFormType):
             img.setMapping(node.mapping)
             rgb = img.rgbImage()
             bb = node.roi.bb()
-            node.previewRadius = getRadiusFromSlider(node.brushSize,img)
+            node.previewRadius = getRadiusFromSlider(node.brushSize, img.w, img.h)
             if bb is None:
                 # no ROI, but we still need to use the RGB
                 node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
