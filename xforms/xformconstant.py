@@ -47,11 +47,11 @@ class GNumberText(QtWidgets.QGraphicsTextItem):
 
 
 @xformtype
-class XFormNumber(XFormType):
+class XFormConstant(XFormType):
     """Generates a numeric value which can be typed directly into the node's box in the graph"""
     def __init__(self):
-        super().__init__("number", "maths", "0.0.0")
-        self.addOutputConnector("", "number")
+        super().__init__("constant", "maths", "0.0.0")
+        self.addOutputConnector("", conntypes.NUMBER)
         self.autoserialise = ('val',)
 
     ## build the text element of the graph scene object for the node. By default, this

@@ -398,18 +398,7 @@ class TabMacro(ui.tabs.Tab):
 class TabConnector(ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'assets/tabconnector.ui')
-        # populate with types
-        layout = QtWidgets.QVBoxLayout()
-        self.buttons = []
-        idx = 0
-        for x in conntypes.types:
-            b = QtWidgets.QRadioButton(x)
-            layout.addWidget(b)
-            self.buttons.append(b)
-            b.idx = idx
-            idx += 1
-            b.toggled.connect(self.buttonToggled)
-        self.w.type.setLayout(layout)
+        self.w.variant.changed.connect(self.variantChanged)
         self.onNodeChanged()
 
     def onNodeChanged(self):
@@ -417,11 +406,9 @@ class TabConnector(ui.tabs.Tab):
         i = conntypes.types.index(self.node.conntype)
         if i < 0:
             raise Exception('unknown connector type: {}'.format(self.node.conntype))
-        self.buttons[i].setChecked(True)
+        self.w.variant.set(self.node.conntype)
 
-    def buttonToggled(self, checked):
-        for b in self.buttons:
-            if b.isChecked():
-                self.node.conntype = conntypes.types[b.idx]
-                self.node.proto.setConnectors()
-                break
+    def variantChanged(self, t):
+        self.node.conntype = t
+        self.node.proto.setConnectors()
+

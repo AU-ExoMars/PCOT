@@ -1,13 +1,9 @@
-import cv2 as cv
-import numpy as np
-from PyQt5 import QtGui, QtWidgets
+from PyQt5 import QtWidgets
 
 import conntypes
-import ui.number
 import ui.tabs
-from pancamimage import ImageCube
 from utils import binop
-from xform import xformtype, XFormType, XFormException, Datum
+from xform import xformtype, XFormType
 
 
 class XFormBinop(XFormType):
@@ -69,32 +65,17 @@ class XFormDiv(XFormBinop):
 class TabBinop(ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'assets/tabbinop.ui')
-        # populate with types
-        layout = QtWidgets.QVBoxLayout()
-        self.buttons = []
-        idx = 0
-        for x in conntypes.types:
-            b = QtWidgets.QRadioButton(x)
-            layout.addWidget(b)
-            self.buttons.append(b)
-            b.idx = idx
-            idx += 1
-            b.toggled.connect(self.buttonToggled)
+        self.w.variant.setTitle("Output type")
+        self.w.variant.changed.connect(self.variantChanged)
         self.w.canvas.setMapping(node.mapping)
         self.w.canvas.setGraph(node.graph)
-        self.w.type.setLayout(layout)
         self.onNodeChanged()
 
     def onNodeChanged(self):
-        # set the current type
-        i = conntypes.types.index(self.node.getOutputType(0))
-        self.buttons[i].setChecked(True)
+        self.w.variant.set(self.node.getOutputType(0))
         self.w.canvas.display(self.node.img)
 
-    def buttonToggled(self, checked):
-        for b in self.buttons:
-            if b.isChecked():
-                self.node.outputTypes[0] = conntypes.types[b.idx]
-                self.node.graph.ensureConnectionsValid()
-                self.changed()
-                break
+    def variantChanged(self, t):
+        self.node.outputTypes[0] = t
+        self.node.graph.ensureConnectionsValid()
+        self.changed()

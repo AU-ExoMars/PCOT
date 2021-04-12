@@ -35,11 +35,7 @@
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
        <item row="0" column="0">
-        <widget class="QGroupBox" name="type">
-         <property name="title">
-          <string>Connector Type</string>
-         </property>
-        </widget>
+        <widget class="VariantWidget" name="variant" native="true"/>
        </item>
       </layout>
      </widget>
@@ -52,6 +48,12 @@
    <class>Canvas</class>
    <extends>QWidget</extends>
    <header>ui.canvas</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>VariantWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">ui/variantwidget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
