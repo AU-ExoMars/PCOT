@@ -58,9 +58,11 @@ class ROIRect(ROI):
 #   should be manipulated in any operation.
 
 class SubImageCubeROI:
-    def __init__(self, img):
-        if len(img.rois) > 0:
-            bbs = [r.bb() for r in img.rois]  # get bbs
+    def __init__(self, img, imgToUse=None):  # can take another image to get rois from
+        rois = img.rois if imgToUse is None else imgToUse.rois
+
+        if len(rois) > 0:
+            bbs = [r.bb() for r in rois]  # get bbs
             x1 = min([b[0] for b in bbs])
             y1 = min([b[1] for b in bbs])
             x2 = max([b[0] + b[2] for b in bbs])
@@ -70,7 +72,7 @@ class SubImageCubeROI:
             # now construct the mask, initially all False
             self.mask = np.full((y2 - y1, x2 - x1), False)
             # and OR the ROIs into it
-            for r in img.rois:
+            for r in rois:
                 rx,ry,rw,rh = r.bb()
                 # calculate ROI's position inside subimage
                 x = rx - x1
@@ -104,11 +106,20 @@ class SubImageCubeROI:
             # put into a h,w,chans array
             return np.reshape(x, (h, w, chans))
 
+    # get the masked image
+    def masked(self):
+        return np.ma.masked_array(self.img, mask=~self.fullmask())
+
     ## use this ROI to crop the image in img2. Doesn't do masking, though.
     # Copies the sources list from that image.
     def cropother(self, img2):
         x, y, w, h = self.bb
         return ImageCube(img2.img[y:y + h, x:x + w], img2.mapping, img2.sources)
+
+    ## Compare two subimages - just their regions of interest, not the actual image data
+    # Will also work if the images are different depths.
+    def sameROI(self, other):
+        return self.bb == other.bb and self.mask == other.mask
 
 
 ## A mapping from a multichannel image into RGB. All nodes have one of these, although some may have more and some
@@ -229,7 +240,7 @@ class ImageCube:
 
     # Set the RGB mapping for this image, and create default channel mappings if necessary.
     def setMapping(self, mapping: ChannelMapping):
-#        print("{} changing mapping to {}".format(self, self.mapping))
+        #        print("{} changing mapping to {}".format(self, self.mapping))
         self.mapping = mapping
         if mapping is not None:
             mapping.ensureValid(self)
@@ -312,9 +323,10 @@ class ImageCube:
         return ImageCube(self.rgb(), ChannelMapping(0, 1, 2), sources)
 
     ## extract the "subimage" - the image cropped to regions of interest,
-    # with a mask for those ROIs
-    def subimage(self):
-        return SubImageCubeROI(self)
+    # with a mask for those ROIs. Note that you can also supply an image,
+    # in which case you get this image cropped to the other image's ROIs!
+    def subimage(self, imgToUse=None):
+        return SubImageCubeROI(self, imgToUse)
 
     def __str__(self):
         s = "<Image-{} {}x{} array:{} channels:{}, {} bytes, ".format(id(self), self.w, self.h,
@@ -359,6 +371,9 @@ class ImageCube:
         i = ImageCube(self.img.copy(), m, srcs, defaultMapping=self.defaultMapping)
         i.rois = self.rois.copy()
         return i
+
+    def hasROI(self):
+        return len(self.rois)>0
 
     ## return a copy of the image, with the given image spliced in at the
     # subimage's coordinates and masked according to the subimage

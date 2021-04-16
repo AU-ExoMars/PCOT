@@ -30,24 +30,53 @@ def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: conntypes.
 
     if a.isImage() and b.isImage():
         # get actual images
-        imga = a.val.img
-        imgb = b.val.img
+        imga = a.val
+        imgb = b.val
         # check images are same size/depth
-        if imga.shape != imgb.shape:
-            raise BinopException('Images must be same shape')
-        # perform calculation
-        img = op(imga, imgb)  # will generate a numpy array
-        # generate the image
+        if imga.img.shape != imgb.img.shape:
+            raise BinopException('Images must be same shape in binary operation')
+        # if imga has an ROI, use that for both. Similarly, if imgb has an ROI, use that.
+        # But if they both have a subimage they must be the same.
+        ahasroi = imga.hasROI()
+        bhasroi = imgb.hasROI()
+        if ahasroi or bhasroi:
+            if ahasroi and bhasroi:
+                subimga = imga.subimage()
+                subimgb = imgb.subimage()
+                if subimga.bb != subimgb.bb:  # might need an extra check on the masks - but what would it be?
+                    raise BinopException('regions of interest must be the same size in binary operation')
+            else:
+                # get subimages, using their own image's ROI if it has one, otherwise the other image's ROI.
+                # One of these will be true.
+                subimga = imga.subimage(None if ahasroi else imgb)
+                subimgb = imgb.subimage(None if bhasroi else imga)
+
+            maskeda = subimga.masked()
+            maskedb = subimgb.masked()
+            # get masked subimages
+            # perform calculation and get result subimage
+            ressubimg = op(maskeda, maskedb)  # will generate a numpy array
+            # splice that back into a copy of image A, but just take its image, because we're going to
+            # rebuild the sources
+            img = imga.modifyWithSub(subimga, ressubimg).img
+            # generate the output datum
+        else:
+            # neither image has a roi
+            img = op(imga.img, imgb.img)
         r = Datum(conntypes.IMG, ImageCube(img, sources=ImageCube.buildSources([a.val, b.val])))
     elif a.tp == conntypes.NUMBER and b.isImage():
         # here, we're combining a number with an image to give an image
         # which will have the same sources
-        img = op(a.val, b.val.img)
-        r = Datum(conntypes.IMG, ImageCube(img, sources=b.val.sources))
+        img = b.val
+        subimg = img.subimage()
+        img = img.modifyWithSub(subimg, op(a.val, subimg.masked()))
+        r = Datum(conntypes.IMG, img)
     elif a.isImage() and b.tp == conntypes.NUMBER:
         # same as previous case, other way round
-        img = op(a.val.img, b.val)
-        r = Datum(conntypes.IMG, ImageCube(img, sources=a.val.sources))
+        img = a.val
+        subimg = img.subimage()
+        img = img.modifyWithSub(subimg, op(subimg.masked(), b.val))
+        r = Datum(conntypes.IMG, img)
     elif a.tp == conntypes.NUMBER and b.tp == conntypes.NUMBER:
         # easy case:  op(number,number)->number
         r = Datum(conntypes.NUMBER, op(a.val, b.val))
