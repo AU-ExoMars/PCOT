@@ -161,20 +161,6 @@ class XFormPainted(XFormType):
 
     def perform(self, node):
         img = node.getInput(0, conntypes.IMG)
-        node.roi.setImageSize(img.w, img.h)
-
-        if node.drawMode == 0:
-            drawEdge = True
-            drawBox = True
-        elif node.drawMode == 1:
-            drawEdge = True
-            drawBox = False
-        elif node.drawMode == 2:
-            drawEdge = False
-            drawBox = True
-        else:
-            drawEdge = False
-            drawBox = False
 
         if img is None:
             # no image
@@ -183,6 +169,21 @@ class XFormPainted(XFormType):
             node.setOutput(self.OUT_ANNOT, None)
             node.setOutput(self.OUT_RECT, None)
         else:
+            node.roi.setImageSize(img.w, img.h)
+
+            if node.drawMode == 0:
+                drawEdge = True
+                drawBox = True
+            elif node.drawMode == 1:
+                drawEdge = True
+                drawBox = False
+            elif node.drawMode == 2:
+                drawEdge = False
+                drawBox = True
+            else:
+                drawEdge = False
+                drawBox = False
+
             # for the annotated image, we just get the RGB for the image in the
             # input node.
             img = img.copy()

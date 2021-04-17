@@ -3,7 +3,9 @@
 
 
 from io import BytesIO
-from tokenize import tokenize, TokenInfo, NUMBER, NAME, OP, ENCODING, ENDMARKER, NEWLINE
+
+from tokenize import tokenize, TokenInfo, NUMBER, NAME, OP, ENCODING, ENDMARKER, NEWLINE, ERRORTOKEN, PERCENT, DOT
+
 from typing import List, Any, Optional, Callable, Dict, Tuple
 
 Stack = List[Any]
@@ -144,8 +146,18 @@ def execute(seq: List[Instruction], stack: Stack) -> float:
                 print(x)
     return stack[0]
 
-def defaultInstNumberFactory(num:float) -> Instruction:
+
+def defaultInstNumberFactory(num: float) -> Instruction:
     return InstNumber(num)
+
+
+def defaultInstIdentFactory(num: float) -> Instruction:
+    return InstIdent(num)
+
+
+def isOp(t):
+    return t.type in [OP, ERRORTOKEN, PERCENT, DOT]
+
 
 # https://stackoverflow.com/questions/16380234/handling-extra-operators-in-shunting-yard/16392115
 
@@ -178,8 +190,14 @@ class Parser:
     ## register the function which outputs a number instruction given a float.
     # By default this uses the built-in InstNumber, but we sometimes need to override it
     # (PCOT does to allow numbers to be stacked as Datums)
-    def registerNumInstFactory(self, fn : Callable[[float],Instruction]):
+    def registerNumInstFactory(self, fn: Callable[[float], Instruction]):
         self.numInstFactory = fn
+
+    ## register the function which outputs an ident instruction given a float.
+    # By default this uses the built-in InstIdent, but we sometimes need to override it
+    # (PCOT does to allow idents to be stacked as Datums)
+    def registerIdentInstFactory(self, fn: Callable[[str], Instruction]):
+        self.numIdentFactory = fn
 
     ## other functions are names mapped to functions
     ## which take a list of args and return an arg
@@ -194,13 +212,14 @@ class Parser:
     def stackOp(self, op: InstOp):
         self.opstack.append(op)
 
-    def __init__(self,nakedIdents=False):
+    def __init__(self, nakedIdents=False):
         self.binopRegistry = dict()
         self.unopRegistry = dict()
         self.varRegistry = dict()
         self.funcRegistry = dict()
         self.toks = []
         self.numInstFactory = defaultInstNumberFactory
+        self.numIdentFactory = defaultInstIdentFactory
 
         self.nakedIdents = nakedIdents
 
@@ -223,9 +242,10 @@ class Parser:
                 ######### In this mode, we want an operand next. Otherwise we want an operator.
                 #   read a token. If there are no more tokens, announce an error.
                 t = self.next()
+                print(t)
                 if t is None:
                     raise ParseException("premature end", t)
-                elif t.type == OP:
+                elif isOp(t):
                     #  if the token is an prefix operator or an '(':
                     #    mark it as prefix and push it onto the operator stack
                     # Note that the bracket case is different from when we meet it in the
@@ -270,6 +290,7 @@ class Parser:
                 ######### In this mode, we want an operator next. Otherwise we want an operand.
                 #   read a token
                 t = self.next()
+                print(t)
                 #   if there are no more tokens:
                 if t is None:
                     #     pop all operators off the stack, adding each one to the output queue.
@@ -284,7 +305,7 @@ class Parser:
                 #   could deal with postfix here, but won't.
 
                 # if the token is a ')':
-                if t.type == OP and t.string == ')':
+                if isOp(t) and t.string == ')':
                     #     while the top of the stack is not '(':
                     while self.stackTopIsNotLPar():
                         #       pop an operator off the stack and add it to the output queue
@@ -303,7 +324,7 @@ class Parser:
                     #     pop the '(' off the top of the stack
                     #     goto have_operand (already there)
 
-                elif t.type == OP and t.string == ',':
+                elif isOp(t) and t.string == ',':
                     #   if the token is a ',':
                     #     while the top of the stack is not '(':
                     while self.stackTopIsNotLPar():
@@ -318,7 +339,7 @@ class Parser:
                         raise ParseException("syntax error : mismatched bracket left 2", t)
                     #     goto want_operand
                     wantOperand = True
-                elif t.type == OP:
+                elif isOp(t):
                     #   if the token is an infix operator:
                     if t.string == '(':
                         op = InstBracket(self)

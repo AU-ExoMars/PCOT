@@ -295,7 +295,7 @@ class Datum:
         return conntypes.isImage(self.tp)
 
     def __str__(self):
-        return "[DATUM type {} value {}]".format(self.tp, self.val)
+        return "[DATUM-{}, value {}]".format(self.tp, self.val)
 
 
 ## an actual instance of a transformation, often called a "node".

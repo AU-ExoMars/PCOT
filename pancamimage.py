@@ -3,6 +3,7 @@
 # and also incorporates region-of-interest data.  Conversions to and from float are
 # done in many operations. Avoiding floats saves memory and speeds things up,
 # but we could change things later.
+import math
 
 import cv2 as cv
 import numpy as np
@@ -73,7 +74,7 @@ class SubImageCubeROI:
             self.mask = np.full((y2 - y1, x2 - x1), False)
             # and OR the ROIs into it
             for r in rois:
-                rx,ry,rw,rh = r.bb()
+                rx, ry, rw, rh = r.bb()
                 # calculate ROI's position inside subimage
                 x = rx - x1
                 y = ry - y1
@@ -373,7 +374,7 @@ class ImageCube:
         return i
 
     def hasROI(self):
-        return len(self.rois)>0
+        return len(self.rois) > 0
 
     ## return a copy of the image, with the given image spliced in at the
     # subimage's coordinates and masked according to the subimage
@@ -382,3 +383,25 @@ class ImageCube:
         x, y, w, h = subimage.bb
         i.img[y:y + h, x:x + w][subimage.mask] = newimg[subimage.mask]
         return i
+
+    ## given a wavelength, extract that wavelength's slice/image/channel and
+    # build a new image with just that.
+    def getChannelImageByWavelength(self, cwl):
+        # for each channel's set of sources
+        for i in range(len(self.sources)):  # iterate so we have the index
+            x = self.sources[i]
+            if len(x) == 1:
+                # there must be only one source in the set; get it.
+                item = next(iter(x))
+                filt = item.getFilter()
+                # there must be a filter in this source
+                if filt is not None:
+                    # and it must have a very close wavelength
+                    if math.isclose(cwl, filt.cwl):
+                        # now we have it. Extract that channel. Note - this is better than cv.split!
+                        img = self.img[:, :, i]
+                        return ImageCube(img, sources=[x])
+        return None
+
+    def getChannelImagebyName(self, name):
+        return None

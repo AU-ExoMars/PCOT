@@ -16,10 +16,12 @@ BINS = 2000
 
 
 def equalize(img, mask):
+    img = np.ma.masked_array(img,mask = ~mask)
     mask = mask.astype(np.ubyte)
-    # first, clip the image to 0-1
-    #    img[img<0]=0
-    #    img[img>1]=1
+    # clip masked image
+    img[img>1] = 1
+    img[img<0] = 0
+
     # algorithm source: https://docs.opencv.org/master/d5/daf/tutorial_py_histogram_equalization.html
     # get histogram; N bins in range 0-1. Set the weight of all unmasked
     # pixels to zero so they don't get counted.

@@ -5,6 +5,8 @@
 # add to isCompatibleConnection if you're doing something odd.
 # Note that types which start with "img" are image types, and
 # should all be renderable by Canvas.
+#
+# These types are also used by the expression evaluator.
 
 from PyQt5 import QtWidgets, uic, QtGui, QtCore
 from PyQt5.QtCore import Qt
@@ -31,6 +33,11 @@ NUMBER = 'number'
 # by the user. They don't appear on the graph until this has happened.
 
 VARIANT = 'variant'
+
+
+# these types are not generally used for connections, but for values on the expression evaluation stack
+
+IDENT = 'ident'
 
 
 def isImage(t: Type):

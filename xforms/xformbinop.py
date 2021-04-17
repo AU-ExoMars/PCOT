@@ -2,8 +2,8 @@ from PyQt5 import QtWidgets
 
 import conntypes
 import ui.tabs
-from utils import binop
-from utils.binop import BinopException
+from utils import ops
+from utils.ops import BinopException
 from xform import xformtype, XFormType, XFormException
 
 
@@ -26,7 +26,7 @@ class XFormBinop(XFormType):
         b = node.getInput(1)
 
         try:
-            res = binop.binop(a, b, self.op, node.getOutputType(0))
+            res = ops.binop(a, b, self.op, node.getOutputType(0))
         except BinopException as be:
             raise XFormException('DATA','Math error: {}'.format(be))
         if res is not None and res.isImage():
