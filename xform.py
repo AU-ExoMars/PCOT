@@ -294,6 +294,13 @@ class Datum:
     def isImage(self):
         return conntypes.isImage(self.tp)
 
+    ## get data field or None if type doesn't match.
+    def get(self, tp):
+        if tp == conntypes.IMG:
+            return self.val if self.isImage() else None
+        else:
+            return self.val if self.tp == tp else None
+
     def __str__(self):
         return "[DATUM-{}, value {}]".format(self.tp, self.val)
 

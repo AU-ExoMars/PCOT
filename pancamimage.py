@@ -61,6 +61,7 @@ class ROIRect(ROI):
 class SubImageCubeROI:
     def __init__(self, img, imgToUse=None):  # can take another image to get rois from
         rois = img.rois if imgToUse is None else imgToUse.rois
+        self.channels = img.channels
 
         if len(rois) > 0:
             bbs = [r.bb() for r in rois]  # get bbs

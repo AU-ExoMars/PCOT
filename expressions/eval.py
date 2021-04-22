@@ -1,6 +1,7 @@
 # This is the application-specific part of the expression parsing system.
 # In this system, all data is a Datum object.
 import conntypes
+import operations
 from expressions import parse
 from expressions.parse import Stack
 from utils.ops import binop, unop
@@ -38,7 +39,7 @@ class InstIdent(parse.Instruction):
         return "IDENT {}".format(self.val)
 
 
-def extractChannelByName(a:Datum,b:Datum):
+def extractChannelByName(a: Datum, b: Datum):
     if a is None or b is None:
         return None
 
@@ -54,13 +55,13 @@ def extractChannelByName(a:Datum,b:Datum):
         raise XFormException('DATA', "channel extract operator '$' requires ident or numeric wavelength RHS")
 
     if img is None:
-        raise XFormException('EXPR', "unable to get this wavelength from an image: "+str(b))
+        raise XFormException('EXPR', "unable to get this wavelength from an image: " + str(b))
 
     img.rois = a.val.rois.copy()
     return Datum(conntypes.IMG, img)
 
 
-def getProperty(a:Datum,b:Datum):
+def getProperty(a: Datum, b: Datum):
     pass
 
 
@@ -78,6 +79,9 @@ class Parser(parse.Parser):
 
         self.registerBinop('$', 90, extractChannelByName)
         self.registerBinop('.', 80, getProperty)
+
+        # additional functions
+        operations.registerOpFunctions(self)
 
     def run(self, s):
         self.parse(s)

@@ -114,6 +114,8 @@ class InstCall(Instruction):
         for x in range(0, self.argcount):
             stack.pop()
         func = stack.pop()
+        if isinstance(func, str):
+            raise ParseException("unknown function '{}' ".format(func))
         stack.append(func(args))
 
 

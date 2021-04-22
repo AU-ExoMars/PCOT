@@ -1,25 +1,11 @@
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import Qt
-
 import cv2 as cv
 import numpy as np
 
 import conntypes
-import ui, ui.tabs, ui.canvas, ui.mplwidget
-from xform import xformtype, XFormType, Datum
-from pancamimage import ImageCube
-
-# number of points in lookup table
-NUMPOINTS = 1000
-# x-coords of table
-lutxcoords = np.linspace(0, 1, NUMPOINTS)
-
-
-def curve(img, mask, node):
-    masked = np.ma.masked_array(img, mask=~mask)
-    cp = img.copy()
-    np.putmask(cp, mask, np.interp(masked, lutxcoords, node.lut).astype(np.float32))
-    return cp
+import operations
+import ui.tabs
+from operations.curve import curve, genLut, lutxcoords
+from xform import xformtype, XFormType
 
 
 @xformtype
@@ -41,31 +27,8 @@ class XformCurve(XFormType):
         node.add = 0
         node.mul = 1
 
-    def recalculate(self, node):
-        print("RECALC")
-        # recalculate the LUT each time - need to get recalculate() working
-        xb = node.mul * (lutxcoords - 0.5) + node.add
-        node.lut = (1.0 / (1.0 + np.exp(-xb)))
-
-    # given a dictionary, set the values in the node from the dictionary    
     def perform(self, node):
-        img = node.getInput(0, conntypes.IMG)
-        if img is None:
-            node.img = None
-        elif not node.enabled:
-            node.img = img
-            node.img.setMapping(node.mapping)
-        else:
-            subimage = img.subimage()
-
-            if img.channels == 1:
-                newsubimg = curve(subimage.img, subimage.mask, node)
-            else:
-                # TODO won't work on non-RGB
-                newsubimg = cv.merge([curve(x, subimage.mask, node) for x in cv.split(subimage.img)])
-            node.img = img.modifyWithSub(subimage, newsubimg)
-            node.img.setMapping(node.mapping)
-        node.setOutput(0, Datum(conntypes.IMG, node.img))
+        operations.performOp(node, operations.curve.curve, add=node.add, mul=node.mul)
 
 
 class TabCurve(ui.tabs.Tab):
@@ -94,16 +57,17 @@ class TabCurve(ui.tabs.Tab):
     def onNodeChanged(self):
         self.w.addDial.setValue(self.node.add * 10 + 50)
         self.w.mulDial.setValue(self.node.mul * 10)
-        self.node.type.recalculate(self.node)
+        lut = genLut(self.node.mul, self.node.add)
         if self.plot is None:
             # set up the initial plot
             # doing stuff without pyplot is weird!
             self.w.mpl.ax.set_xlim(0, 1)
             self.w.mpl.ax.set_ylim(0, 1)
             # make the plot, store the zeroth plot (ours)
-            self.plot = self.w.mpl.ax.plot(lutxcoords, self.node.lut, 'r')[0]
+
+            self.plot = self.w.mpl.ax.plot(lutxcoords, lut, 'r')[0]
         else:
-            self.plot.set_ydata(self.node.lut)
+            self.plot.set_ydata(lut)
         self.w.mpl.canvas.draw()  # present drawing
 
         # display image        

@@ -1,35 +1,7 @@
-import cv2 as cv
-import numpy as np
-
-import conntypes
-import ui, ui.tabs, ui.canvas
-from xform import xformtype, XFormType, XFormException, Datum
-from xforms.tabimage import TabImage
-from pancamimage import ImageCube
-
-
-# Normalize the image to the 0-1 range. The range is taken across all three channels.
-
-def norm(img, mode, mask):
-    masked = np.ma.masked_array(img, mask=~mask)
-    cp = img.copy()
-    mn = masked.min()
-    mx = masked.max()
-    ex = None
-
-    if mode == 0:  # normalize
-        if mn == mx:
-            ex = XFormException("DATA", "cannot normalize, image is a single value")
-            res = np.zeros(img.shape, np.float32)
-        else:
-            res = (masked - mn) / (mx - mn)
-    elif mode == 1:  # clip
-        masked[masked > 1] = 1
-        masked[masked < 0] = 0
-        res = masked
-
-    np.putmask(cp, mask, res)
-    return ex, cp
+import operations
+import ui.tabs
+from operations.norm import norm
+from xform import xformtype, XFormType
 
 
 @xformtype
@@ -51,19 +23,9 @@ class XformNormImage(XFormType):
         node.img = None
 
     def perform(self, node):
-        img = node.getInput(0, conntypes.IMG)
-        node.img = None
-        if img is not None:
-            if node.enabled:
-                subimage = img.subimage()
-                ex, newsubimg = norm(subimage.img, node.mode, subimage.fullmask())
-                if ex is not None:
-                    node.setError(ex)
-                node.img = img.modifyWithSub(subimage, newsubimg)
-            else:
-                node.img = img
-            node.img.setMapping(node.mapping)
-        node.setOutput(0, Datum(conntypes.IMG, node.img))
+        # this uses the performOp function to wrap the "norm" operation function so that
+        # it works in a node.
+        operations.performOp(node, operations.norm.norm, mode=node.mode)
 
 
 class TabNorm(ui.tabs.Tab):
@@ -80,4 +42,5 @@ class TabNorm(ui.tabs.Tab):
 
     def onNodeChanged(self):
         self.w.mode.setCurrentIndex(self.node.mode)
+        print("Node displ")
         self.w.canvas.display(self.node.img)

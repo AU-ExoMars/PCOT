@@ -72,6 +72,7 @@ class TabEval(ui.tabs.Tab):
 
     def exprChanged(self):
         self.node.expr = self.w.expr.toPlainText()
+        self.node.displayName = self.node.expr
         # don't call changed() or we'll run the expr on every key press!
 
     def run(self):
