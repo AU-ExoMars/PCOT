@@ -1,6 +1,7 @@
 import configparser,os,io
 from pkg_resources import resource_string as resource_bytes
 
+
 def getAssetAsFile(fn):
     s = resource_bytes('pcot.assets',fn).decode('utf-8')
     return io.StringIO(s)

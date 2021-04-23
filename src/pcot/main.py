@@ -5,8 +5,6 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import QCommandLineParser
 import os, sys
 
-print("MAIN")
-
 # import all transform types (see the __init__.py there)
 # ACTUALLY REQUIRED despite what the IDE says! DO NOT
 # REMOVE THESE LINES!
