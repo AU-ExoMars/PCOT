@@ -50,13 +50,13 @@
   <customwidget>
    <class>Canvas</class>
    <extends>QWidget</extends>
-   <header>ui.canvas</header>
+   <header>pcot.ui.canvas</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>NumberWidget</class>
    <extends>QWidget</extends>
-   <header>ui.number</header>
+   <header>pcot.ui.number</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

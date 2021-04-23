@@ -340,7 +340,7 @@
   <customwidget>
    <class>GraphView</class>
    <extends>QGraphicsView</extends>
-   <header>ui.graphview</header>
+   <header>pcot.ui.graphview</header>
   </customwidget>
  </customwidgets>
  <resources/>

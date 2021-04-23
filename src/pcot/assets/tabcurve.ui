@@ -113,13 +113,13 @@
   <customwidget>
    <class>Canvas</class>
    <extends>QWidget</extends>
-   <header>ui.canvas</header>
+   <header>pcot.ui.canvas</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>MplWidget</class>
    <extends>QWidget</extends>
-   <header>ui.mplwidget</header>
+   <header>pcot.ui.mplwidget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

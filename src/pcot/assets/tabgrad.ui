@@ -52,13 +52,13 @@
   <customwidget>
    <class>Canvas</class>
    <extends>QWidget</extends>
-   <header>ui.canvas</header>
+   <header>pcot.ui.canvas</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>Gradient</class>
    <extends>QWidget</extends>
-   <header>ui.gradient</header>
+   <header>pcot.ui.gradient</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -13,3 +13,4 @@ config.read_file(getAssetAsFile('defaults.ini'))
 config.read(['site.cfg', os.path.expanduser('~/.pcot.ini')], encoding='utf_8')
 
 
+print("INIT")
