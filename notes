@@ -246,4 +246,11 @@ the node when the canvas mapping changes.
 
 Argh. I've tried to add a thing called "redisplayNode", which gets
 called to perform a node in redisplay, but it's not working right.
+I've deleted it. Need to analyse this problem more. 
 
+A related problem is with "ensurevalid", which sometimes (notably
+in the ENVI import system) just discards any mapping we've carefully
+set up and creates a default one. It's almost always going to do this,
+because first time round there won't be a prevMappingString.
+
+OK, that's sorted.
