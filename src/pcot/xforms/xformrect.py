@@ -15,15 +15,13 @@ class XformRect(XFormType):
 
     # constants enumerating the outputs
     OUT_IMG = 0
-    OUT_CROP = 1
-    OUT_ANNOT = 2
-    OUT_RECT = 3
+    OUT_ANNOT = 1
+    OUT_RECT = 2
 
     def __init__(self):
         super().__init__("rect", "regions", "0.0.0")
         self.addInputConnector("", "img")
         self.addOutputConnector("img", "img", "image with ROI")  # image+roi
-        self.addOutputConnector("crop", "img", "image cropped to ROI")  # cropped image
         self.addOutputConnector("ann", "img",
                                 "image as RGB with ROI, with added annotations around ROI")  # annotated image
         self.addOutputConnector("rect", "rect", "the rectangle data")  # rectangle (just the ROI)
@@ -46,7 +44,6 @@ class XformRect(XFormType):
         if img is None:
             # no image
             node.setOutput(self.OUT_IMG, None)
-            node.setOutput(self.OUT_CROP, None)
             node.setOutput(self.OUT_ANNOT, None)
             node.setOutput(self.OUT_RECT, None)
         else:
@@ -60,7 +57,6 @@ class XformRect(XFormType):
                 node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
                 node.img = img  # the original image
                 node.setOutput(self.OUT_IMG, Datum(conntypes.IMG, img))
-                node.setOutput(self.OUT_CROP, Datum(conntypes.IMG, img))
                 node.setOutput(self.OUT_ANNOT, Datum(conntypes.IMG, rgb))
                 node.setOutput(self.OUT_RECT, None)
             else:
@@ -75,13 +71,6 @@ class XformRect(XFormType):
                 o.rois.append(roi)  # and add to the image
                 if node.isOutputConnected(self.OUT_IMG):
                     node.setOutput(0, Datum(conntypes.IMG, o))  # output image and ROI
-                if node.isOutputConnected(self.OUT_CROP):
-                    # output cropped image: this uses the ROI rectangle to
-                    # crop the image; we get a numpy image out which we wrap.
-                    # with no ROIs
-                    node.setOutput(self.OUT_CROP,
-                                   Datum(conntypes.IMG, ImageCube(roi.crop(o), node.mapping, o.sources)))
-
                 # now make an annotated image by drawing on the RGB image we got earlier
                 annot = rgb.img
                 # write on it - but we MUST WRITE OUTSIDE THE BOUNDS, otherwise we interfere

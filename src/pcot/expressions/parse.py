@@ -199,7 +199,7 @@ class Parser:
     # By default this uses the built-in InstIdent, but we sometimes need to override it
     # (PCOT does to allow idents to be stacked as Datums)
     def registerIdentInstFactory(self, fn: Callable[[str], Instruction]):
-        self.numIdentFactory = fn
+        self.identInstFactory = fn
 
     ## other functions are names mapped to functions
     ## which take a list of args and return an arg
@@ -221,7 +221,7 @@ class Parser:
         self.funcRegistry = dict()
         self.toks = []
         self.numInstFactory = defaultInstNumberFactory
-        self.numIdentFactory = defaultInstIdentFactory
+        self.identInstFactory = defaultInstIdentFactory
 
         self.nakedIdents = nakedIdents
 
@@ -281,7 +281,7 @@ class Parser:
                         fn = self.funcRegistry[t.string]
                         self.out(InstFunc(t.string, fn))
                     elif self.nakedIdents:
-                        self.out(InstIdent(t.string))
+                        self.out(self.identInstFactory(t.string))
                     else:
                         raise ParseException("unknown variable or function", t)
                     wantOperand = False

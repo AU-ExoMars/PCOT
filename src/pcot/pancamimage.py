@@ -7,6 +7,8 @@ import math
 
 import cv2 as cv
 import numpy as np
+from scipy import ndimage
+
 from pcot.channelsource import IChannelSource, FileChannelSourceRed, FileChannelSourceGreen, FileChannelSourceBlue
 from typing import List, Set, Optional
 
@@ -48,6 +50,117 @@ class ROIRect(ROI):
 
     def __str__(self):
         return "ROI-RECT {} {} {}x{}".format(self.x, self.y, self.w, self.h)
+
+
+# used in ROIpainted to convert a 0-99 value into a brush size for painting
+def getRadiusFromSlider(sliderVal, imgw, imgh):
+    v = max(imgw, imgh)
+    return (v / 400) * sliderVal
+
+
+## a "painted" ROI
+
+class ROIPainted(ROI):
+    # we can create this ab initio or from a subimage mask
+    def __init__(self, mask=None):
+        if mask is None:
+            self.bbrect = None
+            self.map = None
+            self.imgw = None
+            self.imgh = None
+        else:
+            h, w = mask.shape[:2]
+            self.imgw = w
+            self.imgh = h
+            self.bbrect = (0, 0, w, h)
+            self.map = np.zeros((h, w), dtype=np.uint8)
+            self.map[mask] = 255
+
+    def clear(self):
+        self.map = None
+        self.bbrect = None
+
+    def setImageSize(self, imgw, imgh):
+        if self.imgw is not None:
+            if self.imgw != imgw or self.imgh != imgh:
+                self.clear()
+
+        self.imgw = imgw
+        self.imgh = imgh
+
+    def bb(self):
+        return self.bbrect
+
+    def serialise(self):
+        return {
+            'rect': self.bbrect,
+            'map': self.map
+        }
+
+    def deserialise(self, d):
+        if 'map' in d:
+            self.map = d['map']
+            self.bbrect = d['rect']
+
+    def mask(self):
+        # return a boolean array, same size as BB
+        return self.map > 0
+
+    def draw(self, img, colour, drawEdge):
+        # draw into an RGB image
+        # first, get the slice into the real image
+        x, y, w, h = self.bb()
+        imgslice = img[y:y + h, x:x + w]
+
+        # now get the mask and run sobel edge-detection on it if required
+        mask = self.mask()
+        if drawEdge:
+            sx = ndimage.sobel(mask, axis=0, mode='constant')
+            sy = ndimage.sobel(mask, axis=1, mode='constant')
+            mask = np.hypot(sx, sy)
+
+        # flatten and repeat each element of the mask for each channel
+        x = np.repeat(np.ravel(mask), 3)
+        # and reshape into the same shape as the image slice
+        x = np.reshape(x, imgslice.shape)
+
+        # write a colour
+        np.putmask(imgslice, x, colour)
+
+    ## fill a circle in the ROI, or clear it (if delete is true)
+    def setCircle(self, x, y, brushSize, delete=False):
+        if self.imgw is not None:
+            # There's a clever way of doing this I'm sure, but I'm going to do it the dumb way.
+            # 1) create a map the size of the image and put the existing ROI into it
+            # 2) extend the ROI with a new circle, just drawing it into the image
+            # 3) crop the image back down again by finding a new bounding box and cutting the mask out of it.
+            # It should hopefully be fast enough.
+
+            # create full size map
+            fullsize = np.zeros((self.imgh, self.imgw), dtype=np.uint8)
+            # splice in existing data, if there is any!
+            if self.bbrect is not None:
+                bbx, bby, bbw, bbh = self.bbrect
+                fullsize[bby:bby + bbh, bbx:bbx + bbw] = self.map
+            # add the new circle
+            r = int(getRadiusFromSlider(brushSize, self.imgw, self.imgh))
+            cv.circle(fullsize, (x, y), r, 0 if delete else 255, -1)
+            # calculate new bounding box
+            cols = np.any(fullsize, axis=0)
+            rows = np.any(fullsize, axis=1)
+            ymin, ymax = np.where(rows)[0][[0, -1]]
+            xmin, xmax = np.where(cols)[0][[0, -1]]
+            xmax += 1
+            ymax += 1
+            # cut out the new data
+            self.map = fullsize[ymin:ymax, xmin:xmax]
+            # construct the new BB
+            self.bbrect = (int(xmin), int(ymin), int(xmax - xmin), int(ymax - ymin))
+
+    def __str__(self):
+        if not self.bbrect:
+            return "ROI-PAINTED (no points)"
+        return "ROI-PAINTED {} {} {}x{}".format(self.bbrect.x, self.bbrect.y, self.bbrect.w, self.bbrect.h)
 
 
 ## this is the parts of an image cube which are covered by the active ROIs
@@ -404,5 +517,25 @@ class ImageCube:
                         return ImageCube(img, sources=[x])
         return None
 
-    def getChannelImagebyName(self, name):
+    def getChannelImageByName(self, name):
+        # for each channel's set of sources
+        for i in range(len(self.sources)):  # iterate so we have the index
+            x = self.sources[i]
+            if len(x) == 1:
+                # there must be only one source in the set; get it.
+                item = next(iter(x))
+                # match either the filter name or position, case-dependent
+                iname = item.getFilterName()
+                ipos = item.getFilterPos()
+                if iname == name or ipos == name:
+                    # now we have it. Extract that channel. Note - this is better than cv.split!
+                    img = self.img[:, :, i]
+                    return ImageCube(img, sources=[x])
         return None
+
+    ## crop an image down to its regions of interest, creating a new painted ROI.
+    def cropROI(self):
+        subimg = self.subimage()
+        img = ImageCube(subimg.img, rgbMapping=self.mapping, defaultMapping=self.defaultMapping, sources=self.sources)
+        img.rois = [ROIPainted(subimg.mask)]
+        return img

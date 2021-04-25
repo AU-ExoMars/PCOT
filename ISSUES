@@ -20,8 +20,6 @@ means that selection data will be shared across all windows open
 on the same graph.
 
 
-Make ROI crop outputs actually contain the masked image!
-eval allows idents after $ (e.g. a$RED)
 use-as-Library stuff:
     Make setting inputs in library mode easier. Much easier.
     get node by name

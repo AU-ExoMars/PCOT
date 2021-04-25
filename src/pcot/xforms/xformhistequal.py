@@ -66,6 +66,7 @@ class XformHistEqual(XFormType):
         elif not node.enabled:
             node.img = img
         else:
+            img = img.copy() # act always on a copy
             # first extract the ROI subimage; the rectangle which
             # contains the ROIS and a mask we should work on
             subimage = img.subimage()

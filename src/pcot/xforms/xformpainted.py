@@ -1,6 +1,5 @@
 import cv2 as cv
-import numpy as np
-from PyQt5.QtCore import QPoint, Qt
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPainter, QColor
 from PyQt5.QtWidgets import QMessageBox
 
@@ -8,110 +7,8 @@ import pcot.conntypes as conntypes
 import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
-from scipy import ndimage
-from pcot.pancamimage import ImageCube, ROI
+from pcot.pancamimage import ROIPainted, getRadiusFromSlider
 from pcot.xform import xformtype, XFormType, Datum
-
-
-## a "painted" ROI
-
-class ROIPainted(ROI):
-    def __init__(self):
-        self.bbrect = None
-        self.map = None
-        self.imgw = None
-        self.imgh = None
-
-    def clear(self):
-        self.map = None
-        self.bbrect = None
-
-    def setImageSize(self, imgw, imgh):
-        if self.imgw is not None:
-            if self.imgw != imgw or self.imgh != imgh:
-                self.clear()
-
-        self.imgw = imgw
-        self.imgh = imgh
-
-    def bb(self):
-        return self.bbrect
-
-    def serialise(self):
-        return {
-            'rect': self.bbrect,
-            'map': self.map
-        }
-
-    def deserialise(self, d):
-        if 'map' in d:
-            self.map = d['map']
-            self.bbrect = d['rect']
-
-    def mask(self):
-        # return a boolean array, same size as BB
-        return self.map > 0
-
-    def draw(self, img, colour, drawEdge):
-        # draw into an RGB image
-        # first, get the slice into the real image
-        x, y, w, h = self.bb()
-        imgslice = img[y:y + h, x:x + w]
-
-        # now get the mask and run sobel edge-detection on it if required
-        mask = self.mask()
-        if drawEdge:
-            sx = ndimage.sobel(mask, axis=0, mode='constant')
-            sy = ndimage.sobel(mask, axis=1, mode='constant')
-            mask = np.hypot(sx, sy)
-
-        # flatten and repeat each element of the mask for each channel
-        x = np.repeat(np.ravel(mask), 3)
-        # and reshape into the same shape as the image slice
-        x = np.reshape(x, imgslice.shape)
-
-        # write a colour
-        np.putmask(imgslice, x, colour)
-
-    ## fill a circle in the ROI, or clear it (if delete is true)
-    def setCircle(self, x, y, brushSize, delete=False):
-        if self.imgw is not None:
-            # There's a clever way of doing this I'm sure, but I'm going to do it the dumb way.
-            # 1) create a map the size of the image and put the existing ROI into it
-            # 2) extend the ROI with a new circle, just drawing it into the image
-            # 3) crop the image back down again by finding a new bounding box and cutting the mask out of it.
-            # It should hopefully be fast enough.
-
-            # create full size map
-            fullsize = np.zeros((self.imgh, self.imgw))
-            # splice in existing data, if there is any!
-            if self.bbrect is not None:
-                bbx, bby, bbw, bbh = self.bbrect
-                fullsize[bby:bby + bbh, bbx:bbx + bbw] = self.map
-            # add the new circle
-            r = int(getRadiusFromSlider(brushSize, self.imgw, self.imgh))
-            cv.circle(fullsize, (x, y), r, 0 if delete else 255, -1)
-            # calculate new bounding box
-            cols = np.any(fullsize, axis=0)
-            rows = np.any(fullsize, axis=1)
-            ymin, ymax = np.where(rows)[0][[0, -1]]
-            xmin, xmax = np.where(cols)[0][[0, -1]]
-            xmax += 1
-            ymax += 1
-            # cut out the new data
-            self.map = fullsize[ymin:ymax, xmin:xmax]
-            # construct the new BB
-            self.bbrect = (int(xmin), int(ymin), int(xmax - xmin), int(ymax - ymin))
-
-    def __str__(self):
-        if not self.bbrect:
-            return "ROI-PAINTED (no points)"
-        return "ROI-PAINTED {} {} {}x{}".format(self.bbrect.x, self.bbrect.y, self.bbrect.w, self.bbrect.h)
-
-
-def getRadiusFromSlider(sliderVal, imgw, imgh):
-    v = max(imgw, imgh)
-    return (v/400) * sliderVal
 
 
 @xformtype
@@ -120,15 +17,13 @@ class XFormPainted(XFormType):
 
     # constants enumerating the outputs
     OUT_IMG = 0
-    OUT_CROP = 1
-    OUT_ANNOT = 2
-    OUT_RECT = 3
+    OUT_ANNOT = 1
+    OUT_RECT = 2
 
     def __init__(self):
         super().__init__("painted", "regions", "0.0.0")
         self.addInputConnector("", "img")
         self.addOutputConnector("img", "img", "image with ROI")  # image+roi
-        self.addOutputConnector("crop", "img", "image cropped to ROI")  # cropped image
         self.addOutputConnector("ann", "img",
                                 "image as RGB with ROI, with added annotations around ROI")  # annotated image
         self.addOutputConnector("rect", "rect", "the crop rectangle data")  # rectangle (just the ROI's bounding box)
@@ -165,7 +60,6 @@ class XFormPainted(XFormType):
         if img is None:
             # no image
             node.setOutput(self.OUT_IMG, None)
-            node.setOutput(self.OUT_CROP, None)
             node.setOutput(self.OUT_ANNOT, None)
             node.setOutput(self.OUT_RECT, None)
         else:
@@ -196,7 +90,6 @@ class XFormPainted(XFormType):
                 node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
                 node.img = img  # the original image
                 node.setOutput(self.OUT_IMG, Datum(conntypes.IMG, img))
-                node.setOutput(self.OUT_CROP, Datum(conntypes.IMG, img))
                 node.setOutput(self.OUT_ANNOT, Datum(conntypes.IMG, rgb))
                 node.setOutput(self.OUT_RECT, None)
             else:
@@ -210,12 +103,6 @@ class XFormPainted(XFormType):
                 o.rois.append(node.roi)  # and add to the image
                 if node.isOutputConnected(self.OUT_IMG):
                     node.setOutput(0, Datum(conntypes.IMG, o))  # output image and ROI
-                if node.isOutputConnected(self.OUT_CROP):
-                    # output cropped image: this uses the ROI rectangle to
-                    # crop the image; we get a numpy image out which we wrap.
-                    # with no ROIs
-                    node.setOutput(self.OUT_CROP,
-                                   Datum(conntypes.IMG, ImageCube(node.roi.crop(o), node.mapping, o.sources)))
 
                 # now make an annotated image by drawing on the RGB image we got earlier
                 annot = rgb.img
