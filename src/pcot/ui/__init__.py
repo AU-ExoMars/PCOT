@@ -2,7 +2,16 @@ import traceback
 import pcot.ui.mainwindow as mainwindow
 from PyQt5 import QtWidgets
 
-application=None
+# this is the "application" when we are importing PCOT. If we run
+# it as a main program, setApp() gets called to turn this into the Qt
+# application object. Of course, if you're writing your own app you
+# should do that too.
+
+class DummyApplication:
+    def beep(self):
+        pass
+
+application=DummyApplication()
 
 
 def setApp(a):
