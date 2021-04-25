@@ -220,7 +220,8 @@ will also be shown in the tab for that node and in its ``help box''
 \label{inputs}
 Inputs are components which take external data from the DAR or from files and
 bring them into PCOT. While they are part of the
-data processing setup which is saved in a graph file, they are not
+data processing setup which is saved in a graph file --- and indeed
+are part of the \texttt{XFormGraph} object --- they are not
 part of graph of nodes which appears in the right-hand pane. This may sound
 like an odd choice, but there are good reasons for it:
 \begin{itemize}
@@ -261,16 +262,17 @@ UI window is open. This will contain a set of widgets, each of which is
 subclass of \texttt{MethodWidget}, one for each input method. Only the widget
 corresponding to the active method will be visible.
 \end{itemize}
-Code for the inputs is the \texttt{inputs} directory, except for the UI
-code which is in \texttt{ui/inputs.py}.
+Code for the inputs is the \texttt{pcot.inputs} package, except for the UI
+code which is in the \texttt{pcot.ui.inputs} module.
 
 \clearpage
 \subsection{Image data}
-Most classes making up the image data 
-model are declared in the \texttt{pancamimage.py} file, including the main \texttt{ImageCube}
-class. Some additional classes describing where images can come from are in \texttt{channelsource.py}.
-The model is shown in outline in Fig.~\ref{image.pdf} although some links to channel sources
-and mapping from nodes are omitted; these will be explained later.
+Most classes making up the image data model are declared in the
+\texttt{pancamimage.py} file, including the main \texttt{ImageCube} class.
+Some additional classes describing where images can come from are in
+\texttt{channelsource.py}. The model is shown in outline in
+Fig.~\ref{image.pdf} although some links to channel sources and mapping from
+nodes are omitted; these will be explained later.
 
 \begin{figure}[ht]
 \center
@@ -288,7 +290,7 @@ point, and images are typically normalized to the range [0,1].
 
 \begin{notebox}
 In this document I have a tendency to refer to image data as both ``image'' and ``image cube.''
-Both terms refer to the same thing: an array of floating point image data, with 1 or more channels
+Both terms refer to the same thing: an array of floating point image data, with 1 or more channels (slices)
 of information. There is no upper limit on the number of channels in an image (or image cube)
 beyond system memory.
 \end{notebox}

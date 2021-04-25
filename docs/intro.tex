@@ -108,3 +108,29 @@ compile time, so the \texttt{if}-statement is added to stop the import
 at run time. Note the quotes: they are there to stop Python trying to
 resolve the symbols at run time.
 
+\subsection{Structure}
+The code is structured thus:
+\begin{verbatim}
+PCOT                    { main directory }
+\-src                   { source code }
+  \-pcot                { top-level package }
+    \-assets            { data, typically .ui files }
+     -expressions       { expression parser package }
+     -inputs            { data input method package }
+     -operations        { "operations" package for node/expressions }
+     -ui                { core user interface code and widget code }
+     -utils             { utilities, e.g. archive managed, colour functions }
+     -xforms            { the auto-registered \texttt{XFormType} node types }
+\end{verbatim}
+Notes:
+\begin{itemize}
+\item \textbf{operations} is a package for things which are both nodes and
+expression functions, such as \emph{curve} and \emph{norm}: the operation
+is encapsulated in a single function which is used by both a node
+and a lambda for registering with the expression parser.
+\item As well as containing the \texttt{src} directory, the top level
+also contain \texttt{setup.py} and \texttt{setup.cfg} for wheel creation
+and installation. The \texttt{setup.py} is kept so that users can do
+\texttt{python setup.py develop} to create an editable install.
+\end{itemize}
+

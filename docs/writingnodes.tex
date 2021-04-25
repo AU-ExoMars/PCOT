@@ -140,8 +140,16 @@ canvas widget will display a None image as a blue empty rectangle):
     def init(self, node):
         node.img = None
 \end{lstlisting}
+
+\subsubsection{Writing the perform method in full}
 Finally we come to the \texttt{perform()} method, which describes how this
-type of node performs its operation. Again, it requires a reference to the
+type of node performs its operation. Here I'll describe it in full. Many
+nodes, however, perform a simple operation with a few numeric parameters
+on an image and output an image. These nodes can be written in a 
+simpler way which also allows them to be used as functions in the 
+\emph{eval} node. This will be dealt with later.
+
+Again, it requires a reference to the
 \texttt{XForm} node object which contains the node state, and its first action
 is to pre-set the output image to None and then fetch the input image:
 \begin{lstlisting}
@@ -199,4 +207,10 @@ a \texttt{Datum}:
         node.setOutput(0, Datum(conntypes.IMG, node.img))
 \end{lstlisting}
 
+
+\subsubsection{Writing the perform method using operation functions}
+\begin{notebox}
+For now, see \texttt{xformcurve.py} along with \texttt{operations} and its 
+files.
+\end{notebox}
 

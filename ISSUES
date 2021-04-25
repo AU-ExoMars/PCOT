@@ -2,14 +2,7 @@ Optimisation: at the moment, setting an output causes a perform.
 This means that (say) split, which sets three outputs, causes merge
 to perform three times. It doesn't need to.
 
-Loading files in source isn't optimal - let's say you're compositing
-N different source greyscale files which aren't in the current directory.
-You have to browse down the file tree for each one.
-
 Fix decorr stretch knob!
-
-Recalculate and curve
-
 
 THINGS TO DO
 
@@ -21,25 +14,18 @@ Make mainwindow support multiple mainwindows into a single scene:
     remove link from node to tab (node may now link several tabs!) (OK)
     make cut-and-paste work across windows
     
-Macros:
-    optimisation is now required. Don't let nodes perform until
-    ALL connected inputs have data (mark all nodes input data as "unset"
-    (NOT none) at start of recursion, then set as you setOutput).
-    
-    
-
-What to do if a loaded node doesn't exist (some kind of placeholder node with
-dead outputs?) Or just panic (as we do right now?)
-
-
-Macros. Dear God, macros.
-
-
-
-Ellipse and Path ROIs, same as rectangle in usage.
-
 Graphs now own their scenes, which is a better idea but causes an
 interesting problem given that scenes own the selection data. This
 means that selection data will be shared across all windows open
 on the same graph.
 
+
+Make ROI crop outputs actually contain the masked image!
+eval allows idents after $ (e.g. a$RED)
+use-as-Library stuff:
+    Make setting inputs in library mode easier. Much easier.
+    get node by name
+    get output is easy enough already...
+    set RGB mapping
+    eval??
+    
