@@ -27,14 +27,7 @@ import pcot.xform as xform
 
 from pcot.utils import archive
 
-## return the current username, whichis either obtained from the OS
-# or from the PCOT_USER environment variable
 
-def getUserName():
-    if 'PCOT_USER' in os.environ:
-        return os.environ['PCOT_USER']
-    else:
-        return getpass.getuser()
 
 
 class InputSelectButton(QtWidgets.QPushButton):
@@ -77,7 +70,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     ## @var macroPrototype
     # if I am showing a macro, the macro prototype (else None)
-    macroPrototype: Optional[macros.XFormMacro]
+    macroPrototype: Optional['macros.XFormMacro']
 
     ## @var view
     # my view of the scene (representing the graph)
@@ -236,43 +229,13 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.graph.constructScene(True)
         self.view.setScene(self.graph.scene)
 
-    ## create a dictionary of everything in the app we need to save: global settings,
-    # the graph, macros etc.
-    def serialise(self):
-        d = {'SETTINGS': {'cap': self.graph.captionType},
-             'INFO': {'author': getUserName(),
-                      'date': time.time()},
-             'GRAPH': self.graph.serialise(),
-             'INPUTS': self.graph.inputMgr.serialise(),
-             'MACROS': macros.XFormMacro.serialiseAll()}
-        # now we also have to serialise the macros
-        return d
-
-    ## deserialise everything from the given top-level dictionary.
-    # Deserialising the inputs is optional : we don't do it if we are loading templates
-    # or if there is no INPUTS entry in the file, or there's no input manager (shouldn't
-    # happen unless we're doing something weird like loading a macro prototype graph)
-    def deserialise(self, d, deserialiseInputs=True):
-        # deserialise macros before graph!
-        if 'MACROS' in d:
-            macros.XFormMacro.deserialiseAll(d['MACROS'])
-        self.graph.deserialise(d['GRAPH'], True)  # True to delete existing nodes first
-
-        if 'INPUTS' in d and deserialiseInputs and self.graph.inputMgr is not None:
-            self.graph.inputMgr.deserialise(d['INPUTS'])
-
-        settings = d['SETTINGS']
-        self.setCaption(settings['cap'])
-        self.graph.changed()  # and rerun everything
-
     ## saving to a file  
     def save(self, fname):
         # we serialise to a string and then save the string rather than
         # doing it in one step, to avoid errors in the former leaving us
         # with an unreadable file.
         try:
-            with archive.FileArchive(fname, 'w') as arc:
-                arc.writeJson("JSON", self.serialise())
+            pcot.save(fname, self.graph)
             ui.msg("File saved : " + fname)
         except Exception as e:
             traceback.print_exc()
@@ -281,9 +244,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     ## loading from a file
     def load(self, fname):
         try:
-            with archive.FileArchive(fname) as arc:
-                d = arc.readJson("JSON")
-            self.deserialise(d)
+            pcot.load(fname, graph=self.graph)  # if anything goes wrong an exception is thrown
             # now we need to reconstruct the scene with the new data
             # (False means don't do autolayout, read xy data from the dict instead)
             self.graph.constructScene(False)

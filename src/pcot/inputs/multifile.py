@@ -9,6 +9,7 @@ import cv2 as cv
 from PyQt5 import uic, QtWidgets, QtGui
 from PyQt5.QtCore import Qt
 
+import pcot
 from pcot.channelsource import FileChannelSource
 from pcot.inputs.inputmethod import InputMethod
 from pcot.pancamimage import ChannelMapping, ImageCube
@@ -126,7 +127,7 @@ class MultifileMethodWidget(MethodWidget):
     def __init__(self, m):
         super().__init__(m)
         self.model = None
-        uic.loadUi('assets/tabmultifile.ui', self)
+        uic.loadUi(pcot.getAssetAsFile('tabmultifile.ui'), self)
         self.getinitial.clicked.connect(self.getInitial)
         self.filters.textChanged.connect(self.filtersChanged)
         self.filelist.activated.connect(self.itemActivated)

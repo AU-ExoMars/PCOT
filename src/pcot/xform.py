@@ -968,6 +968,11 @@ class XFormGraph:
         else:
             ui.msg("Autorun not enabled")
 
+        # make sure the caption in any attached window is correct.
+        for xx in ui.mainwindow.MainUI.windows:
+            if xx.graph == self:
+                xx.setCaption(self.captionType)
+
     ## perform the entire graph, or all those nodes below a given node.
     # If the entire graph, performs a traversal from the root nodes.
     def performNodes(self, node=None):

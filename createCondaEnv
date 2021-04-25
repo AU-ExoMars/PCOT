@@ -1,6 +1,6 @@
 #!/bin/bash
 
 # pyperclip requires conda-forge
-conda create -n dev -c conda-forge pyqt opencv numpy scikit-image \
+conda create -n pcot -c conda-forge pyqt opencv numpy scikit-image \
     matplotlib pyperclip
 

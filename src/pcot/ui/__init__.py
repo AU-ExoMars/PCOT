@@ -1,5 +1,5 @@
 import traceback
-from pcot.ui.mainwindow import MainUI
+import pcot.ui.mainwindow as mainwindow
 from PyQt5 import QtWidgets
 
 application=None
@@ -17,13 +17,13 @@ def app():
 
 ## show a message on the status bar
 def msg(t):
-    for x in MainUI.windows:
+    for x in mainwindow.MainUI.windows:
         x.statusBar.showMessage(t)
 
 
 ## show a message in all window logs
 def log(s):
-    for x in MainUI.windows:
+    for x in mainwindow.MainUI.windows:
         x.logText.append(s)
 
 

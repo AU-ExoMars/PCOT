@@ -6,7 +6,7 @@ from PyQt5 import QtCore, uic
 from PyQt5.QtCore import QDir
 from PyQt5.QtWidgets import QFileSystemModel
 
-from pcot import config
+import pcot
 import pcot.ui as ui
 from pcot.inputs.inputmethod import InputMethod
 from pcot.pancamimage import ImageCube, ChannelMapping
@@ -51,12 +51,12 @@ class RGBInputMethod(InputMethod):
 class RGBMethodWidget(MethodWidget):
     def __init__(self, m):
         super().__init__(m)
-        uic.loadUi('assets/tabrgbfile.ui', self)
+        uic.loadUi(pcot.getAssetAsFile('tabrgbfile.ui'), self)
         # set up the file tree
         self.dirModel = QFileSystemModel()
         # pretty ugly way to get hold of the config, done to avoid cyclic imports
-        print(config.get('Locations', 'images'))
-        self.dirModel.setRootPath(os.path.expanduser(config.get('Locations', 'images')))
+        print(pcot.config.get('Locations', 'images'))
+        self.dirModel.setRootPath(os.path.expanduser(pcot.config.get('Locations', 'images')))
         self.dirModel.setNameFilters(["*.jpg", "*.png", "*.ppm", "*.tga", "*.tif"])
         self.dirModel.setNameFilterDisables(False)
         tree = self.treeView

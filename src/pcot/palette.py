@@ -8,7 +8,6 @@ from PyQt5.QtWidgets import QMessageBox
 
 import pcot.macros as macros
 from pcot.xform import XFormType
-from pcot.macros import XFormMacro
 import pcot.ui as ui
 
 view = None
@@ -31,7 +30,7 @@ class PaletteButton(QtWidgets.QPushButton):
 
     def contextMenu(self, e):
         menu = QtWidgets.QMenu()
-        if isinstance(self.xformtype, XFormMacro):
+        if isinstance(self.xformtype, macros.XFormMacro):
             openProtoAct = menu.addAction("Open prototype")
             deleteMacroAct = menu.addAction("Delete macro")
             act = menu.exec_(self.mapToGlobal(e))
