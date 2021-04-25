@@ -10,6 +10,13 @@ import pcot.xform as xform
 
 from pcot.utils import archive
 
+# import all transform types (see the __init__.py there)
+# ACTUALLY REQUIRED despite what the IDE says! DO NOT
+# REMOVE THESE LINES!
+
+import pcot.xforms
+from pcot.xforms import *
+
 
 def getAssetAsFile(fn):
     s = resource_bytes('pcot.assets',fn).decode('utf-8')

@@ -52,6 +52,9 @@ class Input:
     def isActive(self, method):
         return self.methods[self.activeMethod] == method
 
+    def getActive(self):
+        return self.methods[self.activeMethod]
+
     def selectMethod(self, method):
         self.activeMethod = self.methods.index(method)
         self.window.methodChanged()

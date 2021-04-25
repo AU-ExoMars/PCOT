@@ -8,12 +8,6 @@ import os, sys
 from pcot import config, ui
 import pcot.ui.mainwindow
 
-# import all transform types (see the __init__.py there)
-# ACTUALLY REQUIRED despite what the IDE says! DO NOT
-# REMOVE THESE LINES!
-
-import pcot.xforms
-from pcot.xforms import *
 
 app = None
 
