@@ -409,6 +409,9 @@ class XForm:
     ## @var error
     # error state or None. See XFormException for codes.
     error: Optional[XFormException]
+    ## @var rectText
+    # extra text displayed (if there's no error)
+    rectText: Optional[str]
 
     ## constructor, takes type and displayname
     def __init__(self, tp, dispname):
@@ -433,6 +436,7 @@ class XForm:
         self.inputs = [None] * len(tp.inputConnectors)
         self.connCountChanged()
         self.error = None
+        self.rectText = None
 
         # UI-DEPENDENT DATA DOWN HERE
         self.xy = (0, 0)  # this SHOULD be serialised
@@ -468,9 +472,14 @@ class XForm:
         self.error = ex
         ui.error(ex.message)
 
-    ## called to clear the error state
-    def clearError(self):
+    ## set the rect text
+    def setRectText(self,t):
+        self.rectText = t
+
+    ## called to clear the error state and rect text
+    def clearErrorAndRectText(self):
         self.error = None
+        self.rectText = None
 
     ## clear all the node's outputs, required on all nodes before we run the graph
     # (it's how we check a node can run - are all its input nodes' outputs set?)
@@ -932,7 +941,7 @@ class XFormGraph:
         else:
             nodeset = set(self.nodes)
         for n in nodeset:
-            n.clearError()
+            n.clearErrorAndRectText()
             n.clearOutputs()
             n.hasRun = False
 

@@ -50,13 +50,29 @@
       </size>
      </property>
      <layout class="QGridLayout" name="gridLayout_4">
+      <item row="0" column="2">
+       <widget class="QPushButton" name="run">
+        <property name="text">
+         <string>Run</string>
+        </property>
+       </widget>
+      </item>
       <item row="0" column="0">
        <widget class="QPlainTextEdit" name="expr"/>
       </item>
       <item row="0" column="1">
-       <widget class="QPushButton" name="run">
-        <property name="text">
-         <string>Run</string>
+       <widget class="QPlainTextEdit" name="result">
+        <property name="maximumSize">
+         <size>
+          <width>200</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="autoFillBackground">
+         <bool>false</bool>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
         </property>
        </widget>
       </item>

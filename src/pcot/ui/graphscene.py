@@ -390,12 +390,17 @@ def makeNodeGraphics(n):
 
     makeConnectors(n, x, y)
 
-    # if there's an error, add the code
+    # if there's an error, add the code. Otherwise if there a rect text, add that.
     if n.error is not None:
         error = GText(n.rect, "err:" + n.error.code, n)
         error.setFont(errorFont)
         error.setBrush(QColor(255, 0, 0))
         error.setPos(x + XTEXTOFFSET + XERROROFFSET, y + YTEXTOFFSET + CONNECTORHEIGHT + YERROROFFSET)
+    elif n.rectText is not None:
+        t = GText(n.rect, "res:" + n.rectText, n)
+        t.setFont(errorFont)
+        t.setBrush(QColor(0, 0, 255))
+        t.setPos(x + XTEXTOFFSET, y + YTEXTOFFSET + CONNECTORHEIGHT + YERROROFFSET)
 
     return n.rect
 

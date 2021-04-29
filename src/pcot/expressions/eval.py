@@ -62,6 +62,22 @@ def extractChannelByName(a: Datum, b: Datum):
 
 
 def getProperty(a: Datum, b: Datum):
+    if a.tp == conntypes.IMG:
+        img = a.val
+        if b.tp != conntypes.IDENT:
+            raise XFormException('EXPR','second argument should be identifier in "." operator')
+        prop = b.val
+        if prop == 'w':
+            return Datum(conntypes.NUMBER,img.w)
+        elif prop == 'h':
+            return Datum(conntypes.NUMBER, img.h)
+        else:
+            raise XFormException('EXPR', 'unknown image property "{}" in "." operator'.format(prop))
+    else:
+        raise XFormException('EXPR','invalid type in "." operator')
+
+
+def funcMerge(args):
     pass
 
 
@@ -79,6 +95,8 @@ class Parser(parse.Parser):
 
         self.registerBinop('$', 90, extractChannelByName)
         self.registerBinop('.', 80, getProperty)
+
+        self.registerFunc("merge", funcMerge)
 
         # additional functions
         operations.registerOpFunctions(self)

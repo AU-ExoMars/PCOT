@@ -30,6 +30,8 @@ class XFormEval(XFormType):
         node.expr = ""
         # used when we have an image on the output
         node.img = None
+        # a string to display the image
+        node.result = ""
 
     def perform(self, node):
         # we register the input vars here because we have to, they are temporary and apply to
@@ -44,11 +46,18 @@ class XFormEval(XFormType):
             if len(node.expr.strip()) > 0:
                 res = self.parser.run(node.expr)
                 node.setOutput(0, res)
-                if res is not None and res.tp == conntypes.IMG:
-                    # if there's an image on the output, show it
-                    node.img = res.val
-                    node.img.setMapping(node.mapping)
+                if res is not None:
+                    if res.tp == conntypes.IMG:
+                        # if there's an image on the output, show it
+                        node.img = res.val
+                        node.img.setMapping(node.mapping)
+                        node.result = "IMAGE"
+                    elif res.tp == conntypes.NUMBER:
+                        node.result = str(res.val)
+                        node.setRectText(node.result)
+
         except Exception as e:
+            node.result = str(e)
             raise XFormException('EXPR', str(e))
 
 
@@ -81,4 +90,5 @@ class TabEval(pcot.ui.tabs.Tab):
     def onNodeChanged(self):
         self.w.variant.set(self.node.getOutputType(0))
         self.w.expr.setPlainText(self.node.expr)
+        self.w.result.setPlainText(self.node.result)
         self.w.canvas.display(self.node.img)

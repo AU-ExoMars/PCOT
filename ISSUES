@@ -19,6 +19,11 @@ interesting problem given that scenes own the selection data. This
 means that selection data will be shared across all windows open
 on the same graph.
 
+WORKING ON
+     properties w and h - others?
+     merge function - others?
+     eval documentation!
+
 
 use-as-Library stuff:
     Make setting inputs in library mode easier. Much easier.
