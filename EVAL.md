@@ -7,10 +7,10 @@ and **$** for slice extraction. These are described below.
 
 Operator | description | precedence 
 -------- | ----------- | ----------
-+ | add | 10
-- | subtract | 10 (50 for unary)
+\+ | add | 10
+\- | subtract | 10 (50 for unary)
 / | divide | 20
-* | multiply | 20
+\* | multiply | 20
 ^ | exponentiate | 30
 . | get property | 80
 $ | get slice | 90
