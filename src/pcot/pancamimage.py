@@ -539,3 +539,11 @@ class ImageCube:
         img = ImageCube(subimg.img, rgbMapping=self.mapping, defaultMapping=self.defaultMapping, sources=self.sources)
         img.rois = [ROIPainted(subimg.mask)]
         return img
+
+    ## perform a simple function on an image's ROI or the whole image if there is no ROI
+    def func(self, fn):
+        img = self.subimage()
+        mask = img.fullmask()  # get mask with same shape as below image
+        img = img.img  # get imagecube bounded by ROIs as np array
+        masked = np.ma.masked_array(img, mask=~mask)
+        return fn(masked)

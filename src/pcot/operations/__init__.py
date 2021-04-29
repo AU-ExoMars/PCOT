@@ -9,6 +9,7 @@ import numpy as np
 from pcot.conntypes import NUMBER, IMG
 import pcot.operations.norm
 import pcot.operations.curve
+from pcot.expressions.eval import registerProperty
 from pcot.pancamimage import ImageCube, SubImageCubeROI
 from pcot.xform import Datum, XForm, XFormException
 
@@ -34,7 +35,7 @@ def performOp(node: XForm, fn: Callable[[SubImageCubeROI, XForm, Dict[str, Any]]
     else:
         # otherwise the SubImageCubeROI object from the image - this is the image clipped to
         # a BB around the ROI, with a mask for which pixels are in the ROI.
-        subimage = img.copy().subimage()         # make a copy (need to do this to avoid overwriting the source).
+        subimage = img.copy().subimage()  # make a copy (need to do this to avoid overwriting the source).
 
         # perform our function, returning a numpy array which
         # is a modified clipped image. We also pass the kwargs, expanding them first - optional
@@ -82,10 +83,13 @@ def exprWrapper(fn, img, *args):
     return Datum(IMG, img)
 
 
-## Register additional functions into a Parser.
+## Register additional functions and properties into a Parser.
 
 
-def registerOpFunctions(p: 'Parser'):
+def registerOpFunctionsAndProperties(p: 'Parser'):
     p.registerFunc("curve", lambda args: exprWrapper(curve.curve, *getData(args, IMG, NUMBER, NUMBER)))
-    p.registerFunc("norm", lambda args: exprWrapper(norm.norm, getDatum(args[0], IMG), 0))
-    p.registerFunc("clip", lambda args: exprWrapper(norm.norm, getDatum(args[0], IMG), 1))
+#    p.registerFunc("norm", lambda args: exprWrapper(norm.norm, getDatum(args[0], IMG), 0))
+#    p.registerFunc("clip", lambda args: exprWrapper(norm.norm, getDatum(args[0], IMG), 1))
+
+    registerProperty("norm", IMG, lambda x: exprWrapper(norm.norm, getDatum(x, IMG), 0))
+    registerProperty("clip", IMG, lambda x: exprWrapper(norm.norm, getDatum(x, IMG), 1))

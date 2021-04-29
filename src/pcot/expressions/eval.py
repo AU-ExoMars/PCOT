@@ -1,5 +1,9 @@
 # This is the application-specific part of the expression parsing system.
 # In this system, all data is a Datum object.
+from typing import Callable, Dict, Tuple
+
+import numpy as np
+
 import pcot.conntypes as conntypes
 import pcot.operations as operations
 from pcot.expressions import parse
@@ -61,20 +65,29 @@ def extractChannelByName(a: Datum, b: Datum):
     return Datum(conntypes.IMG, img)
 
 
+# property dict - keys are (name,type).
+
+properties: Dict[Tuple[str, conntypes.Type], Callable[[Datum], Datum]] = {}
+
+
+def registerProperty(name: str, tp: conntypes.Type, func: Callable[[Datum], Datum]):
+    properties[(name, tp)] = func
+
+
 def getProperty(a: Datum, b: Datum):
-    if a.tp == conntypes.IMG:
-        img = a.val
-        if b.tp != conntypes.IDENT:
-            raise XFormException('EXPR','second argument should be identifier in "." operator')
-        prop = b.val
-        if prop == 'w':
-            return Datum(conntypes.NUMBER,img.w)
-        elif prop == 'h':
-            return Datum(conntypes.NUMBER, img.h)
-        else:
-            raise XFormException('EXPR', 'unknown image property "{}" in "." operator'.format(prop))
-    else:
-        raise XFormException('EXPR','invalid type in "." operator')
+    if a is None:
+        raise XFormException('EXPR', 'first argument is None in "." operator')
+    if b is None:
+        raise XFormException('EXPR', 'second argument is None in "." operator')
+    if b.tp != conntypes.IDENT:
+        raise XFormException('EXPR', 'second argument should be identifier in "." operator')
+    propName = b.val
+
+    try:
+        func = properties[(propName, a.tp)]
+        return func(a)
+    except KeyError:
+        raise XFormException('EXPR', 'unknown property "{}" for given type in "." operator'.format(propName))
 
 
 def funcMerge(args):
@@ -90,16 +103,25 @@ class Parser(parse.Parser):
         self.registerBinop('-', 10, lambda a, b: binop(a, b, lambda x, y: x - y, None))
         self.registerBinop('/', 20, lambda a, b: binop(a, b, lambda x, y: x / y, None))
         self.registerBinop('*', 20, lambda a, b: binop(a, b, lambda x, y: x * y, None))
+        self.registerBinop('^', 30, lambda a, b: binop(a, b, lambda x, y: x ** y, None))
 
         self.registerUnop('-', 50, lambda x: unop(x, lambda a: -a, None))
 
         self.registerBinop('$', 90, extractChannelByName)
-        self.registerBinop('.', 80, getProperty)
-
+        self.registerBinop('.', 100, getProperty)
         self.registerFunc("merge", funcMerge)
 
         # additional functions
-        operations.registerOpFunctions(self)
+        operations.registerOpFunctionsAndProperties(self)
+
+        # properties - SEE ALSO the __init__.py in the operations module.
+
+        registerProperty('w', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.w))
+        registerProperty('h', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.h))
+        registerProperty('min', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.func(np.min)))
+        registerProperty('max', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.func(np.max)))
+        registerProperty('sd', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.func(np.std)))
+        registerProperty('mean', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.func(np.mean)))
 
     def run(self, s):
         self.parse(s)
