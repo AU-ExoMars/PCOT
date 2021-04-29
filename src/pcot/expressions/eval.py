@@ -3,11 +3,12 @@
 from typing import Callable, Dict, Tuple
 
 import numpy as np
-
+import cv2 as cv
 import pcot.conntypes as conntypes
 import pcot.operations as operations
 from pcot.expressions import parse
 from pcot.expressions.parse import Stack
+from pcot.pancamimage import ImageCube
 from pcot.utils.ops import binop, unop
 from pcot.xform import Datum, XFormException
 
@@ -91,7 +92,30 @@ def getProperty(a: Datum, b: Datum):
 
 
 def funcMerge(args):
-    pass
+    if any([x is None for x in args]):
+        raise XFormException('EXPR', 'argument is None for merge')
+    if any([not x.isImage() for x in args]):
+        raise XFormException('EXPR', 'merge only accepts images')
+
+    args = [x.get(conntypes.IMG) for x in args]
+
+    bands = []
+    sources = []
+    for x in args:
+        if x.channels == 1:
+            bands.append(x.img)
+        else:
+            bands = bands + cv.split(x.img)
+        sources = sources + x.sources
+
+    img = np.stack(bands, axis=-1)
+    img = ImageCube(img, None, sources)
+
+    return Datum(conntypes.IMG,img)
+
+
+
+
 
 
 class Parser(parse.Parser):
@@ -107,8 +131,8 @@ class Parser(parse.Parser):
 
         self.registerUnop('-', 50, lambda x: unop(x, lambda a: -a, None))
 
+        self.registerBinop('.', 80, getProperty)
         self.registerBinop('$', 90, extractChannelByName)
-        self.registerBinop('.', 100, getProperty)
         self.registerFunc("merge", funcMerge)
 
         # additional functions

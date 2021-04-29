@@ -1,14 +1,27 @@
 # Expression parser syntax
 
-The standard operators +,/,*,- and ^ all have their usual meanings. When applied to images they work in
-a pixel-wise fashion, so if "a" is an image, **2*a** will double the brightness. If **b** is also an image,
+The standard operators +,/,\*,- and ^ all have their usual meanings. When applied to images they work in
+a pixel-wise fashion, so if "a" is an image, **2\*a** will double the brightness. If **b** is also an image,
 **a+b** will add the two images, pixel by pixel. There are two non-standard operators: **.** for properties
 and **$** for slice extraction. These are described below.
+
+Operator | description | precedence 
+-------- | ----------- | ----------
++ | add | 10
+- | subtract | 10 (50 for unary)
+/ | divide | 20
+* | multiply | 20
+^ | exponentiate | 30
+. | get property | 80
+$ | get slice | 90
 
 ## Properties
 
 The **.** operator takes an identifier on the right hand side, and extracts a property from the value on
 the left - typically an image. This is often used to apply parameterless functions to an image.
+Note that brackets may be required to stop the parser interpreting the operator as a trailing
+decimal - for example **a$780.norm** must be written as **(a$780).norm**.
+
 Properties currently supported are:
 
 Property name | description
