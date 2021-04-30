@@ -243,6 +243,9 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     ## loading from a file
     def load(self, fname):
+        # As the scene is constructed, widgets are constantly changed - this typically triggers runs.
+        # For that reason we turn off autorun temporarily when loading.
+        oldAutoRun = self.graph.autoRun
         try:
             pcot.load(fname, graph=self.graph)  # if anything goes wrong an exception is thrown
             # now we need to reconstruct the scene with the new data
@@ -254,6 +257,8 @@ class MainUI(ui.tabs.DockableTabWindow):
         except Exception as e:
             traceback.print_exc()
             ui.error("cannot open file {}: {}".format(fname, e))
+        finally:
+            self.graph.autoRun = oldAutoRun
 
     ## the "save as" menu handler
     def saveAsAction(self):
