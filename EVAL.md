@@ -26,14 +26,8 @@ Properties currently supported are:
 
 Property name | description
 --------------| -------
-norm | normalize an image to [0,1] (all bands are considered together)
-clip | clip an image to [0,1]
 w | image width
 h | image height
-min | minimum value
-max | maximum value
-sd | population standard deviation
-mean | mean value
 
 
 For example, if **a** and **b** are images, then **(a+b).w** will add the two images and give the
@@ -45,6 +39,16 @@ The following functions are supported:
 
 Function | description
 -------- | -----------
+min | minimum value
+max | maximum value
+sd | population standard deviation
+mean | mean value
+sin | sine
+cos | cosine
+tan | tangent
+sqrt | square root 
+norm | normalize an image to [0,1] (all bands are considered together)
+clip | clip an image to [0,1]
 curve(a,mul,add) | apply a logistic sigmoid to the image, first multiplying by *mul* and adding *add*
 merge(a,b..) | merge multiple images (or slices) into a single image
 

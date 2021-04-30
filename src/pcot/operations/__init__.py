@@ -72,7 +72,7 @@ def getData(args, *argTypes):
 
 ## used to register op functions as lambdas - takes a function, an image, and remaining args. Performs the
 # necessary magic to extract ROI bounded image, perform the function on that subimage, and plug the subimage
-# back into the image.
+# back into the image. It's a little different from the funcWrapper in eval.py, which can take images and numbers.
 
 def exprWrapper(fn, img, *args):
     if img is None:
@@ -88,8 +88,6 @@ def exprWrapper(fn, img, *args):
 
 def registerOpFunctionsAndProperties(p: 'Parser'):
     p.registerFunc("curve", lambda args: exprWrapper(curve.curve, *getData(args, IMG, NUMBER, NUMBER)))
-#    p.registerFunc("norm", lambda args: exprWrapper(norm.norm, getDatum(args[0], IMG), 0))
-#    p.registerFunc("clip", lambda args: exprWrapper(norm.norm, getDatum(args[0], IMG), 1))
+    p.registerFunc("norm", lambda args: exprWrapper(norm.norm, getDatum(args[0], IMG), 0))
+    p.registerFunc("clip", lambda args: exprWrapper(norm.norm, getDatum(args[0], IMG), 1))
 
-    registerProperty("norm", IMG, lambda x: exprWrapper(norm.norm, getDatum(x, IMG), 0))
-    registerProperty("clip", IMG, lambda x: exprWrapper(norm.norm, getDatum(x, IMG), 1))

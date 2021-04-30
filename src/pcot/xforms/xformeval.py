@@ -1,3 +1,5 @@
+import traceback
+
 import pcot.conntypes as conntypes
 import pcot.ui.tabs
 from pcot.expressions.eval import Parser
@@ -13,6 +15,7 @@ class XFormEval(XFormType):
     A.B         property B of entity A (e.g. a.h is height of image a)
     A$546       extract single channel image of wavelength 546
     """
+
     def __init__(self):
         super().__init__("eval", "maths", "0.0.0")
         self.parser = Parser()
@@ -57,6 +60,7 @@ class XFormEval(XFormType):
                         node.setRectText(node.result)
 
         except Exception as e:
+            traceback.print_exc()
             node.result = str(e)
             raise XFormException('EXPR', str(e))
 
@@ -81,7 +85,7 @@ class TabEval(pcot.ui.tabs.Tab):
 
     def exprChanged(self):
         self.node.expr = self.w.expr.toPlainText()
-        self.node.displayName = self.node.expr
+        self.node.displayName = self.node.expr.replace('\r', '').replace('\n', '').replace('\t', '')
         # don't call changed() or we'll run the expr on every key press!
 
     def run(self):

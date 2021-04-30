@@ -8,7 +8,7 @@ class NullInputMethod(InputMethod):
     def __init__(self, inp):
         super().__init__(inp)
 
-    def get(self):
+    def readData(self):
         return None
 
     def getName(self):

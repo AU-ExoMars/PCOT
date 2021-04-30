@@ -1,5 +1,7 @@
 # This is the application-specific part of the expression parsing system.
 # In this system, all data is a Datum object.
+import math
+import numbers
 from typing import Callable, Dict, Tuple
 
 import numpy as np
@@ -114,7 +116,30 @@ def funcMerge(args):
     return Datum(conntypes.IMG,img)
 
 
+## compare this with exprWrapper in operations, which only handles images and delegates
+# processing ROI stuff to the function.
 
+def funcWrapper(fn, d, *args):
+    if d is None:
+        return None
+    elif d.isImage():   # deal with image argument
+        img = d.val
+        subimage = img.subimage()
+        mask = subimage.fullmask()
+        cp = subimage.img.copy()
+        masked = np.ma.masked_array(cp, mask=~mask)
+        newdata = fn(masked, *args)  # the result of this could be *anything*
+        # so now we look at the result and build an appropriate Datum
+        if isinstance(newdata,np.ndarray):
+            np.putmask(cp,mask,newdata)
+            img = img.modifyWithSub(subimage, newdata)
+            return Datum(conntypes.IMG, img)
+        elif isinstance(newdata, numbers.Number):
+            return Datum(conntypes.NUMBER, float(newdata))
+        else:
+            raise XFormException('EXPR', 'internal: fn returns bad type')
+    elif d.tp == conntypes.NUMBER:  # deal with numeric argument (always returns a numeric result)
+        return Datum(conntypes.NUMBER, fn(d.val))
 
 
 
@@ -133,19 +158,23 @@ class Parser(parse.Parser):
 
         self.registerBinop('.', 80, getProperty)
         self.registerBinop('$', 90, extractChannelByName)
-        self.registerFunc("merge", funcMerge)
 
-        # additional functions
+        # additional functions and properties - SEE ALSO the __init__.py in the operations module.
         operations.registerOpFunctionsAndProperties(self)
 
-        # properties - SEE ALSO the __init__.py in the operations module.
+        self.registerFunc("merge", funcMerge)
+        self.registerFunc("sin", lambda args: funcWrapper(np.sin, args[0]))
+        self.registerFunc("cos", lambda args: funcWrapper(np.cos, args[0]))
+        self.registerFunc("tan", lambda args: funcWrapper(np.tan, args[0]))
+        self.registerFunc("sqrt", lambda args: funcWrapper(np.sqrt, args[0]))
+
+        self.registerFunc("min", lambda args: funcWrapper(np.min, args[0]))
+        self.registerFunc("max", lambda args: funcWrapper(np.max, args[0]))
+        self.registerFunc("sd", lambda args: funcWrapper(np.std, args[0]))
+        self.registerFunc("mean", lambda args: funcWrapper(np.mean, args[0]))
 
         registerProperty('w', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.w))
         registerProperty('h', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.h))
-        registerProperty('min', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.func(np.min)))
-        registerProperty('max', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.func(np.max)))
-        registerProperty('sd', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.func(np.std)))
-        registerProperty('mean', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.func(np.mean)))
 
     def run(self, s):
         self.parse(s)

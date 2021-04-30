@@ -37,5 +37,4 @@ def norm(img: SubImageCubeROI, mode: int) -> np.array:
 
     # overwrite the changed result into the working copy
     np.putmask(cp, mask, res)
-    print("Image written with sum {} ressum {},  mode {}".format(np.sum(cp),np.sum(res),mode))
     return cp

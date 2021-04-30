@@ -1,17 +1,6 @@
-import os
-import re
-from typing import TYPE_CHECKING, List
+from typing import List
 
-from PyQt5 import QtWidgets, uic, QtCore, QtGui
-from PyQt5.QtCore import QDir, Qt
-from PyQt5.QtWidgets import QFileSystemModel
-
-import pcot.ui
-from pcot.channelsource import FileChannelSource
-from pcot.pancamimage import ImageCube
-
-if TYPE_CHECKING:
-    from inputs.inp import Input, InputMethod
+from PyQt5 import QtWidgets
 
 
 class MethodSelectButton(QtWidgets.QPushButton):
@@ -78,6 +67,9 @@ class MethodWidget(QtWidgets.QWidget):
     def __init__(self, m):
         self.method = m
         super().__init__()
+
+    def invalidate(self):
+        self.method.invalidate()
 
 
 class NullMethodWidget(MethodWidget):

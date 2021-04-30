@@ -30,7 +30,7 @@ class RGBInputMethod(InputMethod):
         ui.log("Image {} loaded: {}".format(self.fname, img))
         self.img = img
 
-    def get(self):
+    def readData(self):
         if self.img is None and self.fname is not None:
             self.loadImg()
         return self.img
@@ -82,6 +82,7 @@ class RGBMethodWidget(MethodWidget):
 
     def onInputChanged(self):
         self.canvas.display(self.method.img)
+        self.invalidate()  # input has changed, invalidate so the cache is dirtied
         self.method.input.performGraph()
 
     def fileClickedAction(self, idx):

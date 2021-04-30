@@ -6,6 +6,7 @@ import base64
 import copy
 import hashlib
 import inspect
+import time
 import traceback
 from collections import deque
 from io import BytesIO
@@ -412,6 +413,9 @@ class XForm:
     ## @var rectText
     # extra text displayed (if there's no error)
     rectText: Optional[str]
+    ## @var runTime
+    # the time this node took to run in the last call to performNodes
+    runTime: float
 
     ## constructor, takes type and displayname
     def __init__(self, tp, dispname):
@@ -473,7 +477,7 @@ class XForm:
         ui.error(ex.message)
 
     ## set the rect text
-    def setRectText(self,t):
+    def setRectText(self, t):
         self.rectText = t
 
     ## called to clear the error state and rect text
@@ -752,7 +756,9 @@ class XForm:
                 self.clearOutputs()
                 # now run the node, catching any XFormException
                 try:
+                    st = time.perf_counter()
                     self.type.perform(self)
+                    self.runTime = time.perf_counter() - st
                 except XFormException as e:
                     # exception caught, set the error. Children will still run.
                     self.setError(e)
@@ -943,6 +949,7 @@ class XFormGraph:
         for n in nodeset:
             n.clearErrorAndRectText()
             n.clearOutputs()
+            n.runTime = None
             n.hasRun = False
 
     ## Called when a control in a node has changed, and the node needs to rerun (as do all its children
@@ -1003,8 +1010,18 @@ class XFormGraph:
         else:
             node.perform()
         self.performingGraph = False
+
+        self.showPerformance()
+
         # force a rebuild of the scene; error states may have changed.
         self.rebuildGraphics()
+
+    def showPerformance(self):
+        tot=0
+        for n in sorted([x for x in self.nodes if x.runTime is not None], key=lambda x: x.runTime):
+            tot = tot+n.runTime
+            print("{:<10.3f} {} ".format(n.runTime, n.displayName))
+        print("{:<10.3f} TOTAL".format(tot))
 
     def rebuildGraphics(self):
         if self.scene is not None:

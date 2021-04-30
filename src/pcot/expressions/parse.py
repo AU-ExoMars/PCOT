@@ -230,6 +230,7 @@ class Parser:
         self.unopRegistry['('] = (100, None)
 
     def parse(self, s: str):
+        s=s.replace('\n','').replace('\r','')
         x = BytesIO(s.encode())
         self.toks = [x for x in (tokenize(x.readline) or []) if x.type != ENCODING
                      and x.type != ENDMARKER and
@@ -244,7 +245,6 @@ class Parser:
                 ######### In this mode, we want an operand next. Otherwise we want an operator.
                 #   read a token. If there are no more tokens, announce an error.
                 t = self.next()
-                print(t)
                 if t is None:
                     raise ParseException("premature end", t)
                 elif isOp(t):
@@ -292,7 +292,6 @@ class Parser:
                 ######### In this mode, we want an operator next. Otherwise we want an operand.
                 #   read a token
                 t = self.next()
-                print(t)
                 #   if there are no more tokens:
                 if t is None:
                     #     pop all operators off the stack, adding each one to the output queue.

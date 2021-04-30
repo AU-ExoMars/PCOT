@@ -35,7 +35,7 @@ class ENVIInputMethod(InputMethod):
             img = None
         self.img = img
 
-    def get(self):
+    def readData(self):
         if self.img is None and self.fname is not None:
             self.loadImg()
         return self.img
@@ -92,6 +92,7 @@ class ENVIMethodWidget(MethodWidget):
             self.method.img.setMapping(self.method.mapping)
         print("Displaying image {}, mapping {}".format(self.method.img,self.method.mapping))
         self.canvas.display(self.method.img)
+        self.invalidate()  # input has changed, invalidate so the cache is dirtied
         self.method.input.performGraph()
 
     def fileClickedAction(self, idx):

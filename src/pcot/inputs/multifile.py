@@ -52,7 +52,7 @@ class MultifileInputMethod(InputMethod):
         except re.error:
             self.filterre = None
 
-    def get(self):
+    def readData(self):
         self.compileRegex()
 
         sources = []  # array of source sets for each image
@@ -174,6 +174,7 @@ class MultifileMethodWidget(MethodWidget):
         else:
             self.camCombo.setCurrentIndex(0)
         self.displayActivatedImage()
+        self.invalidate()  # input has changed, invalidate so the cache is dirtied
         self.method.input.performGraph()
 
     def fileClickedAction(self, idx):
