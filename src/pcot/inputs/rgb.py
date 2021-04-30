@@ -38,6 +38,11 @@ class RGBInputMethod(InputMethod):
     def getName(self):
         return "RGB"
 
+    # used from external code
+    def setFileName(self, fname):
+        self.fname = fname
+        self.mapping = ChannelMapping()
+
     def createWidget(self):
         return RGBMethodWidget(self)
 

@@ -12,8 +12,6 @@ import pcot.ui.mainwindow
 app = None
 
 
-
-
 ## the main function: parses command line, loads any files specified,
 # opens a mainwindow and runs its code.
 

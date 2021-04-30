@@ -25,6 +25,11 @@ class Input:
     methods: List['InputMethod']
     activeMethod: int
 
+    NULL = 0
+    RGB = 1
+    MULTIFILE = 2
+    ENVI = 3
+
     ## this will intialise an Input from scratch, typically when
     # you're creating a new main graph. The input will be initialised
     # to use the null method.
@@ -55,9 +60,14 @@ class Input:
     def getActive(self):
         return self.methods[self.activeMethod]
 
-    def selectMethod(self, method):
-        self.activeMethod = self.methods.index(method)
-        self.window.methodChanged()
+    # use from external code with NULL, ENVI, etc...
+    def setActiveMethod(self, idx):
+        self.activeMethod = idx
+        if self.window is not None:
+            self.window.methodChanged()
+
+    def selectMethod(self, method: InputMethod):
+        self.setActiveMethod(self.methods.index(method))
 
     def openWindow(self):
         if self.window is None:

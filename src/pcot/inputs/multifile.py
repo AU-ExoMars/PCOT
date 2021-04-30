@@ -96,6 +96,12 @@ class MultifileInputMethod(InputMethod):
     def getName(self):
         return "Multifile"
 
+    # used from external code
+    def setFileNames(self, directory, fnames):
+        self.dir = directory
+        self.files = fnames
+        self.mapping = ChannelMapping()
+
     def createWidget(self):
         return MultifileMethodWidget(self)
 
@@ -190,17 +196,17 @@ class MultifileMethodWidget(MethodWidget):
         if res != '':
             self.selectDir(res)
 
-    def selectDir(self, dir):
+    def selectDir(self, dr):
         # called when we want to load a new directory, or when the node has changed (on loading)
-        if self.method.dir != dir:  # if the directory has changed reset the selected file list
+        if self.method.dir != dr:  # if the directory has changed reset the selected file list
             self.method.files = []
             ## TODO self.method.type.clearImages(self.node)
-        self.dir.setText(dir)
+        self.dir.setText(dr)
         # get all the files in dir which are images
-        self.allFiles = sorted([f for f in os.listdir(dir) if os.path.isfile(os.path.join(dir, f))
+        self.allFiles = sorted([f for f in os.listdir(dr) if os.path.isfile(os.path.join(dr, f))
                                 and IMAGETYPERE.match(f) is not None])
         # using the relative path (usually more right than using the absolute)
-        self.method.dir = os.path.relpath(dir)
+        self.method.dir = os.path.relpath(dr)
         # rebuild the model
         self.buildModel()
 

@@ -248,6 +248,8 @@ class MainUI(ui.tabs.DockableTabWindow):
         oldAutoRun = self.graph.autoRun
         try:
             pcot.load(fname, graph=self.graph)  # if anything goes wrong an exception is thrown
+            self.graph.changed()  # and rerun everything
+
             # now we need to reconstruct the scene with the new data
             # (False means don't do autolayout, read xy data from the dict instead)
             self.graph.constructScene(False)

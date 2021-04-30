@@ -62,7 +62,6 @@ def deserialise(d, graph, deserialiseInputs=True):
 
     settings = d['SETTINGS']
     graph.captionType = settings['cap']
-    graph.changed()  # and rerun everything
 
 
 def save(fname, graph):

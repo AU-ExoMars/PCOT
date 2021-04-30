@@ -43,6 +43,11 @@ class ENVIInputMethod(InputMethod):
     def getName(self):
         return "ENVI"
 
+    # used from external code
+    def setFileName(self, fname):
+        self.fname = fname
+        self.mapping = ChannelMapping()
+
     def createWidget(self):
         return ENVIMethodWidget(self)
 
