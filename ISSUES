@@ -23,6 +23,12 @@ WORKING ON
      properties w and h - others?
      merge function - others?
      eval documentation!
+     rgb function (and node?)
+     pixels function for counting pixels in ROI
+     some kind of "generic data" type?
+     stats node outputting data - and a "data canvas"
+     DOCSTRINGS
+
 
 
 use-as-Library stuff:

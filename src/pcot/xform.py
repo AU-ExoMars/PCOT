@@ -1,7 +1,7 @@
-## @package xform
-# The core model module, containing definitions of the xforms (nodes), the graph, and the
-# type objects. The basic idea is that all XForms are the same, with the exception of additional data.
-# Their behaviour is controlled by the XFormType object to which they link via their "type" member.
+"""The core model module, containing definitions of the xforms (nodes), the graph, and the
+type objects. The basic idea is that all XForms are the same, with the exception of additional data.
+Their behaviour is controlled by the XFormType object to which they link via their "type" member.
+"""
 import base64
 import copy
 import hashlib
@@ -34,10 +34,10 @@ from pcot.pancamimage import ChannelMapping
 allTypes = dict()
 
 
-## custom exception which will cause an XForm to go into error
-# state when thrown or set into setError().
-
 class XFormException(Exception):
+    """custom exception which will cause an XForm to go into error
+    state when thrown or set into setError().
+    """
     ## @var code
     # A four-letter code for the message to display in the node's box
     # Codes:
@@ -54,17 +54,18 @@ class XFormException(Exception):
         self.message = message
 
 
-## Decorator for a transformation type. There is a singleton subclassed
-# from this for each type. 
-# This is a singleton decorator which, unusually, is not lazy, because we
-# need the xforms to be registered at initialisation. Thus the class creation
-# forces an instance to be created. We also use it to grab the source code
-# and generate an MD5 checksum, so we are *sure* versions match.
-
 # I'm suppressing a name warning because I prefer it like this!
 
 # noinspection PyPep8Naming
 class xformtype:
+    """Decorator for a transformation type. There is a singleton subclassed
+    from this for each type.
+    This is a singleton decorator which, unusually, is not lazy, because we
+    need the xforms to be registered at initialisation. Thus the class creation
+    forces an instance to be created. We also use it to grab the source code
+    and generate an MD5 checksum, so we are *sure* versions match.
+    """
+
     def __init__(self, cls, *args, **kwargs):
         self._cls = cls
         # get the module so we can add an MD5 checksum of its source code to the type
@@ -80,17 +81,18 @@ class xformtype:
         return self._instance
 
 
-## This exception is thrown if a loaded node's MD5 checksum (from the node source when the 
-# file was saved) disagrees with the node's current MD5: this means that the node's source
-# code has changed, and the node is not guaranteed to work as it did when saved.
-
 class BadVersionException(Exception):
+    """This exception is thrown if a loaded node's MD5 checksum (from the node source when the
+    file was saved) disagrees with the node's current MD5: this means that the node's source
+    code has changed, and the node is not guaranteed to work as it did when saved.
+    """
+
     def __init__(self, n):
         self.message = "Node {} was saved with a different version of type {}".format(n.name, n.type.name)
 
 
-## Superclass for a transformation type, defining how any XForm which links to it behaves.
 class XFormType:
+    """Superclass for a transformation type, defining how any XForm which links to it behaves."""
     ## @var name
     # name of the type
     name: str
@@ -127,8 +129,8 @@ class XFormType:
     # MD5 hash of source code (generated automatically)
     _md5: str
 
-    ## constructor, takes name, groupname and version
     def __init__(self, name, group, ver):
+        """constructor, takes name, groupname and version"""
         self.group = group
         self.name = name
         self.ver = ver
@@ -156,24 +158,23 @@ class XFormType:
         # before, the serialise() and deserialise() methods.
         self.autoserialise = ()  # tuple or list of attribute names
 
-    ## call to remove node from instance list
     def remove(self, node):
+        """call to remove node from instance list"""
         self.instances.remove(node)
 
-    ## returns a checksum of the sourcecode for the module defining the type, MD5 hash, used
-    # to check versions
     def md5(self):
+        """returns a checksum of the sourcecode for the module defining the type, MD5 hash, used to check versions"""
         return self._md5
 
-    ## run autoserialisation for a node
     def doAutoserialise(self, node):
+        """run autoserialisation for a node"""
         try:
             return {name: node.__dict__[name] for name in self.autoserialise}
         except KeyError as e:
             raise Exception("autoserialise value not in node {}: {}".format(self.name, e.args[0]))
 
-    ## run autodeserialisation for a node
     def doAutodeserialise(self, node, ent):
+        """run autodeserialisation for a node"""
         for name in self.autoserialise:
             # ignore key errors, for when we add data during development
             try:
@@ -181,98 +182,105 @@ class XFormType:
             except KeyError:
                 pass
 
-    ## create a new input connector; done in subclass constructor
     def addInputConnector(self, name, typename, desc=""):
+        """create a new input connector; done in subclass constructor"""
         self.inputConnectors.append((name, typename, desc))
 
-    ## create a new output connector; done in subclass constructor
     def addOutputConnector(self, name, typename, desc=""):
+        """create a new output connector; done in subclass constructor"""
         self.outputConnectors.append((name, typename, desc))
 
-    ## rename a node (the displayname, not the unique name).
-    # Subclassed in connector nodes because they are messy.
-    # even though we're only changing the display name
     def rename(self, node, name):
+        """rename a node (the displayname, not the unique name).
+        Subclassed in connector nodes because they are messy.
+        even though we're only changing the display name
+        """
         node.displayName = name
 
-    ## delete a type! Used to delete old macros
     def delType(self):
+        """delete a type! Used to delete old macros"""
         del allTypes[self.name]
 
-    ## rename the type, used to rename a macro. Let's hope that
-    # we don't reference types by name anywhere else.
     def renameType(self, newname):
+        """rename the type, used to rename a macro.
+        Let's hope that we don't reference types by name anywhere else.
+        """
         del allTypes[self.name]
         self.name = newname
         allTypes[newname] = self
         ui.mainwindow.MainUI.rebuildPalettes()
         ui.mainwindow.MainUI.rebuildAll()
 
-    ## return all types
     @classmethod
     def all(cls):
+        """return all types"""
         return allTypes
 
     # DOWN HERE ARE METHODS YOU MAY NEED TO OVERRIDE WHEN WRITING NODE TYPES
 
-    # this is overriden if a node might change its output type depending on its
-    # input types. It's called when an input connection is made or broken, and is followed
-    # by a check on existing connections to those outputs which may then be broken if 
-    # they are no longer compatible. It's called by XFormGraph.inputChanged(node).
-    #
-    # DO NOT modify the output type directly, use changeOutputType in the node. This
-    # will tell the on-screen connector rect to update its brush. See xforms/xformcurve for
-    # an example.
     def generateOutputTypes(self, node):
+        """this is overriden if a node might change its output type depending on its input types.
+            It's called when an input connection is made or broken, and is followed
+            by a check on existing connections to those outputs which may then be broken if
+            they are no longer compatible. It's called by XFormGraph.inputChanged(node).
+            DO NOT modify the output type directly, use changeOutputType in the node. This
+            will tell the on-screen connector rect to update its brush.
+            """
         pass
 
-    ## override this - perform the actual action of the transformation, will generate outputs
-    # in that object.
     def perform(self, xform):
+        """override this - perform the actual action of the transformation, will generate outputs in that object."""
         pass
 
-    ## override this - initialise any data fields (often to None)
     def init(self, xform):
+        """override this - initialise any data fields (often to None)"""
         pass
 
-    ## maybe override - after control data has changed (either in a tab or by loading a file) it
-    # may be necessary to recalculate internal data (e.g. lookup tables). Typically done when
-    # internal data relies on a combination of controls. This
-    # can be overridden to do that: it happens when a node is deserialised, when a node is created,
-    # and should also be called in the tab's onNodeChanged() AFTER the controls are set
-    # and BEFORE changing any status displays (see xformcurve for an example).
     def recalculate(self, xform):
+        """maybe override to recalculate internal data
+            after control data has changed (either in a tab or by loading a file) it
+            may be necessary to recalculate internal data (e.g. lookup tables). Typically done when
+            internal data relies on a combination of controls. This
+            can be overridden to do that: it happens when a node is deserialised, when a node is created,
+            and should also be called in the tab's onNodeChanged() AFTER the controls are set
+            and BEFORE changing any status displays.
+            """
         pass
 
-    ## maybe override - return a dict of all values belonging to the node which should be saved.
-    # This happens in addition to autoserialisation/deserialisation
     def serialise(self, xform):
+        """maybe override - return a dict of all values belonging to the node which should be saved.
+            This happens in addition to autoserialisation/deserialisation
+        """
         pass
 
-    ## maybe override - given a dictionary, set the values in the node from the dictionary    
-    # This happens in addition to autoserialisation/deserialisation
     def deserialise(self, xform, d):
+        """maybe override - given a dictionary, set the values in the node from the dictionary
+            This happens in addition to autoserialisation/deserialisation
+        """
         pass
 
-    ## override this - create a tab connected to this xform, parented to a main window.
-    # Might return none, if this xform doesn't have a meaningful UI.
     def createTab(self, xform, window):
+        """usually override this - create a tab connected to this xform, parented to a main window.
+            Might return none, if this xform doesn't have a meaningful UI.
+            """
+
         return None
 
-    ## build the text element of the graph scene object for the node. By default, this
-    # will just create static text, but can be overridden.
     @staticmethod
     def buildText(n):
+        """build the text element of the graph scene object for the node.
+        By default, this will just create static text, but can be overridden.
+        """
         x, y = n.xy
         text = graphscene.GText(n.rect, n.displayName, n)
         text.setPos(x + graphscene.XTEXTOFFSET, y + graphscene.YTEXTOFFSET + graphscene.CONNECTORHEIGHT)
         return text
 
 
-## serialise a connection (xform,i) into (xformName,i).
-# Will only serialise connections into the set passed in. If None is passed
-# in all connections are OK.
 def serialiseConn(c, connSet):
+    """serialise a connection (xform,i) into (xformName,i).
+    Will only serialise connections into the set passed in. If None is passed
+    in all connections are OK."""
     if c:
         x, i = c
         if (connSet is None) or (x in connSet):
@@ -280,8 +288,8 @@ def serialiseConn(c, connSet):
     return None
 
 
-## a piece of data sitting in a node's output, to be read by its input.
 class Datum:
+    """a piece of data sitting in a node's output, to be read by its input."""
     ## @var tp
     # the data type
     tp: conntypes.Type
@@ -294,10 +302,11 @@ class Datum:
         self.val = v
 
     def isImage(self):
+        """Is this an image of some type?"""
         return conntypes.isImage(self.tp)
 
-    ## get data field or None if type doesn't match.
     def get(self, tp):
+        """get data field or None if type doesn't match."""
         if tp == conntypes.IMG:
             return self.val if self.isImage() else None
         else:
@@ -307,8 +316,16 @@ class Datum:
         return "[DATUM-{}, value {}]".format(self.tp, self.val)
 
 
-## an actual instance of a transformation, often called a "node".
+class BadTypeException(Exception):
+    """Raised when XForm.getOutput() asks for an incorrect type"""
+
+    def __init__(self, i):
+        super().__init__("incorrect output type requested, index {}".format(i))
+
+
 class XForm:
+    """an actual instance of a transformation, often called a "node"."""
+
     # type hints for attributes, here mainly as documentation
 
     ## @var type
@@ -418,8 +435,8 @@ class XForm:
     # the time this node took to run in the last call to performNodes
     runTime: float
 
-    ## constructor, takes type and displayname
     def __init__(self, tp, dispname):
+        """constructor, takes type and displayname"""
         self.instance = None
         self.type = tp
         self.savedver = tp.ver
@@ -460,8 +477,8 @@ class XForm:
         self.mapping = ChannelMapping()
         tp.instances.append(self)
 
-    ## debugging
     def dumpInputs(self, t):
+        """debugging"""
         print('--------', t)
         for i in range(0, len(self.inputs)):
             inp = self.inputs[i]
@@ -469,31 +486,32 @@ class XForm:
                 tp = self.inputTypes[i]
                 print("{}: {}/{}/{}".format(i, inp[0], inp[1], tp))
 
-    ## called to set an error state. Can either be called directly or invoked via
-    # an exception. Takes an XFormException which may not necessarily have ever been raised.
-    # Will result in a log message. After the perform has occurred, may also result in a
-    # scene graph rebuild.
     def setError(self, ex: XFormException):
+        """called to set an error state. Can either be called directly or invoked via an exception.
+        Takes an XFormException which may not necessarily have ever been raised.
+        Will result in a log message. After the perform has occurred, may also result in a
+        scene graph rebuild.
+        """
         self.error = ex
         ui.error(ex.message)
 
-    ## set the rect text
     def setRectText(self, t):
+        """set the rect text: extra text displayed along with the name and any error"""
         self.rectText = t
 
-    ## called to clear the error state and rect text
     def clearErrorAndRectText(self):
+        """clear the error state and rect text"""
         self.error = None
         self.rectText = None
 
-    ## clear all the node's outputs, required on all nodes before we run the graph
-    # (it's how we check a node can run - are all its input nodes' outputs set?)
     def clearOutputs(self):
+        """clear all the node's outputs, required on all nodes before we run the graph
+            (it's how we check a node can run - are all its input nodes' outputs set?)
+            """
         self.outputs = [None for _ in self.type.outputConnectors]
 
-    ## called when the connector count changes to set up the necessary
-    # lists.
     def connCountChanged(self):
+        """called when the connector count changes to set up the necessary lists."""
         # create unconnected connections. Connections are either None
         # or (Xform,index) tuples - the xform is the object to which we are
         # connected, the index is the index of the output connector on that xform for inputs,
@@ -519,22 +537,23 @@ class XForm:
         self.inrects = [None for _ in self.inputs]  # input connector GConnectRects
         self.outrects = [None for _ in self.outputs]  # output connector GConnectRects
 
-    ## called when a node is deleted
     def onRemove(self):
+        """called when a node is deleted"""
         self.type.remove(self)
 
-    ## set or clear the enabled field   
     def setEnabled(self, b):
+        """set or clear the enabled field"""
         for x in self.tabs:
             x.setNodeEnabled(b)
         self.enabled = b
         self.graph.scene.selChanged()
         self.graph.changed(self)
 
-    ## build a serialisable python dict of this node's values, including
-    # only connections to/from the nodes in the selection (which may
-    # be None if you want to serialize the whole set)
     def serialise(self, selection=None):
+        """build a serialisable python dict of this node's values
+        including only connections to/from the nodes in the selection (which may
+        be None if you want to serialize the whole set)
+        """
         d = {'xy': self.xy,
              'type': self.type.name,
              'displayName': self.displayName,
@@ -557,8 +576,9 @@ class XForm:
             d.update(d2 or {})
         return d
 
-    ## deserialise a node from a python dict. Some entries already dealt with.
     def deserialise(self, d):
+        """deserialise a node from a python dict.
+        Some entries have already been already dealt with."""
         self.xy = d['xy']
         self.comment = d['comment']
         self.outputTypes = d['outputTypes']
@@ -580,9 +600,10 @@ class XForm:
         # run the additional deserialisation method
         self.type.deserialise(self, d)
 
-    ## return the actual type of an output, taking account of overrides (node outputTypes). Note that
-    # this returns the *connection* type, not the *datum* type stored in that connection.
     def getOutputType(self, i):
+        """return the actual type of an output, taking account of overrides (node outputTypes).
+        Note that this returns the *connection* type, not the *datum* type stored in that connection.
+        """
         if 0 <= i < len(self.outputs):
             if self.outputTypes[i] is None:
                 return self.type.outputConnectors[i][1]
@@ -591,10 +612,11 @@ class XForm:
         else:
             return None
 
-    ## return the actual type of an input, taking account of overrides (node inputTypes). Again, this is
-    # the *connection* type, not the *datum* type stored in that connection (or rather the output to
-    # which it is connected)
     def getInputType(self, i):
+        """return the actual type of an input, taking account of overrides (node inputTypes).
+            Again, this is the *connection* type, not the *datum* type stored in that connection
+            (or rather the output to which it is connected)
+            """
         if 0 <= i < len(self.inputs):
             if self.inputTypes[i] is None:
                 return self.type.inputConnectors[i][1]
@@ -603,8 +625,21 @@ class XForm:
         else:
             return None
 
-    ## is an output connected? This is a bit messy.
+    def getOutput(self, i, tp=None):
+        """get an output, raising an exception if the type is incorrect or the index is output range
+        used in external code; compare with Datum.get() which doesn't raise.
+        """
+        d = self.outputs[i]  # may raise IndexError
+        if d is None:
+            return None
+        elif tp is None or d.tp == tp or tp == conntypes.IMG and d.isImage():
+            return d.val
+        else:
+            raise BadTypeException(i)
+
     def isOutputConnected(self, i):
+        """is an output connected?"""
+        # This is a bit messy.
         for outputnode in self.children:
             for inp in outputnode.inputs:
                 if inp is not None:
@@ -613,8 +648,8 @@ class XForm:
                         return True
         return False
 
-    ## this should be used to change an output type in generateOutputTypes
     def changeOutputType(self, index, tp):
+        """this should be used to change an output type in generateOutputTypes"""
         self.outputTypes[index] = tp
         if self.outrects[index] is not None:
             #            print("MATCHING: {} becomes {}".format(index,type))
@@ -636,8 +671,8 @@ class XForm:
                 if self.outrects[o] is not None:
                     self.outrects[o].typeChanged()
 
-    ## return a debugging "name"
     def debugName(self):
+        """return a debugging "name"""
         return "{}/{}/{}".format(self.type.name, self.name, self.displayName)
 
     ## debugging dump
@@ -659,9 +694,8 @@ class XForm:
                 s += str(i) + " "
         print(s)
 
-    ## cycle detector - is "other" one of my children? We do a breadth-first
-    # search with a queue.
     def cycle(self, other):
+        """cycle detector - is "other" one of my children? We do a breadth-first search with a queue."""
         queue = deque()
         queue.append(self)
         while len(queue) > 0:
@@ -672,9 +706,10 @@ class XForm:
                 queue.append(q)
         return False
 
-    ## connect an input to an output on another xform. Note that this doesn't
-    # check compatibility; that's done in the UI.
     def connect(self, inputIdx, other, output, autoPerform=True):
+        """connect an input to an output on another xform.
+            Note that this doesn't check compatibility; that's done in the UI.
+            """
         if 0 <= inputIdx < len(self.inputs) and self is not other:
             if 0 <= output < len(other.type.outputConnectors):
                 if not self.cycle(other):  # this is a double check, the UI checks too.
@@ -683,8 +718,8 @@ class XForm:
                     if autoPerform:
                         other.graph.changed(other)  # perform the input node; the output should perform
 
-    ## disconnect an input 
     def disconnect(self, inputIdx):
+        """disconnect an input"""
         if 0 <= inputIdx < len(self.inputs):
             if self.inputs[inputIdx] is not None:
                 n, i = self.inputs[inputIdx]
@@ -692,8 +727,8 @@ class XForm:
                 self.inputs[inputIdx] = None
                 self.graph.changed(self)  # run perform safely
 
-    ## disconnect all inputs and outputs prior to removal
     def disconnectAll(self):
+        """disconnect all inputs and outputs prior to removal"""
         for i in range(0, len(self.inputs)):
             self.disconnect(i)
         for n, v in self.children.items():
@@ -706,8 +741,8 @@ class XForm:
                         # the child counts are irrelevant and don't need updating
                         n.inputs[i] = None
 
-    ## change an output. This should be called by the type's perform method. Takes the type and datum.
     def setOutput(self, i: int, data: Datum):
+        """change an output. This should be called by the type's perform method. Takes the type and datum."""
         self.outputs[i] = data
 
     ## used in connection            
@@ -775,9 +810,11 @@ class XForm:
             traceback.print_exc()
             ui.logXFormException(self, e)
 
-    ## get the value of an input. Optional type; if passed in will check for that type and dereference the contents if
-    # matched, else returning null.
-    def getInput(self, i: int, tp=None) -> Datum:
+    def getInput(self, i: int, tp=None) -> Optional[Datum]:
+        """get the value of an input.
+            Optional type; if passed in will check for that type and dereference the contents if
+            matched, else returning null.
+            """
         if self.inputs[i] is None:
             return None
         else:
@@ -791,8 +828,8 @@ class XForm:
             else:
                 return o
 
-    ## ensure connections are valid and break them if not
     def ensureConnectionsValid(self):
+        """ensure connections are valid and break them if not"""
         for i in range(0, len(self.inputs)):
             inp = self.inputs[i]
             if inp is not None:
@@ -802,8 +839,8 @@ class XForm:
                 if not conntypes.isCompatibleConnection(outtype, intype):
                     self.disconnect(i)
 
-    ## rename a node - changes the displayname.
     def rename(self, name):
+        """rename a node - changes the displayname."""
         # defer to type, because connector nodes have to rebuild all views.
         self.type.rename(self, name)
 
@@ -811,8 +848,8 @@ class XForm:
         return "XForm-{}-{}-{}".format(id(self), self.displayName, self.type.name)
 
 
-## a graph of transformation nodes
 class XFormGraph:
+    """a graph of transformation nodes: this is the primary PCOT document type"""
     ## @var nodes
     # all my nodes
     nodes: List[XForm]
@@ -852,8 +889,8 @@ class XFormGraph:
     # integer indexing the caption type for canvases in this graph: see the box in MainWindow's ui for meanings.
     captionType: int
 
-    ## constructor, takes whether the graph is a macro prototype or not
     def __init__(self, isMacro):
+        """constructor, takes whether the graph is a macro prototype or not"""
         # all the nodes
         self.proto = None
         self.nodes = []
@@ -864,12 +901,12 @@ class XFormGraph:
         self.captionType = 0
         self.inputMgr = InputManager(self)
 
-    ## construct a graphical representation for this graph
     def constructScene(self, doAutoLayout):
+        """construct a graphical representation for this graph"""
         self.scene = graphscene.XFormGraphScene(self, doAutoLayout)
 
-    ## create a new node, passing in a type name.
     def create(self, typename):
+        """create a new node, passing in a type name."""
         if typename in allTypes:
             tp = allTypes[typename]
             # display name is just the type name to start with.
@@ -887,11 +924,12 @@ class XFormGraph:
             return self.create("dummy")
         return xform
 
-    ## copy selected items to the clipboard. This copies a serialized
-    # version, like that used for load/save - but it's hairier than it might seem because
-    # there might be numpy data in there. So we build a ZIP archive of the JSON and numpy arrays,
-    # convert that to b64 and store that string. Ugh.
     def copy(self, selection):
+        """copy selected items to the clipboard.
+            This copies a serialized version, like that used for load/save - but it's hairier than it might seem because
+            there might be numpy data in there. So we build a ZIP archive of the JSON and numpy arrays,
+            convert that to b64 and store that string. Ugh.
+        """
         # turn into binary data
         with archive.MemoryArchive() as a:
             a.writeJson("clipboard", self.serialise(selection))
@@ -902,9 +940,11 @@ class XFormGraph:
         s = base64.b64encode(a.get().getvalue()).decode()  # get memory from bytesio, encode as b64, convert to string.
         pyperclip.copy(s)
 
-    ## paste the clipboard. This involves deserialising.
-    # Returns a list of new nodes.
     def paste(self):
+        """paste the clipboard.
+        This involves deserialising.
+        Returns a list of new nodes.
+        """
         # get data from clipboard as a b64 encoded string
         s = pyperclip.paste()
         if len(s) > 0:
@@ -920,8 +960,8 @@ class XFormGraph:
         else:
             return []
 
-    ## remove a node from the graph, and close any tab/window
     def remove(self, node):
+        """remove a node from the graph, and close any tab/window"""
         node.disconnectAll()
         for x in node.tabs:
             x.nodeDeleted()
@@ -934,6 +974,7 @@ class XFormGraph:
         for n in self.nodes:
             n.dump()
 
+    ## handy visitor method
     def visit(self, root: Optional[XForm], fn: Callable[[XForm], None]):
         fn(root)
         for n in root.children:
@@ -953,11 +994,12 @@ class XFormGraph:
             n.runTime = None
             n.hasRun = False
 
-    ## Called when a control in a node has changed, and the node needs to rerun (as do all its children
-    # recursively). If called on a normal graph, will perform the graph or a single node within it,
-    # and all dependent nodes; called on a macro will do the same thing in instances, starting at the
-    # counterpart node for that in the macro prototype.
     def changed(self, node=None):
+        """Called when a control in a node has changed, and the node needs to rerun (as do all its children recursively).
+        If called on a normal graph, will perform the graph or a single node within it,
+        and all dependent nodes; called on a macro will do the same thing in instances, starting at the
+        counterpart node for that in the macro prototype.
+        """
         if self.autoRun:
             if self.inputMgr is not None:
                 self.inputMgr.readAll()  # reread all inputs
@@ -991,9 +1033,10 @@ class XFormGraph:
             if xx.graph == self:
                 xx.setCaption(self.captionType)
 
-    ## perform the entire graph, or all those nodes below a given node.
-    # If the entire graph, performs a traversal from the root nodes.
     def performNodes(self, node=None):
+        """perform the entire graph, or all those nodes below a given node.
+            If the entire graph, performs a traversal from the root nodes.
+            """
         # if we are already running this method, exit. This
         # will be atomic because GIL. The use case here can
         # happen because turning a knob quickly will fire
@@ -1019,6 +1062,7 @@ class XFormGraph:
         self.rebuildGraphics()
 
     def showPerformance(self):
+        """show how long each node took to run"""
         tot = 0
         for n in sorted([x for x in self.nodes if x.runTime is not None], key=lambda x: x.runTime):
             tot = tot + n.runTime
@@ -1026,6 +1070,7 @@ class XFormGraph:
         print("{:<10.3f} TOTAL".format(tot))
 
     def rebuildGraphics(self):
+        """rebuild all graphics elements if a scene is present"""
         if self.scene is not None:
             self.scene.rebuild()
 
@@ -1049,8 +1094,8 @@ class XFormGraph:
         for child, i in toDisconnect:
             child.disconnect(i)
 
-    ## serialise all nodes into a dict
     def serialise(self, items=None):
+        """serialise all nodes into a dict"""
         # just serialise all the nodes into a dict, or those in a list.
         d = {}
         if items is None:
@@ -1060,10 +1105,11 @@ class XFormGraph:
 
         return d
 
-    ## given a dictionary, build a graph based on it. Do not delete
-    # any existing nodes unless asked and do not perform the nodes.
-    # Returns a list of the new nodes. 
     def deserialise(self, d, deleteExistingNodes):
+        """given a dictionary, add nodes stored in it in serialized form.
+            Do not delete any existing nodes unless asked and do not perform the nodes.
+            Returns a list of the new nodes.
+            """
         if deleteExistingNodes:
             self.nodes = []
         # disambiguate nodes in the dict, to make sure they don't
@@ -1144,9 +1190,10 @@ class XFormGraph:
             # and pass back the new, disambiguated dict
         return newd
 
-    ## ensure all connections are valid (i.e. in/out types are compatible)
-    # and break those which aren't
     def ensureConnectionsValid(self):
+        """ensure all connections are valid (i.e. in/out types are compatible)
+            and break those which aren't
+            """
         for n in self.nodes:
             n.ensureConnectionsValid()
 
@@ -1160,20 +1207,20 @@ class XFormGraph:
         i.read()
         return i.exception
 
-    ## helper to set graph's input to an ENVI
     def setInputENVI(self, inputidx, fname):
+        """set graph's input to an ENVI"""
         return self.setInputData(inputidx, inputs.Input.ENVI, lambda method: method.setFileName(fname))
 
-    ## helper to set graph's input to RGB
     def setInputRGB(self, inputidx, fname):
+        """set graph's input to RGB"""
         return self.setInputData(inputidx, inputs.Input.RGB, lambda method: method.setFileName(fname))
 
-    ## helper to set graph's input to multiple files
-    def setInputMulti(self,inputidx, directory, fnames):
+    def setInputMulti(self, inputidx, directory, fnames):
+        """set graph's input to multiple files"""
         return self.setInputData(inputidx, inputs.Input.RGB, lambda method: method.setFileNames(directory, fnames))
 
-    ## get a node by its DISPLAY name, not its internal UUID.
     def getNodeByName(self, name):
+        """get a node by its DISPLAY name, not its internal UUID."""
         # this is a little ugly, but it's plenty quick enough and avoids problems
         for x in self.nodes:
             if name == x.displayName:
