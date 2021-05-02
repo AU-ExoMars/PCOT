@@ -1,6 +1,7 @@
 import pcot.conntypes as conntypes
+import pcot.inputs
 
-from pcot.xform import xformtype, XFormType, XForm, Datum
+from pcot.xform import xformtype, XFormType, XForm, Datum, XFormException
 from pcot.xforms.tabimage import TabImage
 
 
@@ -17,9 +18,12 @@ class XFormInput(XFormType):
         node.img = None
 
     def perform(self, node):
-        node.img = node.graph.inputMgr.inputs[self.idx].get()
+        inp = node.graph.inputMgr.inputs[self.idx]
+        node.img = inp.get()
         if node.img is not None:
             node.img.setMapping(node.mapping)
+        elif inp.activeMethod != pcot.inputs.Input.NULL:
+            node.setError(XFormException('DATA', 'input node could not read data - {}'.format(inp.exception)))
         node.setOutput(0, Datum(conntypes.IMG, node.img))
 
 

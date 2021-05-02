@@ -28,6 +28,11 @@ def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: conntypes.
     if outType is not None and outType != conntypes.IMG and (a.isImage() or b.isImage()):
         raise BinopException('Output type must be image if either input is image')
 
+    if a.isImage() and a.val is None:
+        raise BinopException("Cannot perform binary operation on None image")
+    if b.isImage() and b.val is None:
+        raise BinopException("Cannot perform binary operation on None image")
+
     if a.isImage() and b.isImage():
         # get actual images
         imga = a.val

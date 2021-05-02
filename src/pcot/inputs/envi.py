@@ -26,13 +26,8 @@ class ENVIInputMethod(InputMethod):
         self.mapping = ChannelMapping()
 
     def loadImg(self):
-        # will throw exception if load failed
-        try:
-            img = envi.load(self.fname, self.mapping)
-            ui.log("Image {} loaded: {}, mapping is {}".format(self.fname, img, self.mapping))
-        except FileNotFoundError:
-            ui.error("Image {} cannot be loaded".format(self.fname))
-            img = None
+        img = envi.load(self.fname, self.mapping)
+        ui.log("Image {} loaded: {}, mapping is {}".format(self.fname, img, self.mapping))
         self.img = img
 
     def readData(self):

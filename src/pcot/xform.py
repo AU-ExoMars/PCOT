@@ -18,6 +18,7 @@ import uuid
 
 import pcot.conntypes as conntypes
 import pcot.ui as ui
+from pcot import inputs
 from pcot.ui import graphscene
 from pcot.inputs.inp import InputManager
 from pcot.utils import archive
@@ -959,7 +960,8 @@ class XFormGraph:
     def changed(self, node=None):
         if self.autoRun:
             if self.inputMgr is not None:
-                self.inputMgr.getAll()  # reread all inputs
+                self.inputMgr.readAll()  # reread all inputs
+
             if self.isMacro:
                 # distribute changes in macro prototype to instances.
                 # what we do here is go through all instances of the macro. 
@@ -1017,9 +1019,9 @@ class XFormGraph:
         self.rebuildGraphics()
 
     def showPerformance(self):
-        tot=0
+        tot = 0
         for n in sorted([x for x in self.nodes if x.runTime is not None], key=lambda x: x.runTime):
-            tot = tot+n.runTime
+            tot = tot + n.runTime
             print("{:<10.3f} {} ".format(n.runTime, n.displayName))
         print("{:<10.3f} TOTAL".format(tot))
 
@@ -1147,3 +1149,32 @@ class XFormGraph:
     def ensureConnectionsValid(self):
         for n in self.nodes:
             n.ensureConnectionsValid()
+
+    ## helper for external code - set input to some input type and run code to set data.
+    def setInputData(self, inputidx, inputType, fn):
+        i = self.inputMgr.inputs[inputidx]
+        i.setActiveMethod(inputType)
+        fn(i.getActive())  # run a function on active method
+        # force an immediate read; it's OK, the data should be cached. This is done so we can return
+        # a success/failure status/
+        i.read()
+        return i.exception
+
+    ## helper to set graph's input to an ENVI
+    def setInputENVI(self, inputidx, fname):
+        return self.setInputData(inputidx, inputs.Input.ENVI, lambda method: method.setFileName(fname))
+
+    ## helper to set graph's input to RGB
+    def setInputRGB(self, inputidx, fname):
+        return self.setInputData(inputidx, inputs.Input.RGB, lambda method: method.setFileName(fname))
+
+    ## helper to set graph's input to multiple files
+    def setInputMulti(self,inputidx, directory, fnames):
+        return self.setInputData(inputidx, inputs.Input.RGB, lambda method: method.setFileNames(directory, fnames))
+
+    ## get a node by its DISPLAY name, not its internal UUID.
+    def getNodeByName(self, name):
+        # this is a little ugly, but it's plenty quick enough and avoids problems
+        for x in self.nodes:
+            if name == x.displayName:
+                return x

@@ -4,6 +4,7 @@
 # done in many operations. Avoiding floats saves memory and speeds things up,
 # but we could change things later.
 import math
+import numbers
 
 import cv2 as cv
 import numpy as np
@@ -437,6 +438,11 @@ class ImageCube:
         # The RGB mapping here should be just [0,1,2], since this output is the RGB representation.
         return ImageCube(self.rgb(), ChannelMapping(0, 1, 2), sources)
 
+    ## save RGB representation
+    def rgbWrite(self, filename):
+        img = self.rgb()
+        cv.imwrite(filename, img*255)  # convert from 0-1
+
     ## extract the "subimage" - the image cropped to regions of interest,
     # with a mask for those ROIs. Note that you can also supply an image,
     # in which case you get this image cropped to the other image's ROIs!
@@ -517,6 +523,8 @@ class ImageCube:
                         return ImageCube(img, sources=[x])
         return None
 
+    ## given a channel filter's name, extract that slice/image/channel and
+    # build a new image with just that.
     def getChannelImageByName(self, name):
         # for each channel's set of sources
         for i in range(len(self.sources)):  # iterate so we have the index
@@ -533,6 +541,24 @@ class ImageCube:
                     return ImageCube(img, sources=[x])
         return None
 
+    ## annoyingly similar to the two methods above, this is used to get a channel _index_.
+    def getChannelIdx(self, nameOrCwl):
+        for i in range(len(self.sources)):  # iterate so we have the index
+            x = self.sources[i]
+            if len(x) == 1:
+                # there must be only one source in the set; get it.
+                item = next(iter(x))
+                # match either the filter name or position, case-dependent
+                iname = item.getFilterName()
+                ipos = item.getFilterPos()
+                if iname == nameOrCwl or ipos == nameOrCwl:
+                    return i
+                if isinstance(nameOrCwl, numbers.Number):
+                    f = item.getFilter()
+                    if f is not None and math.isclose(nameOrCwl, f.cwl):
+                        return i
+        return None
+
     ## crop an image down to its regions of interest, creating a new painted ROI.
     def cropROI(self):
         subimg = self.subimage()
@@ -547,3 +573,29 @@ class ImageCube:
         img = img.img  # get imagecube bounded by ROIs as np array
         masked = np.ma.masked_array(img, mask=~mask)
         return fn(masked)
+
+    ## attach an RGB mapping. If no arguments, it's the default mapping. If arguments are
+    # provided, they are filter names or wavelengths and ALL THREE must be present. OR it's a list of actual
+    # RGB indices. So the possible calls are:  (), (name,name,name), (cwl,cwl,cwl) or ([idx,idx,idx])
+    def setRGBMapping(self, r=None, g=None, b=None):
+        if isinstance(r, list) or isinstance(r, tuple):
+            self.mapping = ChannelMapping(*r)
+        elif r is not None or b is not None or g is not None:
+            if r is None or b is None or g is None:
+                raise Exception("All three RGB channel IDs or none must be provided in setDefaultMapping")
+
+            ridx = self.getChannelIdx(r)
+            if ridx is None:
+                raise Exception("cannot find channel {}".format(r))
+            gidx = self.getChannelIdx(g)
+            if gidx is None:
+                raise Exception("cannot find channel {}".format(g))
+            bidx = self.getChannelIdx(b)
+            if bidx is None:
+                raise Exception("cannot find channel {}".format(b))
+
+            self.mapping = ChannelMapping(ridx, gidx, bidx)
+        else:
+            self.mapping = ChannelMapping()
+
+        self.mapping.ensureValid(self)

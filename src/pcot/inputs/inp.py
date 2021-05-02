@@ -37,6 +37,7 @@ class Input:
     def __init__(self, mgr):
         self.mgr = mgr
         self.activeMethod = 0
+        self.exception = None
         self.window = None
         self.methods = [
             NullInputMethod(self),  # null method must be first
@@ -45,6 +46,7 @@ class Input:
             ENVIInputMethod(self)
         ]
 
+    ## actually returns the cached data. Will not read, though - that should be done by readAll.
     def get(self):
         # This needs to get a copy, otherwise its mapping will overwrite the mapping
         # in the input method itself.
@@ -53,6 +55,13 @@ class Input:
             return i.copy()
         else:
             return i
+
+    def read(self):
+        self.exception = None
+        try:
+            self.methods[self.activeMethod].read()
+        except Exception as e:
+            self.exception = e
 
     def isActive(self, method):
         return self.methods[self.activeMethod] == method
@@ -114,6 +123,9 @@ class Input:
             m.deserialise(data)  # and deserialise its data
         return m
 
+    def __str__(self):
+        return "InputManager-active-{}".format(self.activeMethod)
+
 
 ## how many inputs the system can have
 NUMINPUTS = 4
@@ -154,6 +166,6 @@ class InputManager:
             inp.deserialise(data)
 
     ## force reread of all inputs, typically on graph.changed().
-    def getAll(self):
+    def readAll(self):
         for x in self.inputs:
-            x.get()
+            x.read()

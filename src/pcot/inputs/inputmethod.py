@@ -22,13 +22,19 @@ class InputMethod:
     def invalidate(self):
         self.data = None
 
-    ## actually returns the cached data and reads if necessary
+    ##  returns the cached data
     def get(self):
-        if self.data is None:
-            self.data = self.readData()
-            if self.data is not None:
-                print("CACHE WAS INVALID, DATA READ")
         return self.data
+
+    ## reads the data if the cache has been invalidated
+    def read(self):
+        if self.data is None:
+            if self.data is None:
+                self.data = self.readData()
+                if self.data is not None:
+                    print("CACHE WAS INVALID, DATA READ")
+                else:
+                    print("FAILED TO READ DATA (or NULL input method")
 
     ## to override - returns the name for display purposes
     def getName(self):
