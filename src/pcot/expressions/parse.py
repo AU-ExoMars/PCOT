@@ -15,6 +15,8 @@ debug: bool = False
 
 
 class Instruction:
+    """Instruction interface"""
+
     def exec(self, stack: Stack):
         pass
 
@@ -161,9 +163,8 @@ def isOp(t):
     return t.type in [OP, ERRORTOKEN, PERCENT, DOT]
 
 
-# https://stackoverflow.com/questions/16380234/handling-extra-operators-in-shunting-yard/16392115
-
 class Parser:
+    """Expression parser using the shunting algorithm, also incorporating the virtual machine for evaluation"""
     list: List[TokenInfo]
     output: List[Instruction]
     opstack: List[Instruction]  # compile stack
@@ -175,30 +176,34 @@ class Parser:
     binopRegistry: Dict[str, Tuple[int, Optional[Callable[[Any, Any], Any]]]]
 
     def registerBinop(self, name: str, precedence: int, fn: Callable[[Any, Any], Any]):
+        """Register a binary operation"""
         self.binopRegistry[name] = (precedence, fn)
 
     ## unary ops are names mapped to precedence and single arg function which returns a value
     unopRegistry: Dict[str, Tuple[int, Optional[Callable[[Any], Any]]]]
 
     def registerUnop(self, name: str, precedence: int, fn: Callable[[Any], Any]):
+        """Register a unary operation"""
         self.unopRegistry[name] = (precedence, fn)
 
     ## vars are names mapped to argless fns which return a value
     varRegistry: Dict[str, Callable[[], Any]]
 
     def registerVar(self, name: str, fn: Callable[[], Any]):
+        """register a variable with a function to fetch it"""
         self.varRegistry[name] = fn
 
-    ## register the function which outputs a number instruction given a float.
-    # By default this uses the built-in InstNumber, but we sometimes need to override it
-    # (PCOT does to allow numbers to be stacked as Datums)
     def registerNumInstFactory(self, fn: Callable[[float], Instruction]):
+        """register the function which outputs a number instruction given a float.
+        By default this uses the built-in InstNumber, but we sometimes need to override it
+        (PCOT does to allow numbers to be stacked as Datums)
+        """
         self.numInstFactory = fn
 
-    ## register the function which outputs an ident instruction given a float.
-    # By default this uses the built-in InstIdent, but we sometimes need to override it
-    # (PCOT does to allow idents to be stacked as Datums)
     def registerIdentInstFactory(self, fn: Callable[[str], Instruction]):
+        """register the function which outputs an ident instruction given a float.
+            By default this uses the built-in InstIdent, but we sometimes need to override it
+            (PCOT does to allow idents to be stacked as Datums)"""
         self.identInstFactory = fn
 
     ## other functions are names mapped to functions
@@ -206,15 +211,19 @@ class Parser:
     funcRegistry: Dict[str, Callable[[List[Any]], Any]]
 
     def registerFunc(self, name: str, fn: Callable[[List[Any]], Any]):
+        """register a function - the callable should take a list of args and return a value"""
         self.funcRegistry[name] = fn
 
     def out(self, inst: Instruction):
+        # internal method - output
         self.output.append(inst)
 
     def stackOp(self, op: InstOp):
+        # internal method - stack operator
         self.opstack.append(op)
 
     def __init__(self, nakedIdents=False):
+        """Initialise the parser, clearing all registered vars, funcs and ops."""
         self.binopRegistry = dict()
         self.unopRegistry = dict()
         self.varRegistry = dict()
@@ -230,7 +239,11 @@ class Parser:
         self.unopRegistry['('] = (100, None)
 
     def parse(self, s: str):
-        s=s.replace('\n','').replace('\r','')
+        """Parsing function - uses the shunting algorithm.
+        See also
+        https://stackoverflow.com/questions/16380234/handling-extra-operators-in-shunting-yard/16392115
+        """
+        s = s.replace('\n', '').replace('\r', '')  # remove rogue newlines
         x = BytesIO(s.encode())
         self.toks = [x for x in (tokenize(x.readline) or []) if x.type != ENCODING
                      and x.type != ENDMARKER and
@@ -355,6 +368,7 @@ class Parser:
                     raise ParseException("syntax error : unexpected operand", t)
 
     def stackTopIsNotLPar(self):
+        # internal method - stack top is NOT an open bracket
         if len(self.opstack) == 0:
             return False
         op = self.opstack[-1]  # peek
@@ -362,6 +376,7 @@ class Parser:
         return op.name != '('
 
     def stackTopIsOperatorPoppable(self, curop):
+        # internal method - stack top is poppable to output
         if len(self.opstack) == 0:
             return False
         op = self.opstack[-1]  # peek
@@ -373,6 +388,7 @@ class Parser:
         return op.precedence >= curop.precedence
 
     def next(self) -> TokenInfo:
+        # internal method - get next token
         if self.toksLeft():
             if debug:
                 print(self.toks[0])
@@ -381,13 +397,16 @@ class Parser:
             return None
 
     def rewind(self, tok: TokenInfo):
+        # rewinder, unused.
         self.toks.insert(0, tok)
 
     def peek(self) -> TokenInfo:
+        # stack peek
         if self.toksLeft():
             return self.toks[0]
         else:
             return None
 
     def toksLeft(self) -> bool:
+        # count remaining tokens
         return len(self.toks) > 0

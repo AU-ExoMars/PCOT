@@ -32,9 +32,5 @@ WORKING ON
 
 
 use-as-Library stuff:
-    Make setting inputs in library mode easier. Much easier.
-    get node by name
-    get output is easy enough already...
-    set RGB mapping
     eval??
     

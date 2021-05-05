@@ -1,3 +1,6 @@
+"""
+Parser/Evaluator tests - not PCOT specific, just the shunting yard algorithm and VM.
+"""
 from math import sqrt
 
 import parse

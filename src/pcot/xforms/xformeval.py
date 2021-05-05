@@ -2,7 +2,7 @@ import traceback
 
 import pcot.conntypes as conntypes
 import pcot.ui.tabs
-from pcot.expressions.eval import Parser
+from pcot.expressions.eval import ExpressionEvaluator
 from pcot.xform import XFormType, xformtype, XFormException
 
 
@@ -18,7 +18,7 @@ class XFormEval(XFormType):
 
     def __init__(self):
         super().__init__("eval", "maths", "0.0.0")
-        self.parser = Parser()
+        self.parser = ExpressionEvaluator()
         self.addInputConnector("a", conntypes.ANY)
         self.addInputConnector("b", conntypes.ANY)
         self.addInputConnector("c", conntypes.ANY)

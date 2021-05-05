@@ -40,7 +40,9 @@ class InputWindow(QtWidgets.QMainWindow):
         for m in self.input.methods:
             b = MethodSelectButton(self.input, m)
             topBoxLayout.addWidget(b)
+            m.openingWindow = True
             widget = m.createWidget()
+            m.openingWindow = False
             self.widgets.append(widget)
             layout.addWidget(widget)
 
@@ -66,6 +68,7 @@ class MethodWidget(QtWidgets.QWidget):
 
     def __init__(self, m):
         self.method = m
+        self.openingWindow = False   # true if the window is opening
         super().__init__()
 
     def invalidate(self):

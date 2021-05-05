@@ -57,7 +57,7 @@ class IChannelSource(ABC):
         return self.fullStr() == other.fullStr()
 
     def __hash__(self):
-            return hash(self.fullStr())
+        return hash(self.fullStr())
 
 
 # used for channels which SHOULD have filters. The "pos"" will be

@@ -94,9 +94,10 @@ class Input:
 
     ## in an ideal world this would only perform those nodes in the graph
     # which descend from the input nodes for this input. That's hairy,
-    # so I'll just perform the entire graph.
+    # so I'll just perform the entire graph via changed() to ensure the
+    # inputs re-run.
     def performGraph(self):
-        self.mgr.graph.performNodes()
+        self.mgr.graph.changed()
 
     ## serialise the input, or rather produce a "serialisable" data structure. We
     # do this by producing a list of two elements: the input type and that input type's

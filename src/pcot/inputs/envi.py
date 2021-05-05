@@ -93,7 +93,10 @@ class ENVIMethodWidget(MethodWidget):
         print("Displaying image {}, mapping {}".format(self.method.img,self.method.mapping))
         self.canvas.display(self.method.img)
         self.invalidate()  # input has changed, invalidate so the cache is dirtied
-        self.method.input.performGraph()
+        # we don't do this when the window is opening, otherwise it happens a lot!
+        if not self.method.openingWindow:
+            self.method.input.performGraph()
+        self.canvas.display(self.method.img)
 
     def fileClickedAction(self, idx):
         if not self.dirModel.isDir(idx):

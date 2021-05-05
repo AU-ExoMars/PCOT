@@ -15,12 +15,12 @@ from pcot.utils.ops import binop, unop
 from pcot.xform import Datum, XFormException
 
 
-# TODO: error if output is wrong type. Show output in canvas (and other output somehow if not image?). Honour the ROI from the "leftmost" image with an ROI - So A has priority over B, etc.
-# TODO: Band selection and combining. Unaries. Expression guide in help.
-# TODO: Obviously functions and that.
+# TODO: Show output in canvas (and other output somehow if not image?). Honour the ROI from the "leftmost" image with an ROI - So A has priority over B, etc.
+# TODO: keep expression guide in help updated
 
 
 class InstNumber(parse.Instruction):
+    """constant number instruction"""
     val: float
 
     def __init__(self, v: float):
@@ -34,6 +34,7 @@ class InstNumber(parse.Instruction):
 
 
 class InstIdent(parse.Instruction):
+    """constant string identifier instruction"""
     val: str
 
     def __init__(self, v: str):
@@ -74,6 +75,7 @@ properties: Dict[Tuple[str, conntypes.Type], Callable[[Datum], Datum]] = {}
 
 
 def registerProperty(name: str, tp: conntypes.Type, func: Callable[[Datum], Datum]):
+    """add a property (e.g. the 'w' in 'a.w'), given name, input type and function"""
     properties[(name, tp)] = func
 
 
@@ -94,6 +96,7 @@ def getProperty(a: Datum, b: Datum):
 
 
 def funcMerge(args):
+    """function for merging a number of images"""
     if any([x is None for x in args]):
         raise XFormException('EXPR', 'argument is None for merge')
     if any([not x.isImage() for x in args]):
@@ -113,16 +116,16 @@ def funcMerge(args):
     img = np.stack(bands, axis=-1)
     img = ImageCube(img, None, sources)
 
-    return Datum(conntypes.IMG,img)
+    return Datum(conntypes.IMG, img)
 
-
-## compare this with exprWrapper in operations, which only handles images and delegates
-# processing ROI stuff to the function.
 
 def funcWrapper(fn, d, *args):
+    """Wrapper around a evaluator function that deals with ROIs etc.
+    compare this with exprWrapper in operations, which only handles images and delegates
+    processing ROI stuff to the function."""
     if d is None:
         return None
-    elif d.isImage():   # deal with image argument
+    elif d.isImage():  # deal with image argument
         img = d.val
         subimage = img.subimage()
         mask = subimage.fullmask()
@@ -130,8 +133,8 @@ def funcWrapper(fn, d, *args):
         masked = np.ma.masked_array(cp, mask=~mask)
         newdata = fn(masked, *args)  # the result of this could be *anything*
         # so now we look at the result and build an appropriate Datum
-        if isinstance(newdata,np.ndarray):
-            np.putmask(cp,mask,newdata)
+        if isinstance(newdata, np.ndarray):
+            np.putmask(cp, mask, newdata)
             img = img.modifyWithSub(subimage, newdata)
             return Datum(conntypes.IMG, img)
         elif isinstance(newdata, numbers.Number):
@@ -142,9 +145,11 @@ def funcWrapper(fn, d, *args):
         return Datum(conntypes.NUMBER, fn(d.val))
 
 
-
-class Parser(parse.Parser):
+class ExpressionEvaluator(parse.Parser):
+    """The core class for the expression evaluator, based on a generic Parser."""
     def __init__(self):
+        """Initialise the evaluator, registering functions and operators.
+        Caller may add other things (e.g. variables)"""
         super().__init__(True)  # naked identifiers permitted
         self.registerNumInstFactory(lambda x: InstNumber(x))  # make sure we stack numbers as Datums
         self.registerIdentInstFactory(lambda x: InstIdent(x))  # identifiers too
@@ -157,7 +162,7 @@ class Parser(parse.Parser):
         self.registerUnop('-', 50, lambda x: unop(x, lambda a: -a, None))
 
         self.registerBinop('.', 80, getProperty)
-        self.registerBinop('$', 90, extractChannelByName)
+        self.registerBinop('$', 100, extractChannelByName)
 
         # additional functions and properties - SEE ALSO the __init__.py in the operations module.
         operations.registerOpFunctionsAndProperties(self)
@@ -177,6 +182,7 @@ class Parser(parse.Parser):
         registerProperty('h', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.h))
 
     def run(self, s):
+        """Parse and evaluate an expression."""
         self.parse(s)
 
         stack = []
