@@ -33,8 +33,6 @@ class InputMethod:
                 self.data = self.readData()
                 if self.data is not None:
                     print("CACHE WAS INVALID, DATA READ")
-                else:
-                    print("FAILED TO READ DATA (or NULL input method")
 
     ## to override - returns the name for display purposes
     def getName(self):

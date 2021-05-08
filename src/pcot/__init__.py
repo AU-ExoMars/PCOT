@@ -106,7 +106,7 @@ for d in pluginDirs:
             base, ext = os.path.splitext(filename)
             if ext == '.py':
                 path = os.path.join(root, filename)
-                print(path)
+                print("Loading plugin :", path)
                 spec = importlib.util.spec_from_file_location(base, path)
                 module = importlib.util.module_from_spec(spec)
                 sys.modules[base] = module
