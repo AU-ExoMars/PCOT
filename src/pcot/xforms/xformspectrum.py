@@ -75,7 +75,7 @@ class Table:
         return s.getvalue()
 
 
-NUMINPUTS = 5
+NUMINPUTS = 8
 
 
 @xformtype
@@ -128,7 +128,6 @@ class XFormSpectrum(XFormType):
                     table.add(w, s)
                 node.setOutput(0, Datum(conntypes.DATA, table))
 
-        table.add("wibble", 0)
         node.data = data
 
 

@@ -164,7 +164,6 @@ class XformPoly(XFormType):
         self.addOutputConnector("ann", conntypes.IMGRGB,
                                 "image as RGB with ROI, with added annotations around ROI")  # annotated image
         self.addOutputConnector("rect", conntypes.RECT, "the crop rectangle data")  # rectangle (just the ROI's bounding box)
-        self.addOutputConnector("rect", "rect", "the crop rectangle data")  # rectangle (just the ROI's bounding box)
         self.autoserialise = ('caption', 'captiontop', 'fontsize', 'fontline', 'colour', 'drawMode')
 
     def createTab(self, n, w):
