@@ -1,14 +1,11 @@
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import Qt
-
 import cv2 as cv
 import numpy as np
 
 import pcot.conntypes as conntypes
-import pcot.ui, pcot.ui.tabs
+import pcot.ui.tabs
 from pcot.channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, BLUEINTERNALSOURCE
+from pcot.pancamimage import ImageCube
 from pcot.xform import xformtype, XFormType, XFormException, Datum
-from pcot.pancamimage import ImageCube, ChannelMapping
 
 
 def applyGradient(img, mask, grad):

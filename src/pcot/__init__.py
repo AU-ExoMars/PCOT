@@ -1,5 +1,7 @@
 import configparser,os,io
 import getpass
+import importlib
+import sys
 import time
 import traceback
 
@@ -88,5 +90,28 @@ config = None
 config = configparser.ConfigParser()
 config.read_file(getAssetAsFile('defaults.ini'))
 config.read(['site.cfg', os.path.expanduser('~/.pcot.ini')], encoding='utf_8')
+
+
+
+
+##### Plugin handling
+
+# plugin dirs are colon separated, stored in Locations/plugins
+pluginDirs = [os.path.expanduser(x) for x in config.get('Locations', 'pluginpath').split(':')]
+
+# Load any plugins by recursively walking the plugin directories and importing .py files.
+for d in pluginDirs:
+    for root, dirs, files in os.walk(d):
+        for filename in files:
+            base, ext = os.path.splitext(filename)
+            if ext == '.py':
+                path = os.path.join(root, filename)
+                print(path)
+                spec = importlib.util.spec_from_file_location(base, path)
+                module = importlib.util.module_from_spec(spec)
+                sys.modules[base] = module
+                spec.loader.exec_module(module)
+
+
 
 
