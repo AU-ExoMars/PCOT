@@ -24,6 +24,8 @@ def wavelength(channelNumber, img):
     [source] = source
     return source.getFilter().cwl
 
+NUMINPUTS = 5
+
 
 @xformtype
 class XFormSpectrum(XFormType):
@@ -32,7 +34,8 @@ class XFormSpectrum(XFormType):
     def __init__(self):
         super().__init__("spectrum", "data", "0.0.0")
         self.autoserialise = ('mode',)
-        self.addInputConnector("", "img")
+        for i in range(NUMINPUTS):
+            self.addInputConnector(str(i), "img")
 
     def createTab(self, n, w):
         return TabSpectrum(n, w)
@@ -42,26 +45,28 @@ class XFormSpectrum(XFormType):
         node.data = None
 
     def perform(self, node):
-        img = node.getInput(0, conntypes.IMG)
-        if img is not None:
-            # first, generate a list of indices of channels with a single source which has a wavelength,
-            # and a list of those wavelengths
-            wavelengths = [wavelength(x, img) for x in range(img.channels)]
-            chans = [x for x in range(img.channels) if wavelengths[x] > 0]
-            wavelengths = [x for x in wavelengths if x > 0]
+        data = [] # list of output spectra, one for each active input
+        for i in range(NUMINPUTS):
+            img = node.getInput(i, conntypes.IMG)
+            if img is not None:
+                legend = img.getROIName()  # this is a name attached to one of the image's ROIs
+                # first, generate a list of indices of channels with a single source which has a wavelength,
+                # and a list of those wavelengths
+                wavelengths = [wavelength(x, img) for x in range(img.channels)]
+                chans = [x for x in range(img.channels) if wavelengths[x] > 0]
+                wavelengths = [x for x in wavelengths if x > 0]
 
-            # generate a list of labels, one for each channel
-            labels = [IChannelSource.stringForSet(img.sources[x], node.graph.captionType) for x in chans]
+                # generate a list of labels, one for each channel
+                labels = [IChannelSource.stringForSet(img.sources[x], node.graph.captionType) for x in chans]
 
-            # get the ROI bounded image
-            subimg = img.subimage()
-            # now we need to get the mean amplitude of the pixels in each channel in the ROI
-            spectrum = [getSpectrum(subimg.img[:, :, i], subimg.mask) for i in chans]
+                # get the ROI bounded image
+                subimg = img.subimage()
+                # now we need to get the mean amplitude of the pixels in each channel in the ROI
+                spectrum = [getSpectrum(subimg.img[:, :, i], subimg.mask) for i in chans]
 
-            # zip them all together and sort by wavelength
-            node.data = sorted(zip(chans, wavelengths, spectrum, labels), key=lambda x: x[1])
-        else:
-            node.data = None
+                # zip them all together and sort by wavelength
+                data.append( (legend,sorted(zip(chans, wavelengths, spectrum, labels), key=lambda x: x[1])))
+        node.data = data
 
 
 class TabSpectrum(ui.tabs.Tab):
@@ -74,18 +79,18 @@ class TabSpectrum(ui.tabs.Tab):
 
     def replot(self):
         # set up the plot
-        if self.node.data is not None:
-            self.w.mpl.fig.suptitle(self.node.comment)
-            self.w.mpl.ax.cla()  # clear any previous plot
-            cols = cm.get_cmap('Dark2').colors
+        self.w.mpl.fig.suptitle(self.node.comment)
+        self.w.mpl.ax.cla()  # clear any previous plot
+        cols = cm.get_cmap('Dark2').colors
 
-            [chans, wavelengths, spectrum, labels] = list(zip(*self.node.data))  # "unzip" idiom
-            self.w.mpl.ax.plot(wavelengths, spectrum)
-            self.w.mpl.ax.scatter(wavelengths,spectrum,c=[wav2RGB(x) for x in wavelengths])
-            for _, wv, sp, lab in self.node.data:
-                self.w.mpl.ax.annotate(lab, (wv, sp), textcoords='offset points', xytext=(0, 10), ha='center')
-
-            self.w.mpl.draw()
+        for legend, x in self.node.data:
+            [chans, wavelengths, spectrum, labels] = list(zip(*x))  # "unzip" idiom
+            self.w.mpl.ax.plot(wavelengths, spectrum, label=legend)
+            self.w.mpl.ax.scatter(wavelengths, spectrum, c=[wav2RGB(x) for x in wavelengths])
+#            for _, wv, sp, lab in x:
+#                self.w.mpl.ax.annotate(lab, (wv, sp), textcoords='offset points', xytext=(0, 10), ha='center')
+        self.w.mpl.ax.legend()
+        self.w.mpl.draw()
         self.w.replot.setStyleSheet("")
 
     def save(self):

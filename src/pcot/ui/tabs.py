@@ -142,9 +142,9 @@ class Tab(QtWidgets.QWidget):
     ## constructor, which should be called by the subclass ctor
     def __init__(self, window, node, uifile):
         super(Tab, self).__init__()
-        self.title = node.displayName
         self.expanded = None
         self.node = node
+        self.retitle()
         # store a ref to the main UI window which created the tab
         self.window = window
 
@@ -241,7 +241,10 @@ class Tab(QtWidgets.QWidget):
 
     ## force update of tab title and return new title
     def retitle(self):
-        self.title = self.node.displayName
+        if self.node.displayName == self.node.type.name:
+            self.title = self.node.displayName
+        else:
+            self.title = "{} ({})".format(self.node.displayName, self.node.type.name)
         return self.title
 
     def updateError(self):

@@ -68,6 +68,8 @@ class XformRect(XFormType):
                 # potentially modify the image we passed in.
                 o = img.copy()
                 roi = ROIRect(x, y, w, h)  # create the ROI
+                # label the ROI according to the node's display name
+                roi.setNameFromNode(node)
                 o.rois.append(roi)  # and add to the image
                 if node.isOutputConnected(self.OUT_IMG):
                     node.setOutput(0, Datum(conntypes.IMG, o))  # output image and ROI

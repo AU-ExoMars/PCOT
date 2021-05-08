@@ -16,27 +16,40 @@ from typing import List, Set, Optional
 import pcot.filters as filters
 
 
-## definition of interface for regions of interest
 class ROI:
-    ## return a (x,y,w,h) tuple describing the bounding box for this ROI
+    """definition of interface for regions of interest"""
+
+    def __init__(self):
+        """Ctor. ROIs can optionally have a name, which is used to label data in nodes like 'spectrum'"""
+        self.name = None
+
     def bb(self):
+        """return a (x,y,w,h) tuple describing the bounding box for this ROI"""
         pass
 
-    ## return an image cropped to the BB
     def crop(self, img):
+        """return an image cropped to the BB"""
         x, y, w, h = self.bb()
         return img.img[y:y + h, x:x + w]
 
-    ## return a boolean mask which, when imposed on the cropped image,
-    # gives the ROI. Or none,( in which case there is no mask.
     def mask(self):
+        """return a boolean mask which, when imposed on the cropped image, gives the ROI. Or none in which case there is no mask.
+        Note that this is an inverted mask from how masked arrays in numpy work: true means the pixel is included.
+        """
         pass
+
+    def setNameFromNode(self, node):
+        """Set the name of the ROI from its node, or none if the display name is the same as the type name. Ugly,
+        but there's stuff inside macros that relies on displayName always being set, otherwise I'd simplify things
+        by making displayName None unless it's changed."""
+        self.name = None if node.displayName == node.type.name else node.displayName
 
 
 ## a rectangle ROI
 
 class ROIRect(ROI):
     def __init__(self, x, y, w, h):
+        super.__init__()
         self.x = x
         self.y = y
         self.w = w
@@ -64,6 +77,7 @@ def getRadiusFromSlider(sliderVal, imgw, imgh):
 class ROIPainted(ROI):
     # we can create this ab initio or from a subimage mask
     def __init__(self, mask=None):
+        super().__init__()
         if mask is None:
             self.bbrect = None
             self.map = None
@@ -161,7 +175,9 @@ class ROIPainted(ROI):
     def __str__(self):
         if not self.bbrect:
             return "ROI-PAINTED (no points)"
-        return "ROI-PAINTED {} {} {}x{}".format(self.bbrect.x, self.bbrect.y, self.bbrect.w, self.bbrect.h)
+        else:
+            x, y, w, h = self.bb()
+            return "ROI-PAINTED {} {} {}x{}".format(x, y, w, h)
 
 
 ## this is the parts of an image cube which are covered by the active ROIs
@@ -441,7 +457,7 @@ class ImageCube:
     ## save RGB representation
     def rgbWrite(self, filename):
         img = self.rgb()
-        cv.imwrite(filename, img*255)  # convert from 0-1
+        cv.imwrite(filename, img * 255)  # convert from 0-1
 
     ## extract the "subimage" - the image cropped to regions of interest,
     # with a mask for those ROIs. Note that you can also supply an image,
@@ -495,6 +511,12 @@ class ImageCube:
 
     def hasROI(self):
         return len(self.rois) > 0
+
+    def getROIName(self):
+        for x in reversed(self.rois):
+            if x.name is not None:
+                return x.name
+        return None
 
     ## return a copy of the image, with the given image spliced in at the
     # subimage's coordinates and masked according to the subimage

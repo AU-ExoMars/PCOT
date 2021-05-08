@@ -17,6 +17,7 @@ from pcot.xform import xformtype, XFormType, Datum
 
 class ROIPoly(ROI):
     def __init__(self):
+        super().__init__()
         self.imgw = None
         self.imgh = None
         self.points = []
@@ -225,6 +226,10 @@ class XformPoly(XFormType):
                 # potentially modify the image we passed in.
                 o = img.copy()
                 o.rois.append(node.roi)  # and add to the image
+
+                # label the ROI according to the node's display name
+                node.roi.setNameFromNode(node)
+
                 if node.isOutputConnected(self.OUT_IMG):
                     node.setOutput(0, Datum(conntypes.IMG, o))  # output image and ROI
 

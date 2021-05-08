@@ -100,6 +100,10 @@ class XFormPainted(XFormType):
                 # mess things up if we go back up the tree again - it would
                 # potentially modify the image we passed in.
                 o = img.copy()
+
+                # label the ROI according to the node's display name
+                node.roi.setNameFromNode(node)
+
                 o.rois.append(node.roi)  # and add to the image
                 if node.isOutputConnected(self.OUT_IMG):
                     node.setOutput(0, Datum(conntypes.IMG, o))  # output image and ROI

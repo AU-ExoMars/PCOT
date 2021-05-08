@@ -459,6 +459,7 @@ class XForm:
         self.connCountChanged()
         self.error = None
         self.rectText = None
+        self.runTime = 0
 
         # UI-DEPENDENT DATA DOWN HERE
         self.xy = (0, 0)  # this SHOULD be serialised
