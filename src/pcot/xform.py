@@ -605,12 +605,15 @@ class XForm:
         """return the actual type of an output, taking account of overrides (node outputTypes).
         Note that this returns the *connection* type, not the *datum* type stored in that connection.
         """
-        if 0 <= i < len(self.outputs):
-            if self.outputTypes[i] is None:
-                return self.type.outputConnectors[i][1]
+        try:
+            if 0 <= i < len(self.outputs):
+                if self.outputTypes[i] is None:
+                    return self.type.outputConnectors[i][1]
+                else:
+                    return self.outputTypes[i]
             else:
-                return self.outputTypes[i]
-        else:
+                return None
+        except IndexError:
             return None
 
     def getInputType(self, i):
@@ -618,12 +621,15 @@ class XForm:
             Again, this is the *connection* type, not the *datum* type stored in that connection
             (or rather the output to which it is connected)
             """
-        if 0 <= i < len(self.inputs):
-            if self.inputTypes[i] is None:
-                return self.type.inputConnectors[i][1]
+        try:
+            if 0 <= i < len(self.inputs):
+                if self.inputTypes[i] is None:
+                    return self.type.inputConnectors[i][1]
+                else:
+                    return self.inputTypes[i]
             else:
-                return self.inputTypes[i]
-        else:
+                return None
+        except IndexError:
             return None
 
     def getOutput(self, i, tp=None):

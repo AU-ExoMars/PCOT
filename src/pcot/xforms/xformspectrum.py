@@ -1,13 +1,14 @@
 from functools import partial
 
 import numpy as np
+import csv, io
 from matplotlib import cm
 
 import pcot.conntypes as conntypes
 import pcot.ui as ui
 from pcot.channelsource import IChannelSource
 from pcot.filters import wav2RGB
-from pcot.xform import XFormType, xformtype
+from pcot.xform import XFormType, xformtype, Datum
 
 
 # find the mean of all the masked values. Note mask negation!
@@ -24,6 +25,56 @@ def wavelength(channelNumber, img):
     [source] = source
     return source.getFilter().cwl
 
+
+# utility class which might get moved elsewhere. Provides a structure
+# consisting of a list of keys, and a list of dicts. Each dict contains values for the keys,
+# although None is a permissible value (and the default). Start a new row with newRow.
+# Then add k/v pairs. Access via __getitem__ on this object (I think); because direct dict access
+# would be bad. So it's a bit like csv.DictWriter, but deals with ignored data.
+
+class TableIter:
+    def __init__(self, table):
+        self.table = table
+        self.iter = table._rows.__iter__()
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        row = self.iter.__next__()
+        return [row[k] if k in row else 'NA' for k in self.table.keys()]
+
+
+class Table:
+    def __init__(self):
+        self._keys = []
+        self._rows = []
+        self._currow = None
+
+    def newRow(self):
+        self._currow = dict()
+        self._rows.append(self._currow)
+
+    def add(self, k, v):
+        if k not in self._keys:
+            self._keys.append(k)
+        self._currow[k] = v
+
+    def keys(self):
+        return self._keys
+
+    def __iter__(self):
+        return TableIter(self)
+
+    def __str__(self):
+        s = io.StringIO()
+        w = csv.writer(s)
+        w.writerow(self._keys)
+        for r in self:
+            w.writerow(r)
+        return s.getvalue()
+
+
 NUMINPUTS = 5
 
 
@@ -36,6 +87,7 @@ class XFormSpectrum(XFormType):
         self.autoserialise = ('mode',)
         for i in range(NUMINPUTS):
             self.addInputConnector(str(i), "img")
+        self.addOutputConnector("data", conntypes.DATA)
 
     def createTab(self, n, w):
         return TabSpectrum(n, w)
@@ -45,7 +97,8 @@ class XFormSpectrum(XFormType):
         node.data = None
 
     def perform(self, node):
-        data = [] # list of output spectra, one for each active input
+        table = Table()
+        data = []  # list of output spectra, one for each active input
         for i in range(NUMINPUTS):
             img = node.getInput(i, conntypes.IMG)
             if img is not None:
@@ -65,7 +118,17 @@ class XFormSpectrum(XFormType):
                 spectrum = [getSpectrum(subimg.img[:, :, i], subimg.mask) for i in chans]
 
                 # zip them all together and sort by wavelength
-                data.append( (legend,sorted(zip(chans, wavelengths, spectrum, labels), key=lambda x: x[1])))
+                data.append((legend, sorted(zip(chans, wavelengths, spectrum, labels), key=lambda x: x[1])))
+
+                # add to table
+                table.newRow()
+                table.add("name", legend)
+                table.add("pixels", subimg.pixelCount())
+                for w, s in zip(wavelengths, spectrum):
+                    table.add(w, s)
+                node.setOutput(0, Datum(conntypes.DATA, table))
+
+        table.add("wibble", 0)
         node.data = data
 
 
@@ -87,8 +150,8 @@ class TabSpectrum(ui.tabs.Tab):
             [chans, wavelengths, spectrum, labels] = list(zip(*x))  # "unzip" idiom
             self.w.mpl.ax.plot(wavelengths, spectrum, label=legend)
             self.w.mpl.ax.scatter(wavelengths, spectrum, c=[wav2RGB(x) for x in wavelengths])
-#            for _, wv, sp, lab in x:
-#                self.w.mpl.ax.annotate(lab, (wv, sp), textcoords='offset points', xytext=(0, 10), ha='center')
+        #            for _, wv, sp, lab in x:
+        #                self.w.mpl.ax.annotate(lab, (wv, sp), textcoords='offset points', xytext=(0, 10), ha='center')
         self.w.mpl.ax.legend()
         self.w.mpl.draw()
         self.w.replot.setStyleSheet("")

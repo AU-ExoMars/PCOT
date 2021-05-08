@@ -20,8 +20,8 @@ class ROI:
     """definition of interface for regions of interest"""
 
     def __init__(self):
-        """Ctor. ROIs can optionally have a name, which is used to label data in nodes like 'spectrum'"""
-        self.name = None
+        """Ctor. ROIs have a label, which is used to label data in nodes like 'spectrum' and appears in annotations"""
+        self.label = None
 
     def bb(self):
         """return a (x,y,w,h) tuple describing the bounding box for this ROI"""
@@ -37,12 +37,6 @@ class ROI:
         Note that this is an inverted mask from how masked arrays in numpy work: true means the pixel is included.
         """
         pass
-
-    def setNameFromNode(self, node):
-        """Set the name of the ROI from its node, or none if the display name is the same as the type name. Ugly,
-        but there's stuff inside macros that relies on displayName always being set, otherwise I'd simplify things
-        by making displayName None unless it's changed."""
-        self.name = None if node.displayName == node.type.name else node.displayName
 
 
 ## a rectangle ROI
@@ -252,6 +246,11 @@ class SubImageCubeROI:
     # Will also work if the images are different depths.
     def sameROI(self, other):
         return self.bb == other.bb and self.mask == other.mask
+
+    ## pixel count
+    def pixelCount(self):
+        return self.mask.sum()
+
 
 
 ## A mapping from a multichannel image into RGB. All nodes have one of these, although some may have more and some
@@ -514,8 +513,8 @@ class ImageCube:
 
     def getROIName(self):
         for x in reversed(self.rois):
-            if x.name is not None:
-                return x.name
+            if x.label is not None and len(x.label)>0:
+                return x.label
         return None
 
     ## return a copy of the image, with the given image spliced in at the

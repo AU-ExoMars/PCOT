@@ -39,6 +39,10 @@ VARIANT = 'variant'
 
 IDENT = 'ident'
 
+# generic data
+
+DATA = 'data'
+
 
 def isImage(t: Type):
     return "img" in t
@@ -67,6 +71,7 @@ brushDict[IMGGREY] = Qt.gray
 brushDict[IMG] = Qt.blue
 brushDict[ELLIPSE] = Qt.cyan
 brushDict[RECT] = Qt.cyan
+brushDict[DATA] = Qt.darkMagenta
 brushDict[NUMBER] = Qt.darkGreen
 brushDict[VARIANT] = QBrush(Qt.black, Qt.DiagCrossPattern)
 

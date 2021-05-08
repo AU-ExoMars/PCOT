@@ -57,7 +57,7 @@ class XFormEval(XFormType):
                         node.result = "IMAGE"
                     elif res.tp == conntypes.NUMBER:
                         node.result = str(res.val)
-                        node.setRectText(node.result)
+                        node.setRectText("res: "+node.result)
 
         except Exception as e:
             traceback.print_exc()

@@ -10,21 +10,29 @@ from pcot.xform import xformtype, XFormType, Datum
 
 @xformtype
 class XformRect(XFormType):
-    """Add a rectangular ROI to an image. At the next node all ROIs will be grouped together,
-    used to perform the operation, and discarded."""
+    """Add a rectangular ROI to an image.
+    At the next node all ROIs will be grouped together,
+    used to perform the operation, and discarded.
+    Also outputs an RGB image annotated with the ROI on the 'ann' RGB input, or the input
+    image converted to RGB if that input is not connected.
+    """
 
     # constants enumerating the outputs
     OUT_IMG = 0
     OUT_ANNOT = 1
     OUT_RECT = 2
 
+    IN_IMG = 0
+    IN_ANNOT = 1
+
     def __init__(self):
         super().__init__("rect", "regions", "0.0.0")
-        self.addInputConnector("", "img")
-        self.addOutputConnector("img", "img", "image with ROI")  # image+roi
-        self.addOutputConnector("ann", "img",
+        self.addInputConnector("input", conntypes.IMG)
+        self.addInputConnector("ann", conntypes.IMGRGB, "used as base for annotated image")
+        self.addOutputConnector("img", conntypes.IMG, "image with ROI")  # image+roi
+        self.addOutputConnector("ann", conntypes.IMGRGB,
                                 "image as RGB with ROI, with added annotations around ROI")  # annotated image
-        self.addOutputConnector("rect", "rect", "the rectangle data")  # rectangle (just the ROI)
+        self.addOutputConnector("rect", conntypes.RECT, "the crop rectangle data")  # rectangle (just the ROI's bounding box)
         self.autoserialise = ('croprect', 'caption', 'captiontop', 'fontsize', 'fontline', 'colour')
 
     def createTab(self, n, w):
@@ -40,18 +48,23 @@ class XformRect(XFormType):
         node.colour = (1, 1, 0)
 
     def perform(self, node):
-        img = node.getInput(0, conntypes.IMG)
+        # label the ROI
+        node.roi.label = node.caption
+        node.setRectText(node.caption)
+
+        img = node.getInput(self.IN_IMG, conntypes.IMG)
+        inAnnot = node.getInput(self.IN_ANNOT, conntypes.IMG)
         if img is None:
             # no image
             node.setOutput(self.OUT_IMG, None)
-            node.setOutput(self.OUT_ANNOT, None)
+            node.setOutput(self.OUT_ANNOT, None if inAnnot is None else Datum(conntypes.IMGRGB, inAnnot))
             node.setOutput(self.OUT_RECT, None)
         else:
             # for the annotated image, we just get the RGB for the image in the
             # input node.
             img = img.copy()
             img.setMapping(node.mapping)
-            rgb = img.rgbImage()
+            rgb = img.rgbImage() if inAnnot is None else inAnnot.copy()
             if node.croprect is None:
                 # no rectangle, but we still need to use the RGB for annotation
                 node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
@@ -68,8 +81,6 @@ class XformRect(XFormType):
                 # potentially modify the image we passed in.
                 o = img.copy()
                 roi = ROIRect(x, y, w, h)  # create the ROI
-                # label the ROI according to the node's display name
-                roi.setNameFromNode(node)
                 o.rois.append(roi)  # and add to the image
                 if node.isOutputConnected(self.OUT_IMG):
                     node.setOutput(0, Datum(conntypes.IMG, o))  # output image and ROI

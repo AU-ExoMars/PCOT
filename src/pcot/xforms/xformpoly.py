@@ -141,19 +141,29 @@ class ROIPoly(ROI):
 
 @xformtype
 class XformPoly(XFormType):
-    """Add a polygonal ROI to an image."""
+    """Add a polygonal ROI to an image.
+    At the next node all ROIs will be grouped together,
+    used to perform the operation, and discarded.
+    Also outputs an RGB image annotated with the ROI on the 'ann' RGB input, or the input
+    image converted to RGB if that input is not connected.
+    """
 
     # constants enumerating the outputs
     OUT_IMG = 0
     OUT_ANNOT = 1
     OUT_RECT = 2
 
+    IN_IMG = 0
+    IN_ANNOT = 1
+
     def __init__(self):
         super().__init__("poly", "regions", "0.0.0")
-        self.addInputConnector("", "img")
-        self.addOutputConnector("img", "img", "image with ROI")  # image+roi
-        self.addOutputConnector("ann", "img",
+        self.addInputConnector("input", conntypes.IMG)
+        self.addInputConnector("ann", conntypes.IMGRGB, "used as base for annotated image")
+        self.addOutputConnector("img", conntypes.IMG, "image with ROI")  # image+roi
+        self.addOutputConnector("ann", conntypes.IMGRGB,
                                 "image as RGB with ROI, with added annotations around ROI")  # annotated image
+        self.addOutputConnector("rect", conntypes.RECT, "the crop rectangle data")  # rectangle (just the ROI's bounding box)
         self.addOutputConnector("rect", "rect", "the crop rectangle data")  # rectangle (just the ROI's bounding box)
         self.autoserialise = ('caption', 'captiontop', 'fontsize', 'fontline', 'colour', 'drawMode')
 
@@ -181,12 +191,17 @@ class XformPoly(XFormType):
         node.roi.deserialise(d)
 
     def perform(self, node):
-        img = node.getInput(0, conntypes.IMG)
+        img = node.getInput(self.IN_IMG, conntypes.IMG)
+        inAnnot = node.getInput(self.IN_ANNOT, conntypes.IMG)
+        # label the ROI
+        node.roi.label = node.caption
+        node.setRectText(node.caption)
+
         if img is None:
             node.roi.clear()
             # no image
             node.setOutput(self.OUT_IMG, None)
-            node.setOutput(self.OUT_ANNOT, None)
+            node.setOutput(self.OUT_ANNOT, None if inAnnot is None else Datum(conntypes.IMGRGB, inAnnot))
             node.setOutput(self.OUT_RECT, None)
         else:
             node.roi.setImageSize(img.w, img.h)
@@ -204,7 +219,7 @@ class XformPoly(XFormType):
             # input node.
             img = img.copy()
             img.setMapping(node.mapping)
-            rgb = img.rgbImage()
+            rgb = img.rgbImage() if inAnnot is None else inAnnot.copy()
             bb = node.roi.bb()
             # now make an annotated image by drawing on the RGB image we got earlier
             annot = rgb.img
@@ -226,9 +241,6 @@ class XformPoly(XFormType):
                 # potentially modify the image we passed in.
                 o = img.copy()
                 o.rois.append(node.roi)  # and add to the image
-
-                # label the ROI according to the node's display name
-                node.roi.setNameFromNode(node)
 
                 if node.isOutputConnected(self.OUT_IMG):
                     node.setOutput(0, Datum(conntypes.IMG, o))  # output image and ROI
