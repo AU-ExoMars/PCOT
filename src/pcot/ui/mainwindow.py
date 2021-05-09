@@ -3,16 +3,12 @@
 # "patch" or a macro prototype, a palette of transforms, and an area
 # for tabs controlling transforms.
 
-import getpass
-import json
-import os
-import time
 import traceback
 from typing import List, Optional, OrderedDict, ClassVar
 
 from PyQt5 import QtWidgets, uic, QtGui
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QMessageBox
+
 
 import pcot
 from pcot.ui import graphscene, graphview
@@ -26,8 +22,6 @@ import pcot.xform as xform
 
 
 from pcot.utils import archive
-
-
 
 
 class InputSelectButton(QtWidgets.QPushButton):
@@ -171,6 +165,9 @@ class MainUI(ui.tabs.DockableTabWindow):
         # This only does something when you already have a graph, which macro protos don't,
         # but that's OK because they don't have a caption control either.
         self.setCaption(0)
+
+        for x in pcot.mainWindowInitHooks:
+            x(self)
 
         self.show()
         ui.msg("OK")

@@ -91,7 +91,8 @@ config = configparser.ConfigParser()
 config.read_file(getAssetAsFile('defaults.ini'))
 config.read(['site.cfg', os.path.expanduser('~/.pcot.ini')], encoding='utf_8')
 
-
+# A list of functions for adding stuff to the main window. Each takes a MainUI
+mainWindowInitHooks = []
 
 
 ##### Plugin handling

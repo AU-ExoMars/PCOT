@@ -1,13 +1,11 @@
-from functools import partial
-
 import numpy as np
-import csv, io
 from matplotlib import cm
 
 import pcot.conntypes as conntypes
 import pcot.ui as ui
 from pcot.channelsource import IChannelSource
 from pcot.filters import wav2RGB
+from pcot.utils.table import Table
 from pcot.xform import XFormType, xformtype, Datum
 
 
@@ -26,68 +24,21 @@ def wavelength(channelNumber, img):
     return source.getFilter().cwl
 
 
-# utility class which might get moved elsewhere. Provides a structure
-# consisting of a list of keys, and a list of dicts. Each dict contains values for the keys,
-# although None is a permissible value (and the default). Start a new row with newRow.
-# Then add k/v pairs. Access via __getitem__ on this object (I think); because direct dict access
-# would be bad. So it's a bit like csv.DictWriter, but deals with ignored data.
-
-class TableIter:
-    def __init__(self, table):
-        self.table = table
-        self.iter = table._rows.__iter__()
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        row = self.iter.__next__()
-        return [row[k] if k in row else 'NA' for k in self.table.keys()]
-
-
-class Table:
-    def __init__(self):
-        self._keys = []
-        self._rows = []
-        self._currow = None
-
-    def newRow(self):
-        self._currow = dict()
-        self._rows.append(self._currow)
-
-    def add(self, k, v):
-        if k not in self._keys:
-            self._keys.append(k)
-        self._currow[k] = v
-
-    def keys(self):
-        return self._keys
-
-    def __iter__(self):
-        return TableIter(self)
-
-    def __str__(self):
-        s = io.StringIO()
-        w = csv.writer(s)
-        w.writerow(self._keys)
-        for r in self:
-            w.writerow(r)
-        return s.getvalue()
-
-
 NUMINPUTS = 8
 
 
 @xformtype
 class XFormSpectrum(XFormType):
-    """Produce a histogram for each channel in the data"""
+    """Show the mean intensities for each frequency in each input. Each input has a separate line in
+    the resulting plot, labelled with either a generated label or the annotation of the last ROI on that
+    input. If two inputs have the same ROI label, they are merged into a single line."""
 
     def __init__(self):
         super().__init__("spectrum", "data", "0.0.0")
         self.autoserialise = ('mode',)
         for i in range(NUMINPUTS):
-            self.addInputConnector(str(i), "img")
-        self.addOutputConnector("data", conntypes.DATA)
+            self.addInputConnector(str(i), conntypes.IMG, "a single line in the plot")
+        self.addOutputConnector("data", conntypes.DATA, "a CSV output (use 'dump' to read it)")
 
     def createTab(self, n, w):
         return TabSpectrum(n, w)
@@ -98,11 +49,14 @@ class XFormSpectrum(XFormType):
 
     def perform(self, node):
         table = Table()
-        data = []  # list of output spectra, one for each active input
+        data = dict()  # dict of output spectra, key is input name (several inputs might go into one entry if names are same)
         for i in range(NUMINPUTS):
             img = node.getInput(i, conntypes.IMG)
             if img is not None:
-                legend = img.getROIName()  # this is a name attached to one of the image's ROIs
+                legend = img.getROIName()  # this is an annotation attached to one of the image's ROIs
+                if legend is None:      # and if there isn't an annotation, use "input n"
+                    legend = "input {}".format(i)
+
                 # first, generate a list of indices of channels with a single source which has a wavelength,
                 # and a list of those wavelengths
                 wavelengths = [wavelength(x, img) for x in range(img.channels)]
@@ -117,18 +71,24 @@ class XFormSpectrum(XFormType):
                 # now we need to get the mean amplitude of the pixels in each channel in the ROI
                 spectrum = [getSpectrum(subimg.img[:, :, i], subimg.mask) for i in chans]
 
-                # zip them all together and sort by wavelength
-                data.append((legend, sorted(zip(chans, wavelengths, spectrum, labels), key=lambda x: x[1])))
+                # zip them all together and append to the list for that legend (creating a new list
+                # if there isn't one)
+                if legend not in data:
+                    data[legend] = []
+                data[legend] += list(zip(chans, wavelengths, spectrum, labels))
 
                 # add to table
-                table.newRow()
+                table.newRow(legend)
                 table.add("name", legend)
                 table.add("pixels", subimg.pixelCount())
                 for w, s in zip(wavelengths, spectrum):
                     table.add(w, s)
                 node.setOutput(0, Datum(conntypes.DATA, table))
 
-        node.data = data
+        # now, for each list in the dict, build a new dict of the lists sorted
+        # by wavelength
+
+        node.data = {legend: sorted(lst, key=lambda x: x[1]) for legend, lst in data.items()}
 
 
 class TabSpectrum(ui.tabs.Tab):
@@ -145,7 +105,7 @@ class TabSpectrum(ui.tabs.Tab):
         self.w.mpl.ax.cla()  # clear any previous plot
         cols = cm.get_cmap('Dark2').colors
 
-        for legend, x in self.node.data:
+        for legend, x in self.node.data.items():
             [chans, wavelengths, spectrum, labels] = list(zip(*x))  # "unzip" idiom
             self.w.mpl.ax.plot(wavelengths, spectrum, label=legend)
             self.w.mpl.ax.scatter(wavelengths, spectrum, c=[wav2RGB(x) for x in wavelengths])
