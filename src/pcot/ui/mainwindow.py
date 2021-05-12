@@ -211,10 +211,12 @@ class MainUI(ui.tabs.DockableTabWindow):
     ## rebuild the graphics in all main windows and also all the tab titles
     # (since they may have been renamed)
     @staticmethod
-    def rebuildAll():
+    def rebuildAll(scene=True, tab=True):
         for w in MainUI.windows:
-            w.graph.scene.rebuild()
-            w.retitleTabs()
+            if scene:
+                w.graph.scene.rebuild()
+            if tab:
+                w.retitleTabs()
 
     ## close event handler
     def closeEvent(self, evt):

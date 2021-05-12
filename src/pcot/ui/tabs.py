@@ -241,10 +241,12 @@ class Tab(QtWidgets.QWidget):
 
     ## force update of tab title and return new title
     def retitle(self):
-        if self.node.displayName == self.node.type.name:
-            self.title = self.node.displayName
-        else:
-            self.title = "{} ({})".format(self.node.displayName, self.node.type.name)
+        t = self.node.displayName
+        if self.node.displayName != self.node.type.name:
+            t += " ({})".format(self.node.type.name)
+        if self.node.rectText is not None:
+            t += " [{}]".format(self.node.rectText)
+        self.title = t
         return self.title
 
     def updateError(self):

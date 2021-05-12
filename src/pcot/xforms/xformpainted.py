@@ -7,6 +7,7 @@ import pcot.conntypes as conntypes
 import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
+from pcot import ui
 from pcot.pancamimage import ROIPainted, getRadiusFromSlider
 from pcot.xform import xformtype, XFormType, Datum
 
@@ -200,6 +201,8 @@ class TabPainted(pcot.ui.tabs.Tab):
         # set the text again. We set a flag to stop the text being reset.
         self.dontSetText = True
         self.changed()
+        # just rebuild tabs
+        ui.mainwindow.MainUI.rebuildAll(scene=False)
         self.dontSetText = False
 
     def fontLineChanged(self, i):
