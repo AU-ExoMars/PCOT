@@ -164,7 +164,7 @@ class ExpressionEvaluator(parse.Parser):
         self.registerBinop('.', 80, getProperty)
         self.registerBinop('$', 100, extractChannelByName)
 
-        # additional functions and properties - SEE ALSO the __init__.py in the operations module.
+        # additional functions and properties - this is in the __init__.py in the operations package.
         operations.registerOpFunctionsAndProperties(self)
 
         self.registerFunc("merge", funcMerge)

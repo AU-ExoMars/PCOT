@@ -3,10 +3,9 @@
 #
 
 import pcot
-
-# load a PCOT graph
 from pcot.conntypes import IMG
 
+# load a PCOT graph
 g = pcot.load("..\\foo.pcot")
 # change input 0 to some ENVI data
 rv = g.setInputENVI(0, r'..\\RStar_AUPE\AUPE_RWAC_Caltarg_RStar.hdr')
