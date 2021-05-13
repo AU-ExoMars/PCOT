@@ -91,7 +91,7 @@
   <customwidget>
    <class>VariantWidget</class>
    <extends>QWidget</extends>
-   <header location="global">ui/variantwidget</header>
+   <header>pcot.ui.variantwidget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

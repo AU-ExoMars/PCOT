@@ -1,7 +1,7 @@
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import pyqtSignal
 
-import conntypes
+import pcot.conntypes as conntypes
 
 
 class VariantWidget(QtWidgets.QGroupBox):

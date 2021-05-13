@@ -9,7 +9,6 @@ import numpy as np
 from pcot.conntypes import NUMBER, IMG
 import pcot.operations.norm
 import pcot.operations.curve
-from pcot.expressions.eval import registerProperty
 from pcot.pancamimage import ImageCube, SubImageCubeROI
 from pcot.xform import Datum, XForm, XFormException
 
