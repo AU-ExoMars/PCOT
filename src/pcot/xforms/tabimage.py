@@ -7,6 +7,7 @@ import pcot.ui.tabs
 class TabImage(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabimage.ui')  # same UI as sink
+        self.w.canvas.setPersister(node)
         self.w.canvas.setMapping(node.mapping)
         self.w.canvas.setGraph(node.graph)
         # sync tab with node

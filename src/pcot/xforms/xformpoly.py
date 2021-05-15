@@ -10,11 +10,11 @@ import pcot.utils.colour
 import pcot.utils.text
 
 from pcot.pancamimage import ImageCube, ROI, ROIPoly
-from pcot.xform import xformtype, XFormType, Datum
+from pcot.xform import xformtype, XFormType, Datum, XFormROIType
 
 
 @xformtype
-class XformPoly(XFormType):
+class XformPoly(XFormROIType):
     """Add a polygonal ROI to an image.
     At the next node all ROIs will be grouped together,
     used to perform the operation, and discarded.
@@ -63,63 +63,19 @@ class XformPoly(XFormType):
     def deserialise(self, node, d):
         node.roi.deserialise(d)
 
-    def perform(self, node):
-        img = node.getInput(self.IN_IMG, conntypes.IMG)
-        inAnnot = node.getInput(self.IN_ANNOT, conntypes.IMG)
-        # label the ROI
-        node.roi.label = node.caption
-        node.setRectText(node.caption)
-
-        if img is None:
-            node.roi.clear()
-            # no image
-            node.setOutput(self.OUT_IMG, None)
-            node.setOutput(self.OUT_ANNOT, None if inAnnot is None else Datum(conntypes.IMGRGB, inAnnot))
-            node.setOutput(self.OUT_RECT, None)
+    def setProps(self, node, img):
+        node.roi.setImageSize(img.w, img.h)
+        if node.drawMode == 0:
+            drawPoints = True
+            drawBox = True
+        elif node.drawMode == 1:
+            drawPoints = True
+            drawBox = False
         else:
-            node.roi.setImageSize(img.w, img.h)
-            if node.drawMode == 0:
-                drawPoints = True
-                drawBox = True
-            elif node.drawMode == 1:
-                drawPoints = True
-                drawBox = False
-            else:
-                drawPoints = False
-                drawBox = False
+            drawPoints = False
+            drawBox = False
 
-            node.roi.setDrawProps(node.colour, node.fontsize, node.fontline, drawPoints, drawBox)
-
-            # for the annotated image, we just get the RGB for the image in the
-            # input node.
-            img = img.copy()
-            img.setMapping(node.mapping)
-            rgb = img.rgbImage() if inAnnot is None else inAnnot.copy()
-            bb = node.roi.bb()
-            # now make an annotated image by drawing on the RGB image we got earlier
-            # Note how this differs from some other ROIs - we might not have a BB, but still need to draw
-            node.roi.draw(rgb)
-            node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
-            node.setOutput(self.OUT_ANNOT, Datum(conntypes.IMG, rgb))
-            if bb is None:
-                node.img = img  # the original image
-                node.setOutput(self.OUT_RECT, None)
-            else:
-                # need to generate image + ROI
-                # output image same as input image with same
-                # ROIs. I could just pass input to output, but this would
-                # mess things up if we go back up the tree again - it would
-                # potentially modify the image we passed in.
-                o = img.copy()
-                o.rois.append(node.roi)  # and add to the image
-                node.rgbImage.rois = o.rois  # with same ROI list as unannotated image
-                # but we still store the original
-                node.img = img
-                # and the BB rectangle
-                node.setOutput(self.OUT_RECT, Datum(conntypes.RECT, bb))
-
-            if node.isOutputConnected(self.OUT_IMG):
-                node.setOutput(self.OUT_IMG, Datum(conntypes.IMG, node.img))  # output image and ROI
+        node.roi.setDrawProps(node.colour, node.fontsize, node.fontline, drawPoints, drawBox)
 
 
 class TabPoly(pcot.ui.tabs.Tab):
@@ -139,6 +95,7 @@ class TabPoly(pcot.ui.tabs.Tab):
         self.w.canvas.setGraph(node.graph)
         # but we still need to be able to edit it
         self.w.canvas.setMapping(node.mapping)
+        self.w.canvas.setPersister(node)
 
         self.mouseDown = False
         self.dontSetText = False

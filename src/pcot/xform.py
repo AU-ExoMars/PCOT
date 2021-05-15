@@ -21,6 +21,7 @@ import pcot.ui as ui
 from pcot import inputs
 from pcot.ui import graphscene
 from pcot.inputs.inp import InputManager
+from pcot.ui.canvas import Canvas
 from pcot.utils import archive
 
 if TYPE_CHECKING:
@@ -477,6 +478,7 @@ class XForm:
         # all nodes have a channel mapping, because it's easier. See docs for that class.
         self.mapping = ChannelMapping()
         tp.instances.append(self)
+        Canvas.initPersistData(self)
 
     def dumpInputs(self, t):
         """debugging"""
@@ -575,6 +577,7 @@ class XForm:
         if d2 is not None:
             # avoids a type check problem
             d.update(d2 or {})
+        Canvas.serialise(self, d)
         return d
 
     def deserialise(self, d):
@@ -588,6 +591,7 @@ class XForm:
         self.savedmd5 = d['md5']  # and stash the MD5 we were saved with
         self.displayName = d['displayName']
         self.mapping = ChannelMapping.deserialise(d['mapping'])
+        Canvas.deserialise(self, d)
 
         # some nodes don't have this, in which case we just set it
         # to true.
@@ -1232,3 +1236,46 @@ class XFormGraph:
         for x in self.nodes:
             if name == x.displayName:
                 return x
+
+
+class XFormROIType(XFormType):
+    """Class for handling ROI xform types, does most of the heavy lifting of the node's perform
+    function. The actual ROIs are dealt with in pancamimage"""
+    def setProps(self, node, img):
+        """Set properties in the node and ROI attached to the node. Assumes img is a valid
+        imagecube, and node.roi is the ROI"""
+        pass
+
+    def perform(self, node):
+        img = node.getInput(self.IN_IMG, conntypes.IMG)
+        inAnnot = node.getInput(self.IN_ANNOT, conntypes.IMG)
+        # label the ROI
+        node.roi.label = node.caption
+        node.setRectText(node.caption)
+
+        if img is None:
+            # no image
+            node.setOutput(self.OUT_IMG, None)
+            node.setOutput(self.OUT_ANNOT, None if inAnnot is None else Datum(conntypes.IMGRGB, inAnnot))
+            node.setOutput(self.OUT_RECT, None)
+        else:
+            self.setProps(node, img)
+            # copy image and append ROI to it
+            img = img.copy()
+            img.rois.append(node.roi)
+            # set mapping from node
+            img.setMapping(node.mapping)
+            # create a new RGB image or use the input one
+            rgb = img.rgbImage() if inAnnot is None else inAnnot.copy()
+            # now make an annotated image by drawing all ROIS on the RGB image
+            img.drawROIs(rgb.img)
+            rgb.rois = img.rois  # with same ROI list as unannotated image
+            node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
+            node.setOutput(self.OUT_ANNOT, Datum(conntypes.IMG, rgb))
+            node.img = img
+            # output BB
+            bb = node.roi.bb()
+            node.setOutput(self.OUT_RECT, Datum(conntypes.RECT, None if bb is None else bb))
+
+            if node.isOutputConnected(self.OUT_IMG):
+                node.setOutput(self.OUT_IMG, Datum(conntypes.IMG, node.img))  # output image and ROI

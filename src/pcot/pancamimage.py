@@ -24,7 +24,7 @@ class ROI:
         """Ctor. ROIs have a label, which is used to label data in nodes like 'spectrum' and appears in annotations"""
         self.label = None
         self.labeltop = False  # draw the label at the top?
-        self.colour = (0,0,0)  # annotation colour
+        self.colour = (0, 0, 0)  # annotation colour
         self.fontline = 2  # thickness of lines and text
         self.fontsize = 10  # annotation font size
 
@@ -48,37 +48,57 @@ class ROI:
         # write on it - but we MUST WRITE OUTSIDE THE BOUNDS, otherwise we interfere
         # with the image! Doing this predictably with the thickness function
         # in cv.rectangle is a pain, so I'm doing it by hand.
-        x, y, w, h = self.bb()
-        for i in range(self.fontline):
-            cv.rectangle(rgb.img, (x - i - 1, y - i - 1), (x + w + i, y + h + i), self.colour, thickness=1)
+        if (bb := self.bb()) is not None:
+            x, y, w, h = bb
+            for i in range(self.fontline):
+                cv.rectangle(rgb, (x - i - 1, y - i - 1), (x + w + i, y + h + i), self.colour, thickness=1)
 
-        ty = y if self.labeltop else y + h
-        text.write(rgb.img, self.label, x, ty, self.labeltop, self.fontsize,
-                   self.fontline, self.colour)
+            ty = y if self.labeltop else y + h
+            text.write(rgb, self.label, x, ty, self.labeltop, self.fontsize,
+                       self.fontline, self.colour)
 
 
 ## a rectangle ROI
 
 class ROIRect(ROI):
-    def __init__(self, colour, fontline, fontsize, x, y, w, h):
-        super.__init__()
-        self.x = x
-        self.y = y
-        self.w = w
-        self.h = h
-        self.colour = colour  # annotation colour
-        self.fontline = fontline  # thickness of lines and text
-        self.fontsize = fontsize  # annotation font size
+    def __init__(self):
+        super().__init__()
+        self.x = -1
+        self.y = 0
+        self.w = 0
+        self.h = 0
+        self.colour = (1, 1, 0)  # annotation colour
+        self.fontline = 2
+        self.fontsize = 10
 
     def bb(self):
+        if self.x < 0:
+            return None
         return self.x, self.y, self.w, self.h
 
-    def draw(self, img: 'ImageCube'):
+    def draw(self, img: np.ndarray):
         self.drawBB(img)
 
     def mask(self):
         # return a boolean array of True, same size as BB
         return np.full((self.h, self.w), True)
+
+    def setDrawProps(self, colour, fontsize, fontline):
+        self.colour = colour
+        self.fontline = fontline
+        self.fontsize = fontsize
+
+    def setBB(self, x, y, w, h):
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
+
+    def serialise(self):
+        return {'bb': (self.x, self.y, self.w, self.h)}
+
+    def deserialise(self, d):
+        self.x, self.y, self.w, self.h = d['bb']
 
     def __str__(self):
         return "ROI-RECT {} {} {}x{}".format(self.x, self.y, self.w, self.h)
@@ -154,24 +174,24 @@ class ROIPainted(ROI):
 
         # draw into an RGB image
         # first, get the slice into the real image
-        x, y, w, h = self.bb()
-        img = img.img
-        imgslice = img[y:y + h, x:x + w]
+        if (bb := self.bb()) is not None:
+            x, y, w, h = bb
+            imgslice = img[y:y + h, x:x + w]
 
-        # now get the mask and run sobel edge-detection on it if required
-        mask = self.mask()
-        if self.drawEdge:
-            sx = ndimage.sobel(mask, axis=0, mode='constant')
-            sy = ndimage.sobel(mask, axis=1, mode='constant')
-            mask = np.hypot(sx, sy)
+            # now get the mask and run sobel edge-detection on it if required
+            mask = self.mask()
+            if self.drawEdge:
+                sx = ndimage.sobel(mask, axis=0, mode='constant')
+                sy = ndimage.sobel(mask, axis=1, mode='constant')
+                mask = np.hypot(sx, sy)
 
-        # flatten and repeat each element of the mask for each channel
-        x = np.repeat(np.ravel(mask), 3)
-        # and reshape into the same shape as the image slice
-        x = np.reshape(x, imgslice.shape)
+            # flatten and repeat each element of the mask for each channel
+            x = np.repeat(np.ravel(mask), 3)
+            # and reshape into the same shape as the image slice
+            x = np.reshape(x, imgslice.shape)
 
-        # write a colour
-        np.putmask(imgslice, x, self.colour)
+            # write a colour
+            np.putmask(imgslice, x, self.colour)
 
     ## fill a circle in the ROI, or clear it (if delete is true)
     def setCircle(self, x, y, brushSize, delete=False):
@@ -358,9 +378,12 @@ class ROIPoly(ROI):
 #   should be manipulated in any operation.
 
 class SubImageCubeROI:
-    def __init__(self, img, imgToUse=None):  # can take another image to get rois from
+    def __init__(self, img, imgToUse=None, roi=None):  # can take another image to get rois from
         rois = img.rois if imgToUse is None else imgToUse.rois
         self.channels = img.channels
+
+        if roi is not None:
+            rois = [roi]
 
         if len(rois) > 0:
             bbs = [r.bb() for r in rois]  # get bbs
@@ -602,8 +625,9 @@ class ImageCube:
 
     ## get a numpy image (not another ImageCube) we can display on an RGB surface - see
     # rgbImage if you want an imagecube. If there is more than one channel we need to have
-    # an RGB mapping in the image.
-    def rgb(self):
+    # an RGB mapping in the image. If showROIs is true, we create an image with the ROIs
+    # on it.
+    def rgb(self, showROIs: bool = False):
         # assume we're 8 bit
         if self.channels == 1:
             # single channel images are a special case, rather than
@@ -615,8 +639,10 @@ class ImageCube:
             red = self.img[:, :, self.mapping.red]
             green = self.img[:, :, self.mapping.green]
             blue = self.img[:, :, self.mapping.blue]
-
-        return cv.merge([red, green, blue])
+        img = cv.merge([red, green, blue])
+        if showROIs:
+            self.drawROIs(img)
+        return img
 
     ## as rgb, but wraps in an ImageCube. Also works out the sources, which should be for
     # the channels in the result.
@@ -632,10 +658,10 @@ class ImageCube:
         img = self.rgb()
         cv.imwrite(filename, img * 255)  # convert from 0-1
 
-    def drawROIs(self, rgb: 'ImageCube' = None) -> 'ImageCube':
+    def drawROIs(self, rgb: np.ndarray = None) -> np.ndarray:
         """Return an RGB representation of this image with any ROIs drawn on it - an image may be provided."""
         if rgb is None:
-            rgb = self.rgbImage()
+            rgb = self.rgb()
         for r in self.rois:
             r.draw(rgb)
         return rgb
@@ -643,8 +669,9 @@ class ImageCube:
     ## extract the "subimage" - the image cropped to regions of interest,
     # with a mask for those ROIs. Note that you can also supply an image,
     # in which case you get this image cropped to the other image's ROIs!
-    def subimage(self, imgToUse=None):
-        return SubImageCubeROI(self, imgToUse)
+    # You can also limit to a single ROI or use all of them (the default)
+    def subimage(self, imgToUse=None, roi=None):
+        return SubImageCubeROI(self, imgToUse, roi)
 
     def __str__(self):
         s = "<Image-{} {}x{} array:{} channels:{}, {} bytes, ".format(id(self), self.w, self.h,
@@ -692,12 +719,6 @@ class ImageCube:
 
     def hasROI(self):
         return len(self.rois) > 0
-
-    def getROIName(self):
-        for x in reversed(self.rois):
-            if x.label is not None and len(x.label) > 0:
-                return x.label
-        return None
 
     ## return a copy of the image, with the given image spliced in at the
     # subimage's coordinates and masked according to the subimage

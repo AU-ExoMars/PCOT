@@ -11,6 +11,7 @@ import pcot.envi as envi
 import pcot.ui as ui
 from pcot.inputs.inputmethod import InputMethod
 from pcot.pancamimage import ImageCube, ChannelMapping
+from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
 
 
@@ -47,10 +48,13 @@ class ENVIInputMethod(InputMethod):
         return ENVIMethodWidget(self)
 
     def serialise(self):
-        return self.fname
+        x = {'fname': self.fname}
+        Canvas.serialise(self, x)
+        return x
 
     def deserialise(self, data):
-        self.fname = data
+        self.fname = data['fname']
+        Canvas.deserialise(self, data)
 
 
 class ENVIMethodWidget(MethodWidget):
@@ -78,6 +82,7 @@ class ENVIMethodWidget(MethodWidget):
         self.treeView.setColumnHidden(2, True)
         self.treeView.doubleClicked.connect(self.fileClickedAction)
         self.treeView.scrollTo(idx)
+        self.canvas.setPersister(m)
         # ensure canvas is using my mapping
         self.canvas.setMapping(m.mapping)
         # the canvas gets its "caption display" setting from the graph, so
@@ -90,7 +95,7 @@ class ENVIMethodWidget(MethodWidget):
         # ensure image is also using my mapping.
         if self.method.img is not None:
             self.method.img.setMapping(self.method.mapping)
-        print("Displaying image {}, mapping {}".format(self.method.img,self.method.mapping))
+        print("Displaying image {}, mapping {}".format(self.method.img, self.method.mapping))
         self.canvas.display(self.method.img)
         self.invalidate()  # input has changed, invalidate so the cache is dirtied
         # we don't do this when the window is opening, otherwise it happens a lot!
@@ -104,6 +109,3 @@ class ENVIMethodWidget(MethodWidget):
             self.method.fname = os.path.relpath(self.dirModel.filePath(idx))
             self.method.get()
             self.onInputChanged()
-
-
-

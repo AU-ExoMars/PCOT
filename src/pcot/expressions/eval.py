@@ -2,7 +2,7 @@
 # In this system, all data is a Datum object.
 import math
 import numbers
-from typing import Callable, Dict, Tuple
+from typing import Callable, Dict, Tuple, List, Optional, Any
 
 import numpy as np
 import cv2 as cv
@@ -119,6 +119,62 @@ def funcMerge(args):
     return Datum(conntypes.IMG, img)
 
 
+def chkargs(fname, args: List[Optional[Datum]], types: List[conntypes.Type], optTypes: List[Tuple[conntypes.Type, Any]]):
+    """Process arguments, returning a pair of lists of Datum items: mandatory and optional args.
+    Takes two lists: one of types of mandatory values (none of which can be None) and another of pairs of
+    type, defaultvalue for optional args"""
+    mandatArgs = []
+    optArgs = []
+    for t in types:
+        if len(args) == 0:
+            raise XFormException('EXPR', 'Out of arguments in {}'.format(fname))
+        x = args.pop(0)
+        if x is None:
+            raise XFormException('EXPR', 'None argument in {}'.format(fname))
+        elif x.tp != t:
+            raise XFormException('EXPR', 'Bad argument in {}, got {}, expected {}'.format(fname, x.tp, t))
+        mandatArgs.append(x)
+
+    for t, deflt in optTypes:
+        if len(args) == 0:
+            optArgs.append(deflt)
+        else:
+            x = args.pop(0)
+            if x is None:
+                raise XFormException('EXPR', 'None argument in {}'.format(fname))
+            elif x.tp != t:
+                raise XFormException('EXPR', 'Bad argument in {}, got {}, expected {}'.format(fname, x.tp, t))
+            optArgs.append(x)
+
+    return mandatArgs, optArgs
+
+
+def funcGrey(args):
+    """Greyscale conversion. If the optional second argument is nonzero, and the image has 3 channels, we'll use CV's
+    conversion equation rather than just the mean."""
+
+    # args : Image, use cv conversion [default false]
+    args, optargs = chkargs('grey', args, [conntypes.IMG], [(conntypes.NUMBER, 0)])
+
+    if any([x is None for x in args]):
+        raise XFormException('EXPR', 'argument is None for merge')
+
+    img = args[0].get(conntypes.IMG)
+    sources = set.union(*img.sources)
+
+    if optargs[0] != 0:
+        if img.channels != 3:
+            raise XFormException('DATA', "Image must be RGB for OpenCV greyscale conversion")
+        img = ImageCube(cv.cvtColor(img.img, cv.COLOR_RGB2GRAY), img.mapping, [sources])
+    else:
+        # create a transformation matrix specifying that the output is a single channel which
+        # is the mean of all the channels in the source
+        mat = np.array([1 / img.channels] * img.channels).reshape((1, img.channels))
+        out = cv.transform(img.img, mat)
+        img = ImageCube(out, img.mapping, [sources])
+    return Datum(conntypes.IMG, img)
+
+
 def funcWrapper(fn, d, *args):
     """Wrapper around a evaluator function that deals with ROIs etc.
     compare this with exprWrapper in operations, which only handles images and delegates
@@ -147,6 +203,7 @@ def funcWrapper(fn, d, *args):
 
 class ExpressionEvaluator(parse.Parser):
     """The core class for the expression evaluator, based on a generic Parser."""
+
     def __init__(self):
         """Initialise the evaluator, registering functions and operators.
         Caller may add other things (e.g. variables)"""
@@ -177,6 +234,8 @@ class ExpressionEvaluator(parse.Parser):
         self.registerFunc("max", lambda args: funcWrapper(np.max, args[0]))
         self.registerFunc("sd", lambda args: funcWrapper(np.std, args[0]))
         self.registerFunc("mean", lambda args: funcWrapper(np.mean, args[0]))
+
+        self.registerFunc("grey", funcGrey)
 
         registerProperty('w', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.w))
         registerProperty('h', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.h))

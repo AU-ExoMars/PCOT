@@ -10,6 +10,7 @@ import pcot
 import pcot.ui as ui
 from pcot.inputs.inputmethod import InputMethod
 from pcot.pancamimage import ImageCube, ChannelMapping
+from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
 
 
@@ -47,10 +48,13 @@ class RGBInputMethod(InputMethod):
         return RGBMethodWidget(self)
 
     def serialise(self):
-        return self.fname
+        x = {'fname': self.fname}
+        Canvas.serialise(self, x)
+        return x
 
     def deserialise(self, data):
-        self.fname = data
+        self.fname = data['fname']
+        Canvas.deserialise(self, data)
 
 
 class RGBMethodWidget(MethodWidget):
@@ -83,6 +87,8 @@ class RGBMethodWidget(MethodWidget):
         # we need to get it from the manager, which we get from the input,
         # which we get from the method. Ugh.
         self.canvas.setGraph(self.method.input.mgr.graph)
+        self.canvas.setPersister(m)
+
         self.onInputChanged()
 
     def onInputChanged(self):

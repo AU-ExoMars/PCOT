@@ -104,6 +104,7 @@ class TabGradient(pcot.ui.tabs.Tab):
         self.w.presetCombo.currentIndexChanged.connect(self.loadPreset)
         self.w.canvas.setMapping(node.mapping)
         self.w.canvas.setGraph(node.graph)
+        self.w.canvas.setPersister(node)
 
         self.onNodeChanged()
 
