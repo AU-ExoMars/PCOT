@@ -80,21 +80,13 @@ class XformRect(XFormType):
                 # mess things up if we go back up the tree again - it would
                 # potentially modify the image we passed in.
                 o = img.copy()
-                roi = ROIRect(x, y, w, h)  # create the ROI
+                roi = ROIRect(node.colour, node.fontline, node.fontsize, x, y, w, h)  # create the ROI
                 o.rois.append(roi)  # and add to the image
                 if node.isOutputConnected(self.OUT_IMG):
                     node.setOutput(0, Datum(conntypes.IMG, o))  # output image and ROI
                 # now make an annotated image by drawing on the RGB image we got earlier
-                annot = rgb.img
-                # write on it - but we MUST WRITE OUTSIDE THE BOUNDS, otherwise we interfere
-                # with the image! Doing this predictably with the thickness function
-                # in cv.rectangle is a pain, so I'm doing it by hand.
-                for i in range(node.fontline):
-                    cv.rectangle(annot, (x - i - 1, y - i - 1), (x + w + i, y + h + i), node.colour, thickness=1)
+                roi.drawBB(rgb)
 
-                ty = y if node.captiontop else y + h
-                pcot.utils.text.write(annot, node.caption, x, ty, node.captiontop, node.fontsize,
-                                 node.fontline, node.colour)
                 # that's also the image displayed in the tab
                 node.rgbImage = rgb
                 node.rgbImage.rois = o.rois  # with same ROI list as unannotated image

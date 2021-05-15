@@ -93,60 +93,40 @@ class XFormPainted(XFormType):
                 drawEdge = False
                 drawBox = False
 
+            node.roi.setDrawProps(node.colour, node.fontsize, node.fontline, drawEdge, drawBox)
+
+            node.previewRadius = getRadiusFromSlider(node.brushSize, img.w, img.h)
+
             # for the annotated image, we just get the RGB for the image in the
             # input node.
             img = img.copy()
             img.setMapping(node.mapping)
-            # we get the RGB either from the RGB input or from the input image
             rgb = img.rgbImage() if inAnnot is None else inAnnot.copy()
             bb = node.roi.bb()
-            node.previewRadius = getRadiusFromSlider(node.brushSize, img.w, img.h)
+            # now make an annotated image by drawing on the RGB image we got earlier
+            # Note how this differs from some other ROIs - we might not have a BB, but still need to draw
+            node.roi.draw(rgb)
+            node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
+            node.setOutput(self.OUT_ANNOT, Datum(conntypes.IMG, rgb))
             if bb is None:
-                # no ROI, but we still need to use the RGB
-                node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
                 node.img = img  # the original image
-                node.setOutput(self.OUT_IMG, Datum(conntypes.IMG, img))
-                node.setOutput(self.OUT_ANNOT, Datum(conntypes.IMG, rgb))
                 node.setOutput(self.OUT_RECT, None)
             else:
                 # need to generate image + ROI
-
                 # output image same as input image with same
                 # ROIs. I could just pass input to output, but this would
                 # mess things up if we go back up the tree again - it would
                 # potentially modify the image we passed in.
                 o = img.copy()
-
                 o.rois.append(node.roi)  # and add to the image
-                if node.isOutputConnected(self.OUT_IMG):
-                    node.setOutput(0, Datum(conntypes.IMG, o))  # output image and ROI
-
-                # now make an annotated image by drawing on the RGB image we got earlier
-                annot = rgb.img
-                # Write the bounding box. I may remove this.
-                # We MUST WRITE OUTSIDE THE BOUNDS, otherwise we interfere
-                # with the image! Doing this predictably with the thickness function
-                # in cv.rectangle is a pain, so I'm doing it by hand.
-                x, y, w, h = bb
-                if drawBox:
-                    for i in range(node.fontline):
-                        cv.rectangle(annot, (x - i - 1, y - i - 1), (x + w + i, y + h + i), node.colour, thickness=1)
-
-                node.roi.draw(annot, node.colour, drawEdge)
-
-                # write the caption
-                ty = y if node.captiontop else y + h
-                pcot.utils.text.write(annot, node.caption, x, ty, node.captiontop, node.fontsize,
-                                      node.fontline, node.colour)
-                # that's also the image displayed in the tab
-                node.rgbImage = rgb
                 node.rgbImage.rois = o.rois  # with same ROI list as unannotated image
                 # but we still store the original
                 node.img = img
-                # output the annotated image
-                node.setOutput(self.OUT_ANNOT, Datum(conntypes.IMG, node.rgbImage))
                 # and the BB rectangle
                 node.setOutput(self.OUT_RECT, Datum(conntypes.RECT, bb))
+
+            if node.isOutputConnected(self.OUT_IMG):
+                node.setOutput(self.OUT_IMG, Datum(conntypes.IMG, node.img))  # output image and ROI
 
 
 class TabPainted(pcot.ui.tabs.Tab):
