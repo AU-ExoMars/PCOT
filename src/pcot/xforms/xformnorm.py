@@ -34,6 +34,7 @@ class TabNorm(pcot.ui.tabs.Tab):
         super().__init__(w, node, 'tabnorm.ui')
         self.w.canvas.setMapping(node.mapping)
         self.w.canvas.setGraph(node.graph)
+        self.w.canvas.setPersister(node)
         self.w.mode.currentIndexChanged.connect(self.modeChanged)
         self.onNodeChanged()
 

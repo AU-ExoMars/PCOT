@@ -3,12 +3,16 @@
 # its index in the Input).
 from typing import Optional, Any
 
+from pcot.ui.canvas import Canvas
+
 
 class InputMethod:
     def __init__(self, inp):
         self.input = inp
         self.name = ''
         self.data = None
+        Canvas.initPersistData(self)
+        self.showROIs = False  # actually part of the canvas.
 
     ## asks the input if I'm active
     def isActive(self):

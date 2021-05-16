@@ -11,7 +11,10 @@ from pcot.xform import XFormType, xformtype, Datum
 
 # find the mean of all the masked values. Note mask negation!
 def getSpectrum(chanImg, mask):
-    return np.ma.masked_array(data=chanImg, mask=~mask).mean()
+    if mask is not None:
+        return np.ma.masked_array(data=chanImg, mask=~mask).mean()
+    else:
+        return chanImg.mean()
 
 
 # return  wavelength if channel is a single source from a filtered input, else -1.
@@ -53,10 +56,6 @@ class XFormSpectrum(XFormType):
         for i in range(NUMINPUTS):
             img = node.getInput(i, conntypes.IMG)
             if img is not None:
-                legend = img.getROIName()  # this is an annotation attached to one of the image's ROIs
-                if legend is None:      # and if there isn't an annotation, use "input n"
-                    legend = "input {}".format(i)
-
                 # first, generate a list of indices of channels with a single source which has a wavelength,
                 # and a list of those wavelengths
                 wavelengths = [wavelength(x, img) for x in range(img.channels)]
@@ -64,31 +63,54 @@ class XFormSpectrum(XFormType):
                 wavelengths = [x for x in wavelengths if x > 0]
 
                 # generate a list of labels, one for each channel
-                labels = [IChannelSource.stringForSet(img.sources[x], node.graph.captionType) for x in chans]
+                chanlabels = [IChannelSource.stringForSet(img.sources[x], node.graph.captionType) for x in chans]
 
-                # get the ROI bounded image
-                subimg = img.subimage()
-                # now we need to get the mean amplitude of the pixels in each channel in the ROI
-                spectrum = [getSpectrum(subimg.img[:, :, i], subimg.mask) for i in chans]
+                if len(img.rois) == 0:
+                    # no ROIs, do the whole image
+                    legend = "image {}".format(i)
+                    subimg = img.img
+                    spectrum = [getSpectrum(subimg[:, :, i], None) for i in chans]
+                    # zip them all together and append to the list for that legend (creating a new list
+                    # if there isn't one)
+                    if legend not in data:
+                        data[legend] = []
+                    data[legend] += list(zip(chans, wavelengths, spectrum, chanlabels))
 
-                # zip them all together and append to the list for that legend (creating a new list
-                # if there isn't one)
-                if legend not in data:
-                    data[legend] = []
-                data[legend] += list(zip(chans, wavelengths, spectrum, labels))
+                    # add to table
+                    table.newRow(legend)
+                    table.add("name", legend)
+                    table.add("pixels", img.w * img.h)
+                    for w, s in zip(wavelengths, spectrum):
+                        table.add(w, s)
 
-                # add to table
-                table.newRow(legend)
-                table.add("name", legend)
-                table.add("pixels", subimg.pixelCount())
-                for w, s in zip(wavelengths, spectrum):
-                    table.add(w, s)
-                node.setOutput(0, Datum(conntypes.DATA, table))
+                for roi in img.rois:
+                    # only include valid ROIs
+                    if roi.bb() is None:
+                        continue
+                    legend = roi.label  # get the name for this ROI, which will appear as a thingy.
+                    # get the ROI bounded image
+                    subimg = img.subimage(roi=roi)
+                    # now we need to get the mean amplitude of the pixels in each channel in the ROI
+                    spectrum = [getSpectrum(subimg.img[:, :, i], subimg.mask) for i in chans]
+
+                    # zip them all together and append to the list for that legend (creating a new list
+                    # if there isn't one)
+                    if legend not in data:
+                        data[legend] = []
+                    data[legend] += list(zip(chans, wavelengths, spectrum, chanlabels))
+
+                    # add to table
+                    table.newRow(legend)
+                    table.add("name", legend)
+                    table.add("pixels", subimg.pixelCount())
+                    for w, s in zip(wavelengths, spectrum):
+                        table.add(w, s)
 
         # now, for each list in the dict, build a new dict of the lists sorted
         # by wavelength
-
         node.data = {legend: sorted(lst, key=lambda x: x[1]) for legend, lst in data.items()}
+
+        node.setOutput(0, Datum(conntypes.DATA, table))
 
 
 class TabSpectrum(ui.tabs.Tab):

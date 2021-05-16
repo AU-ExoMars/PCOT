@@ -109,6 +109,7 @@ class TabInset(pcot.ui.tabs.Tab):
         # the image is always RGB, so we shouldn't be able to remap it
         self.w.canvas.setMapping(ChannelMapping(0, 1, 2))
         self.w.canvas.hideMapping()
+        self.w.canvas.setPersister(node)
 
         self.mouseDown = False
         self.dontSetText = False

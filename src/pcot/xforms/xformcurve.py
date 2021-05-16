@@ -38,6 +38,7 @@ class TabCurve(pcot.ui.tabs.Tab):
         self.w.mulDial.valueChanged.connect(self.setMul)
         self.w.canvas.setMapping(node.mapping)
         self.w.canvas.setGraph(node.graph)
+        self.w.canvas.setPersister(node)
 
         self.plot = None  # the matplotlib plot which we update
         # sync tab with node

@@ -29,6 +29,12 @@ WORKING ON
      stats node outputting data - and a "data canvas"
      DOCSTRINGS
 
+Is it possible to have multiple labelled ROIs in a single ImageCube?
+Pros: makes spectra easier, makes calibration target ROI handling easier
+Cons: Which ROI is used for an operation????!!? It's a nightmare to code - the annotation code has to be separated out;
+    it probably should be anyway (so ROIs are responsible for drawing themselves). They already do most of that,
+    just not the BB and annotation text. Annotation text will clearly become part of the ROI itself and not the node.
+    MIGHT WANT TO DO THIS ANYWAY.
 
 
 use-as-Library stuff:

@@ -384,6 +384,7 @@ class TabMacro(Tab):
         self.w.openProto.pressed.connect(self.openProto)
         self.w.canvas.setMapping(node.mapping)
         self.w.canvas.setGraph(node.graph)
+        self.w.canvas.setPersister(node)
         self.onNodeChanged()
 
     def openProto(self):

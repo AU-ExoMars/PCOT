@@ -13,6 +13,7 @@ import pcot
 from pcot.channelsource import FileChannelSource
 from pcot.inputs.inputmethod import InputMethod
 from pcot.pancamimage import ChannelMapping, ImageCube
+from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
 
 
@@ -106,13 +107,14 @@ class MultifileInputMethod(InputMethod):
         return MultifileMethodWidget(self)
 
     def serialise(self):
-        return {'namefilters': self.namefilters,
+        x = {'namefilters': self.namefilters,
                 'dir': self.dir,
                 'files': self.files,
                 'mult': self.mult,
                 'filterpat': self.filterpat,
-                'camera': self.camera
+                'camera': self.camera,
                 }
+        Canvas.serialise(self, x)
 
     def deserialise(self, data):
         self.namefilters = data['namefilters']
@@ -121,6 +123,8 @@ class MultifileInputMethod(InputMethod):
         self.mult = data['mult']
         self.filterpat = data['filterpat']
         self.camera = data['camera']
+        Canvas.deserialise(self, data)
+
 
 
 # Then the UI class..
@@ -143,6 +147,7 @@ class MultifileMethodWidget(MethodWidget):
         self.canvas.setMapping(m.mapping)
         self.canvas.hideMapping()  # because we're showing greyscale for each image
         self.canvas.setGraph(self.method.input.mgr.graph)
+        self.canvas.setPersister(m)
 
         self.filelist.setMinimumWidth(300)
         self.setMinimumSize(1000, 500)

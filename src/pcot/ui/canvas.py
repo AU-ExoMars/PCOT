@@ -76,11 +76,12 @@ class InnerCanvas(QtWidgets.QWidget):
 
     ## display an image next time paintEvent
     # happens, and update to cause that. Allow it to handle None too.
-    def display(self, img: ImageCube, isPremapped: bool):
+    def display(self, img: ImageCube, isPremapped: bool, showROIs: bool = False):
         if img is not None:
             self.desc = img.getDesc(self.getGraph())
             if not isPremapped:
-                img = img.rgb()  # convert to RGB
+                # convert to RGB
+                img = img.rgb(showROIs=showROIs)  # convert to RGB
                 if img is None:
                     ui.error("Unusual - the RGB representation is None")
             else:
@@ -290,6 +291,9 @@ class Canvas(QtWidgets.QWidget):
         topbar.addWidget(makeTopBarLabel("RED source"), 0, 0)
         topbar.addWidget(makeTopBarLabel("GREEN source"), 0, 1)
         topbar.addWidget(makeTopBarLabel("BLUE source"), 0, 2)
+        self.roiToggle = QtWidgets.QRadioButton("Show ROIS")
+        topbar.addWidget(self.roiToggle, 0, 3)
+        self.roiToggle.toggled.connect(self.roiToggleChanged)
         self.topbarwidget.setContentsMargins(0, 0, 0, 0)
         topbar.setContentsMargins(0, 0, 0, 0)
 
@@ -328,13 +332,37 @@ class Canvas(QtWidgets.QWidget):
         self.mapping = None
         # previous image (in case mapping changes and we need to redisplay the old image with a new mapping)
         self.previmg = None
-
         self.isPremapped = False
+        # entity to persist data in; should serialise and deserialise canvas settings
+        self.persister = None
 
     ## call this if this is only ever going to display single channel images
     # or annotated RGB images (obviating the need for source drop-downs)
     def hideMapping(self):
         self.topbarwidget.setVisible(False)
+
+    ## this works by setting a data structure which is persisted, and holds some of our
+    # data rather than us. Ugly, yes.
+    def setPersister(self, p):
+        self.persister = p
+        self.roiToggle.setChecked(p.showROIs)
+
+    ## some canvas persistence data is to be stored from an object into a dict.
+    # Get the data from the object and store it in the dict.
+    @staticmethod
+    def serialise(o, data):
+        data['showROIs'] = o.showROIs
+
+    ## inverse of setPersistData, done when we deserialise something
+    @staticmethod
+    def deserialise(o, data):
+        o.showROIs = data.get('showROIs', False)
+
+    ## prepare an object for holding some of our data
+    @staticmethod
+    def initPersistData(o):
+        if not hasattr(o,'showROIs'):
+            o.showROIs = False
 
     # these sets a reference to the mapping this canvas is using - bear in mind this class can mutate
     # that mapping!
@@ -358,6 +386,10 @@ class Canvas(QtWidgets.QWidget):
     def blueIndexChanged(self, i):
         print("BLUE CHANGED TO", i)
         self.mapping.blue = i
+        self.redisplay()
+
+    def roiToggleChanged(self, v):
+        self.persister.showROIs = v
         self.redisplay()
 
     ## this initialises a combo box, setting the possible values to be the channels in the image
@@ -419,7 +451,7 @@ class Canvas(QtWidgets.QWidget):
     def redisplay(self):
         if self.nodeToPerform is not None:
             self.graph.performNodes(self.nodeToPerform)
-        self.canvas.display(self.previmg, self.isPremapped)
+        self.canvas.display(self.previmg, self.isPremapped, showROIs=self.persister.showROIs)
 
     ## reset the canvas to x1 magnification
     def reset(self):

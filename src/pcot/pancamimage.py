@@ -14,6 +14,7 @@ from pcot.channelsource import IChannelSource, FileChannelSourceRed, FileChannel
 from typing import List, Set, Optional
 
 import pcot.filters as filters
+from pcot.utils import text
 
 
 class ROI:
@@ -22,6 +23,10 @@ class ROI:
     def __init__(self):
         """Ctor. ROIs have a label, which is used to label data in nodes like 'spectrum' and appears in annotations"""
         self.label = None
+        self.labeltop = False  # draw the label at the top?
+        self.colour = (0, 0, 0)  # annotation colour
+        self.fontline = 2  # thickness of lines and text
+        self.fontsize = 10  # annotation font size
 
     def bb(self):
         """return a (x,y,w,h) tuple describing the bounding box for this ROI"""
@@ -38,23 +43,62 @@ class ROI:
         """
         pass
 
+    def drawBB(self, rgb: 'ImageCube'):
+        """draw BB onto existing RGB image"""
+        # write on it - but we MUST WRITE OUTSIDE THE BOUNDS, otherwise we interfere
+        # with the image! Doing this predictably with the thickness function
+        # in cv.rectangle is a pain, so I'm doing it by hand.
+        if (bb := self.bb()) is not None:
+            x, y, w, h = bb
+            for i in range(self.fontline):
+                cv.rectangle(rgb, (x - i - 1, y - i - 1), (x + w + i, y + h + i), self.colour, thickness=1)
+
+            ty = y if self.labeltop else y + h
+            text.write(rgb, self.label, x, ty, self.labeltop, self.fontsize,
+                       self.fontline, self.colour)
+
 
 ## a rectangle ROI
 
 class ROIRect(ROI):
-    def __init__(self, x, y, w, h):
-        super.__init__()
+    def __init__(self):
+        super().__init__()
+        self.x = -1
+        self.y = 0
+        self.w = 0
+        self.h = 0
+        self.colour = (1, 1, 0)  # annotation colour
+        self.fontline = 2
+        self.fontsize = 10
+
+    def bb(self):
+        if self.x < 0:
+            return None
+        return self.x, self.y, self.w, self.h
+
+    def draw(self, img: np.ndarray):
+        self.drawBB(img)
+
+    def mask(self):
+        # return a boolean array of True, same size as BB
+        return np.full((self.h, self.w), True)
+
+    def setDrawProps(self, colour, fontsize, fontline):
+        self.colour = colour
+        self.fontline = fontline
+        self.fontsize = fontsize
+
+    def setBB(self, x, y, w, h):
         self.x = x
         self.y = y
         self.w = w
         self.h = h
 
-    def bb(self):
-        return self.x, self.y, self.w, self.h
+    def serialise(self):
+        return {'bb': (self.x, self.y, self.w, self.h)}
 
-    def mask(self):
-        # return a boolean array of True, same size as BB
-        return np.full((self.h, self.w), True)
+    def deserialise(self, d):
+        self.x, self.y, self.w, self.h = d['bb']
 
     def __str__(self):
         return "ROI-RECT {} {} {}x{}".format(self.x, self.y, self.w, self.h)
@@ -84,6 +128,8 @@ class ROIPainted(ROI):
             self.bbrect = (0, 0, w, h)
             self.map = np.zeros((h, w), dtype=np.uint8)
             self.map[mask] = 255
+        self.drawEdge = True
+        self.drawBox = True
 
     def clear(self):
         self.map = None
@@ -96,6 +142,13 @@ class ROIPainted(ROI):
 
         self.imgw = imgw
         self.imgh = imgh
+
+    def setDrawProps(self, colour, fontsize, fontline, drawEdge, drawBox):
+        self.colour = colour
+        self.fontline = fontline
+        self.fontsize = fontsize
+        self.drawEdge = drawEdge
+        self.drawBox = drawBox
 
     def bb(self):
         return self.bbrect
@@ -115,26 +168,30 @@ class ROIPainted(ROI):
         # return a boolean array, same size as BB
         return self.map > 0
 
-    def draw(self, img, colour, drawEdge):
+    def draw(self, img):
+        if self.drawBox:
+            self.drawBB(img)
+
         # draw into an RGB image
         # first, get the slice into the real image
-        x, y, w, h = self.bb()
-        imgslice = img[y:y + h, x:x + w]
+        if (bb := self.bb()) is not None:
+            x, y, w, h = bb
+            imgslice = img[y:y + h, x:x + w]
 
-        # now get the mask and run sobel edge-detection on it if required
-        mask = self.mask()
-        if drawEdge:
-            sx = ndimage.sobel(mask, axis=0, mode='constant')
-            sy = ndimage.sobel(mask, axis=1, mode='constant')
-            mask = np.hypot(sx, sy)
+            # now get the mask and run sobel edge-detection on it if required
+            mask = self.mask()
+            if self.drawEdge:
+                sx = ndimage.sobel(mask, axis=0, mode='constant')
+                sy = ndimage.sobel(mask, axis=1, mode='constant')
+                mask = np.hypot(sx, sy)
 
-        # flatten and repeat each element of the mask for each channel
-        x = np.repeat(np.ravel(mask), 3)
-        # and reshape into the same shape as the image slice
-        x = np.reshape(x, imgslice.shape)
+            # flatten and repeat each element of the mask for each channel
+            x = np.repeat(np.ravel(mask), 3)
+            # and reshape into the same shape as the image slice
+            x = np.reshape(x, imgslice.shape)
 
-        # write a colour
-        np.putmask(imgslice, x, colour)
+            # write a colour
+            np.putmask(imgslice, x, self.colour)
 
     ## fill a circle in the ROI, or clear it (if delete is true)
     def setCircle(self, x, y, brushSize, delete=False):
@@ -174,6 +231,144 @@ class ROIPainted(ROI):
             return "ROI-PAINTED {} {} {}x{}".format(x, y, w, h)
 
 
+## a polygon ROI
+
+class ROIPoly(ROI):
+    def __init__(self):
+        super().__init__()
+        self.imgw = None
+        self.imgh = None
+        self.points = []
+        self.selectedPoint = None
+        self.drawPoints = True
+        self.drawBox = True
+
+    def clear(self):
+        self.points = []
+        self.selectedPoint = None
+
+    def hasPoly(self):
+        return len(self.points) > 2
+
+    def setImageSize(self, imgw, imgh):
+        if self.imgw is not None:
+            if self.imgw != imgw or self.imgh != imgh:
+                self.clear()
+
+        self.imgw = imgw
+        self.imgh = imgh
+
+    def setDrawProps(self, colour, fontsize, fontline, drawPoints, drawBox):
+        self.colour = colour
+        self.fontline = fontline
+        self.fontsize = fontsize
+        self.drawPoints = drawPoints
+        self.drawBox = drawBox
+
+    def bb(self):
+        if not self.hasPoly():
+            return None
+
+        xmin = min([p[0] for p in self.points])
+        xmax = max([p[0] for p in self.points])
+        ymin = min([p[1] for p in self.points])
+        ymax = max([p[1] for p in self.points])
+
+        return xmin, ymin, xmax - xmin, ymax - ymin
+
+    def serialise(self):
+        return {
+            'points': self.points,
+        }
+
+    def deserialise(self, d):
+        if 'points' in d:
+            pts = d['points']
+            # points will be saved as lists, turn back into tuples
+            self.points = [tuple(x) for x in pts]
+
+    def mask(self):
+        # return a boolean array, same size as BB. We use opencv here to build a uint8 image
+        # which we convert into a boolean array.
+
+        if not self.hasPoly():
+            return
+
+        # First, we need to build a polygon relative to the bounding box
+        xmin, ymin, w, h = self.bb()
+        poly = [(x - xmin, y - ymin) for (x, y) in self.points]
+
+        # now create an empty image
+        polyimg = np.zeros((h, w), dtype=np.uint8)
+        # draw the polygon in it (we have enough points)
+        pts = np.array(poly, np.int32)
+        pts = pts.reshape((-1, 1, 2))
+        cv.fillPoly(polyimg, [pts], 255)
+        # convert to boolean
+        return polyimg > 0
+
+    def draw(self, img):
+        if self.drawBox:
+            self.drawBB(img)
+
+        # first write the points in the actual image
+        if self.drawPoints:
+            for p in self.points:
+                cv.circle(img, p, 7, self.colour, self.fontline)
+
+        if self.selectedPoint is not None:
+            if self.selectedPoint >= len(self.points):
+                self.selectedPoint = None
+            else:
+                p = self.points[self.selectedPoint]
+                cv.circle(img, p, 10, self.colour, self.fontline + 1)
+
+        if not self.hasPoly():
+            return
+
+        # draw the polygon
+        pts = np.array(self.points, np.int32)
+        pts = pts.reshape((-1, 1, 2))
+        cv.polylines(img, [pts], True, self.colour, thickness=self.fontline)
+
+    def addPoint(self, x, y):
+        self.points.append((x, y))
+
+    def selPoint(self, x, y):
+        mindist = None
+        self.selectedPoint = None
+        for idx in range(len(self.points)):
+            p = self.points[idx]
+            dx = p[0] - x
+            dy = p[1] - y
+            dsq = dx * dx + dy * dy
+            print(dsq)
+            if dsq < 1000 and (mindist is None or dsq < mindist):
+                self.selectedPoint = idx
+                mindist = dsq
+
+    def moveSelPoint(self, x, y):
+        if self.selectedPoint is not None:
+            self.points[self.selectedPoint] = (x, y)
+            return True
+        else:
+            return False
+
+    def delSelPoint(self):
+        if self.selectedPoint is not None:
+            del self.points[self.selectedPoint]
+            self.selectedPoint = None
+            return True
+        else:
+            return False
+
+    def __str__(self):
+        if not self.hasPoly():
+            return "ROI-POLY (no points)"
+        x, y, w, h = self.bb()
+        return "ROI-POLY {} {} {}x{}".format(x, y, w, h)
+
+
 ## this is the parts of an image cube which are covered by the active ROIs
 # in that image. It consists of
 # * the image cropped to the bounding box of the ROIs. NOTE THAT this
@@ -183,9 +378,12 @@ class ROIPainted(ROI):
 #   should be manipulated in any operation.
 
 class SubImageCubeROI:
-    def __init__(self, img, imgToUse=None):  # can take another image to get rois from
+    def __init__(self, img, imgToUse=None, roi=None):  # can take another image to get rois from
         rois = img.rois if imgToUse is None else imgToUse.rois
         self.channels = img.channels
+
+        if roi is not None:
+            rois = [roi]
 
         if len(rois) > 0:
             bbs = [r.bb() for r in rois]  # get bbs
@@ -250,7 +448,6 @@ class SubImageCubeROI:
     ## pixel count
     def pixelCount(self):
         return self.mask.sum()
-
 
 
 ## A mapping from a multichannel image into RGB. All nodes have one of these, although some may have more and some
@@ -428,8 +625,9 @@ class ImageCube:
 
     ## get a numpy image (not another ImageCube) we can display on an RGB surface - see
     # rgbImage if you want an imagecube. If there is more than one channel we need to have
-    # an RGB mapping in the image.
-    def rgb(self):
+    # an RGB mapping in the image. If showROIs is true, we create an image with the ROIs
+    # on it.
+    def rgb(self, showROIs: bool = False):
         # assume we're 8 bit
         if self.channels == 1:
             # single channel images are a special case, rather than
@@ -441,8 +639,10 @@ class ImageCube:
             red = self.img[:, :, self.mapping.red]
             green = self.img[:, :, self.mapping.green]
             blue = self.img[:, :, self.mapping.blue]
-
-        return cv.merge([red, green, blue])
+        img = cv.merge([red, green, blue])
+        if showROIs:
+            self.drawROIs(img)
+        return img
 
     ## as rgb, but wraps in an ImageCube. Also works out the sources, which should be for
     # the channels in the result.
@@ -458,11 +658,20 @@ class ImageCube:
         img = self.rgb()
         cv.imwrite(filename, img * 255)  # convert from 0-1
 
+    def drawROIs(self, rgb: np.ndarray = None) -> np.ndarray:
+        """Return an RGB representation of this image with any ROIs drawn on it - an image may be provided."""
+        if rgb is None:
+            rgb = self.rgb()
+        for r in self.rois:
+            r.draw(rgb)
+        return rgb
+
     ## extract the "subimage" - the image cropped to regions of interest,
     # with a mask for those ROIs. Note that you can also supply an image,
     # in which case you get this image cropped to the other image's ROIs!
-    def subimage(self, imgToUse=None):
-        return SubImageCubeROI(self, imgToUse)
+    # You can also limit to a single ROI or use all of them (the default)
+    def subimage(self, imgToUse=None, roi=None):
+        return SubImageCubeROI(self, imgToUse, roi)
 
     def __str__(self):
         s = "<Image-{} {}x{} array:{} channels:{}, {} bytes, ".format(id(self), self.w, self.h,
@@ -510,12 +719,6 @@ class ImageCube:
 
     def hasROI(self):
         return len(self.rois) > 0
-
-    def getROIName(self):
-        for x in reversed(self.rois):
-            if x.label is not None and len(x.label)>0:
-                return x.label
-        return None
 
     ## return a copy of the image, with the given image spliced in at the
     # subimage's coordinates and masked according to the subimage

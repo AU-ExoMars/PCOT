@@ -9,138 +9,12 @@ import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
 
-from pcot.pancamimage import ImageCube, ROI
-from pcot.xform import xformtype, XFormType, Datum
-
-
-## a polygon ROI
-
-class ROIPoly(ROI):
-    def __init__(self):
-        super().__init__()
-        self.imgw = None
-        self.imgh = None
-        self.points = []
-        self.selectedPoint = None
-
-    def clear(self):
-        self.points = []
-        self.selectedPoint = None
-
-    def hasPoly(self):
-        return len(self.points) > 2
-
-    def setImageSize(self, imgw, imgh):
-        if self.imgw is not None:
-            if self.imgw != imgw or self.imgh != imgh:
-                self.clear()
-
-        self.imgw = imgw
-        self.imgh = imgh
-
-    def bb(self):
-        if not self.hasPoly():
-            return None
-
-        xmin = min([p[0] for p in self.points])
-        xmax = max([p[0] for p in self.points])
-        ymin = min([p[1] for p in self.points])
-        ymax = max([p[1] for p in self.points])
-
-        return xmin, ymin, xmax - xmin, ymax - ymin
-
-    def serialise(self):
-        return {
-            'points': self.points,
-        }
-
-    def deserialise(self, d):
-        if 'points' in d:
-            pts = d['points']
-            # points will be saved as lists, turn back into tuples
-            self.points = [tuple(x) for x in pts]
-
-    def mask(self):
-        # return a boolean array, same size as BB. We use opencv here to build a uint8 image
-        # which we convert into a boolean array.
-
-        if not self.hasPoly():
-            return
-
-        # First, we need to build a polygon relative to the bounding box
-        xmin, ymin, w, h = self.bb()
-        poly = [(x - xmin, y - ymin) for (x, y) in self.points]
-
-        # now create an empty image
-        polyimg = np.zeros((h, w), dtype=np.uint8)
-        # draw the polygon in it (we have enough points)
-        pts = np.array(poly, np.int32)
-        pts = pts.reshape((-1, 1, 2))
-        cv.fillPoly(polyimg, [pts], 255)
-        # convert to boolean
-        return polyimg > 0
-
-    def draw(self, img, colour, thickness, drawPoints):
-        # first write the points in the actual image
-        if drawPoints:
-            for p in self.points:
-                cv.circle(img, p, 7, colour, thickness)
-
-        if self.selectedPoint is not None:
-            if self.selectedPoint >= len(self.points):
-                self.selectedPoint = None
-            else:
-                p = self.points[self.selectedPoint]
-                cv.circle(img, p, 10, colour, thickness + 1)
-
-        if not self.hasPoly():
-            return
-
-        # draw the polygon
-        pts = np.array(self.points, np.int32)
-        pts = pts.reshape((-1, 1, 2))
-        cv.polylines(img, [pts], True, colour, thickness=thickness)
-
-    def addPoint(self, x, y):
-        self.points.append((x, y))
-
-    def selPoint(self, x, y):
-        mindist = None
-        self.selectedPoint = None
-        for idx in range(len(self.points)):
-            p = self.points[idx]
-            dx = p[0] - x
-            dy = p[1] - y
-            dsq = dx * dx + dy * dy
-            print(dsq)
-            if dsq < 1000 and (mindist is None or dsq < mindist):
-                self.selectedPoint = idx
-                mindist = dsq
-
-    def moveSelPoint(self, x, y):
-        if self.selectedPoint is not None:
-            self.points[self.selectedPoint] = (x, y)
-            return True
-        else:
-            return False
-
-    def delSelPoint(self):
-        if self.selectedPoint is not None:
-            del self.points[self.selectedPoint]
-            self.selectedPoint = None
-            return True
-        else:
-            return False
-
-    def __str__(self):
-        if not self.hasPoly():
-            return "ROI-POLY (no points)"
-        x, y, w, h = self.bb()
-        return "ROI-POLY {} {} {}x{}".format(x, y, w, h)
+from pcot.pancamimage import ImageCube, ROI, ROIPoly
+from pcot.xform import xformtype, XFormType, Datum, XFormROIType
 
 
 @xformtype
-class XformPoly(XFormType):
+class XformPoly(XFormROIType):
     """Add a polygonal ROI to an image.
     At the next node all ROIs will be grouped together,
     used to perform the operation, and discarded.
@@ -189,83 +63,19 @@ class XformPoly(XFormType):
     def deserialise(self, node, d):
         node.roi.deserialise(d)
 
-    def perform(self, node):
-        img = node.getInput(self.IN_IMG, conntypes.IMG)
-        inAnnot = node.getInput(self.IN_ANNOT, conntypes.IMG)
-        # label the ROI
-        node.roi.label = node.caption
-        node.setRectText(node.caption)
-
-        if img is None:
-            node.roi.clear()
-            # no image
-            node.setOutput(self.OUT_IMG, None)
-            node.setOutput(self.OUT_ANNOT, None if inAnnot is None else Datum(conntypes.IMGRGB, inAnnot))
-            node.setOutput(self.OUT_RECT, None)
+    def setProps(self, node, img):
+        node.roi.setImageSize(img.w, img.h)
+        if node.drawMode == 0:
+            drawPoints = True
+            drawBox = True
+        elif node.drawMode == 1:
+            drawPoints = True
+            drawBox = False
         else:
-            node.roi.setImageSize(img.w, img.h)
-            if node.drawMode == 0:
-                drawPoints = True
-                drawBox = True
-            elif node.drawMode == 1:
-                drawPoints = True
-                drawBox = False
-            else:
-                drawPoints = False
-                drawBox = False
+            drawPoints = False
+            drawBox = False
 
-            # for the annotated image, we just get the RGB for the image in the
-            # input node.
-            img = img.copy()
-            img.setMapping(node.mapping)
-            rgb = img.rgbImage() if inAnnot is None else inAnnot.copy()
-            bb = node.roi.bb()
-            # now make an annotated image by drawing on the RGB image we got earlier
-            annot = rgb.img
-            # Note how this differs from some other ROIs - we might not have a BB, but still need to draw
-            node.roi.draw(annot, node.colour, node.fontline, drawPoints)
-            if bb is None:
-                # no ROI, but we still need to use the RGB
-                node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
-                node.img = img  # the original image
-                node.setOutput(self.OUT_IMG, Datum(conntypes.IMG, img))
-                node.setOutput(self.OUT_ANNOT, Datum(conntypes.IMG, rgb))
-                node.setOutput(self.OUT_RECT, None)
-            else:
-                # need to generate image + ROI
-
-                # output image same as input image with same
-                # ROIs. I could just pass input to output, but this would
-                # mess things up if we go back up the tree again - it would
-                # potentially modify the image we passed in.
-                o = img.copy()
-                o.rois.append(node.roi)  # and add to the image
-
-                if node.isOutputConnected(self.OUT_IMG):
-                    node.setOutput(0, Datum(conntypes.IMG, o))  # output image and ROI
-
-                # Write the bounding box. I may remove this.
-                # We MUST WRITE OUTSIDE THE BOUNDS, otherwise we interfere
-                # with the image! Doing this predictably with the thickness function
-                # in cv.rectangle is a pain, so I'm doing it by hand.
-                x, y, w, h = bb
-                if drawBox:
-                    for i in range(node.fontline):
-                        cv.rectangle(annot, (x - i - 1, y - i - 1), (x + w + i, y + h + i), node.colour, thickness=1)
-
-                # write the caption
-                ty = y if node.captiontop else y + h
-                pcot.utils.text.write(annot, node.caption, x, ty, node.captiontop, node.fontsize,
-                                 node.fontline, node.colour)
-                # that's also the image displayed in the tab
-                node.rgbImage = rgb
-                node.rgbImage.rois = o.rois  # with same ROI list as unannotated image
-                # but we still store the original
-                node.img = img
-                # output the annotated image
-                node.setOutput(self.OUT_ANNOT, Datum(conntypes.IMG, node.rgbImage))
-                # and the BB rectangle
-                node.setOutput(self.OUT_RECT, Datum(conntypes.RECT, bb))
+        node.roi.setDrawProps(node.colour, node.fontsize, node.fontline, drawPoints, drawBox)
 
 
 class TabPoly(pcot.ui.tabs.Tab):
@@ -285,6 +95,7 @@ class TabPoly(pcot.ui.tabs.Tab):
         self.w.canvas.setGraph(node.graph)
         # but we still need to be able to edit it
         self.w.canvas.setMapping(node.mapping)
+        self.w.canvas.setPersister(node)
 
         self.mouseDown = False
         self.dontSetText = False
