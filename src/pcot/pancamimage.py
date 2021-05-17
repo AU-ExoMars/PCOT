@@ -114,8 +114,9 @@ def getRadiusFromSlider(sliderVal, imgw, imgh):
 
 class ROIPainted(ROI):
     # we can create this ab initio or from a subimage mask
-    def __init__(self, mask=None):
+    def __init__(self, mask=None,label=None):
         super().__init__()
+        self.label=label
         if mask is None:
             self.bbrect = None
             self.map = None
@@ -787,7 +788,7 @@ class ImageCube:
     def cropROI(self):
         subimg = self.subimage()
         img = ImageCube(subimg.img, rgbMapping=self.mapping, defaultMapping=self.defaultMapping, sources=self.sources)
-        img.rois = [ROIPainted(subimg.mask)]
+        img.rois = [ROIPainted(subimg.mask,"crop")]
         return img
 
     ## perform a simple function on an image's ROI or the whole image if there is no ROI
