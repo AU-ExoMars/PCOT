@@ -31,6 +31,7 @@ types = [
     VARIANT := 'variant',
     # these types are not generally used for connections, but for values on the expression evaluation stack
     IDENT := 'ident',
+    FUNC := 'func',
     # generic data
     DATA := 'data'
 ]

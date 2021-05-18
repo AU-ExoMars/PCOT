@@ -17,6 +17,88 @@ Stack = List[Any]
 debug: bool = False
 
 
+class ArgsException(Exception):
+    ## @var message
+    # a string message
+    message: str
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+
+def orTuple(tup):
+    # turn a tuple (1,2,3) into "1, 2 or 3"
+    if len(tup) == 1:
+        return str(tup[0])
+    else:
+        lst = list(tup)
+        last = lst.pop()
+        return "{} or {}".format(", ".join([str(x) for x in lst]), last)
+
+
+class Function:
+    """a function callable from an eval string"""
+    def __init__(self, name: str, fn: Callable[[List[Any]], Any], description: str,
+                 mandatoryArgTypes, optArgTypes, varargs):
+        self.fn = fn
+        self.name = name
+        self.desc = description
+        self.mandatoryArgTypes = mandatoryArgTypes
+        self.optArgTypes = optArgTypes
+        self.varargs = varargs
+        if self.varargs and len(self.mandatoryArgTypes)==0:
+            raise ArgsException("cannot have a function with varargs but no mandatory arguments")
+        elif self.varargs and len(self.optArgTypes)>0:
+            raise ArgsException("cannot have a function with varargs and optional arguments")
+
+    def chkargs(self, args: List[Optional[Datum]]):
+        """Process arguments, returning a pair of lists of Datum items: mandatory and optional args.
+        Takes two lists: one of tuples of permitted types of mandatory values (none of which can be None) and another of pairs of
+        type tuple, defaultvalue for optional args"""
+        mandatArgs = []
+        optArgs = []
+        lastargtypes = None
+        if self.mandatoryArgTypes is None:
+            return args     # no type checking, just pass all args straight through
+        for t in self.mandatoryArgTypes:
+            if len(args) == 0:
+                raise ArgsException('Not enough arguments in {}'.format(self.name))
+            x = args.pop(0)
+            if x is None:
+                raise ArgsException('None argument in {}'.format(self.name))
+            elif x.tp not in t:
+                raise ArgsException('Bad argument in {}, got {}, expected {}'.format(self.name, x.tp, orTuple(t)))
+            mandatArgs.append(x)
+            lastargtypes = t
+
+        if self.varargs:
+            # consume remaining args, using the last mandatory argument type
+            for x in args:
+                if x.tp in lastargtypes:
+                    mandatArgs.append(x)
+                else:
+                    raise ArgsException('Bad argument in {}, got {}, expected {}'.format(self.name, x.tp, orTuple(lastargtypes)))
+
+        for t, deflt in self.optArgTypes:
+            if len(args) == 0:
+                optArgs.append(Datum(conntypes.NUMBER, deflt))
+            else:
+                x = args.pop(0)
+                if x is None:
+                    raise ArgsException('None argument in {}'.format(self.name))
+                elif x.tp not in t:
+                    raise ArgsException('Bad argument in {}, got {}, expected {}'.format(self.name, x.tp, orTuple(t)))
+                optArgs.append(x)
+
+        return mandatArgs, optArgs
+
+    def call(self, args):
+        # do type checking for arguments, then call. Note that we pass mandatory and optional arguments
+        args, optargs = self.chkargs(args)
+        return self.fn(args, optargs)
+
+
 class Instruction:
     """Instruction interface"""
 
@@ -68,13 +150,13 @@ class InstVar(Instruction):
 class InstFunc(Instruction):
     callback: Callable[[List[Any]], Any]
 
-    def __init__(self, name, callback):
-        self.callback = callback
+    def __init__(self, name, func: Function):
+        self.func = func
         self.name = name
 
     def exec(self, stack: Stack):
-        # actually stack the callback function, don't call it.
-        stack.append(self.callback)
+        # actually stack the callback function, don't call it - InstCall does that.
+        stack.append(Datum(conntypes.FUNC, self.func))
 
     def __str__(self):
         return "FUNC {}".format(self.name)
@@ -126,16 +208,22 @@ class InstCall(Instruction):
 
     def exec(self, stack: Stack):
         # semantics here - pop off the args, then pop off the function name (or some other kind of ID!)
-        args = stack[-self.argcount:]
+        if self.argcount != 0:
+            args = stack[-self.argcount:]
+        else:
+            args = []
         # args.reverse()   # is this faster than just popping them in reverse order?
         # this is really annoying; can't delete multiple items from the stack without slicing and
         # can't slice because that wouldn't change the original stack.
         for x in range(0, self.argcount):
             stack.pop()
-        func = stack.pop()
-        if isinstance(func, str):
-            raise ParseException("unknown function '{}' ".format(func))
-        stack.append(func(args))
+        v = stack.pop()
+        if v.tp == conntypes.IDENT:
+            raise ParseException("unknown function '{}' ".format(v.val))
+        elif v.tp == conntypes.FUNC:
+            # this executes the function by calling it's call method,
+            # which will do argument type checking.
+            stack.append(v.val.call(args))
 
 
 class ParseException(Exception):
@@ -191,11 +279,27 @@ class Parser:
 
     ## other functions are names mapped to functions
     ## which take a list of args and return an arg
-    funcRegistry: Dict[str, Callable[[List[Any]], Any]]
+    funcRegistry: Dict[str, Function]
 
-    def registerFunc(self, name: str, fn: Callable[[List[Any]], Any]):
-        """register a function - the callable should take a list of args and return a value"""
-        self.funcRegistry[name] = fn
+    def registerFunc(self, name: str,
+                     description: str,
+                     # this is a list of tuples, each of which is the possible types for each argument.
+                     # e.g. for a func which takes two images or numbers, [(conntypes.NUMBER, conntypes.IMG), (conntypes.NUMBER, conntypes.IMG)]
+                     # if none, we don't check args.
+                     mandatoryArgTypes: Optional[List[Tuple[conntypes.Type, ...]]],
+                     # This is a list of tuples, one for each argument. Each is a tuple of acceptable types, and default value (always a number).
+                     # e.g for one extra arg which is image or number - possible types and default val [ ((conntypes.NUMBER, conntypes.IMG), 1.0) ]
+                     optArgTypes: List[Tuple[Tuple[conntypes.Type, ...], Any]],
+                     # the actual function to call, which takes a list of mandatory arguments, a list of optional arguments,
+                     # and returns a datum.
+                     fn: Callable[[List[Datum], List[Datum]], Datum],
+                     # if true, there are no optional arguments and all extra args must
+                     # have the same type as the last mandatory argument
+                     varargs=False,
+                     ):
+        """register a function - the callable should take a list of args, a list of optional args and return a value.
+        Also takes a description and two lists of argument types: mandatory and optional."""
+        self.funcRegistry[name] = Function(name, fn, description, mandatoryArgTypes, optArgTypes, varargs)
 
     def out(self, inst: Instruction):
         # internal method - output
