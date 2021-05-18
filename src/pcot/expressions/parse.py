@@ -9,6 +9,7 @@ from tokenize import tokenize, TokenInfo, NUMBER, NAME, OP, ENCODING, ENDMARKER,
 from typing import List, Any, Optional, Callable, Dict, Tuple
 
 import pcot.conntypes as conntypes
+from pcot.conntypes import Datum
 
 Stack = List[Any]
 
@@ -30,10 +31,24 @@ class InstNumber(Instruction):
         self.val = v
 
     def exec(self, stack: Stack):
-        stack.append(self.val)
+        # can't import NUMBER, it clashes with the one in tokenizer.
+        stack.append(Datum(conntypes.NUMBER, self.val))
 
     def __str__(self):
         return "NUM {}".format(self.val)
+
+
+class InstIdent(Instruction):
+    val: str
+
+    def __init__(self, v: str):
+        self.val = v
+
+    def exec(self, stack: Stack):
+        stack.append(Datum(conntypes.IDENT, self.val))
+
+    def __str__(self):
+        return "STR {}".format(self.val)
 
 
 class InstVar(Instruction):
@@ -123,19 +138,6 @@ class InstCall(Instruction):
         stack.append(func(args))
 
 
-class InstIdent(Instruction):
-    val: str
-
-    def __init__(self, v: str):
-        self.val = v
-
-    def exec(self, stack: Stack):
-        stack.append(self.val)
-
-    def __str__(self):
-        return "STR {}".format(self.val)
-
-
 class ParseException(Exception):
     def __init__(self, msg: str, t: Optional[TokenInfo] = None):
         if t is not None:
@@ -151,14 +153,6 @@ def execute(seq: List[Instruction], stack: Stack) -> float:
             for x in stack:
                 print(x)
     return stack[0]
-
-
-def defaultInstNumberFactory(num: float) -> Instruction:
-    return InstNumber(num)
-
-
-def defaultInstIdentFactory(num: float) -> Instruction:
-    return InstIdent(num)
 
 
 def isOp(t):
@@ -195,19 +189,6 @@ class Parser:
         """register a variable with a function to fetch it"""
         self.varRegistry[name] = fn
 
-    def registerNumInstFactory(self, fn: Callable[[float], Instruction]):
-        """register the function which outputs a number instruction given a float.
-        By default this uses the built-in InstNumber, but we sometimes need to override it
-        (PCOT does to allow numbers to be stacked as Datums)
-        """
-        self.numInstFactory = fn
-
-    def registerIdentInstFactory(self, fn: Callable[[str], Instruction]):
-        """register the function which outputs an ident instruction given a float.
-            By default this uses the built-in InstIdent, but we sometimes need to override it
-            (PCOT does to allow idents to be stacked as Datums)"""
-        self.identInstFactory = fn
-
     ## other functions are names mapped to functions
     ## which take a list of args and return an arg
     funcRegistry: Dict[str, Callable[[List[Any]], Any]]
@@ -231,8 +212,6 @@ class Parser:
         self.varRegistry = dict()
         self.funcRegistry = dict()
         self.toks = []
-        self.numInstFactory = defaultInstNumberFactory
-        self.identInstFactory = defaultInstIdentFactory
 
         self.nakedIdents = nakedIdents
 
@@ -287,7 +266,7 @@ class Parser:
                 #     add it to the output queue
                 #     goto have_operand
                 elif t.type == NUMBER:
-                    self.out(self.numInstFactory(float(t.string)))
+                    self.out(InstNumber(float(t.string)))
                     wantOperand = False
                 elif t.type == NAME:
                     if t.string in self.varRegistry:
@@ -296,7 +275,7 @@ class Parser:
                         fn = self.funcRegistry[t.string]
                         self.out(InstFunc(t.string, fn))
                     elif self.nakedIdents:
-                        self.out(self.identInstFactory(t.string))
+                        self.out(InstIdent(t.string))
                     else:
                         raise ParseException("unknown variable or function", t)
                     wantOperand = False

@@ -30,9 +30,6 @@ brushDict[DATA] = Qt.darkMagenta
 brushDict[NUMBER] = Qt.darkGreen
 brushDict[VARIANT] = QBrush(Qt.black, Qt.DiagCrossPattern)
 
-## complete list of all types
-types = [x for x in brushDict]
-
 # convert all brushes to actual QBrush objects
 brushDict = {k: QBrush(v) for k, v in brushDict.items()}
 

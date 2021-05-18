@@ -20,32 +20,6 @@ from pcot.conntypes import Datum
 # TODO: keep expression guide in help updated
 
 
-class InstNumber(parse.Instruction):
-    """constant number instruction"""
-    val: float
-
-    def __init__(self, v: float):
-        self.val = v
-
-    def exec(self, stack: Stack):
-        stack.append(Datum(conntypes.NUMBER, self.val))
-
-    def __str__(self):
-        return "NUM {}".format(self.val)
-
-
-class InstIdent(parse.Instruction):
-    """constant string identifier instruction"""
-    val: str
-
-    def __init__(self, v: str):
-        self.val = v
-
-    def exec(self, stack: Stack):
-        stack.append(Datum(conntypes.IDENT, self.val))
-
-    def __str__(self):
-        return "IDENT {}".format(self.val)
 
 
 def extractChannelByName(a: Datum, b: Datum):
@@ -209,8 +183,6 @@ class ExpressionEvaluator(parse.Parser):
         """Initialise the evaluator, registering functions and operators.
         Caller may add other things (e.g. variables)"""
         super().__init__(True)  # naked identifiers permitted
-        self.registerNumInstFactory(lambda x: InstNumber(x))  # make sure we stack numbers as Datums
-        self.registerIdentInstFactory(lambda x: InstIdent(x))  # identifiers too
         self.registerBinop('+', 10, lambda a, b: binop(a, b, lambda x, y: x + y, None))
         self.registerBinop('-', 10, lambda a, b: binop(a, b, lambda x, y: x - y, None))
         self.registerBinop('/', 20, lambda a, b: binop(a, b, lambda x, y: x / y, None))

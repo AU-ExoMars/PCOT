@@ -16,29 +16,24 @@ from typing import Any
 
 Type = str
 
-ANY = 'any'
-
-IMG = 'img'
-IMGRGB = 'imgrgb'
-IMGGREY = 'imggrey'
-
-ELLIPSE = 'ellipse'
-RECT = 'rect'
-NUMBER = 'number'
-
-## this special type means the node must have its output/input type specified
-# by the user. They don't appear on the graph until this has happened.
-
-VARIANT = 'variant'
-
-
-# these types are not generally used for connections, but for values on the expression evaluation stack
-
-IDENT = 'ident'
-
-# generic data
-
-DATA = 'data'
+## complete list of all types
+types = [
+    ANY := 'any',
+    # image types, which all contain 'img' in their string (yes, ugly).
+    IMG := 'img',
+    IMGRGB := 'imgrgb',
+    IMGGREY := 'imggrey',
+    ELLIPSE := 'ellipse',
+    RECT := 'rect',
+    NUMBER := 'number',
+    # this special type means the node must have its output/input type specified
+    # by the user. They don't appear on the graph until this has happened.
+    VARIANT := 'variant',
+    # these types are not generally used for connections, but for values on the expression evaluation stack
+    IDENT := 'ident',
+    # generic data
+    DATA := 'data'
+]
 
 
 def isImage(t: Type):
