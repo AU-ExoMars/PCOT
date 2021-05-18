@@ -1,16 +1,15 @@
 ## This package manages "operation functions" : these are functions which take a subimage (i.e. bounding box around an
 # ROI and mask data) and some other optional data, and return an ImageCube. They can be used three ways:
 # as an XForm node, as a function in an eval node, and as a plain Python function.
-import inspect
-from typing import Tuple, Callable, Dict, Any
+from typing import Callable, Dict, Any
 
 import numpy as np
 
 from pcot.conntypes import NUMBER, IMG
 import pcot.operations.norm
 import pcot.operations.curve
-from pcot.pancamimage import ImageCube, SubImageCubeROI
-from pcot.xform import XForm, XFormException
+from pcot.pancamimage import SubImageCubeROI
+from pcot.xform import XForm
 from pcot.conntypes import Datum
 
 

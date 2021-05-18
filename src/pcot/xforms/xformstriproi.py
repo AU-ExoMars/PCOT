@@ -1,5 +1,5 @@
 import pcot.conntypes as conntypes
-from pcot.xform import xformtype, XFormType, Datum
+from pcot.xform import xformtype, XFormType
 from pcot.xforms.tabimage import TabImage
 
 
@@ -24,4 +24,4 @@ class XformStripROI(XFormType):
             img = img.copy()
             img.rois = []
         node.img = img
-        node.setOutput(0, Datum(conntypes.IMG, img))
+        node.setOutput(0, conntypes.Datum(conntypes.IMG, img))

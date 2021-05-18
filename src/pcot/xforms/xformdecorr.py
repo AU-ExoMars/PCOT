@@ -1,7 +1,7 @@
 import numpy as np
 
 import pcot.conntypes as conntypes
-from pcot.xform import xformtype, XFormType, XFormException, Datum
+from pcot.xform import xformtype, XFormType, XFormException
 from pcot.xforms.tabimage import TabImage
 
 from functools import reduce
