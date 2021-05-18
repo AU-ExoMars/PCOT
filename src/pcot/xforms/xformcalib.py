@@ -1,6 +1,6 @@
 import pcot.conntypes as conntypes
 
-from pcot.xform import xformtype, XFormType, Datum
+from pcot.xform import xformtype, XFormType
 from pcot.xforms.tabimage import TabImage
 
 
@@ -24,4 +24,4 @@ class XformCalib(XFormType):
 
     def perform(self, node):
         node.img = node.getInput(0, conntypes.IMG)
-        node.setOutput(0, Datum(conntypes.IMG, node.img))
+        node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))

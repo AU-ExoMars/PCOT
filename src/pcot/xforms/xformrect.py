@@ -1,11 +1,9 @@
-import cv2 as cv
-
 import pcot.conntypes as conntypes
 import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
-from pcot.pancamimage import ImageCube, ROIRect, ChannelMapping
-from pcot.xform import xformtype, XFormType, Datum, XFormROIType
+from pcot.pancamimage import ROIRect
+from pcot.xform import xformtype, XFormROIType
 
 
 @xformtype

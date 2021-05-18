@@ -4,10 +4,11 @@ import numpy as np
 from PyQt5.QtWidgets import QGridLayout, QComboBox, QLabel
 
 import pcot.conntypes as conntypes
+
 import pcot.ui
 from pcot.channelsource import IChannelSource
 from pcot.pancamimage import ImageCube
-from pcot.xform import xformtype, XFormType, XFormException, Datum
+from pcot.xform import xformtype, XFormType, XFormException
 import cv2 as cv
 
 NUMCHANS = 6
@@ -120,7 +121,7 @@ class XFormCombine(XFormType):
 
             out = ImageCube(out, node.mapping, sources=imgsources)
         node.img = out
-        node.setOutput(0, Datum(conntypes.IMG, node.img))
+        node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))
 
 
 def shortLab(s):

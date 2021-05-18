@@ -10,7 +10,8 @@ from pcot.conntypes import NUMBER, IMG
 import pcot.operations.norm
 import pcot.operations.curve
 from pcot.pancamimage import ImageCube, SubImageCubeROI
-from pcot.xform import Datum, XForm, XFormException
+from pcot.xform import XForm, XFormException
+from pcot.conntypes import Datum
 
 
 ## This is the function which allows XForm nodes to use operation functions.

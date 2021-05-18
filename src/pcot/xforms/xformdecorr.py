@@ -1,14 +1,8 @@
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import Qt
-
-import cv2 as cv
 import numpy as np
 
 import pcot.conntypes as conntypes
-import pcot.ui.tabs
 from pcot.xform import xformtype, XFormType, XFormException, Datum
 from pcot.xforms.tabimage import TabImage
-from pcot.pancamimage import ImageCube
 
 from functools import reduce
 
@@ -43,7 +37,7 @@ class XformDecorr(XFormType):
             node.img = img.modifyWithSub(subimage, newimg)
         if node.img is not None:
             node.img.setMapping(node.mapping)
-        node.setOutput(0, Datum(conntypes.IMG, node.img))
+        node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))
 
 
 def decorrstretch(A, mask):

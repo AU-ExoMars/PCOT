@@ -6,7 +6,7 @@ import pcot.ui as ui
 from pcot.channelsource import IChannelSource
 from pcot.filters import wav2RGB
 from pcot.utils.table import Table
-from pcot.xform import XFormType, xformtype, Datum
+from pcot.xform import XFormType, xformtype
 
 
 # find the mean of all the masked values. Note mask negation!
@@ -110,7 +110,7 @@ class XFormSpectrum(XFormType):
         # by wavelength
         node.data = {legend: sorted(lst, key=lambda x: x[1]) for legend, lst in data.items()}
 
-        node.setOutput(0, Datum(conntypes.DATA, table))
+        node.setOutput(0, conntypes.Datum(conntypes.DATA, table))
 
 
 class TabSpectrum(ui.tabs.Tab):

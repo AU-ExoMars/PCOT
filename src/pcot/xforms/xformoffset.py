@@ -3,7 +3,7 @@ import numpy as np
 import pcot.conntypes as conntypes
 import pcot.ui.tabs
 from pcot.pancamimage import ImageCube
-from pcot.xform import xformtype, XFormType, Datum
+from pcot.xform import xformtype, XFormType
 
 
 @xformtype
@@ -48,7 +48,7 @@ class XFormOffset(XFormType):
             # remember to copy ROI            
             node.img = ImageCube(newimg, node.mapping, img.sources)
 
-        node.setOutput(0, Datum(conntypes.IMG, node.img))
+        node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))
 
 
 class TabOffset(pcot.ui.tabs.Tab):

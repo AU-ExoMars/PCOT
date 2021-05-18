@@ -6,7 +6,7 @@ import pcot.ui as ui
 import pcot.utils.cluster
 from pcot.channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, BLUEINTERNALSOURCE
 
-from pcot.xform import xformtype, XFormType, XFormException, Datum
+from pcot.xform import xformtype, XFormType, XFormException
 from pcot.xforms.tabimage import TabImage
 from pcot.pancamimage import ImageCube
 
@@ -43,8 +43,8 @@ class XformEllipseDetect(XFormType):
             node.img = ImageCube(i, rgbMapping=node.mapping, sources=[{REDINTERNALSOURCE},
                                                                       {GREENINTERNALSOURCE},
                                                                       {BLUEINTERNALSOURCE}])
-        node.setOutput(0, Datum(conntypes.IMG, node.img))
-        node.setOutput(1, Datum(conntypes.RECT, node.data))
+        node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))
+        node.setOutput(1, conntypes.Datum(conntypes.RECT, node.data))
 
 
 def ellipseDetect(img):

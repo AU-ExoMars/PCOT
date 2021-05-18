@@ -4,7 +4,7 @@ from PyQt5 import QtGui, QtCore
 
 import pcot.conntypes as conntypes
 
-from pcot.xform import xformtype, XFormType, XFormException, Datum
+from pcot.xform import xformtype, XFormType, XFormException
 import pcot.ui.tabs
 from pcot.pancamimage import ImageCube
 
@@ -45,7 +45,7 @@ class XformGrey(XFormType):
                 out = cv.transform(img.img, mat)
                 node.img = ImageCube(out, node.mapping, [sources])
 
-        node.setOutput(0, Datum(conntypes.IMG, node.img))
+        node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))
 
 
 class TabGrey(pcot.ui.tabs.Tab):

@@ -5,7 +5,7 @@ import pcot.conntypes as conntypes
 import pcot.ui.tabs
 from pcot.channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, BLUEINTERNALSOURCE
 from pcot.pancamimage import ImageCube
-from pcot.xform import xformtype, XFormType, XFormException, Datum
+from pcot.xform import xformtype, XFormType, XFormException
 
 
 def applyGradient(img, mask, grad):
@@ -92,7 +92,7 @@ class XformGradient(XFormType):
                 raise XFormException('DATA', 'Ellipse detection must be on greyscale images')
         else:
             node.img = img
-        node.setOutput(0, Datum(conntypes.IMG, node.img))
+        node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))
 
 
 class TabGradient(pcot.ui.tabs.Tab):

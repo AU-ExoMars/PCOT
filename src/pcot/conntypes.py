@@ -7,6 +7,7 @@
 # should all be renderable by Canvas.
 #
 # These types are also used by the expression evaluator.
+from typing import Any
 
 from PyQt5 import QtWidgets, uic, QtGui, QtCore
 from PyQt5.QtCore import Qt
@@ -113,3 +114,31 @@ def isCompatibleConnection(outtype, intype):
     else:
         # otherwise has to match exactly
         return outtype == intype
+
+
+class Datum:
+    """a piece of data sitting in a node's output, to be read by its input."""
+    ## @var tp
+    # the data type
+    tp: Type
+    ## @var val
+    # the data value
+    val: Any
+
+    def __init__(self, t: Type, v: Any):
+        self.tp = t
+        self.val = v
+
+    def isImage(self):
+        """Is this an image of some type?"""
+        return isImage(self.tp)
+
+    def get(self, tp):
+        """get data field or None if type doesn't match."""
+        if tp == IMG:
+            return self.val if self.isImage() else None
+        else:
+            return self.val if self.tp == tp else None
+
+    def __str__(self):
+        return "[DATUM-{}, value {}]".format(self.tp, self.val)

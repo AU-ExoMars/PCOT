@@ -1,5 +1,5 @@
-# This is the core of the expression parsing system, and none of it
-# is application-specific. The actual operations etc. are in eval.py.
+# This is the core of the expression parsing system.
+# The actual operations etc. are in eval.py.
 
 
 from io import BytesIO
@@ -7,6 +7,8 @@ from io import BytesIO
 from tokenize import tokenize, TokenInfo, NUMBER, NAME, OP, ENCODING, ENDMARKER, NEWLINE, ERRORTOKEN, PERCENT, DOT
 
 from typing import List, Any, Optional, Callable, Dict, Tuple
+
+import pcot.conntypes as conntypes
 
 Stack = List[Any]
 

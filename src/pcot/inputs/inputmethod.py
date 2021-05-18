@@ -3,6 +3,7 @@
 # its index in the Input).
 from typing import Optional, Any
 
+from pcot import ui
 from pcot.ui.canvas import Canvas
 
 
@@ -25,7 +26,10 @@ class InputMethod:
     ## invalidates
     def invalidate(self):
         self.data = None
-        self.read()  # and try to read. TODO - I'm not happy about this; I feel it's happening too much. Too tired to think properly about it now.
+        try:
+            self.read()  # and try to read. TODO - I'm not happy about this; I feel it's happening too much. Too tired to think properly about it now.
+        except FileNotFoundError as e:
+            ui.error("Cannot read file {}".format(e.filename))
 
     ##  returns the cached data
     def get(self):

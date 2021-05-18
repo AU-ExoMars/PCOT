@@ -12,7 +12,8 @@ from pcot.expressions import parse
 from pcot.expressions.parse import Stack
 from pcot.pancamimage import ImageCube
 from pcot.utils.ops import binop, unop
-from pcot.xform import Datum, XFormException
+from pcot.xform import XFormException
+from pcot.conntypes import Datum
 
 
 # TODO: Show output in canvas (and other output somehow if not image?). Honour the ROI from the "leftmost" image with an ROI - So A has priority over B, etc.

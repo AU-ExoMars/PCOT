@@ -3,7 +3,7 @@ import numpy as np
 
 import pcot.conntypes as conntypes
 import pcot.ui.tabs
-from pcot.xform import xformtype, XFormType, Datum
+from pcot.xform import xformtype, XFormType
 
 
 # performs contrast stretching on a single channel. The image is a (h,w) numpy array.
@@ -94,7 +94,7 @@ class XformContrast(XFormType):
         # cause all nodes "downstream" to perform their actions.
         if node.img is not None:
             node.img.setMapping(node.mapping)
-        node.setOutput(0, Datum(conntypes.IMG, node.img))
+        node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))
 
 
 # This is the user interface for the node type, which is created when we double click on a node.
