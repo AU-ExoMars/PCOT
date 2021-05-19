@@ -19,8 +19,6 @@ def norm(img: SubImageCubeROI, mode: int) -> np.array:
     # get min and max
     mn = masked.min()
     mx = masked.max()
-    # by default, the returned exception is None
-    ex = None
 
     if mode == 0:  # normalize mode
         if mn == mx:

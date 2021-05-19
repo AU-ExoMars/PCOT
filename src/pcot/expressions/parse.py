@@ -1,12 +1,10 @@
 # This is the core of the expression parsing system.
 # The actual operations etc. are in eval.py.
-
-
+import numbers
 from io import BytesIO
-
 from tokenize import tokenize, TokenInfo, NUMBER, NAME, OP, ENCODING, ENDMARKER, NEWLINE, ERRORTOKEN, PERCENT, DOT
 
-from typing import List, Any, Optional, Callable, Dict, Tuple
+from typing import List, Any, Optional, Callable, Dict, Tuple, Union
 
 import pcot.conntypes as conntypes
 from pcot.conntypes import Datum
@@ -27,29 +25,67 @@ class ArgsException(Exception):
         self.message = message
 
 
-def orTuple(tup):
-    # turn a tuple (1,2,3) into "1, 2 or 3"
-    if len(tup) == 1:
-        return str(tup[0])
-    else:
-        lst = list(tup)
-        last = lst.pop()
-        return "{} or {}".format(", ".join([str(x) for x in lst]), last)
+class ParamException(Exception):
+    ## @var message
+    # a string message
+    message: str
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+
+class Parameter:
+    """a definition of a function parameter"""
+
+    def __init__(self,
+                 name: str,  # name
+                 desc: str,  # description
+                 types: Union[conntypes.Type, Tuple[conntypes.Type, ...]],  # tuple of valid types, or just one
+                 deflt: Optional[numbers.Number] = None  # default value for optional parameters, must be numeric
+                 ):
+        self.name = name
+        if isinstance(types, conntypes.Type):
+            self.types = (types,)   # convert single type to tuple
+        else:
+            self.types = types
+        self.desc = desc
+        self.deflt = deflt
+
+    def isValid(self, datum: Datum):
+        if datum is None:
+            raise ParamException("None is not a valid parameter type")
+        return datum.tp in self.types
+
+    def getDefault(self):
+        if self.deflt is None:
+            raise ParamException("internal: optional parameter {} has a no default".format(self.name))
+        return self.deflt
+
+    def validArgsString(self):
+        # turn a tuple (1,2,3) into "1, 2 or 3"
+        if len(self.types) == 1:
+            return str(self.types[0])
+        else:
+            lst = list(self.types)
+            last = lst.pop()
+            return "{} or {}".format(", ".join([str(x) for x in lst]), last)
 
 
 class Function:
     """a function callable from an eval string"""
+
     def __init__(self, name: str, fn: Callable[[List[Any]], Any], description: str,
-                 mandatoryArgTypes, optArgTypes, varargs):
+                 mandatoryParams: List[Parameter], optParams: List[Parameter], varargs):
         self.fn = fn
         self.name = name
         self.desc = description
-        self.mandatoryArgTypes = mandatoryArgTypes
-        self.optArgTypes = optArgTypes
+        self.mandatoryParams = mandatoryParams
+        self.optParams = optParams
         self.varargs = varargs
-        if self.varargs and len(self.mandatoryArgTypes)==0:
+        if self.varargs and len(self.mandatoryParams) == 0:
             raise ArgsException("cannot have a function with varargs but no mandatory arguments")
-        elif self.varargs and len(self.optArgTypes)>0:
+        elif self.varargs and len(self.optParams) > 0:
             raise ArgsException("cannot have a function with varargs and optional arguments")
 
     def chkargs(self, args: List[Optional[Datum]]):
@@ -58,38 +94,47 @@ class Function:
         type tuple, defaultvalue for optional args"""
         mandatArgs = []
         optArgs = []
-        lastargtypes = None
-        if self.mandatoryArgTypes is None:
-            return args     # no type checking, just pass all args straight through
-        for t in self.mandatoryArgTypes:
-            if len(args) == 0:
-                raise ArgsException('Not enough arguments in {}'.format(self.name))
-            x = args.pop(0)
-            if x is None:
-                raise ArgsException('None argument in {}'.format(self.name))
-            elif x.tp not in t:
-                raise ArgsException('Bad argument in {}, got {}, expected {}'.format(self.name, x.tp, orTuple(t)))
-            mandatArgs.append(x)
-            lastargtypes = t
-
-        if self.varargs:
-            # consume remaining args, using the last mandatory argument type
-            for x in args:
-                if x.tp in lastargtypes:
-                    mandatArgs.append(x)
-                else:
-                    raise ArgsException('Bad argument in {}, got {}, expected {}'.format(self.name, x.tp, orTuple(lastargtypes)))
-
-        for t, deflt in self.optArgTypes:
-            if len(args) == 0:
-                optArgs.append(Datum(conntypes.NUMBER, deflt))
-            else:
+        lastparam = None
+        try:
+            if self.mandatoryParams is None:
+                return args  # no type checking, just pass all args straight through
+            for t in self.mandatoryParams:
+                if len(args) == 0:
+                    raise ArgsException('Not enough arguments in {}'.format(self.name))
                 x = args.pop(0)
                 if x is None:
                     raise ArgsException('None argument in {}'.format(self.name))
-                elif x.tp not in t:
-                    raise ArgsException('Bad argument in {}, got {}, expected {}'.format(self.name, x.tp, orTuple(t)))
-                optArgs.append(x)
+                elif t.isValid(x):
+                    mandatArgs.append(x)
+                else:
+                    raise ArgsException(
+                        'Bad argument in {}, got {}, expected {}'.format(self.name, x.tp, t.validArgsString()))
+                lastparam = t
+
+            if self.varargs:
+                # varargs flag set - consume remaining args, using the last mandatory argument type
+                for x in args:
+                    if lastparam.isValid(t):
+                        mandatArgs.append(x)
+                    else:
+                        raise ArgsException(
+                            'Bad argument in {}, got {}, expected {}'.format(self.name, x.tp, lastparam.validArgsString()))
+
+            for t in self.optParams:
+                if len(args) == 0:
+                    optArgs.append(Datum(conntypes.NUMBER, t.getDefault()))
+                else:
+                    x = args.pop(0)
+                    if x is None:
+                        raise ArgsException('None argument in {}'.format(self.name))
+                    elif t.isValid(x):
+                        optArgs.append(x)
+                    else:
+                        raise ArgsException(
+                            'Bad argument in {}, got {}, expected {}'.format(self.name, x.tp, t.validArgsString()))
+        except ParamException as e:
+            # propagate parameter exception adding the name
+            raise ArgsException("{}: {}".format(self.name, e.message))
 
         return mandatArgs, optArgs
 
@@ -283,13 +328,11 @@ class Parser:
 
     def registerFunc(self, name: str,
                      description: str,
-                     # this is a list of tuples, each of which is the possible types for each argument.
-                     # e.g. for a func which takes two images or numbers, [(conntypes.NUMBER, conntypes.IMG), (conntypes.NUMBER, conntypes.IMG)]
-                     # if none, we don't check args.
-                     mandatoryArgTypes: Optional[List[Tuple[conntypes.Type, ...]]],
-                     # This is a list of tuples, one for each argument. Each is a tuple of acceptable types, and default value (always a number).
-                     # e.g for one extra arg which is image or number - possible types and default val [ ((conntypes.NUMBER, conntypes.IMG), 1.0) ]
-                     optArgTypes: List[Tuple[Tuple[conntypes.Type, ...], Any]],
+                     # this is a list of Parameter objects, one for each mandatory parameter. Default values on the parameters are ignored.
+                     # if none, we don't type check at all.
+                     mandatoryParams: Optional[List[Parameter]],
+                     # This is a Parameter objects, one for each optional parameter, each of which should have a default.
+                     optParams: List[Parameter],
                      # the actual function to call, which takes a list of mandatory arguments, a list of optional arguments,
                      # and returns a datum.
                      fn: Callable[[List[Datum], List[Datum]], Datum],
@@ -299,7 +342,7 @@ class Parser:
                      ):
         """register a function - the callable should take a list of args, a list of optional args and return a value.
         Also takes a description and two lists of argument types: mandatory and optional."""
-        self.funcRegistry[name] = Function(name, fn, description, mandatoryArgTypes, optArgTypes, varargs)
+        self.funcRegistry[name] = Function(name, fn, description, mandatoryParams, optParams, varargs)
 
     def out(self, inst: Instruction):
         # internal method - output

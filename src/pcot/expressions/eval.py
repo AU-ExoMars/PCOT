@@ -9,7 +9,7 @@ import cv2 as cv
 import pcot.conntypes as conntypes
 import pcot.operations as operations
 from pcot.expressions import parse
-from pcot.expressions.parse import Stack
+from pcot.expressions.parse import Parameter
 from pcot.pancamimage import ImageCube
 from pcot.utils.ops import binop, unop
 from pcot.xform import XFormException
@@ -18,8 +18,6 @@ from pcot.conntypes import Datum
 
 # TODO: Show output in canvas (and other output somehow if not image?). Honour the ROI from the "leftmost" image with an ROI - So A has priority over B, etc.
 # TODO: keep expression guide in help updated
-
-
 
 
 def extractChannelByName(a: Datum, b: Datum):
@@ -197,46 +195,48 @@ class ExpressionEvaluator(parse.Parser):
         operations.registerOpFunctionsAndProperties(self)
 
         self.registerFunc("merge", "merge a number of slices (channels) into a single image",
-                          [(conntypes.IMG,)],
+                          [Parameter("slice", "an image of depth 1", conntypes.IMG)],
                           [],
                           funcMerge, varargs=True)
         self.registerFunc("sin", "calculate sine of angle in radians",
-                          [(conntypes.NUMBER, conntypes.IMG)],
+                          [Parameter("angle", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
                           [],
                           lambda args, optargs: funcWrapper(np.sin, args[0]))
         self.registerFunc("cos", "calculate cosine of angle in radians",
-                          [(conntypes.NUMBER, conntypes.IMG)],
+                          [Parameter("angle", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
                           [],
                           lambda args, optargs: funcWrapper(np.cos, args[0]))
         self.registerFunc("tan", "calculate tangent of angle in radians",
-                          [(conntypes.NUMBER, conntypes.IMG)],
+                          [Parameter("angle", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
                           [],
                           lambda args, optargs: funcWrapper(np.tan, args[0]))
         self.registerFunc("sqrt", "calculate the square root",
-                          [(conntypes.NUMBER, conntypes.IMG)],
+                          [Parameter("angle", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
                           [],
                           lambda args, optargs: funcWrapper(np.sqrt, args[0]))
 
-        self.registerFunc("min", "find the minimum value of pixels in an ROI or image",
-                          [(conntypes.IMG, conntypes.NUMBER)],
+        self.registerFunc("min", "find the minimum value of pixels in a list of ROIs, images or values",
+                          [Parameter("val", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
                           [],
                           lambda args, optargs: statsWrapper(np.min, args), varargs=True)
-        self.registerFunc("max", "find the maximum value of pixels in an ROI or image",
-                          [(conntypes.IMG, conntypes.NUMBER)],
+        self.registerFunc("max", "find the maximum value of pixels in a list of ROIs, images or values",
+                          [Parameter("val", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
                           [],
                           lambda args, optargs: statsWrapper(np.max, args), varargs=True)
-        self.registerFunc("sd", "find the standard deviation of pixels in an ROI or image",
-                          [(conntypes.IMG, conntypes.NUMBER)],
+        self.registerFunc("sd", "find the standard deviation of pixels in a list of ROIs, images or values",
+                          [Parameter("val", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
                           [],
                           lambda args, optargs: statsWrapper(np.std, args), varargs=True)
-        self.registerFunc("mean", "find the standard deviation of pixels in an ROI or image",
-                          [(conntypes.IMG, conntypes.NUMBER)],
+        self.registerFunc("mean", "find the standard deviation of pixels in a list of ROIs, images or values",
+                          [Parameter("val", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
                           [],
                           lambda args, optargs: statsWrapper(np.mean, args), varargs=True)
 
         self.registerFunc("grey", "convert an image to greyscale",
-                          [(conntypes.IMG,)],
-                          [((conntypes.NUMBER,), 0)],
+                          [Parameter("image", "an image to process", conntypes.IMG)],
+                          [Parameter("useCV",
+                                     "if non-zero, use openCV greyscale conversion (RGB input only): 0.299*R + 0.587*G + 0.114*B",
+                                     conntypes.NUMBER,deflt=0)],
                           funcGrey)
 
         registerProperty('w', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.w))
