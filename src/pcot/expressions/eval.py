@@ -236,7 +236,7 @@ class ExpressionEvaluator(parse.Parser):
                           [Parameter("image", "an image to process", conntypes.IMG)],
                           [Parameter("useCV",
                                      "if non-zero, use openCV greyscale conversion (RGB input only): 0.299*R + 0.587*G + 0.114*B",
-                                     conntypes.NUMBER,deflt=0)],
+                                     conntypes.NUMBER, deflt=0)],
                           funcGrey)
 
         registerProperty('w', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.w))
