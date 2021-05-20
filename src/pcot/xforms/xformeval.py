@@ -71,7 +71,6 @@ class TabEval(pcot.ui.tabs.Tab):
         super().__init__(w, node, 'tabeval.ui')
         self.w.variant.setTitle("Output type")
         self.w.run.clicked.connect(self.run)
-        self.w.expr.setPlaceholderText('insert expression and click Run')
         self.w.expr.textChanged.connect(self.exprChanged)
         self.w.variant.changed.connect(self.variantChanged)
         self.w.canvas.setMapping(node.mapping)

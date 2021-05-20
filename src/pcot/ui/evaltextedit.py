@@ -20,6 +20,10 @@ class EvalTextEdit(QPlainTextEdit):
         fhact = "dummy"
         if len(funcname) > 0:
             fhact = menu.addAction("Get help on '{}'".format(funcname))
+        else:
+            a = menu.addAction("Hover over a function name and right-click for help")
+            a.setDisabled(True)
+            menu.addAction(a)
 
         a = menu.exec_(ev.globalPos())
         if a == fhact:

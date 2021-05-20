@@ -58,7 +58,11 @@
        </widget>
       </item>
       <item row="0" column="0">
-       <widget class="EvalTextEdit" name="expr"/>
+       <widget class="EvalTextEdit" name="expr">
+        <property name="placeholderText">
+         <string>Right click for context menu with help options</string>
+        </property>
+       </widget>
       </item>
       <item row="0" column="1">
        <widget class="QPlainTextEdit" name="result">

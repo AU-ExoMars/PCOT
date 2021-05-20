@@ -67,11 +67,12 @@ class Parameter:
     def validArgsString(self):
         # turn a tuple (1,2,3) into "1, 2 or 3"
         if len(self.types) == 1:
-            return str(self.types[0])
+            r = str(self.types[0])
         else:
             lst = list(self.types)
             last = lst.pop()
-            return "{} or {}".format(", ".join([str(x) for x in lst]), last)
+            r = "{} or {}".format(", ".join([str(x) for x in lst]), last)
+        return r
 
 
 def _styleTableCells(x):
@@ -102,7 +103,7 @@ class Function:
         for x in self.mandatoryParams:
             t.newRow()
             t.add("name", x.name)
-            t.add("types", x.validArgsString())
+            t.add("types", x.validArgsString() + ("" if not self.varargs else "..."))
             t.add("description", x.desc)
         margs = t.htmlObj()
         t = Table()
@@ -393,7 +394,7 @@ class Parser:
             t.add("name", name)
             ps = ",".join([p.name for p in f.mandatoryParams])
             if f.varargs:
-                ps += " (repeated)"
+                ps += "..."
             t.add("params", ps)
             t.add("opt. params", ",".join([p.name for p in f.optParams]))
             t.add("description", f.desc)
