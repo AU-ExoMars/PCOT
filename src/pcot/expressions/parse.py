@@ -8,6 +8,8 @@ from typing import List, Any, Optional, Callable, Dict, Tuple, Union
 
 import pcot.conntypes as conntypes
 from pcot.conntypes import Datum
+from pcot.utils.html import HTML, Bold
+from pcot.utils.table import Table
 
 Stack = List[Any]
 
@@ -46,7 +48,7 @@ class Parameter:
                  ):
         self.name = name
         if isinstance(types, conntypes.Type):
-            self.types = (types,)   # convert single type to tuple
+            self.types = (types,)  # convert single type to tuple
         else:
             self.types = types
         self.desc = desc
@@ -72,6 +74,13 @@ class Parameter:
             return "{} or {}".format(", ".join([str(x) for x in lst]), last)
 
 
+def _styleTableCells(x):
+    if x.tag in ('th', 'tr'):
+        x.attrs = {"align": "left"}
+    elif x.tag == "table":
+        x.attrs = {"border": "1", "cellpadding": 5}
+
+
 class Function:
     """a function callable from an eval string"""
 
@@ -87,6 +96,32 @@ class Function:
             raise ArgsException("cannot have a function with varargs but no mandatory arguments")
         elif self.varargs and len(self.optParams) > 0:
             raise ArgsException("cannot have a function with varargs and optional arguments")
+
+    def help(self):
+        t = Table()
+        for x in self.mandatoryParams:
+            t.newRow()
+            t.add("name", x.name)
+            t.add("types", x.validArgsString())
+            t.add("description", x.desc)
+        margs = t.htmlObj()
+        t = Table()
+        for x in self.optParams:
+            t.newRow()
+            t.add("name", x.name)
+            t.add("types", x.validArgsString())
+            t.add("description", x.desc)
+        oargs = t.htmlObj()
+
+        return HTML("div",
+                    [
+                        HTML("p", self.desc),
+                        HTML("p", Bold("Mandatory arguments")),
+                        margs,
+                        HTML("p", Bold("Optional arguments")),
+                        oargs
+                    ]
+                    ).visit(_styleTableCells).string()
 
     def chkargs(self, args: List[Optional[Datum]]):
         """Process arguments, returning a pair of lists of Datum items: mandatory and optional args.
@@ -118,7 +153,8 @@ class Function:
                         mandatArgs.append(x)
                     else:
                         raise ArgsException(
-                            'Bad argument in {}, got {}, expected {}'.format(self.name, x.tp, lastparam.validArgsString()))
+                            'Bad argument in {}, got {}, expected {}'.format(self.name, x.tp,
+                                                                             lastparam.validArgsString()))
 
             for t in self.optParams:
                 if len(args) == 0:
@@ -343,6 +379,25 @@ class Parser:
         """register a function - the callable should take a list of args, a list of optional args and return a value.
         Also takes a description and two lists of argument types: mandatory and optional."""
         self.funcRegistry[name] = Function(name, fn, description, mandatoryParams, optParams, varargs)
+
+    def funcHelp(self, name):
+        if name in self.funcRegistry:
+            return self.funcRegistry[name].help()
+        else:
+            return "Function not found"
+
+    def listFuncs(self):
+        t = Table()
+        for name, f in self.funcRegistry.items():
+            t.newRow()
+            t.add("name", name)
+            ps = ",".join([p.name for p in f.mandatoryParams])
+            if f.varargs:
+                ps += " (repeated)"
+            t.add("params", ps)
+            t.add("opt. params", ",".join([p.name for p in f.optParams]))
+            t.add("description", f.desc)
+        return t.htmlObj().visit(_styleTableCells).string()
 
     def out(self, inst: Instruction):
         # internal method - output

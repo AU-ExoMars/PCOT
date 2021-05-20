@@ -1,6 +1,7 @@
 import csv
 import io
 from collections import OrderedDict
+from pcot.utils.html import HTML, Col
 
 
 class TableIter:
@@ -32,10 +33,21 @@ class Table:
         self._keys = []
         self._rows = OrderedDict()
         self._currow = None
+        self._internalLabelCt = 0  # used for when we don't give a label to newRow
         self.NA = 'NA'
         self.sigfigs = 5
 
-    def newRow(self, label):
+    def newRow(self, label=None):
+        """Select a new row or an existing row - the label is internal use only. For a new unique row
+        without a label, leave it unset"""
+        if label is None:
+            # no label, autogenerate a new one that isn't in the dict
+            while True:
+                label = "internallab"+str(self._internalLabelCt)
+                self._internalLabelCt += 1
+                if label not in self._rows:
+                    break
+
         if label in self._rows:
             self._currow = self._rows[label]
         else:
@@ -62,3 +74,18 @@ class Table:
             r = [round(v, self.sigfigs) if isinstance(v, float) else v for v in r]
             w.writerow(r)  # each row
         return s.getvalue()
+
+    def htmlObj(self):
+        """convert to html object"""
+        # first generate the headers
+        headerRow = HTML("tr", [HTML("th", Col('red', k)) for k in self._keys])
+        # now the rows
+        rows = []
+        for r in self:
+            r = [round(v, self.sigfigs) if isinstance(v, float) else v for v in r]
+            rows.append(HTML("tr", [HTML("td", x) for x in r]))
+        return HTML("table", headerRow, rows)
+
+    def html(self):
+        """convert to html string"""
+        return self.htmlObj().run()
