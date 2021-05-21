@@ -58,7 +58,7 @@
        </widget>
       </item>
       <item row="0" column="0">
-       <widget class="EvalTextEdit" name="expr">
+       <widget class="PlainTextEditWithHelp" name="expr">
         <property name="placeholderText">
          <string>Enter expression here and press Run. Right click for context menu with help options</string>
         </property>
@@ -99,9 +99,9 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>EvalTextEdit</class>
+   <class>PlainTextEditWithHelp</class>
    <extends>QPlainTextEdit</extends>
-   <header>pcot.ui.evaltextedit</header>
+   <header>pcot.ui.textedit</header>
   </customwidget>
  </customwidgets>
  <resources/>
