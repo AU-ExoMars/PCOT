@@ -6,7 +6,7 @@ import pcot.utils.colour
 import pcot.utils.text
 from pcot.channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, BLUEINTERNALSOURCE
 from pcot.pancamimage import ImageCube, ChannelMapping
-from pcot.xform import xformtype, XFormType, Datum
+from pcot.xform import xformtype, XFormType
 
 
 # this transform takes an image and places it at a position inside another image.
@@ -91,7 +91,7 @@ class XformInset(XFormType):
                                                       [{REDINTERNALSOURCE},
                                                        {GREENINTERNALSOURCE},
                                                        {BLUEINTERNALSOURCE}])
-        node.setOutput(0, Datum(conntypes.IMG, node.img))
+        node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))
 
 
 class TabInset(pcot.ui.tabs.Tab):

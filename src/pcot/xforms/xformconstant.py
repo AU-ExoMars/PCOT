@@ -3,7 +3,7 @@ from PyQt5.QtCore import Qt
 
 import pcot.conntypes as conntypes
 import pcot.ui as ui
-from pcot.xform import xformtype, XFormType, Datum
+from pcot.xform import xformtype, XFormType
 
 validKeys = {Qt.Key_0, Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5, Qt.Key_6, Qt.Key_7, Qt.Key_8, Qt.Key_9,
              Qt.Key_Period, Qt.Key_Minus,
@@ -70,4 +70,4 @@ class XFormConstant(XFormType):
         node.val = 0
 
     def perform(self, node):
-        node.setOutput(0, Datum(conntypes.NUMBER, node.val))
+        node.setOutput(0, conntypes.Datum(conntypes.NUMBER, node.val))

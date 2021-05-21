@@ -2,6 +2,7 @@ import traceback
 
 import pcot.conntypes as conntypes
 import pcot.ui.tabs
+from pcot import ui
 from pcot.expressions.eval import ExpressionEvaluator
 from pcot.xform import XFormType, xformtype, XFormException
 
@@ -70,12 +71,12 @@ class TabEval(pcot.ui.tabs.Tab):
         super().__init__(w, node, 'tabeval.ui')
         self.w.variant.setTitle("Output type")
         self.w.run.clicked.connect(self.run)
-        self.w.expr.setPlaceholderText('insert expression and click Run')
         self.w.expr.textChanged.connect(self.exprChanged)
         self.w.variant.changed.connect(self.variantChanged)
         self.w.canvas.setMapping(node.mapping)
         self.w.canvas.setGraph(node.graph)
         self.w.canvas.setPersister(node)
+        self.w.expr.node = node   # need a link from the text edit box into the node, so we can get help on funcs.
 
         self.onNodeChanged()
 

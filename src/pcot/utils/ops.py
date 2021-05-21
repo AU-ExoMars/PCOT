@@ -4,8 +4,8 @@ from typing import Any, Callable
 import numpy as np
 
 import pcot.conntypes as conntypes
+from pcot.conntypes import Datum
 from pcot.pancamimage import ImageCube
-from pcot.xform import Datum, XFormException
 
 
 class BinopException(Exception):

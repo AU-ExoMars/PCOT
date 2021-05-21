@@ -17,6 +17,8 @@ import pcot.utils.deb
 import pcot.xform as xform
 
 ## do we have the Grandalf package for automatic graph layout?
+from pcot import connbrushes
+
 hasGrandalf = True
 try:
     # we might have grandalf, but probably not.
@@ -27,7 +29,6 @@ try:
     hasGrandalf = True
 except ImportError:
     print("Grandalf is not present, autolayout will be awful.")
-
 
     # dummy class defs for when grandalf isn't present, to avoid rogue errors in type checking
 
@@ -213,7 +214,7 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
                 node.type.inputConnectors[index][0], node.getInputType(index), node.type.inputConnectors[index][2])
         else:
             name, typename = (node.type.outputConnectors[index][0], node.getOutputType(index))
-        brush = conntypes.getBrush(typename)
+        brush = connbrushes.getBrush(typename)
         t = QTransform().translate(self.rect().x(), 0)  # need to translate brush patterns
         brush.setTransform(t)
         self.setBrush(brush)

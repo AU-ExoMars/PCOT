@@ -1,17 +1,184 @@
-# This is the core of the expression parsing system, and none of it
-# is application-specific. The actual operations etc. are in eval.py.
-
-
+# This is the core of the expression parsing system.
+# The actual operations etc. are in eval.py.
+import numbers
 from io import BytesIO
-
 from tokenize import tokenize, TokenInfo, NUMBER, NAME, OP, ENCODING, ENDMARKER, NEWLINE, ERRORTOKEN, PERCENT, DOT
 
-from typing import List, Any, Optional, Callable, Dict, Tuple
+from typing import List, Any, Optional, Callable, Dict, Tuple, Union
+
+import pcot.conntypes as conntypes
+from pcot.conntypes import Datum
+from pcot.utils.html import HTML, Bold
+from pcot.utils.table import Table
 
 Stack = List[Any]
 
 # will turn on printing
 debug: bool = False
+
+
+class ArgsException(Exception):
+    ## @var message
+    # a string message
+    message: str
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+
+class ParamException(Exception):
+    ## @var message
+    # a string message
+    message: str
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+
+class Parameter:
+    """a definition of a function parameter"""
+
+    def __init__(self,
+                 name: str,  # name
+                 desc: str,  # description
+                 types: Union[conntypes.Type, Tuple[conntypes.Type, ...]],  # tuple of valid types, or just one
+                 deflt: Optional[numbers.Number] = None  # default value for optional parameters, must be numeric
+                 ):
+        self.name = name
+        if isinstance(types, conntypes.Type):
+            self.types = (types,)  # convert single type to tuple
+        else:
+            self.types = types
+        self.desc = desc
+        self.deflt = deflt
+
+    def isValid(self, datum: Datum):
+        if datum is None:
+            raise ParamException("None is not a valid parameter type")
+        return datum.tp in self.types
+
+    def getDefault(self):
+        if self.deflt is None:
+            raise ParamException("internal: optional parameter {} has a no default".format(self.name))
+        return self.deflt
+
+    def validArgsString(self):
+        # turn a tuple (1,2,3) into "1, 2 or 3"
+        if len(self.types) == 1:
+            r = str(self.types[0])
+        else:
+            lst = list(self.types)
+            last = lst.pop()
+            r = "{} or {}".format(", ".join([str(x) for x in lst]), last)
+        return r
+
+
+def _styleTableCells(x):
+    if x.tag in ('th', 'tr'):
+        x.attrs = {"align": "left"}
+    elif x.tag == "table":
+        x.attrs = {"border": "1", "cellpadding": 5}
+
+
+class Function:
+    """a function callable from an eval string"""
+
+    def __init__(self, name: str, fn: Callable[[List[Any]], Any], description: str,
+                 mandatoryParams: List[Parameter], optParams: List[Parameter], varargs):
+        self.fn = fn
+        self.name = name
+        self.desc = description
+        self.mandatoryParams = mandatoryParams
+        self.optParams = optParams
+        self.varargs = varargs
+        if self.varargs and len(self.mandatoryParams) == 0:
+            raise ArgsException("cannot have a function with varargs but no mandatory arguments")
+        elif self.varargs and len(self.optParams) > 0:
+            raise ArgsException("cannot have a function with varargs and optional arguments")
+
+    def help(self):
+        t = Table()
+        for x in self.mandatoryParams:
+            t.newRow()
+            t.add("name", x.name)
+            t.add("types", x.validArgsString() + ("" if not self.varargs else "..."))
+            t.add("description", x.desc)
+        margs = t.htmlObj()
+        t = Table()
+        for x in self.optParams:
+            t.newRow()
+            t.add("name", x.name)
+            t.add("types", x.validArgsString())
+            t.add("description", x.desc)
+        oargs = t.htmlObj()
+
+        return HTML("div",
+                    [
+                        HTML("p", self.desc),
+                        HTML("p", Bold("Mandatory arguments")),
+                        margs,
+                        HTML("p", Bold("Optional arguments")),
+                        oargs
+                    ]
+                    ).visit(_styleTableCells).string()
+
+    def chkargs(self, args: List[Optional[Datum]]):
+        """Process arguments, returning a pair of lists of Datum items: mandatory and optional args.
+        Takes two lists: one of tuples of permitted types of mandatory values (none of which can be None) and another of pairs of
+        type tuple, defaultvalue for optional args"""
+        mandatArgs = []
+        optArgs = []
+        lastparam = None
+        try:
+            if self.mandatoryParams is None:
+                return args  # no type checking, just pass all args straight through
+            for t in self.mandatoryParams:
+                if len(args) == 0:
+                    raise ArgsException('Not enough arguments in {}'.format(self.name))
+                x = args.pop(0)
+                if x is None:
+                    raise ArgsException('None argument in {}'.format(self.name))
+                elif t.isValid(x):
+                    mandatArgs.append(x)
+                else:
+                    raise ArgsException(
+                        'Bad argument in {}, got {}, expected {}'.format(self.name, x.tp, t.validArgsString()))
+                lastparam = t
+
+            if self.varargs:
+                # varargs flag set - consume remaining args, using the last mandatory argument type
+                for x in args:
+                    if lastparam.isValid(t):
+                        mandatArgs.append(x)
+                    else:
+                        raise ArgsException(
+                            'Bad argument in {}, got {}, expected {}'.format(self.name, x.tp,
+                                                                             lastparam.validArgsString()))
+
+            for t in self.optParams:
+                if len(args) == 0:
+                    optArgs.append(Datum(conntypes.NUMBER, t.getDefault()))
+                else:
+                    x = args.pop(0)
+                    if x is None:
+                        raise ArgsException('None argument in {}'.format(self.name))
+                    elif t.isValid(x):
+                        optArgs.append(x)
+                    else:
+                        raise ArgsException(
+                            'Bad argument in {}, got {}, expected {}'.format(self.name, x.tp, t.validArgsString()))
+        except ParamException as e:
+            # propagate parameter exception adding the name
+            raise ArgsException("{}: {}".format(self.name, e.message))
+
+        return mandatArgs, optArgs
+
+    def call(self, args):
+        # do type checking for arguments, then call. Note that we pass mandatory and optional arguments
+        args, optargs = self.chkargs(args)
+        return self.fn(args, optargs)
 
 
 class Instruction:
@@ -28,10 +195,24 @@ class InstNumber(Instruction):
         self.val = v
 
     def exec(self, stack: Stack):
-        stack.append(self.val)
+        # can't import NUMBER, it clashes with the one in tokenizer.
+        stack.append(Datum(conntypes.NUMBER, self.val))
 
     def __str__(self):
         return "NUM {}".format(self.val)
+
+
+class InstIdent(Instruction):
+    val: str
+
+    def __init__(self, v: str):
+        self.val = v
+
+    def exec(self, stack: Stack):
+        stack.append(Datum(conntypes.IDENT, self.val))
+
+    def __str__(self):
+        return "STR {}".format(self.val)
 
 
 class InstVar(Instruction):
@@ -51,13 +232,13 @@ class InstVar(Instruction):
 class InstFunc(Instruction):
     callback: Callable[[List[Any]], Any]
 
-    def __init__(self, name, callback):
-        self.callback = callback
+    def __init__(self, name, func: Function):
+        self.func = func
         self.name = name
 
     def exec(self, stack: Stack):
-        # actually stack the callback function, don't call it.
-        stack.append(self.callback)
+        # actually stack the callback function, don't call it - InstCall does that.
+        stack.append(Datum(conntypes.FUNC, self.func))
 
     def __str__(self):
         return "FUNC {}".format(self.name)
@@ -109,29 +290,22 @@ class InstCall(Instruction):
 
     def exec(self, stack: Stack):
         # semantics here - pop off the args, then pop off the function name (or some other kind of ID!)
-        args = stack[-self.argcount:]
+        if self.argcount != 0:
+            args = stack[-self.argcount:]
+        else:
+            args = []
         # args.reverse()   # is this faster than just popping them in reverse order?
         # this is really annoying; can't delete multiple items from the stack without slicing and
         # can't slice because that wouldn't change the original stack.
         for x in range(0, self.argcount):
             stack.pop()
-        func = stack.pop()
-        if isinstance(func, str):
-            raise ParseException("unknown function '{}' ".format(func))
-        stack.append(func(args))
-
-
-class InstIdent(Instruction):
-    val: str
-
-    def __init__(self, v: str):
-        self.val = v
-
-    def exec(self, stack: Stack):
-        stack.append(self.val)
-
-    def __str__(self):
-        return "STR {}".format(self.val)
+        v = stack.pop()
+        if v.tp == conntypes.IDENT:
+            raise ParseException("unknown function '{}' ".format(v.val))
+        elif v.tp == conntypes.FUNC:
+            # this executes the function by calling it's call method,
+            # which will do argument type checking.
+            stack.append(v.val.call(args))
 
 
 class ParseException(Exception):
@@ -149,14 +323,6 @@ def execute(seq: List[Instruction], stack: Stack) -> float:
             for x in stack:
                 print(x)
     return stack[0]
-
-
-def defaultInstNumberFactory(num: float) -> Instruction:
-    return InstNumber(num)
-
-
-def defaultInstIdentFactory(num: float) -> Instruction:
-    return InstIdent(num)
 
 
 def isOp(t):
@@ -193,26 +359,46 @@ class Parser:
         """register a variable with a function to fetch it"""
         self.varRegistry[name] = fn
 
-    def registerNumInstFactory(self, fn: Callable[[float], Instruction]):
-        """register the function which outputs a number instruction given a float.
-        By default this uses the built-in InstNumber, but we sometimes need to override it
-        (PCOT does to allow numbers to be stacked as Datums)
-        """
-        self.numInstFactory = fn
-
-    def registerIdentInstFactory(self, fn: Callable[[str], Instruction]):
-        """register the function which outputs an ident instruction given a float.
-            By default this uses the built-in InstIdent, but we sometimes need to override it
-            (PCOT does to allow idents to be stacked as Datums)"""
-        self.identInstFactory = fn
-
     ## other functions are names mapped to functions
     ## which take a list of args and return an arg
-    funcRegistry: Dict[str, Callable[[List[Any]], Any]]
+    funcRegistry: Dict[str, Function]
 
-    def registerFunc(self, name: str, fn: Callable[[List[Any]], Any]):
-        """register a function - the callable should take a list of args and return a value"""
-        self.funcRegistry[name] = fn
+    def registerFunc(self, name: str,
+                     description: str,
+                     # this is a list of Parameter objects, one for each mandatory parameter. Default values on the parameters are ignored.
+                     # if none, we don't type check at all.
+                     mandatoryParams: Optional[List[Parameter]],
+                     # This is a Parameter objects, one for each optional parameter, each of which should have a default.
+                     optParams: List[Parameter],
+                     # the actual function to call, which takes a list of mandatory arguments, a list of optional arguments,
+                     # and returns a datum.
+                     fn: Callable[[List[Datum], List[Datum]], Datum],
+                     # if true, there are no optional arguments and all extra args must
+                     # have the same type as the last mandatory argument
+                     varargs=False,
+                     ):
+        """register a function - the callable should take a list of args, a list of optional args and return a value.
+        Also takes a description and two lists of argument types: mandatory and optional."""
+        self.funcRegistry[name] = Function(name, fn, description, mandatoryParams, optParams, varargs)
+
+    def funcHelp(self, name):
+        if name in self.funcRegistry:
+            return self.funcRegistry[name].help()
+        else:
+            return "Function not found"
+
+    def listFuncs(self):
+        t = Table()
+        for name, f in self.funcRegistry.items():
+            t.newRow()
+            t.add("name", name)
+            ps = ",".join([p.name for p in f.mandatoryParams])
+            if f.varargs:
+                ps += "..."
+            t.add("params", ps)
+            t.add("opt. params", ",".join([p.name for p in f.optParams]))
+            t.add("description", f.desc)
+        return t.htmlObj().visit(_styleTableCells).string()
 
     def out(self, inst: Instruction):
         # internal method - output
@@ -229,8 +415,6 @@ class Parser:
         self.varRegistry = dict()
         self.funcRegistry = dict()
         self.toks = []
-        self.numInstFactory = defaultInstNumberFactory
-        self.identInstFactory = defaultInstIdentFactory
 
         self.nakedIdents = nakedIdents
 
@@ -285,7 +469,7 @@ class Parser:
                 #     add it to the output queue
                 #     goto have_operand
                 elif t.type == NUMBER:
-                    self.out(self.numInstFactory(float(t.string)))
+                    self.out(InstNumber(float(t.string)))
                     wantOperand = False
                 elif t.type == NAME:
                     if t.string in self.varRegistry:
@@ -294,7 +478,7 @@ class Parser:
                         fn = self.funcRegistry[t.string]
                         self.out(InstFunc(t.string, fn))
                     elif self.nakedIdents:
-                        self.out(self.identInstFactory(t.string))
+                        self.out(InstIdent(t.string))
                     else:
                         raise ParseException("unknown variable or function", t)
                     wantOperand = False

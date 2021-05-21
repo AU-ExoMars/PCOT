@@ -9,42 +9,15 @@ import cv2 as cv
 import pcot.conntypes as conntypes
 import pcot.operations as operations
 from pcot.expressions import parse
-from pcot.expressions.parse import Stack
+from pcot.expressions.parse import Parameter
 from pcot.pancamimage import ImageCube
 from pcot.utils.ops import binop, unop
-from pcot.xform import Datum, XFormException
+from pcot.xform import XFormException
+from pcot.conntypes import Datum
 
 
 # TODO: Show output in canvas (and other output somehow if not image?). Honour the ROI from the "leftmost" image with an ROI - So A has priority over B, etc.
 # TODO: keep expression guide in help updated
-
-
-class InstNumber(parse.Instruction):
-    """constant number instruction"""
-    val: float
-
-    def __init__(self, v: float):
-        self.val = v
-
-    def exec(self, stack: Stack):
-        stack.append(Datum(conntypes.NUMBER, self.val))
-
-    def __str__(self):
-        return "NUM {}".format(self.val)
-
-
-class InstIdent(parse.Instruction):
-    """constant string identifier instruction"""
-    val: str
-
-    def __init__(self, v: str):
-        self.val = v
-
-    def exec(self, stack: Stack):
-        stack.append(Datum(conntypes.IDENT, self.val))
-
-    def __str__(self):
-        return "IDENT {}".format(self.val)
 
 
 def extractChannelByName(a: Datum, b: Datum):
@@ -95,7 +68,7 @@ def getProperty(a: Datum, b: Datum):
         raise XFormException('EXPR', 'unknown property "{}" for given type in "." operator'.format(propName))
 
 
-def funcMerge(args):
+def funcMerge(args, optargs):
     """function for merging a number of images"""
     if any([x is None for x in args]):
         raise XFormException('EXPR', 'argument is None for merge')
@@ -119,50 +92,14 @@ def funcMerge(args):
     return Datum(conntypes.IMG, img)
 
 
-def chkargs(fname, args: List[Optional[Datum]], types: List[conntypes.Type], optTypes: List[Tuple[conntypes.Type, Any]]):
-    """Process arguments, returning a pair of lists of Datum items: mandatory and optional args.
-    Takes two lists: one of types of mandatory values (none of which can be None) and another of pairs of
-    type, defaultvalue for optional args"""
-    mandatArgs = []
-    optArgs = []
-    for t in types:
-        if len(args) == 0:
-            raise XFormException('EXPR', 'Out of arguments in {}'.format(fname))
-        x = args.pop(0)
-        if x is None:
-            raise XFormException('EXPR', 'None argument in {}'.format(fname))
-        elif x.tp != t:
-            raise XFormException('EXPR', 'Bad argument in {}, got {}, expected {}'.format(fname, x.tp, t))
-        mandatArgs.append(x)
-
-    for t, deflt in optTypes:
-        if len(args) == 0:
-            optArgs.append(deflt)
-        else:
-            x = args.pop(0)
-            if x is None:
-                raise XFormException('EXPR', 'None argument in {}'.format(fname))
-            elif x.tp != t:
-                raise XFormException('EXPR', 'Bad argument in {}, got {}, expected {}'.format(fname, x.tp, t))
-            optArgs.append(x)
-
-    return mandatArgs, optArgs
-
-
-def funcGrey(args):
+def funcGrey(args, optargs):
     """Greyscale conversion. If the optional second argument is nonzero, and the image has 3 channels, we'll use CV's
     conversion equation rather than just the mean."""
-
-    # args : Image, use cv conversion [default false]
-    args, optargs = chkargs('grey', args, [conntypes.IMG], [(conntypes.NUMBER, 0)])
-
-    if any([x is None for x in args]):
-        raise XFormException('EXPR', 'argument is None for merge')
 
     img = args[0].get(conntypes.IMG)
     sources = set.union(*img.sources)
 
-    if optargs[0] != 0:
+    if optargs[0].get(conntypes.NUMBER) != 0:
         if img.channels != 3:
             raise XFormException('DATA', "Image must be RGB for OpenCV greyscale conversion")
         img = ImageCube(cv.cvtColor(img.img, cv.COLOR_RGB2GRAY), img.mapping, [sources])
@@ -196,9 +133,44 @@ def funcWrapper(fn, d, *args):
         elif isinstance(newdata, numbers.Number):
             return Datum(conntypes.NUMBER, float(newdata))
         else:
-            raise XFormException('EXPR', 'internal: fn returns bad type')
+            raise XFormException('EXPR', 'internal: fn returns bad type in funcWrapper')
     elif d.tp == conntypes.NUMBER:  # deal with numeric argument (always returns a numeric result)
-        return Datum(conntypes.NUMBER, fn(d.val))
+        return Datum(conntypes.NUMBER, fn(d.val, *args))
+
+
+def statsWrapper(fn, d: List[Optional[Datum]], *args):
+    """similar to funcWrapper, but can take lots of image and number arguments which it aggregates to do stats on.
+    The result of fn must be a number. Works by flattening any images and concatenating them with any numbers,
+    and doing the operation on the resulting data."""
+    intermediate = None
+    for x in d:
+        if x is None:
+            continue
+        elif x.isImage():
+            subimage = x.val.subimage()
+            mask = subimage.fullmask()
+            cp = subimage.img.copy()
+            masked = np.ma.masked_array(cp, mask=~mask)
+            # we convert the data into a flat numpy array if it isn't one already
+            if isinstance(masked, np.ma.masked_array):
+                newdata = masked.compressed()  # convert to 1d and remove masked elements
+            elif isinstance(masked, np.ndarray):
+                newdata = masked.flatten()  # convert to 1d
+            else:
+                raise XFormException('EXPR', 'internal: fn returns bad type in statsWrapper')
+        elif x.tp == conntypes.NUMBER:
+            newdata = np.array([x.val], np.float32)
+        else:
+            raise XFormException('EXPR', 'internal: bad type passed to statsWrapper')
+
+        # and add it to the intermediate array
+        if intermediate is None:
+            intermediate = newdata
+        else:
+            intermediate = np.concatenate((intermediate, newdata))
+
+    # then we perform the function on the collated array
+    return Datum(conntypes.NUMBER, fn(intermediate, *args))
 
 
 class ExpressionEvaluator(parse.Parser):
@@ -208,8 +180,6 @@ class ExpressionEvaluator(parse.Parser):
         """Initialise the evaluator, registering functions and operators.
         Caller may add other things (e.g. variables)"""
         super().__init__(True)  # naked identifiers permitted
-        self.registerNumInstFactory(lambda x: InstNumber(x))  # make sure we stack numbers as Datums
-        self.registerIdentInstFactory(lambda x: InstIdent(x))  # identifiers too
         self.registerBinop('+', 10, lambda a, b: binop(a, b, lambda x, y: x + y, None))
         self.registerBinop('-', 10, lambda a, b: binop(a, b, lambda x, y: x - y, None))
         self.registerBinop('/', 20, lambda a, b: binop(a, b, lambda x, y: x / y, None))
@@ -224,18 +194,50 @@ class ExpressionEvaluator(parse.Parser):
         # additional functions and properties - this is in the __init__.py in the operations package.
         operations.registerOpFunctionsAndProperties(self)
 
-        self.registerFunc("merge", funcMerge)
-        self.registerFunc("sin", lambda args: funcWrapper(np.sin, args[0]))
-        self.registerFunc("cos", lambda args: funcWrapper(np.cos, args[0]))
-        self.registerFunc("tan", lambda args: funcWrapper(np.tan, args[0]))
-        self.registerFunc("sqrt", lambda args: funcWrapper(np.sqrt, args[0]))
+        self.registerFunc("merge", "merge a number of slices (channels) into a single image",
+                          [Parameter("slice", "an image of depth 1", conntypes.IMG)],
+                          [],
+                          funcMerge, varargs=True)
+        self.registerFunc("sin", "calculate sine of angle in radians",
+                          [Parameter("angle", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
+                          [],
+                          lambda args, optargs: funcWrapper(np.sin, args[0]))
+        self.registerFunc("cos", "calculate cosine of angle in radians",
+                          [Parameter("angle", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
+                          [],
+                          lambda args, optargs: funcWrapper(np.cos, args[0]))
+        self.registerFunc("tan", "calculate tangent of angle in radians",
+                          [Parameter("angle", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
+                          [],
+                          lambda args, optargs: funcWrapper(np.tan, args[0]))
+        self.registerFunc("sqrt", "calculate the square root",
+                          [Parameter("angle", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
+                          [],
+                          lambda args, optargs: funcWrapper(np.sqrt, args[0]))
 
-        self.registerFunc("min", lambda args: funcWrapper(np.min, args[0]))
-        self.registerFunc("max", lambda args: funcWrapper(np.max, args[0]))
-        self.registerFunc("sd", lambda args: funcWrapper(np.std, args[0]))
-        self.registerFunc("mean", lambda args: funcWrapper(np.mean, args[0]))
+        self.registerFunc("min", "find the minimum value of pixels in a list of ROIs, images or values",
+                          [Parameter("val", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
+                          [],
+                          lambda args, optargs: statsWrapper(np.min, args), varargs=True)
+        self.registerFunc("max", "find the maximum value of pixels in a list of ROIs, images or values",
+                          [Parameter("val", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
+                          [],
+                          lambda args, optargs: statsWrapper(np.max, args), varargs=True)
+        self.registerFunc("sd", "find the standard deviation of pixels in a list of ROIs, images or values",
+                          [Parameter("val", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
+                          [],
+                          lambda args, optargs: statsWrapper(np.std, args), varargs=True)
+        self.registerFunc("mean", "find the standard deviation of pixels in a list of ROIs, images or values",
+                          [Parameter("val", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
+                          [],
+                          lambda args, optargs: statsWrapper(np.mean, args), varargs=True)
 
-        self.registerFunc("grey", funcGrey)
+        self.registerFunc("grey", "convert an image to greyscale",
+                          [Parameter("image", "an image to process", conntypes.IMG)],
+                          [Parameter("useCV",
+                                     "if non-zero, use openCV greyscale conversion (RGB input only): 0.299*R + 0.587*G + 0.114*B",
+                                     conntypes.NUMBER, deflt=0)],
+                          funcGrey)
 
         registerProperty('w', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.w))
         registerProperty('h', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.h))

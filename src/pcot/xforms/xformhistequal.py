@@ -2,9 +2,8 @@ import cv2 as cv
 import numpy as np
 
 import pcot.conntypes as conntypes
-from pcot.xform import xformtype, XFormType, Datum
+from pcot.xform import xformtype, XFormType
 from pcot.xforms.tabimage import TabImage
-from pcot.pancamimage import ImageCube
 
 # perform equalisation with a mask. Unfortunately cv.equalizeHist doesn't
 # support masks.
@@ -98,4 +97,4 @@ class XformHistEqual(XFormType):
             node.img = img.modifyWithSub(subimage, equalized)
         if node.img is not None:
             node.img.setMapping(node.mapping)
-        node.setOutput(0, Datum(conntypes.IMG, node.img))
+        node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))

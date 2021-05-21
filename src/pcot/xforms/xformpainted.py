@@ -1,4 +1,3 @@
-import cv2 as cv
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPainter, QColor
 from PyQt5.QtWidgets import QMessageBox
@@ -9,7 +8,7 @@ import pcot.utils.colour
 import pcot.utils.text
 from pcot import ui
 from pcot.pancamimage import ROIPainted, getRadiusFromSlider
-from pcot.xform import xformtype, XFormType, Datum, XFormROIType
+from pcot.xform import xformtype, XFormROIType
 
 
 @xformtype

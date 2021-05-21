@@ -7,10 +7,7 @@
 # should all be renderable by Canvas.
 #
 # These types are also used by the expression evaluator.
-
-from PyQt5 import QtWidgets, uic, QtGui, QtCore
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor, QBrush, QLinearGradient
+from typing import Any
 
 # Here is where new connection types are registered and tested
 # for compatibility: I'm aware that this should really be model-only,
@@ -19,78 +16,29 @@ from PyQt5.QtGui import QColor, QBrush, QLinearGradient
 
 Type = str
 
-ANY = 'any'
-
-IMG = 'img'
-IMGRGB = 'imgrgb'
-IMGGREY = 'imggrey'
-
-ELLIPSE = 'ellipse'
-RECT = 'rect'
-NUMBER = 'number'
-
-## this special type means the node must have its output/input type specified
-# by the user. They don't appear on the graph until this has happened.
-
-VARIANT = 'variant'
-
-
-# these types are not generally used for connections, but for values on the expression evaluation stack
-
-IDENT = 'ident'
-
-# generic data
-
-DATA = 'data'
+## complete list of all types
+types = [
+    ANY := 'any',
+    # image types, which all contain 'img' in their string (yes, ugly).
+    IMG := 'img',
+    IMGRGB := 'imgrgb',
+    IMGGREY := 'imggrey',
+    ELLIPSE := 'ellipse',
+    RECT := 'rect',
+    NUMBER := 'number',
+    # this special type means the node must have its output/input type specified
+    # by the user. They don't appear on the graph until this has happened.
+    VARIANT := 'variant',
+    # these types are not generally used for connections, but for values on the expression evaluation stack
+    IDENT := 'ident',
+    FUNC := 'func',
+    # generic data
+    DATA := 'data'
+]
 
 
 def isImage(t: Type):
     return "img" in t
-
-
-## dictionary of name -> brush for connection pad drawing
-
-brushDict = {}
-
-
-## creates a gradient consisting of three colours in quick succession
-# followed by a wide band of another colour. Used to mark connections such as RGB.
-
-def quickGrad(c1, c2, c3, finalC):
-    grad = QLinearGradient(0, 0, 20, 0)
-    grad.setColorAt(0, c1)
-    grad.setColorAt(0.4, c2)
-    grad.setColorAt(0.8, c3)
-    grad.setColorAt(1, finalC)
-    return grad
-
-
-brushDict[ANY] = Qt.red
-brushDict[IMGRGB] = quickGrad(Qt.red, Qt.green, Qt.blue, QColor(50, 50, 50))
-brushDict[IMGGREY] = Qt.gray
-brushDict[IMG] = Qt.blue
-brushDict[ELLIPSE] = Qt.cyan
-brushDict[RECT] = Qt.cyan
-brushDict[DATA] = Qt.darkMagenta
-brushDict[NUMBER] = Qt.darkGreen
-brushDict[VARIANT] = QBrush(Qt.black, Qt.DiagCrossPattern)
-
-## complete list of all types
-types = [x for x in brushDict]
-
-# convert all brushes to actual QBrush objects
-brushDict = {k: QBrush(v) for k, v in brushDict.items()}
-
-
-# add brushes which are already QBrush down here
-
-## get a brush by name or magenta if no brush is found
-def getBrush(typename):
-    if typename in brushDict:
-        return brushDict[typename]
-    else:
-        print("Unknown type ", typename)
-        return QBrush(Qt.magenta)
 
 
 ## are two connectors compatible?
@@ -113,3 +61,31 @@ def isCompatibleConnection(outtype, intype):
     else:
         # otherwise has to match exactly
         return outtype == intype
+
+
+class Datum:
+    """a piece of data sitting in a node's output, to be read by its input."""
+    ## @var tp
+    # the data type
+    tp: Type
+    ## @var val
+    # the data value
+    val: Any
+
+    def __init__(self, t: Type, v: Any):
+        self.tp = t
+        self.val = v
+
+    def isImage(self):
+        """Is this an image of some type?"""
+        return isImage(self.tp)
+
+    def get(self, tp):
+        """get data field or None if type doesn't match."""
+        if tp == IMG:
+            return self.val if self.isImage() else None
+        else:
+            return self.val if self.tp == tp else None
+
+    def __str__(self):
+        return "[DATUM-{}, value {}]".format(self.tp, self.val)

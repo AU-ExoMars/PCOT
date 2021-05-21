@@ -17,6 +17,7 @@ import pyperclip
 import uuid
 
 import pcot.conntypes as conntypes
+from pcot.conntypes import Datum
 import pcot.ui as ui
 from pcot import inputs
 from pcot.ui import graphscene
@@ -30,6 +31,7 @@ if TYPE_CHECKING:
 
 # ugly forward declarations so the type hints work
 from pcot.pancamimage import ChannelMapping
+
 
 ## dictionary of name -> transformation type (XFormType)
 allTypes = dict()
@@ -289,32 +291,7 @@ def serialiseConn(c, connSet):
     return None
 
 
-class Datum:
-    """a piece of data sitting in a node's output, to be read by its input."""
-    ## @var tp
-    # the data type
-    tp: conntypes.Type
-    ## @var val
-    # the data value
-    val: Any
 
-    def __init__(self, t: conntypes.Type, v: Any):
-        self.tp = t
-        self.val = v
-
-    def isImage(self):
-        """Is this an image of some type?"""
-        return conntypes.isImage(self.tp)
-
-    def get(self, tp):
-        """get data field or None if type doesn't match."""
-        if tp == conntypes.IMG:
-            return self.val if self.isImage() else None
-        else:
-            return self.val if self.tp == tp else None
-
-    def __str__(self):
-        return "[DATUM-{}, value {}]".format(self.tp, self.val)
 
 
 class BadTypeException(Exception):
