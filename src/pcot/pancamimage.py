@@ -43,7 +43,7 @@ class ROI:
         """
         pass
 
-    def drawBB(self, rgb: 'ImageCube'):
+    def drawBB(self, rgb: 'ImageCube', col):
         """draw BB onto existing RGB image"""
         # write on it - but we MUST WRITE OUTSIDE THE BOUNDS, otherwise we interfere
         # with the image! Doing this predictably with the thickness function
@@ -51,11 +51,11 @@ class ROI:
         if (bb := self.bb()) is not None:
             x, y, w, h = bb
             for i in range(self.fontline):
-                cv.rectangle(rgb, (x - i - 1, y - i - 1), (x + w + i, y + h + i), self.colour, thickness=1)
+                cv.rectangle(rgb, (x - i - 1, y - i - 1), (x + w + i, y + h + i), col, thickness=1)
 
             ty = y if self.labeltop else y + h
             text.write(rgb, self.label, x, ty, self.labeltop, self.fontsize,
-                       self.fontline, self.colour)
+                       self.fontline, col)
 
 
 ## a rectangle ROI
@@ -77,7 +77,7 @@ class ROIRect(ROI):
         return self.x, self.y, self.w, self.h
 
     def draw(self, img: np.ndarray):
-        self.drawBB(img)
+        self.drawBB(img, self.colour)
 
     def mask(self):
         # return a boolean array of True, same size as BB
@@ -114,9 +114,9 @@ def getRadiusFromSlider(sliderVal, imgw, imgh):
 
 class ROIPainted(ROI):
     # we can create this ab initio or from a subimage mask
-    def __init__(self, mask=None,label=None):
+    def __init__(self, mask=None, label=None):
         super().__init__()
-        self.label=label
+        self.label = label
         if mask is None:
             self.bbrect = None
             self.map = None
@@ -171,7 +171,7 @@ class ROIPainted(ROI):
 
     def draw(self, img):
         if self.drawBox:
-            self.drawBB(img)
+            self.drawBB(img, self.colour)
 
         # draw into an RGB image
         # first, get the slice into the real image
@@ -310,7 +310,7 @@ class ROIPoly(ROI):
 
     def draw(self, img):
         if self.drawBox:
-            self.drawBB(img)
+            self.drawBB(img, self.colour)
 
         # first write the points in the actual image
         if self.drawPoints:
@@ -659,12 +659,17 @@ class ImageCube:
         img = self.rgb()
         cv.imwrite(filename, img * 255)  # convert from 0-1
 
-    def drawROIs(self, rgb: np.ndarray = None) -> np.ndarray:
-        """Return an RGB representation of this image with any ROIs drawn on it - an image may be provided."""
+    def drawROIs(self, rgb: np.ndarray = None, onlyROI: ROI = None) -> np.ndarray:
+        """Return an RGB representation of this image with any ROIs drawn on it - an image may be provided.
+        onlyROI indicates that only one ROI should be drawn"""
         if rgb is None:
             rgb = self.rgb()
-        for r in self.rois:
-            r.draw(rgb)
+
+        if onlyROI is None:
+            for r in self.rois:
+                r.draw(rgb)
+        else:
+            onlyROI.draw(rgb)
         return rgb
 
     ## extract the "subimage" - the image cropped to regions of interest,
@@ -788,7 +793,7 @@ class ImageCube:
     def cropROI(self):
         subimg = self.subimage()
         img = ImageCube(subimg.img, rgbMapping=self.mapping, defaultMapping=self.defaultMapping, sources=self.sources)
-        img.rois = [ROIPainted(subimg.mask,"crop")]
+        img.rois = [ROIPainted(subimg.mask, "crop")]
         return img
 
     ## perform a simple function on an image's ROI or the whole image if there is no ROI

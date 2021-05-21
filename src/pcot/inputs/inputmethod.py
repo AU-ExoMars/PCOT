@@ -13,7 +13,7 @@ class InputMethod:
         self.name = ''
         self.data = None
         Canvas.initPersistData(self)
-        self.showROIs = False  # actually part of the canvas.
+        self.showROIs = False  # used by the canvas
 
     ## asks the input if I'm active
     def isActive(self):
