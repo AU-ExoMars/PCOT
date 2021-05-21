@@ -5,7 +5,7 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import QCommandLineParser
 import os, sys
 
-from pcot import config, ui
+import pcot.config
 import pcot.ui.mainwindow
 
 
@@ -37,11 +37,13 @@ def main():
     if len(args) > 0:
         window.load(args[0])
     else:
-        loadfile = config.get('Default', 'loadFile', fallback=None)
+        loadfile = pcot.config.default.get('loadFile', fallback=None)
         if loadfile is not None:
             window.load(os.path.expanduser(loadfile))
 
     app.exec_()  # Start the application
+    print("Leaving app")
+    pcot.config.save()
 
 
 if __name__ == "__main__":

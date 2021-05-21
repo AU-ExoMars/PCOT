@@ -23,7 +23,7 @@ class MultifileInputMethod(InputMethod):
         # list of filter strings - strings which must be in any filenames
         self.namefilters = []
         # directory we're looking at
-        self.dir = '.'
+        self.dir = pcot.config.locations['images']
         # files we have checked in the file list
         self.files = []
         # all data in all channels is multiplied by this (used for, say, 10 bit images)
@@ -108,13 +108,14 @@ class MultifileInputMethod(InputMethod):
 
     def serialise(self):
         x = {'namefilters': self.namefilters,
-                'dir': self.dir,
-                'files': self.files,
-                'mult': self.mult,
-                'filterpat': self.filterpat,
-                'camera': self.camera,
-                }
+             'dir': self.dir,
+             'files': self.files,
+             'mult': self.mult,
+             'filterpat': self.filterpat,
+             'camera': self.camera,
+             }
         Canvas.serialise(self, x)
+        return x
 
     def deserialise(self, data):
         self.namefilters = data['namefilters']
@@ -124,7 +125,6 @@ class MultifileInputMethod(InputMethod):
         self.filterpat = data['filterpat']
         self.camera = data['camera']
         Canvas.deserialise(self, data)
-
 
 
 # Then the UI class..
@@ -137,7 +137,7 @@ class MultifileMethodWidget(MethodWidget):
     def __init__(self, m):
         super().__init__(m)
         self.model = None
-        uic.loadUi(pcot.getAssetAsFile('tabmultifile.ui'), self)
+        uic.loadUi(pcot.config.getAssetAsFile('tabmultifile.ui'), self)
         self.getinitial.clicked.connect(self.getInitial)
         self.filters.textChanged.connect(self.filtersChanged)
         self.filelist.activated.connect(self.itemActivated)
@@ -194,13 +194,15 @@ class MultifileMethodWidget(MethodWidget):
     def fileClickedAction(self, idx):
         if not self.dirModel.isDir(idx):
             self.method.img = None
-            self.method.fname = os.path.relpath(self.dirModel.filePath(idx))
+            self.method.fname = os.path.realpath(self.dirModel.filePath(idx))
             self.method.get()
             self.onInputChanged()
 
     def getInitial(self):
         # select a directory
-        res = QtWidgets.QFileDialog.getExistingDirectory(None, 'Directory for images', '.')
+        d = pcot.config.locations.get('images')
+        res = QtWidgets.QFileDialog.getExistingDirectory(None, 'Directory for images',
+                                                         os.path.expanduser(d))
         if res != '':
             self.selectDir(res)
 
@@ -213,8 +215,10 @@ class MultifileMethodWidget(MethodWidget):
         # get all the files in dir which are images
         self.allFiles = sorted([f for f in os.listdir(dr) if os.path.isfile(os.path.join(dr, f))
                                 and IMAGETYPERE.match(f) is not None])
-        # using the relative path (usually more right than using the absolute)
-        self.method.dir = os.path.relpath(dr)
+        # using the absolute, real path
+        self.method.dir = os.path.realpath(dr)
+        pcot.config.locations['images'] = self.method.dir
+        pcot.config.save()
         # rebuild the model
         self.buildModel()
 

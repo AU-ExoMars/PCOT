@@ -2,13 +2,13 @@
 # Code for the main windows, which hold a scene representing the 
 # "patch" or a macro prototype, a palette of transforms, and an area
 # for tabs controlling transforms.
-
+import os
 import traceback
 from typing import List, Optional, OrderedDict, ClassVar
 
 from PyQt5 import QtWidgets, uic, QtGui
 from PyQt5.QtCore import Qt
-
+from PyQt5.QtWidgets import QAction
 
 import pcot
 from pcot.ui import graphscene, graphview
@@ -19,7 +19,6 @@ import pcot.ui.help as help
 import pcot.ui.namedialog as namedialog
 import pcot.ui.tabs as tabs
 import pcot.xform as xform
-
 
 from pcot.utils import archive
 
@@ -45,9 +44,9 @@ class HelpWindow(QtWidgets.QDialog):
         wid.setText(txt)
         layout.addWidget(wid)
 
-#        button = QtWidgets.QPushButton("Close")
-#        button.clicked.connect(lambda: self.close())
-#        layout.addWidget(button)
+        #        button = QtWidgets.QPushButton("Close")
+        #        button.clicked.connect(lambda: self.close())
+        #        layout.addWidget(button)
 
         self.show()
 
@@ -102,10 +101,14 @@ class MainUI(ui.tabs.DockableTabWindow):
     def __init__(self, macroWindow=False):
         super().__init__()
         self.graph = None
-        uic.loadUi(pcot.getAssetAsFile('main.ui'), self)
+        uic.loadUi(pcot.config.getAssetAsFile('main.ui'), self)
         self.initTabs()
         self.saveFileName = None
         self.setWindowTitle(ui.app().applicationName() + ' ' + ui.app().applicationVersion())
+
+        self.menuFile.addSeparator()
+        self.recentActs = []
+        self.rebuildRecents()
 
         # connect buttons etc.
         self.autolayoutButton.clicked.connect(self.autoLayoutButton)
@@ -178,6 +181,25 @@ class MainUI(ui.tabs.DockableTabWindow):
         MainUI.windows.append(self)
         MainUI.updateAutorun()
 
+    def rebuildRecents(self):
+        # add recent files to menu, removing old ones first. Note that recent files must be at the end
+        # of the menu for this to work!
+
+        for act in self.recentActs:
+            self.menuFile.removeAction(act)
+        self.recentActs = []
+
+        recents = pcot.config.getRecents()
+        if len(recents) > 0:
+            for x in recents:
+                act = QAction(x, parent=self)
+                act.setData(x)
+                self.menuFile.addAction(act)
+                act.triggered.connect(self.loadRecent)
+                self.recentActs.append(act)
+
+
+
     ## is this a macro?
     def isMacro(self):
         # these two had better agree!
@@ -236,6 +258,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         try:
             pcot.save(fname, self.graph)
             ui.msg("File saved : " + fname)
+            self.rebuildRecents()
         except Exception as e:
             traceback.print_exc()
             ui.error("cannot save file {}: {}".format(fname, e))
@@ -255,6 +278,7 @@ class MainUI(ui.tabs.DockableTabWindow):
             self.view.setScene(self.graph.scene)
             ui.msg("File loaded")
             self.saveFileName = fname
+            self.rebuildRecents()
         except Exception as e:
             traceback.print_exc()
             ui.error("cannot open file {}: {}".format(fname, e))
@@ -263,10 +287,13 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     ## the "save as" menu handler
     def saveAsAction(self):
-        res = QtWidgets.QFileDialog.getSaveFileName(self, 'Save file', '.', "PCOT files (*.pcot)")
+        res = QtWidgets.QFileDialog.getSaveFileName(self, 'Save file',
+                                                    os.path.expanduser(pcot.config.locations['pcotfiles']),
+                                                    "PCOT files (*.pcot)")
         if res[0] != '':
             self.save(res[0])
             self.saveFileName = res[0]
+            pcot.config.locations['pcotfiles'] = os.path.dirname(os.path.realpath(res[0]))
 
     ## the "save" menu handler
     def saveAction(self):
@@ -277,10 +304,21 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     ## the "open" menu handler
     def openAction(self):
-        res = QtWidgets.QFileDialog.getOpenFileName(self, 'Open file', '.', "PCOT files (*.pcot)")
+        res = QtWidgets.QFileDialog.getOpenFileName(self,
+                                                    'Open file',
+                                                    os.path.expanduser(pcot.config.locations['pcotfiles']),
+                                                    "PCOT files (*.pcot)")
         if res[0] != '':
             self.closeAllTabs()
             self.load(res[0])
+
+    ## recent file load
+    def loadRecent(self, _):
+        act = self.sender()
+        if act is not None:
+            fn = act.data()
+            self.closeAllTabs()
+            self.load(fn)
 
     ## "copy" menu/keypress
     def copyAction(self):

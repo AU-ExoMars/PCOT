@@ -30,6 +30,8 @@ class InputMethod:
             self.read()  # and try to read. TODO - I'm not happy about this; I feel it's happening too much. Too tired to think properly about it now.
         except FileNotFoundError as e:
             ui.error("Cannot read file {}".format(e.filename))
+        except Exception as e:
+            ui.error(str(e))
 
     ##  returns the cached data
     def get(self):
