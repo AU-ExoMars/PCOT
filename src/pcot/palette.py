@@ -13,7 +13,7 @@ import pcot.ui as ui
 view = None
 
 ## The groups into which the buttons are sorted - it's a constant.
-groups = ["source", "macros", "maths", "processing", "calibration", "data", "colour", "regions", "utility"]
+groups = ["source", "macros", "maths", "processing", "calibration", "data", "regions", "utility"]
 
 
 ## The palette items, which are buttons which can be either clicked or dragged (with RMB)
