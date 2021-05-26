@@ -24,7 +24,7 @@ types = [
     IMGRGB := 'imgrgb',
     IMGGREY := 'imggrey',
     ELLIPSE := 'ellipse',
-    RECT := 'rect',
+    ROI := 'roi',
     NUMBER := 'number',
     # this special type means the node must have its output/input type specified
     # by the user. They don't appear on the graph until this has happened.

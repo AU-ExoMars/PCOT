@@ -19,23 +19,9 @@ class XformPoly(XFormROIType):
     image converted to RGB if that input is not connected.
     """
 
-    # constants enumerating the outputs
-    OUT_IMG = 0
-    OUT_ANNOT = 1
-    OUT_RECT = 2
-
-    IN_IMG = 0
-    IN_ANNOT = 1
-
     def __init__(self):
         super().__init__("poly", "regions", "0.0.0")
-        self.addInputConnector("input", conntypes.IMG)
-        self.addInputConnector("ann", conntypes.IMGRGB, "used as base for annotated image")
-        self.addOutputConnector("img", conntypes.IMG, "image with ROI")  # image+roi
-        self.addOutputConnector("ann", conntypes.IMGRGB,
-                                "image as RGB with ROI, with added annotations around ROI")  # annotated image
-        self.addOutputConnector("rect", conntypes.RECT, "the crop rectangle data")  # rectangle (just the ROI's bounding box)
-        self.autoserialise = ('caption', 'captiontop', 'fontsize', 'fontline', 'colour', 'drawMode')
+        self.autoserialise += ('drawMode',)
 
     def createTab(self, n, w):
         return TabPoly(n, w)

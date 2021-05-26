@@ -1218,6 +1218,26 @@ class XFormGraph:
 class XFormROIType(XFormType):
     """Class for handling ROI xform types, does most of the heavy lifting of the node's perform
     function. The actual ROIs are dealt with in pancamimage"""
+
+    # constants enumerating the outputs
+    OUT_IMG = 0
+    OUT_ANNOT = 1
+    OUT_ROI = 2
+
+    IN_IMG = 0
+    IN_ANNOT = 1
+
+    def __init__(self, name, group, ver):
+        super().__init__(name, group, ver)
+        self.addInputConnector("input", conntypes.IMG)
+        self.addInputConnector("ann", conntypes.IMGRGB, "used as base for annotated image")
+        self.addOutputConnector("img", conntypes.IMG, "image with ROI")  # image+roi
+        self.addOutputConnector("ann", conntypes.IMGRGB,
+                                "image as RGB with ROI, with added annotations around ROI")  # annotated image
+        self.addOutputConnector("roi", conntypes.ROI, "the region of interest")
+
+        self.autoserialise = ('caption', 'captiontop', 'fontsize', 'fontline', 'colour')
+
     def setProps(self, node, img):
         """Set properties in the node and ROI attached to the node. Assumes img is a valid
         imagecube, and node.roi is the ROI"""
@@ -1234,7 +1254,7 @@ class XFormROIType(XFormType):
             # no image
             node.setOutput(self.OUT_IMG, None)
             node.setOutput(self.OUT_ANNOT, None if inAnnot is None else Datum(conntypes.IMGRGB, inAnnot))
-            node.setOutput(self.OUT_RECT, None)
+            node.setOutput(self.OUT_ROI, None)
         else:
             self.setProps(node, img)
             # copy image and append ROI to it
@@ -1251,9 +1271,8 @@ class XFormROIType(XFormType):
             node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
             node.setOutput(self.OUT_ANNOT, Datum(conntypes.IMG, rgb))
             node.img = img
-            # output BB
-            bb = node.roi.bb()
-            node.setOutput(self.OUT_RECT, Datum(conntypes.RECT, None if bb is None else bb))
+            # output the ROI - note that this is NOT a copy!
+            node.setOutput(self.OUT_ROI, Datum(conntypes.ROI, node.roi))
 
             if node.isOutputConnected(self.OUT_IMG):
                 node.setOutput(self.OUT_IMG, Datum(conntypes.IMG, node.img))  # output image and ROI

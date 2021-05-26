@@ -22,10 +22,10 @@ class XformInset(XFormType):
 
     def __init__(self):
         super().__init__("inset", "regions", "0.0.0")
-        self.addInputConnector("img", "img")
-        self.addInputConnector("inset", "img")
-        self.addInputConnector("rect", "rect")
-        self.addOutputConnector("", "img")
+        self.addInputConnector("img", conntypes.IMG)
+        self.addInputConnector("inset", conntypes.IMG)
+        self.addInputConnector("roi", conntypes.ROI)
+        self.addOutputConnector("", conntypes.IMG)
         self.autoserialise = ('insetrect', 'caption', 'captiontop',
                               'fontsize', 'fontline', 'colour')
         self.hasEnable = True
@@ -45,7 +45,9 @@ class XformInset(XFormType):
     def perform(self, node):
         image = node.getInput(0, conntypes.IMG)  # this is the main image
         inset = node.getInput(1, conntypes.IMG)  # this is the thing we're going to insert
-        inrect = node.getInput(2, conntypes.RECT)  # this is the rectangle
+        roi = node.getInput(2, conntypes.ROI)  # this is the ROI
+
+        inrect = None if roi is None else roi.bb()  # get rect from ROI
 
         # if there is no input rect we use the rubberbanded one set by the tab
         if inrect is None:
