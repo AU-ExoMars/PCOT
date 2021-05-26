@@ -9,36 +9,51 @@
 # These types are also used by the expression evaluator.
 from typing import Any
 
+
 # Here is where new connection types are registered and tested
 # for compatibility: I'm aware that this should really be model-only,
 # but there's UI stuff in here too because (a) I don't want to separate it out and
 # (b) there isn't much more to a type than its name.
 
-Type = str
+
+class Type:
+    def __init__(self, name, image=False, internal=False):
+        self.name = name
+        self.image = image  # is the type for an image (i.e. is it a 'subtype' of Type("img")?)
+        self.internal = internal  # is it an internal type used in the expression evaluator, not for connectors?
+
+    def __str__(self):
+        return self.name
+
 
 ## complete list of all types
 types = [
-    ANY := 'any',
+    ANY := Type("any"),
     # image types, which all contain 'img' in their string (yes, ugly).
-    IMG := 'img',
-    IMGRGB := 'imgrgb',
-    IMGGREY := 'imggrey',
-    ELLIPSE := 'ellipse',
-    ROI := 'roi',
-    NUMBER := 'number',
+    IMG := Type("img", image=True),
+    IMGRGB := Type("imgrgb", image=True),
+    ELLIPSE := Type("ellipse"),
+    ROI := Type("roi"),
+    NUMBER := Type("number"),
     # this special type means the node must have its output/input type specified
     # by the user. They don't appear on the graph until this has happened.
-    VARIANT := 'variant',
-    # these types are not generally used for connections, but for values on the expression evaluation stack
-    IDENT := 'ident',
-    FUNC := 'func',
+    VARIANT := Type("variant"),
     # generic data
-    DATA := 'data'
+    DATA := Type("data"),
+
+    # these types are not generally used for connections, but for values on the expression evaluation stack
+    IDENT := Type("ident", internal=True),
+    FUNC := Type("func", internal=True)
 ]
 
+# lookup by name for serialisation
+typesByName = {t.name: t for t in types}
 
-def isImage(t: Type):
-    return "img" in t
+
+def deserialise(n):
+    if n not in typesByName:
+        raise Exception("cannot find type {} for a connector".format(n))
+    return typesByName[n]
 
 
 ## are two connectors compatible?
@@ -55,7 +70,7 @@ def isCompatibleConnection(outtype, intype):
 
     # image inputs accept all images
     if intype == IMG:
-        return 'img' in outtype
+        return outtype.image
     elif intype == ANY:  # accepts anything
         return True
     else:
@@ -78,7 +93,7 @@ class Datum:
 
     def isImage(self):
         """Is this an image of some type?"""
-        return isImage(self.tp)
+        return self.tp.image
 
     def get(self, tp):
         """get data field or None if type doesn't match."""

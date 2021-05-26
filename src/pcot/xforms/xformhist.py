@@ -20,7 +20,7 @@ class XFormHistogram(XFormType):
     def __init__(self):
         super().__init__("histogram", "data", "0.0.0")
         self.autoserialise = ('bincount',)
-        self.addInputConnector("", "img")
+        self.addInputConnector("", conntypes.IMG)
 
     def createTab(self, n, w):
         return TabHistogram(n, w)

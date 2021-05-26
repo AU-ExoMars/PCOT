@@ -6,7 +6,7 @@ import pcot.ui as ui
 from pcot.channelsource import IChannelSource
 from pcot.filters import wav2RGB
 from pcot.utils.table import Table
-from pcot.xform import XFormType, xformtype
+from pcot.xform import XFormType, xformtype, XFormException
 
 
 # find the mean of all the masked values. Note mask negation!
@@ -128,7 +128,10 @@ class TabSpectrum(ui.tabs.Tab):
         cols = cm.get_cmap('Dark2').colors
 
         for legend, x in self.node.data.items():
-            [chans, wavelengths, spectrum, labels] = list(zip(*x))  # "unzip" idiom
+            try:
+                [chans, wavelengths, spectrum, labels] = list(zip(*x))  # "unzip" idiom
+            except ValueError:
+                raise XFormException("cannot get spectrum - problem with ROIs?")
             self.w.mpl.ax.plot(wavelengths, spectrum, label=legend)
             self.w.mpl.ax.scatter(wavelengths, spectrum, c=[wav2RGB(x) for x in wavelengths])
         #            for _, wv, sp, lab in x:

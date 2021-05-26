@@ -59,7 +59,7 @@ class XFormMacroConnector(XFormType):
         super().__init__(name, "hidden", "0.0.0")
         self.displayName = '??'  # forces a rename in setConnectors first time
         self._md5 = ''  # we ignore the MD5 checksum for versioning
-        self.autoserialise = ('idx', 'conntype')
+        self.autoserialise = ('idx', )
 
     def init(self, node):
         node.datum = None
@@ -67,13 +67,15 @@ class XFormMacroConnector(XFormType):
 
     ## called from XForm.serialise, saves the macro name
     def serialise(self, node):
-        return {'macro': node.proto.name}
+        return {'macro': node.proto.name,
+                'conntype': node.conntype.name}
 
     ## called from XForm.deserialise, finds the macro
     def deserialise(self, node, d):
         name = d['macro']
         if name not in XFormMacro.protos:
             raise Exception('macro {} not found'.format(name))
+        node.conntype = conntypes.deserialise(d['conntype'])
         node.proto = XFormMacro.protos[name]
         node.proto.setConnectors()
 

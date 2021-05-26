@@ -17,9 +17,9 @@ class XformEllipseDetect(XFormType):
 
     def __init__(self):
         super().__init__("ellipsedetect", "calibration", "0.0.0")
-        self.addInputConnector("", "img")
-        self.addOutputConnector("img", "img")
-        self.addOutputConnector("data", "ellipse")
+        self.addInputConnector("", conntypes.IMG)
+        self.addOutputConnector("img", conntypes.IMG)
+        self.addOutputConnector("data", conntypes.ELLIPSE)
 
     def createTab(self, n, w):
         return TabImage(n, w)

@@ -539,8 +539,8 @@ class XForm:
              'displayName': self.displayName,
              'ins': [serialiseConn(c, selection) for c in self.inputs],
              'comment': self.comment,
-             'outputTypes': self.outputTypes,
-             'inputTypes': self.inputTypes,
+             'outputTypes': [None if x is None else x.name for x in self.outputTypes],
+             'inputTypes': [None if x is None else x.name for x in self.inputTypes],
              'md5': self.type.md5(),
              'ver': self.type.ver,
              'mapping': self.mapping.serialise()}
@@ -562,8 +562,9 @@ class XForm:
         Some entries have already been already dealt with."""
         self.xy = d['xy']
         self.comment = d['comment']
-        self.outputTypes = d['outputTypes']
-        self.inputTypes = d['inputTypes']
+        # these are the overriding types - if the value is None, use the xformtype's value, else use the one here.
+        self.outputTypes = [None if x is None else conntypes.deserialise(x) for x in d['outputTypes']]
+        self.inputTypes = [None if x is None else conntypes.deserialise(x) for x in d['inputTypes']]
         self.savedver = d['ver']  # ver is version node was saved with
         self.savedmd5 = d['md5']  # and stash the MD5 we were saved with
         self.displayName = d['displayName']

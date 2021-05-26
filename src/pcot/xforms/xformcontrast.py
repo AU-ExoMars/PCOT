@@ -47,11 +47,9 @@ class XformContrast(XFormType):
         super().__init__("contrast stretch", "processing", "0.0.0")
         # set up a single input which takes an image of any type. The connector could have
         # a name in more complex node types, but here we just have an empty string.
-        self.addInputConnector("", "img")
-        # and a single output which produces an image of any type (but this will be modified
-        # when the input is wired up to specify the exact image type - done in
-        # generateOutputTypes). 
-        self.addOutputConnector("", "img")
+        self.addInputConnector("", conntypes.IMG)
+        # and a single output which produces an image of any type
+        self.addOutputConnector("", conntypes.IMG)
         # There is one data item which should be saved - the "tol" (tolerance) control value.
         self.autoserialise = ('tol',)
         self.hasEnable = True

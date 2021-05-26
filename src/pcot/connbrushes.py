@@ -22,7 +22,6 @@ def quickGrad(c1, c2, c3, finalC):
 
 brushDict[ANY] = Qt.red
 brushDict[IMGRGB] = quickGrad(Qt.red, Qt.green, Qt.blue, QColor(50, 50, 50))
-brushDict[IMGGREY] = Qt.gray
 brushDict[IMG] = Qt.blue
 brushDict[ELLIPSE] = Qt.cyan
 brushDict[ROI] = Qt.cyan

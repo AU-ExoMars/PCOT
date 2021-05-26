@@ -60,8 +60,8 @@ class XformGradient(XFormType):
 
     def __init__(self):
         super().__init__("gradient", "data", "0.0.0")
-        self.addInputConnector("", "img")
-        self.addOutputConnector("", "img")
+        self.addInputConnector("", conntypes.IMG)
+        self.addOutputConnector("", conntypes.IMG)
         self.autoserialise = ('gradient',)
         self.hasEnable = True
 
