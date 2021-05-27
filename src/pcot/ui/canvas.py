@@ -480,6 +480,8 @@ class Canvas(QtWidgets.QWidget):
             # if there's an ROI being set from this node (and we're not showing all ROIs), show its details
             # Also have to check the ROI itself is OK.
             txt = "{} pixels in ROI".format(self.ROInode.roi.pixels())
+        else:
+            txt = ""
         self.roiText.setText(txt)
 
         self.canvas.display(self.previmg, self.isPremapped, showROIs=self.persister.showROIs)
