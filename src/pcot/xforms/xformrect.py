@@ -56,6 +56,7 @@ class TabRect(pcot.ui.tabs.Tab):
         # but we still need to be able to edit it
         self.w.canvas.setMapping(node.mapping)
         self.w.canvas.setPersister(node)
+        self.w.canvas.setROINode(node)
 
         self.mouseDown = False
         self.dontSetText = False

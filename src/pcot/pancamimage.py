@@ -43,6 +43,13 @@ class ROI:
         """
         pass
 
+    def pixels(self):
+        """count the number of pixels in the ROI"""
+        if self.bb() is None:
+            return 0    # ROI is degenerate or inactive
+        else:
+            return self.mask().sum()
+
     def drawBB(self, rgb: 'ImageCube', col):
         """draw BB onto existing RGB image"""
         # write on it - but we MUST WRITE OUTSIDE THE BOUNDS, otherwise we interfere
@@ -215,14 +222,18 @@ class ROIPainted(ROI):
             # calculate new bounding box
             cols = np.any(fullsize, axis=0)
             rows = np.any(fullsize, axis=1)
-            ymin, ymax = np.where(rows)[0][[0, -1]]
-            xmin, xmax = np.where(cols)[0][[0, -1]]
-            xmax += 1
-            ymax += 1
-            # cut out the new data
-            self.map = fullsize[ymin:ymax, xmin:xmax]
-            # construct the new BB
-            self.bbrect = (int(xmin), int(ymin), int(xmax - xmin), int(ymax - ymin))
+            if cols.any():
+                ymin, ymax = np.where(rows)[0][[0, -1]]
+                xmin, xmax = np.where(cols)[0][[0, -1]]
+                xmax += 1
+                ymax += 1
+                # cut out the new data
+                self.map = fullsize[ymin:ymax, xmin:xmax]
+                # construct the new BB
+                self.bbrect = (int(xmin), int(ymin), int(xmax - xmin), int(ymax - ymin))
+            else:
+                self.bbrect = None
+                self.map = None
 
     def __str__(self):
         if not self.bbrect:

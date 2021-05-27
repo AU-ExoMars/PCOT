@@ -86,6 +86,7 @@ class TabPainted(pcot.ui.tabs.Tab):
         # but we still need to be able to edit it
         self.w.canvas.setMapping(node.mapping)
         self.w.canvas.setPersister(node)
+        self.w.canvas.setROINode(node)
         self.w.canvas.canvas.setMouseTracking(True)
         self.mousePos = None
         self.mouseDown = False
