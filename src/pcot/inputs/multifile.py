@@ -24,6 +24,8 @@ class MultifileInputMethod(InputMethod):
         self.namefilters = []
         # directory we're looking at
         self.dir = pcot.config.locations['images']
+        if not os.path.isdir(self.dir):
+            self.dir = os.path.expanduser("~")
         # files we have checked in the file list
         self.files = []
         # all data in all channels is multiplied by this (used for, say, 10 bit images)

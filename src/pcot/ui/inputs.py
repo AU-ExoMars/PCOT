@@ -89,6 +89,8 @@ class TreeMethodWidget(MethodWidget):
         self.dirModel = QFileSystemModel()
         # pretty ugly way to get hold of the config, done to avoid cyclic imports
         root = os.path.expanduser(pcot.config.locations.get('images'))
+        if not os.path.isdir(root):
+            root = os.path.expanduser("~")
         self.dirModel.setRootPath(root)
         self.dirModel.setNameFilters(filterList)
         self.dirModel.setNameFilterDisables(False)

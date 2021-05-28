@@ -82,6 +82,7 @@ def funcMerge(args, optargs):
     for x in args:
         if x.channels == 1:
             bands.append(x.img)
+            print(x.img)
         else:
             bands = bands + cv.split(x.img)
         sources = sources + x.sources
