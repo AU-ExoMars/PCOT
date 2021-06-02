@@ -23,7 +23,7 @@
       </sizepolicy>
      </property>
      <property name="text">
-      <string>Mode</string>
+      <string>Error bars</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -48,10 +48,20 @@
     </widget>
    </item>
    <item row="2" column="3">
-    <widget class="QComboBox" name="mode">
+    <widget class="QComboBox" name="errorbarmode">
      <item>
       <property name="text">
-       <string>CURRENTLY UNUSED</string>
+       <string>None</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>One standard error</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>One standard deviation</string>
       </property>
      </item>
     </widget>
