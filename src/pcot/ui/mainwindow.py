@@ -430,9 +430,9 @@ class MainUI(ui.tabs.DockableTabWindow):
         win = HelpWindow(self, node)
 
     ## add a macro connector, only should be used on macro prototypes   
-    def addMacroConnector(self, type):
+    def addMacroConnector(self, tp):
         # create the node inside the prototype
-        n = self.graph.create(type)
+        n = self.graph.create(tp)
         n.xy = self.graph.scene.getNewPosition()
         assert (self.isMacro())
         assert (self.macroPrototype is not None)
