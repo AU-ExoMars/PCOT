@@ -78,10 +78,6 @@ def processData(table, legend, data, pxct, wavelengths, spectrum, chans, chanlab
     # This means pixcount get dupped a lot but it's not a problem
     data[legend] += list(zip(chans, wavelengths, means, sds, chanlabels, pixcts))
 
-    pp = pprint.PrettyPrinter(indent=4)
-    pp.pprint(data[legend])
-
-
     # add to table
     table.newRow(legend)
     table.add("name", legend)
