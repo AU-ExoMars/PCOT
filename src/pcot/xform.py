@@ -1012,6 +1012,9 @@ class XFormGraph:
                     # on an object inside that graph. We need to call performNodes() on the main graph
                     # to run the XFormMacro node inside that graph.
                     inst.graph.performNodes(inst)
+
+                # and rebuild graphics in the prototype
+                self.rebuildGraphics()
             else:
                 self.performNodes(node)
         else:
