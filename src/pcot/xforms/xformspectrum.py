@@ -1,4 +1,5 @@
 import math
+import pprint
 
 import numpy as np
 from matplotlib import cm
@@ -31,19 +32,55 @@ def wavelength(channelNumber, img):
     return source.getFilter().cwl
 
 
-def processData(table, subimg, legend, wavelengths, spectrum, data, chans, chanlabels, pxct):
+def processData(table, legend, data, pxct, wavelengths, spectrum, chans, chanlabels):
+    """
+    table: Table object for dump output
+    legend: name of ROI/image
+    data: data dictionary
+        part of processData's responsibility is to set the entries in here
+            - key is ROI/image name, value is a list of data.
+            - valiue is a list of tuples (chanidx, cwl, mean, sd, labels, pixct)
+    Then a list for each channel, giving
+        wavelengths:    cwl of channel
+        spectrum        (mean,sd) of intensity across ROI/image for this channel
+
+    Consider two images. Image 0 has an ROI with 3132 pixels in it, image 1 has an ROI
+    with only 484 pixels in it. However, the two ROIs both have the same name, and are fed
+    into a spectrum. They will be combined into a single data list looking like this:
+    [
+        # channel index, cwl, mean intensity, sd of intensity, channel label, pixel count
+       (0, 438.0, 0.09718827482688777, 0.033184560153696856, 'L4_438', 3132),
+        (1, 500.0, 0.12427511008154235, 0.04296475099012811, 'L5_500', 3132),
+        (2, 532.0, 0.15049515647449713, 0.04899176061731549, 'L6_532', 3132),
+        (3, 568.0, 0.18620748507717713, 0.05834286572257662, 'L7_568', 3132),
+        (4, 610.0, 0.23161822595511056, 0.07227542372780232, 'L8_610', 3132),
+        (5, 671.0, 0.2626209478268678, 0.08226790002558386, 'L9_671', 3132),
+        (0, 740.0, 0.3917202910115896, 0.08213716515845079, 'R4_740', 484),
+        (1, 780.0, 0.41594551023372933, 0.08695280835403581, 'R5_780', 484),
+        (2, 832.0, 0.39478648792613635, 0.08164454531723438, 'R6_832', 484),
+        (3, 900.0, 0.37751833072378616, 0.07634822775362438, 'R7_900', 484),
+        (4, 950.0, 0.3726376304941729, 0.07310612483354316, 'R8_950', 484),
+        (5, 1000.0, 0.4105814784026343, 0.08091608212909969, 'R9_1000', 484)]
+    ]
+
+    This should mean that the standard error will be calculated correctly for both of the ROI.
+    """
 
     # zip them all together and append to the list for that legend (creating a new list
     # if there isn't one)
     if legend not in data:
         data[legend] = []
 
-    # spectrum is [(mean,sd), (mean,sd)...]
+    # spectrum is [(mean,sd), (mean,sd)...] but we also build a pixcount array
     means, sds, pixcts = [x[0] for x in spectrum], [x[1] for x in spectrum], [pxct for x in spectrum]
 
     # data for each region is [ (chan,wave,mean,sd,chanlabel,pixcount), (chan,wave,mean,sd,chanlabel,pixcount)..]
     # This means pixcount get dupped a lot but it's not a problem
     data[legend] += list(zip(chans, wavelengths, means, sds, chanlabels, pixcts))
+
+    pp = pprint.PrettyPrinter(indent=4)
+    pp.pprint(data[legend])
+
 
     # add to table
     table.newRow(legend)
@@ -108,8 +145,8 @@ class XFormSpectrum(XFormType):
                     subimg = img.img
                     # this returns a tuple for each channel of (mean,sd)
                     spectrum = [getSpectrum(subimg[:, :, i], None) for i in chans]
-                    processData(table, subimg, legend, wavelengths,
-                                spectrum, data, chans, chanlabels, img.w * img.h)
+                    processData(table, legend, data, img.w * img.h,
+                                wavelengths, spectrum, chans, chanlabels)
 
                 for roi in img.rois:
                     # only include valid ROIs
@@ -121,8 +158,8 @@ class XFormSpectrum(XFormType):
                     # now we need to get the mean amplitude of the pixels in each channel in the ROI
                     # this returns a tuple for each channel of (mean,sd)
                     spectrum = [getSpectrum(subimg.img[:, :, i], subimg.mask) for i in chans]
-                    processData(table, subimg, legend, wavelengths,
-                                spectrum, data, chans, chanlabels, subimg.pixelCount())
+                    processData(table, legend, data, subimg.pixelCount(),
+                                wavelengths, spectrum, chans, chanlabels)
 
         # now, for each list in the dict, build a new dict of the lists sorted
         # by wavelength
