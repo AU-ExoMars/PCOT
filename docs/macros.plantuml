@@ -7,6 +7,8 @@ abstract class XFormType {
 MacroInstance o-- XFormMacro:proto
 XFormMacro --|> XFormType
 
+XFormGraph o-- XFormMacro:proto
+
 MacroInstance *-- XFormGraph:graph
 note right on link
 This is the instance graph,
@@ -18,8 +20,8 @@ XFormMacro *-- XFormGraph:graph
 note right on link
 This is the prototype graph
 end note
-XFormMacro *-- "1..*" XFormMacro:protos
 
+XForm o-- XFormGraph:graph
 XForm *-- MacroInstance:instance
 XForm o-- XFormMacro:type
 note right of XForm
