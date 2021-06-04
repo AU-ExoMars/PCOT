@@ -215,6 +215,11 @@ class XFormType:
         ui.mainwindow.MainUI.rebuildPalettes()
         ui.mainwindow.MainUI.rebuildAll()
 
+    def cycleCheck(self, g):
+        """does this type's prototype graph (if it is a macro) contain a macro
+        whose graph is g? False by default."""
+        return False
+
     @classmethod
     def all(cls):
         """return all types"""
@@ -852,7 +857,7 @@ class XFormGraph:
     # true if this is a macro prototype, will be false for instances
     isMacro: bool
 
-    ## @var performingGraph    
+    ## @var performingGraph
     # true when I'm recursively performing my nodes. Avoids parallel
     # attempts to run a graph in different threads.
     performingGraph: bool
@@ -899,9 +904,9 @@ class XFormGraph:
         """create a new node, passing in a type name."""
         if typename in allTypes:
             tp = allTypes[typename]
-            # first, try to make sure we aren't creating a macro in a macro
-            if self.isMacro and isinstance(tp, pcot.macros.XFormMacro):
-                raise XFormException('TYPE', "Cannot create a macro which contains a macro")
+            # first, try to make sure we aren't creating a macro inside itself
+            if tp.cycleCheck(self):
+                raise XFormException('TYPE', "Cannot create a macro which contains itself")
 
             # display name is just the type name to start with.
             xform = XForm(tp, tp.name)
@@ -973,13 +978,6 @@ class XFormGraph:
         fn(root)
         for n in root.children:
             self.visit(n, fn)
-
-    ## does the graph contain this type of node?
-    def containsType(self, tp):
-        for x in self.nodes:
-            if x.type == tp:
-                return True
-        return False
 
     ## we are about to perform some nodes due to a UI change, so reset errors, hasRun flag, and outputs
     # of the descendants of the node we are running (or all nodes if we are running the entire graph)

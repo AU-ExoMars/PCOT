@@ -11,9 +11,9 @@ import pcot.ui.mainwindow
 import pcot.conntypes as conntypes
 import pcot.xform as xform
 from pcot.pancamimage import ChannelMapping
-from pcot.xform import XFormType
+from pcot.xform import XFormType, XFormGraph
 
-    ## This is the instance of a macro, containing its copy of the graph
+ ## This is the instance of a macro, containing its copy of the graph
 # and some metadata. Refactoring note - this class used to be a lot bigger
 # and things gradually got moved into the node itself. That's now probably
 # the best place for them, although copyProto is a problem.
@@ -272,6 +272,20 @@ class XFormMacro(XFormType):
         super().renameType(newname)
         XFormMacro.protos[newname] = self
 
+    ## we are about to insert this macro into the prototype graph g. Return true
+    # if this would make a cycle.
+    def cycleCheck(self, g: XFormGraph):
+        if self.graph == g:
+            return True
+        # for every node in here, make sure it's not a macro whose prototype graph is g
+        for x in self.graph.nodes:
+            if x.type.cycleCheck(g):
+                return True
+        return False
+
+
+
+
     ## this serialises all the macro prototypes
     @staticmethod
     def serialiseAll():
@@ -383,7 +397,7 @@ class XFormMacro(XFormType):
 class TabMacro(Tab):
     def __init__(self, node:XFormMacro, w):
         super().__init__(w, node, 'tabmacro.ui')
-        self.w.openProto.pressed.connect(self.openProto)
+        self.w.openProto.clicked.connect(self.openProto)
         self.w.canvas.setMapping(node.mapping)
         self.w.canvas.setGraph(node.graph)
         self.w.canvas.setPersister(node)
