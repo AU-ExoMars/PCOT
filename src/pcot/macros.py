@@ -283,9 +283,6 @@ class XFormMacro(XFormType):
                 return True
         return False
 
-
-
-
     ## this serialises all the macro prototypes
     @staticmethod
     def serialiseAll():

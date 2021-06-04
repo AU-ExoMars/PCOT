@@ -247,11 +247,13 @@ class MainUI(ui.tabs.DockableTabWindow):
             evt.accept()
         elif QMessageBox.question(self.parent(), "Clear region", "Are you sure?",
                                   QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
-            evt.accept()
-            self.graph.inputMgr.closeAllWindows()
+            MainUI.windows.remove(self)
             self.closeAllTabs()
-            for x in self.windows:
-                x.close()
+            # if the only remaining windows at this point are macro windows, close them too.
+            if all([x.isMacro() for x in MainUI.windows]):
+                for x in MainUI.windows.copy():  # do on a copy because this recurses
+                    x.close()
+            evt.accept()
         else:
             evt.ignore()
 
