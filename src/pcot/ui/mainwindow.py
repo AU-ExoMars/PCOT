@@ -8,7 +8,7 @@ from typing import List, Optional, OrderedDict, ClassVar
 
 from PyQt5 import QtWidgets, uic, QtGui
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QAction
+from PyQt5.QtWidgets import QAction, QMessageBox
 
 import pcot
 from pcot.ui import graphscene, graphview
@@ -198,8 +198,6 @@ class MainUI(ui.tabs.DockableTabWindow):
                 act.triggered.connect(self.loadRecent)
                 self.recentActs.append(act)
 
-
-
     ## is this a macro?
     def isMacro(self):
         # these two had better agree!
@@ -240,10 +238,22 @@ class MainUI(ui.tabs.DockableTabWindow):
             if tab:
                 w.retitleTabs()
 
-    ## close event handler
+    ## close event handler - close all windows on confirmation if this is a main window, otherwise it's a macro - don't
+    # bother confirming, just close this window.
+
     def closeEvent(self, evt):
-        MainUI.windows.remove(self)
-        self.graph.inputMgr.closeAllWindows()
+        if self.isMacro():
+            MainUI.windows.remove(self)
+            evt.accept()
+        elif QMessageBox.question(self.parent(), "Clear region", "Are you sure?",
+                                  QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+            evt.accept()
+            self.graph.inputMgr.closeAllWindows()
+            self.closeAllTabs()
+            for x in self.windows:
+                x.close()
+        else:
+            evt.ignore()
 
     ## autolayout button handler
     def autoLayoutButton(self):
@@ -420,9 +430,9 @@ class MainUI(ui.tabs.DockableTabWindow):
         win = HelpWindow(self, node)
 
     ## add a macro connector, only should be used on macro prototypes   
-    def addMacroConnector(self, type):
+    def addMacroConnector(self, tp):
         # create the node inside the prototype
-        n = self.graph.create(type)
+        n = self.graph.create(tp)
         n.xy = self.graph.scene.getNewPosition()
         assert (self.isMacro())
         assert (self.macroPrototype is not None)

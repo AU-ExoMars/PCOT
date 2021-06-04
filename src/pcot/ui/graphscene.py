@@ -655,7 +655,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 outtype = n1.getOutputType(output)
                 intype = n2.getInputType(inputIdx)
 
-                if conntypes.isCompatibleConnection(outtype, intype):
+                if intype is not None and outtype is not None and conntypes.isCompatibleConnection(outtype, intype):
                     if n2.cycle(n1):
                         ui.error("cannot create a cycle")
                     else:

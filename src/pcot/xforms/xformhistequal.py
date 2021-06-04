@@ -47,8 +47,8 @@ class XformHistEqual(XFormType):
 
     def __init__(self):
         super().__init__("histequal", "processing", "0.0.0")
-        self.addInputConnector("", "img")
-        self.addOutputConnector("", "img")
+        self.addInputConnector("", conntypes.IMG)
+        self.addOutputConnector("", conntypes.IMG)
         self.hasEnable = True
 
     def createTab(self, n, w):

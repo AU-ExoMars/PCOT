@@ -264,7 +264,14 @@ class Canvas(QtWidgets.QWidget):
     # is this a premapped image?
     isPremapped: bool
 
+    ## @var canvas
+    # the actual canvas itself on which the image is displayed
     canvas: InnerCanvas
+
+    ## @var ROInode
+    # if we're displaying the canvas of an ROI node, a reference to that node
+    # so we can display stats for just its ROI. Otherwise None.
+    ROInode: Optional['XForm']
 
     ## constructor
     def __init__(self, parent):
@@ -274,6 +281,7 @@ class Canvas(QtWidgets.QWidget):
         self.keyHook = None
         self.graph = None
         self.nodeToPerform = None
+        self.ROInode = None
 
         # outer layout is a vertical box - the topbar and canvas+scrollbars are in this
         outerlayout = QtWidgets.QVBoxLayout()
@@ -294,6 +302,10 @@ class Canvas(QtWidgets.QWidget):
         self.roiToggle = QtWidgets.QRadioButton("Show ROIS")
         topbar.addWidget(self.roiToggle, 0, 3)
         self.roiToggle.toggled.connect(self.roiToggleChanged)
+
+        self.roiText = QtWidgets.QLabel('')
+        topbar.addWidget(self.roiText, 1, 3)
+
         self.topbarwidget.setContentsMargins(0, 0, 0, 0)
         topbar.setContentsMargins(0, 0, 0, 0)
 
@@ -347,6 +359,10 @@ class Canvas(QtWidgets.QWidget):
         self.persister = p
         self.roiToggle.setChecked(p.showROIs)
 
+    ## if this is a canvas for an ROI node, set that node.
+    def setROINode(self, n):
+        self.ROInode = n
+
     ## some canvas persistence data is to be stored from an object into a dict.
     # Get the data from the object and store it in the dict.
     @staticmethod
@@ -361,7 +377,7 @@ class Canvas(QtWidgets.QWidget):
     ## prepare an object for holding some of our data
     @staticmethod
     def initPersistData(o):
-        if not hasattr(o,'showROIs'):
+        if not hasattr(o, 'showROIs'):
             o.showROIs = False
 
     # these sets a reference to the mapping this canvas is using - bear in mind this class can mutate
@@ -451,6 +467,23 @@ class Canvas(QtWidgets.QWidget):
     def redisplay(self):
         if self.nodeToPerform is not None:
             self.graph.performNodes(self.nodeToPerform)
+
+        # set ROI pixel count text.
+        if self.previmg is None:
+            # if there's no image, then there are no pixels
+            txt = ""
+        elif self.persister.showROIs:
+            # if we're displaying all ROIs, show that pixel count (and ROI count)
+            txt = "{} pixels in {} ROIs".format(sum([x.pixels() for x in self.previmg.rois]),
+                                                len(self.previmg.rois))
+        elif self.ROInode is not None and self.ROInode.roi is not None:
+            # if there's an ROI being set from this node (and we're not showing all ROIs), show its details
+            # Also have to check the ROI itself is OK.
+            txt = "{} pixels in ROI".format(self.ROInode.roi.pixels())
+        else:
+            txt = ""
+        self.roiText.setText(txt)
+
         self.canvas.display(self.previmg, self.isPremapped, showROIs=self.persister.showROIs)
 
     ## reset the canvas to x1 magnification

@@ -23,12 +23,15 @@ class VariantWidget(QtWidgets.QGroupBox):
         self.buttons = []
         idx = 0
         for x in conntypes.types:
-            b = QtWidgets.QRadioButton(x)
-            layout.addWidget(b)
-            self.buttons.append(b)
-            b.idx = idx
+            # I would operate on a filtered list, but note that we still need the
+            # indices to be incremented on every type.
+            if not x.internal:
+                b = QtWidgets.QRadioButton(str(x))
+                layout.addWidget(b)
+                self.buttons.append(b)
+                b.idx = idx
+                b.toggled.connect(self.buttonToggled)
             idx += 1
-            b.toggled.connect(self.buttonToggled)
 
     def buttonToggled(self, _):
         for b in self.buttons:

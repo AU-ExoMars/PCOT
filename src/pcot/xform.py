@@ -17,6 +17,7 @@ import pyperclip
 import uuid
 
 import pcot.conntypes as conntypes
+import pcot.macros
 from pcot.conntypes import Datum
 import pcot.ui as ui
 from pcot import inputs
@@ -213,6 +214,11 @@ class XFormType:
         allTypes[newname] = self
         ui.mainwindow.MainUI.rebuildPalettes()
         ui.mainwindow.MainUI.rebuildAll()
+
+    def cycleCheck(self, g):
+        """does this type's prototype graph (if it is a macro) contain a macro
+        whose graph is g? False by default."""
+        return False
 
     @classmethod
     def all(cls):
@@ -539,8 +545,8 @@ class XForm:
              'displayName': self.displayName,
              'ins': [serialiseConn(c, selection) for c in self.inputs],
              'comment': self.comment,
-             'outputTypes': self.outputTypes,
-             'inputTypes': self.inputTypes,
+             'outputTypes': [None if x is None else x.name for x in self.outputTypes],
+             'inputTypes': [None if x is None else x.name for x in self.inputTypes],
              'md5': self.type.md5(),
              'ver': self.type.ver,
              'mapping': self.mapping.serialise()}
@@ -562,8 +568,9 @@ class XForm:
         Some entries have already been already dealt with."""
         self.xy = d['xy']
         self.comment = d['comment']
-        self.outputTypes = d['outputTypes']
-        self.inputTypes = d['inputTypes']
+        # these are the overriding types - if the value is None, use the xformtype's value, else use the one here.
+        self.outputTypes = [None if x is None else conntypes.deserialise(x) for x in d['outputTypes']]
+        self.inputTypes = [None if x is None else conntypes.deserialise(x) for x in d['inputTypes']]
         self.savedver = d['ver']  # ver is version node was saved with
         self.savedmd5 = d['md5']  # and stash the MD5 we were saved with
         self.displayName = d['displayName']
@@ -850,7 +857,7 @@ class XFormGraph:
     # true if this is a macro prototype, will be false for instances
     isMacro: bool
 
-    ## @var performingGraph    
+    ## @var performingGraph
     # true when I'm recursively performing my nodes. Avoids parallel
     # attempts to run a graph in different threads.
     performingGraph: bool
@@ -897,6 +904,10 @@ class XFormGraph:
         """create a new node, passing in a type name."""
         if typename in allTypes:
             tp = allTypes[typename]
+            # first, try to make sure we aren't creating a macro inside itself
+            if tp.cycleCheck(self):
+                raise XFormException('TYPE', "Cannot create a macro which contains itself")
+
             # display name is just the type name to start with.
             xform = XForm(tp, tp.name)
             self.nodes.append(xform)
@@ -1011,6 +1022,9 @@ class XFormGraph:
                     # on an object inside that graph. We need to call performNodes() on the main graph
                     # to run the XFormMacro node inside that graph.
                     inst.graph.performNodes(inst)
+
+                # and rebuild graphics in the prototype
+                self.rebuildGraphics()
             else:
                 self.performNodes(node)
         else:
@@ -1218,6 +1232,26 @@ class XFormGraph:
 class XFormROIType(XFormType):
     """Class for handling ROI xform types, does most of the heavy lifting of the node's perform
     function. The actual ROIs are dealt with in pancamimage"""
+
+    # constants enumerating the outputs
+    OUT_IMG = 0
+    OUT_ANNOT = 1
+    OUT_ROI = 2
+
+    IN_IMG = 0
+    IN_ANNOT = 1
+
+    def __init__(self, name, group, ver):
+        super().__init__(name, group, ver)
+        self.addInputConnector("input", conntypes.IMG)
+        self.addInputConnector("ann", conntypes.IMGRGB, "used as base for annotated image")
+        self.addOutputConnector("img", conntypes.IMG, "image with ROI")  # image+roi
+        self.addOutputConnector("ann", conntypes.IMGRGB,
+                                "image as RGB with ROI, with added annotations around ROI")  # annotated image
+        self.addOutputConnector("roi", conntypes.ROI, "the region of interest")
+
+        self.autoserialise = ('caption', 'captiontop', 'fontsize', 'fontline', 'colour')
+
     def setProps(self, node, img):
         """Set properties in the node and ROI attached to the node. Assumes img is a valid
         imagecube, and node.roi is the ROI"""
@@ -1234,7 +1268,7 @@ class XFormROIType(XFormType):
             # no image
             node.setOutput(self.OUT_IMG, None)
             node.setOutput(self.OUT_ANNOT, None if inAnnot is None else Datum(conntypes.IMGRGB, inAnnot))
-            node.setOutput(self.OUT_RECT, None)
+            node.setOutput(self.OUT_ROI, None)
         else:
             self.setProps(node, img)
             # copy image and append ROI to it
@@ -1251,9 +1285,8 @@ class XFormROIType(XFormType):
             node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
             node.setOutput(self.OUT_ANNOT, Datum(conntypes.IMG, rgb))
             node.img = img
-            # output BB
-            bb = node.roi.bb()
-            node.setOutput(self.OUT_RECT, Datum(conntypes.RECT, None if bb is None else bb))
+            # output the ROI - note that this is NOT a copy!
+            node.setOutput(self.OUT_ROI, Datum(conntypes.ROI, node.roi))
 
             if node.isOutputConnected(self.OUT_IMG):
                 node.setOutput(self.OUT_IMG, Datum(conntypes.IMG, node.img))  # output image and ROI

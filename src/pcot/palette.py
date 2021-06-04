@@ -7,13 +7,13 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QMessageBox
 
 import pcot.macros as macros
-from pcot.xform import XFormType
+from pcot.xform import XFormType, XFormException
 import pcot.ui as ui
 
 view = None
 
 ## The groups into which the buttons are sorted - it's a constant.
-groups = ["source", "macros", "maths", "processing", "calibration", "data", "colour", "regions", "utility"]
+groups = ["source", "macros", "maths", "processing", "calibration", "data", "regions", "utility"]
 
 
 ## The palette items, which are buttons which can be either clicked or dragged (with RMB)
@@ -76,13 +76,15 @@ class PaletteButton(QtWidgets.QPushButton):
 
     def click(self):
         # create a new item at a position decided by the scene
-        node = self.view.scene().graph.create(self.name)
-        node.xy = self.view.scene().getNewPosition()
-        # rebuild the scene
-        self.view.scene().rebuild()
-        # and perform the node to get initial data
-        node.graph.performNodes(node)
-
+        try:
+            node = self.view.scene().graph.create(self.name)
+            node.xy = self.view.scene().getNewPosition()
+            # rebuild the scene
+            self.view.scene().rebuild()
+            # and perform the node to get initial data
+            node.graph.performNodes(node)
+        except XFormException as e:
+            ui.error(e.message)
 
 ## the palette itself, which isn't a widget but a plain class containing all the necessary
 # widgets etc.

@@ -10,7 +10,7 @@ class XFormDump(XFormType):
     """Simple data dump: prints a string of its output into its window"""
     def __init__(self):
         super().__init__("dump","data","0.0.0")
-        self.addInputConnector("any","any")
+        self.addInputConnector("any", conntypes.ANY)
         
     def createTab(self,n,w):
         return TabDump(n,w)
@@ -35,5 +35,5 @@ class TabDump(pcot.ui.tabs.Tab):
         self.onNodeChanged()
         
     def onNodeChanged(self):
-        self.w.type.setPlainText(self.node.tp)
+        self.w.type.setPlainText(str(self.node.tp))
         self.w.text.setPlainText(str(self.node.data))

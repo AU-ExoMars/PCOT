@@ -20,7 +20,7 @@ class XformSink(XFormType):
         super().__init__("sink", "utility", "0.0.0")
         # set up a single input which takes an image of any type. The connector could have
         # a name in more complex node types, but here we just have an empty string.
-        self.addInputConnector("", "img")
+        self.addInputConnector("", conntypes.IMG)
 
     # this creates a tab when we want to control or view a node of this type. This uses
     # the built-in TabImage, which contains an OpenCV image viewer.

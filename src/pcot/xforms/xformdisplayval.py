@@ -7,7 +7,7 @@ class XFormDisplayVal(XFormType):
     """Display a numeric value inside the node's box in the graph"""
     def __init__(self):
         super().__init__("show number", "maths", "0.0.0")
-        self.addInputConnector("", "number")
+        self.addInputConnector("", conntypes.NUMBER)
 
     def createTab(self, n, w):
         return None
