@@ -1,43 +1,38 @@
 # PCOT
 
-This is the prototype of the Pancam Operations Toolkit. It's a Python
-program with a number of dependencies:
+This is the prototype of the Pancam Operations Toolkit. 
+
+## Installing
+
+PCOT is a Python
+program (and library) with a number of dependencies:
 
 * PyQt
 * OpenCV
 * numpy
 * scikit-image
-* pyqtgraph
+* pyperclip
 * matplotlib
 
-A short one-liner script to create an Anaconda environment to run
-the program can be found in **createCondaEnv**: it will create an
-environment called **pcot**. After installing
-Anaconda, run this script. This may take a while!
-Then activate the **pcot** environment with **conda activate pcot**.
+I find the best way to manage these is to use Anaconda. Installation has been tested on Windows 10
+and Ubuntu 20.04
 
-## Installing
+### Installing on Ubuntu
 
-There are a few different methods. All of them require the above Conda
-environment to be created or the required packages to be installed directly.
-If you are using Conda, you need to be running a command line shell in the
-Conda environment. In Linux just type * **conda activate pcot** in a terminal
-window. In Windows, open the Anaconda Powershell Prompt (installed with
-Anaconda), run the createCondaEnv script if you haven't already, then run
-**conda activate pcot**.
+* Open a bash shell.
+* Install Anaconda and cd to the PCOT directory (which contains this file).
+* Run the command **./createCondaEnv**. This will create an environment called **pcot**, and will take some time
+* Activate the environment with **conda activate pcot**.
+* Install PCOT into the environment with **python setup.py develop** (not 'install'; we want to be able to update easily).
+* You should now be able to run **./pcot** to start the application.
 
-### Install for development
-
-If you are going to be developing PCOT, the simplest thing to do then is go
-into the PCOT directory and run **python setup.py develop**. This will install
-the PCOT package into your Anaconda environment and add the **pcot** script to
-run the program. However, the code PCOT uses will still be code inside the
-directory you downloaded PCOT into.
-
-### Install for execution only
-
-If you are going to be just using PCOT you should install with **python
-setup.py install** (for now, these instructions may change). 
+### Installing on Windows
+* Install Anaconda.
+* Open the Anaconda PowerShell Prompt application and change directory to the PCOT directory (which contains this file).
+* Run the command **./createCondaEnv.bat**. This will create an environment called **pcot**, and will take some time
+* Activate the environment with **conda activate pcot**.
+* Install PCOT into the environment with **python setup.py develop** (not 'install'; we want to be able to update easily).
+* You should now be able to run **./pcot** to start the application.
 
 ## Environment variables
 
