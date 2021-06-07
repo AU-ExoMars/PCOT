@@ -961,12 +961,13 @@ class XFormGraph:
 
     def remove(self, node):
         """remove a node from the graph, and close any tab/window"""
-        node.disconnectAll()
-        for x in node.tabs:
-            x.nodeDeleted()
-        self.nodes.remove(node)
-        del self.nodeDict[node.name]
-        node.onRemove()
+        if node in self.nodes:
+            node.disconnectAll()
+            for x in node.tabs:
+                x.nodeDeleted()
+            self.nodes.remove(node)
+            del self.nodeDict[node.name]
+            node.onRemove()
 
     ## debugging dump of entire graph
     def dump(self):

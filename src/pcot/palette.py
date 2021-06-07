@@ -86,6 +86,7 @@ class PaletteButton(QtWidgets.QPushButton):
         except XFormException as e:
             ui.error(e.message)
 
+
 ## the palette itself, which isn't a widget but a plain class containing all the necessary
 # widgets etc.
 
@@ -105,12 +106,12 @@ class Palette:
     def populate(self):
         grouplists = {x: [] for x in groups}
         # we want the keys in sorted order
-        all = XFormType.all()
-        ks = sorted(all.keys())
+        alltypes = XFormType.all()
+        ks = sorted(alltypes.keys())
         # add xformtypes to a list for each group
         for k in ks:
-            v = all[k]
-            if not v.group in groups:
+            v = alltypes[k]
+            if v.group not in groups:
                 # "hidden" is a special group which doesn't appear in the palette, used for 
                 # things like macro connectors.
                 if v.group != 'hidden':
@@ -130,8 +131,8 @@ class Palette:
             sep.setStyleSheet("background-color:rgb(200,200,200)")
             self.layout.addWidget(sep)
             for k in grouplists[g]:
-                v = all[k]
-                b = PaletteButton(k, all[k], self.view)
+                v = alltypes[k]
+                b = PaletteButton(k, alltypes[k], self.view)
                 if g == 'macros':
                     b.setStyleSheet("background-color:rgb(220,220,140)")
                 self.layout.addWidget(b)

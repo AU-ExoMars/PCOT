@@ -13,7 +13,7 @@ import pcot.xform as xform
 from pcot.pancamimage import ChannelMapping
 from pcot.xform import XFormType, XFormGraph
 
- ## This is the instance of a macro, containing its copy of the graph
+## This is the instance of a macro, containing its copy of the graph
 # and some metadata. Refactoring note - this class used to be a lot bigger
 # and things gradually got moved into the node itself. That's now probably
 # the best place for them, although copyProto is a problem.
@@ -59,7 +59,7 @@ class XFormMacroConnector(XFormType):
         super().__init__(name, "hidden", "0.0.0")
         self.displayName = '??'  # forces a rename in setConnectors first time
         self._md5 = ''  # we ignore the MD5 checksum for versioning
-        self.autoserialise = ('idx', )
+        self.autoserialise = ('idx',)
 
     def init(self, node):
         node.datum = None
@@ -351,14 +351,14 @@ class XFormMacro(XFormType):
             # get the corresponding node in the instance
             if connName in nodedict:
                 conn = nodedict[connName]
+                # set the input connector's data ready for its perform() to copy
+                # into the output
+                print("SETTING OUTPUT IN CONNECTOR", conn, " TO ", data)
+                conn.datum = data
             else:
                 print("Looking for", connName)
                 print("Keys are", nodedict.keys())
                 pcot.ui.error("cannot find input node in instance graph of macro")
-            # set the input connector's data ready for its perform() to copy
-            # into the output
-            print("SETTING OUTPUT IN CONNECTOR", conn, " TO ", data)
-            conn.datum = data
 
         # 3 - run the macro. You might think you could do this by just running the inputs
         # as you set them (recursively running their children) but that would omit non-input
@@ -382,17 +382,17 @@ class XFormMacro(XFormType):
             # get the corresponding node in the instance
             if connName in self.outputNodes:
                 conn = nodedict[connName]
+                # the output connector will have set its data field to its input
+                # set the node's output to that data
+                node.setOutput(i, conn.datum)
             else:
                 pcot.ui.error("cannot find output node in instance graph of macro")
-            # the output connector will have set its data field to its input
-            # set the node's output to that data
-            node.setOutput(i, conn.datum)
 
 
 ## this is the UI for macros, and it should probably not be here.
 
 class TabMacro(Tab):
-    def __init__(self, node:XFormMacro, w):
+    def __init__(self, node: XFormMacro, w):
         super().__init__(w, node, 'tabmacro.ui')
         self.w.openProto.clicked.connect(self.openProto)
         self.w.canvas.setMapping(node.mapping)
@@ -402,7 +402,7 @@ class TabMacro(Tab):
 
     def openProto(self):
         if self.node.instance is not None:
-            w = pcot.ui.mainwindow.MainUI.createMacroWindow(self.node.instance.proto, False)
+            pcot.ui.mainwindow.MainUI.createMacroWindow(self.node.instance.proto, False)
 
     def onNodeChanged(self):
         self.w.canvas.display(self.node.sinkimg)
@@ -426,4 +426,3 @@ class TabConnector(Tab):
     def variantChanged(self, t):
         self.node.conntype = t
         self.node.proto.setConnectors()
-
