@@ -2,11 +2,10 @@
 
 This is the prototype of the Pancam Operations Toolkit. 
 
-## Installing
+## Installing with Anaconda
+PCOT is a Python program (and library) with a number of dependencies:
 
-PCOT is a Python
-program (and library) with a number of dependencies:
-
+* Python >3.8
 * PyQt
 * OpenCV
 * numpy
@@ -33,6 +32,13 @@ and Ubuntu 20.04
 * Activate the environment with **conda activate pcot**.
 * Install PCOT into the environment with **python setup.py develop** (not 'install'; we want to be able to update easily).
 * You should now be able to run **./pcot** to start the application.
+
+## Installing without an environment manager
+
+Alternatively, you can directly install the packages at the top of this
+file using **pip3 *packagename packagename* ...** and run PCOT directly 
+with **./pcot**. The danger here is, of course, clashes with your existing 
+python environment. 
 
 ## Environment variables
 
