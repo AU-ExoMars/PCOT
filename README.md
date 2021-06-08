@@ -19,32 +19,55 @@ and Ubuntu 20.04
 ### Installing on Ubuntu
 
 * Open a bash shell.
-* Install Anaconda and cd to the PCOT directory (which contains this file).
-* Run the command **./createCondaEnv**. This will create an environment called **pcot**, and will take some time
+* Install Anaconda: https://docs.anaconda.com/anaconda/install/linux/
+* cd to the PCOT directory (which contains this file).
+* Run the command **./createCondaEnv**. This will create an environment called **pcot**, and will take some time.
 * Activate the environment with **conda activate pcot**.
 * Install PCOT into the environment with **python setup.py develop** (not 'install'; we want to be able to update easily).
-* You should now be able to run **./pcot** to start the application.
+* You should now be able to run **pcot** to start the application.
 
 ### Installing on Windows
-* Install Anaconda.
-* Open the Anaconda PowerShell Prompt application and change directory to the PCOT directory (which contains this file).
-* Run the command **./createCondaEnv.bat**. This will create an environment called **pcot**, and will take some time
+* Install Anaconda: https://docs.anaconda.com/anaconda/install/windows/
+* Open the Anaconda PowerShell Prompt application from the Start Menu.
+* cd to the PCOT directory (which contains this file).
+* Run the command **./createCondaEnv.bat**. This will create an environment called **pcot**, and will take some time.
 * Activate the environment with **conda activate pcot**.
 * Install PCOT into the environment with **python setup.py develop** (not 'install'; we want to be able to update easily).
-* You should now be able to run **./pcot** to start the application.
+* You should now be able to run **pcot** to start the application.
 
 ## Installing without an environment manager
+* Directly install the packages at the top of this
+file using **pip3 *packagename packagename* ...**
+* Install PCOT with **python setup.py develop** as above
+* You should now be able to run **pcot** to start the application.
+  
+The danger here is, of course, clashes with your existing 
+python environment.
 
-Alternatively, you can directly install the packages at the top of this
-file using **pip3 *packagename packagename* ...** and run PCOT directly 
-with **./pcot**. The danger here is, of course, clashes with your existing 
-python environment. 
+## Running PCOT inside Pycharm
+These instructions apply to Anaconda installations.
+
+* First set up the Conda environment and interpreter:
+    * Open PyCharm and open the PCOT directory as an existing project.
+    * Open **Settings..** (Ctrl+Alt+S)
+    * Select **Project:PCOT / Python Interpreter**
+    * Select the cogwheel to the right of the Python Interpreter dropdown and then select  **Add**.
+    * Select **Conda Environment**.
+    * Select **Existing Environment**.
+    * Select the environment: it should be something like **anaconda3/envs/pcot/bin/python**.
+    * Select **OK**.
+* Now set up the run configuration:
+    * Select **Edit Configurations** from the configurations drop down in the menu bar
+    * Add a new configuration (the + symbol)
+    * Set **Script Path** to **PCOT/src/pcot/__main__.py**
+    * Make sure the interpreter is something like **Project Default (Python 3.8 (pcot))**, i.e. the Python interpreter of the pcot environment.
+* You should now be able to run and debug PCOT.
 
 ## Environment variables
 
 It's a good idea, but not mandatory, to set the environment variable
 **PCOTUSER** to a string of the form **name \<email\>**. For example,
-in Linux I have added the following to my **.bashrc** file
+in Linux I have added the following to my **.bashrc** file:
 ```
 export PCOT_USER="Jim Finnis <jcf12@aber.ac.uk>"
 ```
