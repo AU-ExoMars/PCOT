@@ -61,8 +61,9 @@ class ROI:
                 cv.rectangle(rgb, (x - i - 1, y - i - 1), (x + w + i, y + h + i), col, thickness=1)
 
             ty = y if self.labeltop else y + h
-            text.write(rgb, self.label, x, ty, self.labeltop, self.fontsize,
-                       self.fontline, col)
+            text.write(rgb,
+                       "NO ANNOTATION" if self.label is None or self.label=='' else self.label,
+                       x, ty, self.labeltop, self.fontsize, self.fontline, col)
 
 
 ## a rectangle ROI

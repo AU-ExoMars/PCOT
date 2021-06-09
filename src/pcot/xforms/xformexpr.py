@@ -8,7 +8,7 @@ from pcot.xform import XFormType, xformtype, XFormException
 
 
 @xformtype
-class XFormEval(XFormType):
+class XFormExpr(XFormType):
     """
     Expression evaluator.
     Operators:
@@ -18,7 +18,7 @@ class XFormEval(XFormType):
     """
 
     def __init__(self):
-        super().__init__("eval", "maths", "0.0.0")
+        super().__init__("expr", "maths", "0.0.0")
         self.parser = ExpressionEvaluator()
         self.addInputConnector("a", conntypes.ANY)
         self.addInputConnector("b", conntypes.ANY)
@@ -28,7 +28,7 @@ class XFormEval(XFormType):
         self.autoserialise = ('expr',)
 
     def createTab(self, n, w):
-        return TabEval(n, w)
+        return TabExpr(n, w)
 
     def init(self, node):
         node.expr = ""
@@ -66,9 +66,9 @@ class XFormEval(XFormType):
             raise XFormException('EXPR', str(e))
 
 
-class TabEval(pcot.ui.tabs.Tab):
+class TabExpr(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
-        super().__init__(w, node, 'tabeval.ui')
+        super().__init__(w, node, 'tabexpr.ui')
         self.w.variant.setTitle("Output type")
         self.w.run.clicked.connect(self.run)
         self.w.expr.textChanged.connect(self.exprChanged)
