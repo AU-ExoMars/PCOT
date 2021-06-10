@@ -95,20 +95,46 @@ class MainUI(ui.tabs.DockableTabWindow):
     # containing for macro controls
     extraCtrls: QtWidgets.QWidget
 
+    ## @var recentActs
+    # QActions for recent file list
+    recentActs: List[QAction]
+
     windows = []  # list of all main windows open
 
-    ## constructor, takes true if is for a macro prototype
-    def __init__(self, macroWindow=False):
+    def __init__(self,
+                 doc=None,  # XFormMacro
+                 macro=None,  # Document
+                 doAutoLayout: bool = True):
+        """Constructor which just calls _init()"""
         super().__init__()
-        self.graph = None
-        uic.loadUi(pcot.config.getAssetAsFile('main.ui'), self)
-        self.initTabs()
-        self.saveFileName = None
-        self.setWindowTitle(ui.app().applicationName() + ' ' + ui.app().applicationVersion())
+        self._init(doc=doc, macro=macro, doAutoLayout=doAutoLayout)
 
-        self.menuFile.addSeparator()
+    def _init(self,
+              doc=None,  # XFormMacro
+              macro=None,  # Document
+              doAutoLayout: bool = True):
+        """This is the 'real' constructor, which is a separate function so
+                      we can reinitialise an existing window. Note that it takes
+                      EITHER a document or a macro, and does that via keywords."""
+
+        if macro is None and doc is None:
+            raise Exception("macro or document must be provided")
+        elif macro is not None and doc is not None:
+            raise Exception("macro or document must be provided, not both!")
+
+        if macro is not None:
+            self.graph = macro.graph
+        else:
+            self.graph = doc.graph
+
         self.recentActs = []
+
+        uic.loadUi(pcot.config.getAssetAsFile('main.ui'), self)
+        self.setWindowTitle(ui.app().applicationName() + ' ' + ui.app().applicationVersion())
+        self.menuFile.addSeparator()
         self.rebuildRecents()
+
+        self.initTabs()
 
         # connect buttons etc.
         self.autolayoutButton.clicked.connect(self.autoLayoutButton)
@@ -133,7 +159,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.palette = palette.Palette(self.paletteArea, self.paletteContents, self.view)
 
         # and remove some things which don't apply to macro windows
-        if macroWindow:
+        if macro is not None:
             # first turn off the file menu
             self.menuFile.setEnabled(False)
             # annoyingly have to do this too, or we'll still be able
@@ -153,8 +179,12 @@ class MainUI(ui.tabs.DockableTabWindow):
             b = QtWidgets.QPushButton("Rename macro")
             b.pressed.connect(self.renameMacro)
             self.extraCtrls.layout().addWidget(b, 0, 2)
+
+            self.macroPrototype = macro
+            self.setWindowTitle(ui.app().applicationName() +
+                                ' ' + ui.app().applicationVersion() +
+                                " [MACRO {}]".format(self.graph.proto.name))
         else:
-            self.reset()  # create empty "standard" graph
             self.macroPrototype = None  # we are not a macro
             # now create the input selector buttons
             isfLayout = QtWidgets.QHBoxLayout()
@@ -164,7 +194,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
         # make sure the view has a link up to this window,
         # also will tint the view if we are a macro
-        self.view.setWindow(self, macroWindow)
+        self.view.setWindow(self, macro is not None)
         # This only does something when you already have a graph, which macro protos don't,
         # but that's OK because they don't have a caption control either.
         self.setCaption(0)
@@ -179,7 +209,11 @@ class MainUI(ui.tabs.DockableTabWindow):
         else:
             ui.log("Grandalf not found - autolayout will be rubbish")
         MainUI.windows.append(self)
+
+        self.saveFileName = None
         MainUI.updateAutorun()
+        self.graph.constructScene(doAutoLayout)
+        self.view.setScene(self.graph.scene)
 
     def rebuildRecents(self):
         # add recent files to menu, removing old ones first. Note that recent files must be at the end
@@ -208,19 +242,6 @@ class MainUI(ui.tabs.DockableTabWindow):
     def scene(self):
         return self.graph.scene
 
-    ## create a new macro window - pass true when this is a new macro.
-    @staticmethod
-    def createMacroWindow(proto, isNewMacro):
-        w = MainUI(True)  # create macro window
-        # link the window to the prototype
-        w.macroPrototype = proto
-        w.graph = proto.graph
-        w.setWindowTitle(ui.app().applicationName() +
-                         ' ' + ui.app().applicationVersion() +
-                         " [MACRO {}]".format(proto.name))
-        w.graph.constructScene(isNewMacro)  # builds the scene
-        w.view.setScene(w.graph.scene)
-
     ## run through all the palettes on all main windows,
     # repopulating them. Done typically when macros are added and removed.
     @staticmethod
@@ -245,7 +266,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         if self.isMacro():
             MainUI.windows.remove(self)
             evt.accept()
-        elif QMessageBox.question(self.parent(), "Clear region", "Are you sure?",
+        elif QMessageBox.question(self.parent(), "Close graph", "Are you sure?",
                                   QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
             MainUI.windows.remove(self)
             self.closeAllTabs()
@@ -280,14 +301,12 @@ class MainUI(ui.tabs.DockableTabWindow):
         # As the scene is constructed, widgets are constantly changed - this typically triggers runs.
         # For that reason we turn off autorun temporarily when loading.
         oldAutoRun = self.graph.autoRun
+        self.graph.autoRun = False
         try:
-            pcot.load(fname, graph=self.graph)  # if anything goes wrong an exception is thrown
+            import pcot.document
+            d = pcot.document.Document(fname)
+            self._init(doc=d, doAutoLayout=False)
             self.graph.changed()  # and rerun everything
-
-            # now we need to reconstruct the scene with the new data
-            # (False means don't do autolayout, read xy data from the dict instead)
-            self.graph.constructScene(False)
-            self.view.setScene(self.graph.scene)
             ui.msg("File loaded")
             self.saveFileName = fname
             self.rebuildRecents()
@@ -351,23 +370,15 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     ## "new" menu/keypress, will create a new top-level "patch"
     def newAction(self):
-        MainUI()  # create a new empty window
+        import pcot.document
+        d = pcot.document.Document()
+        MainUI(doc=d, doAutoLayout=True)  # create a new empty window
 
     ## "new macro" menu/keypress, will create a new macro prototype stored
     # in this patch
     def newMacroAction(self):
         p = macros.XFormMacro(None)
-        MainUI.createMacroWindow(p, True)
-
-    ## create a new dummy graph with a single source
-    def reset(self):
-        # create a dummy graph with just a source
-        self.graph = xform.XFormGraph(False)
-        source = self.graph.create("input 0")
-        self.saveFileName = None
-        # set up its scene and view
-        self.graph.constructScene(True)
-        self.view.setScene(self.graph.scene)
+        MainUI(macro=p, doAutoLayout=True)
 
     ## this gets called from way down in the scene to open tabs for nodes
     def openTab(self, node):

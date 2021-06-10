@@ -5,13 +5,13 @@ from typing import List, Dict, ClassVar
 
 from PyQt5 import QtWidgets
 
-import pcot.ui
 from pcot.ui.tabs import Tab
 import pcot.ui.mainwindow
 import pcot.conntypes as conntypes
 import pcot.xform as xform
 from pcot.pancamimage import ChannelMapping
 from pcot.xform import XFormType, XFormGraph
+
 
 ## This is the instance of a macro, containing its copy of the graph
 # and some metadata. Refactoring note - this class used to be a lot bigger
