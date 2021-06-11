@@ -1,4 +1,5 @@
 import time
+from collections import namedtuple
 from typing import Dict
 
 import pcot.config
@@ -9,18 +10,36 @@ from pcot.utils import archive
 from pcot.xform import XFormGraph
 
 
+# this is saved to the SETTINGS block of the document
+
+class DocumentSettings:
+    def __init__(self):
+        # integer indexing the caption type for canvases in this graph: see the box in MainWindow's ui for meanings.
+        self.captionType = 0
+
+    def serialise(self):
+        return {
+            'cap': self.captionType
+        }
+
+    def deserialise(self, d):
+        self.captionType = d['cap']
+
+
 class Document:
     """This class contains the main graph, inputs and macros for a PCOT document"""
 
     graph: XFormGraph
     macros: Dict[str, XFormMacro]
     inputMgr: InputManager
+    settings: DocumentSettings
 
     def __init__(self, fileName=None):
         """Create a new document, and (optionally) load a file into it"""
         self.inputMgr = InputManager(self)
         self.graph = XFormGraph(self, False)  # false - is not a macro
         self.macros = {}
+        self.settings = DocumentSettings()
 
         if fileName is not None:
             self.load(fileName)
@@ -31,10 +50,10 @@ class Document:
     # the graph, macros etc.
     def serialise(self):
         macros = {}
-        for k, v in self.macros:
+        for k, v in self.macros.items():
             macros[k] = v.graph.serialise()
 
-        d = {'SETTINGS': {'cap': self.graph.captionType},
+        d = {'SETTINGS': self.settings.serialise(),
              'INFO': {'author': pcot.config.getUserName(),
                       'date': time.time()},
              'GRAPH': self.graph.serialise(),
@@ -52,7 +71,7 @@ class Document:
         # deserialise macros before graph!
         if 'MACROS' in d:
             for k, v in d['MACROS'].items():
-                p = XFormMacro(self, k) # will autoregister
+                p = XFormMacro(self, k)  # will autoregister
                 p.graph.deserialise(v, True)
 
         self.graph.deserialise(d['GRAPH'], True)  # True to delete existing nodes first
@@ -60,8 +79,7 @@ class Document:
         if 'INPUTS' in d and deserialiseInputs:
             self.inputMgr.deserialise(d['INPUTS'])
 
-        settings = d['SETTINGS']
-        self.graph.captionType = settings['cap']
+        self.settings.deserialise(d['SETTINGS'])
 
     def save(self, fname):
         # note that the archive mechanism deals with numpy array saving and also
@@ -88,6 +106,13 @@ class Document:
                 return name
             ct += 1
 
+    def setCaption(self, i):
+        self.settings.captionType = i
+
+    ## typically used in external code - just calls the graph changed()
+    def changed(self):
+        self.graph.changed()
+
     ## helper for external code - set input to some input type and run code to set data.
     def setInputData(self, inputidx, inputType, fn):
         i = self.inputMgr.inputs[inputidx]
@@ -111,10 +136,9 @@ class Document:
         return self.setInputData(inputidx, inputs.Input.RGB, lambda method: method.setFileNames(directory, fnames))
 
     def getNodeByName(self, name):
-        """get a node by its DISPLAY name, not its internal UUID."""
+        """get a node by its DISPLAY name, not its internal UUID. Raises a NameError if not found."""
         # this is a little ugly, but it's plenty quick enough and avoids problems
         for x in self.graph.nodes:
             if name == x.displayName:
                 return x
-
-
+        raise NameError(name)

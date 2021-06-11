@@ -711,9 +711,9 @@ class ImageCube:
     # 11 channels is far too many to show in the descriptor at the bottom of the canvas!
 
     def getDesc(self, graph):
-        if graph.captionType == 3:
+        if graph.doc.settings.captionType == 3:
             return ""
-        out = [IChannelSource.stringForSet(s, graph.captionType) for s in self.sources]
+        out = [IChannelSource.stringForSet(s, graph.doc.settings.captionType) for s in self.sources]
         # if there are channel assignments, show only the assigned channels. Not sure about this.
         if self.mapping is not None:
             out = [out[x] for x in [self.mapping.red, self.mapping.green, self.mapping.blue]]

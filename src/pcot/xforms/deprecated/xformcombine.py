@@ -82,7 +82,7 @@ class XFormCombine(XFormType):
             if inp is not None:
                 # there's an image, grand. We have to populate a list for each image, so it's there for the
                 # combo boxes later.
-                chanStringList = [IChannelSource.stringForSet(s, node.graph.captionType) for s in inp.sources]
+                chanStringList = [IChannelSource.stringForSet(s, node.graph.doc.settings.captionType) for s in inp.sources]
                 node.imgChannelStrings.append(chanStringList)
                 # and we're also going to populate a private list converting the index of the combo box into
                 # (image,chan) index tuples.. if image 2 has 3 channels this will go [(2,0),(2,1),(2,2)]

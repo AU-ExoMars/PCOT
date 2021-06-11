@@ -882,10 +882,6 @@ class XFormGraph:
     autoRun: ClassVar[bool]
     autoRun = True
 
-    ## @var captionType
-    # integer indexing the caption type for canvases in this graph: see the box in MainWindow's ui for meanings.
-    captionType: int
-
     ## @var doc
     # the document of which I am a part, whether as the top-level graph or a macro.
     doc: 'Document'
@@ -899,7 +895,6 @@ class XFormGraph:
         self.scene = None  # the graph's scene is created by autoLayout
         self.isMacro = isMacro
         self.nodeDict = {}
-        self.captionType = 0
 
     def constructScene(self, doAutoLayout):
         """construct a graphical representation for this graph"""
@@ -1044,7 +1039,7 @@ class XFormGraph:
         # make sure the caption in any attached window is correct.
         for xx in ui.mainwindow.MainUI.windows:
             if xx.graph == self:
-                xx.setCaption(self.captionType)
+                xx.setCaption(self.doc.settings.captionType)
 
     def performNodes(self, node=None):
         """perform the entire graph, or all those nodes below a given node.

@@ -294,7 +294,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         # doing it in one step, to avoid errors in the former leaving us
         # with an unreadable file.
         try:
-            pcot.save(fname, self.graph)
+            self.doc.save(fname)
             ui.msg("File saved : " + fname)
             self.rebuildRecents()
         except Exception as e:
@@ -414,13 +414,15 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     ## caption type has been changed in widget
     def captionChanged(self, i):
-        self.graph.captionType = i  # best stored as an int, I think
+        self.graph.doc.setCaption(i)
+        # TODO some windows might not change their captions!
         self.graph.performNodes()
 
     ## set the caption type (for actual main windows, not macros)
     def setCaption(self, i):
         if self.graph is not None:
-            self.graph.captionType = i
+            # TODO some windows might not change their captions!
+            self.graph.doc.setCaption(i)
             self.capCombo.setCurrentIndex(i)
 
     ## autorun has been changed in widget. This is global,
