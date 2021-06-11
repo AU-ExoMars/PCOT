@@ -76,13 +76,24 @@ class xformtype:
         # data, for version matching info
         mod = inspect.getmodule(cls)
         src = inspect.getsource(mod).encode('utf-8')  # get the source
-        self._instance = self._cls(*args, **kwargs)  # make the instance
+        i = self._cls(*args, **kwargs)  # make the instance
+        self._instance = i
+        # and add to the registry
+        if i.name in allTypes:
+            raise Exception("xform type name already in use: " + i.name)
+        # register the type
+        xformtype.register(i)
+
         self._instance._md5 = hashlib.md5(src).hexdigest()  # add the checksum
         if self._instance.__doc__ is None:
             print("WARNING: no documentation for xform type '{}'".format(self._instance.name))
 
     def __call__(self):
         return self._instance
+
+    @staticmethod
+    def register(instance):
+        allTypes[instance.name] = instance
 
 
 class BadVersionException(Exception):
@@ -139,11 +150,6 @@ class XFormType:
         self.name = name
         self.ver = ver
         self.instances = []
-        # add to the global dictionary
-        if name in allTypes:
-            raise Exception("xform type name already in use: " + name)
-        # register the type
-        allTypes[name] = self
         # does this node have an "enabled" button? Change in subclass if reqd.
         self.hasEnable = False
         # this contains tuples of (name,typename). Images have typenames which
@@ -876,51 +882,49 @@ class XFormGraph:
     autoRun: ClassVar[bool]
     autoRun = True
 
-    ## @var inputs
-    # The data inputs this system has
-    inputMgr: InputManager
+    ## @var doc
+    # the document of which I am a part, whether as the top-level graph or a macro.
+    doc: 'Document'
 
-    ## @var captionType
-    # integer indexing the caption type for canvases in this graph: see the box in MainWindow's ui for meanings.
-    captionType: int
-
-    def __init__(self, isMacro):
+    def __init__(self, doc, isMacro):
         """constructor, takes whether the graph is a macro prototype or not"""
-        # all the nodes
         self.proto = None
+        self.doc = doc
         self.nodes = []
         self.performingGraph = False
         self.scene = None  # the graph's scene is created by autoLayout
         self.isMacro = isMacro
         self.nodeDict = {}
-        self.captionType = 0
-        self.inputMgr = InputManager(self)
 
     def constructScene(self, doAutoLayout):
         """construct a graphical representation for this graph"""
         self.scene = graphscene.XFormGraphScene(self, doAutoLayout)
 
     def create(self, typename):
-        """create a new node, passing in a type name."""
+        """create a new node, passing in a type name. We look in both the 'global' dictionary,
+        allTypes,  but also the macros for this document"""
         if typename in allTypes:
             tp = allTypes[typename]
-            # first, try to make sure we aren't creating a macro inside itself
-            if tp.cycleCheck(self):
-                raise XFormException('TYPE', "Cannot create a macro which contains itself")
-
-            # display name is just the type name to start with.
-            xform = XForm(tp, tp.name)
-            self.nodes.append(xform)
-            xform.graph = self
-            tp.init(xform)  # run the init
-            self.nodeDict[xform.name] = xform
-            # force a recalc in those nodes that require it,
-            # will generate internal data dependent on a combination
-            # of all controls
-            tp.recalculate(xform)
+        elif typename in self.doc.macros:
+            tp = self.doc.macros[typename]
         else:
             ui.warn("Transformation type not found: " + typename)
             return self.create("dummy")
+
+        # first, try to make sure we aren't creating a macro inside itself
+        if tp.cycleCheck(self):
+            raise XFormException('TYPE', "Cannot create a macro which contains itself")
+
+        # display name is just the type name to start with.
+        xform = XForm(tp, tp.name)
+        self.nodes.append(xform)
+        xform.graph = self
+        tp.init(xform)  # run the init
+        self.nodeDict[xform.name] = xform
+        # force a recalc in those nodes that require it,
+        # will generate internal data dependent on a combination
+        # of all controls
+        tp.recalculate(xform)
         return xform
 
     def copy(self, selection):
@@ -991,8 +995,9 @@ class XFormGraph:
         for n in nodeset:
             n.clearErrorAndRectText()
             n.clearOutputs()
-            n.runTime = None
             n.hasRun = False
+        for n in self.nodes:
+            n.runTime = None
 
     def changed(self, node=None):
         """Called when a control in a node has changed, and the node needs to rerun (as do all its children recursively).
@@ -1001,8 +1006,8 @@ class XFormGraph:
         counterpart node for that in the macro prototype.
         """
         if self.autoRun:
-            if self.inputMgr is not None:
-                self.inputMgr.readAll()  # reread all inputs
+            # reread all inputs for my document (should cache!)
+            self.doc.inputMgr.readAll()
 
             if self.isMacro:
                 # distribute changes in macro prototype to instances.
@@ -1034,7 +1039,7 @@ class XFormGraph:
         # make sure the caption in any attached window is correct.
         for xx in ui.mainwindow.MainUI.windows:
             if xx.graph == self:
-                xx.setCaption(self.captionType)
+                xx.setCaption(self.doc.settings.captionType)
 
     def performNodes(self, node=None):
         """perform the entire graph, or all those nodes below a given node.
@@ -1199,35 +1204,6 @@ class XFormGraph:
             """
         for n in self.nodes:
             n.ensureConnectionsValid()
-
-    ## helper for external code - set input to some input type and run code to set data.
-    def setInputData(self, inputidx, inputType, fn):
-        i = self.inputMgr.inputs[inputidx]
-        i.setActiveMethod(inputType)
-        fn(i.getActive())  # run a function on active method
-        # force an immediate read; it's OK, the data should be cached. This is done so we can return
-        # a success/failure status/
-        i.read()
-        return i.exception
-
-    def setInputENVI(self, inputidx, fname):
-        """set graph's input to an ENVI"""
-        return self.setInputData(inputidx, inputs.Input.ENVI, lambda method: method.setFileName(fname))
-
-    def setInputRGB(self, inputidx, fname):
-        """set graph's input to RGB"""
-        return self.setInputData(inputidx, inputs.Input.RGB, lambda method: method.setFileName(fname))
-
-    def setInputMulti(self, inputidx, directory, fnames):
-        """set graph's input to multiple files"""
-        return self.setInputData(inputidx, inputs.Input.RGB, lambda method: method.setFileNames(directory, fnames))
-
-    def getNodeByName(self, name):
-        """get a node by its DISPLAY name, not its internal UUID."""
-        # this is a little ugly, but it's plenty quick enough and avoids problems
-        for x in self.nodes:
-            if name == x.displayName:
-                return x
 
 
 class XFormROIType(XFormType):

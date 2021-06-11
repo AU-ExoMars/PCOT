@@ -39,7 +39,7 @@ class XFormHistogram(XFormType):
             # OK, brace yourself..
 
             # generate a list of labels, one for each channel
-            labels = [IChannelSource.stringForSet(s, node.graph.captionType) for s in img.sources]
+            labels = [IChannelSource.stringForSet(s, node.graph.doc.settings.captionType) for s in img.sources]
             # generate a (weights,bins) tuple for each channel
             hists = [gethistogram(chan, weights, node.bincount) for chan in cv.split(subimg.img)]
             # they must be the same size

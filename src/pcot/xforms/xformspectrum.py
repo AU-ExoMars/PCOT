@@ -133,7 +133,8 @@ class XFormSpectrum(XFormType):
                 wavelengths = [x for x in wavelengths if x > 0]
 
                 # generate a list of labels, one for each channel
-                chanlabels = [IChannelSource.stringForSet(img.sources[x], node.graph.captionType) for x in chans]
+                chanlabels = [IChannelSource.stringForSet(img.sources[x],
+                                                          node.graph.doc.settings.captionType) for x in chans]
 
                 if len(img.rois) == 0:
                     # no ROIs, do the whole image

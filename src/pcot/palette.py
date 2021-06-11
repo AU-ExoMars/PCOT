@@ -35,7 +35,9 @@ class PaletteButton(QtWidgets.QPushButton):
             deleteMacroAct = menu.addAction("Delete macro")
             act = menu.exec_(self.mapToGlobal(e))
             if act == openProtoAct:
-                ui.mainwindow.MainUI.createMacroWindow(self.xformtype, False)
+                ui.mainwindow.MainUI(self.xformtype.doc,
+                                     macro=self.xformtype,
+                                     doAutoLayout=False)
             elif act == deleteMacroAct:
                 if QMessageBox.question(self.parent(), "Delete macro", "Are you sure?",
                                         QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
@@ -93,20 +95,23 @@ class PaletteButton(QtWidgets.QPushButton):
 class Palette:
     ## set up the scrolling palette as part of view initialisation, will populate
     # with initial data
-    def __init__(self, scrollArea, scrollAreaContent, view):
+    def __init__(self, doc, scrollArea, scrollAreaContent, vw):
+        self.doc = doc
         layout = QtWidgets.QVBoxLayout()
         scrollAreaContent.setLayout(layout)
         scrollArea.setMinimumWidth(150)
         self.scrollAreaContent = scrollAreaContent
-        self.view = view
+        self.view = vw
         self.layout = layout
         self.populate()
 
     ## populate the palette with items
     def populate(self):
         grouplists = {x: [] for x in groups}
-        # we want the keys in sorted order
-        alltypes = XFormType.all()
+        # we want the keys in sorted order, and the keys come from both the global
+        # types and the macros for this document. This is a dict merge - in 3.9+ we
+        # could use the a|b syntax.
+        alltypes = {**XFormType.all(), **self.doc.macros}
         ks = sorted(alltypes.keys())
         # add xformtypes to a list for each group
         for k in ks:

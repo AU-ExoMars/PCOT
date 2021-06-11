@@ -18,7 +18,9 @@ class XFormInput(XFormType):
         node.img = None
 
     def perform(self, node):
-        inp = node.graph.inputMgr.inputs[self.idx]
+        # get hold of the document via the graph, get the input manager, and access
+        # the input.
+        inp = node.graph.doc.inputMgr.inputs[self.idx]
         node.img = inp.get()
         if node.img is not None:
             node.img.setMapping(node.mapping)

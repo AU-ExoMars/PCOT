@@ -7,7 +7,7 @@ import os, sys
 
 import pcot.config
 import pcot.ui.mainwindow
-
+from pcot.document import Document
 
 app = None
 
@@ -33,15 +33,21 @@ def main():
     parser.process(app)
     args = parser.positionalArguments()
 
-    window = pcot.ui.mainwindow.MainUI()  # Create an instance of a main window
+    # create a document either ab initio or from a file, depending on args and config.
     if len(args) > 0:
-        window.load(args[0])
+        doc = Document(args[0])
     else:
         loadfile = pcot.config.default.get('loadFile', fallback=None)
         if loadfile is not None:
-            window.load(os.path.expanduser(loadfile))
+            doc = Document(os.path.expanduser(loadfile))
+        else:
+            doc = Document()
 
-    app.exec_()  # Start the application
+    # Create an instance of a main window on that document
+    window = pcot.ui.mainwindow.MainUI(doc, doAutoLayout=True)
+
+    # run the application until exit
+    app.exec_()
     print("Leaving app")
     pcot.config.save()
 
