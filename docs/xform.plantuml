@@ -1,5 +1,19 @@
 @startuml
 skinparam classAttributeIconSize 0
+skinparam class {
+    BackgroundColor<<root>> PaleGreen
+}
+
+class Document<<root>>
+
+Document *-- XFormGraph : graph
+Document *-- "0..*" XFormMacro : macros (dict)
+Document *-- InputMgr : inputmgr
+
+XFormMacro --|> XFormType
+XFormMacro o-- XFormGraph : graph
+XFormGraph o-- Document : doc
+
 
 class XForm {
     +inputs:List<Tuple<XForm,int>>
@@ -42,8 +56,8 @@ note right of XformRect
 example singleton
 end note
 
-XformRect ..|> TabRect: creates
-XformNormImage ..|> TabImage: creates
+XformRect --> TabRect: creates
+XformNormImage --> TabImage: creates
 
 abstract class Tab {
 }

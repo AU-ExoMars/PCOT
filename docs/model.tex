@@ -12,19 +12,32 @@
 
 
 \section{The data model}
-The data model consists of two parts --- the data itself (largely
-image cube data) and the graph. By far the most important kind of data
-from the point of view of this document is the image data, which ties
-into the user interface in complex ways. Other forms of data do exist,
+The ``root'' of the data model is the \texttt{Document} object.
+This contains:
+\begin{itemize}
+\item the ``main graph'' --- that is, the graph of nodes not contained
+inside macros;
+\item a dictionary of macro type objects (\texttt{XFormMacro}) by name,
+which are local to this document --- each macro also contains a ``prototype
+graph'' (see Sec.~\ref{macros});
+\item the input manager and the state of the various input methods
+contained in each input (see Sec.~\ref{inputs});
+\item document-wide settings.
+\end{itemize}
+The most important parts of the model are the graph
+and the data which it manipulates --- this is largely
+image cube data passed between the graph nodes.
+Other forms of data do exist,
 but these are much simpler.
 
-
 \subsection{Graph and nodes}
-The graph is a directed graph of nodes represented by the 
+Graphs are directed acyclic graphs of nodes represented by the 
 \texttt{XFormGraph} class. Each node is an instance of \texttt{XForm}
 (short for ``transform node''). The function of each node is
 determined by its \texttt{type} field, which references an
-\texttt{XFormType} singleton. See Fig.~\ref{xform.pdf} for an overview.
+\texttt{XFormType} singleton. See Fig.~\ref{xform.pdf} for an overview,
+which also shows an outline of how the main graph and macro prototype
+graphs fit into the document.
 
 \begin{figure}[ht]
 \center
@@ -42,7 +55,7 @@ the \texttt{XformRect} class, which has a singleton instance. All
 \texttt{XForm} nodes which are \emph{rect} nodes have a \texttt{type} field
 pointing to this singleton.
 
-The singletons are automatically created and registered when the class
+Most singletons are automatically created and registered when the class
 is defined, through the \texttt{@xformtype} decorator. This does the
 following:
 \begin{itemize}
@@ -56,7 +69,24 @@ a singleton).
 The base constructor for \texttt{XFormType} adds the singleton
 to a dictionary class variable \texttt{allTypes}, so we can always
 obtain the singleton object and create new nodes which perform that
-node type.
+node type. In addition, each type singleton has a ``group'' field which 
+determines where in the palette to create a construction button for the type.
+
+Some other \texttt{XFormType} objects are dealt with differently:
+\begin{itemize}
+\item Macros are represented by \texttt{XFormMacro} objects --- a subclass
+of \texttt{XFormType}. However, these
+are stored inside the document, not in the global type
+dictionary --- this ensures that macros are document-local\footnote{The
+ramifications of macros being global to the application are problematic:
+consider opening a file with a macro ``foo'' defined one way, and then
+opening another file with a different definition of the same macro!}
+\item Some nodes are registered normally in \texttt{allTypes} but are given
+a ``non-existent'' group name to stop them appearing in the palette.
+These include the \texttt{XFormDummy} type, assigned to nodes whose
+type cannot be found; and macro connectors which can only be created inside
+macros.
+\end{itemize}
 
 \subsubsection{XFormType methods}
 In order to perform a node's action, the type classes must contain
@@ -219,10 +249,8 @@ will also be shown in the tab for that node and in its ``help box''
 \subsection{Inputs}
 \label{inputs}
 Inputs are components which take external data from the DAR or from files and
-bring them into PCOT. While they are part of the
-data processing setup which is saved in a graph file --- and indeed
-are part of the \texttt{XFormGraph} object --- they are not
-part of graph of nodes which appears in the right-hand pane. This may sound
+bring them into PCOT. They are considered part of the document, but not part
+of the graph of nodes which appears in the right-hand pane. This may sound
 like an odd choice, but there are good reasons for it:
 \begin{itemize}
 \item We can change the graph without changing the input files: this
@@ -249,7 +277,7 @@ How inputs work is summarised in Fig.~\ref{inputs.pdf}:
 \label{inputs.pdf}
 \end{figure}
 \begin{itemize}
-\item Graphs which are not macro prototypes own an \texttt{InputManager}.
+\item Documents own an \texttt{InputManager}.
 \item The \texttt{InputManager} owns one \texttt{Input} object for each input.
 \item Each \texttt{Input} has a number of input method objects,
 each of which is of a different subclass of \texttt{InputMethod}.

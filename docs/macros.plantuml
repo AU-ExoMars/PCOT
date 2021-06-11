@@ -21,6 +21,8 @@ note right on link
 This is the prototype graph
 end note
 
+XFormMacro o-- Document:doc
+
 XForm o-- XFormGraph:graph
 XForm *-- MacroInstance:instance
 XForm o-- XFormMacro:type

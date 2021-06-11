@@ -5,11 +5,11 @@ class InputManager {
     +openWindow(idx:int):void
 }
 
-XFormGraph *--o "0..1" InputManager: inputManager
-note right on link
-Only when not
-macro prototype
-end note
+Document *-- InputManager: inputManager
+InputManager o-- Document : doc
+
+Document *-- XFormGraph : graph
+XFormGraph o-- Document  : doc
 
 abstract class Input {
     -activeMethod:int
@@ -31,6 +31,7 @@ abstract class XForm {
 }
 
 XFormInput --|> XForm
+XForm o-- XFormGraph : graph
 
 Input *--o "0..1" InputWindow : window
 

@@ -5,7 +5,11 @@ skinparam classAttributeIconSize 0
 
 MainUI *-- "0..*" MainUI : windows
 
-MainUI o-- XFormGraph : graph
+MainUI o-- Document : doc
+
+XFormGraph o-- Document : doc
+Document o-- XFormGraph : graph
+
 
 XFormGraph *-- XFormGraphScene : scene
 note top on link
