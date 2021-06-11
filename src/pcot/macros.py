@@ -95,7 +95,8 @@ class XFormMacroConnector(XFormType):
         return TabConnector(node, window)
 
 
-## The macro input connector (used inside macro prototypes)    
+## The macro input connector (used inside macro prototypes)
+@xform.xformtype
 class XFormMacroIn(XFormMacroConnector):
     def __init__(self):
         super().__init__("in")
@@ -113,6 +114,7 @@ class XFormMacroIn(XFormMacroConnector):
 
 
 ## The macro output connector (used inside macro prototypes)    
+@xform.xformtype
 class XFormMacroOut(XFormMacroConnector):
     def __init__(self):
         super().__init__("out")
@@ -128,11 +130,6 @@ class XFormMacroOut(XFormMacroConnector):
         print("DUMP OF INCONNECTOR ", node.name, node)
         node.dump()
         print("CONNECTOR OUTPUT", node.datum)
-
-
-# register them, creating instances manually
-xform.xformtype.register(XFormMacroIn())
-xform.xformtype.register(XFormMacroOut())
 
 
 ## the actual macro xform type - this doesn't get autoregistered
@@ -329,7 +326,7 @@ class XFormMacro(XFormType):
             if connName in nodedict:
                 conn = nodedict[connName]
                 # set the input connector's data ready for its perform() to copy
-                # into the output
+                # into the outputin
                 print("SETTING OUTPUT IN CONNECTOR", conn, " TO ", data)
                 conn.datum = data
             else:

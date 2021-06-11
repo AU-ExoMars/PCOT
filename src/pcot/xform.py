@@ -82,7 +82,7 @@ class xformtype:
         if i.name in allTypes:
             raise Exception("xform type name already in use: " + i.name)
         # register the type
-        xformtype.register(i)
+        allTypes[i.name] = i
 
         self._instance._md5 = hashlib.md5(src).hexdigest()  # add the checksum
         if self._instance.__doc__ is None:
@@ -91,9 +91,6 @@ class xformtype:
     def __call__(self):
         return self._instance
 
-    @staticmethod
-    def register(instance):
-        allTypes[instance.name] = instance
 
 
 class BadVersionException(Exception):
