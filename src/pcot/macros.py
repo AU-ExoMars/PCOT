@@ -31,7 +31,7 @@ class MacroInstance:
     def __init__(self, proto, node):
         self.proto = proto
         self.node = node  # backpointer to the XForm containing me
-        self.graph = xform.XFormGraph(False)  # create an empty graph, not a macro prototype
+        self.graph = xform.XFormGraph(proto.doc, False)  # create an empty graph, not a macro prototype
 
     ## this serialises and then deserialises the prototype's
     # graph, giving us a fresh copy of the nodes. However, the UUID "names"
@@ -70,13 +70,14 @@ class XFormMacroConnector(XFormType):
         return {'macro': node.proto.name,
                 'conntype': node.conntype.name}
 
-    ## called from XForm.deserialise, finds the macro
+    ## called from XFormMacro.deserialise, finds the macro
     def deserialise(self, node, d):
         name = d['macro']
-        if name not in XFormMacro.protos:
+        doc = node.graph.doc
+        if name not in doc.macros:
             raise Exception('macro {} not found'.format(name))
+        node.proto = doc.macros[name]
         node.conntype = conntypes.deserialise(d['conntype'])
-        node.proto = XFormMacro.protos[name]
         node.proto.setConnectors()
 
     ## when connectors are removed, the prototype's connectors must change (and
@@ -129,9 +130,9 @@ class XFormMacroOut(XFormMacroConnector):
         print("CONNECTOR OUTPUT", node.datum)
 
 
-# register them
-XFormMacroIn()
-XFormMacroOut()
+# register them, creating instances manually
+xform.xformtype.register(XFormMacroIn())
+xform.xformtype.register(XFormMacroOut())
 
 
 ## the actual macro xform type - this doesn't get autoregistered
@@ -142,8 +143,6 @@ XFormMacroOut()
 # but with a unique name and different connectors.
 
 class XFormMacro(XFormType):
-    protos: ClassVar[Dict[str, 'XFormMacro']]  # dictionary of all macros by name
-
     ## @var graph
     # the graph for this prototype
     graph: xform.XFormGraph
@@ -156,40 +155,31 @@ class XFormMacro(XFormType):
     # the UUIDs for output nodes in the prototype
     outputNodes: List[str]
 
-    ## dictionary of all macros by name    
-    protos = {}  # dictionary of all macro prototypes
+    ## Document
+    doc: 'Document'
 
     ## initialise, creating a new unique name if none provided.
-    def __init__(self, name):
+    def __init__(self, doc, name):
         # generate name if none provided
         if name is None:
-            name = XFormMacro.getUniqueUntitledName()
+            name = doc.getUniqueUntitledMacroName()
         # superinit
         super().__init__(name, "macros", "0.0.0")
         self._md5 = ''  # we ignore the MD5 checksum for versioning
         self.hasEnable = True
+        self.doc = doc
         # create our prototype graph 
-        self.graph = xform.XFormGraph(True)
+        self.graph = xform.XFormGraph(doc, True)
         # backpointer to this type object
         self.graph.proto = self
         # ensure unique name
-        if name in XFormMacro.protos:
+        if name in doc.macros:
             raise Exception("macro {} already exists".format(name))
         # register with the class dictionary
-        XFormMacro.protos[name] = self
+        doc.macros[name] = self
         # initialise the (empty) connectors and will also add us to
         # the palette
         self.setConnectors()
-
-    ## generates a new unique name for this macro. TODO: MAY NOT WORK ON LOAD/RELOAD.
-    @staticmethod
-    def getUniqueUntitledName():
-        ct = 0
-        while True:
-            name = 'untitled' + str(ct)
-            if name not in XFormMacro.protos:
-                return name
-            ct += 1
 
     ## This creates an instance of the macro by setting the node's instance value to a
     # new MacroInstance. Other aspects of the xform's macro behaviour are, of course,
@@ -257,20 +247,22 @@ class XFormMacro(XFormType):
         # and we're also going to have to rebuild the palette, so inform all main
         # windows
         pcot.ui.mainwindow.MainUI.rebuildPalettes()
-        # and rebuild absolutely everything
+        # and rebuild absolutely everything IF the graph has a scene.
         pcot.ui.mainwindow.MainUI.rebuildAll()
 
     ## renaming a macro - we have to update more things than default XFormType rename
     def renameType(self, newname):
+        import pcot.ui
         # rename all instances if their displayName is the same as the old type name
         for x in self.instances:
             if x.displayName == self.name:
                 x.displayName = newname
         # do the default
         # then rename in the macro dictionary
-        del XFormMacro.protos[self.name]
-        super().renameType(newname)
-        XFormMacro.protos[newname] = self
+        del self.doc.macros[self.name]
+        self.doc.macros[newname] = self
+        pcot.ui.mainwindow.MainUI.rebuildPalettes()
+        pcot.ui.mainwindow.MainUI.rebuildAll()
 
     ## we are about to insert this macro into the prototype graph g. Return true
     # if this would make a cycle.
@@ -282,21 +274,6 @@ class XFormMacro(XFormType):
             if x.type.cycleCheck(g):
                 return True
         return False
-
-    ## this serialises all the macro prototypes
-    @staticmethod
-    def serialiseAll():
-        d = {}
-        for k, v in XFormMacro.protos.items():
-            d[k] = v.graph.serialise()
-        return d
-
-    ## deserialises all macro prototypes  
-    @staticmethod
-    def deserialiseAll(d):
-        for k, v in d.items():
-            p = XFormMacro(k)
-            p.graph.deserialise(v, True)
 
     ## serialise an individual macro instance node by storing the macro name
     def serialise(self, node):
@@ -310,11 +287,12 @@ class XFormMacro(XFormType):
     # name and creating a new MacroInstance
     def deserialise(self, node, d):
         name = d['proto']
+        doc = node.graph.doc
         if name is None:
             node.instance = None
         else:
-            if name in XFormMacro.protos:
-                MacroInstance(XFormMacro.protos[name], node)
+            if name in doc.macros:
+                MacroInstance(doc.macros[name], node)
             else:
                 pcot.ui.error("Cannot find macro {} in internal dict".format(name))
 
@@ -328,9 +306,8 @@ class XFormMacro(XFormType):
             toRebuild.add(x.graph)
         for x in toRebuild:
             x.rebuildGraphics()
-        # and now the macro itself
-        del XFormMacro.protos[xformtype.name]
-        xformtype.delType()
+        # and now the macro itself from the doc
+        del xformtype.doc.macros[xformtype.name]
         # caller rebuilds palettes
 
     ## creates edit tab
@@ -402,7 +379,9 @@ class TabMacro(Tab):
 
     def openProto(self):
         if self.node.instance is not None:
-            pcot.ui.mainwindow.MainUI.createMacroWindow(self.node.instance.proto, False)
+            pcot.ui.mainwindow.MainUI(self.node.graph.doc,
+                                      macro=self.node.instance.proto,
+                                      doAutoLayout=False)
 
     def onNodeChanged(self):
         self.w.canvas.display(self.node.sinkimg)

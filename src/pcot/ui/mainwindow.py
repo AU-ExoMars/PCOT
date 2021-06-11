@@ -58,8 +58,13 @@ class MainUI(ui.tabs.DockableTabWindow):
     windows: ClassVar[List['MainUI']]
 
     ## @var graph
-    # the graph I am showing - might be None, but only briefly, when creating a window for a macro prototype
+    # the graph I am showing - might be the main graph of the document
+    # or one of its macros
     graph: Optional[xform.XFormGraph]
+
+    ## @var doc
+    # backpointer to the document of which I am a part
+    doc: 'Document'
 
     ## @var macroPrototype
     # if I am showing a macro, the macro prototype (else None)
@@ -110,22 +115,20 @@ class MainUI(ui.tabs.DockableTabWindow):
         self._init(doc=doc, macro=macro, doAutoLayout=doAutoLayout)
 
     def _init(self,
-              doc=None,  # XFormMacro
-              macro=None,  # Document
+              doc,  # Document
+              macro=None,  # XFormMacro
               doAutoLayout: bool = True):
         """This is the 'real' constructor, which is a separate function so
-                      we can reinitialise an existing window. Note that it takes
-                      EITHER a document or a macro, and does that via keywords."""
-
-        if macro is None and doc is None:
-            raise Exception("macro or document must be provided")
-        elif macro is not None and doc is not None:
-            raise Exception("macro or document must be provided, not both!")
+        we can reinitialise. Doc must always be supplied; it's the document
+        we are using. If there is no macro, we are viewing the main graph of
+        the document. Otherwise we are viewing a macro inside the document."""
 
         if macro is not None:
             self.graph = macro.graph
         else:
             self.graph = doc.graph
+
+        self.doc = doc
 
         self.recentActs = []
 
@@ -156,7 +159,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.setStatusBar(self.statusBar)
 
         # set up the scrolling palette and make the buttons therein
-        self.palette = palette.Palette(self.paletteArea, self.paletteContents, self.view)
+        self.palette = palette.Palette(doc, self.paletteArea, self.paletteContents, self.view)
 
         # and remove some things which don't apply to macro windows
         if macro is not None:
@@ -185,12 +188,13 @@ class MainUI(ui.tabs.DockableTabWindow):
                                 ' ' + ui.app().applicationVersion() +
                                 " [MACRO {}]".format(self.graph.proto.name))
         else:
+            # We are definitely a main window
             self.macroPrototype = None  # we are not a macro
             # now create the input selector buttons
             isfLayout = QtWidgets.QHBoxLayout()
             self.inputSelectorFrame.setLayout(isfLayout)
-            for x in range(0, len(self.graph.inputMgr.inputs)):
-                isfLayout.addWidget(InputSelectButton(x, self.graph.inputMgr.inputs[x]))
+            for x in range(0, len(self.doc.inputMgr.inputs)):
+                isfLayout.addWidget(InputSelectButton(x, self.doc.inputMgr.inputs[x]))
 
         # make sure the view has a link up to this window,
         # also will tint the view if we are a macro
@@ -255,7 +259,8 @@ class MainUI(ui.tabs.DockableTabWindow):
     def rebuildAll(scene=True, tab=True):
         for w in MainUI.windows:
             if scene:
-                w.graph.scene.rebuild()
+                if w.graph.scene is not None:
+                    w.graph.scene.rebuild()
             if tab:
                 w.retitleTabs()
 
@@ -372,13 +377,12 @@ class MainUI(ui.tabs.DockableTabWindow):
     def newAction(self):
         import pcot.document
         d = pcot.document.Document()
-        MainUI(doc=d, doAutoLayout=True)  # create a new empty window
+        MainUI(d, doAutoLayout=True)  # create a new empty window
 
-    ## "new macro" menu/keypress, will create a new macro prototype stored
-    # in this patch
+    ## "new macro" menu/keypress, will create a new macro prototype in this document
     def newMacroAction(self):
-        p = macros.XFormMacro(None)
-        MainUI(macro=p, doAutoLayout=True)
+        p = macros.XFormMacro(self.doc, None)
+        MainUI(self.doc, macro=p, doAutoLayout=True)
 
     ## this gets called from way down in the scene to open tabs for nodes
     def openTab(self, node):

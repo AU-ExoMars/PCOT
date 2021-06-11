@@ -33,6 +33,7 @@ def main():
     parser.process(app)
     args = parser.positionalArguments()
 
+    # create a document either ab initio or from a file, depending on args and config.
     if len(args) > 0:
         doc = Document(args[0])
     else:
@@ -42,8 +43,11 @@ def main():
         else:
             doc = Document()
 
-    window = pcot.ui.mainwindow.MainUI(doc=doc, doAutoLayout=True)  # Create an instance of a main window
-    app.exec_()  # Start the application
+    # Create an instance of a main window on that document
+    window = pcot.ui.mainwindow.MainUI(doc, doAutoLayout=True)
+
+    # run the application until exit
+    app.exec_()
     print("Leaving app")
     pcot.config.save()
 
