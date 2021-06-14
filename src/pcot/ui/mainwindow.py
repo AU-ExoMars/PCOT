@@ -203,7 +203,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         # but that's OK because they don't have a caption control either.
         self.setCaption(0)
 
-        for x in pcot.mainWindowInitHooks:
+        for x in pcot.config.mainWindowHooks:
             x(self)
 
         self.show()

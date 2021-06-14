@@ -75,5 +75,17 @@ def save():
 def addRecent(fn):
     fn = os.path.realpath(os.path.expanduser(fn))  # just make sure.
     Recents.add(fn)
-    locations['pcotfiles'] = fn
+    locations['pcotfiles'] = os.path.dirname(fn)
     save()
+
+
+mainWindowHooks = []
+exprFuncHooks = []
+
+
+def addMainWindowHook(x):
+    mainWindowHooks.append(x)
+
+
+def addExprFuncHook(x):
+    exprFuncHooks.append(x)

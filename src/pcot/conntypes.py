@@ -15,7 +15,6 @@ from typing import Any
 # but there's UI stuff in here too because (a) I don't want to separate it out and
 # (b) there isn't much more to a type than its name.
 
-
 class Type:
     def __init__(self, name, image=False, internal=False):
         self.name = name
@@ -88,6 +87,9 @@ class Datum:
     val: Any
 
     def __init__(self, t: Type, v: Any):
+        if not isinstance(t,Type):
+            from pcot.xform import XFormException
+            raise XFormException("CODE", "bad call to datum ctor: should be Datum(Type,Value)")
         self.tp = t
         self.val = v
 

@@ -6,6 +6,8 @@ from typing import Callable, Dict, Tuple, List, Optional, Any
 
 import numpy as np
 import cv2 as cv
+
+import pcot.config
 import pcot.conntypes as conntypes
 import pcot.operations as operations
 from pcot.expressions import parse
@@ -175,7 +177,8 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
 
 
 class ExpressionEvaluator(parse.Parser):
-    """The core class for the expression evaluator, based on a generic Parser."""
+    """The core class for the expression evaluator, based on a generic Parser. The constructor
+    is responsible for registering most functions."""
 
     def __init__(self):
         """Initialise the evaluator, registering functions and operators.
@@ -239,6 +242,9 @@ class ExpressionEvaluator(parse.Parser):
                                      "if non-zero, use openCV greyscale conversion (RGB input only): 0.299*R + 0.587*G + 0.114*B",
                                      conntypes.NUMBER, deflt=0)],
                           funcGrey)
+
+        for x in pcot.config.exprFuncHooks:
+            x(self)
 
         registerProperty('w', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.w))
         registerProperty('h', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.h))

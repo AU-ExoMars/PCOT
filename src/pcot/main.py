@@ -33,6 +33,8 @@ def main():
     parser.process(app)
     args = parser.positionalArguments()
 
+    pcot.xform.createXFormTypeInstances()
+
     # create a document either ab initio or from a file, depending on args and config.
     if len(args) > 0:
         doc = Document(args[0])

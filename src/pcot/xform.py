@@ -58,6 +58,21 @@ class XFormException(Exception):
         self.message = message
 
 
+_xformctors = []            # list of (xformtype,classobject,args,kwargs,md5) tuples
+
+
+def createXFormTypeInstances():
+    for xft, cls, args, kwargs, md5 in _xformctors:
+        i = cls(*args, *kwargs)
+        xft._instance = i
+        if i.name in allTypes:
+            raise Exception("xform type name already in use: " + i.name)
+        allTypes[i.name] = i
+        i._md5 = md5
+        if i.__doc__ is None:
+            print("WARNING: no documentation for xform type '{}'".format(i.name))
+
+
 # I'm suppressing a name warning because I prefer it like this!
 
 # noinspection PyPep8Naming
@@ -68,6 +83,9 @@ class xformtype:
     need the xforms to be registered at initialisation. Thus the class creation
     forces an instance to be created. We also use it to grab the source code
     and generate an MD5 checksum, so we are *sure* versions match.
+
+    Well, it's SORT of lazy because it just adds data to a list which createXFormTypeInstances iterates over later,
+    once everything is up.
     """
 
     def __init__(self, cls, *args, **kwargs):
@@ -76,17 +94,13 @@ class xformtype:
         # data, for version matching info
         mod = inspect.getmodule(cls)
         src = inspect.getsource(mod).encode('utf-8')  # get the source
-        i = self._cls(*args, **kwargs)  # make the instance
-        self._instance = i
-        # and add to the registry
-        if i.name in allTypes:
-            raise Exception("xform type name already in use: " + i.name)
-        # register the type
-        allTypes[i.name] = i
 
-        self._instance._md5 = hashlib.md5(src).hexdigest()  # add the checksum
-        if self._instance.__doc__ is None:
-            print("WARNING: no documentation for xform type '{}'".format(self._instance.name))
+        # we don't create the instance - that's postponed until later to avoid some circular import
+        # problems when expr is initialised (it's quite difficult to run the user function hooks this
+        # early). We add the required info to a list, which createXFormTypeInstances() runs through later.
+
+        md5 = hashlib.md5(src).hexdigest()  # add the checksum
+        _xformctors.append((self, cls, args, kwargs, md5))
 
     def __call__(self):
         return self._instance

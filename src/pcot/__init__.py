@@ -7,12 +7,9 @@ import pcot.macros as macros
 import pcot.ui as ui
 import pcot.xform as xform
 import pcot.xforms
-from pcot.config import getUserName
+from pcot.config import getUserName, addMainWindowHook, addExprFuncHook
 from pcot.utils import archive
 from pcot.xforms import *
-
-# A list of functions for adding stuff to the main window. Each takes a MainUI
-mainWindowInitHooks = []
 
 ##### Plugin handling
 
