@@ -14,7 +14,24 @@ PCOT is a Python program (and library) with a number of dependencies:
 * matplotlib
 
 I find the best way to manage these is to use Anaconda. Installation has been tested on Windows 10
-and Ubuntu 20.04
+and Ubuntu 20.04.
+
+### Obtain the software
+
+For both Windows and Ubuntu this is the obvious first step. This can be done by either downloading the 
+archive from Github and extracting it into a new directory, or cloning the repository. In both cases, the top level
+directory should be called PCOT (this isn't really mandatory but makes the instructions below simpler). The best way
+to download is this:
+
+```shell
+git clone git@github.com:AU-ExoMars/PCOT.git
+```
+or
+```shell
+git clone https://github.com/AU-ExoMars/PCOT.git
+```
+You'll need a Github account and membership of the AU-ExoMars group to do this successfully.  
+ 
 
 ### Installing on Ubuntu
 
