@@ -139,8 +139,8 @@ class InputManager:
     inputs: List[Input]
     graph: 'XFormGraph'
 
-    def __init__(self, graph):
-        self.graph = graph
+    def __init__(self, doc):
+        self.graph = doc.graph
         self.inputs = [Input(self) for _ in range(0, NUMINPUTS)]
 
     def openWindow(self, inputIdx):

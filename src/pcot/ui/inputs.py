@@ -76,7 +76,8 @@ class MethodWidget(QtWidgets.QWidget):
         super().__init__()
 
     def invalidate(self):
-        self.method.invalidate()
+        if self.method.isActive():
+            self.method.invalidate()
 
 
 # This class is for displaying input methods which rely on a tree view of files,
@@ -91,6 +92,7 @@ class TreeMethodWidget(MethodWidget):
         root = os.path.expanduser(pcot.config.locations.get('images'))
         if not os.path.isdir(root):
             root = os.path.expanduser("~")
+        self.fileEdit.setText(root)
         self.dirModel.setRootPath(root)
         self.dirModel.setNameFilters(filterList)
         self.dirModel.setNameFilterDisables(False)
@@ -98,24 +100,16 @@ class TreeMethodWidget(MethodWidget):
         self.treeView.setMinimumWidth(300)
         self.setMinimumSize(1000, 500)
 
-        # find index of directory
-        idx = self.dirModel.index(root)
-        # expand and scroll to it
-        self.treeView.setExpanded(idx, True)
-        # and select the file (if one is selected)
-        self.treeView.scrollTo(idx)
-        if self.method.fname is not None:
-            idx = self.dirModel.index(self.method.fname)
-            self.treeView.selectionModel().select(idx, QtCore.QItemSelectionModel.Select)
-            self.treeView.scrollTo(idx)
-
         self.treeView.setIndentation(10)
         self.treeView.setSortingEnabled(True)
         self.treeView.setColumnWidth(0, self.treeView.width() / 1.5)
         self.treeView.setColumnHidden(1, True)
         self.treeView.setColumnHidden(2, True)
-        self.treeView.doubleClicked.connect(self.fileClickedAction)
-        self.treeView.scrollTo(idx)
+        self.treeView.doubleClicked.connect(self.fileDoubleClickedAction)
+        self.fileEdit.editingFinished.connect(self.lineToTree)
+        self.treeView.clicked.connect(self.fileClickedAction)
+        self.goto(root)
+
         self.canvas.setMapping(m.mapping)
         # the canvas gets its "caption display" setting from the graph, so
         # we need to get it from the manager, which we get from the input,
@@ -125,7 +119,39 @@ class TreeMethodWidget(MethodWidget):
 
         self.onInputChanged()
 
+    def goto(self, filename):
+        """Filename could be a file or directory - we should scroll to it, and select it if it's a file"""
+        if os.path.isfile(filename):
+            dirname = os.path.dirname(filename)
+        elif os.path.isdir(filename):
+            dirname = filename
+            filename = None
+        else:
+            dirname = os.path.expanduser("~")
+        print("FILENAME IS {}, DIRNAME IS {}".format(filename,dirname))
+        # find index of directory
+        idx = self.dirModel.index(dirname)
+        # expand and scroll to it
+        self.treeView.setExpanded(idx, True)
+        # and select the file (if one is selected)
+        self.treeView.scrollTo(idx)
+
+        if filename is not None and os.path.isfile(filename):
+            idx = self.dirModel.index(filename)
+            self.treeView.selectionModel().select(idx, QtCore.QItemSelectionModel.Select)
+            self.treeView.scrollTo(idx)
+
+    def lineToTree(self):
+        txt = self.fileEdit.text()
+        fname = os.path.realpath(os.path.expanduser(txt))
+        if os.path.exists(fname):
+            self.goto(fname)
+
     def fileClickedAction(self, idx):
+        name = os.path.realpath(self.dirModel.filePath(idx))
+        self.fileEdit.setText(name)
+
+    def fileDoubleClickedAction(self, idx):
         if not self.dirModel.isDir(idx):
             self.method.img = None
             self.method.get()
