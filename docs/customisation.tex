@@ -1,0 +1,70 @@
+% Created by Jim Finnis
+% Date Mon Jun 14 12:18:40 2021
+
+
+\section{Customising PCOT}
+\label{customisation}
+After running PCOT for the first time, each user will have a
+\texttt{.pcot.ini} file in the their home directory for settings
+and some persistent data. This
+section of the document describes this data.
+
+\subsection{Locations section}
+\begin{itemize}
+\item \textbf{pcotfiles}: location of PCOT documents; the directory
+of the last PCOT file saved or loaded.
+\item \textbf{images}: the directory of the last image loaded.
+\item \textbf{mplplots}: the directory of the last MPL plot saved.
+\item \textbf{pluginpath}: a colon-separated list of directories
+scanned for plugins (see below).
+\end{itemize}
+
+\subsection{Plugins}
+Each directory inside the plugin path (see above) is scanned at
+application startup, on import of the \texttt{pcot} module. All
+Python files found are imported. Various mechanisms are provided
+to let users create their own nodes, \emph{expr} functions and
+menu items.
+
+\subsubsection{Creating new types of node}
+Simply adding a new subclass of \texttt{XFormType} preceded by
+the \texttt{@xformtype} annotation is sufficient to register
+a new node type. See Sec.~\ref{writingnodes} for more details,
+or read some of PCOT's source code --- node types can be found
+in the \texttt{xforms} directory.
+
+\subsubsection{Creating new \emph{expr} functions}
+This is done by adding an expression function hook to the list of hooks. These
+hooks are functions which take an \texttt{ExpressionEvaluator} class. Add something
+like the following to one of your Python files in your plugin directory:
+\begin{lstlisting}
+import pcot
+
+def testfunc(args, optargs):
+    # just a numeric test function that calculates a+b*2 for two parameters a,b
+    # get the two values as numbers
+    a = args[0].get(conntypes.NUMBER)
+    b = args[1].get(conntypes.NUMBER)
+    # calculate the result (yes, I'm doing this the long-winded way)
+    result = a+b*2
+    # convert the result into a Datum and return
+    return Datum(conntypes.NUMBER, result)
+
+def regfuncs(e):
+    from pcot.expression.parse import Parameter
+    # register a function "test" with a description
+    p.registerFunc("test", "func description",
+    # one entry for each mandatory argument/parameter
+                   [Parameter("a", "description for A", conntypes.NUMBER),
+                    Parameter("b","description for B", conntypes.NUMBER)
+                   ],
+                   [], # no optional arguments
+                   testfunc # finally, the fnction
+                   )
+
+# register the function by adding it to the expression function hooks - this
+# will run regfuncs() when the expression evaluator is created.
+
+pcot.exprFuncHooks.append(regfuncs)
+\end{lstlisting}
+See~\ref{writingfuncs} for more details.

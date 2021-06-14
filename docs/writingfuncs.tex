@@ -1,0 +1,109 @@
+% Created by Jim Finnis
+% Date Mon Jun 14 12:06:09 2021
+
+
+\section{Writing custom \emph{expr} functions}
+\label{writingfuncs}
+This section covers writing custom functions for use in the expression evaluation node \emph{expr}.
+All these functions have two arguments and return a single value. The arguments are:
+\begin{itemize}
+\item \textbf{args} is an array of mandatory positional arguments
+\item \textbf{optargs} is an array of optional positional arguments which may follow the mandatory arguments.
+\end{itemize}
+All arguments and the return value are \texttt{Datum} objects, and we obtain the contained data by calling
+the \texttt{get()} method with the appropriate \texttt{conntype} member.
+To register a function we use the \texttt{registerFunc()} method of \texttt{ExpressionEvaluator}, which
+has the following arguments:
+\begin{itemize}
+\item function name
+\item function description
+\item array of \texttt{Parameter} objects describing the mandatory arguments
+\item array of \texttt{Parameter} objects describing the optional arguments (which must be numeric)
+\item the function itself
+\end{itemize}
+For built-in functions this is done in \texttt{ExpressionEvaluator}'s
+constructor. For user functions, you must add an expression function hook from
+a plugin file and register the functions in the hook (which is passed an
+\texttt{ExpressionEvaluator}) --- see Sec.~\ref{customisation} for how to do
+this.
+
+The \texttt{Parameter} constructor takes the following arguments:
+\begin{itemize}
+\item parameter name
+\item parameter description
+\item tuple of permitted types for this parameter
+\item default value (which must be numeric!) for optional parameters
+\end{itemize}
+
+\subsection{Example of a simple function}
+Here is a simple function which generates a greyscale from an incoming image. There is an optional
+numeric argument which is used as a flag to control how the function processes RGB images:
+if the flag is true, 3-channel images are converted using OpenCV's
+method\footnote{$0.299r + 0.587g + 0.114b$},
+otherwise the mean of all channels is used. This latter method is always used when the image does not have
+3 channels.
+
+\begin{lstlisting}
+def funcGrey(args, optargs):
+
+    # Note that documentation strings are important: they are used in the
+    # help system!
+    
+    """Greyscale conversion. If the optional second argument
+    is nonzero, and the image has 3 channels, we'll use CV's
+    conversion equation rather than just the mean."""
+
+    # get the first argument as an ImageCube
+    
+    img = args[0].get(conntypes.IMG)
+    
+    # get the image's sources, combined into a single set
+    
+    sources = set.union(*img.sources)
+
+    # get the optional argument (or the default if not
+    # provided).
+    
+    if optargs[0].get(conntypes.NUMBER) != 0:
+
+        # We are using the OpenCV method for 3 channels
+        
+        if img.channels != 3:
+            # but there aren't 3 channels, raise an exception!
+            raise XFormException('DATA', "Image must be RGB for OpenCV greyscale conversion")
+
+        # generate a new image cube from the greyscale data, but keep the same
+        # image mapping. Use the combined sources for this single channel.
+
+        img = ImageCube(cv.cvtColor(img.img, cv.COLOR_RGB2GRAY), img.mapping, [sources])
+    else:
+        # create a transformation matrix specifying that the output is a single channel which
+        # is the mean of all the channels in the source
+        
+        mat = np.array([1 / img.channels] * img.channels).reshape((1, img.channels))
+
+        # use it to generate the image
+        out = cv.transform(img.img, mat)
+
+        # and turn this into an image cube
+        img = ImageCube(out, img.mapping, [sources])
+    
+    # return the image cube as a Datum
+    return Datum(conntypes.IMG, img)
+\end{lstlisting}
+
+We can then register this function. This is a built-in function, so it is registered inside the constructor for
+the \texttt{ExpressionEvaluator} owned by the \texttt{XFormExpr} type object:
+
+\begin{lstlisting}
+        self.registerFunc("grey", # name 
+            "convert an image to greyscale", # description
+            # a single mandatory parameter: an image
+            [Parameter("image", "an image to process", conntypes.IMG)],
+            # a single optional parameter (which must be numeric):
+            [Parameter("useCV",
+               "if non-zero, use openCV greyscale conversion (RGB input only): 0.299*R + 0.587*G + 0.114*B",
+                conntypes.NUMBER, deflt=0)],
+            funcGrey)
+\end{lstlisting}
+
