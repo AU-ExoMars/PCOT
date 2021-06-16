@@ -22,7 +22,7 @@ def handleMenuEvent(self, ev):
         a.setDisabled(True)
         menu.addAction(a)
 
-    parser = allTypes['eval'].parser    # the eval node type owns the parser, which knows about funcs.
+    parser = allTypes['expr'].parser    # the eval node type owns the parser, which knows about funcs.
 
     a = menu.exec_(ev.globalPos())
     if a == fhact:
