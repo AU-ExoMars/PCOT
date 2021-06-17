@@ -2,6 +2,7 @@
 # Canvas widget for showing a CV image
 #
 import math
+import os
 from typing import TYPE_CHECKING, Optional
 
 from PyQt5 import QtWidgets, QtCore
@@ -11,6 +12,7 @@ from PyQt5.QtCore import Qt
 import cv2 as cv
 import numpy as np
 
+import pcot
 import pcot.ui as ui
 from pcot.channelsource import IChannelSource
 from pcot.pancamimage import ImageCube, ChannelMapping
@@ -299,12 +301,17 @@ class Canvas(QtWidgets.QWidget):
         topbar.addWidget(makeTopBarLabel("RED source"), 0, 0)
         topbar.addWidget(makeTopBarLabel("GREEN source"), 0, 1)
         topbar.addWidget(makeTopBarLabel("BLUE source"), 0, 2)
+
         self.roiToggle = QtWidgets.QRadioButton("Show ROIS")
         topbar.addWidget(self.roiToggle, 0, 3)
         self.roiToggle.toggled.connect(self.roiToggleChanged)
 
+        self.saveButton = QtWidgets.QPushButton("Save RGB as PNG")
+        topbar.addWidget(self.saveButton, 1, 3)
+        self.saveButton.clicked.connect(self.saveButtonClicked)
+
         self.roiText = QtWidgets.QLabel('')
-        topbar.addWidget(self.roiText, 1, 3)
+        topbar.addWidget(self.roiText, 0, 4)
 
         self.topbarwidget.setContentsMargins(0, 0, 0, 0)
         topbar.setContentsMargins(0, 0, 0, 0)
@@ -407,6 +414,26 @@ class Canvas(QtWidgets.QWidget):
     def roiToggleChanged(self, v):
         self.persister.showROIs = v
         self.redisplay()
+
+    def saveButtonClicked(self, c):
+        if self.previmg is None:
+            return
+        img = self.previmg.rgb()
+        # convert to 8-bit integer from 32-bit float
+        img8 = (img * 255).astype('uint8')
+        # and change endianness
+        img8 = cv.cvtColor(img8, cv.COLOR_RGB2BGR)
+        res = QtWidgets.QFileDialog.getSaveFileName(self, 'Save RGB image as PNG',
+                                                    os.path.expanduser(pcot.config.locations['savedimages']),
+                                                    "PNG images (*.png)")
+        if res[0] != '':
+            path = res[0]
+            pcot.config.locations['savedimages'] = os.path.dirname(os.path.realpath(path))
+            cv.imwrite(path, img8)
+            ui.log("Image written")
+
+
+        pass
 
     ## this initialises a combo box, setting the possible values to be the channels in the image
     # input

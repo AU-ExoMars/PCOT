@@ -53,8 +53,8 @@ class MplWidget(QtWidgets.QWidget):
                                                     "Figures (*.png *.pdf *.jpg)")
         if res[0] != '':
             path = res[0]
-            pcot.config.locations['mplplots'] = os.path.dirname(os.path.realpath(path))
             self.fig.savefig(path)
+            pcot.config.locations['mplplots'] = os.path.dirname(os.path.realpath(path))
 
     ## clear all drawings
     def clear(self):
