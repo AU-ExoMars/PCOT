@@ -9,8 +9,8 @@ from pcot.xform import xformtype, XFormROIType
 @xformtype
 class XformRect(XFormROIType):
     """Add a rectangular ROI to an image.
-    At the next operation node all ROIs will be grouped together,
-    used to perform the operation, and discarded.
+    Most subsequent operations will only
+    be performed on the union of all regions of interest.
     Also outputs an RGB image annotated with the ROI on the 'ann' RGB input, or the input
     image converted to RGB if that input is not connected.
     """

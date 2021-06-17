@@ -89,7 +89,7 @@ def exprWrapper(fn, img, *args):
 def registerOpFunctionsAndProperties(p: 'Parser'):
     p.registerFunc(
         "curve",
-        "impose a sigmoid curve on an image, y=1/(1+e^-(px+a))) where m and a are parameters",
+        "impose a sigmoid curve on an image, y=1/(1+e^-(mx+a))) where m and a are parameters",
         [Parameter("image", "the image to process", IMG),
          Parameter("mul", "multiply pixel values by this factor before processing", NUMBER),
          Parameter("add", "add this to pixels values after multiplication", NUMBER)],
