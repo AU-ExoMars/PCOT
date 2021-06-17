@@ -10,22 +10,24 @@ from skimage.registration import optical_flow_tvl1
 
 from pcot.xforms.tabimage import TabImage
 
+
 @xformtype
-class XFormRegister(XFormType):
+class XFormAutoRegister(XFormType):
     # https://scikit-image.org/docs/dev/api/skimage.registration.html#skimage.registration.optical_flow_tvl1
     # https://scikit-image.org/docs/dev/auto_examples/registration/plot_opticalflow.html
 
     """Use the TV-L1 solver to find an optical flow field for transforming one image into another. Not generally advised!"""
+
     def __init__(self):
         super().__init__("tvl1 autoreg", "processing", "0.0.0")
         self.addInputConnector("moving", conntypes.IMG)
         self.addInputConnector("fixed", conntypes.IMG)
         self.addOutputConnector("moved", conntypes.IMG)
 
-    def init(self,node):
+    def init(self, node):
         node.img = None
 
-    def perform(self,node):
+    def perform(self, node):
         # read images
         movingImg = node.getInput(0, conntypes.IMG)
         fixedImg = node.getInput(1, conntypes.IMG)
@@ -49,7 +51,8 @@ class XFormRegister(XFormType):
             if movingImg.channels == 1:
                 out = warp(movingImg.img, warpdata, mode='edge')
             else:
-                chans = [np.reshape(x, (nr, nc)) for x in np.dsplit(movingImg.img, movingImg.channels)]  # same as cv.split
+                chans = [np.reshape(x, (nr, nc)) for x in
+                         np.dsplit(movingImg.img, movingImg.channels)]  # same as cv.split
                 outs = [warp(x, warpdata, mode='edge') for x in chans]
                 out = np.dstack(outs)
 
@@ -59,8 +62,3 @@ class XFormRegister(XFormType):
 
     def createTab(self, n, w):
         return TabImage(n, w)
-
-
-
-
-
