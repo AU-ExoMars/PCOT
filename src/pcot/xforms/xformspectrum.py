@@ -99,7 +99,7 @@ ERRORBARMODE_STDDEV = 2
 
 @xformtype
 class XFormSpectrum(XFormType):
-    """Show the mean intensities for each frequency in each input. Each input has a separate line in
+    """Show the mean intensities for each frequency band in each input. Each input has a separate line in
     the resulting plot, labelled with either a generated label or the annotation of the last ROI on that
     input. If two inputs have the same ROI label, they are merged into a single line."""
 

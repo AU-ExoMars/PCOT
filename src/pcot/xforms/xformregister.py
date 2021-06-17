@@ -15,7 +15,7 @@ class XFormRegister(XFormType):
     # https://scikit-image.org/docs/dev/api/skimage.registration.html#skimage.registration.optical_flow_tvl1
     # https://scikit-image.org/docs/dev/auto_examples/registration/plot_opticalflow.html
 
-    """Use the TV-L1 solver to find an optical flow field for transforming one image into another."""
+    """Use the TV-L1 solver to find an optical flow field for transforming one image into another. Not generally advised!"""
     def __init__(self):
         super().__init__("tvl1 autoreg", "processing", "0.0.0")
         self.addInputConnector("moving", conntypes.IMG)

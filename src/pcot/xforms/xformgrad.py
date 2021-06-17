@@ -56,7 +56,7 @@ presetGradients = {
 
 @xformtype
 class XformGradient(XFormType):
-    """Convert a greyscale image to a colour gradient image for better visibility"""
+    """Convert a greyscale image to an RGB gradient image for better visibility"""
 
     def __init__(self):
         super().__init__("gradient", "data", "0.0.0")

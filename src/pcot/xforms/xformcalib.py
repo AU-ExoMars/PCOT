@@ -6,8 +6,8 @@ from pcot.xforms.tabimage import TabImage
 
 @xformtype
 class XformCalib(XFormType):
-    """mock calibration: takes ellipse data (or more realistically calibration data
-    generated from ellipses) and calibrates the image accordingly"""
+    """calibration: takes ellipse data (or more realistically calibration data
+    generated from ellipses) and calibrates the image accordingly. Not yet implemented"""
 
     def __init__(self):
         super().__init__("calib", "calibration", "0.0.0")
