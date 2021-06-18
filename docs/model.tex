@@ -56,8 +56,8 @@ the \texttt{XformRect} class, which has a singleton instance. All
 pointing to this singleton.
 
 Most singletons are automatically created and registered when the class
-is defined, through the \texttt{@xformtype} annotation and \texttt{createXFormTypeInstances()}. 
-The annotation stores the required information ---- name, class, constructor arguments etc. ---
+is defined, through the \texttt{@xformtype} decorator and \texttt{createXFormTypeInstances()}. 
+The decorator stores the required information ---- name, class, constructor arguments etc. ---
 into a list, while \texttt{createXFormTypeInstances()}, which runs just before the app starts (as
 late as possible) does the following for each entry:
 \begin{itemize}

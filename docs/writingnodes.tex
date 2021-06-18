@@ -17,7 +17,7 @@ To write a new node type we need to write a new \texttt{XFormType},
 create a singleton object of that class, and register it with the system
 (so the user can see it). The last two steps are dealt with automatically;
 all we need do is write the class inside the \texttt{xforms} directory
-and make sure it has the \texttt{@xformtype} annotation to ensure
+and make sure it has the \texttt{@xformtype} decorator to ensure
 it is registered and is a singleton, as described in 
 Sec.~\ref{xformtype}.
 
@@ -96,7 +96,7 @@ by the \texttt{XFormType} singleton to which it is linked. The code for this cla
 class XformNormImage(XFormType):
 \end{lstlisting}
 We're creating a new subclass of \texttt{XFormType} and giving it the
-\texttt{@xformtype} annotation, which will create an instance and register it
+\texttt{@xformtype} decorator, which will create an instance and register it
 automatically with the application. Because of this, the declaration is the
 only place where the name of the class is used. Now the constructor:
 \begin{lstlisting}
