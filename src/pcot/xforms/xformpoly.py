@@ -1,4 +1,5 @@
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QKeyEvent
 from PyQt5.QtWidgets import QMessageBox
 
 import pcot.conntypes as conntypes
@@ -166,6 +167,7 @@ class TabPoly(pcot.ui.tabs.Tab):
     def canvasMouseReleaseEvent(self, x, y, e):
         self.mouseDown = False
 
-    def canvasKeyPressEvent(self, e):
-        self.node.roi.delSelPoint()
-        self.changed()
+    def canvasKeyPressEvent(self, e: QKeyEvent):
+        if e.key() == Qt.Key_Delete:
+            self.node.roi.delSelPoint()
+            self.changed()

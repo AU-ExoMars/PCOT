@@ -639,32 +639,38 @@ class ImageCube:
     ## get a numpy image (not another ImageCube) we can display on an RGB surface - see
     # rgbImage if you want an imagecube. If there is more than one channel we need to have
     # an RGB mapping in the image. If showROIs is true, we create an image with the ROIs
-    # on it.
-    def rgb(self, showROIs: bool = False):
+    # on it. We can specify a different mapping than that of the image.
+    def rgb(self, showROIs: bool = False, mapping: Optional[ChannelMapping] = None):
         # assume we're 8 bit
         if self.channels == 1:
             # single channel images are a special case, rather than
             # [chans,w,h] they are just [w,h]
             return cv.merge([self.img, self.img, self.img])
         else:
-            if self.mapping is None:
+            if mapping is None:
+                mapping = self.mapping
+            if mapping is None:
                 raise Exception("trying to get rgb of an imagecube with no mapping")
-            red = self.img[:, :, self.mapping.red]
-            green = self.img[:, :, self.mapping.green]
-            blue = self.img[:, :, self.mapping.blue]
+            red = self.img[:, :, mapping.red]
+            green = self.img[:, :, mapping.green]
+            blue = self.img[:, :, mapping.blue]
         img = cv.merge([red, green, blue])
         if showROIs:
             self.drawROIs(img)
         return img
 
     ## as rgb, but wraps in an ImageCube. Also works out the sources, which should be for
-    # the channels in the result.
-    def rgbImage(self):
-        sources = [self.sources[self.mapping.red],
-                   self.sources[self.mapping.green],
-                   self.sources[self.mapping.blue]]
+    # the channels in the result. A different mapping from the image mapping can be specified.
+    def rgbImage(self, mapping: Optional[ChannelMapping] = None):
+        if mapping is None:
+            mapping = self.mapping
+        if mapping is None:
+            raise Exception("trying to get rgb of an imagecube with no mapping")
+        sources = [self.sources[mapping.red],
+                   self.sources[mapping.green],
+                   self.sources[mapping.blue]]
         # The RGB mapping here should be just [0,1,2], since this output is the RGB representation.
-        return ImageCube(self.rgb(), ChannelMapping(0, 1, 2), sources)
+        return ImageCube(self.rgb(mapping=mapping), ChannelMapping(0, 1, 2), sources)
 
     ## save RGB representation
     def rgbWrite(self, filename):

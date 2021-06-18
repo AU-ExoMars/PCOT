@@ -13,7 +13,7 @@ import pcot.config
 
 # The first part of the plugin creates a new type of node.
 
-# this annotation will cause the node to auto-register.
+# this decorator will cause the node to auto-register.
 
 @xformtype
 class XFormEdgeDetect(XFormType):
