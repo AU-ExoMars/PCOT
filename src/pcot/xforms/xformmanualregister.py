@@ -84,7 +84,10 @@ class XFormManualRegister(XFormType):
         # is the selected point (if any) in the dest list (or the source list)?
         node.selIsDest = False
 
-    def perform(self, node):
+    def uichange(self, node):
+        self.perform(node, False)
+
+    def perform(self, node, doApply=True):
         # read images
         movingImg = node.getInput(0, conntypes.IMG)
         fixedImg = node.getInput(1, conntypes.IMG)
@@ -93,7 +96,8 @@ class XFormManualRegister(XFormType):
             node.img = None  # output image (i.e. warped)
             node.movingImg = None  # image we are moving
         else:
-            self.apply(node)
+            if doApply:
+                self.apply(node)
 
             # this gets the appropriate image and also manipulates it.
             # Generally we convert RGB to grey; otherwise we'd have to store

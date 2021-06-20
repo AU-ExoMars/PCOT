@@ -258,6 +258,14 @@ class XFormType:
         """override this - perform the actual action of the transformation, will generate outputs in that object."""
         pass
 
+    def uichange(self, xform):
+        """Respond to changes in a tab. If autorun is not set, this alone is run on the changed node. If autorun is
+        set, the perform() runs immediately after it and the run recurses down the children. For some fast nodes,
+        it's fine to have this call perform() if there are important UI changes (such as ROIs). It will run twice, but
+        that's OK.
+        """
+        pass
+
     def init(self, xform):
         """override this - initialise any data fields (often to None)"""
         pass
@@ -492,11 +500,10 @@ class XForm:
     def setError(self, ex: XFormException):
         """called to set an error state. Can either be called directly or invoked via an exception.
         Takes an XFormException which may not necessarily have ever been raised.
-        Will result in a log message. After the perform has occurred, may also result in a
-        scene graph rebuild.
+        After the perform has occurred, may also result in a scene graph rebuild.
         """
         self.error = ex
-        ui.error(ex.message)
+        # ui.error(ex.message)           # the beeps are really annoying...
 
     def setRectText(self, t):
         """set the rect text: extra text displayed along with the name and any error"""
@@ -782,6 +789,14 @@ class XForm:
                     return False
         return True
 
+    def uichange(self):
+        self.type.uichange(self)
+
+    def updateTabs(self):
+        for x in self.tabs:
+            x.onNodeChanged()
+            x.updateError()
+
     ## perform the transformation; delegated to the type object - recurses down the children.
     # Also tells any tab open on a node that its node has changed.
     # DO NOT CALL DIRECTLY - called either from itself or from performNodes.
@@ -812,9 +827,7 @@ class XForm:
                     self.setError(e)
                 self.hasRun = True
                 # tell the tab that this node has changed
-                for x in self.tabs:
-                    x.onNodeChanged()
-                    x.updateError()
+                self.updateTabs()
                 # run each child (could turn off child processing?)
                 for n in self.children:
                     n.perform()
@@ -1016,6 +1029,7 @@ class XFormGraph:
         and all dependent nodes; called on a macro will do the same thing in instances, starting at the
         counterpart node for that in the macro prototype.
         """
+
         if XFormGraph.autoRun:
             # reread all inputs for my document (should cache!)
             self.doc.inputMgr.readAll()
@@ -1044,7 +1058,12 @@ class XFormGraph:
                 self.rebuildGraphics()
             else:
                 self.performNodes(node)
-        else:
+        elif node is not None:
+            # this always happens when an individual node is changed, even if autorun is off. Note that it happens
+            # to every node before perform() when autorun is on (hence the elif below).
+            node.uichange()
+            # and update tabs.
+            node.updateTabs()
             ui.msg("Autorun not enabled")
 
         # make sure the caption in any attached window is correct.
@@ -1070,8 +1089,10 @@ class XFormGraph:
             for n in self.nodes:
                 # identify root nodes (no connected inputs).
                 if all(i is None for i in n.inputs):
+                    n.uichange()
                     n.perform()
         else:
+            node.uichange()
             node.perform()
         self.performingGraph = False
 
@@ -1244,6 +1265,9 @@ class XFormROIType(XFormType):
         """Set properties in the node and ROI attached to the node. Assumes img is a valid
         imagecube, and node.roi is the ROI"""
         pass
+
+    def uichange(self, n):
+        self.perform(n)
 
     def perform(self, node):
         img = node.getInput(self.IN_IMG, conntypes.IMG)

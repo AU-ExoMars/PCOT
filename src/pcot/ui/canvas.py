@@ -257,10 +257,10 @@ class Canvas(QtWidgets.QWidget):
     # previous image, so we can avoid redisplay.
     previmg: Optional[ImageCube]
 
-    ## @var nodeToPerform
-    # Node to perform whenever we redisplay an image (the mapping may have changed, and in the case of premapped
+    ## @var nodeToUIChange
+    # Node to do a UI change on whenever we redisplay an image (the mapping may have changed, and in the case of premapped
     # images it's the node that applies the mapping)
-    nodeToPerform: Optional['XForm']
+    nodeToUIChange: Optional['XForm']
 
     ## @var isPremapped
     # is this a premapped image?
@@ -282,7 +282,7 @@ class Canvas(QtWidgets.QWidget):
         self.mouseHook = None
         self.keyHook = None
         self.graph = None
-        self.nodeToPerform = None
+        self.nodeToUIChange = None
         self.ROInode = None
 
         # outer layout is a vertical box - the topbar and canvas+scrollbars are in this
@@ -458,7 +458,7 @@ class Canvas(QtWidgets.QWidget):
     # In the normal case (where the Canvas does the RGB mapping) just call with the image.
     # In the premapped case, call with the premapped RGB image, the source image, and the node.
 
-    def display(self, img: ImageCube, alreadyRGBMappedImageSource=None, nodeToPerform=None):
+    def display(self, img: ImageCube, alreadyRGBMappedImageSource=None, nodeToUIChange=None):
         if self.mapping is None:
             raise Exception(
                 "Mapping not set in ui.canvas.Canvas.display() - should be done in tab's ctor with setMapping()")
@@ -487,13 +487,14 @@ class Canvas(QtWidgets.QWidget):
         # When we're using a "premapped" image, whenever we redisplay, we'll have to recalculate the node:
         # when we change the mapping (which is why we would redisplay) it's the node code which regenerates
         # the remapped image.
-        self.nodeToPerform = nodeToPerform
+        self.nodeToUIChange = nodeToUIChange
         # This will clear the screen if img is None
         self.redisplay()
 
     def redisplay(self):
-        if self.nodeToPerform is not None:
-            self.graph.performNodes(self.nodeToPerform)
+        if self.nodeToUIChange is not None:
+            self.nodeToUIChange.uichange()
+#            self.graph.performNodes(self.nodeToPerform)
 
         # set ROI pixel count text.
         if self.previmg is None:
