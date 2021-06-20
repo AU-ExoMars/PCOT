@@ -3,6 +3,8 @@ import numpy as np
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QKeyEvent
 from PyQt5.QtWidgets import QMessageBox
+from skimage import transform
+from skimage.transform import warp
 
 import pcot.conntypes as conntypes
 import pcot.ui.tabs
@@ -10,14 +12,14 @@ from pcot.channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, \
     BLUEINTERNALSOURCE
 from pcot.pancamimage import ImageCube
 from pcot.utils import text
-from pcot.xform import XFormType, xformtype
+from pcot.xform import XFormType, xformtype, XFormException
 
-VIEWMODE_BOTH = 0
-VIEWMODE_FIXED = 1
-VIEWMODE_MOVING = 2
+IMAGEMODE_SOURCE = 0
+IMAGEMODE_DEST = 1
+IMAGEMODE_BOTH = 2
+IMAGEMODE_RESULT = 3
 
-EDITMODE_SOURCE = 0
-EDITMODE_DEST = 1
+IMAGEMODE_CT = 4
 
 
 # channel-agnostic RGB of an image
@@ -29,9 +31,9 @@ def prep(img: ImageCube) -> np.array:
     return (canvimg - mn) / (mx - mn)
 
 
-def drawpoints(img, lst, selidx, col, iscurmode):
+def drawpoints(img, lst, selidx, col):
     i = 0
-    fontline = 3 if iscurmode else 2
+    fontline = 2
     fontsize = 10
 
     for p in lst:
@@ -42,6 +44,20 @@ def drawpoints(img, lst, selidx, col, iscurmode):
 
     if selidx is not None:
         cv.circle(img, lst[selidx], 10, col, fontline+2)
+
+
+def findInList(lst, x, y):
+    pt = None
+    mindist = None
+    for idx in range(len(lst)):
+        px, py = lst[idx]
+        dx = px - x
+        dy = py - y
+        dsq = dx * dx + dy * dy
+        if dsq < 100 and (mindist is None or dsq < mindist):
+            pt = idx
+            mindist = dsq
+    return pt
 
 
 @xformtype
@@ -55,16 +71,17 @@ class XFormManualRegister(XFormType):
 
     def init(self, node):
         node.img = None
-        node.viewmode = VIEWMODE_BOTH
-        node.editmode = EDITMODE_SOURCE
-        node.hideother = False
+        node.imagemode = IMAGEMODE_SOURCE
+        node.showSrc = True
+        node.showDest = True
 
         # source and destination points - there is a 1:1 mapping between the two
         node.src = []  # ditto
         node.dest = []  # list of (x,y) points
-        # index of selected points in each list (or None)
-        node.destSel = None
-        node.srcSel = None
+        # index of selected points
+        node.selIdx = None
+        # is the selected point (if any) in the dest list (or the source list)?
+        node.selIsDest = False
 
     def perform(self, node):
         # read images
@@ -72,80 +89,104 @@ class XFormManualRegister(XFormType):
         fixedImg = node.getInput(1, conntypes.IMG)
 
         if fixedImg is None or movingImg is None:
-            node.img = None
+            node.img = None  # output image (i.e. warped)
+            node.movingImg = None  # image we are moving
         else:
+            self.apply(node)
+
             # this gets the appropriate image and also manipulates it.
             # Generally we convert RGB to grey; otherwise we'd have to store
             # quite a few mappings.
-            if node.viewmode == VIEWMODE_FIXED:
-                img = prep(movingImg)
-            elif node.viewmode == VIEWMODE_MOVING:
+            if node.imagemode == IMAGEMODE_DEST:
                 img = prep(fixedImg)
+            elif node.imagemode == IMAGEMODE_SOURCE:
+                img = prep(movingImg)
+            elif node.imagemode == IMAGEMODE_RESULT:
+                if node.img is not None:
+                    img = prep(node.img)
+                else:
+                    img = None
             else:
                 img = (prep(movingImg) + prep(fixedImg)) / 2
 
-            # create a new image for the canvas; we'll draw on it.
-            canvimg = cv.merge([img, img, img])
+            node.movingImg = movingImg
 
-            # now draw the points
+            if img is not None:
+                # create a new image for the canvas; we'll draw on it.
+                canvimg = cv.merge([img, img, img])
 
-            if not node.hideother or node.editmode == EDITMODE_SOURCE:
-                drawpoints(canvimg, node.src, node.srcSel, (1, 1, 0), node.editmode == EDITMODE_SOURCE)
-            if not node.hideother or node.editmode == EDITMODE_DEST:
-                drawpoints(canvimg, node.dest, node.destSel, (0, 1, 1), node.editmode == EDITMODE_DEST)
+                # now draw the points
 
-            # grey, but 3 channels so I can draw on it!
-            node.canvimg = ImageCube(canvimg, node.mapping,
-                                     [{REDINTERNALSOURCE}, {GREENINTERNALSOURCE}, {BLUEINTERNALSOURCE}])
+                if node.showSrc:
+                    issel = node.selIdx if not node.selIsDest else None
+                    drawpoints(canvimg, node.src, issel, (1, 1, 0))
+                if node.showDest:
+                    issel = node.selIdx if node.selIsDest else None
+                    drawpoints(canvimg, node.dest, issel, (0, 1, 1))
 
-            node.img = movingImg  # this is the one we need to warp!
+                # grey, but 3 channels so I can draw on it!
+                node.canvimg = ImageCube(canvimg, node.mapping,
+                                         [{REDINTERNALSOURCE}, {GREENINTERNALSOURCE}, {BLUEINTERNALSOURCE}])
+            else:
+                node.canvimg = None
 
         node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))
 
+    def slowPerform(self, xform):
+        self.perform(xform, slow=True)
+
     @staticmethod
     def delSelPoint(n):
-        if n.editmode == EDITMODE_DEST and n.destSel is not None:
-            del n.dest[n.destSel]
-            n.destSel = None
-        elif n.editmode == EDITMODE_SOURCE and n.srcSel is not None:
-            del n.src[n.srcSel]
-            n.srcSel = None
+        if n.selIdx is not None:
+            if n.showSrc and not n.selIsDest:
+                del n.src[n.selIdx]
+                n.selIdx = None
+            elif n.showDest and n.selIsDest:
+                del n.dest[n.selIdx]
+                n.selIdx = None
 
     @staticmethod
     def moveSelPoint(n, x, y):
-        if n.editmode == EDITMODE_DEST:
-            if n.destSel is not None:
-                n.dest[n.destSel] = (x, y)
+        if n.selIdx is not None:
+            if n.showSrc and not n.selIsDest:
+                n.src[n.selIdx] = (x, y)
                 return True
-        elif n.editmode == EDITMODE_SOURCE:
-            if n.srcSel is not None:
-                n.src[n.srcSel] = (x, y)
+            elif n.showDest and n.selIsDest:
+                n.dest[n.selIdx] = (x, y)
                 return True
         return False
 
     @staticmethod
-    def addPoint(n, x, y):
-        lst = n.dest if n.editmode == EDITMODE_DEST else n.src
-        lst.append((x, y))
+    def addPoint(n, x, y, dest):
+        (n.dest if dest else n.src).append((x, y))
 
     @staticmethod
     def selPoint(n, x, y):
-        lst = n.dest if n.editmode == EDITMODE_DEST else n.src
-        pt = None
-        mindist = None
-        for idx in range(len(lst)):
-            px, py = lst[idx]
-            dx = px - x
-            dy = py - y
-            dsq = dx * dx + dy * dy
-            if dsq < 100 and (mindist is None or dsq < mindist):
-                pt = idx
-                mindist = dsq
-        if pt is not None:
-            if n.editmode == EDITMODE_DEST:
-                n.destSel = pt
-            else:
-                n.srcSel = pt
+        if n.showSrc:
+            pt = findInList(n.src, x, y)
+            if pt is not None:
+                n.selIdx = pt
+                n.selIsDest = False
+        if pt is None and n.showDest:
+            pt = findInList(n.dest, x, y)
+            if pt is not None:
+                n.selIdx = pt
+                n.selIsDest = True
+
+    @staticmethod
+    def apply(n):
+        # errors here must not be thrown, we need later stuff to run.
+        if len(n.src) != len(n.dest):
+            n.setError(XFormException('DATA', "Number of source and dest points must be the same"))
+        elif len(n.src) < 3:
+            n.setError(XFormException('DATA', "There must be at least three points"))
+        else:
+            tform = transform.ProjectiveTransform()
+            tform.estimate(np.array(n.dest), np.array(n.src))
+
+            if n.movingImg is not None:
+                img = warp(n.movingImg.img, tform)
+                n.img = ImageCube(img, n.movingImg.mapping, n.movingImg.sources)
 
     def createTab(self, n, w):
         return TabManualReg(n, w)
@@ -161,81 +202,69 @@ class TabManualReg(pcot.ui.tabs.Tab):
         self.w.canvas.keyHook = self
         self.w.canvas.mouseHook = self
 
+        self.onNodeChanged()  # doing this FIRST so signals don't go to slots during setup.
+
         self.w.radioBoth.toggled.connect(self.radioViewToggled)
-        self.w.radioFixed.toggled.connect(self.radioViewToggled)
-        self.w.radioMoving.toggled.connect(self.radioViewToggled)
+        self.w.radioSource.toggled.connect(self.radioViewToggled)
+        self.w.radioDest.toggled.connect(self.radioViewToggled)
+        self.w.radioResult.toggled.connect(self.radioViewToggled)
 
-        self.w.radioDest.toggled.connect(self.radioEditToggled)
-        self.w.radioSource.toggled.connect(self.radioEditToggled)
+        self.w.checkBoxDest.toggled.connect(self.checkBoxDestToggled)
+        self.w.checkBoxSrc.toggled.connect(self.checkBoxSrcToggled)
 
-        self.w.hideOther.toggled.connect(self.hideOtherToggled)
-
-        self.w.applyButton.clicked.connect(self.applyClicked)
         self.w.clearButton.clicked.connect(self.clearClicked)
 
-        self.onNodeChanged()
-
-    def applyClicked(self):
-        pass
 
     def clearClicked(self):
         if QMessageBox.question(self.parent(), "Clear all points", "Are you sure?",
                                 QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
-            pass
-
-    def hideOtherToggled(self):
-        self.node.hideother = self.w.hideOther.isChecked()
-        self.changed()
+            self.node.dest = []
+            self.node.src = []
+            self.node.selIdx = None
+            self.changed()
 
     def radioViewToggled(self):
         if self.w.radioBoth.isChecked():
-            self.node.viewmode = VIEWMODE_BOTH
-        elif self.w.radioFixed.isChecked():
-            self.node.viewmode = VIEWMODE_FIXED
-        elif self.w.radioMoving.isChecked():
-            self.node.viewmode = VIEWMODE_MOVING
+            self.node.imagemode = IMAGEMODE_BOTH
+        elif self.w.radioSource.isChecked():
+            self.node.imagemode = IMAGEMODE_SOURCE
+        elif self.w.radioDest.isChecked():
+            self.node.imagemode = IMAGEMODE_DEST
+        elif self.w.radioResult.isChecked():
+            self.node.imagemode = IMAGEMODE_RESULT
         self.changed()
 
-    def radioEditToggled(self):
-        if self.w.radioDest.isChecked():
-            self.node.editmode = EDITMODE_DEST
-        elif self.w.radioSource.isChecked():
-            self.node.editmode = EDITMODE_SOURCE
+    def checkBoxDestToggled(self):
+        self.node.showDest = self.w.checkBoxDest.isChecked()
+        self.changed()
+
+    def checkBoxSrcToggled(self):
+        self.node.showSrc = self.w.checkBoxSrc.isChecked()
         self.changed()
 
     def onNodeChanged(self):
-        self.w.radioBoth.setChecked(self.node.viewmode == VIEWMODE_BOTH)
-        self.w.radioFixed.setChecked(self.node.viewmode == VIEWMODE_FIXED)
-        self.w.radioMoving.setChecked(self.node.viewmode == VIEWMODE_MOVING)
+        self.w.radioBoth.setChecked(self.node.imagemode == IMAGEMODE_BOTH)
+        self.w.radioSource.setChecked(self.node.imagemode == IMAGEMODE_SOURCE)
+        self.w.radioDest.setChecked(self.node.imagemode == IMAGEMODE_DEST)
+        self.w.radioResult.setChecked(self.node.imagemode == IMAGEMODE_RESULT)
 
-        self.w.radioSource.setChecked(self.node.editmode == EDITMODE_SOURCE)
-        self.w.radioDest.setChecked(self.node.editmode == EDITMODE_DEST)
+        self.w.checkBoxSrc.setChecked(self.node.showSrc)
+        self.w.checkBoxDest.setChecked(self.node.showDest)
 
-        self.w.hideOther.setChecked(self.node.hideother)
-
-        if self.node.img is not None:
-            # displaying a premapped image
-            self.w.canvas.display(self.node.canvimg, self.node.canvimg, self.node)
+        # displaying a premapped image
+        self.w.canvas.display(self.node.canvimg, self.node.canvimg, self.node)
 
     def canvasKeyPressEvent(self, e: QKeyEvent):
         k = e.key()
-        if k == Qt.Key_1:
-            self.node.viewmode = VIEWMODE_BOTH
+        if k == Qt.Key_M:
+            self.node.imagemode += 1
+            self.node.imagemode %= IMAGEMODE_CT
             self.changed()
-        elif k == Qt.Key_2:
-            self.node.viewmode = VIEWMODE_MOVING
+        elif k == Qt.Key_S:
+            self.node.showSrc = not self.node.showSrc
             self.changed()
-        elif k == Qt.Key_3:
-            self.node.viewmode = VIEWMODE_FIXED
-            self.changed()
-        elif k == Qt.Key_M:
-            if self.node.editmode == EDITMODE_SOURCE:
-                self.node.editmode = EDITMODE_DEST
-            elif self.node.editmode == EDITMODE_DEST:
-                self.node.editmode = EDITMODE_SOURCE
-            self.changed()
-        elif k == Qt.Key_H:
-            self.node.hideother = not self.node.hideother
+        elif k == Qt.Key_D:
+            self.node.showDest = not self.node.showDest
             self.changed()
         elif k == Qt.Key_Delete:
             self.node.type.delSelPoint(self.node)
@@ -248,9 +277,23 @@ class TabManualReg(pcot.ui.tabs.Tab):
 
     def canvasMousePressEvent(self, x, y, e):
         self.mouseDown = True
-        if e.modifiers() & Qt.ShiftModifier:
-            self.node.type.addPoint(self.node, x, y)
+        if e.modifiers() & (Qt.ShiftModifier | Qt.AltModifier):
+            # modifiers = we're adding
+            if self.node.showSrc and self.node.showDest:
+                # if both are shown, distinguish with modifier
+                if e.modifiers() & Qt.ShiftModifier:   # shift = source
+                    self.node.type.addPoint(self.node, x, y, False)
+                elif e.modifiers() & Qt.AltModifier:   # alt = dest
+                    self.node.type.addPoint(self.node, x, y, True)
+            else:
+                # otherwise which sort we are adding can be determined from which sort
+                # we are showing.
+                if self.node.showSrc:
+                    self.node.type.addPoint(self.node, x, y, False)
+                elif self.node.showDest:
+                    self.node.type.addPoint(self.node, x, y, True)
         else:
+            # no modifiers, just select.
             self.node.type.selPoint(self.node, x, y)
         self.changed()
         self.w.canvas.update()
