@@ -46,7 +46,7 @@ class ROI:
     def pixels(self):
         """count the number of pixels in the ROI"""
         if self.bb() is None:
-            return 0    # ROI is degenerate or inactive
+            return 0  # ROI is degenerate or inactive
         else:
             return self.mask().sum()
 
@@ -62,7 +62,7 @@ class ROI:
 
             ty = y if self.labeltop else y + h
             text.write(rgb,
-                       "NO ANNOTATION" if self.label is None or self.label=='' else self.label,
+                       "NO ANNOTATION" if self.label is None or self.label == '' else self.label,
                        x, ty, self.labeltop, self.fontsize, self.fontline, col)
 
 
@@ -355,7 +355,6 @@ class ROIPoly(ROI):
             dx = p[0] - x
             dy = p[1] - y
             dsq = dx * dx + dy * dy
-            print(dsq)
             if dsq < 1000 and (mindist is None or dsq < mindist):
                 self.selectedPoint = idx
                 mindist = dsq
