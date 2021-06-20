@@ -217,10 +217,10 @@ class Tab(QtWidgets.QWidget):
         splitter.setSizes([total * 0.9, total * 0.1])
 
     ## The tab's widgets have changed the data, we need
-    # to perform the node
-    # (or all instance nodes of a macro prototype)
-    def changed(self):
-        self.node.graph.changed(self.node)
+    # to perform the node. (or all instance nodes of a macro prototype).
+    # If uiOnly is false, just do the uichanged() update, as if autorun were not set.
+    def changed(self, uiOnly=False):
+        self.node.graph.changed(self.node, uiOnly=uiOnly)
 
     ## enabled has changed  
     def enableChanged(self, b):

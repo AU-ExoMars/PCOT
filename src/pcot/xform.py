@@ -1024,14 +1024,14 @@ class XFormGraph:
         for n in self.nodes:
             n.runTime = None
 
-    def changed(self, node=None, runAll=False):
+    def changed(self, node=None, runAll=False, uiOnly=False):
         """Called when a control in a node has changed, and the node needs to rerun (as do all its children recursively).
         If called on a normal graph, will perform the graph or a single node within it,
         and all dependent nodes; called on a macro will do the same thing in instances, starting at the
         counterpart node for that in the macro prototype.
         """
 
-        if XFormGraph.autoRun or runAll:
+        if (not uiOnly) and (XFormGraph.autoRun or runAll):
             # reread all inputs for my document (should cache!)
             self.doc.inputMgr.readAll()
 

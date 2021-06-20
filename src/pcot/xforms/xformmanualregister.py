@@ -237,15 +237,15 @@ class TabManualReg(pcot.ui.tabs.Tab):
             self.node.imagemode = IMAGEMODE_DEST
         elif self.w.radioResult.isChecked():
             self.node.imagemode = IMAGEMODE_RESULT
-        self.changed()
+        self.changed(uiOnly=True)
 
     def checkBoxDestToggled(self):
         self.node.showDest = self.w.checkBoxDest.isChecked()
-        self.changed()
+        self.changed(uiOnly=True)
 
     def checkBoxSrcToggled(self):
         self.node.showSrc = self.w.checkBoxSrc.isChecked()
-        self.changed()
+        self.changed(uiOnly=True)
 
     def onNodeChanged(self):
         self.w.radioBoth.setChecked(self.node.imagemode == IMAGEMODE_BOTH)
