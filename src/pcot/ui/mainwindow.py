@@ -484,4 +484,5 @@ class MainUI(ui.tabs.DockableTabWindow):
     ## perform all in the graph
     def runAll(self):
         if self.graph is not None:
-            self.graph.changed()
+            # pass in true, indicating we want to ignore autorun
+            self.graph.changed(runAll=True)

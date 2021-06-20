@@ -820,6 +820,7 @@ class XForm:
                 # now run the node, catching any XFormException
                 try:
                     st = time.perf_counter()
+                    self.uichange()
                     self.type.perform(self)
                     self.runTime = time.perf_counter() - st
                 except XFormException as e:
@@ -845,7 +846,7 @@ class XForm:
         else:
             n, i = self.inputs[i]
             o = n.outputs[i]
-            if tp is not None:
+            if tp is not None and o is not None:
                 if o.tp == tp:
                     return o.val
                 else:
@@ -1023,14 +1024,14 @@ class XFormGraph:
         for n in self.nodes:
             n.runTime = None
 
-    def changed(self, node=None):
+    def changed(self, node=None, runAll=False):
         """Called when a control in a node has changed, and the node needs to rerun (as do all its children recursively).
         If called on a normal graph, will perform the graph or a single node within it,
         and all dependent nodes; called on a macro will do the same thing in instances, starting at the
         counterpart node for that in the macro prototype.
         """
 
-        if XFormGraph.autoRun:
+        if XFormGraph.autoRun or runAll:
             # reread all inputs for my document (should cache!)
             self.doc.inputMgr.readAll()
 
@@ -1089,10 +1090,8 @@ class XFormGraph:
             for n in self.nodes:
                 # identify root nodes (no connected inputs).
                 if all(i is None for i in n.inputs):
-                    n.uichange()
                     n.perform()
         else:
-            node.uichange()
             node.perform()
         self.performingGraph = False
 

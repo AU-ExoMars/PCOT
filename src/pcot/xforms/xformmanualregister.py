@@ -43,7 +43,7 @@ def drawpoints(img, lst, selidx, col):
         i = i + 1
 
     if selidx is not None:
-        cv.circle(img, lst[selidx], 10, col, fontline+2)
+        cv.circle(img, lst[selidx], 10, col, fontline + 2)
 
 
 def findInList(lst, x, y):
@@ -68,6 +68,7 @@ class XFormManualRegister(XFormType):
         self.addInputConnector("moving", conntypes.IMG)
         self.addInputConnector("fixed", conntypes.IMG)
         self.addOutputConnector("moved", conntypes.IMG)
+        self.autoserialise = ('showSrc', 'showDest', 'src', 'dest')
 
     def init(self, node):
         node.img = None
@@ -219,7 +220,6 @@ class TabManualReg(pcot.ui.tabs.Tab):
 
         self.w.clearButton.clicked.connect(self.clearClicked)
 
-
     def clearClicked(self):
         if QMessageBox.question(self.parent(), "Clear all points", "Are you sure?",
                                 QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
@@ -286,9 +286,9 @@ class TabManualReg(pcot.ui.tabs.Tab):
             # modifiers = we're adding
             if self.node.showSrc and self.node.showDest:
                 # if both are shown, distinguish with modifier
-                if e.modifiers() & Qt.ShiftModifier:   # shift = source
+                if e.modifiers() & Qt.ShiftModifier:  # shift = source
                     self.node.type.addPoint(self.node, x, y, False)
-                elif e.modifiers() & Qt.AltModifier:   # alt = dest
+                elif e.modifiers() & Qt.AltModifier:  # alt = dest
                     self.node.type.addPoint(self.node, x, y, True)
             else:
                 # otherwise which sort we are adding can be determined from which sort
