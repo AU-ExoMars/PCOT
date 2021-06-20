@@ -1016,7 +1016,7 @@ class XFormGraph:
         and all dependent nodes; called on a macro will do the same thing in instances, starting at the
         counterpart node for that in the macro prototype.
         """
-        if self.autoRun:
+        if XFormGraph.autoRun:
             # reread all inputs for my document (should cache!)
             self.doc.inputMgr.readAll()
 

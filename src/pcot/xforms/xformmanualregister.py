@@ -74,6 +74,7 @@ class XFormManualRegister(XFormType):
         node.imagemode = IMAGEMODE_SOURCE
         node.showSrc = True
         node.showDest = True
+        node.canvimg = None
 
         # source and destination points - there is a 1:1 mapping between the two
         node.src = []  # ditto
