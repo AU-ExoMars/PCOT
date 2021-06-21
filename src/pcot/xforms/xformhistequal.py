@@ -43,7 +43,9 @@ def equalize(img, mask):
 
 @xformtype
 class XformHistEqual(XFormType):
-    """Perform histogram equalisation on all channels of the image separately. Honours ROIs. Currently set to 2000 bins, but I may add a control for that."""
+    """
+    Perform histogram equalisation on all channels of the image separately. Honours ROIs.
+    Currently set to 2000 bins, but I may add a control for that."""
 
     def __init__(self):
         super().__init__("histequal", "processing", "0.0.0")

@@ -6,7 +6,8 @@ from pcot.xforms.tabimage import TabImage
 
 @xformtype
 class XformCalib(XFormType):
-    """calibration: takes ellipse data (or more realistically calibration data
+    """
+    calibration: takes ellipse data (or more realistically calibration data
     generated from ellipses) and calibrates the image accordingly. Not yet implemented"""
 
     def __init__(self):

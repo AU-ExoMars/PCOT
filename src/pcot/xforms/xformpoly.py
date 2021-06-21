@@ -13,7 +13,8 @@ from pcot.xform import xformtype, XFormROIType
 
 @xformtype
 class XformPoly(XFormROIType):
-    """Add a polygonal ROI to an image.
+    """
+    Add a polygonal ROI to an image.
     Most subsequent operations will only
     be performed on the union of all regions of interest.
     Also outputs an RGB image annotated with the ROI on the 'ann' RGB input, or the input

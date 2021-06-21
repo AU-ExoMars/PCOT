@@ -6,7 +6,7 @@ from pcot.xforms.tabimage import TabImage
 
 
 class XFormInput(XFormType):
-    """Bring an input into the graph"""
+    """Bring an input into the graph."""
     def __init__(self, idx):
         super().__init__("input " + str(idx), "source", "0.0.0")
         self.addOutputConnector("img", conntypes.IMG, "image")

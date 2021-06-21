@@ -7,7 +7,8 @@ from pcot.xform import xformtype, XFormType
 
 @xformtype
 class XformNormImage(XFormType):
-    """Normalise the image to a single range taken from all channels. Honours ROIs. If you need to normalise
+    """
+    Normalise the image to a single range taken from all channels. Honours ROIs. If you need to normalise
     each channel separately, use the norm() function in the "expr" node which has an optional argument for this."""
 
     def __init__(self):

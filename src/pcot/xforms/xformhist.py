@@ -15,8 +15,9 @@ def gethistogram(chan, weights, bincount):
 
 @xformtype
 class XFormHistogram(XFormType):
-    """Produce a histogram of intensities for each channel in the data - will be very messy if used on a multispectral
-    image."""
+    """
+    Produce a histogram of intensities for each channel in the data -
+    will be very messy if used on a multispectral image."""
 
     def __init__(self):
         super().__init__("histogram", "data", "0.0.0")

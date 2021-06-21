@@ -8,7 +8,8 @@ from pcot.xform import xformtype, XFormType
 
 @xformtype
 class XFormOffset(XFormType):
-    """offset an image. Will create a zero band on one edge and clip on the opposite.
+    """
+    offset an image. Will create a zero band on one edge and clip on the opposite.
     ROIs are not honoured, but are passed through."""
 
     def __init__(self):

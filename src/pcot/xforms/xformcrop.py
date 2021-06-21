@@ -5,7 +5,8 @@ from pcot.xforms.tabimage import TabImage
 
 @xformtype
 class XformCropROI(XFormType):
-    """Crops an image to a rectangle which is the union of its regions of interest"""
+    """
+    Crops an image to a rectangle which is the union of its regions of interest"""
 
     def __init__(self):
         super().__init__("croproi", "regions", "0.0.0")

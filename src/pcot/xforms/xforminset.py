@@ -15,10 +15,11 @@ from pcot.xform import xformtype, XFormType
 
 @xformtype
 class XformInset(XFormType):
-    """Inset an image inside another. Uses RGB versions of both images, as defined by the
-     RGB mapping set in the previous nodes. Does not honour regions of interest. Note that
-     there is no RGB mapping in the canvas for the tab - RGB mappings should be set in
-     the input nodes."""
+    """
+    Inset an image inside another. Uses RGB versions of both images, as defined by the
+    RGB mapping set in the previous nodes. Does not honour regions of interest. Note that
+    there is no RGB mapping in the canvas for the tab - RGB mappings should be set in
+    the input nodes."""
 
     def __init__(self):
         super().__init__("inset", "regions", "0.0.0")

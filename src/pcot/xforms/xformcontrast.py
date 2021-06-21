@@ -38,7 +38,8 @@ def contrast1(img, tol, mask):
 
 @xformtype
 class XformContrast(XFormType):
-    """Perform a simple contrast stretch separately on each channel. The stretch is linear around the midpoint
+    """
+    Perform a simple contrast stretch separately on each channel. The stretch is linear around the midpoint
     and excessive values are clamped. The knob controls the amount of stretch applied."""
 
     # type constructor run once at startup

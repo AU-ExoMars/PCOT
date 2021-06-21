@@ -62,7 +62,27 @@ def findInList(lst, x, y):
 
 @xformtype
 class XFormManualRegister(XFormType):
+    """
+    Perform manual registration of two images. The output is a version of the 'moving' image with a projective
+    transform applied to map points onto corresponding points in the 'fixed' image.
 
+    The canvas view can show the moving input (also referred to as the "source"), the fixed image (also referred
+    to as the "destination"), a blend of the two, or the result. All images are shown as greyscale (since the
+    fixed and moving images will likely have different frequency bands).
+
+    The transform will map a set of points in the moving image onto a set in the fixed image. Both sets of
+    points can be changed, or a single set. Points are mapped onto the correspondingly numbered point.
+
+    Points are added to the source (moving) image by clicking with shift.
+    Points are adding to the dest (fixed) image by clicking with alt.
+
+    If only the source or dest points are shown, either shift- or alt-clicking will add to the appropriate
+    point set. The selected point can be deleted with the Delete key (but this will modify the numbering!)
+
+    A point can be selected and dragged by clicking on it. This may be slow because the warping operation will
+    take place every update; disabling 'auto-run on change' is a good idea!
+
+    """
     def __init__(self):
         super().__init__("manual register", "processing", "0.0.0")
         self.addInputConnector("moving", conntypes.IMG)

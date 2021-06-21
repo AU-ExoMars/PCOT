@@ -6,7 +6,8 @@ from pcot.xforms.tabimage import TabImage
 
 @xformtype
 class XformImportROI(XFormType):
-    """Import a ROI into an image which was originally set on another image. The 'roi' input takes
+    """
+    Import a ROI into an image which was originally set on another image. The 'roi' input takes
     either an ROI or an image. If the former, that ROI is imposed on the image passed into the main
     input. If the latter, all the ROIs from the 'roi' input image are imposed on the image input
     image."""

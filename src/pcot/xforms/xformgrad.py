@@ -56,7 +56,14 @@ presetGradients = {
 
 @xformtype
 class XformGradient(XFormType):
-    """Convert a greyscale image to an RGB gradient image for better visibility"""
+    """
+    Convert a greyscale image to an RGB gradient image for better visibility.
+    The gradient widget has the following behaviour:
+        click and drag to move a colour point
+        doubleclick to delete an existing colour point
+        doubleclick to add a new colour point
+        right click to edit an existing colour point
+    """
 
     def __init__(self):
         super().__init__("gradient", "data", "0.0.0")
@@ -89,7 +96,7 @@ class XformGradient(XFormType):
 
                 node.img = outimg.modifyWithSub(subimage, newsubimg)
             else:
-                raise XFormException('DATA', 'Ellipse detection must be on greyscale images')
+                raise XFormException('DATA', 'Gradient must be on greyscale images')
         else:
             node.img = img
         node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))

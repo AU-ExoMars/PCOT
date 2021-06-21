@@ -10,7 +10,7 @@ from pcot.xform import XFormType, xformtype, XFormException
 @xformtype
 class XFormExpr(XFormType):
     """
-    Expression evaluator. The node box will hold the text of the expression. The "run" button must be clicked to
+    Expression evaluator. The node box will show the text of the expression. The "run" button must be clicked to
     set the node to the new expression and perform it. Additionally, the output type must be set - the system cannot
     determine the output type from the input types.
 
