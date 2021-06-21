@@ -198,8 +198,8 @@ class ExpressionEvaluator(parse.Parser):
         # additional functions and properties - this is in the __init__.py in the operations package.
         operations.registerOpFunctionsAndProperties(self)
 
-        self.registerFunc("merge", "merge a number of slices (channels) into a single image",
-                          [Parameter("slice", "an image of depth 1", conntypes.IMG)],
+        self.registerFunc("merge", "merge a number of images into a single image - if the image has multiple channels they will all be merged in.",
+                          [Parameter("image", "an image of any depth", conntypes.IMG)],
                           [],
                           funcMerge, varargs=True)
         self.registerFunc("sin", "calculate sine of angle in radians",
@@ -248,6 +248,7 @@ class ExpressionEvaluator(parse.Parser):
 
         registerProperty('w', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.w))
         registerProperty('h', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.h))
+        registerProperty('n', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.h * x.val.w))
 
     def run(self, s):
         """Parse and evaluate an expression."""

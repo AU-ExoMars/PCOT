@@ -8,6 +8,7 @@ from typing import List, Optional, OrderedDict, ClassVar
 
 from PyQt5 import QtWidgets, uic, QtGui
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFontDatabase, QFont
 from PyQt5.QtWidgets import QAction, QMessageBox
 
 import pcot
@@ -41,6 +42,10 @@ class HelpWindow(QtWidgets.QDialog):
         txt = ui.help.getHelpHTML(node.type, node.error)
         self.setWindowTitle("Help for '{}'".format(node.type.name))
         wid = QtWidgets.QLabel()
+        font = QFont("Consolas")
+        font.setPixelSize(15)
+        wid.setFont(font)
+        #  wid.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
         wid.setText(txt)
         layout.addWidget(wid)
 

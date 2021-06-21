@@ -7,7 +7,7 @@ import pcot.ui.tabs
 
 @xformtype
 class XFormDump(XFormType):
-    """Simple data dump: prints a string of its output into its window"""
+    """Simple data dump: prints a string of its output into its window. Useful for outputting spectra as CSV."""
     def __init__(self):
         super().__init__("dump","data","0.0.0")
         self.addInputConnector("any", conntypes.ANY)

@@ -15,6 +15,8 @@ def getHelpHTML(xt, errorState: XFormException):
     else:
         s = xt.__doc__.replace('\n', '<br>')  # basic help
 
+    s = s.replace(" ", "&nbsp;")  # need this so spacing works!
+
     # add connection data
     if len(xt.inputConnectors) > 0:
         s += '<br><br><font color="blue">Inputs</font><br>'

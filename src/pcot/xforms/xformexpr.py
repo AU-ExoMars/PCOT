@@ -10,11 +10,28 @@ from pcot.xform import XFormType, xformtype, XFormException
 @xformtype
 class XFormExpr(XFormType):
     """
-    Expression evaluator.
+    Expression evaluator. The node box will hold the text of the expression. The "run" button must be clicked to
+    set the node to the new expression and perform it. Additionally, the output type must be set - the system cannot
+    determine the output type from the input types.
+
+    The four inputs are assigned to the variables a, b, c, and d. They are typically (but not necessarily) images
+    or scalar values.
+
     Operators:
-    *, -, /, +  operate on scalars and images
-    A.B         property B of entity A (e.g. a.h is height of image a)
-    A$546       extract single channel image of wavelength 546
+    *, -, /, +,^  operate on scalars and images
+    A.B           property B of entity A (e.g. a.h is height of image a)
+    A$546         extract single channel image of wavelength 546
+
+    Properties are indicated by the "." operator, e.g. "a.w"
+    Currently supported:
+    h             height of an image
+    w             width of an image
+    n             pixel count of an image
+
+    A list of functions can be obtained by right-clicking on either the log pane or function entry pane
+    and selecting "List all functions." Help on an individual function can be found by hovering over
+    the name of a function, right-clicking and selecting "Get help on 'somefunction'".
+
     """
 
     def __init__(self):
