@@ -76,6 +76,9 @@ class XFormExpr(XFormType):
                     elif res.tp == conntypes.NUMBER:
                         node.result = str(res.val)
                         node.setRectText("res: "+node.result)
+                    else:
+                        node.result = str(res.val)
+                        node.setRectText("res: "+str(res.tp))
 
         except Exception as e:
             traceback.print_exc()

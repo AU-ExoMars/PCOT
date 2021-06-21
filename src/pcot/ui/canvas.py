@@ -284,6 +284,7 @@ class Canvas(QtWidgets.QWidget):
         self.graph = None
         self.nodeToUIChange = None
         self.ROInode = None
+        self.recursing = False      # An ugly hack to avoid recursion in ROI nodes
 
         # outer layout is a vertical box - the topbar and canvas+scrollbars are in this
         outerlayout = QtWidgets.QVBoxLayout()
@@ -492,9 +493,17 @@ class Canvas(QtWidgets.QWidget):
         self.redisplay()
 
     def redisplay(self):
+        # Note that we are doing ugly things to avoid recursion here. In some of the ROI nodes, this can happen:
+        # updatetabs -> onNodeChanged -> display -> redisplay -> updatetabs...
+        # This is the simplest way to avoid it.
+        if self.recursing:
+            return
+        self.recursing = True
         if self.nodeToUIChange is not None:
             self.nodeToUIChange.uichange()
-#            self.graph.performNodes(self.nodeToPerform)
+            self.nodeToUIChange.updateTabs()
+#            self.graph.performNodes(self.nodeToUIChange)
+        self.recursing=False
 
         # set ROI pixel count text.
         if self.previmg is None:

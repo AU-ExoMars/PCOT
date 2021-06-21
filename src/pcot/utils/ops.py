@@ -5,12 +5,53 @@ import numpy as np
 
 import pcot.conntypes as conntypes
 from pcot.conntypes import Datum
-from pcot.pancamimage import ImageCube
+from pcot.pancamimage import ImageCube, BadOpException
 
 
 class BinopException(Exception):
     def __init__(self, msg):
         super().__init__(msg)
+
+
+def twoImageBinop(imga: ImageCube, imgb: ImageCube, op: Callable[[Any, Any], Any]) -> ImageCube:
+    # check images are same size/depth
+    if imga.img.shape != imgb.img.shape:
+        raise BinopException('Images must be same shape in binary operation')
+    # if imga has an ROI, use that for both. Similarly, if imgb has an ROI, use that.
+    # But if they both have a subimage they must be the same.
+    ahasroi = imga.hasROI()
+    bhasroi = imgb.hasROI()
+    if ahasroi or bhasroi:
+        if ahasroi and bhasroi:
+            rois = imga.rois
+            subimga = imga.subimage()
+            subimgb = imgb.subimage()
+            if subimga.bb != subimgb.bb:  # might need an extra check on the masks - but what would it be?
+                raise BinopException('regions of interest must be the same size in binary operation')
+        else:
+            # get subimages, using their own image's ROI if it has one, otherwise the other image's ROI.
+            # One of these will be true.
+            rois = imga.rois if ahasroi else imgb.rois
+            subimga = imga.subimage(None if ahasroi else imgb)
+            subimgb = imgb.subimage(None if bhasroi else imga)
+
+        maskeda = subimga.masked()
+        maskedb = subimgb.masked()
+        # get masked subimages
+        # perform calculation and get result subimage
+        ressubimg = op(maskeda, maskedb)  # will generate a numpy array
+        # splice that back into a copy of image A, but just take its image, because we're going to
+        # rebuild the sources
+        img = imga.modifyWithSub(subimga, ressubimg).img
+    else:
+        # neither image has a roi
+        img = op(imga.img, imgb.img)
+        rois = None
+
+    outimg = ImageCube(img, sources=ImageCube.buildSources([imga, imgb]))
+    if rois is not None:
+        outimg.rois = rois.copy()
+    return Datum(conntypes.IMG, outimg)
 
 
 # The problem with binary operation NODES is that we have to set an output type:
@@ -34,47 +75,7 @@ def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: conntypes.
         raise BinopException("Cannot perform binary operation on None image")
 
     if a.isImage() and b.isImage():
-        # get actual images
-        imga = a.val
-        imgb = b.val
-        # check images are same size/depth
-        if imga.img.shape != imgb.img.shape:
-            raise BinopException('Images must be same shape in binary operation')
-        # if imga has an ROI, use that for both. Similarly, if imgb has an ROI, use that.
-        # But if they both have a subimage they must be the same.
-        ahasroi = imga.hasROI()
-        bhasroi = imgb.hasROI()
-        if ahasroi or bhasroi:
-            if ahasroi and bhasroi:
-                rois = imga.rois
-                subimga = imga.subimage()
-                subimgb = imgb.subimage()
-                if subimga.bb != subimgb.bb:  # might need an extra check on the masks - but what would it be?
-                    raise BinopException('regions of interest must be the same size in binary operation')
-            else:
-                # get subimages, using their own image's ROI if it has one, otherwise the other image's ROI.
-                # One of these will be true.
-                rois = imga.rois if ahasroi else imgb.rois
-                subimga = imga.subimage(None if ahasroi else imgb)
-                subimgb = imgb.subimage(None if bhasroi else imga)
-
-            maskeda = subimga.masked()
-            maskedb = subimgb.masked()
-            # get masked subimages
-            # perform calculation and get result subimage
-            ressubimg = op(maskeda, maskedb)  # will generate a numpy array
-            # splice that back into a copy of image A, but just take its image, because we're going to
-            # rebuild the sources
-            img = imga.modifyWithSub(subimga, ressubimg).img
-        else:
-            # neither image has a roi
-            img = op(imga.img, imgb.img)
-            rois = None
-
-        outimg = ImageCube(img, sources=ImageCube.buildSources([a.val, b.val]))
-        if rois is not None:
-            outimg.rois = rois.copy()
-        r = Datum(conntypes.IMG, outimg)
+        r = twoImageBinop(a.val, b.val, op)
     elif a.tp == conntypes.NUMBER and b.isImage():
         # here, we're combining a number with an image to give an image
         # which will have the same sources
@@ -93,13 +94,20 @@ def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: conntypes.
     elif a.tp == conntypes.NUMBER and b.tp == conntypes.NUMBER:
         # easy case:  op(number,number)->number
         r = Datum(conntypes.NUMBER, op(a.val, b.val))
+    elif a.tp == conntypes.ROI and b.tp == conntypes.ROI:
+        # again, easy case because ROI has most operations overloaded. Indeed, those that aren't valid
+        # will fail.
+        try:
+            r = Datum(conntypes.ROI, op(a.val, b.val))
+        except BadOpException as e:
+            raise BinopException("unimplemented operation for ROIs")
     else:
         raise BinopException("incompatible types for operator")
 
     return r
 
 
-def unop(a: Datum, op: Callable[[Any],Any], outType: conntypes.Type) -> Datum:
+def unop(a: Datum, op: Callable[[Any], Any], outType: conntypes.Type) -> Datum:
     if a is None:
         return None
 

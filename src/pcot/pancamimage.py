@@ -13,24 +13,31 @@ from scipy import ndimage
 from pcot.channelsource import IChannelSource, FileChannelSourceRed, FileChannelSourceGreen, FileChannelSourceBlue
 from typing import List, Set, Optional
 
-import pcot.filters as filters
 from pcot.utils import text
 
 
-class ROI:
-    """definition of interface for regions of interest"""
-
+class BadOpException(Exception):
     def __init__(self):
+        super().__init__("op not valid")
+
+
+class ROI:
+    """definition of base type for regions of interest - this is useful in itself
+    because it defines an ROI consisting of a predefined BB and mask."""
+
+    def __init__(self, bbrect=None, maskimg=None):
         """Ctor. ROIs have a label, which is used to label data in nodes like 'spectrum' and appears in annotations"""
         self.label = None
         self.labeltop = False  # draw the label at the top?
-        self.colour = (0, 0, 0)  # annotation colour
+        self.colour = (1, 1, 0)  # annotation colour
         self.fontline = 2  # thickness of lines and text
         self.fontsize = 10  # annotation font size
+        self.bbrect = bbrect
+        self.maskimg = maskimg
 
     def bb(self):
         """return a (x,y,w,h) tuple describing the bounding box for this ROI"""
-        pass
+        return self.bbrect
 
     def crop(self, img):
         """return an image cropped to the BB"""
@@ -41,7 +48,7 @@ class ROI:
         """return a boolean mask which, when imposed on the cropped image, gives the ROI. Or none in which case there is no mask.
         Note that this is an inverted mask from how masked arrays in numpy work: true means the pixel is included.
         """
-        pass
+        return self.maskimg
 
     def pixels(self):
         """count the number of pixels in the ROI"""
@@ -49,6 +56,35 @@ class ROI:
             return 0  # ROI is degenerate or inactive
         else:
             return self.mask().sum()
+
+    def baseDraw(self, img, drawBox=False, drawEdge=True):
+        # default draw operator
+        if drawBox:
+            self.drawBB(img, self.colour)
+
+        # draw into an RGB image
+        # first, get the slice into the real image
+        if (bb := self.bb()) is not None:
+            x, y, w, h = bb
+            imgslice = img[y:y + h, x:x + w]
+
+            # now get the mask and run sobel edge-detection on it if required
+            mask = self.mask()
+            if drawEdge:
+                sx = ndimage.sobel(mask, axis=0, mode='constant')
+                sy = ndimage.sobel(mask, axis=1, mode='constant')
+                mask = np.hypot(sx, sy)
+
+            # flatten and repeat each element of the mask for each channel
+            x = np.repeat(np.ravel(mask), 3)
+            # and reshape into the same shape as the image slice
+            x = np.reshape(x, imgslice.shape)
+
+            # write a colour
+            np.putmask(imgslice, x, self.colour)
+
+    def draw(self, img):
+        self.baseDraw(img)
 
     def drawBB(self, rgb: 'ImageCube', col):
         """draw BB onto existing RGB image"""
@@ -64,6 +100,45 @@ class ROI:
             text.write(rgb,
                        "NO ANNOTATION" if self.label is None or self.label == '' else self.label,
                        x, ty, self.labeltop, self.fontsize, self.fontline, col)
+
+    @staticmethod
+    def roiUnion(rois):
+        bbs = [r.bb() for r in rois]  # get bbs
+        x1 = min([b[0] for b in bbs])
+        y1 = min([b[1] for b in bbs])
+        x2 = max([b[0] + b[2] for b in bbs])
+        y2 = max([b[1] + b[3] for b in bbs])
+        bb = (x1, y1, x2 - x1, y2 - y1)
+        # now construct the mask, initially all False
+        mask = np.full((y2 - y1, x2 - x1), False)
+        # and OR the ROIs into it
+        for r in rois:
+            rx, ry, rw, rh = r.bb()
+            # calculate ROI's position inside subimage
+            x = rx - x1
+            y = ry - y1
+            # get ROI's mask
+            roimask = r.mask()
+            # add it at that position
+            mask[y:y + rh, x:x + rw] |= roimask
+        return ROI(bb, mask)
+
+    def __add__(self, other):
+        return self.roiUnion([self, other])
+
+    # and OR the ROIs into it
+
+    def __sub__(self, other):
+        raise BadOpException()
+
+    def __mul__(self, other):
+        raise BadOpException()
+
+    def __truediv__(self, other):
+        raise BadOpException()
+
+    def __pow__(self, power, modulo=None):
+        raise BadOpException()
 
 
 ## a rectangle ROI
@@ -144,6 +219,9 @@ class ROIPainted(ROI):
         self.map = None
         self.bbrect = None
 
+    def draw(self,img):
+        self.baseDraw(img, self.drawBox, self.drawEdge)
+
     def setImageSize(self, imgw, imgh):
         if self.imgw is not None:
             if self.imgw != imgw or self.imgh != imgh:
@@ -176,31 +254,6 @@ class ROIPainted(ROI):
     def mask(self):
         # return a boolean array, same size as BB
         return self.map > 0
-
-    def draw(self, img):
-        if self.drawBox:
-            self.drawBB(img, self.colour)
-
-        # draw into an RGB image
-        # first, get the slice into the real image
-        if (bb := self.bb()) is not None:
-            x, y, w, h = bb
-            imgslice = img[y:y + h, x:x + w]
-
-            # now get the mask and run sobel edge-detection on it if required
-            mask = self.mask()
-            if self.drawEdge:
-                sx = ndimage.sobel(mask, axis=0, mode='constant')
-                sy = ndimage.sobel(mask, axis=1, mode='constant')
-                mask = np.hypot(sx, sy)
-
-            # flatten and repeat each element of the mask for each channel
-            x = np.repeat(np.ravel(mask), 3)
-            # and reshape into the same shape as the image slice
-            x = np.reshape(x, imgslice.shape)
-
-            # write a colour
-            np.putmask(imgslice, x, self.colour)
 
     ## fill a circle in the ROI, or clear it (if delete is true)
     def setCircle(self, x, y, brushSize, delete=False):
@@ -398,29 +451,13 @@ class SubImageCubeROI:
             rois = [roi]
 
         if len(rois) > 0:
-            bbs = [r.bb() for r in rois]  # get bbs
-            x1 = min([b[0] for b in bbs])
-            y1 = min([b[1] for b in bbs])
-            x2 = max([b[0] + b[2] for b in bbs])
-            y2 = max([b[1] + b[3] for b in bbs])
-            self.bb = (x1, y1, x2 - x1, y2 - y1)
-            self.img = img.img[y1:y2, x1:x2]
-            # now construct the mask, initially all False
-            self.mask = np.full((y2 - y1, x2 - x1), False)
-            # and OR the ROIs into it
-            for r in rois:
-                rx, ry, rw, rh = r.bb()
-                # calculate ROI's position inside subimage
-                x = rx - x1
-                y = ry - y1
-                # get ROI's mask
-                roimask = r.mask()
-                # add it at that position
-                self.mask[y:y + rh, x:x + rw] = roimask
-                # debugging code to let us see the submask
-            #                xxx = self.mask.astype(np.ubyte)*255
-            #                print(xxx)
-            #                cv.imwrite("foo.png",cv.merge([xxx,xxx,xxx]))
+            # construct a temporary ROI union
+            roi = ROI.roiUnion(rois)
+            self.bb = roi.bb()
+            self.mask = roi.mask()
+            x, y, w, h = self.bb
+            self.img = img.img[y:y + h, x:x + w]
+
             if self.img.shape[:2] != self.mask.shape:
                 raise Exception(
                     "Mask not same shape as image: can happen when ROI is out of bounds. Have you loaded a new image?")
