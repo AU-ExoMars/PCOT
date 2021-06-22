@@ -5,7 +5,8 @@ import numpy as np
 
 import pcot.conntypes as conntypes
 from pcot.conntypes import Datum
-from pcot.pancamimage import ImageCube, BadOpException
+from pcot.pancamimage import ImageCube
+from pcot.rois import BadOpException
 
 
 class BinopException(Exception):

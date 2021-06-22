@@ -2,7 +2,7 @@ import pcot.conntypes as conntypes
 import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
-from pcot.pancamimage import ROIRect
+from pcot.rois import ROIRect
 from pcot.xform import xformtype, XFormROIType
 
 

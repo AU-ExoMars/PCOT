@@ -7,7 +7,7 @@ import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
 
-from pcot.pancamimage import ROIPoly
+from pcot.rois import ROIPoly
 from pcot.xform import xformtype, XFormROIType
 
 

@@ -7,7 +7,7 @@ import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
 from pcot import ui
-from pcot.pancamimage import ROIPainted, getRadiusFromSlider
+from pcot.rois import ROIPainted, getRadiusFromSlider
 from pcot.xform import xformtype, XFormROIType
 
 
