@@ -123,16 +123,71 @@ class ROI:
             mask[y:y + rh, x:x + rw] |= roimask
         return ROI(bb, mask)
 
+    @staticmethod
+    def roiIntersection(rois):
+        bbs = [r.bb() for r in rois]  # get bbs
+        x1 = min([b[0] for b in bbs])
+        y1 = min([b[1] for b in bbs])
+        x2 = max([b[0] + b[2] for b in bbs])
+        y2 = max([b[1] + b[3] for b in bbs])
+        bb = (x1, y1, x2 - x1, y2 - y1)
+        # now construct the mask, initially all True
+        mask = np.full((y2 - y1, x2 - x1), True)
+        # and AND the ROIs into it
+        for r in rois:
+            rx, ry, rw, rh = r.bb()
+            # calculate ROI's position inside subimage
+            x = rx - x1
+            y = ry - y1
+            # get ROI's mask
+            roimask = r.mask()
+            # construct a working mask, same size as our final mask. We need to do this so that
+            # the AND operation goes over the entire result mask.
+            workMask = np.full((y2 - y1, x2 - x1), False)
+            # add the ROI to the working mask at that position
+            workMask[y:y + rh, x:x + rw] = roimask
+            # and AND the mask by the work mask.
+            mask &= workMask
+        return ROI(bb, mask)
+
     def __add__(self, other):
         return self.roiUnion([self, other])
 
-    # and OR the ROIs into it
-
     def __sub__(self, other):
-        raise BadOpException()
+        # the two ROIs overlap, so our resulting ROI will be the same size as the union of both.
+        # Wasteful but easy.
+        bbs = [r.bb() for r in (self, other)]  # get bbs
+        x1 = min([b[0] for b in bbs])
+        y1 = min([b[1] for b in bbs])
+        x2 = max([b[0] + b[2] for b in bbs])
+        y2 = max([b[1] + b[3] for b in bbs])
+        bb = (x1, y1, x2 - x1, y2 - y1)
+        # now construct the mask, initially all False
+        mask = np.full((y2 - y1, x2 - x1), False)
+
+        # Then OR the LHS into the mask
+        rx, ry, rw, rh = self.bb()
+        # calculate ROI's position inside subimage
+        x = rx - x1
+        y = ry - y1
+        # get ROI's mask
+        roimask = self.mask()
+        # add it at that position
+        mask[y:y + rh, x:x + rw] |= roimask
+
+        # and AND the RHS out of the mask
+        rx, ry, rw, rh = other.bb()
+        x = rx - x1
+        y = ry - y1
+        roimask = other.mask()
+        workMask = np.full((y2 - y1, x2 - x1), False)
+        workMask[y:y + rh, x:x + rw] = roimask
+        mask &= ~workMask
+
+        return ROI(bb, mask)
 
     def __mul__(self, other):
-        raise BadOpException()
+        return self.roiIntersection([self, other])
 
     def __truediv__(self, other):
         raise BadOpException()

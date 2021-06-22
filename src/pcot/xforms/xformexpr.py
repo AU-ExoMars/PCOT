@@ -18,12 +18,17 @@ class XFormExpr(XFormType):
     or scalar values.
 
     Operators:
-    *, -, /, +,^  operate on scalars and images
+    *, -, /, +,^  operate on scalars, images and ROIs (see below for ROIs)
     A.B           property B of entity A (e.g. a.h is height of image a)
     A$546         extract single channel image of wavelength 546
 
-    Properties are indicated by the "." operator, e.g. "a.w"
-    Currently supported:
+    ROI operators:
+    a+b           union
+    a*b           intersection
+    a-b           difference
+    Source ROIs from the "roi" output of ROI nodes. Impose resulting ROIs on images with "importroi" node.
+
+    Properties are indicated by the "." operator, e.g. "a.w":
     h             height of an image
     w             width of an image
     n             pixel count of an image
