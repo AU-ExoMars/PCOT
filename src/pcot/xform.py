@@ -1292,13 +1292,11 @@ class XFormROIType(XFormType):
             img.setMapping(node.mapping)
             # create a new RGB image or use the input one
             rgb = img.rgbImage() if inAnnot is None else inAnnot.copy()
-            print("SNARK PRE",np.max(rgb.img))
             # now make an annotated image by drawing ROIS on the RGB image; ours should be a bit different
             # if showROIs (handled by canvas) is true, draw all ROIs, otherwise only draw one.
             img.drawROIs(rgb.img, onlyROI=None if node.showROIs else node.roi)
             rgb.rois = img.rois  # with same ROI list as unannotated image
             node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
-            print("SNARK POST",np.max(rgb.img))
             node.setOutput(self.OUT_ANNOT, Datum(conntypes.IMG, rgb))
             node.img = img
             # output the ROI - note that this is NOT a copy!
