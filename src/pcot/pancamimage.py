@@ -11,7 +11,7 @@ import numpy as np
 
 from pcot.channelsource import IChannelSource, FileChannelSourceRed, FileChannelSourceGreen, FileChannelSourceBlue
 from typing import List, Set, Optional
-from rois import ROI, ROIPainted
+from pcot.rois import ROI, ROIPainted
 
 
 ## this is the parts of an image cube which are covered by the active ROIs
