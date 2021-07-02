@@ -3,7 +3,6 @@
 
 import os
 import sys
-import importlib.resources
 
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QCommandLineParser
@@ -14,8 +13,6 @@ from pcot.document import Document
 
 app = None
 
-__version__ = importlib.resources.read_text(pcot, 'VERSION.txt')
-
 ## the main function: parses command line, loads any files specified,
 # opens a mainwindow and runs its code.
 
@@ -23,7 +20,7 @@ def main():
     global app
 
     app = QtWidgets.QApplication(sys.argv)
-    app.setApplicationVersion(__version__)
+    app.setApplicationVersion(pcot.__version__)
     app.setApplicationName("PCOT")
     app.setOrganizationName('Aberystwyth University')
     app.setOrganizationDomain('aber.ac.uk')
