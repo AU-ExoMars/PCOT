@@ -19,8 +19,12 @@ class XFormExpr(XFormType):
 
     Operators:
     *, -, /, +,^  operate on scalars, images and ROIs (see below for ROIs)
+    -A            element-wise -A
     A.B           property B of entity A (e.g. a.h is height of image a)
     A$546         extract single channel image of wavelength 546
+    A&B           element-wise minimum of A and B (Zadeh's AND operator)
+    A|B           element-wise maximum of A and B (Zadeh's OR operator)
+    !A            element-wise 1-A (Zadeh's NOT operator)
 
     ROI operators:
     a+b           union

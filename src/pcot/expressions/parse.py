@@ -14,7 +14,7 @@ from pcot.utils.table import Table
 Stack = List[Any]
 
 # will turn on printing
-debug: bool = False
+debug: bool = True
 
 
 class ArgsException(Exception):
@@ -451,7 +451,7 @@ class Parser:
                     # Note that the bracket case is different from when we meet it in the
                     # !wantOperand case. It's just a prefix op here, otherwise we'd end up
                     # generating a CALL when we don't want one.
-                    if t.string == '-' or t.string == '(':
+                    if t.string in self.unopRegistry or t.string == '(':
                         self.stackOp(InstOp(t.string, True, self))
                         #     goto want_operand (we just loop)
                     elif t.string == ')':
