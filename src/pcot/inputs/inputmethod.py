@@ -23,6 +23,22 @@ class InputMethod:
     def readData(self) -> Optional[Any]:
         return None
 
+    def mark(self):
+        """About to perform a change, so mark an undo point"""
+        return self.input.mgr.graph.doc.mark()
+
+    def abandonMark(self):
+        """remove most recently placed undo mark but do not transfer to redo stack (it was abandoned)"""
+        return self.input.mgr.graph.doc.abandonMark()
+
+    def undo(self):
+        """undo the entire document - widget has responsibility for updating UI"""
+        self.input.mgr.graph.doc.undo()
+
+    def redo(self):
+        """redo the entire document - widget has responsibility for updating UI"""
+        self.input.mgr.graph.doc.redo()
+
     ## invalidates
     def invalidate(self):
         self.data = None

@@ -205,7 +205,8 @@ class TabSpectrum(ui.tabs.Tab):
         self.w.replot.setStyleSheet("")
 
     def save(self):
-        self.w.mpl.save()
+        #  self.w.mpl.save()
+        self.close()
 
     def errorbarmodeChanged(self, mode):
         self.node.errorbarmode = mode

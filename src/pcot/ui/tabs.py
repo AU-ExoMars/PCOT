@@ -26,7 +26,7 @@ class DockableTabWindow(QtWidgets.QMainWindow):
         # set up the double-clicked signal
         self.tabWidget.tabBar().tabBarDoubleClicked.connect(self.undock)
         # and the close for a tab
-        self.tabWidget.tabBar().tabCloseRequested.connect(self.closeTab)
+        self.tabWidget.tabBar().tabCloseRequested.connect(self.closeTabByIndex)
         # and when we switch tab
         self.tabWidget.currentChanged.connect(self.currentChanged)
 
@@ -40,13 +40,20 @@ class DockableTabWindow(QtWidgets.QMainWindow):
         self.tabs = None
 
     ## close a tab
-    def closeTab(self, index):
+    def closeTabByIndex(self, index):
         tab = self.tabWidget.widget(index)
         tab.node.tabs.remove(tab)
         self.tabWidget.removeTab(index)
         self.tabs = {k: v for k, v in self.tabs.items() if v != tab}
 
-    ## close every tab and expanded tab window       
+    def closeTab(self, t):
+        if t.expanded:
+            t.expanded.close()
+        idx = self.tabWidget.indexOf(t)
+        if idx >= 0:
+            self.closeTabByIndex(idx)
+
+    ## close every tab and expanded tab window
     def closeAllTabs(self):
         # first, close all expanded tab windows
         for t in self.tabs.values():
@@ -55,7 +62,7 @@ class DockableTabWindow(QtWidgets.QMainWindow):
                 t.expanded.close()
         # then close all the tabs
         for t in self.tabs.values():
-            self.closeTab(self.tabWidget.indexOf(t))
+            self.closeTabByIndex(self.tabWidget.indexOf(t))
 
     ## used to undock tab into a window
     def undock(self, i):
@@ -168,11 +175,11 @@ class Tab(QtWidgets.QWidget):
         splitter.addWidget(widlower)
         laylower = QtWidgets.QVBoxLayout()
         widlower.setLayout(laylower)
-        laylower.setContentsMargins(1,1,1,1)
+        laylower.setContentsMargins(1, 1, 1, 1)
 
         widCommentAndEnable = QtWidgets.QWidget()
         layCommentAndEnable = QtWidgets.QHBoxLayout()
-        layCommentAndEnable.setContentsMargins(1,1,1,1)
+        layCommentAndEnable.setContentsMargins(1, 1, 1, 1)
         widCommentAndEnable.setLayout(layCommentAndEnable)
         laylower.addWidget(widCommentAndEnable)
 
@@ -252,7 +259,7 @@ class Tab(QtWidgets.QWidget):
 
     def updateError(self):
         if self.node.error is not None:
-            self.errorText.setText("Error "+self.node.error.code+": "+self.node.error.message)
+            self.errorText.setText("Error " + self.node.error.code + ": " + self.node.error.message)
             self.errorText.setVisible(True)
         else:
             self.errorText.setVisible(False)

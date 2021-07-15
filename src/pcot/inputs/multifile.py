@@ -43,7 +43,10 @@ class MultifileInputMethod(InputMethod):
         if self.filterre is None:
             return None
         else:
-            m = self.filterre.match(path).groupdict()
+            m = self.filterre.match(path)
+            if m is None:
+                return None
+            m = m.groupdict()
             lens = m['lens'] if 'lens' in m else ''
             n = m['n'] if 'n' in m else ''
             return lens + n

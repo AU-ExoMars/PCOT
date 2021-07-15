@@ -50,6 +50,7 @@ class RGBInputMethod(InputMethod):
 
     def deserialise(self, data):
         self.fname = data['fname']
+        self.img = None   # ensure image is reloaded
         Canvas.deserialise(self, data)
 
 

@@ -1,7 +1,8 @@
 import os
 from typing import List
 
-from PyQt5 import QtWidgets, uic, QtCore
+from PyQt5 import QtWidgets, uic, QtCore, QtGui
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QFileSystemModel
 
 import pcot
@@ -55,6 +56,21 @@ class InputWindow(QtWidgets.QMainWindow):
 
         self.show()
 
+    def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
+        m = self.input.getActive()
+        if event.modifiers() & Qt.ControlModifier:
+            if event.key() == Qt.Key_Z:
+                m.undo()
+                self.onUndoRedo()
+            elif event.key() == Qt.Key_Y:
+                m.redo()
+                self.onUndoRedo()
+
+    def onUndoRedo(self):
+        for w in self.widgets:
+            if w.method.isActive():
+                w.onUndoRedo()
+
     def closeEvent(self, event):
         print("Closing input window")
         self.input.onWindowClosed()
@@ -74,6 +90,24 @@ class MethodWidget(QtWidgets.QWidget):
         self.method = m
         self.openingWindow = False   # true if the window is opening
         super().__init__()
+
+    def onInputChanged(self):
+        """implemented in subclasses, can be called when data changed from outside (deserialise, undo, redo)"""
+        pass
+
+    def onUndoRedo(self):
+        self.onInputChanged()
+        if self.method.input.window is not None:
+            self.method.input.window.methodChanged()
+
+    def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
+        if event.modifiers() & Qt.ControlModifier:
+            if event.key() == Qt.Key_Z:
+                self.method.undo()
+                self.onUndoRedo()
+            elif event.key() == Qt.Key_Y:
+                self.method.redo()
+                self.onUndoRedo()
 
     def invalidate(self):
         if self.method.isActive():
@@ -153,6 +187,7 @@ class TreeMethodWidget(MethodWidget):
 
     def fileDoubleClickedAction(self, idx):
         if not self.dirModel.isDir(idx):
+            self.method.mark()
             self.method.img = None
             self.method.get()
             self.method.fname = os.path.realpath(self.dirModel.filePath(idx))

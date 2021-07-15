@@ -1,18 +1,64 @@
 import time
-from collections import namedtuple
+from collections import deque
 from typing import Dict
 
 import pcot.config
 from pcot import inputs
 from pcot.inputs.inp import InputManager
 from pcot.macros import XFormMacro
+from pcot.ui.mainwindow import MainUI
 from pcot.utils import archive
 from pcot.xform import XFormGraph
 
 
-# this is saved to the SETTINGS block of the document
+class UndoRedoStore:
+    """Handles undo/redo processing"""
+
+    def __init__(self):
+        self.undoStack = deque()
+        self.redoStack = deque()
+
+    def canUndo(self):
+        print("UNDO STACK LEN: {}".format(len(self.undoStack)))
+        return len(self.undoStack) > 0
+
+    def canRedo(self):
+        print("REDO STACK LEN: {}".format(len(self.redoStack)))
+        return len(self.redoStack) > 0
+
+    def mark(self, state):
+        """Document is about to change - record an undo point. All redo points
+        are removed; this is a real external change made by a user."""
+        self.undoStack.append(state)
+        self.redoStack.clear()
+
+    def abandonMark(self):
+        """The last undo point is a mistake; perhaps an exception occurred during the
+        change. Abandon and do not move to redo stack"""
+        self.undoStack.pop()
+
+    def undo(self, state):
+        """Perform an undo, returning the new state or None"""
+        if self.canUndo():
+            x = self.undoStack.pop()
+            self.redoStack.append(state)
+        else:
+            x = None
+        return x
+
+    def redo(self, state):
+        """Perform a redo, returning the new state or None"""
+        if self.canRedo():
+            x = self.redoStack.pop()
+            self.undoStack.append(state)
+        else:
+            x = None
+        return x
+
 
 class DocumentSettings:
+    """this is saved to the SETTINGS block of the document"""
+
     def __init__(self):
         # integer indexing the caption type for canvases in this graph: see the box in MainWindow's ui for meanings.
         self.captionType = 0
@@ -33,6 +79,7 @@ class Document:
     macros: Dict[str, XFormMacro]
     inputMgr: InputManager
     settings: DocumentSettings
+    undoRedoStore: UndoRedoStore
 
     def __init__(self, fileName=None):
         """Create a new document, and (optionally) load a file into it"""
@@ -40,6 +87,7 @@ class Document:
         self.inputMgr = InputManager(self)
         self.macros = {}
         self.settings = DocumentSettings()
+        self.undoRedoStore = UndoRedoStore()
 
         if fileName is not None:
             self.load(fileName)
@@ -142,3 +190,30 @@ class Document:
             if name == x.displayName:
                 return x
         raise NameError(name)
+
+    def mark(self):
+        """We are about to perform a change, so mark an undo/redo point"""
+        self.undoRedoStore.mark(self.serialise())
+
+    def abandonMark(self):
+        """The last placed mark was actually a mistake (perhaps led to an exception)
+        so just remove it, but do not transfer it to the redo stack"""
+        self.undoRedoStore.abandonMark()
+
+    def replaceData(self,data):
+        """Completely deserialise the document, and replace it a new one in all windows.
+        In actuality only the graph changes and the document is actually the same, but
+        the windows should all use the new graph."""
+        self.deserialise(data)
+        for w in MainUI.getWindowsForDocument(self):
+            w.replaceDocument(self)
+
+    def undo(self):
+        if self.undoRedoStore.canUndo():
+            data = self.undoRedoStore.undo(self.serialise())
+            self.replaceData(data)
+
+    def redo(self):
+        if self.undoRedoStore.canRedo():
+            data = self.undoRedoStore.redo(self.serialise())
+            self.replaceData(data)

@@ -109,11 +109,18 @@ class Input:
         return out
 
     ## rebuild this input from given data structure produced by serialise().
-    # We could just deserialise the data into the existing objects, but this is
-    # probably safer, avoiding stale data.
+    # This will deserialise the input methods into the existing method objects,
+    # to avoid problems with undo/redo leaving stale objects with widgets linked to
+    # them.
     def deserialise(self, d):
+        # old way creating new objects
+        # self.methods = [self.createMethod(name, data) for name, data in d['methods']]
+
         self.activeMethod = d['active']
-        self.methods = [self.createMethod(name, data) for name, data in d['methods']]
+        methodsByName = {type(m).__name__: m for m in self.methods}
+        for name, data in d['methods']:
+            m = methodsByName[name]
+            m.deserialise(data)
 
     ## create a method given its type name, and initialise it with some data.
     def createMethod(self, name, data=None):

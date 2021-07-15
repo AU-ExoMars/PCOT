@@ -224,6 +224,10 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.graph.constructScene(doAutoLayout)
         self.view.setScene(self.graph.scene)
 
+    @classmethod
+    def getWindowsForDocument(cls, d):
+        return [w for w in cls.windows if w.doc == d]
+
     def rebuildRecents(self):
         # add recent files to menu, removing old ones first. Note that recent files must be at the end
         # of the menu for this to work!
@@ -491,3 +495,29 @@ class MainUI(ui.tabs.DockableTabWindow):
         if self.graph is not None:
             # pass in true, indicating we want to ignore autorun
             self.graph.changed(runAll=True)
+
+    ## After an undo/redo, a whole new document may have been deserialised.
+    # Set this new graph, and make sure the window's tabs point to nodes
+    # in the new graph rather than the old one.
+
+    def replaceDocument(self, d):
+        # construct a dict of uid -> node for the new graph
+        newGraphDict = {n.name: n for n in d.graph.nodes}
+
+        # replace the graph and document
+        self.graph = d.graph
+        self.doc = d
+        # rebuild the scene
+        self.graph.constructScene(True)
+        self.view.setScene(self.graph.scene)
+
+        for title, tab in self.tabs.items():
+            # get the new node which replaces the old one if we can. Otherwise
+            # delete the tab.
+            if tab.node.name in newGraphDict:
+                n = newGraphDict[tab.node.name]
+                tab.node = n  # replace the node reference in the tab
+                tab.onNodeChanged()  # node contents have changed
+                tab.changed()  # and re-run the node
+            else:
+                self.closeTab(tab)
