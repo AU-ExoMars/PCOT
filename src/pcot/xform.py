@@ -939,6 +939,10 @@ class XFormGraph:
     def create(self, typename):
         """create a new node, passing in a type name. We look in both the 'global' dictionary,
         allTypes,  but also the macros for this document"""
+
+        # note that we don't mark here - this is called in deserialisation so that would be bad. We do the mark
+        # before the UI calls this.
+
         if typename in allTypes:
             tp = allTypes[typename]
         elif typename in self.doc.macros:

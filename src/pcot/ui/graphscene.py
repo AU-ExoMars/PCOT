@@ -125,10 +125,12 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
     helprect: GHelpRect  # help rectangle (top-right corner)
     node: xform.XForm  # node to which I refer
     text: GText  # text field
+    aboutToMove: bool   # true when the item is clicked; the first move after this will cause a mark and clear this flag
 
     def __init__(self, x1, y1, w, h, node):
         self.offsetx = 0  # these are the distances from our original pos.
         self.offsety = 0
+        self.aboutToMove = False
         super().__init__(x1, y1, w, h)
         self.setFlags(QtWidgets.QGraphicsItem.ItemIsSelectable |
                       QtWidgets.QGraphicsItem.ItemIsMovable |
@@ -140,6 +142,9 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
     ## deal with items moving
     def itemChange(self, change, value):
         if change == QtWidgets.QGraphicsItem.ItemPositionChange:
+            if self.aboutToMove:
+                self.aboutToMove = False
+                self.scene().mark()
             dx = value.x() - self.offsetx
             dy = value.y() - self.offsety
             self.offsetx = value.x()
@@ -151,6 +156,9 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
             # remake all the scene's connection arrows, which is rather inefficient!
             self.scene().rebuildArrows()
         return super().itemChange(change, value)
+
+    def mousePressEvent(self, event):
+        self.aboutToMove = True
 
     ## double click should find or open a tab, even to the extent
     # of focussing another window (an expanded tab); an action
@@ -622,6 +630,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         v = getEventView(event)
         v.setDragMode(QtWidgets.QGraphicsView.RubberBandDrag)
         if self.draggingArrow is not None:
+            self.mark()
             arrow = self.draggingArrow  # disconnects seem to remove this?
             # first, make sure we close off the movement
             self.mouseMoveEvent(event)
@@ -687,6 +696,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
 
     ## paste operation, deserialises items from the system clipboard
     def paste(self):
+        self.mark()
         # clear the selection area (UI controlled)
         self.clearSelection()
         # paste the nodes, offset them, and select them.
@@ -704,8 +714,12 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
 
     ## cut operation, serialises items to system clipboard and deletes them
     def cut(self):
+        self.mark()
         self.graph.copy(self.selection)
         for n in self.selection:
             self.graph.remove(n)
         self.selection = []
         self.rebuild()
+
+    def mark(self):
+        self.graph.doc.mark()

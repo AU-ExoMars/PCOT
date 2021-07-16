@@ -227,6 +227,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         MainUI.updateAutorun()
         self.graph.constructScene(doAutoLayout)
         self.view.setScene(self.graph.scene)
+        self.doc.clearUndo()
 
     @classmethod
     def getWindowsForDocument(cls, d):
@@ -402,6 +403,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     ## "new macro" menu/keypress, will create a new macro prototype in this document
     def newMacroAction(self):
+        self.doc.mark()
         p = macros.XFormMacro(self.doc, None)
         MainUI(self.doc, macro=p, doAutoLayout=True)
 
@@ -435,6 +437,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     ## caption type has been changed in widget
     def captionChanged(self, i):
+        self.doc.mark()
         self.graph.doc.setCaption(i)
         # TODO some windows might not change their captions!
         self.graph.performNodes()
@@ -449,6 +452,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     ## autorun has been changed in widget. This is global,
     # so all windows must agree.
     def autorunChanged(self, i):
+        self.doc.mark()
         xform.XFormGraph.autoRun = self.autoRun.isChecked()
         # I'll set autorun on all graphs
         MainUI.updateAutorun()
@@ -471,6 +475,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     ## add a macro connector, only should be used on macro prototypes   
     def addMacroConnector(self, tp):
+        self.doc.mark()
         # create the node inside the prototype
         n = self.graph.create(tp)
         n.xy = self.graph.scene.getNewPosition()
@@ -500,6 +505,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         assert (self.macroPrototype is not None)
         changed, newname = ui.namedialog.do(self.macroPrototype.name)
         if changed:
+            self.doc.mark()
             self.macroPrototype.renameType(newname)
 
     ## perform all in the graph

@@ -15,8 +15,12 @@ class UndoRedoStore:
     """Handles undo/redo processing"""
 
     def __init__(self):
-        self.undoStack = deque()
-        self.redoStack = deque()
+        self.undoStack = deque(maxlen=8)
+        self.redoStack = deque(maxlen=8)
+
+    def clear(self):
+        self.undoStack.clear()
+        self.redoStack.clear()
 
     def canUndo(self):
         print("UNDO STACK LEN: {}".format(len(self.undoStack)))
@@ -224,6 +228,10 @@ class Document:
         if self.undoRedoStore.canRedo():
             data = self.undoRedoStore.redo(self.serialise())
             self.replaceData(data)
+        self.showUndoStatus()
+
+    def clearUndo(self):
+        self.undoRedoStore.clear()
         self.showUndoStatus()
 
     def showUndoStatus(self):

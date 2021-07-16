@@ -81,6 +81,7 @@ class GraphView(QtWidgets.QGraphicsView):
         stream = QtCore.QDataStream(bs)
         name = stream.readQString()
         # now we need to make one of those and add it to the graph!
+        self.scene().mark()
         x = self.scene().graph.create(name)
         # we have to fudge up a position for this; normally grandalf
         # creates these. No need to set width and height.
@@ -93,6 +94,7 @@ class GraphView(QtWidgets.QGraphicsView):
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Delete:
             scene = self.scene()
+            scene.mark()
             for n in scene.selection:
                 # remove the nodes
                 scene.graph.remove(n)
