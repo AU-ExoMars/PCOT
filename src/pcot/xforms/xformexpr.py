@@ -57,6 +57,7 @@ class XFormExpr(XFormType):
         return TabExpr(n, w)
 
     def init(self, node):
+        node.tmpexpr = ""
         node.expr = ""
         # used when we have an image on the output
         node.img = None
@@ -102,27 +103,33 @@ class TabExpr(pcot.ui.tabs.Tab):
         self.w.run.clicked.connect(self.run)
         self.w.expr.textChanged.connect(self.exprChanged)
         self.w.variant.changed.connect(self.variantChanged)
-        self.w.canvas.setMapping(node.mapping)
-        self.w.canvas.setGraph(node.graph)
-        self.w.canvas.setPersister(node)
         self.w.expr.node = node   # need a link from the text edit box into the node, so we can get help on funcs.
 
-        self.onNodeChanged()
+        self.nodeChanged()
 
     def variantChanged(self, t):
+        self.mark()
         self.node.outputTypes[0] = t
         self.node.graph.ensureConnectionsValid()
         self.changed()
 
     def exprChanged(self):
-        self.node.expr = self.w.expr.toPlainText()
+        self.node.tmpexpr = self.w.expr.toPlainText()
         self.node.displayName = self.node.expr.replace('\r', '').replace('\n', '').replace('\t', '')
         # don't call changed() or we'll run the expr on every key press!
 
     def run(self):
+        self.mark()
+        # note that we use a temporary expression, so that the expression isn't constantly changing and we have
+        # difficulty marking undo points.
+        self.node.expr = self.node.tmpexpr
         self.changed()
 
     def onNodeChanged(self):
+        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
+        self.w.canvas.setMapping(self.node.mapping)
+        self.w.canvas.setGraph(self.node.graph)
+        self.w.canvas.setPersister(self.node)
         self.w.variant.set(self.node.getOutputType(0))
         self.w.expr.setPlainText(self.node.expr)
         self.w.result.setPlainText(self.node.result)

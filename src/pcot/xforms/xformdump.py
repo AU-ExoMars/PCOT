@@ -32,7 +32,7 @@ class XFormDump(XFormType):
 class TabDump(pcot.ui.tabs.Tab):
     def __init__(self,node,w):
         super().__init__(w,node,'tabdump.ui')
-        self.onNodeChanged()
+        self.nodeChanged()
         
     def onNodeChanged(self):
         self.w.type.setPlainText(str(self.node.tp))

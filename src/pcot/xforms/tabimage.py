@@ -7,12 +7,13 @@ import pcot.ui.tabs
 class TabImage(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabimage.ui')  # same UI as sink
-        self.w.canvas.setPersister(node)
-        self.w.canvas.setMapping(node.mapping)
-        self.w.canvas.setGraph(node.graph)
         # sync tab with node
-        self.onNodeChanged()
+        self.nodeChanged()
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
+        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
+        self.w.canvas.setMapping(self.node.mapping)
+        self.w.canvas.setGraph(self.node.graph)
+        self.w.canvas.setPersister(self.node)
         self.w.canvas.display(self.node.img)

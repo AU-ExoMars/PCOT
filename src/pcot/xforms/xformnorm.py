@@ -34,17 +34,18 @@ class XformNormImage(XFormType):
 class TabNorm(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabnorm.ui')
-        self.w.canvas.setMapping(node.mapping)
-        self.w.canvas.setGraph(node.graph)
-        self.w.canvas.setPersister(node)
         self.w.mode.currentIndexChanged.connect(self.modeChanged)
-        self.onNodeChanged()
+        self.nodeChanged()
 
     def modeChanged(self, i):
+        self.mark()
         self.node.mode = i
         self.changed()
 
     def onNodeChanged(self):
+        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
+        self.w.canvas.setMapping(self.node.mapping)
+        self.w.canvas.setGraph(self.node.graph)
+        self.w.canvas.setPersister(self.node)
         self.w.mode.setCurrentIndex(self.node.mode)
-        print("Node displ")
         self.w.canvas.display(self.node.img)

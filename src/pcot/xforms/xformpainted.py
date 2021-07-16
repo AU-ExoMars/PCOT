@@ -82,41 +82,42 @@ class TabPainted(pcot.ui.tabs.Tab):
         self.w.captionTop.toggled.connect(self.topChanged)
         self.w.drawMode.currentIndexChanged.connect(self.drawModeChanged)
         self.w.brushSize.valueChanged.connect(self.brushSizeChanged)
-        self.w.canvas.setGraph(node.graph)
-        # but we still need to be able to edit it
-        self.w.canvas.setMapping(node.mapping)
-        self.w.canvas.setPersister(node)
-        self.w.canvas.setROINode(node)
         self.w.canvas.canvas.setMouseTracking(True)
         self.mousePos = None
         self.mouseDown = False
         self.dontSetText = False
         # sync tab with node
-        self.onNodeChanged()
+        self.nodeChanged()
 
     def drawModeChanged(self, idx):
+        self.mark()
         self.node.drawMode = idx
         self.changed()
 
     def brushSizeChanged(self, val):
+        self.mark()
         self.node.brushSize = val
         self.changed()
 
     def topChanged(self, checked):
+        self.mark()
         self.node.captiontop = checked
         self.changed()
 
     def fontSizeChanged(self, i):
+        self.mark()
         self.node.fontsize = i
         self.changed()
 
     def clearPressed(self):
         if QMessageBox.question(self.parent(), "Clear region", "Are you sure?",
                                 QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+            self.mark()
             self.node.roi.clear()
             self.changed()
 
     def textChanged(self, t):
+        self.mark()
         self.node.caption = t
         # this will cause perform, which will cause onNodeChanged, which will
         # set the text again. We set a flag to stop the text being reset.
@@ -127,17 +128,24 @@ class TabPainted(pcot.ui.tabs.Tab):
         self.dontSetText = False
 
     def fontLineChanged(self, i):
+        self.mark()
         self.node.fontline = i
         self.changed()
 
     def colourPressed(self):
         col = pcot.utils.colour.colDialog(self.node.colour)
         if col is not None:
+            self.mark()
             self.node.colour = col
             self.changed()
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
+        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
+        self.w.canvas.setMapping(self.node.mapping)
+        self.w.canvas.setGraph(self.node.graph)
+        self.w.canvas.setPersister(self.node)
+        self.w.canvas.setROINode(self.node)
         if self.node.img is not None:
             # We're displaying a "premapped" image : this node's perform code is
             # responsible for doing the RGB mapping, unlike most other nodes where it's
@@ -181,6 +189,7 @@ class TabPainted(pcot.ui.tabs.Tab):
         self.w.canvas.update()
 
     def canvasMousePressEvent(self, x, y, e):
+        self.mark()
         self.mouseDown = True
         self.doSet(x, y, e)
         self.changed()

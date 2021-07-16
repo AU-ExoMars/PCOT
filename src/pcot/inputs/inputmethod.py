@@ -27,9 +27,9 @@ class InputMethod:
         """About to perform a change, so mark an undo point"""
         return self.input.mgr.graph.doc.mark()
 
-    def abandonMark(self):
+    def unmark(self):
         """remove most recently placed undo mark but do not transfer to redo stack (it was abandoned)"""
-        return self.input.mgr.graph.doc.abandonMark()
+        return self.input.mgr.graph.doc.unmark()
 
     def undo(self):
         """undo the entire document - widget has responsibility for updating UI"""

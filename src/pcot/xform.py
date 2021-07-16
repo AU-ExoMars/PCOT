@@ -27,6 +27,7 @@ from pcot import inputs
 from pcot.ui import graphscene
 from pcot.inputs.inp import InputManager
 from pcot.ui.canvas import Canvas
+from pcot.ui.tabs import Tab
 from pcot.utils import archive
 
 if TYPE_CHECKING:
@@ -797,7 +798,7 @@ class XForm:
 
     def updateTabs(self):
         for x in self.tabs:
-            x.onNodeChanged()
+            x.nodeChanged()
             x.updateError()
 
     ## perform the transformation; delegated to the type object - recurses down the children.
@@ -872,6 +873,13 @@ class XForm:
         """rename a node - changes the displayname."""
         # defer to type, because connector nodes have to rebuild all views.
         self.type.rename(self, name)
+
+    def mark(self):
+        """Record the state of the node in the undo mechanism"""
+        self.graph.doc.mark()
+
+    def unmark(self):
+        self.graph.doc.unmark()
 
     def __str__(self):
         return "XForm-{}-{}-{}".format(id(self), self.displayName, self.type.name)

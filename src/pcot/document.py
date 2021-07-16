@@ -32,7 +32,7 @@ class UndoRedoStore:
         self.undoStack.append(state)
         self.redoStack.clear()
 
-    def abandonMark(self):
+    def unmark(self):
         """The last undo point is a mistake; perhaps an exception occurred during the
         change. Abandon and do not move to redo stack"""
         self.undoStack.pop()
@@ -54,6 +54,9 @@ class UndoRedoStore:
         else:
             x = None
         return x
+
+    def status(self):
+        return len(self.undoStack), len(self.redoStack)
 
 
 class DocumentSettings:
@@ -194,26 +197,35 @@ class Document:
     def mark(self):
         """We are about to perform a change, so mark an undo/redo point"""
         self.undoRedoStore.mark(self.serialise())
+        self.showUndoStatus()
 
-    def abandonMark(self):
+    def unmark(self):
         """The last placed mark was actually a mistake (perhaps led to an exception)
         so just remove it, but do not transfer it to the redo stack"""
-        self.undoRedoStore.abandonMark()
+        self.undoRedoStore.unmark()
+        self.showUndoStatus()
 
-    def replaceData(self,data):
+    def replaceData(self, data):
         """Completely deserialise the document, and replace it a new one in all windows.
         In actuality only the graph changes and the document is actually the same, but
         the windows should all use the new graph."""
         self.deserialise(data)
         for w in MainUI.getWindowsForDocument(self):
             w.replaceDocument(self)
+        self.showUndoStatus()
 
     def undo(self):
         if self.undoRedoStore.canUndo():
             data = self.undoRedoStore.undo(self.serialise())
             self.replaceData(data)
+        self.showUndoStatus()
 
     def redo(self):
         if self.undoRedoStore.canRedo():
             data = self.undoRedoStore.redo(self.serialise())
             self.replaceData(data)
+        self.showUndoStatus()
+
+    def showUndoStatus(self):
+        for w in MainUI.getWindowsForDocument(self):
+            w.showUndoStatus()

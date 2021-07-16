@@ -38,13 +38,10 @@ class TabCurve(pcot.ui.tabs.Tab):
         super().__init__(w, node, 'tabcurve.ui')
         self.w.addDial.valueChanged.connect(self.setAdd)
         self.w.mulDial.valueChanged.connect(self.setMul)
-        self.w.canvas.setMapping(node.mapping)
-        self.w.canvas.setGraph(node.graph)
-        self.w.canvas.setPersister(node)
 
         self.plot = None  # the matplotlib plot which we update
         # sync tab with node
-        self.onNodeChanged()
+        self.nodeChanged()
 
     def setAdd(self, v):
         # when a control changes, update node and perform
@@ -58,6 +55,11 @@ class TabCurve(pcot.ui.tabs.Tab):
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
+        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
+        self.w.canvas.setMapping(self.node.mapping)
+        self.w.canvas.setGraph(self.node.graph)
+        self.w.canvas.setPersister(self.node)
+
         self.w.addDial.setValue(self.node.add * 10 + 50)
         self.w.mulDial.setValue(self.node.mul * 10)
         lut = genLut(self.node.mul, self.node.add)

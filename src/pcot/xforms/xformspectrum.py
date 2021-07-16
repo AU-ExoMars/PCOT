@@ -172,7 +172,7 @@ class TabSpectrum(ui.tabs.Tab):
         self.w.errorbarmode.currentIndexChanged.connect(self.errorbarmodeChanged)
         self.w.replot.clicked.connect(self.replot)
         self.w.save.clicked.connect(self.save)
-        self.onNodeChanged()
+        self.nodeChanged()
 
     def replot(self):
         # set up the plot
@@ -209,6 +209,7 @@ class TabSpectrum(ui.tabs.Tab):
         self.close()
 
     def errorbarmodeChanged(self, mode):
+        self.mark()
         self.node.errorbarmode = mode
         self.changed()
 

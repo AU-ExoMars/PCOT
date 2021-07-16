@@ -148,6 +148,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.autolayoutButton.clicked.connect(self.autoLayoutButton)
         self.dumpButton.clicked.connect(lambda: self.graph.dump())
         self.capCombo.currentIndexChanged.connect(self.captionChanged)
+
         self.actionSave_As.triggered.connect(self.saveAsAction)
         self.action_New.triggered.connect(self.newAction)
         self.actionNew_Macro.triggered.connect(self.newMacroAction)
@@ -156,6 +157,9 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.actionCopy.triggered.connect(self.copyAction)
         self.actionPaste.triggered.connect(self.pasteAction)
         self.actionCut.triggered.connect(self.cutAction)
+        self.actionUndo.triggered.connect(self.undoAction)
+        self.actionRedo.triggered.connect(self.redoAction)
+
         self.runAllButton.pressed.connect(self.runAllAction)
         self.autoRun.toggled.connect(self.autorunChanged)
 
@@ -377,6 +381,14 @@ class MainUI(ui.tabs.DockableTabWindow):
     def cutAction(self):
         self.graph.scene.cut()
 
+    def undoAction(self):
+        print("UNDO")
+        self.doc.undo()
+
+    def redoAction(self):
+        print("REDO")
+        self.doc.redo()
+
     ## "run all" action, typically used when you have auto-run turned off (editing a macro,
     # perhaps)
     def runAllAction(self):
@@ -507,9 +519,12 @@ class MainUI(ui.tabs.DockableTabWindow):
         # replace the graph and document
         self.graph = d.graph
         self.doc = d
-        # rebuild the scene
-        self.graph.constructScene(True)
+        # rebuild the scene without autolayout (coords should be in the data)
+        self.graph.constructScene(False)
         self.view.setScene(self.graph.scene)
+
+        for x in self.graph.nodes:
+            x.tabs = []
 
         for title, tab in self.tabs.items():
             # get the new node which replaces the old one if we can. Otherwise
@@ -517,7 +532,12 @@ class MainUI(ui.tabs.DockableTabWindow):
             if tab.node.name in newGraphDict:
                 n = newGraphDict[tab.node.name]
                 tab.node = n  # replace the node reference in the tab
-                tab.onNodeChanged()  # node contents have changed
-                tab.changed()  # and re-run the node
+                n.tabs.append(tab)
             else:
                 self.closeTab(tab)
+
+        self.runAll()  # refresh everything (yes, slow)
+
+    def showUndoStatus(self):
+        u, r = self.doc.undoRedoStore.status()
+        self.undoStatus.setText("Undo {}, redo {}".format(u, r))
