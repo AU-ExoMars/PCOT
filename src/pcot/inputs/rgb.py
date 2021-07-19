@@ -23,6 +23,7 @@ class RGBInputMethod(InputMethod):
 
     def loadImg(self):
         # will throw exception if load failed
+        print("RGB PERFORMING FILE READ")
         img = ImageCube.load(self.fname, self.mapping)
         ui.log("Image {} loaded: {}".format(self.fname, img))
         self.img = img
@@ -43,14 +44,19 @@ class RGBInputMethod(InputMethod):
     def createWidget(self):
         return RGBMethodWidget(self)
 
-    def serialise(self):
+    def serialise(self, internal):
         x = {'fname': self.fname}
+        if internal:
+            x['image'] = self.img
         Canvas.serialise(self, x)
         return x
 
-    def deserialise(self, data):
+    def deserialise(self, data, internal):
         self.fname = data['fname']
-        self.img = None   # ensure image is reloaded
+        if internal:
+            self.img = data['image']
+        else:
+            self.img = None   # ensure image is reloaded
         Canvas.deserialise(self, data)
 
 

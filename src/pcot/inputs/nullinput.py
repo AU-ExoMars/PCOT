@@ -17,8 +17,8 @@ class NullInputMethod(InputMethod):
     def createWidget(self):
         return PlaceholderMethodWidget(self)
 
-    def serialise(self):
-        pass
+    def serialise(self, internal):
+        return None
 
-    def deserialise(self, data):
+    def deserialise(self, data, internal):
         pass

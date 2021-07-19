@@ -102,9 +102,9 @@ class Input:
     ## serialise the input, or rather produce a "serialisable" data structure. We
     # do this by producing a list of two elements: the input type and that input type's
     # data.
-    def serialise(self):
+    def serialise(self, internal):
         out = {'active': self.activeMethod,
-               'methods': [[type(x).__name__, x.serialise()] for x in self.methods]
+               'methods': [[type(x).__name__, x.serialise(internal)] for x in self.methods]
                }
         return out
 
@@ -112,7 +112,7 @@ class Input:
     # This will deserialise the input methods into the existing method objects,
     # to avoid problems with undo/redo leaving stale objects with widgets linked to
     # them.
-    def deserialise(self, d):
+    def deserialise(self, d, internal):
         # old way creating new objects
         # self.methods = [self.createMethod(name, data) for name, data in d['methods']]
 
@@ -120,7 +120,7 @@ class Input:
         methodsByName = {type(m).__name__: m for m in self.methods}
         for name, data in d['methods']:
             m = methodsByName[name]
-            m.deserialise(data)
+            m.deserialise(data, internal)
 
     ## create a method given its type name, and initialise it with some data.
     def createMethod(self, name, data=None):
@@ -162,16 +162,18 @@ class InputManager:
 
     ## serialise the inputs, returning a structure which can be converted into
     # JSON (i.e. just primitive, dict and list types). This will contain a block
-    # of data for each input.
-    def serialise(self):
-        out = [x.serialise() for x in self.inputs]
+    # of data for each input. Internal means that the data is used for undo/redo
+    # and may not be a true serialisation (there may be references). It never gets
+    # to a file or the clipboard. And restoring from it should not reload from disk/DAR!
+    def serialise(self, internal):
+        out = [x.serialise(internal) for x in self.inputs]
         return out
 
     ## given a list like that produced by serialise(), generate the inputs. This will
     # pass each block of data to each input
-    def deserialise(self, lst):
+    def deserialise(self, lst, internal):
         for inp, data in zip(self.inputs, lst):
-            inp.deserialise(data)
+            inp.deserialise(data, internal)
 
     ## force reread of all inputs, typically on graph.changed().
     def readAll(self):

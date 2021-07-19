@@ -60,11 +60,13 @@ class InputWindow(QtWidgets.QMainWindow):
         m = self.input.getActive()
         if event.modifiers() & Qt.ControlModifier:
             if event.key() == Qt.Key_Z:
-                m.undo()
-                self.onUndoRedo()
+                if m.canUndo():
+                    m.undo()
+                    self.onUndoRedo()
             elif event.key() == Qt.Key_Y:
-                m.redo()
-                self.onUndoRedo()
+                if m.canRedo():
+                    m.redo()
+                    self.onUndoRedo()
 
     def onUndoRedo(self):
         for w in self.widgets:

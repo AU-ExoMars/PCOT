@@ -115,8 +115,10 @@ class Document:
             self.graph.create("input 0")
 
     ## create a dictionary of everything in the app we need to save: global settings,
-    # the graph, macros etc.
-    def serialise(self):
+    # the graph, macros etc. If internal is true, this data is used for internal undo/redo
+    # stuff and should operate very quickly without loading data. As such, it may not actually
+    # perform a strict serialisation - you'll get information out with references in etc.
+    def serialise(self, internal=False):
         macros = {}
         for k, v in self.macros.items():
             macros[k] = v.graph.serialise()
@@ -125,7 +127,7 @@ class Document:
              'INFO': {'author': pcot.config.getUserName(),
                       'date': time.time()},
              'GRAPH': self.graph.serialise(),
-             'INPUTS': self.inputMgr.serialise(),
+             'INPUTS': self.inputMgr.serialise(internal),
              'MACROS': macros
              }
         return d
@@ -135,7 +137,7 @@ class Document:
     # Deserialising the inputs is optional : we don't do it if we are loading templates
     # or if there is no INPUTS entry in the file, or there's no input manager (shouldn't
     # happen unless we're doing something weird like loading a macro prototype graph)
-    def deserialise(self, d, deserialiseInputs=True):
+    def deserialise(self, d, deserialiseInputs=True, internal=False):
         # deserialise macros before graph!
         if 'MACROS' in d:
             for k, v in d['MACROS'].items():
@@ -145,7 +147,7 @@ class Document:
         self.graph.deserialise(d['GRAPH'], True)  # True to delete existing nodes first
 
         if 'INPUTS' in d and deserialiseInputs:
-            self.inputMgr.deserialise(d['INPUTS'])
+            self.inputMgr.deserialise(d['INPUTS'], internal)
 
         self.settings.deserialise(d['SETTINGS'])
 
@@ -213,7 +215,7 @@ class Document:
 
     def mark(self):
         """We are about to perform a change, so mark an undo/redo point"""
-        self.undoRedoStore.mark(self.serialise())
+        self.undoRedoStore.mark(self.serialise(internal=True))
         self.showUndoStatus()
 
     def unmark(self):
@@ -223,23 +225,29 @@ class Document:
         self.showUndoStatus()
 
     def replaceData(self, data):
-        """Completely deserialise the document, and replace it a new one in all windows.
+        """Completely restore the document from a memento.
         In actuality only the graph changes and the document is actually the same, but
         the windows should all use the new graph."""
-        self.deserialise(data)
+        self.deserialise(data, internal=True)
         for w in MainUI.getWindowsForDocument(self):
             w.replaceDocument(self)
         self.showUndoStatus()
 
+    def canUndo(self):
+        return self.undoRedoStore.canUndo()
+
+    def canRedo(self):
+        return self.undoRedoStore.canRedo()
+
     def undo(self):
-        if self.undoRedoStore.canUndo():
-            data = self.undoRedoStore.undo(self.serialise())
+        if self.canUndo():
+            data = self.undoRedoStore.undo(self.serialise(internal=True))
             self.replaceData(data)
         self.showUndoStatus()
 
     def redo(self):
-        if self.undoRedoStore.canRedo():
-            data = self.undoRedoStore.redo(self.serialise())
+        if self.canRedo():
+            data = self.undoRedoStore.redo(self.serialise(internal=True))
             self.replaceData(data)
         self.showUndoStatus()
 
