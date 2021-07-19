@@ -5,7 +5,6 @@
 # but we could change things later.
 import math
 import numbers
-from functools import lru_cache
 
 import cv2 as cv
 import numpy as np
@@ -130,11 +129,6 @@ class ChannelMapping:
         return "ChannelMapping-{} r{} g{} b{}".format(id(self), self.red, self.green, self.blue)
 
 
-## This is a cached call to image read to speed things up (notably undo)
-@lru_cache(maxsize=8)
-def cachedImRead(fn):
-    print("NOT CACHED")
-    return cv.imread(fn, -1)
 
 
 ## an image - just a numpy array (the image) and a list of ROI objects. The array
@@ -220,7 +214,7 @@ class ImageCube:
         print("ImageCube.load: " + fname)
         # imread with this argument will load any depth, any
         # number of channels
-        img = cachedImRead(fname)
+        img = cv.imread(fname, -1)
         if img is None:
             raise Exception('cannot read image {}'.format(fname))
         if len(img.shape) == 2:  # expand to RGB. Annoyingly we cut it down later sometimes.

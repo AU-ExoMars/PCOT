@@ -22,7 +22,6 @@
 
 import os
 import sys
-from functools import lru_cache
 
 import numpy as np
 
@@ -140,8 +139,8 @@ class ENVIHeader:
             self.ignoreValue = None
 
 
-@lru_cache(maxsize=8)
 def _load(fn):
+    """Actually loads the envi, returning a tuple of (header, ndarray)"""
     with open(fn) as f:
         h = ENVIHeader(f)
 
