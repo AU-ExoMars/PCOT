@@ -5,6 +5,7 @@
 # but we could change things later.
 import math
 import numbers
+from functools import lru_cache
 
 import cv2 as cv
 import numpy as np
@@ -21,6 +22,8 @@ from pcot.rois import ROI, ROIPainted
 # * the data for that bounding box in the image (x,y,w,h)
 # * a boolean mask the same size as the BB, True for pixels which
 #   should be manipulated in any operation.
+from pcot.utils.deb import Timer
+
 
 class SubImageCubeROI:
     def __init__(self, img, imgToUse=None, roi=None):  # can take another image to get rois from
@@ -127,6 +130,13 @@ class ChannelMapping:
         return "ChannelMapping-{} r{} g{} b{}".format(id(self), self.red, self.green, self.blue)
 
 
+## This is a cached call to image read to speed things up (notably undo)
+@lru_cache(maxsize=8)
+def cachedImRead(fn):
+    print("NOT CACHED")
+    return cv.imread(fn, -1)
+
+
 ## an image - just a numpy array (the image) and a list of ROI objects. The array
 # has shape either (h,w) (for a single channel) or (h,w,n) for multiple channels.
 # Images are 32-bit float.
@@ -210,7 +220,7 @@ class ImageCube:
         print("ImageCube.load: " + fname)
         # imread with this argument will load any depth, any
         # number of channels
-        img = cv.imread(fname, -1)
+        img = cachedImRead(fname)
         if img is None:
             raise Exception('cannot read image {}'.format(fname))
         if len(img.shape) == 2:  # expand to RGB. Annoyingly we cut it down later sometimes.

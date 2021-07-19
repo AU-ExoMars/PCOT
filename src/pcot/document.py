@@ -12,21 +12,31 @@ from pcot.xform import XFormGraph
 
 
 class UndoRedoStore:
-    """Handles undo/redo processing"""
+    """Handles storing data for undo/redo processing. There are two stacks involved - 'undo' and 'redo.'
+    How it works is described under each method, but the usage is:
+    To mark that a change is about to happen, call mark() to record the state before the change.
+    To indicate the last 'mark' was a mistake (because an error occurred during the operation), call unmark.
+    To undo a change, call undo to get the previous state.
+    To redo a change, call redo to get the new state.
+    Use canUndo and canRedo to check the above calls are valid to make."""
 
     def __init__(self):
+        """Initialise the system"""
         self.undoStack = deque(maxlen=8)
         self.redoStack = deque(maxlen=8)
 
     def clear(self):
+        """Clear the two stacks, so that neither undo or redo are possible."""
         self.undoStack.clear()
         self.redoStack.clear()
 
     def canUndo(self):
+        """return true if undo is possible (if there is data on the undo stack)"""
         print("UNDO STACK LEN: {}".format(len(self.undoStack)))
         return len(self.undoStack) > 0
 
     def canRedo(self):
+        """return true if redo is possible (if there is data on the redo stack)"""
         print("REDO STACK LEN: {}".format(len(self.redoStack)))
         return len(self.redoStack) > 0
 
@@ -42,7 +52,8 @@ class UndoRedoStore:
         self.undoStack.pop()
 
     def undo(self, state):
-        """Perform an undo, returning the new state or None"""
+        """Perform an undo, returning the new state or None. This pushes the current state (which must be
+        passed in) to the redo stack, pops a state from the undo stack, and returns it."""
         if self.canUndo():
             x = self.undoStack.pop()
             self.redoStack.append(state)
@@ -51,7 +62,8 @@ class UndoRedoStore:
         return x
 
     def redo(self, state):
-        """Perform a redo, returning the new state or None"""
+        """Perform a redo, returning the new state or None. This pushes the current state (which must be
+        passed in) to the undo stack ,pops a state from the redo stack, and returns it."""
         if self.canRedo():
             x = self.redoStack.pop()
             self.undoStack.append(state)
@@ -60,6 +72,7 @@ class UndoRedoStore:
         return x
 
     def status(self):
+        """return the sizes of undo and redo stacks"""
         return len(self.undoStack), len(self.redoStack)
 
 
