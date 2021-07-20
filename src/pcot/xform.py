@@ -1165,7 +1165,9 @@ class XFormGraph:
             Returns a list of the new nodes.
             """
         if deleteExistingNodes:
-            self.nodes = []
+            for n in self.nodes:
+                self.remove(n)
+
         # disambiguate nodes in the dict, to make sure they don't
         # have the same nodes as ones already in the graph
         d = self.disambiguate(d)
