@@ -545,5 +545,20 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.runAll()  # refresh everything (yes, slow)
 
     def showUndoStatus(self):
+        import gc
+
         u, r = self.doc.undoRedoStore.status()
-        self.undoStatus.setText("Undo {}, redo {}".format(u, r))
+        try:
+            from psutil import Process
+            process = Process(os.getpid())
+            m = process.memory_info().rss
+            self.undoStatus.setText("Undo {}, redo {}, {}M".format(u, r, m//(1024*1024)))
+        except ImportError:
+            self.undoStatus.setText("Undo {}, redo {}".format(u, r))
+        gc.collect()
+
+        # for x in gc.get_objects():
+        #     from ..xform import XForm
+        #     if isinstance(x, XForm):
+        #         print(str(x))
+
