@@ -456,9 +456,9 @@ class MainUI(ui.tabs.DockableTabWindow):
         xform.XFormGraph.autoRun = self.autoRun.isChecked()
         # I'll set autorun on all graphs
         MainUI.updateAutorun()
-        # but only rerun this one
-        if xform.XFormGraph.autoRun:
-            self.runAll()
+        # but only rerun this one (turned off because some nodes are REALLY SLOW)
+#        if xform.XFormGraph.autoRun:
+#            self.runAll()
 
     ## update autorun checkbox states from class variable
     @staticmethod

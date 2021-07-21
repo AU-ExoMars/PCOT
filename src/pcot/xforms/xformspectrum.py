@@ -2,7 +2,7 @@ import math
 import pprint
 
 import numpy as np
-from matplotlib import cm
+import matplotlib
 
 import pcot.conntypes as conntypes
 import pcot.ui as ui
@@ -91,7 +91,6 @@ def processData(table, legend, data, pxct, wavelengths, spectrum, chans, chanlab
 
 NUMINPUTS = 8
 
-
 ERRORBARMODE_NONE = 0
 ERRORBARMODE_STDERROR = 1
 ERRORBARMODE_STDDEV = 2
@@ -106,7 +105,8 @@ class XFormSpectrum(XFormType):
 
     def __init__(self):
         super().__init__("spectrum", "data", "0.0.0")
-        self.autoserialise = ('errorbarmode',)
+        self.autoserialise = (
+        'errorbarmode', 'legendFontSize', 'axisFontSize', 'stackSep', 'labelFontSize', 'bottomSpace')
         for i in range(NUMINPUTS):
             self.addInputConnector(str(i), conntypes.IMG, "a single line in the plot")
         self.addOutputConnector("data", conntypes.DATA, "a CSV output (use 'dump' to read it)")
@@ -116,6 +116,11 @@ class XFormSpectrum(XFormType):
 
     def init(self, node):
         node.errorbarmode = 0
+        node.legendFontSize = 8
+        node.axisFontSize = 8
+        node.labelFontSize = 12
+        node.bottomSpace = 0
+        node.stackSep = 0
         node.data = None
 
     def perform(self, node):
@@ -172,45 +177,91 @@ class TabSpectrum(ui.tabs.Tab):
         self.w.errorbarmode.currentIndexChanged.connect(self.errorbarmodeChanged)
         self.w.replot.clicked.connect(self.replot)
         self.w.save.clicked.connect(self.save)
+        self.w.stackSepSpin.valueChanged.connect(self.stackSepChanged)
+        self.w.legendFontSpin.valueChanged.connect(self.legendFontSizeChanged)
+        self.w.axisFontSpin.valueChanged.connect(self.axisFontSizeChanged)
+        self.w.labelFontSpin.valueChanged.connect(self.labelFontSizeChanged)
+        self.w.bottomSpaceSpin.valueChanged.connect(self.bottomSpaceChanged)
         self.nodeChanged()
 
     def replot(self):
+        ax = self.w.mpl.ax
         # set up the plot
         self.w.mpl.fig.suptitle(self.node.comment)
-        self.w.mpl.ax.cla()  # clear any previous plot
-        cols = cm.get_cmap('Dark2').colors
+        ax.cla()  # clear any previous plot
+        cols = matplotlib.cm.get_cmap('Dark2').colors
 
         # the dict consists of a list of channel data tuples for each image/roi.
         colidx = 0
+        stack = 0  # current stacking value, added to each line's Y
+        stackSep = self.node.stackSep / 10
+
+        if self.node.stackSep != 0:  # turn off tick labels if we are stacking; the Y values would be deceptive.
+            ax.set_yticklabels('')
+
+        ax.tick_params(axis='both', labelsize=self.node.axisFontSize)
+        ax.set_xlabel('wavelength', fontsize=self.node.labelFontSize)
+        ax.set_ylabel('reflectance', fontsize=self.node.labelFontSize)
+
         for legend, x in self.node.data.items():
             try:
                 [chans, wavelengths, means, sds, labels, pixcounts] = list(zip(*x))  # "unzip" idiom
             except ValueError:
                 raise XFormException("cannot get spectrum - problem with ROIs?")
-            col = cols[colidx%len(cols)]
-            self.w.mpl.ax.plot(wavelengths, means, label=legend, c=col)
-            self.w.mpl.ax.scatter(wavelengths, means, c=[wav2RGB(x) for x in wavelengths])
+            col = cols[colidx % len(cols)]
+            means = [x + stack for x in means]
+            ax.plot(wavelengths, means, c=col, label=legend)
+            ax.scatter(wavelengths, means, c=[wav2RGB(x) for x in wavelengths])
 
             if self.node.errorbarmode != ERRORBARMODE_NONE:
                 # calculate standard errors from standard deviations
                 stderrs = [std / math.sqrt(pixels) for std, pixels in zip(sds, pixcounts)]
-                self.w.mpl.ax.errorbar(wavelengths, means,
-                                       stderrs if self.node.errorbarmode == ERRORBARMODE_STDERROR else sds,
-                                       ls="None", capsize=4, c=col)
+                ax.errorbar(wavelengths, means,
+                            stderrs if self.node.errorbarmode == ERRORBARMODE_STDERROR else sds,
+                            ls="None", capsize=4, c=col)
             colidx += 1
-        #            for _, wv, sp, lab in x:
-        #                self.w.mpl.ax.annotate(lab, (wv, sp), textcoords='offset points', xytext=(0, 10), ha='center')
-        self.w.mpl.ax.legend()
+            stack -= stackSep  # subtrack so we get an intuitive legend ordering
+        ax.legend(fontsize=self.node.legendFontSize)
+        ymin, ymax = ax.get_ylim()
+        ax.set_ylim(ymin - self.node.bottomSpace / 10, ymax)
+
+        if self.node.stackSep == 0:  # only remove negative ticks if we're labelling the ticks.
+            ax.set_yticks([x for x in ax.get_yticks() if x >= 0])
+
         self.w.mpl.draw()
         self.w.replot.setStyleSheet("")
 
     def save(self):
-        #  self.w.mpl.save()
-        self.close()
+        self.w.mpl.save()
 
     def errorbarmodeChanged(self, mode):
         self.mark()
         self.node.errorbarmode = mode
+        self.changed()
+
+    def bottomSpaceChanged(self, val):
+        self.mark()
+        self.node.bottomSpace = val
+        self.changed()
+
+    def legendFontSizeChanged(self, val):
+        self.mark()
+        self.node.legendFontSize = val
+        self.changed()
+
+    def axisFontSizeChanged(self, val):
+        self.mark()
+        self.node.axisFontSize = val
+        self.changed()
+
+    def labelFontSizeChanged(self, val):
+        self.mark()
+        self.node.labelFontSize = val
+        self.changed()
+
+    def stackSepChanged(self, val):
+        self.mark()
+        self.node.stackSep = val
         self.changed()
 
     def onNodeChanged(self):
@@ -218,3 +269,8 @@ class TabSpectrum(ui.tabs.Tab):
         # a while to run. But we do make the replot button red!
         self.w.replot.setStyleSheet("background-color:rgb(255,100,100)")
         self.w.errorbarmode.setCurrentIndex(self.node.errorbarmode)
+        self.w.stackSepSpin.setValue(self.node.stackSep)
+        self.w.bottomSpaceSpin.setValue(self.node.bottomSpace)
+        self.w.legendFontSpin.setValue(self.node.legendFontSize)
+        self.w.axisFontSpin.setValue(self.node.axisFontSize)
+        self.w.labelFontSpin.setValue(self.node.labelFontSize)
