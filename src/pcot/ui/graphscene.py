@@ -159,6 +159,7 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
 
     def mousePressEvent(self, event):
         self.aboutToMove = True
+        super().mousePressEvent(event)
 
     ## double click should find or open a tab, even to the extent
     # of focussing another window (an expanded tab); an action

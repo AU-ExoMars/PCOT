@@ -12,6 +12,7 @@ class GraphView(QtWidgets.QGraphicsView):
     ## constructor, taking the widget parent
     def __init__(self, parent=None):
         self.window = None
+        self._prevMousePos = None
         super().__init__(parent)
 
     ## sets the window this view is in, and also colours the view
@@ -45,15 +46,15 @@ class GraphView(QtWidgets.QGraphicsView):
     # to the scroll bar.
     def mousePressEvent(self, event):
         if event.button() == Qt.RightButton:
-            self.__prevMousePos = event.pos()
+            self._prevMousePos = event.pos()
         else:
             super().mousePressEvent(event)
 
     ## handle the mouse move event, doing panning if RMB down.
     def mouseMoveEvent(self, event):
         if event.buttons() == Qt.RightButton:
-            offset = self.__prevMousePos - event.pos()
-            self.__prevMousePos = event.pos()
+            offset = self._prevMousePos - event.pos()
+            self._prevMousePos = event.pos()
 
             self.verticalScrollBar().setValue(self.verticalScrollBar().value() + offset.y())
             self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() + offset.x())
