@@ -159,6 +159,9 @@ class XFormType:
     # MD5 hash of source code (generated automatically)
     _md5: str
 
+    ## @var minwidth
+    # minimum width of node on screen
+
     def __init__(self, name, group, ver):
         """constructor, takes name, groupname and version"""
         self.group = group
@@ -182,6 +185,7 @@ class XFormType:
         # they must be simple Python data. This happens in addition to, and
         # before, the serialise() and deserialise() methods.
         self.autoserialise = ()  # tuple or list of attribute names
+        self.minwidth = 100
 
     def remove(self, node):
         """call to remove node from instance list"""

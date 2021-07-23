@@ -63,6 +63,7 @@ class XFormExpr(XFormType):
         node.img = None
         # a string to display the image
         node.result = ""
+        node.w = -1
 
     def perform(self, node):
         # we register the input vars here because we have to, they are temporary and apply to
@@ -123,6 +124,7 @@ class TabExpr(pcot.ui.tabs.Tab):
         # note that we use a temporary expression, so that the expression isn't constantly changing and we have
         # difficulty marking undo points.
         self.node.expr = self.node.tmpexpr
+        self.node.rect.setSizeToText(self.node)
         self.changed()
 
     def onNodeChanged(self):
