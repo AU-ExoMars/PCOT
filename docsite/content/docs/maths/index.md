@@ -1,6 +1,6 @@
 ---
 date: 2021-07-13
-title: Image import processing maths
+title: Image import maths
 summary: This page describes how images are processed from import until reflectance.
 tags: ["pcot","mars","python"]
 ---
@@ -15,7 +15,6 @@ tags: ["pcot","mars","python"]
 Multispectral images are first downloaded from the DAR or imported from
 disk files (either as ENVI or separate PNG files). Such images may have up
 to 11 bands.
-
 
 ## Step 2: Flat-fielding
 
@@ -62,8 +61,74 @@ it's possible (?) that multiple images could share the same
 coefficients if they are part of the same set (taken at the same time).
 
 {{<important>}}
-This is where it gets complicated.
+This is where it gets complicated, and I may have missed the point here
+because it looks like the MER method (older) is much more complicated
+than the method described in [1]. 
 {{</important>}}
+
+### The MER way (from paper [2])
+* First, we have a BRDF model of the reflectance of the calibration targets.
+That's a function $f_r(\omega_i, \omega_r)$ which (simply put) gives us the
+ratio of light out to light in for all possible incidence and
+reflection vectors (vector-to-light and vector-to-eye).
+* We also have to factor dust composition into this, since it will modify
+the BRDF.
+* Analysts then select ROIs for each calibration target patch in each
+filter band (well, obviously you can do this with one selection across
+each multispectral image). Mean and SD of pixel values within each ROI
+are calculated.
+* For each filter, we then plot the measured values against the predicted values for each
+patch. This should fit a line constrained through the origin (because black
+should equal black). The fit is checked by analysts, and the slope of the line $m$ 
+can be used to convert from radiance to [IoF]({{<relref "../glossary/#iof">}})
+$$
+IoF = r\cdot m \cdot \cos(i)
+$$
+where $r$ is the radiance, $m$ is the slope of the line, and $i$ is the
+incidence angle at the calibration target. We can then get $ R^* $ from
+this by dividing by $\cos(i)$, so
+$$
+R^* = r\cdot m
+$$
+
+### The ExoSpec way (from paper [1])
+* Again, analysts select ROIs for each calibration target patch in each filter band, and obtain mean and
+variance for pixel values within each ROI for each band. We then fit lines, and the paper seems to provide some
+maths:
+$$
+\Delta = \sum_i \frac{1}{\sigma^2_i} \sum_i \frac{\rho^2_i}{\sigma^2_i}-\(\sum_i \frac{\rho^2_i}{\sigma^2_i}\)^2
+$$
+where $\sigma^2_i$ is the variance for patch ROI $i$ and $\rho_i$ is the lab-measured reflectance for that patch. This means that 
+ROIs with larger uncertainty contribute less.
+{{<important>}}I'd love a citation for this fitting technique.{{</important>}}
+Now we can do this:
+$$
+m = \frac{
+\sum_i \frac{1}{\sigma^2_i}
+\sum_i \frac{\rho_i s_i}{\sigma^2_i}-
+\sum_i \frac{\rho_i}{\sigma^2_i}
+\sum_i \frac{s_i}{\sigma^2_i}
+}{\Delta}
+$$
+and
+$$
+c = \frac{
+\sum_i \frac{\rho^2_i}{\sigma^2_i}
+\sum_i \frac{s_i}{\sigma^2_i}-
+\sum_i \frac{\rho_i}{\sigma^2_i}
+\sum_i \frac{\rho_i s_i}{\sigma^2_i}
+}{\Delta}
+$$
+where $s_i$ is the mean signal in W.m<sup>2</sup>.sr.nm for each ROI $i$. We can also obtain uncertainties in the form
+of standard deviations of $m$ and $c$:
+$$
+\sigma_m = \sqrt{\frac{\sum_i \frac{1}{\sigma_i^2}}{\Delta}}
+$$
+and
+$$
+\sigma_c = \sqrt{\frac{\sum_i \frac{\rho_i^2}{\sigma_i^2}}{\Delta}}
+$$
+
 
 Sources: 
 1. [Allender, Elyse J., et al. "The ExoMars spectral tool (ExoSpec): An image analysis tool for ExoMars 2020 PanCam imagery." Image and Signal Processing for Remote Sensing XXIV. Vol. 10789. International Society for Optics and Photonics, 2018.](https://research-repository.st-andrews.ac.uk/bitstream/handle/10023/16973/Allender_2018_ExoMars_SPIE_107890I.pdf)
