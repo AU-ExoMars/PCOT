@@ -1,0 +1,6 @@
+#!/bin/sh
+
+#hugo server --bind 192.168.1.102 -b http://192.168.1.102:1313/
+#hugo server --bind 192.168.142.3 -b http://192.168.142.3:1313/
+#hugo server --bind 10.0.2.15 -b http://10.0.2.15:1313/
+hugo server --bind 192.168.99.101 -b http://192.168.99.101:1313/
