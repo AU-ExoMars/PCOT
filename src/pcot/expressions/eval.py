@@ -10,8 +10,7 @@ import pcot.config
 import pcot.conntypes as conntypes
 import pcot.operations as operations
 from pcot.conntypes import Datum
-from pcot.expressions import parse
-from pcot.expressions.parse import Parameter
+from .parse import Parameter, Parser, execute
 from pcot.pancamimage import ImageCube
 from pcot.utils.ops import binop, unop
 from pcot.xform import XFormException
@@ -175,7 +174,7 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
     return Datum(conntypes.NUMBER, fn(intermediate, *args))
 
 
-class ExpressionEvaluator(parse.Parser):
+class ExpressionEvaluator(Parser):
     """The core class for the expression evaluator, based on a generic Parser. The constructor
     is responsible for registering most functions."""
     def __init__(self):
@@ -258,4 +257,4 @@ class ExpressionEvaluator(parse.Parser):
         self.parse(s)
 
         stack = []
-        return parse.execute(self.output, stack)
+        return execute(self.output, stack)

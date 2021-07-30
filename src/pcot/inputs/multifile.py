@@ -11,7 +11,7 @@ from PyQt5.QtCore import Qt
 
 import pcot
 from pcot.channelsource import FileChannelSource
-from pcot.inputs.inputmethod import InputMethod
+from .inputmethod import InputMethod
 from pcot.pancamimage import ChannelMapping, ImageCube
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget

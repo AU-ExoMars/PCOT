@@ -1,11 +1,11 @@
 ## the abstract class from which all input types come
 from typing import List, Optional, TYPE_CHECKING
 
-from pcot.inputs.envi import ENVIInputMethod
-from pcot.inputs.inputmethod import InputMethod
-from pcot.inputs.multifile import MultifileInputMethod
-from pcot.inputs.nullinput import NullInputMethod
-from pcot.inputs.rgb import RGBInputMethod
+from .envi import ENVIInputMethod
+from .inputmethod import InputMethod
+from .multifile import MultifileInputMethod
+from .nullinput import NullInputMethod
+from .rgb import RGBInputMethod
 from pcot.pancamimage import ImageCube
 
 if TYPE_CHECKING:

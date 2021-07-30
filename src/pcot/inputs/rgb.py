@@ -2,9 +2,8 @@
 import os
 from typing import Optional
 
-import pcot
 import pcot.ui as ui
-from pcot.inputs.inputmethod import InputMethod
+from .inputmethod import InputMethod
 from pcot.pancamimage import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import TreeMethodWidget

@@ -3,7 +3,7 @@ import traceback
 import pcot.conntypes as conntypes
 import pcot.ui.tabs
 from pcot import ui
-from pcot.expressions.eval import ExpressionEvaluator
+from pcot.expressions import ExpressionEvaluator
 from pcot.xform import XFormType, xformtype, XFormException
 
 

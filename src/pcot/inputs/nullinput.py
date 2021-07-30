@@ -1,6 +1,6 @@
 ## the Null input, which does nothing and outputs None
 
-from pcot.inputs.inputmethod import InputMethod
+from .inputmethod import InputMethod
 from pcot.ui.inputs import PlaceholderMethodWidget
 
 
