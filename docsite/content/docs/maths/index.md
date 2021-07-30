@@ -5,8 +5,6 @@ summary: This page describes how images are processed from import until reflecta
 tags: ["pcot","mars","python"]
 ---
 
-{{<katex>}}
-
 
 {{< figure src="process.png" title="Image import and calibration">}}
 
@@ -77,7 +75,8 @@ the BRDF.
 filter band (well, obviously you can do this with one selection across
 each multispectral image). Mean and SD of pixel values within each ROI
 are calculated.
-* For each filter, we then plot the measured values against the predicted values for each
+* For each filter, we then plot the measured values against the predicted 
+(lab measured?) values for each
 patch. This should fit a line constrained through the origin (because black
 should equal black). The fit is checked by analysts, and the slope of the line $m$ 
 can be used to convert from radiance to [IoF]({{<relref "../glossary/#iof">}})
@@ -92,15 +91,19 @@ R^* = r\cdot m
 $$
 
 ### The ExoSpec way (from paper [1])
-* Again, analysts select ROIs for each calibration target patch in each filter band, and obtain mean and
+Again, analysts select ROIs for each calibration target patch in each filter band, and obtain mean and
 variance for pixel values within each ROI for each band. We then fit lines, and the paper seems to provide some
 maths:
 $$
-\Delta = \sum_i \frac{1}{\sigma^2_i} \sum_i \frac{\rho^2_i}{\sigma^2_i}-\(\sum_i \frac{\rho^2_i}{\sigma^2_i}\)^2
+\Delta = \sum_i \frac{1}{\sigma^2_i} \sum_i \frac{\rho^2_i}{\sigma^2_i}-\left(\sum_i \frac{\rho_i}{\sigma^2_i}\right)^2
 $$
 where $\sigma^2_i$ is the variance for patch ROI $i$ and $\rho_i$ is the lab-measured reflectance for that patch. This means that 
-ROIs with larger uncertainty contribute less.
-{{<important>}}I'd love a citation for this fitting technique.{{</important>}}
+ROIs with larger uncertainty contribute less. 
+{{<important>}}
+[1] gets this from Matt's thesis [3], he gets it from Kirkup[4]. In [1] it's been copied wrongly with the $\Delta$ definition having $\rho_i^2$
+in the numerator of the bracketed term.
+{{</important>}}
+
 Now we can do this:
 $$
 m = \frac{
@@ -133,6 +136,9 @@ $$
 Sources: 
 1. [Allender, Elyse J., et al. "The ExoMars spectral tool (ExoSpec): An image analysis tool for ExoMars 2020 PanCam imagery." Image and Signal Processing for Remote Sensing XXIV. Vol. 10789. International Society for Optics and Photonics, 2018.](https://research-repository.st-andrews.ac.uk/bitstream/handle/10023/16973/Allender_2018_ExoMars_SPIE_107890I.pdf)
 2. [Bell III, James F., et al. "In-flight calibration and performance of the Mars Exploration Rover Panoramic Camera (Pancam) instruments." Journal of Geophysical Research: Planets 111.E2 (2006).](https://agupubs.onlinelibrary.wiley.com/doi/pdfdirect/10.1029/2005JE002444)
+3. Gunn M., Spectral imaging for Mars exploration. PhD thesis, Aberystwyth University (2013)
+4. Kirkup, L., Experimental Methods An introduction to the analysis and presentation of data. 1994: John Wiley & Sons INC.
+
 
 [^1]: This equation is given in Allender et al. as 
 $$
