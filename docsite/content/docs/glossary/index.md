@@ -20,21 +20,21 @@ Useful because lots of other probes use it!
 
 ### R\*
 Used by Mars Pathfinder (Reid, 1999[^2]). 
-> A related parameter, R* (''R-star''), was defined and
+A related parameter, R\* (''R-star''), was defined and
 utilized by Reid et al. [1999] for Imager for Mars Pathfinder
-(IMP) reflectance products. R* was defined by Reid et al.
+(IMP) reflectance products. R\* was defined by Reid et al.
 [1999] as ''the brightness of the surface divided by the
 brightness of an RT (Radiometric Calibration Target) scaled
 to its equivalent Lambert reflectance.'' Some researchers
 have called this quantity ''relative reflectance'' because it is
 the reflectance of the scene relative to that of a perfectly
 Lambertian albedo = 1.0 surface in an identical geometry. In
-general, R* can be defined as the ratio of the reflectance of a
+general, R\* can be defined as the ratio of the reflectance of a
 surface to that of a perfectly diffuse surface under the same
 conditions of illumination and measurement. This is also
 known as the reflectance factor or reflectance coefficient
-[Hapke, 1993], and it is essentially an approximation of the
-Lambert albedo within each Pancam bandpass. Units of R*
+[Hapke, 1993], and it is **essentially an approximation of the
+Lambert albedo within each Pancam bandpass**. Units of R*
 can be obtained by dividing Pancam IOF images by the
 cosine of the solar incidence angle at the time of the
 observation.
