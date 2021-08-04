@@ -1,21 +1,19 @@
 # This is the application-specific part of the expression parsing system.
 # In this system, all data is a Datum object.
-import math
 import numbers
-from typing import Callable, Dict, Tuple, List, Optional, Any
+from typing import Callable, Dict, Tuple, List, Optional
 
-import numpy as np
 import cv2 as cv
+import numpy as np
 
 import pcot.config
 import pcot.conntypes as conntypes
 import pcot.operations as operations
-from pcot.expressions import parse
-from pcot.expressions.parse import Parameter
+from pcot.conntypes import Datum
+from .parse import Parameter, Parser, execute
 from pcot.pancamimage import ImageCube
 from pcot.utils.ops import binop, unop
 from pcot.xform import XFormException
-from pcot.conntypes import Datum
 
 
 # TODO: Show output in canvas (and other output somehow if not image?). Honour the ROI from the "leftmost" image with an ROI - So A has priority over B, etc.
@@ -176,10 +174,9 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
     return Datum(conntypes.NUMBER, fn(intermediate, *args))
 
 
-class ExpressionEvaluator(parse.Parser):
+class ExpressionEvaluator(Parser):
     """The core class for the expression evaluator, based on a generic Parser. The constructor
     is responsible for registering most functions."""
-
     def __init__(self):
         """Initialise the evaluator, registering functions and operators.
         Caller may add other things (e.g. variables)"""
@@ -189,8 +186,12 @@ class ExpressionEvaluator(parse.Parser):
         self.registerBinop('/', 20, lambda a, b: binop(a, b, lambda x, y: x / y, None))
         self.registerBinop('*', 20, lambda a, b: binop(a, b, lambda x, y: x * y, None))
         self.registerBinop('^', 30, lambda a, b: binop(a, b, lambda x, y: x ** y, None))
-
         self.registerUnop('-', 50, lambda x: unop(x, lambda a: -a, None))
+
+        # standard fuzzy operators (i.e. Zadeh)
+        self.registerBinop('&', 20, lambda a, b: binop(a, b, lambda x, y: np.minimum(x, y), None))
+        self.registerBinop('|', 20, lambda a, b: binop(a, b, lambda x, y: np.maximum(x, y), None))
+        self.registerUnop('!', 50, lambda x: unop(x, lambda a: 1 - a, None))
 
         self.registerBinop('.', 80, getProperty)
         self.registerBinop('$', 100, extractChannelByName)
@@ -198,7 +199,8 @@ class ExpressionEvaluator(parse.Parser):
         # additional functions and properties - this is in the __init__.py in the operations package.
         operations.registerOpFunctionsAndProperties(self)
 
-        self.registerFunc("merge", "merge a number of images into a single image - if the image has multiple channels they will all be merged in.",
+        self.registerFunc("merge",
+                          "merge a number of images into a single image - if the image has multiple channels they will all be merged in.",
                           [Parameter("image", "an image of any depth", conntypes.IMG)],
                           [],
                           funcMerge, varargs=True)
@@ -255,4 +257,4 @@ class ExpressionEvaluator(parse.Parser):
         self.parse(s)
 
         stack = []
-        return parse.execute(self.output, stack)
+        return execute(self.output, stack)

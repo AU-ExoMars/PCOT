@@ -27,6 +27,7 @@ from pcot import inputs
 from pcot.ui import graphscene
 from pcot.inputs.inp import InputManager
 from pcot.ui.canvas import Canvas
+from pcot.ui.tabs import Tab
 from pcot.utils import archive
 
 if TYPE_CHECKING:
@@ -158,6 +159,9 @@ class XFormType:
     # MD5 hash of source code (generated automatically)
     _md5: str
 
+    ## @var minwidth
+    # minimum width of node on screen
+
     def __init__(self, name, group, ver):
         """constructor, takes name, groupname and version"""
         self.group = group
@@ -181,6 +185,7 @@ class XFormType:
         # they must be simple Python data. This happens in addition to, and
         # before, the serialise() and deserialise() methods.
         self.autoserialise = ()  # tuple or list of attribute names
+        self.minwidth = 100
 
     def remove(self, node):
         """call to remove node from instance list"""
@@ -797,7 +802,7 @@ class XForm:
 
     def updateTabs(self):
         for x in self.tabs:
-            x.onNodeChanged()
+            x.nodeChanged()
             x.updateError()
 
     ## perform the transformation; delegated to the type object - recurses down the children.
@@ -873,6 +878,13 @@ class XForm:
         # defer to type, because connector nodes have to rebuild all views.
         self.type.rename(self, name)
 
+    def mark(self):
+        """Record the state of the node in the undo mechanism"""
+        self.graph.doc.mark()
+
+    def unmark(self):
+        self.graph.doc.unmark()
+
     def __str__(self):
         return "XForm-{}-{}-{}".format(id(self), self.displayName, self.type.name)
 
@@ -931,6 +943,10 @@ class XFormGraph:
     def create(self, typename):
         """create a new node, passing in a type name. We look in both the 'global' dictionary,
         allTypes,  but also the macros for this document"""
+
+        # note that we don't mark here - this is called in deserialisation so that would be bad. We do the mark
+        # before the UI calls this.
+
         if typename in allTypes:
             tp = allTypes[typename]
         elif typename in self.doc.macros:
@@ -1153,7 +1169,9 @@ class XFormGraph:
             Returns a list of the new nodes.
             """
         if deleteExistingNodes:
-            self.nodes = []
+            for n in self.nodes:
+                self.remove(n)
+
         # disambiguate nodes in the dict, to make sure they don't
         # have the same nodes as ones already in the graph
         d = self.disambiguate(d)

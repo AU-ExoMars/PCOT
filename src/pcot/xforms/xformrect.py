@@ -53,26 +53,24 @@ class TabRect(pcot.ui.tabs.Tab):
         self.w.caption.textChanged.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
         self.w.captionTop.toggled.connect(self.topChanged)
-        self.w.canvas.setGraph(node.graph)
-        # but we still need to be able to edit it
-        self.w.canvas.setMapping(node.mapping)
-        self.w.canvas.setPersister(node)
-        self.w.canvas.setROINode(node)
 
         self.mouseDown = False
         self.dontSetText = False
         # sync tab with node
-        self.onNodeChanged()
+        self.nodeChanged()
 
     def topChanged(self, checked):
+        self.mark()
         self.node.captiontop = checked
         self.changed()
 
     def fontSizeChanged(self, i):
+        self.mark()
         self.node.fontsize = i
         self.changed()
 
     def textChanged(self, t):
+        self.mark()
         self.node.caption = t
         # this will cause perform, which will cause onNodeChanged, which will
         # set the text again. We set a flag to stop the text being reset.
@@ -81,17 +79,24 @@ class TabRect(pcot.ui.tabs.Tab):
         self.dontSetText = False
 
     def fontLineChanged(self, i):
+        self.mark()
         self.node.fontline = i
         self.changed()
 
     def colourPressed(self):
         col = pcot.utils.colour.colDialog(self.node.colour)
         if col is not None:
+            self.mark()
             self.node.colour = col
             self.changed()
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
+        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
+        self.w.canvas.setMapping(self.node.mapping)
+        self.w.canvas.setGraph(self.node.graph)
+        self.w.canvas.setPersister(self.node)
+        self.w.canvas.setROINode(self.node)
         if self.node.img is not None:
             # We're displaying a "premapped" image : this node's perform code is
             # responsible for doing the RGB mapping, unlike most other nodes where it's
@@ -126,6 +131,7 @@ class TabRect(pcot.ui.tabs.Tab):
                 w = 10
             if h < 10:
                 h = 10
+            # we don't do a mark here to avoid multiple marks - one is done on mousedown.
             self.node.roi.setBB(x, y, w, h)
             self.changed()
         self.w.canvas.update()
@@ -135,6 +141,7 @@ class TabRect(pcot.ui.tabs.Tab):
         w = 10  # min crop size
         h = 10
         self.mouseDown = True
+        self.mark()
         self.node.roi.setBB(x, y, w, h)
         self.changed()
         self.w.canvas.update()

@@ -112,22 +112,24 @@ class TabInset(pcot.ui.tabs.Tab):
         # the image is always RGB, so we shouldn't be able to remap it
         self.w.canvas.setMapping(ChannelMapping(0, 1, 2))
         self.w.canvas.hideMapping()
-        self.w.canvas.setPersister(node)
 
         self.mouseDown = False
         self.dontSetText = False
         # sync tab with node
-        self.onNodeChanged()
+        self.nodeChanged()
 
     def topChanged(self, checked):
+        self.mark()
         self.node.captiontop = checked
         self.changed()
 
     def fontSizeChanged(self, i):
+        self.mark()
         self.node.fontsize = i
         self.changed()
 
     def textChanged(self, t):
+        self.mark()
         self.node.caption = t
         # this will cause perform, which will cause onNodeChanged, which will
         # set the text again. We set a flag to stop the text being reset.
@@ -136,12 +138,14 @@ class TabInset(pcot.ui.tabs.Tab):
         self.dontSetText = False
 
     def fontLineChanged(self, i):
+        self.mark()
         self.node.fontline = i
         self.changed()
 
     def colourPressed(self):
         col = pcot.utils.colour.colDialog(self.node.colour)
         if col is not None:
+            self.mark()
             self.node.colour = col
             self.changed()
 
@@ -149,6 +153,8 @@ class TabInset(pcot.ui.tabs.Tab):
     def onNodeChanged(self):
         # we just draw the composited image
         if self.node.img is not None:
+            # have to do canvas set up here to handle extreme undo events which change the graph and nodes
+            self.w.canvas.setPersister(self.node)
             self.w.canvas.display(self.node.img)
         if not self.dontSetText:
             self.w.caption.setText(self.node.caption)
@@ -183,6 +189,7 @@ class TabInset(pcot.ui.tabs.Tab):
         p = e.pos()
         w = 10  # min crop size
         h = 10
+        self.mark()
         self.mouseDown = True
         self.node.insetrect = (x, y, w, h)
         self.changed()

@@ -12,7 +12,7 @@ from pcot.config import getUserName, addMainWindowHook, addExprFuncHook
 from pcot.utils import archive
 from pcot.xforms import *
 
-__version__ = importlib.resources.read_text(pcot, 'VERSION.txt')
+__version__ = importlib.resources.read_text(pcot, 'VERSION.txt').split("\n")[1]
 
 
 ##### Plugin handling

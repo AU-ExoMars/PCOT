@@ -79,10 +79,12 @@ class PaletteButton(QtWidgets.QPushButton):
     def click(self):
         # create a new item at a position decided by the scene
         try:
-            node = self.view.scene().graph.create(self.name)
-            node.xy = self.view.scene().getNewPosition()
+            scene = self.view.scene()
+            scene.mark()
+            node = scene.graph.create(self.name)
+            node.xy = scene.getNewPosition()
             # rebuild the scene
-            self.view.scene().rebuild()
+            scene.rebuild()
             # and perform the node to get initial data
             node.graph.performNodes(node)
         except XFormException as e:

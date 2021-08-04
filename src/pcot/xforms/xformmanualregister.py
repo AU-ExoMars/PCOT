@@ -222,13 +222,10 @@ class TabManualReg(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabmanreg.ui')
         self.mouseDown = False
-        self.w.canvas.setGraph(node.graph)
-        self.w.canvas.setMapping(node.mapping)
-        self.w.canvas.setPersister(node)
         self.w.canvas.keyHook = self
         self.w.canvas.mouseHook = self
 
-        self.onNodeChanged()  # doing this FIRST so signals don't go to slots during setup.
+        self.nodeChanged()  # doing this FIRST so signals don't go to slots during setup.
 
         self.w.radioBoth.toggled.connect(self.radioViewToggled)
         self.w.radioSource.toggled.connect(self.radioViewToggled)
@@ -243,12 +240,14 @@ class TabManualReg(pcot.ui.tabs.Tab):
     def clearClicked(self):
         if QMessageBox.question(self.parent(), "Clear all points", "Are you sure?",
                                 QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+            self.mark()
             self.node.dest = []
             self.node.src = []
             self.node.selIdx = None
             self.changed()
 
     def radioViewToggled(self):
+        self.mark()
         if self.w.radioBoth.isChecked():
             self.node.imagemode = IMAGEMODE_BOTH
         elif self.w.radioSource.isChecked():
@@ -260,14 +259,20 @@ class TabManualReg(pcot.ui.tabs.Tab):
         self.changed(uiOnly=True)
 
     def checkBoxDestToggled(self):
+        self.mark()
         self.node.showDest = self.w.checkBoxDest.isChecked()
         self.changed(uiOnly=True)
 
     def checkBoxSrcToggled(self):
+        self.mark()
         self.node.showSrc = self.w.checkBoxSrc.isChecked()
         self.changed(uiOnly=True)
 
     def onNodeChanged(self):
+        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
+        self.w.canvas.setMapping(self.node.mapping)
+        self.w.canvas.setGraph(self.node.graph)
+        self.w.canvas.setPersister(self.node)
         self.w.radioBoth.setChecked(self.node.imagemode == IMAGEMODE_BOTH)
         self.w.radioSource.setChecked(self.node.imagemode == IMAGEMODE_SOURCE)
         self.w.radioDest.setChecked(self.node.imagemode == IMAGEMODE_DEST)
@@ -282,16 +287,20 @@ class TabManualReg(pcot.ui.tabs.Tab):
     def canvasKeyPressEvent(self, e: QKeyEvent):
         k = e.key()
         if k == Qt.Key_M:
+            self.mark()
             self.node.imagemode += 1
             self.node.imagemode %= IMAGEMODE_CT
             self.changed()
         elif k == Qt.Key_S:
+            self.mark()
             self.node.showSrc = not self.node.showSrc
             self.changed()
         elif k == Qt.Key_D:
+            self.mark()
             self.node.showDest = not self.node.showDest
             self.changed()
         elif k == Qt.Key_Delete:
+            self.mark()
             self.node.type.delSelPoint(self.node)
             self.changed()
 
@@ -302,6 +311,7 @@ class TabManualReg(pcot.ui.tabs.Tab):
 
     def canvasMousePressEvent(self, x, y, e):
         self.mouseDown = True
+        self.mark()
         if e.modifiers() & (Qt.ShiftModifier | Qt.AltModifier):
             # modifiers = we're adding
             if self.node.showSrc and self.node.showDest:

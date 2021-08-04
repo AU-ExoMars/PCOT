@@ -58,7 +58,7 @@ class TabHistogram(ui.tabs.Tab):
         self.w.bins.editingFinished.connect(self.binsChanged)
         self.w.replot.clicked.connect(self.replot)
         self.w.save.clicked.connect(self.save)
-        self.onNodeChanged()
+        self.nodeChanged()
 
     def replot(self):
         # set up the plot
@@ -84,6 +84,7 @@ class TabHistogram(ui.tabs.Tab):
         self.w.mpl.save()
 
     def binsChanged(self):
+        self.mark()
         self.node.bincount = self.w.bins.value()
         self.changed()
 

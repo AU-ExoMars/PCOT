@@ -11,7 +11,7 @@ from PyQt5.QtCore import Qt
 
 import pcot
 from pcot.channelsource import FileChannelSource
-from pcot.inputs.inputmethod import InputMethod
+from .inputmethod import InputMethod
 from pcot.pancamimage import ChannelMapping, ImageCube
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
@@ -43,7 +43,10 @@ class MultifileInputMethod(InputMethod):
         if self.filterre is None:
             return None
         else:
-            m = self.filterre.match(path).groupdict()
+            m = self.filterre.match(path)
+            if m is None:
+                return None
+            m = m.groupdict()
             lens = m['lens'] if 'lens' in m else ''
             n = m['n'] if 'n' in m else ''
             return lens + n
@@ -72,8 +75,10 @@ class MultifileInputMethod(InputMethod):
                 source = {FileChannelSource(path, self.getFilterName(path), self.camera == 'AUPE')}
                 # is it in the cache?
                 if path in self.cachedFiles:
+                    print("IMAGE IN MULTIFILE CACHE: NOT PERFORMING FILE READ")
                     img = self.cachedFiles[path]
                 else:
+                    print("IMAGE NOT IN MULTIFILE CACHE: PERFORMING FILE READ")
                     # use image cube loader even though we're just going to use the numpy image - just easier.
                     img = ImageCube.load(path, None, None)  # always RGB at this point
                     # aaaand this pretty much always happens, because load always
@@ -108,7 +113,7 @@ class MultifileInputMethod(InputMethod):
     def createWidget(self):
         return MultifileMethodWidget(self)
 
-    def serialise(self):
+    def serialise(self, internal):
         x = {'namefilters': self.namefilters,
              'dir': self.dir,
              'files': self.files,
@@ -116,16 +121,24 @@ class MultifileInputMethod(InputMethod):
              'filterpat': self.filterpat,
              'camera': self.camera,
              }
+        if internal:
+            x['cache'] = self.cachedFiles
+            x['img'] = self.img
+
         Canvas.serialise(self, x)
         return x
 
-    def deserialise(self, data):
+    def deserialise(self, data, internal):
         self.namefilters = data['namefilters']
         self.dir = data['dir']
         self.files = data['files']
         self.mult = data['mult']
         self.filterpat = data['filterpat']
         self.camera = data['camera']
+        if internal:
+            self.cachedFiles = data['cache']
+            self.img = data['img']
+
         Canvas.deserialise(self, data)
 
 

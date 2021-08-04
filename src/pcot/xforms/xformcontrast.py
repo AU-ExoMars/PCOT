@@ -108,16 +108,14 @@ class TabContrast(pcot.ui.tabs.Tab):
         # that method will be called with the new value. Note that the dial is actually loaded
         # into a subwidget called "w".
         self.w.dial.valueChanged.connect(self.setContrast)
-        self.w.canvas.setMapping(node.mapping)
-        self.w.canvas.setGraph(node.graph)
-        self.w.canvas.setPersister(node)
 
         # We call onNodeChanged to set the tab with the initial values from the node.
-        self.onNodeChanged()
+        self.nodeChanged()
 
     # The value of the dial has changed. It ranges from 0-100, so we set the 
     # tolerance by scaling the value down. We then call perform().
     def setContrast(self, v):
+        self.mark()
         self.node.tol = v / 200
         self.changed()
 
@@ -126,5 +124,10 @@ class TabContrast(pcot.ui.tabs.Tab):
     # image on the tab's canvas - this is a class in the ui package which can display OpenCV
     # images.
     def onNodeChanged(self):
+        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
+        self.w.canvas.setMapping(self.node.mapping)
+        self.w.canvas.setGraph(self.node.graph)
+        self.w.canvas.setPersister(self.node)
+
         self.w.dial.setValue(self.node.tol * 200)
         self.w.canvas.display(self.node.img)

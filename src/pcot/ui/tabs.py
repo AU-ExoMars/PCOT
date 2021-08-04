@@ -26,7 +26,7 @@ class DockableTabWindow(QtWidgets.QMainWindow):
         # set up the double-clicked signal
         self.tabWidget.tabBar().tabBarDoubleClicked.connect(self.undock)
         # and the close for a tab
-        self.tabWidget.tabBar().tabCloseRequested.connect(self.closeTab)
+        self.tabWidget.tabBar().tabCloseRequested.connect(self.closeTabByIndex)
         # and when we switch tab
         self.tabWidget.currentChanged.connect(self.currentChanged)
 
@@ -40,13 +40,20 @@ class DockableTabWindow(QtWidgets.QMainWindow):
         self.tabs = None
 
     ## close a tab
-    def closeTab(self, index):
+    def closeTabByIndex(self, index):
         tab = self.tabWidget.widget(index)
         tab.node.tabs.remove(tab)
         self.tabWidget.removeTab(index)
         self.tabs = {k: v for k, v in self.tabs.items() if v != tab}
 
-    ## close every tab and expanded tab window       
+    def closeTab(self, t):
+        if t.expanded:
+            t.expanded.close()
+        idx = self.tabWidget.indexOf(t)
+        if idx >= 0:
+            self.closeTabByIndex(idx)
+
+    ## close every tab and expanded tab window
     def closeAllTabs(self):
         # first, close all expanded tab windows
         for t in self.tabs.values():
@@ -55,7 +62,7 @@ class DockableTabWindow(QtWidgets.QMainWindow):
                 t.expanded.close()
         # then close all the tabs
         for t in self.tabs.values():
-            self.closeTab(self.tabWidget.indexOf(t))
+            self.closeTabByIndex(self.tabWidget.indexOf(t))
 
     ## used to undock tab into a window
     def undock(self, i):
@@ -135,6 +142,9 @@ tabErrorFont.setPixelSize(15)
 ## A tab to be loaded. We subclass this. Once loaded, all ui elements
 # are in the 'w' widget
 class Tab(QtWidgets.QWidget):
+
+    updatingTabs = False  # we are updating after a perform, don't take too much notice of calls to changed()
+
     ## the comment field changed, set the data in the node.
     def commentChanged(self):
         self.node.comment = self.comment.toPlainText().strip()
@@ -168,11 +178,11 @@ class Tab(QtWidgets.QWidget):
         splitter.addWidget(widlower)
         laylower = QtWidgets.QVBoxLayout()
         widlower.setLayout(laylower)
-        laylower.setContentsMargins(1,1,1,1)
+        laylower.setContentsMargins(1, 1, 1, 1)
 
         widCommentAndEnable = QtWidgets.QWidget()
         layCommentAndEnable = QtWidgets.QHBoxLayout()
-        layCommentAndEnable.setContentsMargins(1,1,1,1)
+        layCommentAndEnable.setContentsMargins(1, 1, 1, 1)
         widCommentAndEnable.setLayout(layCommentAndEnable)
         laylower.addWidget(widCommentAndEnable)
 
@@ -219,6 +229,7 @@ class Tab(QtWidgets.QWidget):
     ## The tab's widgets have changed the data, we need
     # to perform the node. (or all instance nodes of a macro prototype).
     # If uiOnly is false, just do the uichanged() update, as if autorun were not set.
+    # We also record an undo mark.
     def changed(self, uiOnly=False):
         self.node.graph.changed(self.node, uiOnly=uiOnly)
 
@@ -252,7 +263,7 @@ class Tab(QtWidgets.QWidget):
 
     def updateError(self):
         if self.node.error is not None:
-            self.errorText.setText("Error "+self.node.error.code+": "+self.node.error.message)
+            self.errorText.setText("Error " + self.node.error.code + ": " + self.node.error.message)
             self.errorText.setVisible(True)
         else:
             self.errorText.setVisible(False)
@@ -261,3 +272,17 @@ class Tab(QtWidgets.QWidget):
     # should update the tab when the node's data has changed
     def onNodeChanged(self):
         pass
+
+    ## will set a flag to stop undo marking and perform before calling onNodeChanged to update
+    # tab widgets; this avoids the changes to those widgets triggering another changed and rerun.
+    def nodeChanged(self):
+        Tab.updatingTabs = True
+        self.onNodeChanged()
+        Tab.updatingTabs = False
+
+    ## the tab is about to change the node! Mark this undo point if we are not updating tabs from the node.
+    # Yes, we probably shouldn't be doing this at all in the latter case, but it's sometimes hard to avoid.
+    def mark(self):
+        if not Tab.updatingTabs:
+            self.node.mark()
+

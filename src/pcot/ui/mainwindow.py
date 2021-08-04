@@ -148,6 +148,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.autolayoutButton.clicked.connect(self.autoLayoutButton)
         self.dumpButton.clicked.connect(lambda: self.graph.dump())
         self.capCombo.currentIndexChanged.connect(self.captionChanged)
+
         self.actionSave_As.triggered.connect(self.saveAsAction)
         self.action_New.triggered.connect(self.newAction)
         self.actionNew_Macro.triggered.connect(self.newMacroAction)
@@ -156,6 +157,9 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.actionCopy.triggered.connect(self.copyAction)
         self.actionPaste.triggered.connect(self.pasteAction)
         self.actionCut.triggered.connect(self.cutAction)
+        self.actionUndo.triggered.connect(self.undoAction)
+        self.actionRedo.triggered.connect(self.redoAction)
+
         self.runAllButton.pressed.connect(self.runAllAction)
         self.autoRun.toggled.connect(self.autorunChanged)
 
@@ -223,6 +227,11 @@ class MainUI(ui.tabs.DockableTabWindow):
         MainUI.updateAutorun()
         self.graph.constructScene(doAutoLayout)
         self.view.setScene(self.graph.scene)
+        self.doc.clearUndo()
+
+    @classmethod
+    def getWindowsForDocument(cls, d):
+        return [w for w in cls.windows if w.doc == d]
 
     def rebuildRecents(self):
         # add recent files to menu, removing old ones first. Note that recent files must be at the end
@@ -373,6 +382,14 @@ class MainUI(ui.tabs.DockableTabWindow):
     def cutAction(self):
         self.graph.scene.cut()
 
+    def undoAction(self):
+        print("UNDO")
+        self.doc.undo()
+
+    def redoAction(self):
+        print("REDO")
+        self.doc.redo()
+
     ## "run all" action, typically used when you have auto-run turned off (editing a macro,
     # perhaps)
     def runAllAction(self):
@@ -386,6 +403,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     ## "new macro" menu/keypress, will create a new macro prototype in this document
     def newMacroAction(self):
+        self.doc.mark()
         p = macros.XFormMacro(self.doc, None)
         MainUI(self.doc, macro=p, doAutoLayout=True)
 
@@ -419,6 +437,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     ## caption type has been changed in widget
     def captionChanged(self, i):
+        self.doc.mark()
         self.graph.doc.setCaption(i)
         # TODO some windows might not change their captions!
         self.graph.performNodes()
@@ -433,12 +452,13 @@ class MainUI(ui.tabs.DockableTabWindow):
     ## autorun has been changed in widget. This is global,
     # so all windows must agree.
     def autorunChanged(self, i):
+        self.doc.mark()
         xform.XFormGraph.autoRun = self.autoRun.isChecked()
         # I'll set autorun on all graphs
         MainUI.updateAutorun()
-        # but only rerun this one
-        if xform.XFormGraph.autoRun:
-            self.runAll()
+        # but only rerun this one (turned off because some nodes are REALLY SLOW)
+#        if xform.XFormGraph.autoRun:
+#            self.runAll()
 
     ## update autorun checkbox states from class variable
     @staticmethod
@@ -455,6 +475,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     ## add a macro connector, only should be used on macro prototypes   
     def addMacroConnector(self, tp):
+        self.doc.mark()
         # create the node inside the prototype
         n = self.graph.create(tp)
         n.xy = self.graph.scene.getNewPosition()
@@ -484,6 +505,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         assert (self.macroPrototype is not None)
         changed, newname = ui.namedialog.do(self.macroPrototype.name)
         if changed:
+            self.doc.mark()
             self.macroPrototype.renameType(newname)
 
     ## perform all in the graph
@@ -491,3 +513,52 @@ class MainUI(ui.tabs.DockableTabWindow):
         if self.graph is not None:
             # pass in true, indicating we want to ignore autorun
             self.graph.changed(runAll=True)
+
+    ## After an undo/redo, a whole new document may have been deserialised.
+    # Set this new graph, and make sure the window's tabs point to nodes
+    # in the new graph rather than the old one.
+
+    def replaceDocument(self, d):
+        # construct a dict of uid -> node for the new graph
+        newGraphDict = {n.name: n for n in d.graph.nodes}
+
+        # replace the graph and document
+        self.graph = d.graph
+        self.doc = d
+        # rebuild the scene without autolayout (coords should be in the data)
+        self.graph.constructScene(False)
+        self.view.setScene(self.graph.scene)
+
+        for x in self.graph.nodes:
+            x.tabs = []
+
+        for title, tab in self.tabs.items():
+            # get the new node which replaces the old one if we can. Otherwise
+            # delete the tab.
+            if tab.node.name in newGraphDict:
+                n = newGraphDict[tab.node.name]
+                tab.node = n  # replace the node reference in the tab
+                n.tabs.append(tab)
+            else:
+                self.closeTab(tab)
+
+        self.runAll()  # refresh everything (yes, slow)
+
+    def showUndoStatus(self):
+        import gc
+
+        u, r = self.doc.undoRedoStore.status()
+        try:
+            from psutil import Process
+            process = Process(os.getpid())
+            m = process.memory_info().rss
+            self.undoStatus.setText("Undo {}, redo {}, {}M".format(u, r, m//(1024*1024)))
+        except ImportError:
+            self.undoStatus.setText("Undo {}, redo {}".format(u, r))
+        gc.collect()
+
+        # for x in gc.get_objects():
+        #     from ..xform import XForm
+        #     if isinstance(x, XForm):
+        #         print(str(x))
+

@@ -33,11 +33,12 @@ class VariantWidget(QtWidgets.QGroupBox):
                 b.toggled.connect(self.buttonToggled)
             idx += 1
 
-    def buttonToggled(self, _):
-        for b in self.buttons:
-            if b.isChecked():
-                t = conntypes.types[b.idx]
-                self.changed.emit(t)
+    def buttonToggled(self, checked):
+        if checked:     # ignore button toggling off event
+            for b in self.buttons:
+                if b.isChecked():
+                    t = conntypes.types[b.idx]
+                    self.changed.emit(t)
 
     def set(self, t):
         i = conntypes.types.index(t)

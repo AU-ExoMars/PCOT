@@ -59,9 +59,7 @@ errorFont.setPixelSize(12)
 
 # constants for node drawing
 
-## width of a node in pixels
-NODEWIDTH = 100
-## height of a node in pixels (including connectors)
+## height of a node in pixels (including connectors) (minimum is part of XFormType)
 NODEHEIGHT = 50
 
 ## offset of xform name text into box
@@ -125,21 +123,36 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
     helprect: GHelpRect  # help rectangle (top-right corner)
     node: xform.XForm  # node to which I refer
     text: GText  # text field
+    aboutToMove: bool   # true when the item is clicked; the first move after this will cause a mark and clear this flag
 
     def __init__(self, x1, y1, w, h, node):
         self.offsetx = 0  # these are the distances from our original pos.
         self.offsety = 0
+        self.aboutToMove = False
         super().__init__(x1, y1, w, h)
         self.setFlags(QtWidgets.QGraphicsItem.ItemIsSelectable |
                       QtWidgets.QGraphicsItem.ItemIsMovable |
                       QtWidgets.QGraphicsItem.ItemSendsGeometryChanges)
         self.node = node
-        # and add in the help box
-        self.helprect = GHelpRect(x1, y1, node, self)
+        # help "button" created when setSizeToText is called.
+        self.helprect = None
+
+    def setSizeToText(self, node):
+        r = self.rect()
+        w = max(node.type.minwidth, self.text.boundingRect().width()+10)
+        r.setWidth(w)
+        self.setRect(r)
+        node.w = w
+        if self.helprect: # get rid of any old one
+            self.helprect.setParentItem(None)
+        self.helprect = GHelpRect(r.x(), r.y(), node, self)
 
     ## deal with items moving
     def itemChange(self, change, value):
         if change == QtWidgets.QGraphicsItem.ItemPositionChange:
+            if self.aboutToMove:
+                self.aboutToMove = False
+                self.scene().mark()
             dx = value.x() - self.offsetx
             dy = value.y() - self.offsety
             self.offsetx = value.x()
@@ -151,6 +164,10 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
             # remake all the scene's connection arrows, which is rather inefficient!
             self.scene().rebuildArrows()
         return super().itemChange(change, value)
+
+    def mousePressEvent(self, event):
+        self.aboutToMove = True
+        super().mousePressEvent(event)
 
     ## double click should find or open a tab, even to the extent
     # of focussing another window (an expanded tab); an action
@@ -376,19 +393,21 @@ def makeNodeGraphics(n):
     x, y = n.xy
     # if the node doesn't have width and height yet, set them. This happens
     # when a node is not created in place().
-    if n.w is None:
-        n.w = NODEWIDTH
+    # Also, if a node width is negative, set the size to the text.
+
+    if n.h is None:
         n.h = NODEHEIGHT + YPADDING
 
     # draw basic rect, leaving room for connectors at top and bottom
     # We keep this rectangle in the node so we can change its colour
-    n.rect = GMainRect(x, y + CONNECTORHEIGHT, n.w, n.h - YPADDING - CONNECTORHEIGHT * 2, n)
+    n.rect = GMainRect(x, y + CONNECTORHEIGHT, n.type.minwidth,
+                       n.h - YPADDING - CONNECTORHEIGHT * 2, n)
 
     # draw text label, using the display name. Need to keep a handle on the text
     # so we can change the colour in setColourToState(). This is drawn using a method
     # in the type, which we can override if we want to do Odd Things (editable text)
     n.rect.text = n.type.buildText(n)
-
+    n.rect.setSizeToText(n)
     makeConnectors(n, x, y)
 
     # if there's an error, add the code. Otherwise if there a rect text, add that.
@@ -434,7 +453,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         else:
             # or alternatively just set w,h (for loading data from a file)
             for n in self.graph.nodes:
-                n.w = NODEWIDTH
+                n.w = n.type.minwidth  # will get changed
                 n.h = NODEHEIGHT + YPADDING
 
         # and make all the graphics
@@ -451,7 +470,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         # add the vertices
         for n in self.graph.nodes:
             n.vert = Vertex(n)
-            n.vert.view = VertexViewer(w=NODEWIDTH, h=NODEHEIGHT + YPADDING)
+            n.vert.view = VertexViewer(w=n.type.minwidth, h=NODEHEIGHT + YPADDING)
             g.add_vertex(n.vert)
         # now the edges
         for n in self.graph.nodes:
@@ -488,7 +507,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             x = 0
             y = 0
             for n in self.graph.nodes:
-                n.w = NODEWIDTH
+                n.w = n.type.minwidth      # will get changed
                 n.h = NODEHEIGHT + YPADDING
                 n.xy = (x, y)
                 y += n.h + 20
@@ -622,6 +641,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         v = getEventView(event)
         v.setDragMode(QtWidgets.QGraphicsView.RubberBandDrag)
         if self.draggingArrow is not None:
+            self.mark()
             arrow = self.draggingArrow  # disconnects seem to remove this?
             # first, make sure we close off the movement
             self.mouseMoveEvent(event)
@@ -687,6 +707,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
 
     ## paste operation, deserialises items from the system clipboard
     def paste(self):
+        self.mark()
         # clear the selection area (UI controlled)
         self.clearSelection()
         # paste the nodes, offset them, and select them.
@@ -704,8 +725,12 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
 
     ## cut operation, serialises items to system clipboard and deletes them
     def cut(self):
+        self.mark()
         self.graph.copy(self.selection)
         for n in self.selection:
             self.graph.remove(n)
         self.selection = []
         self.rebuild()
+
+    def mark(self):
+        self.graph.doc.mark()

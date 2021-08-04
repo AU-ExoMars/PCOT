@@ -1,0 +1,7 @@
+{{ $text := (.Get "text") }}
+<span class="spoiler-container">
+    <span class="spoiler-link">
+        <a onclick="var spoiler=$(this).parents('.spoiler-container').find('.spoiler').toggle('slow');">{{ $text }}</a> 
+    </span>
+    <span class="spoiler">{{ .Inner | markdownify | emojify}}</span>    
+</span>

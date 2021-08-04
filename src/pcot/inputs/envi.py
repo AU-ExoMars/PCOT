@@ -23,6 +23,7 @@ class ENVIInputMethod(InputMethod):
         self.mapping = ChannelMapping()
 
     def loadImg(self):
+        print("ENVI PERFORMING FILE READ")
         img = envi.load(self.fname, self.mapping)
         ui.log("Image {} loaded: {}, mapping is {}".format(self.fname, img, self.mapping))
         self.img = img
@@ -43,13 +44,19 @@ class ENVIInputMethod(InputMethod):
     def createWidget(self):
         return ENVIMethodWidget(self)
 
-    def serialise(self):
+    def serialise(self, internal):
         x = {'fname': self.fname}
+        if internal:
+            x['image'] = self.img
         Canvas.serialise(self, x)
         return x
 
-    def deserialise(self, data):
+    def deserialise(self, data, internal):
         self.fname = data['fname']
+        if internal:
+            self.img = data['image']
+        else:
+            self.img = None   # ensure image is reloaded
         Canvas.deserialise(self, data)
 
 

@@ -1,18 +1,84 @@
 import time
-from collections import namedtuple
+from collections import deque
 from typing import Dict
 
 import pcot.config
 from pcot import inputs
 from pcot.inputs.inp import InputManager
 from pcot.macros import XFormMacro
+from pcot.ui.mainwindow import MainUI
 from pcot.utils import archive
 from pcot.xform import XFormGraph
 
 
-# this is saved to the SETTINGS block of the document
+class UndoRedoStore:
+    """Handles storing data for undo/redo processing. There are two stacks involved - 'undo' and 'redo.'
+    How it works is described under each method, but the usage is:
+    To mark that a change is about to happen, call mark() to record the state before the change.
+    To indicate the last 'mark' was a mistake (because an error occurred during the operation), call unmark.
+    To undo a change, call undo to get the previous state.
+    To redo a change, call redo to get the new state.
+    Use canUndo and canRedo to check the above calls are valid to make."""
+
+    def __init__(self):
+        """Initialise the system"""
+        self.undoStack = deque(maxlen=8)
+        self.redoStack = deque(maxlen=8)
+
+    def clear(self):
+        """Clear the two stacks, so that neither undo or redo are possible."""
+        self.undoStack.clear()
+        self.redoStack.clear()
+
+    def canUndo(self):
+        """return true if undo is possible (if there is data on the undo stack)"""
+        print("UNDO STACK LEN: {}".format(len(self.undoStack)))
+        return len(self.undoStack) > 0
+
+    def canRedo(self):
+        """return true if redo is possible (if there is data on the redo stack)"""
+        print("REDO STACK LEN: {}".format(len(self.redoStack)))
+        return len(self.redoStack) > 0
+
+    def mark(self, state):
+        """Document is about to change - record an undo point. All redo points
+        are removed; this is a real external change made by a user."""
+        self.undoStack.append(state)
+        self.redoStack.clear()
+
+    def unmark(self):
+        """The last undo point is a mistake; perhaps an exception occurred during the
+        change. Abandon and do not move to redo stack"""
+        self.undoStack.pop()
+
+    def undo(self, state):
+        """Perform an undo, returning the new state or None. This pushes the current state (which must be
+        passed in) to the redo stack, pops a state from the undo stack, and returns it."""
+        if self.canUndo():
+            x = self.undoStack.pop()
+            self.redoStack.append(state)
+        else:
+            x = None
+        return x
+
+    def redo(self, state):
+        """Perform a redo, returning the new state or None. This pushes the current state (which must be
+        passed in) to the undo stack ,pops a state from the redo stack, and returns it."""
+        if self.canRedo():
+            x = self.redoStack.pop()
+            self.undoStack.append(state)
+        else:
+            x = None
+        return x
+
+    def status(self):
+        """return the sizes of undo and redo stacks"""
+        return len(self.undoStack), len(self.redoStack)
+
 
 class DocumentSettings:
+    """this is saved to the SETTINGS block of the document"""
+
     def __init__(self):
         # integer indexing the caption type for canvases in this graph: see the box in MainWindow's ui for meanings.
         self.captionType = 0
@@ -33,6 +99,7 @@ class Document:
     macros: Dict[str, XFormMacro]
     inputMgr: InputManager
     settings: DocumentSettings
+    undoRedoStore: UndoRedoStore
 
     def __init__(self, fileName=None):
         """Create a new document, and (optionally) load a file into it"""
@@ -40,6 +107,7 @@ class Document:
         self.inputMgr = InputManager(self)
         self.macros = {}
         self.settings = DocumentSettings()
+        self.undoRedoStore = UndoRedoStore()
 
         if fileName is not None:
             self.load(fileName)
@@ -47,8 +115,10 @@ class Document:
             self.graph.create("input 0")
 
     ## create a dictionary of everything in the app we need to save: global settings,
-    # the graph, macros etc.
-    def serialise(self):
+    # the graph, macros etc. If internal is true, this data is used for internal undo/redo
+    # stuff and should operate very quickly without loading data. As such, it may not actually
+    # perform a strict serialisation - you'll get information out with references in etc.
+    def serialise(self, internal=False):
         macros = {}
         for k, v in self.macros.items():
             macros[k] = v.graph.serialise()
@@ -57,7 +127,7 @@ class Document:
              'INFO': {'author': pcot.config.getUserName(),
                       'date': time.time()},
              'GRAPH': self.graph.serialise(),
-             'INPUTS': self.inputMgr.serialise(),
+             'INPUTS': self.inputMgr.serialise(internal),
              'MACROS': macros
              }
         return d
@@ -67,7 +137,7 @@ class Document:
     # Deserialising the inputs is optional : we don't do it if we are loading templates
     # or if there is no INPUTS entry in the file, or there's no input manager (shouldn't
     # happen unless we're doing something weird like loading a macro prototype graph)
-    def deserialise(self, d, deserialiseInputs=True):
+    def deserialise(self, d, deserialiseInputs=True, internal=False):
         # deserialise macros before graph!
         if 'MACROS' in d:
             for k, v in d['MACROS'].items():
@@ -77,7 +147,7 @@ class Document:
         self.graph.deserialise(d['GRAPH'], True)  # True to delete existing nodes first
 
         if 'INPUTS' in d and deserialiseInputs:
-            self.inputMgr.deserialise(d['INPUTS'])
+            self.inputMgr.deserialise(d['INPUTS'], internal)
 
         self.settings.deserialise(d['SETTINGS'])
 
@@ -142,3 +212,49 @@ class Document:
             if name == x.displayName:
                 return x
         raise NameError(name)
+
+    def mark(self):
+        """We are about to perform a change, so mark an undo/redo point"""
+        self.undoRedoStore.mark(self.serialise(internal=True))
+        self.showUndoStatus()
+
+    def unmark(self):
+        """The last placed mark was actually a mistake (perhaps led to an exception)
+        so just remove it, but do not transfer it to the redo stack"""
+        self.undoRedoStore.unmark()
+        self.showUndoStatus()
+
+    def replaceData(self, data):
+        """Completely restore the document from a memento.
+        In actuality only the graph changes and the document is actually the same, but
+        the windows should all use the new graph."""
+        self.deserialise(data, internal=True)
+        for w in MainUI.getWindowsForDocument(self):
+            w.replaceDocument(self)
+        self.showUndoStatus()
+
+    def canUndo(self):
+        return self.undoRedoStore.canUndo()
+
+    def canRedo(self):
+        return self.undoRedoStore.canRedo()
+
+    def undo(self):
+        if self.canUndo():
+            data = self.undoRedoStore.undo(self.serialise(internal=True))
+            self.replaceData(data)
+        self.showUndoStatus()
+
+    def redo(self):
+        if self.canRedo():
+            data = self.undoRedoStore.redo(self.serialise(internal=True))
+            self.replaceData(data)
+        self.showUndoStatus()
+
+    def clearUndo(self):
+        self.undoRedoStore.clear()
+        self.showUndoStatus()
+
+    def showUndoStatus(self):
+        for w in MainUI.getWindowsForDocument(self):
+            w.showUndoStatus()

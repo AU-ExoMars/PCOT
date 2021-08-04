@@ -195,7 +195,7 @@ has already run in this call to \texttt{performNodes()} or if it is not ready to
 \STATE run the node type singleton's \texttt{perform()} method on the node
 \STATE mark node as having run
 \FORALL{$t$ in open tabs for this node}
-\STATE $t$\texttt{.onNodeChanged()}
+\STATE $t$\texttt{.nodeChanged()}
 \ENDFOR
 \FORALL{$c$ in child nodes}
 \STATE perform node $c$

@@ -372,7 +372,7 @@ class TabMacro(Tab):
         self.w.canvas.setMapping(node.mapping)
         self.w.canvas.setGraph(node.graph)
         self.w.canvas.setPersister(node)
-        self.onNodeChanged()
+        self.nodeChanged()
 
     def openProto(self):
         if self.node.instance is not None:
@@ -381,6 +381,11 @@ class TabMacro(Tab):
                                       doAutoLayout=False)
 
     def onNodeChanged(self):
+        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
+        self.w.canvas.setMapping(self.node.mapping)
+        self.w.canvas.setGraph(self.node.graph)
+        self.w.canvas.setPersister(self.node)
+
         self.w.canvas.display(self.node.sinkimg)
 
 
@@ -390,7 +395,7 @@ class TabConnector(Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabconnector.ui')
         self.w.variant.changed.connect(self.variantChanged)
-        self.onNodeChanged()
+        self.nodeChanged()
 
     def onNodeChanged(self):
         # set the current type

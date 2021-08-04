@@ -77,7 +77,7 @@ def testfunc(args, optargs):
 
 def regfuncs(p):
     # late import of Parameter to avoid cyclic import problems.
-    from pcot.expressions.parse import Parameter
+    from pcot.expressions import Parameter
     # register our function.
     p.registerFunc("testf",                 # name
                    "calculates a+2*b",      # description

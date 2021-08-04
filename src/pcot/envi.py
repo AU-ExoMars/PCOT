@@ -139,7 +139,8 @@ class ENVIHeader:
             self.ignoreValue = None
 
 
-def load(fn, mapping: ChannelMapping) -> ImageCube:
+def _load(fn):
+    """Actually loads the envi, returning a tuple of (header, ndarray)"""
     with open(fn) as f:
         h = ENVIHeader(f)
 
@@ -174,6 +175,14 @@ def load(fn, mapping: ChannelMapping) -> ImageCube:
 
     # now have list of 6 bands. Interleave.
     img = np.stack(bands, axis=-1)
+
+    return h, img
+
+
+def load(fn, mapping: ChannelMapping) -> ImageCube:
+
+    # perform cached load
+    h, img = _load(fn)
 
     # construct the source data
     sources = [{ChannelSourceWithFilter(fn, f, False)} for f in h.filters]

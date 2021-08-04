@@ -2,9 +2,8 @@
 import os
 from typing import Optional
 
-import pcot
 import pcot.ui as ui
-from pcot.inputs.inputmethod import InputMethod
+from .inputmethod import InputMethod
 from pcot.pancamimage import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import TreeMethodWidget
@@ -23,6 +22,7 @@ class RGBInputMethod(InputMethod):
 
     def loadImg(self):
         # will throw exception if load failed
+        print("RGB PERFORMING FILE READ")
         img = ImageCube.load(self.fname, self.mapping)
         ui.log("Image {} loaded: {}".format(self.fname, img))
         self.img = img
@@ -43,13 +43,19 @@ class RGBInputMethod(InputMethod):
     def createWidget(self):
         return RGBMethodWidget(self)
 
-    def serialise(self):
+    def serialise(self, internal):
         x = {'fname': self.fname}
+        if internal:
+            x['image'] = self.img
         Canvas.serialise(self, x)
         return x
 
-    def deserialise(self, data):
+    def deserialise(self, data, internal):
         self.fname = data['fname']
+        if internal:
+            self.img = data['image']
+        else:
+            self.img = None   # ensure image is reloaded
         Canvas.deserialise(self, data)
 
 

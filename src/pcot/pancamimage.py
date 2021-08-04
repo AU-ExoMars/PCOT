@@ -21,6 +21,8 @@ from pcot.rois import ROI, ROIPainted
 # * the data for that bounding box in the image (x,y,w,h)
 # * a boolean mask the same size as the BB, True for pixels which
 #   should be manipulated in any operation.
+from pcot.utils.deb import Timer
+
 
 class SubImageCubeROI:
     def __init__(self, img, imgToUse=None, roi=None):  # can take another image to get rois from
@@ -125,6 +127,8 @@ class ChannelMapping:
 
     def __str__(self):
         return "ChannelMapping-{} r{} g{} b{}".format(id(self), self.red, self.green, self.blue)
+
+
 
 
 ## an image - just a numpy array (the image) and a list of ROI objects. The array

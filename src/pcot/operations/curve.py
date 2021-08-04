@@ -4,7 +4,6 @@ import numpy as np
 import cv2 as cv
 
 from pcot.pancamimage import SubImageCubeROI
-from pcot.xform import XFormException
 
 # number of points in lookup table
 NUMPOINTS = 1000

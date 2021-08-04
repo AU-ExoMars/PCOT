@@ -57,21 +57,24 @@ class TabOffset(pcot.ui.tabs.Tab):
         super().__init__(w, node, 'taboffset.ui')
         self.w.xoff.editingFinished.connect(self.xChanged)
         self.w.yoff.editingFinished.connect(self.yChanged)
-        self.w.canvas.setMapping(node.mapping)
-        self.w.canvas.setGraph(node.graph)
-        self.w.canvas.setPersister(node)
 
-        self.onNodeChanged()
+        self.nodeChanged()
 
     def xChanged(self):
+        self.mark()
         self.node.x = int(self.w.xoff.text())
         self.changed()
 
     def yChanged(self):
+        self.mark()
         self.node.y = int(self.w.yoff.text())
         self.changed()
 
     def onNodeChanged(self):
+        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
+        self.w.canvas.setMapping(self.node.mapping)
+        self.w.canvas.setGraph(self.node.graph)
+        self.w.canvas.setPersister(self.node)
         self.w.xoff.setText(str(self.node.x))
         self.w.yoff.setText(str(self.node.y))
         self.w.canvas.display(self.node.img)

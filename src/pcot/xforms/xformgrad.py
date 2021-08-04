@@ -109,24 +109,26 @@ class TabGradient(pcot.ui.tabs.Tab):
         for n in presetGradients:
             self.w.presetCombo.insertItem(1000, n)
         self.w.presetCombo.currentIndexChanged.connect(self.loadPreset)
-        self.w.canvas.setMapping(node.mapping)
-        self.w.canvas.setGraph(node.graph)
-        self.w.canvas.setPersister(node)
-
-        self.onNodeChanged()
+        self.nodeChanged()
 
     def loadPreset(self):
         name = self.w.presetCombo.currentText()
         if name in presetGradients:
             self.w.gradient.setGradient(presetGradients[name])
             self.w.gradient.update()
+            self.mark()
             self.node.gradient = self.w.gradient.gradient()
             self.changed()
 
     def onNodeChanged(self):
+        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
+        self.w.canvas.setMapping(self.node.mapping)
+        self.w.canvas.setGraph(self.node.graph)
+        self.w.canvas.setPersister(self.node)
         self.w.gradient.setGradient(self.node.gradient)
         self.w.canvas.display(self.node.img)
 
     def gradientChanged(self):
+        self.mark()
         self.node.gradient = self.w.gradient.gradient()
         self.changed()

@@ -28,12 +28,14 @@ class GNumberText(QtWidgets.QGraphicsTextItem):
         # return means "go!"
         if event.key() == Qt.Key_Return:
             try:
+                self.node.mark()
                 v = self.toPlainText()
                 self.node.val = float(v)
                 self.clearFocus()
                 # we also have to tell the graph to perform from here
                 self.node.graph.performNodes(self.node)
             except ValueError:
+                self.node.unmark()
                 ui.error("cannot convert text")
             event.accept()
         # Ignore non-numeric
