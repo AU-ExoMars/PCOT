@@ -1,1 +1,2 @@
-0.0.1
+# Version consists of semantic version number, code name, (optional release type), ISO 8601 date.
+0.1.0 BLUE ORGANISATION (pre-alpha2) 2021/08/04
