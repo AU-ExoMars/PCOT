@@ -153,6 +153,12 @@ class InnerCanvas(QtWidgets.QWidget):
         y = int(p.y() * (self.getScale()) + self.y)
         return x, y
 
+    ## given a point in the image, give coordinates in the widget
+    def getCanvasCoords(self, x, y):
+        x = (x - self.x) / self.getScale()
+        y = (y - self.y) / self.getScale()
+        return x, y
+
     def keyPressEvent(self, e):
         if self.canv.keyHook is not None:
             self.canv.keyHook.canvasKeyPressEvent(e)
@@ -284,7 +290,7 @@ class Canvas(QtWidgets.QWidget):
         self.graph = None
         self.nodeToUIChange = None
         self.ROInode = None
-        self.recursing = False      # An ugly hack to avoid recursion in ROI nodes
+        self.recursing = False  # An ugly hack to avoid recursion in ROI nodes
 
         # outer layout is a vertical box - the topbar and canvas+scrollbars are in this
         outerlayout = QtWidgets.QVBoxLayout()
@@ -433,7 +439,6 @@ class Canvas(QtWidgets.QWidget):
             cv.imwrite(path, img8)
             ui.log("Image written")
 
-
         pass
 
     ## this initialises a combo box, setting the possible values to be the channels in the image
@@ -502,8 +507,8 @@ class Canvas(QtWidgets.QWidget):
         if self.nodeToUIChange is not None:
             self.nodeToUIChange.uichange()
             self.nodeToUIChange.updateTabs()
-#            self.graph.performNodes(self.nodeToUIChange)
-        self.recursing=False
+        #            self.graph.performNodes(self.nodeToUIChange)
+        self.recursing = False
 
         # set ROI pixel count text.
         if self.previmg is None:
@@ -557,3 +562,9 @@ class Canvas(QtWidgets.QWidget):
     def horzScrollChanged(self, v):
         self.canvas.x = v
         self.canvas.update()
+
+    def getCanvasCoords(self, x, y):
+        return self.canvas.getCanvasCoords(x, y)
+
+    def getImgCoords(self, x, y):
+        return self.canvas.getImgCoords(x, y)
