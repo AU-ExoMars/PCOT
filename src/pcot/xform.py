@@ -1007,12 +1007,14 @@ class XFormGraph:
         else:
             return []
 
-    def remove(self, node):
-        """remove a node from the graph, and close any tab/window"""
+    def remove(self, node, closetabs=True):
+        """remove a node from the graph, and close any tab/window (but not always; when doing Undo
+        we monkey patch the existing tabs to point at the replacement nodes)"""
         if node in self.nodes:
             node.disconnectAll()
-            for x in node.tabs:
-                x.nodeDeleted()
+            if closetabs:
+                for x in node.tabs:
+                    x.nodeDeleted()
             self.nodes.remove(node)
             del self.nodeDict[node.name]
             node.onRemove()
@@ -1163,14 +1165,19 @@ class XFormGraph:
 
         return d
 
-    def deserialise(self, d, deleteExistingNodes):
+    def deserialise(self, d, deleteExistingNodes, closetabs=True):
         """given a dictionary, add nodes stored in it in serialized form.
             Do not delete any existing nodes unless asked and do not perform the nodes.
             Returns a list of the new nodes.
+            Will leave tabs open pointing to the dead nodes when closetabs is false - the
+            app must then patch these tabs to point to replacement nodes, if they exist.
+            If not they should be closed. This is used in undo/redo.
             """
         if deleteExistingNodes:
-            for n in self.nodes:
-                self.remove(n)
+            # remove from a copy; can't modify a list while traversing
+            for n in self.nodes.copy():
+                # this will close any open tabs, but NOT when closetabs is false.
+                self.remove(n, closetabs=closetabs)
 
         # disambiguate nodes in the dict, to make sure they don't
         # have the same nodes as ones already in the graph
