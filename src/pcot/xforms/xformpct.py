@@ -1,3 +1,4 @@
+from collections import deque
 from typing import Tuple
 
 import numpy as np
@@ -9,12 +10,72 @@ from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QColor, QPainter, QPolygon
 from PyQt5.QtWidgets import QMessageBox
 from pcot.calib import pct
-from pcot.rois import getRadiusFromSlider
+from pcot.rois import getRadiusFromSlider, ROIPainted
 from pcot.xform import xformtype, XFormType
 
 # modes of operation through which we proceed
 POINTS = 0  # initial mode, constructing a set of 3 points to position the PCT
 EDITROIS = 1  # PCT positioned and ROIs constructed, now editing them
+
+
+class FloodFiller:
+    def __init__(self, img):
+        self.means = np.repeat(0, img.channels).astype(np.float64)
+        self.img = img.img
+        self.h, self.w = self.img.shape[:2]
+        self.mask = np.zeros(self.img.shape[:2], dtype=np.bool)
+        self.n = 0
+
+    def _set(self, x, y):
+        """set pixel and update cumulative moving means"""
+        if not self.mask[y, x]:
+            self.mask[y, x] = True
+            self.means = (self.img[y, x] + self.n * self.means) / (self.n + 1)
+            self.n += 1
+
+    def fill(self, x, y):
+        stack = [(x,y)]
+        while stack:
+            x,y = stack.pop()
+            if self._inside(x,y):
+                self._set(x, y)
+                stack.append((x-1,y))
+                stack.append((x+1,y))
+                stack.append((x,y-1))
+                stack.append((x,y+1))
+
+    def _inside(self, x, y):
+        if x < 0 or y < 0 or x >= self.w or y >= self.h:
+            return False
+        if self.mask[y,x]:
+            return False
+        # get the point we're talking about in the image
+        # and see how far it is from the running mean
+        if self.n > 0:
+            dsq = np.sum((self.img[y, x] - self.means)**2)
+            if dsq > 0.005:
+                return False
+        return True
+
+
+def createPatchROI(n, x, y):
+    """Create a ROIPainted which encompasses the coords x,y"""
+
+    # first step - create a bool mask the same size as the image, all zeroes.
+
+    # second step - perform a flood fill of this mask, using the image itself
+    # as a reference. Fill should stop when the point about to be filled is
+    # very far from the mean of the points so far.
+
+    ff = FloodFiller(n.img)
+    ff.fill(int(x), int(y))
+
+    # TODO third step - crop down to a mask and BB, generate a ROIPainted and return.
+    # can use the cropdown method in the ROI for this.
+    ### TEST
+    n.img.img[ff.mask] = np.repeat(1, n.img.channels)
+
+    return None
 
 
 @xformtype
@@ -37,7 +98,8 @@ class XformPCT(XFormType):
         node.previewRadius = None  # previewing needs the image, but that's awkward - so we stash this data in perform()
         node.brushSize = 10
         node.mode = POINTS
-        node.pctPoints = []  # (x,y) tuples for screen positions of screws
+        # (x,y) tuples for screen positions of screws; a deque so we can rotate
+        node.pctPoints = deque()
         node.selPoint = -1  # selected point to move
 
     def perform(self, node):
@@ -51,6 +113,24 @@ class XformPCT(XFormType):
 
     def uichange(self, n):
         self.perform(n)
+
+    def generateROIs(self, n):
+        """Generate the regions of interest for the colour patches. These are
+        stored in a list in the same order as in pct.patches."""
+
+        # We need to get from PCT space to image space
+        pts1 = np.float32(pct.screws)
+        pts2 = np.float32(n.pctPoints)
+        # get affine transform
+        M = cv.getAffineTransform(pts1, pts2)
+
+        rois = []
+        for idx, p in enumerate(pct.patches):
+            # get patch centre, convert to image space, get xy coords.
+            x, y, _ = p
+            pp = np.float32([[[x, y]]])
+            x, y = cv.transform(pp, M).ravel().tolist()
+            rois.append(createPatchROI(n, x, y))
 
 
 def transformPoints(points, matrix):
@@ -81,6 +161,9 @@ class TabPCT(pcot.ui.tabs.Tab):
         self.w.canvas.paintHook = self
         self.w.canvas.mouseHook = self
         self.w.brushSize.valueChanged.connect(self.brushSizeChanged)
+        self.w.rotateButton.clicked.connect(self.rotatePressed)
+        self.w.clearButton.clicked.connect(self.clearPressed)
+        self.w.genButton.clicked.connect(self.genPressed)
         self.w.canvas.canvas.setMouseTracking(True)
         self.mousePos = None
         self.mouseDown = False
@@ -93,10 +176,24 @@ class TabPCT(pcot.ui.tabs.Tab):
         self.changed()
 
     def clearPressed(self):
-        if QMessageBox.question(self.parent(), "Clear regions", "Are you sure?",
-                                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+        if self.node.mode == POINTS:
+            if QMessageBox.question(self.parent(), "Clear points", "Are you sure?",
+                                    QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                self.mark()
+                self.node.pctPoints.clear()
+                self.changed()
+
+    def rotatePressed(self):
+        if len(self.node.pctPoints) == 3:
             self.mark()
-            # TODO link this to a button and make it work
+            self.node.pctPoints.rotate()
+            self.changed()
+
+    def genPressed(self):
+        if len(self.node.pctPoints) == 3:
+            self.mark()
+            self.node.type.generateROIs(self.node)
+            self.node.pctPoints.clear()
             self.changed()
 
     # causes the tab to update itself from the node
@@ -105,6 +202,19 @@ class TabPCT(pcot.ui.tabs.Tab):
         self.w.canvas.setMapping(self.node.mapping)
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)
+
+        # some buttons are disabled in some nodes..
+        if self.node.mode == POINTS:
+            rotateEnabled = len(self.node.pctPoints) == 3
+            genEnabled = len(self.node.pctPoints) == 3
+            clearEnabled = len(self.node.pctPoints) > 0
+        else:
+            rotateEnabled = False
+            genEnabled = False
+            clearEnabled = True
+        self.w.clearButton.setEnabled(clearEnabled)
+        self.w.genButton.setEnabled(genEnabled)
+        self.w.rotateButton.setEnabled(rotateEnabled)
 
         if self.node.img is not None:
             # We're displaying a "premapped" image : this node's perform code is
