@@ -3,7 +3,7 @@ from collections import deque
 from typing import Dict
 
 import pcot.config
-from pcot import inputs
+from pcot import inputs, ui
 from pcot.inputs.inp import InputManager
 from pcot.macros import XFormMacro
 from pcot.ui.mainwindow import MainUI
@@ -240,6 +240,9 @@ class Document:
         return self.undoRedoStore.canRedo()
 
     def undo(self):
+        ui.error("UNDO currently disabled - too buggy.")
+
+    def _undo(self):
         if self.canUndo():
             data = self.undoRedoStore.undo(self.serialise(internal=True))
             self.replaceData(data)

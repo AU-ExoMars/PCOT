@@ -263,7 +263,7 @@ class ROIPainted(ROI):
         self.map = None
         self.bbrect = None
 
-    def draw(self,img):
+    def draw(self, img):
         self.baseDraw(img, self.drawBox, self.drawEdge)
 
     def setImageSize(self, imgw, imgh):
@@ -296,42 +296,49 @@ class ROIPainted(ROI):
             self.bbrect = d['rect']
 
     def mask(self):
-        # return a boolean array, same size as BB
+        """return a boolean array, same size as BB"""
         return self.map > 0
 
-    ## fill a circle in the ROI, or clear it (if delete is true)
-    def setCircle(self, x, y, brushSize, delete=False):
-        if self.imgw is not None:
-            # There's a clever way of doing this I'm sure, but I'm going to do it the dumb way.
-            # 1) create a map the size of the image and put the existing ROI into it
-            # 2) extend the ROI with a new circle, just drawing it into the image
-            # 3) crop the image back down again by finding a new bounding box and cutting the mask out of it.
-            # It should hopefully be fast enough.
+    def cropDownWithDraw(self, draw=None):
+        """crop ROI mask down to smallest possible size and reset BB. If draw is
+        set, this will be a function taking the full size image used to draw on
+        the ROI as part of the process."""
 
-            # create full size map
-            fullsize = np.zeros((self.imgh, self.imgw), dtype=np.uint8)
-            # splice in existing data, if there is any!
-            if self.bbrect is not None:
-                bbx, bby, bbw, bbh = self.bbrect
-                fullsize[bby:bby + bbh, bbx:bbx + bbw] = self.map
-            # add the new circle
-            r = int(getRadiusFromSlider(brushSize, self.imgw, self.imgh))
-            cv.circle(fullsize, (x, y), r, 0 if delete else 255, -1)
-            # calculate new bounding box
-            cols = np.any(fullsize, axis=0)
-            rows = np.any(fullsize, axis=1)
-            if cols.any():
-                ymin, ymax = np.where(rows)[0][[0, -1]]
-                xmin, xmax = np.where(cols)[0][[0, -1]]
-                xmax += 1
-                ymax += 1
-                # cut out the new data
-                self.map = fullsize[ymin:ymax, xmin:xmax]
-                # construct the new BB
-                self.bbrect = (int(xmin), int(ymin), int(xmax - xmin), int(ymax - ymin))
-            else:
-                self.bbrect = None
-                self.map = None
+        # create full size map
+        fullsize = np.zeros((self.imgh, self.imgw), dtype=np.uint8)
+        # splice in existing data, if there is any!
+        if self.bbrect is not None:
+            bbx, bby, bbw, bbh = self.bbrect
+            fullsize[bby:bby + bbh, bbx:bbx + bbw] = self.map
+        if draw is not None:
+            # do extra drawing
+            draw(fullsize)
+        # calculate new bounding box
+        cols = np.any(fullsize, axis=0)
+        rows = np.any(fullsize, axis=1)
+        if cols.any():
+            ymin, ymax = np.where(rows)[0][[0, -1]]
+            xmin, xmax = np.where(cols)[0][[0, -1]]
+            xmax += 1
+            ymax += 1
+            # cut out the new data
+            self.map = fullsize[ymin:ymax, xmin:xmax]
+            # construct the new BB
+            self.bbrect = (int(xmin), int(ymin), int(xmax - xmin), int(ymax - ymin))
+        else:
+            self.bbrect = None
+            self.map = None
+
+    @staticmethod
+    def drawBrush(fullsize, x, y, brushSize, slf, delete):
+        """called from inside cropDown as an optional step to draw an extra circle"""
+        r = int(getRadiusFromSlider(brushSize, slf.imgw, slf.imgh))
+        cv.circle(fullsize, (x, y), r, 0 if delete else 255, -1)
+
+    def setCircle(self, x, y, brushSize, delete=False):
+        """fill a circle in the ROI, or clear it (if delete is true)"""
+        if self.imgw is not None:
+            self.cropDown(draw=lambda fullsize: ROIPainted.drawBrush(fullsize, x, y, brushSize, self, delete))
 
     def __str__(self):
         if not self.bbrect:
