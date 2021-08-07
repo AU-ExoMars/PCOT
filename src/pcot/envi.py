@@ -179,7 +179,7 @@ def _load(fn):
     return h, img
 
 
-def load(fn, mapping: ChannelMapping) -> ImageCube:
+def load(fn, mapping: ChannelMapping=None) -> ImageCube:
 
     # perform cached load
     h, img = _load(fn)
@@ -187,5 +187,7 @@ def load(fn, mapping: ChannelMapping) -> ImageCube:
     # construct the source data
     sources = [{ChannelSourceWithFilter(fn, f, False)} for f in h.filters]
 
+    if mapping is None:
+        mapping = ChannelMapping()
     mapping.set(*h.defaultBands)
     return ImageCube(img, mapping, sources, defaultMapping=mapping.copy())

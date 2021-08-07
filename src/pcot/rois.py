@@ -47,7 +47,7 @@ class ROI:
             return self.mask().sum()
 
     def baseDraw(self, img, drawBox=False, drawEdge=True):
-        # default draw operator
+        """Draw the ROI onto an RGB image using the set colour (yellow by default)"""
         if drawBox:
             self.drawBB(img, self.colour)
 
@@ -86,9 +86,10 @@ class ROI:
                 cv.rectangle(rgb, (x - i - 1, y - i - 1), (x + w + i, y + h + i), col, thickness=1)
 
             ty = y if self.labeltop else y + h
-            text.write(rgb,
-                       "NO ANNOTATION" if self.label is None or self.label == '' else self.label,
-                       x, ty, self.labeltop, self.fontsize, self.fontline, col)
+            if self.fontsize > 0:
+                text.write(rgb,
+                           "NO ANNOTATION" if self.label is None or self.label == '' else self.label,
+                           x, ty, self.labeltop, self.fontsize, self.fontline, col)
 
     @staticmethod
     def roiUnion(rois):
@@ -264,6 +265,7 @@ class ROIPainted(ROI):
         self.bbrect = None
 
     def draw(self, img):
+        """Draw the ROI onto an rgb image"""
         self.baseDraw(img, self.drawBox, self.drawEdge)
 
     def setImageSize(self, imgw, imgh):
@@ -283,6 +285,11 @@ class ROIPainted(ROI):
 
     def bb(self):
         return self.bbrect
+
+    def centroid(self):
+        """Simple centroid from BB"""
+        x,y,w,h = self.bbrect
+        return x+w/2, y+h/2
 
     def serialise(self):
         return {
@@ -338,7 +345,7 @@ class ROIPainted(ROI):
     def setCircle(self, x, y, brushSize, delete=False):
         """fill a circle in the ROI, or clear it (if delete is true)"""
         if self.imgw is not None:
-            self.cropDown(draw=lambda fullsize: ROIPainted.drawBrush(fullsize, x, y, brushSize, self, delete))
+            self.cropDownWithDraw(draw=lambda fullsize: ROIPainted.drawBrush(fullsize, x, y, brushSize, self, delete))
 
     def __str__(self):
         if not self.bbrect:
