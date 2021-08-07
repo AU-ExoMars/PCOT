@@ -233,9 +233,9 @@ class ROIRect(ROI):
 
 
 # used in ROIpainted to convert a 0-99 value into a brush size for painting
-def getRadiusFromSlider(sliderVal, imgw, imgh):
+def getRadiusFromSlider(sliderVal, imgw, imgh, scale=1.0):
     v = max(imgw, imgh)
-    return (v / 400) * sliderVal
+    return (v / 400) * sliderVal * scale
 
 
 ## a "painted" ROI

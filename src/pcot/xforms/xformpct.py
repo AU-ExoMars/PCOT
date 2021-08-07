@@ -4,12 +4,14 @@ import cv2 as cv
 
 import pcot
 from PyQt5.QtCore import Qt, QPoint
-from PyQt5.QtGui import QColor, QPainter, QPolygon
+from PyQt5.QtGui import QColor, QPainter, QPolygon, QFont
 from PyQt5.QtWidgets import QMessageBox
 from pcot.calib import pct
 from pcot.rois import getRadiusFromSlider, ROIPainted
 from pcot.xform import xformtype, XFormType
 
+# scale of editing brush
+BRUSHSCALE = 0.1
 
 class FloodFiller:
     def __init__(self, img):
@@ -106,7 +108,7 @@ class XformPCT(XFormType):
         return {'rois': [None if roi is None else roi.serialise() for roi in n.rois]}
 
     def deserialise(self, n, d):
-        n.rois=[]
+        n.rois = []
         if 'rois' in d:
             for ent in d['rois']:
                 r = ROIPainted()
@@ -125,16 +127,17 @@ class XformPCT(XFormType):
         node.selPoint = -1  # selected point to move
         node.rois = []  # list of ROIs (ROIPainted); if none then we're editing points.
         node.selROI = None  # selected ROI index or None
+        node.showStdDevs = False # show stddevs on canvas
 
     def perform(self, node):
         img = node.getInput(0, conntypes.IMG)
         # the perform for this node mainly draws ROIs once they are generated. The PCT outline is drawn
         # in the canvas draw hook.
         if img is not None:
-            node.previewRadius = getRadiusFromSlider(node.brushSize, img.w, img.h)
+            node.previewRadius = getRadiusFromSlider(node.brushSize, img.w, img.h, scale=BRUSHSCALE)
             img.setMapping(node.mapping)
 
-            for r in node.rois: # we need to tell the ROI how big the contained image is
+            for r in node.rois:  # we need to tell the ROI how big the contained image is
                 r.setImageSize(img.w, img.h)
 
             # get the RGB image we are going to draw the ROIs onto. Will only draw if there are ROIs!
@@ -148,11 +151,22 @@ class XformPCT(XFormType):
                                        node.drawMode == 'Edge',
                                        i == node.selROI)
                         r.draw(node.rgbImage.img)
-
         node.img = img
 
     def uichange(self, n):
         self.perform(n)
+
+    def stddev(self, node, idx):
+        """get stats for a given patch (by index). This is the mean of the stddevs across all channels;
+        otherwise we'd get very high stddev for (say) blue and low for black and white!"""
+        if not node.rois or node.rois[idx] is None or node.img is None:
+            return None
+        # get subimage
+        subimg = node.img.subimage(roi=node.rois[idx])
+        # get masked ROI image
+        masked = subimg.masked()
+        stddev = np.mean(masked.std(axis=(0,1)))
+        return stddev
 
     def generateROIs(self, n):
         """Generate the regions of interest for the colour patches. These are
@@ -206,6 +220,7 @@ class TabPCT(pcot.ui.tabs.Tab):
         self.w.clearButton.clicked.connect(self.clearPressed)
         self.w.genButton.clicked.connect(self.genPressed)
         self.w.drawMode.currentIndexChanged.connect(self.drawModeChanged)
+        self.w.stddevsBox.stateChanged.connect(self.stddevsBoxChanged)
         self.w.canvas.canvas.setMouseTracking(True)
         self.mousePos = None
         self.mouseDown = False
@@ -214,6 +229,10 @@ class TabPCT(pcot.ui.tabs.Tab):
 
     def drawModeChanged(self, val):
         self.node.drawMode = self.w.drawMode.currentText()
+        self.changed()
+
+    def stddevsBoxChanged(self, val):
+        self.node.showStdDevs = (val != 0)
         self.changed()
 
     def brushSizeChanged(self, val):
@@ -232,7 +251,7 @@ class TabPCT(pcot.ui.tabs.Tab):
         if len(self.node.pctPoints) == 3:
             self.mark()
             p = self.node.pctPoints
-            p = p[1:] + p[:1] # could do this with a deque, but they can't serialise.
+            p = p[1:] + p[:1]  # could do this with a deque, but they can't serialise.
             self.node.pctPoints = p
             self.changed()
 
@@ -269,7 +288,30 @@ class TabPCT(pcot.ui.tabs.Tab):
             # done in the canvas for display purposes only
             self.w.canvas.display(self.node.rgbImage, self.node.img, self.node)
         self.w.brushSize.setValue(self.node.brushSize)
+        self.w.stddevsBox.setCheckState(2 if self.node.showStdDevs else 0)
         self.w.roiHelpLabel.setEnabled(len(self.node.rois) > 0)
+
+    def drawStats(self, p: QPainter):
+        if self.node.rois:
+            FONTSIZE = 20
+            prevfont = p.font()
+            p.setPen(Qt.black)
+            p.setBrush(Qt.black)
+            p.drawRect(0, 0, 300, 180)
+            font = QFont("Consolas")
+            font.setPixelSize(FONTSIZE)
+            p.setFont(font)
+            p.setPen(Qt.white)
+            for idx, roi in enumerate(self.node.rois):
+                patch = pct.patches[idx]
+                if roi is not None:
+                    std = self.node.type.stddev(self.node, idx)
+                    s = "{}\t\t{:.3f}".format(patch.name, std)
+                else:
+                    s = "{}\t\t---".format(patch.name)
+                p.drawText(0, (idx + 1) * FONTSIZE, s)
+
+            p.setFont(prevfont)
 
     # extra drawing operations
     def canvasPaintHook(self, p: QPainter):
@@ -318,14 +360,16 @@ class TabPCT(pcot.ui.tabs.Tab):
                 # now draw the patches
                 for patch in pct.patches:
                     drawCircle(patch.x, patch.y, patch.r, M, p, c)
-
         else:
             # we are editing ROIS; draw the preview circle
             if self.mousePos is not None and n.previewRadius is not None and n.selROI is not None:
                 # draw brush preview
-                p.setPen(QColor(255, 255, 255))
+                p.setPen(Qt.white)
                 r = n.previewRadius / (self.w.canvas.canvas.getScale())
                 p.drawEllipse(self.mousePos, r, r)
+            if n.showStdDevs:
+                self.drawStats(p)
+
 
     def canvasMouseMoveEvent(self, x, y, e):
         self.mousePos = e.pos()
@@ -391,9 +435,9 @@ class TabPCT(pcot.ui.tabs.Tab):
     def doSet(self, x, y, e):
         n = self.node
         if e.modifiers() & Qt.ShiftModifier:
-            n.rois[n.selROI].setCircle(x, y, n.brushSize, True)
+            n.rois[n.selROI].setCircle(x, y, n.brushSize*BRUSHSCALE, True)
         else:
-            n.rois[n.selROI].setCircle(x, y, n.brushSize, False)
+            n.rois[n.selROI].setCircle(x, y, n.brushSize*BRUSHSCALE, False)
 
     def canvasMouseReleaseEvent(self, x, y, e):
         self.mouseDown = False
