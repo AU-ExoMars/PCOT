@@ -1286,7 +1286,7 @@ class XFormROIType(XFormType):
                                 "image as RGB with ROI, with added annotations around ROI")  # annotated image
         self.addOutputConnector("roi", conntypes.ROI, "the region of interest")
 
-        self.autoserialise = ('caption', 'captiontop', 'fontsize', 'fontline', 'colour')
+        self.autoserialise = ('caption', 'captiontop', 'fontsize', 'fontline', 'colour', 'drawbg')
 
     def setProps(self, node, img):
         """Set properties in the node and ROI attached to the node. Assumes img is a valid

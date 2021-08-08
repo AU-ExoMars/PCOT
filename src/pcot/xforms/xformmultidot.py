@@ -1,3 +1,4 @@
+import matplotlib
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPainter, QColor, QKeyEvent
 from PyQt5.QtWidgets import QMessageBox
@@ -36,7 +37,7 @@ class XFormMultiDot(XFormType):
         self.addOutputConnector("ann", conntypes.IMGRGB,
                                 "image as RGB with ROIs, with added annotations around ROIs")  # annotated image
 
-        self.autoserialise = ('fontsize', 'fontline', 'colour', 'dotSize')
+        self.autoserialise = ('fontsize', 'fontline', 'colour', 'dotSize', 'drawbg')
 
     def createTab(self, n, w):
         return TabMultiDot(n, w)
@@ -46,6 +47,7 @@ class XFormMultiDot(XFormType):
         node.fontsize = 10
         node.fontline = 2
         node.colour = (1, 1, 0)
+        node.drawbg = True
         node.prefix = ''
         node.dotSize = 10  # scale of 0-99 i.e. a slider value. Converted to pixel radius in getRadiusFromSlider()
         node.previewRadius = None  # previewing needs the image, but that's awkward - so we stash this data in perform()
@@ -75,7 +77,12 @@ class XFormMultiDot(XFormType):
             # now make an annotated image by drawing ROIS on the RGB image; ours should be a bit different
             # if showROIs (handled by canvas) is true, draw all ROIs, otherwise only draw our list.
             for r in node.rois:
+                # copy parameters shared by all these ROIs into each one. Ugh, I know.
                 r.drawBox = (r == node.selected)
+                r.fontline = node.fontline
+                r.fontsize = node.fontsize
+                r.drawbg = node.drawbg
+
             img.drawROIs(rgb.img, onlyROI=None if node.showROIs else node.rois)
             rgb.rois = img.rois  # with same ROI list as unannotated image
             node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
@@ -118,9 +125,11 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.canvas.mouseHook = self
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
         self.w.fontline.valueChanged.connect(self.fontLineChanged)
+        self.w.drawbg.stateChanged.connect(self.drawbgChanged)
         self.w.caption.textChanged.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
         self.w.clearButton.pressed.connect(self.clearPressed)
+        self.w.recolour.pressed.connect(self.recolourPressed)
         self.w.dotSize.valueChanged.connect(self.dotSizeChanged)
         self.w.canvas.canvas.setMouseTracking(True)
         self.mousePos = None
@@ -128,6 +137,11 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.dontSetText = False
         # sync tab with node
         self.nodeChanged()
+
+    def drawbgChanged(self, val):
+        self.mark()
+        self.node.drawbg = (val != 0)
+        self.changed()
 
     def dotSizeChanged(self, val):
         self.mark()
@@ -137,6 +151,14 @@ class TabMultiDot(pcot.ui.tabs.Tab):
     def fontSizeChanged(self, i):
         self.mark()
         self.node.fontsize = i
+        self.changed()
+
+    def recolourPressed(self):
+        self.mark()
+        cols = matplotlib.cm.get_cmap('Dark2').colors
+
+        for idx, r in enumerate(self.node.rois):
+            r.colour = cols[idx % len(cols)]
         self.changed()
 
     def clearPressed(self):
@@ -150,14 +172,12 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         # no need to mark as changed; this just sets the prefix for new items
         self.node.prefix = t
         if self.node.selected is not None:
-            self.node.selected.label = t    # except for this special case!
+            self.node.selected.label = t  # except for this special case!
             self.changed()
 
     def fontLineChanged(self, i):
         self.mark()
         self.node.fontline = i
-        if self.node.selected is not None:
-            self.node.selected.fontline = i
         self.changed()
 
     def colourPressed(self):
@@ -191,6 +211,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.fontsize.setValue(self.node.fontsize)
         self.w.fontline.setValue(self.node.fontline)
         self.w.dotSize.setValue(self.node.dotSize)
+        self.w.drawbg.setChecked(self.node.drawbg)
 
         r, g, b = [x * 255 for x in self.node.colour]
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
@@ -254,7 +275,6 @@ class TabMultiDot(pcot.ui.tabs.Tab):
                 n.selected = None
                 self.dragging = False  # just in case
                 self.changed()
-
 
     def canvasMouseReleaseEvent(self, x, y, e):
         self.dragging = False

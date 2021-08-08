@@ -10,7 +10,7 @@ class BadOpException(Exception):
         super().__init__("op not valid")
 
 
-ROISERIALISEFIELDS = ['label', 'labeltop', 'colour', 'fontline', 'fontsize']
+ROISERIALISEFIELDS = ['label', 'labeltop', 'colour', 'fontline', 'fontsize', 'drawbg']
 
 
 class ROI:
@@ -26,6 +26,7 @@ class ROI:
         self.fontsize = 10  # annotation font size
         self.bbrect = bbrect
         self.maskimg = maskimg
+        self.drawbg = True
 
     def bb(self):
         """return a (x,y,w,h) tuple describing the bounding box for this ROI"""
@@ -96,9 +97,15 @@ class ROI:
             if self.fontsize > 0:
                 if label is None:
                     label = self.label
+                if self.drawbg:
+                    # dark text has a white background; light text has a black background
+                    bg = (1, 1, 1) if sum(col) < 1.5 else (0, 0, 0)
+                else:
+                    bg = None
                 text.write(rgb,
                            "NO ANNOTATION" if label is None or label == '' else label,
-                           x, ty, self.labeltop, self.fontsize, self.fontline, col)
+                           x, ty, self.labeltop, self.fontsize, self.fontline, col,
+                           bg=bg)
 
     def serialise(self):
         return serialiseFields(self, ROISERIALISEFIELDS)
@@ -227,10 +234,11 @@ class ROIRect(ROI):
         # return a boolean array of True, same size as BB
         return np.full((self.h, self.w), True)
 
-    def setDrawProps(self, colour, fontsize, fontline):
+    def setDrawProps(self, colour, fontsize, fontline, drawbg):
         self.colour = colour
         self.fontline = fontline
         self.fontsize = fontsize
+        self.drawbg = drawbg
 
     def setBB(self, x, y, w, h):
         self.x = x
@@ -240,7 +248,7 @@ class ROIRect(ROI):
 
     def serialise(self):
         d = super().serialise()
-        d.update()({'bb': (self.x, self.y, self.w, self.h)})
+        d.update({'bb': (self.x, self.y, self.w, self.h)})
         return d
 
     def deserialise(self, d):
@@ -279,12 +287,13 @@ class ROICircle(ROI):
 
     def draw(self, img):
         self.baseDraw(img, drawEdge=False, drawBox=self.drawBox)
-        self.drawText(img, self.colour)
+        self.drawText(img, self.colour)  # these always show label
 
-    def setDrawProps(self, colour, fontsize, fontline):
+    def setDrawProps(self, colour, fontsize, fontline, drawbg):
         self.colour = colour
         self.fontline = fontline
         self.fontsize = fontsize
+        self.drawbg = drawbg
 
     def serialise(self):
         d = super().serialise()
@@ -343,12 +352,13 @@ class ROIPainted(ROI):
         self.imgw = imgw
         self.imgh = imgh
 
-    def setDrawProps(self, colour, fontsize, fontline, drawEdge, drawBox):
+    def setDrawProps(self, colour, fontsize, fontline, drawEdge, drawBox, drawbg):
         self.colour = colour
         self.fontline = fontline
         self.fontsize = fontsize
         self.drawEdge = drawEdge
         self.drawBox = drawBox
+        self.drawbg = drawbg
 
     def bb(self):
         return self.bbrect
@@ -446,12 +456,13 @@ class ROIPoly(ROI):
         self.imgw = imgw
         self.imgh = imgh
 
-    def setDrawProps(self, colour, fontsize, fontline, drawPoints, drawBox):
+    def setDrawProps(self, colour, fontsize, fontline, drawPoints, drawBox, drawbg):
         self.colour = colour
         self.fontline = fontline
         self.fontsize = fontsize
         self.drawPoints = drawPoints
         self.drawBox = drawBox
+        self.drawbg = drawbg
 
     def bb(self):
         if not self.hasPoly():
@@ -466,7 +477,7 @@ class ROIPoly(ROI):
 
     def serialise(self):
         d = super().serialise()
-        return serialiseFields(self,['points'],d=d)
+        return serialiseFields(self, ['points'], d=d)
 
     def deserialise(self, d):
         super().deserialise(d)
@@ -498,6 +509,7 @@ class ROIPoly(ROI):
     def draw(self, img):
         if self.drawBox:
             self.drawBB(img, self.colour)
+            self.drawText(img, self.colour)
 
         # first write the points in the actual image
         if self.drawPoints:
