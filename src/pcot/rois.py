@@ -2,12 +2,15 @@ import numpy as np
 import cv2 as cv
 from scipy import ndimage
 
-from pcot.utils import text
+from pcot.utils import text, serialiseFields, deserialiseFields
 
 
 class BadOpException(Exception):
     def __init__(self):
         super().__init__("op not valid")
+
+
+ROISERIALISEFIELDS = ['label', 'labeltop', 'colour', 'fontline', 'fontsize']
 
 
 class ROI:
@@ -50,6 +53,7 @@ class ROI:
         """Draw the ROI onto an RGB image using the set colour (yellow by default)"""
         if drawBox:
             self.drawBB(img, self.colour)
+            self.drawText(img, self.colour)  # drawBox will also draw the text (usually)
 
         # draw into an RGB image
         # first, get the slice into the real image
@@ -85,11 +89,22 @@ class ROI:
             for i in range(self.fontline):
                 cv.rectangle(rgb, (x - i - 1, y - i - 1), (x + w + i, y + h + i), col, thickness=1)
 
+    def drawText(self, rgb: 'ImageCube', col, label=None):
+        if (bb := self.bb()) is not None:
+            x, y, w, h = bb
             ty = y if self.labeltop else y + h
             if self.fontsize > 0:
+                if label is None:
+                    label = self.label
                 text.write(rgb,
-                           "NO ANNOTATION" if self.label is None or self.label == '' else self.label,
+                           "NO ANNOTATION" if label is None or label == '' else label,
                            x, ty, self.labeltop, self.fontsize, self.fontline, col)
+
+    def serialise(self):
+        return serialiseFields(self, ROISERIALISEFIELDS)
+
+    def deserialise(self, d):
+        deserialiseFields(self, d, ROISERIALISEFIELDS)
 
     @staticmethod
     def roiUnion(rois):
@@ -206,6 +221,7 @@ class ROIRect(ROI):
 
     def draw(self, img: np.ndarray):
         self.drawBB(img, self.colour)
+        self.drawText(img, self.colour)
 
     def mask(self):
         # return a boolean array of True, same size as BB
@@ -223,13 +239,64 @@ class ROIRect(ROI):
         self.h = h
 
     def serialise(self):
-        return {'bb': (self.x, self.y, self.w, self.h)}
+        d = super().serialise()
+        d.update()({'bb': (self.x, self.y, self.w, self.h)})
+        return d
 
     def deserialise(self, d):
+        super().deserialise(d)
         self.x, self.y, self.w, self.h = d['bb']
 
     def __str__(self):
         return "ROI-RECT {} {} {}x{}".format(self.x, self.y, self.w, self.h)
+
+
+class ROICircle(ROI):
+    """A simple circular ROI designed for use with multidot regions"""
+
+    def __init__(self, x=-1, y=0, r=0):
+        super().__init__()
+        self.x = x
+        self.y = y
+        self.r = r
+        self.colour = (1, 1, 0)  # annotation colour
+        self.fontline = 2
+        self.fontsize = 10
+        self.drawBox = False
+
+    def bb(self):
+        if self.x < 0:
+            return None
+        return self.x - self.r, self.y - self.r, self.r * 2, self.r * 2
+
+    def mask(self):
+        # there are a few ways we can generate a circular
+        # mask bounded by the BB. This is one of them, which
+        # leverages cv's drawing code.
+        m = np.zeros((self.r * 2, self.r * 2), dtype=np.uint8)
+        cv.circle(m, (self.r, self.r), self.r, 255, -1)
+        return m > 0
+
+    def draw(self, img):
+        self.baseDraw(img, drawEdge=False, drawBox=self.drawBox)
+        self.drawText(img, self.colour)
+
+    def setDrawProps(self, colour, fontsize, fontline):
+        self.colour = colour
+        self.fontline = fontline
+        self.fontsize = fontsize
+
+    def serialise(self):
+        d = super().serialise()
+        d.update({'croi': (self.x, self.y, self.r)})
+        return d
+
+    def deserialise(self, d):
+        super().deserialise(d)
+        self.x, self.y, self.r = d['croi']
+
+    def __str__(self):
+        return "ROI-CIRCLE {} {} {}".format(self.x, self.y, self.r)
 
 
 # used in ROIpainted to convert a 0-99 value into a brush size for painting
@@ -288,19 +355,16 @@ class ROIPainted(ROI):
 
     def centroid(self):
         """Simple centroid from BB"""
-        x,y,w,h = self.bbrect
-        return x+w/2, y+h/2
+        x, y, w, h = self.bbrect
+        return x + w / 2, y + h / 2
 
     def serialise(self):
-        return {
-            'rect': self.bbrect,
-            'map': self.map
-        }
+        d = super().serialise()
+        return serialiseFields(self, ['bbrect', 'map'], d=d)
 
     def deserialise(self, d):
-        if 'map' in d:
-            self.map = d['map']
-            self.bbrect = d['rect']
+        super().deserialise(d)
+        deserialiseFields(self, d, ['bbrect', 'map'])
 
     def mask(self):
         """return a boolean array, same size as BB"""
@@ -401,11 +465,11 @@ class ROIPoly(ROI):
         return xmin, ymin, xmax - xmin, ymax - ymin
 
     def serialise(self):
-        return {
-            'points': self.points,
-        }
+        d = super().serialise()
+        return serialiseFields(self,['points'],d=d)
 
     def deserialise(self, d):
+        super().deserialise(d)
         if 'points' in d:
             pts = d['points']
             # points will be saved as lists, turn back into tuples
@@ -490,5 +554,3 @@ class ROIPoly(ROI):
             return "ROI-POLY (no points)"
         x, y, w, h = self.bb()
         return "ROI-POLY {} {} {}x{}".format(x, y, w, h)
-
-

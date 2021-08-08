@@ -38,8 +38,8 @@ def processData(table, legend, data, pxct, wavelengths, spectrum, chans, chanlab
     legend: name of ROI/image
     data: data dictionary
         part of processData's responsibility is to set the entries in here
-            - key is ROI/image name, value is a list of data.
-            - valiue is a list of tuples (chanidx, cwl, mean, sd, labels, pixct)
+            - key is ROI/image name (legend), value is a list of data.
+            - value is a list of tuples (chanidx, cwl, mean, sd, labels, pixct)
     Then a list for each channel, giving
         wavelengths:    cwl of channel
         spectrum        (mean,sd) of intensity across ROI/image for this channel
@@ -68,6 +68,7 @@ def processData(table, legend, data, pxct, wavelengths, spectrum, chans, chanlab
 
     # zip them all together and append to the list for that legend (creating a new list
     # if there isn't one)
+
     if legend not in data:
         data[legend] = []
 
@@ -95,6 +96,11 @@ ERRORBARMODE_NONE = 0
 ERRORBARMODE_STDERROR = 1
 ERRORBARMODE_STDDEV = 2
 
+COLOUR_FROMROIS = 0
+COLOUR_SCHEME1 = 1
+COLOUR_SCHEME2 = 2
+
+
 
 @xformtype
 class XFormSpectrum(XFormType):
@@ -106,7 +112,7 @@ class XFormSpectrum(XFormType):
     def __init__(self):
         super().__init__("spectrum", "data", "0.0.0")
         self.autoserialise = (
-        'errorbarmode', 'legendFontSize', 'axisFontSize', 'stackSep', 'labelFontSize', 'bottomSpace')
+        'errorbarmode', 'legendFontSize', 'axisFontSize', 'stackSep', 'labelFontSize', 'bottomSpace', 'colourmode')
         for i in range(NUMINPUTS):
             self.addInputConnector(str(i), conntypes.IMG, "a single line in the plot")
         self.addOutputConnector("data", conntypes.DATA, "a CSV output (use 'dump' to read it)")
@@ -115,12 +121,14 @@ class XFormSpectrum(XFormType):
         return TabSpectrum(n, w)
 
     def init(self, node):
-        node.errorbarmode = 0
+        node.errorbarmode = ERRORBARMODE_STDDEV
+        node.colourmode = COLOUR_FROMROIS
         node.legendFontSize = 8
         node.axisFontSize = 8
         node.labelFontSize = 12
         node.bottomSpace = 0
         node.stackSep = 0
+        node.colsByLegend = None  # this is a legend->col dictionary used if colourmode is COLOUR_FROMROIS
         node.data = None
 
     def perform(self, node):
@@ -129,6 +137,7 @@ class XFormSpectrum(XFormType):
         # have several ROIs each with a different value)
         # For each ROI/image there is a lists of tuples, one for each channel : (chanidx, wavelength, mean, sd, name)
         data = dict()
+        cols = dict()  # colour dictionary for ROIs/images
         for i in range(NUMINPUTS):
             img = node.getInput(i, conntypes.IMG)
             if img is not None:
@@ -150,6 +159,7 @@ class XFormSpectrum(XFormType):
                     spectrum = [getSpectrum(subimg[:, :, i], None) for i in chans]
                     processData(table, legend, data, img.w * img.h,
                                 wavelengths, spectrum, chans, chanlabels)
+                    cols[legend] = (0, 0, 0)  # what colour??
 
                 for roi in img.rois:
                     # only include valid ROIs
@@ -163,10 +173,12 @@ class XFormSpectrum(XFormType):
                     spectrum = [getSpectrum(subimg.img[:, :, i], subimg.mask) for i in chans]
                     processData(table, legend, data, subimg.pixelCount(),
                                 wavelengths, spectrum, chans, chanlabels)
+                    cols[legend] = roi.colour
 
         # now, for each list in the dict, build a new dict of the lists sorted
         # by wavelength
         node.data = {legend: sorted(lst, key=lambda x: x[1]) for legend, lst in data.items()}
+        node.colsByLegend = cols  # we use this if we're using the ROI colours
 
         node.setOutput(0, conntypes.Datum(conntypes.DATA, table))
 
@@ -175,6 +187,7 @@ class TabSpectrum(ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabspectrum.ui')
         self.w.errorbarmode.currentIndexChanged.connect(self.errorbarmodeChanged)
+        self.w.colourmode.currentIndexChanged.connect(self.colourmodeChanged)
         self.w.replot.clicked.connect(self.replot)
         self.w.save.clicked.connect(self.save)
         self.w.stackSepSpin.valueChanged.connect(self.stackSepChanged)
@@ -189,7 +202,11 @@ class TabSpectrum(ui.tabs.Tab):
         # set up the plot
         self.w.mpl.fig.suptitle(self.node.comment)
         ax.cla()  # clear any previous plot
-        cols = matplotlib.cm.get_cmap('Dark2').colors
+
+        if self.node.colourmode == COLOUR_SCHEME2:
+            cols = matplotlib.cm.get_cmap('tab10').colors
+        else:
+            cols = matplotlib.cm.get_cmap('Dark2').colors
 
         # the dict consists of a list of channel data tuples for each image/roi.
         colidx = 0
@@ -208,7 +225,10 @@ class TabSpectrum(ui.tabs.Tab):
                 [chans, wavelengths, means, sds, labels, pixcounts] = list(zip(*x))  # "unzip" idiom
             except ValueError:
                 raise XFormException("cannot get spectrum - problem with ROIs?")
-            col = cols[colidx % len(cols)]
+            if self.node.colourmode == COLOUR_FROMROIS:
+                col = self.node.colsByLegend[legend]
+            else:
+                col = cols[colidx % len(cols)]
             means = [x + stack for x in means]
             ax.plot(wavelengths, means, c=col, label=legend)
             ax.scatter(wavelengths, means, c=[wav2RGB(x) for x in wavelengths])
@@ -237,6 +257,11 @@ class TabSpectrum(ui.tabs.Tab):
     def errorbarmodeChanged(self, mode):
         self.mark()
         self.node.errorbarmode = mode
+        self.changed()
+
+    def colourmodeChanged(self, mode):
+        self.mark()
+        self.node.colourmode = mode
         self.changed()
 
     def bottomSpaceChanged(self, val):
@@ -269,6 +294,7 @@ class TabSpectrum(ui.tabs.Tab):
         # a while to run. But we do make the replot button red!
         self.w.replot.setStyleSheet("background-color:rgb(255,100,100)")
         self.w.errorbarmode.setCurrentIndex(self.node.errorbarmode)
+        self.w.colourmode.setCurrentIndex(self.node.colourmode)
         self.w.stackSepSpin.setValue(self.node.stackSep)
         self.w.bottomSpaceSpin.setValue(self.node.bottomSpace)
         self.w.legendFontSpin.setValue(self.node.legendFontSize)

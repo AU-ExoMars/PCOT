@@ -3,6 +3,7 @@
 # and also incorporates region-of-interest data.  Conversions to and from float are
 # done in many operations. Avoiding floats saves memory and speeds things up,
 # but we could change things later.
+import collections
 import math
 import numbers
 
@@ -299,12 +300,16 @@ class ImageCube:
 
     def drawROIs(self, rgb: np.ndarray = None, onlyROI: ROI = None) -> np.ndarray:
         """Return an RGB representation of this image with any ROIs drawn on it - an image may be provided.
-        onlyROI indicates that only one ROI should be drawn"""
+        onlyROI indicates that only one ROI should be drawn. We can also pass a Sequence of ROIs in (added
+        later to support multidot ROIs)."""
         if rgb is None:
             rgb = self.rgb()
 
         if onlyROI is None:
             for r in self.rois:
+                r.draw(rgb)
+        elif isinstance(onlyROI,collections.abc.Sequence):
+            for r in onlyROI:
                 r.draw(rgb)
         else:
             onlyROI.draw(rgb)

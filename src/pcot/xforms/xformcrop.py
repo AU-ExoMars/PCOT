@@ -9,7 +9,7 @@ class XformCropROI(XFormType):
     Crops an image to a rectangle which is the union of its regions of interest"""
 
     def __init__(self):
-        super().__init__("croproi", "regions", "0.0.0")
+        super().__init__("croproi", "ROI edit", "0.0.0")
         self.addInputConnector("", conntypes.IMG)
         self.addOutputConnector("", conntypes.IMG)
 

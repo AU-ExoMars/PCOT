@@ -22,7 +22,7 @@ class XformInset(XFormType):
     the input nodes."""
 
     def __init__(self):
-        super().__init__("inset", "regions", "0.0.0")
+        super().__init__("inset", "ROI edit", "0.0.0")
         self.addInputConnector("img", conntypes.IMG)
         self.addInputConnector("inset", conntypes.IMG)
         self.addInputConnector("roi", conntypes.ROI)

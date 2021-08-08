@@ -518,10 +518,10 @@ class Canvas(QtWidgets.QWidget):
             # if we're displaying all ROIs, show that pixel count (and ROI count)
             txt = "{} pixels in {} ROIs".format(sum([x.pixels() for x in self.previmg.rois]),
                                                 len(self.previmg.rois))
-        elif self.ROInode is not None and self.ROInode.roi is not None:
+        elif self.ROInode is not None:
             # if there's an ROI being set from this node (and we're not showing all ROIs), show its details
             # Also have to check the ROI itself is OK.
-            txt = "{} pixels in ROI".format(self.ROInode.roi.pixels())
+            txt = "{} pixels in ROI".format(self.ROInode.type.getROIPixels(self.ROInode))
         else:
             txt = ""
         self.roiText.setText(txt)

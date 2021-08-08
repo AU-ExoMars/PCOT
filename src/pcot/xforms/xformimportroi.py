@@ -13,7 +13,7 @@ class XformImportROI(XFormType):
     image."""
 
     def __init__(self):
-        super().__init__("importroi", "regions", "0.0.0")
+        super().__init__("importroi", "ROI edit", "0.0.0")
         self.addInputConnector("", conntypes.IMG)
         self.addInputConnector("roi", conntypes.ANY)
         self.addOutputConnector("", conntypes.IMG)
