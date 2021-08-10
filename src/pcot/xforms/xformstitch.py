@@ -1,7 +1,10 @@
+from typing import Any
+
 import numpy as np
 from PyQt5 import QtCore
-from PyQt5.QtCore import Qt, QItemSelection, QItemSelectionModel
+from PyQt5.QtCore import Qt, QItemSelection, QItemSelectionModel, QModelIndex
 import cv2 as cv
+from PyQt5.QtGui import QKeyEvent
 
 from pcot import conntypes
 from pcot.pancamimage import ImageCube
@@ -37,7 +40,7 @@ class XFormStitch(XFormType):
             self.addInputConnector(str(i), conntypes.IMG, desc="Input image {}".format(i))
         self.addOutputConnector("", conntypes.IMG, desc="Output image")
         self.hasEnable = True
-        self.autoserialise = ('offsets', 'order')
+        self.autoserialise = ('offsets', 'order', 'showImage')
 
     def createTab(self, n, w):
         return TabStitch(n, w)
@@ -45,66 +48,87 @@ class XFormStitch(XFormType):
     def init(self, node):
         # these are the image offsets
         node.offsets = [(i * 50, i * 50 - 200) for i in range(NUMINPUTS)]
-        # and the default ordering
+        # and the default ordering - this maps from run order to input number
         node.order = [i for i in range(NUMINPUTS)]
-        node.present = [False for _ in range(NUMINPUTS)]
+        # list of selected items, indexed by run order (so equals selected rows in the table)
         node.selected = []
+        # map of inputs which are connected
+        node.present = [False for _ in range(NUMINPUTS)]
+        # RGB image used on canvas
         node.rgbImage = None
+        # output image
         node.img = None
+        node.showImage = True
 
     def perform(self, node):
-        realIns = [node.getInput(i, conntypes.IMG) for i in range(NUMINPUTS)]
-        # get a list of actual active inputs, rearranged for ordering
+        inputs = [node.getInput(i, conntypes.IMG) for i in range(NUMINPUTS)]
 
-        images = [realIns[node.order[i]] for i in range(NUMINPUTS)]
-        node.present = [i is not None for i in images]  # keep an array of booleans indicating if an item is present
-
-        # same with offsets
-        offsets = [node.offsets[node.order[i]] for i in range(NUMINPUTS) if images[i] is not None]
-        images = [i for i in images if i is not None]  # done separately to avoid double getInput call.
-        if len(images) == 0:
+        # filter out inputs which aren't connected, for BB calculations
+        activeInputImages = [i for i in inputs if i is not None]
+        node.present = [i is not None for i in inputs]
+        # get the offsets of those inputs, for the same purpose
+        activeInputOffsets = [node.offsets[i] for i in range(NUMINPUTS) if inputs[i] is not None]
+        # exit early if no active inputs
+        if len(activeInputImages) == 0:
             node.img = None
             node.setOutput(0, None)
             return
-
-        if len(set([i.channels for i in images])) > 1:
+        # throw an error if the images don't all have the same channel count
+        if len(set([i.channels for i in activeInputImages])) > 1:
             raise XFormException('DATA', 'all images must have the same number of channels for stitching')
 
         # work out the bounding box
-        minx = min([p[0] for p in offsets])
-        miny = min([p[1] for p in offsets])
-        maxx = max([p[0] + img.w for p, img in zip(offsets, images)])
-        maxy = max([p[1] + img.h for p, img in zip(offsets, images)])
+        minx = min([p[0] for p in activeInputOffsets])
+        miny = min([p[1] for p in activeInputOffsets])
+        maxx = max([p[0] + img.w for p, img in zip(activeInputOffsets, activeInputImages)])
+        maxy = max([p[1] + img.h for p, img in zip(activeInputOffsets, activeInputImages)])
 
         # create an image of that size to compose the images into
-        chans = images[0].channels
+        chans = activeInputImages[0].channels
         img = np.zeros((maxy - miny, maxx - minx, chans), dtype=np.float32)
 
         # compose the sources - this is a channel-wise union of all the sources
         # in all the images.
         sources = [set() for i in range(chans)]  # one empty set for each channel
-        for srcimg in images:
+        for srcimg in activeInputImages:
             for c in range(chans):
                 sources[c] = sources[c].union(srcimg.sources[c])
 
-        # perform the composition
-        for offset, srcimg in zip(offsets, images):
-            # calculate the actual image offset
-            x = offset[0] - minx
-            y = offset[1] - miny
-            # paste in
-            img[y:y + srcimg.h, x:x + srcimg.w] = srcimg.img
+        # perform the composition - this time we're just stepping through the inputs, connected or not
+        # as it's easier to avoid errors.
+        for drawOrder in range(NUMINPUTS):
+            # work out which image to display from the ordering
+            i = node.order[drawOrder]
+            if inputs[i] is not None:
+                # calculate the actual image offset
+                x = node.offsets[i][0] - minx
+                y = node.offsets[i][1] - miny
+                # paste in
+                srcimg = inputs[i]
+                try:
+                    img[y:y + srcimg.h, x:x + srcimg.w] = srcimg.img
+                except ValueError as e:
+                    print("stored offset:{},{} min:{},{} xy:{},{}".format(node.offsets[i][0], node.offsets[i][1], minx,
+                                                                          miny, x, y))
+                    print(img.shape)
+                    print(srcimg.img.shape)
+                    print(y, y + srcimg.h, x, x + srcimg.w)
+                    raise e
 
         # generate the output
         node.img = ImageCube(img, node.mapping, sources)
 
+        # now draw the selected inputs
         node.rgbImage = node.img.rgbImage()
-        # note that we are now not reordering so that the selection makes sense.
-        for i, (inp, off) in enumerate(zip(realIns, node.offsets)):
-            if inp is not None and i in node.selected:
-                x = off[0]-minx
-                y = off[1]-miny
-                cv.rectangle(node.rgbImage.img, (x, y), (x+inp.w, y+inp.h), (1, 0, 0), 10)
+
+        if node.showImage:
+            for i in range(NUMINPUTS):
+                inp = inputs[node.order[i]]
+                if inp is not None and i in node.selected:
+                    off = node.offsets[node.order[i]]
+                    x = off[0] - minx
+                    y = off[1] - miny
+                    cv.rectangle(node.rgbImage.img, (x, y), (x + inp.w, y + inp.h), (1, 0, 0), 10)
 
     def uichange(self, node):
         self.perform(node)
@@ -157,14 +181,21 @@ class TabStitch(Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabstitch.ui')
         self.model = TableModel(node)
+        self.w.canvas.keyHook = self
         self.w.table.setModel(self.model)
-        self.w.table.setColumnWidth(0, 10)
+        self.w.table.setColumnWidth(0, 30)
         self.w.table.setColumnWidth(1, 70)
         self.w.table.setColumnWidth(2, 70)
         self.w.up.pressed.connect(self.upPressed)
         self.w.down.pressed.connect(self.downPressed)
         self.w.table.selectionModel().selectionChanged.connect(self.selChanged)
+        self.w.showimage.toggled.connect(self.showImageToggled)
         self.nodeChanged()
+
+    def showImageToggled(self):
+        self.node.showImage = self.w.showimage.isChecked()
+        self.node.uichange()
+        self.w.canvas.redisplay()
 
     def selChanged(self, sel, desel):
         self.node.selected = self.getSelected()
@@ -179,25 +210,56 @@ class TabStitch(Tab):
         return [mi.row() for mi in self.w.table.selectionModel().selectedRows()]
 
     def upPressed(self):
+        self.mark()
         o = self.node.order
         for r in self.getSelected():
             if r > 0:
                 o[r - 1], o[r] = o[r], o[r - 1]
-            self.selectRow(r-1)
+            self.selectRow(r - 1)
         self.changed()
 
     def downPressed(self):
+        self.mark()
         o = self.node.order
         for r in self.getSelected():
-            if r < NUMINPUTS-1:
+            if r < NUMINPUTS - 1:
                 o[r + 1], o[r] = o[r], o[r + 1]
-            self.selectRow(r+1)
+            self.selectRow(r + 1)
         self.changed()
 
     def onNodeChanged(self):
         self.w.canvas.setMapping(self.node.mapping)
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)
+        self.w.showimage.setChecked(self.node.showImage)
         if self.node.img is not None:  # premapped rgb
             self.w.canvas.display(self.node.rgbImage, self.node.img, self.node)
         self.w.table.viewport().update()  # force table redraw
+
+    def moveSel(self, e: QKeyEvent, x, y):
+        self.mark()
+        scale = 10
+        if e.modifiers() & Qt.ControlModifier:
+            scale *= 10
+        if e.modifiers() & Qt.ShiftModifier:
+            scale /= 10
+
+        n = self.node
+        for r in self.getSelected():
+            xx, yy = n.offsets[r]
+            xx += scale * x
+            yy += scale * y
+            n.offsets[r] = int(xx), int(yy)
+        if len(self.getSelected()):
+            self.changed()
+
+    def canvasKeyPressEvent(self, e: QKeyEvent):
+        k = e.key()
+        if k == Qt.Key_Left:
+            self.moveSel(e, -1, 0)
+        elif k == Qt.Key_Right:
+            self.moveSel(e, 1, 0)
+        elif k == Qt.Key_Up:
+            self.moveSel(e, 0, -1)
+        elif k == Qt.Key_Down:
+            self.moveSel(e, 0, 1)

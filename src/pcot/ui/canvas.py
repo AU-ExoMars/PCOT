@@ -92,8 +92,9 @@ class InnerCanvas(QtWidgets.QWidget):
                     ui.error("Unusual - the image has no numpy array")
 
             # only reset the image zoom if the shape has changed
-            if self.img is None or self.img.shape[:2] != img.shape[:2]:
-                self.reset()
+            # DISABLED so that image stitching is bearable.
+#            if self.img is None or self.img.shape[:2] != img.shape[:2]:
+#                self.reset()
             self.img = img
         else:
             self.img = None
@@ -501,14 +502,13 @@ class Canvas(QtWidgets.QWidget):
         # Note that we are doing ugly things to avoid recursion here. In some of the ROI nodes, this can happen:
         # updatetabs -> onNodeChanged -> display -> redisplay -> updatetabs...
         # This is the simplest way to avoid it.
-        if self.recursing:
-            return
-        self.recursing = True
-        if self.nodeToUIChange is not None:
-            self.nodeToUIChange.uichange()
-            self.nodeToUIChange.updateTabs()
-        #            self.graph.performNodes(self.nodeToUIChange)
-        self.recursing = False
+        if not self.recursing:
+            self.recursing = True
+            if self.nodeToUIChange is not None:
+                self.nodeToUIChange.uichange()
+                self.nodeToUIChange.updateTabs()
+            #            self.graph.performNodes(self.nodeToUIChange)
+            self.recursing = False
 
         # set ROI pixel count text.
         if self.previmg is None:

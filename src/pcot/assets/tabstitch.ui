@@ -65,6 +65,23 @@
          </item>
         </layout>
        </item>
+       <item row="2" column="0">
+        <widget class="QCheckBox" name="showimage">
+         <property name="text">
+          <string>Show image outline</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>Arrow keys to move the selected image - make sure you have clicked on the canvas. Shift and Ctrl for slow/fast move.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </widget>
