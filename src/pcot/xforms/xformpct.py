@@ -149,7 +149,8 @@ class XformPCT(XFormType):
                         p = pct.patches[i]
                         r.setDrawProps(p.col, 0, 1,
                                        node.drawMode == 'Edge',
-                                       i == node.selROI)
+                                       i == node.selROI,
+                                       True)
                         r.draw(node.rgbImage.img)
         node.img = img
 
