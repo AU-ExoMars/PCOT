@@ -40,7 +40,7 @@ class XformRect(XFormROIType):
         node.roi.deserialise(d)
 
     def setProps(self, node, img):
-        node.roi.setDrawProps(node.colour, node.fontsize, node.fontline, node.drawbg)
+        node.roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.fontline, node.drawbg)
 
 
 class TabRect(pcot.ui.tabs.Tab):

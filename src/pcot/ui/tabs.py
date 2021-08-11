@@ -42,9 +42,10 @@ class DockableTabWindow(QtWidgets.QMainWindow):
     ## close a tab
     def closeTabByIndex(self, index):
         tab = self.tabWidget.widget(index)
-        tab.node.tabs.remove(tab)
-        self.tabWidget.removeTab(index)
-        self.tabs = {k: v for k, v in self.tabs.items() if v != tab}
+        if tab is not None:
+            tab.node.tabs.remove(tab)
+            self.tabWidget.removeTab(index)
+            self.tabs = {k: v for k, v in self.tabs.items() if v != tab}
 
     def closeTab(self, t):
         if t.expanded:

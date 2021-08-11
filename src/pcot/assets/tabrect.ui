@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>768</width>
-    <height>500</height>
+    <width>1110</width>
+    <height>572</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -78,22 +78,6 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="3">
-    <widget class="QRadioButton" name="captionTop">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>30</height>
-      </size>
-     </property>
-     <property name="layoutDirection">
-      <enum>Qt::RightToLeft</enum>
-     </property>
-     <property name="text">
-      <string>Top</string>
-     </property>
-    </widget>
-   </item>
    <item row="1" column="2">
     <widget class="QCheckBox" name="drawbg">
      <property name="layoutDirection">
@@ -101,6 +85,16 @@
      </property>
      <property name="text">
       <string>Background</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="3">
+    <widget class="QCheckBox" name="captionTop">
+     <property name="layoutDirection">
+      <enum>Qt::RightToLeft</enum>
+     </property>
+     <property name="text">
+      <string>Top</string>
      </property>
     </widget>
    </item>

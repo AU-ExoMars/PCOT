@@ -148,10 +148,10 @@ class XformPCT(XFormType):
                 for i, r in enumerate(node.rois):
                     if r is not None:
                         p = pct.patches[i]
-                        r.setDrawProps(p.col, 0, 1,
-                                       node.drawMode == 'Edge',
-                                       i == node.selROI,
+                        r.setDrawProps(True, p.col, 0, 1,  # font size zero
                                        True)
+                        r.drawEdge = (node.drawMode == 'Edge'),
+                        r.drawBox = i == (node.selROI)
                         r.draw(node.rgbImage.img)
         node.img = img
 

@@ -64,7 +64,11 @@ class XFormPainted(XFormROIType):
         else:
             drawEdge = False
             drawBox = False
-        node.roi.setDrawProps(node.colour, node.fontsize, node.fontline, drawEdge, drawBox, node.drawbg)
+
+        node.roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.fontline, node.drawbg)
+        node.roi.drawEdge = drawEdge
+        node.roi.drawBox = drawBox
+
         node.previewRadius = getRadiusFromSlider(node.brushSize, img.w, img.h)
 
 

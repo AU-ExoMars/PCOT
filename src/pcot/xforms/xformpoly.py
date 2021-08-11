@@ -61,7 +61,9 @@ class XformPoly(XFormROIType):
             drawPoints = False
             drawBox = False
 
-        node.roi.setDrawProps(node.colour, node.fontsize, node.fontline, drawPoints, drawBox, node.drawbg)
+        node.roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.fontline, node.drawbg)
+        node.roi.drawPoints = drawPoints
+        node.roi.drawBox = drawBox
 
 
 class TabPoly(pcot.ui.tabs.Tab):

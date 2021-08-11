@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 import numpy as np
 import cv2 as cv
 from scipy import ndimage
@@ -20,13 +22,23 @@ class ROI:
     def __init__(self, bbrect=None, maskimg=None):
         """Ctor. ROIs have a label, which is used to label data in nodes like 'spectrum' and appears in annotations"""
         self.label = None
+        self.bbrect = bbrect
+        self.maskimg = maskimg
+
         self.labeltop = False  # draw the label at the top?
         self.colour = (1, 1, 0)  # annotation colour
         self.fontline = 2  # thickness of lines and text
         self.fontsize = 10  # annotation font size
-        self.bbrect = bbrect
-        self.maskimg = maskimg
         self.drawbg = True
+
+    def setDrawProps(self, labeltop, colour, fontsize, fontline, drawbg):
+        """set the common draw properties for all ROIs"""
+        self.labeltop = labeltop
+        self.colour = colour
+        self.fontline = fontline
+        self.fontsize = fontsize
+        self.drawbg = drawbg
+
 
     def bb(self):
         """return a (x,y,w,h) tuple describing the bounding box for this ROI"""
@@ -234,12 +246,6 @@ class ROIRect(ROI):
         # return a boolean array of True, same size as BB
         return np.full((self.h, self.w), True)
 
-    def setDrawProps(self, colour, fontsize, fontline, drawbg):
-        self.colour = colour
-        self.fontline = fontline
-        self.fontsize = fontsize
-        self.drawbg = drawbg
-
     def setBB(self, x, y, w, h):
         self.x = x
         self.y = y
@@ -288,12 +294,6 @@ class ROICircle(ROI):
     def draw(self, img):
         self.baseDraw(img, drawEdge=False, drawBox=self.drawBox)
         self.drawText(img, self.colour)  # these always show label
-
-    def setDrawProps(self, colour, fontsize, fontline, drawbg):
-        self.colour = colour
-        self.fontline = fontline
-        self.fontsize = fontsize
-        self.drawbg = drawbg
 
     def serialise(self):
         d = super().serialise()
@@ -351,14 +351,6 @@ class ROIPainted(ROI):
 
         self.imgw = imgw
         self.imgh = imgh
-
-    def setDrawProps(self, colour, fontsize, fontline, drawEdge, drawBox, drawbg):
-        self.colour = colour
-        self.fontline = fontline
-        self.fontsize = fontsize
-        self.drawEdge = drawEdge
-        self.drawBox = drawBox
-        self.drawbg = drawbg
 
     def bb(self):
         return self.bbrect
@@ -455,14 +447,6 @@ class ROIPoly(ROI):
 
         self.imgw = imgw
         self.imgh = imgh
-
-    def setDrawProps(self, colour, fontsize, fontline, drawPoints, drawBox, drawbg):
-        self.colour = colour
-        self.fontline = fontline
-        self.fontsize = fontsize
-        self.drawPoints = drawPoints
-        self.drawBox = drawBox
-        self.drawbg = drawbg
 
     def bb(self):
         if not self.hasPoly():
