@@ -75,7 +75,7 @@ def createPatchROI(n, x, y, radiusmm):
     ff = FloodFiller(n.img)
     # get minimum and maximum pixel sizes (empirically determined from radius of patch)
     maxPix = (radiusmm ** 2) * 8
-    minPix = maxPix / 3
+    minPix = maxPix / 6
 
     if ff.fill(int(x), int(y), minpix=minPix, maxpix=maxPix):
         # third step - crop down to a mask and BB, generate a ROIPainted and return.
@@ -138,7 +138,8 @@ class XformPCT(XFormType):
             img.setMapping(node.mapping)
 
             for r in node.rois:  # we need to tell the ROI how big the contained image is
-                r.setImageSize(img.w, img.h)
+                if r is not None:
+                    r.setImageSize(img.w, img.h)
 
             # get the RGB image we are going to draw the ROIs onto. Will only draw if there are ROIs!
 
@@ -282,6 +283,7 @@ class TabPCT(pcot.ui.tabs.Tab):
         self.w.clearButton.setEnabled(clearEnabled)
         self.w.genButton.setEnabled(genEnabled)
         self.w.rotateButton.setEnabled(rotateEnabled)
+        self.w.drawMode.setCurrentIndex(self.w.drawMode.findText(self.node.drawMode))
 
         if self.node.img is not None:
             # We're displaying a "premapped" image : this node's perform code is
