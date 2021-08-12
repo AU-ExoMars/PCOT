@@ -194,13 +194,11 @@ class TabStitch(Tab):
 
     def showImageToggled(self):
         self.node.showImage = self.w.showimage.isChecked()
-        self.node.uichange()
-        self.w.canvas.redisplay()
+        self.changed(uiOnly=True)
 
     def selChanged(self, sel, desel):
         self.node.selected = self.getSelected()
-        self.node.uichange()
-        self.w.canvas.redisplay()
+        self.changed(uiOnly=True)
 
     def selectRow(self, r):
         sel = QItemSelection(self.model.index(r, 0), self.model.index(r, 2))

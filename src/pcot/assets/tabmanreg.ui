@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1097</width>
+    <width>941</width>
     <height>673</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="1,0">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="1,0,0">
    <item>
     <widget class="Canvas" name="canvas" native="true">
      <property name="sizePolicy">
@@ -93,7 +93,7 @@
        <property name="maximumSize">
         <size>
          <width>16777215</width>
-         <height>55</height>
+         <height>16777215</height>
         </size>
        </property>
        <property name="title">
@@ -116,7 +116,7 @@
         <item>
          <widget class="QRadioButton" name="radioDest">
           <property name="text">
-           <string>Destination (fixed)</string>
+           <string>Dest (fixed)</string>
           </property>
          </widget>
         </item>
@@ -150,6 +150,30 @@
         </widget>
        </item>
       </layout>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="0,1">
+     <item>
+      <widget class="QCheckBox" name="translate">
+       <property name="text">
+        <string>Translate only (requires one point)</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="layoutDirection">
+        <enum>Qt::LeftToRight</enum>
+       </property>
+       <property name="text">
+        <string>Shift-click to add source points, Ctrl-click for dest points.</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>
