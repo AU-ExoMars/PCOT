@@ -112,8 +112,10 @@ class XFormMultiDot(XFormType):
     def setProps(self, node, img):
         node.previewRadius = getRadiusFromSlider(node.dotSize, img.w, img.h)
 
-    def getROIPixels(self, node):
-        return sum([0 if r is None else r.pixels() for r in node.rois])
+    def getROIDesc(self, node):
+        n = sum([0 if r is None else 1 for r in node.rois])
+        s = sum([0 if r is None else r.pixels() for r in node.rois])
+        return "{} pixels in {} ROIs".format(s, n)
 
 
 class TabMultiDot(pcot.ui.tabs.Tab):

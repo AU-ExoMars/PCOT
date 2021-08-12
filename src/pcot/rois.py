@@ -39,7 +39,6 @@ class ROI:
         self.fontsize = fontsize
         self.drawbg = drawbg
 
-
     def bb(self):
         """return a (x,y,w,h) tuple describing the bounding box for this ROI"""
         return self.bbrect
@@ -61,6 +60,16 @@ class ROI:
             return 0  # ROI is degenerate or inactive
         else:
             return self.mask().sum()
+
+    def details(self):
+        """Information string on this ROI. This default shows the extent."""
+        bb = self.bb()
+        if bb is not None:
+            x, y, w, h = bb
+            return "{} pixels, extent {},{} {}x{}".format(self.pixels(),
+                                                          x, y, w, h)
+        else:
+            return "No ROI"
 
     def baseDraw(self, img, drawBox=False, drawEdge=True):
         """Draw the ROI onto an RGB image using the set colour (yellow by default)"""
@@ -238,6 +247,14 @@ class ROIRect(ROI):
             return None
         return self.x, self.y, self.w, self.h
 
+    def details(self):
+        """Information string on this ROI."""
+        if self.x < 0:
+            return "No ROI"
+        else:
+            return "{} pixels, {},{} {}x{}".format(self.pixels(),
+                                                   self.x, self.y, self.w, self.h)
+
     def draw(self, img: np.ndarray):
         self.drawBB(img, self.colour)
         self.drawText(img, self.colour)
@@ -277,6 +294,10 @@ class ROICircle(ROI):
         self.fontline = 2
         self.fontsize = 10
         self.drawBox = False
+
+    def details(self):
+        """Information string on this ROI."""
+        return "details() should not be called"
 
     def bb(self):
         if self.x < 0:

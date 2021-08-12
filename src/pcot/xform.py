@@ -1330,5 +1330,5 @@ class XFormROIType(XFormType):
             if node.isOutputConnected(self.OUT_IMG):
                 node.setOutput(self.OUT_IMG, Datum(conntypes.IMG, node.img))  # output image and ROI
 
-    def getROIPixels(self, node):
-        return 0 if node.roi is None else node.roi.pixels()
+    def getROIDesc(self, node):
+        return "no ROI" if node.roi is None else node.roi.details()

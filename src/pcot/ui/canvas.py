@@ -520,8 +520,8 @@ class Canvas(QtWidgets.QWidget):
                                                 len(self.previmg.rois))
         elif self.ROInode is not None:
             # if there's an ROI being set from this node (and we're not showing all ROIs), show its details
-            # Also have to check the ROI itself is OK.
-            txt = "{} pixels in ROI".format(self.ROInode.type.getROIPixels(self.ROInode))
+            # Also have to check the ROI itself is OK (the method will do this)
+            txt = self.ROInode.type.getROIDesc(self.ROInode)
         else:
             txt = ""
         self.roiText.setText(txt)
