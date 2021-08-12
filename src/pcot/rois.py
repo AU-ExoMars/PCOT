@@ -137,24 +137,29 @@ class ROI:
     @staticmethod
     def roiUnion(rois):
         bbs = [r.bb() for r in rois]  # get bbs
-        x1 = min([b[0] for b in bbs])
-        y1 = min([b[1] for b in bbs])
-        x2 = max([b[0] + b[2] for b in bbs])
-        y2 = max([b[1] + b[3] for b in bbs])
-        bb = (x1, y1, x2 - x1, y2 - y1)
-        # now construct the mask, initially all False
-        mask = np.full((y2 - y1, x2 - x1), False)
-        # and OR the ROIs into it
-        for r in rois:
-            rx, ry, rw, rh = r.bb()
-            # calculate ROI's position inside subimage
-            x = rx - x1
-            y = ry - y1
-            # get ROI's mask
-            roimask = r.mask()
-            # add it at that position
-            mask[y:y + rh, x:x + rw] |= roimask
-        return ROI(bb, mask)
+        bbs = [b for b in bbs if b is not None]
+        if len(bbs)>0:
+            x1 = min([b[0] for b in bbs])
+            y1 = min([b[1] for b in bbs])
+            x2 = max([b[0] + b[2] for b in bbs])
+            y2 = max([b[1] + b[3] for b in bbs])
+            bb = (x1, y1, x2 - x1, y2 - y1)
+            # now construct the mask, initially all False
+            mask = np.full((y2 - y1, x2 - x1), False)
+            # and OR the ROIs into it
+            for r in rois:
+                rx, ry, rw, rh = r.bb()
+                # calculate ROI's position inside subimage
+                x = rx - x1
+                y = ry - y1
+                # get ROI's mask
+                roimask = r.mask()
+                # add it at that position
+                mask[y:y + rh, x:x + rw] |= roimask
+            return ROI(bb, mask)
+        else:
+            # return a null ROI
+            return ROI((0,0,10,10),np.full((10,10),False))
 
     @staticmethod
     def roiIntersection(rois):

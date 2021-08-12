@@ -1,4 +1,6 @@
 import numpy as np
+from numpy.ma import masked
+
 import pcot.conntypes as conntypes
 import cv2 as cv
 
@@ -28,7 +30,7 @@ class FloodFiller:
             self.means = (self.img[y, x] + self.n * self.means) / (self.n + 1)
             self.n += 1
 
-    def fill(self, x, y, minpix=100, maxpix=10000):
+    def fill(self, x, y, minpix=0, maxpix=10000):
         """Perform the fill, returning true if the number of pixels found
         was within an acceptable range (will exit early if too many)"""
         stack = [(x, y)]
@@ -61,7 +63,7 @@ class FloodFiller:
         return True
 
 
-def createPatchROI(n, x, y, radiusmm):
+def createPatchROI(n, x, y, radius):
     """Create a ROIPainted which encompasses the coords x,y. The patch has
     a given radius in mm, which we use to determine the min and max number
     of pixels acceptable."""
@@ -74,8 +76,8 @@ def createPatchROI(n, x, y, radiusmm):
 
     ff = FloodFiller(n.img)
     # get minimum and maximum pixel sizes (empirically determined from radius of patch)
-    maxPix = (radiusmm ** 2) * 8
-    minPix = maxPix / 6
+    maxPix = radius ** 2 * 4
+    minPix = 0      # probably best to not have a min pixel count
 
     if ff.fill(int(x), int(y), minpix=minPix, maxpix=maxPix):
         # third step - crop down to a mask and BB, generate a ROIPainted and return.
@@ -150,7 +152,7 @@ class XformPCT(XFormType):
                         p = pct.patches[i]
                         r.setDrawProps(True, p.col, 0, 1,  # font size zero
                                        True)
-                        r.drawEdge = (node.drawMode == 'Edge'),
+                        r.drawEdge = (node.drawMode == 'Edge')
                         r.drawBox = i == (node.selROI)
                         r.draw(node.rgbImage.img)
         node.img = img
@@ -160,7 +162,8 @@ class XformPCT(XFormType):
 
     def stddev(self, node, idx):
         """get stats for a given patch (by index). This is the mean of the stddevs across all channels;
-        otherwise we'd get very high stddev for (say) blue and low for black and white!"""
+        otherwise we'd get very high stddev for (say) blue and low for black and white! Return value may be masked
+        if there are no unmasked pixels."""
         if not node.rois or node.rois[idx] is None or node.img is None:
             return None
         # get subimage
@@ -179,6 +182,9 @@ class XformPCT(XFormType):
         pts2 = np.float32(n.pctPoints)
         # get affine transform
         M = cv.getAffineTransform(pts1, pts2)
+        #  max scale factor
+        maxScale = np.max(M[:2,:2])
+        print("scale from PCT coords to screen coords:",maxScale)
 
         n.rois = []
         # ROIs must be indexed the same as patches in pct.patches
@@ -186,7 +192,7 @@ class XformPCT(XFormType):
             # get patch centre, convert to image space, get xy coords.
             pp = np.float32([[[p.x, p.y]]])
             x, y = cv.transform(pp, M).ravel().tolist()
-            roi = createPatchROI(n, x, y, p.r)
+            roi = createPatchROI(n, x, y, p.r * maxScale)
             n.rois.append(roi)
 
 
@@ -309,7 +315,10 @@ class TabPCT(pcot.ui.tabs.Tab):
                 patch = pct.patches[idx]
                 if roi is not None:
                     std = self.node.type.stddev(self.node, idx)
-                    s = "{}\t\t{:.3f}".format(patch.name, std)
+                    if std == masked:
+                        s = "{}\t\tno data".format(patch.name, std)
+                    else:
+                        s = "{}\t\t{:.3f}".format(patch.name, std)
                 else:
                     s = "{}\t\t---".format(patch.name)
                 p.drawText(0, (idx + 1) * FONTSIZE, s)
