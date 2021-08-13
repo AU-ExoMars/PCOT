@@ -7,6 +7,7 @@ import cv2 as cv
 from PyQt5.QtGui import QKeyEvent
 
 from pcot import conntypes
+from pcot.conntypes import Datum
 from pcot.pancamimage import ImageCube
 from pcot.ui.tabs import Tab
 from pcot.xform import XFormType, xformtype, XFormException
@@ -117,6 +118,7 @@ class XFormStitch(XFormType):
 
         # generate the output
         node.img = ImageCube(img, node.mapping, sources)
+        node.setOutput(0, Datum(conntypes.IMG, node.img))
 
         # now draw the selected inputs
         node.rgbImage = node.img.rgbImage()

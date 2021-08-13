@@ -80,7 +80,8 @@ class XFormManualRegister(XFormType):
     fixed and moving images will likely have different frequency bands).
 
     The transform will map a set of points in the moving image onto a set in the fixed image. Both sets of
-    points can be changed, or a single set. Points are mapped onto the correspondingly numbered point.
+    points can be changed, or a single set. Points are mapped onto the correspondingly numbered point. In "translate"
+    mode only a single point is required (and only a single point will be shown from each set).
 
     Points are added to the source (moving) image by clicking with shift.
     Points are adding to the dest (fixed) image by clicking with ctrl.

@@ -117,6 +117,8 @@ class MainUI(ui.tabs.DockableTabWindow):
                  doAutoLayout: bool = True):
         """Constructor which just calls _init()"""
         super().__init__()
+        uic.loadUi(pcot.config.getAssetAsFile('main.ui'), self)
+        self.menuFile.addSeparator()
         self._init(doc=doc, macro=macro, doAutoLayout=doAutoLayout)
 
     def _init(self,
@@ -137,9 +139,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
         self.recentActs = []
 
-        uic.loadUi(pcot.config.getAssetAsFile('main.ui'), self)
         self.setWindowTitle(ui.app().applicationName() + ' ' + ui.app().applicationVersion())
-        self.menuFile.addSeparator()
         self.rebuildRecents()
 
         self.initTabs()
@@ -324,7 +324,8 @@ class MainUI(ui.tabs.DockableTabWindow):
         try:
             import pcot.document
             d = pcot.document.Document(fname)
-            self._init(doc=d, doAutoLayout=False)
+            MainUI.windows.remove(self)  # remove the existing entry for this window, we'll add it again in the next line
+            self._init(doc=d, doAutoLayout=False)   # rerun window construction
             self.graph.changed()  # and rerun everything
             ui.msg("File loaded")
             self.saveFileName = fname
@@ -341,8 +342,15 @@ class MainUI(ui.tabs.DockableTabWindow):
                                                     os.path.expanduser(pcot.config.locations['pcotfiles']),
                                                     "PCOT files (*.pcot)")
         if res[0] != '':
-            self.save(res[0])
-            self.saveFileName = res[0]
+            path = res[0]
+            (root, ext) = os.path.splitext(path)
+            if ext != '.pcot':
+                ext += '.pcot'
+            path = root + ext
+
+            self.save(path)
+            self.saveFileName = path
+            ui.log("Document written to "+path)
             pcot.config.locations['pcotfiles'] = os.path.dirname(os.path.realpath(res[0]))
 
     ## the "save" menu handler

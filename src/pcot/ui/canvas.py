@@ -93,8 +93,8 @@ class InnerCanvas(QtWidgets.QWidget):
 
             # only reset the image zoom if the shape has changed
             # DISABLED so that image stitching is bearable.
-#            if self.img is None or self.img.shape[:2] != img.shape[:2]:
-#                self.reset()
+            #            if self.img is None or self.img.shape[:2] != img.shape[:2]:
+            #                self.reset()
             self.img = img
         else:
             self.img = None
@@ -436,9 +436,14 @@ class Canvas(QtWidgets.QWidget):
                                                     "PNG images (*.png)")
         if res[0] != '':
             path = res[0]
+            # make sure it ends with PNG!
+            (root, ext) = os.path.splitext(path)
+            if ext != '.png':
+                ext += '.png'
+            path = root + ext
             pcot.config.locations['savedimages'] = os.path.dirname(os.path.realpath(path))
             cv.imwrite(path, img8)
-            ui.log("Image written")
+            ui.log("Image written to " + path)
 
         pass
 
