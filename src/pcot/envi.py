@@ -129,6 +129,8 @@ class ENVIHeader:
             else:
                 gain = [0 for _ in wavelengths]
 
+            self.gains = gain
+
             self.filters = []
             for w, f, g, n in zip(wavelengths, fwhm, gain, bandNames):
                 self.filters.append(Filter(w, f, g, n, n))
@@ -169,9 +171,10 @@ def _load(fn):
     with open(datfile, "rb") as f:
         for i in range(0, h.bands):
             band = np.fromfile(f, np.float32, h.w * h.h).reshape(h.h, h.w)
+            gain = h.gains[i]
             if sys.byteorder != h.byteorder:
                 band = band.byteswap()
-            bands.append(band)
+            bands.append(band)      # Do I need to apply the data gain values here??
 
     # now have list of 6 bands. Interleave.
     img = np.stack(bands, axis=-1)

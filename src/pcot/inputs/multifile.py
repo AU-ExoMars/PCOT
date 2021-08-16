@@ -23,7 +23,7 @@ class MultifileInputMethod(InputMethod):
         # list of filter strings - strings which must be in any filenames
         self.namefilters = []
         # directory we're looking at
-        self.dir = pcot.config.locations['images']
+        self.dir = pcot.config.getDefaultDir('images')
         if not os.path.isdir(self.dir):
             self.dir = os.path.expanduser("~")
         # files we have checked in the file list
@@ -173,6 +173,7 @@ class MultifileMethodWidget(MethodWidget):
         self.activatedImage = None
         # all the files in the current directory (which match the filters)
         self.allFiles = []
+        self.method.dir = pcot.config.getDefaultDir('images')
         self.onInputChanged()
 
     def cameraChanged(self, i):
@@ -215,7 +216,7 @@ class MultifileMethodWidget(MethodWidget):
 
     def getInitial(self):
         # select a directory
-        d = pcot.config.locations.get('images')
+        d = pcot.config.getDefaultDir('images')
         res = QtWidgets.QFileDialog.getExistingDirectory(None, 'Directory for images',
                                                          os.path.expanduser(d))
         if res != '':
@@ -232,8 +233,7 @@ class MultifileMethodWidget(MethodWidget):
                                 and IMAGETYPERE.match(f) is not None])
         # using the absolute, real path
         self.method.dir = os.path.realpath(dr)
-        pcot.config.locations['images'] = self.method.dir
-        pcot.config.save()
+        pcot.config.setDefaultDir('images', self.method.dir)
         # rebuild the model
         self.buildModel()
 

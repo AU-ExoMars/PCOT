@@ -16,10 +16,9 @@ from pcot.xform import XFormType, xformtype, XFormException
 
 IMAGEMODE_SOURCE = 0
 IMAGEMODE_DEST = 1
-IMAGEMODE_BOTH = 2
-IMAGEMODE_RESULT = 3
+IMAGEMODE_RESULT = 2
 
-IMAGEMODE_CT = 4
+IMAGEMODE_CT = 3
 
 
 # channel-agnostic RGB of an image
@@ -139,13 +138,11 @@ class XFormManualRegister(XFormType):
                 img = prep(fixedImg)
             elif node.imagemode == IMAGEMODE_SOURCE:
                 img = prep(movingImg)
-            elif node.imagemode == IMAGEMODE_RESULT:
+            else:
                 if node.img is not None:
                     img = prep(node.img)
                 else:
                     img = None
-            else:
-                img = (prep(movingImg) + prep(fixedImg)) / 2
 
             node.movingImg = movingImg
 
@@ -251,7 +248,6 @@ class TabManualReg(pcot.ui.tabs.Tab):
 
         self.nodeChanged()  # doing this FIRST so signals don't go to slots during setup.
 
-        self.w.radioBoth.toggled.connect(self.radioViewToggled)
         self.w.radioSource.toggled.connect(self.radioViewToggled)
         self.w.radioDest.toggled.connect(self.radioViewToggled)
         self.w.radioResult.toggled.connect(self.radioViewToggled)
@@ -273,9 +269,7 @@ class TabManualReg(pcot.ui.tabs.Tab):
 
     def radioViewToggled(self):
         self.mark()
-        if self.w.radioBoth.isChecked():
-            self.node.imagemode = IMAGEMODE_BOTH
-        elif self.w.radioSource.isChecked():
+        if self.w.radioSource.isChecked():
             self.node.imagemode = IMAGEMODE_SOURCE
         elif self.w.radioDest.isChecked():
             self.node.imagemode = IMAGEMODE_DEST
@@ -303,7 +297,6 @@ class TabManualReg(pcot.ui.tabs.Tab):
         self.w.canvas.setMapping(self.node.mapping)
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)
-        self.w.radioBoth.setChecked(self.node.imagemode == IMAGEMODE_BOTH)
         self.w.radioSource.setChecked(self.node.imagemode == IMAGEMODE_SOURCE)
         self.w.radioDest.setChecked(self.node.imagemode == IMAGEMODE_DEST)
         self.w.radioResult.setChecked(self.node.imagemode == IMAGEMODE_RESULT)

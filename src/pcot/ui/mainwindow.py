@@ -107,7 +107,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     ## @var recentActs
     # QActions for recent file list
-    recentActs: List[QAction]
+    recentActs: List[QAction] = []
 
     windows = []  # list of all main windows open
 
@@ -136,8 +136,6 @@ class MainUI(ui.tabs.DockableTabWindow):
             self.graph = doc.graph
 
         self.doc = doc
-
-        self.recentActs = []
 
         self.setWindowTitle(ui.app().applicationName() + ' ' + ui.app().applicationVersion())
         self.rebuildRecents()
@@ -237,18 +235,21 @@ class MainUI(ui.tabs.DockableTabWindow):
         # add recent files to menu, removing old ones first. Note that recent files must be at the end
         # of the menu for this to work!
 
-        for act in self.recentActs:
+        print("REBUILDING RECENTS")
+        for act in MainUI.recentActs:
+            print(" REMOVING ACTION {} {}".format(act,act.data()))
             self.menuFile.removeAction(act)
-        self.recentActs = []
+        MainUI.recentActs = []
 
         recents = pcot.config.getRecents()
         if len(recents) > 0:
             for x in recents:
                 act = QAction(x, parent=self)
+                print("Adding action {} {}".format(act,x))
                 act.setData(x)
                 self.menuFile.addAction(act)
                 act.triggered.connect(self.loadRecent)
-                self.recentActs.append(act)
+                MainUI.recentActs.append(act)
 
     ## is this a macro?
     def isMacro(self):
@@ -339,7 +340,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     ## the "save as" menu handler
     def saveAsAction(self):
         res = QtWidgets.QFileDialog.getSaveFileName(self, 'Save file',
-                                                    os.path.expanduser(pcot.config.locations['pcotfiles']),
+                                                    os.path.expanduser(pcot.config.getDefaultDir('pcotfiles')),
                                                     "PCOT files (*.pcot)")
         if res[0] != '':
             path = res[0]
@@ -351,7 +352,7 @@ class MainUI(ui.tabs.DockableTabWindow):
             self.save(path)
             self.saveFileName = path
             ui.log("Document written to "+path)
-            pcot.config.locations['pcotfiles'] = os.path.dirname(os.path.realpath(res[0]))
+            pcot.config.setDefaultDir('pcotfiles', os.path.dirname(os.path.realpath(res[0])))
 
     ## the "save" menu handler
     def saveAction(self):
@@ -364,7 +365,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     def openAction(self):
         res = QtWidgets.QFileDialog.getOpenFileName(self,
                                                     'Open file',
-                                                    os.path.expanduser(pcot.config.locations['pcotfiles']),
+                                                    os.path.expanduser(pcot.config.getDefaultDir('pcotfiles')),
                                                     "PCOT files (*.pcot)")
         if res[0] != '':
             self.closeAllTabs()

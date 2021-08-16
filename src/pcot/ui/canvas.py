@@ -432,7 +432,7 @@ class Canvas(QtWidgets.QWidget):
         # and change endianness
         img8 = cv.cvtColor(img8, cv.COLOR_RGB2BGR)
         res = QtWidgets.QFileDialog.getSaveFileName(self, 'Save RGB image as PNG',
-                                                    os.path.expanduser(pcot.config.locations['savedimages']),
+                                                    os.path.expanduser(pcot.config.getDefaultDir('savedimages')),
                                                     "PNG images (*.png)")
         if res[0] != '':
             path = res[0]
@@ -441,7 +441,7 @@ class Canvas(QtWidgets.QWidget):
             if ext != '.png':
                 ext += '.png'
             path = root + ext
-            pcot.config.locations['savedimages'] = os.path.dirname(os.path.realpath(path))
+            pcot.config.setDefaultDir('images', os.path.dirname(os.path.realpath(path)))
             cv.imwrite(path, img8)
             ui.log("Image written to " + path)
 

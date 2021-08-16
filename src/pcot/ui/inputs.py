@@ -125,7 +125,7 @@ class TreeMethodWidget(MethodWidget):
         # set up the file tree
         self.dirModel = QFileSystemModel()
         # pretty ugly way to get hold of the config, done to avoid cyclic imports
-        root = os.path.expanduser(pcot.config.locations.get('images'))
+        root = os.path.expanduser(pcot.config.getDefaultDir('images'))
         if not os.path.isdir(root):
             root = os.path.expanduser("~")
         self.fileEdit.setText(root)
@@ -193,8 +193,7 @@ class TreeMethodWidget(MethodWidget):
             self.method.img = None
             self.method.get()
             self.method.fname = os.path.realpath(self.dirModel.filePath(idx))
-            pcot.config.locations['images'] = os.path.dirname(self.method.fname)
-            pcot.config.save()
+            pcot.config.setDefaultDir('images', os.path.dirname(self.method.fname))
             self.onInputChanged()
 
 

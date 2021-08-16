@@ -121,13 +121,6 @@
          </widget>
         </item>
         <item>
-         <widget class="QRadioButton" name="radioBoth">
-          <property name="text">
-           <string>Both</string>
-          </property>
-         </widget>
-        </item>
-        <item>
          <widget class="QRadioButton" name="radioResult">
           <property name="text">
            <string>Result</string>

@@ -28,8 +28,13 @@ data = configparser.ConfigParser()
 data.read_file(getAssetAsFile('defaults.ini'))
 data.read(['site.cfg', os.path.expanduser('~/.pcot.ini')], encoding='utf_8')
 
-locations = data['Locations']
-default = data['Default']
+
+def getDef(key, fallback='nofallback'):
+    """get a value from the Default section"""
+    if fallback == 'nofallback':
+        return data['Default'][key]
+    else:
+        return data['Default'].get(key, fallback=fallback)
 
 
 class Recents:
@@ -49,14 +54,14 @@ class Recents:
     def fetch(cls):
         for i in range(cls.COUNT):
             name = "Recent{}".format(i)
-            if name in default:
-                cls.paths.append(default[name])
+            if name in data['Default']:
+                cls.paths.append(data['Default'][name])
 
     @classmethod
     def store(cls):
         for i in range(len(cls.paths)):
             name = "Recent{}".format(i)
-            default[name] = cls.paths[i]
+            data['Default'][name] = cls.paths[i]
 
 
 def getRecents():
@@ -72,12 +77,29 @@ def save():
         data.write(f)
 
 
+def setDefaultDir(kind, directory):
+    print("Setting default dir for {} to {}".format(kind, directory))
+    directory = os.path.realpath(directory)
+    data['Locations'][kind] = directory
+    save()
+
+
+def getDefaultDir(kind):
+    directory = data['Locations'][kind]
+    print("Retrieving default dir for {} as {}".format(kind, directory))
+    return directory
+
+
 def addRecent(fn):
     fn = os.path.realpath(os.path.expanduser(fn))  # just make sure.
     Recents.add(fn)
-    locations['pcotfiles'] = os.path.dirname(fn)
+    setDefaultDir('pcotfiles', os.path.dirname(fn))
     save()
 
+
+# These are used to add plugins: main window hooks run when a main window is opened,
+# so that new menu items can be added. Expression function hooks run when the
+# expression evaluator is initialised, so that new user functions can be added.
 
 mainWindowHooks = []
 exprFuncHooks = []
