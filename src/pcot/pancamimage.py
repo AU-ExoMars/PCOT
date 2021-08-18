@@ -13,20 +13,34 @@ import numpy as np
 from pcot.channelsource import IChannelSource, FileChannelSourceRed, FileChannelSourceGreen, FileChannelSourceBlue
 from typing import List, Set, Optional
 from pcot.rois import ROI, ROIPainted
+from pcot.utils import geom
 
 
-## this is the parts of an image cube which are covered by the active ROIs
-# in that image. It consists of
-# * the image cropped to the bounding box of the ROIs. NOTE THAT this
-#   is a VIEW INTO THE ORIGINAL IMAGE
-# * the data for that bounding box in the image (x,y,w,h)
-# * a boolean mask the same size as the BB, True for pixels which
-#   should be manipulated in any operation.
-from pcot.utils.deb import Timer
+class ROIBoundsException(Exception):
+    def __init__(self):
+        super().__init__(
+            "Mask not same shape as image: can happen when ROI is out of bounds. Have you loaded a new image?")
 
 
 class SubImageCubeROI:
-    def __init__(self, img, imgToUse=None, roi=None):  # can take another image to get rois from
+    """This is a class representing the parts of an imagecube which are covered by ROIs or an ROI.
+    It consists of
+    * the image cropped to the bounding box of the ROIs; this is a view into the original image.
+    * the data for the BB (x,y,w,h)
+    * a boolean mask the same size as the BB, True for pixels contained in the ROIs and which
+      should be manipulated.
+
+    """
+
+    def __init__(self, img, imgToUse=None, roi=None, clip=False):
+        """
+        img - the image in which we are finding the subimage
+        imgToUse - used if we are actually getting the ROIs from another image
+        roi - used if we are getting the subimage for an arbitrary ROI
+        clip - used if we should clip the ROI to the image; alternative is ROIBoundsException
+
+        Note that ROIBoundsException can still occur if the ROI is entirely outside the image!
+        """
         rois = img.rois if imgToUse is None else imgToUse.rois
         self.channels = img.channels
 
@@ -36,15 +50,30 @@ class SubImageCubeROI:
         if len(rois) > 0:
             # construct a temporary ROI union
             roi = ROI.roiUnion(rois)
-            self.bb = roi.bb()
-            self.mask = roi.mask()
+            self.bb = roi.bb()  # the bounding box within the image
+            self.mask = roi.mask()  # the ROI's mask, same size as the BB
+            imgBB = (0, 0, img.w, img.h)
+            # get intersection of ROI BB and image BB
+            intersect = geom.rectIntersection(self.bb, imgBB)
+            if intersect is None:
+                # no intersection, ROI outside image
+                raise ROIBoundsException()
+
+            if intersect != self.bb:
+                print("SNARK INTERSECT ERROR", intersect, self.bb)
+                # intersection is not equal to ROI BB, we must clip
+                if clip:
+                    raise Exception("SNARK - roi clip not yet implemented")
+                else:
+                    raise ROIBoundsException()
+
             x, y, w, h = self.bb
             self.img = img.img[y:y + h, x:x + w]
 
             if self.img.shape[:2] != self.mask.shape:
-                raise Exception(
-                    "Mask not same shape as image: can happen when ROI is out of bounds. Have you loaded a new image?")
+                raise Exception("Internal error: shape still incorrect after clip")
         else:
+            # here we just make a copy of the image
             self.img = np.copy(img.img)  # make a copy to avoid descendant nodes changing their input nodes' outputs
             self.bb = (0, 0, img.w, img.h)  # whole image
             self.mask = np.full((img.h, img.w), True)  # full mask
@@ -128,8 +157,6 @@ class ChannelMapping:
 
     def __str__(self):
         return "ChannelMapping-{} r{} g{} b{}".format(id(self), self.red, self.green, self.blue)
-
-
 
 
 ## an image - just a numpy array (the image) and a list of ROI objects. The array
@@ -308,7 +335,7 @@ class ImageCube:
         if onlyROI is None:
             for r in self.rois:
                 r.draw(rgb)
-        elif isinstance(onlyROI,collections.abc.Sequence):
+        elif isinstance(onlyROI, collections.abc.Sequence):
             for r in onlyROI:
                 r.draw(rgb)
         else:

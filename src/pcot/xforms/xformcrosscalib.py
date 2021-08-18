@@ -191,8 +191,8 @@ class XFormCrossCalib(XFormType):
 
         factors = []
         for (sx, sy), (dx, dy) in zip(n.src, n.dest):
-            s = srcImg.subimage(roi=ROICircle(sx, sy, 10))
-            d = destImg.subimage(roi=ROICircle(dx, dy, 10))
+            s = srcImg.subimage(roi=ROICircle(sx, sy, 100))
+            d = destImg.subimage(roi=ROICircle(dx, dy, 100))
             smean = s.masked().mean(axis=(0, 1))
             dmean = d.masked().mean(axis=(0, 1))
 

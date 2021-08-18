@@ -235,9 +235,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         # add recent files to menu, removing old ones first. Note that recent files must be at the end
         # of the menu for this to work!
 
-        print("REBUILDING RECENTS")
         for act in MainUI.recentActs:
-            print(" REMOVING ACTION {} {}".format(act,act.data()))
             self.menuFile.removeAction(act)
         MainUI.recentActs = []
 
@@ -245,7 +243,6 @@ class MainUI(ui.tabs.DockableTabWindow):
         if len(recents) > 0:
             for x in recents:
                 act = QAction(x, parent=self)
-                print("Adding action {} {}".format(act,x))
                 act.setData(x)
                 self.menuFile.addAction(act)
                 act.triggered.connect(self.loadRecent)
