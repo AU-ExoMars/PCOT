@@ -5,6 +5,7 @@ import cv2 as cv
 from scipy import ndimage
 
 from pcot.utils import text, serialiseFields, deserialiseFields
+from pcot.utils.geom import Rect
 
 
 class BadOpException(Exception):
@@ -19,7 +20,7 @@ class ROI:
     """definition of base type for regions of interest - this is useful in itself
     because it defines an ROI consisting of a predefined BB and mask."""
 
-    def __init__(self, bbrect=None, maskimg=None):
+    def __init__(self, bbrect: Rect = None, maskimg: np.array = None):
         """Ctor. ROIs have a label, which is used to label data in nodes like 'spectrum' and appears in annotations"""
         self.label = None
         self.bbrect = bbrect
@@ -40,13 +41,13 @@ class ROI:
         self.drawbg = drawbg
 
     def bb(self):
-        """return a (x,y,w,h) tuple describing the bounding box for this ROI"""
+        """return a Rect describing the bounding box for this ROI"""
         return self.bbrect
 
     def crop(self, img):
         """return an image cropped to the BB"""
-        x, y, w, h = self.bb()
-        return img.img[y:y + h, x:x + w]
+        x, y, x2, y2 = self.bb().corners()
+        return img.img[y:y2, x:x2]
 
     def mask(self):
         """return a boolean mask which, when imposed on the cropped image, gives the ROI. Or none in which case there is no mask.
@@ -80,8 +81,8 @@ class ROI:
         # draw into an RGB image
         # first, get the slice into the real image
         if (bb := self.bb()) is not None:
-            x, y, w, h = bb
-            imgslice = img[y:y + h, x:x + w]
+            x, y, x2, y2 = bb.corners()
+            imgslice = img[y:y2, x:x2]
 
             # now get the mask and run sobel edge-detection on it if required
             mask = self.mask()
@@ -107,14 +108,14 @@ class ROI:
         # with the image! Doing this predictably with the thickness function
         # in cv.rectangle is a pain, so I'm doing it by hand.
         if (bb := self.bb()) is not None:
-            x, y, w, h = bb
+            x, y, x2, y2 = bb.corners()
             for i in range(self.fontline):
-                cv.rectangle(rgb, (x - i - 1, y - i - 1), (x + w + i, y + h + i), col, thickness=1)
+                cv.rectangle(rgb, (x - i - 1, y - i - 1), (x2 + i, y2 + i), col, thickness=1)
 
     def drawText(self, rgb: 'ImageCube', col, label=None):
         if (bb := self.bb()) is not None:
-            x, y, w, h = bb
-            ty = y if self.labeltop else y + h
+            x, y, x2, y2 = bb.corners()
+            ty = y if self.labeltop else y2
             if self.fontsize > 0:
                 if label is None:
                     label = self.label
@@ -138,12 +139,12 @@ class ROI:
     def roiUnion(rois):
         bbs = [r.bb() for r in rois]  # get bbs
         bbs = [b for b in bbs if b is not None]
-        if len(bbs)>0:
-            x1 = min([b[0] for b in bbs])
-            y1 = min([b[1] for b in bbs])
-            x2 = max([b[0] + b[2] for b in bbs])
-            y2 = max([b[1] + b[3] for b in bbs])
-            bb = (x1, y1, x2 - x1, y2 - y1)
+        if len(bbs) > 0:
+            x1 = min([b.x for b in bbs])
+            y1 = min([b.y for b in bbs])
+            x2 = max([b.x + b.w for b in bbs])
+            y2 = max([b.y + b.h for b in bbs])
+            bb = Rect(x1, y1, x2 - x1, y2 - y1)
             # now construct the mask, initially all False
             mask = np.full((y2 - y1, x2 - x1), False)
             # and OR the ROIs into it
@@ -159,16 +160,16 @@ class ROI:
             return ROI(bb, mask)
         else:
             # return a null ROI
-            return ROI((0,0,10,10),np.full((10,10),False))
+            return ROI(Rect(0, 0, 10, 10), np.full((10, 10), False))
 
     @staticmethod
     def roiIntersection(rois):
         bbs = [r.bb() for r in rois]  # get bbs
-        x1 = min([b[0] for b in bbs])
-        y1 = min([b[1] for b in bbs])
-        x2 = max([b[0] + b[2] for b in bbs])
-        y2 = max([b[1] + b[3] for b in bbs])
-        bb = (x1, y1, x2 - x1, y2 - y1)
+        x1 = min([b.x for b in bbs])
+        y1 = min([b.y for b in bbs])
+        x2 = max([b.x + b.w for b in bbs])
+        y2 = max([b.y + b.h for b in bbs])
+        bb = Rect(x1, y1, x2 - x1, y2 - y1)
         # now construct the mask, initially all True
         mask = np.full((y2 - y1, x2 - x1), True)
         # and AND the ROIs into it
@@ -195,11 +196,11 @@ class ROI:
         # the two ROIs overlap, so our resulting ROI will be the same size as the union of both.
         # Wasteful but easy.
         bbs = [r.bb() for r in (self, other)]  # get bbs
-        x1 = min([b[0] for b in bbs])
-        y1 = min([b[1] for b in bbs])
-        x2 = max([b[0] + b[2] for b in bbs])
-        y2 = max([b[1] + b[3] for b in bbs])
-        bb = (x1, y1, x2 - x1, y2 - y1)
+        x1 = min([b.x for b in bbs])
+        y1 = min([b.y for b in bbs])
+        x2 = max([b.x + b.w for b in bbs])
+        y2 = max([b.y + b.h for b in bbs])
+        bb = Rect(x1, y1, x2 - x1, y2 - y1)
         # now construct the mask, initially all False
         mask = np.full((y2 - y1, x2 - x1), False)
 
@@ -250,7 +251,7 @@ class ROIRect(ROI):
     def bb(self):
         if self.x < 0:
             return None
-        return self.x, self.y, self.w, self.h
+        return Rect(self.x, self.y, self.w, self.h)
 
     def details(self):
         """Information string on this ROI."""
@@ -307,7 +308,7 @@ class ROICircle(ROI):
     def bb(self):
         if self.x < 0:
             return None
-        return self.x - self.r, self.y - self.r, self.r * 2, self.r * 2
+        return Rect(self.x - self.r, self.y - self.r, self.r * 2, self.r * 2)
 
     def mask(self):
         # there are a few ways we can generate a circular
@@ -356,7 +357,7 @@ class ROIPainted(ROI):
             h, w = mask.shape[:2]
             self.imgw = w
             self.imgh = h
-            self.bbrect = (0, 0, w, h)
+            self.bbrect = Rect(0, 0, w, h)
             self.map = np.zeros((h, w), dtype=np.uint8)
             self.map[mask] = 255
         self.drawEdge = True
@@ -388,11 +389,13 @@ class ROIPainted(ROI):
 
     def serialise(self):
         d = super().serialise()
-        return serialiseFields(self, ['bbrect', 'map'], d=d)
+        d['bbrect'] = self.bbrect.astuple() if self.bbrect else None
+        return serialiseFields(self, ['map'], d=d)
 
     def deserialise(self, d):
         super().deserialise(d)
-        deserialiseFields(self, d, ['bbrect', 'map'])
+        self.bbrect = Rect.fromtuple(d['bbrect'])
+        deserialiseFields(self, d, ['map'])
 
     def mask(self):
         """return a boolean array, same size as BB"""
@@ -407,8 +410,8 @@ class ROIPainted(ROI):
         fullsize = np.zeros((self.imgh, self.imgw), dtype=np.uint8)
         # splice in existing data, if there is any!
         if self.bbrect is not None:
-            bbx, bby, bbw, bbh = self.bbrect
-            fullsize[bby:bby + bbh, bbx:bbx + bbw] = self.map
+            bbx, bby, bbx2, bby2 = self.bbrect.corners()
+            fullsize[bby:bby2, bbx:bbx2] = self.map
         if draw is not None:
             # do extra drawing
             draw(fullsize)
@@ -423,7 +426,7 @@ class ROIPainted(ROI):
             # cut out the new data
             self.map = fullsize[ymin:ymax, xmin:xmax]
             # construct the new BB
-            self.bbrect = (int(xmin), int(ymin), int(xmax - xmin), int(ymax - ymin))
+            self.bbrect = Rect(int(xmin), int(ymin), int(xmax - xmin), int(ymax - ymin))
         else:
             self.bbrect = None
             self.map = None
@@ -483,7 +486,7 @@ class ROIPoly(ROI):
         ymin = min([p[1] for p in self.points])
         ymax = max([p[1] for p in self.points])
 
-        return xmin, ymin, xmax - xmin, ymax - ymin
+        return Rect(xmin, ymin, xmax - xmin, ymax - ymin)
 
     def serialise(self):
         d = super().serialise()

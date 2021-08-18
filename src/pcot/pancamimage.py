@@ -54,7 +54,7 @@ class SubImageCubeROI:
             self.mask = roi.mask()  # the ROI's mask, same size as the BB
             imgBB = (0, 0, img.w, img.h)
             # get intersection of ROI BB and image BB
-            intersect = geom.rectIntersection(self.bb, imgBB)
+            intersect = self.bb.intersection(imgBB)
             if intersect is None:
                 # no intersection, ROI outside image
                 raise ROIBoundsException()

@@ -5,6 +5,7 @@
 import os
 import traceback
 from typing import List, Optional, OrderedDict, ClassVar
+from zipfile import BadZipFile
 
 from PyQt5 import QtWidgets, uic, QtGui
 from PyQt5.QtCore import Qt
@@ -382,7 +383,10 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     ## "paste" menu/keypress
     def pasteAction(self):
-        self.graph.scene.paste()
+        try:
+            self.graph.scene.paste()
+        except Exception as e:
+            ui.error("Clipboard does not contain valid PCOT data")
 
     ## "cut menu/keypress
     def cutAction(self):
