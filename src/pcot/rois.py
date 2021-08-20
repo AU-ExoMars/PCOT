@@ -2,6 +2,7 @@ from collections import namedtuple
 
 import numpy as np
 import cv2 as cv
+from numpy import ndarray
 from scipy import ndimage
 
 from pcot.utils import text, serialiseFields, deserialiseFields
@@ -11,6 +12,12 @@ from pcot.utils.geom import Rect
 class BadOpException(Exception):
     def __init__(self):
         super().__init__("op not valid")
+
+
+class ROIBoundsException(Exception):
+    def __init__(self):
+        super().__init__(
+            "ROI is out of bounds or entirely outside image. Have you loaded a new image?")
 
 
 ROISERIALISEFIELDS = ['label', 'labeltop', 'colour', 'fontline', 'fontsize', 'drawbg']
@@ -72,20 +79,22 @@ class ROI:
         else:
             return "No ROI"
 
-    def baseDraw(self, img, drawBox=False, drawEdge=True):
+    def baseDraw(self, img: ndarray, drawBox=False, drawEdge=True):
         """Draw the ROI onto an RGB image using the set colour (yellow by default)"""
+        # clip the ROI to the image, perhaps getting a new ROI
+        todraw = self.clipToImage(img)
         if drawBox:
-            self.drawBB(img, self.colour)
-            self.drawText(img, self.colour)  # drawBox will also draw the text (usually)
+            todraw.drawBB(img, self.colour)
+            todraw.drawText(img, self.colour)  # drawBox will also draw the text (usually)
 
         # draw into an RGB image
         # first, get the slice into the real image
-        if (bb := self.bb()) is not None:
+        if (bb := todraw.bb()) is not None:
             x, y, x2, y2 = bb.corners()
             imgslice = img[y:y2, x:x2]
 
             # now get the mask and run sobel edge-detection on it if required
-            mask = self.mask()
+            mask = todraw.mask()
             if drawEdge:
                 sx = ndimage.sobel(mask, axis=0, mode='constant')
                 sy = ndimage.sobel(mask, axis=1, mode='constant')
@@ -97,7 +106,7 @@ class ROI:
             x = np.reshape(x, imgslice.shape)
 
             # write a colour
-            np.putmask(imgslice, x, self.colour)
+            np.putmask(imgslice, x, todraw.colour)
 
     def draw(self, img):
         self.baseDraw(img)
@@ -188,6 +197,25 @@ class ROI:
             # and AND the mask by the work mask.
             mask &= workMask
         return ROI(bb, mask)
+
+    def clipToImage(self, img: ndarray):
+        # clip the ROI to the image. If it doesn't require clipping, just returns the ROI. If it does,
+        # returns a new basic ROI. Best not use this for standard drawing, unless you're using the basic
+        # draw method anyway, because you'll lose the points and other nuances.
+        bb = self.bb()
+        h, w = img.shape[:2]
+        intersect = bb.intersection(Rect(0, 0, w, h))
+        if intersect is None:
+            raise ROIBoundsException()
+        if intersect == bb:
+            return self  # intersect of BB with image is same size as BB, so image completely contains ROI.
+        # calculate the top left of the part of the mask we are going to copy
+        maskX = -bb.x if bb.x < 0 else 0
+        maskY = -bb.y if bb.y < 0 else 0
+        # and make the new mask
+        mask = self.mask()[maskY:maskY + intersect.h, maskX:maskX + intersect.w]
+        # construct the ROI.
+        return ROI(intersect, mask)
 
     def __add__(self, other):
         return self.roiUnion([self, other])
@@ -293,9 +321,9 @@ class ROICircle(ROI):
 
     def __init__(self, x=-1, y=0, r=0):
         super().__init__()
-        self.x = x
-        self.y = y
-        self.r = r
+        self.x = int(x)
+        self.y = int(y)
+        self.r = int(r)
         self.colour = (1, 1, 0)  # annotation colour
         self.fontline = 2
         self.fontsize = 10
@@ -344,7 +372,7 @@ def getRadiusFromSlider(sliderVal, imgw, imgh, scale=1.0):
 ## a "painted" ROI
 
 class ROIPainted(ROI):
-    # we can create this ab initio or from a subimage mask
+    # we can create this ab initio or from a subimage mask of an image.
     def __init__(self, mask=None, label=None):
         super().__init__()
         self.label = label

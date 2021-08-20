@@ -12,14 +12,8 @@ import numpy as np
 
 from pcot.channelsource import IChannelSource, FileChannelSourceRed, FileChannelSourceGreen, FileChannelSourceBlue
 from typing import List, Set, Optional
-from pcot.rois import ROI, ROIPainted
+from pcot.rois import ROI, ROIPainted, ROIBoundsException
 from pcot.utils import geom
-
-
-class ROIBoundsException(Exception):
-    def __init__(self):
-        super().__init__(
-            "Mask not same shape as image: can happen when ROI is out of bounds. Have you loaded a new image?")
 
 
 class SubImageCubeROI:
@@ -32,7 +26,7 @@ class SubImageCubeROI:
 
     """
 
-    def __init__(self, img, imgToUse=None, roi=None, clip=False):
+    def __init__(self, img, imgToUse=None, roi=None, clip=True):
         """
         img - the image in which we are finding the subimage
         imgToUse - used if we are actually getting the ROIs from another image
@@ -45,10 +39,11 @@ class SubImageCubeROI:
         self.channels = img.channels
 
         if roi is not None:
+            # we're not using the image ROIs, we're using one passed in. Make a list of it.
             rois = [roi]
 
         if len(rois) > 0:
-            # construct a temporary ROI union
+            # construct a temporary ROI union of all the ROIs on this image
             roi = ROI.roiUnion(rois)
             self.bb = roi.bb()  # the bounding box within the image
             self.mask = roi.mask()  # the ROI's mask, same size as the BB
@@ -58,12 +53,12 @@ class SubImageCubeROI:
             if intersect is None:
                 # no intersection, ROI outside image
                 raise ROIBoundsException()
-
             if intersect != self.bb:
-                print("SNARK INTERSECT ERROR", intersect, self.bb)
                 # intersection is not equal to ROI BB, we must clip
                 if clip:
-                    raise Exception("SNARK - roi clip not yet implemented")
+                    roi = roi.clipToImage(img)
+                    self.bb = roi.bb()
+                    self.mask = roi.mask()
                 else:
                     raise ROIBoundsException()
 
