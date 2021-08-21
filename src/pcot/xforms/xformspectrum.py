@@ -114,7 +114,7 @@ class XFormSpectrum(XFormType):
     def __init__(self):
         super().__init__("spectrum", "data", "0.0.0")
         self.autoserialise = (
-        'errorbarmode', 'legendFontSize', 'axisFontSize', 'stackSep', 'labelFontSize', 'bottomSpace', 'colourmode')
+        'errorbarmode', 'legendFontSize', 'axisFontSize', 'stackSep', 'labelFontSize', 'bottomSpace', 'colourmode', 'rightSpace')
         for i in range(NUMINPUTS):
             self.addInputConnector(str(i), conntypes.IMG, "a single line in the plot")
         self.addOutputConnector("data", conntypes.DATA, "a CSV output (use 'dump' to read it)")
@@ -129,6 +129,7 @@ class XFormSpectrum(XFormType):
         node.axisFontSize = 8
         node.labelFontSize = 12
         node.bottomSpace = 0
+        node.rightSpace = 0
         node.stackSep = 0
         node.colsByLegend = None  # this is a legend->col dictionary used if colourmode is COLOUR_FROMROIS
         node.data = None
@@ -200,6 +201,7 @@ class TabSpectrum(ui.tabs.Tab):
         self.w.axisFontSpin.valueChanged.connect(self.axisFontSizeChanged)
         self.w.labelFontSpin.valueChanged.connect(self.labelFontSizeChanged)
         self.w.bottomSpaceSpin.valueChanged.connect(self.bottomSpaceChanged)
+        self.w.rightSpaceSpin.valueChanged.connect(self.rightSpaceChanged)
         self.nodeChanged()
 
     def replot(self):
@@ -249,6 +251,8 @@ class TabSpectrum(ui.tabs.Tab):
         ax.legend(fontsize=self.node.legendFontSize)
         ymin, ymax = ax.get_ylim()
         ax.set_ylim(ymin - self.node.bottomSpace / 10, ymax)
+        xmin, xmax = ax.get_xlim()
+        ax.set_xlim(xmin, xmax+self.node.rightSpace*100)
 
         if self.node.stackSep == 0:  # only remove negative ticks if we're labelling the ticks.
             ax.set_yticks([x for x in ax.get_yticks() if x >= 0])
@@ -272,6 +276,11 @@ class TabSpectrum(ui.tabs.Tab):
     def bottomSpaceChanged(self, val):
         self.mark()
         self.node.bottomSpace = val
+        self.changed()
+
+    def rightSpaceChanged(self, val):
+        self.mark()
+        self.node.rightSpace = val
         self.changed()
 
     def legendFontSizeChanged(self, val):
@@ -302,6 +311,7 @@ class TabSpectrum(ui.tabs.Tab):
         self.w.colourmode.setCurrentIndex(self.node.colourmode)
         self.w.stackSepSpin.setValue(self.node.stackSep)
         self.w.bottomSpaceSpin.setValue(self.node.bottomSpace)
+        self.w.rightSpaceSpin.setValue(self.node.rightSpace)
         self.w.legendFontSpin.setValue(self.node.legendFontSize)
         self.w.axisFontSpin.setValue(self.node.axisFontSize)
         self.w.labelFontSpin.setValue(self.node.labelFontSize)
