@@ -191,6 +191,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         if self.node.selected is not None:
             self.node.selected.label = t  # except for this special case!
             self.changed()
+        self.w.canvas.setFocus(Qt.OtherFocusReason)
 
     def fontLineChanged(self, i):
         self.mark()

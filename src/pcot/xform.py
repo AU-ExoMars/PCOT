@@ -745,19 +745,20 @@ class XForm:
                     if autoPerform:
                         other.graph.changed(other)  # perform the input node; the output should perform
 
-    def disconnect(self, inputIdx):
+    def disconnect(self, inputIdx, perform=True):
         """disconnect an input"""
         if 0 <= inputIdx < len(self.inputs):
             if self.inputs[inputIdx] is not None:
                 n, i = self.inputs[inputIdx]
                 n.decreaseChildCount(self)
                 self.inputs[inputIdx] = None
-                self.graph.changed(self)  # run perform safely
+                if perform:
+                    self.graph.changed(self)  # run perform safely
 
     def disconnectAll(self):
         """disconnect all inputs and outputs prior to removal"""
         for i in range(0, len(self.inputs)):
-            self.disconnect(i)
+            self.disconnect(i, perform=False)
         for n, v in self.children.items():
             # remove all inputs which reference this node
             for i in range(0, len(n.inputs)):
