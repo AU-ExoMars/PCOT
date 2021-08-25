@@ -1120,6 +1120,7 @@ class XFormGraph:
 
         # force a rebuild of the scene; error states may have changed.
         self.rebuildGraphics()
+        ui.msg("Perform complete")
 
     def showPerformance(self):
         """show how long each node took to run"""

@@ -334,10 +334,6 @@ class ROICircle(ROI):
         self.fontsize = 10
         self.drawBox = False
 
-    def details(self):
-        """Information string on this ROI."""
-        return "details() should not be called"
-
     def bb(self):
         if self.x < 0:
             return None

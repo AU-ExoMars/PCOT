@@ -128,11 +128,13 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
         self.w.fontline.valueChanged.connect(self.fontLineChanged)
         self.w.drawbg.stateChanged.connect(self.drawbgChanged)
-        self.w.caption.textChanged.connect(self.textChanged)
+        self.w.caption.returnPressed.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
         self.w.clearButton.pressed.connect(self.clearPressed)
         self.w.recolour.pressed.connect(self.recolourPressed)
-        self.w.dotSize.valueChanged.connect(self.dotSizeChanged)
+        self.w.dotSize.sliderPressed.connect(self.justMark)
+        self.w.dotSize.valueChanged.connect(self.dotSizeChanging)
+        self.w.dotSize.sliderReleased.connect(self.dotSizeChanged)
         self.w.canvas.canvas.setMouseTracking(True)
         self.mousePos = None
         self.dragging = False
@@ -145,9 +147,23 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.node.drawbg = (val != 0)
         self.changed()
 
-    def dotSizeChanged(self, val):
-        self.mark()
+    def getDotRadius(self):
+        n = self.node
+        r = int(getRadiusFromSlider(n.dotSize, n.img.w, n.img.h))
+        return 1 if r<1 else r
+
+    def dotSizeChanging(self, val):
         self.node.dotSize = val
+        if self.node.selected is not None:
+            self.mark()
+            self.node.selected.r = self.getDotRadius()
+        self.node.uichange()
+        self.w.canvas.redisplay()
+
+    def justMark(self):
+        self.mark()
+
+    def dotSizeChanged(self):
         self.changed()
 
     def fontSizeChanged(self, i):
@@ -170,9 +186,8 @@ class TabMultiDot(pcot.ui.tabs.Tab):
             self.node.rois = []
             self.changed()
 
-    def textChanged(self, t):
-        # no need to mark as changed; this just sets the prefix for new items
-        self.node.prefix = t
+    def textChanged(self):
+        t = self.w.caption.text()
         if self.node.selected is not None:
             self.node.selected.label = t  # except for this special case!
             self.changed()
@@ -190,6 +205,13 @@ class TabMultiDot(pcot.ui.tabs.Tab):
             if self.node.selected is not None:
                 self.node.selected.colour = col
             self.changed()
+
+    # call this when the selected state changes; changes the enabled state of contropls which
+    # allow the selected node to be edited.
+    def updateSelected(self):
+        b = self.node.selected is not None
+        self.w.caplabel.setEnabled(b)
+        self.w.caption.setEnabled(b)
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
@@ -232,7 +254,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         if self.dragging and node.selected is not None:
             node.selected.x = x
             node.selected.y = y
-            node.type.uichange(node)
+            node.uichange()
             self.w.canvas.redisplay()
 
         self.w.canvas.update()
@@ -249,8 +271,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
                     break
                 idx = idx + 1  # increment and keep looking
             # create ROI at correct radius, label etc. and add to list.
-            rad = int(getRadiusFromSlider(node.dotSize, node.img.w, node.img.h))
-            r = ROICircle(x, y, rad)
+            r = ROICircle(x, y, self.getDotRadius())
             r.label = node.prefix + str(idx)
             r.colour = node.colour
             node.rois.append(r)
@@ -263,7 +284,8 @@ class TabMultiDot(pcot.ui.tabs.Tab):
                 if d < 100 and (mindist is None or d < mindist):
                     node.selected = r
                     mindist = d
-        node.type.uichange(node)
+        self.updateSelected()
+        node.uichange()
         self.w.canvas.redisplay()
         self.w.canvas.update()
 
@@ -276,6 +298,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
                 n.rois.remove(n.selected)
                 n.selected = None
                 self.dragging = False  # just in case
+                self.updateSelected()
                 self.changed()
 
     def canvasMouseReleaseEvent(self, x, y, e):
