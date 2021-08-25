@@ -83,30 +83,31 @@ class ROI:
         """Draw the ROI onto an RGB image using the set colour (yellow by default)"""
         # clip the ROI to the image, perhaps getting a new ROI
         todraw = self.clipToImage(img)
-        if drawBox:
-            todraw.drawBB(img, self.colour)
-            todraw.drawText(img, self.colour)  # drawBox will also draw the text (usually)
+        if todraw is not None:
+            if drawBox:
+                todraw.drawBB(img, self.colour)
+                todraw.drawText(img, self.colour)  # drawBox will also draw the text (usually)
 
-        # draw into an RGB image
-        # first, get the slice into the real image
-        if (bb := todraw.bb()) is not None:
-            x, y, x2, y2 = bb.corners()
-            imgslice = img[y:y2, x:x2]
+            # draw into an RGB image
+            # first, get the slice into the real image
+            if (bb := todraw.bb()) is not None:
+                x, y, x2, y2 = bb.corners()
+                imgslice = img[y:y2, x:x2]
 
-            # now get the mask and run sobel edge-detection on it if required
-            mask = todraw.mask()
-            if drawEdge:
-                sx = ndimage.sobel(mask, axis=0, mode='constant')
-                sy = ndimage.sobel(mask, axis=1, mode='constant')
-                mask = np.hypot(sx, sy)
+                # now get the mask and run sobel edge-detection on it if required
+                mask = todraw.mask()
+                if drawEdge:
+                    sx = ndimage.sobel(mask, axis=0, mode='constant')
+                    sy = ndimage.sobel(mask, axis=1, mode='constant')
+                    mask = np.hypot(sx, sy)
 
-            # flatten and repeat each element of the mask for each channel
-            x = np.repeat(np.ravel(mask), 3)
-            # and reshape into the same shape as the image slice
-            x = np.reshape(x, imgslice.shape)
+                # flatten and repeat each element of the mask for each channel
+                x = np.repeat(np.ravel(mask), 3)
+                # and reshape into the same shape as the image slice
+                x = np.reshape(x, imgslice.shape)
 
-            # write a colour
-            np.putmask(imgslice, x, todraw.colour)
+                # write a colour
+                np.putmask(imgslice, x, todraw.colour)
 
     def draw(self, img):
         self.baseDraw(img)
@@ -201,21 +202,25 @@ class ROI:
     def clipToImage(self, img: ndarray):
         # clip the ROI to the image. If it doesn't require clipping, just returns the ROI. If it does,
         # returns a new basic ROI. Best not use this for standard drawing, unless you're using the basic
-        # draw method anyway, because you'll lose the points and other nuances.
+        # draw method anyway, because you'll lose the points and other nuances. Returns None if there is
+        # no BB (i.e. the ROI hasn't been set to anything).
         bb = self.bb()
-        h, w = img.shape[:2]
-        intersect = bb.intersection(Rect(0, 0, w, h))
-        if intersect is None:
-            raise ROIBoundsException()
-        if intersect == bb:
-            return self  # intersect of BB with image is same size as BB, so image completely contains ROI.
-        # calculate the top left of the part of the mask we are going to copy
-        maskX = -bb.x if bb.x < 0 else 0
-        maskY = -bb.y if bb.y < 0 else 0
-        # and make the new mask
-        mask = self.mask()[maskY:maskY + intersect.h, maskX:maskX + intersect.w]
-        # construct the ROI.
-        return ROI(intersect, mask)
+        if bb is not None:
+            h, w = img.shape[:2]
+            intersect = bb.intersection(Rect(0, 0, w, h))
+            if intersect is None:
+                raise ROIBoundsException()
+            if intersect == bb:
+                return self  # intersect of BB with image is same size as BB, so image completely contains ROI.
+            # calculate the top left of the part of the mask we are going to copy
+            maskX = -bb.x if bb.x < 0 else 0
+            maskY = -bb.y if bb.y < 0 else 0
+            # and make the new mask
+            mask = self.mask()[maskY:maskY + intersect.h, maskX:maskX + intersect.w]
+            # construct the ROI.
+            return ROI(intersect, mask)
+        else:
+            return None
 
     def __add__(self, other):
         return self.roiUnion([self, other])

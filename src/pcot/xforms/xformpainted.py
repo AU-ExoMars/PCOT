@@ -207,4 +207,5 @@ class TabPainted(pcot.ui.tabs.Tab):
         self.w.canvas.update()
 
     def canvasMouseReleaseEvent(self, x, y, e):
+        self.mark()
         self.mouseDown = False
