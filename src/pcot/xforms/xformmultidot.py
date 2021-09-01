@@ -1,4 +1,5 @@
 import matplotlib
+import matplotlib
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPainter, QColor, QKeyEvent
 from PyQt5.QtWidgets import QMessageBox
@@ -8,7 +9,7 @@ import pcot.utils.colour
 import pcot.utils.text
 from pcot import ui, conntypes
 from pcot.conntypes import Datum
-from pcot.rois import ROICircle, getRadiusFromSlider
+from pcot.rois import ROICircle
 from pcot.xform import xformtype, XFormType
 
 
@@ -49,7 +50,7 @@ class XFormMultiDot(XFormType):
         node.colour = (1, 1, 0)
         node.drawbg = True
         node.prefix = ''
-        node.dotSize = 10  # scale of 0-99 i.e. a slider value. Converted to pixel radius in getRadiusFromSlider()
+        node.dotSize = 10  # dot radius in pixels
         node.previewRadius = None  # previewing needs the image, but that's awkward - so we stash this data in perform()
         node.selected = None  # selected ROICircle
         node.rois = []  # this will be a list of ROICircle
@@ -65,6 +66,7 @@ class XFormMultiDot(XFormType):
             # no image
             node.setOutput(self.OUT_IMG, None)
             node.setOutput(self.OUT_ANNOT, None if inAnnot is None else Datum(conntypes.IMGRGB, inAnnot))
+            node.img = None
         else:
             self.setProps(node, img)
             # copy image and append ROIs to it
@@ -110,7 +112,7 @@ class XFormMultiDot(XFormType):
         node.rois = [r for r in node.rois if r is not None and r.r > 0]
 
     def setProps(self, node, img):
-        node.previewRadius = getRadiusFromSlider(node.dotSize, img.w, img.h)
+        node.previewRadius = node.dotSize
 
     def getROIDesc(self, node):
         n = sum([0 if r is None else 1 for r in node.rois])
@@ -132,9 +134,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.colourButton.pressed.connect(self.colourPressed)
         self.w.clearButton.pressed.connect(self.clearPressed)
         self.w.recolour.pressed.connect(self.recolourPressed)
-        self.w.dotSize.sliderPressed.connect(self.justMark)
-        self.w.dotSize.valueChanged.connect(self.dotSizeChanging)
-        self.w.dotSize.sliderReleased.connect(self.dotSizeChanged)
+        self.w.dotSize.valueChanged.connect(self.dotSizeChanged)
         self.w.canvas.canvas.setMouseTracking(True)
         self.mousePos = None
         self.dragging = False
@@ -147,24 +147,16 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.node.drawbg = (val != 0)
         self.changed()
 
-    def getDotRadius(self):
-        n = self.node
-        r = int(getRadiusFromSlider(n.dotSize, n.img.w, n.img.h))
-        return 1 if r<1 else r
-
-    def dotSizeChanging(self, val):
+    def dotSizeChanged(self, val):
         self.node.dotSize = val
         if self.node.selected is not None:
             self.mark()
-            self.node.selected.r = self.getDotRadius()
-        self.node.uichange()
+            self.node.selected.r = val
+        self.changed()
         self.w.canvas.redisplay()
 
     def justMark(self):
         self.mark()
-
-    def dotSizeChanged(self):
-        self.changed()
 
     def fontSizeChanged(self, i):
         self.mark()
@@ -213,6 +205,12 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         b = self.node.selected is not None
         self.w.caplabel.setEnabled(b)
         self.w.caption.setEnabled(b)
+        if b:
+            # we're selecting a node, so set the text and dot size
+            if self.node.img:
+                r = self.node.selected.r
+                self.w.dotSize.setValue(r)
+            self.w.caption.setText(self.node.selected.label)
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
@@ -272,7 +270,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
                     break
                 idx = idx + 1  # increment and keep looking
             # create ROI at correct radius, label etc. and add to list.
-            r = ROICircle(x, y, self.getDotRadius())
+            r = ROICircle(x, y, self.node.dotSize)
             r.label = node.prefix + str(idx)
             r.colour = node.colour
             node.rois.append(r)
