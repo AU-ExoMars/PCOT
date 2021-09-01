@@ -6,14 +6,20 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>539</width>
+    <width>555</width>
     <height>548</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout">
+  <layout class="QGridLayout" name="gridLayout" columnstretch="2,2,2,0">
    <item row="2" column="1">
     <widget class="QPushButton" name="save">
      <property name="text">
@@ -39,156 +45,168 @@
     </widget>
    </item>
    <item row="0" column="3">
-    <layout class="QFormLayout" name="formLayout">
-     <property name="sizeConstraint">
-      <enum>QLayout::SetDefaultConstraint</enum>
+    <widget class="QWidget" name="controls" native="true">
+     <property name="maximumSize">
+      <size>
+       <width>200</width>
+       <height>16777215</height>
+      </size>
      </property>
-     <item row="0" column="0">
-      <widget class="QLabel" name="label">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="text">
-        <string>Error bars</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="QComboBox" name="errorbarmode">
-       <item>
-        <property name="text">
-         <string>None</string>
+     <layout class="QFormLayout" name="formLayout">
+      <item row="22" column="1">
+       <widget class="QSpinBox" name="stackSepSpin"/>
+      </item>
+      <item row="20" column="1">
+       <widget class="QComboBox" name="errorbarmode">
+        <item>
+         <property name="text">
+          <string>None</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>One standard error</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>One standard deviation</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="19" column="1">
+       <widget class="QSpinBox" name="legendFontSpin">
+        <property name="minimum">
+         <number>1</number>
         </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>One standard error</string>
+        <property name="maximum">
+         <number>20</number>
         </property>
-       </item>
-       <item>
+       </widget>
+      </item>
+      <item row="18" column="1">
+       <widget class="QSpinBox" name="labelFontSpin"/>
+      </item>
+      <item row="10" column="1">
+       <widget class="QSpinBox" name="axisFontSpin"/>
+      </item>
+      <item row="9" column="1">
+       <widget class="QSpinBox" name="bottomSpaceSpin"/>
+      </item>
+      <item row="8" column="1">
+       <widget class="QComboBox" name="colourmode">
+        <item>
+         <property name="text">
+          <string>From ROIs</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Colour Scheme 1</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Colour Scheme 2</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="6" column="1">
+       <widget class="QSpinBox" name="rightSpaceSpin"/>
+      </item>
+      <item row="5" column="1">
+       <widget class="QSpinBox" name="lineLabelSpin"/>
+      </item>
+      <item row="6" column="0">
+       <widget class="QLabel" name="label_9">
         <property name="text">
-         <string>One standard deviation</string>
+         <string>Right space</string>
         </property>
-       </item>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label_2">
-       <property name="text">
-        <string>Legend font</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QSpinBox" name="legendFontSpin">
-       <property name="minimum">
-        <number>1</number>
-       </property>
-       <property name="maximum">
-        <number>20</number>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="label_4">
-       <property name="text">
-        <string>Axis tick font</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QSpinBox" name="axisFontSpin"/>
-     </item>
-     <item row="4" column="0">
-      <widget class="QLabel" name="label_5">
-       <property name="text">
-        <string>Bottom space</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="1">
-      <widget class="QSpinBox" name="bottomSpaceSpin"/>
-     </item>
-     <item row="6" column="0">
-      <widget class="QLabel" name="label_6">
-       <property name="text">
-        <string>Line labels</string>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="1">
-      <widget class="QSpinBox" name="lineLabelSpin"/>
-     </item>
-     <item row="7" column="0">
-      <widget class="QLabel" name="label_7">
-       <property name="text">
-        <string>Axis label font</string>
-       </property>
-      </widget>
-     </item>
-     <item row="7" column="1">
-      <widget class="QSpinBox" name="labelFontSpin"/>
-     </item>
-     <item row="8" column="0">
-      <widget class="QLabel" name="label_8">
-       <property name="text">
-        <string>Colour</string>
-       </property>
-      </widget>
-     </item>
-     <item row="8" column="1">
-      <widget class="QComboBox" name="colourmode">
-       <item>
+       </widget>
+      </item>
+      <item row="20" column="0">
+       <widget class="QLabel" name="label">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="text">
-         <string>From ROIs</string>
+         <string>Error bars</string>
         </property>
-       </item>
-       <item>
+        <property name="alignment">
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="19" column="0">
+       <widget class="QLabel" name="label_2">
         <property name="text">
-         <string>Colour Scheme 1</string>
+         <string>Legend font</string>
         </property>
-       </item>
-       <item>
+       </widget>
+      </item>
+      <item row="22" column="0">
+       <widget class="QLabel" name="label_3">
         <property name="text">
-         <string>Colour Scheme 2</string>
+         <string>Stack Sep</string>
         </property>
-       </item>
-      </widget>
-     </item>
-     <item row="5" column="1">
-      <widget class="QSpinBox" name="rightSpaceSpin"/>
-     </item>
-     <item row="5" column="0">
-      <widget class="QLabel" name="label_9">
-       <property name="text">
-        <string>Right space</string>
-       </property>
-      </widget>
-     </item>
-     <item row="10" column="1">
-      <widget class="QSpinBox" name="stackSepSpin"/>
-     </item>
-     <item row="10" column="0">
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>Stack Sep</string>
-       </property>
-      </widget>
-     </item>
-     <item row="9" column="0" colspan="2">
-      <widget class="QPushButton" name="reorderButton">
-       <property name="text">
-        <string>Reorder plots...</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
+       </widget>
+      </item>
+      <item row="10" column="0">
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>Axis tick font</string>
+        </property>
+       </widget>
+      </item>
+      <item row="9" column="0">
+       <widget class="QLabel" name="label_5">
+        <property name="text">
+         <string>Bottom space</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="label_6">
+        <property name="text">
+         <string>Line labels</string>
+        </property>
+       </widget>
+      </item>
+      <item row="18" column="0">
+       <widget class="QLabel" name="label_7">
+        <property name="text">
+         <string>Axis label font</string>
+        </property>
+       </widget>
+      </item>
+      <item row="8" column="0">
+       <widget class="QLabel" name="label_8">
+        <property name="text">
+         <string>Colour</string>
+        </property>
+       </widget>
+      </item>
+      <item row="21" column="0" colspan="2">
+       <widget class="QPushButton" name="reorderButton">
+        <property name="text">
+         <string>Reorder plots...</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="2" column="2">
+    <widget class="QPushButton" name="hideButton">
+     <property name="text">
+      <string>Hide Controls</string>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>

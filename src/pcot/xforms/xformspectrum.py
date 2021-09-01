@@ -265,6 +265,7 @@ class TabSpectrum(ui.tabs.Tab):
         self.w.labelFontSpin.valueChanged.connect(self.labelFontSizeChanged)
         self.w.bottomSpaceSpin.valueChanged.connect(self.bottomSpaceChanged)
         self.w.rightSpaceSpin.valueChanged.connect(self.rightSpaceChanged)
+        self.w.hideButton.clicked.connect(self.hideClicked)
         self.nodeChanged()
 
     def replot(self):
@@ -333,6 +334,15 @@ class TabSpectrum(ui.tabs.Tab):
 
     def save(self):
         self.w.mpl.save()
+
+    def hideClicked(self):
+        self.w.controls.setVisible(not self.w.controls.isVisible())
+        self.setHideButtonText()
+
+    def setHideButtonText(self):
+        self.w.hideButton.setText(
+            "Hide controls" if self.w.controls.isVisible() else "Show controls"
+        )
 
     def errorbarmodeChanged(self, mode):
         self.mark()
