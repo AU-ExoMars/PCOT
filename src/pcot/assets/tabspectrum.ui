@@ -105,16 +105,6 @@
      <item row="2" column="1">
       <widget class="QSpinBox" name="axisFontSpin"/>
      </item>
-     <item row="3" column="0">
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>Stack Sep</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1">
-      <widget class="QSpinBox" name="stackSepSpin"/>
-     </item>
      <item row="4" column="0">
       <widget class="QLabel" name="label_5">
        <property name="text">
@@ -178,6 +168,23 @@
       <widget class="QLabel" name="label_9">
        <property name="text">
         <string>Right space</string>
+       </property>
+      </widget>
+     </item>
+     <item row="10" column="1">
+      <widget class="QSpinBox" name="stackSepSpin"/>
+     </item>
+     <item row="10" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>Stack Sep</string>
+       </property>
+      </widget>
+     </item>
+     <item row="9" column="0" colspan="2">
+      <widget class="QPushButton" name="reorderButton">
+       <property name="text">
+        <string>Reorder plots...</string>
        </property>
       </widget>
      </item>
