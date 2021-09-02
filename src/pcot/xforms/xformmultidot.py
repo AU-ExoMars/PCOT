@@ -2,7 +2,7 @@ import matplotlib
 import matplotlib
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPainter, QColor, QKeyEvent
-from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtWidgets import QMessageBox, QSpinBox
 
 import pcot.ui.tabs
 import pcot.utils.colour
@@ -134,7 +134,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.colourButton.pressed.connect(self.colourPressed)
         self.w.clearButton.pressed.connect(self.clearPressed)
         self.w.recolour.pressed.connect(self.recolourPressed)
-        self.w.dotSize.valueChanged.connect(self.dotSizeChanged)
+        self.w.dotSize.editingFinished.connect(self.dotSizeChanged)
         self.w.canvas.canvas.setMouseTracking(True)
         self.mousePos = None
         self.dragging = False
@@ -147,7 +147,8 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.node.drawbg = (val != 0)
         self.changed()
 
-    def dotSizeChanged(self, val):
+    def dotSizeChanged(self):
+        val = self.w.dotSize.value()
         self.node.dotSize = val
         if self.node.selected is not None:
             self.mark()

@@ -50,7 +50,7 @@
       </sizepolicy>
      </property>
      <property name="text">
-      <string>Dot Size</string>
+      <string>Dot Size (pixels)</string>
      </property>
     </widget>
    </item>
@@ -129,7 +129,7 @@
     </widget>
    </item>
    <item row="2" column="2">
-    <widget class="QSpinBox" name="dotSize"/>
+    <widget class="MouseReleaseSpinBox" name="dotSize"/>
    </item>
    <item row="3" column="2">
     <widget class="QLineEdit" name="caption"/>
@@ -142,6 +142,11 @@
    <extends>QWidget</extends>
    <header>pcot.ui.canvas</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>MouseReleaseSpinBox</class>
+   <extends>QSpinBox</extends>
+   <header>pcot.ui.smallwidgets</header>
   </customwidget>
  </customwidgets>
  <resources/>
