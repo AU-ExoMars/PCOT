@@ -28,6 +28,7 @@ class XformRect(XFormROIType):
         node.caption = ''
         node.captiontop = False
         node.fontsize = 10
+        node.drawbg = True
         node.fontline = 2
         node.colour = (1, 1, 0)
         node.roi = ROIRect()
@@ -39,7 +40,7 @@ class XformRect(XFormROIType):
         node.roi.deserialise(d)
 
     def setProps(self, node, img):
-        node.roi.setDrawProps(node.colour, node.fontsize, node.fontline)
+        node.roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.fontline, node.drawbg)
 
 
 class TabRect(pcot.ui.tabs.Tab):
@@ -49,6 +50,7 @@ class TabRect(pcot.ui.tabs.Tab):
         self.w.canvas.paintHook = self
         self.w.canvas.mouseHook = self
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
+        self.w.drawbg.stateChanged.connect(self.drawbgChanged)
         self.w.fontline.valueChanged.connect(self.fontLineChanged)
         self.w.caption.textChanged.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
@@ -58,6 +60,11 @@ class TabRect(pcot.ui.tabs.Tab):
         self.dontSetText = False
         # sync tab with node
         self.nodeChanged()
+
+    def drawbgChanged(self, val):
+        self.mark()
+        self.node.drawbg = (val != 0)
+        self.changed()
 
     def topChanged(self, checked):
         self.mark()
@@ -112,6 +119,7 @@ class TabRect(pcot.ui.tabs.Tab):
         self.w.fontsize.setValue(self.node.fontsize)
         self.w.fontline.setValue(self.node.fontline)
         self.w.captionTop.setChecked(self.node.captiontop)
+        self.w.drawbg.setChecked(self.node.drawbg)
         r, g, b = [x * 255 for x in self.node.colour]
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
 

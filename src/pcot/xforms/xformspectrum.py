@@ -3,7 +3,10 @@ import pprint
 
 import numpy as np
 import matplotlib
+from PyQt5 import uic, QtWidgets
+from PyQt5.QtWidgets import QDialog
 
+import pcot
 import pcot.conntypes as conntypes
 import pcot.ui as ui
 from pcot.channelsource import IChannelSource
@@ -22,14 +25,16 @@ def getSpectrum(chanImg, mask):
     return a.mean(), a.std()
 
 
-# return wavelength if channel is a single source from a filtered input, else -1.
+# return wavelength if all sources in channel are of the same wavelength, else -1.
 def wavelength(channelNumber, img):
-    source = img.sources[channelNumber]
-    if len(source) != 1:
+    sources = img.sources[channelNumber]
+    # all the sources in this channel should have the same cwl
+    wavelengths = set([s.getFilter().cwl for s in sources])
+    if len(wavelengths) != 1:
         return -1
     # looks weird, but just unpacks this single-item set
-    [source] = source
-    return source.getFilter().cwl
+    [cwl] = wavelengths
+    return cwl
 
 
 def processData(table, legend, data, pxct, wavelengths, spectrum, chans, chanlabels):
@@ -38,8 +43,8 @@ def processData(table, legend, data, pxct, wavelengths, spectrum, chans, chanlab
     legend: name of ROI/image
     data: data dictionary
         part of processData's responsibility is to set the entries in here
-            - key is ROI/image name, value is a list of data.
-            - valiue is a list of tuples (chanidx, cwl, mean, sd, labels, pixct)
+            - key is ROI/image name (legend), value is a list of data.
+            - value is a list of tuples (chanidx, cwl, mean, sd, labels, pixct)
     Then a list for each channel, giving
         wavelengths:    cwl of channel
         spectrum        (mean,sd) of intensity across ROI/image for this channel
@@ -68,6 +73,7 @@ def processData(table, legend, data, pxct, wavelengths, spectrum, chans, chanlab
 
     # zip them all together and append to the list for that legend (creating a new list
     # if there isn't one)
+
     if legend not in data:
         data[legend] = []
 
@@ -95,6 +101,21 @@ ERRORBARMODE_NONE = 0
 ERRORBARMODE_STDERROR = 1
 ERRORBARMODE_STDDEV = 2
 
+COLOUR_FROMROIS = 0
+COLOUR_SCHEME1 = 1
+COLOUR_SCHEME2 = 2
+
+
+def fixSortList(node):
+    """fix the sortlist, making sure that only legends for data we have are present,
+    and that all of them are present"""
+    # now remove any data from the sort list which are not present in the data
+    legends = node.data.keys()
+    node.sortlist = [x for x in node.sortlist if x in legends]
+    # and add any new items
+    for x in [x for x in legends if x not in node.sortlist]:
+        node.sortlist.append(x)
+
 
 @xformtype
 class XFormSpectrum(XFormType):
@@ -105,8 +126,8 @@ class XFormSpectrum(XFormType):
 
     def __init__(self):
         super().__init__("spectrum", "data", "0.0.0")
-        self.autoserialise = (
-        'errorbarmode', 'legendFontSize', 'axisFontSize', 'stackSep', 'labelFontSize', 'bottomSpace')
+        self.autoserialise = ('sortlist', 'errorbarmode', 'legendFontSize', 'axisFontSize', 'stackSep', 'labelFontSize',
+                              'bottomSpace', 'colourmode', 'rightSpace')
         for i in range(NUMINPUTS):
             self.addInputConnector(str(i), conntypes.IMG, "a single line in the plot")
         self.addOutputConnector("data", conntypes.DATA, "a CSV output (use 'dump' to read it)")
@@ -115,12 +136,16 @@ class XFormSpectrum(XFormType):
         return TabSpectrum(n, w)
 
     def init(self, node):
-        node.errorbarmode = 0
+        node.errorbarmode = ERRORBARMODE_STDDEV
+        node.colourmode = COLOUR_FROMROIS
         node.legendFontSize = 8
         node.axisFontSize = 8
         node.labelFontSize = 12
         node.bottomSpace = 0
+        node.rightSpace = 0
         node.stackSep = 0
+        node.sortlist = []  # list of legends (ROI names) - the order in which spectra should be stacked.
+        node.colsByLegend = None  # this is a legend->col dictionary used if colourmode is COLOUR_FROMROIS
         node.data = None
 
     def perform(self, node):
@@ -129,6 +154,7 @@ class XFormSpectrum(XFormType):
         # have several ROIs each with a different value)
         # For each ROI/image there is a lists of tuples, one for each channel : (chanidx, wavelength, mean, sd, name)
         data = dict()
+        cols = dict()  # colour dictionary for ROIs/images
         for i in range(NUMINPUTS):
             img = node.getInput(i, conntypes.IMG)
             if img is not None:
@@ -137,6 +163,9 @@ class XFormSpectrum(XFormType):
                 wavelengths = [wavelength(x, img) for x in range(img.channels)]
                 chans = [x for x in range(img.channels) if wavelengths[x] > 0]
                 wavelengths = [x for x in wavelengths if x > 0]
+
+                if len(wavelengths) == 0:
+                    raise XFormException("DATA", "no single-wavelength channels in image")
 
                 # generate a list of labels, one for each channel
                 chanlabels = [IChannelSource.stringForSet(img.sources[x],
@@ -150,6 +179,7 @@ class XFormSpectrum(XFormType):
                     spectrum = [getSpectrum(subimg[:, :, i], None) for i in chans]
                     processData(table, legend, data, img.w * img.h,
                                 wavelengths, spectrum, chans, chanlabels)
+                    cols[legend] = (0, 0, 0)  # what colour??
 
                 for roi in img.rois:
                     # only include valid ROIs
@@ -163,25 +193,91 @@ class XFormSpectrum(XFormType):
                     spectrum = [getSpectrum(subimg.img[:, :, i], subimg.mask) for i in chans]
                     processData(table, legend, data, subimg.pixelCount(),
                                 wavelengths, spectrum, chans, chanlabels)
+                    cols[legend] = roi.colour
 
         # now, for each list in the dict, build a new dict of the lists sorted
         # by wavelength
         node.data = {legend: sorted(lst, key=lambda x: x[1]) for legend, lst in data.items()}
+        node.colsByLegend = cols  # we use this if we're using the ROI colours
+        fixSortList(node)
 
         node.setOutput(0, conntypes.Datum(conntypes.DATA, table))
 
 
+class ReorderDialog(QDialog):
+    def __init__(self, parent, node):
+        super().__init__(parent)
+        # load the UI file into the actual dialog (as the UI was created as "dialog with buttons")
+        x = pcot.config.getAssetAsFile('reorderplots.ui')
+        uic.loadUi(x, self)
+        self.upButton.clicked.connect(self.upClicked)
+        self.downButton.clicked.connect(self.downClicked)
+        self.revButton.clicked.connect(self.revClicked)
+        self.listWidget.itemClicked.connect(self.itemClicked)
+        self.node = node
+        # add the items (we're using an item-based system rather than model-based, it's easier)
+        for i in node.sortlist:
+            QtWidgets.QListWidgetItem(i, self.listWidget)
+
+        self.fixUpDown()
+
+    def fixUpDown(self):
+        if self.listWidget.currentRow() < 0:
+            self.upButton.setEnabled(False)
+            self.downButton.setEnabled(False)
+        else:
+            self.upButton.setEnabled(self.listWidget.currentRow() > 0)
+            self.downButton.setEnabled(self.listWidget.currentRow() < len(self.node.sortlist) - 1)
+
+    def itemClicked(self):
+        self.fixUpDown()
+
+    def revClicked(self):
+        items=[]
+        while True:
+            item = self.listWidget.takeItem(0)
+            if item is None:
+                break
+            else:
+                items.append(item)
+        for x in items:
+            self.listWidget.insertItem(0,x)
+
+    def movecur(self, delta):
+        row = self.listWidget.currentRow()
+        if row >= 0:
+            item = self.listWidget.takeItem(row)
+            self.listWidget.insertItem(row + delta, item)
+            self.listWidget.setCurrentItem(item)
+            self.fixUpDown()
+
+    def upClicked(self):
+        self.movecur(-1)
+
+    def downClicked(self):
+        self.movecur(+1)
+
+    def getNewList(self):
+        return [self.listWidget.item(x).text() for x in range(self.listWidget.count())]
+
+
 class TabSpectrum(ui.tabs.Tab):
+    """The tab for the spectrum node"""
+
     def __init__(self, node, w):
         super().__init__(w, node, 'tabspectrum.ui')
         self.w.errorbarmode.currentIndexChanged.connect(self.errorbarmodeChanged)
+        self.w.colourmode.currentIndexChanged.connect(self.colourmodeChanged)
         self.w.replot.clicked.connect(self.replot)
         self.w.save.clicked.connect(self.save)
+        self.w.reorderButton.clicked.connect(self.openReorder)
         self.w.stackSepSpin.valueChanged.connect(self.stackSepChanged)
         self.w.legendFontSpin.valueChanged.connect(self.legendFontSizeChanged)
         self.w.axisFontSpin.valueChanged.connect(self.axisFontSizeChanged)
         self.w.labelFontSpin.valueChanged.connect(self.labelFontSizeChanged)
         self.w.bottomSpaceSpin.valueChanged.connect(self.bottomSpaceChanged)
+        self.w.rightSpaceSpin.valueChanged.connect(self.rightSpaceChanged)
+        self.w.hideButton.clicked.connect(self.hideClicked)
         self.nodeChanged()
 
     def replot(self):
@@ -189,29 +285,43 @@ class TabSpectrum(ui.tabs.Tab):
         # set up the plot
         self.w.mpl.fig.suptitle(self.node.comment)
         ax.cla()  # clear any previous plot
-        cols = matplotlib.cm.get_cmap('Dark2').colors
+
+        # make sure the legend list is correct
+        fixSortList(self.node)
+
+        # pick a colour scheme for multiple plots if we're not getting the colour
+        # from the ROIs
+        if self.node.colourmode == COLOUR_SCHEME2:
+            cols = matplotlib.cm.get_cmap('tab10').colors
+        else:
+            cols = matplotlib.cm.get_cmap('Dark2').colors
 
         # the dict consists of a list of channel data tuples for each image/roi.
         colidx = 0
-        stack = 0  # current stacking value, added to each line's Y
-        stackSep = self.node.stackSep / 10
+        stackSep = self.node.stackSep / 20
 
-        if self.node.stackSep != 0:  # turn off tick labels if we are stacking; the Y values would be deceptive.
+        if stackSep != 0:  # turn off tick labels if we are stacking; the Y values would be deceptive.
             ax.set_yticklabels('')
 
         ax.tick_params(axis='both', labelsize=self.node.axisFontSize)
         ax.set_xlabel('wavelength', fontsize=self.node.labelFontSize)
-        ax.set_ylabel('reflectance', fontsize=self.node.labelFontSize)
+        ax.set_ylabel('reflectance' if stackSep == 0 else 'stacked reflectance',
+                      fontsize=self.node.labelFontSize)
 
-        for legend, x in self.node.data.items():
+        stackpos = 0
+        for legend in self.node.sortlist:
+            x = self.node.data[legend]
             try:
                 [chans, wavelengths, means, sds, labels, pixcounts] = list(zip(*x))  # "unzip" idiom
             except ValueError:
                 raise XFormException("cannot get spectrum - problem with ROIs?")
-            col = cols[colidx % len(cols)]
-            means = [x + stack for x in means]
+            if self.node.colourmode == COLOUR_FROMROIS:
+                col = self.node.colsByLegend[legend]
+            else:
+                col = cols[colidx % len(cols)]
+            means = [x + stackSep * stackpos for x in means]
             ax.plot(wavelengths, means, c=col, label=legend)
-            ax.scatter(wavelengths, means, c=[wav2RGB(x) for x in wavelengths])
+            ax.scatter(wavelengths, means, c=[wav2RGB(x) for x in wavelengths], s=0)
 
             if self.node.errorbarmode != ERRORBARMODE_NONE:
                 # calculate standard errors from standard deviations
@@ -220,10 +330,14 @@ class TabSpectrum(ui.tabs.Tab):
                             stderrs if self.node.errorbarmode == ERRORBARMODE_STDERROR else sds,
                             ls="None", capsize=4, c=col)
             colidx += 1
-            stack -= stackSep  # subtrack so we get an intuitive legend ordering
+            # subtraction to make the plots stack the same way as the legend!
+            stackpos -= self.node.stackSep
+
         ax.legend(fontsize=self.node.legendFontSize)
         ymin, ymax = ax.get_ylim()
         ax.set_ylim(ymin - self.node.bottomSpace / 10, ymax)
+        xmin, xmax = ax.get_xlim()
+        ax.set_xlim(xmin, xmax + self.node.rightSpace * 100)
 
         if self.node.stackSep == 0:  # only remove negative ticks if we're labelling the ticks.
             ax.set_yticks([x for x in ax.get_yticks() if x >= 0])
@@ -234,14 +348,33 @@ class TabSpectrum(ui.tabs.Tab):
     def save(self):
         self.w.mpl.save()
 
+    def hideClicked(self):
+        self.w.controls.setVisible(not self.w.controls.isVisible())
+        self.setHideButtonText()
+
+    def setHideButtonText(self):
+        self.w.hideButton.setText(
+            "Hide controls" if self.w.controls.isVisible() else "Show controls"
+        )
+
     def errorbarmodeChanged(self, mode):
         self.mark()
         self.node.errorbarmode = mode
         self.changed()
 
+    def colourmodeChanged(self, mode):
+        self.mark()
+        self.node.colourmode = mode
+        self.changed()
+
     def bottomSpaceChanged(self, val):
         self.mark()
         self.node.bottomSpace = val
+        self.changed()
+
+    def rightSpaceChanged(self, val):
+        self.mark()
+        self.node.rightSpace = val
         self.changed()
 
     def legendFontSizeChanged(self, val):
@@ -264,13 +397,25 @@ class TabSpectrum(ui.tabs.Tab):
         self.node.stackSep = val
         self.changed()
 
+    def openReorder(self):
+        reorderDialog = ReorderDialog(self, self.node)
+        if reorderDialog.exec():
+            self.node.sortlist = reorderDialog.getNewList()
+            self.markReplotReady()
+
+    def markReplotReady(self):
+        """make the replot button red"""
+        self.w.replot.setStyleSheet("background-color:rgb(255,100,100)")
+
     def onNodeChanged(self):
         # this is done in replot - the user replots this node manually because it takes
         # a while to run. But we do make the replot button red!
-        self.w.replot.setStyleSheet("background-color:rgb(255,100,100)")
+        self.markReplotReady()
         self.w.errorbarmode.setCurrentIndex(self.node.errorbarmode)
+        self.w.colourmode.setCurrentIndex(self.node.colourmode)
         self.w.stackSepSpin.setValue(self.node.stackSep)
         self.w.bottomSpaceSpin.setValue(self.node.bottomSpace)
+        self.w.rightSpaceSpin.setValue(self.node.rightSpace)
         self.w.legendFontSpin.setValue(self.node.legendFontSize)
         self.w.axisFontSpin.setValue(self.node.axisFontSize)
         self.w.labelFontSpin.setValue(self.node.labelFontSize)

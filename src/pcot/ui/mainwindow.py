@@ -5,6 +5,7 @@
 import os
 import traceback
 from typing import List, Optional, OrderedDict, ClassVar
+from zipfile import BadZipFile
 
 from PyQt5 import QtWidgets, uic, QtGui
 from PyQt5.QtCore import Qt
@@ -107,7 +108,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     ## @var recentActs
     # QActions for recent file list
-    recentActs: List[QAction]
+    recentActs: List[QAction] = []
 
     windows = []  # list of all main windows open
 
@@ -117,6 +118,8 @@ class MainUI(ui.tabs.DockableTabWindow):
                  doAutoLayout: bool = True):
         """Constructor which just calls _init()"""
         super().__init__()
+        uic.loadUi(pcot.config.getAssetAsFile('main.ui'), self)
+        self.menuFile.addSeparator()
         self._init(doc=doc, macro=macro, doAutoLayout=doAutoLayout)
 
     def _init(self,
@@ -135,11 +138,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
         self.doc = doc
 
-        self.recentActs = []
-
-        uic.loadUi(pcot.config.getAssetAsFile('main.ui'), self)
         self.setWindowTitle(ui.app().applicationName() + ' ' + ui.app().applicationVersion())
-        self.menuFile.addSeparator()
         self.rebuildRecents()
 
         self.initTabs()
@@ -237,9 +236,9 @@ class MainUI(ui.tabs.DockableTabWindow):
         # add recent files to menu, removing old ones first. Note that recent files must be at the end
         # of the menu for this to work!
 
-        for act in self.recentActs:
+        for act in MainUI.recentActs:
             self.menuFile.removeAction(act)
-        self.recentActs = []
+        MainUI.recentActs = []
 
         recents = pcot.config.getRecents()
         if len(recents) > 0:
@@ -248,7 +247,7 @@ class MainUI(ui.tabs.DockableTabWindow):
                 act.setData(x)
                 self.menuFile.addAction(act)
                 act.triggered.connect(self.loadRecent)
-                self.recentActs.append(act)
+                MainUI.recentActs.append(act)
 
     ## is this a macro?
     def isMacro(self):
@@ -324,7 +323,8 @@ class MainUI(ui.tabs.DockableTabWindow):
         try:
             import pcot.document
             d = pcot.document.Document(fname)
-            self._init(doc=d, doAutoLayout=False)
+            MainUI.windows.remove(self)  # remove the existing entry for this window, we'll add it again in the next line
+            self._init(doc=d, doAutoLayout=False)   # rerun window construction
             self.graph.changed()  # and rerun everything
             ui.msg("File loaded")
             self.saveFileName = fname
@@ -338,12 +338,19 @@ class MainUI(ui.tabs.DockableTabWindow):
     ## the "save as" menu handler
     def saveAsAction(self):
         res = QtWidgets.QFileDialog.getSaveFileName(self, 'Save file',
-                                                    os.path.expanduser(pcot.config.locations['pcotfiles']),
+                                                    os.path.expanduser(pcot.config.getDefaultDir('pcotfiles')),
                                                     "PCOT files (*.pcot)")
         if res[0] != '':
-            self.save(res[0])
-            self.saveFileName = res[0]
-            pcot.config.locations['pcotfiles'] = os.path.dirname(os.path.realpath(res[0]))
+            path = res[0]
+            (root, ext) = os.path.splitext(path)
+            if ext != '.pcot':
+                ext += '.pcot'
+            path = root + ext
+
+            self.save(path)
+            self.saveFileName = path
+            ui.log("Document written to "+path)
+            pcot.config.setDefaultDir('pcotfiles', os.path.dirname(os.path.realpath(res[0])))
 
     ## the "save" menu handler
     def saveAction(self):
@@ -356,7 +363,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     def openAction(self):
         res = QtWidgets.QFileDialog.getOpenFileName(self,
                                                     'Open file',
-                                                    os.path.expanduser(pcot.config.locations['pcotfiles']),
+                                                    os.path.expanduser(pcot.config.getDefaultDir('pcotfiles')),
                                                     "PCOT files (*.pcot)")
         if res[0] != '':
             self.closeAllTabs()
@@ -376,7 +383,10 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     ## "paste" menu/keypress
     def pasteAction(self):
-        self.graph.scene.paste()
+        try:
+            self.graph.scene.paste()
+        except Exception as e:
+            ui.error("Clipboard does not contain valid PCOT data")
 
     ## "cut menu/keypress
     def cutAction(self):

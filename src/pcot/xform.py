@@ -745,19 +745,20 @@ class XForm:
                     if autoPerform:
                         other.graph.changed(other)  # perform the input node; the output should perform
 
-    def disconnect(self, inputIdx):
+    def disconnect(self, inputIdx, perform=True):
         """disconnect an input"""
         if 0 <= inputIdx < len(self.inputs):
             if self.inputs[inputIdx] is not None:
                 n, i = self.inputs[inputIdx]
                 n.decreaseChildCount(self)
                 self.inputs[inputIdx] = None
-                self.graph.changed(self)  # run perform safely
+                if perform:
+                    self.graph.changed(self)  # run perform safely
 
     def disconnectAll(self):
         """disconnect all inputs and outputs prior to removal"""
         for i in range(0, len(self.inputs)):
-            self.disconnect(i)
+            self.disconnect(i, perform=False)
         for n, v in self.children.items():
             # remove all inputs which reference this node
             for i in range(0, len(n.inputs)):
@@ -1007,12 +1008,14 @@ class XFormGraph:
         else:
             return []
 
-    def remove(self, node):
-        """remove a node from the graph, and close any tab/window"""
+    def remove(self, node, closetabs=True):
+        """remove a node from the graph, and close any tab/window (but not always; when doing Undo
+        we monkey patch the existing tabs to point at the replacement nodes)"""
         if node in self.nodes:
             node.disconnectAll()
-            for x in node.tabs:
-                x.nodeDeleted()
+            if closetabs:
+                for x in node.tabs:
+                    x.nodeDeleted()
             self.nodes.remove(node)
             del self.nodeDict[node.name]
             node.onRemove()
@@ -1118,6 +1121,7 @@ class XFormGraph:
 
         # force a rebuild of the scene; error states may have changed.
         self.rebuildGraphics()
+        ui.msg("Perform complete")
 
     def showPerformance(self):
         """show how long each node took to run"""
@@ -1163,14 +1167,19 @@ class XFormGraph:
 
         return d
 
-    def deserialise(self, d, deleteExistingNodes):
+    def deserialise(self, d, deleteExistingNodes, closetabs=True):
         """given a dictionary, add nodes stored in it in serialized form.
             Do not delete any existing nodes unless asked and do not perform the nodes.
             Returns a list of the new nodes.
+            Will leave tabs open pointing to the dead nodes when closetabs is false - the
+            app must then patch these tabs to point to replacement nodes, if they exist.
+            If not they should be closed. This is used in undo/redo.
             """
         if deleteExistingNodes:
-            for n in self.nodes:
-                self.remove(n)
+            # remove from a copy; can't modify a list while traversing
+            for n in self.nodes.copy():
+                # this will close any open tabs, but NOT when closetabs is false.
+                self.remove(n, closetabs=closetabs)
 
         # disambiguate nodes in the dict, to make sure they don't
         # have the same nodes as ones already in the graph
@@ -1279,7 +1288,7 @@ class XFormROIType(XFormType):
                                 "image as RGB with ROI, with added annotations around ROI")  # annotated image
         self.addOutputConnector("roi", conntypes.ROI, "the region of interest")
 
-        self.autoserialise = ('caption', 'captiontop', 'fontsize', 'fontline', 'colour')
+        self.autoserialise = ('caption', 'captiontop', 'fontsize', 'fontline', 'colour', 'drawbg')
 
     def setProps(self, node, img):
         """Set properties in the node and ROI attached to the node. Assumes img is a valid
@@ -1322,3 +1331,6 @@ class XFormROIType(XFormType):
 
             if node.isOutputConnected(self.OUT_IMG):
                 node.setOutput(self.OUT_IMG, Datum(conntypes.IMG, node.img))  # output image and ROI
+
+    def getROIDesc(self, node):
+        return "no ROI" if node.roi is None else node.roi.details()

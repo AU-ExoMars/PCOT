@@ -52,15 +52,24 @@
        </widget>
       </item>
       <item>
-       <widget class="QLabel" name="label_6">
+       <widget class="QLabel" name="roiHelpLabel">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>70</height>
+         </size>
+        </property>
         <property name="text">
-         <string>Click to paint, Shift-Click to erase</string>
+         <string>Ctrl-Click to select, Click to paint, Shift-Click to erase</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -90,9 +99,38 @@
         </item>
         <item row="0" column="1">
          <widget class="QSlider" name="brushSize">
+          <property name="maximum">
+           <number>99</number>
+          </property>
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="rOIDrawModeLabel">
+          <property name="text">
+           <string>ROI Draw Mode</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QComboBox" name="drawMode">
+          <item>
+           <property name="text">
+            <string>None</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Fill</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Edge</string>
+           </property>
+          </item>
          </widget>
         </item>
        </layout>
@@ -120,6 +158,13 @@
          <widget class="QPushButton" name="genButton">
           <property name="text">
            <string>Generate ROIs</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QCheckBox" name="stddevsBox">
+          <property name="text">
+           <string>Show ROI stddevs</string>
           </property>
          </widget>
         </item>

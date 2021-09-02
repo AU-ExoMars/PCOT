@@ -14,7 +14,7 @@ import cv2 as cv
 # fontcol - (r,g,b)
 
 
-def write(img, txt, x, y, above, fontsize, fontthickness, fontcol):
+def write(img, txt, x, y, above, fontsize, fontthickness, fontcol, bg=None):
     th = 0
     tw = 0
     lines = txt.split('\\n')
@@ -33,6 +33,12 @@ def write(img, txt, x, y, above, fontsize, fontthickness, fontcol):
     else:
         ty = y + hs[0] + 2
     i = 0
+    if bg is not None:
+        # ty+=5 # move out of the way a bit
+        recty = int(ty - (th + baseline) * 0.6)
+        cv.rectangle(img, (x, recty), (x + tw, recty + th), bg, thickness=-1)
+        cv.rectangle(img, (x, recty), (x + tw, recty + th), fontcol, thickness=fontthickness)
+
     for s in lines:
         cv.putText(img, s, (x, ty), cv.FONT_HERSHEY_SIMPLEX,
                    fontsize / 10, fontcol, fontthickness)

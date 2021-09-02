@@ -35,7 +35,8 @@ class XformSink(XFormType):
         # and does the rest.
         img = node.getInput(0, conntypes.IMG)
         if img is not None:
-            img = ImageCube(img.img, node.mapping, img.sources)
+            img = img.copy()
+            img.mapping = node.mapping
         node.img = img
 
     def init(self, node):

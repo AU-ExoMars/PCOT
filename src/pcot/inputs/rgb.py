@@ -23,6 +23,7 @@ class RGBInputMethod(InputMethod):
     def loadImg(self):
         # will throw exception if load failed
         print("RGB PERFORMING FILE READ")
+
         img = ImageCube.load(self.fname, self.mapping)
         ui.log("Image {} loaded: {}".format(self.fname, img))
         self.img = img

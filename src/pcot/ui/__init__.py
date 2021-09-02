@@ -11,12 +11,9 @@ application = None
 def setApp(a):
     global application
     application = a
-    print("Setting {}".format(application))
-    
+
 
 def app():
-    print("Getting {}".format(application))
-    print(application)
     return application
 
 

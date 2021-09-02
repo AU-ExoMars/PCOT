@@ -6,15 +6,42 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>629</width>
-    <height>503</height>
+    <width>842</width>
+    <height>615</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="2" column="3">
+   <item row="3" column="8">
+    <widget class="QPushButton" name="colourButton">
+     <property name="text">
+      <string>Colour</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="8">
+    <widget class="QPushButton" name="clearButton">
+     <property name="text">
+      <string>Clear</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1" colspan="6">
+    <widget class="QLineEdit" name="caption"/>
+   </item>
+   <item row="4" column="7">
+    <widget class="QCheckBox" name="drawbg">
+     <property name="layoutDirection">
+      <enum>Qt::RightToLeft</enum>
+     </property>
+     <property name="text">
+      <string>Background</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="3">
     <widget class="QLabel" name="label_2">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
@@ -36,49 +63,7 @@
      </property>
     </widget>
    </item>
-   <item row="2" column="2">
-    <widget class="QRadioButton" name="captionTop">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>30</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>40</width>
-       <height>16777215</height>
-      </size>
-     </property>
-     <property name="layoutDirection">
-      <enum>Qt::RightToLeft</enum>
-     </property>
-     <property name="text">
-      <string>Top</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="5">
-    <widget class="QLabel" name="label_3">
-     <property name="text">
-      <string>Thickness</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="7">
-    <widget class="QPushButton" name="colourButton">
-     <property name="text">
-      <string>Colour</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="4">
+   <item row="3" column="4">
     <widget class="QSpinBox" name="fontsize">
      <property name="minimum">
       <number>2</number>
@@ -91,37 +76,7 @@
      </property>
     </widget>
    </item>
-   <item row="2" column="6">
-    <widget class="QSpinBox" name="fontline">
-     <property name="minimum">
-      <number>1</number>
-     </property>
-     <property name="maximum">
-      <number>20</number>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="0">
-    <widget class="QLabel" name="label">
-     <property name="text">
-      <string>Annotation</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0" colspan="8">
-    <widget class="QLabel" name="label_4">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="text">
-      <string>Shift-Click to add a point, Click to select a point, Drag to move a point, Del to delete selected point.</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="1">
+   <item row="3" column="1">
     <widget class="QComboBox" name="drawMode">
      <property name="minimumSize">
       <size>
@@ -146,14 +101,44 @@
      </item>
     </widget>
    </item>
-   <item row="2" column="0">
+   <item row="3" column="0">
     <widget class="QLabel" name="label_6">
      <property name="text">
       <string>Draw Mode</string>
      </property>
     </widget>
    </item>
-   <item row="0" column="0" colspan="8">
+   <item row="3" column="7">
+    <widget class="QSpinBox" name="fontline">
+     <property name="minimum">
+      <number>1</number>
+     </property>
+     <property name="maximum">
+      <number>20</number>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Annotation</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0" colspan="9">
+    <widget class="QLabel" name="label_4">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>Shift-Click to add a point, Click to select a point, Drag to move a point, Del to delete selected point.</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0" colspan="9">
     <widget class="Canvas" name="canvas" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -163,13 +148,26 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="1" colspan="6">
-    <widget class="QLineEdit" name="caption"/>
-   </item>
-   <item row="3" column="7">
-    <widget class="QPushButton" name="clearButton">
+   <item row="3" column="6">
+    <widget class="QLabel" name="label_3">
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
+     </property>
      <property name="text">
-      <string>Clear</string>
+      <string>Thickness</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="2">
+    <widget class="QCheckBox" name="captionTop">
+     <property name="layoutDirection">
+      <enum>Qt::RightToLeft</enum>
+     </property>
+     <property name="text">
+      <string>Top</string>
      </property>
     </widget>
    </item>

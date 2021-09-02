@@ -50,12 +50,12 @@ class MplWidget(QtWidgets.QWidget):
         # thread)
 
         res = QtWidgets.QFileDialog.getSaveFileName(self, 'Save figure',
-                                                    os.path.expanduser(pcot.config.locations['mplplots']),
+                                                    os.path.expanduser(pcot.config.getDefaultDir('mplplots')),
                                                     "Figures (*.png *.pdf *.jpg)")
         if res[0] != '':
             path = res[0]
             self.fig.savefig(path)
-            pcot.config.locations['mplplots'] = os.path.dirname(os.path.realpath(path))
+            pcot.config.setDefaultDir('mplplots', os.path.dirname(os.path.realpath(path)))
 
     ## clear all drawings
     def clear(self):

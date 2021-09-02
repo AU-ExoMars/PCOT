@@ -92,8 +92,9 @@ class InnerCanvas(QtWidgets.QWidget):
                     ui.error("Unusual - the image has no numpy array")
 
             # only reset the image zoom if the shape has changed
-            if self.img is None or self.img.shape[:2] != img.shape[:2]:
-                self.reset()
+            # DISABLED so that image stitching is bearable.
+            #            if self.img is None or self.img.shape[:2] != img.shape[:2]:
+            #                self.reset()
             self.img = img
         else:
             self.img = None
@@ -431,13 +432,18 @@ class Canvas(QtWidgets.QWidget):
         # and change endianness
         img8 = cv.cvtColor(img8, cv.COLOR_RGB2BGR)
         res = QtWidgets.QFileDialog.getSaveFileName(self, 'Save RGB image as PNG',
-                                                    os.path.expanduser(pcot.config.locations['savedimages']),
+                                                    os.path.expanduser(pcot.config.getDefaultDir('savedimages')),
                                                     "PNG images (*.png)")
         if res[0] != '':
             path = res[0]
-            pcot.config.locations['savedimages'] = os.path.dirname(os.path.realpath(path))
+            # make sure it ends with PNG!
+            (root, ext) = os.path.splitext(path)
+            if ext != '.png':
+                ext += '.png'
+            path = root + ext
+            pcot.config.setDefaultDir('images', os.path.dirname(os.path.realpath(path)))
             cv.imwrite(path, img8)
-            ui.log("Image written")
+            ui.log("Image written to " + path)
 
         pass
 
@@ -501,14 +507,13 @@ class Canvas(QtWidgets.QWidget):
         # Note that we are doing ugly things to avoid recursion here. In some of the ROI nodes, this can happen:
         # updatetabs -> onNodeChanged -> display -> redisplay -> updatetabs...
         # This is the simplest way to avoid it.
-        if self.recursing:
-            return
-        self.recursing = True
-        if self.nodeToUIChange is not None:
-            self.nodeToUIChange.uichange()
-            self.nodeToUIChange.updateTabs()
-        #            self.graph.performNodes(self.nodeToUIChange)
-        self.recursing = False
+        if not self.recursing:
+            self.recursing = True
+            if self.nodeToUIChange is not None:
+                self.nodeToUIChange.uichange()
+                self.nodeToUIChange.updateTabs()
+            #            self.graph.performNodes(self.nodeToUIChange)
+            self.recursing = False
 
         # set ROI pixel count text.
         if self.previmg is None:
@@ -518,10 +523,10 @@ class Canvas(QtWidgets.QWidget):
             # if we're displaying all ROIs, show that pixel count (and ROI count)
             txt = "{} pixels in {} ROIs".format(sum([x.pixels() for x in self.previmg.rois]),
                                                 len(self.previmg.rois))
-        elif self.ROInode is not None and self.ROInode.roi is not None:
+        elif self.ROInode is not None:
             # if there's an ROI being set from this node (and we're not showing all ROIs), show its details
-            # Also have to check the ROI itself is OK.
-            txt = "{} pixels in ROI".format(self.ROInode.roi.pixels())
+            # Also have to check the ROI itself is OK (the method will do this)
+            txt = self.ROInode.type.getROIDesc(self.ROInode)
         else:
             txt = ""
         self.roiText.setText(txt)

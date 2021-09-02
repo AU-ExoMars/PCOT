@@ -69,7 +69,7 @@ def getProperty(a: Datum, b: Datum):
 
 
 def funcMerge(args, optargs):
-    """function for merging a number of images"""
+    """Function for merging a number of images. Crops all images to same size as smallest image."""
     if any([x is None for x in args]):
         raise XFormException('EXPR', 'argument is None for merge')
     if any([not x.isImage() for x in args]):
@@ -77,14 +77,18 @@ def funcMerge(args, optargs):
 
     args = [x.get(conntypes.IMG) for x in args]
 
+    # work out minimum width and height of all images
+    w = min([i.w for i in args])
+    h = min([i.h for i in args])
+
     bands = []
     sources = []
     for x in args:
         if x.channels == 1:
-            bands.append(x.img)
+            bands.append(x.img[:h, :w])
             print(x.img)
         else:
-            bands = bands + cv.split(x.img)
+            bands = bands + cv.split(x.img[:h, :w])
         sources = sources + x.sources
 
     img = np.stack(bands, axis=-1)
@@ -110,6 +114,14 @@ def funcGrey(args, optargs):
         mat = np.array([1 / img.channels] * img.channels).reshape((1, img.channels))
         out = cv.transform(img.img, mat)
         img = ImageCube(out, img.mapping, [sources])
+    return Datum(conntypes.IMG, img)
+
+
+def funcCrop(args, _):
+    img = args[0].get(conntypes.IMG)
+    x, y, w, h = [int(x.get(conntypes.NUMBER)) for x in args[1:]]
+    out = img.img[y:y + h, x:x + w]
+    img = ImageCube(out, img.mapping, img.sources)
     return Datum(conntypes.IMG, img)
 
 
@@ -177,6 +189,7 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
 class ExpressionEvaluator(Parser):
     """The core class for the expression evaluator, based on a generic Parser. The constructor
     is responsible for registering most functions."""
+
     def __init__(self):
         """Initialise the evaluator, registering functions and operators.
         Caller may add other things (e.g. variables)"""
@@ -244,6 +257,15 @@ class ExpressionEvaluator(Parser):
                                      "if non-zero, use openCV greyscale conversion (RGB input only): 0.299*R + 0.587*G + 0.114*B",
                                      conntypes.NUMBER, deflt=0)],
                           funcGrey)
+
+        self.registerFunc("crop", "crop an image to a rectangle",
+                          [Parameter("image", "an image to process", conntypes.IMG),
+                           Parameter("x", "x coordinate of top-left corner", conntypes.NUMBER),
+                           Parameter("y", "y coordinate of top-left corner", conntypes.NUMBER),
+                           Parameter("w", "width of rectangle", conntypes.NUMBER),
+                           Parameter("h", "height of rectangle", conntypes.NUMBER)],
+                          [],
+                          funcCrop)
 
         for x in pcot.config.exprFuncHooks:
             x(self)

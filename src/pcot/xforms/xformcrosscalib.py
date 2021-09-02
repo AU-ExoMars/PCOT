@@ -11,6 +11,7 @@ import pcot.ui.tabs
 from pcot.channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, \
     BLUEINTERNALSOURCE
 from pcot.pancamimage import ImageCube
+from pcot.rois import ROICircle
 from pcot.utils import text
 from pcot.xform import XFormType, xformtype, XFormException
 
@@ -30,15 +31,10 @@ def prep(img: ImageCube) -> np.array:
     return (canvimg - mn) / (mx - mn)
 
 
-def drawpoints(img, lst, translate, selidx, col):
+def drawpoints(img, lst, selidx, col):
     i = 0
     fontline = 2
     fontsize = 10
-
-    if translate:
-        # translate-only mode uses only one point, don't show the others
-        if len(lst) > 1:
-            lst = [lst[0]]
 
     for p in lst:
         cv.circle(img, p, 7, col, fontline)
@@ -50,15 +46,12 @@ def drawpoints(img, lst, translate, selidx, col):
         cv.circle(img, lst[selidx], 10, col, fontline + 2)
 
 
-def findInList(lst, x, y, translate):
+def findInList(lst, x, y):
     pt = None
     mindist = None
 
-    limit = len(lst)
-    if translate:
-        limit = min(limit, 1)  # in translate mode, only look at the first item
-    for idx in range(limit):
-        px, py = lst[idx]
+    for idx, ptcoords in enumerate(lst):
+        px, py = ptcoords
         dx = px - x
         dy = py - y
         dsq = dx * dx + dy * dy
@@ -69,36 +62,19 @@ def findInList(lst, x, y, translate):
 
 
 @xformtype
-class XFormManualRegister(XFormType):
+class XFormCrossCalib(XFormType):
     """
-    Perform manual registration of two images. The output is a version of the 'moving' image with a projective
-    transform applied to map points onto corresponding points in the 'fixed' image.
-
-    The canvas view can show the moving input (also referred to as the "source"), the fixed image (also referred
-    to as the "destination"), a blend of the two, or the result. All images are shown as greyscale (since the
-    fixed and moving images will likely have different frequency bands).
-
-    The transform will map a set of points in the moving image onto a set in the fixed image. Both sets of
-    points can be changed, or a single set. Points are mapped onto the correspondingly numbered point. In "translate"
-    mode only a single point is required (and only a single point will be shown from each set).
-
-    Points are added to the source (moving) image by clicking with shift.
-    Points are adding to the dest (fixed) image by clicking with ctrl.
-
-    If only the source or dest points are shown, either shift- or ctrl-clicking will add to the appropriate
-    point set. The selected point can be deleted with the Delete key (but this will modify the numbering!)
-
-    A point can be selected and dragged by clicking on it. This may be slow because the warping operation will
-    take place every update; disabling 'auto-run on change' is a good idea!
-
+    "Cross-calibrate" two images: given points S in a source image and corresponding points D in a
+    destination image, find a vector of factors v for the bands such that S=vD, and transform S accordingly.
+    Essentially, and crudely speaking, make the colours in S match those in D by sampling the same point in each.
     """
 
     def __init__(self):
-        super().__init__("manual register", "processing", "0.0.0")
-        self.addInputConnector("moving", conntypes.IMG)
-        self.addInputConnector("fixed", conntypes.IMG)
-        self.addOutputConnector("moved", conntypes.IMG)
-        self.autoserialise = ('showSrc', 'showDest', 'src', 'dest', 'translate')
+        super().__init__("crosscalib", "processing", "0.0.0")
+        self.addInputConnector("source", conntypes.IMG)
+        self.addInputConnector("dest", conntypes.IMG)
+        self.addOutputConnector("out", conntypes.IMG)
+        self.autoserialise = ('showSrc', 'showDest', 'src', 'dest')
 
     def init(self, node):
         node.img = None
@@ -106,7 +82,6 @@ class XFormManualRegister(XFormType):
         node.showSrc = True
         node.showDest = True
         node.canvimg = None
-        node.translate = False
 
         # source and destination points - there is a 1:1 mapping between the two
         node.src = []  # ditto
@@ -121,30 +96,29 @@ class XFormManualRegister(XFormType):
 
     def perform(self, node, doApply=True):
         """Perform node. When called from uichange(), doApply will be False. Normally it's true."""
-        movingImg = node.getInput(0, conntypes.IMG)
-        fixedImg = node.getInput(1, conntypes.IMG)
+        sourceImg = node.getInput(0, conntypes.IMG)
+        destImg = node.getInput(1, conntypes.IMG)
 
-        if fixedImg is None or movingImg is None:
+        if sourceImg is None or destImg is None:
             node.img = None  # output image (i.e. warped)
-            node.movingImg = None  # image we are moving
         else:
             if doApply:
-                self.apply(node)
+                outimg = self.apply(node, sourceImg, destImg)
+                if outimg is not None:
+                    node.img = ImageCube(outimg, sourceImg.mapping, sourceImg.sources)
 
             # this gets the appropriate image and also manipulates it.
             # Generally we convert RGB to grey; otherwise we'd have to store
             # quite a few mappings.
             if node.imagemode == IMAGEMODE_DEST:
-                img = prep(fixedImg)
+                img = prep(destImg)
             elif node.imagemode == IMAGEMODE_SOURCE:
-                img = prep(movingImg)
+                img = prep(sourceImg)
             else:
                 if node.img is not None:
                     img = prep(node.img)
                 else:
                     img = None
-
-            node.movingImg = movingImg
 
             if img is not None:
                 # create a new image for the canvas; we'll draw on it.
@@ -154,10 +128,10 @@ class XFormManualRegister(XFormType):
 
                 if node.showSrc:
                     issel = node.selIdx if not node.selIsDest else None
-                    drawpoints(canvimg, node.src, node.translate, issel, (1, 1, 0))
+                    drawpoints(canvimg, node.src, issel, (1, 1, 0))
                 if node.showDest:
                     issel = node.selIdx if node.selIsDest else None
-                    drawpoints(canvimg, node.dest, node.translate, issel, (0, 1, 1))
+                    drawpoints(canvimg, node.dest, issel, (0, 1, 1))
 
                 # grey, but 3 channels so I can draw on it!
                 node.canvimg = ImageCube(canvimg, node.mapping,
@@ -191,57 +165,51 @@ class XFormManualRegister(XFormType):
     @staticmethod
     def addPoint(n, x, y, dest):
         lst = n.dest if dest else n.src
-        # translate mode changes the first point, or adds a point if there isn't one.
-        if len(lst) == 0 or not n.translate:
-            lst.append((x, y))
-        else:
-            lst[0] = (x, y)
+        lst.append((x, y))
 
     @staticmethod
     def selPoint(n, x, y):
         if n.showSrc:
-            pt = findInList(n.src, x, y, n.translate)
+            pt = findInList(n.src, x, y)
             if pt is not None:
                 n.selIdx = pt
                 n.selIsDest = False
         if pt is None and n.showDest:
-            pt = findInList(n.dest, x, y, n.translate)
+            pt = findInList(n.dest, x, y)
             if pt is not None:
                 n.selIdx = pt
                 n.selIsDest = True
 
     @staticmethod
-    def apply(n):
+    def apply(n, srcImg, destImg):
         # errors here must not be thrown, we need later stuff to run.
         if len(n.src) != len(n.dest):
             n.setError(XFormException('DATA', "Number of source and dest points must be the same"))
             return
-        if n.translate:
-            if len(n.src) < 1:
-                n.setError(XFormException('DATA', "There must be a reference point in translate mode"))
-                return
-            src = n.src[0]
-            dest = n.dest[0]
-            d = (src[0]-dest[0], src[1]-dest[1])
-            tform = transform.EuclideanTransform(translation=(d[0], d[1]))
-        else:
-            if len(n.src) < 3:
-                n.setError(XFormException('DATA', "There must be at least three points"))
-                return
-            tform = transform.ProjectiveTransform()
-            tform.estimate(np.array(n.dest), np.array(n.src))
 
-        if n.movingImg is not None:
-            img = warp(n.movingImg.img, tform)
-            n.img = ImageCube(img, n.movingImg.mapping, n.movingImg.sources)
+        # for each point, calculate the mean of the surrounding area for src and dest
+
+        factors = []
+        for (sx, sy), (dx, dy) in zip(n.src, n.dest):
+            s = srcImg.subimage(roi=ROICircle(sx, sy, 100))
+            d = destImg.subimage(roi=ROICircle(dx, dy, 100))
+            smean = s.masked().mean(axis=(0, 1))
+            dmean = d.masked().mean(axis=(0, 1))
+
+            factors.append(dmean / smean)
+
+        factors = np.array(factors)
+        factors = np.mean(factors, axis=0)
+        return (srcImg.img * factors).astype(np.float32)
+
 
     def createTab(self, n, w):
-        return TabManualReg(n, w)
+        return TabCrossCalib(n, w)
 
 
-class TabManualReg(pcot.ui.tabs.Tab):
+class TabCrossCalib(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
-        super().__init__(w, node, 'tabmanreg.ui')
+        super().__init__(w, node, 'tabcrosscalib.ui')
         self.mouseDown = False
         self.w.canvas.keyHook = self
         self.w.canvas.mouseHook = self
@@ -251,7 +219,6 @@ class TabManualReg(pcot.ui.tabs.Tab):
         self.w.radioSource.toggled.connect(self.radioViewToggled)
         self.w.radioDest.toggled.connect(self.radioViewToggled)
         self.w.radioResult.toggled.connect(self.radioViewToggled)
-        self.w.translate.toggled.connect(self.translateToggled)
 
         self.w.checkBoxDest.toggled.connect(self.checkBoxDestToggled)
         self.w.checkBoxSrc.toggled.connect(self.checkBoxSrcToggled)
@@ -287,11 +254,6 @@ class TabManualReg(pcot.ui.tabs.Tab):
         self.node.showSrc = self.w.checkBoxSrc.isChecked()
         self.changed(uiOnly=True)
 
-    def translateToggled(self):
-        self.mark()
-        self.node.translate = self.w.translate.isChecked()
-        self.changed()
-
     def onNodeChanged(self):
         # have to do canvas set up here to handle extreme undo events which change the graph and nodes
         self.w.canvas.setMapping(self.node.mapping)
@@ -303,7 +265,6 @@ class TabManualReg(pcot.ui.tabs.Tab):
 
         self.w.checkBoxSrc.setChecked(self.node.showSrc)
         self.w.checkBoxDest.setChecked(self.node.showDest)
-        self.w.translate.setChecked(self.node.translate)
 
         # displaying a premapped image
         self.w.canvas.display(self.node.canvimg, self.node.canvimg, self.node)

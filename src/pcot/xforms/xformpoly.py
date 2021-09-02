@@ -34,6 +34,7 @@ class XformPoly(XFormROIType):
         node.captiontop = False
         node.fontsize = 10
         node.fontline = 2
+        node.drawbg = True
         node.colour = (1, 1, 0)
         node.drawMode = 0
 
@@ -60,7 +61,9 @@ class XformPoly(XFormROIType):
             drawPoints = False
             drawBox = False
 
-        node.roi.setDrawProps(node.colour, node.fontsize, node.fontline, drawPoints, drawBox)
+        node.roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.fontline, node.drawbg)
+        node.roi.drawPoints = drawPoints
+        node.roi.drawBox = drawBox
 
 
 class TabPoly(pcot.ui.tabs.Tab):
@@ -74,6 +77,7 @@ class TabPoly(pcot.ui.tabs.Tab):
         self.w.fontline.valueChanged.connect(self.fontLineChanged)
         self.w.caption.textChanged.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
+        self.w.drawbg.stateChanged.connect(self.drawbgChanged)
         self.w.clearButton.pressed.connect(self.clearPressed)
         self.w.captionTop.toggled.connect(self.topChanged)
         self.w.drawMode.currentIndexChanged.connect(self.drawModeChanged)
@@ -82,6 +86,11 @@ class TabPoly(pcot.ui.tabs.Tab):
         self.dontSetText = False
         # sync tab with node
         self.nodeChanged()
+
+    def drawbgChanged(self, val):
+        self.mark()
+        self.node.drawbg = (val != 0)
+        self.changed()
 
     def drawModeChanged(self, idx):
         self.mark()
@@ -145,6 +154,7 @@ class TabPoly(pcot.ui.tabs.Tab):
             self.w.canvas.display(self.node.rgbImage, self.node.img, self.node)
         if not self.dontSetText:
             self.w.caption.setText(self.node.caption)
+        self.w.drawbg.setChecked(self.node.drawbg)
         self.w.fontsize.setValue(self.node.fontsize)
         self.w.fontline.setValue(self.node.fontline)
         self.w.captionTop.setChecked(self.node.captiontop)

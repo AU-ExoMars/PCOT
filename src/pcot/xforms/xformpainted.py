@@ -2,12 +2,11 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPainter, QColor
 from PyQt5.QtWidgets import QMessageBox
 
-import pcot.conntypes as conntypes
 import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
 from pcot import ui
-from pcot.rois import ROIPainted, getRadiusFromSlider
+from pcot.rois import ROIPainted
 from pcot.xform import xformtype, XFormROIType
 
 
@@ -32,6 +31,7 @@ class XFormPainted(XFormROIType):
         node.caption = ''
         node.captiontop = False
         node.fontsize = 10
+        node.drawbg = True
         node.fontline = 2
         node.colour = (1, 1, 0)
         node.brushSize = 20  # scale of 0-99 i.e. a slider value. Converted to pixel radius in getRadiusFromSlider()
@@ -64,7 +64,11 @@ class XFormPainted(XFormROIType):
         else:
             drawEdge = False
             drawBox = False
-        node.roi.setDrawProps(node.colour, node.fontsize, node.fontline, drawEdge, drawBox)
+
+        node.roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.fontline, node.drawbg)
+        node.roi.drawEdge = drawEdge
+        node.roi.drawBox = drawBox
+
         node.previewRadius = getRadiusFromSlider(node.brushSize, img.w, img.h)
 
 
@@ -78,6 +82,7 @@ class TabPainted(pcot.ui.tabs.Tab):
         self.w.fontline.valueChanged.connect(self.fontLineChanged)
         self.w.caption.textChanged.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
+        self.w.drawbg.stateChanged.connect(self.drawbgChanged)
         self.w.clearButton.pressed.connect(self.clearPressed)
         self.w.captionTop.toggled.connect(self.topChanged)
         self.w.drawMode.currentIndexChanged.connect(self.drawModeChanged)
@@ -88,6 +93,11 @@ class TabPainted(pcot.ui.tabs.Tab):
         self.dontSetText = False
         # sync tab with node
         self.nodeChanged()
+
+    def drawbgChanged(self, val):
+        self.mark()
+        self.node.drawbg = (val != 0)
+        self.changed()
 
     def drawModeChanged(self, idx):
         self.mark()
@@ -163,6 +173,7 @@ class TabPainted(pcot.ui.tabs.Tab):
         self.w.captionTop.setChecked(self.node.captiontop)
         self.w.brushSize.setValue(self.node.brushSize)
         self.w.drawMode.setCurrentIndex(self.node.drawMode)
+        self.w.drawbg.setChecked(self.node.drawbg)
 
         r, g, b = [x * 255 for x in self.node.colour]
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
@@ -196,4 +207,5 @@ class TabPainted(pcot.ui.tabs.Tab):
         self.w.canvas.update()
 
     def canvasMouseReleaseEvent(self, x, y, e):
+        self.mark()
         self.mouseDown = False

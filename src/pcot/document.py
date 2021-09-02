@@ -132,19 +132,21 @@ class Document:
              }
         return d
 
-    ## deserialise everything from the given top-level dictionary into an existing graph;
+    # deserialise everything from the given top-level dictionary into an existing graph;
     # also deserialises the macros (which are global to all graphs).
     # Deserialising the inputs is optional : we don't do it if we are loading templates
     # or if there is no INPUTS entry in the file, or there's no input manager (shouldn't
     # happen unless we're doing something weird like loading a macro prototype graph)
-    def deserialise(self, d, deserialiseInputs=True, internal=False):
+    def deserialise(self, d, deserialiseInputs=True, internal=False, closetabs=True):
         # deserialise macros before graph!
         if 'MACROS' in d:
             for k, v in d['MACROS'].items():
                 p = XFormMacro(self, k)  # will autoregister
                 p.graph.deserialise(v, True)
 
-        self.graph.deserialise(d['GRAPH'], True)  # True to delete existing nodes first
+        # True to delete existing nodes first
+        # and we also might not want to delete any tabs (for undo)
+        self.graph.deserialise(d['GRAPH'], True, closetabs=closetabs)
 
         if 'INPUTS' in d and deserialiseInputs:
             self.inputMgr.deserialise(d['INPUTS'], internal)
@@ -228,9 +230,11 @@ class Document:
         """Completely restore the document from a memento.
         In actuality only the graph changes and the document is actually the same, but
         the windows should all use the new graph."""
-        self.deserialise(data, internal=True)
+
+        # we don't delete any old tabs here.
+        self.deserialise(data, internal=True, closetabs=False)
         for w in MainUI.getWindowsForDocument(self):
-            w.replaceDocument(self)
+            w.replaceDocument(self)  # and this must repatch the tabs we didn't delete
         self.showUndoStatus()
 
     def canUndo(self):
@@ -240,9 +244,6 @@ class Document:
         return self.undoRedoStore.canRedo()
 
     def undo(self):
-        ui.error("UNDO currently disabled - too buggy.")
-
-    def _undo(self):
         if self.canUndo():
             data = self.undoRedoStore.undo(self.serialise(internal=True))
             self.replaceData(data)

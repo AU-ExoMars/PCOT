@@ -149,7 +149,7 @@ class Function:
 
             if self.varargs:
                 # varargs flag set - consume remaining args, using the last mandatory argument type
-                while len(args)>0:
+                while len(args) > 0:
                     x = args.pop(0)
                     if lastparam.isValid(x):
                         mandatArgs.append(x)

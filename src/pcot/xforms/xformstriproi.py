@@ -8,7 +8,7 @@ class XformStripROI(XFormType):
     """Strip ROIs from an image"""
 
     def __init__(self):
-        super().__init__("striproi", "regions", "0.0.0")
+        super().__init__("striproi", "ROI edit", "0.0.0")
         self.addInputConnector("", conntypes.IMG)
         self.addOutputConnector("", conntypes.IMG)
 

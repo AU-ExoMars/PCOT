@@ -40,7 +40,7 @@ def main():
     if len(args) > 0:
         doc = Document(args[0])
     else:
-        loadfile = pcot.config.default.get('loadFile', fallback=None)
+        loadfile = pcot.config.getDef('loadFile', fallback=None)
         if loadfile is not None:
             doc = Document(os.path.expanduser(loadfile))
         else:
