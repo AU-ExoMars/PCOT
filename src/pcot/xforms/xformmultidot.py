@@ -49,7 +49,7 @@ class XFormMultiDot(XFormType):
         node.fontline = 2
         node.colour = (1, 1, 0)
         node.drawbg = True
-        node.prefix = ''
+        node.prefix = ''  # the name we're going to set by default, it will be followed by an int
         node.dotSize = 10  # dot radius in pixels
         node.previewRadius = None  # previewing needs the image, but that's awkward - so we stash this data in perform()
         node.selected = None  # selected ROICircle
@@ -223,7 +223,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         if self.node.img is not None:
             # We're displaying a "premapped" image : this node's perform code is
             # responsible for doing the RGB mapping, unlike most other nodes where it's
-            # done in the canvas for display purposes only. This is so that we can
+            # done in the canvas for display purposes only. This is so that we c    an
             # actually output the RGB.
             # To render this, we call display in its three-argument form:
             # mapped RGB image, source image, node.
@@ -231,7 +231,11 @@ class TabMultiDot(pcot.ui.tabs.Tab):
             # when the mappings change.
             self.w.canvas.display(self.node.rgbImage, self.node.img, self.node)
         if not self.dontSetText:
-            self.w.caption.setText(self.node.prefix)
+            if self.node.selected:
+                self.w.caption.setText(self.node.selected.label)
+            else:
+                self.w.caption.setText(self.node.prefix)
+
         self.w.fontsize.setValue(self.node.fontsize)
         self.w.fontline.setValue(self.node.fontline)
         self.w.dotSize.setValue(self.node.dotSize)
