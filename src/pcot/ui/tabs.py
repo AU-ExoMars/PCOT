@@ -68,9 +68,12 @@ class DockableTabWindow(QtWidgets.QMainWindow):
     ## used to undock tab into a window
     def undock(self, i):
         # get the tab contents
-        w = self.tabWidget.widget(i)
+        tab = self.tabWidget.widget(i)
         # and move them into a new "expanded tab" window
-        wnd = ExpandedTab(w, self)
+        # Sometimes this seems to get called twice, the second time None is the tab
+        # which causes hilarity.
+        if tab:
+            wnd = ExpandedTab(tab, self)
 
     ## reorder all the tabs back to create order, used when a tab is re-docked
     def reorderTabs(self):

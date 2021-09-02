@@ -212,6 +212,7 @@ class ReorderDialog(QDialog):
         uic.loadUi(x, self)
         self.upButton.clicked.connect(self.upClicked)
         self.downButton.clicked.connect(self.downClicked)
+        self.revButton.clicked.connect(self.revClicked)
         self.listWidget.itemClicked.connect(self.itemClicked)
         self.node = node
         # add the items (we're using an item-based system rather than model-based, it's easier)
@@ -230,6 +231,17 @@ class ReorderDialog(QDialog):
 
     def itemClicked(self):
         self.fixUpDown()
+
+    def revClicked(self):
+        items=[]
+        while True:
+            item = self.listWidget.takeItem(0)
+            if item is None:
+                break
+            else:
+                items.append(item)
+        for x in items:
+            self.listWidget.insertItem(0,x)
 
     def movecur(self, delta):
         row = self.listWidget.currentRow()
@@ -286,14 +298,15 @@ class TabSpectrum(ui.tabs.Tab):
 
         # the dict consists of a list of channel data tuples for each image/roi.
         colidx = 0
-        stackSep = self.node.stackSep / 10
+        stackSep = self.node.stackSep / 20
 
-        if self.node.stackSep != 0:  # turn off tick labels if we are stacking; the Y values would be deceptive.
+        if stackSep != 0:  # turn off tick labels if we are stacking; the Y values would be deceptive.
             ax.set_yticklabels('')
 
         ax.tick_params(axis='both', labelsize=self.node.axisFontSize)
         ax.set_xlabel('wavelength', fontsize=self.node.labelFontSize)
-        ax.set_ylabel('reflectance', fontsize=self.node.labelFontSize)
+        ax.set_ylabel('reflectance' if stackSep == 0 else 'stacked reflectance',
+                      fontsize=self.node.labelFontSize)
 
         stackpos = 0
         for legend in self.node.sortlist:
@@ -308,7 +321,7 @@ class TabSpectrum(ui.tabs.Tab):
                 col = cols[colidx % len(cols)]
             means = [x + stackSep * stackpos for x in means]
             ax.plot(wavelengths, means, c=col, label=legend)
-            ax.scatter(wavelengths, means, c=[wav2RGB(x) for x in wavelengths])
+            ax.scatter(wavelengths, means, c=[wav2RGB(x) for x in wavelengths], s=0)
 
             if self.node.errorbarmode != ERRORBARMODE_NONE:
                 # calculate standard errors from standard deviations

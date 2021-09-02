@@ -230,15 +230,21 @@ class TabMultiDot(pcot.ui.tabs.Tab):
             # We need to node so we can force it to perform (and regenerate the mapped image)
             # when the mappings change.
             self.w.canvas.display(self.node.rgbImage, self.node.img, self.node)
+
+        if self.node.selected:
+            ds = self.node.selected.r
+            s = self.node.selected.label
+        else:
+            ds = self.node.dotSize
+            s = self.node.prefix
+
         if not self.dontSetText:
-            if self.node.selected:
-                self.w.caption.setText(self.node.selected.label)
-            else:
-                self.w.caption.setText(self.node.prefix)
+            self.w.caption.setText(s)
+
+        self.w.dotSize.setValue(ds)
 
         self.w.fontsize.setValue(self.node.fontsize)
         self.w.fontline.setValue(self.node.fontline)
-        self.w.dotSize.setValue(self.node.dotSize)
         self.w.drawbg.setChecked(self.node.drawbg)
 
         r, g, b = [x * 255 for x in self.node.colour]
