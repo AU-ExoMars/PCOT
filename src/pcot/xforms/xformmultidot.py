@@ -264,7 +264,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         if self.dragging and node.selected is not None:
             node.selected.x = x
             node.selected.y = y
-            node.uichange()
+            self.uichanged()
             self.w.canvas.redisplay()
 
         self.w.canvas.update()
@@ -295,7 +295,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
                     node.selected = r
                     mindist = d
         self.updateSelected()
-        node.uichange()
+        self.uichanged()
         self.w.canvas.redisplay()
         self.w.canvas.update()
 

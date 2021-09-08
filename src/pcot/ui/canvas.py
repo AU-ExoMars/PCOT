@@ -509,8 +509,9 @@ class Canvas(QtWidgets.QWidget):
         # This is the simplest way to avoid it.
         if not self.recursing:
             self.recursing = True
-            if self.nodeToUIChange is not None:
-                self.nodeToUIChange.uichange()
+            n = self.nodeToUIChange
+            if n is not None:
+                n.type.uichange(n)
                 self.nodeToUIChange.updateTabs()
             #            self.graph.performNodes(self.nodeToUIChange)
             self.recursing = False

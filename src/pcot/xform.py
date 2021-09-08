@@ -798,10 +798,9 @@ class XForm:
                     return False
         return True
 
-    def uichange(self):
-        self.type.uichange(self)
-
     def updateTabs(self):
+        """Tell the node to update its tabs; calls nodeChanged and updateError for each tab. The former
+        will tell the tab to update itself from the node, the latter will update the error field."""
         for x in self.tabs:
             x.nodeChanged()
             x.updateError()
@@ -829,7 +828,7 @@ class XForm:
                 # now run the node, catching any XFormException
                 try:
                     st = time.perf_counter()
-                    self.uichange()
+                    self.type.uichange(self)
                     self.type.perform(self)
                     self.runTime = time.perf_counter() - st
                 except XFormException as e:
@@ -1084,7 +1083,7 @@ class XFormGraph:
         elif node is not None:
             # this always happens when an individual node is changed, even if autorun is off. Note that it happens
             # to every node before perform() when autorun is on (hence the elif below).
-            node.uichange()
+            node.type.uichange(node)
             # and update tabs.
             node.updateTabs()
             ui.msg("Autorun not enabled")
