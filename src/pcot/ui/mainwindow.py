@@ -119,7 +119,30 @@ class MainUI(ui.tabs.DockableTabWindow):
         """Constructor which just calls _init()"""
         super().__init__()
         uic.loadUi(pcot.config.getAssetAsFile('main.ui'), self)
+        # connect buttons etc.
+        self.autolayoutButton.clicked.connect(self.autoLayoutButton)
+        self.dumpButton.clicked.connect(lambda: self.graph.dump())
+        self.capCombo.currentIndexChanged.connect(self.captionChanged)
+
+        self.actionSave_As.triggered.connect(self.saveAsAction)
+        self.action_New.triggered.connect(self.newAction)
+        self.actionNew_Macro.triggered.connect(self.newMacroAction)
+        self.actionSave.triggered.connect(self.saveAction)
+        self.actionOpen.triggered.connect(self.openAction)
+        self.actionCopy.triggered.connect(self.copyAction)
+        self.actionPaste.triggered.connect(self.pasteAction)
+        self.actionCut.triggered.connect(self.cutAction)
+        self.actionUndo.triggered.connect(self.undoAction)
+        self.actionRedo.triggered.connect(self.redoAction)
+
+        self.runAllButton.clicked.connect(self.runAllAction)
+        self.autoRun.toggled.connect(self.autorunChanged)
+
+        # get and activate the status bar
+        self.statusBar = QtWidgets.QStatusBar()
+        self.setStatusBar(self.statusBar)
         self.menuFile.addSeparator()
+
         self._init(doc=doc, macro=macro, doAutoLayout=doAutoLayout)
 
     def _init(self,
@@ -142,29 +165,6 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.rebuildRecents()
 
         self.initTabs()
-
-        # connect buttons etc.
-        self.autolayoutButton.clicked.connect(self.autoLayoutButton)
-        self.dumpButton.clicked.connect(lambda: self.graph.dump())
-        self.capCombo.currentIndexChanged.connect(self.captionChanged)
-
-        self.actionSave_As.triggered.connect(self.saveAsAction)
-        self.action_New.triggered.connect(self.newAction)
-        self.actionNew_Macro.triggered.connect(self.newMacroAction)
-        self.actionSave.triggered.connect(self.saveAction)
-        self.actionOpen.triggered.connect(self.openAction)
-        self.actionCopy.triggered.connect(self.copyAction)
-        self.actionPaste.triggered.connect(self.pasteAction)
-        self.actionCut.triggered.connect(self.cutAction)
-        self.actionUndo.triggered.connect(self.undoAction)
-        self.actionRedo.triggered.connect(self.redoAction)
-
-        self.runAllButton.pressed.connect(self.runAllAction)
-        self.autoRun.toggled.connect(self.autorunChanged)
-
-        # get and activate the status bar        
-        self.statusBar = QtWidgets.QStatusBar()
-        self.setStatusBar(self.statusBar)
 
         # set up the scrolling palette and make the buttons therein
         self.palette = palette.Palette(doc, self.paletteArea, self.paletteContents, self.view)
@@ -402,7 +402,10 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     ## "run all" action, typically used when you have auto-run turned off (editing a macro,
     # perhaps)
+    snark = 0
     def runAllAction(self):
+        MainUI.snark += 1
+        ui.log(f"RUN ALL {MainUI.snark}")
         self.runAll()
 
     ## "new" menu/keypress, will create a new top-level "patch"
