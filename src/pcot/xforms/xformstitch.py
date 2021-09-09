@@ -133,6 +133,7 @@ class XFormStitch(XFormType):
                     cv.rectangle(node.rgbImage.img, (x, y), (x + inp.w, y + inp.h), (1, 0, 0), 10)
 
     def uichange(self, node):
+        node.timesPerformed += 1
         self.perform(node)
 
 

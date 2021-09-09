@@ -37,7 +37,6 @@ if TYPE_CHECKING:
 # ugly forward declarations so the type hints work
 from pcot.pancamimage import ChannelMapping
 
-
 ## dictionary of name -> transformation type (XFormType)
 allTypes = dict()
 
@@ -62,7 +61,7 @@ class XFormException(Exception):
         self.message = message
 
 
-_xformctors = []            # list of (xformtype,classobject,args,kwargs,md5) tuples
+_xformctors = []  # list of (xformtype,classobject,args,kwargs,md5) tuples
 
 
 def createXFormTypeInstances():
@@ -108,7 +107,6 @@ class xformtype:
 
     def __call__(self):
         return self._instance
-
 
 
 class BadVersionException(Exception):
@@ -330,9 +328,6 @@ def serialiseConn(c, connSet):
     return None
 
 
-
-
-
 class BadTypeException(Exception):
     """Raised when XForm.getOutput() asks for an incorrect type"""
 
@@ -477,6 +472,7 @@ class XForm:
         self.error = None
         self.rectText = None
         self.runTime = 0
+        self.timesPerformed = 0  # used for debugging/optimising
 
         # UI-DEPENDENT DATA DOWN HERE
         self.xy = (0, 0)  # this SHOULD be serialised
@@ -814,6 +810,7 @@ class XForm:
         if not self.graph.performingGraph:
             raise Exception("Do not call perform directly on a node!")
         ui.msg("Performing {}".format(self.debugName()))
+        self.timesPerformed += 1
         try:
             # must clear this with prePerform on the graph, or nodes will
             # only run once!
@@ -1295,6 +1292,7 @@ class XFormROIType(XFormType):
         pass
 
     def uichange(self, n):
+        n.timesPerformed += 1
         self.perform(n)
 
     def perform(self, node):

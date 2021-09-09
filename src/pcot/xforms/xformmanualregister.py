@@ -117,6 +117,7 @@ class XFormManualRegister(XFormType):
         node.selIsDest = False
 
     def uichange(self, node):
+        node.timesPerformed += 1
         self.perform(node, False)
 
     def perform(self, node, doApply=True):

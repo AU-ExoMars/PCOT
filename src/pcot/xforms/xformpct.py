@@ -158,6 +158,7 @@ class XformPCT(XFormType):
         node.img = img
 
     def uichange(self, n):
+        node.timesPerformed += 1
         self.perform(n)
 
     def stddev(self, node, idx):

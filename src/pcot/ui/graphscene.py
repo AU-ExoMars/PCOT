@@ -416,11 +416,17 @@ def makeNodeGraphics(n):
         error.setFont(errorFont)
         error.setBrush(QColor(255, 0, 0))
         error.setPos(x + XTEXTOFFSET + XERROROFFSET, y + YTEXTOFFSET + CONNECTORHEIGHT + YERROROFFSET)
-    elif n.rectText is not None:
+    elif n.rectText is not None and len(n.rectText)>0:
         t = GText(n.rect, n.rectText, n)
         t.setFont(errorFont)
         t.setBrush(QColor(0, 0, 255))
         t.setPos(x + XTEXTOFFSET, y + YTEXTOFFSET + CONNECTORHEIGHT + YERROROFFSET)
+    else:
+        t = GText(n.rect, f"{n.timesPerformed}", n)
+        t.setFont(errorFont)
+        t.setBrush(QColor(0, 128, 0))
+        t.setPos(x + XTEXTOFFSET, y + YTEXTOFFSET + CONNECTORHEIGHT + YERROROFFSET)
+
 
     return n.rect
 

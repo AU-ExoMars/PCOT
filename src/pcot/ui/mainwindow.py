@@ -402,10 +402,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     ## "run all" action, typically used when you have auto-run turned off (editing a macro,
     # perhaps)
-    snark = 0
     def runAllAction(self):
-        MainUI.snark += 1
-        ui.log(f"RUN ALL {MainUI.snark}")
         self.runAll()
 
     ## "new" menu/keypress, will create a new top-level "patch"

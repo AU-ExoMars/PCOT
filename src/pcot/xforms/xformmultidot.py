@@ -1,5 +1,4 @@
 import matplotlib
-import matplotlib
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPainter, QColor, QKeyEvent
 from PyQt5.QtWidgets import QMessageBox, QSpinBox
@@ -56,6 +55,7 @@ class XFormMultiDot(XFormType):
         node.rois = []  # this will be a list of ROICircle
 
     def uichange(self, n):
+        n.timesPerformed += 1
         self.perform(n)
 
     def perform(self, node):
