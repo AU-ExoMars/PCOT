@@ -43,32 +43,36 @@ class SubImageCubeROI:
             # we're not using the image ROIs, we're using one passed in. Make a list of it.
             rois = [roi]
 
+        genFullImage = True  # true if there is no valid ROI
         if len(rois) > 0:
             # construct a temporary ROI union of all the ROIs on this image
             roi = ROI.roiUnion(rois)
-            self.bb = roi.bb()  # the bounding box within the image
-            self.mask = roi.mask()  # the ROI's mask, same size as the BB
-            imgBB = (0, 0, img.w, img.h)
-            # get intersection of ROI BB and image BB
-            intersect = self.bb.intersection(imgBB)
-            if intersect is None:
-                # no intersection, ROI outside image
-                raise ROIBoundsException()
-            if intersect != self.bb:
-                # intersection is not equal to ROI BB, we must clip
-                if clip:
-                    roi = roi.clipToImage(img)
-                    self.bb = roi.bb()
-                    self.mask = roi.mask()
-                else:
+            if roi is not None:  # if the ROI union is OK
+                genFullImage = False
+                self.bb = roi.bb()  # the bounding box within the image
+                self.mask = roi.mask()  # the ROI's mask, same size as the BB
+                imgBB = (0, 0, img.w, img.h)
+                # get intersection of ROI BB and image BB
+                intersect = self.bb.intersection(imgBB)
+                if intersect is None:
+                    # no intersection, ROI outside image
                     raise ROIBoundsException()
+                if intersect != self.bb:
+                    # intersection is not equal to ROI BB, we must clip
+                    if clip:
+                        roi = roi.clipToImage(img)
+                        self.bb = roi.bb()
+                        self.mask = roi.mask()
+                    else:
+                        raise ROIBoundsException()
 
-            x, y, w, h = self.bb  # this works even though self.bb is Rect
-            self.img = img.img[y:y + h, x:x + w]
+                x, y, w, h = self.bb  # this works even though self.bb is Rect
+                self.img = img.img[y:y + h, x:x + w]
 
-            if self.img.shape[:2] != self.mask.shape:
-                raise Exception("Internal error: shape still incorrect after clip")
-        else:
+                if self.img.shape[:2] != self.mask.shape:
+                    raise Exception("Internal error: shape still incorrect after clip")
+
+        if genFullImage:
             # here we just make a copy of the image
             self.img = np.copy(img.img)  # make a copy to avoid descendant nodes changing their input nodes' outputs
             self.bb = Rect(0, 0, img.w, img.h)  # whole image

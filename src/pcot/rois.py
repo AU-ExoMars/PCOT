@@ -170,7 +170,8 @@ class ROI:
             return ROI(bb, mask)
         else:
             # return a null ROI
-            return ROI(Rect(0, 0, 10, 10), np.full((10, 10), False))
+            return None
+            # return ROI(Rect(0, 0, 10, 10), np.full((10, 10), False))
 
     @staticmethod
     def roiIntersection(rois):
