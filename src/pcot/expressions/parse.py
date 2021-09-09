@@ -75,7 +75,7 @@ class Parameter:
         return r
 
 
-def _styleTableCells(x):
+def styleTableCells(x):
     if x.tag in ('th', 'tr'):
         x.attrs = {"align": "left"}
     elif x.tag == "table":
@@ -122,7 +122,7 @@ class Function:
                         HTML("p", Bold("Optional arguments")),
                         oargs
                     ]
-                    ).visit(_styleTableCells).string()
+                    ).visit(styleTableCells).string()
 
     def chkargs(self, args: List[Optional[Datum]]):
         """Process arguments, returning a pair of lists of Datum items: mandatory and optional args.
@@ -382,11 +382,53 @@ class Parser:
         Also takes a description and two lists of argument types: mandatory and optional."""
         self.funcRegistry[name] = Function(name, fn, description, mandatoryParams, optParams, varargs)
 
-    def funcHelp(self, name):
+    # property dict - keys are (name,type), values are (desc,func) where the func
+    # takes Datum and gives Datum
+
+    properties: Dict[Tuple[str, conntypes.Type], Tuple[str, Callable[[Datum], Datum]]]
+
+    def registerProperty(self, name: str, tp: conntypes.Type, desc: str, func: Callable[[Datum], Datum]):
+        """add a property (e.g. the 'w' in 'a.w'), given name, input type, description and function"""
+        self.properties[(name, tp)] = (desc, func)
+
+    def getProperty(self, a: Datum, b: Datum):
+        if a is None:
+            raise ParseException('first argument is None in "." operator')
+        if b is None:
+            raise ParseException('second argument is None in "." operator')
+        if b.tp != conntypes.IDENT:
+            raise ParseException('second argument should be identifier in "." operator')
+        propName = b.val
+
+        try:
+            _, func = self.properties[(propName, a.tp)]
+            return func(a.get(a.tp))
+        except KeyError:
+            raise ParseException('unknown property "{}" for given type in "." operator'.format(propName))
+
+    def listProps(self, nameToFind = None):
+        t = Table()
+        for k, v in self.properties.items():
+            name, tp = k
+            desc, _ = v
+            if nameToFind is None or nameToFind == name:
+                t.newRow()
+                t.add("name", "x."+name)
+                t.add("type of x", tp.name)
+                t.add("desc", desc)
+        if len(t) == 0:
+            return None # no match found!
+        return t.htmlObj().visit(styleTableCells).string()
+
+    def helpOnWord(self, name):
         if name in self.funcRegistry:
             return self.funcRegistry[name].help()
         else:
-            return "Function not found"
+            s = self.listProps(nameToFind=name)
+            if s is not None:
+                return s
+
+        return "Function not found"
 
     def listFuncs(self):
         t = Table()
@@ -399,7 +441,7 @@ class Parser:
             t.add("params", ps)
             t.add("opt. params", ",".join([p.name for p in f.optParams]))
             t.add("description", f.desc)
-        return t.htmlObj().visit(_styleTableCells).string()
+        return t.htmlObj().visit(styleTableCells).string()
 
     def out(self, inst: Instruction):
         # internal method - output
@@ -415,6 +457,7 @@ class Parser:
         self.unopRegistry = dict()
         self.varRegistry = dict()
         self.funcRegistry = dict()
+        self.properties = dict()
         self.toks = []
 
         self.nakedIdents = nakedIdents
@@ -422,6 +465,8 @@ class Parser:
         # preregister the special operators for open bracket
         self.binopRegistry['('] = (100, None)
         self.unopRegistry['('] = (100, None)
+        # getProperty is built into the parser, but can be bound to any operator.
+        self.registerBinop('.', 80, lambda a, b: self.getProperty(a, b))
 
     def parse(self, s: str):
         """Parsing function - uses the shunting algorithm.

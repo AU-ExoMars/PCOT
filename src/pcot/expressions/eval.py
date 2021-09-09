@@ -10,14 +10,14 @@ import pcot.config
 import pcot.conntypes as conntypes
 import pcot.operations as operations
 from pcot.conntypes import Datum
-from .parse import Parameter, Parser, execute
+from .parse import Parameter, Parser, execute, styleTableCells
 from pcot.pancamimage import ImageCube
 from pcot.utils.ops import binop, unop
 from pcot.xform import XFormException
 
-
 # TODO: Show output in canvas (and other output somehow if not image?). Honour the ROI from the "leftmost" image with an ROI - So A has priority over B, etc.
 # TODO: keep expression guide in help updated
+from ..utils.table import Table
 
 
 def extractChannelByName(a: Datum, b: Datum):
@@ -40,32 +40,6 @@ def extractChannelByName(a: Datum, b: Datum):
 
     img.rois = a.val.rois.copy()
     return Datum(conntypes.IMG, img)
-
-
-# property dict - keys are (name,type).
-
-properties: Dict[Tuple[str, conntypes.Type], Callable[[Datum], Datum]] = {}
-
-
-def registerProperty(name: str, tp: conntypes.Type, func: Callable[[Datum], Datum]):
-    """add a property (e.g. the 'w' in 'a.w'), given name, input type and function"""
-    properties[(name, tp)] = func
-
-
-def getProperty(a: Datum, b: Datum):
-    if a is None:
-        raise XFormException('EXPR', 'first argument is None in "." operator')
-    if b is None:
-        raise XFormException('EXPR', 'second argument is None in "." operator')
-    if b.tp != conntypes.IDENT:
-        raise XFormException('EXPR', 'second argument should be identifier in "." operator')
-    propName = b.val
-
-    try:
-        func = properties[(propName, a.tp)]
-        return func(a)
-    except KeyError:
-        raise XFormException('EXPR', 'unknown property "{}" for given type in "." operator'.format(propName))
 
 
 def funcMerge(args, optargs):
@@ -206,7 +180,6 @@ class ExpressionEvaluator(Parser):
         self.registerBinop('|', 20, lambda a, b: binop(a, b, lambda x, y: np.maximum(x, y), None))
         self.registerUnop('!', 50, lambda x: unop(x, lambda a: 1 - a, None))
 
-        self.registerBinop('.', 80, getProperty)
         self.registerBinop('$', 100, extractChannelByName)
 
         # additional functions and properties - this is in the __init__.py in the operations package.
@@ -267,12 +240,25 @@ class ExpressionEvaluator(Parser):
                           [],
                           funcCrop)
 
+        self.registerProperty('w', conntypes.IMG,
+                              "give the width of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",
+                              lambda q: Datum(conntypes.NUMBER, q.subimage().bb.w))
+        self.registerProperty('w', conntypes.ROI, "give the width of an ROI in pixels",
+                              lambda q: Datum(conntypes.NUMBER, q.bb().w))
+        self.registerProperty('h', conntypes.IMG,
+                              "give the height of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",
+                              lambda q: Datum(conntypes.NUMBER, q.subimage().bb.h))
+        self.registerProperty('h', conntypes.ROI, "give the width of an ROI in pixels",
+                              lambda q: Datum(conntypes.NUMBER, q.bb().h))
+
+        self.registerProperty('n', conntypes.IMG,
+                              "give the area of an image in pixels (if there are ROIs, give the number of pixels in the ROI union)",
+                              lambda q: Datum(conntypes.NUMBER, q.subimage().mask.sum()))
+        self.registerProperty('n', conntypes.ROI, "give the number of pixels in an ROI",
+                              lambda q: Datum(conntypes.NUMBER, q.pixels()))
+
         for x in pcot.config.exprFuncHooks:
             x(self)
-
-        registerProperty('w', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.w))
-        registerProperty('h', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.h))
-        registerProperty('n', conntypes.IMG, lambda x: Datum(conntypes.NUMBER, x.val.h * x.val.w))
 
     def run(self, s):
         """Parse and evaluate an expression."""

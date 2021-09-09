@@ -14,6 +14,7 @@ from pcot.channelsource import IChannelSource, FileChannelSourceRed, FileChannel
 from typing import List, Set, Optional
 from pcot.rois import ROI, ROIPainted, ROIBoundsException
 from pcot.utils import geom
+from pcot.utils.geom import Rect
 
 
 class SubImageCubeROI:
@@ -62,7 +63,7 @@ class SubImageCubeROI:
                 else:
                     raise ROIBoundsException()
 
-            x, y, w, h = self.bb
+            x, y, w, h = self.bb  # this works even though self.bb is Rect
             self.img = img.img[y:y + h, x:x + w]
 
             if self.img.shape[:2] != self.mask.shape:
@@ -70,7 +71,7 @@ class SubImageCubeROI:
         else:
             # here we just make a copy of the image
             self.img = np.copy(img.img)  # make a copy to avoid descendant nodes changing their input nodes' outputs
-            self.bb = (0, 0, img.w, img.h)  # whole image
+            self.bb = Rect(0, 0, img.w, img.h)  # whole image
             self.mask = np.full((img.h, img.w), True)  # full mask
 
     ## the main mask is just a single channel - this will generate a mask
@@ -352,9 +353,10 @@ class ImageCube:
         xx = ";".join([IChannelSource.stringForSet(x, 0) for x in self.sources])
 
         s += "src: [{}]".format(xx)
-        x = [r.bb() for r in self.rois]
-        x = [", ROI {},{},{}x{}".format(x, y, w, h) for x, y, w, h in x]
-        s += "/".join(x) + ">"
+        xx = [r.bb() for r in self.rois]
+        xx = [x for x in xx if x]  # filter out None
+        xx = [", ROI {},{},{}x{}".format(x, y, w, h) for x, y, w, h in xx if xx]
+        s += "/".join(xx) + ">"
         return s
 
     ## the descriptor is a string which can vary depending on main window settings.

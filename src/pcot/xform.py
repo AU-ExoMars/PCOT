@@ -1291,9 +1291,9 @@ class XFormROIType(XFormType):
         imagecube, and node.roi is the ROI"""
         pass
 
-    def uichange(self, n):
-        n.timesPerformed += 1
-        self.perform(n)
+#    def uichange(self, n):
+#        n.timesPerformed += 1
+#        self.perform(n)
 
     def perform(self, node):
         img = node.getInput(self.IN_IMG, conntypes.IMG)

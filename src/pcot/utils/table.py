@@ -54,6 +54,9 @@ class Table:
             self._currow = dict()
             self._rows[label] = self._currow
 
+    def __len__(self):
+        return len(self._rows)
+
     def add(self, k, v):
         if k not in self._keys:
             self._keys.append(k)

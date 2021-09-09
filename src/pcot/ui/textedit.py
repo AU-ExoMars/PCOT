@@ -13,6 +13,7 @@ def handleMenuEvent(self, ev):
     menu = self.createStandardContextMenu()
 
     lfact = menu.addAction("List all functions")
+    lpact = menu.addAction("List all properties")
 
     fhact = "dummy"
     if len(funcname) > 0:
@@ -20,18 +21,21 @@ def handleMenuEvent(self, ev):
     else:
         a = menu.addAction("Hover over a function name and right-click for help")
         a.setDisabled(True)
-        menu.addAction(a)
 
     parser = allTypes['expr'].parser    # the eval node type owns the parser, which knows about funcs.
 
     a = menu.exec_(ev.globalPos())
     if a == fhact:
         txt = "<h1>Help on {}</h1>".format(funcname)
-        txt += parser.funcHelp(funcname)
+        txt += parser.helpOnWord(funcname)
         ui.log(txt)
     elif a == lfact:
         txt = "<h1>List of all functions in eval node</h1>"
         txt += parser.listFuncs()
+        ui.log(txt)
+    elif a == lpact:
+        txt = "<h1>List of all 'x.y' properties in eval node</h1>"
+        txt += parser.listProps()
         ui.log(txt)
     else:
         menu.exec_(ev.globalPos())

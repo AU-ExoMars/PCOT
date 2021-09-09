@@ -54,9 +54,9 @@ class XFormMultiDot(XFormType):
         node.selected = None  # selected ROICircle
         node.rois = []  # this will be a list of ROICircle
 
-    def uichange(self, n):
-        n.timesPerformed += 1
-        self.perform(n)
+#    def uichange(self, n):
+#        n.timesPerformed += 1
+#        self.perform(n)
 
     def perform(self, node):
         img = node.getInput(self.IN_IMG, conntypes.IMG)
@@ -264,8 +264,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         if self.dragging and node.selected is not None:
             node.selected.x = x
             node.selected.y = y
-            self.uichanged()
-            self.w.canvas.redisplay()
+            self.changed()
 
         self.w.canvas.update()
 
@@ -295,8 +294,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
                     node.selected = r
                     mindist = d
         self.updateSelected()
-        self.uichanged()
-        self.w.canvas.redisplay()
+        self.changed()
         self.w.canvas.update()
 
     def canvasKeyPressEvent(self, e: QKeyEvent):
