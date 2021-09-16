@@ -158,7 +158,7 @@ class XformPCT(XFormType):
         node.img = img
 
     def uichange(self, n):
-        node.timesPerformed += 1
+        n.timesPerformed += 1
         self.perform(n)
 
     def stddev(self, node, idx):
@@ -299,7 +299,17 @@ class TabPCT(pcot.ui.tabs.Tab):
             self.w.canvas.display(self.node.rgbImage, self.node.img, self.node)
         self.w.brushSize.setValue(self.node.brushSize)
         self.w.stddevsBox.setCheckState(2 if self.node.showStdDevs else 0)
-        self.w.roiHelpLabel.setEnabled(len(self.node.rois) > 0)
+        if len(self.node.rois)<1:
+            if rotateEnabled:
+                t = "adjust the image of the PCT by dragging the three control points " \
+                    "or clicking 'rotate'. Then click 'generate ROIs'"
+            else:
+                t = "Click on the PCT mounting screws in the following order: right, " \
+                    "left, top (assuming the two large patches are at the top)"
+        else:
+            t = "Ctrl-Click to select an ROI, then Click to paint extra pixels or Shift-Click " \
+                "to remove them"
+        self.w.roiHelpLabel.setText(t)
 
     def drawStats(self, p: QPainter):
         if self.node.rois:

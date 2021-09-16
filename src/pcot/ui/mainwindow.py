@@ -22,12 +22,10 @@ import pcot.ui.namedialog as namedialog
 import pcot.ui.tabs as tabs
 import pcot.xform as xform
 
-from pcot.utils import archive
-
 
 class InputSelectButton(QtWidgets.QPushButton):
     def __init__(self, n, inp):
-        text = "Input " + str(n)
+        text = f"Input {n}"
         self.input = inp
         super().__init__(text=text)
         self.clicked.connect(lambda: self.input.openWindow())
@@ -142,6 +140,8 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.statusBar = QtWidgets.QStatusBar()
         self.setStatusBar(self.statusBar)
         self.menuFile.addSeparator()
+        self.isfLayout = QtWidgets.QHBoxLayout()
+        self.inputSelectorFrame.setLayout(self.isfLayout)
 
         self._init(doc=doc, macro=macro, doAutoLayout=doAutoLayout)
 
@@ -198,11 +198,12 @@ class MainUI(ui.tabs.DockableTabWindow):
         else:
             # We are definitely a main window
             self.macroPrototype = None  # we are not a macro
-            # now create the input selector buttons
-            isfLayout = QtWidgets.QHBoxLayout()
-            self.inputSelectorFrame.setLayout(isfLayout)
+            # now create the input selector buttons, removing the old ones
+            while self.isfLayout.takeAt(0):
+                pass
+
             for x in range(0, len(self.doc.inputMgr.inputs)):
-                isfLayout.addWidget(InputSelectButton(x, self.doc.inputMgr.inputs[x]))
+                self.isfLayout.addWidget(InputSelectButton(x, self.doc.inputMgr.inputs[x]))
 
         # make sure the view has a link up to this window,
         # also will tint the view if we are a macro
