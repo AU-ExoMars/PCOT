@@ -1,5 +1,7 @@
-# This is the application-specific part of the expression parsing system.
-# In this system, all data is a Datum object.
+"""This is the application-specific part of the expression parsing system.
+
+Anything in here should be specific to PCOT itself, and all data should be as Datum objects.
+"""
 import numbers
 from typing import Callable, Dict, Tuple, List, Optional
 
@@ -10,17 +12,21 @@ import pcot.config
 import pcot.conntypes as conntypes
 import pcot.operations as operations
 from pcot.conntypes import Datum
-from .parse import Parameter, Parser, execute, styleTableCells
+from .parse import Parameter, Parser, execute
 from pcot.pancamimage import ImageCube
 from pcot.utils.ops import binop, unop
 from pcot.xform import XFormException
 
 # TODO: Show output in canvas (and other output somehow if not image?). Honour the ROI from the "leftmost" image with an ROI - So A has priority over B, etc.
 # TODO: keep expression guide in help updated
-from ..utils.table import Table
 
 
 def extractChannelByName(a: Datum, b: Datum):
+    """Extract a channel by name from an image, used for the $ operator.
+    a: a Datum which must be an image
+    b: a Datum which must be an identifier or numeric wavelength
+    return: a new single-channel image datum
+    """
     if a is None or b is None:
         return None
 
@@ -131,9 +137,11 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
     and doing the operation on the resulting data."""
     intermediate = None
     for x in d:
+        # get each datum, which is either numeric or an image.
         if x is None:
             continue
         elif x.isImage():
+            # if an image, convert to a 1D array
             subimage = x.val.subimage()
             mask = subimage.fullmask()
             cp = subimage.img.copy()
@@ -146,11 +154,12 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
             else:
                 raise XFormException('EXPR', 'internal: fn returns bad type in statsWrapper')
         elif x.tp == conntypes.NUMBER:
+            # if a number, convert to a single-value array
             newdata = np.array([x.val], np.float32)
         else:
             raise XFormException('EXPR', 'internal: bad type passed to statsWrapper')
 
-        # and add it to the intermediate array
+        # and concat it to the intermediate array
         if intermediate is None:
             intermediate = newdata
         else:

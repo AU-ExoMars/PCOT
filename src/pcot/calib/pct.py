@@ -1,10 +1,18 @@
-#
-# PCT geometry
-#
+"""Geometry of the PCT.
 
-# Numbering system is from the top left, as viewed in EXM-PC-DRW-ABU-0007_1.4_PCT_Drawing
-# with the two large patches at the bottom. Tuples give x,y coordinates and radius in mm; origin is TOP LEFT.
-# Note that the patches are elliptical, but the mean diameters are 19mm/31mm for small/large.
+patches: the positions, radii, names and approx. colours of the PCT patches
+
+Order of the patches is from the top left, as viewed in EXM-PC-DRW-ABU-0007_1.4_PCT_Drawing
+with the two large patches at the bottom. Each patch has x,y coordinates and radius in mm, with origin
+at top left; the patch name, and an RGB approximation of its colour.
+Note that the patches are elliptical, but the mean diameters are 19mm/31mm for small/large.
+
+screws: the positions of the three large mounting screws (not the corner holes)
+
+width, height: overall PCT dimensions
+
+"""
+
 from collections import namedtuple
 
 Patch = namedtuple('Patch', ['x', 'y', 'r', 'name', 'col'])

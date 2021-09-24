@@ -1,5 +1,10 @@
-# This is the core of the expression parsing system.
-# The actual operations etc. are in eval.py.
+"""This is the expression parser and VM, which uses a shunting-yard algorithm to
+produce a sequence of instructions for a stack machine. While largely application
+independent, it does use PCOT's Datum type as a variant record, and conntypes to
+handle type checking. Additionally, PCOT's html and table modules are used for
+generating help texts.
+"""
+
 import numbers
 from io import BytesIO
 from tokenize import tokenize, TokenInfo, NUMBER, NAME, OP, ENCODING, ENDMARKER, NEWLINE, ERRORTOKEN, PERCENT, DOT
@@ -18,6 +23,7 @@ debug: bool = True
 
 
 class ArgsException(Exception):
+    """Exception indicating an error has occurred while processing an argument"""
     ## @var message
     # a string message
     message: str
@@ -28,6 +34,7 @@ class ArgsException(Exception):
 
 
 class ParamException(Exception):
+    """Internal exception used during parameter processing; propagated to ArgsException"""
     ## @var message
     # a string message
     message: str
@@ -37,9 +44,16 @@ class ParamException(Exception):
         self.message = message
 
 
+class ParseException(Exception):
+    """A generic error in the parser"""
+    def __init__(self, msg: str, t: Optional[TokenInfo] = None):
+        if t is not None:
+            msg = "{}: '{}' at chars {}-{}".format(msg, t.string, t.start[1], t.end[1])
+        super().__init__(msg)
+
+
 class Parameter:
     """a definition of a function parameter"""
-
     def __init__(self,
                  name: str,  # name
                  desc: str,  # description
@@ -48,24 +62,26 @@ class Parameter:
                  ):
         self.name = name
         if isinstance(types, conntypes.Type):
-            self.types = (types,)  # convert single type to tuple
-        else:
-            self.types = types
+            types = (types,)  # convert single type to tuple
+        self.types = set(types)  # convert tuple to set
         self.desc = desc
         self.deflt = deflt
 
     def isValid(self, datum: Datum):
+        """Make sure that the datum has a type, and that this type is acceptable (is in this parameter's
+        set of valid types"""
         if datum is None:
             raise ParamException("None is not a valid parameter type")
         return datum.tp in self.types
 
     def getDefault(self):
+        """Return the default value of this parameter if there is one (must be numeric)"""
         if self.deflt is None:
             raise ParamException("internal: optional parameter {} has a no default".format(self.name))
         return self.deflt
 
     def validArgsString(self):
-        # turn a tuple (1,2,3) into "1, 2 or 3"
+        """turn a tuple (1,2,3) into "1, 2 or 3"""
         if len(self.types) == 1:
             r = str(self.types[0])
         else:
@@ -76,6 +92,7 @@ class Parameter:
 
 
 def styleTableCells(x):
+    """Generate appropriate XML attributes for making table cells look better (yes, should be a stylesheet)"""
     if x.tag in ('th', 'tr'):
         x.attrs = {"align": "left"}
     elif x.tag == "table":
@@ -83,8 +100,7 @@ def styleTableCells(x):
 
 
 class Function:
-    """a function callable from an eval string"""
-
+    """defines a function callable from an eval string; is called from registerFunc."""
     def __init__(self, name: str, fn: Callable[[List[Any]], Any], description: str,
                  mandatoryParams: List[Parameter], optParams: List[Parameter], varargs):
         self.fn = fn
@@ -99,6 +115,7 @@ class Function:
             raise ArgsException("cannot have a function with varargs and optional arguments")
 
     def help(self):
+        """generate help text using the Table class, returning an HTML object."""
         t = Table()
         for x in self.mandatoryParams:
             t.newRow()
@@ -177,19 +194,20 @@ class Function:
         return mandatArgs, optArgs
 
     def call(self, args):
-        # do type checking for arguments, then call. Note that we pass mandatory and optional arguments
+        """do type checking for arguments, then call this function.
+        Note that we pass mandatory and optional arguments"""
         args, optargs = self.chkargs(args)
         return self.fn(args, optargs)
 
 
 class Instruction:
-    """Instruction interface"""
-
+    """Interface for all instructions in the virtual machine"""
     def exec(self, stack: Stack):
         pass
 
 
 class InstNumber(Instruction):
+    """A VM instruction for stacking a number"""
     val: float
 
     def __init__(self, v: float):
@@ -204,6 +222,7 @@ class InstNumber(Instruction):
 
 
 class InstIdent(Instruction):
+    """A VM instruction for stacking an identifier (a short string)"""
     val: str
 
     def __init__(self, v: str):
@@ -217,7 +236,11 @@ class InstIdent(Instruction):
 
 
 class InstVar(Instruction):
+    """A VM instruction for stacking a variable.
+    This encapsulates a function which should be called by the VM to get the variable's value.
+    The name of the variable is also stored for debugging."""
     callback: Callable[[], Any]
+    name: str
 
     def __init__(self, name, callback: Callable[[], Any]):
         self.callback = callback
@@ -231,14 +254,18 @@ class InstVar(Instruction):
 
 
 class InstFunc(Instruction):
+    """A VM instruction for stacking a function.
+    Does not call the function! InstCall does that. Holds the function to be called by the VM, and the
+    name of the function for debugging."""
     callback: Callable[[List[Any]], Any]
+    name: str
 
     def __init__(self, name, func: Function):
         self.func = func
         self.name = name
 
     def exec(self, stack: Stack):
-        # actually stack the callback function, don't call it - InstCall does that.
+        """actually stack the callback function, don't call it - InstCall does that."""
         stack.append(Datum(conntypes.FUNC, self.func))
 
     def __str__(self):
@@ -246,6 +273,9 @@ class InstFunc(Instruction):
 
 
 class InstOp(Instruction):
+    """A VM instruction for performing a unary (prefix) or binary operation.
+    The constructor fetches the function to call from the appropriate
+    registry."""
     name: str
     prefix: bool
     precedence: int
@@ -273,6 +303,8 @@ class InstOp(Instruction):
 
 
 class InstBracket(InstOp):
+    """A VM instruction used internally to process brackets in the shunting yard algorithm;
+    should never be output as part of the instruction stream"""
     def __init__(self, parser: 'Parser'):
         # still need the string argument so InstOp knows which precedence to look up
         super().__init__('(', False, parser)
@@ -283,6 +315,8 @@ class InstBracket(InstOp):
 
 
 class InstCall(Instruction):
+    """The VM instruction which calls the function on top of the stack (see InstFunction).
+    If the function wasn't registered, an ident will be stacked instead."""
     def __init__(self, argcount):
         self.argcount = argcount
 
@@ -307,13 +341,9 @@ class InstCall(Instruction):
             # this executes the function by calling it's call method,
             # which will do argument type checking.
             stack.append(v.val.call(args))
-
-
-class ParseException(Exception):
-    def __init__(self, msg: str, t: Optional[TokenInfo] = None):
-        if t is not None:
-            msg = "{}: '{}' at chars {}-{}".format(msg, t.string, t.start[1], t.end[1])
-        super().__init__(msg)
+        else:
+            # if we do (say) "a()", we'll get "cannot call a (whatever input A is connected to)..."
+            raise ParseException("cannot call a {} as if it were a function".format(v.tp))
 
 
 def execute(seq: List[Instruction], stack: Stack) -> float:
