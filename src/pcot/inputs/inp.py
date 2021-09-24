@@ -1,4 +1,3 @@
-## the abstract class from which all input types come
 from typing import List, Optional, TYPE_CHECKING
 
 from .envi import ENVIInputMethod
@@ -8,19 +7,16 @@ from .nullinput import NullInputMethod
 from .rgb import RGBInputMethod
 from pcot.pancamimage import ImageCube
 
-if TYPE_CHECKING:
-    from pcot.xform import XFormGraph
-
 from pcot.ui.inputs import InputWindow
 
 
-## This is an input, of which there are (probably) 4 or so.
-# Each input has a number of "methods" - objects which can read RGB, multifiles
-# and so on. All methods are always present, but only one is active.
-# The data from the currently active input methods arrives in the graph through
-# an XFormInput node.
-
 class Input:
+    """This is an input, of which there are (probably) 4 or so.
+    Each input has a number of "methods" - objects which can read RGB, multifiles
+    and so on. All methods are always present, but only one is active.
+    The data from the currently active input methods arrives in the graph through
+    an XFormInput node.
+    """
     window: Optional['InputWindow']
     methods: List['InputMethod']
     activeMethod: int
@@ -97,7 +93,7 @@ class Input:
     # so I'll just perform the entire graph via changed() to ensure the
     # inputs re-run.
     def performGraph(self):
-        self.mgr.graph.changed()
+        self.mgr.doc.graph.changed()
 
     ## serialise the input, or rather produce a "serialisable" data structure. We
     # do this by producing a list of two elements: the input type and that input type's
@@ -139,15 +135,13 @@ class Input:
 NUMINPUTS = 4
 
 
-## This is the input manager, which owns and manages the inputs. It itself is owned by a graph,
-# if that graph isn't a macro prototype graph.
-
 class InputManager:
+    """This is the input manager, which owns and manages the inputs.
+    It itself is owned by a document"""
     inputs: List[Input]
-    graph: 'XFormGraph'
 
     def __init__(self, doc):
-        self.graph = doc.graph
+        self.doc = doc
         self.inputs = [Input(self) for _ in range(0, NUMINPUTS)]
 
     def openWindow(self, inputIdx):

@@ -1,4 +1,4 @@
-## the ENVI file input method, only supports 32 bit float, non-interleaved
+"""the ENVI file input method, only supports 32 bit float, non-interleaved"""
 import os
 from typing import Optional
 

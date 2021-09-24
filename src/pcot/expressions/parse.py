@@ -99,6 +99,22 @@ def styleTableCells(x):
         x.attrs = {"border": "1", "cellpadding": 5}
 
 
+class Variable:
+    """defines a variable, which is a wrapper around a parameterless function and a description"""
+    def __init__(self, name: str, fn: Callable[[],Any], desc: str):
+        self.desc = desc
+        self.fn = fn
+        self.name = name
+
+    def help(self):
+        """Slightly overkill to return the help string of a var"""
+        return HTML("div",
+                    [
+                      HTML("p", self.desc)
+                    ]
+                    ).visit(styleTableCells).string()
+
+
 class Function:
     """defines a function callable from an eval string; is called from registerFunc."""
     def __init__(self, name: str, fn: Callable[[List[Any]], Any], description: str,
@@ -237,20 +253,18 @@ class InstIdent(Instruction):
 
 class InstVar(Instruction):
     """A VM instruction for stacking a variable.
-    This encapsulates a function which should be called by the VM to get the variable's value.
-    The name of the variable is also stored for debugging."""
-    callback: Callable[[], Any]
+    This encapsulates a function which should be called by the VM to get the variable's value."""
+    var: Variable
     name: str
 
-    def __init__(self, name, callback: Callable[[], Any]):
-        self.callback = callback
-        self.name = name
+    def __init__(self, var):
+        self.var = var
 
     def exec(self, stack: Stack):
-        stack.append(self.callback())
+        stack.append(self.var.fn())
 
     def __str__(self):
-        return "VAR {}".format(self.name)
+        return "VAR {}".format(self.var.name)
 
 
 class InstFunc(Instruction):
@@ -324,7 +338,7 @@ class InstCall(Instruction):
         return "CALL  argcount: {}".format(self.argcount)
 
     def exec(self, stack: Stack):
-        # semantics here - pop off the args, then pop off the function name (or some other kind of ID!)
+        """execute: pop off the args, then pop off the function value"""
         if self.argcount != 0:
             args = stack[-self.argcount:]
         else:
@@ -347,6 +361,7 @@ class InstCall(Instruction):
 
 
 def execute(seq: List[Instruction], stack: Stack) -> float:
+    """Execute a list of instructions on a given stack"""
     for inst in seq:
         inst.exec(stack)
         if debug:
@@ -357,6 +372,7 @@ def execute(seq: List[Instruction], stack: Stack) -> float:
 
 
 def isOp(t):
+    """Return whether a token is an operator (since we've got some weird ones)"""
     return t.type in [OP, ERRORTOKEN, PERCENT, DOT]
 
 
@@ -383,12 +399,13 @@ class Parser:
         """Register a unary operation"""
         self.unopRegistry[name] = (precedence, fn)
 
-    ## vars are names mapped to argless fns which return a value
-    varRegistry: Dict[str, Callable[[], Any]]
+    ## vars are names mapped to argless fns (wrapped in a class) which
+    # return their value
+    varRegistry: Dict[str, Variable]
 
-    def registerVar(self, name: str, fn: Callable[[], Any]):
-        """register a variable with a function to fetch it"""
-        self.varRegistry[name] = fn
+    def registerVar(self, name: str, description: str, fn: Callable[[], Any]):
+        """register a variable with a parameterless function to fetch it"""
+        self.varRegistry[name] = Variable(name, fn, description)
 
     ## other functions are names mapped to functions
     ## which take a list of args and return an arg
@@ -422,6 +439,8 @@ class Parser:
         self.properties[(name, tp)] = (desc, func)
 
     def getProperty(self, a: Datum, b: Datum):
+        """Get the value of a property - requires two Datum arguments, the first is the object and the second is
+        the property name (an identifier)"""
         if a is None:
             raise ParseException('first argument is None in "." operator')
         if b is None:
@@ -436,7 +455,8 @@ class Parser:
         except KeyError:
             raise ParseException('unknown property "{}" for given type in "." operator'.format(propName))
 
-    def listProps(self, nameToFind = None):
+    def listProps(self, nameToFind:Optional[str]=None):
+        """Generate help on properties as HTML, or get help on a single property"""
         t = Table()
         for k, v in self.properties.items():
             name, tp = k
@@ -450,9 +470,13 @@ class Parser:
             return None # no match found!
         return t.htmlObj().visit(styleTableCells).string()
 
-    def helpOnWord(self, name):
+    def helpOnWord(self, name: str):
+        """Generate help on a word, which can be a property or a function."""
         if name in self.funcRegistry:
             return self.funcRegistry[name].help()
+        elif name in self.varRegistry:
+            _, desc = self.varRegistry[name]
+            return self.varRegistry[name].help()
         else:
             s = self.listProps(nameToFind=name)
             if s is not None:
@@ -461,6 +485,7 @@ class Parser:
         return "Function not found"
 
     def listFuncs(self):
+        """Generate a list of all functions with help"""
         t = Table()
         for name, f in self.funcRegistry.items():
             t.newRow()
@@ -474,15 +499,17 @@ class Parser:
         return t.htmlObj().visit(styleTableCells).string()
 
     def out(self, inst: Instruction):
-        # internal method - output
+        """Internal method to output an instruction (part of shunting yard)"""
         self.output.append(inst)
 
     def stackOp(self, op: InstOp):
-        # internal method - stack operator
+        """Internal method to put an operator onto the operator stack (part of shunting yard)"""
         self.opstack.append(op)
 
     def __init__(self, nakedIdents=False):
-        """Initialise the parser, clearing all registered vars, funcs and ops."""
+        """Initialise the parser, clearing all registered vars, funcs and ops.
+        If nakedIdents are true, then identifiers which are not in the function
+        or variable registries are compiled as literal strings (InstIdent) """
         self.binopRegistry = dict()
         self.unopRegistry = dict()
         self.varRegistry = dict()
@@ -549,7 +576,7 @@ class Parser:
                     wantOperand = False
                 elif t.type == NAME:
                     if t.string in self.varRegistry:
-                        self.out(InstVar(t.string, self.varRegistry[t.string]))
+                        self.out(InstVar(self.varRegistry[t.string]))
                     elif t.string in self.funcRegistry:
                         fn = self.funcRegistry[t.string]
                         self.out(InstFunc(t.string, fn))
@@ -628,7 +655,7 @@ class Parser:
                     raise ParseException("syntax error : unexpected operand", t)
 
     def stackTopIsNotLPar(self):
-        # internal method - stack top is NOT an open bracket
+        """internal method - op stack top is NOT an open bracket"""
         if len(self.opstack) == 0:
             return False
         op = self.opstack[-1]  # peek
@@ -636,7 +663,7 @@ class Parser:
         return op.name != '('
 
     def stackTopIsOperatorPoppable(self, curop):
-        # internal method - stack top is poppable to output
+        """internal method - stack top is poppable to output"""
         if len(self.opstack) == 0:
             return False
         op = self.opstack[-1]  # peek
@@ -648,7 +675,7 @@ class Parser:
         return op.precedence >= curop.precedence
 
     def next(self) -> TokenInfo:
-        # internal method - get next token
+        """internal method - get next token"""
         if self.toksLeft():
             if debug:
                 print(self.toks[0])
@@ -657,16 +684,16 @@ class Parser:
             return None
 
     def rewind(self, tok: TokenInfo):
-        # rewinder, unused.
+        """tokeniser rewinder, unused."""
         self.toks.insert(0, tok)
 
     def peek(self) -> TokenInfo:
-        # stack peek
+        """tokeniser peek, unused"""
         if self.toksLeft():
             return self.toks[0]
         else:
             return None
 
     def toksLeft(self) -> bool:
-        # count remaining tokens
+        """count remaining tokens"""
         return len(self.toks) > 0

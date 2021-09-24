@@ -161,7 +161,7 @@ class MultifileMethodWidget(MethodWidget):
         self.camCombo.currentIndexChanged.connect(self.cameraChanged)
         self.canvas.setMapping(m.mapping)
         self.canvas.hideMapping()  # because we're showing greyscale for each image
-        self.canvas.setGraph(self.method.input.mgr.graph)
+        self.canvas.setGraph(self.method.input.mgr.doc.graph)
         self.canvas.setPersister(m)
 
         self.filelist.setMinimumWidth(300)

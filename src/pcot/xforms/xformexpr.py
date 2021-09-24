@@ -69,10 +69,10 @@ class XFormExpr(XFormType):
         # we register the input vars here because we have to, they are temporary and apply to
         # this run only. To register other things, go to expression/eval.py.
 
-        self.parser.registerVar('a', lambda: node.getInput(0))
-        self.parser.registerVar('b', lambda: node.getInput(1))
-        self.parser.registerVar('c', lambda: node.getInput(2))
-        self.parser.registerVar('d', lambda: node.getInput(3))
+        self.parser.registerVar('a', 'value of input a', lambda: node.getInput(0))
+        self.parser.registerVar('b', 'value of input b', lambda: node.getInput(1))
+        self.parser.registerVar('c', 'value of input c', lambda: node.getInput(2))
+        self.parser.registerVar('d', 'value of input d', lambda: node.getInput(3))
 
         try:
             if len(node.expr.strip()) > 0:
