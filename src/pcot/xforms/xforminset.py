@@ -1,6 +1,6 @@
 import cv2 as cv
 
-import pcot.conntypes as conntypes
+from pcot.datum import Datum
 import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
@@ -23,10 +23,10 @@ class XformInset(XFormType):
 
     def __init__(self):
         super().__init__("inset", "ROI edit", "0.0.0")
-        self.addInputConnector("img", conntypes.IMG)
-        self.addInputConnector("inset", conntypes.IMG)
-        self.addInputConnector("roi", conntypes.ROI)
-        self.addOutputConnector("", conntypes.IMG)
+        self.addInputConnector("img", Datum.IMG)
+        self.addInputConnector("inset", Datum.IMG)
+        self.addInputConnector("roi", Datum.ROI)
+        self.addOutputConnector("", Datum.IMG)
         self.autoserialise = ('insetrect', 'caption', 'captiontop',
                               'fontsize', 'fontline', 'colour')
         self.hasEnable = True
@@ -44,9 +44,9 @@ class XformInset(XFormType):
         node.colour = (1, 1, 0)
 
     def perform(self, node):
-        image = node.getInput(0, conntypes.IMG)  # this is the main image
-        inset = node.getInput(1, conntypes.IMG)  # this is the thing we're going to insert
-        roi = node.getInput(2, conntypes.ROI)  # this is the ROI
+        image = node.getInput(0, Datum.IMG)  # this is the main image
+        inset = node.getInput(1, Datum.IMG)  # this is the thing we're going to insert
+        roi = node.getInput(2, Datum.ROI)  # this is the ROI
 
         inrect = None if roi is None else roi.bb()  # get rect from ROI
 
@@ -94,7 +94,7 @@ class XformInset(XFormType):
                                                       [{REDINTERNALSOURCE},
                                                        {GREENINTERNALSOURCE},
                                                        {BLUEINTERNALSOURCE}])
-        node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))
+        node.setOutput(0, Datum(Datum.IMG, node.img))
 
 
 class TabInset(pcot.ui.tabs.Tab):

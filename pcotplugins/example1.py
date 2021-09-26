@@ -1,9 +1,9 @@
 import cv2 as cv
 import numpy as np
 
+from pcot import datum
 from pcot.xform import XFormType, xformtype, Datum
 from pcot.xforms.tabimage import TabImage
-import pcot.conntypes as conntypes
 from pcot.pancamimage import ImageCube
 
 from PyQt5 import QtWidgets
@@ -27,8 +27,8 @@ class XFormEdgeDetect(XFormType):
         # this node should appear in the maths group.
         super().__init__("edge", "maths", "0.0.0")
         # set input and output - they are images and are unnamed.
-        self.addInputConnector("", conntypes.IMG)
-        self.addOutputConnector("", conntypes.IMG)
+        self.addInputConnector("", datum.IMG)
+        self.addOutputConnector("", datum.IMG)
 
     def createTab(self, n, w):
         # there is no custom tab, we just use an image canvas. This expects "node.img" to be set to
@@ -41,7 +41,7 @@ class XFormEdgeDetect(XFormType):
 
     def perform(self, node):
         # get the input image
-        img = node.getInput(0, conntypes.IMG)
+        img = node.getInput(0, datum.IMG)
         if img is not None:
             # find mean of all channels - construct a transform array and then use it.
             mat = np.array([1 / img.channels] * img.channels).reshape((1, img.channels))
@@ -58,7 +58,7 @@ class XFormEdgeDetect(XFormType):
             # no image on the input, set node.img to None
             node.img = None
         # output node.img
-        node.setOutput(0, Datum(conntypes.IMG, node.img))
+        node.setOutput(0, Datum(datum.IMG, node.img))
 
 
 ################################################################################
@@ -68,11 +68,11 @@ class XFormEdgeDetect(XFormType):
 def testfunc(args, optargs):
     # the function itself, which takes a list of mandatory arguments and a
     # list of optional arguments (of which there are none)
-    a = args[0].get(conntypes.NUMBER)   # get the first argument, which is numeric
-    b = args[1].get(conntypes.NUMBER)   # and the second argument.
+    a = args[0].get(datum.NUMBER)   # get the first argument, which is numeric
+    b = args[1].get(datum.NUMBER)   # and the second argument.
     result = a + b * 2                  # calculate the result
     # convert the result into a numeric Datum and return it.
-    return Datum(conntypes.NUMBER, result)
+    return Datum(datum.NUMBER, result)
 
 
 def regfuncs(p):
@@ -82,8 +82,8 @@ def regfuncs(p):
     p.registerFunc("testf",                 # name
                    "calculates a+2*b",      # description
                    # a list defining our parameters by name, description and type
-                   [Parameter("a", "number 1", conntypes.NUMBER),
-                    Parameter("b", "number 2", conntypes.NUMBER)
+                   [Parameter("a", "number 1", datum.NUMBER),
+                    Parameter("b", "number 2", datum.NUMBER)
                     ],
                    # the empty list of optional parameters
                    [],

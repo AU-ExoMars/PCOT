@@ -2,7 +2,7 @@ import cv2 as cv
 import numpy as np
 from PyQt5 import QtGui, QtCore
 
-import pcot.conntypes as conntypes
+import pcot.datum as conntypes
 
 from pcot.xform import xformtype, XFormType, XFormException
 import pcot.ui.tabs

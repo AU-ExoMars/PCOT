@@ -3,7 +3,7 @@ from functools import partial
 import numpy as np
 from PyQt5.QtWidgets import QGridLayout, QComboBox, QLabel
 
-import pcot.conntypes as conntypes
+import pcot.datum as conntypes
 
 import pcot.ui
 from pcot.channelsource import IChannelSource

@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 
-import pcot.conntypes as conntypes
+from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.xform import xformtype, XFormType
 
@@ -48,9 +48,9 @@ class XformContrast(XFormType):
         super().__init__("contrast stretch", "processing", "0.0.0")
         # set up a single input which takes an image of any type. The connector could have
         # a name in more complex node types, but here we just have an empty string.
-        self.addInputConnector("", conntypes.IMG)
+        self.addInputConnector("", Datum.IMG)
         # and a single output which produces an image of any type
-        self.addOutputConnector("", conntypes.IMG)
+        self.addOutputConnector("", Datum.IMG)
         # There is one data item which should be saved - the "tol" (tolerance) control value.
         self.autoserialise = ('tol',)
         self.hasEnable = True
@@ -70,7 +70,7 @@ class XformContrast(XFormType):
     # and on loading.
     def perform(self, node):
         # get the input (index 0, our first and only input)
-        img = node.getInput(0, conntypes.IMG)
+        img = node.getInput(0, Datum.IMG)
         if img is None:
             # there is no image, so the stored image (and output) will be no image
             node.img = None
@@ -93,7 +93,7 @@ class XformContrast(XFormType):
         # cause all nodes "downstream" to perform their actions.
         if node.img is not None:
             node.img.setMapping(node.mapping)
-        node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))
+        node.setOutput(0, Datum(Datum.IMG, node.img))
 
 
 # This is the user interface for the node type, which is created when we double click on a node.

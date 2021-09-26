@@ -11,8 +11,8 @@ from tokenize import tokenize, TokenInfo, NUMBER, NAME, OP, ENCODING, ENDMARKER,
 
 from typing import List, Any, Optional, Callable, Dict, Tuple, Union
 
-import pcot.conntypes as conntypes
-from pcot.conntypes import Datum
+from pcot import datum
+from pcot.datum import Datum
 from pcot.utils.html import HTML, Bold
 from pcot.utils.table import Table
 
@@ -57,11 +57,11 @@ class Parameter:
     def __init__(self,
                  name: str,  # name
                  desc: str,  # description
-                 types: Union[conntypes.Type, Tuple[conntypes.Type, ...]],  # tuple of valid types, or just one
+                 types: Union[datum.Type, Tuple[datum.Type, ...]],  # tuple of valid types, or just one
                  deflt: Optional[numbers.Number] = None  # default value for optional parameters, must be numeric
                  ):
         self.name = name
-        if isinstance(types, conntypes.Type):
+        if isinstance(types, datum.Type):
             types = (types,)  # convert single type to tuple
         self.types = set(types)  # convert tuple to set
         self.desc = desc
@@ -193,7 +193,7 @@ class Function:
 
             for t in self.optParams:
                 if len(args) == 0:
-                    optArgs.append(Datum(conntypes.NUMBER, t.getDefault()))
+                    optArgs.append(Datum(Datum.NUMBER, t.getDefault()))
                 else:
                     x = args.pop(0)
                     if x is None:
@@ -231,7 +231,7 @@ class InstNumber(Instruction):
 
     def exec(self, stack: Stack):
         # can't import NUMBER, it clashes with the one in tokenizer.
-        stack.append(Datum(conntypes.NUMBER, self.val))
+        stack.append(Datum(Datum.NUMBER, self.val))
 
     def __str__(self):
         return "NUM {}".format(self.val)
@@ -245,7 +245,7 @@ class InstIdent(Instruction):
         self.val = v
 
     def exec(self, stack: Stack):
-        stack.append(Datum(conntypes.IDENT, self.val))
+        stack.append(Datum(Datum.IDENT, self.val))
 
     def __str__(self):
         return "STR {}".format(self.val)
@@ -280,7 +280,7 @@ class InstFunc(Instruction):
 
     def exec(self, stack: Stack):
         """actually stack the callback function, don't call it - InstCall does that."""
-        stack.append(Datum(conntypes.FUNC, self.func))
+        stack.append(Datum(Datum.FUNC, self.func))
 
     def __str__(self):
         return "FUNC {}".format(self.name)
@@ -349,9 +349,9 @@ class InstCall(Instruction):
         for x in range(0, self.argcount):
             stack.pop()
         v = stack.pop()
-        if v.tp == conntypes.IDENT:
+        if v.tp == Datum.IDENT:
             raise ParseException("unknown function '{}' ".format(v.val))
-        elif v.tp == conntypes.FUNC:
+        elif v.tp == Datum.FUNC:
             # this executes the function by calling it's call method,
             # which will do argument type checking.
             stack.append(v.val.call(args))
@@ -432,9 +432,9 @@ class Parser:
     # property dict - keys are (name,type), values are (desc,func) where the func
     # takes Datum and gives Datum
 
-    properties: Dict[Tuple[str, conntypes.Type], Tuple[str, Callable[[Datum], Datum]]]
+    properties: Dict[Tuple[str, datum.Type], Tuple[str, Callable[[Datum], Datum]]]
 
-    def registerProperty(self, name: str, tp: conntypes.Type, desc: str, func: Callable[[Datum], Datum]):
+    def registerProperty(self, name: str, tp: datum.Type, desc: str, func: Callable[[Datum], Datum]):
         """add a property (e.g. the 'w' in 'a.w'), given name, input type, description and function"""
         self.properties[(name, tp)] = (desc, func)
 
@@ -445,7 +445,7 @@ class Parser:
             raise ParseException('first argument is None in "." operator')
         if b is None:
             raise ParseException('second argument is None in "." operator')
-        if b.tp != conntypes.IDENT:
+        if b.tp != Datum.IDENT:
             raise ParseException('second argument should be identifier in "." operator')
         propName = b.val
 

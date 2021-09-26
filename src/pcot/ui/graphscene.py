@@ -10,7 +10,7 @@ from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import Qt, QPointF
 from PyQt5.QtGui import QColor, QFont, QTransform
 
-import pcot.conntypes as conntypes
+from pcot.datum import Datum, isCompatibleConnection
 import pcot.ui as ui
 import pcot.ui.namedialog
 import pcot.utils.deb
@@ -211,7 +211,7 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
 
     def isVariant(self):
         tp = self.node.getInputType(self.index) if self.isInput else self.node.getOutputType(self.index)
-        return tp == conntypes.VARIANT
+        return tp == Datum.VARIANT
 
     ## construct, giving parent object (GMainRect), rectangle data, node data, input/output and index.
     def __init__(self, parent, x1, y1, x2, y2, node, isInput, index):
@@ -681,7 +681,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 outtype = n1.getOutputType(output)
                 intype = n2.getInputType(inputIdx)
 
-                if intype is not None and outtype is not None and conntypes.isCompatibleConnection(outtype, intype):
+                if intype is not None and outtype is not None and isCompatibleConnection(outtype, intype):
                     if n2.cycle(n1):
                         ui.error("cannot create a cycle")
                     else:

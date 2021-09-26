@@ -3,8 +3,7 @@ from typing import Any, Callable
 
 import numpy as np
 
-import pcot.conntypes as conntypes
-from pcot.conntypes import Datum
+from pcot.datum import Datum, Type
 from pcot.pancamimage import ImageCube
 from pcot.rois import BadOpException
 
@@ -52,14 +51,14 @@ def twoImageBinop(imga: ImageCube, imgb: ImageCube, op: Callable[[Any, Any], Any
     outimg = ImageCube(img, sources=ImageCube.buildSources([imga, imgb]))
     if rois is not None:
         outimg.rois = rois.copy()
-    return Datum(conntypes.IMG, outimg)
+    return Datum(Datum.IMG, outimg)
 
 
 # The problem with binary operation NODES is that we have to set an output type:
 # ANY is no use. So in this, we have to check that the type being generated is
 # correct. Of course, in an expression we don't do that.
 
-def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: conntypes.Type) -> Datum:
+def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: Type) -> Datum:
     # if either input is None, the output will be None
     if a is None or b is None:
         return None
@@ -67,7 +66,7 @@ def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: conntypes.
     # if either input is an image, the output will be an image, so check the output type
     # is correct. But only do the check if there IS an output type.
 
-    if outType is not None and outType != conntypes.IMG and (a.isImage() or b.isImage()):
+    if outType is not None and outType != Datum.IMG and (a.isImage() or b.isImage()):
         raise BinopException('Output type must be image if either input is image')
 
     if a.isImage() and a.val is None:
@@ -77,29 +76,29 @@ def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: conntypes.
 
     if a.isImage() and b.isImage():
         r = twoImageBinop(a.val, b.val, op)
-    elif a.tp == conntypes.NUMBER and b.isImage():
+    elif a.tp == Datum.NUMBER and b.isImage():
         # here, we're combining a number with an image to give an image
         # which will have the same sources
         img = b.val
         subimg = img.subimage()
         img = img.modifyWithSub(subimg, op(a.val, subimg.masked()))
         img.rois = b.val.rois.copy()
-        r = Datum(conntypes.IMG, img)
-    elif a.isImage() and b.tp == conntypes.NUMBER:
+        r = Datum(Datum.IMG, img)
+    elif a.isImage() and b.tp == Datum.NUMBER:
         # same as previous case, other way round
         img = a.val
         subimg = img.subimage()
         img = img.modifyWithSub(subimg, op(subimg.masked(), b.val))
         img.rois = a.val.rois.copy()
-        r = Datum(conntypes.IMG, img)
-    elif a.tp == conntypes.NUMBER and b.tp == conntypes.NUMBER:
+        r = Datum(Datum.IMG, img)
+    elif a.tp == Datum.NUMBER and b.tp == Datum.NUMBER:
         # easy case:  op(number,number)->number
-        r = Datum(conntypes.NUMBER, op(a.val, b.val))
-    elif a.tp == conntypes.ROI and b.tp == conntypes.ROI:
+        r = Datum(Datum.NUMBER, op(a.val, b.val))
+    elif a.tp == Datum.ROI and b.tp == Datum.ROI:
         # again, easy case because ROI has most operations overloaded. Indeed, those that aren't valid
         # will fail.
         try:
-            r = Datum(conntypes.ROI, op(a.val, b.val))
+            r = Datum(Datum.ROI, op(a.val, b.val))
         except BadOpException as e:
             raise BinopException("unimplemented operation for ROIs")
     else:
@@ -108,11 +107,11 @@ def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: conntypes.
     return r
 
 
-def unop(a: Datum, op: Callable[[Any], Any], outType: conntypes.Type) -> Datum:
+def unop(a: Datum, op: Callable[[Any], Any], outType: Type) -> Datum:
     if a is None:
         return None
 
-    if outType is not None and outType != conntypes.IMG and a.isImage():
+    if outType is not None and outType != Datum.IMG and a.isImage():
         raise BinopException('Output type must be image if input is image')
 
     if a.isImage():
@@ -126,9 +125,9 @@ def unop(a: Datum, op: Callable[[Any], Any], outType: conntypes.Type) -> Datum:
             rimg = op(img.img)
         out = ImageCube(rimg, sources=ImageCube.buildSources([img]))
         out.rois = img.rois.copy()
-        r = Datum(conntypes.IMG, out)
-    elif a.tp == conntypes.NUMBER:
-        r = Datum(conntypes.NUMBER, op(a.val))
+        r = Datum(Datum.IMG, out)
+    elif a.tp == Datum.NUMBER:
+        r = Datum(Datum.NUMBER, op(a.val))
     else:
         raise BinopException("bad type type for unary operator")
 

@@ -2,7 +2,7 @@ import cv2 as cv
 import numpy as np
 from cv2 import KeyPoint
 
-import pcot.conntypes as conntypes
+import pcot.datum as conntypes
 import pcot.ui as ui
 import pcot.utils.cluster
 from pcot.channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, BLUEINTERNALSOURCE

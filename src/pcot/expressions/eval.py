@@ -9,9 +9,8 @@ import cv2 as cv
 import numpy as np
 
 import pcot.config
-import pcot.conntypes as conntypes
 import pcot.operations as operations
-from pcot.conntypes import Datum
+from pcot.datum import Datum
 from .parse import Parameter, Parser, execute
 from pcot.pancamimage import ImageCube
 from pcot.utils.ops import binop, unop
@@ -30,13 +29,13 @@ def extractChannelByName(a: Datum, b: Datum):
     if a is None or b is None:
         return None
 
-    if a.tp != conntypes.IMG:
+    if a.tp != Datum.IMG:
         raise XFormException('DATA', "channel extract operator '$' requires image LHS")
     img = a.val
 
-    if b.tp == conntypes.NUMBER:
+    if b.tp == Datum.NUMBER:
         img = img.getChannelImageByWavelength(b.val)
-    elif b.tp == conntypes.IDENT:
+    elif b.tp == Datum.IDENT:
         img = img.getChannelImageByName(b.val)
     else:
         raise XFormException('DATA', "channel extract operator '$' requires ident or numeric wavelength RHS")
@@ -45,7 +44,7 @@ def extractChannelByName(a: Datum, b: Datum):
         raise XFormException('EXPR', "unable to get this wavelength from an image: " + str(b))
 
     img.rois = a.val.rois.copy()
-    return Datum(conntypes.IMG, img)
+    return Datum(Datum.IMG, img)
 
 
 def funcMerge(args, optargs):
@@ -55,7 +54,7 @@ def funcMerge(args, optargs):
     if any([not x.isImage() for x in args]):
         raise XFormException('EXPR', 'merge only accepts images')
 
-    args = [x.get(conntypes.IMG) for x in args]
+    args = [x.get(Datum.IMG) for x in args]
 
     # work out minimum width and height of all images
     w = min([i.w for i in args])
@@ -74,17 +73,17 @@ def funcMerge(args, optargs):
     img = np.stack(bands, axis=-1)
     img = ImageCube(img, None, sources)
 
-    return Datum(conntypes.IMG, img)
+    return Datum(Datum.IMG, img)
 
 
 def funcGrey(args, optargs):
     """Greyscale conversion. If the optional second argument is nonzero, and the image has 3 channels, we'll use CV's
     conversion equation rather than just the mean."""
 
-    img = args[0].get(conntypes.IMG)
+    img = args[0].get(Datum.IMG)
     sources = set.union(*img.sources)
 
-    if optargs[0].get(conntypes.NUMBER) != 0:
+    if optargs[0].get(Datum.NUMBER) != 0:
         if img.channels != 3:
             raise XFormException('DATA', "Image must be RGB for OpenCV greyscale conversion")
         img = ImageCube(cv.cvtColor(img.img, cv.COLOR_RGB2GRAY), img.mapping, [sources])
@@ -94,15 +93,15 @@ def funcGrey(args, optargs):
         mat = np.array([1 / img.channels] * img.channels).reshape((1, img.channels))
         out = cv.transform(img.img, mat)
         img = ImageCube(out, img.mapping, [sources])
-    return Datum(conntypes.IMG, img)
+    return Datum(Datum.IMG, img)
 
 
 def funcCrop(args, _):
-    img = args[0].get(conntypes.IMG)
-    x, y, w, h = [int(x.get(conntypes.NUMBER)) for x in args[1:]]
+    img = args[0].get(Datum.IMG)
+    x, y, w, h = [int(x.get(Datum.NUMBER)) for x in args[1:]]
     out = img.img[y:y + h, x:x + w]
     img = ImageCube(out, img.mapping, img.sources)
-    return Datum(conntypes.IMG, img)
+    return Datum(Datum.IMG, img)
 
 
 def funcWrapper(fn, d, *args):
@@ -122,13 +121,13 @@ def funcWrapper(fn, d, *args):
         if isinstance(newdata, np.ndarray):
             np.putmask(cp, mask, newdata)
             img = img.modifyWithSub(subimage, newdata)
-            return Datum(conntypes.IMG, img)
+            return Datum(Datum.IMG, img)
         elif isinstance(newdata, numbers.Number):
-            return Datum(conntypes.NUMBER, float(newdata))
+            return Datum(Datum.NUMBER, float(newdata))
         else:
             raise XFormException('EXPR', 'internal: fn returns bad type in funcWrapper')
-    elif d.tp == conntypes.NUMBER:  # deal with numeric argument (always returns a numeric result)
-        return Datum(conntypes.NUMBER, fn(d.val, *args))
+    elif d.tp == Datum.NUMBER:  # deal with numeric argument (always returns a numeric result)
+        return Datum(Datum.NUMBER, fn(d.val, *args))
 
 
 def statsWrapper(fn, d: List[Optional[Datum]], *args):
@@ -153,7 +152,7 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
                 newdata = masked.flatten()  # convert to 1d
             else:
                 raise XFormException('EXPR', 'internal: fn returns bad type in statsWrapper')
-        elif x.tp == conntypes.NUMBER:
+        elif x.tp == Datum.NUMBER:
             # if a number, convert to a single-value array
             newdata = np.array([x.val], np.float32)
         else:
@@ -166,7 +165,7 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
             intermediate = np.concatenate((intermediate, newdata))
 
     # then we perform the function on the collated array
-    return Datum(conntypes.NUMBER, fn(intermediate, *args))
+    return Datum(Datum.NUMBER, fn(intermediate, *args))
 
 
 class ExpressionEvaluator(Parser):
@@ -196,75 +195,75 @@ class ExpressionEvaluator(Parser):
 
         self.registerFunc("merge",
                           "merge a number of images into a single image - if the image has multiple channels they will all be merged in.",
-                          [Parameter("image", "an image of any depth", conntypes.IMG)],
+                          [Parameter("image", "an image of any depth", Datum.IMG)],
                           [],
                           funcMerge, varargs=True)
         self.registerFunc("sin", "calculate sine of angle in radians",
-                          [Parameter("angle", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
+                          [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                           [],
                           lambda args, optargs: funcWrapper(np.sin, args[0]))
         self.registerFunc("cos", "calculate cosine of angle in radians",
-                          [Parameter("angle", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
+                          [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                           [],
                           lambda args, optargs: funcWrapper(np.cos, args[0]))
         self.registerFunc("tan", "calculate tangent of angle in radians",
-                          [Parameter("angle", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
+                          [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                           [],
                           lambda args, optargs: funcWrapper(np.tan, args[0]))
         self.registerFunc("sqrt", "calculate the square root",
-                          [Parameter("angle", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
+                          [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                           [],
                           lambda args, optargs: funcWrapper(np.sqrt, args[0]))
 
         self.registerFunc("min", "find the minimum value of pixels in a list of ROIs, images or values",
-                          [Parameter("val", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
+                          [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                           [],
                           lambda args, optargs: statsWrapper(np.min, args), varargs=True)
         self.registerFunc("max", "find the maximum value of pixels in a list of ROIs, images or values",
-                          [Parameter("val", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
+                          [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                           [],
                           lambda args, optargs: statsWrapper(np.max, args), varargs=True)
         self.registerFunc("sd", "find the standard deviation of pixels in a list of ROIs, images or values",
-                          [Parameter("val", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
+                          [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                           [],
                           lambda args, optargs: statsWrapper(np.std, args), varargs=True)
         self.registerFunc("mean", "find the standard deviation of pixels in a list of ROIs, images or values",
-                          [Parameter("val", "value(s) to input", (conntypes.NUMBER, conntypes.IMG))],
+                          [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                           [],
                           lambda args, optargs: statsWrapper(np.mean, args), varargs=True)
 
         self.registerFunc("grey", "convert an image to greyscale",
-                          [Parameter("image", "an image to process", conntypes.IMG)],
+                          [Parameter("image", "an image to process", Datum.IMG)],
                           [Parameter("useCV",
                                      "if non-zero, use openCV greyscale conversion (RGB input only): 0.299*R + 0.587*G + 0.114*B",
-                                     conntypes.NUMBER, deflt=0)],
+                                     Datum.NUMBER, deflt=0)],
                           funcGrey)
 
         self.registerFunc("crop", "crop an image to a rectangle",
-                          [Parameter("image", "an image to process", conntypes.IMG),
-                           Parameter("x", "x coordinate of top-left corner", conntypes.NUMBER),
-                           Parameter("y", "y coordinate of top-left corner", conntypes.NUMBER),
-                           Parameter("w", "width of rectangle", conntypes.NUMBER),
-                           Parameter("h", "height of rectangle", conntypes.NUMBER)],
+                          [Parameter("image", "an image to process", Datum.IMG),
+                           Parameter("x", "x coordinate of top-left corner", Datum.NUMBER),
+                           Parameter("y", "y coordinate of top-left corner", Datum.NUMBER),
+                           Parameter("w", "width of rectangle", Datum.NUMBER),
+                           Parameter("h", "height of rectangle", Datum.NUMBER)],
                           [],
                           funcCrop)
 
-        self.registerProperty('w', conntypes.IMG,
+        self.registerProperty('w', Datum.IMG,
                               "give the width of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",
-                              lambda q: Datum(conntypes.NUMBER, q.subimage().bb.w))
-        self.registerProperty('w', conntypes.ROI, "give the width of an ROI in pixels",
-                              lambda q: Datum(conntypes.NUMBER, q.bb().w))
-        self.registerProperty('h', conntypes.IMG,
+                              lambda q: Datum(Datum.NUMBER, q.subimage().bb.w))
+        self.registerProperty('w', Datum.ROI, "give the width of an ROI in pixels",
+                              lambda q: Datum(Datum.NUMBER, q.bb().w))
+        self.registerProperty('h', Datum.IMG,
                               "give the height of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",
-                              lambda q: Datum(conntypes.NUMBER, q.subimage().bb.h))
-        self.registerProperty('h', conntypes.ROI, "give the width of an ROI in pixels",
-                              lambda q: Datum(conntypes.NUMBER, q.bb().h))
+                              lambda q: Datum(Datum.NUMBER, q.subimage().bb.h))
+        self.registerProperty('h', Datum.ROI, "give the width of an ROI in pixels",
+                              lambda q: Datum(Datum.NUMBER, q.bb().h))
 
-        self.registerProperty('n', conntypes.IMG,
+        self.registerProperty('n', Datum.IMG,
                               "give the area of an image in pixels (if there are ROIs, give the number of pixels in the ROI union)",
-                              lambda q: Datum(conntypes.NUMBER, q.subimage().mask.sum()))
-        self.registerProperty('n', conntypes.ROI, "give the number of pixels in an ROI",
-                              lambda q: Datum(conntypes.NUMBER, q.pixels()))
+                              lambda q: Datum(Datum.NUMBER, q.subimage().mask.sum()))
+        self.registerProperty('n', Datum.ROI, "give the number of pixels in an ROI",
+                              lambda q: Datum(Datum.NUMBER, q.pixels()))
 
         for x in pcot.config.exprFuncHooks:
             x(self)

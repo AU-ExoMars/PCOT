@@ -1,7 +1,4 @@
-import cv2 as cv
-import numpy as np
-
-import pcot.conntypes as conntypes
+from pcot.datum import Datum
 import pcot.operations as operations
 import pcot.ui.tabs
 from pcot.operations.curve import curve, genLut, lutxcoords
@@ -16,8 +13,8 @@ class XformCurve(XFormType):
 
     def __init__(self):
         super().__init__("curve", "processing", "0.0.0")
-        self.addInputConnector("", conntypes.IMG)
-        self.addOutputConnector("", conntypes.IMG)
+        self.addInputConnector("", Datum.IMG)
+        self.addOutputConnector("", Datum.IMG)
         self.autoserialise = ('add', 'mul')
         self.hasEnable = True
 

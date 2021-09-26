@@ -14,18 +14,14 @@ from typing import List, Dict, Tuple, Any, ClassVar, Optional, TYPE_CHECKING, Ca
 
 import json
 
-import cv2
-import numpy as np
 import pyperclip
 import uuid
 
-import pcot.conntypes as conntypes
 import pcot.macros
-from pcot.conntypes import Datum
+from pcot import datum
+from pcot.datum import Datum
 import pcot.ui as ui
-from pcot import inputs
 from pcot.ui import graphscene
-from pcot.inputs.inp import InputManager
 from pcot.ui.canvas import Canvas
 from pcot.ui.tabs import Tab
 from pcot.utils import archive
@@ -597,8 +593,8 @@ class XForm:
         self.xy = d['xy']
         self.comment = d['comment']
         # these are the overriding types - if the value is None, use the xformtype's value, else use the one here.
-        self.outputTypes = [None if x is None else conntypes.deserialise(x) for x in d['outputTypes']]
-        self.inputTypes = [None if x is None else conntypes.deserialise(x) for x in d['inputTypes']]
+        self.outputTypes = [None if x is None else datum.deserialise(x) for x in d['outputTypes']]
+        self.inputTypes = [None if x is None else datum.deserialise(x) for x in d['inputTypes']]
         self.savedver = d['ver']  # ver is version node was saved with
         self.savedmd5 = d['md5']  # and stash the MD5 we were saved with
         self.displayName = d['displayName']
@@ -655,7 +651,7 @@ class XForm:
         d = self.outputs[i]  # may raise IndexError
         if d is None:
             return None
-        elif tp is None or d.tp == tp or tp == conntypes.IMG and d.isImage():
+        elif tp is None or d.tp == tp or tp == Datum.IMG and d.isImage():
             return d.val
         else:
             raise BadTypeException(i)
@@ -867,7 +863,7 @@ class XForm:
                 n, idx = inp
                 outtype = n.getOutputType(idx)
                 intype = self.getInputType(i)
-                if not conntypes.isCompatibleConnection(outtype, intype):
+                if not datum.isCompatibleConnection(outtype, intype):
                     self.disconnect(i)
 
     def rename(self, name):
@@ -1147,7 +1143,7 @@ class XFormGraph:
                     if parent is node:
                         outtype = node.getOutputType(out)
                         intype = child.getInputType(i)
-                        if not conntypes.isCompatibleConnection(outtype, intype):
+                        if not datum.isCompatibleConnection(outtype, intype):
                             toDisconnect.append((child, i))
         for child, i in toDisconnect:
             child.disconnect(i)
@@ -1277,12 +1273,12 @@ class XFormROIType(XFormType):
 
     def __init__(self, name, group, ver):
         super().__init__(name, group, ver)
-        self.addInputConnector("input", conntypes.IMG)
-        self.addInputConnector("ann", conntypes.IMGRGB, "used as base for annotated image")
-        self.addOutputConnector("img", conntypes.IMG, "image with ROI")  # image+roi
-        self.addOutputConnector("ann", conntypes.IMGRGB,
+        self.addInputConnector("input", Datum.IMG)
+        self.addInputConnector("ann", Datum.IMGRGB, "used as base for annotated image")
+        self.addOutputConnector("img", Datum.IMG, "image with ROI")  # image+roi
+        self.addOutputConnector("ann", Datum.IMGRGB,
                                 "image as RGB with ROI, with added annotations around ROI")  # annotated image
-        self.addOutputConnector("roi", conntypes.ROI, "the region of interest")
+        self.addOutputConnector("roi", Datum.ROI, "the region of interest")
 
         self.autoserialise = ('caption', 'captiontop', 'fontsize', 'fontline', 'colour', 'drawbg')
 
@@ -1296,8 +1292,8 @@ class XFormROIType(XFormType):
 #        self.perform(n)
 
     def perform(self, node):
-        img = node.getInput(self.IN_IMG, conntypes.IMG)
-        inAnnot = node.getInput(self.IN_ANNOT, conntypes.IMG)
+        img = node.getInput(self.IN_IMG, Datum.IMG)
+        inAnnot = node.getInput(self.IN_ANNOT, Datum.IMG)
         # label the ROI
         node.roi.label = node.caption
         node.setRectText(node.caption)
@@ -1305,7 +1301,7 @@ class XFormROIType(XFormType):
         if img is None:
             # no image
             node.setOutput(self.OUT_IMG, None)
-            node.setOutput(self.OUT_ANNOT, None if inAnnot is None else Datum(conntypes.IMGRGB, inAnnot))
+            node.setOutput(self.OUT_ANNOT, None if inAnnot is None else Datum(Datum.IMGRGB, inAnnot))
             node.setOutput(self.OUT_ROI, None)
         else:
             self.setProps(node, img)
@@ -1321,13 +1317,13 @@ class XFormROIType(XFormType):
             img.drawROIs(rgb.img, onlyROI=None if node.showROIs else node.roi)
             rgb.rois = img.rois  # with same ROI list as unannotated image
             node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
-            node.setOutput(self.OUT_ANNOT, Datum(conntypes.IMG, rgb))
+            node.setOutput(self.OUT_ANNOT, Datum(Datum.IMG, rgb))
             node.img = img
             # output the ROI - note that this is NOT a copy!
-            node.setOutput(self.OUT_ROI, Datum(conntypes.ROI, node.roi))
+            node.setOutput(self.OUT_ROI, Datum(Datum.ROI, node.roi))
 
             if node.isOutputConnected(self.OUT_IMG):
-                node.setOutput(self.OUT_IMG, Datum(conntypes.IMG, node.img))  # output image and ROI
+                node.setOutput(self.OUT_IMG, Datum(Datum.IMG, node.img))  # output image and ROI
 
     def getROIDesc(self, node):
         return "no ROI" if node.roi is None else node.roi.details()

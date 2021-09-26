@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 
-import pcot.conntypes as conntypes
+from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, BLUEINTERNALSOURCE
 from pcot.pancamimage import ImageCube
@@ -67,8 +67,8 @@ class XformGradient(XFormType):
 
     def __init__(self):
         super().__init__("gradient", "data", "0.0.0")
-        self.addInputConnector("", conntypes.IMG)
-        self.addOutputConnector("", conntypes.IMG)
+        self.addInputConnector("", Datum.IMG)
+        self.addOutputConnector("", Datum.IMG)
         self.autoserialise = ('gradient',)
         self.hasEnable = True
 
@@ -80,7 +80,7 @@ class XformGradient(XFormType):
         node.img = None
 
     def perform(self, node):
-        img = node.getInput(0, conntypes.IMG)
+        img = node.getInput(0, Datum.IMG)
         if img is None:
             node.img = None
         elif node.enabled:
@@ -99,7 +99,7 @@ class XformGradient(XFormType):
                 raise XFormException('DATA', 'Gradient must be on greyscale images')
         else:
             node.img = img
-        node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))
+        node.setOutput(0, Datum(Datum.IMG, node.img))
 
 
 class TabGradient(pcot.ui.tabs.Tab):

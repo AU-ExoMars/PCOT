@@ -6,8 +6,7 @@ from PyQt5.QtWidgets import QMessageBox, QSpinBox
 import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
-from pcot import ui, conntypes
-from pcot.conntypes import Datum
+from pcot.datum import Datum
 from pcot.rois import ROICircle
 from pcot.xform import xformtype, XFormType
 
@@ -31,10 +30,10 @@ class XFormMultiDot(XFormType):
 
     def __init__(self):
         super().__init__("multidot", "regions", "0.0.0")
-        self.addInputConnector("input", conntypes.IMG)
-        self.addInputConnector("ann", conntypes.IMGRGB, "used as base for annotated image")
-        self.addOutputConnector("img", conntypes.IMG, "image with ROIs")
-        self.addOutputConnector("ann", conntypes.IMGRGB,
+        self.addInputConnector("input", Datum.IMG)
+        self.addInputConnector("ann", Datum.IMGRGB, "used as base for annotated image")
+        self.addOutputConnector("img", Datum.IMG, "image with ROIs")
+        self.addOutputConnector("ann", Datum.IMGRGB,
                                 "image as RGB with ROIs, with added annotations around ROIs")  # annotated image
 
         self.autoserialise = ('fontsize', 'fontline', 'colour', 'dotSize', 'drawbg')
@@ -59,13 +58,13 @@ class XFormMultiDot(XFormType):
 #        self.perform(n)
 
     def perform(self, node):
-        img = node.getInput(self.IN_IMG, conntypes.IMG)
-        inAnnot = node.getInput(self.IN_ANNOT, conntypes.IMG)
+        img = node.getInput(self.IN_IMG, Datum.IMG)
+        inAnnot = node.getInput(self.IN_ANNOT, Datum.IMG)
 
         if img is None:
             # no image
             node.setOutput(self.OUT_IMG, None)
-            node.setOutput(self.OUT_ANNOT, None if inAnnot is None else Datum(conntypes.IMGRGB, inAnnot))
+            node.setOutput(self.OUT_ANNOT, None if inAnnot is None else Datum(Datum.IMGRGB, inAnnot))
             node.img = None
         else:
             self.setProps(node, img)
@@ -88,11 +87,11 @@ class XFormMultiDot(XFormType):
             img.drawROIs(rgb.img, onlyROI=None if node.showROIs else node.rois)
             rgb.rois = img.rois  # with same ROI list as unannotated image
             node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
-            node.setOutput(self.OUT_ANNOT, Datum(conntypes.IMG, rgb))
+            node.setOutput(self.OUT_ANNOT, Datum(Datum.IMG, rgb))
             node.img = img
 
             if node.isOutputConnected(self.OUT_IMG):
-                node.setOutput(self.OUT_IMG, Datum(conntypes.IMG, node.img))  # output image and ROI
+                node.setOutput(self.OUT_IMG, Datum(Datum.IMG, node.img))  # output image and ROI
 
     def serialise(self, node):
         return {

@@ -1,7 +1,6 @@
-import pcot.conntypes as conntypes
+from pcot.datum import Datum
 import pcot.operations as operations
 import pcot.ui.tabs
-from pcot.operations.norm import norm
 from pcot.xform import xformtype, XFormType
 
 
@@ -13,8 +12,8 @@ class XformNormImage(XFormType):
 
     def __init__(self):
         super().__init__("normimage", "processing", "0.0.0")
-        self.addInputConnector("", conntypes.IMG)
-        self.addOutputConnector("", conntypes.IMG)
+        self.addInputConnector("", Datum.IMG)
+        self.addOutputConnector("", Datum.IMG)
         self.hasEnable = True
         self.autoserialise = ('mode',)
 

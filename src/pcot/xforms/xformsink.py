@@ -1,10 +1,6 @@
-import cv2 as cv
-import numpy as np
-
-import pcot.conntypes as conntypes
+from pcot.datum import Datum
 from pcot.xform import xformtype, XFormType
 from pcot.xforms.tabimage import TabImage
-from pcot.pancamimage import ImageCube
 
 
 # The node type itself, a subclass of XFormType with the @xformtype decorator which will
@@ -20,7 +16,7 @@ class XformSink(XFormType):
         super().__init__("sink", "utility", "0.0.0")
         # set up a single input which takes an image of any type. The connector could have
         # a name in more complex node types, but here we just have an empty string.
-        self.addInputConnector("", conntypes.IMG)
+        self.addInputConnector("", Datum.IMG)
 
     # this creates a tab when we want to control or view a node of this type. This uses
     # the built-in TabImage, which contains an OpenCV image viewer.
@@ -33,7 +29,7 @@ class XformSink(XFormType):
         # get the input (index 0, our first and only input). That's all - we just store a reference
         # to the image in the node. The TabImage knows how to display nodes with "img" attributes,
         # and does the rest.
-        img = node.getInput(0, conntypes.IMG)
+        img = node.getInput(0, Datum.IMG)
         if img is not None:
             img = img.copy()
             img.mapping = node.mapping

@@ -1,8 +1,7 @@
 import traceback
 
-import pcot.conntypes as conntypes
+from pcot.datum import Datum
 import pcot.ui.tabs
-from pcot import ui
 from pcot.expressions import ExpressionEvaluator
 from pcot.xform import XFormType, xformtype, XFormException
 
@@ -46,11 +45,11 @@ class XFormExpr(XFormType):
     def __init__(self):
         super().__init__("expr", "maths", "0.0.0")
         self.parser = ExpressionEvaluator()
-        self.addInputConnector("a", conntypes.ANY)
-        self.addInputConnector("b", conntypes.ANY)
-        self.addInputConnector("c", conntypes.ANY)
-        self.addInputConnector("d", conntypes.ANY)
-        self.addOutputConnector("", conntypes.VARIANT)
+        self.addInputConnector("a", Datum.ANY)
+        self.addInputConnector("b", Datum.ANY)
+        self.addInputConnector("c", Datum.ANY)
+        self.addInputConnector("d", Datum.ANY)
+        self.addOutputConnector("", Datum.VARIANT)
         self.autoserialise = ('expr',)
 
     def createTab(self, n, w):
@@ -79,12 +78,12 @@ class XFormExpr(XFormType):
                 res = self.parser.run(node.expr)
                 node.setOutput(0, res)
                 if res is not None:
-                    if res.tp == conntypes.IMG:
+                    if res.tp == Datum.IMG:
                         # if there's an image on the output, show it
                         node.img = res.val
                         node.img.setMapping(node.mapping)
                         node.result = "IMAGE"
-                    elif res.tp == conntypes.NUMBER:
+                    elif res.tp == Datum.NUMBER:
                         node.result = str(res.val)
                         node.setRectText("res: "+node.result)
                     else:

@@ -1,6 +1,6 @@
 import numpy as np
 
-import pcot.conntypes as conntypes
+from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.pancamimage import ImageCube
 from pcot.xform import xformtype, XFormType
@@ -14,8 +14,8 @@ class XFormOffset(XFormType):
 
     def __init__(self):
         super().__init__("offset", "processing", "0.0.0")
-        self.addInputConnector("", conntypes.IMG)
-        self.addOutputConnector("", conntypes.IMG)
+        self.addInputConnector("", Datum.IMG)
+        self.addOutputConnector("", Datum.IMG)
         self.autoserialise = ('x', 'y')
         self.hasEnable = True
 
@@ -28,7 +28,7 @@ class XFormOffset(XFormType):
         node.y = 0
 
     def perform(self, node):
-        img = node.getInput(0, conntypes.IMG)
+        img = node.getInput(0, Datum.IMG)
         if img is None:
             node.img = None
         elif not node.enabled:
@@ -49,7 +49,7 @@ class XFormOffset(XFormType):
             # remember to copy ROI            
             node.img = ImageCube(newimg, node.mapping, img.sources)
 
-        node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))
+        node.setOutput(0, Datum(Datum.IMG, node.img))
 
 
 class TabOffset(pcot.ui.tabs.Tab):

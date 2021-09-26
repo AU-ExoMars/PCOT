@@ -1,13 +1,10 @@
-from typing import Any
-
 import numpy as np
 from PyQt5 import QtCore
-from PyQt5.QtCore import Qt, QItemSelection, QItemSelectionModel, QModelIndex
+from PyQt5.QtCore import Qt, QItemSelection, QItemSelectionModel
 import cv2 as cv
 from PyQt5.QtGui import QKeyEvent
 
-from pcot import conntypes
-from pcot.conntypes import Datum
+from pcot.datum import Datum
 from pcot.pancamimage import ImageCube
 from pcot.ui.tabs import Tab
 from pcot.xform import XFormType, xformtype, XFormException
@@ -38,8 +35,8 @@ class XFormStitch(XFormType):
     def __init__(self):
         super().__init__("stitch", "processing", "0.0.0")
         for i in range(NUMINPUTS):
-            self.addInputConnector(str(i), conntypes.IMG, desc="Input image {}".format(i))
-        self.addOutputConnector("", conntypes.IMG, desc="Output image")
+            self.addInputConnector(str(i), Datum.IMG, desc="Input image {}".format(i))
+        self.addOutputConnector("", Datum.IMG, desc="Output image")
         self.hasEnable = True
         self.autoserialise = ('offsets', 'order', 'showImage')
 
@@ -62,7 +59,7 @@ class XFormStitch(XFormType):
         node.showImage = True
 
     def perform(self, node):
-        inputs = [node.getInput(i, conntypes.IMG) for i in range(NUMINPUTS)]
+        inputs = [node.getInput(i, Datum.IMG) for i in range(NUMINPUTS)]
 
         # filter out inputs which aren't connected, for BB calculations
         activeInputImages = [i for i in inputs if i is not None]
@@ -118,7 +115,7 @@ class XFormStitch(XFormType):
 
         # generate the output
         node.img = ImageCube(img, node.mapping, sources)
-        node.setOutput(0, Datum(conntypes.IMG, node.img))
+        node.setOutput(0, Datum(Datum.IMG, node.img))
 
         # now draw the selected inputs
         node.rgbImage = node.img.rgbImage()

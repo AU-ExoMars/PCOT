@@ -1,4 +1,4 @@
-import pcot.conntypes as conntypes
+from pcot.datum import Datum
 from pcot.xform import xformtype,XFormType
 import pcot.ui.tabs
 
@@ -10,7 +10,7 @@ class XFormDump(XFormType):
     """Simple data dump: prints a string of its output into its window. Useful for outputting spectra as CSV."""
     def __init__(self):
         super().__init__("dump","data","0.0.0")
-        self.addInputConnector("any", conntypes.ANY)
+        self.addInputConnector("any", Datum.ANY)
         
     def createTab(self,n,w):
         return TabDump(n,w)

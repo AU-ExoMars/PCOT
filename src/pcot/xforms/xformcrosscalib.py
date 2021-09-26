@@ -3,10 +3,8 @@ import numpy as np
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QKeyEvent
 from PyQt5.QtWidgets import QMessageBox
-from skimage import transform
-from skimage.transform import warp
 
-import pcot.conntypes as conntypes
+from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, \
     BLUEINTERNALSOURCE
@@ -71,9 +69,9 @@ class XFormCrossCalib(XFormType):
 
     def __init__(self):
         super().__init__("crosscalib", "processing", "0.0.0")
-        self.addInputConnector("source", conntypes.IMG)
-        self.addInputConnector("dest", conntypes.IMG)
-        self.addOutputConnector("out", conntypes.IMG)
+        self.addInputConnector("source", Datum.IMG)
+        self.addInputConnector("dest", Datum.IMG)
+        self.addOutputConnector("out", Datum.IMG)
         self.autoserialise = ('showSrc', 'showDest', 'src', 'dest')
 
     def init(self, node):
@@ -97,8 +95,8 @@ class XFormCrossCalib(XFormType):
 
     def perform(self, node, doApply=True):
         """Perform node. When called from uichange(), doApply will be False. Normally it's true."""
-        sourceImg = node.getInput(0, conntypes.IMG)
-        destImg = node.getInput(1, conntypes.IMG)
+        sourceImg = node.getInput(0, Datum.IMG)
+        destImg = node.getInput(1, Datum.IMG)
 
         if sourceImg is None or destImg is None:
             node.img = None  # output image (i.e. warped)
@@ -140,7 +138,7 @@ class XFormCrossCalib(XFormType):
             else:
                 node.canvimg = None
 
-        node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))
+        node.setOutput(0, Datum(Datum.IMG, node.img))
 
     @staticmethod
     def delSelPoint(n):

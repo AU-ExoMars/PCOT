@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.ma import masked
 
-import pcot.conntypes as conntypes
+from pcot.datum import Datum
 import cv2 as cv
 
 import pcot
@@ -14,6 +14,7 @@ from pcot.xform import xformtype, XFormType
 
 # scale of editing brush
 BRUSHSCALE = 0.1
+
 
 class FloodFiller:
     def __init__(self, img):
@@ -77,7 +78,7 @@ def createPatchROI(n, x, y, radius):
     ff = FloodFiller(n.img)
     # get minimum and maximum pixel sizes (empirically determined from radius of patch)
     maxPix = radius ** 2 * 4
-    minPix = 0      # probably best to not have a min pixel count
+    minPix = 0  # probably best to not have a min pixel count
 
     if ff.fill(int(x), int(y), minpix=minPix, maxpix=maxPix):
         # third step - crop down to a mask and BB, generate a ROIPainted and return.
@@ -99,7 +100,7 @@ class XformPCT(XFormType):
 
     def __init__(self):
         super().__init__("pct", "calibration", "0.0.0")
-        self.addInputConnector("img", conntypes.IMG)
+        self.addInputConnector("img", Datum.IMG)
         self.autoserialise = ('brushSize', 'pctPoints', 'drawMode')
         # TODO output!
 
@@ -129,10 +130,10 @@ class XformPCT(XFormType):
         node.selPoint = -1  # selected point to move
         node.rois = []  # list of ROIs (ROIPainted); if none then we're editing points.
         node.selROI = None  # selected ROI index or None
-        node.showStdDevs = False # show stddevs on canvas
+        node.showStdDevs = False  # show stddevs on canvas
 
     def perform(self, node):
-        img = node.getInput(0, conntypes.IMG)
+        img = node.getInput(0, Datum.IMG)
         # the perform for this node mainly draws ROIs once they are generated. The PCT outline is drawn
         # in the canvas draw hook.
         if img is not None:
@@ -153,7 +154,7 @@ class XformPCT(XFormType):
                         r.setDrawProps(True, p.col, 0, 1,  # font size zero
                                        True)
                         r.drawEdge = (node.drawMode == 'Edge')
-                        r.drawBox = i == (node.selROI)
+                        r.drawBox = (i == node.selROI)
                         r.draw(node.rgbImage.img)
         node.img = img
 
@@ -171,7 +172,7 @@ class XformPCT(XFormType):
         subimg = node.img.subimage(roi=node.rois[idx])
         # get masked ROI image
         masked = subimg.masked()
-        stddev = np.mean(masked.std(axis=(0,1)))
+        stddev = np.mean(masked.std(axis=(0, 1)))
         return stddev
 
     def generateROIs(self, n):
@@ -184,8 +185,8 @@ class XformPCT(XFormType):
         # get affine transform
         M = cv.getAffineTransform(pts1, pts2)
         #  max scale factor
-        maxScale = np.max(M[:2,:2])
-        print("scale from PCT coords to screen coords:",maxScale)
+        maxScale = np.max(M[:2, :2])
+        print("scale from PCT coords to screen coords:", maxScale)
 
         n.rois = []
         # ROIs must be indexed the same as patches in pct.patches
@@ -299,7 +300,7 @@ class TabPCT(pcot.ui.tabs.Tab):
             self.w.canvas.display(self.node.rgbImage, self.node.img, self.node)
         self.w.brushSize.setValue(self.node.brushSize)
         self.w.stddevsBox.setCheckState(2 if self.node.showStdDevs else 0)
-        if len(self.node.rois)<1:
+        if len(self.node.rois) < 1:
             if rotateEnabled:
                 t = "adjust the image of the PCT by dragging the three control points " \
                     "or clicking 'rotate'. Then click 'generate ROIs'"
@@ -393,7 +394,6 @@ class TabPCT(pcot.ui.tabs.Tab):
             if n.showStdDevs:
                 self.drawStats(p)
 
-
     def canvasMouseMoveEvent(self, x, y, e):
         self.mousePos = e.pos()
         n = self.node
@@ -458,9 +458,9 @@ class TabPCT(pcot.ui.tabs.Tab):
     def doSet(self, x, y, e):
         n = self.node
         if e.modifiers() & Qt.ShiftModifier:
-            n.rois[n.selROI].setCircle(x, y, n.brushSize*BRUSHSCALE, True)
+            n.rois[n.selROI].setCircle(x, y, n.brushSize * BRUSHSCALE, True)
         else:
-            n.rois[n.selROI].setCircle(x, y, n.brushSize*BRUSHSCALE, False)
+            n.rois[n.selROI].setCircle(x, y, n.brushSize * BRUSHSCALE, False)
 
     def canvasMouseReleaseEvent(self, x, y, e):
         self.mouseDown = False

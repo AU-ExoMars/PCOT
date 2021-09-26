@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 
-import pcot.conntypes as conntypes
+import pcot.datum as conntypes
 import pcot.ui.tabs
 from pcot.xform import xformtype, XFormType, Datum
 from pcot.pancamimage import ImageCube, ROIRect, ChannelMapping

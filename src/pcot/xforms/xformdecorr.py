@@ -1,6 +1,6 @@
 import numpy as np
 
-import pcot.conntypes as conntypes
+from pcot.datum import Datum
 from pcot.xform import xformtype, XFormType, XFormException
 from pcot.xforms.tabimage import TabImage
 
@@ -13,8 +13,8 @@ class XformDecorr(XFormType):
 
     def __init__(self):
         super().__init__("decorr stretch", "processing", "0.0.0")
-        self.addInputConnector("rgb", conntypes.IMG)
-        self.addOutputConnector("rgb", conntypes.IMG)
+        self.addInputConnector("rgb", Datum.IMG)
+        self.addOutputConnector("rgb", Datum.IMG)
         self.hasEnable = True
 
     def createTab(self, n, w):
@@ -24,7 +24,7 @@ class XformDecorr(XFormType):
         node.img = None
 
     def perform(self, node):
-        img = node.getInput(0, conntypes.IMG)
+        img = node.getInput(0, Datum.IMG)
         if img is None:
             node.img = None
         elif not node.enabled:
@@ -37,7 +37,7 @@ class XformDecorr(XFormType):
             node.img = img.modifyWithSub(subimage, newimg)
         if node.img is not None:
             node.img.setMapping(node.mapping)
-        node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))
+        node.setOutput(0, Datum(Datum.IMG, node.img))
 
 
 def decorrstretch(A, mask):

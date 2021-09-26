@@ -7,7 +7,7 @@ from PyQt5 import uic, QtWidgets
 from PyQt5.QtWidgets import QDialog
 
 import pcot
-import pcot.conntypes as conntypes
+from pcot.datum import Datum
 import pcot.ui as ui
 from pcot.channelsource import IChannelSource
 from pcot.filters import wav2RGB
@@ -129,8 +129,8 @@ class XFormSpectrum(XFormType):
         self.autoserialise = ('sortlist', 'errorbarmode', 'legendFontSize', 'axisFontSize', 'stackSep', 'labelFontSize',
                               'bottomSpace', 'colourmode', 'rightSpace')
         for i in range(NUMINPUTS):
-            self.addInputConnector(str(i), conntypes.IMG, "a single line in the plot")
-        self.addOutputConnector("data", conntypes.DATA, "a CSV output (use 'dump' to read it)")
+            self.addInputConnector(str(i), Datum.IMG, "a single line in the plot")
+        self.addOutputConnector("data", Datum.DATA, "a CSV output (use 'dump' to read it)")
 
     def createTab(self, n, w):
         return TabSpectrum(n, w)
@@ -156,7 +156,7 @@ class XFormSpectrum(XFormType):
         data = dict()
         cols = dict()  # colour dictionary for ROIs/images
         for i in range(NUMINPUTS):
-            img = node.getInput(i, conntypes.IMG)
+            img = node.getInput(i, Datum.IMG)
             if img is not None:
                 # first, generate a list of indices of channels with a single source which has a wavelength,
                 # and a list of those wavelengths
@@ -201,7 +201,7 @@ class XFormSpectrum(XFormType):
         node.colsByLegend = cols  # we use this if we're using the ROI colours
         fixSortList(node)
 
-        node.setOutput(0, conntypes.Datum(conntypes.DATA, table))
+        node.setOutput(0, Datum(Datum.DATA, table))
 
 
 class ReorderDialog(QDialog):

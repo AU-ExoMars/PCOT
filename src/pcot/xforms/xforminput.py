@@ -1,4 +1,4 @@
-import pcot.conntypes as conntypes
+from pcot.datum import Datum
 import pcot.inputs
 
 from pcot.xform import xformtype, XFormType, XFormException
@@ -9,7 +9,7 @@ class XFormInput(XFormType):
     """Bring an input into the graph."""
     def __init__(self, idx):
         super().__init__("input " + str(idx), "source", "0.0.0")
-        self.addOutputConnector("img", conntypes.IMG, "image")
+        self.addOutputConnector("img", Datum.IMG, "image")
         self.idx = idx
 
     def createTab(self, n, w):
@@ -27,7 +27,7 @@ class XFormInput(XFormType):
             node.img.setMapping(node.mapping)
         elif inp.activeMethod != pcot.inputs.Input.NULL:
             node.setError(XFormException('DATA', 'input node could not read data - {}'.format(inp.exception)))
-        node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))
+        node.setOutput(0, Datum(Datum.IMG, node.img))
 
 
 @xformtype

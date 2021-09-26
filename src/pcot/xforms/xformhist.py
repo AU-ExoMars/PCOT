@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 
-import pcot.conntypes as conntypes
+from pcot.datum import Datum
 import pcot.ui as ui
 from pcot.channelsource import IChannelSource
 from pcot.xform import xformtype, XFormType
@@ -22,7 +22,7 @@ class XFormHistogram(XFormType):
     def __init__(self):
         super().__init__("histogram", "data", "0.0.0")
         self.autoserialise = ('bincount',)
-        self.addInputConnector("", conntypes.IMG)
+        self.addInputConnector("", Datum.IMG)
 
     def createTab(self, n, w):
         return TabHistogram(n, w)
@@ -33,7 +33,7 @@ class XFormHistogram(XFormType):
         node.bincount = 256
 
     def perform(self, node):
-        img = node.getInput(0, conntypes.IMG)
+        img = node.getInput(0, Datum.IMG)
         if img is not None:
             subimg = img.subimage()
             mask = ~subimg.mask

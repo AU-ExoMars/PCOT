@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QBrush, QLinearGradient
 
 
-from pcot.conntypes import *
+from pcot.datum import Datum
 brushDict = {}
 
 
@@ -20,14 +20,14 @@ def quickGrad(c1, c2, c3, finalC):
     return grad
 
 
-brushDict[ANY] = Qt.red
-brushDict[IMGRGB] = quickGrad(Qt.red, Qt.green, Qt.blue, QColor(50, 50, 50))
-brushDict[IMG] = Qt.blue
-brushDict[ELLIPSE] = Qt.cyan
-brushDict[ROI] = Qt.cyan
-brushDict[DATA] = Qt.darkMagenta
-brushDict[NUMBER] = Qt.darkGreen
-brushDict[VARIANT] = QBrush(Qt.black, Qt.DiagCrossPattern)
+brushDict[Datum.ANY] = Qt.red
+brushDict[Datum.IMGRGB] = quickGrad(Qt.red, Qt.green, Qt.blue, QColor(50, 50, 50))
+brushDict[Datum.IMG] = Qt.blue
+brushDict[Datum.ELLIPSE] = Qt.cyan
+brushDict[Datum.ROI] = Qt.cyan
+brushDict[Datum.DATA] = Qt.darkMagenta
+brushDict[Datum.NUMBER] = Qt.darkGreen
+brushDict[Datum.VARIANT] = QBrush(Qt.black, Qt.DiagCrossPattern)
 
 # convert all brushes to actual QBrush objects
 brushDict = {k: QBrush(v) for k, v in brushDict.items()}

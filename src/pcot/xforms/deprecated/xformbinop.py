@@ -1,6 +1,6 @@
 from PyQt5 import QtWidgets
 
-import pcot.conntypes as conntypes
+import pcot.datum as conntypes
 import pcot.ui.tabs
 from pcot.utils import ops
 from pcot.utils.ops import BinopException
