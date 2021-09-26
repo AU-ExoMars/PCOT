@@ -43,20 +43,20 @@ import pcot
 def testfunc(args, optargs):
     # just a numeric test function that calculates a+b*2 for two parameters a,b
     # get the two values as numbers
-    a = args[0].get(conntypes.NUMBER)
-    b = args[1].get(conntypes.NUMBER)
+    a = args[0].get(Datum.NUMBER)
+    b = args[1].get(Datum.NUMBER)
     # calculate the result (yes, I'm doing this the long-winded way)
     result = a+b*2
     # convert the result into a Datum and return
-    return Datum(conntypes.NUMBER, result)
+    return Datum(Datum.NUMBER, result)
 
 def regfuncs(e):
     from pcot.expression.parse import Parameter
     # register a function "test" with a description
     p.registerFunc("test", "func description",
     # one entry for each mandatory argument/parameter
-                   [Parameter("a", "description for A", conntypes.NUMBER),
-                    Parameter("b","description for B", conntypes.NUMBER)
+                   [Parameter("a", "description for A", Datum.NUMBER),
+                    Parameter("b","description for B", Datum.NUMBER)
                    ],
                    [], # no optional arguments
                    testfunc # finally, the fnction

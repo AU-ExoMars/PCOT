@@ -126,20 +126,21 @@ For example, the \emph{inset} \texttt{XFormType} has the constructor:
 \begin{lstlisting}
     def __init__(self):
         super().__init__("inset", "regions", "0.0.0")
-        self.addInputConnector("img", conntypes.IMG)    # input 0
-        self.addInputConnector("inset", conntypes.IMG)  # input 1
-        self.addInputConnector("rect", conntypes.RECT)  # input 2
+        self.addInputConnector("img", Datum.IMG)    # input 0
+        self.addInputConnector("inset", Datum.IMG)  # input 1
+        self.addInputConnector("rect", Datum.RECT)  # input 2
         self.addOutputConnector("", "img")
 \end{lstlisting}
 The arguments for these methods are $(name,type,description)$ where the name
 is often empty (it just shows a hint) and the description is optional (it appears
-in help text). The type is a \texttt{conntypes.Type} value.
+in help text). The type is a \texttt{datum.Type} value --- these are stored
+by name as static members of \texttt{Datum}.
 
 Within an executing graph, the data between nodes is stored as an \texttt{xform.Datum}
 object containing the type and value. Inside the node type's \texttt{perform()} method,
 we typically do something like:
 \begin{lstlisting}
-    node.setOutput(0, Datum(conntypes.IMG, img))
+    node.setOutput(0, Datum(Datum.IMG, img))
 \end{lstlisting}
 which sets output 0 to hold the image (i.e.\ \texttt{ImageCube}) stored in \texttt{img}.
 Fetching data from an input is also done in \texttt{perform()}, and takes two forms. The
@@ -150,7 +151,7 @@ first returns a \texttt{Datum}:
 while the second examines the datum internally, and returns the value field if
 the type matches or None if it doesn't:
 \begin{lstlisting}
-    image = node.getInput(0, conntypes.IMG)
+    image = node.getInput(0, Datum.IMG)
 \end{lstlisting}
 Note that None is a permissible value in \texttt{setOutput()}, which \texttt{getInput()} will
 always return as None.
@@ -158,7 +159,7 @@ always return as None.
 \subsubsection{Overriding types and the variant type}
 It is possible for an individual \texttt{XForm} node to override the input and output types
 set in its \texttt{XFormType}, by setting values in the \texttt{inputTypes} and \texttt{outputTypes}
-array. This is used in macros and mathematical operations. Often the ``default'' type is \texttt{conntypes.VARIANT},
+array. This is used in macros and mathematical operations. Often the ``default'' type is \texttt{Datum.VARIANT},
 which is a special type which must be overriden by some user action before the node becomes useful. A variant connection
 shows as crosshatched, and cannot be connected until its type is changed.
 
@@ -229,8 +230,8 @@ Error handling is generally required in three cases:
 \item connection type mismatch discovered at perform time,
 \item other errors at perform time.
 \end{itemize}
-The first is dealt with using the connection type system
-in \texttt{conntypes.py}: each connection (input and output) has a string
+The first is dealt with using the data type system
+in \texttt{datom.py}: each connection (input and output) has a string
 type and the connections must match, or they will not be made. An input
 of type ``any'' can accept any type. Additional checks are made to avoid
 cycles.
@@ -456,7 +457,7 @@ cube, using the \texttt{modifyWithSub} method.
 This example shows the operation of the decorrelation stretch:
 \begin{lstlisting}[language=Python]
     def perform(self,node):
-        img = node.getInput(0, conntypes.IMG)
+        img = node.getInput(0, Datum.IMG)
         if img is None:
             node.img = None
         elif not node.enabled:
@@ -469,7 +470,7 @@ This example shows the operation of the decorrelation stretch:
             node.img = img.modifyWithSub(subimage, newimg)
         if node.img is not None:
             node.img.setMapping(node.mapping)
-        node.setOutput(0, Datum(conntypes.IMG, node.img))
+        node.setOutput(0, Datum(Datum.IMG, node.img))
 \end{lstlisting}
 There are several checks for whether the node is actually enabled, and whether there is an image
 present to stretch, but the core lines are these:

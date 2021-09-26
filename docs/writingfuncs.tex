@@ -11,7 +11,8 @@ All these functions have two arguments and return a single value. The arguments 
 \item \textbf{optargs} is an array of optional positional arguments which may follow the mandatory arguments.
 \end{itemize}
 All arguments and the return value are \texttt{Datum} objects, and we obtain the contained data by calling
-the \texttt{get()} method with the appropriate \texttt{conntype} member.
+the \texttt{get()} method with the appropriate \texttt{Type} object (type objects are static members of
+\texttt{Datum}).
 To register a function we use the \texttt{registerFunc()} method of \texttt{ExpressionEvaluator}, which
 has the following arguments:
 \begin{itemize}
@@ -55,7 +56,7 @@ def funcGrey(args, optargs):
 
     # get the first argument as an ImageCube
     
-    img = args[0].get(conntypes.IMG)
+    img = args[0].get(Datum.IMG)
     
     # get the image's sources, combined into a single set
     
@@ -64,7 +65,7 @@ def funcGrey(args, optargs):
     # get the optional argument (or the default if not
     # provided).
     
-    if optargs[0].get(conntypes.NUMBER) != 0:
+    if optargs[0].get(Datum.NUMBER) != 0:
 
         # We are using the OpenCV method for 3 channels
         
@@ -89,7 +90,7 @@ def funcGrey(args, optargs):
         img = ImageCube(out, img.mapping, [sources])
     
     # return the image cube as a Datum
-    return Datum(conntypes.IMG, img)
+    return Datum(Datum.IMG, img)
 \end{lstlisting}
 
 We can then register this function. This is a built-in function, so it is registered inside the constructor for
@@ -99,11 +100,11 @@ the \texttt{ExpressionEvaluator} owned by the \texttt{XFormExpr} type object:
         self.registerFunc("grey", # name 
             "convert an image to greyscale", # description
             # a single mandatory parameter: an image
-            [Parameter("image", "an image to process", conntypes.IMG)],
+            [Parameter("image", "an image to process", Datum.IMG)],
             # a single optional parameter (which must be numeric):
             [Parameter("useCV",
                "if non-zero, use openCV greyscale conversion (RGB input only): 0.299*R + 0.587*G + 0.114*B",
-                conntypes.NUMBER, deflt=0)],
+                Datum.NUMBER, deflt=0)],
             funcGrey)
 \end{lstlisting}
 
