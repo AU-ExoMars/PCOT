@@ -148,9 +148,10 @@ class TreeMethodWidget(MethodWidget):
 
         self.canvas.setMapping(m.mapping)
         # the canvas gets its "caption display" setting from the graph, so
-        # we need to get it from the manager, which we get from the input,
-        # which we get from the method. Ugh.
-        self.canvas.setGraph(self.method.input.mgr.graph)
+        # we need to get it from the document, which is stored in the manager,
+        # which we get from the input, which we get from the method. Ugh.
+        # Indirection, eh?
+        self.canvas.setGraph(self.method.input.mgr.doc.graph)
         self.canvas.setPersister(m)
 
         self.onInputChanged()

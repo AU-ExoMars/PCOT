@@ -25,25 +25,25 @@ class InputMethod:
 
     def mark(self):
         """About to perform a change, so mark an undo point"""
-        return self.input.mgr.graph.doc.mark()
+        return self.input.mgr.doc.mark()
 
     def unmark(self):
         """remove most recently placed undo mark but do not transfer to redo stack (it was abandoned)"""
-        return self.input.mgr.graph.doc.unmark()
+        return self.input.mgr.doc.unmark()
 
     def undo(self):
         """undo the entire document - widget has responsibility for updating UI"""
-        self.input.mgr.graph.doc.undo()
+        self.input.mgr.doc.undo()
 
     def redo(self):
         """redo the entire document - widget has responsibility for updating UI"""
-        self.input.mgr.graph.doc.redo()
+        self.input.mgr.doc.redo()
 
     def canUndo(self):
-        return self.input.mgr.graph.doc.canUndo()
+        return self.input.mgr.doc.canUndo()
 
     def canRedo(self):
-        return self.input.mgr.graph.doc.cando()
+        return self.input.mgr.doc.cando()
 
     ## invalidates
     def invalidate(self):
