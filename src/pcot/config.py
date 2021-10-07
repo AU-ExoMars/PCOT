@@ -26,7 +26,7 @@ data = None
 
 data = configparser.ConfigParser()
 data.read_file(getAssetAsFile('defaults.ini'))
-data.read(['site.cfg', os.path.expanduser('~/.pcot.ini')], encoding='utf_8')
+#data.read(['site.cfg', os.path.expanduser('~/.pcot.ini')], encoding='utf_8')
 
 
 def getDef(key, fallback='nofallback'):

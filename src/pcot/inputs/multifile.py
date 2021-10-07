@@ -15,6 +15,7 @@ from .inputmethod import InputMethod
 from pcot.pancamimage import ChannelMapping, ImageCube
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
+from .. import ui
 
 
 class MultifileInputMethod(InputMethod):
@@ -229,13 +230,21 @@ class MultifileMethodWidget(MethodWidget):
             ## TODO self.method.type.clearImages(self.node)
         self.dir.setText(dr)
         # get all the files in dir which are images
-        self.allFiles = sorted([f for f in os.listdir(dr) if os.path.isfile(os.path.join(dr, f))
-                                and IMAGETYPERE.match(f) is not None])
-        # using the absolute, real path
-        self.method.dir = os.path.realpath(dr)
-        pcot.config.setDefaultDir('images', self.method.dir)
+        try:
+            self.allFiles = sorted([f for f in os.listdir(dr) if os.path.isfile(os.path.join(dr, f))
+                                    and IMAGETYPERE.match(f) is not None])
+            # using the absolute, real path
+            self.method.dir = os.path.realpath(dr)
+            pcot.config.setDefaultDir('images', self.method.dir)
+        except Exception as e:
+            # some kind of file system error
+            e = str(e)
+            self.method.input.exception = str(e)
+            ui.error(e)
+
         # rebuild the model
         self.buildModel()
+
 
     def patChanged(self):
         self.method.filterpat = self.filterpat.text()
