@@ -47,26 +47,28 @@ class InputMethod:
         return self.input.mgr.doc.cando()
 
     def invalidate(self):
-        """invalidates the method's cached data and rereads it.
-        Ideally, it should just do the former but reads are being missed."""
+        """invalidates the method's cached data"""
         self.data = None
-        try:
-            self.read()  # and try to read. TODO - I'm not happy about this; I feel it's happening too much. Too tired to think properly about it now.
-        except FileNotFoundError as e:
-            ui.error("Cannot read file {}".format(e.filename))
-        except Exception as e:
-            ui.error(str(e))
 
     def get(self):
-        """returns the cached data"""
-        return self.data
-
-    def read(self):
-        """reads the data if the cache has been invalidated"""
+        """returns cached data - if that's None, attempts to read data and cache it."""
         if self.data is None:
-            self.data = self.readData()
-            if self.data is not None:
-                print("CACHE WAS INVALID, DATA MAY HAVE BEEN READ")
+            self.input.exception = None
+            try:
+                self.data = self.readData()
+                if self.data is None:
+                    print("CACHE WAS INVALID AND DATA COULD NOT BE READ")
+                else:
+                    print("CACHE WAS INVALID, DATA HAS BEEN READ")
+            except FileNotFoundError as e:
+                # this one usually doesn't happen
+                self.input.exception = str("Cannot read file {}".format(e.filename))
+                ui.error(self.input.exception)
+            except Exception as e:
+                # this one does.
+                self.input.exception = str(e)
+                ui.error(self.input.exception)
+        return self.data
 
     def getName(self):
         """to override - returns the name for display purposes"""

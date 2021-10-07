@@ -1046,9 +1046,8 @@ class XFormGraph:
         """
 
         if (not uiOnly) and (XFormGraph.autoRun or runAll):
-            # reread all inputs for my document (should cache!)
-            self.doc.inputMgr.readAll()
-
+            if runAll:
+                self.doc.inputMgr.invalidate()
             if self.isMacro:
                 # distribute changes in macro prototype to instances.
                 # what we do here is go through all instances of the macro. 

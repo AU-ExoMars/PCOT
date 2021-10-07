@@ -43,7 +43,7 @@ class Input:
         ]
 
     def get(self):
-        """actually returns the cached data. Will not read, though - that should be done by readAll."""
+        """Get the data for an input, reading into the cache if required."""
         # This needs to get a copy, otherwise its mapping will overwrite the mapping
         # in the input method itself.
         i = self.methods[self.activeMethod].get()
@@ -52,13 +52,10 @@ class Input:
         else:
             return i
 
-    def read(self):
-        """Read the data - called by readAll()"""
-        self.exception = None
-        try:
-            self.methods[self.activeMethod].read()
-        except Exception as e:
-            self.exception = e
+    def invalidate(self):
+        """Invalidate ALL the methods for an input, whether they are active or not"""
+        for m in self.methods:
+            m.invalidate()
 
     def isActive(self, method):
         """return true if a given method is active"""
@@ -167,8 +164,13 @@ class InputManager:
             x.closeWindow()
 
     def get(self, idx):
-        """return the data for a given input - does not actually read it, so data should be in the cache."""
+        """return the data for a given input."""
         return self.inputs[idx].get()
+
+    def invalidate(self):
+        """invalidate all inputs"""
+        for x in self.inputs:
+            x.invalidate()
 
     def serialise(self, internal):
         """serialise the inputs, returning a structure which can be converted into
@@ -184,8 +186,3 @@ class InputManager:
         pass each block of data to each input"""
         for inp, data in zip(self.inputs, lst):
             inp.deserialise(data, internal)
-
-    def readAll(self):
-        """force reread of all inputs, typically on graph.changed()."""
-        for x in self.inputs:
-            x.read()
