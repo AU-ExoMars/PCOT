@@ -234,8 +234,14 @@ class Tab(QtWidgets.QWidget):
         """The tab's widgets have changed the data, we need
         to perform the node. (or all instance nodes of a macro prototype).
         If uiOnly is false, just do the uichanged() update, as if autorun were not set.
-        We also record an undo mark."""
-        self.node.graph.changed(self.node, uiOnly=uiOnly)
+        We also record an undo mark.
+
+        Note that we don't call this if we're updating tabs in nodeChanged().
+        That's because nodeChanged calls onNodeChanged, which can change a lot of widgets,
+        each of which will call this method in their valueChanged slot method."""
+
+        if not Tab.updatingTabs:
+            self.node.graph.changed(self.node, uiOnly=uiOnly)
 
     def enableChanged(self, b):
         self.node.setEnabled(b)

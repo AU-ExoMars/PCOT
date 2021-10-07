@@ -11,6 +11,7 @@ from pcot.datum import Datum
 import pcot.ui as ui
 from pcot.channelsource import IChannelSource
 from pcot.filters import wav2RGB
+from pcot.ui.tabs import Tab
 from pcot.utils.table import Table
 from pcot.xform import XFormType, xformtype, XFormException
 
@@ -411,6 +412,7 @@ class TabSpectrum(ui.tabs.Tab):
         # this is done in replot - the user replots this node manually because it takes
         # a while to run. But we do make the replot button red!
         self.markReplotReady()
+        # these will each cause the widget's changed slot to get called and lots of calls to mark()
         self.w.errorbarmode.setCurrentIndex(self.node.errorbarmode)
         self.w.colourmode.setCurrentIndex(self.node.colourmode)
         self.w.stackSepSpin.setValue(self.node.stackSep)
