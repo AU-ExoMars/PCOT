@@ -102,13 +102,11 @@ class XFormMultiDot(XFormType):
         node.rois = []
         if 'rois' in d:
             for r in d['rois']:
-                if r is None:
-                    roi = None
-                else:
+                if r is not None:
                     roi = ROICircle()
                     roi.deserialise(r)
-                node.rois.append(roi)
-        node.rois = [r for r in node.rois if r is not None and r.r > 0]
+                    node.rois.append(roi)
+        node.rois = [r for r in node.rois if r.r > 0]
 
     def setProps(self, node, img):
         node.previewRadius = node.dotSize
