@@ -1,6 +1,4 @@
-## defines a way of inputting data (image data, usually). Each input has several
-# of this which are all always present, but only one is active (determined by
-# its index in the Input).
+##
 from typing import Optional, Any
 
 from pcot import ui
@@ -8,19 +6,22 @@ from pcot.ui.canvas import Canvas
 
 
 class InputMethod:
+    """Defines a way of inputting data (image data, usually). Each input has several
+    of this which are all always present, but only one is active (determined by
+    its index in the Input)."""
     def __init__(self, inp):
         self.input = inp
         self.name = ''
         self.data = None
-        Canvas.initPersistData(self)
+        Canvas.initPersistData(self)  # creates data inside the canvas
         self.showROIs = False  # used by the canvas
 
-    ## asks the input if I'm active
     def isActive(self):
+        """Is this method active?"""
         return self.input.isActive(self)
 
-    ## to override - actually runs the input and returns data.
     def readData(self) -> Optional[Any]:
+        """to override - actually runs the input and returns data."""
         return None
 
     def mark(self):
@@ -45,8 +46,9 @@ class InputMethod:
     def canRedo(self):
         return self.input.mgr.doc.cando()
 
-    ## invalidates
     def invalidate(self):
+        """invalidates the method's cached data and rereads it.
+        Ideally, it should just do the former but reads are being missed."""
         self.data = None
         try:
             self.read()  # and try to read. TODO - I'm not happy about this; I feel it's happening too much. Too tired to think properly about it now.
@@ -55,29 +57,30 @@ class InputMethod:
         except Exception as e:
             ui.error(str(e))
 
-    ##  returns the cached data
     def get(self):
+        """returns the cached data"""
         return self.data
 
-    ## reads the data if the cache has been invalidated
     def read(self):
+        """reads the data if the cache has been invalidated"""
         if self.data is None:
             self.data = self.readData()
             if self.data is not None:
                 print("CACHE WAS INVALID, DATA MAY HAVE BEEN READ")
 
-    ## to override - returns the name for display purposes
     def getName(self):
+        """to override - returns the name for display purposes"""
         return ''
 
-    ## to override - creates the editing widget in the input window
     def createWidget(self):
+        """to override - creates the editing widget in the input window"""
         pass
 
-    ## to override - converts this object's state into a bunch of plain data
-    # which can be converted to JSON. See notes in document.py for "internal" - it really
-    # means we are not truly serialising, just constructing a memento for redo/undo.
     def serialise(self, internal):
+        """to override - converts this object's state into a bunch of plain data
+        which can be converted to JSON. See notes in document.py for "internal" - it really
+        means we are not truly serialising, just constructing a memento for redo/undo.
+        """
         return None
 
     ## to override - sets this method's data from JSON-read data
