@@ -8,7 +8,7 @@ from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, \
     BLUEINTERNALSOURCE
-from pcot.pancamimage import ImageCube
+from pcot.imagecube import ImageCube
 from pcot.rois import ROICircle
 from pcot.utils import text
 from pcot.xform import XFormType, xformtype, XFormException

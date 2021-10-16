@@ -4,7 +4,7 @@ from typing import Optional
 
 import pcot.ui as ui
 from .inputmethod import InputMethod
-from pcot.pancamimage import ImageCube, ChannelMapping
+from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import TreeMethodWidget
 

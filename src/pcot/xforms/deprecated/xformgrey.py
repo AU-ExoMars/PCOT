@@ -6,7 +6,7 @@ import pcot.datum as conntypes
 
 from pcot.xform import xformtype, XFormType, XFormException
 import pcot.ui.tabs
-from pcot.pancamimage import ImageCube
+from pcot.imagecube import ImageCube
 
 
 @xformtype

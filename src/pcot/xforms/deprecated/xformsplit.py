@@ -4,7 +4,7 @@ import numpy as np
 import pcot.datum as conntypes
 import pcot.ui.tabs
 from pcot.xform import xformtype, XFormType, Datum
-from pcot.pancamimage import ImageCube, ROIRect, ChannelMapping
+from pcot.imagecube import ImageCube, ROIRect, ChannelMapping
 
 
 @xformtype

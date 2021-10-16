@@ -6,7 +6,7 @@ import pcot
 import pcot.envi as envi
 import pcot.ui as ui
 from pcot.inputs.inputmethod import InputMethod
-from pcot.pancamimage import ImageCube, ChannelMapping
+from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import TreeMethodWidget
 

@@ -5,7 +5,7 @@ from .inputmethod import InputMethod
 from .multifile import MultifileInputMethod
 from .nullinput import NullInputMethod
 from .rgb import RGBInputMethod
-from pcot.pancamimage import ImageCube
+from pcot.imagecube import ImageCube
 
 from pcot.ui.inputs import InputWindow
 

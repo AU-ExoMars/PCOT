@@ -4,7 +4,7 @@ import numpy as np
 from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, BLUEINTERNALSOURCE
-from pcot.pancamimage import ImageCube
+from pcot.imagecube import ImageCube
 from pcot.xform import xformtype, XFormType, XFormException
 
 

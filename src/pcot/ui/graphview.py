@@ -1,14 +1,12 @@
-## @package graphview
-# This package deals with the widget which displays the graphical scene which 
-# represents a graph (graphscene).
-
+"""This module deals with the widget which displays the graphical scene which
+represents a graph (graphscene).
+"""
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import Qt
 
 
-## The graphical view widget
-
 class GraphView(QtWidgets.QGraphicsView):
+    """The graphical view widget"""
     ## constructor, taking the widget parent
     def __init__(self, parent=None):
         self.window = None

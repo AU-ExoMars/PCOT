@@ -1,6 +1,4 @@
-## @package ui.canvas
-# Canvas widget for showing a CV image
-#
+"""Canvas widget for showing a CV image"""
 import math
 import os
 from typing import TYPE_CHECKING, Optional
@@ -15,17 +13,16 @@ import numpy as np
 import pcot
 import pcot.ui as ui
 from pcot.channelsource import IChannelSource
-from pcot.pancamimage import ImageCube, ChannelMapping
+from pcot.imagecube import ImageCube, ChannelMapping
 
 if TYPE_CHECKING:
     from pcot.xform import XFormGraph, XForm
 
 
-## convert a cv/numpy image to a Qt image
-# input must be 3 channels, 0-1 floats
-
-
 def img2qimage(img):
+    """convert a cv/numpy image to a Qt image
+    input must be 3 channels, 0-1 floats
+    """
     i = img * 255.0
     i = i.astype(np.ubyte)
     height, width, channel = i.shape

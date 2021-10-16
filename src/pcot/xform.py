@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from macros import XFormMacro, MacroInstance
 
 # ugly forward declarations so the type hints work
-from pcot.pancamimage import ChannelMapping
+from pcot.imagecube import ChannelMapping
 
 ## dictionary of name -> transformation type (XFormType)
 allTypes = dict()
@@ -1260,7 +1260,7 @@ class XFormGraph:
 
 class XFormROIType(XFormType):
     """Class for handling ROI xform types, does most of the heavy lifting of the node's perform
-    function. The actual ROIs are dealt with in pancamimage"""
+    function. The actual ROIs are dealt with in imagecube.py"""
 
     # constants enumerating the outputs
     OUT_IMG = 0

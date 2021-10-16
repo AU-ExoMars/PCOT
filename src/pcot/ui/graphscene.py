@@ -1,7 +1,6 @@
-## @package graphscene
-# This package deals with constructing and modifying the Qt Graphics View scene
-# which represents the objects in an XFormGraph.
-
+"""This module deals with constructing and modifying the Qt Graphics View scene
+which represents the objects in an XFormGraph.
+"""
 
 import math
 from typing import List, Optional

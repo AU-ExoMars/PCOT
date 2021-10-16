@@ -12,7 +12,7 @@ import pcot.config
 import pcot.operations as operations
 from pcot.datum import Datum
 from .parse import Parameter, Parser, execute
-from pcot.pancamimage import ImageCube
+from pcot.imagecube import ImageCube
 from pcot.utils.ops import binop, unop
 from pcot.xform import XFormException
 

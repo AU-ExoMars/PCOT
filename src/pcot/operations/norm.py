@@ -5,7 +5,7 @@ from typing import Optional, Tuple
 
 import numpy as np
 
-from pcot.pancamimage import SubImageCubeROI
+from pcot.imagecube import SubImageCubeROI
 from pcot.xform import XFormException
 
 

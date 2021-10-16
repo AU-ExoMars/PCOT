@@ -1,6 +1,5 @@
-## @package palette
-# The palette widget package, which handles the palette of
-# nodes on the right hand side.
+"""The palette widget module, which handles the palette of
+nodes on the right hand side."""
 
 from PyQt5 import QtWidgets, uic, QtCore, QtGui
 from PyQt5.QtCore import Qt

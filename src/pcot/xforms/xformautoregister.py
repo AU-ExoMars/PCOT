@@ -1,5 +1,5 @@
 from pcot.datum import Datum
-from pcot.pancamimage import ImageCube
+from pcot.imagecube import ImageCube
 from pcot.xform import xformtype, XFormType
 import cv2 as cv
 import numpy as np

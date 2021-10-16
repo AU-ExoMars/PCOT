@@ -1,8 +1,9 @@
-## @package pancamimage
-# Classes to encapsulate an image data cube which can be any number of channels
-# and also incorporates region-of-interest data.  Conversions to and from float are
-# done in many operations. Avoiding floats saves memory and speeds things up,
-# but we could change things later.
+"""Classes to encapsulate an image data cube which can be any number of channels
+and also incorporates region-of-interest data.  Conversions to and from float are
+done in many operations. Avoiding floats saves memory and speeds things up,
+but we could change things later.
+"""
+
 import collections
 import math
 import numbers

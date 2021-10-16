@@ -28,7 +28,7 @@ import numpy as np
 import pcot.ui as ui
 from pcot.channelsource import ChannelSourceWithFilter
 from pcot.filters import Filter
-from pcot.pancamimage import ChannelMapping, ImageCube
+from pcot.imagecube import ChannelMapping, ImageCube
 
 
 def parseHeader(lines):

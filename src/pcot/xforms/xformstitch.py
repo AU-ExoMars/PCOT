@@ -5,7 +5,7 @@ import cv2 as cv
 from PyQt5.QtGui import QKeyEvent
 
 from pcot.datum import Datum
-from pcot.pancamimage import ImageCube
+from pcot.imagecube import ImageCube
 from pcot.ui.tabs import Tab
 from pcot.xform import XFormType, xformtype, XFormException
 

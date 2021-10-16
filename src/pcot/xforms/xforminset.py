@@ -5,7 +5,7 @@ import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
 from pcot.channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, BLUEINTERNALSOURCE
-from pcot.pancamimage import ImageCube, ChannelMapping
+from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.xform import xformtype, XFormType
 
 

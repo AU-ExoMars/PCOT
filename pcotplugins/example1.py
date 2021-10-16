@@ -4,7 +4,7 @@ import numpy as np
 from pcot import datum
 from pcot.xform import XFormType, xformtype, Datum
 from pcot.xforms.tabimage import TabImage
-from pcot.pancamimage import ImageCube
+from pcot.imagecube import ImageCube
 
 from PyQt5 import QtWidgets
 

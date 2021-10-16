@@ -4,7 +4,7 @@ from typing import Any, Callable
 import numpy as np
 
 from pcot.datum import Datum, Type
-from pcot.pancamimage import ImageCube
+from pcot.imagecube import ImageCube
 from pcot.rois import BadOpException
 
 

@@ -1,12 +1,11 @@
 import math
 import numpy as np
 
+"""This file deals with the physical multispectral filters for the PANCAM and AUPE cameras"""
 
-## @package filters
-# This package deals with the physical multispectral filters for the PANCAM and AUPE cameras
 
-## The filter class describes a single filter's parameters
 class Filter:
+    """The filter class describes a single filter's parameters"""
     ## @var cwl
     # centre wavelength
     cwl: float
@@ -80,16 +79,16 @@ def wav2RGB(wavelength):
 
     # intensity correction
     if 380 <= w < 420:
-        SSS = 0.3 + 0.7*(w - 350) / (420 - 350)
+        SSS = 0.3 + 0.7 * (w - 350) / (420 - 350)
     elif 420 <= w <= 700:
         SSS = 1.0
     elif 700 < w <= 780:
-        SSS = 0.3 + 0.7*(780 - w) / (780 - 700)
+        SSS = 0.3 + 0.7 * (780 - w) / (780 - 700)
     else:
         SSS = 0.0
-#    SSS *= 255
+    #    SSS *= 255
 
-    return [(SSS*R), (SSS*G), (SSS*B)]
+    return [(SSS * R), (SSS * G), (SSS * B)]
 
 
 ## Array of Pancam filters - data from Coates, A. J., et al. "The PanCam instrument for the ExoMars rover." Astrobiology 17.6-7 (2017): 511-541

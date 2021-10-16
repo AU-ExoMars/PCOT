@@ -7,7 +7,7 @@ import pcot.datum as conntypes
 
 import pcot.ui
 from pcot.channelsource import IChannelSource
-from pcot.pancamimage import ImageCube
+from pcot.imagecube import ImageCube
 from pcot.xform import xformtype, XFormType, XFormException
 import cv2 as cv
 
