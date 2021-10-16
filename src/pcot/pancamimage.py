@@ -483,7 +483,7 @@ class ImageCube:
             self.mapping = ChannelMapping(*r)
         elif r is not None or b is not None or g is not None:
             if r is None or b is None or g is None:
-                raise Exception("All three RGB channel IDs or none must be provided in setDefaultMapping")
+                raise Exception("All three RGB channel IDs or none must be provided in setRGBMapping")
 
             ridx = self.getChannelIdx(r)
             if ridx is None:
