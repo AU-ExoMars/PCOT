@@ -105,6 +105,11 @@ class MultifileInputMethod(InputMethod):
     def getName(self):
         return "Multifile"
 
+    def brief(self):
+        """Give a brief name for use in captions. In multifile this is awkward because several files can be used
+        which would be overly long, so I'm avoiding the problem altogether and just giving the input number."""
+        return f"INP{self.input.idx}"
+
     # used from external code
     def setFileNames(self, directory, fnames):
         self.dir = directory
@@ -244,7 +249,6 @@ class MultifileMethodWidget(MethodWidget):
 
         # rebuild the model
         self.buildModel()
-
 
     def patChanged(self):
         self.method.filterpat = self.filterpat.text()

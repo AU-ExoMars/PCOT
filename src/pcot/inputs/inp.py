@@ -1,6 +1,6 @@
 from typing import List, Optional, TYPE_CHECKING
 
-from .envi import ENVIInputMethod
+from .envimethod import ENVIInputMethod
 from .inputmethod import InputMethod
 from .multifile import MultifileInputMethod
 from .nullinput import NullInputMethod
@@ -17,9 +17,10 @@ class Input:
     The data from the currently active input methods arrives in the graph through
     an XFormInput node.
     """
-    window: Optional['InputWindow']
-    methods: List['InputMethod']
-    activeMethod: int
+    window: Optional['InputWindow']     # if not None, an open window
+    methods: List['InputMethod']        # list of methods
+    activeMethod: int                   # index of active method in above array (see constants below)
+    idx: int                            # index of input in the manager
 
     # indices of the methods in the 'methods' array; only activeMethod will be active.
     NULL = 0
@@ -27,11 +28,12 @@ class Input:
     MULTIFILE = 2
     ENVI = 3
 
-    def __init__(self, mgr):
+    def __init__(self, mgr, idx):
         """this will intialise an Input from scratch, typically when
         you're creating a new main graph. The input will be initialised
         to use the null method."""
         self.mgr = mgr
+        self.idx = idx
         self.activeMethod = 0
         self.exception = None
         self.window = None
@@ -137,7 +139,12 @@ class Input:
         return m
 
     def __str__(self):
+        """string for internal use only"""
         return "InputManager-active-{}".format(self.activeMethod)
+
+    def brief(self):
+        """string for use in captions, etc."""
+        return self.getActive().brief()
 
 
 ## how many inputs the system can have
@@ -152,7 +159,7 @@ class InputManager:
     def __init__(self, doc):
         """Initialise, linking with a Document and creating a set of Inputs"""
         self.doc = doc
-        self.inputs = [Input(self) for _ in range(0, NUMINPUTS)]
+        self.inputs = [Input(self, i) for i in range(0, NUMINPUTS)]
 
     def openWindow(self, inputIdx):
         """Open a window for a given input index"""

@@ -72,7 +72,11 @@ class InputMethod:
 
     def getName(self):
         """to override - returns the name for display purposes"""
-        return ''
+        return 'override-getName!'
+
+    def brief(self):
+        """to override - returns details for captioning etc."""
+        return "override-brief!"
 
     def createWidget(self):
         """to override - creates the editing widget in the input window"""

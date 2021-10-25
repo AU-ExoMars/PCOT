@@ -36,6 +36,9 @@ class RGBInputMethod(InputMethod):
     def getName(self):
         return "RGB"
 
+    def brief(self):
+        return self.fname
+
     # used from external code
     def setFileName(self, fname):
         self.fname = fname

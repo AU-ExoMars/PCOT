@@ -11,7 +11,10 @@ from pcot.inputs import Input
 
 class Source:
     """The base class for sources, with the exception of MultiBandSource which is only used in images."""
-    pass
+    def brief(self):
+        """return a brief string for use in captions - the default is just to return None, which will
+        be filtered out when used in such captions."""
+        return None
 
 
 class SingleSource(Source):
@@ -38,6 +41,18 @@ class SingleSource(Source):
     def __hash__(self):
         return hash(self._uniqid)
 
+    def __str__(self):
+        """Return a full internal string representation, used in debugging"""
+        return f"SOURCE-{self._uniqid}"
+
+    def brief(self):
+        """return a brief string representation, used in image captions"""
+        inptxt = self.input.brief()
+        if self.filter.cwl:
+            return f"{inptxt}:{self.filter.cwl}"
+        else:
+            return inptxt
+
 
 class SourceSet(Source):
     """This is a combination of sources which have produced a single-band datum - could be a band of an
@@ -55,6 +70,9 @@ class SourceSet(Source):
             else:
                 raise Exception(f"Bad argument to source set constructor: {type(x)}")
         self.sourceSet = result
+
+    def __str__(self):
+        return "&".join([str(x) for x in self.sourceSet])
 
 
 class MultiBandSource:

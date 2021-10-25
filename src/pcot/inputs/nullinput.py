@@ -22,3 +22,7 @@ class NullInputMethod(InputMethod):
 
     def deserialise(self, data, internal):
         pass
+
+    def brief(self):
+        """really this should never be seen"""
+        return "null"

@@ -59,6 +59,9 @@ class ENVIInputMethod(InputMethod):
             self.img = None   # ensure image is reloaded
         Canvas.deserialise(self, data)
 
+    def brief(self):
+        return self.fname
+
 
 class ENVIMethodWidget(TreeMethodWidget):
     def __init__(self, m):
