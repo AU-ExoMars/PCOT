@@ -30,7 +30,6 @@ if TYPE_CHECKING:
     import PyQt5.QtWidgets
     from macros import XFormMacro, MacroInstance
 
-# ugly forward declarations so the type hints work
 from pcot.imagecube import ChannelMapping
 
 ## dictionary of name -> transformation type (XFormType)

@@ -21,6 +21,7 @@ class Input:
     methods: List['InputMethod']        # list of methods
     activeMethod: int                   # index of active method in above array (see constants below)
     idx: int                            # index of input in the manager
+    mgr: 'InputManager'                 # our input manager (we can use this to get the document)
 
     # indices of the methods in the 'methods' array; only activeMethod will be active.
     NULL = 0
@@ -155,6 +156,7 @@ class InputManager:
     """This is the input manager, which owns and manages the inputs.
     It itself is owned by a document"""
     inputs: List[Input]
+    doc: 'Document'
 
     def __init__(self, doc):
         """Initialise, linking with a Document and creating a set of Inputs"""

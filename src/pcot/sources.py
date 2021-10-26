@@ -2,38 +2,79 @@
 New source tracking system - each Datum will have a source describing which input it comes from,
 and each input will know how to generate useful information from that source.
 """
-from typing import Optional, List, Union
+import math
+from abc import ABC, abstractmethod
+from typing import Optional, List, Set, SupportsFloat, Union, Iterable
 
-from pcot.document import Document
 from pcot.filters import Filter
-from pcot.inputs import Input
 
 
-class Source:
-    """The base class for sources, with the exception of MultiBandSource which is only used in images."""
-    def brief(self):
-        """return a brief string for use in captions - the default is just to return None, which will
-        be filtered out when used in such captions."""
+class Source(ABC):
+    """The base class for sources, with the exception of MultiBandSource which is only used in images.
+    This is abstract - the absolute minimum functionality is in NullSource."""
+
+    @abstractmethod
+    def brief(self) -> Optional[str]:
+        """Return a brief string to be used in captions, etc."""
+        return None
+
+    @abstractmethod
+    def copy(self):
+        """Return a reasonably deep copy of the source"""
+        pass
+
+    def matches(self, inp, bandNameOrCWL, single, hasBand):
+        """Returns true if the input index matches this source (if not None) and the band matches this source (if not none).
+        None values are ignored, so passing "inp" of None will mean the input index is not checked.
+        Default implementation matches nothing."""
+        return False
+
+    def getFilter(self):
+        """return any filter"""
         return None
 
 
+class NullSource(Source):
+    """This is for "sources" where there isn't a source, the data has come from inside the program.
+    Typically this will get filtered out when we print the sources."""
+
+    def brief(self) -> Optional[str]:
+        """return a brief string for use in captions - this will just return None, which will
+        be filtered out when used in such captions."""
+        return None
+
+    def copy(self):
+        """not actually a copy, but this is immutable anyway"""
+        return self
+
+
 class SingleSource(Source):
-    """A basic source for a single band of an image or a non-image value. Designed so that two Source objects
+    """A basic source for a single band of an image or a non-image value.
+    This is for things which actually come from an Input. Designed so that two Source objects
     with the same document, filter and input index are the same."""
 
-    filter: Optional[Filter]    # if this is an image band, reference to the filter. Else None.
-    doc: Document               # which document I'm associated with
-    inputIdx: int               # the index of the input within the document
-    input: Input                # the actual input object
+    # if this is an filtered image band, reference to the filter; else a string for the band name
+    filterOrName: Union[Filter, str]
+    doc: 'Document'  # which document I'm associated with
+    inputIdx: int  # the index of the input within the document
+    input: 'Input'  # the actual input object
 
-    def __init__(self, doc, inputIdx, filt=None):
-        self.filter = filt
+    def __init__(self, doc, inputIdx, filterOrName):
+        """This takes a document, inputIdx, and either a filter or a name"""
+        self.filterOrName = filterOrName
         self.doc = doc
         self.inputIdx = inputIdx
         self.input = self.doc.inputMgr.inputs[inputIdx]
         # this is used for hashing and equality - should be the same for two identical sources
-        filtCwl = self.filter.cwl if self.filter else 'none'
-        self._uniqid = f"{id(self.doc)}/{self.inputIdx}/{filtCwl}"
+        filtID = self.filterOrName.cwl if isinstance(self.filterOrName, Filter) else self.filterOrName
+        self._uniqid = f"{id(self.doc)}/{self.inputIdx}/{filtID}"
+
+    def getFilter(self):
+        """return the filter if there really is one, else none"""
+        return self.filterOrName if isinstance(self.filterOrName, Filter) else None
+
+    def copy(self):
+        return SingleSource(self.doc, self.inputIdx, self.filterOrName)
 
     def __eq__(self, other: 'SingleSource'):
         return self._uniqid == other._uniqid
@@ -48,42 +89,136 @@ class SingleSource(Source):
     def brief(self):
         """return a brief string representation, used in image captions"""
         inptxt = self.input.brief()
-        if self.filter.cwl:
-            return f"{inptxt}:{self.filter.cwl}"
+        if isinstance(self.filterOrName, Filter):
+            return f"{inptxt}:{int(self.filterOrName.cwl)}"
         else:
-            return inptxt
+            return f"{inptxt}:{self.filterOrName}"
+
+    def matches(self, inp, filterNameOrCWL, single, hasFilter):
+        """return true if the source matches ALL the non-None criteria"""
+        if inp and inp != self.inputIdx:
+            return False
+        if hasFilter is not None:
+            if hasFilter and not self.getFilter():
+                return False
+            if not hasFilter and self.getFilter():
+                return False
+        if filterNameOrCWL:
+            if isinstance(filterNameOrCWL, str):
+                name = self.filterOrName.name if isinstance(self.filterOrName, Filter) else self.filterOrName
+                pos = self.filterOrName.position if isinstance(self.filterOrName, Filter) else None
+                if name != filterNameOrCWL and pos != filterNameOrCWL:
+                    return False
+            elif isinstance(filterNameOrCWL, SupportsFloat):  # this is OK, SupportsFloat is a runtime chkable protocol
+                if not isinstance(self.filterOrName, Filter) \
+                        or not math.isclose(filterNameOrCWL, self.filterOrName.cwl):
+                    return False
+        return True
 
 
-class SourceSet(Source):
+class SourceSet:
     """This is a combination of sources which have produced a single-band datum - could be a band of an
     image or some other type"""
 
-    def __init__(self, ss=[]):
-        """The constructor takes a list of sources and source sets, and generates a new source set which is
-        a union of all of them"""
-        result = set()
-        for x in ss:
-            if isinstance(x, SourceSet):
-                result |= x.sourceSet
-            elif isinstance(x, SingleSource):
-                result.add(x)
-            else:
-                raise Exception(f"Bad argument to source set constructor: {type(x)}")
+    sourceSet: Set[Source]  # the underlying set of sources
+
+    def __init__(self, ss: Union[Source, 'SourceSet', Iterable[Union[Source, 'SourceSet']]] = ()):
+        """The constructor takes a collection of sources and source sets, or just one, and generates a new source
+        set which is  a union of all of them"""
+        if isinstance(ss, Source):
+            result = {ss}
+        elif isinstance(ss, SourceSet):
+            result = ss
+        elif isinstance(ss, Iterable):
+            result = set()
+            for x in ss:
+                if isinstance(x, SourceSet):
+                    result |= x.sourceSet
+                elif isinstance(x, Source):
+                    result.add(x)
+                else:
+                    raise Exception(f"Bad list argument to source set constructor: {type(x)}")
+        else:
+            raise Exception(f"Bad argument to source set constructor: {type(ss)}")
+
         self.sourceSet = result
 
+    def add(self, other: 'SourceSet'):
+        """add a source set to this one (i.e. this source set will become a union of irself and the other)"""
+        self.sourceSet |= other.sourceSet
+
+    def copy(self):
+        return SourceSet([x.copy() for x in self.sourceSet])
+
     def __str__(self):
-        return "&".join([str(x) for x in self.sourceSet])
+        """internal text description; uses (none) for null sources"""
+        return "&".join([str(x) if x else "(none)" for x in self.sourceSet])
+
+    def brief(self):
+        """external (user-facing) text description, skips null sources"""
+        return "&".join([x.brief() for x in self.sourceSet if x])
+
+    def matches(self, inp=None, filterNameOrCWL=None, single=False, hasFilter=None):
+        """Returns true if ANY source in the set matches ALL the criteria"""
+        if single and len(self.sourceSet) > 1:  # if required, ignore this set if it's not from a single source
+            return False
+        return any([x.matches(inp, filterNameOrCWL, single, hasFilter) for x in self.sourceSet])
 
 
 class MultiBandSource:
-    """This is an array of sources for a single image with multiple bands; each source is indexed by the band"""
+    """This is an array of source sets for a single image with multiple bands; each set  is indexed by the band"""
 
-    sources: List[Source]
+    sourceSets: List[SourceSet]  # life is much simpler if this is public.
 
-    def __init__(self, s=[]):
-        self.sources = s
+    def __init__(self, ss: List[Union[SourceSet, Source]] = ()):
+        # turn any sources into single-element source sets
+        ss = [s if isinstance(s, SourceSet) else SourceSet(s) for s in ss]
+        self.sourceSets = ss
+
+    @classmethod
+    def createNullSources(cls, count):
+        """Alternative constructor for when no source sets are provided: this will create an empty source set
+        for each channel, given the number of channels."""
+        return cls([SourceSet() for _ in range(count)])
+
+    @classmethod
+    def createBandwiseUnion(cls, lst: List['MultiBandSource']):
+        """For each MultiBandSource in the list, create a new one which is a band-wise union of all of them;
+        the number of bands is equal to the maximum band count of the MBSs in the list."""
+        numChannels = max([len(x.sourceSets) for x in lst])  # yes, I'm using 'band' and 'channel' interchangeably.
+        sets = []  # a list of SourceSets we're going to build
+        for i in range(numChannels):
+            # for each channel work on a new set
+            newSet = SourceSet()
+            for mbs in lst:
+                # for each input MultiBandSource
+                if i < len(mbs.sourceSets):
+                    # add the source for that channel to the set
+                    newSet.add(mbs.sourceSets[i])
+            sets.append(newSet)
+        return cls(sets)
 
     def add(self, s):
-        self.sources.add(s)
+        """add a band's sources to this one"""
+        self.sourceSets.append(s)
 
+    def copy(self):
+        """Make a fairly deep copy of the source sets"""
+        return MultiBandSource([ss.copy() for ss in self.sourceSets])
 
+    def search(self, filterNameOrCWL=None, inp=None, single=False, hasFilter=None):
+        """Given some criteria, returns a list of indices of bands which match ALL those criteria in their source sets
+            filtNameOrCWL : value must match the name, position or wavelength of a filter
+            inp : value must match input index
+            single : there must only be a single source in the set
+        """
+        out = []
+        for i, s in enumerate(self.sourceSets):
+            if s.matches(inp, filterNameOrCWL, single, hasFilter):
+                out.append(i)
+        return out
+
+    def brief(self):
+        """Brief text description - note, may not be used for captions."""
+        out = [s.brief() for s in self.sourceSets]
+        return "|".join(out)

@@ -36,7 +36,7 @@ def log(s):
 
 
 ## show error on status bar, and log in red; will dump traceback to stdout if requested.
-def error(s, tb=False):
+def error(s, tb=True):
     if app() is not None:
         application.beep()
         log('<font color="red">Error: </font> {}'.format(s))

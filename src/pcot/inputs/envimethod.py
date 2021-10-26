@@ -24,7 +24,9 @@ class ENVIInputMethod(InputMethod):
 
     def loadImg(self):
         print("ENVI PERFORMING FILE READ")
-        img = envi.load(self.fname, self.mapping)
+        doc = self.input.mgr.doc
+        inpidx = self.input.idx
+        img = envi.load(self.fname, doc, inpidx, self.mapping)
         ui.log("Image {} loaded: {}, mapping is {}".format(self.fname, img, self.mapping))
         self.img = img
 
@@ -58,9 +60,6 @@ class ENVIInputMethod(InputMethod):
         else:
             self.img = None   # ensure image is reloaded
         Canvas.deserialise(self, data)
-
-    def brief(self):
-        return self.fname
 
 
 class ENVIMethodWidget(TreeMethodWidget):

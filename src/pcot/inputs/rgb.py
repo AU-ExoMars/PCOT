@@ -7,6 +7,7 @@ from .inputmethod import InputMethod
 from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import TreeMethodWidget
+from ..sources import MultiBandSource, SingleSource
 
 
 class RGBInputMethod(InputMethod):
@@ -24,7 +25,15 @@ class RGBInputMethod(InputMethod):
         # will throw exception if load failed
         print("RGB PERFORMING FILE READ")
 
-        img = ImageCube.load(self.fname, self.mapping)
+        doc = self.input.mgr.doc
+        inpidx = self.input.idx
+
+        # might seem a bit wasteful having three of them, but seems more logical to me.
+        sources = MultiBandSource([SingleSource(doc, inpidx, 'R'),
+                                   SingleSource(doc, inpidx, 'G'),
+                                   SingleSource(doc, inpidx, 'B')])
+
+        img = ImageCube.load(self.fname, self.mapping, sources)
         ui.log("Image {} loaded: {}".format(self.fname, img))
         self.img = img
 
@@ -35,9 +44,6 @@ class RGBInputMethod(InputMethod):
 
     def getName(self):
         return "RGB"
-
-    def brief(self):
-        return self.fname
 
     # used from external code
     def setFileName(self, fname):

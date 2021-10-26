@@ -12,8 +12,6 @@ import numpy as np
 
 import pcot
 import pcot.ui as ui
-from pcot.channelsource import IChannelSource
-from pcot.imagecube import ImageCube, ChannelMapping
 
 if TYPE_CHECKING:
     from pcot.xform import XFormGraph, XForm
@@ -75,7 +73,7 @@ class InnerCanvas(QtWidgets.QWidget):
 
     ## display an image next time paintEvent
     # happens, and update to cause that. Allow it to handle None too.
-    def display(self, img: ImageCube, isPremapped: bool, showROIs: bool = False):
+    def display(self, img: 'ImageCube', isPremapped: bool, showROIs: bool = False):
         if img is not None:
             self.desc = img.getDesc(self.getGraph())
             if not isPremapped:
@@ -255,11 +253,11 @@ class Canvas(QtWidgets.QWidget):
     # the mapping we are editing, and using to display/generate the RGB representation. Unless we're in 'alreadyRGBMapped'
     # in which case it's just a mapping we are editing - we display an image mapped elsewhere. Again, not actually
     # optional - we have to set it in the containing window's init.
-    mapping: Optional[ChannelMapping]
+    mapping: Optional['ChannelMapping']
 
     ## @var previmg
     # previous image, so we can avoid redisplay.
-    previmg: Optional[ImageCube]
+    previmg: Optional['ImageCube']
 
     ## @var nodeToUIChange
     # Node to do a UI change on whenever we redisplay an image (the mapping may have changed, and in the case of premapped
@@ -446,12 +444,15 @@ class Canvas(QtWidgets.QWidget):
 
     ## this initialises a combo box, setting the possible values to be the channels in the image
     # input
-    def addChannelsToChannelCombo(self, combo: QtWidgets.QComboBox, img: ImageCube):
+    def addChannelsToChannelCombo(self, combo: QtWidgets.QComboBox, img: 'ImageCube'):
         combo.clear()
         for i in range(0, img.channels):
             # adds descriptor string and integer channels index
-            combo.addItem("{}) {}".format(i, IChannelSource.stringForSet(img.sources[i],
-                                                                         self.graph.doc.settings.captionType)))  # ugly
+            # TODO ignores caption type
+            s = f"{i}) {img.sources.sourceSets[i].brief()}"
+            combo.addItem(s)
+            #combo.addItem("{}) {}".format(i, IChannelSource.stringForSet(img.sources[i],
+            #                                                             self.graph.doc.settings.captionType)))  # ugly
 
     def setCombosToImageChannels(self, img):
         self.addChannelsToChannelCombo(self.redChanCombo, img)
@@ -467,7 +468,7 @@ class Canvas(QtWidgets.QWidget):
     # In the normal case (where the Canvas does the RGB mapping) just call with the image.
     # In the premapped case, call with the premapped RGB image, the source image, and the node.
 
-    def display(self, img: ImageCube, alreadyRGBMappedImageSource=None, nodeToUIChange=None):
+    def display(self, img: 'ImageCube', alreadyRGBMappedImageSource=None, nodeToUIChange=None):
         if self.mapping is None:
             raise Exception(
                 "Mapping not set in ui.canvas.Canvas.display() - should be done in tab's ctor with setMapping()")
@@ -569,5 +570,5 @@ class Canvas(QtWidgets.QWidget):
     def getCanvasCoords(self, x, y):
         return self.canvas.getCanvasCoords(x, y)
 
-    def getImgCoords(self, x, y):
-        return self.canvas.getImgCoords(x, y)
+    def getImgCoords(self, p):
+        return self.canvas.getImgCoords(p)

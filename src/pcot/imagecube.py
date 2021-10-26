@@ -7,14 +7,13 @@ but we could change things later.
 import collections
 import math
 import numbers
+from typing import List, Optional, Tuple, Sequence, Union
 
 import cv2 as cv
 import numpy as np
 
-from pcot.channelsource import IChannelSource, FileChannelSourceRed, FileChannelSourceGreen, FileChannelSourceBlue
-from typing import List, Set, Optional
 from pcot.rois import ROI, ROIPainted, ROIBoundsException
-from pcot.utils import geom
+from pcot.sources import MultiBandSource
 from pcot.utils.geom import Rect
 
 
@@ -25,7 +24,6 @@ class SubImageCubeROI:
     * the data for the BB (x,y,w,h)
     * a boolean mask the same size as the BB, True for pixels contained in the ROIs and which
       should be manipulated.
-
     """
 
     def __init__(self, img, imgToUse=None, roi=None, clip=True):
@@ -178,7 +176,7 @@ class ImageCube:
     ## @var shape
     # the shape of the image array (i.e. the .shape field) - a single channel image will be a 2D array,
     # a multichannel image will be 3D.
-    shape: np.ndarray
+    shape: Tuple
 
     ## @var channels
     # how many channels the image has.
@@ -186,14 +184,14 @@ class ImageCube:
 
     ## @var sources
     # a list of sets of sources - one set for each channel - describing where this data came from
-    sources: List[Set[IChannelSource]]
+    sources: MultiBandSource
 
     ## @var mapping
     # The RGB mapping to convert this image into RGB. May be None
     mapping: Optional[ChannelMapping]
 
     # create image from numpy array
-    def __init__(self, img: np.ndarray, rgbMapping: ChannelMapping = None, sources: List[Set[IChannelSource]] = [],
+    def __init__(self, img: np.ndarray, rgbMapping: ChannelMapping = None, sources: MultiBandSource = None,
                  defaultMapping: ChannelMapping = None):
 
         if img is None:
@@ -212,12 +210,9 @@ class ImageCube:
             self.channels = img.shape[2]
         self.w = img.shape[1]
         self.h = img.shape[0]
-        # an image may have a list of source data attached to it indexed
-        # by channel.
-        # These are a list (for each channel) of sets of Source objects,
-        # one for each filter. Thus each channel can come from more than one filter.
-        #
-        self.sources = sources
+        # an image may have a list of source data attached to it indexed by channel. Or if none is
+        # provided, an empty one.
+        self.sources = sources if sources else MultiBandSource.createNullSources(self.channels)
         self.defaultMapping = defaultMapping
 
         # get the mapping sorted, which may be None (in which case rgb() might not work).
@@ -236,10 +231,9 @@ class ImageCube:
             mapping.ensureValid(self)
 
     ## class method for loading an image (using cv's imread)
-    # If the source is None, use (fname,None) (i.e. no filter).
-    # Always builds an RGB image.
+    # Always builds an RGB image. Sources must be provided.
     @classmethod
-    def load(cls, fname, mapping, sources=None):
+    def load(cls, fname, mapping, sources):
         print("ImageCube.load: " + fname)
         # imread with this argument will load any depth, any
         # number of channels
@@ -261,29 +255,8 @@ class ImageCube:
         img = img.astype(np.float32)
         # scale to 0..1 
         img /= scale
-        # build the default sources if required. This always builds an RGB image.
-        if sources is None:
-            sources = [{FileChannelSourceRed(fname)},
-                       {FileChannelSourceGreen(fname)},
-                       {FileChannelSourceBlue(fname)}]
         # and construct the image
         return cls(img, mapping, sources)
-
-    # use this to get the sources when you are combining images channel-wise (i.e. where channel 0 is
-    # combined with channel 0 in another image, and so on).
-
-    @classmethod
-    def buildSources(cls, images: List['ImageCube']):
-        images = [x for x in images if x is not None]  # filter null images
-        numChannels = max([x.channels for x in images])
-        out = []
-        for i in range(0, numChannels):
-            s = set()
-            for img in images:
-                if i < len(img.sources):
-                    s = set.union(s, img.sources[i])
-            out.append(s)
-        return out
 
     ## get a numpy image (not another ImageCube) we can display on an RGB surface - see
     # rgbImage if you want an imagecube. If there is more than one channel we need to have
@@ -315,9 +288,10 @@ class ImageCube:
             mapping = self.mapping
         if mapping is None:
             raise Exception("trying to get rgb of an imagecube with no mapping")
-        sources = [self.sources[mapping.red],
-                   self.sources[mapping.green],
-                   self.sources[mapping.blue]]
+        sourcesR = self.sources.sourceSets[mapping.red]
+        sourcesG = self.sources.sourceSets[mapping.green]
+        sourcesB = self.sources.sourceSets[mapping.blue]
+        sources = MultiBandSource([sourcesR, sourcesG, sourcesB])
         # The RGB mapping here should be just [0,1,2], since this output is the RGB representation.
         return ImageCube(self.rgb(mapping=mapping), ChannelMapping(0, 1, 2), sources)
 
@@ -326,7 +300,7 @@ class ImageCube:
         img = self.rgb()
         cv.imwrite(filename, img * 255)  # convert from 0-1
 
-    def drawROIs(self, rgb: np.ndarray = None, onlyROI: ROI = None) -> np.ndarray:
+    def drawROIs(self, rgb: np.ndarray = None, onlyROI: Union[ROI, Sequence] = None) -> np.ndarray:
         """Return an RGB representation of this image with any ROIs drawn on it - an image may be provided.
         onlyROI indicates that only one ROI should be drawn. We can also pass a Sequence of ROIs in (added
         later to support multidot ROIs)."""
@@ -336,7 +310,7 @@ class ImageCube:
         if onlyROI is None:
             for r in self.rois:
                 r.draw(rgb)
-        elif isinstance(onlyROI, collections.abc.Sequence):
+        elif isinstance(onlyROI, Sequence):
             for r in onlyROI:
                 r.draw(rgb)
         else:
@@ -355,7 +329,7 @@ class ImageCube:
                                                                       str(self.img.shape), self.channels,
                                                                       self.img.nbytes)
         # caption type 0 is filter positions only
-        xx = ";".join([IChannelSource.stringForSet(x, 0) for x in self.sources])
+        xx = self.sources.brief()
 
         s += "src: [{}]".format(xx)
         xx = [r.bb() for r in self.rois]
@@ -373,7 +347,8 @@ class ImageCube:
     def getDesc(self, graph):
         if graph.doc.settings.captionType == 3:
             return ""
-        out = [IChannelSource.stringForSet(s, graph.doc.settings.captionType) for s in self.sources]
+        # TODO does not take account of caption type
+        out = [s.brief() for s in self.sources.sourceSets]
         # if there are channel assignments, show only the assigned channels. Not sure about this.
         if self.mapping is not None:
             out = [out[x] for x in [self.mapping.red, self.mapping.green, self.mapping.blue]]
@@ -400,52 +375,40 @@ class ImageCube:
 
     ## return a copy of the image, with the given image spliced in at the
     # subimage's coordinates and masked according to the subimage
-    def modifyWithSub(self, subimage: SubImageCubeROI, newimg: np.ndarray):
+    def modifyWithSub(self, subimage: SubImageCubeROI, newimg: np.ndarray, sources=None):
         i = self.copy()
         x, y, w, h = subimage.bb
         i.img[y:y + h, x:x + w][subimage.mask] = newimg[subimage.mask]
+        # can replace sources if required
+        if sources is not None:
+            i.sources = sources
         return i
 
-    ## given a wavelength, extract that wavelength's slice/image/channel and
-    # build a new image with just that.
-    def getChannelImageByWavelength(self, cwl):
-        # for each channel's set of sources
-        for i in range(len(self.sources)):  # iterate so we have the index
-            x = self.sources[i]
-            if len(x) == 1:
-                # there must be only one source in the set; get it.
-                item = next(iter(x))
-                filt = item.getFilter()
-                # there must be a filter in this source
-                if filt is not None:
-                    # and it must have a very close wavelength
-                    if math.isclose(cwl, filt.cwl):
-                        # now we have it. Extract that channel. Note - this is better than cv.split!
-                        img = self.img[:, :, i]
-                        return ImageCube(img, sources=[x])
-        return None
-
-    ## given a channel filter's name, extract that slice/image/channel and
-    # build a new image with just that.
-    def getChannelImageByName(self, name):
-        # for each channel's set of sources
-        for i in range(len(self.sources)):  # iterate so we have the index
-            x = self.sources[i]
-            if len(x) == 1:
-                # there must be only one source in the set; get it.
-                item = next(iter(x))
-                # match either the filter name or position, case-dependent
-                iname = item.getFilterName()
-                ipos = item.getFilterPos()
-                if iname == name or ipos == name:
-                    # now we have it. Extract that channel. Note - this is better than cv.split!
-                    img = self.img[:, :, i]
-                    return ImageCube(img, sources=[x])
-        return None
+    def getChannelImageByFilter(self, filterNameOrCWL):
+        """Given a filter name, position or CWL, get a list of all channels which use it. Then build an image
+        out of those channels. Usually this returns a single channel image, but it could very easily not."""
+        # get list of matching channel indices (often only one)
+        lstOfChannels = self.sources.search(filterNameOrCWL=filterNameOrCWL)
+        if len(lstOfChannels) == 0:
+            return None # no matches found
+        chans = []
+        sources = []
+        # now create a list of source sets and a list of single channel images
+        for i in lstOfChannels:
+            sources.append(self.sources.sourceSets[i])
+            chans.append(self.img[:, :, i])
+        if len(lstOfChannels) == 1:
+            # single channel case
+            img = chans[0]
+        else:
+            # else create a new multichannel image
+            img = np.stack(chans, axis=-1)
+        # and a new imagecube
+        return ImageCube(img, sources=MultiBandSource(sources))
 
     ## annoyingly similar to the two methods above, this is used to get a channel _index_.
     def getChannelIdx(self, nameOrCwl):
-        for i in range(len(self.sources)):  # iterate so we have the index
+        for i in range(len(self.sources.sourceSets)):  # iterate so we have the index
             x = self.sources[i]
             if len(x) == 1:
                 # there must be only one source in the set; get it.
@@ -486,15 +449,20 @@ class ImageCube:
             if r is None or b is None or g is None:
                 raise Exception("All three RGB channel IDs or none must be provided in setRGBMapping")
 
-            ridx = self.getChannelIdx(r)
-            if ridx is None:
+            idxs = self.sources.search(filterNameOrCWL=r)
+            if len(idxs) == 0:
                 raise Exception("cannot find channel {}".format(r))
-            gidx = self.getChannelIdx(g)
-            if gidx is None:
+            ridx = idxs[0]
+
+            idxs = self.sources.search(filterNameOrCWL=g)
+            if len(idxs) == 0:
                 raise Exception("cannot find channel {}".format(g))
-            bidx = self.getChannelIdx(b)
-            if bidx is None:
+            gidx = idxs[0]
+
+            idxs = self.sources.search(filterNameOrCWL=b)
+            if len(idxs) == 0:
                 raise Exception("cannot find channel {}".format(b))
+            bidx = idxs[0]
 
             self.mapping = ChannelMapping(ridx, gidx, bidx)
         else:

@@ -26,9 +26,9 @@ import sys
 import numpy as np
 
 import pcot.ui as ui
-from pcot.channelsource import ChannelSourceWithFilter
 from pcot.filters import Filter
 from pcot.imagecube import ChannelMapping, ImageCube
+from pcot.sources import SingleSource, MultiBandSource
 
 
 def parseHeader(lines):
@@ -182,13 +182,15 @@ def _load(fn):
     return h, img
 
 
-def load(fn, mapping: ChannelMapping=None) -> ImageCube:
+def load(fn, doc, inpidx, mapping: ChannelMapping = None) -> ImageCube:
+    """Load a file as an ENVI.
+    Requires a Document and an input index, so don't call this directly - Document.setInputENVI()."""
 
     # perform cached load
     h, img = _load(fn)
 
     # construct the source data
-    sources = [{ChannelSourceWithFilter(fn, f, False)} for f in h.filters]
+    sources = MultiBandSource([SingleSource(doc, inpidx, f) for f in h.filters])
 
     if mapping is None:
         mapping = ChannelMapping()

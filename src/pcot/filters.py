@@ -164,3 +164,12 @@ PANCAMfiltersByPosition = {x.position: x for x in PANCAM_FILTERS}
 ## dictionary of PANCAM filters by name - e.g. G01 (geology 1),
 # C01L (colour 1 left)
 PANCAMfiltersByName = {x.name: x for x in PANCAM_FILTERS}
+
+
+def getFilterByPos(fpos, aupe=False):
+    """Return a filter given its position string, used in multifile sources"""
+    if aupe:
+        d = AUPEfiltersByPosition
+    else:
+        d = PANCAMfiltersByPosition
+    return d[fpos] if fpos in d else DUMMY_FILTER

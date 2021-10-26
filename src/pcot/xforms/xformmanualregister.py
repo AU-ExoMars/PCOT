@@ -8,8 +8,6 @@ from skimage.transform import warp
 
 from pcot.datum import Datum
 import pcot.ui.tabs
-from pcot.channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, \
-    BLUEINTERNALSOURCE
 from pcot.imagecube import ImageCube
 from pcot.utils import text
 from pcot.xform import XFormType, xformtype, XFormException
@@ -161,8 +159,7 @@ class XFormManualRegister(XFormType):
                     drawpoints(canvimg, node.dest, node.translate, issel, (0, 1, 1))
 
                 # grey, but 3 channels so I can draw on it!
-                node.canvimg = ImageCube(canvimg, node.mapping,
-                                         [{REDINTERNALSOURCE}, {GREENINTERNALSOURCE}, {BLUEINTERNALSOURCE}])
+                node.canvimg = ImageCube(canvimg, node.mapping, None)
             else:
                 node.canvimg = None
 

@@ -10,12 +10,13 @@ from PyQt5 import uic, QtWidgets, QtGui
 from PyQt5.QtCore import Qt
 
 import pcot
-from pcot.channelsource import FileChannelSource
 from .inputmethod import InputMethod
 from pcot.imagecube import ChannelMapping, ImageCube
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
 from .. import ui
+from ..filters import getFilterByPos
+from ..sources import SingleSource, SourceSet
 
 
 class MultifileInputMethod(InputMethod):
@@ -62,6 +63,9 @@ class MultifileInputMethod(InputMethod):
     def readData(self):
         self.compileRegex()
 
+        doc = self.input.mgr.doc
+        inpidx = self.input.idx
+
         sources = []  # array of source sets for each image
         imgs = []  # array of actual images (greyscale, numpy)
         newCachedFiles = {}  # will replace the old cache data
@@ -73,7 +77,10 @@ class MultifileInputMethod(InputMethod):
                 # most of the time.
                 path = os.path.relpath(os.path.join(self.dir, self.files[i]))
                 # build sources data : filename and filter name
-                source = {FileChannelSource(path, self.getFilterName(path), self.camera == 'AUPE')}
+                filtpos = self.getFilterName(path)   # says name, but usually is the position.
+                filt = getFilterByPos(filtpos)
+                source = SourceSet(SingleSource(doc, inpidx, filt))
+
                 # is it in the cache?
                 if path in self.cachedFiles:
                     print("IMAGE IN MULTIFILE CACHE: NOT PERFORMING FILE READ")
@@ -104,11 +111,6 @@ class MultifileInputMethod(InputMethod):
 
     def getName(self):
         return "Multifile"
-
-    def brief(self):
-        """Give a brief name for use in captions. In multifile this is awkward because several files can be used
-        which would be overly long, so I'm avoiding the problem altogether and just giving the input number."""
-        return f"INP{self.input.idx}"
 
     # used from external code
     def setFileNames(self, directory, fnames):
@@ -312,7 +314,7 @@ class MultifileMethodWidget(MethodWidget):
         item = self.model.itemFromIndex(idx)
         path = os.path.join(self.method.dir, item.text())
         self.method.compileRegex()
-        img = ImageCube.load(path, self.method.mapping, None)  # RGB image
+        img = ImageCube.load(path, self.method.mapping, None)  # RGB image, null sources
         img.img *= self.method.mult
         self.activatedImagePath = path
         self.activatedImage = img
@@ -320,10 +322,10 @@ class MultifileMethodWidget(MethodWidget):
 
     def displayActivatedImage(self):
         if self.activatedImage:
-            source = {FileChannelSource(self.activatedImagePath,
-                                        self.method.getFilterName(self.activatedImagePath),
-                                        self.method.camera == 'AUPE')}
-            self.activatedImage.sources = [source, source, source]
+            # we're creating a temporary greyscale image here. We could use a SingleSource
+            # as usual, but that won't work because it assumes the input is already set up.
+            # There's really not much point in using a source at all, though, so we'll just
+            # use null sources here - and those will already be loaded by .load().
             self.canvas.display(self.activatedImage)
 
     def checkedChanged(self):

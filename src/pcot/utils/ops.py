@@ -1,11 +1,12 @@
 ## binary operations which work on many kinds of data sensibly.
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 import numpy as np
 
 from pcot.datum import Datum, Type
 from pcot.imagecube import ImageCube
 from pcot.rois import BadOpException
+from pcot.sources import MultiBandSource
 
 
 class BinopException(Exception):
@@ -48,7 +49,8 @@ def twoImageBinop(imga: ImageCube, imgb: ImageCube, op: Callable[[Any, Any], Any
         img = op(imga.img, imgb.img)
         rois = None
 
-    outimg = ImageCube(img, sources=ImageCube.buildSources([imga, imgb]))
+    sources = MultiBandSource.createBandwiseUnion([imga.sources, imgb.sources])
+    outimg = ImageCube(img, sources=sources)
     if rois is not None:
         outimg.rois = rois.copy()
     return Datum(Datum.IMG, outimg)
@@ -58,7 +60,7 @@ def twoImageBinop(imga: ImageCube, imgb: ImageCube, op: Callable[[Any, Any], Any
 # ANY is no use. So in this, we have to check that the type being generated is
 # correct. Of course, in an expression we don't do that.
 
-def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: Type) -> Datum:
+def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: Optional[Type]) -> Datum:
     # if either input is None, the output will be None
     if a is None or b is None:
         return None
@@ -107,7 +109,7 @@ def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: Type) -> D
     return r
 
 
-def unop(a: Datum, op: Callable[[Any], Any], outType: Type) -> Datum:
+def unop(a: Datum, op: Callable[[Any], Any], outType: Optional[Type]) -> Datum:
     if a is None:
         return None
 
@@ -123,7 +125,7 @@ def unop(a: Datum, op: Callable[[Any], Any], outType: Type) -> Datum:
             rimg = img.modifyWithSub(subimg, ressubimg).img
         else:
             rimg = op(img.img)
-        out = ImageCube(rimg, sources=ImageCube.buildSources([img]))
+        out = ImageCube(rimg, sources=img.sources)  # originally this built a new source set. Don't know why.
         out.rois = img.rois.copy()
         r = Datum(Datum.IMG, out)
     elif a.tp == Datum.NUMBER:

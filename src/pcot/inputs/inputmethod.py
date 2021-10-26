@@ -6,6 +6,11 @@ from pcot.ui.canvas import Canvas
 
 
 class InputMethod:
+    input: 'Input'
+    name: str
+    data: Any
+    showROIs: bool
+
     """Defines a way of inputting data (image data, usually). Each input has several
     of this which are all always present, but only one is active (determined by
     its index in the Input)."""
@@ -75,8 +80,8 @@ class InputMethod:
         return 'override-getName!'
 
     def brief(self):
-        """to override - returns details for captioning etc."""
-        return "override-brief!"
+        """Give a brief name for use in captions. Anything apart from the input number is too long!"""
+        return f"{self.input.idx}"
 
     def createWidget(self):
         """to override - creates the editing widget in the input window"""
