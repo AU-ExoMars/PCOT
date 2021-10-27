@@ -6,21 +6,21 @@ import base64
 import copy
 import hashlib
 import inspect
+import json
 import time
 import traceback
+import uuid
 from collections import deque
 from io import BytesIO
-from typing import List, Dict, Tuple, Any, ClassVar, Optional, TYPE_CHECKING, Callable
-
-import json
+from typing import List, Dict, Tuple, ClassVar, Optional, TYPE_CHECKING, Callable
 
 import pyperclip
-import uuid
 
 import pcot.macros
+import pcot.ui as ui
 from pcot import datum
 from pcot.datum import Datum
-import pcot.ui as ui
+from pcot.sources import nullSourceSet, SourceSet
 from pcot.ui import graphscene
 from pcot.ui.canvas import Canvas
 from pcot.ui.tabs import Tab
@@ -1302,6 +1302,9 @@ class XFormROIType(XFormType):
             node.setOutput(self.OUT_ANNOT, None if inAnnot is None else Datum(Datum.IMGRGB, inAnnot))
             node.setOutput(self.OUT_ROI, None)
         else:
+            # sources are a combo of the image sources and that of the ROI
+            sources = SourceSet([img, node.roi.sources])
+            # TODO ROI Source combination with objects not dealt with - need to be combined into images
             self.setProps(node, img)
             # copy image and append ROI to it
             img = img.copy()
@@ -1318,7 +1321,7 @@ class XFormROIType(XFormType):
             node.setOutput(self.OUT_ANNOT, Datum(Datum.IMG, rgb))
             node.img = img
             # output the ROI - note that this is NOT a copy!
-            node.setOutput(self.OUT_ROI, Datum(Datum.ROI, node.roi))
+            node.setOutput(self.OUT_ROI, Datum(Datum.ROI, node.roi, sources))
 
             if node.isOutputConnected(self.OUT_IMG):
                 node.setOutput(self.OUT_IMG, Datum(Datum.IMG, node.img))  # output image and ROI

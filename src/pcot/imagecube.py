@@ -13,7 +13,7 @@ import cv2 as cv
 import numpy as np
 
 from pcot.rois import ROI, ROIPainted, ROIBoundsException
-from pcot.sources import MultiBandSource
+from pcot.sources import MultiBandSource, SourcesObtainable
 from pcot.utils.geom import Rect
 
 
@@ -158,13 +158,14 @@ class ChannelMapping:
         return "ChannelMapping-{} r{} g{} b{}".format(id(self), self.red, self.green, self.blue)
 
 
-## an image - just a numpy array (the image) and a list of ROI objects. The array
-# has shape either (h,w) (for a single channel) or (h,w,n) for multiple channels.
-# Images are 32-bit float.
-# An RGB mapping can be provided, saying how the image should be represented in RGB (via the rgb() method)
-# There is also a list of source tuples, (filename,filter), indexed by channel.
-
-class ImageCube:
+class ImageCube(SourcesObtainable):
+    """
+    an image - just a numpy array (the image) and a list of ROI objects. The array
+    has shape either (h,w) (for a single channel) or (h,w,n) for multiple channels.
+    Images are 32-bit float.
+    An RGB mapping can be provided, saying how the image should be represented in RGB (via the rgb() method)
+    There is also a MultiBandSource describing the source sets associated with each channel.
+    """
     ## @var img
     # the numpy array containing the image data
     img: np.ndarray
@@ -212,7 +213,7 @@ class ImageCube:
         self.h = img.shape[0]
         # an image may have a list of source data attached to it indexed by channel. Or if none is
         # provided, an empty one.
-        self.sources = sources if sources else MultiBandSource.createNullSources(self.channels)
+        self.sources = sources if sources else MultiBandSource.createEmptySourceSets(self.channels)
         self.defaultMapping = defaultMapping
 
         # get the mapping sorted, which may be None (in which case rgb() might not work).
@@ -469,3 +470,6 @@ class ImageCube:
             self.mapping = ChannelMapping()
 
         self.mapping.ensureValid(self)
+
+    def getSources(self):
+        return self.sources.getSources()

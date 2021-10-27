@@ -28,7 +28,7 @@ import numpy as np
 import pcot.ui as ui
 from pcot.filters import Filter
 from pcot.imagecube import ChannelMapping, ImageCube
-from pcot.sources import SingleSource, MultiBandSource
+from pcot.sources import InputSource, MultiBandSource
 
 
 def parseHeader(lines):
@@ -190,7 +190,7 @@ def load(fn, doc, inpidx, mapping: ChannelMapping = None) -> ImageCube:
     h, img = _load(fn)
 
     # construct the source data
-    sources = MultiBandSource([SingleSource(doc, inpidx, f) for f in h.filters])
+    sources = MultiBandSource([InputSource(doc, inpidx, f) for f in h.filters])
 
     if mapping is None:
         mapping = ChannelMapping()

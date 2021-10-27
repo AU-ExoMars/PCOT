@@ -6,7 +6,7 @@ import numpy as np
 from pcot.datum import Datum, Type
 from pcot.imagecube import ImageCube
 from pcot.rois import BadOpException
-from pcot.sources import MultiBandSource
+from pcot.sources import MultiBandSource, SourceSet
 
 
 class BinopException(Exception):
@@ -92,15 +92,15 @@ def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: Optional[T
         subimg = img.subimage()
         img = img.modifyWithSub(subimg, op(subimg.masked(), b.val))
         img.rois = a.val.rois.copy()
-        r = Datum(Datum.IMG, img)
+        r = Datum(Datum.IMG, img, SourceSet([img, b.getSources()]))
     elif a.tp == Datum.NUMBER and b.tp == Datum.NUMBER:
         # easy case:  op(number,number)->number
-        r = Datum(Datum.NUMBER, op(a.val, b.val))
+        r = Datum(Datum.NUMBER, op(a.val, b.val), SourceSet([a.getSources(), b.getSources()]))
     elif a.tp == Datum.ROI and b.tp == Datum.ROI:
         # again, easy case because ROI has most operations overloaded. Indeed, those that aren't valid
         # will fail.
         try:
-            r = Datum(Datum.ROI, op(a.val, b.val))
+            r = Datum(Datum.ROI, op(a.val, b.val), SourceSet([a.getSources(), b.getSources()]))
         except BadOpException as e:
             raise BinopException("unimplemented operation for ROIs")
     else:
@@ -129,7 +129,7 @@ def unop(a: Datum, op: Callable[[Any], Any], outType: Optional[Type]) -> Datum:
         out.rois = img.rois.copy()
         r = Datum(Datum.IMG, out)
     elif a.tp == Datum.NUMBER:
-        r = Datum(Datum.NUMBER, op(a.val))
+        r = Datum(Datum.NUMBER, op(a.val), a.getSources())
     else:
         raise BinopException("bad type type for unary operator")
 

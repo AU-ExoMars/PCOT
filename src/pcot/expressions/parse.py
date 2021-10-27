@@ -13,6 +13,7 @@ from typing import List, Any, Optional, Callable, Dict, Tuple, Union
 
 from pcot import datum
 from pcot.datum import Datum
+from pcot.sources import nullSourceSet
 from pcot.utils.html import HTML, Bold
 from pcot.utils.table import Table
 
@@ -193,7 +194,7 @@ class Function:
 
             for t in self.optParams:
                 if len(args) == 0:
-                    optArgs.append(Datum(Datum.NUMBER, t.getDefault()))
+                    optArgs.append(Datum(Datum.NUMBER, t.getDefault()), nullSourceSet)
                 else:
                     x = args.pop(0)
                     if x is None:
@@ -231,7 +232,7 @@ class InstNumber(Instruction):
 
     def exec(self, stack: Stack):
         # can't import NUMBER, it clashes with the one in tokenizer.
-        stack.append(Datum(Datum.NUMBER, self.val))
+        stack.append(Datum(Datum.NUMBER, self.val, nullSourceSet))
 
     def __str__(self):
         return "NUM {}".format(self.val)
@@ -245,7 +246,7 @@ class InstIdent(Instruction):
         self.val = v
 
     def exec(self, stack: Stack):
-        stack.append(Datum(Datum.IDENT, self.val))
+        stack.append(Datum(Datum.IDENT, self.val, nullSourceSet))
 
     def __str__(self):
         return "STR {}".format(self.val)
@@ -280,7 +281,7 @@ class InstFunc(Instruction):
 
     def exec(self, stack: Stack):
         """actually stack the callback function, don't call it - InstCall does that."""
-        stack.append(Datum(Datum.FUNC, self.func))
+        stack.append(Datum(Datum.FUNC, self.func, nullSourceSet))
 
     def __str__(self):
         return "FUNC {}".format(self.name)

@@ -16,7 +16,7 @@ from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
 from .. import ui
 from ..filters import getFilterByPos
-from ..sources import SingleSource, SourceSet
+from ..sources import InputSource, SourceSet
 
 
 class MultifileInputMethod(InputMethod):
@@ -79,7 +79,7 @@ class MultifileInputMethod(InputMethod):
                 # build sources data : filename and filter name
                 filtpos = self.getFilterName(path)   # says name, but usually is the position.
                 filt = getFilterByPos(filtpos)
-                source = SourceSet(SingleSource(doc, inpidx, filt))
+                source = SourceSet(InputSource(doc, inpidx, filt))
 
                 # is it in the cache?
                 if path in self.cachedFiles:
@@ -322,7 +322,7 @@ class MultifileMethodWidget(MethodWidget):
 
     def displayActivatedImage(self):
         if self.activatedImage:
-            # we're creating a temporary greyscale image here. We could use a SingleSource
+            # we're creating a temporary greyscale image here. We could use an InputSource
             # as usual, but that won't work because it assumes the input is already set up.
             # There's really not much point in using a source at all, though, so we'll just
             # use null sources here - and those will already be loaded by .load().

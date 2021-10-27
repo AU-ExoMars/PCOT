@@ -7,7 +7,7 @@ from .inputmethod import InputMethod
 from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import TreeMethodWidget
-from ..sources import MultiBandSource, SingleSource
+from ..sources import MultiBandSource, InputSource
 
 
 class RGBInputMethod(InputMethod):
@@ -29,9 +29,9 @@ class RGBInputMethod(InputMethod):
         inpidx = self.input.idx
 
         # might seem a bit wasteful having three of them, but seems more logical to me.
-        sources = MultiBandSource([SingleSource(doc, inpidx, 'R'),
-                                   SingleSource(doc, inpidx, 'G'),
-                                   SingleSource(doc, inpidx, 'B')])
+        sources = MultiBandSource([InputSource(doc, inpidx, 'R'),
+                                   InputSource(doc, inpidx, 'G'),
+                                   InputSource(doc, inpidx, 'B')])
 
         img = ImageCube.load(self.fname, self.mapping, sources)
         ui.log("Image {} loaded: {}".format(self.fname, img))

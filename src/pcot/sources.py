@@ -9,14 +9,22 @@ from typing import Optional, List, Set, SupportsFloat, Union, Iterable
 from pcot.filters import Filter
 
 
-class Source(ABC):
+class SourcesObtainable(ABC):
+    """Interface for all sources; we can get a set of all sources from this"""
+    @abstractmethod
+    def getSources(self) -> 'SourceSet':
+        """get a SourceSet of all sources"""
+        pass
+
+
+class Source(SourcesObtainable):
     """The base class for sources, with the exception of MultiBandSource which is only used in images.
     This is abstract - the absolute minimum functionality is in NullSource."""
 
     @abstractmethod
     def brief(self) -> Optional[str]:
         """Return a brief string to be used in captions, etc."""
-        return None
+        pass
 
     @abstractmethod
     def copy(self):
@@ -33,10 +41,15 @@ class Source(ABC):
         """return any filter"""
         return None
 
+    def getSources(self):
+        """return a set of all sources"""
+        return SourceSet(self)
 
-class NullSource(Source):
+
+class _NullSource(Source):
     """This is for "sources" where there isn't a source, the data has come from inside the program.
-    Typically this will get filtered out when we print the sources."""
+    Typically this will get filtered out when we print the sources. Probably best to use nullSource and nullSourceSet
+    objects declared at the end of this module"""
 
     def brief(self) -> Optional[str]:
         """return a brief string for use in captions - this will just return None, which will
@@ -48,7 +61,7 @@ class NullSource(Source):
         return self
 
 
-class SingleSource(Source):
+class InputSource(Source):
     """A basic source for a single band of an image or a non-image value.
     This is for things which actually come from an Input. Designed so that two Source objects
     with the same document, filter and input index are the same."""
@@ -74,9 +87,9 @@ class SingleSource(Source):
         return self.filterOrName if isinstance(self.filterOrName, Filter) else None
 
     def copy(self):
-        return SingleSource(self.doc, self.inputIdx, self.filterOrName)
+        return InputSource(self.doc, self.inputIdx, self.filterOrName)
 
-    def __eq__(self, other: 'SingleSource'):
+    def __eq__(self, other: 'InputSource'):
         return self._uniqid == other._uniqid
 
     def __hash__(self):
@@ -116,7 +129,7 @@ class SingleSource(Source):
         return True
 
 
-class SourceSet:
+class SourceSet(SourcesObtainable):
     """This is a combination of sources which have produced a single-band datum - could be a band of an
     image or some other type"""
 
@@ -136,6 +149,8 @@ class SourceSet:
                     result |= x.sourceSet
                 elif isinstance(x, Source):
                     result.add(x)
+                elif isinstance(x, SourcesObtainable):
+                    result |= x.getSources()
                 else:
                     raise Exception(f"Bad list argument to source set constructor: {type(x)}")
         else:
@@ -164,8 +179,11 @@ class SourceSet:
             return False
         return any([x.matches(inp, filterNameOrCWL, single, hasFilter) for x in self.sourceSet])
 
+    def getSources(self):
+        return self
 
-class MultiBandSource:
+
+class MultiBandSource(SourcesObtainable):
     """This is an array of source sets for a single image with multiple bands; each set  is indexed by the band"""
 
     sourceSets: List[SourceSet]  # life is much simpler if this is public.
@@ -176,7 +194,7 @@ class MultiBandSource:
         self.sourceSets = ss
 
     @classmethod
-    def createNullSources(cls, count):
+    def createEmptySourceSets(cls, count):
         """Alternative constructor for when no source sets are provided: this will create an empty source set
         for each channel, given the number of channels."""
         return cls([SourceSet() for _ in range(count)])
@@ -222,3 +240,13 @@ class MultiBandSource:
         """Brief text description - note, may not be used for captions."""
         out = [s.brief() for s in self.sourceSets]
         return "|".join(out)
+
+    def getSources(self):
+        return set().union(*[s.sourceSet for s in self.sourceSets])
+
+
+# use these to avoid the creation of lots of identical objects
+
+nullSource = _NullSource()
+nullSourceSet = SourceSet(nullSource)
+

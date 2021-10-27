@@ -123,11 +123,15 @@ def funcWrapper(fn, d, *args):
             img = img.modifyWithSub(subimage, newdata)
             return Datum(Datum.IMG, img)
         elif isinstance(newdata, SupportsFloat):
-            return Datum(Datum.NUMBER, float(newdata))
+            # 'img' is SourcesObtainable.
+            return Datum(Datum.NUMBER, float(newdata), img)
         else:
             raise XFormException('EXPR', 'internal: fn returns bad type in funcWrapper')
     elif d.tp == Datum.NUMBER:  # deal with numeric argument (always returns a numeric result)
-        return Datum(Datum.NUMBER, fn(d.val, *args))
+        # get sources for all arguments
+        ss = [a.getSources() for a in args]
+        ss.append(d.getSources())
+        return Datum(Datum.NUMBER, fn(d.val, *args), SourceSet(ss))
 
 
 def statsWrapper(fn, d: List[Optional[Datum]], *args):
@@ -135,6 +139,7 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
     The result of fn must be a number. Works by flattening any images and concatenating them with any numbers,
     and doing the operation on the resulting data."""
     intermediate = None
+    sources = []
     for x in d:
         # get each datum, which is either numeric or an image.
         if x is None:
@@ -144,6 +149,7 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
             subimage = x.val.subimage()
             mask = subimage.fullmask()
             cp = subimage.img.copy()
+            sources.append(x.getSources())
             masked = np.ma.masked_array(cp, mask=~mask)
             # we convert the data into a flat numpy array if it isn't one already
             if isinstance(masked, np.ma.masked_array):
@@ -155,6 +161,7 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
         elif x.tp == Datum.NUMBER:
             # if a number, convert to a single-value array
             newdata = np.array([x.val], np.float32)
+            sources.append(x.getSources())
         else:
             raise XFormException('EXPR', 'internal: bad type passed to statsWrapper')
 
@@ -165,7 +172,7 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
             intermediate = np.concatenate((intermediate, newdata))
 
     # then we perform the function on the collated array
-    return Datum(Datum.NUMBER, fn(intermediate, *args))
+    return Datum(Datum.NUMBER, fn(intermediate, *args), sources)
 
 
 class ExpressionEvaluator(Parser):
@@ -250,20 +257,20 @@ class ExpressionEvaluator(Parser):
 
         self.registerProperty('w', Datum.IMG,
                               "give the width of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",
-                              lambda q: Datum(Datum.NUMBER, q.subimage().bb.w))
+                              lambda q: Datum(Datum.NUMBER, q.subimage().bb.w, q.getSources()))
         self.registerProperty('w', Datum.ROI, "give the width of an ROI in pixels",
-                              lambda q: Datum(Datum.NUMBER, q.bb().w))
+                              lambda q: Datum(Datum.NUMBER, q.bb().w, q.getSources()))
         self.registerProperty('h', Datum.IMG,
                               "give the height of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",
-                              lambda q: Datum(Datum.NUMBER, q.subimage().bb.h))
+                              lambda q: Datum(Datum.NUMBER, q.subimage().bb.h, q.getSources()))
         self.registerProperty('h', Datum.ROI, "give the width of an ROI in pixels",
-                              lambda q: Datum(Datum.NUMBER, q.bb().h))
+                              lambda q: Datum(Datum.NUMBER, q.bb().h, q.getSources()))
 
         self.registerProperty('n', Datum.IMG,
                               "give the area of an image in pixels (if there are ROIs, give the number of pixels in the ROI union)",
-                              lambda q: Datum(Datum.NUMBER, q.subimage().mask.sum()))
+                              lambda q: Datum(Datum.NUMBER, q.subimage().mask.sum(), q.getSources()))
         self.registerProperty('n', Datum.ROI, "give the number of pixels in an ROI",
-                              lambda q: Datum(Datum.NUMBER, q.pixels()))
+                              lambda q: Datum(Datum.NUMBER, q.pixels(), q.getSources()))
 
         for x in pcot.config.exprFuncHooks:
             x(self)
