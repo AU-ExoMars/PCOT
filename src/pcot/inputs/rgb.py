@@ -68,6 +68,9 @@ class RGBInputMethod(InputMethod):
             self.img = None   # ensure image is reloaded
         Canvas.deserialise(self, data)
 
+    def long(self):
+        return f"RGB:{self.fname}"
+
 
 class RGBMethodWidget(TreeMethodWidget):
     def __init__(self, m):

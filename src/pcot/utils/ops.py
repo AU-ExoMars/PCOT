@@ -56,6 +56,15 @@ def twoImageBinop(imga: ImageCube, imgb: ImageCube, op: Callable[[Any, Any], Any
     return Datum(Datum.IMG, outimg)
 
 
+def combineImageWithNumberSources(img: ImageCube, other: SourceSet) -> MultiBandSource:
+    """This is used to generate the source sets when an image is combined with something else,
+    e.g. an image is multiplied by a number. In this case, each band of the image is combined with
+    the other sources."""
+    x = [x.sourceSet for x in img.sources.sourceSets]
+
+    return MultiBandSource([SourceSet(x.sourceSet.union(other.sourceSet)) for x in img.sources.sourceSets])
+
+
 # The problem with binary operation NODES is that we have to set an output type:
 # ANY is no use. So in this, we have to check that the type being generated is
 # correct. Of course, in an expression we don't do that.
@@ -85,6 +94,7 @@ def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: Optional[T
         subimg = img.subimage()
         img = img.modifyWithSub(subimg, op(a.val, subimg.masked()))
         img.rois = b.val.rois.copy()
+        img.sources = combineImageWithNumberSources(img, a.getSources())
         r = Datum(Datum.IMG, img)
     elif a.isImage() and b.tp == Datum.NUMBER:
         # same as previous case, other way round
@@ -92,7 +102,8 @@ def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: Optional[T
         subimg = img.subimage()
         img = img.modifyWithSub(subimg, op(subimg.masked(), b.val))
         img.rois = a.val.rois.copy()
-        r = Datum(Datum.IMG, img, SourceSet([img, b.getSources()]))
+        img.sources = combineImageWithNumberSources(img, b.getSources())
+        r = Datum(Datum.IMG, img)
     elif a.tp == Datum.NUMBER and b.tp == Datum.NUMBER:
         # easy case:  op(number,number)->number
         r = Datum(Datum.NUMBER, op(a.val, b.val), SourceSet([a.getSources(), b.getSources()]))

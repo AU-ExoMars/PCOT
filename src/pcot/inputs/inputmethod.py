@@ -1,11 +1,12 @@
 ##
+from abc import ABC, abstractmethod
 from typing import Optional, Any
 
 from pcot import ui
 from pcot.ui.canvas import Canvas
 
 
-class InputMethod:
+class InputMethod(ABC):
     input: 'Input'
     name: str
     data: Any
@@ -83,6 +84,12 @@ class InputMethod:
         """Give a brief name for use in captions. Anything apart from the input number is too long!"""
         return f"{self.input.idx}"
 
+    @abstractmethod
+    def long(self):
+        """Give a longer text description"""
+        pass
+
+    @abstractmethod
     def createWidget(self):
         """to override - creates the editing widget in the input window"""
         pass

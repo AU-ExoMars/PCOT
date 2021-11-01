@@ -11,6 +11,7 @@ from pcot.filters import Filter
 
 class SourcesObtainable(ABC):
     """Interface for all sources; we can get a set of all sources from this"""
+
     @abstractmethod
     def getSources(self) -> 'SourceSet':
         """get a SourceSet of all sources"""
@@ -20,11 +21,6 @@ class SourcesObtainable(ABC):
 class Source(SourcesObtainable):
     """The base class for sources, with the exception of MultiBandSource which is only used in images.
     This is abstract - the absolute minimum functionality is in NullSource."""
-
-    @abstractmethod
-    def brief(self) -> Optional[str]:
-        """Return a brief string to be used in captions, etc."""
-        pass
 
     @abstractmethod
     def copy(self):
@@ -45,6 +41,16 @@ class Source(SourcesObtainable):
         """return a set of all sources"""
         return SourceSet(self)
 
+    @abstractmethod
+    def brief(self) -> Optional[str]:
+        """Return a brief string to be used in captions, etc. If null, is filtered out"""
+        pass
+
+    @abstractmethod
+    def long(self) -> Optional[str]:
+        """Return a longer text, possibly with line breaks"""
+        pass
+
 
 class _NullSource(Source):
     """This is for "sources" where there isn't a source, the data has come from inside the program.
@@ -54,6 +60,9 @@ class _NullSource(Source):
     def brief(self) -> Optional[str]:
         """return a brief string for use in captions - this will just return None, which will
         be filtered out when used in such captions."""
+        return None
+
+    def long(self) -> Optional[str]:
         return None
 
     def copy(self):
@@ -107,6 +116,13 @@ class InputSource(Source):
         else:
             return f"{inptxt}:{self.filterOrName}"
 
+    def long(self):
+        inptxt = self.input.long()
+        if isinstance(self.filterOrName, Filter):
+            return f"{inptxt}: wavelength {int(self.filterOrName.cwl)}"
+        else:
+            return f"{inptxt}: band {self.filterOrName}"
+
     def matches(self, inp, filterNameOrCWL, single, hasFilter):
         """return true if the source matches ALL the non-None criteria"""
         if inp and inp != self.inputIdx:
@@ -152,9 +168,9 @@ class SourceSet(SourcesObtainable):
                 elif isinstance(x, SourcesObtainable):
                     result |= x.getSources()
                 else:
-                    raise Exception(f"Bad list argument to source set constructor: {type(x)}")
+                    raise Exception(f"Bad list argument to source set constructor: {type(x).__name__}")
         else:
-            raise Exception(f"Bad argument to source set constructor: {type(ss)}")
+            raise Exception(f"Bad argument to source set constructor: {type(ss).__name__}")
 
         self.sourceSet = result
 
@@ -171,7 +187,13 @@ class SourceSet(SourcesObtainable):
 
     def brief(self):
         """external (user-facing) text description, skips null sources"""
-        return "&".join([x.brief() for x in self.sourceSet if x])
+        x = [x.brief() for x in self.sourceSet]
+        return "&".join(sorted([s for s in x if s]))
+
+    def long(self):
+        x = [x.long() for x in self.sourceSet]
+        lst = "\n".join(sorted([s for s in x if s]))
+        return f"SET[\n{lst}\n]\n"
 
     def matches(self, inp=None, filterNameOrCWL=None, single=False, hasFilter=None):
         """Returns true if ANY source in the set matches ALL the criteria"""
@@ -241,7 +263,14 @@ class MultiBandSource(SourcesObtainable):
         out = [s.brief() for s in self.sourceSets]
         return "|".join(out)
 
+    def long(self):
+        txts = [f"{i}: {s.long()}" for i, s in enumerate(self.sourceSets)]
+        s = "\n".join(txts)
+        return "{\n"+s+"\n}\n"
+
     def getSources(self):
+        """Merge all the bands' source sets into a single set (used in, for example, making a greyscale
+        image, or any calculation where all bands have input)"""
         return set().union(*[s.sourceSet for s in self.sourceSets])
 
 
@@ -249,4 +278,3 @@ class MultiBandSource(SourcesObtainable):
 
 nullSource = _NullSource()
 nullSourceSet = SourceSet(nullSource)
-

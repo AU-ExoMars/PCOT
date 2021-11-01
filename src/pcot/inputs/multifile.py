@@ -41,6 +41,10 @@ class MultifileInputMethod(InputMethod):
         self.mapping = ChannelMapping()
         self.img = None
 
+    def long(self):
+        lst = [f"{i}: {f}" for i, f in enumerate(self.files)]
+        return f"MULTI: path={self.dir} {', '.join(lst)}]"
+
     def getFilterName(self, path):
         if self.filterre is None:
             return None

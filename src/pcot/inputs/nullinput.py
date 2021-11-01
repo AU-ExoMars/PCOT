@@ -26,3 +26,7 @@ class NullInputMethod(InputMethod):
     def brief(self):
         """really this should never be seen"""
         return "null"
+
+    def long(self):
+        """really this should never be seen"""
+        return "null"

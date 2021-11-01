@@ -80,8 +80,7 @@ def funcGrey(args, optargs):
     conversion equation rather than just the mean."""
 
     img = args[0].get(Datum.IMG)
-    source = SourceSet(set.union(*img.sources.sourceSets))  # our single channel is from all sources
-    sources = MultiBandSource([source])
+    sources = MultiBandSource([SourceSet(img.sources.getSources())])
 
     if optargs[0].get(Datum.NUMBER) != 0:
         if img.channels != 3:
@@ -257,20 +256,20 @@ class ExpressionEvaluator(Parser):
 
         self.registerProperty('w', Datum.IMG,
                               "give the width of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",
-                              lambda q: Datum(Datum.NUMBER, q.subimage().bb.w, q.getSources()))
+                              lambda q: Datum(Datum.NUMBER, q.subimage().bb.w, SourceSet(q.getSources())))
         self.registerProperty('w', Datum.ROI, "give the width of an ROI in pixels",
-                              lambda q: Datum(Datum.NUMBER, q.bb().w, q.getSources()))
+                              lambda q: Datum(Datum.NUMBER, q.bb().w, SourceSet(q.getSources())))
         self.registerProperty('h', Datum.IMG,
                               "give the height of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",
-                              lambda q: Datum(Datum.NUMBER, q.subimage().bb.h, q.getSources()))
+                              lambda q: Datum(Datum.NUMBER, q.subimage().bb.h, SourceSet(q.getSources())))
         self.registerProperty('h', Datum.ROI, "give the width of an ROI in pixels",
-                              lambda q: Datum(Datum.NUMBER, q.bb().h, q.getSources()))
+                              lambda q: Datum(Datum.NUMBER, q.bb().h, SourceSet(q.getSources())))
 
         self.registerProperty('n', Datum.IMG,
                               "give the area of an image in pixels (if there are ROIs, give the number of pixels in the ROI union)",
-                              lambda q: Datum(Datum.NUMBER, q.subimage().mask.sum(), q.getSources()))
+                              lambda q: Datum(Datum.NUMBER, q.subimage().mask.sum(), SourceSet(q.getSources())))
         self.registerProperty('n', Datum.ROI, "give the number of pixels in an ROI",
-                              lambda q: Datum(Datum.NUMBER, q.pixels(), q.getSources()))
+                              lambda q: Datum(Datum.NUMBER, q.pixels(), SourceSet(q.getSources())))
 
         for x in pcot.config.exprFuncHooks:
             x(self)

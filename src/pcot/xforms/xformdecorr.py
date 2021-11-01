@@ -36,8 +36,7 @@ class XformDecorr(XFormType):
             subimage = img.subimage()
             newimg = decorrstretch(subimage.img, subimage.mask)
             # in this case, all channels just come from the union of the sources
-            sources = [img.sources.sourceSets[x].sourceSet for x in range(3)]
-            sources = SourceSet(set().union(*sources))  # this is for a single channel
+            sources = SourceSet(img.sources.getSources())
             node.img = img.modifyWithSub(subimage, newimg, sources=MultiBandSource([sources, sources, sources]))
 
         if node.img is not None:

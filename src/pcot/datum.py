@@ -68,7 +68,7 @@ class Datum(SourcesObtainable):
             if not self.isImage():
                 raise XFormException("CODE", "Datum objects which are not images must have an explicit source set")
             else:
-                sources = self.val  # imagecubes are SourcesObtainable too
+                sources = self.val.sources
         self.sources = sources
 
     def isImage(self):

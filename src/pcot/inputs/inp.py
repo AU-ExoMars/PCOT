@@ -147,6 +147,10 @@ class Input:
         """string for use in captions, etc."""
         return self.getActive().brief()
 
+    def long(self):
+        """long description"""
+        return self.getActive().long()
+
 
 ## how many inputs the system can have
 NUMINPUTS = 4

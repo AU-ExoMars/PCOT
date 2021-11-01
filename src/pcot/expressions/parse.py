@@ -84,7 +84,7 @@ class Parameter:
     def validArgsString(self):
         """turn a tuple (1,2,3) into "1, 2 or 3"""
         if len(self.types) == 1:
-            r = str(self.types[0])
+            r = str(next(iter(self.types)))  # weird idiom for "get only item from set/list"
         else:
             lst = list(self.types)
             last = lst.pop()
@@ -146,6 +146,7 @@ class Function:
             t.add("name", x.name)
             t.add("types", x.validArgsString())
             t.add("description", x.desc)
+            t.add("default", x.deflt)
         oargs = t.htmlObj()
 
         return HTML("div",
@@ -194,7 +195,7 @@ class Function:
 
             for t in self.optParams:
                 if len(args) == 0:
-                    optArgs.append(Datum(Datum.NUMBER, t.getDefault()), nullSourceSet)
+                    optArgs.append(Datum(Datum.NUMBER, t.getDefault(), nullSourceSet))
                 else:
                     x = args.pop(0)
                     if x is None:
