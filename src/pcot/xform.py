@@ -1321,7 +1321,7 @@ class XFormROIType(XFormType):
             node.setOutput(self.OUT_ANNOT, Datum(Datum.IMG, rgb))
             node.img = img
             # output the ROI - note that this is NOT a copy!
-            node.setOutput(self.OUT_ROI, Datum(Datum.ROI, node.roi, sources))
+            node.setOutput(self.OUT_ROI, Datum(Datum.ROI, node.roi, node.roi.sources))
 
             if node.isOutputConnected(self.OUT_IMG):
                 node.setOutput(self.OUT_IMG, Datum(Datum.IMG, node.img))  # output image and ROI
