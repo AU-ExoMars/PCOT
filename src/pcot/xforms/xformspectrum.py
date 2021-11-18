@@ -9,6 +9,7 @@ import pcot
 import pcot.ui as ui
 from pcot.datum import Datum
 from pcot.filters import wav2RGB
+from pcot.sources import SourceSet
 from pcot.ui.tabs import Tab
 from pcot.utils.table import Table
 from pcot.xform import XFormType, xformtype, XFormException
@@ -157,14 +158,19 @@ class XFormSpectrum(XFormType):
         # For each ROI/image there is a lists of tuples, one for each channel : (chanidx, wavelength, mean, sd, name)
         data = dict()
         cols = dict()  # colour dictionary for ROIs/images
+        sources = set()  # sources
         for i in range(NUMINPUTS):
             img = node.getInput(i, Datum.IMG)
             if img is not None:
                 # first, generate a list of indices of channels with a single source which has a wavelength,
                 # and a list of those wavelengths
                 wavelengths = [wavelength(x, img) for x in range(img.channels)]
-                chans = [x for x in range(img.channels) if wavelengths[x] > 0]
                 wavelengths = [x for x in wavelengths if x > 0]
+                chans = [x for x in range(img.channels) if wavelengths[x] > 0]
+
+                # add the channels we found to a set of sources
+                for x in chans:
+                    sources |= img.sources.sourceSets[x].sourceSet
 
                 if len(wavelengths) == 0:
                     raise XFormException("DATA", "no single-wavelength channels in image")
@@ -203,7 +209,7 @@ class XFormSpectrum(XFormType):
         node.colsByLegend = cols  # we use this if we're using the ROI colours
         fixSortList(node)
 
-        node.setOutput(0, Datum(Datum.DATA, table))
+        node.setOutput(0, Datum(Datum.DATA, table, sources=SourceSet(sources)))
 
 
 class ReorderDialog(QDialog):

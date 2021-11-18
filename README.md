@@ -74,6 +74,13 @@ file using **pip3 *packagename packagename* ...**
 The danger here, of course, is that the new packages may clash with your existing 
 python environment.
 
+## One last step
+Because the **pds4-tools** package isn't in any Anaconda reposities yet,
+you'll need to install it manually. With the pcot environment active, run
+```
+pip3 install pds4-tools
+```
+
 ## Running PCOT
 Open an Anaconda shell and run the following commands (assuming you installed PCOT into your home directory):
 ```shell

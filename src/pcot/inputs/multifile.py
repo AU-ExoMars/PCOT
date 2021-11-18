@@ -16,7 +16,7 @@ from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
 from .. import ui
 from ..filters import getFilterByPos
-from ..sources import InputSource, SourceSet
+from ..sources import InputSource, SourceSet, MultiBandSource
 
 
 class MultifileInputMethod(InputMethod):
@@ -83,7 +83,7 @@ class MultifileInputMethod(InputMethod):
                 # build sources data : filename and filter name
                 filtpos = self.getFilterName(path)   # says name, but usually is the position.
                 filt = getFilterByPos(filtpos)
-                source = SourceSet(InputSource(doc, inpidx, filt))
+                source = InputSource(doc, inpidx, filt)
 
                 # is it in the cache?
                 if path in self.cachedFiles:
@@ -110,7 +110,7 @@ class MultifileInputMethod(InputMethod):
             img = cv.merge(imgs)
         else:
             return None  # no image
-        img = ImageCube(img * self.mult, self.mapping, sources)
+        img = ImageCube(img * self.mult, self.mapping, MultiBandSource(sources))
         return img
 
     def getName(self):
