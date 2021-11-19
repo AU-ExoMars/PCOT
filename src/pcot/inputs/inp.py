@@ -5,6 +5,8 @@ from .inputmethod import InputMethod
 from .multifile import MultifileInputMethod
 from .nullinput import NullInputMethod
 from .rgb import RGBInputMethod
+from .pds4image import PDS4ImageInputMethod
+
 from pcot.imagecube import ImageCube
 
 from pcot.ui.inputs import InputWindow
@@ -42,7 +44,8 @@ class Input:
             NullInputMethod(self),  # null method must be first
             RGBInputMethod(self),
             MultifileInputMethod(self),
-            ENVIInputMethod(self)
+            ENVIInputMethod(self),
+            PDS4ImageInputMethod(self)
         ]
 
     def get(self):

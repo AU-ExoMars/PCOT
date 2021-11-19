@@ -1,7 +1,5 @@
-"""the ENVI file input method, only supports 32 bit float, non-interleaved"""
 from typing import Optional
 
-import pcot.dataformats.envi as envi
 import pcot.ui as ui
 from pcot.inputs.inputmethod import InputMethod
 from pcot.imagecube import ImageCube, ChannelMapping
@@ -9,7 +7,7 @@ from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import TreeMethodWidget
 
 
-class ENVIInputMethod(InputMethod):
+class PDS4ImageInputMethod(InputMethod):
     img: Optional[ImageCube]
     fname: Optional[str]
     mapping: ChannelMapping
@@ -21,10 +19,8 @@ class ENVIInputMethod(InputMethod):
         self.mapping = ChannelMapping()
 
     def loadImg(self):
-        print("ENVI PERFORMING FILE READ")
-        doc = self.input.mgr.doc
-        inpidx = self.input.idx
-        img = envi.load(self.fname, doc, inpidx, self.mapping)
+        print("PDS4IMAGE PERFORMING FILE READ")
+        img = None
         ui.log("Image {} loaded: {}, mapping is {}".format(self.fname, img, self.mapping))
         self.img = img
 
@@ -34,7 +30,7 @@ class ENVIInputMethod(InputMethod):
         return self.img
 
     def getName(self):
-        return "ENVI"
+        return "PDS4"
 
     # used from external code
     def setFileName(self, fname):
@@ -42,7 +38,7 @@ class ENVIInputMethod(InputMethod):
         self.mapping = ChannelMapping()
 
     def createWidget(self):
-        return ENVIMethodWidget(self)
+        return PDS4ImageMethodWidget(self)
 
     def serialise(self, internal):
         x = {'fname': self.fname}
@@ -63,9 +59,17 @@ class ENVIInputMethod(InputMethod):
         return f"ENVI:{self.fname}"
 
 
-class ENVIMethodWidget(TreeMethodWidget):
+class PDS4ImageMethodWidget(TreeMethodWidget):
     def __init__(self, m):
-        super().__init__(m, 'tabrgbfile.ui', ["*.hdr"])
+        super().__init__(m, 'tabpdsfile.ui', ["*.hdr"])
+
+        # add some test data to the linear widget
+        timeline = self.timeline
+        for i in range(10):
+            timeline.add(i,"wibble")
+        timeline.rescale()
+        timeline.rebuild()
+
 
     def onInputChanged(self):
         # ensure image is also using my mapping.
