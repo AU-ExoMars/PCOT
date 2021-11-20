@@ -6,6 +6,18 @@ import pcot.ui as ui
 
 DEFAULTRANGE = 20       # default x range of set view when there are no items
 
+class LinearSetItem(QtWidgets.QGraphicsItemGroup):
+    """A graphics item representing an entity in the linear set"""
+    def __init__(self, x, y, ent):
+        super().__init__()
+        self.ent = ent
+        rad = 10
+        r = QtWidgets.QGraphicsEllipseItem(x-rad/2, y-rad/2, rad, rad)
+        r.setBrush(Qt.blue)
+        r.setPen(Qt.black)
+        self.addToGroup(r)
+
+
 class LinearSetEntity(NamedTuple):
     """Something in the linear set"""
     x: float        # position in "timeline" or whatever the horizontal axis is
@@ -13,11 +25,7 @@ class LinearSetEntity(NamedTuple):
 
     def createSceneItem(self, x: float, y: float):
         """Create a scene item to represent this item, positioned at X,Y in the scene"""
-        rad = 10
-        r = QtWidgets.QGraphicsEllipseItem(x-rad/2, y-rad/2, rad, rad)
-        r.setBrush(Qt.blue)
-        r.setPen(Qt.black)
-        return r
+        return LinearSetItem(x,y,self)
 
 
 class LinearSetScene(QtWidgets.QGraphicsScene):
@@ -32,15 +40,20 @@ class LinearSetScene(QtWidgets.QGraphicsScene):
     maxx: float     # maximum X position
 
     def __init__(self, widget):
+        super().__init__(widget.parent)
         self.widget = widget
         self.minx = 0
         self.maxx = 100
-        super().__init__(widget.parent)
+        # set the scene rectangle to the same as the widget
+        self.setSceneRect(0,0,widget.width(), widget.height())
 
     def zoom(self, centreX, factor):
-        print(f"Zoom on {centreX}")
+        print(f"Zoom on {centreX} was {self.minx}:{self.maxx}")
         self.minx = centreX - factor*(centreX-self.minx)
         self.maxx = centreX + factor*(self.maxx-centreX)
+        print(f"                  now {self.minx}:{self.maxx}")
+        if self.minx<0:
+            self.minx=0
         self.rebuild()
 
     def sceneToEntity(self, x):
@@ -76,7 +89,7 @@ class LinearSetWidget(QtWidgets.QGraphicsView):
         super().__init__(parent)
         self.items = []
         self.parent = parent
-        self._prevMousePos = None
+        self.prevX = None
         self.scene = LinearSetScene(self)
         self.setScene(self.scene)
         self.setAlignment(Qt.AlignTop | Qt.AlignLeft)
@@ -105,8 +118,8 @@ class LinearSetWidget(QtWidgets.QGraphicsView):
         print(f"Extent {sc.minx}:{sc.maxx}")
         print(f"View: {self.width()} Scene: {self.scene.width()}")
 
-    ## handle mouse wheel zooming
     def wheelEvent(self, evt):
+        """handle mouse wheel zooming"""
         # Remove possible Anchors
         self.setTransformationAnchor(QtWidgets.QGraphicsView.NoAnchor)
         self.setResizeAnchor(QtWidgets.QGraphicsView.NoAnchor)
@@ -114,22 +127,45 @@ class LinearSetWidget(QtWidgets.QGraphicsView):
         target_viewport_pos = self.mapToScene(evt.pos())
         x = target_viewport_pos.x()
         # ZOOM
-        if evt.angleDelta().y() > 0:
-            factor = 1.01
+        if evt.angleDelta().y() < 0:
+            factor = 1.1
         else:
-            factor = 1/1.01
+            factor = 1/1.1
         self.scene.zoom(self.scene.sceneToEntity(x), factor)
         self.update()
 
-    ## handle right mouse button panning (when zoomed). This works by
-    # looking at the delta from right mouse button events and applying it
-    # to the scroll bar.
     def mousePressEvent(self, event):
-        if event.button() == Qt.RightButton:
-            self._prevMousePos = event.pos()
-        else:
+        """handle selection and the start of a pan. Works by recording the current entity X position
+        to start the pan, and by using itemAt to find items."""
+
+        if event.button() == Qt.LeftButton:
+            p = self.mapToScene(event.pos())
+            i = self.scene.itemAt(p, self.viewportTransform())
+            x = self.scene.sceneToEntity(p.x())
+            self.scene.clearSelected()
+            if i:
+                g = i.group()
+                if not g:
+                    print(f"Scene pos={p.x()} entity pos={x} {i}")
+                else:
+                    print(f"Scene pos={p.x()} entity pos={x} {i.group().ent.name}")
+                    self.scene.markSelected(i.group().ent)
+
+            self.prevX = x
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self.prevX = None
+
+    def mouseMoveEvent(self, event):
+        if self.prevX is not None:
             p = self.mapToScene(event.pos())
             x = self.scene.sceneToEntity(p.x())
-            print(f"Scene pos={p.x()} entity pos={x}")
-            super().mousePressEvent(event)
+            dx = self.prevX-x
+            if self.scene.minx+dx >= 0:
+                self.scene.minx += dx
+                self.scene.maxx += dx
+                self.scene.rebuild()
+                self.update()
+        super().mouseMoveEvent(event)
 

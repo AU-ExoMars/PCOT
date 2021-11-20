@@ -66,7 +66,7 @@ class PDS4ImageMethodWidget(TreeMethodWidget):
         # add some test data to the linear widget
         timeline = self.timeline
         for i in range(10):
-            timeline.add(i,"wibble")
+            timeline.add(i,f"wibble{i}")
         timeline.rescale()
         timeline.rebuild()
 
