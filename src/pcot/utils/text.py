@@ -4,6 +4,7 @@
 import re
 
 import cv2 as cv
+from PyQt5.QtWidgets import QGraphicsSimpleTextItem
 
 
 def write(img, txt, x, y, above, fontsize, fontthickness, fontcol, bg=None):
@@ -61,3 +62,13 @@ def generateIndenting(s):
         out.append(s)
         indents += ctOpen
     return '\n'.join(out)
+
+
+def posAndCentreText(i: QGraphicsSimpleTextItem, x: float, y: float, centreX=False, centreY=False):
+    """centre an item in X and or Y and position"""
+    bb = i.boundingRect()
+    if centreX:
+        x = x - bb.width() / 2
+    if centreY:
+        y = y - bb.height() / 2
+    i.setPos(x, y)

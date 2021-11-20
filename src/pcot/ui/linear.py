@@ -1,12 +1,25 @@
 import math
+from typing import List
 
-from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QColor, QFont
 
-from typing import NamedTuple, List
 import pcot.ui as ui
+from pcot import utils
 
 DEFAULTRANGE = 20  # default x range of set view when there are no items
+
+# font for drawing axis text
+axesFont = QFont()
+axesFont.setFamily('Sans Serif')
+axesFont.setPixelSize(10)
+
+# font for drawing item text
+markerFont = QFont()
+markerFont.setFamily('Sans Serif')
+markerFont.setBold(True)
+markerFont.setPixelSize(15)
 
 
 class EntityMarkerItem(QtWidgets.QGraphicsEllipseItem):
@@ -50,6 +63,11 @@ class LinearSetEntity:
         self.marker = EntityMarkerItem(x, y, self, radius=10)
         self.marker.setSelected(selected)
         scene.addItem(self.marker)
+        # now the associated text, which isn't selectable
+        i = QtWidgets.QGraphicsSimpleTextItem(self.name)
+        i.setFont(markerFont)
+        utils.text.posAndCentreText(i, x+15, y, centreY=True)
+        scene.addItem(i)
 
 
 class LinearSetScene(QtWidgets.QGraphicsScene):
@@ -111,7 +129,11 @@ class LinearSetScene(QtWidgets.QGraphicsScene):
         for x in range(minx, maxx):
             xx = self.entityToScene(x)
             i = QtWidgets.QGraphicsLineItem(xx, 0, xx, h)
-            i.setPen(Qt.gray)
+            i.setPen(QColor(200, 200, 200))
+            self.addItem(i)
+            i = QtWidgets.QGraphicsSimpleTextItem(str(x))
+            i.setFont(axesFont)
+            i.setPos(xx, 10)
             self.addItem(i)
 
     def rebuild(self):
@@ -119,12 +141,11 @@ class LinearSetScene(QtWidgets.QGraphicsScene):
         ss = self.saveSelection()
         self.clear()
         ui.log(f"range {self.minx, self.maxx}, width {self.width()}")
+        self.createAxes()
         for y, i in enumerate(self.widget.items):
             # create item in scene, in scene coordinates (derived from minx,maxx)
-            i.createSceneItem(self, y)
+            i.createSceneItem(self, self.height() - 10 - (y % 10) * 5)
         self.restoreSelection(ss)
-
-        self.createAxes()
 
 
 class LinearSetWidget(QtWidgets.QGraphicsView):
@@ -171,8 +192,7 @@ class LinearSetWidget(QtWidgets.QGraphicsView):
     def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
         super().resizeEvent(event)
         # set the scene rectangle to the same as the widget
-        print(f"Width {self.width()}")
-        self.setSceneRect(0, 0, self.width(), self.height())
+        self.scene.setSceneRect(0, 0, event.size().width(), event.size().height())
         self.scene.rebuild()
         self.update()
 
