@@ -1,4 +1,6 @@
-from PyQt5 import QtWidgets, QtCore
+import math
+
+from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import Qt
 
 from typing import NamedTuple, List
@@ -66,8 +68,6 @@ class LinearSetScene(QtWidgets.QGraphicsScene):
         self.widget = widget
         self.minx = 0
         self.maxx = 100
-        # set the scene rectangle to the same as the widget
-        self.setSceneRect(0, 0, widget.width(), widget.height())
         self.selectionChanged.connect(self.onSelChanged)
 
     def onSelChanged(self):
@@ -103,15 +103,28 @@ class LinearSetScene(QtWidgets.QGraphicsScene):
         for ent in saved:
             ent.marker.setSelected(True)
 
+    def createAxes(self):
+        """This creates some axis markers - at the moment it's rather dumb"""
+        minx = math.ceil(self.minx)
+        maxx = math.ceil(self.maxx)
+        h = self.height()
+        for x in range(minx, maxx):
+            xx = self.entityToScene(x)
+            i = QtWidgets.QGraphicsLineItem(xx, 0, xx, h)
+            i.setPen(Qt.gray)
+            self.addItem(i)
+
     def rebuild(self):
         """Complete rebuild of the scene, done when almost anything happens. Has to remember selected states."""
         ss = self.saveSelection()
         self.clear()
-        # ui.log(f"range {self.minx, self.maxx}")
+        ui.log(f"range {self.minx, self.maxx}, width {self.width()}")
         for y, i in enumerate(self.widget.items):
             # create item in scene, in scene coordinates (derived from minx,maxx)
             i.createSceneItem(self, y)
         self.restoreSelection(ss)
+
+        self.createAxes()
 
 
 class LinearSetWidget(QtWidgets.QGraphicsView):
@@ -155,6 +168,14 @@ class LinearSetWidget(QtWidgets.QGraphicsView):
         # print(f"Extent {sc.minx}:{sc.maxx}")
         # print(f"View: {self.width()} Scene: {self.scene.width()}")
 
+    def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
+        super().resizeEvent(event)
+        # set the scene rectangle to the same as the widget
+        print(f"Width {self.width()}")
+        self.setSceneRect(0, 0, self.width(), self.height())
+        self.scene.rebuild()
+        self.update()
+
     def wheelEvent(self, evt):
         """handle mouse wheel zooming"""
         # Remove possible Anchors
@@ -169,6 +190,7 @@ class LinearSetWidget(QtWidgets.QGraphicsView):
         else:
             factor = 1 / 1.1
         self.scene.zoom(self.scene.sceneToEntity(x), factor)
+        self.setSceneRect(0, 0, self.width(), self.height())
         self.update()
 
     def mousePressEvent(self, event):
