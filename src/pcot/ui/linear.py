@@ -4,28 +4,50 @@ from PyQt5.QtCore import Qt
 from typing import NamedTuple, List
 import pcot.ui as ui
 
-DEFAULTRANGE = 20       # default x range of set view when there are no items
+DEFAULTRANGE = 20  # default x range of set view when there are no items
 
-class LinearSetItem(QtWidgets.QGraphicsItemGroup):
-    """A graphics item representing an entity in the linear set"""
-    def __init__(self, x, y, ent):
-        super().__init__()
+
+class EntityMarkerItem(QtWidgets.QGraphicsEllipseItem):
+    """The selectable marker part of each linear set item"""
+
+    ent: 'LinearSetEntity'
+
+    def __init__(self, x, y, ent, radius=10):
+        super().__init__(x - radius / 2, y - radius / 2, radius, radius)
+        self.setBrush(Qt.blue)
+        self.setPen(Qt.black)
+        self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable)
         self.ent = ent
-        rad = 10
-        r = QtWidgets.QGraphicsEllipseItem(x-rad/2, y-rad/2, rad, rad)
-        r.setBrush(Qt.blue)
-        r.setPen(Qt.black)
-        self.addToGroup(r)
+
+    def paint(self, painter, option, widget):
+        # fake an unselected state so we don't get a border...
+        option.state = QtWidgets.QStyle.State_None
+        # ...but show the selected state with a colour change #TODO colourblindness!!!
+        if self.isSelected():
+            self.setBrush(Qt.red)
+        else:
+            self.setBrush(Qt.blue)
+        super().paint(painter, option, widget)
 
 
-class LinearSetEntity(NamedTuple):
+class LinearSetEntity:
     """Something in the linear set"""
-    x: float        # position in "timeline" or whatever the horizontal axis is
-    name: str       # name
+    x: float  # position in "timeline" or whatever the horizontal axis is
+    name: str  # name
+    marker: QtWidgets.QGraphicsItem  # item which can be selected
 
-    def createSceneItem(self, x: float, y: float):
-        """Create a scene item to represent this item, positioned at X,Y in the scene"""
-        return LinearSetItem(x,y,self)
+    def __init__(self, x, name):
+        self.x = x
+        self.name = name
+        self.marker = None
+
+    def createSceneItem(self, scene: 'LinearSetScene', y: float, selected=False):
+        """Create some scene items to represent this item, positioned at X,Y in the scene. May be
+        created selected, if we're doing a rebuild of a scene with selected items"""
+        x = scene.entityToScene(self.x)
+        self.marker = EntityMarkerItem(x, y, self, radius=10)
+        self.marker.setSelected(selected)
+        scene.addItem(self.marker)
 
 
 class LinearSetScene(QtWidgets.QGraphicsScene):
@@ -36,8 +58,8 @@ class LinearSetScene(QtWidgets.QGraphicsScene):
     Entities - things on the line - are owned by the parent widget, and are converted into QGraphics scene items
     in rebuild()"""
 
-    minx: float     # minimum X position
-    maxx: float     # maximum X position
+    minx: float  # minimum X position
+    maxx: float  # maximum X position
 
     def __init__(self, widget):
         super().__init__(widget.parent)
@@ -45,37 +67,51 @@ class LinearSetScene(QtWidgets.QGraphicsScene):
         self.minx = 0
         self.maxx = 100
         # set the scene rectangle to the same as the widget
-        self.setSceneRect(0,0,widget.width(), widget.height())
+        self.setSceneRect(0, 0, widget.width(), widget.height())
+        self.selectionChanged.connect(self.onSelChanged)
+
+    def onSelChanged(self):
+        pass  # no real need for this to do anything
 
     def zoom(self, centreX, factor):
-        print(f"Zoom on {centreX} was {self.minx}:{self.maxx}")
-        self.minx = centreX - factor*(centreX-self.minx)
-        self.maxx = centreX + factor*(self.maxx-centreX)
-        print(f"                  now {self.minx}:{self.maxx}")
-        if self.minx<0:
-            self.minx=0
+        # print(f"Zoom on {centreX} was {self.minx}:{self.maxx}")
+        self.minx = centreX - factor * (centreX - self.minx)
+        self.maxx = centreX + factor * (self.maxx - centreX)
+        # print(f"                  now {self.minx}:{self.maxx}")
+        if self.minx < 0:
+            self.minx = 0
         self.rebuild()
 
     def sceneToEntity(self, x):
         """Convert an X-coord in the scene space (i.e. "screen coords") to entity space (e.g. time)"""
-        x = x/self.width()
-        x *= self.maxx-self.minx
-        return x+self.minx
+        x = x / self.width()
+        x *= self.maxx - self.minx
+        return x + self.minx
 
     def entityToScene(self, x):
         """Convert an X-coord in entity space (e.g. time) to scene space (i.e. "screen coords")"""
-        x = (x-self.minx)/(self.maxx-self.minx)       # 0-1
-        return x*self.width()
+        x = (x - self.minx) / (self.maxx - self.minx)  # 0-1
+        return x * self.width()
+
+    def saveSelection(self):
+        """record the selected items during a drag or rebuild"""
+        return [i.ent for i in self.selectedItems()]
+
+    def restoreSelection(self, saved):
+        """restore a recorded set of selected items"""
+        self.clearSelection()
+        for ent in saved:
+            ent.marker.setSelected(True)
 
     def rebuild(self):
+        """Complete rebuild of the scene, done when almost anything happens. Has to remember selected states."""
+        ss = self.saveSelection()
         self.clear()
-        ui.log(f"range {self.minx,self.maxx}")
+        # ui.log(f"range {self.minx, self.maxx}")
         for y, i in enumerate(self.widget.items):
             # create item in scene, in scene coordinates (derived from minx,maxx)
-            item = i.createSceneItem(self.entityToScene(i.x), y)
-            ui.log(f"pos {i.x},{y}  - X maps to {self.entityToScene(i.x)}")
-            # we really only deal with X-coords, but we don't want things to overlap so move them around in Y.
-            self.addItem(item)
+            i.createSceneItem(self, y)
+        self.restoreSelection(ss)
 
 
 class LinearSetWidget(QtWidgets.QGraphicsView):
@@ -95,6 +131,7 @@ class LinearSetWidget(QtWidgets.QGraphicsView):
         self.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setDragMode(QtWidgets.QGraphicsView.RubberBandDrag)
 
     def add(self, x, s):
         self.items.append(LinearSetEntity(x, s))
@@ -115,8 +152,8 @@ class LinearSetWidget(QtWidgets.QGraphicsView):
         else:
             sc.minx = 0
             sc.maxx = DEFAULTRANGE
-        print(f"Extent {sc.minx}:{sc.maxx}")
-        print(f"View: {self.width()} Scene: {self.scene.width()}")
+        # print(f"Extent {sc.minx}:{sc.maxx}")
+        # print(f"View: {self.width()} Scene: {self.scene.width()}")
 
     def wheelEvent(self, evt):
         """handle mouse wheel zooming"""
@@ -130,42 +167,40 @@ class LinearSetWidget(QtWidgets.QGraphicsView):
         if evt.angleDelta().y() < 0:
             factor = 1.1
         else:
-            factor = 1/1.1
+            factor = 1 / 1.1
         self.scene.zoom(self.scene.sceneToEntity(x), factor)
         self.update()
 
     def mousePressEvent(self, event):
-        """handle selection and the start of a pan. Works by recording the current entity X position
-        to start the pan, and by using itemAt to find items."""
+        """Handles the start of a pan. Note that this ONLY calls the superclass event handler
+        if we're doing left-button down to start a selection drag. That's so we can use Qt's dragging
+        system. We don't do it for other events so that we don't get the rubberbanding and we don't lose
+        selections."""
+
+        if event.button() == Qt.RightButton:
+            p = self.mapToScene(event.pos())
+            x = self.scene.sceneToEntity(p.x())
+            self.prevX = x
 
         if event.button() == Qt.LeftButton:
-            p = self.mapToScene(event.pos())
-            i = self.scene.itemAt(p, self.viewportTransform())
-            x = self.scene.sceneToEntity(p.x())
-            self.scene.clearSelected()
-            if i:
-                g = i.group()
-                if not g:
-                    print(f"Scene pos={p.x()} entity pos={x} {i}")
-                else:
-                    print(f"Scene pos={p.x()} entity pos={x} {i.group().ent.name}")
-                    self.scene.markSelected(i.group().ent)
-
-            self.prevX = x
-        super().mousePressEvent(event)
+            # superclass event call to handle selection box drag
+            super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event):
-        self.prevX = None
+        """Mouse button release clears the pan state"""
+        if self.prevX is not None:
+            self.prevX = None
+        super().mouseReleaseEvent(event)
 
     def mouseMoveEvent(self, event):
+        """Handle panning"""
         if self.prevX is not None:
             p = self.mapToScene(event.pos())
             x = self.scene.sceneToEntity(p.x())
-            dx = self.prevX-x
-            if self.scene.minx+dx >= 0:
+            dx = self.prevX - x
+            if self.scene.minx + dx >= 0:
                 self.scene.minx += dx
                 self.scene.maxx += dx
                 self.scene.rebuild()
                 self.update()
         super().mouseMoveEvent(event)
-
