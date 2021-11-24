@@ -74,7 +74,7 @@ class RGBInputMethod(InputMethod):
 
 class RGBMethodWidget(TreeMethodWidget):
     def __init__(self, m):
-        super().__init__(m, 'tabrgbfile.ui',
+        super().__init__(m, 'inputfiletree.ui',
                          ["*.jpg", "*.png", "*.ppm", "*.tga", "*.tif"])
 
     def onInputChanged(self):

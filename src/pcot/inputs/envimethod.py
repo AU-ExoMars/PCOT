@@ -65,7 +65,7 @@ class ENVIInputMethod(InputMethod):
 
 class ENVIMethodWidget(TreeMethodWidget):
     def __init__(self, m):
-        super().__init__(m, 'tabrgbfile.ui', ["*.hdr"])
+        super().__init__(m, 'inputfiletree.ui', ["*.hdr"])
 
     def onInputChanged(self):
         # ensure image is also using my mapping.

@@ -164,7 +164,7 @@ class MultifileMethodWidget(MethodWidget):
     def __init__(self, m):
         super().__init__(m)
         self.model = None
-        uic.loadUi(pcot.config.getAssetAsFile('tabmultifile.ui'), self)
+        uic.loadUi(pcot.config.getAssetAsFile('inputmultifile.ui'), self)
         self.getinitial.clicked.connect(self.getInitial)
         self.filters.textChanged.connect(self.filtersChanged)
         self.filelist.activated.connect(self.itemActivated)
