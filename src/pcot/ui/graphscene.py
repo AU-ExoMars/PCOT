@@ -14,7 +14,8 @@ from pcot.datum import Datum, isCompatibleConnection
 import pcot.ui as ui
 import pcot.ui.namedialog
 import pcot.utils.deb
-import pcot.xform as xform
+from pcot.xform import XForm, XFormGraph
+import pcot.xform
 
 ## do we have the Grandalf package for automatic graph layout?
 from pcot import connbrushes
@@ -121,7 +122,7 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
     offsetx: int
     offsety: int
     helprect: GHelpRect  # help rectangle (top-right corner)
-    node: xform.XForm  # node to which I refer
+    node: XForm  # node to which I refer
     text: GText  # text field
     aboutToMove: bool   # true when the item is clicked; the first move after this will cause a mark and clear this flag
 
@@ -205,7 +206,7 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
 ## connection rectangles at top and bottom of node
 class GConnectRect(QtWidgets.QGraphicsRectItem):
     isInput: bool  # true if this is an input
-    node: xform.XForm  # the node I'm on
+    node: XForm  # the node I'm on
     index: int  # the index of the input/output
     name: str  # the name shown next to the rect (could be "")
 
@@ -283,10 +284,10 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
 class GArrow(QtWidgets.QGraphicsLineItem):
     ## @var n1
     # "from" xform node
-    n1: xform.XForm
+    n1: XForm
     ## @var n2
     # "to" xform node
-    n2: xform.XForm
+    n2: XForm
     ## @var output
     # index of output in n1
     output: int
@@ -436,9 +437,9 @@ def makeNodeGraphics(n):
 
 class XFormGraphScene(QtWidgets.QGraphicsScene):
     ## the graph I represent
-    graph: xform.XFormGraph
+    graph: XFormGraph
     ## selected nodes
-    selection: List[xform.XForm]
+    selection: List[XForm]
     ## check selected nodes if the selection changes
     checkSelChange: bool
     ## list of arrows

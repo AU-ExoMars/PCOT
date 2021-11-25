@@ -8,6 +8,7 @@ import hashlib
 import inspect
 import time
 import traceback
+import sys
 from collections import deque
 from io import BytesIO
 from typing import List, Dict, Tuple, Any, ClassVar, Optional, TYPE_CHECKING, Callable
@@ -92,7 +93,12 @@ class xformtype:
         # get the module so we can add an MD5 checksum of its source code to the type
         # data, for version matching info
         mod = inspect.getmodule(cls)
-        src = inspect.getsource(mod).encode('utf-8')  # get the source
+
+        # can't get source when inside pyinstaller etc.
+        if not (getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS')):
+            src = inspect.getsource(mod).encode('utf-8')  # get the source
+        else:
+            src = ''.encode('utf-8')
 
         # we don't create the instance - that's postponed until later to avoid some circular import
         # problems when expr is initialised (it's quite difficult to run the user function hooks this
