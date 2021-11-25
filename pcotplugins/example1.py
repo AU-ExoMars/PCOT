@@ -2,9 +2,10 @@ import cv2 as cv
 import numpy as np
 
 from pcot import datum
+from pcot.sources import SourceSet
 from pcot.xform import XFormType, xformtype, Datum
 from pcot.xforms.tabimage import TabImage
-from pcot.pancamimage import ImageCube
+from pcot.imagecube import ImageCube
 
 from PyQt5 import QtWidgets
 
@@ -71,8 +72,11 @@ def testfunc(args, optargs):
     a = args[0].get(datum.NUMBER)   # get the first argument, which is numeric
     b = args[1].get(datum.NUMBER)   # and the second argument.
     result = a + b * 2                  # calculate the result
-    # convert the result into a numeric Datum and return it.
-    return Datum(datum.NUMBER, result)
+
+    # get the source sets from the inputs and combine them.
+    sources = SourceSet([args[1].getSources(), args[2].getSources()])
+    # convert the result into a numeric Datum and return it, attaching sources.
+    return Datum(datum.NUMBER, result, sources)
 
 
 def regfuncs(p):

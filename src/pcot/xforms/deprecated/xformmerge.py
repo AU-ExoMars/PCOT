@@ -6,7 +6,7 @@ import pcot.ui.tabs
 from pcot.channelsource import BLUEINTERNALSOURCE, GREENINTERNALSOURCE, REDINTERNALSOURCE
 from pcot.xform import xformtype, XFormType, Datum
 from pcot.xforms.tabimage import TabImage
-from pcot.pancamimage import ImageCube
+from pcot.imagecube import ImageCube
 import functools
 
 

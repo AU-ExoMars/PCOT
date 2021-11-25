@@ -4,9 +4,10 @@ from typing import Optional
 
 import pcot.ui as ui
 from .inputmethod import InputMethod
-from pcot.pancamimage import ImageCube, ChannelMapping
+from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import TreeMethodWidget
+from ..sources import MultiBandSource, InputSource
 
 
 class RGBInputMethod(InputMethod):
@@ -24,7 +25,15 @@ class RGBInputMethod(InputMethod):
         # will throw exception if load failed
         print("RGB PERFORMING FILE READ")
 
-        img = ImageCube.load(self.fname, self.mapping)
+        doc = self.input.mgr.doc
+        inpidx = self.input.idx
+
+        # might seem a bit wasteful having three of them, but seems more logical to me.
+        sources = MultiBandSource([InputSource(doc, inpidx, 'R'),
+                                   InputSource(doc, inpidx, 'G'),
+                                   InputSource(doc, inpidx, 'B')])
+
+        img = ImageCube.load(self.fname, self.mapping, sources)
         ui.log("Image {} loaded: {}".format(self.fname, img))
         self.img = img
 
@@ -59,10 +68,13 @@ class RGBInputMethod(InputMethod):
             self.img = None   # ensure image is reloaded
         Canvas.deserialise(self, data)
 
+    def long(self):
+        return f"RGB:{self.fname}"
+
 
 class RGBMethodWidget(TreeMethodWidget):
     def __init__(self, m):
-        super().__init__(m, 'tabrgbfile.ui',
+        super().__init__(m, 'inputfiletree.ui',
                          ["*.jpg", "*.png", "*.ppm", "*.tga", "*.tif"])
 
     def onInputChanged(self):

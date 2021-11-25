@@ -7,7 +7,9 @@ should all be renderable by Canvas.
 These types are also used by the expression evaluator.
 """
 
-from typing import Any
+from typing import Any, Optional
+
+from pcot.sources import SourcesObtainable
 
 
 class Type:
@@ -21,7 +23,7 @@ class Type:
         return self.name
 
 
-class Datum:
+class Datum(SourcesObtainable):
     """a piece of data sitting in a node's output or on the expression evaluation stack."""
     ## @var tp
     # the data type
@@ -29,6 +31,9 @@ class Datum:
     ## @var val
     # the data value
     val: Any
+    ## @var sources
+    # the source - could be any kind of SourcesObtainable object
+    sources: SourcesObtainable
 
     types = [
         ANY := Type("any"),
@@ -49,13 +54,22 @@ class Datum:
         FUNC := Type("func", internal=True)
     ]
 
-    def __init__(self, t: Type, v: Any):
-        """create a datum given the type and value. No type checking is done!"""
+    def __init__(self, t: Type, v: Any, sources: Optional[SourcesObtainable] = None):
+        """create a datum given the type and value. No type checking is done!
+        The source should be a SourcesObtainable object, but can be omitted from images (it will be
+        the one stored in the image)."""
+        from pcot.xform import XFormException
         if not isinstance(t, Type):
-            from pcot.xform import XFormException
             raise XFormException("CODE", "bad call to datum ctor: should be Datum(Type,Value)")
         self.tp = t
         self.val = v
+
+        if sources is None:
+            if not self.isImage():
+                raise XFormException("CODE", "Datum objects which are not images must have an explicit source set")
+            else:
+                sources = self.val.sources
+        self.sources = sources
 
     def isImage(self):
         """Is this an image of some type?"""
@@ -70,6 +84,9 @@ class Datum:
 
     def __str__(self):
         return "[DATUM-{}, value {}]".format(self.tp, self.val)
+
+    def getSources(self):
+        return self.sources.getSources()
 
 
 ## complete list of all types, which also assigns them to values (kind of like an enum)

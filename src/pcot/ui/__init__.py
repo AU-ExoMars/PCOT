@@ -31,12 +31,11 @@ def log(s):
     if application is not None:
         for x in mainwindow.MainUI.windows:
             x.logText.append(s)
-    else:
-        print(s)
+    print(s)
 
 
 ## show error on status bar, and log in red; will dump traceback to stdout if requested.
-def error(s, tb=False):
+def error(s, tb=True):
     if app() is not None:
         application.beep()
         log('<font color="red">Error: </font> {}'.format(s))

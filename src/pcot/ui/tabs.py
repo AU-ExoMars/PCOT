@@ -1,7 +1,6 @@
-## @package ui.tabs
-# Dockable tab handling code. Windows which have dockable tabs
-# should inherit DockableTabWindow.
-
+"""Dockable tab handling code. Windows which have dockable tabs
+should inherit DockableTabWindow.
+"""
 
 from PyQt5 import QtWidgets, uic, QtCore
 from PyQt5.QtCore import Qt

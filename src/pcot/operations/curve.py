@@ -3,7 +3,7 @@ from typing import Tuple, Optional
 import numpy as np
 import cv2 as cv
 
-from pcot.pancamimage import SubImageCubeROI
+from pcot.imagecube import SubImageCubeROI
 
 # number of points in lookup table
 NUMPOINTS = 1000

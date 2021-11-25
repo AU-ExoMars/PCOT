@@ -3,8 +3,7 @@ import numpy as np
 
 from pcot.datum import Datum
 import pcot.ui.tabs
-from pcot.channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, BLUEINTERNALSOURCE
-from pcot.pancamimage import ImageCube
+from pcot.imagecube import ImageCube
 from pcot.xform import xformtype, XFormType, XFormException
 
 
@@ -88,11 +87,8 @@ class XformGradient(XFormType):
                 subimage = img.subimage()
                 newsubimg = applyGradient(subimage.img, subimage.mask, node.gradient)
                 # Here we make an RGB image from the input image. We then slap the gradient
-                # onto the ROI. We use the default channel mapping and standard "fake" sources.
-                outimg = ImageCube(img.rgb(), node.mapping, [
-                    {REDINTERNALSOURCE},
-                    {GREENINTERNALSOURCE},
-                    {BLUEINTERNALSOURCE}])
+                # onto the ROI. We use the default channel mapping and no sources (this is an artificial image)
+                outimg = ImageCube(img.rgb(), node.mapping, sources=None)
 
                 node.img = outimg.modifyWithSub(subimage, newsubimg)
             else:

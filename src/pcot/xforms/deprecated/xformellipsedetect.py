@@ -9,7 +9,7 @@ from pcot.channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, BLUEINTER
 
 from pcot.xform import xformtype, XFormType, XFormException
 from pcot.xforms.tabimage import TabImage
-from pcot.pancamimage import ImageCube
+from pcot.imagecube import ImageCube
 
 
 

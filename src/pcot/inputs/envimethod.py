@@ -1,12 +1,10 @@
 """the ENVI file input method, only supports 32 bit float, non-interleaved"""
-import os
 from typing import Optional
 
-import pcot
-import pcot.envi as envi
+import pcot.dataformats.envi as envi
 import pcot.ui as ui
 from pcot.inputs.inputmethod import InputMethod
-from pcot.pancamimage import ImageCube, ChannelMapping
+from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import TreeMethodWidget
 
@@ -24,7 +22,9 @@ class ENVIInputMethod(InputMethod):
 
     def loadImg(self):
         print("ENVI PERFORMING FILE READ")
-        img = envi.load(self.fname, self.mapping)
+        doc = self.input.mgr.doc
+        inpidx = self.input.idx
+        img = envi.load(self.fname, doc, inpidx, self.mapping)
         ui.log("Image {} loaded: {}, mapping is {}".format(self.fname, img, self.mapping))
         self.img = img
 
@@ -59,10 +59,13 @@ class ENVIInputMethod(InputMethod):
             self.img = None   # ensure image is reloaded
         Canvas.deserialise(self, data)
 
+    def long(self):
+        return f"ENVI:{self.fname}"
+
 
 class ENVIMethodWidget(TreeMethodWidget):
     def __init__(self, m):
-        super().__init__(m, 'tabrgbfile.ui', ["*.hdr"])
+        super().__init__(m, 'inputfiletree.ui', ["*.hdr"])
 
     def onInputChanged(self):
         # ensure image is also using my mapping.

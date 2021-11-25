@@ -1,6 +1,7 @@
 import numpy as np
 
 from pcot.datum import Datum
+from pcot.sources import MultiBandSource, SourceSet
 from pcot.xform import xformtype, XFormType, XFormException
 from pcot.xforms.tabimage import TabImage
 
@@ -34,7 +35,10 @@ class XformDecorr(XFormType):
         else:
             subimage = img.subimage()
             newimg = decorrstretch(subimage.img, subimage.mask)
-            node.img = img.modifyWithSub(subimage, newimg)
+            # in this case, all channels just come from the union of the sources
+            sources = SourceSet(img.sources.getSources())
+            node.img = img.modifyWithSub(subimage, newimg, sources=MultiBandSource([sources, sources, sources]))
+
         if node.img is not None:
             node.img.setMapping(node.mapping)
         node.setOutput(0, Datum(Datum.IMG, node.img))

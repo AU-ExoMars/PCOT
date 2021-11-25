@@ -1,11 +1,13 @@
 from typing import List, Optional, TYPE_CHECKING
 
-from .envi import ENVIInputMethod
+from .envimethod import ENVIInputMethod
 from .inputmethod import InputMethod
 from .multifile import MultifileInputMethod
 from .nullinput import NullInputMethod
 from .rgb import RGBInputMethod
-from pcot.pancamimage import ImageCube
+from .pds4image import PDS4ImageInputMethod
+
+from pcot.imagecube import ImageCube
 
 from pcot.ui.inputs import InputWindow
 
@@ -17,9 +19,11 @@ class Input:
     The data from the currently active input methods arrives in the graph through
     an XFormInput node.
     """
-    window: Optional['InputWindow']
-    methods: List['InputMethod']
-    activeMethod: int
+    window: Optional['InputWindow']     # if not None, an open window
+    methods: List['InputMethod']        # list of methods
+    activeMethod: int                   # index of active method in above array (see constants below)
+    idx: int                            # index of input in the manager
+    mgr: 'InputManager'                 # our input manager (we can use this to get the document)
 
     # indices of the methods in the 'methods' array; only activeMethod will be active.
     NULL = 0
@@ -27,11 +31,12 @@ class Input:
     MULTIFILE = 2
     ENVI = 3
 
-    def __init__(self, mgr):
+    def __init__(self, mgr, idx):
         """this will intialise an Input from scratch, typically when
         you're creating a new main graph. The input will be initialised
         to use the null method."""
         self.mgr = mgr
+        self.idx = idx
         self.activeMethod = 0
         self.exception = None
         self.window = None
@@ -39,7 +44,8 @@ class Input:
             NullInputMethod(self),  # null method must be first
             RGBInputMethod(self),
             MultifileInputMethod(self),
-            ENVIInputMethod(self)
+            ENVIInputMethod(self),
+            PDS4ImageInputMethod(self)
         ]
 
     def get(self):
@@ -137,7 +143,16 @@ class Input:
         return m
 
     def __str__(self):
+        """string for internal use only"""
         return "InputManager-active-{}".format(self.activeMethod)
+
+    def brief(self):
+        """string for use in captions, etc."""
+        return self.getActive().brief()
+
+    def long(self):
+        """long description"""
+        return self.getActive().long()
 
 
 ## how many inputs the system can have
@@ -148,11 +163,12 @@ class InputManager:
     """This is the input manager, which owns and manages the inputs.
     It itself is owned by a document"""
     inputs: List[Input]
+    doc: 'Document'
 
     def __init__(self, doc):
         """Initialise, linking with a Document and creating a set of Inputs"""
         self.doc = doc
-        self.inputs = [Input(self) for _ in range(0, NUMINPUTS)]
+        self.inputs = [Input(self, i) for i in range(0, NUMINPUTS)]
 
     def openWindow(self, inputIdx):
         """Open a window for a given input index"""

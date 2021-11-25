@@ -1,16 +1,13 @@
-## @package macros
-# Code dealing with macros and macro prototypes
+"""Code dealing with macros and macro prototypes"""
 
-from typing import List, Dict, ClassVar
+from typing import List
 
-from PyQt5 import QtWidgets
-
-from pcot import datum
-from pcot.ui.tabs import Tab
 import pcot.ui.mainwindow
-from pcot.datum import Datum
 import pcot.xform as xform
-from pcot.pancamimage import ChannelMapping
+from pcot import datum
+from pcot.datum import Datum
+from pcot.imagecube import ChannelMapping
+from pcot.ui.tabs import Tab
 from pcot.xform import XFormType, XFormGraph
 
 

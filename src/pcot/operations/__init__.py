@@ -8,7 +8,7 @@ import numpy as np
 import pcot.operations.norm
 import pcot.operations.curve
 from pcot.expressions import Parameter
-from pcot.pancamimage import SubImageCubeROI
+from pcot.imagecube import SubImageCubeROI
 from pcot.xform import XForm
 from pcot.datum import Datum
 

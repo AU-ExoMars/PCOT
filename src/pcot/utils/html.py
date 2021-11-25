@@ -1,5 +1,6 @@
 # Very simple HTML formatting class, because I want to be able to turn it off sometimes.
 
+
 class HTML:
     def __init__(self, tag, *args, attrs=None):
         self.model = []
@@ -52,3 +53,6 @@ class Bold(HTML):
 
 
 BR = "<br/"
+
+
+

@@ -1,6 +1,4 @@
-## @package ui.help
-# Generating help text
-#
+"""Generating help text"""
 
 from pcot.xform import XFormException
 

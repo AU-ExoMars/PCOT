@@ -1,16 +1,15 @@
 import math
-import pprint
 
-import numpy as np
 import matplotlib
+import numpy as np
 from PyQt5 import uic, QtWidgets
 from PyQt5.QtWidgets import QDialog
 
 import pcot
-from pcot.datum import Datum
 import pcot.ui as ui
-from pcot.channelsource import IChannelSource
+from pcot.datum import Datum
 from pcot.filters import wav2RGB
+from pcot.sources import SourceSet
 from pcot.ui.tabs import Tab
 from pcot.utils.table import Table
 from pcot.xform import XFormType, xformtype, XFormException
@@ -28,7 +27,10 @@ def getSpectrum(chanImg, mask):
 
 # return wavelength if all sources in channel are of the same wavelength, else -1.
 def wavelength(channelNumber, img):
-    sources = img.sources[channelNumber]
+    # get the SourceSet
+    sources = img.sources.sourceSets[channelNumber]
+    # all sources in this channel should have a filter
+    sources = [s for s in sources.sourceSet if s.getFilter()]
     # all the sources in this channel should have the same cwl
     wavelengths = set([s.getFilter().cwl for s in sources])
     if len(wavelengths) != 1:
@@ -79,7 +81,7 @@ def processData(table, legend, data, pxct, wavelengths, spectrum, chans, chanlab
         data[legend] = []
 
     # spectrum is [(mean,sd), (mean,sd)...] but we also build a pixcount array
-    means, sds, pixcts = [x[0] for x in spectrum], [x[1] for x in spectrum], [pxct for x in spectrum]
+    means, sds, pixcts = [x[0] for x in spectrum], [x[1] for x in spectrum], [pxct for _ in spectrum]
 
     # data for each region is [ (chan,wave,mean,sd,chanlabel,pixcount), (chan,wave,mean,sd,chanlabel,pixcount)..]
     # This means pixcount get dupped a lot but it's not a problem
@@ -156,21 +158,26 @@ class XFormSpectrum(XFormType):
         # For each ROI/image there is a lists of tuples, one for each channel : (chanidx, wavelength, mean, sd, name)
         data = dict()
         cols = dict()  # colour dictionary for ROIs/images
+        sources = set()  # sources
         for i in range(NUMINPUTS):
             img = node.getInput(i, Datum.IMG)
             if img is not None:
                 # first, generate a list of indices of channels with a single source which has a wavelength,
                 # and a list of those wavelengths
                 wavelengths = [wavelength(x, img) for x in range(img.channels)]
-                chans = [x for x in range(img.channels) if wavelengths[x] > 0]
                 wavelengths = [x for x in wavelengths if x > 0]
+                chans = [x for x in range(img.channels) if wavelengths[x] > 0]
+
+                # add the channels we found to a set of sources
+                for x in chans:
+                    sources |= img.sources.sourceSets[x].sourceSet
 
                 if len(wavelengths) == 0:
                     raise XFormException("DATA", "no single-wavelength channels in image")
 
                 # generate a list of labels, one for each channel
-                chanlabels = [IChannelSource.stringForSet(img.sources[x],
-                                                          node.graph.doc.settings.captionType) for x in chans]
+                # TODO - ignores caption type
+                chanlabels = [img.sources.sourceSets[x].brief() for x in chans]
 
                 if len(img.rois) == 0:
                     # no ROIs, do the whole image
@@ -202,7 +209,7 @@ class XFormSpectrum(XFormType):
         node.colsByLegend = cols  # we use this if we're using the ROI colours
         fixSortList(node)
 
-        node.setOutput(0, Datum(Datum.DATA, table))
+        node.setOutput(0, Datum(Datum.DATA, table, sources=SourceSet(sources)))
 
 
 class ReorderDialog(QDialog):
@@ -234,7 +241,7 @@ class ReorderDialog(QDialog):
         self.fixUpDown()
 
     def revClicked(self):
-        items=[]
+        items = []
         while True:
             item = self.listWidget.takeItem(0)
             if item is None:
@@ -242,7 +249,7 @@ class ReorderDialog(QDialog):
             else:
                 items.append(item)
         for x in items:
-            self.listWidget.insertItem(0,x)
+            self.listWidget.insertItem(0, x)
 
     def movecur(self, delta):
         row = self.listWidget.currentRow()
@@ -313,9 +320,9 @@ class TabSpectrum(ui.tabs.Tab):
         for legend in self.node.sortlist:
             x = self.node.data[legend]
             try:
-                [chans, wavelengths, means, sds, labels, pixcounts] = list(zip(*x))  # "unzip" idiom
+                [_, wavelengths, means, sds, _, pixcounts] = list(zip(*x))  # "unzip" idiom
             except ValueError:
-                raise XFormException("cannot get spectrum - problem with ROIs?")
+                raise XFormException("DATA", "cannot get spectrum - problem with ROIs?")
             if self.node.colourmode == COLOUR_FROMROIS:
                 col = self.node.colsByLegend[legend]
             else:

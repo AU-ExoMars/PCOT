@@ -15,26 +15,34 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QSplitter" name="splitter">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <property name="topMargin">
+      <number>0</number>
      </property>
-     <widget class="QPlainTextEdit" name="type">
-      <property name="maximumSize">
-       <size>
-        <width>16777215</width>
-        <height>30</height>
-       </size>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>14</pointsize>
-        <italic>false</italic>
-       </font>
-      </property>
-     </widget>
-     <widget class="QPlainTextEdit" name="text"/>
-    </widget>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QLineEdit" name="type"/>
+     </item>
+     <item>
+      <widget class="QComboBox" name="dispTypeBox">
+       <item>
+        <property name="text">
+         <string>Data</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Sources</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QPlainTextEdit" name="text"/>
    </item>
   </layout>
  </widget>

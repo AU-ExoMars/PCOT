@@ -1,11 +1,17 @@
 ##
+from abc import ABC, abstractmethod
 from typing import Optional, Any
 
 from pcot import ui
 from pcot.ui.canvas import Canvas
 
 
-class InputMethod:
+class InputMethod(ABC):
+    input: 'Input'
+    name: str
+    data: Any
+    showROIs: bool
+
     """Defines a way of inputting data (image data, usually). Each input has several
     of this which are all always present, but only one is active (determined by
     its index in the Input)."""
@@ -72,8 +78,18 @@ class InputMethod:
 
     def getName(self):
         """to override - returns the name for display purposes"""
-        return ''
+        return 'override-getName!'
 
+    def brief(self):
+        """Give a brief name for use in captions. Anything apart from the input number is too long!"""
+        return f"{self.input.idx}"
+
+    @abstractmethod
+    def long(self):
+        """Give a longer text description"""
+        pass
+
+    @abstractmethod
     def createWidget(self):
         """to override - creates the editing widget in the input window"""
         pass

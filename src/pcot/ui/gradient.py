@@ -1,15 +1,14 @@
-## @package ui.gradient
-# A colour gradient widget, adapted from https://www.learnpyqt.com/widgets/gradient/
+"""A colour gradient widget, adapted from https://www.learnpyqt.com/widgets/gradient/"""
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import pyqtSignal as Signal
 
-from pcot.utils.colour import qcol2rgb,rgb2qcol
+from pcot.utils.colour import qcol2rgb, rgb2qcol
 
-# A colour gradient widget, adapted from https://www.learnpyqt.com/widgets/gradient/
+
 class Gradient(QtWidgets.QWidget):
-
+    """A colour gradient widget, adapted from https://www.learnpyqt.com/widgets/gradient/"""
     gradientChanged = Signal()
 
     def __init__(self, *args, **kwargs):
@@ -21,8 +20,8 @@ class Gradient(QtWidgets.QWidget):
         )
 
         self._gradient = [
-            (0.0, (0,0,0)),
-            (1.0, (1,1,1)),
+            (0.0, (0, 0, 0)),
+            (1.0, (1, 1, 1)),
         ]
 
         # Stop point handle sizes.
@@ -48,7 +47,6 @@ class Gradient(QtWidgets.QWidget):
 
         y = painter.device().height() / 2
 
-
         # Draw the stop handles.
         for stop, _ in self._gradient:
             pen.setColor(QtGui.QColor('white'))
@@ -60,8 +58,8 @@ class Gradient(QtWidgets.QWidget):
             painter.setPen(pen)
 
             rect = QtCore.QRect(
-                stop * width - self._handle_w/2,
-                y - self._handle_h/2,
+                stop * width - self._handle_w / 2,
+                y - self._handle_h / 2,
                 self._handle_w,
                 self._handle_h
             )
@@ -73,7 +71,7 @@ class Gradient(QtWidgets.QWidget):
         return QtCore.QSize(200, 50)
 
     def _sort_gradient(self):
-        self._gradient = sorted(self._gradient, key=lambda g:g[0])
+        self._gradient = sorted(self._gradient, key=lambda g: g[0])
 
     def _constrain_gradient(self):
         self._gradient = [
@@ -97,7 +95,7 @@ class Gradient(QtWidgets.QWidget):
 
     @property
     def _end_stops(self):
-        return [0, len(self._gradient)-1]
+        return [0, len(self._gradient) - 1]
 
     def addStop(self, stop, color=None):
         # Stop is a value 0...1, find the point to insert this stop
@@ -168,7 +166,6 @@ class Gradient(QtWidgets.QWidget):
                 # Activate drag mode.
                 self._drag_position = n
 
-
     def mouseReleaseEvent(self, e):
         self._drag_position = None
         self._sort_gradient()
@@ -187,7 +184,7 @@ class Gradient(QtWidgets.QWidget):
         # Calculate the position of the click relative 0..1 to the width.
         n = self._find_stop_handle_for_event(e)
         if n:
-            self._sort_gradient() # Ensure ordered.
+            self._sort_gradient()  # Ensure ordered.
             # Delete existing, if not at the ends.
             if n > 0 and n < len(self._gradient) - 1:
                 self.removeStopAtPosition(n)
@@ -195,8 +192,3 @@ class Gradient(QtWidgets.QWidget):
         else:
             stop = e.x() / self.width()
             self.addStop(stop)
-
-
-
-
-

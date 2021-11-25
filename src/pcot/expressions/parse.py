@@ -13,6 +13,7 @@ from typing import List, Any, Optional, Callable, Dict, Tuple, Union
 
 from pcot import datum
 from pcot.datum import Datum
+from pcot.sources import nullSourceSet
 from pcot.utils.html import HTML, Bold
 from pcot.utils.table import Table
 
@@ -83,7 +84,7 @@ class Parameter:
     def validArgsString(self):
         """turn a tuple (1,2,3) into "1, 2 or 3"""
         if len(self.types) == 1:
-            r = str(self.types[0])
+            r = str(next(iter(self.types)))  # weird idiom for "get only item from set/list"
         else:
             lst = list(self.types)
             last = lst.pop()
@@ -145,6 +146,7 @@ class Function:
             t.add("name", x.name)
             t.add("types", x.validArgsString())
             t.add("description", x.desc)
+            t.add("default", x.deflt)
         oargs = t.htmlObj()
 
         return HTML("div",
@@ -193,7 +195,7 @@ class Function:
 
             for t in self.optParams:
                 if len(args) == 0:
-                    optArgs.append(Datum(Datum.NUMBER, t.getDefault()))
+                    optArgs.append(Datum(Datum.NUMBER, t.getDefault(), nullSourceSet))
                 else:
                     x = args.pop(0)
                     if x is None:
@@ -231,7 +233,7 @@ class InstNumber(Instruction):
 
     def exec(self, stack: Stack):
         # can't import NUMBER, it clashes with the one in tokenizer.
-        stack.append(Datum(Datum.NUMBER, self.val))
+        stack.append(Datum(Datum.NUMBER, self.val, nullSourceSet))
 
     def __str__(self):
         return "NUM {}".format(self.val)
@@ -245,7 +247,7 @@ class InstIdent(Instruction):
         self.val = v
 
     def exec(self, stack: Stack):
-        stack.append(Datum(Datum.IDENT, self.val))
+        stack.append(Datum(Datum.IDENT, self.val, nullSourceSet))
 
     def __str__(self):
         return "STR {}".format(self.val)
@@ -280,7 +282,7 @@ class InstFunc(Instruction):
 
     def exec(self, stack: Stack):
         """actually stack the callback function, don't call it - InstCall does that."""
-        stack.append(Datum(Datum.FUNC, self.func))
+        stack.append(Datum(Datum.FUNC, self.func, nullSourceSet))
 
     def __str__(self):
         return "FUNC {}".format(self.name)

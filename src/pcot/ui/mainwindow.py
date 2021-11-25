@@ -1,7 +1,8 @@
-## @package ui.mainwindow
-# Code for the main windows, which hold a scene representing the 
-# "patch" or a macro prototype, a palette of transforms, and an area
-# for tabs controlling transforms.
+"""
+Code for the main windows, which hold a scene representing the
+"patch" or a macro prototype, a palette of transforms, and an area
+for tabs controlling transforms.
+"""
 import os
 import traceback
 from typing import List, Optional, OrderedDict, ClassVar

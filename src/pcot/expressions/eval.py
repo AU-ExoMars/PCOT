@@ -2,8 +2,7 @@
 
 Anything in here should be specific to PCOT itself, and all data should be as Datum objects.
 """
-import numbers
-from typing import Callable, Dict, Tuple, List, Optional
+from typing import List, Optional, SupportsFloat
 
 import cv2 as cv
 import numpy as np
@@ -11,13 +10,15 @@ import numpy as np
 import pcot.config
 import pcot.operations as operations
 from pcot.datum import Datum
-from .parse import Parameter, Parser, execute
-from pcot.pancamimage import ImageCube
+from pcot.imagecube import ImageCube
 from pcot.utils.ops import binop, unop
 from pcot.xform import XFormException
+from .parse import Parameter, Parser, execute
+
 
 # TODO: Show output in canvas (and other output somehow if not image?). Honour the ROI from the "leftmost" image with an ROI - So A has priority over B, etc.
 # TODO: keep expression guide in help updated
+from ..sources import SourceSet, MultiBandSource
 
 
 def extractChannelByName(a: Datum, b: Datum):
@@ -33,10 +34,8 @@ def extractChannelByName(a: Datum, b: Datum):
         raise XFormException('DATA', "channel extract operator '$' requires image LHS")
     img = a.val
 
-    if b.tp == Datum.NUMBER:
-        img = img.getChannelImageByWavelength(b.val)
-    elif b.tp == Datum.IDENT:
-        img = img.getChannelImageByName(b.val)
+    if b.tp == Datum.NUMBER or b.tp == Datum.IDENT:
+        img = img.getChannelImageByFilter(b.val)
     else:
         raise XFormException('DATA', "channel extract operator '$' requires ident or numeric wavelength RHS")
 
@@ -47,7 +46,7 @@ def extractChannelByName(a: Datum, b: Datum):
     return Datum(Datum.IMG, img)
 
 
-def funcMerge(args, optargs):
+def funcMerge(args: List[Datum], optargs):
     """Function for merging a number of images. Crops all images to same size as smallest image."""
     if any([x is None for x in args]):
         raise XFormException('EXPR', 'argument is None for merge')
@@ -68,10 +67,10 @@ def funcMerge(args, optargs):
             print(x.img)
         else:
             bands = bands + cv.split(x.img[:h, :w])
-        sources = sources + x.sources
+        sources = sources + x.sources.sourceSets
 
     img = np.stack(bands, axis=-1)
-    img = ImageCube(img, None, sources)
+    img = ImageCube(img, None, MultiBandSource(sources))
 
     return Datum(Datum.IMG, img)
 
@@ -81,18 +80,18 @@ def funcGrey(args, optargs):
     conversion equation rather than just the mean."""
 
     img = args[0].get(Datum.IMG)
-    sources = set.union(*img.sources)
+    sources = MultiBandSource([SourceSet(img.sources.getSources())])
 
     if optargs[0].get(Datum.NUMBER) != 0:
         if img.channels != 3:
             raise XFormException('DATA', "Image must be RGB for OpenCV greyscale conversion")
-        img = ImageCube(cv.cvtColor(img.img, cv.COLOR_RGB2GRAY), img.mapping, [sources])
+        img = ImageCube(cv.cvtColor(img.img, cv.COLOR_RGB2GRAY), img.mapping, sources)
     else:
         # create a transformation matrix specifying that the output is a single channel which
         # is the mean of all the channels in the source
         mat = np.array([1 / img.channels] * img.channels).reshape((1, img.channels))
         out = cv.transform(img.img, mat)
-        img = ImageCube(out, img.mapping, [sources])
+        img = ImageCube(out, img.mapping, sources)
     return Datum(Datum.IMG, img)
 
 
@@ -122,12 +121,16 @@ def funcWrapper(fn, d, *args):
             np.putmask(cp, mask, newdata)
             img = img.modifyWithSub(subimage, newdata)
             return Datum(Datum.IMG, img)
-        elif isinstance(newdata, numbers.Number):
-            return Datum(Datum.NUMBER, float(newdata))
+        elif isinstance(newdata, SupportsFloat):
+            # 'img' is SourcesObtainable.
+            return Datum(Datum.NUMBER, float(newdata), img)
         else:
             raise XFormException('EXPR', 'internal: fn returns bad type in funcWrapper')
     elif d.tp == Datum.NUMBER:  # deal with numeric argument (always returns a numeric result)
-        return Datum(Datum.NUMBER, fn(d.val, *args))
+        # get sources for all arguments
+        ss = [a.getSources() for a in args]
+        ss.append(d.getSources())
+        return Datum(Datum.NUMBER, fn(d.val, *args), SourceSet(ss))
 
 
 def statsWrapper(fn, d: List[Optional[Datum]], *args):
@@ -135,6 +138,7 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
     The result of fn must be a number. Works by flattening any images and concatenating them with any numbers,
     and doing the operation on the resulting data."""
     intermediate = None
+    sources = []
     for x in d:
         # get each datum, which is either numeric or an image.
         if x is None:
@@ -144,6 +148,7 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
             subimage = x.val.subimage()
             mask = subimage.fullmask()
             cp = subimage.img.copy()
+            sources.append(x.getSources())
             masked = np.ma.masked_array(cp, mask=~mask)
             # we convert the data into a flat numpy array if it isn't one already
             if isinstance(masked, np.ma.masked_array):
@@ -155,6 +160,7 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
         elif x.tp == Datum.NUMBER:
             # if a number, convert to a single-value array
             newdata = np.array([x.val], np.float32)
+            sources.append(x.getSources())
         else:
             raise XFormException('EXPR', 'internal: bad type passed to statsWrapper')
 
@@ -165,7 +171,7 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
             intermediate = np.concatenate((intermediate, newdata))
 
     # then we perform the function on the collated array
-    return Datum(Datum.NUMBER, fn(intermediate, *args))
+    return Datum(Datum.NUMBER, fn(intermediate, *args), sources)
 
 
 class ExpressionEvaluator(Parser):
@@ -250,20 +256,20 @@ class ExpressionEvaluator(Parser):
 
         self.registerProperty('w', Datum.IMG,
                               "give the width of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",
-                              lambda q: Datum(Datum.NUMBER, q.subimage().bb.w))
+                              lambda q: Datum(Datum.NUMBER, q.subimage().bb.w, SourceSet(q.getSources())))
         self.registerProperty('w', Datum.ROI, "give the width of an ROI in pixels",
-                              lambda q: Datum(Datum.NUMBER, q.bb().w))
+                              lambda q: Datum(Datum.NUMBER, q.bb().w, SourceSet(q.getSources())))
         self.registerProperty('h', Datum.IMG,
                               "give the height of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",
-                              lambda q: Datum(Datum.NUMBER, q.subimage().bb.h))
+                              lambda q: Datum(Datum.NUMBER, q.subimage().bb.h, SourceSet(q.getSources())))
         self.registerProperty('h', Datum.ROI, "give the width of an ROI in pixels",
-                              lambda q: Datum(Datum.NUMBER, q.bb().h))
+                              lambda q: Datum(Datum.NUMBER, q.bb().h, SourceSet(q.getSources())))
 
         self.registerProperty('n', Datum.IMG,
                               "give the area of an image in pixels (if there are ROIs, give the number of pixels in the ROI union)",
-                              lambda q: Datum(Datum.NUMBER, q.subimage().mask.sum()))
+                              lambda q: Datum(Datum.NUMBER, q.subimage().mask.sum(), SourceSet(q.getSources())))
         self.registerProperty('n', Datum.ROI, "give the number of pixels in an ROI",
-                              lambda q: Datum(Datum.NUMBER, q.pixels()))
+                              lambda q: Datum(Datum.NUMBER, q.pixels(), SourceSet(q.getSources())))
 
         for x in pcot.config.exprFuncHooks:
             x(self)

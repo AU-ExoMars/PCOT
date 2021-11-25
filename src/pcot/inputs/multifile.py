@@ -10,12 +10,13 @@ from PyQt5 import uic, QtWidgets, QtGui
 from PyQt5.QtCore import Qt
 
 import pcot
-from pcot.channelsource import FileChannelSource
 from .inputmethod import InputMethod
-from pcot.pancamimage import ChannelMapping, ImageCube
+from pcot.imagecube import ChannelMapping, ImageCube
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
 from .. import ui
+from ..filters import getFilterByPos
+from ..sources import InputSource, SourceSet, MultiBandSource
 
 
 class MultifileInputMethod(InputMethod):
@@ -40,6 +41,10 @@ class MultifileInputMethod(InputMethod):
         self.mapping = ChannelMapping()
         self.img = None
 
+    def long(self):
+        lst = [f"{i}: {f}" for i, f in enumerate(self.files)]
+        return f"MULTI: path={self.dir} {', '.join(lst)}]"
+
     def getFilterName(self, path):
         if self.filterre is None:
             return None
@@ -62,6 +67,9 @@ class MultifileInputMethod(InputMethod):
     def readData(self):
         self.compileRegex()
 
+        doc = self.input.mgr.doc
+        inpidx = self.input.idx
+
         sources = []  # array of source sets for each image
         imgs = []  # array of actual images (greyscale, numpy)
         newCachedFiles = {}  # will replace the old cache data
@@ -73,7 +81,10 @@ class MultifileInputMethod(InputMethod):
                 # most of the time.
                 path = os.path.relpath(os.path.join(self.dir, self.files[i]))
                 # build sources data : filename and filter name
-                source = {FileChannelSource(path, self.getFilterName(path), self.camera == 'AUPE')}
+                filtpos = self.getFilterName(path)   # says name, but usually is the position.
+                filt = getFilterByPos(filtpos)
+                source = InputSource(doc, inpidx, filt)
+
                 # is it in the cache?
                 if path in self.cachedFiles:
                     print("IMAGE IN MULTIFILE CACHE: NOT PERFORMING FILE READ")
@@ -99,7 +110,7 @@ class MultifileInputMethod(InputMethod):
             img = cv.merge(imgs)
         else:
             return None  # no image
-        img = ImageCube(img * self.mult, self.mapping, sources)
+        img = ImageCube(img * self.mult, self.mapping, MultiBandSource(sources))
         return img
 
     def getName(self):
@@ -153,7 +164,7 @@ class MultifileMethodWidget(MethodWidget):
     def __init__(self, m):
         super().__init__(m)
         self.model = None
-        uic.loadUi(pcot.config.getAssetAsFile('tabmultifile.ui'), self)
+        uic.loadUi(pcot.config.getAssetAsFile('inputmultifile.ui'), self)
         self.getinitial.clicked.connect(self.getInitial)
         self.filters.textChanged.connect(self.filtersChanged)
         self.filelist.activated.connect(self.itemActivated)
@@ -245,7 +256,6 @@ class MultifileMethodWidget(MethodWidget):
         # rebuild the model
         self.buildModel()
 
-
     def patChanged(self):
         self.method.filterpat = self.filterpat.text()
         self.onInputChanged()
@@ -308,7 +318,7 @@ class MultifileMethodWidget(MethodWidget):
         item = self.model.itemFromIndex(idx)
         path = os.path.join(self.method.dir, item.text())
         self.method.compileRegex()
-        img = ImageCube.load(path, self.method.mapping, None)  # RGB image
+        img = ImageCube.load(path, self.method.mapping, None)  # RGB image, null sources
         img.img *= self.method.mult
         self.activatedImagePath = path
         self.activatedImage = img
@@ -316,10 +326,10 @@ class MultifileMethodWidget(MethodWidget):
 
     def displayActivatedImage(self):
         if self.activatedImage:
-            source = {FileChannelSource(self.activatedImagePath,
-                                        self.method.getFilterName(self.activatedImagePath),
-                                        self.method.camera == 'AUPE')}
-            self.activatedImage.sources = [source, source, source]
+            # we're creating a temporary greyscale image here. We could use an InputSource
+            # as usual, but that won't work because it assumes the input is already set up.
+            # There's really not much point in using a source at all, though, so we'll just
+            # use null sources here - and those will already be loaded by .load().
             self.canvas.display(self.activatedImage)
 
     def checkedChanged(self):
