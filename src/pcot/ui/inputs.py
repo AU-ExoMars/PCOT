@@ -109,7 +109,7 @@ class InputWindow(QtWidgets.QMainWindow):
 
 # Widgets for viewing/controlling the Methods (i.e. input types within the Input)
 
-class MethodWidget(QtWidgets.QWidget):#
+class MethodWidget(QtWidgets.QWidget):
     """Superclass for the method widgets. Each method widget contains all the controls for an input method (and gets
     those controls from a UI file). See any of the subclasses for details."""
     method: 'InputMethod'

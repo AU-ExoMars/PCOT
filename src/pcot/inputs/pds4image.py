@@ -1,10 +1,15 @@
+import os
 from typing import Optional
 
+from PyQt5 import uic, QtWidgets
+from PyQt5.QtWidgets import QDialog
+
+import pcot
 import pcot.ui as ui
 from pcot.inputs.inputmethod import InputMethod
 from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
-from pcot.ui.inputs import TreeMethodWidget
+from pcot.ui.inputs import MethodWidget
 
 
 class PDS4ImageInputMethod(InputMethod):
@@ -59,17 +64,37 @@ class PDS4ImageInputMethod(InputMethod):
         return f"ENVI:{self.fname}"
 
 
-class PDS4ImageMethodWidget(TreeMethodWidget):
+class PDS4ImageMethodWidget(MethodWidget):
     def __init__(self, m):
-        super().__init__(m, 'tabpdsfile.ui', ["*.hdr"])
+        super().__init__(m)
+        uic.loadUi(pcot.config.getAssetAsFile('inputpdsfile.ui'), self)
+
+        d = pcot.config.getDefaultDir('images')
+        self.dir = None
+        if d is not None and d != '':
+            self.selectDir(d)
+        else:
+            self.selectDir('.')
+
+        self.browse.clicked.connect(self.onBrowse)
 
         # add some test data to the linear widget
         timeline = self.timeline
         for i in range(10):
-            timeline.add(i,f"wibble{i}")
+            timeline.add(i, f"wibble{i}")
         timeline.rescale()
         timeline.rebuild()
 
+    def selectDir(self, d):
+        self.dir = d
+        self.fileEdit.setText(d)
+        # and find the files...
+
+    def onBrowse(self):
+        res = QtWidgets.QFileDialog.getExistingDirectory(None, 'Directory for products',
+                                                         os.path.expanduser(self.dir))
+        if res != '':
+            self.selectDir(res)
 
     def onInputChanged(self):
         # ensure image is also using my mapping.
