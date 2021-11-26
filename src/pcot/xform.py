@@ -105,6 +105,7 @@ class xformtype:
 
         md5 = hashlib.md5(src).hexdigest()  # add the checksum
         _xformctors.append((self, cls, args, kwargs, md5))
+        print("Appending instance for "+str(cls))
 
     def __call__(self):
         return self._instance
