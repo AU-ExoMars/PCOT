@@ -1,5 +1,6 @@
 import traceback
 
+from pcot import ui
 from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.expressions import ExpressionEvaluator
@@ -93,6 +94,7 @@ class XFormExpr(XFormType):
         except Exception as e:
             traceback.print_exc()
             node.result = str(e)
+            ui.error(f"Error in expression: {str(e)}")
             raise XFormException('EXPR', str(e))
 
 

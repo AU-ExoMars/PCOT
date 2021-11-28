@@ -67,7 +67,7 @@ class Datum(SourcesObtainable):
         if sources is None:
             if not self.isImage():
                 raise XFormException("CODE", "Datum objects which are not images must have an explicit source set")
-            else:
+            elif self.val is not None:
                 sources = self.val.sources
         self.sources = sources
 
