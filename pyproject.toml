@@ -1,7 +1,23 @@
-[build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
-]
-build-backend = "setuptools.build_meta"
+[tool.poetry]
+name = "pcot"
+version = "0.1.0"
+description = "PanCam Operations Toolkit"
+authors = ["Jim Finnis <jcf12@aber.ac.uk>"]
 
+[tool.poetry.dependencies]
+python = "=3.8"
+PyQt5 = "^5.15.6"
+opencv-python-headless = "4.5.3.56"
+scikit-image = "^0.18.3"
+numpy = "^1.21.4"
+matplotlib = "^3.5.0"
+pyperclip = "^1.8.2"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+pcot = 'pcot.main:main'

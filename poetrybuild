@@ -1,0 +1,11 @@
+conda create -n pcot python=3.8 poetry
+
+Then run poetry install.
+
+Others will check out poetry.lock so we all get the same
+versions.
+
+Separately, I'm installing pyinstaller with pip3.
+
+Then go into the pyInstaller dir and run
+pyinstaller file.spec
