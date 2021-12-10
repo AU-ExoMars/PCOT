@@ -17,25 +17,35 @@ class XFormExpr(XFormType):
     The four inputs are assigned to the variables a, b, c, and d. They are typically (but not necessarily) images
     or scalar values.
 
-    Operators:
-    *, -, /, +,^  operate on scalars, images and ROIs (see below for ROIs)
-    -A            element-wise -A
-    A.B           property B of entity A (e.g. a.h is height of image a)
-    A$546         extract single channel image of wavelength 546
-    A&B           element-wise minimum of A and B (Zadeh's AND operator)
-    A|B           element-wise maximum of A and B (Zadeh's OR operator)
-    !A            element-wise 1-A (Zadeh's NOT operator)
+    ### Image/numeric operators:
+    |operator    |description|
+    |-------|-----------|
+    |*, -, /, +,^  |operate on scalars, images and ROIs (see below for ROIs)|
+    |-A            |element-wise -A|
+    |A.B           |property B of entity A (e.g. a.h is height of image a)|
+    |A$546         |extract single channel image of wavelength 546|
+    |A&B           |element-wise minimum of A and B (Zadeh's AND operator)|
+    |A\|B          |element-wise maximum of A and B (Zadeh's OR operator)|
+    |!A            |element-wise 1-A (Zadeh's NOT operator)|
 
-    ROI operators:
-    a+b           union
-    a*b           intersection
-    a-b           difference
-    Source ROIs from the "roi" output of ROI nodes. Impose resulting ROIs on images with "importroi" node.
+
+    ### ROI operators:
+    |operator    |description|
+    |----------|--------------|
+    |a+b |          union|
+    |a*b  |         intersection|
+    |a-b |          difference|
+
+    You can source ROIs from the "roi" output of ROI nodes, and impose resulting ROIs on images with "importroi" node.
+
+    ### Properties
 
     Properties are indicated by the "." operator, e.g. "a.w":
-    h             height of an image
-    w             width of an image
-    n             pixel count of an image
+    |Property |  description|
+    |------|-----------|
+    |h  |           height of an image|
+    |w   |          width of an image|
+    |n    |         pixel count of an image|
 
     A list of functions can be obtained by right-clicking on either the log pane or function entry pane
     and selecting "List all functions." Help on an individual function can be found by hovering over

@@ -105,7 +105,7 @@ class xformtype:
 
         md5 = hashlib.md5(src).hexdigest()  # add the checksum
         _xformctors.append((self, cls, args, kwargs, md5))
-        print("Appending instance for "+str(cls))
+        print("Appending instance for " + str(cls))
 
     def __call__(self):
         return self._instance
@@ -1292,9 +1292,9 @@ class XFormROIType(XFormType):
         imagecube, and node.roi is the ROI"""
         pass
 
-#    def uichange(self, n):
-#        n.timesPerformed += 1
-#        self.perform(n)
+    #    def uichange(self, n):
+    #        n.timesPerformed += 1
+    #        self.perform(n)
 
     def perform(self, node):
         img = node.getInput(self.IN_IMG, Datum.IMG)
