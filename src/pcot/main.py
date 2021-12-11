@@ -61,8 +61,6 @@ def main():
 
     pcot.xform.createXFormTypeInstances()
 
-    pcot.ui.help.generateHelpFiles()
-
     # create a document either ab initio or from a file, depending on args and config.
     if len(args) > 0:
         doc = Document(args[0])

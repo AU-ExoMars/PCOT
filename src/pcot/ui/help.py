@@ -101,10 +101,5 @@ def markdownHelpAllXForms():
 
     return s
 
-def generateHelpFiles():
-    # this is currently fixed to a test directory.
-    with open("/home/white/testpcotdocs/docs/docs.md","w") as f:
-        f.write(markdownHelpAllXForms())
-
 
 
