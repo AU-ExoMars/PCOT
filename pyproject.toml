@@ -26,6 +26,7 @@ numpy = "^1.21.4"
 matplotlib = "^3.5.0"
 pyperclip = "^1.8.2"
 pds4-tools = "^1.2"
+markdown = "^3.3.6"
 
 
 # Future:

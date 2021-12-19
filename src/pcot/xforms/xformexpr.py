@@ -41,6 +41,7 @@ class XFormExpr(XFormType):
     ### Properties
 
     Properties are indicated by the "." operator, e.g. "a.w":
+    
     |Property |  description|
     |------|-----------|
     |h  |           height of an image|

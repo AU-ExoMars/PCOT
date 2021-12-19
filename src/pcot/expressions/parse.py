@@ -1,8 +1,7 @@
 """This is the expression parser and VM, which uses a shunting-yard algorithm to
 produce a sequence of instructions for a stack machine. While largely application
 independent, it does use PCOT's Datum type as a variant record, and conntypes to
-handle type checking. Additionally, PCOT's html and table modules are used for
-generating help texts.
+handle type checking. Help texts are also generated.
 """
 
 import numbers
@@ -14,7 +13,6 @@ from typing import List, Any, Optional, Callable, Dict, Tuple, Union
 from pcot import datum
 from pcot.datum import Datum
 from pcot.sources import nullSourceSet
-from pcot.utils.html import HTML, Bold
 from pcot.utils.table import Table
 
 Stack = List[Any]
@@ -92,28 +90,16 @@ class Parameter:
         return r
 
 
-def styleTableCells(x):
-    """Generate appropriate XML attributes for making table cells look better (yes, should be a stylesheet)"""
-    if x.tag in ('th', 'tr'):
-        x.attrs = {"align": "left"}
-    elif x.tag == "table":
-        x.attrs = {"border": "1", "cellpadding": 5}
-
-
 class Variable:
     """defines a variable, which is a wrapper around a parameterless function and a description"""
-    def __init__(self, name: str, fn: Callable[[],Any], desc: str):
+    def __init__(self, name: str, fn: Callable[[], Any], desc: str):
         self.desc = desc
         self.fn = fn
         self.name = name
 
     def help(self):
-        """Slightly overkill to return the help string of a var"""
-        return HTML("div",
-                    [
-                      HTML("p", self.desc)
-                    ]
-                    ).visit(styleTableCells).string()
+        """return help markdown"""
+        return self.desc
 
 
 class Function:
@@ -132,32 +118,28 @@ class Function:
             raise ArgsException("cannot have a function with varargs and optional arguments")
 
     def help(self):
-        """generate help text using the Table class, returning an HTML object."""
-        t = Table()
-        for x in self.mandatoryParams:
-            t.newRow()
-            t.add("name", x.name)
-            t.add("types", x.validArgsString() + ("" if not self.varargs else "..."))
-            t.add("description", x.desc)
-        margs = t.htmlObj()
-        t = Table()
-        for x in self.optParams:
-            t.newRow()
-            t.add("name", x.name)
-            t.add("types", x.validArgsString())
-            t.add("description", x.desc)
-            t.add("default", x.deflt)
-        oargs = t.htmlObj()
+        """generate help text using the Table class, returning Markdown."""
+        s = f"{self.desc}"
 
-        return HTML("div",
-                    [
-                        HTML("p", self.desc),
-                        HTML("p", Bold("Mandatory arguments")),
-                        margs,
-                        HTML("p", Bold("Optional arguments")),
-                        oargs
-                    ]
-                    ).visit(styleTableCells).string()
+        if len(self.mandatoryParams)>0:
+            t = Table()
+            for x in self.mandatoryParams:
+                t.newRow()
+                t.add("name", x.name)
+                t.add("types", x.validArgsString() + ("" if not self.varargs else "..."))
+                t.add("description", x.desc)
+            margs = t.markdown()
+            s += f"\n\n  ## Mandatory arguments\n{margs}"
+        t = Table()
+        if len(self.optParams)>0:
+            for x in self.optParams:
+                t.newRow()
+                t.add("name", x.name)
+                t.add("types", x.validArgsString())
+                t.add("description", x.desc)
+                t.add("default", x.deflt)
+            oargs = t.markdown()
+            s += f"\n\n  ## Optional arguments\n{oargs}"
 
     def chkargs(self, args: List[Optional[Datum]]):
         """Process arguments, returning a pair of lists of Datum items: mandatory and optional args.
@@ -458,7 +440,7 @@ class Parser:
             raise ParseException('unknown property "{}" for given type in "." operator'.format(propName))
 
     def listProps(self, nameToFind:Optional[str]=None):
-        """Generate help on properties as HTML, or get help on a single property"""
+        """Generate help on properties as Markdown, or get help on a single property"""
         t = Table()
         for k, v in self.properties.items():
             name, tp = k
@@ -469,8 +451,8 @@ class Parser:
                 t.add("type of x", tp.name)
                 t.add("desc", desc)
         if len(t) == 0:
-            return None # no match found!
-        return t.htmlObj().visit(styleTableCells).string()
+            return None  # no match found!
+        return t.markdown()
 
     def helpOnWord(self, name: str):
         """Generate help on a word, which can be a property or a function."""
@@ -498,7 +480,7 @@ class Parser:
             t.add("params", ps)
             t.add("opt. params", ",".join([p.name for p in f.optParams]))
             t.add("description", f.desc)
-        return t.htmlObj().visit(styleTableCells).string()
+        return t.markdown()
 
     def out(self, inst: Instruction):
         """Internal method to output an instruction (part of shunting yard)"""

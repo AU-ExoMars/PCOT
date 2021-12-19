@@ -9,13 +9,13 @@ class TableIter:
 
     def __init__(self, table):
         self.table = table
-        self.iter = table._rows.__iter__()
+        self.iter = table.rows.__iter__()
 
     def __iter__(self):
         return self
 
     def __next__(self):  # note -this iterates over VALUES, not keys.
-        row = self.table._rows[self.iter.__next__()]
+        row = self.table.rows[self.iter.__next__()]
         qq = [row[k] if k in row else self.table.NA for k in self.table.keys()]
         return qq
 
@@ -30,8 +30,8 @@ class Table:
     """
 
     def __init__(self):
+        self.rows = OrderedDict()
         self._keys = []
-        self._rows = OrderedDict()
         self._currow = None
         self._internalLabelCt = 0  # used for when we don't give a label to newRow
         self.NA = 'NA'
@@ -45,17 +45,17 @@ class Table:
             while True:
                 label = "internallab"+str(self._internalLabelCt)
                 self._internalLabelCt += 1
-                if label not in self._rows:
+                if label not in self.rows:
                     break
 
-        if label in self._rows:
-            self._currow = self._rows[label]
+        if label in self.rows:
+            self._currow = self.rows[label]
         else:
             self._currow = dict()
-            self._rows[label] = self._currow
+            self.rows[label] = self._currow
 
     def __len__(self):
-        return len(self._rows)
+        return len(self.rows)
 
     def add(self, k, v):
         if k not in self._keys:
@@ -74,7 +74,7 @@ class Table:
         w = csv.writer(s)
         w.writerow(self._keys)  # headers
         for r in self:
-            r = [round(v, self.sigfigs) if isinstance(v, float) else v for v in r]
+            r = [round(v, self.sigfigs) if isinstance(v, float) else str(v).strip() for v in r]
             w.writerow(r)  # each row
         return s.getvalue()
 
@@ -85,10 +85,19 @@ class Table:
         # now the rows
         rows = []
         for r in self:
-            r = [round(v, self.sigfigs) if isinstance(v, float) else v for v in r]
+            r = [round(v, self.sigfigs) if isinstance(v, float) else str(v).strip() for v in r]
             rows.append(HTML("tr", [HTML("td", x) for x in r]))
         return HTML("table", headerRow, rows)
 
     def html(self):
         """convert to html string"""
         return self.htmlObj().run()
+
+    def markdown(self):
+        """convert to Markdown"""
+        out = "|" + ("|".join(self._keys)) + "|\n"
+        out += "|" + ("|".join(["-----" for _ in self._keys])) + "|\n"
+        for r in self:
+            r = [round(v, self.sigfigs) if isinstance(v, float) else str(v).strip() for v in r]
+            out += "|" + ("|".join(x for x in r)) + "|\n"
+        return out

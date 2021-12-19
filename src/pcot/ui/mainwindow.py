@@ -11,7 +11,7 @@ from zipfile import BadZipFile
 from PyQt5 import QtWidgets, uic, QtGui
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFontDatabase, QFont
-from PyQt5.QtWidgets import QAction, QMessageBox
+from PyQt5.QtWidgets import QAction, QMessageBox, QAbstractScrollArea
 
 import pcot
 from pcot.ui import graphscene, graphview
@@ -41,10 +41,12 @@ class HelpWindow(QtWidgets.QDialog):
         layout = QtWidgets.QVBoxLayout(self)
         txt = ui.help.getHelpHTML(node.type, node.error)
         self.setWindowTitle("Help for '{}'".format(node.type.name))
-        wid = QtWidgets.QLabel()
+        wid = QtWidgets.QTextEdit()
         font = QFont("Consolas")
         font.setPixelSize(15)
         wid.setFont(font)
+        wid.setMinimumSize(800, 500)
+        wid.document().setDefaultStyleSheet(pcot.ui.textedit.styleSheet)
         #  wid.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
         wid.setText(txt)
         layout.addWidget(wid)
@@ -325,8 +327,9 @@ class MainUI(ui.tabs.DockableTabWindow):
         try:
             import pcot.document
             d = pcot.document.Document(fname)
-            MainUI.windows.remove(self)  # remove the existing entry for this window, we'll add it again in the next line
-            self._init(doc=d, doAutoLayout=False)   # rerun window construction
+            MainUI.windows.remove(
+                self)  # remove the existing entry for this window, we'll add it again in the next line
+            self._init(doc=d, doAutoLayout=False)  # rerun window construction
             self.graph.changed()  # and rerun everything
             ui.msg("File loaded")
             self.saveFileName = fname
@@ -351,7 +354,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
             self.save(path)
             self.saveFileName = path
-            ui.log("Document written to "+path)
+            ui.log("Document written to " + path)
             pcot.config.setDefaultDir('pcotfiles', os.path.dirname(os.path.realpath(res[0])))
 
     ## the "save" menu handler
@@ -469,8 +472,9 @@ class MainUI(ui.tabs.DockableTabWindow):
         # I'll set autorun on all graphs
         MainUI.updateAutorun()
         # but only rerun this one (turned off because some nodes are REALLY SLOW)
-#        if xform.XFormGraph.autoRun:
-#            self.runAll()
+
+    #        if xform.XFormGraph.autoRun:
+    #            self.runAll()
 
     ## update autorun checkbox states from class variable
     @staticmethod
@@ -564,7 +568,7 @@ class MainUI(ui.tabs.DockableTabWindow):
             from psutil import Process
             process = Process(os.getpid())
             m = process.memory_info().rss
-            self.undoStatus.setText("Undo {}, redo {}, {}M".format(u, r, m//(1024*1024)))
+            self.undoStatus.setText("Undo {}, redo {}, {}M".format(u, r, m // (1024 * 1024)))
         except ImportError:
             self.undoStatus.setText("Undo {}, redo {}".format(u, r))
         gc.collect()
@@ -573,4 +577,3 @@ class MainUI(ui.tabs.DockableTabWindow):
         #     from ..xform import XForm
         #     if isinstance(x, XForm):
         #         print(str(x))
-

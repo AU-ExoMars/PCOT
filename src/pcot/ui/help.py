@@ -1,105 +1,71 @@
-"""Generating help text"""
-from pcot import xform
+"""Generating help text from docstrings and connection data in XForms. Help stuff for expr nodes functions is
+handled elsewhere. This is used to both generate in-app HTML and Markdown for other help data. We generate
+Markdown, and then use the Markdown library to convert to HTML.
+"""
+
+from pcot.utils.table import Table
 from pcot.xform import XFormException
 
-TABLEHEADERATTRS = 'width="100" align="left"'
-TABLEROWATTRS = 'width="100" align="left"'
+import markdown
+
+MDinstance = markdown.Markdown(extensions=['tables'])
 
 
-def HTMLtablerow(lst, tag, attrs=""):
-    """helper for HTML table rows - takes a list of strings and generates a table row."""
-    s = '<tr>' + ''.join(['<{}>{}</{}>'.format(tag + ' ' + attrs, x, tag) for x in lst]) + '</tr>'
-    #    print(s)
+def markdownWrapper(s):
+    """This will not be thread-safe if we are only using a single markdown instance."""
+    MDinstance.reset()
+    out = MDinstance.convert(s)
+    return out
+
+
+def getHelpMarkdown(xt, errorState: XFormException):
+    """generate Markdown help for both converting into in-app HTML display and
+     generating external help files, given an XFormType and any error message"""
+
+
+    if xt.__doc__ is None:
+        h = '**No help text is available**'
+    else:
+        h = xt.__doc__  # help doc comes from docstring
+
+    # docstrings have whitespace at starts of lines.
+    h = "\n".join([x.strip() for x in h.split('\n')])
+
+    h = markdownWrapper(h)
+    s = f"# {xt.name}\n\n{h}\n\n*****\n\n## Connections\n\n"
+
+    # add connection data
+
+
+    if len(xt.inputConnectors) > 0:
+        s += '\n### Inputs\n'
+        t = Table()
+        t.newRow()
+        for i in range(0, len(xt.inputConnectors)):
+            n, tp, desc = xt.inputConnectors[i]
+            t.add('Index', i)
+            t.add('Name', "(none)" if n == "" else n)
+            t.add('Type', tp.name)
+            t.add('Desc', "(none)" if desc == "" else desc)
+        s += t.markdown() + '\n\n'
+
+    if len(xt.outputConnectors) > 0:
+        s += '\n### Outputs\n'
+        t = Table()
+        t.newRow()
+        for i in range(0, len(xt.outputConnectors)):
+            n, tp, desc = xt.outputConnectors[i]
+            t.add('Index', i)
+            t.add('Name', "(none)" if n == "" else n)
+            t.add('Type', tp.name)
+            t.add('Desc', "(none)" if desc == "" else desc)
+        s += t.markdown() + '\n\n'
+
+    if errorState is not None:
+        s += f"# ERROR: [{errorState.code}] {errorState.message}"
     return s
 
 
 def getHelpHTML(xt, errorState: XFormException):
-    """generate full help for in-app HTML display given an XFormType and any error message"""
-
-    if xt.__doc__ is None:
-        s = '<font color="red">No help text is available</font>'
-    else:
-        s = xt.__doc__.replace('\n', '<br>')  # basic help
-
-    s = s.replace(" ", "&nbsp;")  # need this so spacing works!
-
-    # add connection data
-    if len(xt.inputConnectors) > 0:
-        s += '<br><br><font color="blue">Inputs</font><br>'
-        s += '<table>'
-        s += HTMLtablerow(['Index', 'Name', 'Type', 'Description'], 'th', attrs=TABLEHEADERATTRS)
-        for i in range(0, len(xt.inputConnectors)):
-            n, t, desc = xt.inputConnectors[i]
-            s += HTMLtablerow([i, n, t, desc], 'td', attrs=TABLEROWATTRS)
-        s += '</table><br>'
-
-    if len(xt.outputConnectors) > 0:
-        s += '<br><br><font color="blue">Outputs</font><br>'
-        s += '<table>'
-        s += HTMLtablerow(['Index', 'Name', 'Type', 'Description'], 'th', attrs=TABLEHEADERATTRS)
-        for i in range(0, len(xt.outputConnectors)):
-            n, t, desc = xt.outputConnectors[i]
-            if n == "":
-                n = "(none)"
-            if desc == "":
-                desc = "(none)"
-            s += HTMLtablerow([i, n, t, desc], 'td', attrs=TABLEROWATTRS)
-        s += '</table><br>'
-
-    if errorState is not None:
-        s += '<br><font color="red">ERROR:<br>' + errorState.code + '<br>' + errorState.message + '</font>'
-    return s
-
-
-def getHelpMarkdown(xt):
-    """generate Markdown help given an XFormType"""
-
-    if xt.__doc__ is None:
-        s = 'No help text is available\n'
-    else:
-        s = xt.__doc__ + '\n'
-
-    # trim tabs
-    s = "\n".join([x.strip() for x in s.split('\n')])+"\n\n"
-
-    # add connection data
-    if len(xt.inputConnectors) > 0:
-        s += '##Inputs\n'
-        s += MDtablerow(['Index', 'Name', 'Type', 'Description'], True)
-        for i in range(0, len(xt.inputConnectors)):
-            n, t, desc = xt.inputConnectors[i]
-            s += MDtablerow([i, n, t, desc])
-        s += '\n\n'
-
-    if len(xt.outputConnectors) > 0:
-        s += '##Outputs\n'
-        s += MDtablerow(['Index', 'Name', 'Type', 'Description'], True)
-        for i in range(0, len(xt.outputConnectors)):
-            n, t, desc = xt.outputConnectors[i]
-            if n == "":
-                n = "(none)"
-            if desc == "":
-                desc = "(none)"
-            s += MDtablerow([i, n, t, desc])
-        s += '\n\n'
-
-    return s
-
-def MDtablerow(lst, isHeader=False):
-    s = "|" + ("|".join([str(x) for x in lst])) + "|\n"
-    if isHeader:
-        s += "|" + ("|".join(['-----' for _ in lst])) + "|\n"
-    return s
-
-
-
-def markdownHelpAllXForms():
-    s = ""
-    for name, x in xform.allTypes.items():
-        s += f"# {name}\n\n"
-        s += getHelpMarkdown(x) + "\n\n"
-
-    return s
-
-
-
+    s = getHelpMarkdown(xt, errorState)
+    return markdownWrapper(s)
