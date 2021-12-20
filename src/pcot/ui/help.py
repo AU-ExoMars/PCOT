@@ -8,7 +8,10 @@ from pcot.xform import XFormException
 
 import markdown
 
-MDinstance = markdown.Markdown(extensions=['tables'])
+# have to give the FULL package name for each extension so that PyInstaller can work. They also
+# need to be added to the hidden imports.
+
+MDinstance = markdown.Markdown(extensions=['markdown.extensions.tables'])
 
 
 def markdownWrapper(s):

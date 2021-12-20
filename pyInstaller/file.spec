@@ -45,7 +45,9 @@ a = Analysis(['../src/pcot/__main__.py'],
                 'pcot.ui.gradient',
                 'pcot.ui.namedialog',
                 'pcot.ui.canvas',
-                
+
+                 'markdown.extensions.tables',
+
                 'scipy.spatial.transform._rotation_groups',
                 'scipy.special.cython_special'
              ]+xformsfull,

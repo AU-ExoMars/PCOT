@@ -1,3 +1,9 @@
+To build:
+	pyinstaller dir.spec
+or
+	pyinstaller file.spec
+
+
 Well, this *nearly* works but for two things:
 
 0) had to edit the hook for matplotlib
