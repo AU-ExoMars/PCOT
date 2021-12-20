@@ -18,10 +18,10 @@ def markdownWrapper(s):
     return out
 
 
-def getHelpMarkdown(xt, errorState: XFormException):
+def getHelpMarkdown(xt, errorState: XFormException = None, inApp=False):
     """generate Markdown help for both converting into in-app HTML display and
-     generating external help files, given an XFormType and any error message"""
-
+     generating external help files, given an XFormType and any error message. If inApp is true,
+     the formatting may be slightly different."""
 
     if xt.__doc__ is None:
         h = '**No help text is available**'
@@ -32,10 +32,9 @@ def getHelpMarkdown(xt, errorState: XFormException):
     h = "\n".join([x.strip() for x in h.split('\n')])
 
     h = markdownWrapper(h)
-    s = f"# {xt.name}\n\n{h}\n\n*****\n\n## Connections\n\n"
+    s = f"# {xt.name}\n\n## Description\n\n{h}\n\n*****\n\n## Connections\n\n"
 
     # add connection data
-
 
     if len(xt.inputConnectors) > 0:
         s += '\n### Inputs\n'
@@ -66,6 +65,6 @@ def getHelpMarkdown(xt, errorState: XFormException):
     return s
 
 
-def getHelpHTML(xt, errorState: XFormException):
-    s = getHelpMarkdown(xt, errorState)
+def getHelpHTML(xt, errorState: XFormException = None):
+    s = getHelpMarkdown(xt, errorState, inApp=True)
     return markdownWrapper(s)

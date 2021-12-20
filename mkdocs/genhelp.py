@@ -14,7 +14,5 @@ with open("docs/index.md","w") as idxfile:
         idxfile.write(f"* [{realname}]({name})\n")
         print(name)
         with open(f"docs/{name}.md","w") as file:
-            file.write(f"# {realname}\n")
-            file.write("## Description\n")
             file.write(pcot.ui.help.getHelpMarkdown(x))
             
