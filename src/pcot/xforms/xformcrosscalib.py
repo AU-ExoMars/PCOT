@@ -6,8 +6,6 @@ from PyQt5.QtWidgets import QMessageBox
 
 from pcot.datum import Datum
 import pcot.ui.tabs
-from pcot.channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, \
-    BLUEINTERNALSOURCE
 from pcot.imagecube import ImageCube
 from pcot.rois import ROICircle
 from pcot.utils import text
@@ -133,8 +131,7 @@ class XFormCrossCalib(XFormType):
                     drawpoints(canvimg, node.dest, issel, (0, 1, 1))
 
                 # grey, but 3 channels so I can draw on it!
-                node.canvimg = ImageCube(canvimg, node.mapping,
-                                         [{REDINTERNALSOURCE}, {GREENINTERNALSOURCE}, {BLUEINTERNALSOURCE}])
+                node.canvimg = ImageCube(canvimg, node.mapping, sources=None)
             else:
                 node.canvimg = None
 

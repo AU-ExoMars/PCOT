@@ -4,7 +4,6 @@ from pcot.datum import Datum
 import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
-from pcot.channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, BLUEINTERNALSOURCE
 from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.xform import xformtype, XFormType
 
@@ -89,11 +88,7 @@ class XformInset(XFormType):
                                  node.fontline, node.colour)
 
         # this just builds an rgb image with an inset, using fake sources
-        node.img = None if out is None else ImageCube(out,
-                                                      node.mapping,
-                                                      [{REDINTERNALSOURCE},
-                                                       {GREENINTERNALSOURCE},
-                                                       {BLUEINTERNALSOURCE}])
+        node.img = None if out is None else ImageCube(out, node.mapping, sources=None)
         node.setOutput(0, Datum(Datum.IMG, node.img))
 
 
