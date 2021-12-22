@@ -1,0 +1,78 @@
+% Created by Jim Finnis
+% Date Wed Dec 22 10:28:57 2021
+
+
+\clearpage
+\section{Installation}
+\label{inst:conda}
+The following instructions are intended for developers or users who
+wish to use PCOT as a library, or to develop their own plugins (typically
+XForm node types or \emph{expr} node functions).
+Other users receive a single-file executable constructed by PyInstaller
+using the instructions below. This does not require installation --- just
+running the file will run PCOT. Different executables are required for
+each platform.
+
+Firstly, you will need to install Anaconda (\url{https://docs.anaconda.com/anaconda/install/index.html}). You may already have it
+installed. Then you'll need to open an command line into which you can enter Anaconda commands --- this is platform dependent; on
+Linux it's just a normal shell (and I think this is also true on MacOS), while on Windows it will be a program in the Anaconda package.
+The following commands will 
+create a new Anaconda environment called \texttt{pcot} and install the required packages into it:
+\vspace{1em}
+\begin{paracol}{2}
+\parblock{conda create -n pcot python=3.8 poetry}{Create a minimal conda environment containing just a known version of Python and the Poetry
+dependency management system.}
+\parblock{conda activate pcot}{Activate the environment.}
+\parblock{poetry install}{Use Poetry to install all required packages as listed in the \texttt{pyproject.toml} and \texttt{poetry.lock}
+files.}
+\end{paracol}
+\vspace{1em}
+\noindent Now you should be able to run PCOT using the \texttt{pcot} command.
+
+
+\subsection{Running PCOT inside PyCharm for development}
+If you wish to run PCOT from inside IntelliJ's PyCharm IDE, follow these instructions after building an Anaconda environment as shown
+above. First, tell PyCharm about the environment:
+\begin{itemize}
+\item Open PyCharm and open the PCOT directory as an existing project.
+\item Open \textbf{Settings..} (Ctrl+Alt+S)
+\item Select \textbf{Project:PCOT / Python Interpreter}
+\item Select the cogwheel to the right of the Python Interpreter dropdown and then select \textbf{Add}.
+\item Select \textbf{Conda Environment}.
+\item Select \textbf{Existing Environment}.
+\item Select the environment: it should be something like \texttt{anaconda3/envs/pcot/bin/python}.
+\item Select \textbf{OK}.
+\end{itemize}
+Now set up the run configuration:
+\begin{itemize}
+\item Select \textbf{Edit Configurations} from the configurations drop down in the menu bar
+\item Add a new configuration (the + symbol)
+\item Set \textbf{Script Path} to \texttt{PCOT/src/pcot/main.py}
+\item Make sure the interpreter is something like \texttt{Project Default (Python 3.8 (pcot))},
+i.e. the Python interpreter of the pcot environment.
+\end{itemize}
+You should now be able to run and debug PCOT from inside PyCharm.
+
+\subsection{Building a single file executable}
+These brief instructions are for core PCOT developers only. They deal with creating single file executables for redistribution to users.
+
+The following commands from inside an Anaconda shell should create a single file executable, assuming you have successfully created
+a PCOT Anaconda install as given in Sec.~\ref{inst:conda} above.
+\vspace{1em}
+\begin{paracol}{2}
+\parblock{conda activate pcot}{Ensure the PCOT environment is active.}
+\parblock{pip3 install pyinstaller}{Install PyInstaller into the environment (we don't do this by default because not every user requires
+it).}
+\parblock{cd pyInstaller}{Go into the PyInstaller directory inside the main PCOT directory --- this contains the necessary specification
+files.}
+\parblock{pyinstaller file.spec}{Run PyInstaller: this will build a single, very large file called \texttt{dist/pcot}. It will
+take a very long time.}
+\end{paracol}
+This process is prone to fail: small changes in PCOT's structure can make it difficult for PyInstaller to work. One particular problem
+is ``hidden imports'' -- packages imported through non-standard means. For example, XForms cannot be
+automatically detected when inside a single executable, so under a PyInstaller build they must
+be explicitly listed in a file called \texttt{xformlist.txt} inside the main PCOT
+package. Luckily, the PyInstaller specification file is just a Python program, and can automatically create this file. Read \texttt{file.spec} for the gory details.
+Also, any non-standard widgets used in UI files need to be added to hidden imports, and any data files need to be added to a list of
+such files.
+
