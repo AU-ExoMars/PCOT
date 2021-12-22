@@ -6,6 +6,7 @@ from PyQt5.QtGui import QKeyEvent
 
 from pcot.datum import Datum
 from pcot.imagecube import ImageCube
+from pcot.sources import MultiBandSource
 from pcot.ui.tabs import Tab
 from pcot.xform import XFormType, xformtype, XFormException
 
@@ -87,10 +88,7 @@ class XFormStitch(XFormType):
 
         # compose the sources - this is a channel-wise union of all the sources
         # in all the images.
-        sources = [set() for i in range(chans)]  # one empty set for each channel
-        for srcimg in activeInputImages:
-            for c in range(chans):
-                sources[c] = sources[c].union(srcimg.sources[c])
+        sources = MultiBandSource.createBandwiseUnion([x.sources for x in activeInputImages])
 
         # perform the composition - this time we're just stepping through the inputs, connected or not
         # as it's easier to avoid errors.
