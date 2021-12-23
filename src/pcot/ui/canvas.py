@@ -510,7 +510,7 @@ class Canvas(QtWidgets.QWidget):
             n = self.nodeToUIChange
             if n is not None:
                 n.type.uichange(n)
-                self.nodeToUIChange.updateTabs()
+                n.updateTabs()
             #            self.graph.performNodes(self.nodeToUIChange)
             self.recursing = False
 

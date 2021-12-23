@@ -27,7 +27,7 @@ class Source(SourcesObtainable):
         """Return a reasonably deep copy of the source"""
         pass
 
-    def matches(self, inp, bandNameOrCWL, single, hasBand):
+    def matches(self, inp, bandNameOrCWL, hasBand):
         """Returns true if the input index matches this source (if not None) and the band matches this source (if not none).
         None values are ignored, so passing "inp" of None will mean the input index is not checked.
         Default implementation matches nothing."""
@@ -123,7 +123,7 @@ class InputSource(Source):
         else:
             return f"{inptxt}: band {self.filterOrName}"
 
-    def matches(self, inp, filterNameOrCWL, single, hasFilter):
+    def matches(self, inp, filterNameOrCWL, hasFilter):
         """return true if the source matches ALL the non-None criteria"""
         if inp and inp != self.inputIdx:
             return False
@@ -199,7 +199,7 @@ class SourceSet(SourcesObtainable):
         """Returns true if ANY source in the set matches ALL the criteria"""
         if single and len(self.sourceSet) > 1:  # if required, ignore this set if it's not from a single source
             return False
-        return any([x.matches(inp, filterNameOrCWL, single, hasFilter) for x in self.sourceSet])
+        return any([x.matches(inp, filterNameOrCWL, hasFilter) for x in self.sourceSet])
 
     def getSources(self):
         return self
@@ -247,7 +247,8 @@ class MultiBandSource(SourcesObtainable):
         return MultiBandSource([ss.copy() for ss in self.sourceSets])
 
     def search(self, filterNameOrCWL=None, inp=None, single=False, hasFilter=None):
-        """Given some criteria, returns a list of indices of bands which match ALL those criteria in their source sets
+        """Given some criteria, returns a list of indices of bands whose source sets contain a member which matches
+            ALL those criteria:
             filtNameOrCWL : value must match the name, position or wavelength of a filter
             inp : value must match input index
             single : there must only be a single source in the set

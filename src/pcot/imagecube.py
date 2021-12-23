@@ -356,16 +356,18 @@ class ImageCube(SourcesObtainable):
         desc = " ".join(["[" + s + "]" for s in out])
         return desc
 
-    ## copy an image
-    def copy(self):
-        srcs = self.sources.copy()
-        # it's probably best that this is a copy too - but if you notice
+    def copy(self, keepMapping=False):
+        """copy an image. If keepMapping is false, the image mapping will also be a copy. If true, the mapping
+        is a reference to the same mapping as in the original image. If you notice
         # that you're changing the RGB mappings in a canvas and the image isn't changing,
-        # it might be because of this.
-        if self.mapping is not None:
-            m = self.mapping.copy()
+        # it might be because of this."""
+        if self.mapping is None or keepMapping:
+            m = self.mapping
         else:
-            m = None
+            m = self.mapping.copy()
+
+        srcs = self.sources.copy()
+
         # we should be able to copy the default mapping reference OK, it won't change.
         i = ImageCube(self.img.copy(), m, srcs, defaultMapping=self.defaultMapping)
         i.rois = self.rois.copy()
@@ -374,10 +376,12 @@ class ImageCube(SourcesObtainable):
     def hasROI(self):
         return len(self.rois) > 0
 
-    ## return a copy of the image, with the given image spliced in at the
-    # subimage's coordinates and masked according to the subimage
-    def modifyWithSub(self, subimage: SubImageCubeROI, newimg: np.ndarray, sources=None):
-        i = self.copy()
+    def modifyWithSub(self, subimage: SubImageCubeROI, newimg: np.ndarray, sources=None, keepMapping=False):
+        """return a copy of the image, with the given image spliced in at the
+        subimage's coordinates and masked according to the subimage.
+        keppMapping will ensure that the new image has the same mapping as the old."""
+
+        i = self.copy(keepMapping)
         x, y, w, h = subimage.bb
         i.img[y:y + h, x:x + w][subimage.mask] = newimg[subimage.mask]
         # can replace sources if required
