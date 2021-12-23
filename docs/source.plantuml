@@ -1,0 +1,51 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+note top of SourcesObtainable
+We can always get a 
+source set from these
+end note
+interface SourcesObtainable {
+    +getSources(): SourceSet
+}
+
+note top of Source
+Base class for sources except for MultiBandSource
+which is only used in images
+end note
+abstract class Source implements SourcesObtainable{
+}
+
+note top of InputSource
+Source for single band of an image or non-image
+value, which actually comes from an Input.
+end note
+class InputSource extends Source {
++doc: Document
++inputIdx: int
++input: Input
++filterOrName: Filter|str
+--
++getFilter() : Filter
+}
+
+note top of SourceSet
+A combination of sources which have
+produced a single-band datum
+end note
+class SourceSet implements SourcesObtainable{
+}
+
+SourceSet "1..*" *-- Source:  "sources {set}"
+
+note top of MultiBandSource
+A group of SourceSets, one
+for each band in an image
+end note
+class MultiBandSource implements SourcesObtainable{
+}
+
+MultiBandSource "1..*" *-- SourceSet: "source sets {list}"
+
+
+@enduml

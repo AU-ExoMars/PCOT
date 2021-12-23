@@ -305,13 +305,9 @@ corresponding to the active method will be visible.
 \end{itemize}
 Code for the inputs is the \texttt{pcot.inputs} package, except for the UI
 code which is in the \texttt{pcot.ui.inputs} module.
+\clearpage
 
-\subsection{Image data}
-\begin{todoblock}
-Much of the information here about Channel Sources is out of date and replaced by
-the SourcesObtainable interface. This needs fixing.
-\end{todoblock}
-
+\subsection{Image data and data sources}
 Most classes making up the image data model are declared in the
 \texttt{imagecube.py} file, including the main \texttt{ImageCube} class.
 Some additional classes describing where images can come from are in
@@ -340,45 +336,111 @@ of information. There is no upper limit on the number of channels in an image (o
 beyond system memory.
 \end{notebox}
 
-
-\subsubsection{IChannelSource and its implementations}
-Each \texttt{ImageCube} has a number of channels, and for each channel there must be a corresponding
-entry in its \texttt{sources} list. This describes where that channel came from, so that (typically) filter
-information can be preserved, where appropriate, through the graph. The sources for each channel are a set
-of \texttt{IChannelSource} objects. For example, if an image was loaded through the RGB loader, it might
-have three ``fake'' channel sources for red, green and blue. Thus the sources will be 
-\begin{v}
-[ {RED}, {GREEN}, {BLUE} ]
-\end{v}
-i.e.\ a list of three sets, each with a single source.
-If the image is then converted to greyscale, this could
-become
-\begin{v}
-[ {RED,GREEN,BLUE}, {RED,GREEN,BLUE}, {RED,GREEN,BLUE} ]
-\end{v}
-because each channel now contains information from the red, green and blue channels in the source file.
-The \texttt{RED}, \texttt{GREEN} and \texttt{BLUE} values refer in this case to \texttt{FileChannelSourceNoFilter} objects
-which contain ``fake'' filter information and a filename identifier.
-Each \texttt{IChannelSource} contains methods for accessing:
+\subsubsection{Data sources}
+Each piece of data in PCOT passing through a node or used as part of an
+\emph{expr} node's expression has metadata describing where it came from.
+This is ultimately always a PCOT input (i.e.\ from an \emph{input} node);
+data from user input or elsewhere is disregarded. This is handled by the following
+entities:
 \begin{itemize}
-\item an \textbf{identifier string} for the source from which the channel was acquired (typically a filename or data ID);
-\item a \textbf{filter} and methods for obtaining the filter name, filter position and an actual filter reference (for extra data such as centre wavelength) (note
-that much of this information will be ``fake'' for images loaded from plain RGB files);
-\item methods for getting string descriptors for this source.
+\item \textbf{SourcesObtainable} is the root interface of the system, consisting of
+all classes which have the \texttt{getSources()} method which can return a set of sources.
+\item \textbf{SourceSet} is a set of \texttt{Source} objects, indicating which
+sources are contributing to a given piece of data. For example, some operation
+may have combined several bands into one using a mathematical operation ---
+the output band's SourceSet will consist of the all the contributing Sources.
+It is not a \texttt{Source} itself, but it is a \texttt{SourcesObtainable} and
+so a SourceSet which is the union of all its constituent SourceSets can be
+obtained.
+\item \textbf{Source} is the base class of all concrete source types, currently consisting
+of just \texttt{InputSource} and the dummy \texttt{\_NullSource} ``placeholder'' class for
+sources which can be filtered out. 
+\item \textbf{InputSource} represents a PCOT input source of data. It holds references to
+the Input, Document and may also hold information about which PanCam Filter (or other device)
+the information comes from.
+\item \textbf{MultiBandSource} is a collection of SourceSets, one for each band in a multiband
+image. It is not a \texttt{Source} itself, but it is a \texttt{SourcesObtainable} and so
+a SourceSet which is the union of all its constituent SourceSets can be obtained.
 \end{itemize}
+These classes are shown as a UML diagram in Fig.~\ref{source.pdf}.
+\begin{figure}[ht]
+\center
+\includegraphics[width=5in]{source.pdf}
+\caption{Source management classes}
+\label{source.pdf}
+\end{figure}
 
-Nodes generate and process this information in different ways. For example, a
-\emph{gradient} node takes a single channel and converts it into an RGB image
-with a colour gradient: here, the output image's sources are ``internal RGB''
-sources with no identifier or sensible filter data because the output's colour
-is entirely artificial. In contrast, a the \emph{curve} for performing a
-sigmoid function on all channels of an image will give the output image the
+Nodes generate and process source information in different ways. For example, a
+\emph{gradient} node takes a single band and converts it into an RGB image
+with a colour gradient: here, the output image has a MultiBandSource of three
+identical SourceSets, which are the SourceSet of the single band image input.
+In contrast, a the \emph{curve} for performing a
+sigmoid function on all bands of an image will give the output image the
 same sources as the input image.
 
-Sources are used to keep track of each channel as it moves through the graph
-so they can be processed and displayed appropriately: Fig.~\ref{app.png} shows
+\subsubsection{Important methods for sources}
+As well as \texttt{getSources()}, which return a SourceSet which is the union
+of all constituent sources, all \texttt{Source} subclasses have the following
+methods:
+\begin{itemize}
+\item \textbf{copy()} produces a ``reasonably deep'' copy of the source
+\item \textbf{matches()} returns true if a source matches some criteria --- details are below
+\item \textbf{getFilter()} returns the Filter object if one is present (or None)
+\item \textbf{brief()} returns a brief description
+\item \textbf{long()} returns a long description
+\end{itemize}
+The \texttt{match()} method can match on the following criteria --- all of which
+must be true, but criteria which are None are ignored:
+\begin{itemize}
+\item \textbf{hasFilter}: the Source has a filter
+\item \textbf{filterNameOrCWL}: the Source has a filter with the same name (if a string)
+or centre wavelength (if a float)
+\item \textbf{inp}: the Source has the same input index (i.e.\ number of the PCOT input)
+\end{itemize}
+\textbf{SourceSet} has the following additional functionality:
+\begin{itemize}
+\item The constructor can take a Source, a SourceSet, or a collection of either/both,
+and convert them into a single union SourceSet.
+\item \textbf{match()} returns true if any source in the set matches all criteria.
+If the \texttt{single} flag is true, sets are ignored if they contain more than one element.
+\end{itemize}
+\textbf{MultiBandSource} also has the following:
+\begin{itemize}
+\item The constructor takes a list of SourceSets and/or Sources
+\item \textbf{createEmptySourceSets(n)} class method constructs a MultiBandSource of $n$ empty
+source sets
+\item \textbf{createBandwiseUnion(lst)} takes a list of MultiBandSources with the same number
+of bands, and constructs a new MultiBandSource where each band's source set is a union of
+the corresponding bands' source sets in each input. For example, consider a MultiBandSource $M_1$ consisting
+of three SourceSets $A, B, C$, and two other MultiBandSources $M_2, M_3$ defined similarly:
+\begin{align*}
+M_1 &= \{ A, B, C \}\\
+M_2 &= \{ D, E, F \}\\
+M_3 &= \{ G, H, I \}\\
+\text{createBandwiseUnion}([M_1,M_2,M_3]) &= \{ A \cup D \cup G, B \cup E \cup H, C \cup F \cup I\}
+\end{align*}
+This is typically in $expr$ binary operations such as image addition.
+\item \textbf{add(s)} adds a source set to the list
+\item \textbf{copy()} returns a ``reasonably deep'' copy
+\item \textbf{search()} returns a list of indices of bands whose source sets contain a
+source which match all of the criteria given (again, None criteria are ignored). Criteria are:
+\begin{itemize}
+\item \textbf{hasFilter}: the Source has a filter
+\item \textbf{filterNameOrCWL}: the Source has a filter with the same name (if a string)
+or centre wavelength (if a float)
+\item \textbf{inp}: the Source has the same input index (i.e.\ number of the PCOT input)
+\item \textbf{single}: the Source is the only member of the set
+\end{itemize}
+\item \textbf{brief()} returns a brief description
+\item \textbf{long()} returns a long description
+\end{itemize}
+
+
+Sources are used to keep track of each datum as it moves through the graph
+so they can be processed and displayed appropriately, particularly for images:
+Fig.~\ref{app.png} (p.~\pageref{app.png}) shows
 a typical node in the ``node controls and output'' section. This section, as
-it does in many nodes, contains a ``canvas'' displaying an image. Above the
+it does in many nodes, contains a canvas displaying an image. Above the
 canvas are three combo boxes which select the channels in the image cube to
 display on the canvas, and these are typically labelled by a string generated
 from the source data for each channel (along with the index). Sources are also
