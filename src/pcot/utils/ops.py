@@ -28,7 +28,7 @@ def twoImageBinop(imga: ImageCube, imgb: ImageCube, op: Callable[[Any, Any], Any
             subimga = imga.subimage()
             subimgb = imgb.subimage()
             if subimga.bb != subimgb.bb:  # might need an extra check on the masks - but what would it be?
-                raise BinopException('regions of interest must be the same size in binary operation')
+                raise BinopException('regions of interest must be the same in binary operations')
         else:
             # get subimages, using their own image's ROI if it has one, otherwise the other image's ROI.
             # One of these will be true.

@@ -270,6 +270,13 @@ class ROI(SourcesObtainable):
     def __pow__(self, power, modulo=None):
         raise BadOpException()
 
+    def __str__(self):
+        if not self.bb():
+            return "ROI-BASE (no data)"
+        else:
+            x, y, w, h = self.bb()
+            return "ROI-BASE {} {} {}x{}".format(x, y, w, h)
+
     def getSources(self):
         return self.sources
 

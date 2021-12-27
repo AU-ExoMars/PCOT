@@ -15,9 +15,8 @@ from pcot.utils.ops import binop, unop
 from pcot.xform import XFormException
 from .parse import Parameter, Parser, execute
 
-
-# TODO: Show output in canvas (and other output somehow if not image?). Honour the ROI from the "leftmost" image with an ROI - So A has priority over B, etc.
 # TODO: keep expression guide in help updated
+from .. import rois
 from ..sources import SourceSet, MultiBandSource
 
 
@@ -101,6 +100,35 @@ def funcCrop(args, _):
     out = img.img[y:y + h, x:x + w]
     img = ImageCube(out, img.mapping, img.sources)
     return Datum(Datum.IMG, img)
+
+
+def funcROI(args, _):
+    """Get ROI from image"""
+    img = args[0].get(Datum.IMG)
+    if len(img.rois) == 0:
+        # No ROIs at all? Make one out of the image.
+        roi = rois.ROIRect()
+        roi.setBB(0, 0, img.w, img.h)
+    elif len(img.rois) == 1:
+        # One ROI only? Use that (not a copy).
+        roi = img.rois[0]
+    else:
+        # Some ROIs? Make a new union ROI out of them all
+        roi = rois.ROI.roiUnion(img.rois)
+    return Datum(Datum.ROI, roi, sources=roi.getSources())
+
+
+def funcAddROI(args, _):
+    """Add ROI to image ROI set"""
+    img = args[0].get(Datum.IMG)
+    if img is not None:
+        roi = args[1].get(Datum.ROI)
+        if roi is not None:
+            img = img.copy()
+            img.rois.append(roi)
+        return Datum(Datum.IMG, img)
+    else:
+        return None
 
 
 def funcWrapper(fn, d, *args):
@@ -253,6 +281,18 @@ class ExpressionEvaluator(Parser):
                            Parameter("h", "height of rectangle", Datum.NUMBER)],
                           [],
                           funcCrop)
+
+        self.registerFunc("roi", "extract ROI from image (returns rect ROI on entire image if none is present",
+                          [Parameter("image", "image to extract ROI from", Datum.IMG)],
+                          [],
+                          funcROI)
+
+        self.registerFunc("addroi", "add ROI to image",
+                          [Parameter("image", "image to add ROI to", Datum.IMG),
+                           Parameter("roi", "ROI", Datum.ROI)
+                           ],
+                          [],
+                          funcAddROI)
 
         self.registerProperty('w', Datum.IMG,
                               "give the width of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",

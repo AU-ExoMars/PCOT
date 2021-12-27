@@ -28,8 +28,14 @@ class XFormExpr(XFormType):
     |A\|B          |element-wise maximum of A and B (Zadeh's OR operator)|
     |!A            |element-wise 1-A (Zadeh's NOT operator)|
 
+    ### ROIs on images in binary operators
+    If one of the two images has an ROI, the operation is only performed on that ROI; the remaining image is
+    the left-hand side of the operation passed through unchanged. If both images have an ROI, the ROIs must have
+    identical bounding boxes (see ops.py:twoImageBinop() ).
 
-    ### ROI operators:
+
+
+    ### Operators on ROIs themselves (as opposed to images with ROIs)
     |operator    |description|
     |----------|--------------|
     |a+b |          union|
