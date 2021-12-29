@@ -453,14 +453,13 @@ class MainUI(ui.tabs.DockableTabWindow):
     ## caption type has been changed in widget
     def captionChanged(self, i):
         self.doc.mark()
-        self.graph.doc.setCaption(i)
-        # TODO some windows might not change their captions!
-        self.graph.performNodes()
+        if self.graph is not None:
+            self.graph.doc.setCaption(i)
+            self.graph.performNodes()
 
     ## set the caption type (for actual main windows, not macros)
     def setCaption(self, i):
         if self.graph is not None:
-            # TODO some windows might not change their captions!
             self.graph.doc.setCaption(i)
             self.capCombo.setCurrentIndex(i)
 

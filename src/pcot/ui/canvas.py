@@ -448,11 +448,9 @@ class Canvas(QtWidgets.QWidget):
         combo.clear()
         for i in range(0, img.channels):
             # adds descriptor string and integer channels index
-            # TODO ignores caption type
-            s = f"{i}) {img.sources.sourceSets[i].brief()}"
+            cap = self.graph.doc.settings.captionType
+            s = f"{i}) {img.sources.sourceSets[i].brief(cap)}"
             combo.addItem(s)
-            #combo.addItem("{}) {}".format(i, IChannelSource.stringForSet(img.sources[i],
-            #                                                             self.graph.doc.settings.captionType)))  # ugly
 
     def setCombosToImageChannels(self, img):
         self.addChannelsToChannelCombo(self.redChanCombo, img)

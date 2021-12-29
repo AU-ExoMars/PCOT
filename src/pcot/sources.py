@@ -42,7 +42,7 @@ class Source(SourcesObtainable):
         return SourceSet(self)
 
     @abstractmethod
-    def brief(self) -> Optional[str]:
+    def brief(self, captionType=0) -> Optional[str]:
         """Return a brief string to be used in captions, etc. If null, is filtered out"""
         pass
 
@@ -57,7 +57,7 @@ class _NullSource(Source):
     Typically this will get filtered out when we print the sources. Probably best to use nullSource and nullSourceSet
     objects declared at the end of this module"""
 
-    def brief(self) -> Optional[str]:
+    def brief(self, captionType=0) -> Optional[str]:
         """return a brief string for use in captions - this will just return None, which will
         be filtered out when used in such captions."""
         return None
@@ -108,11 +108,19 @@ class InputSource(Source):
         """Return a full internal string representation, used in debugging"""
         return f"SOURCE-{self._uniqid}"
 
-    def brief(self):
+    def brief(self, captionType=0) -> Optional[str]:
         """return a brief string representation, used in image captions"""
         inptxt = self.input.brief()
         if isinstance(self.filterOrName, Filter):
-            return f"{inptxt}:{int(self.filterOrName.cwl)}"
+            if captionType == 0:  # 0=Position
+                cap = "P" + self.filterOrName.position
+            elif captionType == 1:  # 1=Name
+                cap = "N" + self.filterOrName.name
+            elif captionType == 2:  # 2=Freq.
+                cap = int(self.filterOrName.cwl)
+            else:
+                cap = f"CAPBUG-{captionType}"        # if this appears captionType is out of range.
+            return f"{inptxt}:{cap}"
         else:
             return f"{inptxt}:{self.filterOrName}"
 
@@ -185,9 +193,9 @@ class SourceSet(SourcesObtainable):
         """internal text description; uses (none) for null sources"""
         return "&".join([str(x) if x else "(none)" for x in self.sourceSet])
 
-    def brief(self):
+    def brief(self, captionType=0):
         """external (user-facing) text description, skips null sources"""
-        x = [x.brief() for x in self.sourceSet]
+        x = [x.brief(captionType) for x in self.sourceSet]
         return "&".join(sorted([s for s in x if s]))
 
     def long(self):
@@ -267,7 +275,7 @@ class MultiBandSource(SourcesObtainable):
     def long(self):
         txts = [f"{i}: {s.long()}" for i, s in enumerate(self.sourceSets)]
         s = "\n".join(txts)
-        return "{\n"+s+"\n}\n"
+        return "{\n" + s + "\n}\n"
 
     def getSources(self):
         """Merge all the bands' source sets into a single set (used in, for example, making a greyscale

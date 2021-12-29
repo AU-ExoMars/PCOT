@@ -348,8 +348,7 @@ class ImageCube(SourcesObtainable):
     def getDesc(self, graph):
         if graph.doc.settings.captionType == 3:
             return ""
-        # TODO does not take account of caption type
-        out = [s.brief() for s in self.sources.sourceSets]
+        out = [s.brief(graph.doc.settings.captionType) for s in self.sources.sourceSets]
         # if there are channel assignments, show only the assigned channels. Not sure about this.
         if self.mapping is not None:
             out = [out[x] for x in [self.mapping.red, self.mapping.green, self.mapping.blue]]

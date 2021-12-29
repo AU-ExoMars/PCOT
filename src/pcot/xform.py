@@ -1312,6 +1312,7 @@ class XFormROIType(XFormType):
             # sources are a combo of the image sources and that of the ROI
             sources = SourceSet([img, node.roi.sources])
             # TODO ROI Source combination with objects not dealt with - need to be combined into images
+            # (Yeah, I have no idea what this comment means either).
             self.setProps(node, img)
             # copy image and append ROI to it
             img = img.copy()

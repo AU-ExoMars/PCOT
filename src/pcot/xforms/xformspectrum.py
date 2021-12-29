@@ -176,8 +176,9 @@ class XFormSpectrum(XFormType):
                     raise XFormException("DATA", "no single-wavelength channels in image")
 
                 # generate a list of labels, one for each channel
-                # TODO - ignores caption type
-                chanlabels = [img.sources.sourceSets[x].brief() for x in chans]
+                # NOTE THAT this currently gets ignored, we don't use the chanlabel right now. It gets packed into
+                # the data elements, but the unzip in replot() throws it away when we come to do the plot.
+                chanlabels = [img.sources.sourceSets[x].brief(node.graph.doc.settings.captionType) for x in chans]
 
                 if len(img.rois) == 0:
                     # no ROIs, do the whole image
