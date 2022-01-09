@@ -3,20 +3,22 @@ from pds4_tools.reader.label_objects import Label
 
 from dataclasses import dataclass
 
-@dataclass(frozen=true)
+
+@dataclass(frozen=True)
 class LabelData:
     """Abbreviated PDS4 label data with link to original file"""
-    path: str       # path of original label
-    inst: str       # instrument (camera)
-    typeId: str     # acq type id
-    sol: int        # sol
-    seq: int        # sequence number
+    path: str  # path of original label
+    inst: str  # instrument (camera)
+    typeId: str  # acq type id
+    sol: int  # sol
+    seq: int  # sequence number
 
-@dataclass(frozen=true)
+
+@dataclass(frozen=True)
 class LabelDataImage:
-    ivn: float      # index value number for motion counter
-    cwl: float      # filter CWL
-    fid: str        # filter ID
+    ivn: float  # index value number for motion counter
+    cwl: float  # filter CWL
+    fid: str  # filter ID
 
 
 def getLabelsFromDirectory(d):
@@ -33,7 +35,8 @@ def getLabelsFromDirectory(d):
                     inst = lab.find(".//psa:Sub-Instrument/psa:identifier").text
                     sol = lab.find(".//emrsp_rm_pan:sol_id").text
                     seq = lab.find(".//emrsp_rm_pan:acquisition_sequence_number").text
-                    ivn = lab.find(".//geom:Motion_Counter_Index[geom:index_id='MAST/PTU']/geom:index_value_number").text
+                    ivn = lab.find(
+                        ".//geom:Motion_Counter_Index[geom:index_id='MAST/PTU']/geom:index_value_number").text
                     filt = lab.find(".//img:center_filter_wavelength").text
                     filtId = lab.find(".//img:filter_id").text
 

@@ -53,6 +53,11 @@ class InnerCanvas(QtWidgets.QWidget):
         self.scale = 1
         self.x = 0
         self.y = 0
+        self.cutw = 0   # size of image in view
+        self.cuth = 0
+        self.panning = False
+        self.panX = None
+        self.panY = None
         self.canv = canv
         # needs to do this to get key events
         self.setFocusPolicy(QtCore.Qt.ClickFocus)
@@ -124,10 +129,10 @@ class InnerCanvas(QtWidgets.QWidget):
             cuty = int(self.y)
             img = self.img[cuty:cuty + cuth, cutx:cutx + cutw]
             # now get the size of the image that was actually cut (some areas may be out of range)
-            cuth, cutw = img.shape[:2]
+            self.cuth, self.cutw = img.shape[:2]
             # now resize the cut area up to fit the widget. Using area interpolation here:
             # cubic produced odd artifacts on float images
-            img = cv.resize(img, dsize=(int(cutw / scale), int(cuth / scale)), interpolation=cv.INTER_AREA)
+            img = cv.resize(img, dsize=(int(self.cutw / scale), int(self.cuth / scale)), interpolation=cv.INTER_AREA)
             p.drawImage(0, 0, img2qimage(img))
             if self.canv.paintHook is not None:
                 self.canv.paintHook.canvasPaintHook(p)
@@ -163,21 +168,35 @@ class InnerCanvas(QtWidgets.QWidget):
     ## mouse press handler, can delegate to a hook
     def mousePressEvent(self, e):
         x, y = self.getImgCoords(e.pos())
-        if self.canv.mouseHook is not None:
+        if e.button() == Qt.MidButton:
+            self.panning = True
+            self.panX, self.panY = x, y
+        elif self.canv.mouseHook is not None:
             self.canv.mouseHook.canvasMousePressEvent(x, y, e)
         return super().mousePressEvent(e)
 
     ## mouse move handler, can delegate to a hook
     def mouseMoveEvent(self, e):
         x, y = self.getImgCoords(e.pos())
-        if self.canv.mouseHook is not None:
+        if self.panning:
+            dx = x - self.panX
+            dy = y - self.panY
+            self.x -= dx*0.5
+            self.y -= dy*0.5
+            self.x = max(0, min(self.x, self.img.shape[1]-self.cutw))
+            self.y = max(0, min(self.y, self.img.shape[0]-self.cuth))
+            self.panX, self.panY = x, y
+            self.update()
+        elif self.canv.mouseHook is not None:
             self.canv.mouseHook.canvasMouseMoveEvent(x, y, e)
         return super().mouseMoveEvent(e)
 
     ## mouse release handler, can delegate to a hook
     def mouseReleaseEvent(self, e):
         x, y = self.getImgCoords(e.pos())
-        if self.canv.mouseHook is not None:
+        if e.button() == Qt.MidButton:
+            self.panning = False
+        elif self.canv.mouseHook is not None:
             self.canv.mouseHook.canvasMouseReleaseEvent(x, y, e)
         return super().mouseReleaseEvent(e)
 
@@ -185,6 +204,7 @@ class InnerCanvas(QtWidgets.QWidget):
     def wheelEvent(self, e):
         # get the mousepos in the image and calculate the new zoom
         wheel = 1 if e.angleDelta().y() < 0 else -1
+        # x,y here is the zoom point
         x, y = self.getImgCoords(e.pos())
         newzoom = self.zoomscale * math.exp(wheel * 0.2)
 
@@ -208,9 +228,11 @@ class InnerCanvas(QtWidgets.QWidget):
             return
 
         # calculate change in zoom and use it to move the offset
+
         zoomchange = newzoom - self.zoomscale
         self.x -= zoomchange * x
         self.y -= zoomchange * y
+
         # set the new zoom
         self.zoomscale = newzoom
         # clip the change
