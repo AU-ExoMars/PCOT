@@ -192,7 +192,8 @@ class Document:
         fn(i.getActive())  # run a function on active method
         # force an immediate read; it's OK, the data should be cached. This is done so we can return
         # a success/failure status/
-        i.read()
+        i.invalidate()
+        i.get()
         return i.exception
 
     def setInputENVI(self, inputidx, fname):

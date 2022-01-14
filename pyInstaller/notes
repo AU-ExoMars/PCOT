@@ -1,0 +1,39 @@
+To build:
+	pyinstaller dir.spec
+or
+	pyinstaller file.spec
+
+
+Well, this *nearly* works but for two things:
+
+0) had to edit the hook for matplotlib
+        anaconda3/envs/pcot/lib/
+            python3.8/site-packages/PyInstaller/hooks/hook-matplotlib.py
+            
+   first, change _get_data_path() to get_data_path().
+   
+   Then change the path from 'mpl-data' to 'matplotlib/mpl-data'.
+   Here are the changes:
+   
+        mpl_data_dir = exec_statement(
+            "import matplotlib; print(matplotlib.get_data_path())")
+
+        datas = [
+            (mpl_data_dir, "matplotlib/mpl-data"),
+        ]
+
+   
+1) the xforms don't get imported in __init__, which means the code
+    that autoregisters them doesn't run. That can be fixed by
+    putting a list of the modules by hand in xforms/__init__.py.
+    THIS IS HORRIBLE.
+    
+    
+2) I have to do
+    cp /usr/lib/x86_64-linux-gnu/libxcb-shm.so.0 dist/main
+   to get a version that works. Clearly some version problem somehow.
+   THIS IS HORRIBLE. AND MEANS I CAN'T USE ONE-FILE.
+   
+3) scipy now throws a module missing, fixed by adding it to hidden modules.
+
+4) adding a hidden module for every single custom widget I use

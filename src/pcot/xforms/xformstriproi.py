@@ -1,4 +1,4 @@
-import pcot.conntypes as conntypes
+from pcot.datum import Datum
 from pcot.xform import xformtype, XFormType
 from pcot.xforms.tabimage import TabImage
 
@@ -9,8 +9,8 @@ class XformStripROI(XFormType):
 
     def __init__(self):
         super().__init__("striproi", "ROI edit", "0.0.0")
-        self.addInputConnector("", conntypes.IMG)
-        self.addOutputConnector("", conntypes.IMG)
+        self.addInputConnector("", Datum.IMG)
+        self.addOutputConnector("", Datum.IMG)
 
     def createTab(self, n, w):
         return TabImage(n, w)
@@ -19,9 +19,9 @@ class XformStripROI(XFormType):
         node.img = None
 
     def perform(self, node):
-        img = node.getInput(0, conntypes.IMG)
+        img = node.getInput(0, Datum.IMG)
         if img is not None:
             img = img.copy()
             img.rois = []
         node.img = img
-        node.setOutput(0, conntypes.Datum(conntypes.IMG, img))
+        node.setOutput(0, Datum(Datum.IMG, img))

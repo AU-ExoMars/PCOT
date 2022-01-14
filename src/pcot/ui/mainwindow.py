@@ -1,7 +1,8 @@
-## @package ui.mainwindow
-# Code for the main windows, which hold a scene representing the 
-# "patch" or a macro prototype, a palette of transforms, and an area
-# for tabs controlling transforms.
+"""
+Code for the main windows, which hold a scene representing the
+"patch" or a macro prototype, a palette of transforms, and an area
+for tabs controlling transforms.
+"""
 import os
 import traceback
 from typing import List, Optional, OrderedDict, ClassVar
@@ -10,7 +11,7 @@ from zipfile import BadZipFile
 from PyQt5 import QtWidgets, uic, QtGui
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFontDatabase, QFont
-from PyQt5.QtWidgets import QAction, QMessageBox
+from PyQt5.QtWidgets import QAction, QMessageBox, QAbstractScrollArea
 
 import pcot
 from pcot.ui import graphscene, graphview
@@ -22,12 +23,10 @@ import pcot.ui.namedialog as namedialog
 import pcot.ui.tabs as tabs
 import pcot.xform as xform
 
-from pcot.utils import archive
-
 
 class InputSelectButton(QtWidgets.QPushButton):
     def __init__(self, n, inp):
-        text = "Input " + str(n)
+        text = f"Input {n}"
         self.input = inp
         super().__init__(text=text)
         self.clicked.connect(lambda: self.input.openWindow())
@@ -42,10 +41,12 @@ class HelpWindow(QtWidgets.QDialog):
         layout = QtWidgets.QVBoxLayout(self)
         txt = ui.help.getHelpHTML(node.type, node.error)
         self.setWindowTitle("Help for '{}'".format(node.type.name))
-        wid = QtWidgets.QLabel()
+        wid = QtWidgets.QTextEdit()
         font = QFont("Consolas")
         font.setPixelSize(15)
         wid.setFont(font)
+        wid.setMinimumSize(800, 500)
+        wid.document().setDefaultStyleSheet(pcot.ui.textedit.styleSheet)
         #  wid.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
         wid.setText(txt)
         layout.addWidget(wid)
@@ -119,7 +120,32 @@ class MainUI(ui.tabs.DockableTabWindow):
         """Constructor which just calls _init()"""
         super().__init__()
         uic.loadUi(pcot.config.getAssetAsFile('main.ui'), self)
+        # connect buttons etc.
+        self.autolayoutButton.clicked.connect(self.autoLayoutButton)
+        self.dumpButton.clicked.connect(lambda: self.graph.dump())
+        self.capCombo.currentIndexChanged.connect(self.captionChanged)
+
+        self.actionSave_As.triggered.connect(self.saveAsAction)
+        self.action_New.triggered.connect(self.newAction)
+        self.actionNew_Macro.triggered.connect(self.newMacroAction)
+        self.actionSave.triggered.connect(self.saveAction)
+        self.actionOpen.triggered.connect(self.openAction)
+        self.actionCopy.triggered.connect(self.copyAction)
+        self.actionPaste.triggered.connect(self.pasteAction)
+        self.actionCut.triggered.connect(self.cutAction)
+        self.actionUndo.triggered.connect(self.undoAction)
+        self.actionRedo.triggered.connect(self.redoAction)
+
+        self.runAllButton.clicked.connect(self.runAllAction)
+        self.autoRun.toggled.connect(self.autorunChanged)
+
+        # get and activate the status bar
+        self.statusBar = QtWidgets.QStatusBar()
+        self.setStatusBar(self.statusBar)
         self.menuFile.addSeparator()
+        self.isfLayout = QtWidgets.QHBoxLayout()
+        self.inputSelectorFrame.setLayout(self.isfLayout)
+
         self._init(doc=doc, macro=macro, doAutoLayout=doAutoLayout)
 
     def _init(self,
@@ -142,29 +168,6 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.rebuildRecents()
 
         self.initTabs()
-
-        # connect buttons etc.
-        self.autolayoutButton.clicked.connect(self.autoLayoutButton)
-        self.dumpButton.clicked.connect(lambda: self.graph.dump())
-        self.capCombo.currentIndexChanged.connect(self.captionChanged)
-
-        self.actionSave_As.triggered.connect(self.saveAsAction)
-        self.action_New.triggered.connect(self.newAction)
-        self.actionNew_Macro.triggered.connect(self.newMacroAction)
-        self.actionSave.triggered.connect(self.saveAction)
-        self.actionOpen.triggered.connect(self.openAction)
-        self.actionCopy.triggered.connect(self.copyAction)
-        self.actionPaste.triggered.connect(self.pasteAction)
-        self.actionCut.triggered.connect(self.cutAction)
-        self.actionUndo.triggered.connect(self.undoAction)
-        self.actionRedo.triggered.connect(self.redoAction)
-
-        self.runAllButton.pressed.connect(self.runAllAction)
-        self.autoRun.toggled.connect(self.autorunChanged)
-
-        # get and activate the status bar        
-        self.statusBar = QtWidgets.QStatusBar()
-        self.setStatusBar(self.statusBar)
 
         # set up the scrolling palette and make the buttons therein
         self.palette = palette.Palette(doc, self.paletteArea, self.paletteContents, self.view)
@@ -198,11 +201,12 @@ class MainUI(ui.tabs.DockableTabWindow):
         else:
             # We are definitely a main window
             self.macroPrototype = None  # we are not a macro
-            # now create the input selector buttons
-            isfLayout = QtWidgets.QHBoxLayout()
-            self.inputSelectorFrame.setLayout(isfLayout)
+            # now create the input selector buttons, removing the old ones
+            while self.isfLayout.takeAt(0):
+                pass
+
             for x in range(0, len(self.doc.inputMgr.inputs)):
-                isfLayout.addWidget(InputSelectButton(x, self.doc.inputMgr.inputs[x]))
+                self.isfLayout.addWidget(InputSelectButton(x, self.doc.inputMgr.inputs[x]))
 
         # make sure the view has a link up to this window,
         # also will tint the view if we are a macro
@@ -323,8 +327,9 @@ class MainUI(ui.tabs.DockableTabWindow):
         try:
             import pcot.document
             d = pcot.document.Document(fname)
-            MainUI.windows.remove(self)  # remove the existing entry for this window, we'll add it again in the next line
-            self._init(doc=d, doAutoLayout=False)   # rerun window construction
+            MainUI.windows.remove(
+                self)  # remove the existing entry for this window, we'll add it again in the next line
+            self._init(doc=d, doAutoLayout=False)  # rerun window construction
             self.graph.changed()  # and rerun everything
             ui.msg("File loaded")
             self.saveFileName = fname
@@ -349,7 +354,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
             self.save(path)
             self.saveFileName = path
-            ui.log("Document written to "+path)
+            ui.log("Document written to " + path)
             pcot.config.setDefaultDir('pcotfiles', os.path.dirname(os.path.realpath(res[0])))
 
     ## the "save" menu handler
@@ -448,14 +453,13 @@ class MainUI(ui.tabs.DockableTabWindow):
     ## caption type has been changed in widget
     def captionChanged(self, i):
         self.doc.mark()
-        self.graph.doc.setCaption(i)
-        # TODO some windows might not change their captions!
-        self.graph.performNodes()
+        if self.graph is not None:
+            self.graph.doc.setCaption(i)
+            self.graph.performNodes()
 
     ## set the caption type (for actual main windows, not macros)
     def setCaption(self, i):
         if self.graph is not None:
-            # TODO some windows might not change their captions!
             self.graph.doc.setCaption(i)
             self.capCombo.setCurrentIndex(i)
 
@@ -467,8 +471,9 @@ class MainUI(ui.tabs.DockableTabWindow):
         # I'll set autorun on all graphs
         MainUI.updateAutorun()
         # but only rerun this one (turned off because some nodes are REALLY SLOW)
-#        if xform.XFormGraph.autoRun:
-#            self.runAll()
+
+    #        if xform.XFormGraph.autoRun:
+    #            self.runAll()
 
     ## update autorun checkbox states from class variable
     @staticmethod
@@ -562,7 +567,7 @@ class MainUI(ui.tabs.DockableTabWindow):
             from psutil import Process
             process = Process(os.getpid())
             m = process.memory_info().rss
-            self.undoStatus.setText("Undo {}, redo {}, {}M".format(u, r, m//(1024*1024)))
+            self.undoStatus.setText("Undo {}, redo {}, {}M".format(u, r, m // (1024 * 1024)))
         except ImportError:
             self.undoStatus.setText("Undo {}, redo {}".format(u, r))
         gc.collect()
@@ -571,4 +576,3 @@ class MainUI(ui.tabs.DockableTabWindow):
         #     from ..xform import XForm
         #     if isinstance(x, XForm):
         #         print(str(x))
-

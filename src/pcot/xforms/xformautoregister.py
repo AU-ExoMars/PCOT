@@ -1,6 +1,5 @@
-import pcot
-import pcot.conntypes as conntypes
-from pcot.pancamimage import ImageCube
+from pcot.datum import Datum
+from pcot.imagecube import ImageCube
 from pcot.xform import xformtype, XFormType
 import cv2 as cv
 import numpy as np
@@ -22,17 +21,17 @@ class XFormAutoRegister(XFormType):
 
     def __init__(self):
         super().__init__("tvl1 autoreg", "processing", "0.0.0")
-        self.addInputConnector("moving", conntypes.IMG)
-        self.addInputConnector("fixed", conntypes.IMG)
-        self.addOutputConnector("moved", conntypes.IMG)
+        self.addInputConnector("moving", Datum.IMG)
+        self.addInputConnector("fixed", Datum.IMG)
+        self.addOutputConnector("moved", Datum.IMG)
 
     def init(self, node):
         node.img = None
 
     def perform(self, node):
         # read images
-        movingImg = node.getInput(0, conntypes.IMG)
-        fixedImg = node.getInput(1, conntypes.IMG)
+        movingImg = node.getInput(0, Datum.IMG)
+        fixedImg = node.getInput(1, Datum.IMG)
 
         if fixedImg is None or movingImg is None:
             node.img = None
@@ -60,7 +59,7 @@ class XFormAutoRegister(XFormType):
 
             node.img = ImageCube(out, node.mapping, movingImg.sources)
 
-        node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))
+        node.setOutput(0, Datum(Datum.IMG, node.img))
 
     def createTab(self, n, w):
         return TabImage(n, w)

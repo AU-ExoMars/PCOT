@@ -102,8 +102,8 @@ only place where the name of the class is used. Now the constructor:
 \begin{lstlisting}
     def __init__(self):
         super().__init__("normimage", "processing", "0.0.0")
-        self.addInputConnector("", conntypes.IMG)
-        self.addOutputConnector("", conntypes.IMG)
+        self.addInputConnector("", Datum.IMG)
+        self.addOutputConnector("", Datum.IMG)
         self.hasEnable = True
 \end{lstlisting}
 The superconstructor call sets the node name, the group under which it appears
@@ -112,7 +112,7 @@ output connector. These have optional names, which are both empty in this
 example. This is the usual approach: names are only used to annotate the nodes
 in the graph, and are left empty where they are obvious. In the code,
 connectors are referenced by index in order of creation. Both connectors here
-are images, with type \texttt{IMG}. See \texttt{conntypes.py} for all the
+are images, with type \texttt{IMG}. See \texttt{datum.py} for all the
 types. The final line sets the node to have an \texttt{enabled} value and
 associated toggle button. This is used in nodes which may be computationally
 intensive, to temporarily ``turn them off.'' This will usually be handled by
@@ -156,7 +156,7 @@ is to pre-set the output image to None and then fetch the input image:
 \begin{lstlisting}
     def perform(self, node):
         node.img = None    
-        img = node.getInput(0, conntypes.IMG)
+        img = node.getInput(0, Datum.IMG)
 \end{lstlisting}
 This will get a reference to the image stored in the output field of the node
 connected to this node's zeroth input (the first added in the type
@@ -205,7 +205,7 @@ to be the input image:
 and output the image to the node's zeroth (and only) output, wrapping it in
 a \texttt{Datum}:
 \begin{lstlisting}
-        node.setOutput(0, Datum(conntypes.IMG, node.img))
+        node.setOutput(0, Datum(Datum.IMG, node.img))
 \end{lstlisting}
 
 

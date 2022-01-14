@@ -6,26 +6,23 @@ import base64
 import copy
 import hashlib
 import inspect
+import json
 import time
 import traceback
+import sys
+import uuid
 from collections import deque
 from io import BytesIO
-from typing import List, Dict, Tuple, Any, ClassVar, Optional, TYPE_CHECKING, Callable
+from typing import List, Dict, Tuple, ClassVar, Optional, TYPE_CHECKING, Callable
 
-import json
-
-import cv2
-import numpy as np
 import pyperclip
-import uuid
 
-import pcot.conntypes as conntypes
 import pcot.macros
-from pcot.conntypes import Datum
 import pcot.ui as ui
-from pcot import inputs
+from pcot import datum
+from pcot.datum import Datum
+from pcot.sources import nullSourceSet, SourceSet
 from pcot.ui import graphscene
-from pcot.inputs.inp import InputManager
 from pcot.ui.canvas import Canvas
 from pcot.ui.tabs import Tab
 from pcot.utils import archive
@@ -34,9 +31,7 @@ if TYPE_CHECKING:
     import PyQt5.QtWidgets
     from macros import XFormMacro, MacroInstance
 
-# ugly forward declarations so the type hints work
-from pcot.pancamimage import ChannelMapping
-
+from pcot.imagecube import ChannelMapping
 
 ## dictionary of name -> transformation type (XFormType)
 allTypes = dict()
@@ -62,7 +57,7 @@ class XFormException(Exception):
         self.message = message
 
 
-_xformctors = []            # list of (xformtype,classobject,args,kwargs,md5) tuples
+_xformctors = []  # list of (xformtype,classobject,args,kwargs,md5) tuples
 
 
 def createXFormTypeInstances():
@@ -97,7 +92,12 @@ class xformtype:
         # get the module so we can add an MD5 checksum of its source code to the type
         # data, for version matching info
         mod = inspect.getmodule(cls)
-        src = inspect.getsource(mod).encode('utf-8')  # get the source
+
+        # can't get source when inside pyinstaller etc.
+        if not (getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS')):
+            src = inspect.getsource(mod).encode('utf-8')  # get the source
+        else:
+            src = ''.encode('utf-8')
 
         # we don't create the instance - that's postponed until later to avoid some circular import
         # problems when expr is initialised (it's quite difficult to run the user function hooks this
@@ -105,10 +105,10 @@ class xformtype:
 
         md5 = hashlib.md5(src).hexdigest()  # add the checksum
         _xformctors.append((self, cls, args, kwargs, md5))
+        print("Appending instance for " + str(cls))
 
     def __call__(self):
         return self._instance
-
 
 
 class BadVersionException(Exception):
@@ -330,9 +330,6 @@ def serialiseConn(c, connSet):
     return None
 
 
-
-
-
 class BadTypeException(Exception):
     """Raised when XForm.getOutput() asks for an incorrect type"""
 
@@ -477,6 +474,7 @@ class XForm:
         self.error = None
         self.rectText = None
         self.runTime = 0
+        self.timesPerformed = 0  # used for debugging/optimising
 
         # UI-DEPENDENT DATA DOWN HERE
         self.xy = (0, 0)  # this SHOULD be serialised
@@ -601,8 +599,8 @@ class XForm:
         self.xy = d['xy']
         self.comment = d['comment']
         # these are the overriding types - if the value is None, use the xformtype's value, else use the one here.
-        self.outputTypes = [None if x is None else conntypes.deserialise(x) for x in d['outputTypes']]
-        self.inputTypes = [None if x is None else conntypes.deserialise(x) for x in d['inputTypes']]
+        self.outputTypes = [None if x is None else datum.deserialise(x) for x in d['outputTypes']]
+        self.inputTypes = [None if x is None else datum.deserialise(x) for x in d['inputTypes']]
         self.savedver = d['ver']  # ver is version node was saved with
         self.savedmd5 = d['md5']  # and stash the MD5 we were saved with
         self.displayName = d['displayName']
@@ -659,7 +657,7 @@ class XForm:
         d = self.outputs[i]  # may raise IndexError
         if d is None:
             return None
-        elif tp is None or d.tp == tp or tp == conntypes.IMG and d.isImage():
+        elif tp is None or d.tp == tp or tp == Datum.IMG and d.isImage():
             return d.val
         else:
             raise BadTypeException(i)
@@ -798,10 +796,9 @@ class XForm:
                     return False
         return True
 
-    def uichange(self):
-        self.type.uichange(self)
-
     def updateTabs(self):
+        """Tell the node to update its tabs; calls nodeChanged and updateError for each tab. The former
+        will tell the tab to update itself from the node, the latter will update the error field."""
         for x in self.tabs:
             x.nodeChanged()
             x.updateError()
@@ -815,6 +812,7 @@ class XForm:
         if not self.graph.performingGraph:
             raise Exception("Do not call perform directly on a node!")
         ui.msg("Performing {}".format(self.debugName()))
+        self.timesPerformed += 1
         try:
             # must clear this with prePerform on the graph, or nodes will
             # only run once!
@@ -829,7 +827,7 @@ class XForm:
                 # now run the node, catching any XFormException
                 try:
                     st = time.perf_counter()
-                    self.uichange()
+                    self.type.uichange(self)
                     self.type.perform(self)
                     self.runTime = time.perf_counter() - st
                 except XFormException as e:
@@ -871,7 +869,7 @@ class XForm:
                 n, idx = inp
                 outtype = n.getOutputType(idx)
                 intype = self.getInputType(i)
-                if not conntypes.isCompatibleConnection(outtype, intype):
+                if not datum.isCompatibleConnection(outtype, intype):
                     self.disconnect(i)
 
     def rename(self, name):
@@ -1054,9 +1052,8 @@ class XFormGraph:
         """
 
         if (not uiOnly) and (XFormGraph.autoRun or runAll):
-            # reread all inputs for my document (should cache!)
-            self.doc.inputMgr.readAll()
-
+            if runAll:
+                self.doc.inputMgr.invalidate()
             if self.isMacro:
                 # distribute changes in macro prototype to instances.
                 # what we do here is go through all instances of the macro. 
@@ -1084,7 +1081,7 @@ class XFormGraph:
         elif node is not None:
             # this always happens when an individual node is changed, even if autorun is off. Note that it happens
             # to every node before perform() when autorun is on (hence the elif below).
-            node.uichange()
+            node.type.uichange(node)
             # and update tabs.
             node.updateTabs()
             ui.msg("Autorun not enabled")
@@ -1151,7 +1148,7 @@ class XFormGraph:
                     if parent is node:
                         outtype = node.getOutputType(out)
                         intype = child.getInputType(i)
-                        if not conntypes.isCompatibleConnection(outtype, intype):
+                        if not datum.isCompatibleConnection(outtype, intype):
                             toDisconnect.append((child, i))
         for child, i in toDisconnect:
             child.disconnect(i)
@@ -1269,7 +1266,7 @@ class XFormGraph:
 
 class XFormROIType(XFormType):
     """Class for handling ROI xform types, does most of the heavy lifting of the node's perform
-    function. The actual ROIs are dealt with in pancamimage"""
+    function. The actual ROIs are dealt with in imagecube.py"""
 
     # constants enumerating the outputs
     OUT_IMG = 0
@@ -1281,12 +1278,12 @@ class XFormROIType(XFormType):
 
     def __init__(self, name, group, ver):
         super().__init__(name, group, ver)
-        self.addInputConnector("input", conntypes.IMG)
-        self.addInputConnector("ann", conntypes.IMGRGB, "used as base for annotated image")
-        self.addOutputConnector("img", conntypes.IMG, "image with ROI")  # image+roi
-        self.addOutputConnector("ann", conntypes.IMGRGB,
+        self.addInputConnector("input", Datum.IMG)
+        self.addInputConnector("ann", Datum.IMGRGB, "used as base for annotated image")
+        self.addOutputConnector("img", Datum.IMG, "image with ROI")  # image+roi
+        self.addOutputConnector("ann", Datum.IMGRGB,
                                 "image as RGB with ROI, with added annotations around ROI")  # annotated image
-        self.addOutputConnector("roi", conntypes.ROI, "the region of interest")
+        self.addOutputConnector("roi", Datum.ROI, "the region of interest")
 
         self.autoserialise = ('caption', 'captiontop', 'fontsize', 'fontline', 'colour', 'drawbg')
 
@@ -1295,12 +1292,13 @@ class XFormROIType(XFormType):
         imagecube, and node.roi is the ROI"""
         pass
 
-    def uichange(self, n):
-        self.perform(n)
+    #    def uichange(self, n):
+    #        n.timesPerformed += 1
+    #        self.perform(n)
 
     def perform(self, node):
-        img = node.getInput(self.IN_IMG, conntypes.IMG)
-        inAnnot = node.getInput(self.IN_ANNOT, conntypes.IMG)
+        img = node.getInput(self.IN_IMG, Datum.IMG)
+        inAnnot = node.getInput(self.IN_ANNOT, Datum.IMG)
         # label the ROI
         node.roi.label = node.caption
         node.setRectText(node.caption)
@@ -1308,9 +1306,13 @@ class XFormROIType(XFormType):
         if img is None:
             # no image
             node.setOutput(self.OUT_IMG, None)
-            node.setOutput(self.OUT_ANNOT, None if inAnnot is None else Datum(conntypes.IMGRGB, inAnnot))
+            node.setOutput(self.OUT_ANNOT, None if inAnnot is None else Datum(Datum.IMGRGB, inAnnot))
             node.setOutput(self.OUT_ROI, None)
         else:
+            # sources are a combo of the image sources and that of the ROI
+            sources = SourceSet([img, node.roi.sources])
+            # TODO ROI Source combination with objects not dealt with - need to be combined into images
+            # (Yeah, I have no idea what this comment means either).
             self.setProps(node, img)
             # copy image and append ROI to it
             img = img.copy()
@@ -1324,13 +1326,13 @@ class XFormROIType(XFormType):
             img.drawROIs(rgb.img, onlyROI=None if node.showROIs else node.roi)
             rgb.rois = img.rois  # with same ROI list as unannotated image
             node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
-            node.setOutput(self.OUT_ANNOT, Datum(conntypes.IMG, rgb))
+            node.setOutput(self.OUT_ANNOT, Datum(Datum.IMG, rgb))
             node.img = img
             # output the ROI - note that this is NOT a copy!
-            node.setOutput(self.OUT_ROI, Datum(conntypes.ROI, node.roi))
+            node.setOutput(self.OUT_ROI, Datum(Datum.ROI, node.roi, node.roi.sources))
 
             if node.isOutputConnected(self.OUT_IMG):
-                node.setOutput(self.OUT_IMG, Datum(conntypes.IMG, node.img))  # output image and ROI
+                node.setOutput(self.OUT_IMG, Datum(Datum.IMG, node.img))  # output image and ROI
 
     def getROIDesc(self, node):
         return "no ROI" if node.roi is None else node.roi.details()

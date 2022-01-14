@@ -1,4 +1,4 @@
-import pcot.conntypes as conntypes
+from pcot.datum import Datum
 
 from pcot.xform import xformtype, XFormType
 from pcot.xforms.tabimage import TabImage
@@ -12,9 +12,9 @@ class XformCalib(XFormType):
 
     def __init__(self):
         super().__init__("calib", "calibration", "0.0.0")
-        self.addInputConnector("img", conntypes.IMG)
-        self.addInputConnector("data", conntypes.ELLIPSE)
-        self.addOutputConnector("out", conntypes.IMG)
+        self.addInputConnector("img", Datum.IMG)
+        self.addInputConnector("data", Datum.ELLIPSE)
+        self.addOutputConnector("out", Datum.IMG)
 
     def createTab(self, n, w):
         return TabImage(n, w)
@@ -24,5 +24,5 @@ class XformCalib(XFormType):
         node.data = None
 
     def perform(self, node):
-        node.img = node.getInput(0, conntypes.IMG)
-        node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))
+        node.img = node.getInput(0, Datum.IMG)
+        node.setOutput(0, Datum(Datum.IMG, node.img))

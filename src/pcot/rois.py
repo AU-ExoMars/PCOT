@@ -1,10 +1,9 @@
-from collections import namedtuple
-
 import numpy as np
 import cv2 as cv
 from numpy import ndarray
 from scipy import ndimage
 
+from pcot.sources import SourcesObtainable, SourceSet, nullSourceSet
 from pcot.utils import text, serialiseFields, deserialiseFields
 from pcot.utils.geom import Rect
 
@@ -23,7 +22,7 @@ class ROIBoundsException(Exception):
 ROISERIALISEFIELDS = ['label', 'labeltop', 'colour', 'fontline', 'fontsize', 'drawbg']
 
 
-class ROI:
+class ROI(SourcesObtainable):
     """definition of base type for regions of interest - this is useful in itself
     because it defines an ROI consisting of a predefined BB and mask."""
 
@@ -38,6 +37,9 @@ class ROI:
         self.fontline = 2  # thickness of lines and text
         self.fontsize = 10  # annotation font size
         self.drawbg = True
+        # by default, the source of an ROI is null.
+        # The only time this might not be true is if the ROI is derived somehow from an actual data source.
+        self.sources = nullSourceSet
 
     def setDrawProps(self, labeltop, colour, fontsize, fontline, drawbg):
         """set the common draw properties for all ROIs"""
@@ -170,7 +172,8 @@ class ROI:
             return ROI(bb, mask)
         else:
             # return a null ROI
-            return ROI(Rect(0, 0, 10, 10), np.full((10, 10), False))
+            return None
+            # return ROI(Rect(0, 0, 10, 10), np.full((10, 10), False))
 
     @staticmethod
     def roiIntersection(rois):
@@ -266,6 +269,16 @@ class ROI:
 
     def __pow__(self, power, modulo=None):
         raise BadOpException()
+
+    def __str__(self):
+        if not self.bb():
+            return "ROI-BASE (no data)"
+        else:
+            x, y, w, h = self.bb()
+            return "ROI-BASE {} {} {}x{}".format(x, y, w, h)
+
+    def getSources(self):
+        return self.sources
 
 
 ## a rectangle ROI

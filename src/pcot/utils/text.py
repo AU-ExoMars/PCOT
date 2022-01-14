@@ -1,20 +1,22 @@
 #
-# Drawing text on CV images
+# Drawing text on CV images and assorted text stuff
 #
+import re
 
 import cv2 as cv
-
-
-# img - image to write on
-# txt - text
-# x,y - coords in image
-# above - if true, write text x,y extending above that point; if false write it below that point
-# fontsize - scale of font*10
-# fontthickness - line thickness for drawing
-# fontcol - (r,g,b)
+from PyQt5.QtWidgets import QGraphicsSimpleTextItem
 
 
 def write(img, txt, x, y, above, fontsize, fontthickness, fontcol, bg=None):
+    """ Write text on an OpenCV image - based on the .putText call.
+        img - image to write on
+        txt - text
+        x,y - coords in image
+        above - if true, write text x,y extending above that point; if false write it below that point
+        fontsize - scale of font*10
+        fontthickness - line thickness for drawing
+        fontcol - (r,g,b)
+    """
     th = 0
     tw = 0
     lines = txt.split('\\n')
@@ -44,3 +46,29 @@ def write(img, txt, x, y, above, fontsize, fontthickness, fontcol, bg=None):
                    fontsize / 10, fontcol, fontthickness)
         ty += hs[i] + bls[i]
         i += 1
+
+
+def generateIndenting(s):
+    """Add indenting to a multiline string containing brackets."""
+    indents = 0
+    out = []
+    lines = [x.strip() for x in s.splitlines()]
+    lines = [x for x in lines if len(x) > 0]
+    for x in lines:
+        ctOpen = len(re.findall(r"[\(\[\{]", x))
+        ctClose = len(re.findall(r"[\)\]\}]", x))
+        indents -= ctClose
+        s = ('\t' * indents) + x
+        out.append(s)
+        indents += ctOpen
+    return '\n'.join(out)
+
+
+def posAndCentreText(i: QGraphicsSimpleTextItem, x: float, y: float, centreX=False, centreY=False):
+    """centre an item in X and or Y and position"""
+    bb = i.boundingRect()
+    if centreX:
+        x = x - bb.width() / 2
+    if centreY:
+        y = y - bb.height() / 2
+    i.setPos(x, y)

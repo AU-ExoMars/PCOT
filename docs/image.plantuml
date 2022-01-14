@@ -23,25 +23,6 @@ defines how an image
 is viewed as RGB
 end note
 
-abstract class IChannelSource {
-}
-note right of IChannelSource
-family of types
-defining where each
-channel comes from
-end note
-
-abstract class ChannelSourceWithFilter extends IChannelSource {
-}
-class InternalChannelSource extends ChannelSourceWithFilter {
-}
-class FileChannelSourceNoFilter extends ChannelSourceWithFilter {
-}
-class FileChannelSource extends ChannelSourceWithFilter {
-}
-
-
-
 class ImageCube {
 }
 note right of ImageCube
@@ -51,7 +32,7 @@ common data passed
 between nodes
 end note
 
-ImageCube *-- "1..*" IChannelSource: "sources: set of sources\nper channel"
+ImageCube *-- "1..1" MultiBandSource: "sources: set of sources\nper band/channel"
 ImageCube o-- "0..1" ChannelMapping: rgbMapping
 ImageCube *-- ndarray : img
 ImageCube *-- "0..*" ROI : rois

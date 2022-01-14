@@ -1,7 +1,8 @@
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import pyqtSignal
 
-import pcot.conntypes as conntypes
+from pcot import datum
+from pcot.datum import Datum
 
 
 class VariantWidget(QtWidgets.QGroupBox):
@@ -13,7 +14,7 @@ class VariantWidget(QtWidgets.QGroupBox):
         set(conntype.Type) to set the value
     """
 
-    changed = pyqtSignal(conntypes.Type)
+    changed = pyqtSignal(datum.Type)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -22,7 +23,7 @@ class VariantWidget(QtWidgets.QGroupBox):
         self.setLayout(layout)
         self.buttons = []
         idx = 0
-        for x in conntypes.types:
+        for x in Datum.types:
             # I would operate on a filtered list, but note that we still need the
             # indices to be incremented on every type.
             if not x.internal:
@@ -37,11 +38,11 @@ class VariantWidget(QtWidgets.QGroupBox):
         if checked:     # ignore button toggling off event
             for b in self.buttons:
                 if b.isChecked():
-                    t = conntypes.types[b.idx]
+                    t = Datum.types[b.idx]
                     self.changed.emit(t)
 
     def set(self, t):
-        i = conntypes.types.index(t)
+        i = Datum.types.index(t)
         self.buttons[i].setChecked(True)
 
     def setTitle(self, s):

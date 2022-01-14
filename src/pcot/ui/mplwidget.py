@@ -1,9 +1,9 @@
-## @package ui.mplwidget
-# a widget which can contain a Matplotlib figure
-# See xformcurve for an example.
-#
-# This page is useful
-# https://www.learnpyqt.com/courses/graphics-plotting/plotting-matplotlib/
+"""a widget which can contain a Matplotlib figure
+See xformcurve for an example.
+
+This page is useful
+https://www.learnpyqt.com/courses/graphics-plotting/plotting-matplotlib/
+"""
 import os
 
 from PyQt5 import QtWidgets, QtCore

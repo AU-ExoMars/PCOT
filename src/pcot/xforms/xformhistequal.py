@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 
-import pcot.conntypes as conntypes
+from pcot.datum import Datum
 from pcot.xform import xformtype, XFormType
 from pcot.xforms.tabimage import TabImage
 
@@ -49,8 +49,8 @@ class XformHistEqual(XFormType):
 
     def __init__(self):
         super().__init__("histequal", "processing", "0.0.0")
-        self.addInputConnector("", conntypes.IMG)
-        self.addOutputConnector("", conntypes.IMG)
+        self.addInputConnector("", Datum.IMG)
+        self.addOutputConnector("", Datum.IMG)
         self.hasEnable = True
 
     def createTab(self, n, w):
@@ -60,7 +60,7 @@ class XformHistEqual(XFormType):
         node.img = None
 
     def perform(self, node):
-        img = node.getInput(0, conntypes.IMG)
+        img = node.getInput(0, Datum.IMG)
         if img is None:
             # can't equalize a non-existent image!
             node.img = None
@@ -99,4 +99,4 @@ class XformHistEqual(XFormType):
             node.img = img.modifyWithSub(subimage, equalized)
         if node.img is not None:
             node.img.setMapping(node.mapping)
-        node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))
+        node.setOutput(0, Datum(Datum.IMG, node.img))

@@ -1,8 +1,8 @@
 import traceback
 
-import pcot.conntypes as conntypes
-import pcot.ui.tabs
 from pcot import ui
+from pcot.datum import Datum
+import pcot.ui.tabs
 from pcot.expressions import ExpressionEvaluator
 from pcot.xform import XFormType, xformtype, XFormException
 
@@ -17,25 +17,42 @@ class XFormExpr(XFormType):
     The four inputs are assigned to the variables a, b, c, and d. They are typically (but not necessarily) images
     or scalar values.
 
-    Operators:
-    *, -, /, +,^  operate on scalars, images and ROIs (see below for ROIs)
-    -A            element-wise -A
-    A.B           property B of entity A (e.g. a.h is height of image a)
-    A$546         extract single channel image of wavelength 546
-    A&B           element-wise minimum of A and B (Zadeh's AND operator)
-    A|B           element-wise maximum of A and B (Zadeh's OR operator)
-    !A            element-wise 1-A (Zadeh's NOT operator)
+    ### Image/numeric operators:
+    |operator    |description|
+    |-------|-----------|
+    |*, -, /, +,^  |operate on scalars, images and ROIs (see below for ROIs)|
+    |-A            |element-wise -A|
+    |A.B           |property B of entity A (e.g. a.h is height of image a)|
+    |A$546         |extract single channel image of wavelength 546|
+    |A&B           |element-wise minimum of A and B (Zadeh's AND operator)|
+    |A\|B          |element-wise maximum of A and B (Zadeh's OR operator)|
+    |!A            |element-wise 1-A (Zadeh's NOT operator)|
 
-    ROI operators:
-    a+b           union
-    a*b           intersection
-    a-b           difference
-    Source ROIs from the "roi" output of ROI nodes. Impose resulting ROIs on images with "importroi" node.
+    ### ROIs on images in binary operators
+    If one of the two images has an ROI, the operation is only performed on that ROI; the remaining image is
+    the left-hand side of the operation passed through unchanged. If both images have an ROI, the ROIs must have
+    identical bounding boxes (see ops.py:twoImageBinop() ).
+
+
+
+    ### Operators on ROIs themselves (as opposed to images with ROIs)
+    |operator    |description|
+    |----------|--------------|
+    |a+b |          union|
+    |a*b  |         intersection|
+    |a-b |          difference|
+
+    You can source ROIs from the "roi" output of ROI nodes, and impose resulting ROIs on images with "importroi" node.
+
+    ### Properties
 
     Properties are indicated by the "." operator, e.g. "a.w":
-    h             height of an image
-    w             width of an image
-    n             pixel count of an image
+    
+    |Property |  description|
+    |------|-----------|
+    |h  |           height of an image|
+    |w   |          width of an image|
+    |n    |         pixel count of an image|
 
     A list of functions can be obtained by right-clicking on either the log pane or function entry pane
     and selecting "List all functions." Help on an individual function can be found by hovering over
@@ -46,11 +63,11 @@ class XFormExpr(XFormType):
     def __init__(self):
         super().__init__("expr", "maths", "0.0.0")
         self.parser = ExpressionEvaluator()
-        self.addInputConnector("a", conntypes.ANY)
-        self.addInputConnector("b", conntypes.ANY)
-        self.addInputConnector("c", conntypes.ANY)
-        self.addInputConnector("d", conntypes.ANY)
-        self.addOutputConnector("", conntypes.VARIANT)
+        self.addInputConnector("a", Datum.ANY)
+        self.addInputConnector("b", Datum.ANY)
+        self.addInputConnector("c", Datum.ANY)
+        self.addInputConnector("d", Datum.ANY)
+        self.addOutputConnector("", Datum.VARIANT)
         self.autoserialise = ('expr',)
 
     def createTab(self, n, w):
@@ -69,22 +86,22 @@ class XFormExpr(XFormType):
         # we register the input vars here because we have to, they are temporary and apply to
         # this run only. To register other things, go to expression/eval.py.
 
-        self.parser.registerVar('a', lambda: node.getInput(0))
-        self.parser.registerVar('b', lambda: node.getInput(1))
-        self.parser.registerVar('c', lambda: node.getInput(2))
-        self.parser.registerVar('d', lambda: node.getInput(3))
+        self.parser.registerVar('a', 'value of input a', lambda: node.getInput(0))
+        self.parser.registerVar('b', 'value of input b', lambda: node.getInput(1))
+        self.parser.registerVar('c', 'value of input c', lambda: node.getInput(2))
+        self.parser.registerVar('d', 'value of input d', lambda: node.getInput(3))
 
         try:
             if len(node.expr.strip()) > 0:
                 res = self.parser.run(node.expr)
                 node.setOutput(0, res)
                 if res is not None:
-                    if res.tp == conntypes.IMG:
+                    if res.tp == Datum.IMG:
                         # if there's an image on the output, show it
                         node.img = res.val
                         node.img.setMapping(node.mapping)
                         node.result = "IMAGE"
-                    elif res.tp == conntypes.NUMBER:
+                    elif res.tp == Datum.NUMBER:
                         node.result = str(res.val)
                         node.setRectText("res: "+node.result)
                     else:
@@ -94,6 +111,7 @@ class XFormExpr(XFormType):
         except Exception as e:
             traceback.print_exc()
             node.result = str(e)
+            ui.error(f"Error in expression: {str(e)}")
             raise XFormException('EXPR', str(e))
 
 

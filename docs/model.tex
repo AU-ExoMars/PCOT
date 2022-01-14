@@ -1,16 +1,7 @@
 % Created by Jim Finnis
 % Date Wed Feb 24 13:48:57 2021
 
-\begin{todoblock}
-\begin{itemize}
-\item Change getInput and getOutput docs
-\item update conntypes doc
-\item add Datum details
-\end{itemize}
-
-\end{todoblock}
-
-
+\clearpage
 \section{The data model}
 The ``root'' of the data model is the \texttt{Document} object.
 This contains:
@@ -29,6 +20,20 @@ and the data which it manipulates --- this is largely
 image cube data passed between the graph nodes.
 Other forms of data do exist,
 but these are much simpler.
+
+\subsection{The Datum type}
+All data passed between nodes is of the \texttt{Datum} type. This is also the type used by
+all values in the \emph{expr} expression evaluator node. A \texttt{Datum} consists of:
+\begin{itemize}
+\item \textbf{tp}: a type, e.g.\ \texttt{Datum.IMG} for an image or \texttt{Datum.NUMBER} for a number. This is an enum
+defined in \texttt{Datum} itself, some values of which are never held by actual datum objects (e.g.\ \texttt{Datum.ANY},
+which is used to indicate that a connection can be of any type).
+\item \textbf{val}: a value of the appropriate type to match \textbf{tp}.
+\item \textbf{sources}: an object matching the \texttt{SourcesObtainable} interface. This can be queried to get a set
+of source objects describing which inputs (and filter bands within multichannel inputs) a datum is derived from. Nodes
+and functions which manipulate data are required to handle sources correctly, and this can be difficult.
+\end{itemize}
+
 
 \subsection{Graph and nodes}
 Graphs are directed acyclic graphs of nodes represented by the 
@@ -126,20 +131,21 @@ For example, the \emph{inset} \texttt{XFormType} has the constructor:
 \begin{lstlisting}
     def __init__(self):
         super().__init__("inset", "regions", "0.0.0")
-        self.addInputConnector("img", conntypes.IMG)    # input 0
-        self.addInputConnector("inset", conntypes.IMG)  # input 1
-        self.addInputConnector("rect", conntypes.RECT)  # input 2
+        self.addInputConnector("img", Datum.IMG)    # input 0
+        self.addInputConnector("inset", Datum.IMG)  # input 1
+        self.addInputConnector("rect", Datum.RECT)  # input 2
         self.addOutputConnector("", "img")
 \end{lstlisting}
 The arguments for these methods are $(name,type,description)$ where the name
 is often empty (it just shows a hint) and the description is optional (it appears
-in help text). The type is a \texttt{conntypes.Type} value.
+in help text). The type is a \texttt{datum.Type} value --- these are stored
+by name as static members of \texttt{Datum}.
 
 Within an executing graph, the data between nodes is stored as an \texttt{xform.Datum}
 object containing the type and value. Inside the node type's \texttt{perform()} method,
 we typically do something like:
 \begin{lstlisting}
-    node.setOutput(0, Datum(conntypes.IMG, img))
+    node.setOutput(0, Datum(Datum.IMG, img))
 \end{lstlisting}
 which sets output 0 to hold the image (i.e.\ \texttt{ImageCube}) stored in \texttt{img}.
 Fetching data from an input is also done in \texttt{perform()}, and takes two forms. The
@@ -150,7 +156,7 @@ first returns a \texttt{Datum}:
 while the second examines the datum internally, and returns the value field if
 the type matches or None if it doesn't:
 \begin{lstlisting}
-    image = node.getInput(0, conntypes.IMG)
+    image = node.getInput(0, Datum.IMG)
 \end{lstlisting}
 Note that None is a permissible value in \texttt{setOutput()}, which \texttt{getInput()} will
 always return as None.
@@ -158,7 +164,7 @@ always return as None.
 \subsubsection{Overriding types and the variant type}
 It is possible for an individual \texttt{XForm} node to override the input and output types
 set in its \texttt{XFormType}, by setting values in the \texttt{inputTypes} and \texttt{outputTypes}
-array. This is used in macros and mathematical operations. Often the ``default'' type is \texttt{conntypes.VARIANT},
+array. This is used in macros and mathematical operations. Often the ``default'' type is \texttt{Datum.VARIANT},
 which is a special type which must be overriden by some user action before the node becomes useful. A variant connection
 shows as crosshatched, and cannot be connected until its type is changed.
 
@@ -184,7 +190,6 @@ performed by calling their \texttt{perform()} method. This will recursively
 run the child nodes, but only when they are ``ready to run'' (all their inputs
 have been set). 
 
-\clearpage
 \subsubsection{Performing a node}
 The \texttt{XForm.perform()} method will run a node, and recursively run all child nodes, although
 there are some complexities here (mainly to accommodate macros). It will not perform the node if it 
@@ -204,14 +209,16 @@ has already run in this call to \texttt{performNodes()} or if it is not ready to
 \end{algorithmic}
 A node is ready to run if it has no inputs which do not yet have values set. This is
 determined by checking the outputs of the nodes from which the inputs come to see if
-they have yet been set with values. The \texttt{performNodes()} method is called from only two places:
+they have yet been set with values. The \texttt{performNodes()} method is called from these places:
 \begin{itemize}
 \item \texttt{XFormGraph.changed(node)}: when the graph or a node in a graph has been changed. This is the most
 frequent call, and is typically called with a node to avoid running the whole graph. The node is passed down into
 \texttt{performNodes()}).
 \item \texttt{XFormMacro.perform(node)}: when a node which contains a macro instance is being performed (see
 Sec.~\ref{macros} for more details).
+\item \texttt{PaletteButton.click()}: when a new node is created from the palette, to initialise it.
 \end{itemize}
+A few other calls may occur, for example the \emph{constant} node calls this method when its value is changed.
 The \texttt{XFormGraph.changed()} method is called from several places:
 \begin{itemize}
 \item \texttt{XFormGraph.runAll()} : called when a graph is explicitly run.
@@ -229,8 +236,8 @@ Error handling is generally required in three cases:
 \item connection type mismatch discovered at perform time,
 \item other errors at perform time.
 \end{itemize}
-The first is dealt with using the connection type system
-in \texttt{conntypes.py}: each connection (input and output) has a string
+The first is dealt with using the data type system
+in \texttt{datum.py}: each connection (input and output) has a string
 type and the connections must match, or they will not be made. An input
 of type ``any'' can accept any type. Additional checks are made to avoid
 cycles.
@@ -298,11 +305,11 @@ corresponding to the active method will be visible.
 \end{itemize}
 Code for the inputs is the \texttt{pcot.inputs} package, except for the UI
 code which is in the \texttt{pcot.ui.inputs} module.
-
 \clearpage
-\subsection{Image data}
+
+\subsection{Image data and data sources}
 Most classes making up the image data model are declared in the
-\texttt{pancamimage.py} file, including the main \texttt{ImageCube} class.
+\texttt{imagecube.py} file, including the main \texttt{ImageCube} class.
 Some additional classes describing where images can come from are in
 \texttt{channelsource.py}. The model is shown in outline in
 Fig.~\ref{image.pdf} although some links to channel sources and mapping from
@@ -329,45 +336,111 @@ of information. There is no upper limit on the number of channels in an image (o
 beyond system memory.
 \end{notebox}
 
-
-\subsubsection{IChannelSource and its implementations}
-Each \texttt{ImageCube} has a number of channels, and for each channel there must be a corresponding
-entry in its \texttt{sources} list. This describes where that channel came from, so that (typically) filter
-information can be preserved, where appropriate, through the graph. The sources for each channel are a set
-of \texttt{IChannelSource} objects. For example, if an image was loaded through the RGB loader, it might
-have three ``fake'' channel sources for red, green and blue. Thus the sources will be 
-\begin{v}
-[ {RED}, {GREEN}, {BLUE} ]
-\end{v}
-i.e.\ a list of three sets, each with a single source.
-If the image is then converted to greyscale, this could
-become
-\begin{v}
-[ {RED,GREEN,BLUE}, {RED,GREEN,BLUE}, {RED,GREEN,BLUE} ]
-\end{v}
-because each channel now contains information from the red, green and blue channels in the source file.
-The \texttt{RED}, \texttt{GREEN} and \texttt{BLUE} values refer in this case to \texttt{FileChannelSourceNoFilter} objects
-which contain ``fake'' filter information and a filename identifier.
-Each \texttt{IChannelSource} contains methods for accessing:
+\subsubsection{Data sources}
+Each piece of data in PCOT passing through a node or used as part of an
+\emph{expr} node's expression has metadata describing where it came from.
+This is ultimately always a PCOT input (i.e.\ from an \emph{input} node);
+data from user input or elsewhere is disregarded. This is handled by the following
+entities:
 \begin{itemize}
-\item an \textbf{identifier string} for the source from which the channel was acquired (typically a filename or data ID);
-\item a \textbf{filter} and methods for obtaining the filter name, filter position and an actual filter reference (for extra data such as centre wavelength) (note
-that much of this information will be ``fake'' for images loaded from plain RGB files);
-\item methods for getting string descriptors for this source.
+\item \textbf{SourcesObtainable} is the root interface of the system, consisting of
+all classes which have the \texttt{getSources()} method which can return a set of sources.
+\item \textbf{SourceSet} is a set of \texttt{Source} objects, indicating which
+sources are contributing to a given piece of data. For example, some operation
+may have combined several bands into one using a mathematical operation ---
+the output band's SourceSet will consist of the all the contributing Sources.
+It is not a \texttt{Source} itself, but it is a \texttt{SourcesObtainable} and
+so a SourceSet which is the union of all its constituent SourceSets can be
+obtained.
+\item \textbf{Source} is the base class of all concrete source types, currently consisting
+of just \texttt{InputSource} and the dummy \texttt{\_NullSource} ``placeholder'' class for
+sources which can be filtered out. 
+\item \textbf{InputSource} represents a PCOT input source of data. It holds references to
+the Input, Document and may also hold information about which PanCam Filter (or other device)
+the information comes from.
+\item \textbf{MultiBandSource} is a collection of SourceSets, one for each band in a multiband
+image. It is not a \texttt{Source} itself, but it is a \texttt{SourcesObtainable} and so
+a SourceSet which is the union of all its constituent SourceSets can be obtained.
 \end{itemize}
+These classes are shown as a UML diagram in Fig.~\ref{source.pdf}.
+\begin{figure}[ht]
+\center
+\includegraphics[width=5in]{source.pdf}
+\caption{Source management classes}
+\label{source.pdf}
+\end{figure}
 
-Nodes generate and process this information in different ways. For example, a
-\emph{gradient} node takes a single channel and converts it into an RGB image
-with a colour gradient: here, the output image's sources are ``internal RGB''
-sources with no identifier or sensible filter data because the output's colour
-is entirely artificial. In contrast, a the \emph{curve} for performing a
-sigmoid function on all channels of an image will give the output image the
+Nodes generate and process source information in different ways. For example, a
+\emph{gradient} node takes a single band and converts it into an RGB image
+with a colour gradient: here, the output image has a MultiBandSource of three
+identical SourceSets, which are the SourceSet of the single band image input.
+In contrast, a the \emph{curve} for performing a
+sigmoid function on all bands of an image will give the output image the
 same sources as the input image.
 
-Sources are used to keep track of each channel as it moves through the graph
-so they can be processed and displayed appropriately: Fig.~\ref{app.png} shows
+\subsubsection{Important methods for sources}
+As well as \texttt{getSources()}, which return a SourceSet which is the union
+of all constituent sources, all \texttt{Source} subclasses have the following
+methods:
+\begin{itemize}
+\item \textbf{copy()} produces a ``reasonably deep'' copy of the source
+\item \textbf{matches()} returns true if a source matches some criteria --- details are below
+\item \textbf{getFilter()} returns the Filter object if one is present (or None)
+\item \textbf{brief()} returns a brief description
+\item \textbf{long()} returns a long description
+\end{itemize}
+The \texttt{match()} method can match on the following criteria --- all of which
+must be true, but criteria which are None are ignored:
+\begin{itemize}
+\item \textbf{hasFilter}: the Source has a filter
+\item \textbf{filterNameOrCWL}: the Source has a filter with the same name (if a string)
+or centre wavelength (if a float)
+\item \textbf{inp}: the Source has the same input index (i.e.\ number of the PCOT input)
+\end{itemize}
+\textbf{SourceSet} has the following additional functionality:
+\begin{itemize}
+\item The constructor can take a Source, a SourceSet, or a collection of either/both,
+and convert them into a single union SourceSet.
+\item \textbf{match()} returns true if any source in the set matches all criteria.
+If the \texttt{single} flag is true, sets are ignored if they contain more than one element.
+\end{itemize}
+\textbf{MultiBandSource} also has the following:
+\begin{itemize}
+\item The constructor takes a list of SourceSets and/or Sources
+\item \textbf{createEmptySourceSets(n)} class method constructs a MultiBandSource of $n$ empty
+source sets
+\item \textbf{createBandwiseUnion(lst)} takes a list of MultiBandSources with the same number
+of bands, and constructs a new MultiBandSource where each band's source set is a union of
+the corresponding bands' source sets in each input. For example, consider a MultiBandSource $M_1$ consisting
+of three SourceSets $A, B, C$, and two other MultiBandSources $M_2, M_3$ defined similarly:
+\begin{align*}
+M_1 &= \{ A, B, C \}\\
+M_2 &= \{ D, E, F \}\\
+M_3 &= \{ G, H, I \}\\
+\text{createBandwiseUnion}([M_1,M_2,M_3]) &= \{ A \cup D \cup G, B \cup E \cup H, C \cup F \cup I\}
+\end{align*}
+This is typically in $expr$ binary operations such as image addition.
+\item \textbf{add(s)} adds a source set to the list
+\item \textbf{copy()} returns a ``reasonably deep'' copy
+\item \textbf{search()} returns a list of indices of bands whose source sets contain a
+source which match all of the criteria given (again, None criteria are ignored). Criteria are:
+\begin{itemize}
+\item \textbf{hasFilter}: the Source has a filter
+\item \textbf{filterNameOrCWL}: the Source has a filter with the same name (if a string)
+or centre wavelength (if a float)
+\item \textbf{inp}: the Source has the same input index (i.e.\ number of the PCOT input)
+\item \textbf{single}: the Source is the only member of the set
+\end{itemize}
+\item \textbf{brief()} returns a brief description
+\item \textbf{long()} returns a long description
+\end{itemize}
+
+
+Sources are used to keep track of each datum as it moves through the graph
+so they can be processed and displayed appropriately, particularly for images:
+Fig.~\ref{app.png} (p.~\pageref{app.png}) shows
 a typical node in the ``node controls and output'' section. This section, as
-it does in many nodes, contains a ``canvas'' displaying an image. Above the
+it does in many nodes, contains a canvas displaying an image. Above the
 canvas are three combo boxes which select the channels in the image cube to
 display on the canvas, and these are typically labelled by a string generated
 from the source data for each channel (along with the index). Sources are also
@@ -456,7 +529,7 @@ cube, using the \texttt{modifyWithSub} method.
 This example shows the operation of the decorrelation stretch:
 \begin{lstlisting}[language=Python]
     def perform(self,node):
-        img = node.getInput(0, conntypes.IMG)
+        img = node.getInput(0, Datum.IMG)
         if img is None:
             node.img = None
         elif not node.enabled:
@@ -469,7 +542,7 @@ This example shows the operation of the decorrelation stretch:
             node.img = img.modifyWithSub(subimage, newimg)
         if node.img is not None:
             node.img.setMapping(node.mapping)
-        node.setOutput(0, Datum(conntypes.IMG, node.img))
+        node.setOutput(0, Datum(Datum.IMG, node.img))
 \end{lstlisting}
 There are several checks for whether the node is actually enabled, and whether there is an image
 present to stretch, but the core lines are these:

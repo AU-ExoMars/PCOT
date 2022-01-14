@@ -2,7 +2,6 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QKeyEvent
 from PyQt5.QtWidgets import QMessageBox
 
-import pcot.conntypes as conntypes
 import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text

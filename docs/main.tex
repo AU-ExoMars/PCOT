@@ -23,6 +23,7 @@
 \usepackage{algorithmic}
 \usepackage{algorithm}
 \usepackage{framed}
+\usepackage{paracol}
 
 % this uses the IEEE naming conventions (apart from Procedure)
 % \floatname{algorithm}{Procedure}
@@ -354,6 +355,16 @@ morestring=[b]"
 \newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}}
 
 
+% Parallel ``code'' and comment stuff, inside a paracol{2} env.
+
+\newcommand{\parblock}[2]{
+{\small \texttt{#1}}
+\switchcolumn
+\noindent #2\vspace*{0.6em}
+\switchcolumn*
+}
+
+
 \title{PCOT design notes}
 \author{James Finnis (jcf12@aber.ac.uk)}
 
@@ -377,6 +388,7 @@ morestring=[b]"
 
 
 \input{intro.tex}
+\input{install.tex}
 \input{model.tex}
 \input{customisation.tex}
 \input{writingfuncs.tex}

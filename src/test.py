@@ -3,7 +3,7 @@
 #
 
 from pcot.document import Document
-from pcot.conntypes import IMG
+from pcot.datum import Datum
 
 # load a PCOT document
 d = Document("..\\libtest.pcot")
@@ -15,7 +15,7 @@ if rv is not None:  # check all is good
 d.changed()
 # now get an evaluation node by name (which is the same as its expression)
 # and read its output 0, which should be an image
-img = d.getNodeByName("a*0.5").getOutput(0, IMG)
+img = d.getNodeByName("a*0.5").getOutput(0, Datum.IMG)
 # get an RGB representation using these wavelengths for RGB
 img.setRGBMapping(832, 950, 1000)
 # and write to a PNG

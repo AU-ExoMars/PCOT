@@ -1,7 +1,6 @@
-## @package ui.tabs
-# Dockable tab handling code. Windows which have dockable tabs
-# should inherit DockableTabWindow.
-
+"""Dockable tab handling code. Windows which have dockable tabs
+should inherit DockableTabWindow.
+"""
 
 from PyQt5 import QtWidgets, uic, QtCore
 from PyQt5.QtCore import Qt
@@ -149,12 +148,12 @@ class Tab(QtWidgets.QWidget):
 
     updatingTabs = False  # we are updating after a perform, don't take too much notice of calls to changed()
 
-    ## the comment field changed, set the data in the node.
     def commentChanged(self):
+        """the comment field changed, set the data in the node."""
         self.node.comment = self.comment.toPlainText().strip()
 
-    ## constructor, which should be called by the subclass ctor
     def __init__(self, window, node, uifile):
+        """constructor, which should be called by the subclass ctor"""
         super(Tab, self).__init__()
         self.expanded = None
         self.node = node
@@ -230,24 +229,28 @@ class Tab(QtWidgets.QWidget):
 
         splitter.setSizes([total * 0.9, total * 0.1])
 
-    ## The tab's widgets have changed the data, we need
-    # to perform the node. (or all instance nodes of a macro prototype).
-    # If uiOnly is false, just do the uichanged() update, as if autorun were not set.
-    # We also record an undo mark.
     def changed(self, uiOnly=False):
-        self.node.graph.changed(self.node, uiOnly=uiOnly)
+        """The tab's widgets have changed the data, we need
+        to perform the node. (or all instance nodes of a macro prototype).
+        If uiOnly is false, just do the uichanged() update, as if autorun were not set.
+        We also record an undo mark.
 
-    ## enabled has changed  
+        Note that we don't call this if we're updating tabs in nodeChanged().
+        That's because nodeChanged calls onNodeChanged, which can change a lot of widgets,
+        each of which will call this method in their valueChanged slot method."""
+
+        if not Tab.updatingTabs:
+            self.node.graph.changed(self.node, uiOnly=uiOnly)
+
     def enableChanged(self, b):
         self.node.setEnabled(b)
 
-    ## set node enabled (if the node type has that feature)
     def setNodeEnabled(self, b):
         if self.enable is not None:
             self.enable.setChecked(b)
 
-    ## node has been deleted, remove from tabs
     def nodeDeleted(self):
+        """node has been deleted, remove me from tabs"""
         if self.expanded:
             self.expanded.close()
             self.expanded = None
@@ -255,8 +258,8 @@ class Tab(QtWidgets.QWidget):
         self.window.tabWidget.removeTab(idx)
         self.node.tabs.remove(self)
 
-    ## force update of tab title and return new title
     def retitle(self):
+        """force update of tab title and return new title"""
         t = self.node.displayName
         if self.node.displayName != self.node.type.name:
             t += " ({})".format(self.node.type.name)
@@ -266,27 +269,32 @@ class Tab(QtWidgets.QWidget):
         return self.title
 
     def updateError(self):
+        """Update the error field"""
         if self.node.error is not None:
             self.errorText.setText("Error " + self.node.error.code + ": " + self.node.error.message)
             self.errorText.setVisible(True)
         else:
             self.errorText.setVisible(False)
 
-    ## write this in subclasses - 
-    # should update the tab when the node's data has changed
     def onNodeChanged(self):
+        """should update the tab when the node's data has changed"""
         pass
 
-    ## will set a flag to stop undo marking and perform before calling onNodeChanged to update
-    # tab widgets; this avoids the changes to those widgets triggering another changed and rerun.
     def nodeChanged(self):
+        """will set a flag to stop undo marking and perform before calling onNodeChanged to update
+        tab widgets; this avoids the changes to those widgets triggering another changed and rerun."""
         Tab.updatingTabs = True
         self.onNodeChanged()
         Tab.updatingTabs = False
 
-    ## the tab is about to change the node! Mark this undo point if we are not updating tabs from the node.
-    # Yes, we probably shouldn't be doing this at all in the latter case, but it's sometimes hard to avoid.
     def mark(self):
+        """the tab is about to change the node! Mark this undo point if we are not updating tabs from the node.
+        Yes, we probably shouldn't be calling this at all in the latter case, but it's sometimes hard to avoid."""
         if not Tab.updatingTabs:
             self.node.mark()
+
+    def uichanged(self):
+        """The node has changed, but only the user interface needs updating - the outputs will not change."""
+        self.node.type.uichange(self.node)    # tell the node to update; for some nodes this calls perform() (e.g. ROIs)
+        self.node.updateTabs()
 

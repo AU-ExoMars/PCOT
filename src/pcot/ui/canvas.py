@@ -1,6 +1,4 @@
-## @package ui.canvas
-# Canvas widget for showing a CV image
-#
+"""Canvas widget for showing a CV image"""
 import math
 import os
 from typing import TYPE_CHECKING, Optional
@@ -14,18 +12,15 @@ import numpy as np
 
 import pcot
 import pcot.ui as ui
-from pcot.channelsource import IChannelSource
-from pcot.pancamimage import ImageCube, ChannelMapping
 
 if TYPE_CHECKING:
     from pcot.xform import XFormGraph, XForm
 
 
-## convert a cv/numpy image to a Qt image
-# input must be 3 channels, 0-1 floats
-
-
 def img2qimage(img):
+    """convert a cv/numpy image to a Qt image
+    input must be 3 channels, 0-1 floats
+    """
     i = img * 255.0
     i = i.astype(np.ubyte)
     height, width, channel = i.shape
@@ -58,6 +53,11 @@ class InnerCanvas(QtWidgets.QWidget):
         self.scale = 1
         self.x = 0
         self.y = 0
+        self.cutw = 0   # size of image in view
+        self.cuth = 0
+        self.panning = False
+        self.panX = None
+        self.panY = None
         self.canv = canv
         # needs to do this to get key events
         self.setFocusPolicy(QtCore.Qt.ClickFocus)
@@ -78,7 +78,7 @@ class InnerCanvas(QtWidgets.QWidget):
 
     ## display an image next time paintEvent
     # happens, and update to cause that. Allow it to handle None too.
-    def display(self, img: ImageCube, isPremapped: bool, showROIs: bool = False):
+    def display(self, img: 'ImageCube', isPremapped: bool, showROIs: bool = False):
         if img is not None:
             self.desc = img.getDesc(self.getGraph())
             if not isPremapped:
@@ -129,10 +129,10 @@ class InnerCanvas(QtWidgets.QWidget):
             cuty = int(self.y)
             img = self.img[cuty:cuty + cuth, cutx:cutx + cutw]
             # now get the size of the image that was actually cut (some areas may be out of range)
-            cuth, cutw = img.shape[:2]
+            self.cuth, self.cutw = img.shape[:2]
             # now resize the cut area up to fit the widget. Using area interpolation here:
             # cubic produced odd artifacts on float images
-            img = cv.resize(img, dsize=(int(cutw / scale), int(cuth / scale)), interpolation=cv.INTER_AREA)
+            img = cv.resize(img, dsize=(int(self.cutw / scale), int(self.cuth / scale)), interpolation=cv.INTER_AREA)
             p.drawImage(0, 0, img2qimage(img))
             if self.canv.paintHook is not None:
                 self.canv.paintHook.canvasPaintHook(p)
@@ -168,21 +168,35 @@ class InnerCanvas(QtWidgets.QWidget):
     ## mouse press handler, can delegate to a hook
     def mousePressEvent(self, e):
         x, y = self.getImgCoords(e.pos())
-        if self.canv.mouseHook is not None:
+        if e.button() == Qt.MidButton:
+            self.panning = True
+            self.panX, self.panY = x, y
+        elif self.canv.mouseHook is not None:
             self.canv.mouseHook.canvasMousePressEvent(x, y, e)
         return super().mousePressEvent(e)
 
     ## mouse move handler, can delegate to a hook
     def mouseMoveEvent(self, e):
         x, y = self.getImgCoords(e.pos())
-        if self.canv.mouseHook is not None:
+        if self.panning:
+            dx = x - self.panX
+            dy = y - self.panY
+            self.x -= dx*0.5
+            self.y -= dy*0.5
+            self.x = max(0, min(self.x, self.img.shape[1]-self.cutw))
+            self.y = max(0, min(self.y, self.img.shape[0]-self.cuth))
+            self.panX, self.panY = x, y
+            self.update()
+        elif self.canv.mouseHook is not None:
             self.canv.mouseHook.canvasMouseMoveEvent(x, y, e)
         return super().mouseMoveEvent(e)
 
     ## mouse release handler, can delegate to a hook
     def mouseReleaseEvent(self, e):
         x, y = self.getImgCoords(e.pos())
-        if self.canv.mouseHook is not None:
+        if e.button() == Qt.MidButton:
+            self.panning = False
+        elif self.canv.mouseHook is not None:
             self.canv.mouseHook.canvasMouseReleaseEvent(x, y, e)
         return super().mouseReleaseEvent(e)
 
@@ -190,6 +204,7 @@ class InnerCanvas(QtWidgets.QWidget):
     def wheelEvent(self, e):
         # get the mousepos in the image and calculate the new zoom
         wheel = 1 if e.angleDelta().y() < 0 else -1
+        # x,y here is the zoom point
         x, y = self.getImgCoords(e.pos())
         newzoom = self.zoomscale * math.exp(wheel * 0.2)
 
@@ -213,9 +228,11 @@ class InnerCanvas(QtWidgets.QWidget):
             return
 
         # calculate change in zoom and use it to move the offset
+
         zoomchange = newzoom - self.zoomscale
         self.x -= zoomchange * x
         self.y -= zoomchange * y
+
         # set the new zoom
         self.zoomscale = newzoom
         # clip the change
@@ -258,11 +275,11 @@ class Canvas(QtWidgets.QWidget):
     # the mapping we are editing, and using to display/generate the RGB representation. Unless we're in 'alreadyRGBMapped'
     # in which case it's just a mapping we are editing - we display an image mapped elsewhere. Again, not actually
     # optional - we have to set it in the containing window's init.
-    mapping: Optional[ChannelMapping]
+    mapping: Optional['ChannelMapping']
 
     ## @var previmg
     # previous image, so we can avoid redisplay.
-    previmg: Optional[ImageCube]
+    previmg: Optional['ImageCube']
 
     ## @var nodeToUIChange
     # Node to do a UI change on whenever we redisplay an image (the mapping may have changed, and in the case of premapped
@@ -449,12 +466,13 @@ class Canvas(QtWidgets.QWidget):
 
     ## this initialises a combo box, setting the possible values to be the channels in the image
     # input
-    def addChannelsToChannelCombo(self, combo: QtWidgets.QComboBox, img: ImageCube):
+    def addChannelsToChannelCombo(self, combo: QtWidgets.QComboBox, img: 'ImageCube'):
         combo.clear()
         for i in range(0, img.channels):
             # adds descriptor string and integer channels index
-            combo.addItem("{}) {}".format(i, IChannelSource.stringForSet(img.sources[i],
-                                                                         self.graph.doc.settings.captionType)))  # ugly
+            cap = self.graph.doc.settings.captionType
+            s = f"{i}) {img.sources.sourceSets[i].brief(cap)}"
+            combo.addItem(s)
 
     def setCombosToImageChannels(self, img):
         self.addChannelsToChannelCombo(self.redChanCombo, img)
@@ -470,7 +488,7 @@ class Canvas(QtWidgets.QWidget):
     # In the normal case (where the Canvas does the RGB mapping) just call with the image.
     # In the premapped case, call with the premapped RGB image, the source image, and the node.
 
-    def display(self, img: ImageCube, alreadyRGBMappedImageSource=None, nodeToUIChange=None):
+    def display(self, img: 'ImageCube', alreadyRGBMappedImageSource=None, nodeToUIChange=None):
         if self.mapping is None:
             raise Exception(
                 "Mapping not set in ui.canvas.Canvas.display() - should be done in tab's ctor with setMapping()")
@@ -509,9 +527,10 @@ class Canvas(QtWidgets.QWidget):
         # This is the simplest way to avoid it.
         if not self.recursing:
             self.recursing = True
-            if self.nodeToUIChange is not None:
-                self.nodeToUIChange.uichange()
-                self.nodeToUIChange.updateTabs()
+            n = self.nodeToUIChange
+            if n is not None:
+                n.type.uichange(n)
+                n.updateTabs()
             #            self.graph.performNodes(self.nodeToUIChange)
             self.recursing = False
 
@@ -571,5 +590,5 @@ class Canvas(QtWidgets.QWidget):
     def getCanvasCoords(self, x, y):
         return self.canvas.getCanvasCoords(x, y)
 
-    def getImgCoords(self, x, y):
-        return self.canvas.getImgCoords(x, y)
+    def getImgCoords(self, p):
+        return self.canvas.getImgCoords(p)

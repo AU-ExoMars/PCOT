@@ -1,0 +1,3 @@
+site_name: Test pcot docs
+nav:
+    - Home: index.md

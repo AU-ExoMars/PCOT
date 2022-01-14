@@ -1,15 +1,13 @@
-## @package macros
-# Code dealing with macros and macro prototypes
+"""Code dealing with macros and macro prototypes"""
 
-from typing import List, Dict, ClassVar
+from typing import List
 
-from PyQt5 import QtWidgets
-
-from pcot.ui.tabs import Tab
 import pcot.ui.mainwindow
-import pcot.conntypes as conntypes
 import pcot.xform as xform
-from pcot.pancamimage import ChannelMapping
+from pcot import datum
+from pcot.datum import Datum
+from pcot.imagecube import ChannelMapping
+from pcot.ui.tabs import Tab
 from pcot.xform import XFormType, XFormGraph
 
 
@@ -63,7 +61,7 @@ class XFormMacroConnector(XFormType):
 
     def init(self, node):
         node.datum = None
-        node.conntype = conntypes.VARIANT
+        node.conntype = Datum.VARIANT
 
     ## called from XForm.serialise, saves the macro name
     def serialise(self, node):
@@ -77,7 +75,7 @@ class XFormMacroConnector(XFormType):
         if name not in doc.macros:
             raise Exception('macro {} not found'.format(name))
         node.proto = doc.macros[name]
-        node.conntype = conntypes.deserialise(d['conntype'])
+        node.conntype = datum.deserialise(d['conntype'])
         node.proto.setConnectors()
 
     ## when connectors are removed, the prototype's connectors must change (and
@@ -101,11 +99,11 @@ class XFormMacroIn(XFormMacroConnector):
     def __init__(self):
         super().__init__("in")
         # does not appear until specified by the user
-        self.addOutputConnector("", conntypes.VARIANT)
+        self.addOutputConnector("", Datum.VARIANT)
 
     ## perform sets the output from data set in XFormMacro.perform())
     def perform(self, node):
-        if node.getOutputType(0) == conntypes.VARIANT:
+        if node.getOutputType(0) == Datum.VARIANT:
             raise xform.XFormException('TYPE', 'output type of macro input node must be specified')
         node.setOutput(0, node.datum)
         print("DUMP OF INCONNECTOR ", node.name, node)
@@ -119,12 +117,12 @@ class XFormMacroOut(XFormMacroConnector):
     def __init__(self):
         super().__init__("out")
         # does not appear until specified by the user
-        self.addInputConnector("", conntypes.VARIANT)
+        self.addInputConnector("", Datum.VARIANT)
 
     ## perform stores its input in its data field, ready for
     # XFormMacro.perform() to read it
     def perform(self, node):
-        if node.getInputType(0) == conntypes.VARIANT:
+        if node.getInputType(0) == Datum.VARIANT:
             raise xform.XFormException('TYPE', 'input type of macro output node must be specified')
         node.datum = node.getInput(0)
         print("DUMP OF INCONNECTOR ", node.name, node)
@@ -399,7 +397,7 @@ class TabConnector(Tab):
 
     def onNodeChanged(self):
         # set the current type
-        i = conntypes.types.index(self.node.conntype)
+        i = Datum.types.index(self.node.conntype)
         if i < 0:
             raise Exception('unknown connector type: {}'.format(self.node.conntype))
         self.w.variant.set(self.node.conntype)

@@ -1,0 +1,13 @@
+* conda create -n pcot python=3.8 poetry
+* conda activate pcot
+* poetry install
+
+Then you can just run it. Or if you want..
+
+* pip3 install pyinstaller
+* cd pyInstaller
+* pyinstaller dir.spec (or main.spec for single file)
+
+Note that it might seem odd that the exe is called pcotapp and not pcot;
+that's because it creates a file with the exe name, and we need a directory
+called 'pcot' as it's the top level package.

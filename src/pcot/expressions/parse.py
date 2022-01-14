@@ -1,14 +1,18 @@
-# This is the core of the expression parsing system.
-# The actual operations etc. are in eval.py.
+"""This is the expression parser and VM, which uses a shunting-yard algorithm to
+produce a sequence of instructions for a stack machine. While largely application
+independent, it does use PCOT's Datum type as a variant record, and conntypes to
+handle type checking. Help texts are also generated.
+"""
+
 import numbers
 from io import BytesIO
 from tokenize import tokenize, TokenInfo, NUMBER, NAME, OP, ENCODING, ENDMARKER, NEWLINE, ERRORTOKEN, PERCENT, DOT
 
 from typing import List, Any, Optional, Callable, Dict, Tuple, Union
 
-import pcot.conntypes as conntypes
-from pcot.conntypes import Datum
-from pcot.utils.html import HTML, Bold
+from pcot import datum
+from pcot.datum import Datum
+from pcot.sources import nullSourceSet
 from pcot.utils.table import Table
 
 Stack = List[Any]
@@ -18,6 +22,7 @@ debug: bool = True
 
 
 class ArgsException(Exception):
+    """Exception indicating an error has occurred while processing an argument"""
     ## @var message
     # a string message
     message: str
@@ -28,6 +33,7 @@ class ArgsException(Exception):
 
 
 class ParamException(Exception):
+    """Internal exception used during parameter processing; propagated to ArgsException"""
     ## @var message
     # a string message
     message: str
@@ -37,37 +43,46 @@ class ParamException(Exception):
         self.message = message
 
 
+class ParseException(Exception):
+    """A generic error in the parser"""
+    def __init__(self, msg: str, t: Optional[TokenInfo] = None):
+        if t is not None:
+            msg = "{}: '{}' at chars {}-{}".format(msg, t.string, t.start[1], t.end[1])
+        super().__init__(msg)
+
+
 class Parameter:
     """a definition of a function parameter"""
-
     def __init__(self,
                  name: str,  # name
                  desc: str,  # description
-                 types: Union[conntypes.Type, Tuple[conntypes.Type, ...]],  # tuple of valid types, or just one
+                 types: Union[datum.Type, Tuple[datum.Type, ...]],  # tuple of valid types, or just one
                  deflt: Optional[numbers.Number] = None  # default value for optional parameters, must be numeric
                  ):
         self.name = name
-        if isinstance(types, conntypes.Type):
-            self.types = (types,)  # convert single type to tuple
-        else:
-            self.types = types
+        if isinstance(types, datum.Type):
+            types = (types,)  # convert single type to tuple
+        self.types = set(types)  # convert tuple to set
         self.desc = desc
         self.deflt = deflt
 
     def isValid(self, datum: Datum):
+        """Make sure that the datum has a type, and that this type is acceptable (is in this parameter's
+        set of valid types"""
         if datum is None:
             raise ParamException("None is not a valid parameter type")
         return datum.tp in self.types
 
     def getDefault(self):
+        """Return the default value of this parameter if there is one (must be numeric)"""
         if self.deflt is None:
             raise ParamException("internal: optional parameter {} has a no default".format(self.name))
         return self.deflt
 
     def validArgsString(self):
-        # turn a tuple (1,2,3) into "1, 2 or 3"
+        """turn a tuple (1,2,3) into "1, 2 or 3"""
         if len(self.types) == 1:
-            r = str(self.types[0])
+            r = str(next(iter(self.types)))  # weird idiom for "get only item from set/list"
         else:
             lst = list(self.types)
             last = lst.pop()
@@ -75,16 +90,20 @@ class Parameter:
         return r
 
 
-def _styleTableCells(x):
-    if x.tag in ('th', 'tr'):
-        x.attrs = {"align": "left"}
-    elif x.tag == "table":
-        x.attrs = {"border": "1", "cellpadding": 5}
+class Variable:
+    """defines a variable, which is a wrapper around a parameterless function and a description"""
+    def __init__(self, name: str, fn: Callable[[], Any], desc: str):
+        self.desc = desc
+        self.fn = fn
+        self.name = name
+
+    def help(self):
+        """return help markdown"""
+        return self.desc
 
 
 class Function:
-    """a function callable from an eval string"""
-
+    """defines a function callable from an eval string; is called from registerFunc."""
     def __init__(self, name: str, fn: Callable[[List[Any]], Any], description: str,
                  mandatoryParams: List[Parameter], optParams: List[Parameter], varargs):
         self.fn = fn
@@ -99,30 +118,28 @@ class Function:
             raise ArgsException("cannot have a function with varargs and optional arguments")
 
     def help(self):
-        t = Table()
-        for x in self.mandatoryParams:
-            t.newRow()
-            t.add("name", x.name)
-            t.add("types", x.validArgsString() + ("" if not self.varargs else "..."))
-            t.add("description", x.desc)
-        margs = t.htmlObj()
-        t = Table()
-        for x in self.optParams:
-            t.newRow()
-            t.add("name", x.name)
-            t.add("types", x.validArgsString())
-            t.add("description", x.desc)
-        oargs = t.htmlObj()
+        """generate help text using the Table class, returning Markdown."""
+        s = f"{self.desc}"
 
-        return HTML("div",
-                    [
-                        HTML("p", self.desc),
-                        HTML("p", Bold("Mandatory arguments")),
-                        margs,
-                        HTML("p", Bold("Optional arguments")),
-                        oargs
-                    ]
-                    ).visit(_styleTableCells).string()
+        if len(self.mandatoryParams)>0:
+            t = Table()
+            for x in self.mandatoryParams:
+                t.newRow()
+                t.add("name", x.name)
+                t.add("types", x.validArgsString() + ("" if not self.varargs else "..."))
+                t.add("description", x.desc)
+            margs = t.markdown()
+            s += f"\n\n  ## Mandatory arguments\n{margs}"
+        t = Table()
+        if len(self.optParams)>0:
+            for x in self.optParams:
+                t.newRow()
+                t.add("name", x.name)
+                t.add("types", x.validArgsString())
+                t.add("description", x.desc)
+                t.add("default", x.deflt)
+            oargs = t.markdown()
+            s += f"\n\n  ## Optional arguments\n{oargs}"
 
     def chkargs(self, args: List[Optional[Datum]]):
         """Process arguments, returning a pair of lists of Datum items: mandatory and optional args.
@@ -160,7 +177,7 @@ class Function:
 
             for t in self.optParams:
                 if len(args) == 0:
-                    optArgs.append(Datum(conntypes.NUMBER, t.getDefault()))
+                    optArgs.append(Datum(Datum.NUMBER, t.getDefault(), nullSourceSet))
                 else:
                     x = args.pop(0)
                     if x is None:
@@ -177,19 +194,20 @@ class Function:
         return mandatArgs, optArgs
 
     def call(self, args):
-        # do type checking for arguments, then call. Note that we pass mandatory and optional arguments
+        """do type checking for arguments, then call this function.
+        Note that we pass mandatory and optional arguments"""
         args, optargs = self.chkargs(args)
         return self.fn(args, optargs)
 
 
 class Instruction:
-    """Instruction interface"""
-
+    """Interface for all instructions in the virtual machine"""
     def exec(self, stack: Stack):
         pass
 
 
 class InstNumber(Instruction):
+    """A VM instruction for stacking a number"""
     val: float
 
     def __init__(self, v: float):
@@ -197,55 +215,65 @@ class InstNumber(Instruction):
 
     def exec(self, stack: Stack):
         # can't import NUMBER, it clashes with the one in tokenizer.
-        stack.append(Datum(conntypes.NUMBER, self.val))
+        stack.append(Datum(Datum.NUMBER, self.val, nullSourceSet))
 
     def __str__(self):
         return "NUM {}".format(self.val)
 
 
 class InstIdent(Instruction):
+    """A VM instruction for stacking an identifier (a short string)"""
     val: str
 
     def __init__(self, v: str):
         self.val = v
 
     def exec(self, stack: Stack):
-        stack.append(Datum(conntypes.IDENT, self.val))
+        stack.append(Datum(Datum.IDENT, self.val, nullSourceSet))
 
     def __str__(self):
         return "STR {}".format(self.val)
 
 
 class InstVar(Instruction):
-    callback: Callable[[], Any]
+    """A VM instruction for stacking a variable.
+    This encapsulates a function which should be called by the VM to get the variable's value."""
+    var: Variable
+    name: str
 
-    def __init__(self, name, callback: Callable[[], Any]):
-        self.callback = callback
-        self.name = name
+    def __init__(self, var):
+        self.var = var
 
     def exec(self, stack: Stack):
-        stack.append(self.callback())
+        stack.append(self.var.fn())
 
     def __str__(self):
-        return "VAR {}".format(self.name)
+        return "VAR {}".format(self.var.name)
 
 
 class InstFunc(Instruction):
+    """A VM instruction for stacking a function.
+    Does not call the function! InstCall does that. Holds the function to be called by the VM, and the
+    name of the function for debugging."""
     callback: Callable[[List[Any]], Any]
+    name: str
 
     def __init__(self, name, func: Function):
         self.func = func
         self.name = name
 
     def exec(self, stack: Stack):
-        # actually stack the callback function, don't call it - InstCall does that.
-        stack.append(Datum(conntypes.FUNC, self.func))
+        """actually stack the callback function, don't call it - InstCall does that."""
+        stack.append(Datum(Datum.FUNC, self.func, nullSourceSet))
 
     def __str__(self):
         return "FUNC {}".format(self.name)
 
 
 class InstOp(Instruction):
+    """A VM instruction for performing a unary (prefix) or binary operation.
+    The constructor fetches the function to call from the appropriate
+    registry."""
     name: str
     prefix: bool
     precedence: int
@@ -273,6 +301,8 @@ class InstOp(Instruction):
 
 
 class InstBracket(InstOp):
+    """A VM instruction used internally to process brackets in the shunting yard algorithm;
+    should never be output as part of the instruction stream"""
     def __init__(self, parser: 'Parser'):
         # still need the string argument so InstOp knows which precedence to look up
         super().__init__('(', False, parser)
@@ -283,6 +313,8 @@ class InstBracket(InstOp):
 
 
 class InstCall(Instruction):
+    """The VM instruction which calls the function on top of the stack (see InstFunction).
+    If the function wasn't registered, an ident will be stacked instead."""
     def __init__(self, argcount):
         self.argcount = argcount
 
@@ -290,7 +322,7 @@ class InstCall(Instruction):
         return "CALL  argcount: {}".format(self.argcount)
 
     def exec(self, stack: Stack):
-        # semantics here - pop off the args, then pop off the function name (or some other kind of ID!)
+        """execute: pop off the args, then pop off the function value"""
         if self.argcount != 0:
             args = stack[-self.argcount:]
         else:
@@ -301,22 +333,19 @@ class InstCall(Instruction):
         for x in range(0, self.argcount):
             stack.pop()
         v = stack.pop()
-        if v.tp == conntypes.IDENT:
+        if v.tp == Datum.IDENT:
             raise ParseException("unknown function '{}' ".format(v.val))
-        elif v.tp == conntypes.FUNC:
+        elif v.tp == Datum.FUNC:
             # this executes the function by calling it's call method,
             # which will do argument type checking.
             stack.append(v.val.call(args))
-
-
-class ParseException(Exception):
-    def __init__(self, msg: str, t: Optional[TokenInfo] = None):
-        if t is not None:
-            msg = "{}: '{}' at chars {}-{}".format(msg, t.string, t.start[1], t.end[1])
-        super().__init__(msg)
+        else:
+            # if we do (say) "a()", we'll get "cannot call a (whatever input A is connected to)..."
+            raise ParseException("cannot call a {} as if it were a function".format(v.tp))
 
 
 def execute(seq: List[Instruction], stack: Stack) -> float:
+    """Execute a list of instructions on a given stack"""
     for inst in seq:
         inst.exec(stack)
         if debug:
@@ -327,6 +356,7 @@ def execute(seq: List[Instruction], stack: Stack) -> float:
 
 
 def isOp(t):
+    """Return whether a token is an operator (since we've got some weird ones)"""
     return t.type in [OP, ERRORTOKEN, PERCENT, DOT]
 
 
@@ -353,12 +383,13 @@ class Parser:
         """Register a unary operation"""
         self.unopRegistry[name] = (precedence, fn)
 
-    ## vars are names mapped to argless fns which return a value
-    varRegistry: Dict[str, Callable[[], Any]]
+    ## vars are names mapped to argless fns (wrapped in a class) which
+    # return their value
+    varRegistry: Dict[str, Variable]
 
-    def registerVar(self, name: str, fn: Callable[[], Any]):
-        """register a variable with a function to fetch it"""
-        self.varRegistry[name] = fn
+    def registerVar(self, name: str, description: str, fn: Callable[[], Any]):
+        """register a variable with a parameterless function to fetch it"""
+        self.varRegistry[name] = Variable(name, fn, description)
 
     ## other functions are names mapped to functions
     ## which take a list of args and return an arg
@@ -382,13 +413,63 @@ class Parser:
         Also takes a description and two lists of argument types: mandatory and optional."""
         self.funcRegistry[name] = Function(name, fn, description, mandatoryParams, optParams, varargs)
 
-    def funcHelp(self, name):
+    # property dict - keys are (name,type), values are (desc,func) where the func
+    # takes Datum and gives Datum
+
+    properties: Dict[Tuple[str, datum.Type], Tuple[str, Callable[[Datum], Datum]]]
+
+    def registerProperty(self, name: str, tp: datum.Type, desc: str, func: Callable[[Datum], Datum]):
+        """add a property (e.g. the 'w' in 'a.w'), given name, input type, description and function"""
+        self.properties[(name, tp)] = (desc, func)
+
+    def getProperty(self, a: Datum, b: Datum):
+        """Get the value of a property - requires two Datum arguments, the first is the object and the second is
+        the property name (an identifier)"""
+        if a is None:
+            raise ParseException('first argument is None in "." operator')
+        if b is None:
+            raise ParseException('second argument is None in "." operator')
+        if b.tp != Datum.IDENT:
+            raise ParseException('second argument should be identifier in "." operator')
+        propName = b.val
+
+        try:
+            _, func = self.properties[(propName, a.tp)]
+            return func(a.get(a.tp))
+        except KeyError:
+            raise ParseException('unknown property "{}" for given type in "." operator'.format(propName))
+
+    def listProps(self, nameToFind:Optional[str]=None):
+        """Generate help on properties as Markdown, or get help on a single property"""
+        t = Table()
+        for k, v in self.properties.items():
+            name, tp = k
+            desc, _ = v
+            if nameToFind is None or nameToFind == name:
+                t.newRow()
+                t.add("name", "x."+name)
+                t.add("type of x", tp.name)
+                t.add("desc", desc)
+        if len(t) == 0:
+            return None  # no match found!
+        return t.markdown()
+
+    def helpOnWord(self, name: str):
+        """Generate help on a word, which can be a property or a function."""
         if name in self.funcRegistry:
             return self.funcRegistry[name].help()
+        elif name in self.varRegistry:
+            _, desc = self.varRegistry[name]
+            return self.varRegistry[name].help()
         else:
-            return "Function not found"
+            s = self.listProps(nameToFind=name)
+            if s is not None:
+                return s
+
+        return "Function not found"
 
     def listFuncs(self):
+        """Generate a list of all functions with help"""
         t = Table()
         for name, f in self.funcRegistry.items():
             t.newRow()
@@ -399,22 +480,25 @@ class Parser:
             t.add("params", ps)
             t.add("opt. params", ",".join([p.name for p in f.optParams]))
             t.add("description", f.desc)
-        return t.htmlObj().visit(_styleTableCells).string()
+        return t.markdown()
 
     def out(self, inst: Instruction):
-        # internal method - output
+        """Internal method to output an instruction (part of shunting yard)"""
         self.output.append(inst)
 
     def stackOp(self, op: InstOp):
-        # internal method - stack operator
+        """Internal method to put an operator onto the operator stack (part of shunting yard)"""
         self.opstack.append(op)
 
     def __init__(self, nakedIdents=False):
-        """Initialise the parser, clearing all registered vars, funcs and ops."""
+        """Initialise the parser, clearing all registered vars, funcs and ops.
+        If nakedIdents are true, then identifiers which are not in the function
+        or variable registries are compiled as literal strings (InstIdent) """
         self.binopRegistry = dict()
         self.unopRegistry = dict()
         self.varRegistry = dict()
         self.funcRegistry = dict()
+        self.properties = dict()
         self.toks = []
 
         self.nakedIdents = nakedIdents
@@ -422,6 +506,8 @@ class Parser:
         # preregister the special operators for open bracket
         self.binopRegistry['('] = (100, None)
         self.unopRegistry['('] = (100, None)
+        # getProperty is built into the parser, but can be bound to any operator.
+        self.registerBinop('.', 80, lambda a, b: self.getProperty(a, b))
 
     def parse(self, s: str):
         """Parsing function - uses the shunting algorithm.
@@ -474,7 +560,7 @@ class Parser:
                     wantOperand = False
                 elif t.type == NAME:
                     if t.string in self.varRegistry:
-                        self.out(InstVar(t.string, self.varRegistry[t.string]))
+                        self.out(InstVar(self.varRegistry[t.string]))
                     elif t.string in self.funcRegistry:
                         fn = self.funcRegistry[t.string]
                         self.out(InstFunc(t.string, fn))
@@ -553,7 +639,7 @@ class Parser:
                     raise ParseException("syntax error : unexpected operand", t)
 
     def stackTopIsNotLPar(self):
-        # internal method - stack top is NOT an open bracket
+        """internal method - op stack top is NOT an open bracket"""
         if len(self.opstack) == 0:
             return False
         op = self.opstack[-1]  # peek
@@ -561,7 +647,7 @@ class Parser:
         return op.name != '('
 
     def stackTopIsOperatorPoppable(self, curop):
-        # internal method - stack top is poppable to output
+        """internal method - stack top is poppable to output"""
         if len(self.opstack) == 0:
             return False
         op = self.opstack[-1]  # peek
@@ -573,7 +659,7 @@ class Parser:
         return op.precedence >= curop.precedence
 
     def next(self) -> TokenInfo:
-        # internal method - get next token
+        """internal method - get next token"""
         if self.toksLeft():
             if debug:
                 print(self.toks[0])
@@ -582,16 +668,16 @@ class Parser:
             return None
 
     def rewind(self, tok: TokenInfo):
-        # rewinder, unused.
+        """tokeniser rewinder, unused."""
         self.toks.insert(0, tok)
 
     def peek(self) -> TokenInfo:
-        # stack peek
+        """tokeniser peek, unused"""
         if self.toksLeft():
             return self.toks[0]
         else:
             return None
 
     def toksLeft(self) -> bool:
-        # count remaining tokens
+        """count remaining tokens"""
         return len(self.toks) > 0

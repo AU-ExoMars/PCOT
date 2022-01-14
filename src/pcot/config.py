@@ -2,14 +2,19 @@ import configparser
 import getpass
 import io
 import os
-
-from pkg_resources import resource_string as resource_bytes
+import pkgutil
 from collections import deque
 
 
+def getAssetAsString(fn):
+    s = pkgutil.get_data('pcot.assets', fn)
+    if s is None:
+        raise ValueError(f'cannot find asset {fn}')
+    return s.decode('utf-8')
+
+
 def getAssetAsFile(fn):
-    s = resource_bytes('pcot.assets', fn).decode('utf-8')
-    return io.StringIO(s)
+    return io.StringIO(getAssetAsString(fn))
 
 
 ## return the current username, whichis either obtained from the OS

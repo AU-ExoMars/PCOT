@@ -9,28 +9,46 @@ import pcot
 
 
 class MethodSelectButton(QtWidgets.QPushButton):
-    def __init__(self, inp, m):
+    """Subclass of button used for the buttons at the top of the input window for each method"""
+    def __init__(self, w, m):
+        """Method select buttons know about both the owning input window and the method"""
         super().__init__()
-        self.input = inp
+        self.window = w
         self.method = m
         self.setText(m.getName())
         self.clicked.connect(self.onClick)
 
     def onClick(self):
-        self.input.selectMethod(self.method)
+        """When clicked, make this method active"""
+        self.window.input.selectMethod(self.method)
+        self.window.showActiveMethod()
+
+    def showActive(self):
+        """Colour the button to show that this method is active"""
+        if self.method.isActive():
+            r, g, b = 200,200,255
+        else:
+            r, g, b = 200,200,200
+        self.setStyleSheet(
+            f"border-style: outset; padding: 20px; border-width:1px; border-color:black; background-color:rgb({r},{g},{b})")
 
 
 class InputWindow(QtWidgets.QMainWindow):
+    """The window for each input - consists of buttons to select a method and a group of widgets, one for each method,
+    only one of which is visible."""
     input: 'Input'
     widgets: List['MethodWidget']
+    buttons: List[MethodSelectButton]
 
     def __init__(self, inp: 'Input'):
         super().__init__()
         self.input = inp
         self.widgets = []
+        self.buttons = []
 
         central = QtWidgets.QWidget()
         self.setCentralWidget(central)
+        self.setMinimumSize(1000, 700)
 
         # top box contains the buttons determining what sort of input this is
         layout = QtWidgets.QVBoxLayout()
@@ -43,7 +61,8 @@ class InputWindow(QtWidgets.QMainWindow):
         topBox.setMaximumHeight(50)
 
         for m in self.input.methods:
-            b = MethodSelectButton(self.input, m)
+            b = MethodSelectButton(self, m)
+            self.buttons.append(b)
             topBoxLayout.addWidget(b)
             m.openingWindow = True
             widget = m.createWidget()
@@ -54,7 +73,12 @@ class InputWindow(QtWidgets.QMainWindow):
             if not m.isActive():
                 widget.setVisible(False)
 
+        self.showActiveMethod()
         self.show()
+
+    def showActiveMethod(self):
+        for b in self.buttons:
+            b.showActive()
 
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
         m = self.input.getActive()
@@ -86,6 +110,8 @@ class InputWindow(QtWidgets.QMainWindow):
 # Widgets for viewing/controlling the Methods (i.e. input types within the Input)
 
 class MethodWidget(QtWidgets.QWidget):
+    """Superclass for the method widgets. Each method widget contains all the controls for an input method (and gets
+    those controls from a UI file). See any of the subclasses for details."""
     method: 'InputMethod'
 
     def __init__(self, m):
@@ -116,9 +142,9 @@ class MethodWidget(QtWidgets.QWidget):
             self.method.invalidate()
 
 
-# This class is for displaying input methods which rely on a tree view of files,
-# and which use single files - ENVI and RGB are examples.
 class TreeMethodWidget(MethodWidget):
+    """This class is for displaying input methods which rely on a tree view of files,
+    and which use single files - ENVI and RGB are examples."""
     def __init__(self, m, uiFile: str, filterList: List[str]):
         super().__init__(m)
         uic.loadUi(pcot.config.getAssetAsFile(uiFile), self)
@@ -133,8 +159,8 @@ class TreeMethodWidget(MethodWidget):
         self.dirModel.setNameFilters(filterList)
         self.dirModel.setNameFilterDisables(False)
         self.treeView.setModel(self.dirModel)
-        self.treeView.setMinimumWidth(300)
-        self.setMinimumSize(1000, 500)
+        self.treeView.setMinimumSize(300, 500)
+        self.treeView.setMaximumHeight(700)
 
         self.treeView.setIndentation(10)
         self.treeView.setSortingEnabled(True)
@@ -148,9 +174,10 @@ class TreeMethodWidget(MethodWidget):
 
         self.canvas.setMapping(m.mapping)
         # the canvas gets its "caption display" setting from the graph, so
-        # we need to get it from the manager, which we get from the input,
-        # which we get from the method. Ugh.
-        self.canvas.setGraph(self.method.input.mgr.graph)
+        # we need to get it from the document, which is stored in the manager,
+        # which we get from the input, which we get from the method. Ugh.
+        # Indirection, eh?
+        self.canvas.setGraph(self.method.input.mgr.doc.graph)
         self.canvas.setPersister(m)
 
         self.onInputChanged()
@@ -191,13 +218,14 @@ class TreeMethodWidget(MethodWidget):
         if not self.dirModel.isDir(idx):
             self.method.mark()
             self.method.img = None
-            self.method.get()
             self.method.fname = os.path.realpath(self.dirModel.filePath(idx))
+            self.method.get()
             pcot.config.setDefaultDir('images', os.path.dirname(self.method.fname))
             self.onInputChanged()
 
 
 class NullMethodWidget(MethodWidget):
+    """This method widget does nothing at all."""
     def __init__(self, m):
         super().__init__(m)
         layout = QtWidgets.QVBoxLayout()
@@ -206,6 +234,7 @@ class NullMethodWidget(MethodWidget):
 
 
 class PlaceholderMethodWidget(MethodWidget):
+    """This method widget does nothing at all, but differently."""
     def __init__(self, m):
         super().__init__(m)
         layout = QtWidgets.QVBoxLayout()

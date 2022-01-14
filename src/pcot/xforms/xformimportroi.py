@@ -1,7 +1,6 @@
 import pcot
-import pcot.conntypes as conntypes
+from pcot.datum import Datum
 from pcot.xform import xformtype, XFormType, XFormException
-from pcot.xforms.tabimage import TabImage
 
 
 @xformtype
@@ -14,9 +13,9 @@ class XformImportROI(XFormType):
 
     def __init__(self):
         super().__init__("importroi", "ROI edit", "0.0.0")
-        self.addInputConnector("", conntypes.IMG)
-        self.addInputConnector("roi", conntypes.ANY)
-        self.addOutputConnector("", conntypes.IMG)
+        self.addInputConnector("", Datum.IMG)
+        self.addInputConnector("roi", Datum.ANY)
+        self.addOutputConnector("", Datum.IMG)
 
     def createTab(self, n, w):
         t = TabImportROI(n, w)
@@ -28,16 +27,16 @@ class XformImportROI(XFormType):
         node.img = None
 
     def perform(self, node):
-        img = node.getInput(0, conntypes.IMG)
+        img = node.getInput(0, Datum.IMG)
         node.roi = None
         rgb = None
         if img is not None:
             roiinput = node.getInput(1)
             if roiinput is not None:
                 img = img.copy()
-                if roiinput.tp == conntypes.IMG:
+                if roiinput.tp == Datum.IMG:
                     img.rois += roiinput.val.rois
-                elif roiinput.tp == conntypes.ROI:
+                elif roiinput.tp == Datum.ROI:
                     img.rois.append(roiinput.val)
                     node.roi = roiinput.val
                 else:
@@ -51,7 +50,7 @@ class XformImportROI(XFormType):
         node.img = img
         node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
 
-        node.setOutput(0, conntypes.Datum(conntypes.IMG, img))
+        node.setOutput(0, Datum(Datum.IMG, img))
 
 
 class TabImportROI(pcot.ui.tabs.Tab):

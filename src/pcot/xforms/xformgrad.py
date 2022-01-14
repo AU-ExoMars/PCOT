@@ -1,10 +1,10 @@
 import cv2 as cv
 import numpy as np
 
-import pcot.conntypes as conntypes
+from pcot.datum import Datum
 import pcot.ui.tabs
-from pcot.channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, BLUEINTERNALSOURCE
-from pcot.pancamimage import ImageCube
+from pcot.imagecube import ImageCube
+from pcot.sources import MultiBandSource
 from pcot.xform import xformtype, XFormType, XFormException
 
 
@@ -67,8 +67,8 @@ class XformGradient(XFormType):
 
     def __init__(self):
         super().__init__("gradient", "data", "0.0.0")
-        self.addInputConnector("", conntypes.IMG)
-        self.addOutputConnector("", conntypes.IMG)
+        self.addInputConnector("", Datum.IMG)
+        self.addOutputConnector("", Datum.IMG)
         self.autoserialise = ('gradient',)
         self.hasEnable = True
 
@@ -80,7 +80,7 @@ class XformGradient(XFormType):
         node.img = None
 
     def perform(self, node):
-        img = node.getInput(0, conntypes.IMG)
+        img = node.getInput(0, Datum.IMG)
         if img is None:
             node.img = None
         elif node.enabled:
@@ -88,18 +88,17 @@ class XformGradient(XFormType):
                 subimage = img.subimage()
                 newsubimg = applyGradient(subimage.img, subimage.mask, node.gradient)
                 # Here we make an RGB image from the input image. We then slap the gradient
-                # onto the ROI. We use the default channel mapping and standard "fake" sources.
-                outimg = ImageCube(img.rgb(), node.mapping, [
-                    {REDINTERNALSOURCE},
-                    {GREENINTERNALSOURCE},
-                    {BLUEINTERNALSOURCE}])
+                # onto the ROI. We use the default channel mapping, and the same source on each channel.
+                source = img.sources.getSources()
+                outimg = ImageCube(img.rgb(), node.mapping, sources=MultiBandSource([source, source, source]))
 
-                node.img = outimg.modifyWithSub(subimage, newsubimg)
+                # we keep the same RGB mapping
+                node.img = outimg.modifyWithSub(subimage, newsubimg, keepMapping=True)
             else:
                 raise XFormException('DATA', 'Gradient must be on greyscale images')
         else:
             node.img = img
-        node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))
+        node.setOutput(0, Datum(Datum.IMG, node.img))
 
 
 class TabGradient(pcot.ui.tabs.Tab):

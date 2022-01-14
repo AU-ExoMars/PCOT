@@ -5,13 +5,12 @@ from typing import Callable, Dict, Any
 
 import numpy as np
 
-from pcot.conntypes import NUMBER, IMG
 import pcot.operations.norm
 import pcot.operations.curve
 from pcot.expressions import Parameter
-from pcot.pancamimage import SubImageCubeROI
+from pcot.imagecube import SubImageCubeROI
 from pcot.xform import XForm
-from pcot.conntypes import Datum
+from pcot.datum import Datum
 
 
 ## This is the function which allows XForm nodes to use operation functions.
@@ -25,7 +24,7 @@ from pcot.conntypes import Datum
 
 def performOp(node: XForm, fn: Callable[[SubImageCubeROI, XForm, Dict[str, Any]], np.ndarray], **kwargs):
     # get input 0 (the image)
-    img = node.getInput(0, IMG)
+    img = node.getInput(0, Datum.IMG)
     # if it's None then the input isn't connected; just output None
     if img is None:
         node.img = None
@@ -52,7 +51,7 @@ def performOp(node: XForm, fn: Callable[[SubImageCubeROI, XForm, Dict[str, Any]]
         node.img.setMapping(node.mapping)
 
     # output the current value of node.img
-    node.setOutput(0, Datum(IMG, node.img))
+    node.setOutput(0, Datum(Datum.IMG, node.img))
 
 
 ## used to register op functions as lambdas - takes a datum and type and returns either None (if it's none or
@@ -80,7 +79,7 @@ def exprWrapper(fn, img, *args):
     subimage = img.subimage()
     newsubimg = fn(subimage, *args)
     img = img.modifyWithSub(subimage, newsubimg)
-    return Datum(IMG, img)
+    return Datum(Datum.IMG, img)
 
 
 ## Register additional functions and properties into a Parser.
@@ -90,24 +89,24 @@ def registerOpFunctionsAndProperties(p: 'Parser'):
     p.registerFunc(
         "curve",
         "impose a sigmoid curve on an image, y=1/(1+e^-(mx+a))) where m and a are parameters",
-        [Parameter("image", "the image to process", IMG),
-         Parameter("mul", "multiply pixel values by this factor before processing", NUMBER),
-         Parameter("add", "add this to pixels values after multiplication", NUMBER)],
+        [Parameter("image", "the image to process", Datum.IMG),
+         Parameter("mul", "multiply pixel values by this factor before processing", Datum.NUMBER),
+         Parameter("add", "add this to pixels values after multiplication", Datum.NUMBER)],
         [],
-        lambda args, optargs: exprWrapper(curve.curve, *getData(args, IMG, NUMBER, NUMBER))
+        lambda args, optargs: exprWrapper(curve.curve, *getData(args, Datum.IMG, Datum.NUMBER, Datum.NUMBER))
     )
 
     p.registerFunc(
         "norm",
         "normalize all channels of an image to 0-1, operating on all channels combined (the default) or separately",
-        [Parameter("image", "the image to process", IMG)],
-        [Parameter("splitchans", "if nonzero, process each channel separately", NUMBER, deflt=0)],
-        lambda args, optargs: exprWrapper(norm.norm, getDatum(args[0], IMG), 0, getDatum(optargs[0], NUMBER))
+        [Parameter("image", "the image to process", Datum.IMG)],
+        [Parameter("splitchans", "if nonzero, process each channel separately", Datum.NUMBER, deflt=0)],
+        lambda args, optargs: exprWrapper(norm.norm, getDatum(args[0], Datum.IMG), 0, getDatum(optargs[0], Datum.NUMBER))
     )
 
     p.registerFunc(
         "clip",
         "clip  all channels of an image to 0-1",
-        [Parameter("image", "the image to process", IMG)],
+        [Parameter("image", "the image to process", Datum.IMG)],
         [],
-        lambda args, optargs: exprWrapper(norm.norm, getDatum(args[0], IMG), 1))
+        lambda args, optargs: exprWrapper(norm.norm, getDatum(args[0], Datum.IMG), 1))

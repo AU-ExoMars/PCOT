@@ -6,11 +6,9 @@ from PyQt5.QtWidgets import QMessageBox
 from skimage import transform
 from skimage.transform import warp
 
-import pcot.conntypes as conntypes
+from pcot.datum import Datum
 import pcot.ui.tabs
-from pcot.channelsource import REDINTERNALSOURCE, GREENINTERNALSOURCE, \
-    BLUEINTERNALSOURCE
-from pcot.pancamimage import ImageCube
+from pcot.imagecube import ImageCube
 from pcot.utils import text
 from pcot.xform import XFormType, xformtype, XFormException
 
@@ -95,9 +93,9 @@ class XFormManualRegister(XFormType):
 
     def __init__(self):
         super().__init__("manual register", "processing", "0.0.0")
-        self.addInputConnector("moving", conntypes.IMG)
-        self.addInputConnector("fixed", conntypes.IMG)
-        self.addOutputConnector("moved", conntypes.IMG)
+        self.addInputConnector("moving", Datum.IMG)
+        self.addInputConnector("fixed", Datum.IMG)
+        self.addOutputConnector("moved", Datum.IMG)
         self.autoserialise = ('showSrc', 'showDest', 'src', 'dest', 'translate')
 
     def init(self, node):
@@ -117,12 +115,13 @@ class XFormManualRegister(XFormType):
         node.selIsDest = False
 
     def uichange(self, node):
+        node.timesPerformed += 1
         self.perform(node, False)
 
     def perform(self, node, doApply=True):
         """Perform node. When called from uichange(), doApply will be False. Normally it's true."""
-        movingImg = node.getInput(0, conntypes.IMG)
-        fixedImg = node.getInput(1, conntypes.IMG)
+        movingImg = node.getInput(0, Datum.IMG)
+        fixedImg = node.getInput(1, Datum.IMG)
 
         if fixedImg is None or movingImg is None:
             node.img = None  # output image (i.e. warped)
@@ -160,12 +159,11 @@ class XFormManualRegister(XFormType):
                     drawpoints(canvimg, node.dest, node.translate, issel, (0, 1, 1))
 
                 # grey, but 3 channels so I can draw on it!
-                node.canvimg = ImageCube(canvimg, node.mapping,
-                                         [{REDINTERNALSOURCE}, {GREENINTERNALSOURCE}, {BLUEINTERNALSOURCE}])
+                node.canvimg = ImageCube(canvimg, node.mapping, None)
             else:
                 node.canvimg = None
 
-        node.setOutput(0, conntypes.Datum(conntypes.IMG, node.img))
+        node.setOutput(0, Datum(Datum.IMG, node.img))
 
     @staticmethod
     def delSelPoint(n):
