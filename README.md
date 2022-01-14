@@ -117,3 +117,32 @@ export PCOT_USER="Jim Finnis <jcf12@aber.ac.uk>"
 This data is added to all saved PCOT graphs. If the environment variable
 is not set, the username returned by Python's getpass module is used
 (e.g. 'jcf12').
+
+## Common runtime issues
+
+### Can't start Qt on Linux
+
+This sometimes happens:
+```
+qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found.
+This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+
+Available platform plugins are: eglfs, linuxfb, minimal, minimalegl, offscreen, vnc, wayland-egl, wayland, wayland-xcomposite-egl, wayland-xcomposite-glx, webgl, xcb.
+
+```
+Try this:
+```
+export QT_DEBUG_PLUGINS=1
+pcot
+```
+and you might see errors like this (I've removed some stuff):
+```
+QFactoryLoader::QFactoryLoader() checking directory path "[...]envs/pcot/bin/platforms" ...
+Cannot load library [...]/plugins/platforms/libqxcb.so: (libxcb-xinerama.so.0: cannot open shared object file: No such file or directory)
+QLibraryPrivate::loadPlugin failed on "...[stuff removed].. (libxcb-xinerama.so.0: cannot open shared object file: No such file or directory)"
+```
+If that's the case, install the missing package:
+```
+sudo apt install libxcb-xinerama0
+```
+That might help. Otherwise, send a message to us with the output from the ```QT_DEBUG_PLUGINS``` run and we will investigate.
