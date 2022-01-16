@@ -3,8 +3,7 @@
 This is the prototype of the Pancam Operations Toolkit. 
 
 ## Installing with Anaconda
-PCOT is a Python program (and library) with a number of dependencies:
-
+PCOT is a Python program (and library) with a number of dependencies, including
 * Python >3.8
 * PyQt
 * OpenCV
@@ -51,35 +50,34 @@ installed Anaconda.
 Assuming you have successfully installed Anaconda and cloned or downloaded PCOT as above:
 * Open a bash shell
 * **cd** to the PCOT directory (which contains this file).
-* Run the command **./createCondaEnv**. This will create an environment called **pcot**, and will take some time.
+* Run the command **conda create -n pcot python=3.8 poetry**.
+This will create an environment called **pcot** which uses Python 3.8 and the Poetry dependency
+and packaging manager. It may take some time.
 * Activate the environment with **conda activate pcot**.
-* Install PCOT into the environment with **python setup.py develop** (not 'install'; we want to be able to update easily).
+* Now run **poetry install**. This will set up all the packages PCOT is dependent on and install
+PCOT.
 * You should now be able to run **pcot** to start the application.
 
 ### Installing on Windows
 Assuming you have successfully installed Anaconda and cloned or downloaded PCOT as above:
 * Open the Anaconda PowerShell Prompt application from the Start Menu.
 * **cd** to the PCOT directory (which contains this file).
-* Run the command **./createCondaEnv.bat**. This will create an environment called **pcot**, and will take some time.
+* Run the command **conda create -n pcot python=3.8 poetry**.
+This will create an environment called **pcot** which uses Python 3.8 and the Poetry dependency
+and packaging manager. It may take some time.
 * Activate the environment with **conda activate pcot**.
-* Install PCOT into the environment with **python setup.py develop** (not 'install'; we want to be able to update easily).
+* Now run ***poetry install**. This will set up all the packages PCOT is dependent on and install
+PCOT.
 * You should now be able to run **pcot** to start the application.
 
-## Installing without an environment manager
-* Directly install the packages at the top of this
-file using **pip3 *packagename packagename* ...**
-* Install PCOT with **python setup.py develop** as above
-* You should now be able to run **pcot** to start the application.
-  
-The danger here, of course, is that the new packages may clash with your existing 
-python environment.
-
+<!---
 ## One last step
 Because the **pds4-tools** package isn't in any Anaconda reposities yet,
 you'll need to install it manually. With the pcot environment active, run
 ```
 pip3 install pds4-tools
 ```
+-->
 
 ## Running PCOT
 Open an Anaconda shell and run the following commands (assuming you installed PCOT into your home directory):
@@ -119,3 +117,32 @@ export PCOT_USER="Jim Finnis <jcf12@aber.ac.uk>"
 This data is added to all saved PCOT graphs. If the environment variable
 is not set, the username returned by Python's getpass module is used
 (e.g. 'jcf12').
+
+## Common runtime issues
+
+### Can't start Qt on Linux
+
+This sometimes happens:
+```
+qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found.
+This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+
+Available platform plugins are: eglfs, linuxfb, minimal, minimalegl, offscreen, vnc, wayland-egl, wayland, wayland-xcomposite-egl, wayland-xcomposite-glx, webgl, xcb.
+
+```
+Try this:
+```
+export QT_DEBUG_PLUGINS=1
+pcot
+```
+and you might see errors like this (I've removed some stuff):
+```
+QFactoryLoader::QFactoryLoader() checking directory path "[...]envs/pcot/bin/platforms" ...
+Cannot load library [...]/plugins/platforms/libqxcb.so: (libxcb-xinerama.so.0: cannot open shared object file: No such file or directory)
+QLibraryPrivate::loadPlugin failed on "...[stuff removed].. (libxcb-xinerama.so.0: cannot open shared object file: No such file or directory)"
+```
+If that's the case, install the missing package:
+```
+sudo apt install libxcb-xinerama0
+```
+That might help. Otherwise, send a message to us with the output from the ```QT_DEBUG_PLUGINS``` run and we will investigate.
