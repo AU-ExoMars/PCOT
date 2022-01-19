@@ -2,7 +2,7 @@ import os
 from typing import Optional
 
 from PyQt5 import uic, QtWidgets
-from PyQt5.QtWidgets import QDialog
+from PyQt5.QtCore import Qt
 
 import pcot
 import pcot.ui as ui
@@ -10,6 +10,7 @@ from pcot.inputs.inputmethod import InputMethod
 from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
+from pcot.ui.linear import LinearSetEntity, entityMarkerInitSetup, entityMarkerPaintSetup
 
 
 class PDS4ImageInputMethod(InputMethod):
@@ -57,11 +58,31 @@ class PDS4ImageInputMethod(InputMethod):
         if internal:
             self.img = data['image']
         else:
-            self.img = None   # ensure image is reloaded
+            self.img = None  # ensure image is reloaded
         Canvas.deserialise(self, data)
 
     def long(self):
         return f"ENVI:{self.fname}"
+
+
+class ExampleMarkerItem(QtWidgets.QGraphicsRectItem):
+    """This is an example marker item which is a cyan rectangle - other than that it's the
+    same as the standard kind."""
+    def __init__(self, x, y, ent, radius=10):
+        super().__init__(x - radius / 2, y - radius / 2, radius, radius)
+        entityMarkerInitSetup(self, ent)
+        self.unselCol = Qt.cyan
+
+    def paint(self, painter, option, widget):
+        """and draw."""
+        entityMarkerPaintSetup(self, option, self.unselCol, self.selCol)
+        super().paint(painter, option, widget)
+
+
+class ExampleLinearSetEntityA(LinearSetEntity):
+    """This is an entity which uses the above example marker item"""
+    def createMarkerItem(self, x, y):
+        return ExampleMarkerItem(x, y, self)
 
 
 class PDS4ImageMethodWidget(MethodWidget):
@@ -79,11 +100,14 @@ class PDS4ImageMethodWidget(MethodWidget):
         self.browse.clicked.connect(self.onBrowse)
 
         # add some test data to the linear widget
-        timeline = self.timeline
-        for i in range(10):
-            timeline.add(i, f"wibble{i}")
-        timeline.rescale()
-        timeline.rebuild()
+        items = []
+        for day in range(10):
+            xx = [LinearSetEntity(day, i, f"filt{i}", None) for i in range(10)]
+            items += xx
+            items.append(ExampleLinearSetEntityA(day+0.5, 12, "foon", None))
+        self.timeline.setItems(items)
+        self.timeline.rescale()
+        self.timeline.rebuild()
 
     def selectDir(self, d):
         self.dir = d
@@ -106,4 +130,3 @@ class PDS4ImageMethodWidget(MethodWidget):
         if not self.method.openingWindow:
             self.method.input.performGraph()
         self.canvas.display(self.method.img)
-

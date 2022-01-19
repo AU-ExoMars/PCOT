@@ -1,5 +1,5 @@
 import math
-from typing import List
+from typing import List, Any
 
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import Qt
@@ -18,8 +18,32 @@ axesFont.setPixelSize(10)
 # font for drawing item text
 markerFont = QFont()
 markerFont.setFamily('Sans Serif')
-markerFont.setBold(True)
-markerFont.setPixelSize(15)
+# markerFont.setBold(True)
+markerFont.setPixelSize(12)
+
+
+def entityMarkerInitSetup(obj, ent):
+    """Setups up some common stuff in item initialisation - the problem is that the base class of all these items
+    is a QGraphicsItem, but we want common stuff to happen. We could do this with mixins and careful use of the MRO,
+    but this is easier to understand (I think)."""
+    obj.setBrush(Qt.blue)
+    obj.setPen(Qt.black)
+    obj.selCol = Qt.red
+    obj.unselCol = Qt.blue
+    obj.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable)
+    obj.ent = ent
+
+
+def entityMarkerPaintSetup(obj, option, unselCol, selCol):
+    """Used to set up some common stuff for drawing items. We could potentially do this as a decorator,
+    really - the decorator would provide paint(), wrapping a call to super.paint with code that does this."""
+    # fake an unselected state so we don't get a border...
+    option.state = QtWidgets.QStyle.State_None
+    # ...but show the selected state with a colour change #TODO colourblindness!!!
+    if obj.isSelected():
+        obj.setBrush(selCol)
+    else:
+        obj.setBrush(unselCol)
 
 
 class EntityMarkerItem(QtWidgets.QGraphicsEllipseItem):
@@ -29,44 +53,47 @@ class EntityMarkerItem(QtWidgets.QGraphicsEllipseItem):
 
     def __init__(self, x, y, ent, radius=10):
         super().__init__(x - radius / 2, y - radius / 2, radius, radius)
-        self.setBrush(Qt.blue)
-        self.setPen(Qt.black)
-        self.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable)
-        self.ent = ent
+        entityMarkerInitSetup(self, ent)
 
     def paint(self, painter, option, widget):
-        # fake an unselected state so we don't get a border...
-        option.state = QtWidgets.QStyle.State_None
-        # ...but show the selected state with a colour change #TODO colourblindness!!!
-        if self.isSelected():
-            self.setBrush(Qt.red)
-        else:
-            self.setBrush(Qt.blue)
+        """and draw."""
+        entityMarkerPaintSetup(self, option, self.unselCol, self.selCol)
         super().paint(painter, option, widget)
 
 
 class LinearSetEntity:
     """Something in the linear set"""
     x: float  # position in "timeline" or whatever the horizontal axis is
-    name: str  # name
+    yOffset: int  # an integer Y-offset used to differentiate different object types
+    text: str  # name
     marker: QtWidgets.QGraphicsItem  # item which can be selected
+    data: Any  # the underlying data object
 
-    def __init__(self, x, name):
+    def __init__(self, x, yOffset, text, data):
         self.x = x
-        self.name = name
+        self.yOffset = yOffset
+        self.text = text
         self.marker = None
+        self.data = data
 
-    def createSceneItem(self, scene: 'LinearSetScene', y: float, selected=False):
-        """Create some scene items to represent this item, positioned at X,Y in the scene. May be
-        created selected, if we're doing a rebuild of a scene with selected items"""
+    def createMarkerItem(self, x, y):
+        """Create the actual marker item - called from createSceneItem, this can be overriden to provide
+        a different looking marker"""
+        return EntityMarkerItem(x, y, self)
+
+    def createSceneItem(self, scene: 'LinearSetScene', selected=False):
+        """Create some scene items to represent this item, positioned at X in the scene.
+        The Y position is calculated from yOffset. May be created selected, if we're doing a
+        rebuild of a scene with selected items"""
         x = scene.entityToScene(self.x)
-        self.marker = EntityMarkerItem(x, y, self, radius=10)
+        y = self.yOffset * 15 + 30
+        self.marker = self.createMarkerItem(x, y)
         self.marker.setSelected(selected)
         scene.addItem(self.marker)
         # now the associated text, which isn't selectable
-        i = QtWidgets.QGraphicsSimpleTextItem(self.name)
+        i = QtWidgets.QGraphicsSimpleTextItem(self.text)
         i.setFont(markerFont)
-        utils.text.posAndCentreText(i, x+15, y, centreY=True)
+        utils.text.posAndCentreText(i, x + 15, y, centreY=True)
         scene.addItem(i)
 
 
@@ -142,9 +169,9 @@ class LinearSetScene(QtWidgets.QGraphicsScene):
         self.clear()
         ui.log(f"range {self.minx, self.maxx}, width {self.width()}")
         self.createAxes()
-        for y, i in enumerate(self.widget.items):
+        for i in self.widget.items:
             # create item in scene, in scene coordinates (derived from minx,maxx)
-            i.createSceneItem(self, self.height() - 10 - (y % 10) * 5)
+            i.createSceneItem(self)
         self.restoreSelection(ss)
 
 
@@ -167,8 +194,9 @@ class LinearSetWidget(QtWidgets.QGraphicsView):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setDragMode(QtWidgets.QGraphicsView.RubberBandDrag)
 
-    def add(self, x, s):
-        self.items.append(LinearSetEntity(x, s))
+    def setItems(self, items: List[LinearSetEntity]):
+        """Set the items we are going to render"""
+        self.items = items
 
     def rebuild(self):
         """Rebuild all the scene items; used after zooming/panning/setup/changing/rescaling"""
