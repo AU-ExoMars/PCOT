@@ -46,6 +46,8 @@ installed Anaconda.
 * **Linux and MacOS**: just open a Bash shell  
 
 
+
+
 ### Installing on Ubuntu / MacOS
 Assuming you have successfully installed Anaconda and cloned or downloaded PCOT as above:
 * Open a bash shell
@@ -66,7 +68,7 @@ Assuming you have successfully installed Anaconda and cloned or downloaded PCOT 
 This will create an environment called **pcot** which uses Python 3.8 and the Poetry dependency
 and packaging manager. It may take some time.
 * Activate the environment with **conda activate pcot**.
-* Now run ***poetry install**. This will set up all the packages PCOT is dependent on and install
+* Now run **poetry install**. This will set up all the packages PCOT is dependent on and install
 PCOT.
 * You should now be able to run **pcot** to start the application.
 

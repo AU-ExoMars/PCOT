@@ -4,6 +4,8 @@ from typing import Optional
 from PyQt5 import uic, QtWidgets
 from PyQt5.QtCore import Qt
 
+import pcot.dataformats.pds4
+
 import pcot
 import pcot.ui as ui
 from pcot.inputs.inputmethod import InputMethod
