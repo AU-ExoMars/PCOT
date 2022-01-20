@@ -10,7 +10,7 @@ from pcot.inputs.inputmethod import InputMethod
 from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
-from pcot.ui.linear import LinearSetEntity, entityMarkerInitSetup, entityMarkerPaintSetup
+from pcot.ui.linear import LinearSetEntity, entityMarkerInitSetup, entityMarkerPaintSetup, TickRenderer
 
 
 class PDS4ImageInputMethod(InputMethod):
@@ -68,6 +68,7 @@ class PDS4ImageInputMethod(InputMethod):
 class ExampleMarkerItem(QtWidgets.QGraphicsRectItem):
     """This is an example marker item which is a cyan rectangle - other than that it's the
     same as the standard kind."""
+
     def __init__(self, x, y, ent, radius=10):
         super().__init__(x - radius / 2, y - radius / 2, radius, radius)
         entityMarkerInitSetup(self, ent)
@@ -81,6 +82,7 @@ class ExampleMarkerItem(QtWidgets.QGraphicsRectItem):
 
 class ExampleLinearSetEntityA(LinearSetEntity):
     """This is an entity which uses the above example marker item"""
+
     def createMarkerItem(self, x, y):
         return ExampleMarkerItem(x, y, self)
 
@@ -99,12 +101,26 @@ class PDS4ImageMethodWidget(MethodWidget):
 
         self.browse.clicked.connect(self.onBrowse)
 
+        # create some tick renderers for the widget
+        # this is for big text when the ticks are far apart
+        self.timeline.addTickRenderer(TickRenderer(spacing=1, fontsize=20, textcol=(0, 0, 255), minxdist=50,
+                                                   textgenfunc=lambda x: f"sol {int(x)}"))
+        # this is the same, but the text is smaller and renders when the ticks are close together
+        self.timeline.addTickRenderer(TickRenderer(spacing=1, fontsize=10, textcol=(0, 0, 255), maxxdist=50,
+                                                   textgenfunc=lambda x: f"{int(x)}"))
+
+        # and these are intermediate values
+        self.timeline.addTickRenderer(
+            TickRenderer(spacing=0.1, fontsize=8, textoffset=30, linecol=(230, 230, 230), linelen=0.5, minxdist=10,
+                         textgenfunc=lambda x: f"{int(x*10+0.3)%10}", textalways=True))
+        self.timeline.setYOffset(100)   # make room for axis text
+
         # add some test data to the linear widget
         items = []
         for day in range(10):
             xx = [LinearSetEntity(day, i, f"filt{i}", None) for i in range(10)]
             items += xx
-            items.append(ExampleLinearSetEntityA(day+0.5, 12, "foon", None))
+            items.append(ExampleLinearSetEntityA(day + 0.5, 12, "foon", None))
         self.timeline.setItems(items)
         self.timeline.rescale()
         self.timeline.rebuild()
