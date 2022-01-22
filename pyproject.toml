@@ -22,7 +22,7 @@ python = "=3.8"
 PyQt5 = "^5.15.6"
 opencv-python-headless = "4.5.3.56"
 scikit-image = "^0.18.3"
-numpy = "^1.21.4"
+numpy = "1.21.5"		# numpy 1.22 not currently compatible with pyinstaller
 matplotlib = "^3.5.0"
 pyperclip = "^1.8.2"
 pds4-tools = "^1.2"

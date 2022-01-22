@@ -1,8 +1,10 @@
 import os
+from pathlib import Path
 from typing import Optional
 
 from PyQt5 import uic, QtWidgets
 from PyQt5.QtCore import Qt
+from proctools.products.loader import ProductLoader
 
 import pcot.dataformats.pds4
 
@@ -130,6 +132,17 @@ class PDS4ImageMethodWidget(MethodWidget):
     def selectDir(self, d):
         self.dir = d
         self.fileEdit.setText(d)
+        try:
+            loader = ProductLoader()
+            loader.load_products(Path(d))
+            for prod in loader.all("spec-rad"):
+                m = prod.meta
+                print(
+                    f"type={m.acq_id}, cam={m.camera}, sol={m.sol_id}, seq={m.seq_num},"
+                    f" rmc_ptu={m.rmc_ptu}, cwl={m.filter_cwl}, filt={m.filter_id}"
+                )
+        except Exception as e:
+            ui.log(str(e))
         # and find the files...
 
     def onBrowse(self):
