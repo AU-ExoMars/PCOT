@@ -1,0 +1,12 @@
+h1 {
+    border-style: solid;
+}
+
+h2 {
+    margin-bottom: 10px;
+    margin-top: 20px;
+}
+
+.ver {
+    color = "red";
+}

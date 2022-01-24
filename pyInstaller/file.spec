@@ -30,6 +30,8 @@ a = Analysis(['../src/pcot/__main__.py'],
              binaries=[],
              datas=[
                 ('../src/pcot/assets/*.ui','pcot/assets'),
+                ('../src/pcot/assets/*.css','pcot/assets'),
+                ('../src/pcot/assets/*.md','pcot/assets'),
                 ('../src/pcot/assets/*.ini','pcot/assets'),
                 ('../src/pcot/VERSION.txt','pcot'),
                 ('../src/pcot/xformlist.txt','pcot')

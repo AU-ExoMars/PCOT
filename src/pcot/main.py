@@ -19,7 +19,7 @@ def load_plugins():
     """plugin dirs are colon separated, stored in Locations/plugins"""
 
     pluginDirs = [os.path.expanduser(x) for x in pcot.config.getDefaultDir('pluginpath').split(':')]
-    print("Plugin directories "+",".join(pluginDirs))
+    print("Plugin directories " + ",".join(pluginDirs))
     # Load any plugins by recursively walking the plugin directories and importing .py files.
 
     for d in pluginDirs:
@@ -35,17 +35,15 @@ def load_plugins():
                     spec.loader.exec_module(module)
 
 
-
-## the main function: parses command line, loads any files specified,
-# opens a mainwindow and runs its code.
-
 def main():
+    """the main function: parses command line, loads any files specified,
+    opens a mainwindow and runs its code."""
     global app
-    
+
     load_plugins()
 
     app = QtWidgets.QApplication(sys.argv)
-    app.setApplicationVersion(pcot.__version__)
+    app.setApplicationVersion(pcot.__fullversion__)  # this comes from the VERSION.txt file
     app.setApplicationName("PCOT")
     app.setOrganizationName('Aberystwyth University')
     app.setOrganizationDomain('aber.ac.uk')

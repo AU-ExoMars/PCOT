@@ -1,19 +1,14 @@
-import math
-from typing import List, Any
+from typing import List, Any, Set, Callable
 
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QFont
 
+import numpy as np
 import pcot.ui as ui
 from pcot import utils
 
 DEFAULTRANGE = 20  # default x range of set view when there are no items
-
-# font for drawing axis text
-axesFont = QFont()
-axesFont.setFamily('Sans Serif')
-axesFont.setPixelSize(10)
 
 # font for drawing item text
 markerFont = QFont()
@@ -86,7 +81,7 @@ class LinearSetEntity:
         The Y position is calculated from yOffset. May be created selected, if we're doing a
         rebuild of a scene with selected items"""
         x = scene.entityToScene(self.x)
-        y = self.yOffset * 15 + 30
+        y = self.yOffset * 15 + 30 + scene.itemYOffset  # a bit ad-hoc...
         self.marker = self.createMarkerItem(x, y)
         self.marker.setSelected(selected)
         scene.addItem(self.marker)
@@ -95,6 +90,78 @@ class LinearSetEntity:
         i.setFont(markerFont)
         utils.text.posAndCentreText(i, x + 15, y, centreY=True)
         scene.addItem(i)
+
+
+class TickRenderer:
+    """A definition for a set of ticks on the X-axis - how to render them, when they should
+    appear and how far apart they are. We avoid placing ticks if there are existing ticks."""
+
+    spacing: float  # how far apart the ticks are
+    minxdist: float  # if the ticks are closer together than this number of pixels, don't draw
+    maxxdist: float # if the ticks are further apart or equal to than this no. of pixels, don't draw - ignored if None
+    font: QFont  # font to use (or None if no text)
+    textoffset: float  # if there is a font, the y offset
+    textgenfunc: Callable[[float], str]  # functor to generate text (default is rounded to 1 sig fig)
+    linecol: QColor  # colour of axis line
+    textcol: QColor  # colour of text
+    linelen: float  # length of tick line as fraction of widget height
+    textalways: bool  # true if the 'tick overwrite' thing ignores text, so text is always printed even if the tick isn't.
+
+    def __init__(self, spacing, fontsize=10, minxdist=10, maxxdist=None, textoffset=0, textgenfunc=None, linecol=(200, 200, 200),
+                 linelen=1.0, textcol=(0, 0, 0), textalways=False):
+        self.spacing = float(spacing)
+        self.minxdist = float(minxdist)
+        self.maxxdist = float(maxxdist) if maxxdist is not None else None
+        self.textoffset = textoffset
+        self.textgenfunc = textgenfunc
+        self.linelen = linelen
+        self.linecol = QColor(*linecol)
+        self.textcol = QColor(*textcol)
+        self.textalways = textalways
+        if fontsize > 0:
+            self.font = QFont()
+            self.font.setFamily('Sans Serif')
+            self.font.setPixelSize(fontsize)
+        else:
+            self.font = None
+
+    def generate(self, scene):
+        """Add the ticks to the scene"""
+        # first check X distance between ticks
+        xdist = scene.entityToScene(self.spacing) - scene.entityToScene(0)
+        if xdist < self.minxdist or self.maxxdist is not None and xdist >= self.maxxdist:
+            return
+
+        # now get the positions of first and last tick we will build
+        start = scene.minx - (scene.minx % self.spacing)  # x of start rounded down to nearest 'spacing'
+        end = scene.maxx - (scene.maxx % self.spacing) + self.spacing  # x of end rounded up similarly
+
+        h = scene.height()
+        # go through all tick positions.
+        for x in np.arange(start, end, self.spacing):
+            xx = scene.entityToScene(x)
+            if not scene.hasTickAlready(xx):
+                # only do something if there isn't a tick there
+                # create the line
+                i = QtWidgets.QGraphicsLineItem(xx, 0, xx, h * self.linelen)
+                i.setPen(self.linecol)
+                scene.addItem(i)
+            if not scene.hasTickAlready(xx) or self.textalways:
+                scene.markTick(xx)  # NOW mark the tick.
+                # that was the same check again for the text, but this time we take textalways into account
+                # now if there is text, create that, using the text generation function
+                # if there is one - otherwise just a number to 1 sig digit.
+                if self.font:
+                    if self.textgenfunc:
+                        txt = self.textgenfunc(x)
+                    else:
+                        txt = f"{x:.1f}"
+                    i = QtWidgets.QGraphicsSimpleTextItem(txt)
+                    i.setBrush(self.textcol)
+                    i.setFont(self.font)
+                    i.setPos(xx, 10 + self.textoffset)
+                    i.setZValue(1)  # text always on top
+                    scene.addItem(i)
 
 
 class LinearSetScene(QtWidgets.QGraphicsScene):
@@ -107,6 +174,9 @@ class LinearSetScene(QtWidgets.QGraphicsScene):
 
     minx: float  # minimum X position
     maxx: float  # maximum X position
+    tickRenderers: List[TickRenderer]  # x-axis ticks to create (or not)
+    ticksAlreadyPlaced: Set[float]  # stores ticks already placed in this rebuild
+    itemYOffset: float  # y offset added to all items
 
     def __init__(self, widget):
         super().__init__(widget.parent)
@@ -114,6 +184,8 @@ class LinearSetScene(QtWidgets.QGraphicsScene):
         self.minx = 0
         self.maxx = 100
         self.selectionChanged.connect(self.onSelChanged)
+        self.itemYOffset = 0
+        self.tickRenderers = []
 
     def onSelChanged(self):
         pass  # no real need for this to do anything
@@ -148,27 +220,26 @@ class LinearSetScene(QtWidgets.QGraphicsScene):
         for ent in saved:
             ent.marker.setSelected(True)
 
-    def createAxes(self):
-        """This creates some axis markers - at the moment it's rather dumb"""
-        minx = math.ceil(self.minx)
-        maxx = math.ceil(self.maxx)
-        h = self.height()
-        for x in range(minx, maxx):
-            xx = self.entityToScene(x)
-            i = QtWidgets.QGraphicsLineItem(xx, 0, xx, h)
-            i.setPen(QColor(200, 200, 200))
-            self.addItem(i)
-            i = QtWidgets.QGraphicsSimpleTextItem(str(x))
-            i.setFont(axesFont)
-            i.setPos(xx, 10)
-            self.addItem(i)
+    def createTicks(self):
+        """create scene items for axes in order of how they were added"""
+        self.ticksAlreadyPlaced = set()
+        for a in self.tickRenderers:
+            a.generate(self)
+
+    def hasTickAlready(self, x):
+        """used to check if a tick has already been placed"""
+        return int(x) in self.ticksAlreadyPlaced
+
+    def markTick(self, x):
+        """used to mark that a tick has already been placed"""
+        self.ticksAlreadyPlaced.add(int(x))
 
     def rebuild(self):
         """Complete rebuild of the scene, done when almost anything happens. Has to remember selected states."""
         ss = self.saveSelection()
         self.clear()
         ui.log(f"range {self.minx, self.maxx}, width {self.width()}")
-        self.createAxes()
+        self.createTicks()
         for i in self.widget.items:
             # create item in scene, in scene coordinates (derived from minx,maxx)
             i.createSceneItem(self)
@@ -193,6 +264,15 @@ class LinearSetWidget(QtWidgets.QGraphicsView):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setDragMode(QtWidgets.QGraphicsView.RubberBandDrag)
+
+    def setYOffset(self, y):
+        """change the offset added to all items, generally to make room for axis text at the top"""
+        self.scene.itemYOffset = y
+
+    def addTickRenderer(self, axis: TickRenderer):
+        """add an tick-renderer to the widget. If an renderer would place a new tick over an old one, the
+        new tick will be ignored, so the order of addition is significant (i.e. add 'bigger' ticks first)"""
+        self.scene.tickRenderers.append(axis)
 
     def setItems(self, items: List[LinearSetEntity]):
         """Set the items we are going to render"""

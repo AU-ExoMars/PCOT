@@ -5,13 +5,15 @@ for tabs controlling transforms.
 """
 import os
 import traceback
+from string import Template
 from typing import List, Optional, OrderedDict, ClassVar
 from zipfile import BadZipFile
 
+import markdown
 from PyQt5 import QtWidgets, uic, QtGui
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFontDatabase, QFont
-from PyQt5.QtWidgets import QAction, QMessageBox, QAbstractScrollArea
+from PyQt5.QtGui import QFontDatabase, QFont, QTextCursor
+from PyQt5.QtWidgets import QAction, QMessageBox, QAbstractScrollArea, QDialog
 
 import pcot
 from pcot.ui import graphscene, graphview
@@ -135,6 +137,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.actionCut.triggered.connect(self.cutAction)
         self.actionUndo.triggered.connect(self.undoAction)
         self.actionRedo.triggered.connect(self.redoAction)
+        self.actionAbout.triggered.connect(self.aboutAction)
 
         self.runAllButton.clicked.connect(self.runAllAction)
         self.autoRun.toggled.connect(self.autorunChanged)
@@ -421,6 +424,18 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.doc.mark()
         p = macros.XFormMacro(self.doc, None)
         MainUI(self.doc, macro=p, doAutoLayout=True)
+
+    def aboutAction(self):
+        dialog = QDialog(self)
+        uic.loadUi(pcot.config.getAssetAsFile('about.ui'), dialog)
+        txt = Template(pcot.config.getAssetAsString('about.md')).substitute(version=pcot.__fullversion__)
+        doc = dialog.textEdit.document()
+        doc.setDefaultStyleSheet(pcot.config.getAssetAsString('about.css'))
+        txt = markdown.markdown(txt)
+        doc.setHtml(txt)
+        dialog.textEdit.moveCursor(QTextCursor.Start)
+        # print(dialog.textEdit.toHtml())
+        dialog.show()
 
     ## this gets called from way down in the scene to open tabs for nodes
     def openTab(self, node):
