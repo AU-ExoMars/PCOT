@@ -1,21 +1,33 @@
-from pathlib import Path
-from proctools.products.loader import ProductLoader
+from dataclasses import dataclass, fields
+from typing import Dict
 
 
-def read_all(dir_):
-    loader = ProductLoader()
-    num_loaded = loader.load_products(dir_, recursive=True)
-    print(f"found {num_loaded} products")
-    # Retrieve all loaded PAN-PP-220/spec-rad products as instances of
-    # proctools.products.pancam:SpecRad; sub in the mnemonic of the product you're after
+class PDS4Product:
+    """A general purpose class for PDS4 products. These are stored inside the Requires ability to serialise to some extent."""
 
-    for product in loader.all("spec-rad"):
-        # DataProduct.meta provides convenient access to common label attributes.
-        # See proctools.products.pancam.__init__ for the currently defined mappings
-        m = product.meta
-        print(
-            f"type={m.acq_id}, cam={m.camera}, sol={m.sol_id}, seq={m.seq_num},"
-            f" rmc_ptu={m.rmc_ptu}, cwl={m.filter_cwl}, filt={m.filter_id}"
-        )
+    def __init__(self):
+        pass
 
-# read_all(Path("z:/rcp_output"))
+    def serialise(self) -> Dict:
+        """Serialise the product into a dictionary"""
+        return {x.name: getattr(self, x.name) for x in fields(self)}
+
+    @classmethod
+    def deserialise(cls, d: Dict):
+        """deserialise the product from a dictionary; static method creating new product"""
+        # set of args to pass to the constructor
+        kwargs = {x.name: d[x.name] for x in fields(cls)}
+        # construct with those args
+        return cls(**kwargs)
+
+
+@dataclass(frozen=True)
+class PDS4ImageProduct(PDS4Product):
+    sol_id: int = 0
+    seq_num: int = 0
+    filter_cwl: float = 0
+    filter_id: str = ""
+    camera: str = ""
+    rmc_ptu: float = 0
+
+
