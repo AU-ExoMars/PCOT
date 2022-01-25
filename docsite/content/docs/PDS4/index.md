@@ -4,6 +4,44 @@ title: Notes on importing PDS4
 summary: some notes on the PDS4 input method and ramifications for sources
 ---
 
+# PDS4 input - user experience
+
+* User opens the dialog shown in the figure.
+When opened, the directory field (1) should show the last
+directory selected (if it still exists) and the table (2) and 
+timeline (3) should show
+the PDS4 labels that it showed last time. See "persistence" below.
+* User selects a directory, and whether that directory should be read
+recursively (5).
+* User clicks Load Directory (5) button to read this directory recursively or not
+* Table and timeline are reloaded. Any labels which were selected prior
+to reload are reselected.
+* User selects labels in the timeline or table (**ugh**) - selection
+in one must be reflected in the other
+* User clicks Read Data (6) and if the data is OK (i.e. all image data,
+or all HK) it is loaded into the canvas and the output is set.
+* **Read Data must turn red when selection changes, like the Replot button
+in certain nodes which use matplotlib**
+
+{{< figure src="dialog.png" title="The PDS4 input dialog (proposed)">}}
+1. directory
+2. table of loaded PDS4 products
+3. canvas showing currently selected image (note: may need a way of showing HK
+data too)
+4. timeline of loaded PDS4 products
+5. recursive checkbox and directory load button
+6. Read Data button will load the selected data and output it
+  
+
+## Persistence
+* directory name and recursive state
+* contents of table and timeline - i.e. list of all labels found previously
+and their files.
+* selection state of the above
+* actual output data **(should do this for all inputs)**
+
+# Tech. details
+
 This will naturally be the primary input method, and has several steps.
 
 * First, the PDS4 input method code will scan the directory given and create
@@ -42,3 +80,5 @@ and through that each PDS4 label. Each label will be asked to read
 its data. This will typically produce an ImageCube, or it might be some HK
 data. Each channel will get a Source with a link to the label as mentioned
 above.
+
+
