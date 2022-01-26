@@ -27,11 +27,12 @@ def msg(t):
 
 
 ## show a message in all window logs
-def log(s):
+def log(s, toStdout=True):
     if application is not None:
         for x in mainwindow.MainUI.windows:
             x.logText.append(s)
-    print(s)
+    if toStdout:
+        print(s)
 
 
 ## show error on status bar, and log in red; will dump traceback to stdout if requested.

@@ -29,15 +29,15 @@ def handleMenuEvent(self, ev):
     if a == fhact:
         txt = "<h1>Help on {}</h1>".format(funcname)
         txt += markdownWrapper(parser.helpOnWord(funcname))
-        ui.log(txt)
+        ui.log(txt, toStdout=False)
     elif a == lfact:
         txt = "<h1>List of all functions in eval node</h1>"
         txt += markdownWrapper(parser.listFuncs())
-        ui.log(txt)
+        ui.log(txt, toStdout=False)
     elif a == lpact:
         txt = "<h1>List of all 'x.y' properties in eval node</h1>"
         txt += markdownWrapper(parser.listProps())
-        ui.log(txt)
+        ui.log(txt, toStdout=False)
     else:
         menu.exec_(ev.globalPos())
 

@@ -235,7 +235,7 @@ class LinearSetScene(QtWidgets.QGraphicsScene):
         """Complete rebuild of the scene, done when almost anything happens. Has to remember selected states."""
         ss = self.saveSelection()
         self.clear()
-        ui.log(f"range {self.minx, self.maxx}, width {self.width()}")
+#        ui.log(f"range {self.minx, self.maxx}, width {self.width()}")
         self.createTicks()
         for i in self.widget.items:
             # create item in scene, in scene coordinates (derived from minx,maxx)

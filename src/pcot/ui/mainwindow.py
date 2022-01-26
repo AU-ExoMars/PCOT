@@ -335,7 +335,7 @@ class MainUI(ui.tabs.DockableTabWindow):
             self.rebuildRecents()
         except Exception as e:
             traceback.print_exc()
-            ui.error("cannot open file {}: {}".format(fname, e))
+            ui.error(f"cannot open file {fname}: {repr(e)}")
         finally:
             self.graph.autoRun = oldAutoRun
 

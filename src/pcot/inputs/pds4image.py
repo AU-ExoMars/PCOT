@@ -117,17 +117,18 @@ class PDS4ImageInputMethod(InputMethod):
         return x
 
     def deserialise(self, data, internal):
-        self.recurse = data['recurse']
-        self.selected = data['selected']
-        self.camera = data['camera']
-        self.products = [PDS4Product.deserialise(x) for x in data['products']]
-        self.dir = data['dir']
-        self.mapping = ChannelMapping.deserialise(data['mapping'])
-        if internal:
-            self.img = data['image']
-        else:
-            self.img = None  # ensure image is reloaded
-        Canvas.deserialise(self, data)
+        if 'recurse' in data:
+            self.recurse = data['recurse']
+            self.selected = data['selected']
+            self.camera = data['camera']
+            self.products = [PDS4Product.deserialise(x) for x in data['products']]
+            self.dir = data['dir']
+            self.mapping = ChannelMapping.deserialise(data['mapping'])
+            if internal:
+                self.img = data['image']
+            else:
+                self.img = None  # ensure image is reloaded
+            Canvas.deserialise(self, data)
 
     def long(self):
         # TODO ??
@@ -219,6 +220,7 @@ class PDS4ImageMethodWidget(MethodWidget):
         # create some tick renderers for the widget
         # this is for big text when the ticks are far apart
         self.timeline.addTickRenderer(TickRenderer(spacing=1, fontsize=20, textcol=(0, 0, 255), minxdist=50,
+                                                   textoffset=-10,
                                                    textgenfunc=lambda x: f"sol {int(x)}"))
         # this is the same, but the text is smaller and renders when the ticks are close together
         self.timeline.addTickRenderer(TickRenderer(spacing=1, fontsize=10, textcol=(0, 0, 255), maxxdist=50,
@@ -226,9 +228,9 @@ class PDS4ImageMethodWidget(MethodWidget):
 
         # and these are intermediate values
         self.timeline.addTickRenderer(
-            TickRenderer(spacing=0.1, fontsize=8, textoffset=30, linecol=(230, 230, 230), linelen=0.5, minxdist=10,
+            TickRenderer(spacing=0.1, fontsize=8, textoffset=10, linecol=(230, 230, 230), linelen=0.5, minxdist=10,
                          textgenfunc=lambda x: f"{int(x * 10 + 0.3) % 10}", textalways=True))
-        self.timeline.setYOffset(30)  # make room for axis text
+        self.timeline.setYOffset(40)  # make room for axis text
 
     def populateTableAndTimeline(self):
         """Refresh the table and timeline to reflect what's stored in the method."""
