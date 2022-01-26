@@ -189,10 +189,7 @@ class MultifileMethodWidget(MethodWidget):
         self.onInputChanged()
 
     def cameraChanged(self, i):
-        if i == 0:
-            self.method.camera = "PANCAM"
-        else:
-            self.method.camera = "AUPE"
+        self.method.camera = "PANCAM" if i == 0 else "AUPE"
         self.onInputChanged()
 
     def onInputChanged(self):
@@ -208,10 +205,7 @@ class MultifileMethodWidget(MethodWidget):
         i = self.mult.findText(str(int(self.method.mult)))
         self.mult.setCurrentIndex(i)
         self.filterpat.setText(self.method.filterpat)
-        if self.method.camera == 'AUPE':
-            self.camCombo.setCurrentIndex(1)
-        else:
-            self.camCombo.setCurrentIndex(0)
+        self.camCombo.setCurrentIndex(1 if self.method.camera == 'AUPE' else 0)
         self.displayActivatedImage()
         self.invalidate()  # input has changed, invalidate so the cache is dirtied
         # we don't do this when the window is opening, otherwise it happens a lot!
@@ -271,25 +265,6 @@ class MultifileMethodWidget(MethodWidget):
             self.onInputChanged()  # TODO was self.changed
         except (ValueError, OverflowError):
             raise Exception("CTRL", "Bad mult string in 'multifile': " + s)
-
-    def onNodeChanged(self):
-        # the node has changed - set the filters text widget and reselect the dir.
-        # This will only clear the selected files if we changed the dir.
-        self.filters.setText(",".join(self.method.namefilters))
-        self.selectDir(self.method.dir)
-        s = ""
-        for i in range(len(self.method.files)):
-            s += "{}:\t{}\n".format(i, self.method.files[i])
-        #        s+="\n".join([str(x) for x in self.method.imgpaths])
-        self.outputFiles.setPlainText(s)
-        i = self.mult.findText(str(int(self.method.mult)))
-        self.mult.setCurrentIndex(i)
-        self.filterpat.setText(self.method.filterpat)
-        if self.node.camera == 'AUPE':
-            self.camCombo.setCurrentIndex(1)
-        else:
-            self.camCombo.setCurrentIndex(0)
-        self.displayActivatedImage()
 
     def buildModel(self):
         # build the model that the list view uses

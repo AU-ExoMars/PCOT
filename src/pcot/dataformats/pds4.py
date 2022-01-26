@@ -1,33 +1,55 @@
-from dataclasses import dataclass, fields
+import dataclasses
+from datetime import datetime
 from typing import Dict
+
+from dateutil import parser
+
+from pcot import filters
+from pcot.filters import Filter
 
 
 class PDS4Product:
-    """A general purpose class for PDS4 products. These are stored inside the Requires ability to serialise to some extent."""
+    """A general purpose class for PDS4 products. Subclasses need to be dataclass objects so that the tricks
+    in the serialisation work."""
 
     def __init__(self):
         pass
 
     def serialise(self) -> Dict:
         """Serialise the product into a dictionary"""
-        return {x.name: getattr(self, x.name) for x in fields(self)}
+        pass
 
     @classmethod
     def deserialise(cls, d: Dict):
         """deserialise the product from a dictionary; static method creating new product"""
-        # set of args to pass to the constructor
-        kwargs = {x.name: d[x.name] for x in fields(cls)}
-        # construct with those args
-        return cls(**kwargs)
+        pass
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class PDS4ImageProduct(PDS4Product):
-    sol_id: int = 0
-    seq_num: int = 0
-    filter_cwl: float = 0
-    filter_id: str = ""
-    camera: str = ""
-    rmc_ptu: float = 0
+    sol_id: int
+    seq_num: int
+    filt: Filter
+    camera: str
+    rmc_ptu: float
+    start: datetime
 
+    def serialise(self) -> Dict:
+        """Serialise the product into a dictionary"""
+        d = dataclasses.asdict(self)            # convert into a dict..
+        d['start'] = self.start.isoformat()     # fixup the date into a string
+        d['filtname'] = self.filt.name          # and the filter with the camtype (so we can look it up)
+        d['camera'] = self.filt.camera
+        return d
 
+    @classmethod
+    def deserialise(cls, d: Dict):
+        """deserialise the product from a dictionary; static method creating new product"""
+        # turn camera/filtername strings into a Filter (may throw)
+        d['filter'] = filters.findFilter(d['camera'], d['filtname'])
+        del d['camera']
+        del d['filtname']
+        # turn date string back into datetime
+        d['start'] = parser.isoparse(d['start'])
+        # call constructor
+        return cls(**d)

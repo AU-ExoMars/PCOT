@@ -91,10 +91,6 @@ class MainUI(ui.tabs.DockableTabWindow):
     # if I have saved/loaded, the name of the file
     saveFileName: Optional[str]
 
-    ## @var camera
-    # camera type (PANCAM/AUPE)
-    camera: str
-
     ## @var palette
     # the node palette on the right
     palette: palette.Palette

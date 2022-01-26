@@ -58,6 +58,7 @@ def logXFormException(node, e):
     error("Exception in {}: {}".format(node.name, e))
     if app() is not None:
         log('<font color="red">Exception in <b>{}</b>: </font> {}'.format(node.name, e))
+        print(traceback.format_exc())
 
 
 # called when a graph saved with a different version of a node is loaded

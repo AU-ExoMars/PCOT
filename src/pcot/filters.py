@@ -1,4 +1,6 @@
 import math
+from typing import Tuple
+
 import numpy as np
 
 """This file deals with the physical multispectral filters for the PANCAM and AUPE cameras"""
@@ -6,45 +8,50 @@ import numpy as np
 
 class Filter:
     """The filter class describes a single filter's parameters"""
-    ## @var cwl
     # centre wavelength
     cwl: float
-    ## @var fwhm
     # full-width at half-maximum
     fwhm: float
-    ## @var transmission
     # transmission ratio
     transmission: float
-    ## @var position
     # position of filter in camera (L/R+number)
     position: str
-    ## @var name
     # name of filter (e.g. G01 for "geology 1")
     name: str
+    # camera type (PANCAM or AUPE)
+    camera: str
+    # index in array, used for certain visualisations (e.g. PDS4 timeline)
+    idx: int
 
-    ## constructor
-    def __init__(self, cwl, fwhm, transmission, position=None, name=None):
+    def __init__(self, cwl, fwhm, transmission, position=None, name=None, camera=None):
+        """constructor"""
         self.cwl = cwl
         self.fwhm = fwhm
         self.transmission = transmission
         self.name = name if name is not None else str(cwl)
         self.position = position
+        # typically set later
+        self.camera = camera
+        self.idx = 0
+
 
     @staticmethod
     def _gaussian(x, mu, fwhm):
-        def fwhm_to_sigma(fwhm):
-            return fwhm / (2 * math.sqrt(2 * math.log(2)))  # ~= 2.35482
+        """calculate the value of a normal distribution at x, where mu is the mean
+        and fwhm is full width at half max."""
+        def fwhm_to_sigma(fwhm_):
+            return fwhm_ / (2 * math.sqrt(2 * math.log(2)))  # ~= 2.35482
 
         return np.exp(-(x - mu) ** 2 / (2 * fwhm_to_sigma(fwhm) ** 2))
 
-    ## generate a response curve from an input array of frequencies (I think)
     def response_over(self, x: np.ndarray):
+        """generate a response curve from an input array of frequencies (I think)"""
         return self._gaussian(x, self.cwl, self.fwhm)
 
 
-## This is a VERY CRUDE wavelength to RGB converter, for visualisation use only!
-# Originally from an algorithm in FORTRAN by Dan Bruton.
 def wav2RGB(wavelength):
+    """This is  VERY CRUDE wavelength to RGB converter, for visualisation use only!
+    Originally from an algorithm in FORTRAN by Dan Bruton."""
     w = int(wavelength)
 
     # colour
@@ -118,6 +125,10 @@ PANCAM_FILTERS = [
     Filter(670, 5, 0.000000922, "R11", "S04")
 ]
 
+for i, x in enumerate(PANCAM_FILTERS):
+    x.camera = 'PANCAM'
+    x.idx = i
+
 ## Array of AUPE filters - I've added the lower-case letters myself;
 # they were all G0 or G1
 AUPE_FILTERS = [
@@ -148,8 +159,13 @@ AUPE_FILTERS = [
     Filter(525, 50, 1, "R10", "GUESS"),  # THIS IS A GUESS
 ]
 
+for i, x in enumerate(AUPE_FILTERS):
+    x.camera = 'AUPE'
+    x.idx = i
+
+
 ## dummy filter for when we have trouble finding the value
-DUMMY_FILTER = Filter(0, 0, 0, "??", "??")
+DUMMY_FILTER = Filter(0, 0, 0, "??", "??", camera='PANCAM')
 
 ## dictionary of AUPE filters by position (L/R+number)
 AUPEfiltersByPosition = {x.position: x for x in AUPE_FILTERS}
@@ -173,3 +189,19 @@ def getFilterByPos(fpos, aupe=False):
     else:
         d = PANCAMfiltersByPosition
     return d[fpos] if fpos in d else DUMMY_FILTER
+
+
+def findFilter(camera: str, name: str) -> Filter:
+    """Given a filter's ID, try to find it in either AUPE or PANCAM."""
+    if camera == 'PANCAM':
+        if name in PANCAMfiltersByName:
+            f = PANCAMfiltersByName[name]
+            return f
+    elif camera == 'AUPE':
+        if name in AUPEfiltersByName:  # yeah, duplication. So sue me.
+            f = AUPEfiltersByName[name]
+            return f
+    else:
+        raise Exception(f"unknown camera type {camera}")
+
+    raise Exception(f"Unable to find filter {name} for {camera}")

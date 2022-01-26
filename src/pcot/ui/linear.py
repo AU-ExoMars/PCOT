@@ -1,7 +1,7 @@
 from typing import List, Any, Set, Callable
 
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QColor, QFont
 
 import numpy as np
@@ -81,7 +81,7 @@ class LinearSetEntity:
         The Y position is calculated from yOffset. May be created selected, if we're doing a
         rebuild of a scene with selected items"""
         x = scene.entityToScene(self.x)
-        y = self.yOffset * 15 + 30 + scene.itemYOffset  # a bit ad-hoc...
+        y = self.yOffset + scene.itemYOffset
         self.marker = self.createMarkerItem(x, y)
         self.marker.setSelected(selected)
         scene.addItem(self.marker)
@@ -183,12 +183,9 @@ class LinearSetScene(QtWidgets.QGraphicsScene):
         self.widget = widget
         self.minx = 0
         self.maxx = 100
-        self.selectionChanged.connect(self.onSelChanged)
+        self.selectionChanged.connect(self.widget.onSelChanged)
         self.itemYOffset = 0
         self.tickRenderers = []
-
-    def onSelChanged(self):
-        pass  # no real need for this to do anything
 
     def zoom(self, centreX, factor):
         # print(f"Zoom on {centreX} was {self.minx}:{self.maxx}")
@@ -211,7 +208,7 @@ class LinearSetScene(QtWidgets.QGraphicsScene):
         return x * self.width()
 
     def saveSelection(self):
-        """record the selected items during a drag or rebuild"""
+        """record the selected items during a drag or rebuild; also used to get selection from widget"""
         return [i.ent for i in self.selectedItems()]
 
     def restoreSelection(self, saved):
@@ -253,6 +250,8 @@ class LinearSetWidget(QtWidgets.QGraphicsView):
     scene: LinearSetScene
     items: List[LinearSetEntity]
 
+    selChanged = pyqtSignal()  # signal emitted when the selection changes
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.items = []
@@ -264,6 +263,9 @@ class LinearSetWidget(QtWidgets.QGraphicsView):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setDragMode(QtWidgets.QGraphicsView.RubberBandDrag)
+
+    def onSelChanged(self):
+        self.selChanged.emit()
 
     def setYOffset(self, y):
         """change the offset added to all items, generally to make room for axis text at the top"""
@@ -281,6 +283,14 @@ class LinearSetWidget(QtWidgets.QGraphicsView):
     def rebuild(self):
         """Rebuild all the scene items; used after zooming/panning/setup/changing/rescaling"""
         self.scene.rebuild()
+
+    def setSelection(self, ents):
+        """Set the selected entities"""
+        self.scene.restoreSelection(ents)
+
+    def getSelection(self):
+        """return the selected entities"""
+        return self.scene.saveSelection()
 
     def rescale(self):
         """Rescale the minx and maxx values to fit all the items, do after add"""

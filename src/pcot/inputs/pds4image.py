@@ -1,12 +1,14 @@
 import os
+import traceback
 from pathlib import Path
 from typing import Optional, List
 
+from dateutil import parser
 from PyQt5 import uic, QtWidgets
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QValidator
 from PyQt5.QtWidgets import QMessageBox, QTableWidgetItem
 
+from pcot import filters
 from proctools.products.loader import ProductLoader
 
 import pcot
@@ -16,7 +18,13 @@ from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
 from pcot.ui.linear import LinearSetEntity, entityMarkerInitSetup, entityMarkerPaintSetup, TickRenderer
-from pcot.dataformats.pds4 import PDS4Product
+from pcot.dataformats.pds4 import PDS4Product, PDS4ImageProduct
+
+PRIVATEDATAROLE = 1000  # data role for table items
+
+
+def timestr(t):
+    return t.strftime("%x %X")
 
 
 class PDS4ImageInputMethod(InputMethod):
@@ -24,14 +32,15 @@ class PDS4ImageInputMethod(InputMethod):
 
     # Here is the data model. This all gets persisted.
 
-    img: Optional[ImageCube]        # the output - just image supported for now.
+    img: Optional[ImageCube]  # the output - just image supported for now.
 
-    products: List[PDS4Product]     # list of PDS4 products found under the directory "dir". Not all will be selected.
-    selected: List[int]             # indices of selected items in the above list
+    products: List[PDS4ImageProduct]  # list of PDS4 products found under the directory "dir". Not all will be selected.
+    selected: List[int]  # indices of selected items in the above list
 
-    dir: Optional[str]              # the directory we have got the data from; just used to set up the widget
-    mapping: ChannelMapping         # the mapping for the canvas
-    recurse: bool   # when scanning directories, should we do it recursively?
+    dir: Optional[str]  # the directory we have got the data from; just used to set up the widget
+    mapping: ChannelMapping  # the mapping for the canvas
+    recurse: bool  # when scanning directories, should we do it recursively?
+    camera: str  # type of camera - 'PANCAM' or 'AUPE'
 
     def __init__(self, inp):
         super().__init__(inp)
@@ -41,28 +50,42 @@ class PDS4ImageInputMethod(InputMethod):
         self.dir = None
         self.mapping = ChannelMapping()
         self.recurse = False
+        self.camera = 'PANCAM'
 
     def loadLabelsFromDirectory(self):
         """This will actually load data from the directory into the linear widget. """
         if self.dir is not None:
-            try:
-                loader = ProductLoader()
-                loader.load_products(Path(self.dir), recursive=self.recurse)
-                # Retrieve all loaded PAN-PP-220/spec-rad products as instances of
-                # proctools.products.pancam:SpecRad; sub in the mnemonic of the product you're after
-                for dat in loader.all("spec-rad"):
-                    m = dat.meta
+            self.products = []
+            self.selected = []
 
-                    prod = PDS4Product(m.sol_id, m.seq_num, m.filter_cwl, m.filter_id,
-                                       m.camera, m.rmc_ptu)
-            except Exception as e:
-                ui.log(str(e))
+            # Exceptions might get thrown; the caller must handle them.
+            loader = ProductLoader()
+            loader.load_products(Path(self.dir), recursive=self.recurse)
+            # Retrieve all loaded PAN-PP-220/spec-rad products as instances of
+            # proctools.products.pancam:SpecRad; sub in the mnemonic of the product you're after
+            for dat in loader.all("spec-rad"):
+                m = dat.meta
+                start = parser.isoparse(m.start)
+                cwl = int(m.filter_cwl)
+                sol = int(m.sol_id)
+                seq = int(m.seq_num)
+                ptu = float(m.rmc_ptu)
+
+                # try to work out what filter we are. This is a complete pig - we might
+                # be AUPE, we might be PANCAM. We have to rely on document settings.
+                filt = filters.findFilter(self.camera, m.filter_id)
+                if filt.cwl != cwl:
+                    raise Exception(
+                        f"Filter CWL does not match for filter {m.filter_id}: file says {cwl}, should be {filt.cwl}")
+                prod = PDS4ImageProduct(sol, seq, filt, m.camera, ptu, start)
+                self.products.append(prod)
+            self.products.sort(key=lambda p: p.start)
             pcot.config.setDefaultDir('images', self.dir)
 
     def loadImg(self):
         print("PDS4IMAGE PERFORMING FILE READ")
         img = None
-#        ui.log("Image {} loaded: {}, mapping is {}".format(self.fname, img, self.mapping))
+        #        ui.log("Image {} loaded: {}, mapping is {}".format(self.fname, img, self.mapping))
         self.img = img
 
     def readData(self):
@@ -75,7 +98,7 @@ class PDS4ImageInputMethod(InputMethod):
 
     def set(self, *args):
         """used from external code"""
-        raise NotImplementedError   #TODO
+        raise NotImplementedError  # TODO
         self.mapping = ChannelMapping()
 
     def createWidget(self):
@@ -86,6 +109,7 @@ class PDS4ImageInputMethod(InputMethod):
              'selected': self.selected,
              'products': [x.serialise() for x in self.products],
              'dir': self.dir,
+             'camera': self.camera,
              'mapping': self.mapping.serialise()}
         if internal:
             x['image'] = self.img
@@ -95,6 +119,7 @@ class PDS4ImageInputMethod(InputMethod):
     def deserialise(self, data, internal):
         self.recurse = data['recurse']
         self.selected = data['selected']
+        self.camera = data['camera']
         self.products = [PDS4Product.deserialise(x) for x in data['products']]
         self.dir = data['dir']
         self.mapping = ChannelMapping.deserialise(data['mapping'])
@@ -146,6 +171,10 @@ class PDS4ImageMethodWidget(MethodWidget):
 
         self.recurseBox.setCheckState(2 if self.method.recurse else 0)
 
+        self.canvas.setMapping(m.mapping)
+        self.canvas.setGraph(self.method.input.mgr.doc.graph)
+        self.canvas.setPersister(m)
+
         # prescan the directory?? Not now; any data will
         # be serialised in the method object - we only do
         # this when we want to get new data.
@@ -158,37 +187,32 @@ class PDS4ImageMethodWidget(MethodWidget):
         self.browse.clicked.connect(self.browseClicked)
         self.scanDirButton.clicked.connect(self.scanDirClicked)
         self.readButton.clicked.connect(self.readClicked)
+        self.camCombo.currentIndexChanged.connect(self.cameraChanged)
+        self.table.itemSelectionChanged.connect(self.tableSelectionChanged)
+        self.timeline.selChanged.connect(self.timelineSelectionChanged)
+
+        # if we are updating the selected items this should be true so that we don't end up recursing.
+        self.selectingItems = False
 
         # set up the timeline and table
 
         self.initTimeline()
         self.initTable()
 
-        # add some test data to the linear widget
-        items = []
-        for day in range(10):
-            xx = [LinearSetEntity(day, i, f"filt{i}", None) for i in range(10)]
-            items += xx
-            items.append(ExampleLinearSetEntityA(day + 0.5, 12, "foon", None))
-        self.timeline.setItems(items)
-        self.timeline.rescale()
-        self.timeline.rebuild()
-
     def initTable(self):
         """initialise the table of PDS4 products"""
-        cols = ["foo", "bar", "baz"]
+        cols = ["sol", "start", "PTU", "camera", "filter", "cwl"]
         t = self.table
-        t.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
-        t.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
-        t.verticalHeader().setVisible(False)
         t.setColumnCount(len(cols))
         t.setHorizontalHeaderLabels(cols)
 
-    def addTableRow(self, strs):
+    def addTableRow(self, strs, data):
         self.table.insertRow(self.table.rowCount())
-        n = self.table.rowCount()-1
+        n = self.table.rowCount() - 1
         for i, x in enumerate(strs):
-            self.table.setItem(n, i, QTableWidgetItem(x))
+            w = QTableWidgetItem(x)
+            w.setData(PRIVATEDATAROLE, data)
+            self.table.setItem(n, i, w)
 
     def initTimeline(self):
         """initialise the PDS4 product timeline"""
@@ -203,29 +227,113 @@ class PDS4ImageMethodWidget(MethodWidget):
         # and these are intermediate values
         self.timeline.addTickRenderer(
             TickRenderer(spacing=0.1, fontsize=8, textoffset=30, linecol=(230, 230, 230), linelen=0.5, minxdist=10,
-                         textgenfunc=lambda x: f"{int(x*10+0.3)%10}", textalways=True))
-        self.timeline.setYOffset(100)   # make room for axis text
+                         textgenfunc=lambda x: f"{int(x * 10 + 0.3) % 10}", textalways=True))
+        self.timeline.setYOffset(30)  # make room for axis text
 
     def populateTableAndTimeline(self):
         """Refresh the table and timeline to reflect what's stored in the method."""
         # first the table.
-        self.table.clearContents()
+        self.table.clearContents()  # this will just make all the data empty strings (or null widgets)
+        self.table.setRowCount(0)  # and this will remove the rows
+        for p in self.method.products:
+            strs = [
+                str(p.sol_id),
+                timestr(p.start),
+                str(p.rmc_ptu),
+                p.camera,
+                p.filt.name,
+                str(p.filt.cwl)
+            ]
+            self.addTableRow(strs, p)
+        self.table.resizeColumnsToContents()
+
+        # then the timeline
+
+        items = []
+        for p in self.method.products:
+            yOffset = p.filt.idx * 12
+            items.append(LinearSetEntity(p.sol_id, yOffset, p.filt.name, p))
+        self.timeline.setItems(items)
+        self.timeline.rescale()
+        self.timeline.rebuild()
+
+    def showSelectedItems(self):
+        """Update the timeline and table to show the items selected in the method"""
+
+        selitems = [self.method.products[i] for i in self.method.selected]
+        self.selectingItems = True
+
+        # now the timeline. Yeah, the model is pretty ugly here for selection in the timeline, specifying
+        # the actual LinearSetEntities that are selected.
+        sel = []
+        for x in self.timeline.items:
+            if x.data in selitems:
+                sel.append(x)
+        self.timeline.setSelection(sel)
+
+        # now, the table.
+
+        for i in range(0, self.table.rowCount()):
+            itemInTable = self.table.item(i, PRIVATEDATAROLE)
+            if itemInTable is not None and itemInTable.data(PRIVATEDATAROLE) in selitems:
+                print(f"Table selecting row {i}")
+                self.table.selectRow(i)
+        self.selectingItems = False
+
+    def tableSelectionChanged(self):
+        if not self.selectingItems:
+            # this gets the data items - the actual PDS4 product objects - selected in the table
+            items = [x.data(PRIVATEDATAROLE) for x in self.table.selectedItems()]
+            sel = []
+            for i, x in enumerate(self.method.products):
+                if x in items:
+                    sel.append(i)
+            self.method.selected = sel
+            self.showSelectedItems()
+
+    def timelineSelectionChanged(self):
+        """timeline selection changed, we need to make the table sync up"""
+        if not self.selectingItems:
+            items = [x.data for x in self.timeline.getSelection()]
+            sel = []
+            for i, x in enumerate(self.method.products):
+                if x in items:
+                    sel.append(i)
+            self.method.selected = sel
+            self.showSelectedItems()
+
+    def cameraChanged(self, i):
+        self.method.camera = "PANCAM" if i == 0 else "AUPE"
+        # not really necessary here because it only affects what happens when we scan
+        self.onInputChanged()
 
     def recurseChanged(self, v):
         """recursion checkbox toggled"""
         self.method.recurse = (v != 0)
 
-    def scanDirClicked(self):
+    def scanDir(self):
         """Scan the selected directory for PDS4 products and populate the model, refreshing the timeline and table"""
+        try:
+            self.method.loadLabelsFromDirectory()
+            self.populateTableAndTimeline()
+        except Exception as e:
+            QMessageBox.critical(self, 'Error', str(e))
+            ui.log(str(e))
+
+    def scanDirClicked(self):
+        """Does a scanDir() if we confirm it"""
         if QMessageBox.question(self.parent(), "Rescan directory",
                                 "This will clear all loaded products. Are you sure?",
                                 QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
-            self.method.loadLabelsFromDirectory()
-        pass
+            self.scanDir()
 
     def readClicked(self):
         """Read selected data, checking for validity, and generate output"""
-        pass
+        try:
+            self.method.readSelectedData()
+        except Exception as e:
+            QMessageBox.critical(self, 'Error', str(e))
+            ui.log(str(e))
 
     def browseClicked(self):
         res = QtWidgets.QFileDialog.getExistingDirectory(None, 'Directory for products',
@@ -238,6 +346,8 @@ class PDS4ImageMethodWidget(MethodWidget):
         # ensure image is also using my mapping.
         if self.method.img is not None:
             self.method.img.setMapping(self.method.mapping)
+        self.camCombo.setCurrentIndex(1 if self.method.camera == 'AUPE' else 0)
+
         print("Displaying image {}, mapping {}".format(self.method.img, self.method.mapping))
         self.invalidate()  # input has changed, invalidate so the cache is dirtied
         # we don't do this when the window is opening, otherwise it happens a lot!
