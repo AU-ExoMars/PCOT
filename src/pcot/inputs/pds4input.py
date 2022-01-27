@@ -3,6 +3,7 @@ import traceback
 from pathlib import Path
 from typing import Optional, List
 
+from PyQt5.QtGui import QPen
 from dateutil import parser
 from PyQt5 import uic, QtWidgets
 from PyQt5.QtCore import Qt
@@ -27,7 +28,7 @@ def timestr(t):
     return t.strftime("%x %X")
 
 
-class PDS4ImageInputMethod(InputMethod):
+class PDS4InputMethod(InputMethod):
     """PDS4 inputs are unusual in that they can come from several PDS4 products, not a single file."""
 
     # Here is the data model. This all gets persisted.
@@ -135,12 +136,16 @@ class PDS4ImageInputMethod(InputMethod):
         return f"PDS4-{self.input.idx}"
 
 
-class ExampleMarkerItem(QtWidgets.QGraphicsRectItem):
-    """This is an example marker item which is a cyan rectangle - other than that it's the
-    same as the standard kind."""
+class ImageMarkerItem(QtWidgets.QGraphicsRectItem):
+    """Marker for images"""
 
-    def __init__(self, x, y, ent, radius=10):
-        super().__init__(x - radius / 2, y - radius / 2, radius, radius)
+    def __init__(self, x, y, ent, isLeft, radius=5):
+        super().__init__(x - radius, y - radius, radius*2, radius*2)
+        r2 = radius/2       # radius of internal circle
+        xoffset = -r2 if isLeft else r2
+        sub = QtWidgets.QGraphicsEllipseItem(x - xoffset - radius/2, y-r2, r2*2, r2*2, parent=self)
+        sub.setPen(QPen(Qt.NoPen))
+        sub.setBrush(Qt.black)
         entityMarkerInitSetup(self, ent)
         self.unselCol = Qt.cyan
 
@@ -150,11 +155,15 @@ class ExampleMarkerItem(QtWidgets.QGraphicsRectItem):
         super().paint(painter, option, widget)
 
 
-class ExampleLinearSetEntityA(LinearSetEntity):
-    """This is an entity which uses the above example marker item"""
+class ImageLinearSetEntity(LinearSetEntity):
+    """This is an entity which uses the above marker item"""
 
     def createMarkerItem(self, x, y):
-        return ExampleMarkerItem(x, y, self)
+        """Create a marker item to display - this inspects the underlying product, ensures it's an image
+        and looks at the camera field to see whether it's from the left or right camera. We could do other
+        things here too (different icons for geology, colour etc.)"""
+        isLeft = isinstance(self.data, PDS4ImageProduct) and self.data.camera == 'WACL'
+        return ImageMarkerItem(x, y, self, isLeft)
 
 
 class PDS4ImageMethodWidget(MethodWidget):
@@ -254,32 +263,37 @@ class PDS4ImageMethodWidget(MethodWidget):
         items = []
         for p in self.method.products:
             yOffset = p.filt.idx * 12
-            items.append(LinearSetEntity(p.sol_id, yOffset, p.filt.name, p))
+            items.append(ImageLinearSetEntity(p.sol_id, yOffset, p.filt.name, p))
         self.timeline.setItems(items)
         self.timeline.rescale()
         self.timeline.rebuild()
 
-    def showSelectedItems(self):
+    def showSelectedItems(self, timelineOnly=False, tableOnly=False):
         """Update the timeline and table to show the items selected in the method"""
 
+        # generate list of PDS4Product objects
         selitems = [self.method.products[i] for i in self.method.selected]
         self.selectingItems = True
 
         # now the timeline. Yeah, the model is pretty ugly here for selection in the timeline, specifying
         # the actual LinearSetEntities that are selected.
-        sel = []
-        for x in self.timeline.items:
-            if x.data in selitems:
-                sel.append(x)
-        self.timeline.setSelection(sel)
+        if not tableOnly:
+            sel = []
+            for x in self.timeline.items:
+                if x.data in selitems:
+                    sel.append(x)
+            self.timeline.setSelection(sel)
 
         # now, the table.
 
-        for i in range(0, self.table.rowCount()):
-            itemInTable = self.table.item(i, PRIVATEDATAROLE)
-            if itemInTable is not None and itemInTable.data(PRIVATEDATAROLE) in selitems:
-                print(f"Table selecting row {i}")
-                self.table.selectRow(i)
+        if not timelineOnly:
+            self.table.clearSelection()
+            for i in range(0, self.table.rowCount()):
+                itemInTable = self.table.item(i, 0)  # get the first item in the column
+                # and get that item's private data, which will be the PDS4Product object (as it will for all columns)
+                if itemInTable is not None and itemInTable.data(PRIVATEDATAROLE) in selitems:
+                    self.table.selectRow(i)
+                    print(i)
         self.selectingItems = False
 
     def tableSelectionChanged(self):
@@ -291,18 +305,20 @@ class PDS4ImageMethodWidget(MethodWidget):
                 if x in items:
                     sel.append(i)
             self.method.selected = sel
-            self.showSelectedItems()
+            self.showSelectedItems(timelineOnly=True)
 
     def timelineSelectionChanged(self):
         """timeline selection changed, we need to make the table sync up"""
         if not self.selectingItems:
             items = [x.data for x in self.timeline.getSelection()]
+            print(self.timeline.getSelection())
+            print([x.filt.name for x in items])
             sel = []
             for i, x in enumerate(self.method.products):
                 if x in items:
                     sel.append(i)
             self.method.selected = sel
-            self.showSelectedItems()
+            self.showSelectedItems(tableOnly=True)
 
     def cameraChanged(self, i):
         self.method.camera = "PANCAM" if i == 0 else "AUPE"
