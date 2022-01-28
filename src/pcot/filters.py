@@ -191,13 +191,13 @@ def getFilterByPos(fpos, aupe=False):
     return d[fpos] if fpos in d else DUMMY_FILTER
 
 
-def findFilter(camera: str, name: str) -> Filter:
+def findFilter(cameraType: str, name: str) -> Filter:
     """Given a filter's ID, try to find it in either AUPE or PANCAM."""
-    if camera == 'PANCAM':
+    if cameraType == 'PANCAM':
         if name in PANCAMfiltersByName:
             f = PANCAMfiltersByName[name]
             return f
-    elif camera == 'AUPE':
+    elif cameraType == 'AUPE':
         if name in AUPEfiltersByName:  # yeah, duplication. So sue me.
             f = AUPEfiltersByName[name]
             return f

@@ -25,12 +25,13 @@ class PDS4Product:
         pass
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass()
 class PDS4ImageProduct(PDS4Product):
+    lid: str
     sol_id: int
     seq_num: int
     filt: Filter
-    camera: str
+    camera: str      # note - this is whether the camera is L or R, not PANCAM/AUPE.
     rmc_ptu: float
     start: datetime
 
@@ -38,18 +39,32 @@ class PDS4ImageProduct(PDS4Product):
         """Serialise the product into a dictionary"""
         d = dataclasses.asdict(self)            # convert into a dict..
         d['start'] = self.start.isoformat()     # fixup the date into a string
-        d['filtname'] = self.filt.name          # and the filter with the camtype (so we can look it up)
-        d['camera'] = self.filt.camera
+        d['filt'] = self.filt.name              # and the filter with the camtype (so we can look it up)
+        d['cameratype'] = self.filt.camera      # PANCAM or AUPE?
+        d['prodtype'] = 'image'   # add type label
         return d
 
     @classmethod
     def deserialise(cls, d: Dict):
         """deserialise the product from a dictionary; static method creating new product"""
         # turn camera/filtername strings into a Filter (may throw)
-        d['filter'] = filters.findFilter(d['camera'], d['filtname'])
-        del d['camera']
-        del d['filtname']
+        d['filt'] = filters.findFilter(d['cameratype'], d['filt'])
+        del d['cameratype']
         # turn date string back into datetime
         d['start'] = parser.isoparse(d['start'])
         # call constructor
         return cls(**d)
+
+
+def deserialise(d: Dict) -> PDS4Product:
+    """Deserialise any kind of PDS4Product"""
+    try:
+        tp = d['prodtype']
+    except KeyError:
+        raise Exception(f"no product type in dictionary to deserialise")
+
+    del d['prodtype']
+    if tp == 'image':
+        return PDS4ImageProduct.deserialise(d)
+    else:
+        raise Exception(f"unknown product type: {tp}")

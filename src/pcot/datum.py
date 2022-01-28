@@ -86,6 +86,7 @@ class Datum(SourcesObtainable):
         return "[DATUM-{}, value {}]".format(self.tp, self.val)
 
     def getSources(self):
+        """Get the full source set as an actual single set, unioning all SourceSets within."""
         return self.sources.getSources()
 
 

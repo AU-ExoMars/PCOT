@@ -179,6 +179,25 @@
        </item>
       </widget>
      </item>
+     <item>
+      <widget class="QComboBox" name="multCombo">
+       <item>
+        <property name="text">
+         <string>x1</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>x1024</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>x2048</string>
+        </property>
+       </item>
+      </widget>
+     </item>
     </layout>
    </item>
   </layout>

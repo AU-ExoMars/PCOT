@@ -1,5 +1,6 @@
 from pcot.datum import Datum
 import pcot.inputs
+from pcot.imagecube import ImageCube
 
 from pcot.xform import xformtype, XFormType, XFormException
 from pcot.xforms.tabimage import TabImage
@@ -23,11 +24,12 @@ class XFormInput(XFormType):
         # the input.
         inp = node.graph.doc.inputMgr.inputs[self.idx]
         node.img = inp.get()
-        if node.img is not None:
+        if isinstance(node.img, ImageCube):
             node.img.setMapping(node.mapping)
+            node.setOutput(0, Datum(Datum.IMG, node.img))
         elif inp.activeMethod != pcot.inputs.Input.NULL:
             node.setError(XFormException('DATA', 'input node could not read data - {}'.format(inp.exception)))
-        node.setOutput(0, Datum(Datum.IMG, node.img))
+            node.setOutput(0, None)
 
 
 @xformtype

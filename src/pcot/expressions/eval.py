@@ -176,7 +176,7 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
             subimage = x.val.subimage()
             mask = subimage.fullmask()
             cp = subimage.img.copy()
-            sources.append(x.getSources())
+            sources.append(x.sources)
             masked = np.ma.masked_array(cp, mask=~mask)
             # we convert the data into a flat numpy array if it isn't one already
             if isinstance(masked, np.ma.masked_array):
@@ -188,7 +188,7 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
         elif x.tp == Datum.NUMBER:
             # if a number, convert to a single-value array
             newdata = np.array([x.val], np.float32)
-            sources.append(x.getSources())
+            sources.append(x.sources)
         else:
             raise XFormException('EXPR', 'internal: bad type passed to statsWrapper')
 
@@ -199,7 +199,7 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
             intermediate = np.concatenate((intermediate, newdata))
 
     # then we perform the function on the collated array
-    return Datum(Datum.NUMBER, fn(intermediate, *args), sources)
+    return Datum(Datum.NUMBER, fn(intermediate, *args), SourceSet(sources))
 
 
 class ExpressionEvaluator(Parser):

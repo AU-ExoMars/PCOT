@@ -1,8 +1,8 @@
 import os
-import traceback
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
+import numpy as np
 from PyQt5.QtGui import QPen
 from dateutil import parser
 from PyQt5 import uic, QtWidgets
@@ -10,6 +10,9 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QMessageBox, QTableWidgetItem
 
 from pcot import filters
+from pcot.dataformats import pds4
+from pcot.dataformats.pds4 import PDS4ImageProduct, PDS4Product
+from proctools.products import DataProduct
 from proctools.products.loader import ProductLoader
 
 import pcot
@@ -19,7 +22,6 @@ from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
 from pcot.ui.linear import LinearSetEntity, entityMarkerInitSetup, entityMarkerPaintSetup, TickRenderer
-from pcot.dataformats.pds4 import PDS4Product, PDS4ImageProduct
 
 PRIVATEDATAROLE = 1000  # data role for table items
 
@@ -28,71 +30,159 @@ def timestr(t):
     return t.strftime("%x %X")
 
 
+# list of multiplication factors - same as multCombo in ui file.
+MULTVALUES = [1, 1024, 2048]
+
+
 class PDS4InputMethod(InputMethod):
-    """PDS4 inputs are unusual in that they can come from several PDS4 products, not a single file."""
+    """PDS4 inputs are unusual in that they can come from several PDS4 products, not a single file.
+    This object tries to keep track of PDS4Products between runs, reloading an object's label (from which
+    we can get the data) when we call the loadLabelsFromDirectory() method. These get stored in the non-persisted
+    lidToLabel dict."""
 
     # Here is the data model. This all gets persisted.
 
-    img: Optional[ImageCube]  # the output - just image supported for now.
+    img: Optional[Any]  # the output - could be an ImageCube or something else, or None.
 
-    products: List[PDS4ImageProduct]  # list of PDS4 products found under the directory "dir". Not all will be selected.
+    products: List[PDS4Product]  # list of PDS4 products found under the directory "dir". Not all will be selected.
     selected: List[int]  # indices of selected items in the above list
+    lidToLabel: Dict[str, DataProduct]  # dictionary of LIDs to proctools Labels.
 
     dir: Optional[str]  # the directory we have got the data from; just used to set up the widget
     mapping: ChannelMapping  # the mapping for the canvas
     recurse: bool  # when scanning directories, should we do it recursively?
     camera: str  # type of camera - 'PANCAM' or 'AUPE'
+    multValue: int  # index into list of multiplication factors - same as multCombo in ui file.
 
     def __init__(self, inp):
         super().__init__(inp)
-        self.img = None
+        self.out = None
         self.products = []
         self.selected = []
+        self.lidToLabel = {}
         self.dir = None
         self.mapping = ChannelMapping()
         self.recurse = False
         self.camera = 'PANCAM'
+        self.multValue = 0
 
-    def loadLabelsFromDirectory(self):
-        """This will actually load data from the directory into the linear widget. """
+    def loadLabelsFromDirectory(self, clear=False):
+        """This will actually load data from the directory into the linear widget, either ab initio
+        or associating that data with existing PDS4Product info.
+        * If a PDS4Product with the same LID exists, it will be linked to the label data.
+        * If label data is loaded that doesn't have a PDS4Product, one will be created.
+        * If a PDS4Product ends up with no label data, it will be removed."""
+
         if self.dir is not None:
-            self.products = []
-            self.selected = []
+            if clear:
+                self.products = []
+                self.selected = []
+
+            # construct dictionaries
+            lidToProduct = {p.lid: p for p in self.products}  # lid->product for all the products we already have
+            self.lidToLabel = {}  # clear the lid->label, we're about to reload all labels (or try to)
+
+            # remove all label data from existing products
+            for p in self.products:
+                p.label = None
 
             # Exceptions might get thrown; the caller must handle them.
             loader = ProductLoader()
+            # this is actually loading 'labels' in *my* terminology
             loader.load_products(Path(self.dir), recursive=self.recurse)
-            # Retrieve all loaded PAN-PP-220/spec-rad products as instances of
+            # Retrieve labels for all loaded PAN-PP-220/spec-rad products as instances of
             # proctools.products.pancam:SpecRad; sub in the mnemonic of the product you're after
             for dat in loader.all("spec-rad"):
                 m = dat.meta
                 start = parser.isoparse(m.start)
-                cwl = int(m.filter_cwl)
-                sol = int(m.sol_id)
-                seq = int(m.seq_num)
-                ptu = float(m.rmc_ptu)
+                if m.lid not in lidToProduct:
+                    print(f"Creating new product {m.lid}")
+                    # only generate a new product object if we don't have it already
+                    cwl = int(m.filter_cwl)
+                    sol = int(m.sol_id)
+                    seq = int(m.seq_num)
+                    ptu = float(m.rmc_ptu)
 
-                # try to work out what filter we are. This is a complete pig - we might
-                # be AUPE, we might be PANCAM. We have to rely on document settings.
-                filt = filters.findFilter(self.camera, m.filter_id)
-                if filt.cwl != cwl:
-                    raise Exception(
-                        f"Filter CWL does not match for filter {m.filter_id}: file says {cwl}, should be {filt.cwl}")
-                prod = PDS4ImageProduct(sol, seq, filt, m.camera, ptu, start)
-                self.products.append(prod)
+                    # try to work out what filter we are. This is a complete pig - we might
+                    # be AUPE, we might be PANCAM. We have to rely on document settings.
+                    filt = filters.findFilter(self.camera, m.filter_id)
+                    if filt.cwl != cwl:
+                        raise Exception(
+                            f"Filter CWL does not match for filter {m.filter_id}: file says {cwl}, should be {filt.cwl}")
+                    prod = PDS4ImageProduct(m.lid, sol, seq, filt, m.camera, ptu, start)
+                    self.products.append(prod)
+                    lidToProduct[m.lid] = prod
+                else:
+                    print(f"Using existing product {m.lid}")
+
+                self.lidToLabel[m.lid] = dat
+
+            # remove any products which didn't get a label
+            remove = [(lid, prod) for lid, prod in lidToProduct.items() if lid not in self.lidToLabel]
+            selProds = [self.products[x] for x in self.selected]
+            for lid, prod in remove:
+                if prod in selProds:
+                    # also have to remove selected products from that array
+                    selIdx = self.products.index(prod)  # find index in products list
+                    self.selected.remove(selIdx)  # remove that index from selected list
+                del self.products[lid]
+                del lidToProduct[lid]
+
             self.products.sort(key=lambda p: p.start)
             pcot.config.setDefaultDir('images', self.dir)
 
-    def loadImg(self):
-        print("PDS4IMAGE PERFORMING FILE READ")
-        img = None
-        #        ui.log("Image {} loaded: {}, mapping is {}".format(self.fname, img, self.mapping))
-        self.img = img
+    def loadData(self):
+        """Actually load the data. This might get a bit hairy."""
+        # ensure the data is actually a valid combination. That is, all images or a single datum of any type
+        ok = True
+        self.out = None
+        if len(self.selected) == 0:
+            ok = False
+        else:
+            if len(self.selected) > 1:
+                # make sure all are images
+                if not all([isinstance(self.products[x], PDS4ImageProduct) for x in self.selected]):
+                    ok = False
+                    ui.error("If multiple products are selected in PDS4, they must all be images")
+
+        if ok:
+            # they are either all images, or there is just one product.
+            prods = [self.products[x] for x in self.selected]
+            if isinstance(prods[0], PDS4ImageProduct):
+                # it's an image, build an output
+                self.out = self.buildImageFromProducts(prods)
+            else:
+                ui.error(f"Type not supported: {type(prods[0])}")
+
+        # finally rerun the document's graph
+        self.input.performGraph()
+
+    def buildImageFromProducts(self, products: List[PDS4ImageProduct]) -> Optional[ImageCube]:
+        """Turn a list of products into an image cube, using the lidToLabel map and rereading
+        that data if required"""
+        # first check we have labels
+        oldSelLen = len(self.selected)
+        if not all([p.lid in self.lidToLabel for p in products]):
+            # if not, we're going to have to reread
+            self.loadLabelsFromDirectory(False)
+        if len(self.selected) != oldSelLen:
+            if len(self.selected) == 0:  # dammit, they've *ALL* gone.
+                ui.error("Product labels cannot be found in their old location - cannot rebuild.")
+                return None
+            else:
+                ui.warn("Some selected product labels cannot be found - some bands will be missing.")
+
+        # now extract the numpy arrays. Note that we are only using the data array for now.
+        labels = [self.lidToLabel[self.products[idx].lid] for idx in self.selected]
+        try:
+            imgdata = np.dstack([x.data for x in labels]) * MULTVALUES[self.multValue]
+        except ValueError as e:
+            ui.error("Error in combining image products - are they all the same size?")
+            return None
+        return ImageCube(imgdata, rgbMapping=self.mapping)  # TODO SOURCES
 
     def readData(self):
-        if self.img is None and self.fname is not None:
-            self.loadImg()
-        return self.img
+        return self.out
 
     def getName(self):
         return "PDS4"
@@ -106,30 +196,38 @@ class PDS4InputMethod(InputMethod):
         return PDS4ImageMethodWidget(self)
 
     def serialise(self, internal):
+        # serialise the parameters
         x = {'recurse': self.recurse,
+             'mult': self.multValue,
              'selected': self.selected,
              'products': [x.serialise() for x in self.products],
              'dir': self.dir,
              'camera': self.camera,
              'mapping': self.mapping.serialise()}
         if internal:
-            x['image'] = self.img
+            x['lid2label'] = self.lidToLabel
+            x['out'] = self.out
         Canvas.serialise(self, x)
         return x
 
     def deserialise(self, data, internal):
-        if 'recurse' in data:
+        try:
+            self.multValue = data.get('mult', 0)
             self.recurse = data['recurse']
             self.selected = data['selected']
             self.camera = data['camera']
-            self.products = [PDS4Product.deserialise(x) for x in data['products']]
+            self.products = [pds4.deserialise(x) for x in data['products']]
             self.dir = data['dir']
             self.mapping = ChannelMapping.deserialise(data['mapping'])
             if internal:
-                self.img = data['image']
+                self.out = data['out']
+                self.lidToLabel = data['lid2label']
             else:
-                self.img = None  # ensure image is reloaded
+                self.out = None  # ensure image is reloaded
+                self.lidToLabel = {}
             Canvas.deserialise(self, data)
+        except KeyError as e:
+            ui.error(f"can't read '{e}' from serialised PDS4 input data")
 
     def long(self):
         # TODO ??
@@ -140,10 +238,10 @@ class ImageMarkerItem(QtWidgets.QGraphicsRectItem):
     """Marker for images"""
 
     def __init__(self, x, y, ent, isLeft, radius=5):
-        super().__init__(x - radius, y - radius, radius*2, radius*2)
-        r2 = radius/2       # radius of internal circle
+        super().__init__(x - radius, y - radius, radius * 2, radius * 2)
+        r2 = radius / 2  # radius of internal circle
         xoffset = -r2 if isLeft else r2
-        sub = QtWidgets.QGraphicsEllipseItem(x - xoffset - radius/2, y-r2, r2*2, r2*2, parent=self)
+        sub = QtWidgets.QGraphicsEllipseItem(x - xoffset - radius / 2, y - r2, r2 * 2, r2 * 2, parent=self)
         sub.setPen(QPen(Qt.NoPen))
         sub.setBrush(Qt.black)
         entityMarkerInitSetup(self, ent)
@@ -200,6 +298,7 @@ class PDS4ImageMethodWidget(MethodWidget):
         self.camCombo.currentIndexChanged.connect(self.cameraChanged)
         self.table.itemSelectionChanged.connect(self.tableSelectionChanged)
         self.timeline.selChanged.connect(self.timelineSelectionChanged)
+        self.multCombo.currentIndexChanged.connect(self.multChanged)
 
         # if we are updating the selected items this should be true so that we don't end up recursing.
         self.selectingItems = False
@@ -208,6 +307,8 @@ class PDS4ImageMethodWidget(MethodWidget):
 
         self.initTimeline()
         self.initTable()
+        self.populateTableAndTimeline()
+        self.showSelectedItems()
 
     def initTable(self):
         """initialise the table of PDS4 products"""
@@ -269,7 +370,9 @@ class PDS4ImageMethodWidget(MethodWidget):
         self.timeline.rebuild()
 
     def showSelectedItems(self, timelineOnly=False, tableOnly=False):
-        """Update the timeline and table to show the items selected in the method"""
+        """Update the timeline and table to show the items selected in the method. The xxxOnly booleans
+        are there to make sure we don't inadvertently mess up the widget we have just selected
+        items in (although it really shouldn't matter)."""
 
         # generate list of PDS4Product objects
         selitems = [self.method.products[i] for i in self.method.selected]
@@ -293,7 +396,6 @@ class PDS4ImageMethodWidget(MethodWidget):
                 # and get that item's private data, which will be the PDS4Product object (as it will for all columns)
                 if itemInTable is not None and itemInTable.data(PRIVATEDATAROLE) in selitems:
                     self.table.selectRow(i)
-                    print(i)
         self.selectingItems = False
 
     def tableSelectionChanged(self):
@@ -311,8 +413,8 @@ class PDS4ImageMethodWidget(MethodWidget):
         """timeline selection changed, we need to make the table sync up"""
         if not self.selectingItems:
             items = [x.data for x in self.timeline.getSelection()]
-            print(self.timeline.getSelection())
-            print([x.filt.name for x in items])
+            # print(self.timeline.getSelection())
+            # print([x.filt.name for x in items])
             sel = []
             for i, x in enumerate(self.method.products):
                 if x in items:
@@ -325,6 +427,11 @@ class PDS4ImageMethodWidget(MethodWidget):
         # not really necessary here because it only affects what happens when we scan
         self.onInputChanged()
 
+    def multChanged(self, i):
+        self.method.multValue = i
+        self.readClicked()
+        self.onInputChanged()
+
     def recurseChanged(self, v):
         """recursion checkbox toggled"""
         self.method.recurse = (v != 0)
@@ -332,7 +439,7 @@ class PDS4ImageMethodWidget(MethodWidget):
     def scanDir(self):
         """Scan the selected directory for PDS4 products and populate the model, refreshing the timeline and table"""
         try:
-            self.method.loadLabelsFromDirectory()
+            self.method.loadLabelsFromDirectory(clear=False)
             self.populateTableAndTimeline()
         except Exception as e:
             QMessageBox.critical(self, 'Error', str(e))
@@ -348,7 +455,9 @@ class PDS4ImageMethodWidget(MethodWidget):
     def readClicked(self):
         """Read selected data, checking for validity, and generate output"""
         try:
-            self.method.readSelectedData()
+            self.method.loadData()
+            self.method.input.performGraph()
+            self.updateDisplay()
         except Exception as e:
             QMessageBox.critical(self, 'Error', str(e))
             ui.log(str(e))
@@ -360,15 +469,21 @@ class PDS4ImageMethodWidget(MethodWidget):
             self.fileEdit.setText(res)
             self.method.dir = res
 
+    def updateDisplay(self):
+        """Change the display to show the 'out' of the method."""
+        if isinstance(self.method.out, ImageCube):
+            self.canvas.display(self.method.out)
+
     def onInputChanged(self):
         # ensure image is also using my mapping.
-        if self.method.img is not None:
-            self.method.img.setMapping(self.method.mapping)
+        if self.method.out and isinstance(self.method.out, ImageCube) is not None:
+            self.method.out.setMapping(self.method.mapping)
         self.camCombo.setCurrentIndex(1 if self.method.camera == 'AUPE' else 0)
+        self.multCombo.setCurrentIndex(self.method.multValue)
 
-        print("Displaying image {}, mapping {}".format(self.method.img, self.method.mapping))
+        print("Displaying data {}, mapping {}".format(self.method.out, self.method.mapping))
         self.invalidate()  # input has changed, invalidate so the cache is dirtied
         # we don't do this when the window is opening, otherwise it happens a lot!
         if not self.method.openingWindow:
             self.method.input.performGraph()
-        self.canvas.display(self.method.img)
+        self.updateDisplay()
