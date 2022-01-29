@@ -1,4 +1,5 @@
 """Canvas widget for showing a CV image"""
+import logging
 import math
 import os
 from typing import TYPE_CHECKING, Optional
@@ -15,6 +16,8 @@ import pcot.ui as ui
 
 if TYPE_CHECKING:
     from pcot.xform import XFormGraph, XForm
+
+logger = logging.getLogger(__name__)
 
 
 def img2qimage(img):
@@ -422,17 +425,17 @@ class Canvas(QtWidgets.QWidget):
         self.graph = g
 
     def redIndexChanged(self, i):
-        print("RED CHANGED TO", i)
+        logger.debug(f"RED CHANGED TO {i}")
         self.mapping.red = i
         self.redisplay()
 
     def greenIndexChanged(self, i):
-        print("GREEN CHANGED TO", i)
+        logger.debug(f"GREEN CHANGED TO {i}")
         self.mapping.green = i
         self.redisplay()
 
     def blueIndexChanged(self, i):
-        print("BLUE CHANGED TO", i)
+        logger.debug(f"GREEN CHANGED TO {i}")
         self.mapping.blue = i
         self.redisplay()
 

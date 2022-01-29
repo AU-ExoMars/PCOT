@@ -1,6 +1,6 @@
 ## the Multifile input method, inputting several greyscale images
 # into a single image
-
+import logging
 import os
 import re
 
@@ -17,6 +17,9 @@ from pcot.ui.inputs import MethodWidget
 from .. import ui
 from ..filters import getFilterByPos
 from ..sources import InputSource, SourceSet, MultiBandSource
+
+
+logger = logging.getLogger(__name__)
 
 
 class MultifileInputMethod(InputMethod):
@@ -87,10 +90,10 @@ class MultifileInputMethod(InputMethod):
 
                 # is it in the cache?
                 if path in self.cachedFiles:
-                    print("IMAGE IN MULTIFILE CACHE: NOT PERFORMING FILE READ")
+                    logger.debug("IMAGE IN MULTIFILE CACHE: NOT PERFORMING FILE READ")
                     img = self.cachedFiles[path]
                 else:
-                    print("IMAGE NOT IN MULTIFILE CACHE: PERFORMING FILE READ")
+                    logger.debug("IMAGE NOT IN MULTIFILE CACHE: PERFORMING FILE READ")
                     # use image cube loader even though we're just going to use the numpy image - just easier.
                     img = ImageCube.load(path, None, None)  # always RGB at this point
                     # aaaand this pretty much always happens, because load always

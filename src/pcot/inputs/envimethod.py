@@ -1,4 +1,5 @@
 """the ENVI file input method, only supports 32 bit float, non-interleaved"""
+import logging
 from typing import Optional
 
 import pcot.dataformats.envi as envi
@@ -7,6 +8,9 @@ from pcot.inputs.inputmethod import InputMethod
 from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import TreeMethodWidget
+
+
+logger = logging.getLogger(__name__)
 
 
 class ENVIInputMethod(InputMethod):
@@ -21,11 +25,11 @@ class ENVIInputMethod(InputMethod):
         self.mapping = ChannelMapping()
 
     def loadImg(self):
-        print("ENVI PERFORMING FILE READ")
+        logger.info("PERFORMING FILE READ")
         doc = self.input.mgr.doc
         inpidx = self.input.idx
         img = envi.load(self.fname, doc, inpidx, self.mapping)
-        ui.log("Image {} loaded: {}, mapping is {}".format(self.fname, img, self.mapping))
+        logger.info(f"Image {self.fname} loaded: {img}, mapping is {self.mapping}")
         self.img = img
 
     def readData(self):
@@ -71,7 +75,7 @@ class ENVIMethodWidget(TreeMethodWidget):
         # ensure image is also using my mapping.
         if self.method.img is not None:
             self.method.img.setMapping(self.method.mapping)
-        print("Displaying image {}, mapping {}".format(self.method.img, self.method.mapping))
+        logger.debug(f"Displaying image {self.method.img}, mapping {self.method.mapping}")
         self.invalidate()  # input has changed, invalidate so the cache is dirtied
         # we don't do this when the window is opening, otherwise it happens a lot!
         if not self.method.openingWindow:

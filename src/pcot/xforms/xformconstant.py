@@ -21,7 +21,6 @@ class GNumberText(QtWidgets.QGraphicsTextItem):
         self.node = node
 
     def focusOutEvent(self, event: QtGui.QFocusEvent) -> None:
-        print("Focus lost")
         self.setPlainText(str(self.node.val))
         super().focusOutEvent(event)
 

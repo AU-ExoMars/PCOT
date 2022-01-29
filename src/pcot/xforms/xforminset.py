@@ -82,7 +82,6 @@ class XformInset(XFormType):
                 cv.rectangle(out, (x - i - 1, y - i - 1), (x + w + i, y + h + i), node.colour, thickness=1)
             # add in the caption
             if node.caption != '':
-                print(node.captiontop)
                 ty = y if node.captiontop else y + h
                 pcot.utils.text.write(out, node.caption, x, ty, node.captiontop, node.fontsize,
                                  node.fontline, node.colour)

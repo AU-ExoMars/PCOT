@@ -6,14 +6,17 @@ Note that types which start with "img" are image types, and
 should all be renderable by Canvas.
 These types are also used by the expression evaluator.
 """
-
+import logging
 from typing import Any, Optional
 
 from pcot.sources import SourcesObtainable
 
+logger = logging.getLogger(__name__)
+
 
 class Type:
     """The type of a Datum passed between nodes and inside the expression evaluator."""
+
     def __init__(self, name, image=False, internal=False):
         self.name = name
         self.image = image  # is the type for an image (i.e. is it a 'subtype' of Type("img")?)
@@ -107,7 +110,7 @@ def isCompatibleConnection(outtype, intype):
     """are two connectors compatible?"""
     # this is a weird bug I would really like to catch.
     if intype is None or outtype is None:
-        print("HIGH WEIRDNESS - a connectin type is None")
+        logger.critical("a connectin type is None")
         return False
 
     # variants - used where a node must have a connection type

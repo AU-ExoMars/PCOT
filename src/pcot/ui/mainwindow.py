@@ -397,11 +397,9 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.graph.scene.cut()
 
     def undoAction(self):
-        print("UNDO")
         self.doc.undo()
 
     def redoAction(self):
-        print("REDO")
         self.doc.redo()
 
     ## "run all" action, typically used when you have auto-run turned off (editing a macro,
@@ -490,7 +488,6 @@ class MainUI(ui.tabs.DockableTabWindow):
     @staticmethod
     def updateAutorun():
         for w in MainUI.windows:
-            print("Setting autorun to ", xform.XFormGraph.autoRun)
             w.autoRun.setChecked(xform.XFormGraph.autoRun)
 
     ## open a window showing help for a node

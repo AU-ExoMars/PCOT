@@ -1,9 +1,12 @@
 import configparser
 import getpass
 import io
+import logging
 import os
 import pkgutil
 from collections import deque
+
+logger = logging.getLogger(__name__)
 
 
 def getAssetAsString(fn):
@@ -17,10 +20,8 @@ def getAssetAsFile(fn):
     return io.StringIO(getAssetAsString(fn))
 
 
-## return the current username, whichis either obtained from the OS
-# or from the PCOT_USER environment variable
-
 def getUserName():
+    """return the current username, whichis either obtained from the OS or from the PCOT_USER environment variable"""
     if 'PCOT_USER' in os.environ:
         return os.environ['PCOT_USER']
     else:
@@ -83,7 +84,7 @@ def save():
 
 
 def setDefaultDir(kind, directory):
-    print("Setting default dir for {} to {}".format(kind, directory))
+    logger.info(f"Setting default dir for {kind} to {directory}")
     directory = os.path.realpath(directory)
     data['Locations'][kind] = directory
     save()
@@ -91,7 +92,7 @@ def setDefaultDir(kind, directory):
 
 def getDefaultDir(kind):
     directory = data['Locations'][kind]
-    print("Retrieving default dir for {} as {}".format(kind, directory))
+    logger.debug(f"Retrieving default dir for {kind} as {directory}")
     return directory
 
 

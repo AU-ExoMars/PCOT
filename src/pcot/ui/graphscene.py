@@ -1,7 +1,7 @@
 """This module deals with constructing and modifying the Qt Graphics View scene
 which represents the objects in an XFormGraph.
 """
-
+import logging
 import math
 from typing import List, Optional
 
@@ -19,16 +19,18 @@ import pcot.xform
 # do we have the Grandalf package for automatic graph layout?
 from pcot import connbrushes
 
+logger = logging.getLogger(__name__)
+
 hasGrandalf = True
 try:
     # we might have grandalf, but probably not.
     from grandalf.layouts import SugiyamaLayout, VertexViewer
     from grandalf.graphs import *
 
-    print("Grandalf is present and will be used for autolayout.")
+    logger.info("Grandalf is present and will be used for autolayout.")
     hasGrandalf = True
 except ImportError:
-    print("Grandalf is not present, autolayout will be awful.")
+    logger.info("Grandalf is not present, autolayout will be awful.")
 
     # dummy class defs for when grandalf isn't present, to avoid rogue errors in type checking
 

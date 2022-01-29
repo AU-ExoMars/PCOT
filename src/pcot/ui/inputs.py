@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import List
 
@@ -6,6 +7,8 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QFileSystemModel
 
 import pcot
+
+logger = logging.getLogger(__name__)
 
 
 class MethodSelectButton(QtWidgets.QPushButton):
@@ -98,7 +101,7 @@ class InputWindow(QtWidgets.QMainWindow):
                 w.onUndoRedo()
 
     def closeEvent(self, event):
-        print("Closing input window")
+        logger.debug("Closing input window")
         self.input.onWindowClosed()
         event.accept()
 
@@ -191,7 +194,7 @@ class TreeMethodWidget(MethodWidget):
             filename = None
         else:
             dirname = os.path.expanduser("~")
-        print("FILENAME IS {}, DIRNAME IS {}".format(filename,dirname))
+        logger.debug(f"FILENAME IS {filename}, DIRNAME IS {dirname}")
         # find index of directory
         idx = self.dirModel.index(dirname)
         # expand and scroll to it

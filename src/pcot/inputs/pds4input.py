@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 from typing import Optional, List, Dict, Any
@@ -22,6 +23,9 @@ from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
 from pcot.ui.linear import LinearSetEntity, entityMarkerInitSetup, entityMarkerPaintSetup, TickRenderer
+
+logger = logging.getLogger(__name__)
+
 
 PRIVATEDATAROLE = 1000  # data role for table items
 
@@ -96,7 +100,7 @@ class PDS4InputMethod(InputMethod):
                 m = dat.meta
                 start = parser.isoparse(m.start)
                 if m.lid not in lidToProduct:
-                    print(f"Creating new product {m.lid}")
+                    logger.debug(f"Creating new product {m.lid}")
                     # only generate a new product object if we don't have it already
                     cwl = int(m.filter_cwl)
                     sol = int(m.sol_id)
@@ -113,7 +117,7 @@ class PDS4InputMethod(InputMethod):
                     self.products.append(prod)
                     lidToProduct[m.lid] = prod
                 else:
-                    print(f"Using existing product {m.lid}")
+                    logger.debug(f"Using existing product {m.lid}")
 
                 self.lidToLabel[m.lid] = dat
 
@@ -481,7 +485,7 @@ class PDS4ImageMethodWidget(MethodWidget):
         self.camCombo.setCurrentIndex(1 if self.method.camera == 'AUPE' else 0)
         self.multCombo.setCurrentIndex(self.method.multValue)
 
-        print("Displaying data {}, mapping {}".format(self.method.out, self.method.mapping))
+        logger.log("Displaying data {}, mapping {}".format(self.method.out, self.method.mapping))
         self.invalidate()  # input has changed, invalidate so the cache is dirtied
         # we don't do this when the window is opening, otherwise it happens a lot!
         if not self.method.openingWindow:

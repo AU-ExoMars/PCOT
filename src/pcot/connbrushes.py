@@ -1,4 +1,5 @@
 ## dictionary of name -> brush for connection pad drawing
+import logging
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QBrush, QLinearGradient
@@ -6,6 +7,8 @@ from PyQt5.QtGui import QColor, QBrush, QLinearGradient
 
 from pcot.datum import Datum
 brushDict = {}
+
+logger = logging.getLogger(__name__)
 
 
 ## creates a gradient consisting of three colours in quick succession
@@ -35,10 +38,10 @@ brushDict = {k: QBrush(v) for k, v in brushDict.items()}
 
 # add brushes which are already QBrush down here
 
-## get a brush by name or magenta if no brush is found
 def getBrush(typename):
+    """get a brush by name or magenta if no brush is found"""
     if typename in brushDict:
         return brushDict[typename]
     else:
-        print("Unknown type ", typename)
+        logger.error(f"Unknown type {typename}")
         return QBrush(Qt.magenta)

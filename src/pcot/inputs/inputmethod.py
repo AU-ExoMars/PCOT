@@ -1,9 +1,12 @@
 ##
+import logging
 from abc import ABC, abstractmethod
 from typing import Optional, Any
 
 from pcot import ui
 from pcot.ui.canvas import Canvas
+
+logger = logging.getLogger(__name__)
 
 
 class InputMethod(ABC):
@@ -63,12 +66,12 @@ class InputMethod(ABC):
             try:
                 self.data = self.readData()
                 if self.data is None:
-                    print("CACHE WAS INVALID AND DATA COULD NOT BE READ")
+                    logger.info("CACHE WAS INVALID AND DATA COULD NOT BE READ")
                 else:
-                    print("CACHE WAS INVALID, DATA HAS BEEN READ")
+                    logger.info("CACHE WAS INVALID, DATA HAS BEEN READ")
             except FileNotFoundError as e:
                 # this one usually doesn't happen
-                self.input.exception = str("Cannot read file {}".format(e.filename))
+                self.input.exception = "Cannot read file {e.filename}"
                 ui.error(self.input.exception)
             except Exception as e:
                 # this one does.

@@ -1,3 +1,4 @@
+import logging
 import time
 from collections import deque
 from typing import Dict
@@ -9,6 +10,8 @@ from pcot.macros import XFormMacro
 from pcot.ui.mainwindow import MainUI
 from pcot.utils import archive
 from pcot.xform import XFormGraph
+
+logger = logging.getLogger(__name__)
 
 
 class UndoRedoStore:
@@ -32,12 +35,12 @@ class UndoRedoStore:
 
     def canUndo(self):
         """return true if undo is possible (if there is data on the undo stack)"""
-        print("UNDO STACK LEN: {}".format(len(self.undoStack)))
+        logger.debug(f"UNDO STACK LEN: {len(self.undoStack)}")
         return len(self.undoStack) > 0
 
     def canRedo(self):
         """return true if redo is possible (if there is data on the redo stack)"""
-        print("REDO STACK LEN: {}".format(len(self.redoStack)))
+        logger.debug(f"REDO STACK LEN: {len(self.redoStack)}")
         return len(self.redoStack) > 0
 
     def mark(self, state):

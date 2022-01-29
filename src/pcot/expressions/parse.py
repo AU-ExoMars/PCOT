@@ -5,6 +5,8 @@ handle type checking. Help texts are also generated.
 """
 
 import numbers
+import logging
+
 from io import BytesIO
 from tokenize import tokenize, TokenInfo, NUMBER, NAME, OP, ENCODING, ENDMARKER, NEWLINE, ERRORTOKEN, PERCENT, DOT
 
@@ -17,8 +19,7 @@ from pcot.utils.table import Table
 
 Stack = List[Any]
 
-# will turn on printing
-debug: bool = True
+logger = logging.getLogger(__name__)
 
 
 class ArgsException(Exception):
@@ -348,10 +349,10 @@ def execute(seq: List[Instruction], stack: Stack) -> float:
     """Execute a list of instructions on a given stack"""
     for inst in seq:
         inst.exec(stack)
-        if debug:
-            print("EXECUTED {}, STACK NOW:".format(inst))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"EXECUTED {inst}, STACK NOW (top shown last):")
             for x in stack:
-                print(x)
+                logger.debug(f"    {x}")
     return stack[0]
 
 
@@ -661,8 +662,7 @@ class Parser:
     def next(self) -> TokenInfo:
         """internal method - get next token"""
         if self.toksLeft():
-            if debug:
-                print(self.toks[0])
+            logger.debug(f"Next token : {self.toks[0]}")
             return self.toks.pop(0)
         else:
             return None

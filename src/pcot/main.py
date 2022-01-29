@@ -1,6 +1,6 @@
 # The main function with command line parsing, setting up the UI.
 # Run from both __main__ and from the "pcot" entry point script.
-
+import logging
 import os
 import sys
 import importlib
@@ -14,12 +14,14 @@ from pcot.document import Document
 
 app = None
 
+logger = logging.getLogger(__name__)
+
 
 def load_plugins():
     """plugin dirs are colon separated, stored in Locations/plugins"""
 
     pluginDirs = [os.path.expanduser(x) for x in pcot.config.getDefaultDir('pluginpath').split(':')]
-    print("Plugin directories " + ",".join(pluginDirs))
+    logger.info(f"Plugin directories {','.join(pluginDirs)}")
     # Load any plugins by recursively walking the plugin directories and importing .py files.
 
     for d in pluginDirs:
@@ -28,7 +30,7 @@ def load_plugins():
                 base, ext = os.path.splitext(filename)
                 if ext == '.py':
                     path = os.path.join(root, filename)
-                    print("Loading plugin :", path)
+                    logger.info(f"Loading plugin : {path}")
                     spec = importlib.util.spec_from_file_location(base, path)
                     module = importlib.util.module_from_spec(spec)
                     sys.modules[base] = module
@@ -74,7 +76,7 @@ def main():
 
     # run the application until exit
     app.exec_()
-    print("Leaving app")
+    logger.info("Leaving app")
     pcot.config.save()
 
 

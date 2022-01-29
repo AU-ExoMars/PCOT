@@ -58,7 +58,6 @@ class DockableTabWindow(QtWidgets.QMainWindow):
         # first, close all expanded tab windows
         for t in self.tabs.values():
             if t.expanded is not None:
-                print("Closing {}".format(t.expanded))
                 t.expanded.close()
         # then close all the tabs
         for t in self.tabs.values():

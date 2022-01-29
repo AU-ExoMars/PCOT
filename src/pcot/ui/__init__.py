@@ -1,7 +1,9 @@
+import logging
 import traceback
 import pcot.ui.mainwindow as mainwindow
 from PyQt5 import QtWidgets
 
+logger = logging.getLogger(__name__)
 
 # Stores the QApplication if we have one.
 
@@ -23,7 +25,7 @@ def msg(t):
         for x in mainwindow.MainUI.windows:
             x.statusBar.showMessage(t)
     else:
-        print(t)
+        logger.info(f"LOG MSG {t}")
 
 
 ## show a message in all window logs
@@ -32,7 +34,7 @@ def log(s, toStdout=True):
         for x in mainwindow.MainUI.windows:
             x.logText.append(s)
     if toStdout:
-        print(s)
+        logger.info(f"LOG MSG {s}")
 
 
 ## show error on status bar, and log in red; will dump traceback to stdout if requested.
@@ -51,7 +53,7 @@ def warn(s):
         application.beep()
         QtWidgets.QMessageBox.warning(None, 'WARNING', s)
     else:
-        print("Warning: "+s)
+        logger.warn(f"LOG WARN {s}")
 
 
 ## log an XFormException

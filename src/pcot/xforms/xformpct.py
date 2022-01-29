@@ -90,7 +90,6 @@ def createPatchROI(n, x, y, radius):
         # n.img.img[ff.mask] = np.repeat(1, n.img.channels)
     else:
         roi = None
-    print("Pixel range: [{},{}] : found {}, ROI={}".format(minPix, maxPix, ff.n, roi))
     return roi
 
 
@@ -186,7 +185,6 @@ class XformPCT(XFormType):
         M = cv.getAffineTransform(pts1, pts2)
         #  max scale factor
         maxScale = np.max(M[:2, :2])
-        print("scale from PCT coords to screen coords:", maxScale)
 
         n.rois = []
         # ROIs must be indexed the same as patches in pct.patches

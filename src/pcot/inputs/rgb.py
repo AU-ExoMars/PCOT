@@ -1,4 +1,5 @@
 ## the RGB file input method
+import logging
 import os
 from typing import Optional
 
@@ -8,6 +9,8 @@ from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import TreeMethodWidget
 from ..sources import MultiBandSource, InputSource
+
+logger = logging.getLogger(__name__)
 
 
 class RGBInputMethod(InputMethod):
@@ -23,7 +26,7 @@ class RGBInputMethod(InputMethod):
 
     def loadImg(self):
         # will throw exception if load failed
-        print("RGB PERFORMING FILE READ")
+        logger.info("RGB PERFORMING FILE READ")
 
         doc = self.input.mgr.doc
         inpidx = self.input.idx

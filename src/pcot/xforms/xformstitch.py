@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QItemSelection, QItemSelectionModel
@@ -9,6 +11,8 @@ from pcot.imagecube import ImageCube
 from pcot.sources import MultiBandSource
 from pcot.ui.tabs import Tab
 from pcot.xform import XFormType, xformtype, XFormException
+
+logger = logging.getLogger(__name__)
 
 """
 Notes during dev.
@@ -104,11 +108,11 @@ class XFormStitch(XFormType):
                 try:
                     img[y:y + srcimg.h, x:x + srcimg.w] = srcimg.img
                 except ValueError as e:
-                    print("stored offset:{},{} min:{},{} xy:{},{}".format(node.offsets[i][0], node.offsets[i][1], minx,
+                    logger.error("stored offset:{},{} min:{},{} xy:{},{}".format(node.offsets[i][0], node.offsets[i][1], minx,
                                                                           miny, x, y))
-                    print(img.shape)
-                    print(srcimg.img.shape)
-                    print(y, y + srcimg.h, x, x + srcimg.w)
+                    logger.error(img.shape)
+                    logger.error(srcimg.img.shape)
+                    logger.error(y, y + srcimg.h, x, x + srcimg.w)
                     raise e
 
         # generate the output

@@ -162,7 +162,6 @@ def _load(fn):
     # remember, we only support float format BSQ right now.
 
     requiredSize = 4 * h.bands * h.w * h.h
-    print(requiredSize)
 
     if size != requiredSize:
         raise Exception("Size of ENVI data file is incorrect")

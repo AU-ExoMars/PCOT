@@ -1,9 +1,12 @@
 # This fun snippet imports automatically all the xform files in here.
 
 import glob
+import logging
 import pkgutil
 import sys
 from os.path import dirname, basename, isfile, join
+
+logger = logging.getLogger(__name__)
 
 if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
     # we are running a frozen build so can't get a submodule list from the filesystem.
@@ -17,4 +20,4 @@ else:
     __all__ = [basename(f)[:-3] for f in modules if isfile(f) and not f.endswith('__init__.py')]
 
 for x in __all__:
-    print("Importing ", x)
+    logger.info("Importing ", x)

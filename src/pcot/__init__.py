@@ -1,5 +1,5 @@
+import logging
 import pkgutil
-
 import pcot.macros as macros
 import pcot.ui as ui
 import pcot.xform as xform
@@ -7,6 +7,13 @@ import pcot.xforms
 from pcot.config import getUserName, addMainWindowHook, addExprFuncHook
 from pcot.utils import archive
 from pcot.xforms import *
+
+
+logging.basicConfig(format='%(levelname)s %(asctime)s %(name)s: %(message)s', force=True)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+logger.info("Starting PCOT")
 
 # get version data, which consists of something like
 #   0.0.0  ISO-DATE RAINBOW CODE NAME

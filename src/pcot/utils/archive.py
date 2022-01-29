@@ -65,7 +65,6 @@ class Archive:
             raise Exception("Archive is not open")
         b = BytesIO()
         np.save(b, a)
-        print("Array written as {}".format(name))
         self.zip.writestr(name, b.getvalue())
 
     def writeArrayAndGenerateName(self, a: np.ndarray):

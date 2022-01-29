@@ -5,6 +5,7 @@ but we could change things later.
 """
 
 import collections
+import logging
 import math
 import numbers
 from typing import List, Optional, Tuple, Sequence, Union
@@ -16,6 +17,7 @@ from pcot.rois import ROI, ROIPainted, ROIBoundsException
 from pcot.sources import MultiBandSource, SourcesObtainable
 from pcot.utils.geom import Rect
 
+logger = logging.getLogger(__name__)
 
 class SubImageCubeROI:
     """This is a class representing the parts of an imagecube which are covered by ROIs or an ROI.
@@ -235,7 +237,7 @@ class ImageCube(SourcesObtainable):
     # Always builds an RGB image. Sources must be provided.
     @classmethod
     def load(cls, fname, mapping, sources):
-        print("ImageCube.load: " + fname)
+        logger.info(f"ImageCube load: {fname}")
         # imread with this argument will load any depth, any
         # number of channels
         img = cv.imread(fname, -1)

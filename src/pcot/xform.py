@@ -9,6 +9,7 @@ import inspect
 import json
 import time
 import traceback
+import logging
 import sys
 import uuid
 from collections import deque
@@ -32,6 +33,8 @@ if TYPE_CHECKING:
     from macros import XFormMacro, MacroInstance
 
 from pcot.imagecube import ChannelMapping
+
+logger = logging.getLogger(__name__)
 
 ## dictionary of name -> transformation type (XFormType)
 allTypes = dict()
@@ -69,7 +72,7 @@ def createXFormTypeInstances():
         allTypes[i.name] = i
         i._md5 = md5
         if i.__doc__ is None:
-            print("WARNING: no documentation for xform type '{}'".format(i.name))
+            logging.warning(f"WARNING: no documentation for xform type '{i.name}'")
 
 
 # I'm suppressing a name warning because I prefer it like this!
@@ -105,7 +108,7 @@ class xformtype:
 
         md5 = hashlib.md5(src).hexdigest()  # add the checksum
         _xformctors.append((self, cls, args, kwargs, md5))
-        print("Appending instance for " + str(cls))
+        logging.debug(f"Appending instance for {str(cls)}")
 
     def __call__(self):
         return self._instance
@@ -817,11 +820,11 @@ class XForm:
             # must clear this with prePerform on the graph, or nodes will
             # only run once!
             if self.hasRun:
-                print("----Skipping {}, run already this action".format(self.debugName()))
+                logging.info(f"----Skipping {self.debugName()}, run already this action")
             elif not self.canRun():
-                print("----Skipping {}, it can't run (unset inputs)".format(self.debugName()))
+                logging.info(f"----Skipping {self.debugName()}, it can't run (unset inputs)")
             else:
-                print("--------------------------------------Performing {}".format(self.debugName()))
+                logging.info(f"--------------------------------------Performing {self.debugName()}")
                 # first clear all outputs
                 self.clearOutputs()
                 # now run the node, catching any XFormException
@@ -1125,8 +1128,8 @@ class XFormGraph:
         tot = 0
         for n in sorted([x for x in self.nodes if x.runTime is not None], key=lambda x: x.runTime):
             tot = tot + n.runTime
-            print("{:<10.3f} {} ".format(n.runTime, n.displayName))
-        print("{:<10.3f} TOTAL".format(tot))
+            logging.info("{:<10.3f} {} ".format(n.runTime, n.displayName))
+        logging.info("{:<10.3f} TOTAL".format(tot))
 
     def rebuildGraphics(self):
         """rebuild all graphics elements if a scene is present"""
