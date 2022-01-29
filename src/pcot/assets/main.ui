@@ -123,6 +123,15 @@
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
+        <property name="verticalScrollBarPolicy">
+         <enum>Qt::ScrollBarAsNeeded</enum>
+        </property>
+        <property name="horizontalScrollBarPolicy">
+         <enum>Qt::ScrollBarAlwaysOff</enum>
+        </property>
+        <property name="sizeAdjustPolicy">
+         <enum>QAbstractScrollArea::AdjustToContents</enum>
+        </property>
         <property name="widgetResizable">
          <bool>true</bool>
         </property>
@@ -131,8 +140,8 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>69</width>
-           <height>518</height>
+           <width>68</width>
+           <height>516</height>
           </rect>
          </property>
         </widget>
@@ -262,7 +271,7 @@
      <x>0</x>
      <y>0</y>
      <width>1244</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

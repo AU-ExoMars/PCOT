@@ -30,7 +30,7 @@ class MethodSelectButton(QtWidgets.QPushButton):
         else:
             r, g, b = 200,200,200
         self.setStyleSheet(
-            f"border-style: outset; padding: 20px; border-width:1px; border-color:black; background-color:rgb({r},{g},{b})")
+            f"border-style: outset; padding: 40px; border-width:1px; border-color:black; background-color:rgb({r},{g},{b})")
 
 
 class InputWindow(QtWidgets.QMainWindow):

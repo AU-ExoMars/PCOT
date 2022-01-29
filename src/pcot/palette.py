@@ -3,7 +3,7 @@ nodes on the right hand side."""
 
 from PyQt5 import QtWidgets, uic, QtCore, QtGui
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtWidgets import QMessageBox, QSizePolicy
 
 import pcot.macros as macros
 from pcot.xform import XFormType, XFormException
@@ -11,15 +11,15 @@ import pcot.ui as ui
 
 view = None
 
-## The groups into which the buttons are sorted - it's a constant.
+# The groups into which the buttons are sorted - it's a constant.
 groups = ["source", "macros", "maths", "processing", "calibration", "data", "regions", "ROI edit", "utility"]
 
 
-## The palette items, which are buttons which can be either clicked or dragged (with RMB)
-
 class PaletteButton(QtWidgets.QPushButton):
-    ## constructor, taking button name, xformtype, and view into which they should be inserted.
+    """The palette items, which are buttons which can be either clicked or dragged (with RMB)"""
+
     def __init__(self, name, xformtype, view):
+        """constructor, taking button name, xformtype, and view into which they should be inserted."""
         super().__init__(name)
         self.name = name
         self.view = view
@@ -47,16 +47,16 @@ class PaletteButton(QtWidgets.QPushButton):
     # https://stackoverflow.com/questions/57224812/pyqt5-move-button-on-mainwindow-with-drag-drop
     # This stuff interacts with the graph view (graphview.py)
 
-    ## handle a mouse down event
     def mousePressEvent(self, event):
+        """handle a mouse down event"""
         super().mousePressEvent(event)
         if event.button() == Qt.LeftButton:
             self.click()
         elif event.button() == Qt.RightButton:
             self.mousePos = event.pos()  # save click position for dragging
 
-    ## handle mouse move for dragging with RMB
     def mouseMoveEvent(self, event):
+        """handle mouse move for dragging with RMB"""
         if event.buttons() != QtCore.Qt.RightButton:
             return
         mimeData = QtCore.QMimeData()
@@ -73,9 +73,8 @@ class PaletteButton(QtWidgets.QPushButton):
         drag.setHotSpot(self.mousePos - self.rect().topLeft())
         drag.exec_(Qt.MoveAction)
 
-        ## handle a single LMB click
-
     def click(self):
+        """handle a single LMB click"""
         # create a new item at a position decided by the scene
         try:
             scene = self.view.scene()
@@ -90,24 +89,22 @@ class PaletteButton(QtWidgets.QPushButton):
             ui.error(e.message)
 
 
-## the palette itself, which isn't a widget but a plain class containing all the necessary
-# widgets etc.
-
 class Palette:
-    ## set up the scrolling palette as part of view initialisation, will populate
-    # with initial data
+    """the palette itself, which isn't a widget but a plain class containing all the necessary widgets etc."""
+
     def __init__(self, doc, scrollArea, scrollAreaContent, vw):
+        """set up the scrolling palette as part of view initialisation, will populate with initial data"""
         self.doc = doc
         layout = QtWidgets.QVBoxLayout()
         scrollAreaContent.setLayout(layout)
-        scrollArea.setMinimumWidth(150)
         self.scrollAreaContent = scrollAreaContent
         self.view = vw
         self.layout = layout
         self.populate()
 
-    ## populate the palette with items
     def populate(self):
+        """populate the palette with items"""
+
         grouplists = {x: [] for x in groups}
         # we want the keys in sorted order, and the keys come from both the global
         # types and the macros for this document. This is a dict merge - in 3.9+ we
@@ -131,13 +128,12 @@ class Palette:
         for i in reversed(range(self.layout.count())):
             self.layout.itemAt(i).widget().setParent(None)
 
-            # add buttons and separators for each group
+        # add buttons and separators for each group
         for g in groups:
             sep = QtWidgets.QLabel(g)
             sep.setStyleSheet("background-color:rgb(200,200,200)")
             self.layout.addWidget(sep)
             for k in grouplists[g]:
-                v = alltypes[k]
                 b = PaletteButton(k, alltypes[k], self.view)
                 if g == 'macros':
                     b.setStyleSheet("background-color:rgb(220,220,140)")
