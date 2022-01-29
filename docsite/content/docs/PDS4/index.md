@@ -82,3 +82,51 @@ data. Each channel will get a Source with a link to the label as mentioned
 above.
 
 
+## Sequences of actions
+In these notes, I typically mean a proctools "product" when I refer
+to a "label"; I have my own internal product type (PDS4Product) and it
+would get confusing if I did otherwise.
+
+### Scan button
+
+* **loadLabelsFromDirectory(clear=False)**
+    * preserves existing PDS4Product *products* array and *selected* array
+    * loads labels (THIS IS SLOW, but labels are not serialisable)
+    * generates a LID to label map
+    * generates serialisable PDS4Product data from labels which don't have one yet
+    in the object's *products* array
+    * deletes PDS4Product data which don't have labels with that LID (i.e. files were deleted since last scan)
+* **populateTableAndTimeline** does what it says, preserving *selected* array
+
+### Read button
+
+* **loadData** 
+    * ensures that all items are the same type and if that type is not 'image'
+    that only one is selected
+    * **buildImageFromProducts** 
+        * may call **loadLabelsFromDirectory** if there isn't a lidToLabel entry for a product's LID
+        * gets the labels for the products from lidToLabel
+        * glues them together into an image
+    * runs the graph
+* **updateDisplay** calls canvas.display on the image
+        
+### Serialisation
+
+* **PDS4Input.serialise**
+    * **PDS4Product.serialise**
+        * converts to dict
+        * converts non-serialisable items to serialisable (e.g. filter)
+    * serialises canvas
+    
+        
+## Deserialisation
+
+* **PDS4Input.deserialise**
+    * **PDS4Product.deserialise*
+        * converts serialisable to non-serialisable (e.g. finds filter)
+        * passes dict to product constructor as kwargs
+    * clears LID to label map
+    * clears output
+    
+Input will be blank because the LID to label map will be empty; no
+labels will have been loaded.

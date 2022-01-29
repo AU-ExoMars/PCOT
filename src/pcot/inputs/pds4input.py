@@ -460,7 +460,6 @@ class PDS4ImageMethodWidget(MethodWidget):
         """Read selected data, checking for validity, and generate output"""
         try:
             self.method.loadData()
-            self.method.input.performGraph()
             self.updateDisplay()
         except Exception as e:
             QMessageBox.critical(self, 'Error', str(e))
@@ -485,7 +484,7 @@ class PDS4ImageMethodWidget(MethodWidget):
         self.camCombo.setCurrentIndex(1 if self.method.camera == 'AUPE' else 0)
         self.multCombo.setCurrentIndex(self.method.multValue)
 
-        logger.log("Displaying data {}, mapping {}".format(self.method.out, self.method.mapping))
+        logger.debug("Displaying data {}, mapping {}".format(self.method.out, self.method.mapping))
         self.invalidate()  # input has changed, invalidate so the cache is dirtied
         # we don't do this when the window is opening, otherwise it happens a lot!
         if not self.method.openingWindow:
