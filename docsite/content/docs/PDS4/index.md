@@ -81,6 +81,15 @@ its data. This will typically produce an ImageCube, or it might be some HK
 data. Each channel will get a Source with a link to the label as mentioned
 above.
 
+## Persistence is hard
+
+The proctools system can only read in a whole bunch of labels *en masse*.
+And you can only read data from a label. However, I'm reading the labels
+into a primitive - but serialisable - PDS4Product object. Except these
+objects being serialisable isn't a great win when I can't read data from them!
+
+One possibility - every time we deserialise the data read the directory
+again and make explicit links from PDS4Product to underlying data. Ugh?
 
 ## Sequences of actions
 In these notes, I typically mean a proctools "product" when I refer
@@ -130,3 +139,34 @@ would get confusing if I did otherwise.
     
 Input will be blank because the LID to label map will be empty; no
 labels will have been loaded.
+
+
+## Appendix: data in PDS4 product from proctools
+
+Here's the kind of thing that comes out of PDS4:
+
+|Key|Value|
+|-----|-----|
+|lid|urn:esa:psa:emrsp_rm_pan:data_partially_processed:pan_par_sc_l03_spec-rad_20210921t101327.048z||
+|start|2021-09-21T10:13:27.0484Z|
+|stop|2021-09-21T10:13:28.7444Z|
+|type|spec-rad|
+|acq_desc|To acquire a sequence of stereo and colour WAC images with right Red filter and left RGB filters.|
+|acq_id|2|
+|acq_name|PANCAM_WAC_RRGB|
+|camera|WACL|
+|exposure_duration|1.696|
+|filter|3|
+|filter_num|3|
+|filter_bw|120|
+|filter_cwl|440|
+|filter_id|C03L|
+|filter_name|Broadband Blue|
+|model|FM|
+|rmc_ptu|15.0|
+|seq_img_num|4|
+|seq_num|6|
+|sol_id|5|
+|sub_instrument|WACL|
+|subframe_y|1|
+|subframe_x|1|
