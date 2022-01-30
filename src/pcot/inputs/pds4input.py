@@ -18,6 +18,7 @@ from proctools.products.loader import ProductLoader
 
 import pcot
 import pcot.ui as ui
+from pcot.sources import InputSource, MultiBandSource
 from pcot.inputs.inputmethod import InputMethod
 from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
@@ -25,7 +26,6 @@ from pcot.ui.inputs import MethodWidget
 from pcot.ui.linear import LinearSetEntity, entityMarkerInitSetup, entityMarkerPaintSetup, TickRenderer
 
 logger = logging.getLogger(__name__)
-
 
 PRIVATEDATAROLE = 1000  # data role for table items
 
@@ -77,6 +77,7 @@ class PDS4InputMethod(InputMethod):
         * If label data is loaded that doesn't have a PDS4Product, one will be created.
         * If a PDS4Product ends up with no label data, it will be removed."""
 
+        logger.debug("loadLabelsFromDirectory")
         if self.dir is not None:
             if clear:
                 self.products = []
@@ -93,7 +94,9 @@ class PDS4InputMethod(InputMethod):
             # Exceptions might get thrown; the caller must handle them.
             loader = ProductLoader()
             # this is actually loading 'labels' in *my* terminology
+            logger.debug("Loading products...")
             loader.load_products(Path(self.dir), recursive=self.recurse)
+            logger.debug("...products loaded")
             # Retrieve labels for all loaded PAN-PP-220/spec-rad products as instances of
             # proctools.products.pancam:SpecRad; sub in the mnemonic of the product you're after
             for dat in loader.all("spec-rad"):
@@ -125,7 +128,9 @@ class PDS4InputMethod(InputMethod):
             remove = [(lid, prod) for lid, prod in lidToProduct.items() if lid not in self.lidToLabel]
             selProds = [self.products[x] for x in self.selected]
             for lid, prod in remove:
+                logger.debug(f"removing {lid},{prod} from products - no label was loaded")
                 if prod in selProds:
+                    logger.debug(" -- also removing from selected items")
                     # also have to remove selected products from that array
                     selIdx = self.products.index(prod)  # find index in products list
                     self.selected.remove(selIdx)  # remove that index from selected list
@@ -138,9 +143,11 @@ class PDS4InputMethod(InputMethod):
     def loadData(self):
         """Actually load the data. This might get a bit hairy."""
         # ensure the data is actually a valid combination. That is, all images or a single datum of any type
+        logger.debug(f"loadData on {len(self.products)} products")
         ok = True
         self.out = None
         if len(self.selected) == 0:
+            logger.debug("there are no selected products")
             ok = False
         else:
             if len(self.selected) > 1:
@@ -150,6 +157,7 @@ class PDS4InputMethod(InputMethod):
                     ui.error("If multiple products are selected in PDS4, they must all be images")
 
         if ok:
+            logger.debug("data products are valid")
             # they are either all images, or there is just one product.
             prods = [self.products[x] for x in self.selected]
             if isinstance(prods[0], PDS4ImageProduct):
@@ -164,12 +172,15 @@ class PDS4InputMethod(InputMethod):
     def buildImageFromProducts(self, products: List[PDS4ImageProduct]) -> Optional[ImageCube]:
         """Turn a list of products into an image cube, using the lidToLabel map and rereading
         that data if required"""
+        logger.debug("buildImageFromProducts")
         # first check we have labels
         oldSelLen = len(self.selected)
         if not all([p.lid in self.lidToLabel for p in products]):
+            logger.debug("some products LIDs don't have loaded labels")
             # if not, we're going to have to reread
             self.loadLabelsFromDirectory(False)
         if len(self.selected) != oldSelLen:
+            logger.debug(f"sel. count has changed after loadLabelsFromDirectory (was {oldSelLen}, now {len(self.selected)})")
             if len(self.selected) == 0:  # dammit, they've *ALL* gone.
                 ui.error("Product labels cannot be found in their old location - cannot rebuild.")
                 return None
@@ -177,15 +188,21 @@ class PDS4InputMethod(InputMethod):
                 ui.warn("Some selected product labels cannot be found - some bands will be missing.")
 
         # now extract the numpy arrays. Note that we are only using the data array for now.
-        labels = [self.lidToLabel[self.products[idx].lid] for idx in self.selected]
+        selProds = [self.products[idx] for idx in self.selected]
+        labels = [self.lidToLabel[p.lid] for p in selProds]
+        logger.debug(f"building iamge data, multval={self.multValue}, mult={MULTVALUES[self.multValue]}")
         try:
             imgdata = np.dstack([x.data for x in labels]) * MULTVALUES[self.multValue]
         except ValueError as e:
             ui.error("Error in combining image products - are they all the same size?")
             return None
-        return ImageCube(imgdata, rgbMapping=self.mapping)  # TODO SOURCES
+        sources = MultiBandSource([InputSource(self.input.mgr.doc, self.input.idx, p.filt, pds4=p) for p in selProds])
+
+        return ImageCube(imgdata, rgbMapping=self.mapping, sources=sources)
 
     def readData(self):
+        logger.debug("readData")
+        self.loadData()
         return self.out
 
     def getName(self):
@@ -313,6 +330,7 @@ class PDS4ImageMethodWidget(MethodWidget):
         self.initTable()
         self.populateTableAndTimeline()
         self.showSelectedItems()
+        self.updateDisplay()
 
     def initTable(self):
         """initialise the table of PDS4 products"""
@@ -445,6 +463,7 @@ class PDS4ImageMethodWidget(MethodWidget):
         try:
             self.method.loadLabelsFromDirectory(clear=False)
             self.populateTableAndTimeline()
+            self.onInputChanged()
         except Exception as e:
             QMessageBox.critical(self, 'Error', str(e))
             ui.log(str(e))
@@ -460,7 +479,7 @@ class PDS4ImageMethodWidget(MethodWidget):
         """Read selected data, checking for validity, and generate output"""
         try:
             self.method.loadData()
-            self.updateDisplay()
+            self.onInputChanged()
         except Exception as e:
             QMessageBox.critical(self, 'Error', str(e))
             ui.log(str(e))

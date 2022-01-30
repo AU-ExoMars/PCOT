@@ -6,6 +6,7 @@ import math
 from abc import ABC, abstractmethod
 from typing import Optional, List, Set, SupportsFloat, Union, Iterable
 
+from pcot.dataformats.pds4 import PDS4Product
 from pcot.filters import Filter
 
 
@@ -40,6 +41,10 @@ class Source(SourcesObtainable):
     def getSources(self):
         """return a set of all sources"""
         return SourceSet(self)
+
+    def getPDS4(self):
+        """If a PDS4 product, get its PDS4Product - this will have the LID"""
+        return None
 
     @abstractmethod
     def brief(self, captionType=0) -> Optional[str]:
@@ -80,13 +85,15 @@ class InputSource(Source):
     doc: 'Document'  # which document I'm associated with
     inputIdx: int  # the index of the input within the document
     input: 'Input'  # the actual input object
+    pds4: PDS4Product  # any PDS4 data
 
-    def __init__(self, doc, inputIdx, filterOrName):
+    def __init__(self, doc, inputIdx, filterOrName, pds4: PDS4Product = None):
         """This takes a document, inputIdx, and either a filter or a name"""
         self.filterOrName = filterOrName
         self.doc = doc
         self.inputIdx = inputIdx
         self.input = self.doc.inputMgr.inputs[inputIdx]
+        self.pds4 = pds4
         # this is used for hashing and equality - should be the same for two identical sources
         filtID = self.filterOrName.cwl if isinstance(self.filterOrName, Filter) else self.filterOrName
         self._uniqid = f"{id(self.doc)}/{self.inputIdx}/{filtID}"
@@ -94,6 +101,9 @@ class InputSource(Source):
     def getFilter(self):
         """return the filter if there really is one, else none"""
         return self.filterOrName if isinstance(self.filterOrName, Filter) else None
+
+    def getPDS4(self):
+        return self.pds4
 
     def copy(self):
         return InputSource(self.doc, self.inputIdx, self.filterOrName)
@@ -119,7 +129,7 @@ class InputSource(Source):
             elif captionType == 2:  # 2=Freq.
                 cap = int(self.filterOrName.cwl)
             else:
-                cap = f"CAPBUG-{captionType}"        # if this appears captionType is out of range.
+                cap = f"CAPBUG-{captionType}"  # if this appears captionType is out of range.
             return f"{inptxt}:{cap}"
         else:
             return f"{inptxt}:{self.filterOrName}"
@@ -127,9 +137,12 @@ class InputSource(Source):
     def long(self):
         inptxt = self.input.long()
         if isinstance(self.filterOrName, Filter):
-            return f"{inptxt}: wavelength {int(self.filterOrName.cwl)}"
+            s = f"{inptxt}: wavelength {int(self.filterOrName.cwl)}"
         else:
-            return f"{inptxt}: band {self.filterOrName}"
+            s = f"{inptxt}: band {self.filterOrName}"
+        if self.getPDS4():
+            s += f" {self.getPDS4().lid}"
+        return s
 
     def matches(self, inp, filterNameOrCWL, hasFilter):
         """return true if the source matches ALL the non-None criteria"""
