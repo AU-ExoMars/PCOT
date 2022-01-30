@@ -117,6 +117,7 @@ would get confusing if I did otherwise.
         * gets the labels for the products from lidToLabel
         * glues them together into an image
     * runs the graph
+* **onInputChanged** invalidates cached input data
 * **updateDisplay** calls canvas.display on the image
         
 ### Serialisation

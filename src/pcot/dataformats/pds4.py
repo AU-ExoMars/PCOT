@@ -13,6 +13,7 @@ class PDS4Product:
     in the serialisation work."""
 
     def __init__(self):
+        self.lid = None     # there's always a LID.
         pass
 
     def serialise(self) -> Dict:
