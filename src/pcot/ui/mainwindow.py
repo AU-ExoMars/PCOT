@@ -7,23 +7,21 @@ import os
 import traceback
 from string import Template
 from typing import List, Optional, OrderedDict, ClassVar
-from zipfile import BadZipFile
 
 import markdown
-from PyQt5 import QtWidgets, uic, QtGui
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFontDatabase, QFont, QTextCursor
-from PyQt5.QtWidgets import QAction, QMessageBox, QAbstractScrollArea, QDialog
+from PyQt5 import QtWidgets, uic
+from PyQt5.QtGui import QTextCursor
+from PyQt5.QtWidgets import QAction, QMessageBox, QDialog
 
 import pcot
 from pcot.ui import graphscene, graphview
 import pcot.macros as macros
 import pcot.palette as palette
 import pcot.ui as ui
-import pcot.ui.help as help
 import pcot.ui.namedialog as namedialog
 import pcot.ui.tabs as tabs
 import pcot.xform as xform
+from pcot.ui.help import HelpWindow
 
 
 class InputSelectButton(QtWidgets.QPushButton):
@@ -32,32 +30,6 @@ class InputSelectButton(QtWidgets.QPushButton):
         self.input = inp
         super().__init__(text=text)
         self.clicked.connect(lambda: self.input.openWindow())
-
-
-class HelpWindow(QtWidgets.QDialog):
-    def __init__(self, parent, node):
-        super().__init__(parent=parent)
-        self.setModal(True)
-        node.helpwin = self
-        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
-        layout = QtWidgets.QVBoxLayout(self)
-        txt = ui.help.getHelpHTML(node.type, node.error)
-        self.setWindowTitle("Help for '{}'".format(node.type.name))
-        wid = QtWidgets.QTextEdit()
-        font = QFont("Consolas")
-        font.setPixelSize(15)
-        wid.setFont(font)
-        wid.setMinimumSize(800, 500)
-        wid.document().setDefaultStyleSheet(pcot.ui.textedit.styleSheet)
-        #  wid.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
-        wid.setText(txt)
-        layout.addWidget(wid)
-
-        #        button = QtWidgets.QPushButton("Close")
-        #        button.clicked.connect(lambda: self.close())
-        #        layout.addWidget(button)
-
-        self.show()
 
 
 ## The main window class

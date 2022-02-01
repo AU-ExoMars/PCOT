@@ -20,6 +20,12 @@
       <layout class="QHBoxLayout" name="horizontalLayout_2">
        <item>
         <widget class="QLineEdit" name="fileEdit">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="readOnly">
           <bool>true</bool>
          </property>
@@ -29,6 +35,28 @@
         <widget class="QPushButton" name="browse">
          <property name="text">
           <string>Browse..</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="helpButton">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>50</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">background-color: rgb(207, 123, 123);</string>
+         </property>
+         <property name="text">
+          <string>Help</string>
          </property>
         </widget>
        </item>

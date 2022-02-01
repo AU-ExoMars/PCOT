@@ -2,11 +2,19 @@
 handled elsewhere. This is used to both generate in-app HTML and Markdown for other help data. We generate
 Markdown, and then use the Markdown library to convert to HTML.
 """
+import logging
 
+from PyQt5 import QtWidgets
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont
+
+import pcot
 from pcot.utils.table import Table
 from pcot.xform import XFormException
 
 import markdown
+
+logger = logging.getLogger(__name__)
 
 # have to give the FULL package name for each extension so that PyInstaller can work. They also
 # need to be added to the hidden imports.
@@ -71,3 +79,43 @@ def getHelpMarkdown(xt, errorState: XFormException = None, inApp=False):
 def getHelpHTML(xt, errorState: XFormException = None):
     s = getHelpMarkdown(xt, errorState, inApp=True)
     return markdownWrapper(s)
+
+
+class HelpWindow(QtWidgets.QDialog):
+    def __init__(self, parent, node=None, md=None, title=None):
+        """Either node or md should be set.
+        - node: the node text for the given node will be shown; title is ignored
+        - md: the markdown will converted to HTML and shown; title should be assigned too."""
+        super().__init__(parent=parent)
+        self.setModal(True)
+        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        layout = QtWidgets.QVBoxLayout(self)
+        if node is not None:
+            node.helpwin = self
+            txt = getHelpHTML(node.type, node.error)
+            self.setWindowTitle(f"Help for '{node.type.name}'")
+        elif md is not None:
+            txt = markdownWrapper(md)
+            self.setWindowTitle("Help" if title is None else title)
+        else:
+            txt = "<h1>Bad help!</h1><p>No markdown or node provided</p>"
+            logger.error("Bad help - no markdown or node provided")
+        wid = QtWidgets.QTextEdit()
+        wid.setReadOnly(True)
+        font = QFont("Consolas")
+        font.setPixelSize(15)
+        wid.setFont(font)
+        wid.setMinimumSize(800, 500)
+        wid.document().setDefaultStyleSheet(pcot.ui.textedit.styleSheet)
+        #  wid.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
+        wid.setText(txt)
+        layout.addWidget(wid)
+
+        #        button = QtWidgets.QPushButton("Close")
+        #        button.clicked.connect(lambda: self.close())
+        #        layout.addWidget(button)
+
+        self.show()
+
+
+

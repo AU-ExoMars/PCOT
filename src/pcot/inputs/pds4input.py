@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import QMessageBox, QTableWidgetItem
 from pcot import filters
 from pcot.dataformats import pds4
 from pcot.dataformats.pds4 import PDS4ImageProduct, PDS4Product
+from pcot.ui.help import HelpWindow
 from proctools.products import DataProduct
 from proctools.products.loader import ProductLoader
 
@@ -28,6 +29,18 @@ from pcot.ui.linear import LinearSetEntity, entityMarkerInitSetup, entityMarkerP
 logger = logging.getLogger(__name__)
 
 PRIVATEDATAROLE = 1000  # data role for table items
+
+helpText = """# PDS4 Input
+
+* Select a directory which contains PDS4 products by clicking on the "Browse" button.
+* Set 'recursive directory scan' appropriately. Be careful - you could end up reading a huge number of products!
+* Set the camera type to PANCAM or AUPE.
+* Click "Scan Directory" to read in the products - the table and timeline will now be populated.
+* Select those products who data you wish to use, in either the table or timeline. If more than one
+product is selected, they must all be images.
+* Click "Read" to actually read the product data so that they can be read from the "input" nodes in the graph.
+     
+"""
 
 
 def timestr(t):
@@ -320,6 +333,7 @@ class PDS4ImageMethodWidget(MethodWidget):
         self.table.itemSelectionChanged.connect(self.tableSelectionChanged)
         self.timeline.selChanged.connect(self.timelineSelectionChanged)
         self.multCombo.currentIndexChanged.connect(self.multChanged)
+        self.helpButton.clicked.connect(self.helpClicked)
 
         # if we are updating the selected items this should be true so that we don't end up recursing.
         self.selectingItems = False
@@ -490,6 +504,9 @@ class PDS4ImageMethodWidget(MethodWidget):
         if res != '':
             self.fileEdit.setText(res)
             self.method.dir = res
+
+    def helpClicked(self):
+        HelpWindow(self, md=helpText)
 
     def updateDisplay(self):
         """Change the display to show the 'out' of the method."""
