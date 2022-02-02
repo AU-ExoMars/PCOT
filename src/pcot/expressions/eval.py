@@ -49,18 +49,33 @@ def funcMerge(args: List[Datum], optargs):
     """Function for merging a number of images. Crops all images to same size as smallest image."""
     if any([x is None for x in args]):
         raise XFormException('EXPR', 'argument is None for merge')
-    if any([not x.isImage() for x in args]):
-        raise XFormException('EXPR', 'merge only accepts images')
 
-    args = [x.get(Datum.IMG) for x in args]
+    if not any([x.isImage() for x in args]):
+        raise XFormException('EXPR', 'merge must take at least one image')
 
-    # work out minimum width and height of all images
-    w = min([i.w for i in args])
-    h = min([i.h for i in args])
+    # check sizes of all images are the same
+    imgargs = [x.get(Datum.IMG) for x in args if x.isImage()]
+    if len(set([(i.w, i.h) for i in imgargs])) != 1:
+        raise XFormException('EXPR', 'all images in merge must be the same size')
+    # get image size
+    w = imgargs[0].w
+    h = imgargs[0].h
 
+    # convert numeric values to 1-channel images of that size
+    imglist = []
+    for x in args:
+        if x.isImage():
+            imglist.append(x.val)
+        elif x.tp == Datum.NUMBER:
+            dat = np.full((h, w), x.val, dtype=np.float32)
+            imglist.append(ImageCube(dat, None, None))
+        else:
+            raise XFormException('EXPR', 'arguments to merge must be images or numbers')
+
+    # and merge
     bands = []
     sources = []
-    for x in args:
+    for x in imglist:
         if x.channels == 1:
             bands.append(x.img[:h, :w])
         else:
@@ -228,7 +243,7 @@ class ExpressionEvaluator(Parser):
 
         self.registerFunc("merge",
                           "merge a number of images into a single image - if the image has multiple channels they will all be merged in.",
-                          [Parameter("image", "an image of any depth", Datum.IMG)],
+                          [Parameter("image", "an image of any depth", (Datum.NUMBER, Datum.IMG))],
                           [],
                           funcMerge, varargs=True)
         self.registerFunc("sin", "calculate sine of angle in radians",

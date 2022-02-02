@@ -202,7 +202,7 @@ class ImageCube(SourcesObtainable):
         self.img = img  # the image numpy array
         # first, check the dtype is valid
         if self.img.dtype != np.float32:
-            raise Exception("Images must be floating point")
+            raise Exception("Images must be 32-bit floating point")
         self.rois = []  # no ROI
         self.shape = img.shape
         # set the image type
