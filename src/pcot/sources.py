@@ -126,7 +126,7 @@ class InputSource(Source):
                 cap = "P" + self.filterOrName.position
             elif captionType == 1:  # 1=Name
                 cap = "N" + self.filterOrName.name
-            elif captionType == 2:  # 2=Freq.
+            elif captionType == 2:  # 2=Wavelength
                 cap = int(self.filterOrName.cwl)
             else:
                 cap = f"CAPBUG-{captionType}"  # if this appears captionType is out of range.
