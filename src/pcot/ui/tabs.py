@@ -127,7 +127,7 @@ class ExpandedTab(QtWidgets.QMainWindow):
     ## window got focus. Tell the scene.
     def changeEvent(self, event):
         if event.type() == QtCore.QEvent.ActivationChange:
-            if self.isActiveWindow():
+            if self.isActiveWindow() and self.window.scene():
                 self.window.scene().currentChanged(self.tab.node)
 
     ## retitle window from tab

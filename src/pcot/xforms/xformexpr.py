@@ -4,6 +4,7 @@ from pcot import ui
 from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.expressions import ExpressionEvaluator
+from pcot.imagecube import ChannelMapping
 from pcot.xform import XFormType, xformtype, XFormException
 
 
@@ -79,7 +80,7 @@ class XFormExpr(XFormType):
         # used when we have an image on the output
         node.img = None
         # a string to display the image
-        node.result = ""
+        node.resultStr = ""
         node.w = -1
 
     def perform(self, node):
@@ -93,24 +94,31 @@ class XFormExpr(XFormType):
 
         try:
             if len(node.expr.strip()) > 0:
+                # get the previous number of channels (or None if the result is not an image)
+                oldChans = None if node.img is None else node.img.channels
+                # run the expression
                 res = self.parser.run(node.expr)
                 node.setOutput(0, res)
                 if res is not None:
+                    node.img = None
                     if res.tp == Datum.IMG:
                         # if there's an image on the output, show it
                         node.img = res.val
+                        # if the number of channels has changed, reset the mapping
+                        if oldChans is not None and node.img.channels != oldChans:
+                            node.mapping = ChannelMapping()
                         node.img.setMapping(node.mapping)
-                        node.result = "IMAGE"
+                        node.resultStr = "IMAGE"
                     elif res.tp == Datum.NUMBER:
-                        node.result = str(res.val)
-                        node.setRectText("res: "+node.result)
+                        node.resultStr = str(res.val)
+                        node.setRectText("res: "+node.resultStr)
                     else:
-                        node.result = str(res.val)
+                        node.resultStr = str(res.val)
                         node.setRectText("res: "+str(res.tp))
 
         except Exception as e:
             traceback.print_exc()
-            node.result = str(e)
+            node.resultStr = str(e)
             ui.error(f"Error in expression: {str(e)}")
             raise XFormException('EXPR', str(e))
 
@@ -152,5 +160,5 @@ class TabExpr(pcot.ui.tabs.Tab):
         self.w.canvas.setPersister(self.node)
         self.w.variant.set(self.node.getOutputType(0))
         self.w.expr.setPlainText(self.node.expr)
-        self.w.result.setPlainText(self.node.result)
+        self.w.result.setPlainText(self.node.resultStr)
         self.w.canvas.display(self.node.img)
