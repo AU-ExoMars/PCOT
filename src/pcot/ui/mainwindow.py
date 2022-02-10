@@ -429,7 +429,10 @@ class MainUI(ui.tabs.DockableTabWindow):
             w = None
         else:
             w = self.tabWidget.currentWidget().node
-        self.graph.scene.currentChanged(w)
+        # the scene can be None sometimes if we are loading a new graph on top of an old one, and it thinks the
+        # tabs have changed (this can get called from some tab events)
+        if self.graph.scene is not None:
+            self.graph.scene.currentChanged(w)
 
     ## caption type has been changed in widget
     def captionChanged(self, i):
