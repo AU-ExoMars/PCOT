@@ -202,6 +202,6 @@ def findFilter(cameraType: str, name: str) -> Filter:
             f = AUPEfiltersByName[name]
             return f
     else:
-        raise Exception(f"unknown camera type {camera}")
+        raise Exception(f"unknown camera type {cameraType}")
 
-    raise Exception(f"Unable to find filter {name} for {camera}")
+    raise Exception(f"Unable to find filter {name} for {cameraType}")
