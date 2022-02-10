@@ -28,8 +28,8 @@ class XFormEdgeDetect(XFormType):
         # this node should appear in the maths group.
         super().__init__("edge", "maths", "0.0.0")
         # set input and output - they are images and are unnamed.
-        self.addInputConnector("", datum.IMG)
-        self.addOutputConnector("", datum.IMG)
+        self.addInputConnector("", Datum.IMG)
+        self.addOutputConnector("", Datum.IMG)
 
     def createTab(self, n, w):
         # there is no custom tab, we just use an image canvas. This expects "node.img" to be set to
@@ -42,7 +42,7 @@ class XFormEdgeDetect(XFormType):
 
     def perform(self, node):
         # get the input image
-        img = node.getInput(0, datum.IMG)
+        img = node.getInput(0, Datum.IMG)
         if img is not None:
             # find mean of all channels - construct a transform array and then use it.
             mat = np.array([1 / img.channels] * img.channels).reshape((1, img.channels))
@@ -59,7 +59,7 @@ class XFormEdgeDetect(XFormType):
             # no image on the input, set node.img to None
             node.img = None
         # output node.img
-        node.setOutput(0, Datum(datum.IMG, node.img))
+        node.setOutput(0, Datum(Datum.IMG, node.img))
 
 
 ################################################################################
@@ -69,14 +69,14 @@ class XFormEdgeDetect(XFormType):
 def testfunc(args, optargs):
     # the function itself, which takes a list of mandatory arguments and a
     # list of optional arguments (of which there are none)
-    a = args[0].get(datum.NUMBER)   # get the first argument, which is numeric
-    b = args[1].get(datum.NUMBER)   # and the second argument.
+    a = args[0].get(Datum.NUMBER)   # get the first argument, which is numeric
+    b = args[1].get(Datum.NUMBER)   # and the second argument.
     result = a + b * 2                  # calculate the result
 
     # get the source sets from the inputs and combine them.
     sources = SourceSet([args[1].getSources(), args[2].getSources()])
     # convert the result into a numeric Datum and return it, attaching sources.
-    return Datum(datum.NUMBER, result, sources)
+    return Datum(Datum.NUMBER, result, sources)
 
 
 def regfuncs(p):
@@ -86,8 +86,8 @@ def regfuncs(p):
     p.registerFunc("testf",                 # name
                    "calculates a+2*b",      # description
                    # a list defining our parameters by name, description and type
-                   [Parameter("a", "number 1", datum.NUMBER),
-                    Parameter("b", "number 2", datum.NUMBER)
+                   [Parameter("a", "number 1", Datum.NUMBER),
+                    Parameter("b", "number 2", Datum.NUMBER)
                     ],
                    # the empty list of optional parameters
                    [],
