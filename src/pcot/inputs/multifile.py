@@ -85,7 +85,7 @@ class MultifileInputMethod(InputMethod):
                 path = os.path.relpath(os.path.join(self.dir, self.files[i]))
                 # build sources data : filename and filter name
                 filtpos = self.getFilterName(path)   # says name, but usually is the position.
-                filt = getFilterByPos(filtpos)
+                filt = getFilterByPos(filtpos, self.camera == 'AUPE')
                 source = InputSource(doc, inpidx, filt)
 
                 # is it in the cache?
