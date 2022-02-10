@@ -48,11 +48,14 @@ a = Analysis(['../src/pcot/__main__.py'],
                 'pcot.ui.namedialog',
                 'pcot.ui.canvas',
 
-                 'markdown.extensions.tables',
+                'markdown.extensions.tables',
 
                 'scipy.spatial.transform._rotation_groups',
-                'scipy.special.cython_special'
+                'scipy.special.cython_special',
+
+                
              ]+xformsfull,
+             
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
@@ -64,7 +67,7 @@ pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 
 exe = EXE(pyz,
-          a.scripts,
+          a.scripts, # + [('v', '', 'OPTION')],
           a.binaries,
           a.zipfiles,
           a.datas,  
