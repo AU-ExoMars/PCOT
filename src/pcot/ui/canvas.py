@@ -250,7 +250,7 @@ class InnerCanvas(QtWidgets.QWidget):
 
 def makeTopBarLabel(t):
     lab = QtWidgets.QLabel(t)
-    lab.setMaximumHeight(15)
+    # lab.setMaximumHeight(15)
     lab.setMinimumWidth(100)
     return lab
 
