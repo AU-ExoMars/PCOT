@@ -404,6 +404,7 @@ def makeNodeGraphics(n):
     # so we can change the colour in setColourToState(). This is drawn using a method
     # in the type, which we can override if we want to do Odd Things (editable text)
     n.rect.text = n.type.buildText(n)
+    n.rect.text.setFont(mainFont)
     n.rect.setSizeToText(n)
     makeConnectors(n, x, y)
 
