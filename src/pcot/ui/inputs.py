@@ -19,12 +19,24 @@ class MethodSelectButton(QtWidgets.QPushButton):
         self.window = w
         self.method = m
         self.setText(m.getName())
+        self.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred,
+                                                 QtWidgets.QSizePolicy.Maximum))
         self.clicked.connect(self.onClick)
 
     def onClick(self):
         """When clicked, make this method active"""
         self.window.input.selectMethod(self.method)
         self.window.showActiveMethod()
+        
+    def sizeHint(self):
+        """The buttons are always rather too tall and I have no idea why. To fix this, I'm setting the height
+           to the required height for the text. There must be a better way. For one thing, adding padding to that
+           value doesn't work."""
+        size = super().sizeHint()
+        metrics = QtGui.QFontMetrics(self.font())
+        textSize = metrics.size(Qt.TextShowMnemonic, self.text())
+        size.setHeight(textSize.height())
+        return size
 
     def showActive(self):
         """Colour the button to show that this method is active"""
@@ -50,6 +62,8 @@ class InputWindow(QtWidgets.QMainWindow):
         self.buttons = []
 
         central = QtWidgets.QWidget()
+        central.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
+                                                   QtWidgets.QSizePolicy.Expanding))
         self.setCentralWidget(central)
         self.setMinimumSize(1000, 700)
 
@@ -58,10 +72,12 @@ class InputWindow(QtWidgets.QMainWindow):
         central.setLayout(layout)
 
         topBox = QtWidgets.QWidget()
+        topBox.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred,
+                                                   QtWidgets.QSizePolicy.Preferred))
         topBoxLayout = QtWidgets.QHBoxLayout()
         topBox.setLayout(topBoxLayout)
         layout.addWidget(topBox)
-        topBox.setMaximumHeight(50)
+#        topBox.setMaximumHeight(50)
 
         for m in self.input.methods:
             b = MethodSelectButton(self, m)
