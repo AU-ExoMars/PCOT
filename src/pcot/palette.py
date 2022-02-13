@@ -26,6 +26,17 @@ class PaletteButton(QtWidgets.QPushButton):
         self.xformtype = xformtype
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.contextMenu)
+        
+        # The scrollbar actually overlays the scroll area, rather than sitting to the right
+        # of it. That means the right hand edge of the buttons is overlaid by the scroll area.
+        # To fix this, I get the "scroll bar extent" (how wide a vertical or how tall a horizontal
+        # scroll bar is) and set the button style to add a margin to the right of that width, plus
+        # whatever the left margin is (10 here).
+        
+        app = QtWidgets.QApplication.instance()
+        barsize = app.style().pixelMetric(QtWidgets.QStyle.PM_ScrollBarExtent)
+
+        self.setStyleSheet(f"margin: 2px {barsize+5}px 2px 5px; padding: 2px 5px 2px 5px")
 
     def contextMenu(self, e):
         menu = QtWidgets.QMenu()
