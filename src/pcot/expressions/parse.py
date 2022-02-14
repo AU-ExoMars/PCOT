@@ -472,7 +472,7 @@ class Parser:
     def listFuncs(self):
         """Generate a list of all functions with help"""
         t = Table()
-        for name, f in self.funcRegistry.items():
+        for name, f in sorted(self.funcRegistry.items()):
             t.newRow()
             t.add("name", name)
             ps = ",".join([p.name for p in f.mandatoryParams])

@@ -1,3 +1,11 @@
 site_name: Test pcot docs
+
+markdown_extensions:
+  - pymdownx.arithmatex
 nav:
     - Home: index.md
+    - Autodocs: autodocs/index.md
+
+extra_javascript:
+    - https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML
+
