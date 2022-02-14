@@ -8,6 +8,7 @@ markdown_extensions:
   - lightbox:LightBoxExtension
   - pymdownx.arithmatex
   - pymdownx.magiclink
+  - pymdownx.mark
   - pymdownx.snippets:
         check_paths: True
         base_path: ['docs/','.']
