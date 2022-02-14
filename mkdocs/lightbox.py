@@ -1,3 +1,19 @@
+"""
+A Markdown extension which converts images into lightboxes. To use,
+put an extra ! in front of the text description of an image:
+
+![The PCOT user interface](app.png)
+
+becomes
+
+![!The PCOT user interface](app.png)
+
+
+This was adapted from https://github.com/g-provost/lightgallery-markdown
+and some of the options don't work, because I'm using Lightbox2.
+
+"""
+
 from markdown import Extension
 from markdown.treeprocessors import Treeprocessor
 from markdown.util import etree
