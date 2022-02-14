@@ -4,6 +4,7 @@ This is the prototype of the Pancam Operations Toolkit.
 
 ## Installing with Anaconda
 PCOT is a Python program (and library) with a number of dependencies, including
+
 * Python >3.8
 * PyQt
 * OpenCV
@@ -14,6 +15,7 @@ PCOT is a Python program (and library) with a number of dependencies, including
 
 I find the best way to manage these is to use Anaconda. Installation has been tested on Windows 10
 and Ubuntu 20.04. The first thing you'll need to do is install Anaconda, which can be done from here:
+
 * Windows: https://docs.anaconda.com/anaconda/install/linux/
 * Linux: https://docs.anaconda.com/anaconda/install/linux/
 * MacOS: https://docs.anaconda.com/anaconda/install/mac-os/ (untested)
@@ -50,6 +52,7 @@ installed Anaconda.
 
 ### Installing on Ubuntu / MacOS
 Assuming you have successfully installed Anaconda and cloned or downloaded PCOT as above:
+
 * Open a bash shell
 * **cd** to the PCOT directory (which contains this file).
 * Run the command **conda create -n pcot python=3.8 poetry**.
@@ -62,6 +65,7 @@ PCOT.
 
 ### Installing on Windows
 Assuming you have successfully installed Anaconda and cloned or downloaded PCOT as above:
+
 * Open the Anaconda PowerShell Prompt application from the Start Menu.
 * **cd** to the PCOT directory (which contains this file).
 * Run the command **conda create -n pcot python=3.8 poetry**.
@@ -111,7 +115,7 @@ These instructions apply to Anaconda installations.
 ## Environment variables
 
 It's a good idea, but not mandatory, to set the environment variable
-**PCOTUSER** to a string of the form **name \<email\>**. For example,
+**PCOTUSER** to a string of the form ```name <email>```. For example,
 in Linux I have added the following to my **.bashrc** file:
 ```
 export PCOT_USER="Jim Finnis <jcf12@aber.ac.uk>"

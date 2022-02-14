@@ -1,4 +1,10 @@
-# PCOT documentation
+This root document of the PCOT site transcludes the 
+README.md file from root PCOT directory.
 
-Automatically generated documentation for XForms (nodes) and *expr* functions
-and properties can be [found here](autodocs/index.md).
+Links to:
+
+* [Getting Started](gettingstarted.md) (although installation documentation is on the current page, below)
+* [Automatically generated documentation](autodocs/index.md) for XForms (nodes) and *expr* functions/properties
+
+
+--8<-- "../README.md"

@@ -47,17 +47,16 @@ class XFormExpr(XFormType):
 
     ### Properties
 
-    Properties are indicated by the "." operator, e.g. "a.w":
+    Properties are indicated by the "." operator, e.g. "a.w" to find an
+    image's width.
     
-    |Property |  description|
-    |------|-----------|
-    |h  |           height of an image|
-    |w   |          width of an image|
-    |n    |         pixel count of an image|
-
+    ### Help on functions and properties
+    
     A list of functions can be obtained by right-clicking on either the log pane or function entry pane
     and selecting "List all functions." Help on an individual function can be found by hovering over
     the name of a function, right-clicking and selecting "Get help on 'somefunction'".
+    Similar actions are supported for properties.
+
 
     """
 

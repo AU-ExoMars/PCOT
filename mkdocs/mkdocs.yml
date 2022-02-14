@@ -1,9 +1,20 @@
 site_name: Test pcot docs
 
+theme:
+    name: mkdocs
+    custom_dir: theme
+
 markdown_extensions:
+  - lightbox:LightBoxExtension
   - pymdownx.arithmatex
+  - pymdownx.magiclink
+  - pymdownx.snippets:
+        check_paths: True
+        base_path: ['docs/','.']
+
 nav:
     - Home: index.md
+    - Getting Started: gettingstarted.md
     - Autodocs: autodocs/index.md
 
 extra_javascript:
