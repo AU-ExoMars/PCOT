@@ -30,9 +30,9 @@ class XFormOffset(XFormType):
     def perform(self, node):
         img = node.getInput(0, Datum.IMG)
         if img is None:
-            node.img = None
+            out = None
         elif not node.enabled:
-            node.img = img
+            out = img
         else:
             # make new image the size of the old one
             newimg = np.zeros(img.img.shape, dtype=np.float32)
@@ -47,9 +47,13 @@ class XFormOffset(XFormType):
             s = img.img[ys:ys + h, xs:xs + w]
             newimg[yd:yd + h, xd:xd + w] = s
             # remember to copy ROI            
-            node.img = ImageCube(newimg, node.mapping, img.sources)
+            out = ImageCube(newimg, node.mapping, img.sources)
 
-        node.setOutput(0, Datum(Datum.IMG, node.img))
+        node.img = out
+        if out is None:
+            node.setOutput(0, None)
+        else:
+            node.setOutput(0, Datum(Datum.IMG, node.img))
 
 
 class TabOffset(pcot.ui.tabs.Tab):

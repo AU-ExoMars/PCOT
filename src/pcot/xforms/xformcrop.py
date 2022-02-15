@@ -17,11 +17,12 @@ class XformCropROI(XFormType):
         return TabImage(n, w)
 
     def init(self, node):
-        node.img = None
+        node.out = None
 
     def perform(self, node):
         img = node.getInput(0, Datum.IMG)
         if img is not None:
-            img = img.cropROI()
-        node.img = img
-        node.setOutput(0, Datum(Datum.IMG, img))
+            node.out = Datum(Datum.IMG, img.cropROI())
+        else:
+            node.out = None
+        node.setOutput(0, node.out)

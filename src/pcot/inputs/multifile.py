@@ -15,6 +15,7 @@ from pcot.imagecube import ChannelMapping, ImageCube
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
 from .. import ui
+from ..datum import Datum
 from ..filters import getFilterByPos
 from ..sources import InputSource, SourceSet, MultiBandSource
 
@@ -114,7 +115,7 @@ class MultifileInputMethod(InputMethod):
         else:
             return None  # no image
         img = ImageCube(img * self.mult, self.mapping, MultiBandSource(sources))
-        return img
+        return Datum(Datum.IMG, img)
 
     def getName(self):
         return "Multifile"

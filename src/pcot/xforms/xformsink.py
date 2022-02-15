@@ -14,9 +14,9 @@ class XformSink(XFormType):
     def __init__(self):
         # call superconstructor with the type name and version code
         super().__init__("sink", "utility", "0.0.0")
-        # set up a single input which takes an image of any type. The connector could have
+        # set up a single input which takes an datum of any type. The connector could have
         # a name in more complex node types, but here we just have an empty string.
-        self.addInputConnector("", Datum.IMG)
+        self.addInputConnector("", Datum.ANY)
 
     # this creates a tab when we want to control or view a node of this type. This uses
     # the built-in TabImage, which contains an OpenCV image viewer.
@@ -27,14 +27,17 @@ class XformSink(XFormType):
     # and on loading.
     def perform(self, node):
         # get the input (index 0, our first and only input). That's all - we just store a reference
-        # to the image in the node. The TabImage knows how to display nodes with "img" attributes,
+        # to the image in the node. The TabImage knows how to display nodes with "out" attributes,
         # and does the rest.
-        img = node.getInput(0, Datum.IMG)
-        if img is not None:
-            img = img.copy()
-            img.mapping = node.mapping
-        node.img = img
+        out = node.getInput(0)
+        if out is not None:
+            # if it's an image we need to use a copy using this node's mapping
+            if out.tp == Datum.IMG:
+                outimg = out.val.copy()
+                outimg.mapping = node.mapping
+                out = Datum(Datum.IMG, outimg)
+        node.out = out
 
     def init(self, node):
         # initialise the node by setting its img to None.
-        node.img = None
+        node.out = None

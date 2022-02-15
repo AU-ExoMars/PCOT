@@ -4,6 +4,7 @@ from typing import Optional
 
 import pcot.dataformats.envi as envi
 import pcot.ui as ui
+from pcot.datum import Datum
 from pcot.inputs.inputmethod import InputMethod
 from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
@@ -35,7 +36,7 @@ class ENVIInputMethod(InputMethod):
     def readData(self):
         if self.img is None and self.fname is not None:
             self.loadImg()
-        return self.img
+        return None if self.img is None else Datum(Datum.IMG, self.img)
 
     def getName(self):
         return "ENVI"

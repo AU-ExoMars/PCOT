@@ -10,6 +10,7 @@ from .pds4input import PDS4InputMethod
 from pcot.imagecube import ImageCube
 
 from pcot.ui.inputs import InputWindow
+from ..datum import Datum
 
 
 class Input:
@@ -48,15 +49,9 @@ class Input:
             PDS4InputMethod(self)
         ]
 
-    def get(self):
-        """Get the data for an input, reading into the cache if required."""
-        # This needs to get a copy, otherwise its mapping will overwrite the mapping
-        # in the input method itself.
-        i = self.methods[self.activeMethod].get()
-        if isinstance(i, ImageCube):
-            return i.copy()
-        else:
-            return i
+    def get(self) -> Datum:
+        """Get the data for an input - the underlying method may cache or copy."""
+        return self.methods[self.activeMethod].get()
 
     def invalidate(self):
         """Invalidate ALL the methods for an input, whether they are active or not"""

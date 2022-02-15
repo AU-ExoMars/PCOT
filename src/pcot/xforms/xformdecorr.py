@@ -22,14 +22,14 @@ class XformDecorr(XFormType):
         return TabImage(n, w)
 
     def init(self, node):
-        node.img = None
+        node.out = None
 
     def perform(self, node):
         img = node.getInput(0, Datum.IMG)
         if img is None:
-            node.img = None
+            out = None
         elif not node.enabled:
-            node.img = img
+            out = img
         elif img.channels != 3:
             raise XFormException("DATA", "can only decorr stretch images with 3 channels")
         else:
@@ -37,11 +37,13 @@ class XformDecorr(XFormType):
             newimg = decorrstretch(subimage.img, subimage.mask)
             # in this case, all channels just come from the union of the sources
             sources = SourceSet(img.sources.getSources())
-            node.img = img.modifyWithSub(subimage, newimg, sources=MultiBandSource([sources, sources, sources]))
+            out = img.modifyWithSub(subimage, newimg, sources=MultiBandSource([sources, sources, sources]))
 
-        if node.img is not None:
-            node.img.setMapping(node.mapping)
-        node.setOutput(0, Datum(Datum.IMG, node.img))
+        if out is not None:
+            out.setMapping(node.mapping)
+            out = Datum(Datum.IMG, out)
+        node.out = out
+        node.setOutput(0, out)
 
 
 def decorrstretch(A, mask):
@@ -56,7 +58,6 @@ def decorrstretch(A, mask):
     # save the original shape and image
     orig = A
     orig_shape = A.shape
-    origmask = mask
 
     # reshape the image
     #         B G R

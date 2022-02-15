@@ -26,7 +26,7 @@ class XFormAutoRegister(XFormType):
         self.addOutputConnector("moved", Datum.IMG)
 
     def init(self, node):
-        node.img = None
+        node.out = None
 
     def perform(self, node):
         # read images
@@ -34,7 +34,7 @@ class XFormAutoRegister(XFormType):
         fixedImg = node.getInput(1, Datum.IMG)
 
         if fixedImg is None or movingImg is None:
-            node.img = None
+            out = None
         else:
             # convert to gray
             mat = np.array([1 / movingImg.channels] * movingImg.channels).reshape((1, movingImg.channels))
@@ -57,9 +57,10 @@ class XFormAutoRegister(XFormType):
                 outs = [warp(x, warpdata, mode='edge') for x in chans]
                 out = np.dstack(outs)
 
-            node.img = ImageCube(out, node.mapping, movingImg.sources)
+            out = Datum(Datum.IMG, ImageCube(out, node.mapping, movingImg.sources))
 
-        node.setOutput(0, Datum(Datum.IMG, node.img))
+        node.out = out
+        node.setOutput(0, out)
 
     def createTab(self, n, w):
         return TabImage(n, w)

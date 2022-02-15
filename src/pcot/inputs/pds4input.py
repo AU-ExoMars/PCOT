@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import QMessageBox, QTableWidgetItem
 from pcot import filters
 from pcot.dataformats import pds4
 from pcot.dataformats.pds4 import PDS4ImageProduct, PDS4Product
+from pcot.datum import Datum
 from pcot.ui.help import HelpWindow
 from proctools.products import DataProduct
 from proctools.products.loader import ProductLoader
@@ -216,7 +217,14 @@ class PDS4InputMethod(InputMethod):
     def readData(self):
         logger.debug("readData")
         self.loadData()
-        return self.out
+        # this will need to be changed once we can output different data types
+        if self.out is None:
+            return None
+        else:
+            if isinstance(self.out, ImageCube):
+                return Datum(Datum.IMG, self.out)
+            else:
+                raise Exception(f"bad data type being output from PDS4: {type(self.out)}")
 
     def getName(self):
         return "PDS4"

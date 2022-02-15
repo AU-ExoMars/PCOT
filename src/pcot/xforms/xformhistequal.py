@@ -14,11 +14,11 @@ BINS = 2000
 
 
 def equalize(img, mask):
-    img = np.ma.masked_array(img,mask = ~mask)
+    img = np.ma.masked_array(img, mask=~mask)
     mask = mask.astype(np.ubyte)
     # clip masked image
-    img[img>1] = 1
-    img[img<0] = 0
+    img[img > 1] = 1
+    img[img < 0] = 0
 
     # algorithm source: https://docs.opencv.org/master/d5/daf/tutorial_py_histogram_equalization.html
     # get histogram; N bins in range 0-1. Set the weight of all unmasked
@@ -28,7 +28,8 @@ def equalize(img, mask):
 
     # work out the cumulative dist. function and normalize it
     cdf = hist.cumsum()
-    cdf_normalized = cdf * float(hist.max()) / cdf.max()
+    # cdf_normalized = cdf * float(hist.max()) / cdf.max()
+
     # get a masked array, omitting zeroes, and use it to construct
     # a lookup table for old to new intensities
     cdf_m = np.ma.masked_equal(cdf, 0)
@@ -57,17 +58,17 @@ class XformHistEqual(XFormType):
         return TabImage(n, w)
 
     def init(self, node):
-        node.img = None
+        node.out = None
 
     def perform(self, node):
         img = node.getInput(0, Datum.IMG)
         if img is None:
             # can't equalize a non-existent image!
-            node.img = None
+            out = None
         elif not node.enabled:
-            node.img = img
+            out = img
         else:
-            img = img.copy() # act always on a copy
+            img = img.copy()  # act always on a copy
             # first extract the ROI subimage; the rectangle which
             # contains the ROIS and a mask we should work on
             subimage = img.subimage()
@@ -96,7 +97,9 @@ class XformHistEqual(XFormType):
                 equalized = np.stack(lst, axis=-1)
 
             # make a copy of the image and paste the modified version of the subimage into it
-            node.img = img.modifyWithSub(subimage, equalized)
-        if node.img is not None:
-            node.img.setMapping(node.mapping)
-        node.setOutput(0, Datum(Datum.IMG, node.img))
+            out = img.modifyWithSub(subimage, equalized)
+        if out is not None:
+            out.setMapping(node.mapping)
+            out = Datum(Datum.IMG, out)
+        node.out = out
+        node.setOutput(0, out)

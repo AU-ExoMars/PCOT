@@ -8,6 +8,7 @@ from .inputmethod import InputMethod
 from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import TreeMethodWidget
+from ..datum import Datum
 from ..sources import MultiBandSource, InputSource
 
 logger = logging.getLogger(__name__)
@@ -43,7 +44,7 @@ class RGBInputMethod(InputMethod):
     def readData(self):
         if self.img is None and self.fname is not None:
             self.loadImg()
-        return self.img
+        return None if self.img is None else Datum(Datum.IMG, self.img)
 
     def getName(self):
         return "RGB"
