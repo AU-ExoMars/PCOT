@@ -16,6 +16,19 @@ app = None
 
 logger = logging.getLogger(__name__)
 
+try:
+    import pyi_splash
+
+    # Update the text on the splash screen
+    pyi_splash.update_text("PCOT loaded.")
+    pyi_splash.update_text("And PCOT still loaded.")
+
+    # Close the splash screen. It does not matter when the call
+    # to this function is made, the splash screen remains open until
+    # this function is called or the Python program is terminated.
+    pyi_splash.close()
+except ImportError as e:
+    pass
 
 def load_plugins():
     """plugin dirs are colon separated, stored in Locations/plugins"""
