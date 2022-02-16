@@ -23,6 +23,5 @@ class XformStripROI(XFormType):
         if out is not None:
             out = out.copy()
             out.rois = []
-            out = Datum(Datum.IMG, out)
-        node.out = out
+        node.out = Datum(Datum.IMG, out)
         node.setOutput(0, out)

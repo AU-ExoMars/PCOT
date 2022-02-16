@@ -49,10 +49,9 @@ def performOp(node: XForm, fn: Callable[[SubImageCubeROI, XForm, Dict[str, Any]]
         # if there's an image stored in the node, set the image's RGB mapping to be the node's
         # primary mapping (the default one)
         node.img.setMapping(node.mapping)
-        # output the current value of node.img
-        node.setOutput(0, Datum(Datum.IMG, node.img))
-    else:
-        node.setOutput(0, None)
+
+    # output the current value of node.img
+    node.setOutput(0, Datum(Datum.IMG, node.img))
 
 
 ## used to register op functions as lambdas - takes a datum and type and returns either None (if it's none or

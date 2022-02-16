@@ -27,7 +27,7 @@ class XFormInput(XFormType):
             # if the input is None, and it's not the Null input, set an error state (but not an exception)
             if inp.activeMethod != pcot.inputs.Input.NULL:
                 node.setError(XFormException('DATA', 'input node could not read data - {}'.format(inp.exception)))
-            node.setOutput(0, None)
+            out = Datum(Datum.IMG, None)
         elif out.isImage():
             # if it's an image, we make a copy for just this one input node.
             out = Datum(Datum.IMG, out.val.copy())

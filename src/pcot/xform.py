@@ -852,17 +852,29 @@ class XForm:
             matched, else returning null.
             """
         if self.inputs[i] is None:
-            return None
+            # if we're asking for a particular type, "dereference" the
+            # None and return None directly. Otherwise, wrap the None in
+            # a Datum, but we don't know what type to use so just say ANY.
+            return Datum(Datum.ANY, None, nullSourceSet) if tp is None else None
         else:
             n, i = self.inputs[i]
             o = n.outputs[i]
-            if tp is not None and o is not None:
-                if o.tp == tp:
-                    return o.val
+
+            if tp is None:
+                # no type checking done, we return the Datum
+                if o is None:
+                    # ... except there isn't one, so invent one.
+                    return Datum(Datum.ANY, None, nullSourceSet)
                 else:
-                    return None
+                    # all is well, return the Datum.
+                    return o
+            elif o is None or o.tp != tp:
+                # we have passed in a type, but it either doesn't match
+                # or we have a null input. "Dereference" that into a None.
+                return None
             else:
-                return o
+                # we have passed in a type and it matches, so dereference
+                return o.val
 
     def ensureConnectionsValid(self):
         """ensure connections are valid and break them if not"""
@@ -1308,9 +1320,9 @@ class XFormROIType(XFormType):
 
         if img is None:
             # no image
-            node.setOutput(self.OUT_IMG, None)
-            node.setOutput(self.OUT_ANNOT, None if inAnnot is None else Datum(Datum.IMGRGB, inAnnot))
-            node.setOutput(self.OUT_ROI, None)
+            outImgDatum = Datum(Datum.IMG, None, nullSourceSet)
+            outAnnotDatum = Datum(Datum.IMGRGB, None, nullSourceSet)
+            outROIDatum = Datum(Datum.ROI, None, nullSourceSet)
         else:
             # sources are a combo of the image sources and that of the ROI
             sources = SourceSet([img, node.roi.sources])
@@ -1329,13 +1341,16 @@ class XFormROIType(XFormType):
             img.drawROIs(rgb.img, onlyROI=None if node.showROIs else node.roi)
             rgb.rois = img.rois  # with same ROI list as unannotated image
             node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
-            node.setOutput(self.OUT_ANNOT, Datum(Datum.IMG, rgb))
             node.img = img
-            # output the ROI - note that this is NOT a copy!
-            node.setOutput(self.OUT_ROI, Datum(Datum.ROI, node.roi, node.roi.sources))
 
-            if node.isOutputConnected(self.OUT_IMG):
-                node.setOutput(self.OUT_IMG, Datum(Datum.IMG, node.img))  # output image and ROI
+            outImgDatum = Datum(Datum.IMG, img, sources)
+            outROIDatum = Datum(Datum.ROI, node.roi, node.roi.sources)  # not a copy!
+            outAnnotDatum = Datum(Datum.IMGRGB, rgb, sources)
+
+        node.setOutput(self.OUT_IMG, outImgDatum)
+        node.setOutput(self.OUT_ANNOT, outAnnotDatum)
+        node.setOutput(self.OUT_ROI, outROIDatum)
+
 
     def getROIDesc(self, node):
         return "no ROI" if node.roi is None else node.roi.details()

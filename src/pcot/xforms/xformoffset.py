@@ -49,11 +49,8 @@ class XFormOffset(XFormType):
             # remember to copy ROI            
             out = ImageCube(newimg, node.mapping, img.sources)
 
-        node.img = out
-        if out is None:
-            node.setOutput(0, None)
-        else:
-            node.setOutput(0, Datum(Datum.IMG, node.img))
+        node.img = Datum(Datum.IMG, out)
+        node.setOutput(0, node.img)
 
 
 class TabOffset(pcot.ui.tabs.Tab):

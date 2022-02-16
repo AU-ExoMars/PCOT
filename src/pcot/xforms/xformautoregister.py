@@ -57,10 +57,10 @@ class XFormAutoRegister(XFormType):
                 outs = [warp(x, warpdata, mode='edge') for x in chans]
                 out = np.dstack(outs)
 
-            out = Datum(Datum.IMG, ImageCube(out, node.mapping, movingImg.sources))
+            out = ImageCube(out, node.mapping, movingImg.sources)
 
-        node.out = out
-        node.setOutput(0, out)
+        node.out = Datum(Datum.IMG, out)
+        node.setOutput(0, node.out)
 
     def createTab(self, n, w):
         return TabImage(n, w)

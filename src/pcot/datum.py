@@ -65,9 +65,6 @@ class Datum(SourcesObtainable):
         if not isinstance(t, Type):
             raise XFormException("CODE", "bad call to datum ctor: should be Datum(Type,Value)")
 
-        if v is None:
-            raise XFormException("CODE", "do not set Datum to None values; use None directly.")
-
         self.tp = t
         self.val = v
 

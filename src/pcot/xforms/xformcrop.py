@@ -22,7 +22,6 @@ class XformCropROI(XFormType):
     def perform(self, node):
         img = node.getInput(0, Datum.IMG)
         if img is not None:
-            node.out = Datum(Datum.IMG, img.cropROI())
-        else:
-            node.out = None
+            img = img.cropROI()
+        node.out = Datum(Datum.IMG, img)
         node.setOutput(0, node.out)

@@ -100,6 +100,5 @@ class XformHistEqual(XFormType):
             out = img.modifyWithSub(subimage, equalized)
         if out is not None:
             out.setMapping(node.mapping)
-            out = Datum(Datum.IMG, out)
-        node.out = out
-        node.setOutput(0, out)
+        node.out = Datum(Datum.IMG, out)
+        node.setOutput(0, node.out)

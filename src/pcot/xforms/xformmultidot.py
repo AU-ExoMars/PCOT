@@ -90,8 +90,7 @@ class XFormMultiDot(XFormType):
             node.setOutput(self.OUT_ANNOT, Datum(Datum.IMG, rgb))
             node.img = img
 
-            if node.isOutputConnected(self.OUT_IMG):
-                node.setOutput(self.OUT_IMG, Datum(Datum.IMG, node.img))  # output image and ROI
+        node.setOutput(self.OUT_IMG, Datum(Datum.IMG, node.img))  # output image and ROI
 
     def serialise(self, node):
         return {

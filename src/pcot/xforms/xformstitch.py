@@ -8,7 +8,7 @@ from PyQt5.QtGui import QKeyEvent
 
 from pcot.datum import Datum
 from pcot.imagecube import ImageCube
-from pcot.sources import MultiBandSource
+from pcot.sources import MultiBandSource, nullSource
 from pcot.ui.tabs import Tab
 from pcot.xform import XFormType, xformtype, XFormException
 
@@ -74,7 +74,7 @@ class XFormStitch(XFormType):
         # exit early if no active inputs
         if len(activeInputImages) == 0:
             node.img = None
-            node.setOutput(0, None)
+            node.setOutput(0, Datum(Datum.IMG, None, nullSource))
             return
         # throw an error if the images don't all have the same channel count
         if len(set([i.channels for i in activeInputImages])) > 1:

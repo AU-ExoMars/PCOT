@@ -98,6 +98,7 @@ class XFormExpr(XFormType):
                 oldChans = None if node.img is None else node.img.channels
                 # run the expression
                 res = self.parser.run(node.expr)
+                print(res)
                 node.setOutput(0, res)
                 if res is not None:
                     node.img = None
