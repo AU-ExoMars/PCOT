@@ -94,17 +94,18 @@ These instructions apply to Anaconda installations.
 
 * First set up the Conda environment and interpreter:
     * Open PyCharm and open the PCOT directory as an existing project.
-    * Open **Settings..** (Ctrl+Alt+S)
+    * Open **File/Settings..** (Ctrl+Alt+S)
     * Select **Project:PCOT / Python Interpreter**
-    * Select the cogwheel to the right of the Python Interpreter dropdown and then select  **Add**.
-    * Select **Conda Environment**.
-    * Select **Existing Environment**.
-    * Select the environment: it should be something like **anaconda3/envs/pcot/bin/python**.
-    * Select **OK**.
+    * If the Python Interpreter is not already Python 3.8 with something like **anaconda3/envs/pcot/bin/python**
+        * Select the cogwheel to the right of the Python Interpreter dropdown and then select  **Add**.
+        * Select **Conda Environment**.
+        * Select **Existing Environment**.
+        * Select the environment: it should be something like **anaconda3/envs/pcot/bin/python**.
+        * Select **OK**.
 * Now set up the run configuration:
-    * Select **Edit Configurations** from the configurations drop down in the menu bar
-    * Add a new configuration (the + symbol)
-    * Set **Script Path** to **PCOT/src/pcot/__main__.py**
+    * Select **Edit Configurations...** (or it might be **Add Configuration...**) from the configurations drop down in the menu bar
+    * Add a new configuration (the + symbol) and select **Python**
+    * Set **Script Path** to **PCOT/src/pcot/\_\_main\_\_.py**
     * Make sure the interpreter is something like **Project Default (Python 3.8 (pcot))**, i.e. the Python interpreter of the pcot environment.
 * You should now be able to run and debug PCOT.
 
