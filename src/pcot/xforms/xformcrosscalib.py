@@ -1,3 +1,5 @@
+import logging
+
 import cv2 as cv
 import numpy as np
 from PyQt5.QtCore import Qt
@@ -10,6 +12,8 @@ from pcot.imagecube import ImageCube
 from pcot.rois import ROICircle
 from pcot.utils import text
 from pcot.xform import XFormType, xformtype, XFormException
+
+logger = logging.Logger(__name__)
 
 IMAGEMODE_SOURCE = 0
 IMAGEMODE_DEST = 1
@@ -106,7 +110,9 @@ class XFormCrossCalib(XFormType):
 
             # this gets the appropriate image and also manipulates it.
             # Generally we convert RGB to grey; otherwise we'd have to store
-            # quite a few mappings.
+            # quite a few mappings. Note that prep() here greys and normalises the image,
+            # but does so PURELY FOR OUTPUT ON THE LOCAL CANVAS. It DOES NOT
+            # tweak the output image, which is in node.img!
             if node.imagemode == IMAGEMODE_DEST:
                 img = prep(destImg)
             elif node.imagemode == IMAGEMODE_SOURCE:
@@ -197,7 +203,6 @@ class XFormCrossCalib(XFormType):
         factors = np.array(factors)
         factors = np.mean(factors, axis=0)
         return (srcImg.img * factors).astype(np.float32)
-
 
     def createTab(self, n, w):
         return TabCrossCalib(n, w)
@@ -298,8 +303,10 @@ class TabCrossCalib(pcot.ui.tabs.Tab):
             if self.node.showSrc and self.node.showDest:
                 # if both are shown, distinguish with modifier
                 if e.modifiers() & Qt.ShiftModifier:  # shift = source
+                    logger.debug("Adding SOURCE")
                     self.node.type.addPoint(self.node, x, y, False)
                 elif e.modifiers() & Qt.ControlModifier:  # ctrl = dest
+                    logger.debug("Adding DEST")
                     self.node.type.addPoint(self.node, x, y, True)
             else:
                 # otherwise which sort we are adding can be determined from which sort

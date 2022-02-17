@@ -16,12 +16,12 @@ class XformStripROI(XFormType):
         return TabImage(n, w)
 
     def init(self, node):
-        node.img = None
+        node.out = None
 
     def perform(self, node):
-        img = node.getInput(0, Datum.IMG)
-        if img is not None:
-            img = img.copy()
-            img.rois = []
-        node.img = img
-        node.setOutput(0, Datum(Datum.IMG, img))
+        out = node.getInput(0, Datum.IMG)
+        if out is not None:
+            out = out.copy()
+            out.rois = []
+        node.out = Datum(Datum.IMG, out)
+        node.setOutput(0, out)

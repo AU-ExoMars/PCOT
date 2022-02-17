@@ -63,11 +63,22 @@ a = Analysis(['../src/pcot/__main__.py'],
              win_private_assemblies=False,
              cipher=block_cipher,
              noarchive=False)
+
+splash = Splash('splash.png',
+          binaries = a.binaries,
+          datas = a.datas,
+          text_pos = (9,315),
+          text_size = 12,
+          text_color = 'white')
+
+
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 
 exe = EXE(pyz,
           a.scripts, # + [('v', '', 'OPTION')],
+          splash,
+          splash.binaries,
           a.binaries,
           a.zipfiles,
           a.datas,  

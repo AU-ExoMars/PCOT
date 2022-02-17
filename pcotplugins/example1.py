@@ -1,13 +1,10 @@
 import cv2 as cv
 import numpy as np
 
-from pcot import datum
 from pcot.sources import SourceSet
 from pcot.xform import XFormType, xformtype, Datum
 from pcot.xforms.tabimage import TabImage
 from pcot.imagecube import ImageCube
-
-from PyQt5 import QtWidgets
 
 import pcot.config
 
@@ -32,7 +29,7 @@ class XFormEdgeDetect(XFormType):
         self.addOutputConnector("", Datum.IMG)
 
     def createTab(self, n, w):
-        # there is no custom tab, we just use an image canvas. This expects "node.img" to be set to
+        # there is no custom tab, we just use an image canvas. This expects "node.out" to be set to
         # either None or an imagecube.
         return TabImage(n, w)
 
@@ -53,13 +50,13 @@ class XFormEdgeDetect(XFormType):
             out = cv.Canny(img8, 100, 200)
             # Convert back to 32-bit float
             out = (out / 255).astype('float32')
-            # create the imagecube and set node.img for the canvas in the tab
-            node.img = ImageCube(out, None, img.sources)
+            # create the imagecube and set node.out for the canvas in the tab
+            node.out = ImageCube(out, None, img.sources)
         else:
-            # no image on the input, set node.img to None
-            node.img = None
-        # output node.img
-        node.setOutput(0, Datum(Datum.IMG, node.img))
+            # no image on the input, set node.out to None
+            node.out = None
+        # output node.out
+        node.setOutput(0, Datum(Datum.IMG, node.out))
 
 
 ################################################################################

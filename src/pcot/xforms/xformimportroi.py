@@ -52,6 +52,9 @@ class XformImportROI(XFormType):
 
         node.setOutput(0, Datum(Datum.IMG, img))
 
+    def getROIDesc(self, node):
+        return "no ROI" if node.roi is None else node.roi.details()
+
 
 class TabImportROI(pcot.ui.tabs.Tab):
     def __init__(self, node, w):

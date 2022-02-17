@@ -64,6 +64,7 @@ class Datum(SourcesObtainable):
         from pcot.xform import XFormException
         if not isinstance(t, Type):
             raise XFormException("CODE", "bad call to datum ctor: should be Datum(Type,Value)")
+
         self.tp = t
         self.val = v
 
