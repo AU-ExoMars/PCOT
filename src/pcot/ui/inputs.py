@@ -31,11 +31,11 @@ class MethodSelectButton(QtWidgets.QPushButton):
     def sizeHint(self):
         """The buttons are always rather too tall and I have no idea why. To fix this, I'm setting the height
            to the required height for the text. There must be a better way. For one thing, adding padding to that
-           value doesn't work."""
+           value sometimes doesn't work."""
         size = super().sizeHint()
         metrics = QtGui.QFontMetrics(self.font())
         textSize = metrics.size(Qt.TextShowMnemonic, self.text())
-        size.setHeight(textSize.height())
+        size.setHeight(textSize.height()+15)
         return size
 
     def showActive(self):

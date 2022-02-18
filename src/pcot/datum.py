@@ -9,7 +9,7 @@ These types are also used by the expression evaluator.
 import logging
 from typing import Any, Optional
 
-from pcot.sources import SourcesObtainable
+from pcot.sources import SourcesObtainable, nullSource
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +73,8 @@ class Datum(SourcesObtainable):
                 raise XFormException("CODE", "Datum objects which are not images must have an explicit source set")
             elif self.val is not None:
                 sources = self.val.sources
+            else:
+                sources = nullSource
         self.sources = sources
 
     def isImage(self):
