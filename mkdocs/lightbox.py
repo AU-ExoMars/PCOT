@@ -39,7 +39,8 @@ class ImagesTreeprocessor(Treeprocessor):
                 image.set("alt", desc)
                 parent = parent_map[image]
                 ix = list(parent).index(image)
-                new_node = etree.Element('a')
+                top = etree.Element('figure')
+                new_node = etree.SubElement(top,'a')
                 new_node.set("href", image.attrib["src"])
                 new_node.set("data-lightbox",image.attrib["src"])
                 if self.config["show_description_as_inline_caption"]:
@@ -48,7 +49,10 @@ class ImagesTreeprocessor(Treeprocessor):
                     inline_caption_node.text = desc
                     parent.insert(ix + 1, inline_caption_node)
                 new_node.append(image)
-                parent.insert(ix, new_node)
+                caption = etree.Element('figcaption',attrib={"class":"figure-caption text-right"})
+                caption.text=f"Figure: {desc}. Click on image to expand."
+                top.insert(1,caption)
+                parent.insert(ix, top)
                 parent.remove(image)
 
 class LightBoxExtension(Extension):
