@@ -31,7 +31,8 @@ which is used to indicate that a connection can be of any type).
 \item \textbf{val}: a value of the appropriate type to match \textbf{tp}.
 \item \textbf{sources}: an object matching the \texttt{SourcesObtainable} interface. This can be queried to get a set
 of source objects describing which inputs (and filter bands within multichannel inputs) a datum is derived from. Nodes
-and functions which manipulate data are required to handle sources correctly, and this can be difficult.
+and functions which manipulate data are required to handle sources correctly, and this can be difficult. See Sec.~\ref{sources}
+for more details. Datum itself conforms to SourcesObtainable and the relevant method is passed through to this field.
 \end{itemize}
 
 
@@ -337,12 +338,17 @@ beyond system memory.
 \end{notebox}
 
 \subsubsection{Data sources}
+\label{sources}
 Each piece of data in PCOT passing through a node or used as part of an
 \emph{expr} node's expression has metadata describing where it came from.
 This is ultimately always a PCOT input (i.e.\ from an \emph{input} node);
 data from user input or elsewhere is disregarded. This is handled by the following
 entities:
 \begin{itemize}
+\item \textbf{Datum} has already been described; it is the core data type for information
+being passed between nodes and within expressions in the \emph{expr} node. Datum implements SourcesObtainable
+(see below), and the Datum constructor requires a Source (see below). The exception is image data: if the source passed
+to the constructor is None (the default), the image's source data will be used.
 \item \textbf{SourcesObtainable} is the root interface of the system, consisting of
 all classes which have the \texttt{getSources()} method which can return a set of sources.
 \item \textbf{SourceSet} is a set of \texttt{Source} objects, indicating which
@@ -436,7 +442,6 @@ or centre wavelength (if a float)
 \item \textbf{long()} returns a long description
 \end{itemize}
 
-
 Sources are used to keep track of each datum as it moves through the graph
 so they can be processed and displayed appropriately, particularly for images:
 Fig.~\ref{app.png} (p.~\pageref{app.png}) shows
@@ -446,6 +451,10 @@ canvas are three combo boxes which select the channels in the image cube to
 display on the canvas, and these are typically labelled by a string generated
 from the source data for each channel (along with the index). Sources are also
 used to select channels to combine and manipulate in those nodes which do so.
+
+\subsubsection{Sourceless data}
+Special objects called \textbf{nullSource} and \textbf{nullSourceSet} are available --- these are an empty source and empty
+source set whichshould be used when the data is generated entirely internally.
 
 \subsubsection{RGB channel mappings}
 The previous section briefly mentions the three RGB mapping combo boxes at the
