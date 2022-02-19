@@ -251,12 +251,15 @@ class Tab(QtWidgets.QWidget):
 
     def nodeDeleted(self):
         """node has been deleted, remove me from tabs"""
+
         if self.expanded:
             self.expanded.close()
             self.expanded = None
-        idx = self.window.tabWidget.indexOf(self)
-        self.window.tabWidget.removeTab(idx)
-        self.node.tabs.remove(self)
+        self.window.closeTab(self)  # Issue 41 - this is the right way to close a tab.
+        # whereas this is ad-hoc nonsense which leaves stale data.
+        #        idx = self.window.tabWidget.indexOf(self)
+        #        self.window.tabWidget.removeTab(idx)
+        #        self.node.tabs.remove(self)
 
     def retitle(self):
         """force update of tab title and return new title"""
