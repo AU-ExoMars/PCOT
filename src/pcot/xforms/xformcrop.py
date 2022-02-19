@@ -22,6 +22,9 @@ class XformCropROI(XFormType):
     def perform(self, node):
         img = node.getInput(0, Datum.IMG)
         if img is not None:
+            # create a new image, set it to use this node's mapping
             img = img.cropROI()
+            img.mapping = node.mapping
+
         node.out = Datum(Datum.IMG, img)
         node.setOutput(0, node.out)
