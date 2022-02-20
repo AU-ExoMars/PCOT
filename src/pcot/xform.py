@@ -1307,10 +1307,6 @@ class XFormROIType(XFormType):
         imagecube, and node.roi is the ROI"""
         pass
 
-    #    def uichange(self, n):
-    #        n.timesPerformed += 1
-    #        self.perform(n)
-
     def perform(self, node):
         img = node.getInput(self.IN_IMG, Datum.IMG)
         inAnnot = node.getInput(self.IN_ANNOT, Datum.IMG)
@@ -1351,6 +1347,13 @@ class XFormROIType(XFormType):
         node.setOutput(self.OUT_ANNOT, outAnnotDatum)
         node.setOutput(self.OUT_ROI, outROIDatum)
 
+    def uichange(self, node):
+        """Fix for Issue #42: changing colour mapping on ROI nodes not working.
+        This is called when the UI changes - typically when we edit the canvas' mapping.
+        Because the canvas mapping determines the OUT_ANNOT output, we need to run children.
+        This gets called from inside the canvas itself, in redisplay(), because display()
+        has set the nodeToUIChange field."""
+        node.graph.changed(node)  # have to run children too!
 
     def getROIDesc(self, node):
         return "no ROI" if node.roi is None else node.roi.details()

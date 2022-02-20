@@ -16,7 +16,7 @@ class TabImage(pcot.ui.tabs.Tab):
         # have to do canvas set up here to handle extreme undo events which change the graph and nodes
         out = self.node.out
         if out is not None:
-            if out.tp == Datum.IMG:
+            if out.isImage():
                 self.w.canvas.setMapping(self.node.mapping)
                 self.w.canvas.setGraph(self.node.graph)
                 self.w.canvas.setPersister(self.node)
