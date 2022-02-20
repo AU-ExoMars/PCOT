@@ -123,9 +123,9 @@ class InputSource(Source):
         inptxt = self.input.brief()
         if isinstance(self.filterOrName, Filter):
             if captionType == 0:  # 0=Position
-                cap = "P" + self.filterOrName.position
+                cap = self.filterOrName.position
             elif captionType == 1:  # 1=Name
-                cap = "N" + self.filterOrName.name
+                cap = self.filterOrName.name
             elif captionType == 2:  # 2=Wavelength
                 cap = int(self.filterOrName.cwl)
             else:

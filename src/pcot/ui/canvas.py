@@ -2,7 +2,7 @@
 import logging
 import math
 import os
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtGui import QImage, QPainter
@@ -13,6 +13,7 @@ import numpy as np
 
 import pcot
 import pcot.ui as ui
+from pcot.datum import Datum
 
 if TYPE_CHECKING:
     from pcot.xform import XFormGraph, XForm
@@ -491,7 +492,9 @@ class Canvas(QtWidgets.QWidget):
     # In the normal case (where the Canvas does the RGB mapping) just call with the image.
     # In the premapped case, call with the premapped RGB image, the source image, and the node.
 
-    def display(self, img: 'ImageCube', alreadyRGBMappedImageSource=None, nodeToUIChange=None):
+    def display(self, img: Union[Datum, 'ImageCube'], alreadyRGBMappedImageSource=None, nodeToUIChange=None):
+        if isinstance(img, Datum):
+            img = img.get(Datum.IMG)    # if we are given a Datum, "unwrap" it
         if self.mapping is None:
             raise Exception(
                 "Mapping not set in ui.canvas.Canvas.display() - should be done in tab's ctor with setMapping()")
