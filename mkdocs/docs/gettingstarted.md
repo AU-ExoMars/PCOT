@@ -121,7 +121,76 @@ input 0, and so on.
 
 ## Manipulating an image
 
-TODO
+Let's perform a simple manipulation on an RGB image. It's not what PCOT
+is for, but it will demonstrate some of the principles without requiring
+actual multispectral data. In this example, we'll generate a "red/green
+slope" image (which is pretty meaningless). 
+
+* Start PCOT and load an image into input 0 as before, by clicking on
+the Input 0 button, selecting RGB and double-clicking on an image file.
+* Double-click on the *input 0* node in the graph - instances of this node
+bring input 0 into the graph.
+* Click on *expr* in the palette (on the right) to create an expression
+evaluation node.
+* Drag a connection from the output of *input 0* to the *a* input
+of *expr*
+* Double-click on the *expr* node to open its tab for editing
+
+We now have an input feeding into an expression evaluator, which we can
+edit. First, let's just see one band.
+Click in the *expr* tab's expression box: this is the box which
+says "Enter expression here...". Enter the string
+
+    a$R
+    
+This says "select band *R* from input *a*" - "R" is the name given to
+the red channel in RGB images (in multispectral images we typically
+use wavelengths on the right-hand side of the ```$``` operator, such as
+```a$640```).
+
+Press "Run" in the node's tab. You should now see a monochrome image in the
+node's canvas: the result of the calculation, containing only the red channel.
+Now change the expression to
+
+    a$R - a$G
+    
+and press "Run". This will set each pixel to the result of subtracting the
+green value for that pixel from the red value, giving us our
+"red/green slope." You will probably see quite a
+mess, because the canvas expects data between 0 and 1 and some of the pixels
+will probably be negative. We need to normalise the image to that range.
+Change the expression to 
+
+    norm(a$R - a$G)
+    
+and press "Run" again to see the final result.
+
+Note that the source indicators in the bottom left of the image are now
+displaying something like
+
+    [0:G&0:R][0:G&0:R][0:G&0:R]
+    
+This indicates that all three RGB channels shown in the canvas are getting
+their data from both the R and G bands of input 0.
+
+## Getting help
+
+### Nodes
+Get help on a node by double-clicking on the little blue box in the top right
+corner of that node in the graph. This text is also available
+in the [automatically generated documentation](/autodocs).
+
+### Expressions
+Doing the above on an *expr* node will tell you what
+operations, functions and properties are available. This text is also
+available in the automatically generated [documentation for this
+node](/autodocs/expr). 
+
+You can also get help on properties and functions by 
+right clicking in the log box at the bottom and selecting the appropriate
+option. Inside the expression box in the *expr* node, you can right-click
+on most things and ask for help.
+
 
 ## Loading a "multiband" image
 
