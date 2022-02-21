@@ -460,7 +460,6 @@ class Parser:
         if name in self.funcRegistry:
             return self.funcRegistry[name].help()
         elif name in self.varRegistry:
-            _, desc = self.varRegistry[name]
             return self.varRegistry[name].help()
         else:
             s = self.listProps(nameToFind=name)
