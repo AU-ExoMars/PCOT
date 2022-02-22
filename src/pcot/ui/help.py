@@ -50,8 +50,8 @@ def getHelpMarkdown(xt, errorState: XFormException = None, inApp=False):
     if len(xt.inputConnectors) > 0:
         s += '\n### Inputs\n'
         t = Table()
-        t.newRow()
         for i in range(0, len(xt.inputConnectors)):
+            t.newRow()
             n, tp, desc = xt.inputConnectors[i]
             t.add('Index', i)
             t.add('Name', "(none)" if n == "" else n)
@@ -62,8 +62,8 @@ def getHelpMarkdown(xt, errorState: XFormException = None, inApp=False):
     if len(xt.outputConnectors) > 0:
         s += '\n### Outputs\n'
         t = Table()
-        t.newRow()
         for i in range(0, len(xt.outputConnectors)):
+            t.newRow()
             n, tp, desc = xt.outputConnectors[i]
             t.add('Index', i)
             t.add('Name', "(none)" if n == "" else n)
