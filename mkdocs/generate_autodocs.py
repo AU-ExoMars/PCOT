@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import pcot
 import os
 import shutil

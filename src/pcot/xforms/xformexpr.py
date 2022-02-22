@@ -17,24 +17,35 @@ class XFormExpr(XFormType):
 
     The four inputs are assigned to the variables a, b, c, and d. They are typically (but not necessarily) images
     or scalar values.
+    
+    The standard operators +,/,\*,- and ^ all have their usual meanings. When applied to images they work in
+    a pixel-wise fashion, so if **a** is an image, **2\*a** will double the brightness. If **b** is also an image,
+    **a+b** will add the two images, pixel by pixel. There are two non-standard operators: **.** for properties
+    and **$** for band extraction. These are described below.
+
 
     ### Image/numeric operators:
-    |operator    |description|
-    |-------|-----------|
-    |*, -, /, +,^  |operate on scalars, images and ROIs (see below for ROIs)|
-    |-A            |element-wise -A|
-    |A.B           |property B of entity A (e.g. a.h is height of image a)|
-    |A$546         |extract single channel image of wavelength 546|
-    |A&B           |element-wise minimum of A and B (Zadeh's AND operator)|
-    |A\|B          |element-wise maximum of A and B (Zadeh's OR operator)|
-    |!A            |element-wise 1-A (Zadeh's NOT operator)|
+    |operator    |description| precedence (higher binds tighter)
+    |-------|-----------|----------------
+    | + | add \[r\] | 10
+    | - | subtract \[r\] | 10
+    | / | divide \[r\] | 20
+    | * | multiply \[r\] | 20
+    | ^ | exponentiate \[r\] | 30
+    |-A            |element-wise -A|50
+    |A.B           |property B of entity A (e.g. a.h is height of image a)|80
+    |A$546         |extract single channel image of wavelength 546|100
+    |A&B           |element-wise minimum of A and B (Zadeh's AND operator)|20
+    |A\|B          |element-wise maximum of A and B (Zadeh's OR operator)|20
+    |!A            |element-wise 1-A (Zadeh's NOT operator)|50
+    
+    The operators marked with \[r\] act on scalars, images and ROIs (see below). Other operators act on scalars and images, with the exception
+    of **.** and **$** which have images on the left-hand side and identifiers or numbers on the right-hand side.
 
     ### ROIs on images in binary operators
     If one of the two images has an ROI, the operation is only performed on that ROI; the remaining image is
     the left-hand side of the operation passed through unchanged. If both images have an ROI, the ROIs must have
     identical bounding boxes (see ops.py:twoImageBinop() ).
-
-
 
     ### Operators on ROIs themselves (as opposed to images with ROIs)
     |operator    |description|
@@ -44,6 +55,14 @@ class XFormExpr(XFormType):
     |a-b |          difference|
 
     You can source ROIs from the "roi" output of ROI nodes, and impose resulting ROIs on images with "importroi" node.
+
+    ### Band extraction
+
+    The notation **$name** or **$wavelength** takes an image on the left-hand
+    side and extracts a single band, generating a new monochrome image. 
+    The right-hand side is either a filter name, a filter position or a
+    wavelength. Depending on the camera, all these could be valid: 
+    **a$780**, **(a+b)$R5_780**, **((a+b)\*2)$780**.
 
     ### Properties
 
