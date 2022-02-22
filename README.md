@@ -31,7 +31,8 @@ The best way to download is this:
 
 * Make sure you have a Github account and membership of the AU-ExoMars group.
 * Open an Anaconda shell window (see below)  
-* If you have an SSH key set up for GitHub, type this command into the shell:
+* If you have an SSH key set up for GitHub, type this command into the shell
+(**changing the repository address if it is different**):
 ```shell
 git clone git@github.com:AU-ExoMars/PCOT.git
 ```
@@ -130,7 +131,7 @@ is not set, the username returned by Python's getpass module is used
 ### Can't start Qt on Linux
 
 This sometimes happens:
-```
+```txt
 qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found.
 This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
 
@@ -138,12 +139,13 @@ Available platform plugins are: eglfs, linuxfb, minimal, minimalegl, offscreen, 
 
 ```
 Try this:
-```
+```bash
 export QT_DEBUG_PLUGINS=1
 pcot
 ```
-and you might see errors like this (I've removed some stuff):
-```
+to run the program again, and look at the output.
+You might see errors like this (I've removed some stuff):
+```txt
 QFactoryLoader::QFactoryLoader() checking directory path "[...]envs/pcot/bin/platforms" ...
 Cannot load library [...]/plugins/platforms/libqxcb.so: (libxcb-xinerama.so.0: cannot open shared object file: No such file or directory)
 QLibraryPrivate::loadPlugin failed on "...[stuff removed].. (libxcb-xinerama.so.0: cannot open shared object file: No such file or directory)"
