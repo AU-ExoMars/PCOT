@@ -142,6 +142,10 @@ class XFormType:
     # all instances of this type in all graphs
     instances: List['XForm']
 
+    ## @var helpwin
+    # an open help window, or None
+    helpwin: Optional['PyQt5.QtWidgets.QMainWindow']
+
     ## @var inputConnectors
     # input connectors, a list of triples (name,connection type name, description)
     ## @var outputConnectors
@@ -171,6 +175,7 @@ class XFormType:
         self.name = name
         self.ver = ver
         self.instances = []
+        self.helpwin = None
         # does this node have an "enabled" button? Change in subclass if reqd.
         self.hasEnable = False
         # this contains tuples of (name,typename). Images have typenames which
@@ -439,9 +444,6 @@ class XForm:
     ## @var outrects
     # output connector rectangles
     outrects: List[Optional['graphscene.GConnectRect']]
-    ## @var helpwin
-    # an open help window, or None
-    helpwin: Optional['PyQt5.QtWidgets.QMainWindow']
     ## @var error
     # error state or None. See XFormException for codes.
     error: Optional[XFormException]
@@ -489,7 +491,6 @@ class XForm:
         self.tabs = []  # no tabs open
         self.current = False
         self.rect = None  # the main GMainRect rectangle
-        self.helpwin = None  # no help window
         self.enabled = True  # a lot of nodes won't use; see XFormType.
         self.hasRun = False  # used to mark a node as already having performed its stuff
         # all nodes have a channel mapping, because it's easier. See docs for that class.

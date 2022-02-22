@@ -177,7 +177,7 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
         delegated to the main window"""
         w = getEventWindow(event)
         if self.helprect.boundingRect().contains(event.pos()):
-            w.openHelp(self.node)
+            w.openHelp(self.node.type, node=self.node)
         else:
             w.openTab(self.node)
 
@@ -189,6 +189,7 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
             togact = m.addAction("Disable" if self.node.enabled else "Enable")
         else:
             togact = None
+        help = m.addAction("Help")
 
         # only worth doing if there are menu items!
         if not m.isEmpty():
@@ -202,6 +203,10 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
                 if changed:
                     self.node.rename(newname)
                     ui.mainwindow.MainUI.rebuildAll()
+            elif action == help:
+                w = getEventWindow(event)
+                w.openHelp(self.node.type, node=self.node)
+
 
 
 class GConnectRect(QtWidgets.QGraphicsRectItem):

@@ -465,11 +465,11 @@ class MainUI(ui.tabs.DockableTabWindow):
         for w in MainUI.windows:
             w.autoRun.setChecked(xform.XFormGraph.autoRun)
 
-    ## open a window showing help for a node
-    def openHelp(self, node):
-        if node.helpwin is not None:
-            node.helpwin.close()  # close existing window you may have left open :)
-        win = HelpWindow(self, node)
+    ## open a window showing help for a node type
+    def openHelp(self, tp, node=None):
+        if tp.helpwin is not None:
+            tp.helpwin.close()  # close existing window you may have left open :)
+        win = HelpWindow(self, tp=tp, node=node)
 
     ## add a macro connector, only should be used on macro prototypes   
     def addMacroConnector(self, tp):

@@ -514,7 +514,7 @@ class PDS4ImageMethodWidget(MethodWidget):
             self.method.dir = res
 
     def helpClicked(self):
-        HelpWindow(self, md=helpText)
+        HelpWindow(self, md=helpText, node=self)
 
     def updateDisplay(self):
         """Change the display to show the 'out' of the method."""

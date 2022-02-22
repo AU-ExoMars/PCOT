@@ -82,24 +82,25 @@ def getHelpHTML(xt, errorState: XFormException = None):
 
 
 class HelpWindow(QtWidgets.QDialog):
-    def __init__(self, parent, node=None, md=None, title=None):
+    def __init__(self, parent, tp=None, md=None, title=None, node=None):
         """Either node or md should be set.
-        - node: the node text for the given node will be shown; title is ignored
-        - md: the markdown will converted to HTML and shown; title should be assigned too."""
+        - tp: the text for the given node type will be shown; title is ignored
+        - md: the markdown will converted to HTML and shown; title should be assigned too.
+        - node: if this is present, a particular node's error will be shown if there is one"""
         super().__init__(parent=parent)
         self.setModal(True)
         self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         layout = QtWidgets.QVBoxLayout(self)
-        if node is not None:
-            node.helpwin = self
-            txt = getHelpHTML(node.type, node.error)
-            self.setWindowTitle(f"Help for '{node.type.name}'")
+        if tp is not None:
+            tp.helpwin = self
+            txt = getHelpHTML(tp, node.error if node is not None else None)
+            self.setWindowTitle(f"Help for '{tp.name}'")
         elif md is not None:
             txt = markdownWrapper(md)
             self.setWindowTitle("Help" if title is None else title)
         else:
-            txt = "<h1>Bad help!</h1><p>No markdown or node provided</p>"
-            logger.error("Bad help - no markdown or node provided")
+            txt = "<h1>Bad help!</h1><p>No markdown or node type provided</p>"
+            logger.error("Bad help - no markdown or node type provided")
         wid = QtWidgets.QTextEdit()
         wid.setReadOnly(True)
         font = QFont("Consolas")

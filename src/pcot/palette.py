@@ -3,7 +3,7 @@ nodes on the right hand side."""
 
 from PyQt5 import QtWidgets, uic, QtCore, QtGui
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QMessageBox, QSizePolicy
+from PyQt5.QtWidgets import QMessageBox, QSizePolicy, QAction
 
 import pcot.macros as macros
 from pcot.xform import XFormType, XFormException
@@ -40,19 +40,29 @@ class PaletteButton(QtWidgets.QPushButton):
 
     def contextMenu(self, e):
         menu = QtWidgets.QMenu()
+        # we only add some of these
+        openProtoAct = QAction("Open prototype")
+        deleteMacroAct = QAction("Delete macro")
+        helpAct = QAction("Help")
+
         if isinstance(self.xformtype, macros.XFormMacro):
-            openProtoAct = menu.addAction("Open prototype")
-            deleteMacroAct = menu.addAction("Delete macro")
-            act = menu.exec_(self.mapToGlobal(e))
-            if act == openProtoAct:
-                ui.mainwindow.MainUI(self.xformtype.doc,
-                                     macro=self.xformtype,
-                                     doAutoLayout=False)
-            elif act == deleteMacroAct:
-                if QMessageBox.question(self.parent(), "Delete macro", "Are you sure?",
-                                        QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
-                    macros.XFormMacro.deleteMacro(self.xformtype)
-                    ui.mainwindow.MainUI.rebuildPalettes()
+            menu.addAction(openProtoAct)
+            menu.addAction(deleteMacroAct)
+        else:
+            menu.addAction(helpAct)
+
+        act = menu.exec_(self.mapToGlobal(e))
+        if act == helpAct:
+            self.view.window.openHelp(self.xformtype)
+        elif act == openProtoAct:
+            ui.mainwindow.MainUI(self.xformtype.doc,
+                                 macro=self.xformtype,
+                                 doAutoLayout=False)
+        elif act == deleteMacroAct:
+            if QMessageBox.question(self.parent(), "Delete macro", "Are you sure?",
+                                    QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                macros.XFormMacro.deleteMacro(self.xformtype)
+                ui.mainwindow.MainUI.rebuildPalettes()
 
     # drag handling: nabbed from
     # https://stackoverflow.com/questions/57224812/pyqt5-move-button-on-mainwindow-with-drag-drop
