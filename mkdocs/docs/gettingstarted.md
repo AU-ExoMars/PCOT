@@ -176,8 +176,14 @@ their data from both the R and G bands of input 0.
 ## Getting help
 
 ### Nodes
-Get help on a node by double-clicking on the little blue box in the top right
-corner of that node in the graph. This text is also available
+Inside the PCOT app there are three ways to get help on a node:
+
+* Double-clicking on the little blue box in the top right
+corner of that node in the graph,
+* Using the right-click context menu on a node,
+* Using the right-click context menu on a button in the palette.
+
+The node help texts are also available
 in the [automatically generated documentation](/autodocs).
 
 ### Expressions
