@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, Any
 
 from pcot import ui
+from pcot.datum import Datum
 from pcot.ui.canvas import Canvas
 
 logger = logging.getLogger(__name__)
@@ -29,9 +30,10 @@ class InputMethod(ABC):
         """Is this method active?"""
         return self.input.isActive(self)
 
-    def readData(self) -> Optional[Any]:
-        """to override - actually runs the input and returns data."""
-        return None
+    @abstractmethod
+    def readData(self) -> Datum:
+        """to override - actually runs the input and returns data. This HAS to be overridden."""
+        pass
 
     def mark(self):
         """About to perform a change, so mark an undo point"""
@@ -59,12 +61,12 @@ class InputMethod(ABC):
         """invalidates the method's cached data"""
         self.data = None
 
-    def get(self):
+    def get(self) -> Datum:
         """returns cached data - if that's None, attempts to read data and cache it."""
         if self.data is None:
             self.input.exception = None
             try:
-                self.data = self.readData()
+                self.data = self.readData()  # this is a method in each subclass
                 if self.data is None:
                     logger.info("CACHE WAS INVALID AND DATA COULD NOT BE READ")
                 else:
