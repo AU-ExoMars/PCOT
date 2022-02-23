@@ -1,8 +1,9 @@
 # Getting started with PCOT
 
-!!! alert-danger ""
-    Be aware that this is very much an early version and there are 
-    no doubt a lot of serious problems!
+@@@ danger
+Be aware that this is very much an early version and there are 
+no doubt a lot of serious problems!
+@@@
         
 ## Introduction to the UI
 

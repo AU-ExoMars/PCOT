@@ -5,8 +5,8 @@ theme:
     custom_dir: theme
 
 markdown_extensions:
-  - admonition
   - lightbox:LightBoxExtension
+  - alert:AlertExtension
   - pymdownx.arithmatex
   - pymdownx.magiclink
   - pymdownx.mark
