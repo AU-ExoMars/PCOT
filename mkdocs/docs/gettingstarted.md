@@ -1,5 +1,9 @@
 # Getting started with PCOT
 
+This page is a gentle introduction to PCOT's user interface elements,
+and will walk you through loading image data and performing some
+simple manipulations.
+
 !!! alert-danger ""
     Be aware that this is very much an early version and there are 
     no doubt a lot of serious problems!
@@ -87,7 +91,7 @@ modify how the RGB channels are mapped using the three source widgets
 as described above. Here, the widgets will just hold "R", "G" and "B"
 as the source band names, because this is an RGB image source.
 
-![!An open RGB input](inputrgb.png)
+![!An open RGB input|inputrgb](inputrgb.png)
 
 
 At the bottom right of the image are three **source indicators**: these
@@ -164,7 +168,8 @@ corner of that node in the graph,
 * Using the right-click context menu on a button in the palette.
 
 The node help texts are also available
-in the [automatically generated documentation](/autodocs).
+in the [automatically generated documentation](/autodocs). If this isn't
+enough, don't hesitate to contact the Aberystwyth team.
 
 ### Expressions
 Doing the above on an *expr* node will tell you what
@@ -177,13 +182,36 @@ right clicking in the log box at the bottom and selecting the appropriate
 option. Inside the expression box in the *expr* node, you can right-click
 on most things and ask for help.
 
+## Other image formats
+
+The examples above use RGB images, which aren't much use for real work.
+Other image formats are available:
+* ENVI images
+* "multiband" images (multiple monochrome PNG images, one per band)
+* PDS4 products (work in progress)
+
+## Loading an ENVI image
+ENVI images consists of a header (.hdr) file and the actual data (.dat) file. Currently PCOT can only load
+ENVI files which are 32-bit floating point, BSQ (band sequential) interleaved. To load ENVI, open an input
+and click the ENVI button. A dialog will appear which is very similar to the [RGB file dialog above](#inputrgb), 
+but showing ENVI header files instead of image files. Double-click on such a file to load its associated data,
+which is assumed to be in the same directory with the same name. Filter name and wavelength information will be taken
+from the file.
 
 ## Loading a "multiband" image
 
-TODO
+Sometimes data is provided as a set of monochrome PNG files, although this is clearly far from ideal.
+In this case we need to tell PCOT how to work out which filter is being used for each file. Again, we open
+the dialog by clicking on an input button and clicking the appropriate method - "Multifile" in this case. This
+will open the ENVI dialog, which is rather more complex than the RGB or ENVI dialogs:
 
-## Other image formats
-
-TODO
+![!An open ENVI input|inputenvi](inputenvi.png)
 
 
+* Click get directory
+* In the new dialog, select a directory containing .hdr and their accompanying .dat files, and click "select folder"
+* A lot of files will appear in the Files box.
+* Select PANCAM or AUPE
+* Write an appropriate pattern if the default is not appropriate
+* Double click images to preview them. If they are dark, select an appropriate multiplier and double-click again.
+* Click in image checkboxes to select them; images will be added to the selected files.

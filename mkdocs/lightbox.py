@@ -36,12 +36,18 @@ class ImagesTreeprocessor(Treeprocessor):
             desc = image.attrib["alt"]
             if self.re.match(desc):
                 desc = desc.lstrip("!")
+                if '|' in desc:
+                    desc,anchor = desc.split('|',2)
+                else:
+                    anchor = None
                 image.set("alt", desc)
                 parent = parent_map[image]
                 ix = list(parent).index(image)
                 top = etree.Element('figure')
                 new_node = etree.SubElement(top,'a')
                 new_node.set("href", image.attrib["src"])
+                if anchor is not None:
+                    new_node.set("name", anchor)
                 new_node.set("data-lightbox",image.attrib["src"])
                 if self.config["show_description_as_inline_caption"]:
                     inline_caption_node = etree.Element('p')
