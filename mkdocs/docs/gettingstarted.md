@@ -4,9 +4,10 @@ This page is a gentle introduction to PCOT's user interface elements,
 and will walk you through loading image data and performing some
 simple manipulations.
 
-!!! alert-danger ""
-    Be aware that this is very much an early version and there are 
-    no doubt a lot of serious problems!
+@@@ danger
+Be aware that this is very much an early version and there are 
+no doubt a lot of serious problems!
+@@@
         
 ## Introduction to the UI
 

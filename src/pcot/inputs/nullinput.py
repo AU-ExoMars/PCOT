@@ -2,6 +2,7 @@
 
 from .inputmethod import InputMethod
 from pcot.ui.inputs import PlaceholderMethodWidget
+from ..datum import Datum
 
 
 class NullInputMethod(InputMethod):
@@ -9,7 +10,8 @@ class NullInputMethod(InputMethod):
         super().__init__(inp)
 
     def readData(self):
-        return None
+        """Here we output a null datum for an image"""
+        return Datum(Datum.IMG, None)
 
     def getName(self):
         return "Null"

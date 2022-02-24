@@ -342,6 +342,9 @@ class Canvas(QtWidgets.QWidget):
         self.roiText = QtWidgets.QLabel('')
         topbar.addWidget(self.roiText, 0, 4)
 
+        self.dimensions = QtWidgets.QLabel('')
+        topbar.addWidget(self.dimensions, 1, 4)
+
         self.topbarwidget.setContentsMargins(0, 0, 0, 0)
         topbar.setContentsMargins(0, 0, 0, 0)
 
@@ -555,6 +558,13 @@ class Canvas(QtWidgets.QWidget):
         else:
             txt = ""
         self.roiText.setText(txt)
+
+        # now image dimensions
+        if self.previmg is None:
+            txt = ""
+        else:
+            txt = f"{self.previmg.w} x {self.previmg.h} x {self.previmg.channels}"
+        self.dimensions.setText(txt)
 
         self.canvas.display(self.previmg, self.isPremapped, showROIs=self.persister.showROIs)
 
