@@ -183,7 +183,7 @@ right clicking in the log box at the bottom and selecting the appropriate
 option. Inside the expression box in the *expr* node, you can right-click
 on most things and ask for help.
 
-## Other image formats
+## Loading different image formats
 
 The examples above use RGB images, which aren't much use for real work.
 Other image formats are available:
@@ -191,7 +191,7 @@ Other image formats are available:
 * "multiband" images (multiple monochrome PNG images, one per band)
 * PDS4 products (work in progress)
 
-## Loading an ENVI image
+### Loading an ENVI image
 ENVI images consists of a header (.hdr) file and the actual data (.dat) file. Currently PCOT can only load
 ENVI files which are 32-bit floating point, BSQ (band sequential) interleaved. To load ENVI, open an input
 and click the ENVI button. A dialog will appear which is very similar to the [RGB file dialog above](#inputrgb), 
@@ -199,7 +199,7 @@ but showing ENVI header files instead of image files. Double-click on such a fil
 which is assumed to be in the same directory with the same name. Filter name and wavelength information will be taken
 from the file.
 
-## Loading a "multiband" image
+### Loading a "multiband" image
 
 Sometimes data is provided as a set of monochrome PNG files, although this is clearly far from ideal.
 In this case we need to tell PCOT how to work out which filter is being used for each file. Again, we open
@@ -208,11 +208,33 @@ will open the ENVI dialog, which is rather more complex than the RGB or ENVI dia
 
 ![!An open ENVI input|inputenvi](inputenvi.png)
 
+The procedure here is roughly this:
 
-* Click get directory
-* In the new dialog, select a directory containing .hdr and their accompanying .dat files, and click "select folder"
+* Make sure the file names contain the the lens (left or right) as L or R,
+and the filter position number.
+* Work out a regular expression which can find these in the file name.
+Hopefully you can just use the default, which assumes that the filename 
+contains a string like ```LWAC01``` for left lens, position 01; or
+```RWAC10``` for right lens, position 10. If your filenames don't have this
+format and it's too difficult to rename them, you'll have to write
+an RE yourself or find a handy IT person to help.
+* Get the files into a single directory and open the input dialog as shown
+above.
+* Determine which camera configuration - PANCAM or AUPE - produced the
+images and set the Camera option accordingly. These two setups use
+different filter sets, and will translate filter positions into different
+filter wavelengths and names.
+* Click the "Get Directory" button.
+* In the new dialog, select a directory containing the ENVI .hdr files and
+their accompanying .dat files, and click "Select Folder".
 * A lot of files will appear in the Files box.
-* Select PANCAM or AUPE
-* Write an appropriate pattern if the default is not appropriate
-* Double click images to preview them. If they are dark, select an appropriate multiplier and double-click again.
-* Click in image checkboxes to select them; images will be added to the selected files.
+* Double-click images to preview them as a single channel.
+If they are dark, select an appropriate multiplier and double-click again.
+* Click in image checkboxes to select them; selected images will be combined into a single multispectral mage.
+
+Close the dialog when you have the selected images you want. It might be a good idea to create an *input* node
+to examine the resulting multispectral image.
+
+### PDS4 products
+
+This is very much work in progress - please contact the developers if you need this functionality soon.
