@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 
+{% block site_meta %}
+    {{ super() }}
+    <meta name="robots" content="noindex,nofollow">
+{% endblock site_meta %}
+
 {% block styles %}
     {{ super() }}
     <link rel="stylesheet" href="{{ base_url }}/css/lightbox.min.css">
