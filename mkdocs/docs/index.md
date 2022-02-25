@@ -1,4 +1,4 @@
-# PCOT - the Pancam Operations Toolkit
+# PCOT - the PanCam Operations Toolkit
 
 PCOT is a Python program and library which allows users to manipulate 
 multispectral images and other data from the ExoMars *Rosalind Franklin* rover.

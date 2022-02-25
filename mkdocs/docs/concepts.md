@@ -2,7 +2,7 @@
 
 **How PCOT works (and why)**
 
-PCOT is a tool designed to help scientists and engineers analyse PANCAM data
+PCOT is a tool designed to help scientists and engineers analyse PanCam data
 and produce useful secondary data. It acts downstream from the ROCC on images
 which have already been processed to some extent, and is a successor to
 ExoSpec. As such, its primary purpose is to generate relative reflectance
@@ -11,16 +11,16 @@ to produce spectra from small regions of interest. Indeed, it should
 be flexible enough to perform a wide range of unforeseen calculations.
 
 Of paramount importance is the verifiability and reproducibility of data
-generated from PCOT. To this end, a PCOT document fully describes how
-the data was generated, from the initial import to the final output.
-Users can exchange PCOT documents in addition to, or instead of, the
-generated images or data.
+generated from PCOT. To this end, a PCOT document is a data product which can
+be shared between users, which also fully describes how the data was generated
+from the initial import to the final output. Users are encouraged to exchange
+PCOT documents in addition to, or instead of, the generated images or data.
 
 ## The Graph
 
 To achieve this, a PCOT document manipulates data in a graph - a network of
-nodes, each of which takes some data, works on it, perhaps (usually) displays
-something, and perhaps outputs some derived data. 
+nodes, each of which takes some data, works on it, perhaps displays some
+data, and perhaps outputs derived data. 
 Technically speaking, this is a "directed acyclic graph": each connection
 has a direction, going from the output of one node to the input
 of another, and there can't be any loops.
@@ -40,9 +40,10 @@ Here's what each node in the graph is doing:
 
 * The *input 3* node reads input number 3 into the graph. The inputs are set up separately from the graph,
 and can be multispectral images or other data (e.g. housekeeping) from outside PCOT.
-* The *rect* node lets the user draw a rectangle on the image (this is done inside a tab) to define a region of interest. Images
-can have many regions of interest.
-* The node with 4 inputs *a,b,c,d* is an *expr* node, which is showing the expression it is running: ```norm(a$671 / a$438)```.
+* The *rect* node lets the user draw a rectangle on the image to define a region of interest. Images
+can have many regions of interest and several different kinds are available.
+* The node with 4 inputs *a,b,c,d* is an *expr* node, which 
+calculates the result of a mathematical expression performed on each pixel. The node is showing the expression it is running: ```norm(a$671 / a$438)```.
 This will read the bands whose wavelengths are 671nm and 438nm in the node's *a* input, and find their ratio for every pixel.
 It will then normalise the result
 to the range [0,1]. The result will be a single-band image. *Expr* nodes can perform much more complex calculations than this.
@@ -51,8 +52,9 @@ to the range [0,1]. The result will be a single-band image. *Expr* nodes can per
 * Finally, the *inset* node will inset this RGB image into an RGB representation of the original image - the mapping of bands in
 that image onto RGB is done in the *input* node. A label can be added here.
 
-Of course, if you feel the gradient is rather artificial, the inset can be a just the original band ratio image expanded to RGB 
-greyscale using another *expr* node:
+Of course, if you feel the gradient is rather artificial, the inset can just
+be the original band ratio image expanded to RGB greyscale using another
+*expr* node:
 
 ![!Using a greyscale inset](671438grey.png)
 
@@ -82,3 +84,5 @@ operations to be performed on inputs, as shown above.
 * **Macros** - these are sets of nodes which can be used multiple times and
 appear as single nodes in the graph, although each one has its own "private"
 graph. Currently very experimental (and largely undocumented).
+
+Move on to [Getting Started](/gettingstarted)
