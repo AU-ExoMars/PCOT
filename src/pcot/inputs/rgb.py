@@ -44,7 +44,7 @@ class RGBInputMethod(InputMethod):
     def readData(self):
         if self.img is None and self.fname is not None:
             self.loadImg()
-        return None if self.img is None else Datum(Datum.IMG, self.img)
+        return Datum(Datum.IMG, self.img)
 
     def getName(self):
         return "RGB"

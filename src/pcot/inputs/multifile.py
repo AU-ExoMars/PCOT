@@ -112,9 +112,9 @@ class MultifileInputMethod(InputMethod):
         # assemble the images - cv.merge can cope with non-3 channels
         if len(imgs) > 0:
             img = cv.merge(imgs)
+            img = ImageCube(img * self.mult, self.mapping, MultiBandSource(sources))
         else:
-            return None  # no image
-        img = ImageCube(img * self.mult, self.mapping, MultiBandSource(sources))
+            img = None
         return Datum(Datum.IMG, img)
 
     def getName(self):

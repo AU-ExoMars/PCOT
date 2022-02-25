@@ -24,7 +24,7 @@ class XformStripROI(XFormType):
     def init(self, node):
         # The tab requires an "out" field which contains a Datum.
         # This starts out as a "null datum" for an image.
-        node.out = Datum(Datum.IMG, None)
+        node.out = Datum.null
 
     def perform(self, node):
         # when we run the node, we get the node's only input - an image.

@@ -80,9 +80,9 @@ def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: Optional[T
     if outType is not None and outType != Datum.IMG and (a.isImage() or b.isImage()):
         raise BinopException('Output type must be image if either input is image')
 
-    if a.isImage() and a.val is None:
+    if a.isImage() and a.isNone():
         raise BinopException("Cannot perform binary operation on None image")
-    if b.isImage() and b.val is None:
+    if b.isImage() and b.isNone():
         raise BinopException("Cannot perform binary operation on None image")
 
     if a.isImage() and b.isImage():

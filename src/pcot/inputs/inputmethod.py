@@ -22,7 +22,7 @@ class InputMethod(ABC):
     def __init__(self, inp):
         self.input = inp
         self.name = ''
-        self.data = None
+        self.data = Datum.null
         Canvas.initPersistData(self)  # creates data inside the canvas
         self.showROIs = False  # used by the canvas
 
@@ -32,7 +32,8 @@ class InputMethod(ABC):
 
     @abstractmethod
     def readData(self) -> Datum:
-        """to override - actually runs the input and returns data. This HAS to be overridden."""
+        """to override - actually runs the input and returns data. Do not call from anywhere but get().
+        This HAS to be overridden."""
         pass
 
     def mark(self):
@@ -59,15 +60,17 @@ class InputMethod(ABC):
 
     def invalidate(self):
         """invalidates the method's cached data"""
-        self.data = None
+        self.data = Datum.null
 
     def get(self) -> Datum:
         """returns cached data - if that's None, attempts to read data and cache it."""
         if self.data is None:
+            raise Exception("input methods should not return None from readData(), ever.")
+        if self.data.isNone():   # data is none, try to read it and cache it
             self.input.exception = None
             try:
                 self.data = self.readData()  # this is a method in each subclass
-                if self.data is None:
+                if self.data.isNone():  # it's still not there
                     logger.info("CACHE WAS INVALID AND DATA COULD NOT BE READ")
                 else:
                     logger.info("CACHE WAS INVALID, DATA HAS BEEN READ")
@@ -106,7 +109,7 @@ class InputMethod(ABC):
         """
         return None
 
-    ## to override - sets this method's data from JSON-read data
     def deserialise(self, data, internal):
+        """to override - sets this method's data from JSON-read data"""
         raise Exception("InputMethod does not have a deserialise method")
 

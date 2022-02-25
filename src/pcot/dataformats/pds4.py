@@ -10,7 +10,8 @@ from pcot.filters import Filter
 
 class PDS4Product:
     """A general purpose class for PDS4 products. Subclasses need to be dataclass objects so that the tricks
-    in the serialisation work."""
+    in the serialisation work.
+    Does not store the actual data! Just label information and metadata."""
 
     def __init__(self):
         self.lid = None     # there's always a LID.

@@ -218,21 +218,17 @@ class PDS4InputMethod(InputMethod):
         logger.debug("readData")
         self.loadData()
         # this will need to be changed once we can output different data types
-        if self.out is None:
-            return None
-        else:
-            if isinstance(self.out, ImageCube):
-                return Datum(Datum.IMG, self.out)
-            else:
-                raise Exception(f"bad data type being output from PDS4: {type(self.out)}")
+        if self.out is not None and not isinstance(self.out, ImageCube):
+            raise Exception(f"bad data type being output from PDS4: {type(self.out)}")
+        return Datum(Datum.IMG, self.out) # self.out could be None, of course.
 
     def getName(self):
         return "PDS4"
 
     def set(self, *args):
         """used from external code"""
-        raise NotImplementedError  # TODO
         self.mapping = ChannelMapping()
+        raise NotImplementedError  # TODO
 
     def createWidget(self):
         return PDS4ImageMethodWidget(self)

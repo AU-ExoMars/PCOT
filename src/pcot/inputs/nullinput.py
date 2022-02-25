@@ -10,8 +10,8 @@ class NullInputMethod(InputMethod):
         super().__init__(inp)
 
     def readData(self):
-        """Here we output a null datum for an image"""
-        return Datum(Datum.IMG, None)
+        """Here we output a null datum"""
+        return Datum.null
 
     def getName(self):
         return "Null"

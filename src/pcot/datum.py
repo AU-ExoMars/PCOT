@@ -54,8 +54,11 @@ class Datum(SourcesObtainable):
 
         # these types are not generally used for connections, but for values on the expression evaluation stack
         IDENT := Type("ident", internal=True),
-        FUNC := Type("func", internal=True)
+        FUNC := Type("func", internal=True),
+        NONE := Type("none", internal=True)  # for neither connections nor the stack - a null value
     ]
+
+    null = None  # gets filled in later with a null datum (i.e. type is NONE) that we can use
 
     def __init__(self, t: Type, v: Any, sources: Optional[SourcesObtainable] = None):
         """create a datum given the type and value. No type checking is done!
@@ -69,7 +72,9 @@ class Datum(SourcesObtainable):
         self.val = v
 
         if sources is None:
-            if not self.isImage():
+            if self.isNone():
+                sources = nullSource
+            elif not self.isImage():
                 raise XFormException("CODE", "Datum objects which are not images must have an explicit source set")
             elif self.val is not None:
                 sources = self.val.sources
@@ -80,6 +85,10 @@ class Datum(SourcesObtainable):
     def isImage(self):
         """Is this an image of some type?"""
         return self.tp.image
+
+    def isNone(self):
+        """is this a null datum? Doesn't matter what the type is."""
+        return self.val is None
 
     def get(self, tp):
         """get data field or None if type doesn't match."""
@@ -96,10 +105,14 @@ class Datum(SourcesObtainable):
         return self.sources.getSources()
 
 
+# a handy null datum object
+Datum.null = Datum(Datum.NONE, None)
+
 ## complete list of all types, which also assigns them to values (kind of like an enum)
 
 # lookup by name for serialisation
 _typesByName = {t.name: t for t in Datum.types}
+
 
 
 def deserialise(n):
