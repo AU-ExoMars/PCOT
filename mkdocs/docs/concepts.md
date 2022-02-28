@@ -85,4 +85,13 @@ operations to be performed on inputs, as shown above.
 appear as single nodes in the graph, although each one has its own "private"
 graph. Currently very experimental (and largely undocumented).
 
+@@@ primary
+**Important**
+
+The data being sent out of the inputs into the graph is saved
+and loaded with the document, so the original source data does not need
+to be stored - you can send the document to someone and it will still work
+even if they don't have the sources.
+@@@
+
 Move on to [Getting Started](/gettingstarted)
