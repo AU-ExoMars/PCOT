@@ -26,11 +26,12 @@ class ROI(SourcesObtainable):
     """definition of base type for regions of interest - this is useful in itself
     because it defines an ROI consisting of a predefined BB and mask."""
 
-    def __init__(self, bbrect: Rect = None, maskimg: np.array = None):
+    def __init__(self, tpname, bbrect: Rect = None, maskimg: np.array = None):
         """Ctor. ROIs have a label, which is used to label data in nodes like 'spectrum' and appears in annotations"""
         self.label = None
         self.bbrect = bbrect
         self.maskimg = maskimg
+        self.tpname = tpname  # subtype name (e.g. 'rect', 'poly')
 
         self.labeltop = False  # draw the label at the top?
         self.colour = (1, 1, 0)  # annotation colour
@@ -142,6 +143,8 @@ class ROI(SourcesObtainable):
                            bg=bg)
 
     def serialise(self):
+        if self.tpname == 'tmp':
+            raise Exception("attempt to serialise a temporary ROI")
         return serialiseFields(self, ROISERIALISEFIELDS)
 
     def deserialise(self, d):
@@ -169,7 +172,7 @@ class ROI(SourcesObtainable):
                 roimask = r.mask()
                 # add it at that position
                 mask[y:y + rh, x:x + rw] |= roimask
-            return ROI(bb, mask)
+            return ROI('tmp', bb, mask)  # should not be saved
         else:
             # return a null ROI
             return None
@@ -200,7 +203,7 @@ class ROI(SourcesObtainable):
             workMask[y:y + rh, x:x + rw] = roimask
             # and AND the mask by the work mask.
             mask &= workMask
-        return ROI(bb, mask)
+        return ROI('tmp', bb, mask)
 
     def clipToImage(self, img: ndarray):
         # clip the ROI to the image. If it doesn't require clipping, just returns the ROI. If it does,
@@ -221,7 +224,7 @@ class ROI(SourcesObtainable):
             # and make the new mask
             mask = self.mask()[maskY:maskY + intersect.h, maskX:maskX + intersect.w]
             # construct the ROI.
-            return ROI(intersect, mask)
+            return ROI('tmp', intersect, mask)  # should never be saved
         else:
             return None
 
@@ -259,7 +262,7 @@ class ROI(SourcesObtainable):
         workMask[y:y + rh, x:x + rw] = roimask
         mask &= ~workMask
 
-        return ROI(bb, mask)
+        return ROI('tmp', bb, mask)
 
     def __mul__(self, other):
         return self.roiIntersection([self, other])
@@ -285,7 +288,7 @@ class ROI(SourcesObtainable):
 
 class ROIRect(ROI):
     def __init__(self):
-        super().__init__()
+        super().__init__('rect')
         self.x = -1
         self.y = 0
         self.w = 0
@@ -338,7 +341,7 @@ class ROICircle(ROI):
     """A simple circular ROI designed for use with multidot regions"""
 
     def __init__(self, x=-1, y=0, r=0):
-        super().__init__()
+        super().__init__('circle')
         self.x = int(x)
         self.y = int(y)
         self.r = int(r)
@@ -388,7 +391,7 @@ def getRadiusFromSlider(sliderVal, imgw, imgh, scale=1.0):
 class ROIPainted(ROI):
     # we can create this ab initio or from a subimage mask of an image.
     def __init__(self, mask=None, label=None):
-        super().__init__()
+        super().__init__('painted')
         self.label = label
         if mask is None:
             self.bbrect = None
@@ -496,7 +499,7 @@ class ROIPainted(ROI):
 
 class ROIPoly(ROI):
     def __init__(self):
-        super().__init__()
+        super().__init__('poly')
         self.imgw = None
         self.imgh = None
         self.points = []
@@ -621,3 +624,17 @@ class ROIPoly(ROI):
             return "ROI-POLY (no points)"
         x, y, w, h = self.bb()
         return "ROI-POLY {} {} {}x{}".format(x, y, w, h)
+
+
+def deserialise(self, tp, d):
+    """Not to be confused with ROI.deserialise(). This deserialises an serialised ROI datum given its type"""
+    if tp == 'rect':
+        return ROIRect.deserialise(d)
+    elif tp == 'circle':
+        return ROICircle.deserialise(d)
+    elif tp == 'painted':
+        return ROIPainted.deserialise(d)
+    elif tp == 'poly':
+        return ROIPoly.deserialise(d)
+    else:
+        raise Exception(f"cannot deserialise ROI type '{tp}'")

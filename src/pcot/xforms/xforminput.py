@@ -23,11 +23,10 @@ class XFormInput(XFormType):
         # the input.
         inp = node.graph.doc.inputMgr.inputs[self.idx]
         out = inp.get()
-        if out is None:
+        if out.isNone():
             # if the input is None, and it's not the Null input, set an error state (but not an exception)
             if inp.activeMethod != pcot.inputs.Input.NULL:
                 node.setError(XFormException('DATA', 'input node could not read data - {}'.format(inp.exception)))
-            out = Datum.null
         elif out.isImage():
             # if it's an image, we make a copy for just this one input node.
             out = Datum(Datum.IMG, out.val.copy())

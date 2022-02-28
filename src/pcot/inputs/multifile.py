@@ -83,7 +83,12 @@ class MultifileInputMethod(InputMethod):
             if self.files[i] is not None:
                 # we use the relative path here, it's more right that using the absolute path
                 # most of the time.
-                path = os.path.relpath(os.path.join(self.dir, self.files[i]))
+                # CORRECTION: but it doesn't work if no relative paths exists (e.g. different drives)
+                try:
+                    path = os.path.relpath(os.path.join(self.dir, self.files[i]))
+                except ValueError:
+                    path = os.path.abspath(os.path.join(self.dir, self.files[i]))
+
                 # build sources data : filename and filter name
                 filtpos = self.getFilterName(path)   # says name, but usually is the position.
                 filt = getFilterByPos(filtpos, self.camera == 'AUPE')

@@ -4,7 +4,7 @@ and each input will know how to generate useful information from that source.
 """
 import math
 from abc import ABC, abstractmethod
-from typing import Optional, List, Set, SupportsFloat, Union, Iterable
+from typing import Optional, List, Set, SupportsFloat, Union, Iterable, Any, Tuple
 
 from pcot.dataformats.pds4 import PDS4Product
 from pcot.filters import Filter
@@ -56,6 +56,11 @@ class Source(SourcesObtainable):
         """Return a longer text, possibly with line breaks"""
         pass
 
+    @abstractmethod
+    def serialise(self) -> Tuple[str, Any]:
+        """return type and serialisation data - deserialisation is done in SourceSet"""
+        pass
+
 
 class _NullSource(Source):
     """This is for "sources" where there isn't a source, the data has come from inside the program.
@@ -68,11 +73,15 @@ class _NullSource(Source):
         return None
 
     def long(self) -> Optional[str]:
+        """See above - None gets filtered out of text information"""
         return None
 
     def copy(self):
         """not actually a copy, but this is immutable anyway"""
         return self
+
+    def serialise(self):
+        return 'nullsource', None
 
 
 class InputSource(Source):
@@ -92,7 +101,7 @@ class InputSource(Source):
         self.filterOrName = filterOrName
         self.doc = doc
         self.inputIdx = inputIdx
-        self.input = self.doc.inputMgr.inputs[inputIdx]
+        self.input = doc.inputMgr.inputs[inputIdx]
         self.pds4 = pds4
         # this is used for hashing and equality - should be the same for two identical sources
         filtID = self.filterOrName.cwl if isinstance(self.filterOrName, Filter) else self.filterOrName
@@ -165,6 +174,23 @@ class InputSource(Source):
                     return False
         return True
 
+    def serialise(self):
+        # deserialisation is done in SourceSet
+
+        if isinstance(self.filterOrName,Filter):
+            filtorname = ('filter', self.filterOrName.serialise())
+        elif isinstance(self.filterOrName, str):
+            filtorname = ('name', self.filterOrName)
+        else:
+            raise Exception(f"cannot serialise a {type(self.filterOrName)} as a filter")
+
+        d = {
+            'filtorname': filtorname,
+            'inputidx': self.inputIdx,
+            'pds4': None if self.pds4 is None else self.pds4.serialise()
+        }
+        return 'inputsource', d
+
 
 class SourceSet(SourcesObtainable):
     """This is a combination of sources which have produced a single-band datum - could be a band of an
@@ -224,6 +250,33 @@ class SourceSet(SourcesObtainable):
 
     def getSources(self):
         return self
+
+    def serialise(self):
+        # store each source in set with its type, as a list of tuples
+        return [x.serialise() for x in self.sourceSet]
+
+    @classmethod
+    def deserialise(cls, lst, document) -> 'SourceSet':
+        out = []
+        for tp,d in lst:
+            if tp == 'nullsource':
+                v = nullSource
+            elif tp == 'inputsource':
+                pds4 = None if d['pds4'] is None else PDS4Product.deserialise(d['pds4'])
+                forntype, filtdata = d['filtorname']
+                if forntype == 'filter':
+                    filt = Filter.deserialise(filtdata)
+                else:
+                    filt = filtdata
+
+                v = InputSource(document,
+                                d['inputidx'],
+                                filt,
+                                pds4)
+            else:
+                raise Exception(f"Bad type in sourceset serialisation data: {tp}")
+            out.append(v)
+        return cls(out)
 
 
 class MultiBandSource(SourcesObtainable):
@@ -294,6 +347,14 @@ class MultiBandSource(SourcesObtainable):
         """Merge all the bands' source sets into a single set (used in, for example, making a greyscale
         image, or any calculation where all bands have input)"""
         return set().union(*[s.sourceSet for s in self.sourceSets])
+
+    def serialise(self):
+        return [x.serialise() for x in self.sourceSets]
+
+    @classmethod
+    def deserialise(cls, lst, document):
+        lst = [SourceSet.deserialise(x, document) for x in lst]
+        return cls(lst)
 
 
 # use these to avoid the creation of lots of identical objects

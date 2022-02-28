@@ -9,6 +9,8 @@ These types are also used by the expression evaluator.
 import logging
 from typing import Any, Optional
 
+from pcot import rois
+from pcot.imagecube import ImageCube
 from pcot.sources import SourcesObtainable, nullSource
 
 logger = logging.getLogger(__name__)
@@ -104,6 +106,45 @@ class Datum(SourcesObtainable):
         """Get the full source set as an actual single set, unioning all SourceSets within."""
         return self.sources.getSources()
 
+    def serialise(self):
+        """Serialise for saving to a file, usually (always?) as the cached value of an input"""
+        if self.tp == Datum.IMG:
+            return 'img', self.val.serialise()
+        elif self.tp == Datum.IMGRGB:
+            return 'imgr', self.val.serialise()
+        elif self.tp == Datum.NUMBER:
+            return 'num', (self.val, self.val.sources.getSources().serialise())
+        elif self.tp == Datum.ROI:
+            # getsources here to ensure that everything is turned into SourceSet
+            return 'roi', (self.val.tpname, self.val.serialise(), self.val.sources.getSources().serialise())
+        elif self.tp == Datum.NONE:
+            return 'none', None
+        else:
+            raise Exception(f"Datum type {self.tp} is not yet serialisable")
+
+    @classmethod
+    def deserialise(cls, data, document):
+        """inverse of serialise for serialised data 'd' - requires document so that sources can be
+        reconstructed for images"""
+        tp, d = data     # unpack the tuple
+        if tp == 'img':
+            img = ImageCube.deserialise(d, document)
+            return cls(Datum.IMG, img)
+        elif tp == 'imgr':
+            img = ImageCube.deserialise(d, document)
+            return cls(Datum.IMGRGB, img)
+        elif tp == 'num':
+            n, s = d
+            return cls(Datum.NUMBER, n, s)
+        elif tp == 'roi':
+            roitype, roidata, s = d
+            roi = rois.deserialise(roidata)
+            return cls(Datum.ROI, roi, s)
+        elif tp == 'none':
+            return Datum.null
+        else:
+            raise Exception(f"Unable to deserialise Datum type {tp}")
+
 
 # a handy null datum object
 Datum.null = Datum(Datum.NONE, None)
@@ -112,7 +153,6 @@ Datum.null = Datum(Datum.NONE, None)
 
 # lookup by name for serialisation
 _typesByName = {t.name: t for t in Datum.types}
-
 
 
 def deserialise(n):

@@ -7,8 +7,6 @@ from .nullinput import NullInputMethod
 from .rgb import RGBInputMethod
 from .pds4input import PDS4InputMethod
 
-from pcot.imagecube import ImageCube
-
 from pcot.ui.inputs import InputWindow
 from ..datum import Datum
 
@@ -106,8 +104,20 @@ class Input:
         Done by producing a dict of lists of two elements: input type and input data.
         If 'internal' is set, images and cached images will also be stored - this is used
         to speed up undo/redo operations; we don't want them reloading data."""
+
+        # if we are saving to a file, actually save the input data too. We don't want to do
+        # this when we are doing an internal (undo) serialise because the data there is 'saved'
+        # internally as simple references to the objects; this is done in the methods. Note that
+        # we only save the active method's data in the external (save to file) case.
+
+        if not internal:
+            activeData = self.get().serialise()  # returns Datum
+        else:
+            activeData = None
+
         out = {'active': self.activeMethod,
-               'methods': [[type(x).__name__, x.serialise(internal)] for x in self.methods]
+               'methods': [[type(x).__name__, x.serialise(internal)] for x in self.methods],
+               'activeData': activeData
                }
         return out
 
@@ -128,6 +138,13 @@ class Input:
             m = methodsByName[name]
             m.deserialise(data, internal)
 
+        if 'activeData' in d and d['activeData'] is not None:
+            # if this was an external save, there will be an actual Datum here we can use - until
+            # a method changes!
+            data = Datum.deserialise(d['activeData'], self.mgr.doc)
+            # and set this datuerm in the active method
+            self.methods[self.activeMethod].data = data
+
     def createMethod(self, name, data=None):
         """create a method given its type name, and initialise it with some data. Currently unused."""
         klass = globals()[name]  # get type by name. Lawks!
@@ -139,7 +156,7 @@ class Input:
 
     def __str__(self):
         """string for internal use only"""
-        return "InputManager-active-{}".format(self.activeMethod)
+        return f"Input-{self.idx}-active-{self.activeMethod}"
 
     def brief(self):
         """string for use in captions, etc."""

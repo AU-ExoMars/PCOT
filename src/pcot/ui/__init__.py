@@ -58,9 +58,9 @@ def warn(s):
 
 ## log an XFormException
 def logXFormException(node, e):
-    error("Exception in {}: {}".format(node.name, e))
+    error(f"Exception in {node.name}-{node.type.name}: {e}")
     if app() is not None:
-        log('<font color="red">Exception in <b>{}</b>: </font> {}'.format(node.name, e))
+        log(f'<font color="red">Exception in <b>{node.name}:{node.type.name}</b>: </font> {e}')
         print(traceback.format_exc())
 
 

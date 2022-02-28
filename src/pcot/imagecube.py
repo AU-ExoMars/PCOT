@@ -19,6 +19,7 @@ from pcot.utils.geom import Rect
 
 logger = logging.getLogger(__name__)
 
+
 class SubImageCubeROI:
     """This is a class representing the parts of an imagecube which are covered by ROIs or an ROI.
     It consists of
@@ -478,3 +479,21 @@ class ImageCube(SourcesObtainable):
 
     def getSources(self):
         return self.sources.getSources()
+
+    def serialise(self):
+        """Used to serialise imagecube Datums for serialisation of inputs when saving to a file"""
+        return {
+            'data': self.img,
+            'mapping': self.mapping.serialise(),
+            'defmapping': self.defaultMapping.serialise() if self.defaultMapping else None,
+            'sources': self.sources.serialise()
+        }
+
+    @classmethod
+    def deserialise(cls, d, document):
+        """Inverse of serialise(), requires a document to get the inputs"""
+        data = d['data']    # should already have been converted into an ndarray
+        mapping = ChannelMapping.deserialise(d['mapping'])
+        defmapping = None if d['defmapping'] is None else ChannelMapping.deserialise(d['defmapping'])
+        sources = MultiBandSource.deserialise(d['sources'], document)
+        return cls(data, rgbMapping=mapping, sources=sources, defaultMapping=defmapping)

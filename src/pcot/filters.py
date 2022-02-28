@@ -23,7 +23,7 @@ class Filter:
     # index in array, used for certain visualisations (e.g. PDS4 timeline)
     idx: int
 
-    def __init__(self, cwl, fwhm, transmission, position=None, name=None, camera=None):
+    def __init__(self, cwl, fwhm, transmission, position=None, name=None, camera=None, idx=0):
         """constructor"""
         self.cwl = cwl
         self.fwhm = fwhm
@@ -32,13 +32,23 @@ class Filter:
         self.position = position
         # typically set later
         self.camera = camera
-        self.idx = 0
+        self.idx = idx
 
+    def serialise(self):
+        """serialise for when sources are saved as part of saving an input in a file"""
+        return self.cwl, self.fwhm, self.transmission, self.position, \
+               self.name, self.camera, self.idx
+
+    @classmethod
+    def deserialise(self, d):
+        cwl, fwhm, trans, pos, name, cam, idx = d
+        return Filter(cwl, fwhm, trans, pos, name, cam, idx)
 
     @staticmethod
     def _gaussian(x, mu, fwhm):
         """calculate the value of a normal distribution at x, where mu is the mean
         and fwhm is full width at half max."""
+
         def fwhm_to_sigma(fwhm_):
             return fwhm_ / (2 * math.sqrt(2 * math.log(2)))  # ~= 2.35482
 
@@ -162,7 +172,6 @@ AUPE_FILTERS = [
 for i, x in enumerate(AUPE_FILTERS):
     x.camera = 'AUPE'
     x.idx = i
-
 
 ## dummy filter for when we have trouble finding the value
 DUMMY_FILTER = Filter(0, 0, 0, "??", "??", camera='PANCAM')

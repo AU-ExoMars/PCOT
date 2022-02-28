@@ -18,7 +18,7 @@ class PDS4Product:
         pass
 
     def serialise(self) -> Dict:
-        """Serialise the product into a dictionary"""
+        """Serialise the product info into a dictionary"""
         pass
 
     @classmethod
