@@ -28,7 +28,8 @@ These pages are useful when you are getting started:
 
 Other information
 
-* [Automatically generated documentation](autodocs/index.md) for XForms (nodes) and *expr* functions/properties
+* [Automatically generated documentation](autodocs/index.md) for nodes and
+*expr* functions/properties
 * [The README.md file from the repository](github.md) which contains
 (among other things) details on how to install from source.
 

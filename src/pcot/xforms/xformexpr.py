@@ -38,9 +38,28 @@ class XFormExpr(XFormType):
     |A&B           |element-wise minimum of A and B (Zadeh's AND operator)|20
     |A\|B          |element-wise maximum of A and B (Zadeh's OR operator)|20
     |!A            |element-wise 1-A (Zadeh's NOT operator)|50
+
+    All operators can act on images and scalars (numeric values),
+    with the exception of **.** and **$** which have images on the left-hand side and identifiers
+    or integers on the right-hand side.
+    Those operators marked with \[r\] can also act on pairs of ROIs (regions of interest, see below).
     
-    The operators marked with \[r\] act on scalars, images and ROIs (see below). Other operators act on scalars and images, with the exception
-    of **.** and **$** which have images on the left-hand side and identifiers or numbers on the right-hand side.
+    ### Binary operations on image pairs
+    These act by performing the binary operation on the two underlying Numpy arrays. This means you may need to be
+    careful about the ordering of the bands in the two images, because they will simply be operated on in the order
+    they appear.
+    
+    For example, consider adding two images $a$ and $b$ with the same bands in a slightly different order:
+
+    | image *a* | image *b* | result of addition |
+    |---------|----------|---------------|
+    | 480nm | 480nm | sum of 480nm bands |
+    | 500nm | 500nm | sum of 500nm bands |
+    | 610nm | 670nm | *a*'s 610nm band plus *b*'s 670nm band ||
+    | 670nm | 610nm | copy of previous band (addition being commutative) |
+    
+    This probably isn't what you wanted. Note that this is obviously not an issue when an operation is being performed
+    on bands in a single image.
 
     ### ROIs on images in binary operators
     If one of the two images has an ROI, the operation is only performed on that ROI; the remaining image is
@@ -62,11 +81,25 @@ class XFormExpr(XFormType):
     side and extracts a single band, generating a new monochrome image. 
     The right-hand side is either a filter name, a filter position or a
     wavelength. Depending on the camera, all these could be valid: 
-    **a$780**, **(a+b)$R5_780**, **((a+b)\*2)$780**.
+
+    | expression | meaning |
+    |------------|---------|
+    | **a$780**  | the 780nm band in image *a* |
+    | **(a+b)$G0** | the band named G0 in the image formed by adding images *a* and *b* |
+    | **((a+b)/2)$780** | the average of the 780nm bands of images *a* and *b* |
+    
+    Be aware of caveats in the "binary operations on image pairs" section above: it may be better to extract
+    the band before performing the operation, thus:
+
+    | old expression | better expression |
+    |------------|---------|
+    | **(a+b)$G0** | **a$G0 + b$G0** |
+    | **((a+b)/2)$780** | **(a$780+b$780)/2**  |
+    
 
     ### Properties
 
-    Properties are indicated by the "." operator, e.g. "a.w" to find an
+    Properties are indicated by the **.** operator, e.g. **a.w** to find an
     image's width.
     
     ### Help on functions and properties
