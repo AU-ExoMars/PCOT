@@ -121,7 +121,7 @@ class Document:
     # the graph, macros etc. If internal is true, this data is used for internal undo/redo
     # stuff and should operate very quickly without loading data. As such, it may not actually
     # perform a strict serialisation - you'll get information out with references in etc.
-    def serialise(self, internal=False):
+    def serialise(self, internal=False, saveInputs=True):
         macros = {}
         for k, v in self.macros.items():
             macros[k] = v.graph.serialise()
@@ -130,7 +130,7 @@ class Document:
              'INFO': {'author': pcot.config.getUserName(),
                       'date': time.time()},
              'GRAPH': self.graph.serialise(),
-             'INPUTS': self.inputMgr.serialise(internal),
+             'INPUTS': self.inputMgr.serialise(internal, saveInputs=saveInputs),
              'MACROS': macros
              }
         return d
@@ -156,11 +156,11 @@ class Document:
 
         self.settings.deserialise(d['SETTINGS'])
 
-    def save(self, fname):
+    def save(self, fname, saveInputs=True):
         # note that the archive mechanism deals with numpy array saving and also
         # saves to a temp file before moving when it's all OK at the end.
         with archive.FileArchive(fname, 'w') as arc:
-            arc.writeJson("JSON", self.serialise())
+            arc.writeJson("JSON", self.serialise(saveInputs=saveInputs))
             pcot.config.addRecent(fname)
 
     def load(self, fname):
