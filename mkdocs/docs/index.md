@@ -15,6 +15,9 @@ monochrome PNGs)
 * There are certainly a *lot* of bugs.
 @@@
 
+## Release history
+[Can be found here](releases.md)
+
 ## Installing and running PCOT
 PCOT is available in two forms:
 
