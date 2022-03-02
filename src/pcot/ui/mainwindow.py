@@ -3,6 +3,7 @@ Code for the main windows, which hold a scene representing the
 "patch" or a macro prototype, a palette of transforms, and an area
 for tabs controlling transforms.
 """
+import logging
 import os
 import traceback
 from string import Template
@@ -22,6 +23,8 @@ import pcot.ui.namedialog as namedialog
 import pcot.ui.tabs as tabs
 import pcot.xform as xform
 from pcot.ui.help import HelpWindow
+
+logger = logging.getLogger(__name__)
 
 
 class InputSelectButton(QtWidgets.QPushButton):
@@ -95,10 +98,11 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.dumpButton.clicked.connect(lambda: self.graph.dump())
         self.capCombo.currentIndexChanged.connect(self.captionChanged)
 
-        self.actionSave_As.triggered.connect(self.saveAsAction)
         self.action_New.triggered.connect(self.newAction)
         self.actionNew_Macro.triggered.connect(self.newMacroAction)
         self.actionSave.triggered.connect(self.saveAction)
+        self.actionSave_As.triggered.connect(lambda: self.saveAsAction(True))
+        self.actionSave_As_without_inputs.triggered.connect(lambda: self.saveAsAction(False))
         self.actionOpen.triggered.connect(self.openAction)
         self.actionCopy.triggered.connect(self.copyAction)
         self.actionPaste.triggered.connect(self.pasteAction)
@@ -277,12 +281,12 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.view.setScene(self.graph.scene)
 
     ## saving to a file  
-    def save(self, fname):
+    def save(self, fname, saveInputs=True):
         # we serialise to a string and then save the string rather than
         # doing it in one step, to avoid errors in the former leaving us
         # with an unreadable file.
         try:
-            self.doc.save(fname)
+            self.doc.save(fname, saveInputs=saveInputs)
             ui.msg("File saved : " + fname)
             self.rebuildRecents()
         except Exception as e:
@@ -312,10 +316,12 @@ class MainUI(ui.tabs.DockableTabWindow):
             self.graph.autoRun = oldAutoRun
 
     ## the "save as" menu handler
-    def saveAsAction(self):
-        res = QtWidgets.QFileDialog.getSaveFileName(self, 'Save file',
+    def saveAsAction(self, saveInputs):
+        res = QtWidgets.QFileDialog.getSaveFileName(self,
+                                                    "Save file " if saveInputs else "Save file (WITHOUT INPUTS)",
                                                     os.path.expanduser(pcot.config.getDefaultDir('pcotfiles')),
-                                                    "PCOT files (*.pcot)")
+                                                    "PCOT files (*.pcot)")  #,  options=QtWidgets.QFileDialog.DontUseNativeDialog)
+        logger.info(f"Dialog result: {res[0]}")
         if res[0] != '':
             path = res[0]
             (root, ext) = os.path.splitext(path)
@@ -323,10 +329,13 @@ class MainUI(ui.tabs.DockableTabWindow):
                 ext += '.pcot'
             path = root + ext
 
-            self.save(path)
+            logger.info(f"Save file name: {res[0]}")
+            self.save(path, saveInputs=saveInputs)
             self.saveFileName = path
             ui.log("Document written to " + path)
             pcot.config.setDefaultDir('pcotfiles', os.path.dirname(os.path.realpath(res[0])))
+        else:
+            logger.info("Save cancelled")
 
     ## the "save" menu handler
     def saveAction(self):

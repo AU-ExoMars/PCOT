@@ -99,7 +99,7 @@ class Input:
         inputs re-run."""
         self.mgr.doc.graph.changed()
 
-    def serialise(self, internal):
+    def serialise(self, internal, saveInputs=True):
         """Generate a serialisable data structure for this input (ie. primitives only).
         Done by producing a dict of lists of two elements: input type and input data.
         If 'internal' is set, images and cached images will also be stored - this is used
@@ -110,7 +110,7 @@ class Input:
         # internally as simple references to the objects; this is done in the methods. Note that
         # we only save the active method's data in the external (save to file) case.
 
-        if not internal:
+        if saveInputs and not internal:
             activeData = self.get().serialise()  # returns Datum
         else:
             activeData = None
@@ -200,13 +200,13 @@ class InputManager:
         for x in self.inputs:
             x.invalidate()
 
-    def serialise(self, internal):
+    def serialise(self, internal, saveInputs=True):
         """serialise the inputs, returning a structure which can be converted into
         JSON (i.e. just primitive, dict and list types). This will contain a block
         of data for each input. Internal means that the data is used for undo/redo
         and may not be a true serialisation (there may be references). It never gets
         to a file or the clipboard. And restoring from it should not reload from disk/DAR!"""
-        out = [x.serialise(internal) for x in self.inputs]
+        out = [x.serialise(internal, saveInputs=saveInputs) for x in self.inputs]
         return out
 
     def deserialise(self, lst, internal):
