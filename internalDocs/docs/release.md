@@ -30,5 +30,6 @@ To make a new release, follow this checklist.
    check they work, fixing if necessary.
 1. Upload the releases to the release site.
 1. Upload the docs to the documentation site.
+1. Make sure the dev branch is merged into the master branch.
 1. Make a release tag in the repository.
 
