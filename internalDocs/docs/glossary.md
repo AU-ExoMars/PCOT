@@ -1,13 +1,7 @@
----
-date: 2021-07-13
-title: Glossary
-summary: Some terminology
-tags: ["pcot","mars","python"]
----
+# Glossary
 
-{{<katex>}}
 
-### IoF
+## IoF
 The ratio of the bidirectional
 reflectance of a surface to that of a normally illuminated
 perfectly diffuse surface. This ratio is also known as the 'radiance 
@@ -18,7 +12,7 @@ Martian atmosphere for a given Pancam bandpass.
 docs](https://pds.nasa.gov/ds-view/pds/viewProfile.jsp?dsid=MER2-M-PANCAM-3-IOFCAL-SCI-V1.0).
 Useful because lots of other probes use it!
 
-### R\*
+## R\*
 Used by Mars Pathfinder (Reid, 1999[^2]). 
 A related parameter, R\* (''R-star''), was defined and
 utilized by Reid et al. [1999] for Imager for Mars Pathfinder
@@ -58,10 +52,15 @@ So effectively,
 $$
 R^* = \frac{IoF}{\cos i}
 $$
+
 Oddly, though, we also have 
+
 $$
 IoF = r\cdot m \cdot \cos(i)
-$$from [2] (Eq. 35), where $r$ is the radiance. So
+$$
+
+from [2] (Eq. 35), where $r$ is the radiance. So
+
 $$
 R^* = r m \quad\text{?}
 $$

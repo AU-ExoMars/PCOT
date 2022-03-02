@@ -3,6 +3,18 @@
 PCOT is a Python program and library which allows users to manipulate 
 multispectral images and other data from the ExoMars *Rosalind Franklin* rover.
 
+@@@ warning
+This is an early alpha version with serious limitations.
+
+* There is no calibration code of any kind (although the preliminaries are in place)
+* PDS4 import capabilities are poor (we support ENVI provided the images
+are 32-bit float BSQ, 3-channel PNGs and multispectral images made of multiple
+monochrome PNGs)
+* Data quality and uncertainty data are not yet handled in any way
+* There are probably a *lot* of useful operations missing
+* There are certainly a *lot* of bugs.
+@@@
+
 ## Installing and running PCOT
 PCOT is available in two forms:
 
@@ -17,6 +29,11 @@ the conda environment with ```conda activate pcot``` and then run the ```pcot```
         
 There are a few things which can stop PCOT working - see
 [here for a list](github.md#common-runtime-issues).
+
+## Reporting bugs
+
+You should have been given the address and a user ID to access our
+bug tracking system. If you haven't, please contact the Aberystwyth team.
 
 
 ## More information

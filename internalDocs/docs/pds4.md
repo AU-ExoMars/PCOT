@@ -1,8 +1,4 @@
----
-date: 2022-01-19
-title: Notes on importing PDS4
-summary: some notes on the PDS4 input method and ramifications for sources
----
+Some notes on the PDS4 input method and ramifications for sources
 
 # PDS4 input - user experience
 
@@ -23,7 +19,8 @@ or all HK) it is loaded into the canvas and the output is set.
 * **Read Data must turn red when selection changes, like the Replot button
 in certain nodes which use matplotlib**
 
-{{< figure src="dialog.png" title="The PDS4 input dialog (proposed)">}}
+![!The PDS4 input dialog (proposed)](pds4_dialog.png)
+
 1. directory
 2. table of loaded PDS4 products
 3. canvas showing currently selected image (note: may need a way of showing HK

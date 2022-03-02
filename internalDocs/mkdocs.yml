@@ -1,0 +1,23 @@
+site_name: Internal PCOT Docs
+
+theme:
+    name: mkdocs
+    custom_dir: theme
+
+nav:
+  - Glossary: glossary.md
+
+markdown_extensions:
+  - lightbox:LightBoxExtension
+  - alert:AlertExtension
+  - footnotes
+  - pymdownx.arithmatex
+  - pymdownx.magiclink
+  - pymdownx.mark
+  - pymdownx.snippets:
+        check_paths: True
+        base_path: ['docs/','.']
+
+extra_javascript:
+    - https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML
+

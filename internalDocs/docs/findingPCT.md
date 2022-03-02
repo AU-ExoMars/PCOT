@@ -1,10 +1,6 @@
----
-date: 2021-07-13
-title: Finding the PCT
-summary: This page describes how we go about locating the PCT, from the UX standpoint
-tags: ["pcot","mars","python"]
----
+# Finding PCT
 
+This page describes how we go about locating the PCT, from the UX standpoint.
 This relies on finding a mapping from screen space to the PCT's coordinate
 space and back again. Once we have such a mapping, we can find where 
 the patches should be on the screen and construct a set of ROIs which
