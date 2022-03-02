@@ -48,7 +48,7 @@ def timestr(t):
     return t.strftime("%x %X")
 
 
-# list of multiplication factors - same as multCombo in ui file.
+# list of multiplication factors - sets the combo in the UI
 MULTVALUES = [1, 1024, 2048]
 
 
@@ -70,7 +70,7 @@ class PDS4InputMethod(InputMethod):
     mapping: ChannelMapping  # the mapping for the canvas
     recurse: bool  # when scanning directories, should we do it recursively?
     camera: str  # type of camera - 'PANCAM' or 'AUPE'
-    multValue: int  # index into list of multiplication factors - same as multCombo in ui file.
+    multValue: float  # multiplication to apply post-load
 
     def __init__(self, inp):
         super().__init__(inp)
@@ -82,7 +82,7 @@ class PDS4InputMethod(InputMethod):
         self.mapping = ChannelMapping()
         self.recurse = False
         self.camera = 'PANCAM'
-        self.multValue = 0
+        self.multValue = 1.0
 
     def loadLabelsFromDirectory(self, clear=False):
         """This will actually load data from the directory into the linear widget, either ab initio
@@ -204,9 +204,9 @@ class PDS4InputMethod(InputMethod):
         # now extract the numpy arrays. Note that we are only using the data array for now.
         selProds = [self.products[idx] for idx in self.selected]
         labels = [self.lidToLabel[p.lid] for p in selProds]
-        logger.debug(f"building iamge data, multval={self.multValue}, mult={MULTVALUES[self.multValue]}")
+        logger.debug(f"building image data, multval={self.multValue}")
         try:
-            imgdata = np.dstack([x.data for x in labels]) * MULTVALUES[self.multValue]
+            imgdata = np.dstack([x.data for x in labels]) * self.multValue
         except ValueError as e:
             ui.error("Error in combining image products - are they all the same size?")
             return None
@@ -250,7 +250,7 @@ class PDS4InputMethod(InputMethod):
 
     def deserialise(self, data, internal):
         try:
-            self.multValue = data.get('mult', 0)
+            self.multValue = data.get('mult', 1)
             self.recurse = data['recurse']
             self.selected = data['selected']
             self.camera = data['camera']
@@ -279,7 +279,7 @@ class ImageMarkerItem(QtWidgets.QGraphicsRectItem):
         super().__init__(x - radius, y - radius, radius * 2, radius * 2)
         r2 = radius / 2  # radius of internal circle
         xoffset = -r2 if isLeft else r2
-        sub = QtWidgets.QGraphicsEllipseItem(x - xoffset - radius / 2, y - r2, r2 * 2, r2 * 2, parent=self)
+        sub = QtWidgets.QGraphicsEllipseItem(x + xoffset - radius / 2, y - r2, r2 * 2, r2 * 2, parent=self)
         sub.setPen(QPen(Qt.NoPen))
         sub.setBrush(Qt.black)
         entityMarkerInitSetup(self, ent)
@@ -326,6 +326,11 @@ class PDS4ImageMethodWidget(MethodWidget):
         # this when we want to get new data.
 
         # self.method.loadLabelsFromDirectory()
+
+        # initialise combo
+        self.multCombo.clear()
+        for x in MULTVALUES:
+            self.multCombo.addItem(f"x{x}", userData=x)
 
         # connect signals
 
@@ -468,7 +473,7 @@ class PDS4ImageMethodWidget(MethodWidget):
         self.onInputChanged()
 
     def multChanged(self, i):
-        self.method.multValue = i
+        self.method.multValue = self.multCombo.currentData()
         self.readClicked()
         self.onInputChanged()
 
@@ -522,7 +527,12 @@ class PDS4ImageMethodWidget(MethodWidget):
         if self.method.out and isinstance(self.method.out, ImageCube) is not None:
             self.method.out.setMapping(self.method.mapping)
         self.camCombo.setCurrentIndex(1 if self.method.camera == 'AUPE' else 0)
-        self.multCombo.setCurrentIndex(self.method.multValue)
+
+        idx = self.multCombo.findData(self.method.multValue)
+        if idx >= 0:
+            self.multCombo.setCurrentIndex(idx)
+        else:
+            logger.error(f"setting multiplier combo index to 0, because I don't know about multiplier {self.method.multValue}!")
 
         logger.debug("Displaying data {}, mapping {}".format(self.method.out, self.method.mapping))
         self.invalidate()  # input has changed, invalidate so the cache is dirtied

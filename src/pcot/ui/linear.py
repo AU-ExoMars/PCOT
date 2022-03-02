@@ -301,6 +301,11 @@ class LinearSetWidget(QtWidgets.QGraphicsView):
             sc.maxx = max(vals)
             if sc.minx >= sc.maxx:
                 sc.maxx = sc.minx + DEFAULTRANGE
+            # adjust so there's a little bit of extra space either side
+            diff = (sc.maxx - sc.minx)*0.1
+            sc.maxx += diff
+            sc.minx -= diff
+
         else:
             sc.minx = 0
             sc.maxx = DEFAULTRANGE
