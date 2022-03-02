@@ -45,6 +45,8 @@ These pages are useful when you are getting started:
 
 * [PCOT concepts](concepts.md) describes the basic ideas behind PCOT
 * [Getting Started](gettingstarted.md) introduces the program and gives a basic tutorial
+* There is a [video guide](https://www.youtube.com/watch?v=vo5KrOAtMQ8) - please ignore the opening comments
+on installation and Anaconda; these only apply to installing from source
 
 Other information
 
