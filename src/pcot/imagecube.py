@@ -13,6 +13,7 @@ from typing import List, Optional, Tuple, Sequence, Union
 import cv2 as cv
 import numpy as np
 
+from pcot.documentsettings import DocumentSettings
 from pcot.rois import ROI, ROIPainted, ROIBoundsException
 from pcot.sources import MultiBandSource, SourcesObtainable
 from pcot.utils.geom import Rect
@@ -349,7 +350,7 @@ class ImageCube(SourcesObtainable):
     # 11 channels is far too many to show in the descriptor at the bottom of the canvas!
 
     def getDesc(self, graph):
-        if graph.doc.settings.captionType == 3:
+        if graph.doc.settings.captionType == DocumentSettings.CAP_NONE:
             return ""
         out = [s.brief(graph.doc.settings.captionType) for s in self.sources.sourceSets]
         # if there are channel assignments, show only the assigned channels. Not sure about this.

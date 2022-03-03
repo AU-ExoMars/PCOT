@@ -138,6 +138,7 @@ class MainUI(ui.tabs.DockableTabWindow):
             self.graph = doc.graph
 
         self.doc = doc
+        self.capCombo.setCurrentIndex(self.doc.settings.captionType)
 
         self.setWindowTitle(ui.app().applicationName() + ' ' + ui.app().applicationVersion())
         self.rebuildRecents()
@@ -186,9 +187,6 @@ class MainUI(ui.tabs.DockableTabWindow):
         # make sure the view has a link up to this window,
         # also will tint the view if we are a macro
         self.view.setWindow(self, macro is not None)
-        # This only does something when you already have a graph, which macro protos don't,
-        # but that's OK because they don't have a caption control either.
-        self.setCaption(0)
 
         for x in pcot.config.mainWindowHooks:
             x(self)

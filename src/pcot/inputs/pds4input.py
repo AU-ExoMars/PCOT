@@ -409,7 +409,7 @@ class PDS4ImageMethodWidget(MethodWidget):
         items = []
         for p in self.method.products:
             yOffset = p.filt.idx * 12
-            items.append(ImageLinearSetEntity(p.sol_id, yOffset, p.filt.name, p))
+            items.append(ImageLinearSetEntity(p.sol_id, yOffset, f"{p.filt.cwl} ({p.filt.name})", p))
         self.timeline.setItems(items)
         self.timeline.rescale()
         self.timeline.rebuild()

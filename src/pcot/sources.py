@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, List, Set, SupportsFloat, Union, Iterable, Any, Tuple
 
 from pcot.dataformats.pds4 import PDS4Product
+from pcot.documentsettings import DocumentSettings
 from pcot.filters import Filter
 
 
@@ -47,7 +48,7 @@ class Source(SourcesObtainable):
         return None
 
     @abstractmethod
-    def brief(self, captionType=0) -> Optional[str]:
+    def brief(self, captionType=DocumentSettings.CAP_DEFAULT) -> Optional[str]:
         """Return a brief string to be used in captions, etc. If null, is filtered out"""
         pass
 
@@ -67,7 +68,7 @@ class _NullSource(Source):
     Typically this will get filtered out when we print the sources. Probably best to use nullSource and nullSourceSet
     objects declared at the end of this module"""
 
-    def brief(self, captionType=0) -> Optional[str]:
+    def brief(self, captionType=DocumentSettings.CAP_DEFAULT) -> Optional[str]:
         """return a brief string for use in captions - this will just return None, which will
         be filtered out when used in such captions."""
         return None
@@ -127,15 +128,15 @@ class InputSource(Source):
         """Return a full internal string representation, used in debugging"""
         return f"SOURCE-{self._uniqid}"
 
-    def brief(self, captionType=0) -> Optional[str]:
+    def brief(self, captionType=DocumentSettings.CAP_DEFAULT) -> Optional[str]:
         """return a brief string representation, used in image captions"""
         inptxt = self.input.brief()
         if isinstance(self.filterOrName, Filter):
-            if captionType == 0:  # 0=Position
+            if captionType == DocumentSettings.CAP_POSITIONS:  # 0=Position
                 cap = self.filterOrName.position
-            elif captionType == 1:  # 1=Name
+            elif captionType == DocumentSettings.CAP_NAMES:  # 1=Name
                 cap = self.filterOrName.name
-            elif captionType == 2:  # 2=Wavelength
+            elif captionType == DocumentSettings.CAP_CWL:  # 2=Wavelength
                 cap = int(self.filterOrName.cwl)
             else:
                 cap = f"CAPBUG-{captionType}"  # if this appears captionType is out of range.
@@ -232,7 +233,7 @@ class SourceSet(SourcesObtainable):
         """internal text description; uses (none) for null sources"""
         return "&".join([str(x) if x else "(none)" for x in self.sourceSet])
 
-    def brief(self, captionType=0):
+    def brief(self, captionType=DocumentSettings.CAP_DEFAULT):
         """external (user-facing) text description, skips null sources"""
         x = [x.brief(captionType) for x in self.sourceSet]
         return "&".join(sorted([s for s in x if s]))

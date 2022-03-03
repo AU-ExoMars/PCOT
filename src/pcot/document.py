@@ -5,6 +5,7 @@ from typing import Dict
 
 import pcot.config
 from pcot import inputs, ui
+from pcot.documentsettings import DocumentSettings
 from pcot.inputs.inp import InputManager
 from pcot.macros import XFormMacro
 from pcot.ui.mainwindow import MainUI
@@ -77,22 +78,6 @@ class UndoRedoStore:
     def status(self):
         """return the sizes of undo and redo stacks"""
         return len(self.undoStack), len(self.redoStack)
-
-
-class DocumentSettings:
-    """this is saved to the SETTINGS block of the document"""
-
-    def __init__(self):
-        # integer indexing the caption type for canvases in this graph: see the box in MainWindow's ui for meanings.
-        self.captionType = 0
-
-    def serialise(self):
-        return {
-            'cap': self.captionType
-        }
-
-    def deserialise(self, d):
-        self.captionType = d['cap']
 
 
 class Document:
