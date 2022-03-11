@@ -7,9 +7,10 @@ multispectral images and other data from the ExoMars *Rosalind Franklin* rover.
 This is an early alpha version with serious limitations.
 
 * There is no calibration code of any kind (although the preliminaries are in place)
-* PDS4 import capabilities are poor (we support ENVI provided the images
-are 32-bit float BSQ, 3-channel PNGs and multispectral images made of multiple
-monochrome PNGs)
+* PDS4 import capabilities are poor, but we support
+    * ENVI provided the images are 32-bit float BSQ
+    * RGB PNGs
+    * multispectral images made of multiple monochrome PNGs
 * Data quality and uncertainty data are not yet handled in any way
 * There are probably a *lot* of useful operations missing
 * There are certainly a *lot* of bugs.
@@ -39,7 +40,7 @@ You should have been given the address and a user ID to access our
 bug tracking system. If you haven't, please contact the Aberystwyth team.
 
 
-## More information
+## Tutorials and Guides
 
 These pages are useful when you are getting started:
 
