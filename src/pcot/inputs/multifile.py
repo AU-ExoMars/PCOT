@@ -19,7 +19,6 @@ from ..datum import Datum
 from ..filters import getFilterByPos
 from ..sources import InputSource, SourceSet, MultiBandSource
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -37,6 +36,7 @@ class MultifileInputMethod(InputMethod):
         # all data in all channels is multiplied by this (used for, say, 10 bit images)
         self.mult = 1
         self.camera = "PANCAM"
+        self.defaultLens = "L"
         self.filterpat = r'.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*'
         self.filterre = None
         # dict of files we currently have, fullpath -> imagecube
@@ -57,16 +57,18 @@ class MultifileInputMethod(InputMethod):
             if m is None:
                 return None
             m = m.groupdict()
-            lens = m['lens'] if 'lens' in m else ''
+            lens = m['lens'] if 'lens' in m else self.defaultLens
             n = m['n'] if 'n' in m else ''
             return lens + n
 
     def compileRegex(self):
         # compile the regexp that gets the filter ID out.
+        logger.info(f"Compiling RE: {self.filterpat}")
         try:
             self.filterre = re.compile(self.filterpat)
         except re.error:
             self.filterre = None
+            logger.error("Cannot compile RE!!!!")
 
     def readData(self):
         self.compileRegex()
@@ -90,7 +92,7 @@ class MultifileInputMethod(InputMethod):
                     path = os.path.abspath(os.path.join(self.dir, self.files[i]))
 
                 # build sources data : filename and filter name
-                filtpos = self.getFilterName(path)   # says name, but usually is the position.
+                filtpos = self.getFilterName(path)  # says name, but usually is the position.
                 filt = getFilterByPos(filtpos, self.camera == 'AUPE')
                 source = InputSource(doc, inpidx, filt)
 
@@ -141,6 +143,7 @@ class MultifileInputMethod(InputMethod):
              'mult': self.mult,
              'filterpat': self.filterpat,
              'camera': self.camera,
+             'defaultlens': self.defaultLens
              }
         if internal:
             x['cache'] = self.cachedFiles
@@ -156,6 +159,7 @@ class MultifileInputMethod(InputMethod):
         self.mult = data['mult']
         self.filterpat = data['filterpat']
         self.camera = data['camera']
+        self.defaultLens = data.get('defaultlens', 'L')
         if internal:
             self.cachedFiles = data['cache']
             self.img = data['img']
@@ -178,6 +182,7 @@ class MultifileMethodWidget(MethodWidget):
         self.filters.textChanged.connect(self.filtersChanged)
         self.filelist.activated.connect(self.itemActivated)
         self.filterpat.editingFinished.connect(self.patChanged)
+        self.defaultLens.currentTextChanged.connect(self.defaultLensChanged)
         self.mult.currentTextChanged.connect(self.multChanged)
         self.camCombo.currentIndexChanged.connect(self.cameraChanged)
         self.canvas.setMapping(m.mapping)
@@ -211,9 +216,11 @@ class MultifileMethodWidget(MethodWidget):
             s += "{}:\t{}\n".format(i, self.method.files[i])
         #        s+="\n".join([str(x) for x in self.node.imgpaths])
         self.outputFiles.setPlainText(s)
-        i = self.mult.findText(str(int(self.method.mult)))
+        i = self.mult.findText(str(int(self.method.mult)) + ' ', Qt.MatchFlag.MatchStartsWith)
         self.mult.setCurrentIndex(i)
         self.filterpat.setText(self.method.filterpat)
+        i = self.defaultLens.findText(self.method.defaultLens, Qt.MatchFlag.MatchStartsWith)
+        self.defaultLens.setCurrentIndex(i)
         self.camCombo.setCurrentIndex(1 if self.method.camera == 'AUPE' else 0)
         self.displayActivatedImage()
         self.invalidate()  # input has changed, invalidate so the cache is dirtied
@@ -270,10 +277,16 @@ class MultifileMethodWidget(MethodWidget):
 
     def multChanged(self, s):
         try:
-            self.method.mult = float(s)
-            self.onInputChanged()  # TODO was self.changed
+            # strings in the combobox are typically "64 (6 bit shift)"
+            ll = s.split()
+            if len(ll) > 0:
+                self.method.mult = float(ll[0])
+                self.onInputChanged()  # TODO was self.changed
         except (ValueError, OverflowError):
             raise Exception("CTRL", "Bad mult string in 'multifile': " + s)
+
+    def defaultLensChanged(self, s):
+        self.method.defaultLens = s[0] # just first character
 
     def buildModel(self):
         # build the model that the list view uses

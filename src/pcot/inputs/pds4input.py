@@ -148,7 +148,7 @@ class PDS4InputMethod(InputMethod):
                     # also have to remove selected products from that array
                     selIdx = self.products.index(prod)  # find index in products list
                     self.selected.remove(selIdx)  # remove that index from selected list
-                del self.products[lid]
+                self.products.remove(prod)
                 del lidToProduct[lid]
 
             self.products.sort(key=lambda p: p.start)
@@ -488,8 +488,9 @@ class PDS4ImageMethodWidget(MethodWidget):
             self.populateTableAndTimeline()
             self.onInputChanged()
         except Exception as e:
-            QMessageBox.critical(self, 'Error', str(e))
-            ui.log(str(e))
+            estr = pcot.utils.deb.simpleExceptFormat(e)
+            QMessageBox.critical(self, 'Error', estr)
+            ui.log(estr)
 
     def scanDirClicked(self):
         """Does a scanDir() if we confirm it"""

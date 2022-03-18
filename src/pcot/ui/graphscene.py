@@ -32,6 +32,7 @@ try:
 except ImportError:
     logger.info("Grandalf is not present, autolayout will be awful.")
 
+
     # dummy class defs for when grandalf isn't present, to avoid rogue errors in type checking
 
     class Graph:
@@ -101,6 +102,7 @@ PASTEOFFSET = 20
 class GHelpRect(QtWidgets.QGraphicsRectItem):
     """Help box. This has no functionality, we can't make it catch clicks unless we make it
     selectable (which we don't want). That has to be done in the GMainRect parent."""
+
     def __init__(self, x, y, node, parent):
         super().__init__(x + node.w - CONNECTORHEIGHT, y, HELPBOXSIZE, HELPBOXSIZE, parent=parent)
         self.setBrush(Qt.blue)
@@ -108,6 +110,7 @@ class GHelpRect(QtWidgets.QGraphicsRectItem):
 
 class GText(QtWidgets.QGraphicsSimpleTextItem):
     """text in middle of main rect and on connections"""
+
     def __init__(self, parent, text, node):
         super().__init__(text, parent=parent)
         self.node = node
@@ -125,12 +128,16 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
     helprect: GHelpRect  # help rectangle (top-right corner)
     node: XForm  # node to which I refer
     text: GText  # text field
-    aboutToMove: bool   # true when the item is clicked; the first move after this will cause a mark and clear this flag
+    aboutToMove: bool  # true when the item is clicked; the first move after this will cause a mark and clear this flag
+    resizing: bool  # we are resizing; mutually exclusive with aboutToMove
+    resizeStartRectangle: Optional['QRect']  # if we are resizing, the rect. when we started doing that
+    resizeStartPosition: Optional[QPointF]  # if we are resizing, the mouse pos. when we started doing that
 
     def __init__(self, x1, y1, w, h, node):
         self.offsetx = 0  # these are the distances from our original pos.
         self.offsety = 0
         self.aboutToMove = False
+        self.resizing = False
         super().__init__(x1, y1, w, h)
         self.setFlags(QtWidgets.QGraphicsItem.ItemIsSelectable |
                       QtWidgets.QGraphicsItem.ItemIsMovable |
@@ -138,14 +145,16 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
         self.node = node
         # help "button" created when setSizeToText is called.
         self.helprect = None
+        self.resizeStartRectangle = None
+        self.resizeStartPosition = None
 
     def setSizeToText(self, node):
         r = self.rect()
-        w = max(node.type.minwidth, self.text.boundingRect().width()+10)
+        w = max(node.type.minwidth, self.text.boundingRect().width() + 10)
         r.setWidth(w)
         self.setRect(r)
         node.w = w
-        if self.helprect: # get rid of any old one
+        if self.helprect:  # get rid of any old one
             self.helprect.setParentItem(None)
         self.helprect = GHelpRect(r.x(), r.y(), node, self)
 
@@ -168,8 +177,38 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
         return super().itemChange(change, value)
 
     def mousePressEvent(self, event):
-        self.aboutToMove = True
+        # near a corner? This is vile because of how the coord system works. Instead of the rectangle being (0,0,w,h) and
+        # with its position at (x,y) in the parent scene, the rectangle is at (x,y,x+w,y+h) and its position in the parent
+        # is (0,0).
+
+        p = event.pos()
+        if (p - self.rect().bottomRight()).manhattanLength() < 15:
+            self.resizing = True
+            self.resizeStartPosition = p
+            self.resizeStartRectangle = self.rect()
+            ui.log("Start resize")
+        else:
+            self.aboutToMove = True
         super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
+        if self.resizing:
+            mouseMoved = event.pos() - self.resizeStartPosition
+            ui.log(f"adjusting {event.pos()} - {self.resizeStartPosition} = {mouseMoved}")
+            r = self.resizeStartRectangle.adjusted(0, 0, mouseMoved.x(), mouseMoved.y())
+            if r.width()<self.node.type.minwidth:
+                r.setWidth(self.node.type.minwidth)
+            if r.height()<NODEHEIGHT-YPADDING:
+                r.setHeight(NODEHEIGHT-YPADDING)
+
+            self.setRect(r)
+            event.ignore()
+        else:
+            super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
+        self.resizing = False
+        super().mouseReleaseEvent(event)
 
     def mouseDoubleClickEvent(self, event):
         """double click should find or open a tab, even to the extent
@@ -189,7 +228,7 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
             togact = m.addAction("Disable" if self.node.enabled else "Enable")
         else:
             togact = None
-        help = m.addAction("Help")
+        helpact = m.addAction("Help")
 
         # only worth doing if there are menu items!
         if not m.isEmpty():
@@ -203,10 +242,9 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
                 if changed:
                     self.node.rename(newname)
                     ui.mainwindow.MainUI.rebuildAll()
-            elif action == help:
+            elif action == helpact:
                 w = getEventWindow(event)
                 w.openHelp(self.node.type, node=self.node)
-
 
 
 class GConnectRect(QtWidgets.QGraphicsRectItem):
@@ -333,7 +371,7 @@ class GArrow(QtWidgets.QGraphicsLineItem):
         x2 = line.p2().x()
         y2 = line.p2().y()
         poly << QPointF(x2, y2) << QPointF(x2 + xa * ARROWHEADLENGTH, y2 + ya * ARROWHEADLENGTH) << \
-            QPointF(x2 + xb * ARROWHEADLENGTH, y2 + yb * ARROWHEADLENGTH)
+        QPointF(x2 + xb * ARROWHEADLENGTH, y2 + yb * ARROWHEADLENGTH)
         self.head = QtWidgets.QGraphicsPolygonItem(poly, parent=self)
         self.head.setBrush(Qt.black)
 
@@ -419,7 +457,7 @@ def makeNodeGraphics(n):
         error.setFont(errorFont)
         error.setBrush(QColor(255, 0, 0))
         error.setPos(x + XTEXTOFFSET + XERROROFFSET, y + YTEXTOFFSET + CONNECTORHEIGHT + YERROROFFSET)
-    elif n.rectText is not None and len(n.rectText)>0:
+    elif n.rectText is not None and len(n.rectText) > 0:
         t = GText(n.rect, n.rectText, n)
         t.setFont(errorFont)
         t.setBrush(QColor(0, 0, 255))
@@ -430,9 +468,7 @@ def makeNodeGraphics(n):
         t.setBrush(QColor(0, 128, 0))
         t.setPos(x + XTEXTOFFSET, y + YTEXTOFFSET + CONNECTORHEIGHT + YERROROFFSET)
 
-
     return n.rect
-
 
 
 class XFormGraphScene(QtWidgets.QGraphicsScene):
@@ -447,7 +483,6 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
     arrows: List[GArrow]
     # dragging arrow or none if no arrow being dragged
     draggingArrow: Optional[GArrow]
-
 
     def __init__(self, graph, doPlace):
         """initialise to a graph, and do autolayout if doPlace is true"""
@@ -514,7 +549,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             x = 0
             y = 0
             for n in self.graph.nodes:
-                n.w = n.type.minwidth      # will get changed
+                n.w = n.type.minwidth  # will get changed
                 n.h = NODEHEIGHT + YPADDING
                 n.xy = (x, y)
                 y += n.h + 20
