@@ -32,7 +32,6 @@ try:
 except ImportError:
     logger.info("Grandalf is not present, autolayout will be awful.")
 
-
     # dummy class defs for when grandalf isn't present, to avoid rogue errors in type checking
 
     class Graph:
@@ -76,8 +75,6 @@ XERROROFFSET = 20
 
 # height of connector boxes
 CONNECTORHEIGHT = 10
-# additional space between nodes in autolayouts
-YPADDING = 10
 
 # x offset of connector label
 CONNECTORTEXTXOFF = 2
@@ -196,10 +193,10 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
             mouseMoved = event.pos() - self.resizeStartPosition
             ui.log(f"adjusting {event.pos()} - {self.resizeStartPosition} = {mouseMoved}")
             r = self.resizeStartRectangle.adjusted(0, 0, mouseMoved.x(), mouseMoved.y())
-            if r.width()<self.node.type.minwidth:
+            if r.width() < self.node.type.minwidth:
                 r.setWidth(self.node.type.minwidth)
-            if r.height()<NODEHEIGHT-YPADDING:
-                r.setHeight(NODEHEIGHT-YPADDING)
+            if r.height() < NODEHEIGHT:
+                r.setHeight(NODEHEIGHT)
 
             self.setRect(r)
             event.ignore()
@@ -417,7 +414,7 @@ def makeConnectors(n, x, y):
         xx = x
         for i in range(0, nouts):
             # connection rectangles are parented to the main rectangle
-            yy = y + n.h - YPADDING - CONNECTORHEIGHT
+            yy = y + n.h - CONNECTORHEIGHT
             r = GConnectRect(n.rect, xx, yy, size, CONNECTORHEIGHT, n, False, i)
             text = GText(n.rect, r.name, n)
             text.setPos(xx + CONNECTORTEXTXOFF, yy + OUTCONNECTORTEXTYOFF)
@@ -436,12 +433,12 @@ def makeNodeGraphics(n):
     # Also, if a node width is negative, set the size to the text.
 
     if n.h is None:
-        n.h = NODEHEIGHT + YPADDING
+        n.h = NODEHEIGHT
 
     # draw basic rect, leaving room for connectors at top and bottom
     # We keep this rectangle in the node so we can change its colour
     n.rect = GMainRect(x, y + CONNECTORHEIGHT, n.type.minwidth,
-                       n.h - YPADDING - CONNECTORHEIGHT * 2, n)
+                       n.h - CONNECTORHEIGHT * 2, n)
 
     # draw text label, using the display name. Need to keep a handle on the text
     # so we can change the colour in setColourToState(). This is drawn using a method
@@ -498,7 +495,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             # or alternatively just set w,h (for loading data from a file)
             for n in self.graph.nodes:
                 n.w = n.type.minwidth  # will get changed
-                n.h = NODEHEIGHT + YPADDING
+                n.h = NODEHEIGHT
 
         # and make all the graphics
         self.rebuild()
@@ -512,7 +509,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         # add the vertices
         for n in self.graph.nodes:
             n.vert = Vertex(n)
-            n.vert.view = VertexViewer(w=n.type.minwidth, h=NODEHEIGHT + YPADDING)
+            n.vert.view = VertexViewer(w=n.type.minwidth, h=NODEHEIGHT)
             g.add_vertex(n.vert)
         # now the edges
         for n in self.graph.nodes:
@@ -550,7 +547,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             y = 0
             for n in self.graph.nodes:
                 n.w = n.type.minwidth  # will get changed
-                n.h = NODEHEIGHT + YPADDING
+                n.h = NODEHEIGHT
                 n.xy = (x, y)
                 y += n.h + 20
 
@@ -605,7 +602,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     insize = n2.w / len(n2.inputs)
                     x1 = x1 + outsize * (output + 0.5)
                     x2 = x2 + insize * (inputIdx + 0.5)
-                    y1 += n1.h - YPADDING
+                    y1 += n1.h
                     arrowItem = GArrow(x1, y1, x2, y2, n1, output, n2, inputIdx)
                     self.addItem(arrowItem)
                     self.arrows.append(arrowItem)
