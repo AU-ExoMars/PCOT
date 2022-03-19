@@ -156,6 +156,8 @@ class XFormType:
     # should nodes of this type show their performed count? It's pointless for comments, for example,
     # and messes up their resizing.
     showPerformedCount: bool
+    # callable to set parameters for QGraphicsRectItem; may be null
+    setRectParams: Optional[Callable[['QGraphicsRectItem'], None]]
 
     def __init__(self, name, group, ver):
         """constructor, takes name, groupname and version"""
@@ -186,6 +188,7 @@ class XFormType:
         self.defaultHeight = graphscene.NODEHEIGHT
         self.resizable = False
         self.showPerformedCount = True
+        self.setRectParams = None
 
     def remove(self, node):
         """call to remove node from instance list"""
@@ -316,11 +319,19 @@ class XFormType:
         x, y = n.xy
         text = graphscene.GText(n.rect, n.displayName, n)
         text.setPos(x + graphscene.XTEXTOFFSET, y + graphscene.YTEXTOFFSET + graphscene.CONNECTORHEIGHT)
+        text.setFont(graphscene.mainFont)
+
         return text
 
     def resizeDone(self, n):
         """The node's onscreen box has been resized"""
         pass
+
+    def getDefaultRectColour(self, n):
+        return 255, 255, 255
+
+    def getTextColour(self, n):
+        return 0, 0, 0
 
 
 def serialiseConn(c, connSet):

@@ -148,6 +148,8 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
         self.helprect = None
         self.resizeStartRectangle = None
         self.resizeStartPosition = None
+        if node.type.setRectParams is not None:
+            node.type.setRectParams(self)
 
     def setSizeToText(self):
         """Make sure the text fits - works by setting the width to the maximum of the minimum possible
@@ -193,7 +195,6 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
             self.resizing = True
             self.resizeStartPosition = p
             self.resizeStartRectangle = self.rect()
-            ui.log("Start resize")
         else:
             self.aboutToMove = True
         super().mousePressEvent(event)
@@ -455,9 +456,8 @@ def makeNodeGraphics(n):
     # so we can change the colour in setColourToState(). This is drawn using a method
     # in the type, which we can override if we want to do Odd Things (editable text)
     n.rect.text = n.type.buildText(n)
-    n.rect.text.setFont(mainFont)
-    n.rect.setSizeToText()   # make sure the box fits the text (for non-resizables)
-    n.type.resizeDone(n)      # make sure the text fits the box (for resizables)
+    n.rect.setSizeToText()  # make sure the box fits the text (for non-resizables)
+    n.type.resizeDone(n)  # make sure the text fits the box (for resizables)
     makeConnectors(n, x, y)
 
     # if there's an error, add the code. Otherwise if there a rect text, add that.
@@ -533,18 +533,18 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         # build the layout separately for each unconnected
         # subgraph:
 
-        xoff, yoff = 0, 0   # offset for each subgraph
+        xoff, yoff = 0, 0  # offset for each subgraph
         for gr in g.C:
             sug = SugiyamaLayout(gr)
             sug.init_all()
             sug.draw(3)  # 3 iterations of algorithm
 
-            for v in gr.V():    # add offset to this subgraph
+            for v in gr.V():  # add offset to this subgraph
                 x, y = v.view.xy
                 x += xoff
                 y += yoff
                 v.view.xy = x, y
-            xoff += 100         # increment offset
+            xoff += 100  # increment offset
             yoff += 100
 
         # invert y coordinates of nodes so we have the source at the top,
@@ -630,9 +630,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         there are two selections - the selected items in the view (selected by clicking
         and rubberband) and the currently shown tab."""
         for n in self.graph.nodes:
-            r = 255
-            g = 255
-            b = 255
+            r, g, b = n.type.getDefaultRectColour(n)
             if n in self.selection:
                 r -= 50
                 g -= 50
@@ -644,10 +642,15 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 g -= 50
                 b -= 50
             if n.rect is not None:  # might not have a brush yet (rebuild might need calling)
+                r = max(r, 10)
+                g = max(g, 10)
+                b = max(b, 10)
                 n.rect.setBrush(QColor(r, g, b))
                 outlinecol = QColor(0, 0, 0) if n.enabled else QColor(255, 0, 0)
                 n.rect.setPen(outlinecol)
-                n.rect.text.setColour(outlinecol)
+
+                r, g, b = n.type.getTextColour(n) if n.enabled else QColor(255, 0, 0)
+                n.rect.text.setColour(QColor(r, g, b))
         self.update()
 
     def selChanged(self):

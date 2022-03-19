@@ -1,7 +1,11 @@
+from typing import Tuple
+
 from PyQt5 import QtGui, QtWidgets, QtCore
+from PyQt5.QtGui import QColor, QFont
 from PyQt5.QtWidgets import QGraphicsRectItem
 
 from pcot import ui
+from pcot.ui.tabs import Tab
 from pcot.xform import xformtype, XFormType
 
 
@@ -13,6 +17,11 @@ class GStringText(QtWidgets.QGraphicsTextItem):
         self.setTabChangesFocus(True)
         self.rect = parent
         self.node = node
+
+        font = QFont()
+        font.setFamily('Sans Serif')
+        font.setPixelSize(node.fontSize)
+        self.setFont(font)
 
     def editDone(self):
         self.node.mark()
@@ -33,17 +42,24 @@ class GStringText(QtWidgets.QGraphicsTextItem):
             super().keyPressEvent(event)
 
     def setColour(self, col):
-        pass
+        self.setDefaultTextColor(col)
 
 
 @xformtype
 class XFormComment(XFormType):
     """Comment box"""
+
     def __init__(self):
         super().__init__("comment", "maths", "0.0.0")
         self.resizable = True
         self.showPerformedCount = False
-        self.autoserialise = ('string',)
+        self.autoserialise = ('string', 'boxColour', 'textColour', 'fontSize')
+
+    def init(self, node):
+        node.string = "comment"
+        node.boxColour = (255, 255, 255)
+        node.textColour = (0, 0, 0)
+        node.fontSize = 12
 
     ## build the text element of the graph scene object for the node. By default, this
     # will just create static text, but can be overridden.
@@ -52,17 +68,78 @@ class XFormComment(XFormType):
         x, y = n.xy
         text = GStringText(n.rect, n)
         text.setPos(x + ui.graphscene.XTEXTOFFSET, y + ui.graphscene.YTEXTOFFSET + ui.graphscene.CONNECTORHEIGHT)
+
         return text
+
+    def getDefaultRectColour(self, n):
+        return n.boxColour
+
+    def getTextColour(self, n):
+        return n.textColour
 
     def resizeDone(self, n):
         t = n.rect.text
-        t.setTextWidth(n.w-10)
+        t.setTextWidth(n.w - 10)
+
+    def setRectParams(self, r):
+        r.setPen(QColor(200, 200, 200))
 
     def createTab(self, n, w):
-        return None
-
-    def init(self, node):
-        node.string = "comment"
+        return TabComment(n, w)
 
     def perform(self, node):
         pass
+
+
+def setButtonColour(b, col):
+    b.setAutoFillBackground(True)
+    r1, g1, b1 = col
+    t = 255 if r1 + g1 + b1 < (128 * 3) else 0
+    s = f"background-color: rgb({r1},{g1},{b1}); color: rgb({t},{t},{t})"
+    b.setStyleSheet(s)
+
+
+def colourDialog(col: Tuple[int, int, int]):
+    r, g, b = col
+    col = QColor(r, g, b)
+    col = QtWidgets.QColorDialog.getColor(col, None)
+    if col.isValid():
+        return col.red(), col.green(), col.blue()
+    else:
+        return r, g, b
+
+
+class TabComment(Tab):
+    def __init__(self, node, w):
+        super().__init__(w, node, 'tabcomment.ui')
+        self.w.boxColourButton.clicked.connect(self.boxColourClicked)
+        self.w.textColourButton.clicked.connect(self.textColourClicked)
+        self.w.fontSizeCombo.currentTextChanged.connect(self.fontSizeChanged)
+        self.w.editDone.clicked.connect(self.editDoneClicked)
+        self.w.text.textChanged.connect(self.textChanged)
+        self.nodeChanged()
+
+    def textChanged(self):
+        self.node.string = self.w.text.toPlainText()
+        # editing done button will change what it looks like in the graph (other things might too)
+
+    def editDoneClicked(self):
+        self.changed()
+
+    def boxColourClicked(self):
+        self.node.boxColour = colourDialog(self.node.boxColour)
+        self.changed()
+
+    def textColourClicked(self):
+        self.node.textColour = colourDialog(self.node.textColour)
+        self.changed()
+
+    def fontSizeChanged(self, s):
+        self.node.fontSize = int(s)
+        self.changed()
+
+    def onNodeChanged(self):
+        setButtonColour(self.w.boxColourButton, self.node.boxColour)
+        setButtonColour(self.w.textColourButton, self.node.textColour)
+        self.w.text.setPlainText(self.node.string)
+        self.w.fontSizeCombo.setCurrentText(str(self.node.fontSize))
