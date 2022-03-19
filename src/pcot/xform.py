@@ -153,7 +153,9 @@ class XFormType:
     minwidth: int
     # can we resize this node by dragging a corner?
     resizable: bool
-
+    # should nodes of this type show their performed count? It's pointless for comments, for example,
+    # and messes up their resizing.
+    showPerformedCount: bool
 
     def __init__(self, name, group, ver):
         """constructor, takes name, groupname and version"""
@@ -183,6 +185,7 @@ class XFormType:
         self.defaultWidth = self.minwidth
         self.defaultHeight = graphscene.NODEHEIGHT
         self.resizable = False
+        self.showPerformedCount = True
 
     def remove(self, node):
         """call to remove node from instance list"""
@@ -314,6 +317,10 @@ class XFormType:
         text = graphscene.GText(n.rect, n.displayName, n)
         text.setPos(x + graphscene.XTEXTOFFSET, y + graphscene.YTEXTOFFSET + graphscene.CONNECTORHEIGHT)
         return text
+
+    def resizeDone(self, n):
+        """The node's onscreen box has been resized"""
+        pass
 
 
 def serialiseConn(c, connSet):

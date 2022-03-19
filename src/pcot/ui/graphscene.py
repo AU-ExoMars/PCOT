@@ -149,21 +149,24 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
         self.resizeStartRectangle = None
         self.resizeStartPosition = None
 
-    def setSizeToText(self, node):
+    def setSizeToText(self):
         """Make sure the text fits - works by setting the width to the maximum of the minimum possible
         width and the text width. We don't use the current node width - this method effectively "shrinkwraps"
         the box to the text. We also don't use it for 'resizable' nodes (like comments) """
-
-        r = self.rect()
+        node = self.node
         if not node.type.resizable:
+            r = self.rect()
             w = max(node.type.minwidth, self.text.boundingRect().width() + 10)
             r.setWidth(w)
             self.setRect(r)
             node.w = w
+        self.buildHelpBox()
 
+    def buildHelpBox(self):
+        r = self.rect()
         if self.helprect:  # get rid of any old one
             self.helprect.setParentItem(None)
-        self.helprect = GHelpRect(r.x(), r.y(), node, self)
+        self.helprect = GHelpRect(r.x(), r.y(), self.node, self)
 
     def itemChange(self, change, value):
         """deal with items moving"""
@@ -214,6 +217,10 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
             super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
+        if self.resizing:
+            self.node.type.resizeDone(self.node)
+            self.buildHelpBox()
+
         self.resizing = False
         super().mouseReleaseEvent(event)
 
@@ -449,7 +456,8 @@ def makeNodeGraphics(n):
     # in the type, which we can override if we want to do Odd Things (editable text)
     n.rect.text = n.type.buildText(n)
     n.rect.text.setFont(mainFont)
-    n.rect.setSizeToText(n)   # make sure the text fits!
+    n.rect.setSizeToText()   # make sure the box fits the text (for non-resizables)
+    n.type.resizeDone(n)      # make sure the text fits the box (for resizables)
     makeConnectors(n, x, y)
 
     # if there's an error, add the code. Otherwise if there a rect text, add that.
@@ -463,7 +471,7 @@ def makeNodeGraphics(n):
         t.setFont(errorFont)
         t.setBrush(QColor(0, 0, 255))
         t.setPos(x + XTEXTOFFSET, y + YTEXTOFFSET + CONNECTORHEIGHT + YERROROFFSET)
-    else:
+    elif n.type.showPerformedCount:
         t = GText(n.rect, f"{n.timesPerformed}", n)
         t.setFont(errorFont)
         t.setBrush(QColor(0, 128, 0))

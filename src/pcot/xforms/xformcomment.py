@@ -14,15 +14,17 @@ class GStringText(QtWidgets.QGraphicsTextItem):
         self.rect = parent
         self.node = node
 
+    def editDone(self):
+        self.node.mark()
+        self.node.string = self.toPlainText()
+
     def focusOutEvent(self, event: QtGui.QFocusEvent) -> None:
-        self.setPlainText(self.node.string)
+        self.editDone()
         super().focusOutEvent(event)
 
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
         # return means "go!"
         if event.key() == QtCore.Qt.Key.Key_Return:
-            self.node.mark()
-            self.node.string = self.toPlainText()
             self.clearFocus()
             # no need to perform here; there is no output
             # self.node.graph.performNodes(self.node)
@@ -40,6 +42,7 @@ class XFormComment(XFormType):
     def __init__(self):
         super().__init__("comment", "maths", "0.0.0")
         self.resizable = True
+        self.showPerformedCount = False
         self.autoserialise = ('string',)
 
     ## build the text element of the graph scene object for the node. By default, this
@@ -50,6 +53,10 @@ class XFormComment(XFormType):
         text = GStringText(n.rect, n)
         text.setPos(x + ui.graphscene.XTEXTOFFSET, y + ui.graphscene.YTEXTOFFSET + ui.graphscene.CONNECTORHEIGHT)
         return text
+
+    def resizeDone(self, n):
+        t = n.rect.text
+        t.setTextWidth(n.w-10)
 
     def createTab(self, n, w):
         return None
