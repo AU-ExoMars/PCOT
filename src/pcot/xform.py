@@ -126,48 +126,34 @@ class BadVersionException(Exception):
 
 class XFormType:
     """Superclass for a transformation type, defining how any XForm which links to it behaves."""
-    ## @var name
     # name of the type
     name: str
-    ## @var group
     # the palette group to which it belongs
     group: str
-    ## @var ver
     # version number
     ver: str
-    ## @var hasEnable
     # does it have an enable button?
     hasEnable: bool
-    ## @var instances
     # all instances of this type in all graphs
     instances: List['XForm']
-
-    ## @var helpwin
     # an open help window, or None
     helpwin: Optional['PyQt5.QtWidgets.QMainWindow']
-
-    ## @var inputConnectors
     # input connectors, a list of triples (name,connection type name, description)
-    ## @var outputConnectors
-    # output connectors, a list of triples (name,connection type name, description)
-
     # name is the name which appears in the graph view,
     # connection type name is 'any', 'imgrgb' etc.: the internal type name,
     # desc is used in the help window,
-
     inputConnectors: List[Tuple[str, str, str]]  # the inputs (name,connection type name,description)
+    # output connectors, a list of triples (name,connection type name, description)
     outputConnectors: List[Tuple[str, str, str]]  # the outputs (name,connection type name,description)
-
-    ## @var autoserialise
     # tuple of autoserialisable attributes in each node of this type
     autoserialise: Tuple[str, ...]
-
-    ## @var _md5
     # MD5 hash of source code (generated automatically)
     _md5: str
-
-    ## @var minwidth
     # minimum width of node on screen
+    minwidth: int
+    # can we resize this node by dragging a corner?
+    resizable: bool
+
 
     def __init__(self, name, group, ver):
         """constructor, takes name, groupname and version"""
@@ -194,6 +180,9 @@ class XFormType:
         # before, the serialise() and deserialise() methods.
         self.autoserialise = ()  # tuple or list of attribute names
         self.minwidth = 100
+        self.defaultWidth = self.minwidth
+        self.defaultHeight = graphscene.NODEHEIGHT
+        self.resizable = False
 
     def remove(self, node):
         """call to remove node from instance list"""
@@ -419,38 +408,27 @@ class XForm:
 
     # display data
 
-    ## @var xy
     # the screen coordinates
     xy: Tuple[int, int]
-    ## var w
     # screen width
     w: Optional[int]
-    ## var h
     # screen height
     h: Optional[int]
 
-    ## @var tabs
     # a list of open tabs
     tabs: List['pcot.ui.tabs.Tab']
-    ## @var current
     # is this the currently selected node?
     current: bool
-    ## @var rect
     # the main rectangle for the node in the scene
     rect: ['graphscene.GMainRect']
-    ## @var inrects
     # input connector rectangles
     inrects: List[Optional['graphscene.GConnectRect']]
-    ## @var outrects
     # output connector rectangles
     outrects: List[Optional['graphscene.GConnectRect']]
-    ## @var error
     # error state or None. See XFormException for codes.
     error: Optional[XFormException]
-    ## @var rectText
     # extra text displayed (if there's no error)
     rectText: Optional[str]
-    ## @var runTime
     # the time this node took to run in the last call to performNodes
     runTime: float
 
@@ -482,12 +460,14 @@ class XForm:
         self.timesPerformed = 0  # used for debugging/optimising
 
         # UI-DEPENDENT DATA DOWN HERE
-        self.xy = (0, 0)  # this SHOULD be serialised
+
+        # this SHOULD be serialised
+        self.xy = (0, 0)
+        self.w = self.type.defaultWidth
+        self.h = self.type.defaultHeight
 
         # this stuff shouldn't be serialized
         # on-screen geometry, which should be set before we try to draw it
-        self.w = None  # unset, will be set on draw
-        self.h = None
         self.tabs = []  # no tabs open
         self.current = False
         self.rect = None  # the main GMainRect rectangle
@@ -575,6 +555,8 @@ class XForm:
         be None if you want to serialize the whole set)
         """
         d = {'xy': self.xy,
+             'w': self.w,
+             'h': self.h,
              'type': self.type.name,
              'displayName': self.displayName,
              'ins': [serialiseConn(c, selection) for c in self.inputs],
@@ -601,6 +583,8 @@ class XForm:
         """deserialise a node from a python dict.
         Some entries have already been already dealt with."""
         self.xy = d['xy']
+        self.w = d.get('w', self.type.defaultWidth)  # use 'get' to still be able to load early data
+        self.h = d.get('h', self.type.defaultHeight)
         self.comment = d['comment']
         # these are the overriding types - if the value is None, use the xformtype's value, else use the one here.
         self.outputTypes = [None if x is None else datum.deserialise(x) for x in d['outputTypes']]

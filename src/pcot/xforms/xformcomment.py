@@ -39,6 +39,7 @@ class XFormComment(XFormType):
     """Comment box"""
     def __init__(self):
         super().__init__("comment", "maths", "0.0.0")
+        self.resizable = True
         self.autoserialise = ('string',)
 
     ## build the text element of the graph scene object for the node. By default, this

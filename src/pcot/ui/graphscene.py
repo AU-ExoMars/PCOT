@@ -62,8 +62,11 @@ errorFont.setPixelSize(12)
 
 # constants for node drawing
 
-# height of a node in pixels (including connectors) (minimum is part of XFormType)
+# height of a node in pixels (used in XFormType)
 NODEHEIGHT = 50
+
+# min nodeheight for resizable nodes
+MINNODEHEIGHT = 50
 
 # offset of xform name text into box
 XTEXTOFFSET = 5
@@ -147,11 +150,17 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
         self.resizeStartPosition = None
 
     def setSizeToText(self, node):
+        """Make sure the text fits - works by setting the width to the maximum of the minimum possible
+        width and the text width. We don't use the current node width - this method effectively "shrinkwraps"
+        the box to the text. We also don't use it for 'resizable' nodes (like comments) """
+
         r = self.rect()
-        w = max(node.type.minwidth, self.text.boundingRect().width() + 10)
-        r.setWidth(w)
-        self.setRect(r)
-        node.w = w
+        if not node.type.resizable:
+            w = max(node.type.minwidth, self.text.boundingRect().width() + 10)
+            r.setWidth(w)
+            self.setRect(r)
+            node.w = w
+
         if self.helprect:  # get rid of any old one
             self.helprect.setParentItem(None)
         self.helprect = GHelpRect(r.x(), r.y(), node, self)
@@ -175,12 +184,9 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
         return super().itemChange(change, value)
 
     def mousePressEvent(self, event):
-        # near a corner? This is vile because of how the coord system works. Instead of the rectangle being (0,0,w,h) and
-        # with its position at (x,y) in the parent scene, the rectangle is at (x,y,x+w,y+h) and its position in the parent
-        # is (0,0).
-
+        # near a corner and the node is resizable? Start resizing. Otherwise, start moving.
         p = event.pos()
-        if (p - self.rect().bottomRight()).manhattanLength() < 15:
+        if self.node.type.resizable and (p - self.rect().bottomRight()).manhattanLength() < 15:
             self.resizing = True
             self.resizeStartPosition = p
             self.resizeStartRectangle = self.rect()
@@ -191,15 +197,18 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
 
     def mouseMoveEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
         if self.resizing:
+            # this resizes the node box and ignores the move event (so we don't end up moving it too)
             mouseMoved = event.pos() - self.resizeStartPosition
-            ui.log(f"adjusting {event.pos()} - {self.resizeStartPosition} = {mouseMoved}")
             r = self.resizeStartRectangle.adjusted(0, 0, mouseMoved.x(), mouseMoved.y())
             if r.width() < self.node.type.minwidth:
                 r.setWidth(self.node.type.minwidth)
-            if r.height() < NODEHEIGHT:
-                r.setHeight(NODEHEIGHT)
+            if r.height() < MINNODEHEIGHT:
+                r.setHeight(MINNODEHEIGHT)
 
             self.setRect(r)
+            self.node.w = r.width()
+            self.node.h = r.height()
+            # ui.log(f"adjusting {event.pos()} - {self.resizeStartPosition} = {mouseMoved}, resized to {self.node.w}, {self.node.h}")
             event.ignore()
         else:
             super().mouseMoveEvent(event)
@@ -213,7 +222,7 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
         of focussing another window (an expanded tab); an action
         delegated to the main window"""
         w = getEventWindow(event)
-        if self.helprect.boundingRect().contains(event.pos()):
+        if self.helprect is not None and self.helprect.boundingRect().contains(event.pos()):
             w.openHelp(self.node.type, node=self.node)
         else:
             w.openTab(self.node)
@@ -429,16 +438,10 @@ def makeNodeGraphics(n):
     """create the necessary items to create a node
     (assuming place has been called). Just the node, not the connections."""
     x, y = n.xy
-    # if the node doesn't have width and height yet, set them. This happens
-    # when a node is not created in place().
-    # Also, if a node width is negative, set the size to the text.
-
-    if n.h is None:
-        n.h = NODEHEIGHT
 
     # draw basic rect, leaving room for connectors at top and bottom
     # We keep this rectangle in the node so we can change its colour
-    n.rect = GMainRect(x, y + CONNECTORHEIGHT, n.type.minwidth,
+    n.rect = GMainRect(x, y + CONNECTORHEIGHT, n.w,
                        n.h - CONNECTORHEIGHT * 2, n)
 
     # draw text label, using the display name. Need to keep a handle on the text
@@ -446,7 +449,7 @@ def makeNodeGraphics(n):
     # in the type, which we can override if we want to do Odd Things (editable text)
     n.rect.text = n.type.buildText(n)
     n.rect.text.setFont(mainFont)
-    n.rect.setSizeToText(n)
+    n.rect.setSizeToText(n)   # make sure the text fits!
     makeConnectors(n, x, y)
 
     # if there's an error, add the code. Otherwise if there a rect text, add that.
@@ -489,14 +492,10 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         self.selectionChanged.connect(self.selChanged)
         self.selection = []
         self.checkSelChange = True
-        # place everything, adding xy,w,h to all nodes
+        # place everything, adding xy,w,h to all nodes. Not done when loading from a file, because
+        # each node should have w,h at that point.
         if doPlace:
             self.place()
-        else:
-            # or alternatively just set w,h (for loading data from a file)
-            for n in self.graph.nodes:
-                n.w = n.type.minwidth  # will get changed
-                n.h = NODEHEIGHT
 
         # and make all the graphics
         self.rebuild()
@@ -512,7 +511,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         # add the vertices
         for n in self.graph.nodes:
             n.vert = Vertex(n)
-            n.vert.view = VertexViewer(w=n.type.minwidth, h=NODEHEIGHT + GRANDALFPADDING)
+            n.vert.view = VertexViewer(w=n.w, h=n.h + GRANDALFPADDING)
             g.add_vertex(n.vert)
         # now the edges
         for n in self.graph.nodes:
@@ -558,8 +557,6 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             x = 0
             y = 0
             for n in self.graph.nodes:
-                n.w = n.type.minwidth  # will get changed
-                n.h = NODEHEIGHT
                 n.xy = (x, y)
                 y += n.h + 20
 
@@ -589,7 +586,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             xs = [n.xy[0] for n in self.graph.nodes]
             ys = [n.xy[1] for n in self.graph.nodes]
             x = sum(xs) / len(xs)
-            y = max(ys) + NODEHEIGHT
+            y = max(ys) + max([n.h for n in self.graph.nodes])
             return x, y
         else:
             return 0, 0

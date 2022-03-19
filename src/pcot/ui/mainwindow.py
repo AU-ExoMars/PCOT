@@ -338,7 +338,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     ## the "save" menu handler
     def saveAction(self):
         if self.saveFileName is None:
-            self.saveAsAction()
+            self.saveAsAction(True)
         else:
             self.save(self.saveFileName)
 
