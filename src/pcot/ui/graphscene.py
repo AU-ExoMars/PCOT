@@ -32,6 +32,7 @@ try:
 except ImportError:
     logger.info("Grandalf is not present, autolayout will be awful.")
 
+
     # dummy class defs for when grandalf isn't present, to avoid rogue errors in type checking
 
     class Graph:
@@ -505,11 +506,13 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         if len(self.graph.nodes) == 0:  # no nodes to place
             return
 
+        GRANDALFPADDING = CONNECTORHEIGHT * 2 + 20
+
         g = Graph()  # grandalf graph, not one of ours!
         # add the vertices
         for n in self.graph.nodes:
             n.vert = Vertex(n)
-            n.vert.view = VertexViewer(w=n.type.minwidth, h=NODEHEIGHT)
+            n.vert.view = VertexViewer(w=n.type.minwidth, h=NODEHEIGHT + GRANDALFPADDING)
             g.add_vertex(n.vert)
         # now the edges
         for n in self.graph.nodes:
@@ -523,10 +526,19 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         # build the layout separately for each unconnected
         # subgraph:
 
+        xoff, yoff = 0, 0   # offset for each subgraph
         for gr in g.C:
             sug = SugiyamaLayout(gr)
             sug.init_all()
             sug.draw(3)  # 3 iterations of algorithm
+
+            for v in gr.V():    # add offset to this subgraph
+                x, y = v.view.xy
+                x += xoff
+                y += yoff
+                v.view.xy = x, y
+            xoff += 100         # increment offset
+            yoff += 100
 
         # invert y coordinates of nodes so we have the source at the top,
         # and copy into geometry into the node (if we don't use grandalf)
@@ -534,7 +546,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         for n in self.graph.nodes:
             x, y = n.vert.view.xy
             n.w = n.vert.view.w
-            n.h = n.vert.view.h
+            n.h = n.vert.view.h - GRANDALFPADDING
             n.xy = (x, cy - y)
 
     def place(self):
