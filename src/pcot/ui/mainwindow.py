@@ -177,9 +177,13 @@ class MainUI(ui.tabs.DockableTabWindow):
         else:
             # We are definitely a main window
             self.macroPrototype = None  # we are not a macro
-            # now create the input selector buttons, removing the old ones
-            while self.isfLayout.takeAt(0):
-                pass
+            # now create the input selector buttons, removing the old ones.
+            # We do this by getting rid of the old layout so we can set a new one, by reparenting
+            # the old layout into a temporary widget.
+            QtWidgets.QWidget().setLayout(self.isfLayout)
+            # then we create and set a new layout and add the items to it.
+            self.isfLayout = QtWidgets.QHBoxLayout()
+            self.inputSelectorFrame.setLayout(self.isfLayout)
 
             for x in range(0, len(self.doc.inputMgr.inputs)):
                 self.isfLayout.addWidget(InputSelectButton(x, self.doc.inputMgr.inputs[x]))
