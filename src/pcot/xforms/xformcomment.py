@@ -23,6 +23,12 @@ class GStringText(QtWidgets.QGraphicsTextItem):
         font.setPixelSize(node.fontSize)
         self.setFont(font)
 
+    def contextMenuEvent(self, event: 'QGraphicsSceneContextMenuEvent') -> None:
+        """In QT5, the context menu in QGraphicsTextItem causes a segfault - we disable
+        it here. https://bugreports.qt.io/browse/QTBUG-89563
+        This is probably a good idea anyway, as it lets the node's context menu run"""
+        event.ignore()
+
     def editDone(self):
         self.node.mark()
         self.node.string = self.toPlainText()

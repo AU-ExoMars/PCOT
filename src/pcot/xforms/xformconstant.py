@@ -24,6 +24,12 @@ class GNumberText(QtWidgets.QGraphicsTextItem):
         self.setPlainText(str(self.node.val))
         super().focusOutEvent(event)
 
+    def contextMenuEvent(self, event: 'QGraphicsSceneContextMenuEvent') -> None:
+        """In QT5, the context menu in QGraphicsTextItem causes a segfault - we disable
+        it here. https://bugreports.qt.io/browse/QTBUG-89563
+        This is probably a good idea anyway, as it lets the node's context menu run"""
+        event.ignore()
+
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
         # return means "go!"
         if event.key() == Qt.Key_Return:
