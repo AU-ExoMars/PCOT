@@ -244,21 +244,25 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
         else:
             togact = None
         helpact = m.addAction("Help")
+        openact = m.addAction("Open in tab")
 
-        # only worth doing if there are menu items!
+        # only worth doing if there are menu items! Note that by now this is always true
+        # but I'll leave the condition here.
         if not m.isEmpty():
+            w = getEventWindow(event)
             action = m.exec_(event.screenPos())
             if action is None:
                 return
             elif action == togact:
                 self.node.setEnabled(not self.node.enabled)
+            elif action == openact:
+                w.openTab(self.node)
             elif action == rename:
                 changed, newname = pcot.ui.namedialog.do(self.node.displayName)
                 if changed:
                     self.node.rename(newname)
                     ui.mainwindow.MainUI.rebuildAll()
             elif action == helpact:
-                w = getEventWindow(event)
                 w.openHelp(self.node.type, node=self.node)
 
 

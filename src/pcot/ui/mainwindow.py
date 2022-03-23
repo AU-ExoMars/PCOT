@@ -284,8 +284,9 @@ class MainUI(ui.tabs.DockableTabWindow):
         # doing it in one step, to avoid errors in the former leaving us
         # with an unreadable file.
         try:
+            ui.msg(f"Saving to {fname}")
             self.doc.save(fname, saveInputs=saveInputs)
-            ui.msg("File saved : " + fname)
+            ui.msg(f"File saved to {fname}")
             self.rebuildRecents()
         except Exception as e:
             traceback.print_exc()
@@ -299,6 +300,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.graph.autoRun = False
         try:
             import pcot.document
+            ui.msg(f"Loading file {fname}...")
             d = pcot.document.Document(fname)
             MainUI.windows.remove(
                 self)  # remove the existing entry for this window, we'll add it again in the next line

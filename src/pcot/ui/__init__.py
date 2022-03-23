@@ -24,6 +24,7 @@ def msg(t):
     if application is not None:
         for x in mainwindow.MainUI.windows:
             x.statusBar.showMessage(t)
+            x.statusBar.repaint()   # make sure the message appears!
     else:
         logger.info(f"LOG MSG {t}")
 
