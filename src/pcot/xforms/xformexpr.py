@@ -202,7 +202,7 @@ class TabExpr(pcot.ui.tabs.Tab):
         # note that we use a temporary expression, so that the expression isn't constantly changing and we have
         # difficulty marking undo points.
         self.node.expr = self.node.tmpexpr
-        self.node.rect.setSizeToText(self.node)
+        self.node.rect.setSizeToText()
         self.changed()
 
     def onNodeChanged(self):
