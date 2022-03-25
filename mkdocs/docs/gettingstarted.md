@@ -29,6 +29,8 @@ the palette will add a node of the given type to the graph.
 * At the bottom is the **log area** and a set of
 [global controls](globalcontrols.md).
 
+## Working with graph nodes
+
 ### Selecting in the graph
 
 When you open the program, the first thing you will see is a graph containing
@@ -51,6 +53,46 @@ two selection models:
 * A single node's tab can be open and currently being edited, this node
 is tinted green in the graph.
 * Nodes which are both being edited and are selected are tinted cyan.
+
+### Creating a new node
+
+This can be done in two ways:
+
+* **Clicking on a node type in the palette** will create a new instance of
+that type in the graph, hopefully somewhere sensible.
+* **Right-clicking a node type from the palette and dragging onto the graph** will create a node
+where you wish.
+
+### "Undocking" a node's tab
+
+<img src="/tab.png" style="float: left; margin-right:20px">
+Sometimes it is useful to see several node tabs at the same time.
+Double-clicking on the actual "tab" part, where the name of the
+node type appears, will make the tab open in a separate window.
+This can be done for several tabs, and the windows can be rearranged
+as you wish. Closing the window will "redock" the tab so it appears
+in the tab area as before.
+
+### Constant and comment nodes
+
+These two nodes are special - the boxes in the graph have text fields
+which can be edited.
+
+*  For *constant* nodes, the value in the box 
+will be the numeric output of the node. This node has no tab, and double-clicking
+has no effect.
+* For *comment* nodes, the value in the box is a text comment that can help
+other users navigate the graph. Once edited, the box can be resized by
+clicking and dragging its bottom-right corner. The text will flow to fit
+the box. Double-clicking on a *comment* node opens a tab which provides
+an alternative way of editing the text, as well as changing the font size and
+colours. It's also the only way of getting blank lines into the text, since
+hitting the "enter" key will stop editing when you are editing the node
+text directly in its box.
+
+![!Comment and constant nodes](comment.png)
+
+
 
 ## Canvases
 
