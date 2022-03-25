@@ -13,6 +13,27 @@ pfs = glob.glob(pfdir+"/libq*")
 pfs = [os.path.basename(x) for x in pfs]
 pfs = [(f'{pfdir}/{x}','.') for x in pfs]
 
+# reconstruct the splash screen
+from PIL import Image,ImageFont,ImageDraw
+
+def draw(d, coords, text, size):
+    font = ImageFont.truetype("font.ttf", size)
+    d.text(coords,text,(255,255,255),font=font)
+
+img = Image.open("splashbase.png")
+d = ImageDraw.Draw(img)
+
+LEFT=239
+vtext = open("../src/pcot/VERSION.txt").readline().strip()
+
+draw(d, (LEFT-5,-20), "PCOT", 92)
+draw(d, (LEFT,85), "PanCam Operations Toolkit", 30)
+draw(d, (LEFT,140),"\u00A9 Aberystwyth University 2020-2022",20)
+draw(d, (LEFT,180), vtext, 25)
+
+img.save("splash.png")
+
+
 # build xform imports (which are hidden)
 xforms = [os.path.basename(x)[:-3] for x in glob.glob('../src/pcot/xforms/xform*.py')]
 print(xforms)
