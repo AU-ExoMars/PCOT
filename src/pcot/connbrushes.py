@@ -4,11 +4,19 @@ import logging
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QBrush, QLinearGradient
 
+from pcot.datum import Datum, Type
 
-from pcot.datum import Datum
 brushDict = {}
 
 logger = logging.getLogger(__name__)
+
+
+def register(t: Type, colOrBrush):
+    """register a colour or brush to draw the connector for a datum type"""
+    if isinstance(colOrBrush, QBrush):
+        brushDict[t] = colOrBrush
+    else:
+        brushDict[t] = QBrush(colOrBrush)
 
 
 ## creates a gradient consisting of three colours in quick succession
@@ -23,20 +31,20 @@ def quickGrad(c1, c2, c3, finalC):
     return grad
 
 
-brushDict[Datum.ANY] = Qt.red
-brushDict[Datum.IMGRGB] = quickGrad(Qt.red, Qt.green, Qt.blue, QColor(50, 50, 50))
-brushDict[Datum.IMG] = Qt.blue
-brushDict[Datum.ELLIPSE] = Qt.cyan
-brushDict[Datum.ROI] = Qt.cyan
-brushDict[Datum.DATA] = Qt.darkMagenta
-brushDict[Datum.NUMBER] = Qt.darkGreen
-brushDict[Datum.VARIANT] = QBrush(Qt.black, Qt.DiagCrossPattern)
+# register builtin types
 
-# convert all brushes to actual QBrush objects
-brushDict = {k: QBrush(v) for k, v in brushDict.items()}
+register(Datum.ANY, Qt.red)
+register(Datum.IMGRGB, quickGrad(Qt.red, Qt.green, Qt.blue, QColor(50, 50, 50)))
+register(Datum.IMG, Qt.blue)
+register(Datum.ELLIPSE, Qt.cyan)
+register(Datum.ROI, Qt.cyan)
+register(Datum.DATA, Qt.darkMagenta)
+register(Datum.NUMBER, Qt.darkGreen)
+register(Datum.VARIANT, QBrush(Qt.black, Qt.DiagCrossPattern))
 
 
-# add brushes which are already QBrush down here
+_unknown = QBrush(Qt.magenta)
+
 
 def getBrush(typename):
     """get a brush by name or magenta if no brush is found"""
@@ -44,4 +52,4 @@ def getBrush(typename):
         return brushDict[typename]
     else:
         logger.error(f"Unknown type {typename}")
-        return QBrush(Qt.magenta)
+        return _unknown

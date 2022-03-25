@@ -9,23 +9,131 @@ These types are also used by the expression evaluator.
 import logging
 from typing import Any, Optional
 
+import pcot.sources
 from pcot import rois
 from pcot.imagecube import ImageCube
 from pcot.sources import SourcesObtainable, nullSource
 
 logger = logging.getLogger(__name__)
 
+## complete list of all types, which also assigns them to values (kind of like an enum)
+
+# lookup by name for serialisation
+_typesByName = dict()
+
 
 class Type:
-    """The type of a Datum passed between nodes and inside the expression evaluator."""
+    """The type of a Datum passed between nodes and inside the expression evaluator.
+    Must be a singleton but I'm not going to enforce it."""
 
     def __init__(self, name, image=False, internal=False):
         self.name = name
         self.image = image  # is the type for an image (i.e. is it a 'subtype' of Type("img")?)
         self.internal = internal  # is it an internal type used in the expression evaluator, not for connectors?
+        _typesByName[name] = self  # register by name
 
     def __str__(self):
         return self.name
+
+    def serialise(self, d):
+        raise Exception(f"Datum type {self.name} is not yet serialisable")
+
+    def deserialise(self, d, document) -> 'Datum':
+        raise Exception(f"Datum type {self.name} is not yet serialisable")
+
+
+# Built-in datum types
+
+class AnyType(Type):
+    def __init__(self):
+        super().__init__('any')
+
+
+class ImgType(Type):
+    def __init__(self):
+        super().__init__('img', image=True)
+
+    def serialise(self, d):
+        return self.name, d.val.serialise()
+
+    def deserialise(self, d, document):
+        img = ImageCube.deserialise(d, document)
+        return Datum(self, img)
+
+
+class ImgRGBType(Type):
+    def __init__(self):
+        super().__init__('imgrgb', image=True)
+
+    def serialise(self, d):
+        return self.name, d.val.serialise()
+
+    def deserialise(self, d, document):
+        img = ImageCube.deserialise(d, document)
+        return Datum(self, img)
+
+
+class EllipseType(Type):
+    def __init__(self):
+        super().__init__('ellipse')
+
+
+class RoiType(Type):
+    def __init__(self):
+        super().__init__('roi')
+
+    def serialise(self, d):
+        v = d.val
+        return self.name, (v.tpname, v.serialise(),
+                           v.getSources().serialise())
+
+    def deserialise(self, d, document):
+        roitype, roidata, s = d
+        r = rois.deserialise(roidata)
+        return Datum(self, r, s)
+
+
+class NumberType(Type):
+    def __init__(self):
+        super().__init__('number')
+
+    def serialise(self, d):
+        return self.name, (d.val, d.getSources().serialise())
+
+    def deserialise(self, d, document):
+        n, s = d
+        return Datum(self, n, s)
+
+
+class VariantType(Type):
+    def __init__(self):
+        super().__init__('variant')
+
+
+class GenericDataType(Type):
+    def __init__(self):
+        super().__init__('data')
+
+
+class IdentType(Type):
+    def __init__(self):
+        super().__init__('ident', internal=True)
+
+
+class FuncType(Type):
+    def __init__(self):
+        super().__init__('func', internal=True)
+
+
+class NoneType(Type):
+    def __init__(self):
+        super().__init__('none', internal=True)
+
+    def serialise(self, d):
+        return self.name, None
+
+    def deserialise(self, document, d):
+        return Datum.null
 
 
 class Datum(SourcesObtainable):
@@ -40,25 +148,33 @@ class Datum(SourcesObtainable):
     # the source - could be any kind of SourcesObtainable object
     sources: SourcesObtainable
 
+    # register built-in types; extras can be registered with registerType
     types = [
-        ANY := Type("any"),
+        ANY := AnyType(),
         # image types, which all contain 'img' in their string (yes, ugly).
-        IMG := Type("img", image=True),
-        IMGRGB := Type("imgrgb", image=True),
-        ELLIPSE := Type("ellipse"),
-        ROI := Type("roi"),
-        NUMBER := Type("number"),
+        IMG := ImgType(),
+        IMGRGB := ImgRGBType(),
+        ELLIPSE := EllipseType(),
+        ROI := RoiType(),
+        NUMBER := NumberType(),
         # this special type means the node must have its output/input type specified
         # by the user. They don't appear on the graph until this has happened.
-        VARIANT := Type("variant"),
+        VARIANT := VariantType(),
         # generic data
-        DATA := Type("data"),
+        DATA := GenericDataType(),
 
         # these types are not generally used for connections, but for values on the expression evaluation stack
-        IDENT := Type("ident", internal=True),
-        FUNC := Type("func", internal=True),
-        NONE := Type("none", internal=True)  # for neither connections nor the stack - a null value
+        IDENT := IdentType(),
+        FUNC := FuncType(),
+        NONE := NoneType()  # for neither connections nor the stack - a null value
     ]
+
+    @classmethod
+    def registerType(cls, t):
+        """Register a custom type, which must be a singleton datum.Type object. You can then use it where you
+        would use Datum.IMG, etc.
+        Remember to also register a connector brush with connbrushes.register()."""
+        cls.types.append(t)
 
     null = None  # gets filled in later with a null datum (i.e. type is NONE) that we can use
 
@@ -108,55 +224,31 @@ class Datum(SourcesObtainable):
 
     def serialise(self):
         """Serialise for saving to a file, usually (always?) as the cached value of an input"""
-        if self.tp == Datum.IMG:
-            return 'img', self.val.serialise()
-        elif self.tp == Datum.IMGRGB:
-            return 'imgr', self.val.serialise()
-        elif self.tp == Datum.NUMBER:
-            return 'num', (self.val, self.val.sources.getSources().serialise())
-        elif self.tp == Datum.ROI:
-            # getsources here to ensure that everything is turned into SourceSet
-            return 'roi', (self.val.tpname, self.val.serialise(), self.val.sources.getSources().serialise())
-        elif self.tp == Datum.NONE:
-            return 'none', None
-        else:
-            raise Exception(f"Datum type {self.tp} is not yet serialisable")
+        return self.tp.serialise(self)
 
     @classmethod
     def deserialise(cls, data, document):
         """inverse of serialise for serialised data 'd' - requires document so that sources can be
         reconstructed for images"""
-        tp, d = data     # unpack the tuple
-        if tp == 'img':
-            img = ImageCube.deserialise(d, document)
-            return cls(Datum.IMG, img)
-        elif tp == 'imgr':
-            img = ImageCube.deserialise(d, document)
-            return cls(Datum.IMGRGB, img)
-        elif tp == 'num':
-            n, s = d
-            return cls(Datum.NUMBER, n, s)
-        elif tp == 'roi':
-            roitype, roidata, s = d
-            roi = rois.deserialise(roidata)
-            return cls(Datum.ROI, roi, s)
-        elif tp == 'none':
-            return Datum.null
-        else:
-            raise Exception(f"Unable to deserialise Datum type {tp}")
+
+        tp, d = data  # unpack the tuple
+        # get the type object
+        try:
+            t = _typesByName[tp]
+        except KeyError:
+            raise Exception(f"{tp} is not a known type")
+
+        # and run the deserialisation
+        return t.deserialise(d, document)
 
 
 # a handy null datum object
 Datum.null = Datum(Datum.NONE, None)
 
-## complete list of all types, which also assigns them to values (kind of like an enum)
-
-# lookup by name for serialisation
-_typesByName = {t.name: t for t in Datum.types}
-
 
 def deserialise(n):
-    """Given a type name, return the type object"""
+    """Given a type name, return the type object; used in deserialising
+    macro connectors"""
     if n not in _typesByName:
         raise Exception("cannot find type {} for a connector".format(n))
     return _typesByName[n]
@@ -182,3 +274,4 @@ def isCompatibleConnection(outtype, intype):
     else:
         # otherwise has to match exactly
         return outtype == intype
+
