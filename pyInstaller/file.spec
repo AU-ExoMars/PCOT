@@ -17,7 +17,7 @@ pfs = [(f'{pfdir}/{x}','.') for x in pfs]
 from PIL import Image,ImageFont,ImageDraw
 
 def draw(d, coords, text, size):
-    font = ImageFont.truetype("font.ttf", size)
+    font = ImageFont.truetype("opensans.ttf", size)
     d.text(coords,text,(255,255,255),font=font)
 
 img = Image.open("splashbase.png")
