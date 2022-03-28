@@ -3,7 +3,7 @@ from pcot.xform import xformtype, XFormType
 
 
 @xformtype
-class XFormDisplayVal(XFormType):
+class XFormShowNumber(XFormType):
     """Display a numeric value inside the node's box in the graph"""
     def __init__(self):
         super().__init__("show number", "maths", "0.0.0")

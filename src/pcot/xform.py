@@ -21,7 +21,7 @@ import pyperclip
 import pcot.macros
 import pcot.ui as ui
 from pcot import datum
-from pcot.datum import Datum
+from pcot.datum import Datum, Type
 from pcot.sources import nullSourceSet, SourceSet
 from pcot.ui import graphscene
 from pcot.ui.canvas import Canvas
@@ -138,13 +138,8 @@ class XFormType:
     instances: List['XForm']
     # an open help window, or None
     helpwin: Optional['PyQt5.QtWidgets.QMainWindow']
-    # input connectors, a list of triples (name,connection type name, description)
-    # name is the name which appears in the graph view,
-    # connection type name is 'any', 'imgrgb' etc.: the internal type name,
-    # desc is used in the help window,
-    inputConnectors: List[Tuple[str, str, str]]  # the inputs (name,connection type name,description)
-    # output connectors, a list of triples (name,connection type name, description)
-    outputConnectors: List[Tuple[str, str, str]]  # the outputs (name,connection type name,description)
+    inputConnectors: List[Tuple[str, Type, str]]  # the inputs (name,connection type,description)
+    outputConnectors: List[Tuple[str, Type, str]]  # the outputs (name,connection type,description)
     # tuple of autoserialisable attributes in each node of this type
     autoserialise: Tuple[str, ...]
     # MD5 hash of source code (generated automatically)
@@ -168,8 +163,7 @@ class XFormType:
         self.helpwin = None
         # does this node have an "enabled" button? Change in subclass if reqd.
         self.hasEnable = False
-        # this contains tuples of (name,typename). Images have typenames which
-        # start with "img"
+        # this contains tuples of (name, connector type (a datum Type), desc).
         self.inputConnectors = []
         # this has the same format, but here the output type
         # is the default type for that connection - when an xform is wired up
@@ -214,13 +208,13 @@ class XFormType:
             except KeyError:
                 pass
 
-    def addInputConnector(self, name, typename, desc=""):
+    def addInputConnector(self, name, conntype, desc=""):
         """create a new input connector; done in subclass constructor"""
-        self.inputConnectors.append((name, typename, desc))
+        self.inputConnectors.append((name, conntype, desc))
 
-    def addOutputConnector(self, name, typename, desc=""):
+    def addOutputConnector(self, name, conntype, desc=""):
         """create a new output connector; done in subclass constructor"""
-        self.outputConnectors.append((name, typename, desc))
+        self.outputConnectors.append((name, conntype, desc))
 
     def rename(self, node, name):
         """rename a node (the displayname, not the unique name).
@@ -871,9 +865,14 @@ class XForm:
                 else:
                     # all is well, return the Datum.
                     return o
-            elif o is None or o.tp != tp:
-                # we have passed in a type, but it either doesn't match
-                # or we have a null input. "Dereference" that into a None.
+            elif o is None:
+                # we have a null input
+                return None
+            elif o.tp != tp:
+                # we have passed in a type, but it doesn't match. Rather than raise an exception,
+                # we create an exception and set the XForm's error state to it, and return None. Effectively
+                # we create an exception and deal with it locally.
+                self.setError(XFormException('TYPE', f"expected a {tp}, got {o.tp}"))
                 return None
             else:
                 # we have passed in a type and it matches, so dereference
@@ -1027,13 +1026,22 @@ class XFormGraph:
     def remove(self, node, closetabs=True):
         """remove a node from the graph, and close any tab/window (but not always; when doing Undo
         we monkey patch the existing tabs to point at the replacement nodes)"""
+
         if node in self.nodes:
-            node.disconnectAll()
+            oldChildren = list(node.children)  # shallow copy of children
+            node.disconnectAll()               # because it gets cleared here
             if closetabs:
                 for x in node.tabs:
                     x.nodeDeleted()
             self.nodes.remove(node)
             del self.nodeDict[node.name]
+
+            # having deleted the node try to call all the children. That might seem a bit
+            # weird, but should clear any errors resulting from (say) a bad type being
+            # issued by the deleted node.
+
+            for x in oldChildren:
+                self.performNodes(x)
             node.onRemove()
 
     ## debugging dump of entire graph
@@ -1151,25 +1159,11 @@ class XFormGraph:
         if self.scene is not None:
             self.scene.rebuild()
 
-    ## a node's input has changed, which may change the output types. If it does,
-    # we need to check the output connections to see if they are still compatible.
+    ## a node's input has changed, which may change the output types.
     def inputChanged(self, node):
         # rebuild the types, perhaps replacing None (use the type default) with
         # a type name
         node.type.generateOutputTypes(node)
-        # now check the children for nodes which connect to this one
-        toDisconnect = []
-        for child in node.children:
-            for i in range(0, len(child.inputs)):
-                if child.inputs[i] is not None:
-                    parent, out = child.inputs[i]
-                    if parent is node:
-                        outtype = node.getOutputType(out)
-                        intype = child.getInputType(i)
-                        if not datum.isCompatibleConnection(outtype, intype):
-                            toDisconnect.append((child, i))
-        for child, i in toDisconnect:
-            child.disconnect(i)
 
     def serialise(self, items=None):
         """serialise all nodes into a dict"""

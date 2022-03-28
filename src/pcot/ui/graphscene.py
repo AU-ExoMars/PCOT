@@ -356,7 +356,7 @@ class GArrow(QtWidgets.QGraphicsLineItem):
     # the arrowhead shape
     head: Optional[QtWidgets.QGraphicsPolygonItem]
 
-    def __init__(self, x1, y1, x2, y2, n1, output, n2, inp):
+    def __init__(self, x1, y1, x2, y2, n1, output, n2, inp, compat=True):
         """Constructor - keep track of the nodes and connection indices"""
         self.n1 = n1
         self.output = output
@@ -364,6 +364,8 @@ class GArrow(QtWidgets.QGraphicsLineItem):
         self.input = inp
         super().__init__(x1, y1, x2, y2)
         self.head = None
+        self.col = Qt.black if compat else Qt.red
+        self.setPen(self.col)
         self.makeHead()
 
     def __str__(self):
@@ -392,7 +394,8 @@ class GArrow(QtWidgets.QGraphicsLineItem):
         poly << QPointF(x2, y2) << QPointF(x2 + xa * ARROWHEADLENGTH, y2 + ya * ARROWHEADLENGTH) << \
         QPointF(x2 + xb * ARROWHEADLENGTH, y2 + yb * ARROWHEADLENGTH)
         self.head = QtWidgets.QGraphicsPolygonItem(poly, parent=self)
-        self.head.setBrush(Qt.black)
+        self.head.setBrush(self.col)
+        self.head.setPen(self.col)
 
     def setLine(self, line):
         """whenever we change the line, rebuild the head"""
@@ -616,6 +619,10 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 if inp is not None:
                     n1, output = inp  # n1 is the source node
 
+                    # get types
+                    _, intype, _ = n2.type.inputConnectors[inputIdx]
+                    _, outtype, _ = n1.type.outputConnectors[output]
+
                     x1, y1 = n1.xy  # this is the "from" and should be on the output ctor
                     x2, y2 = n2.xy  # this is the "to" and should be on the input ctor
                     # draw lines
@@ -624,7 +631,8 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     x1 = x1 + outsize * (output + 0.5)
                     x2 = x2 + insize * (inputIdx + 0.5)
                     y1 += n1.h
-                    arrowItem = GArrow(x1, y1, x2, y2, n1, output, n2, inputIdx)
+                    arrowItem = GArrow(x1, y1, x2, y2, n1, output, n2,
+                                       inputIdx, compat=isCompatibleConnection(outtype, intype))
                     self.addItem(arrowItem)
                     self.arrows.append(arrowItem)
 
@@ -737,7 +745,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 outtype = n1.getOutputType(output)
                 intype = n2.getInputType(inputIdx)
 
-                if intype is not None and outtype is not None and isCompatibleConnection(outtype, intype):
+                if intype is not None and outtype is not None:
                     if n2.cycle(n1):
                         ui.error("cannot create a cycle")
                     else:
@@ -757,7 +765,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                         n2.connect(inputIdx, n1, output)
                         self.graph.inputChanged(n2)
                 else:
-                    ui.error("incompatible connection types OUT {} -> IN {}".format(outtype, intype))
+                    ui.error("bad connection type OUT {} -> IN {}".format(outtype, intype))
             self.rebuildArrows()
             self.draggingArrow = None
         super().mouseReleaseEvent(event)
