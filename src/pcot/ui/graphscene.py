@@ -620,8 +620,8 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     n1, output = inp  # n1 is the source node
 
                     # get types
-                    _, intype, _ = n2.type.inputConnectors[inputIdx]
-                    _, outtype, _ = n1.type.outputConnectors[output]
+                    outtype = n1.getOutputType(output)
+                    intype = n2.getInputType(inputIdx)
 
                     x1, y1 = n1.xy  # this is the "from" and should be on the output ctor
                     x2, y2 = n2.xy  # this is the "to" and should be on the input ctor
@@ -631,8 +631,13 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     x1 = x1 + outsize * (output + 0.5)
                     x2 = x2 + insize * (inputIdx + 0.5)
                     y1 += n1.h
+                    compat = isCompatibleConnection(outtype, intype)
+
+#                    if not compat:
+#                        ui.log(f"incompatible: {n1} -> {n2} / {outtype} -> {intype}")
+
                     arrowItem = GArrow(x1, y1, x2, y2, n1, output, n2,
-                                       inputIdx, compat=isCompatibleConnection(outtype, intype))
+                                       inputIdx, compat=compat)
                     self.addItem(arrowItem)
                     self.arrows.append(arrowItem)
 

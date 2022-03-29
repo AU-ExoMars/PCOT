@@ -119,7 +119,7 @@ class XFormExpr(XFormType):
         self.addInputConnector("b", Datum.ANY)
         self.addInputConnector("c", Datum.ANY)
         self.addInputConnector("d", Datum.ANY)
-        self.addOutputConnector("", Datum.VARIANT)
+        self.addOutputConnector("", Datum.NONE)   # this changes type dynamically
         self.autoserialise = ('expr',)
 
     def createTab(self, n, w):
@@ -149,11 +149,11 @@ class XFormExpr(XFormType):
                 oldChans = None if node.img is None else node.img.channels
                 # run the expression
                 res = self.parser.run(node.expr)
-                print(res)
                 node.setOutput(0, res)
-                if res is not None:
+                if res is not None:   # should never be None, but I'll leave this in
                     node.img = None
-                    if res.tp == Datum.IMG:
+                    node.changeOutputType(0, res.tp)   # change the output type
+                    if res.tp.image:
                         # if there's an image on the output, show it
                         node.img = res.val
                         # if the number of channels has changed, reset the mapping
@@ -178,19 +178,11 @@ class XFormExpr(XFormType):
 class TabExpr(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabexpr.ui')
-        self.w.variant.setTitle("Output type")
         self.w.run.clicked.connect(self.run)
         self.w.expr.textChanged.connect(self.exprChanged)
-        self.w.variant.changed.connect(self.variantChanged)
         self.w.expr.node = node   # need a link from the text edit box into the node, so we can get help on funcs.
 
         self.nodeChanged()
-
-    def variantChanged(self, t):
-        self.mark()
-        self.node.outputTypes[0] = t
-        self.node.graph.ensureConnectionsValid()
-        self.changed()
 
     def exprChanged(self):
         self.node.tmpexpr = self.w.expr.toPlainText()
@@ -210,7 +202,6 @@ class TabExpr(pcot.ui.tabs.Tab):
         self.w.canvas.setMapping(self.node.mapping)
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)
-        self.w.variant.set(self.node.getOutputType(0))
         self.w.expr.setPlainText(self.node.expr)
         self.w.result.setPlainText(self.node.resultStr)
         self.w.canvas.display(self.node.img)

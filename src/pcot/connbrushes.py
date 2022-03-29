@@ -41,6 +41,7 @@ register(Datum.ROI, Qt.cyan)
 register(Datum.DATA, Qt.darkMagenta)
 register(Datum.NUMBER, Qt.darkGreen)
 register(Datum.VARIANT, QBrush(Qt.black, Qt.DiagCrossPattern))
+register(Datum.NONE, QBrush(Qt.red, Qt.BDiagPattern))
 
 
 _unknown = QBrush(Qt.magenta)

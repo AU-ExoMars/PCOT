@@ -443,6 +443,8 @@ class XForm:
     rectText: Optional[str]
     # the time this node took to run in the last call to performNodes
     runTime: float
+    # recursion avoidance
+    inUIChange: bool
 
     def __init__(self, tp, dispname):
         """constructor, takes type and displayname"""
@@ -485,6 +487,7 @@ class XForm:
         self.rect = None  # the main GMainRect rectangle
         self.enabled = True  # a lot of nodes won't use; see XFormType.
         self.hasRun = False  # used to mark a node as already having performed its stuff
+        self.inUIChange = False
         # all nodes have a channel mapping, because it's easier. See docs for that class.
         self.mapping = ChannelMapping()
         tp.instances.append(self)
@@ -675,10 +678,14 @@ class XForm:
 
     def changeOutputType(self, index, tp):
         """this should be used to change an output type in generateOutputTypes"""
+#        old = self.outputTypes[index]
         self.outputTypes[index] = tp
         if self.outrects[index] is not None:
             #            print("MATCHING: {} becomes {}".format(index,type))
             self.outrects[index].typeChanged()
+#        if old != tp:
+#            self.graph.rebuildGraphics()
+
 
     ## this can be used in XFormType's generateOutputTypes if the polymorphism
     # is simply that some outputs should match the types of some inputs. The
@@ -868,7 +875,7 @@ class XForm:
             elif o is None:
                 # we have a null input
                 return None
-            elif o.tp != tp:
+            elif not datum.isCompatibleConnection(o.tp, tp):
                 # we have passed in a type, but it doesn't match. Rather than raise an exception,
                 # we create an exception and set the XForm's error state to it, and return None. Effectively
                 # we create an exception and deal with it locally.
@@ -1106,8 +1113,11 @@ class XFormGraph:
                 self.performNodes(node)
         elif node is not None:
             # this always happens when an individual node is changed, even if autorun is off. Note that it happens
-            # to every node before perform() when autorun is on (hence the elif below).
+            # to every node before perform() when autorun is on (hence the elif below). We need recursion avoidance
+            # here too, like happens in perform.
+
             node.type.uichange(node)
+
             # and update tabs.
             node.updateTabs()
             ui.msg("Autorun not enabled")
@@ -1350,7 +1360,13 @@ class XFormROIType(XFormType):
         Because the canvas mapping determines the OUT_ANNOT output, we need to run children.
         This gets called from inside the canvas itself, in redisplay(), because display()
         has set the nodeToUIChange field."""
-        node.graph.changed(node)  # have to run children too!
+
+        # yet more recursion avoidance, this time the simple uichange->changed->uichange... cycle
+        # that can happen when autorun is off
+        if not node.inUIChange:
+            node.inUIChange = True
+            node.graph.changed(node)
+            node.inUIChange = False
 
     def getROIDesc(self, node):
         return "no ROI" if node.roi is None else node.roi.details()
