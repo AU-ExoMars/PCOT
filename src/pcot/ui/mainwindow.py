@@ -120,6 +120,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.menuFile.addSeparator()
         self.isfLayout = QtWidgets.QHBoxLayout()
         self.inputSelectorFrame.setLayout(self.isfLayout)
+        self.initTabs()
 
         self._init(doc=doc, macro=macro, doAutoLayout=doAutoLayout)
 
@@ -142,8 +143,6 @@ class MainUI(ui.tabs.DockableTabWindow):
 
         self.setWindowTitle(ui.app().applicationName() + ' ' + ui.app().applicationVersion())
         self.rebuildRecents()
-
-        self.initTabs()
 
         # set up the scrolling palette and make the buttons therein
         self.palette = palette.Palette(doc, self.paletteArea, self.paletteContents, self.view)
