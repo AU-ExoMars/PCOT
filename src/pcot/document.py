@@ -152,7 +152,7 @@ class Document:
         """Load data into this document - is used in ctor, can also be used on existing document.
         Also adds to the recent files list.
         May throw exceptions, typically FileNotFoundError"""
-        with archive.FileArchive(fname) as arc:
+        with archive.FileArchive(fname, progressCallback=lambda s: ui.msg(s)) as arc:
             dd = arc.readJson("JSON")
             self.deserialise(dd)
             pcot.config.addRecent(fname)

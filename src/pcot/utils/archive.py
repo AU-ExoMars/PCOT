@@ -1,8 +1,8 @@
-
 import json
 import os
 import shutil
 import tempfile
+from typing import Callable
 
 import numpy as np
 import zipfile
@@ -47,10 +47,12 @@ class Archive:
 
     This is useful for serialisation/deserialisation in cut/paste operations.
     """
-    def __init__(self, mode='r'):
+
+    def __init__(self, mode='r', progressCallback=None):
         self.mode = mode
         self.arrayct = 0
         self.zip = None
+        self.progressCallback = progressCallback
 
     def __enter__(self):
         pass
@@ -59,6 +61,10 @@ class Archive:
         if self.zip is not None:
             self.zip.close()
             self.zip = None
+
+    def progress(self, s):
+        if self.progressCallback:
+            self.progressCallback(s)
 
     def writeArray(self, name: str, a: np.ndarray):
         if self.zip is None:
@@ -119,6 +125,7 @@ class Archive:
         elif isinstance(d, tuple):
             return tuple([self.convertTagsToArrays(x) for x in d])
         elif isinstance(d, str) and d.startswith("ARAE-"):
+            self.progress(f"Extracting data array {d} from archive...")
             return self.readArray(d)
         else:
             return d
@@ -143,15 +150,16 @@ class FileArchive(Archive):
     """
     Used for ZIP files on disk
     """
-    def __init__(self, name, mode='r'):
-        self.mode = mode
+
+    def __init__(self, name, mode='r',  progressCallback: Callable[[str], None] = None):
+        super().__init__(mode, progressCallback=progressCallback)
         self.name = name
         self.arrayct = 0
 
     def __enter__(self):
         if self.mode == 'w':
             self.tempdir = tempfile.mkdtemp()
-            self.tempfilename = os.path.join(self.tempdir,'temp.pcot')
+            self.tempfilename = os.path.join(self.tempdir, 'temp.pcot')
             self.zip = zipfile.ZipFile(self.tempfilename, self.mode, compression=zipfile.ZIP_DEFLATED)
         else:
             self.zip = zipfile.ZipFile(self.name, self.mode, compression=zipfile.ZIP_DEFLATED)
@@ -173,14 +181,16 @@ class MemoryArchive(Archive):
     """
     Used for ZIP archives in memory
     """
-    def __init__(self, data=None):
+
+    def __init__(self, data=None, progressCallback=None):
         if data is None:
-            self.data = BytesIO()
-            self.mode = 'w'
+            data = BytesIO()
+            mode = 'w'
         else:
-            self.data = data
-            self.mode = 'r'
-        self.arrayct = 0
+            data = data
+            mode = 'r'
+        super().__init__(mode, progressCallback=progressCallback)
+        self.data = data
 
     def __enter__(self):
         pass
