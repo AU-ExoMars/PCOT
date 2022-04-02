@@ -51,12 +51,13 @@ class XFormEdgeDetect(XFormType):
             # Convert back to 32-bit float
             out = (out / 255).astype('float32')
             # create the imagecube and set node.out for the canvas in the tab
-            node.out = ImageCube(out, None, img.sources)
+            img = ImageCube(out, None, img.sources)
+            node.out = Datum(Datum.IMG, img)
         else:
             # no image on the input, set node.out to None
-            node.out = None
+            node.out = Datum.null
         # output node.out
-        node.setOutput(0, Datum(Datum.IMG, node.out))
+        node.setOutput(0, node.out)
 
 
 ################################################################################
@@ -71,7 +72,7 @@ def testfunc(args, optargs):
     result = a + b * 2                  # calculate the result
 
     # get the source sets from the inputs and combine them.
-    sources = SourceSet([args[1].getSources(), args[2].getSources()])
+    sources = SourceSet([args[0].getSources(), args[1].getSources()])
     # convert the result into a numeric Datum and return it, attaching sources.
     return Datum(Datum.NUMBER, result, sources)
 
