@@ -14,6 +14,7 @@ import numpy as np
 import pcot
 import pcot.ui as ui
 from pcot.datum import Datum
+from pcot.ui.texttogglebutton import TextToggleButton
 
 if TYPE_CHECKING:
     from pcot.xform import XFormGraph, XForm
@@ -331,16 +332,21 @@ class Canvas(QtWidgets.QWidget):
         topbar.addWidget(makeTopBarLabel("GREEN source"), 0, 1)
         topbar.addWidget(makeTopBarLabel("BLUE source"), 0, 2)
 
-        self.roiToggle = QtWidgets.QCheckBox("Show ROIS")
-        topbar.addWidget(self.roiToggle, 0, 3)
+        buttonBlockWidget = QtWidgets.QWidget()
+        buttonBlockLayout = QtWidgets.QGridLayout()
+        buttonBlockWidget.setLayout(buttonBlockLayout)
+        topbar.addWidget(buttonBlockWidget, 0, 3)
+
+        self.roiToggle = TextToggleButton("ROIs", "ROIs")
+        buttonBlockLayout.addWidget(self.roiToggle, 0, 0)
         self.roiToggle.toggled.connect(self.roiToggleChanged)
+
+        self.spectrumToggle = TextToggleButton("Spectrum", "Spectrum")
+        buttonBlockLayout.addWidget(self.spectrumToggle, 0, 1)
 
         self.saveButton = QtWidgets.QPushButton("Save RGB")
         topbar.addWidget(self.saveButton, 1, 3)
         self.saveButton.clicked.connect(self.saveButtonClicked)
-
-        self.spectrumToggle = QtWidgets.QCheckBox("Spectrum")
-        topbar.addWidget(self.spectrumToggle, 0, 4)
 
         self.roiText = QtWidgets.QLabel('')
         topbar.addWidget(self.roiText, 0, 5)

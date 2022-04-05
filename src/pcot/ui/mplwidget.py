@@ -17,7 +17,6 @@ matplotlib.use('Qt5Agg')
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as Canvas
 from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
 
 
 ## Matplotlib canvas class containing a single figure
