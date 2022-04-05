@@ -331,16 +331,19 @@ class Canvas(QtWidgets.QWidget):
         topbar.addWidget(makeTopBarLabel("GREEN source"), 0, 1)
         topbar.addWidget(makeTopBarLabel("BLUE source"), 0, 2)
 
-        self.roiToggle = QtWidgets.QRadioButton("Show ROIS")
+        self.roiToggle = QtWidgets.QCheckBox("Show ROIS")
         topbar.addWidget(self.roiToggle, 0, 3)
         self.roiToggle.toggled.connect(self.roiToggleChanged)
 
-        self.saveButton = QtWidgets.QPushButton("Save RGB as PNG")
+        self.saveButton = QtWidgets.QPushButton("Save RGB")
         topbar.addWidget(self.saveButton, 1, 3)
         self.saveButton.clicked.connect(self.saveButtonClicked)
 
+        self.spectrumToggle = QtWidgets.QCheckBox("Spectrum")
+        topbar.addWidget(self.spectrumToggle, 0, 4)
+
         self.roiText = QtWidgets.QLabel('')
-        topbar.addWidget(self.roiText, 0, 4)
+        topbar.addWidget(self.roiText, 0, 5)
 
         self.dimensions = QtWidgets.QLabel('')
         topbar.addWidget(self.dimensions, 1, 4)
@@ -386,6 +389,8 @@ class Canvas(QtWidgets.QWidget):
         self.isPremapped = False
         # entity to persist data in; should serialise and deserialise canvas settings
         self.persister = None
+        self.roiToggle.setEnabled(False)  # because persister is None at first.
+
 
     ## call this if this is only ever going to display single channel images
     # or annotated RGB images (obviating the need for source drop-downs)
@@ -396,6 +401,7 @@ class Canvas(QtWidgets.QWidget):
     # data rather than us. Ugly, yes.
     def setPersister(self, p):
         self.persister = p
+        self.roiToggle.setEnabled(True)
         self.roiToggle.setChecked(p.showROIs)
 
     ## if this is a canvas for an ROI node, set that node.
@@ -444,6 +450,8 @@ class Canvas(QtWidgets.QWidget):
         self.redisplay()
 
     def roiToggleChanged(self, v):
+        # can only work when a persister is there; if there isn't, will crash.
+        # Hopefully we can disable the toggle.
         self.persister.showROIs = v
         self.redisplay()
 
