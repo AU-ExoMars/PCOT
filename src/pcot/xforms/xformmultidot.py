@@ -113,7 +113,7 @@ class XFormMultiDot(XFormType):
     def getROIDesc(self, node):
         n = sum([0 if r is None else 1 for r in node.rois])
         s = sum([0 if r is None else r.pixels() for r in node.rois])
-        return "{} pixels in {} ROIs".format(s, n)
+        return "{} pixels\nin {} ROIs".format(s, n)
 
 
 class TabMultiDot(pcot.ui.tabs.Tab):

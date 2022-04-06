@@ -77,7 +77,7 @@ class ROI(SourcesObtainable):
         bb = self.bb()
         if bb is not None:
             x, y, w, h = bb
-            return "{} pixels, extent {},{} {}x{}".format(self.pixels(),
+            return "{} pixels\n{},{}\n{}x{}".format(self.pixels(),
                                                           x, y, w, h)
         else:
             return "No ROI"
@@ -307,7 +307,7 @@ class ROIRect(ROI):
         if self.x < 0:
             return "No ROI"
         else:
-            return "{} pixels, {},{} {}x{}".format(self.pixels(),
+            return "{} pixels\n{},{}\n{}x{}".format(self.pixels(),
                                                    self.x, self.y, self.w, self.h)
 
     def draw(self, img: np.ndarray):

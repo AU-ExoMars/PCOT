@@ -5,7 +5,7 @@ import os
 from typing import TYPE_CHECKING, Optional, Union
 
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtGui import QImage, QPainter
+from PyQt5.QtGui import QImage, QPainter, QBitmap, QCursor, QPen
 from PyQt5.QtCore import Qt
 
 import cv2 as cv
@@ -49,6 +49,41 @@ class InnerCanvas(QtWidgets.QWidget):
     ## @var y
     # offset of top left pixel in canvas
 
+    cursor = None  # custom cursor; created once on first use
+
+    @classmethod
+    def getCursor(cls):
+        """Get the custom cursor, creating it if necessary as a class attribute"""
+        if cls.cursor is None:
+            bm = QBitmap(32, 32)
+            CROSSHAIRLENTHICK = 4
+            CROSSHAIRLENTHIN = 10
+            bm.clear()
+            ptr = QPainter(bm)
+            p = QPen()
+            p.setWidth(3)
+            ptr.setPen(p)
+            ptr.drawLine(0, 16, CROSSHAIRLENTHICK, 16)
+            ptr.drawLine(31, 16, 31 - CROSSHAIRLENTHICK, 16)
+            ptr.drawLine(16, 0, 16, CROSSHAIRLENTHICK)
+            ptr.drawLine(16, 31, 16, 31 - CROSSHAIRLENTHICK)
+
+            p.setWidth(1)
+            ptr.setPen(p)
+            ptr.drawLine(0, 16, CROSSHAIRLENTHIN, 16)
+            ptr.drawLine(31, 16, 31 - CROSSHAIRLENTHIN, 16)
+            ptr.drawLine(16, 0, 16, CROSSHAIRLENTHIN)
+            ptr.drawLine(16, 31, 16, 31 - CROSSHAIRLENTHIN)
+            ptr.drawPoint(16, 16)
+
+            ptr.end()
+
+            mask = QBitmap(32, 32)
+            mask.clear()
+
+            cls.cursor = QCursor(bm, mask, 16, 16)
+        return cls.cursor
+
     ## constructor
     def __init__(self, canv, parent=None):
         super().__init__(parent)
@@ -56,9 +91,12 @@ class InnerCanvas(QtWidgets.QWidget):
         self.desc = ""
         self.zoomscale = 1
         self.scale = 1
-        self.x = 0
+        self.cursorX = 0  # coords of cursor in image space
+        self.cursorY = 0
+
+        self.x = 0  # coords of top left of img in view
         self.y = 0
-        self.cutw = 0   # size of image in view
+        self.cutw = 0  # size of image in view
         self.cuth = 0
         self.panning = False
         self.panX = None
@@ -66,6 +104,8 @@ class InnerCanvas(QtWidgets.QWidget):
         self.canv = canv
         # needs to do this to get key events
         self.setFocusPolicy(QtCore.Qt.ClickFocus)
+        self.setCursor(InnerCanvas.getCursor())
+        self.setMouseTracking(True)  # so we get move events with no button press
         self.reset()
 
     ## resets the canvas to zoom level 1, top left pan
@@ -135,6 +175,18 @@ class InnerCanvas(QtWidgets.QWidget):
             img = self.img[cuty:cuty + cuth, cutx:cutx + cutw]
             # now get the size of the image that was actually cut (some areas may be out of range)
             self.cuth, self.cutw = img.shape[:2]
+
+            # highlight the pixel under the cursor, but only if the cut canvas area is
+            # small enough that there's any point (it's a slow operation!)
+            if min(self.cutw, self.cuth) < 200:
+                curx, cury = self.cursorX - cutx, self.cursorY - cuty
+                if 0 <= curx < self.cutw and 0 <= cury < self.cuth:
+                    img = img.copy()  # copy for drawing (to avoid trails)
+                    r, g, b = img[cury, curx, :]
+
+                    img[cury, curx, :] = (1 - r, 1 - g, 1 - b)
+                    ui.log(f"{curx},{cury}")
+
             # now resize the cut area up to fit the widget. Using area interpolation here:
             # cubic produced odd artifacts on float images
             img = cv.resize(img, dsize=(int(self.cutw / scale), int(self.cuth / scale)), interpolation=cv.INTER_AREA)
@@ -183,17 +235,18 @@ class InnerCanvas(QtWidgets.QWidget):
     ## mouse move handler, can delegate to a hook
     def mouseMoveEvent(self, e):
         x, y = self.getImgCoords(e.pos())
+        self.cursorX, self.cursorY = x, y
         if self.panning:
             dx = x - self.panX
             dy = y - self.panY
-            self.x -= dx*0.5
-            self.y -= dy*0.5
-            self.x = max(0, min(self.x, self.img.shape[1]-self.cutw))
-            self.y = max(0, min(self.y, self.img.shape[0]-self.cuth))
+            self.x -= dx * 0.5
+            self.y -= dy * 0.5
+            self.x = max(0, min(self.x, self.img.shape[1] - self.cutw))
+            self.y = max(0, min(self.y, self.img.shape[0] - self.cuth))
             self.panX, self.panY = x, y
-            self.update()
-        elif self.canv.mouseHook is not None:
-            self.canv.mouseHook.canvasMouseMoveEvent(x, y, e)
+        else:
+            self.canv.mouseMove(x, y, e)
+        self.update()
         return super().mouseMoveEvent(e)
 
     ## mouse release handler, can delegate to a hook
@@ -247,10 +300,11 @@ class InnerCanvas(QtWidgets.QWidget):
             self.y = 0
         # update scrollbars and image
         self.canv.setScrollBarsFromCanvas()
+        self.cursorX, self.cursorY = self.getImgCoords(e.pos())
         self.update()
 
 
-def makeTopBarLabel(t):
+def makesidebarLabel(t):
     lab = QtWidgets.QLabel(t)
     # lab.setMaximumHeight(15)
     lab.setMinimumWidth(100)
@@ -315,65 +369,71 @@ class Canvas(QtWidgets.QWidget):
         self.ROInode = None
         self.recursing = False  # An ugly hack to avoid recursion in ROI nodes
 
-        # outer layout is a vertical box - the topbar and canvas+scrollbars are in this
-        outerlayout = QtWidgets.QVBoxLayout()
+        # outer layout is a horizontal box - the sidebar and canvas+scrollbars are in this
+        outerlayout = QtWidgets.QHBoxLayout()
         self.setLayout(outerlayout)
 
-        # the topbar is a grid, with labels on top (red,green,blue)
-        # and channel name comboboxes below
-        self.topbarwidget = QtWidgets.QWidget()
-        topbar = QtWidgets.QGridLayout()
-        self.topbarwidget.setLayout(topbar)
+        # the sidebar is a grid, with labels (red,green,blue)
+        # and channel name comboboxes below each.
+        self.sidebarwidget = QtWidgets.QWidget()
+        sidebar = QtWidgets.QVBoxLayout()
+        self.sidebarwidget.setLayout(sidebar)
+        self.sidebarwidget.setSizePolicy(QtWidgets.QSizePolicy.Maximum,
+                                         QtWidgets.QSizePolicy.MinimumExpanding)
 
-        outerlayout.addWidget(self.topbarwidget)
-        topbar.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
-
-        topbar.addWidget(makeTopBarLabel("RED source"), 0, 0)
-        topbar.addWidget(makeTopBarLabel("GREEN source"), 0, 1)
-        topbar.addWidget(makeTopBarLabel("BLUE source"), 0, 2)
-
-        buttonBlockWidget = QtWidgets.QWidget()
-        buttonBlockLayout = QtWidgets.QGridLayout()
-        buttonBlockWidget.setLayout(buttonBlockLayout)
-        topbar.addWidget(buttonBlockWidget, 0, 3)
-
-        self.roiToggle = TextToggleButton("ROIs", "ROIs")
-        buttonBlockLayout.addWidget(self.roiToggle, 0, 0)
-        self.roiToggle.toggled.connect(self.roiToggleChanged)
-
-        self.spectrumToggle = TextToggleButton("Spectrum", "Spectrum")
-        buttonBlockLayout.addWidget(self.spectrumToggle, 0, 1)
-
-        self.saveButton = QtWidgets.QPushButton("Save RGB")
-        topbar.addWidget(self.saveButton, 1, 3)
-        self.saveButton.clicked.connect(self.saveButtonClicked)
-
-        self.roiText = QtWidgets.QLabel('')
-        topbar.addWidget(self.roiText, 0, 5)
-
-        self.dimensions = QtWidgets.QLabel('')
-        topbar.addWidget(self.dimensions, 1, 4)
-
-        self.topbarwidget.setContentsMargins(0, 0, 0, 0)
-        topbar.setContentsMargins(0, 0, 0, 0)
+        outerlayout.addWidget(self.sidebarwidget)
+        outerlayout.setAlignment(Qt.AlignTop)
 
         # these are the actual widgets specifying which channel in the cube is viewed.
         # We need to deal with these carefully.
+        sidebar.addWidget(makesidebarLabel("RED source"))
         self.redChanCombo = QtWidgets.QComboBox()
         self.redChanCombo.currentIndexChanged.connect(self.redIndexChanged)
-        topbar.addWidget(self.redChanCombo, 1, 0)
+        sidebar.addWidget(self.redChanCombo)
+        sidebar.addWidget(makesidebarLabel("GREEN source"))
         self.greenChanCombo = QtWidgets.QComboBox()
         self.greenChanCombo.currentIndexChanged.connect(self.greenIndexChanged)
-        topbar.addWidget(self.greenChanCombo, 1, 1)
+        sidebar.addWidget(self.greenChanCombo)
+        sidebar.addWidget(makesidebarLabel("BLUE source"))
         self.blueChanCombo = QtWidgets.QComboBox()
         self.blueChanCombo.currentIndexChanged.connect(self.blueIndexChanged)
-        topbar.addWidget(self.blueChanCombo, 1, 2)
+        sidebar.addWidget(self.blueChanCombo)
+
+        self.roiToggle = TextToggleButton("ROIs", "ROIs")
+        sidebar.addWidget(self.roiToggle)
+        self.roiToggle.toggled.connect(self.roiToggleChanged)
+
+        self.spectrumToggle = TextToggleButton("Spectrum", "Spectrum")
+        sidebar.addWidget(self.spectrumToggle)
+
+        self.saveButton = QtWidgets.QPushButton("Save RGB")
+        sidebar.addWidget(self.saveButton)
+        self.saveButton.clicked.connect(self.saveButtonClicked)
+
+        self.coordsText = QtWidgets.QLabel('')
+        sidebar.addWidget(self.coordsText)
+
+        self.roiText = QtWidgets.QLabel('')
+        sidebar.addWidget(self.roiText)
+
+        self.dimensions = QtWidgets.QLabel('')
+        sidebar.addWidget(self.dimensions)
+
+        ## widgets done; add stretch at the end so that the above widgets don't expand.
+        sidebar.addStretch(10)
+
+        sidebar.setContentsMargins(0, 0, 0, 0)
 
         layout = QtWidgets.QGridLayout()
         outerlayout.addLayout(layout)
+        outerlayout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        ## now the canvas and scrollbars
 
         self.canvas = InnerCanvas(self)
         layout.addWidget(self.canvas, 0, 0)
+        layout.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
 
         self.scrollV = QtWidgets.QScrollBar(Qt.Vertical)
         self.scrollV.valueChanged.connect(self.vertScrollChanged)
@@ -397,11 +457,15 @@ class Canvas(QtWidgets.QWidget):
         self.persister = None
         self.roiToggle.setEnabled(False)  # because persister is None at first.
 
+    def mouseMove(self, x, y, event):
+        self.coordsText.setText(f"{x},{y}")
+        if self.mouseHook is not None:
+            self.mouseHook.canvasMouseMoveEvent(x, y, event)
 
     ## call this if this is only ever going to display single channel images
     # or annotated RGB images (obviating the need for source drop-downs)
     def hideMapping(self):
-        self.topbarwidget.setVisible(False)
+        self.sidebarwidget.setVisible(False)
 
     ## this works by setting a data structure which is persisted, and holds some of our
     # data rather than us. Ugly, yes.
@@ -511,7 +575,7 @@ class Canvas(QtWidgets.QWidget):
 
     def display(self, img: Union[Datum, 'ImageCube'], alreadyRGBMappedImageSource=None, nodeToUIChange=None):
         if isinstance(img, Datum):
-            img = img.get(Datum.IMG)    # if we are given a Datum, "unwrap" it
+            img = img.get(Datum.IMG)  # if we are given a Datum, "unwrap" it
         if self.mapping is None:
             raise Exception(
                 "Mapping not set in ui.canvas.Canvas.display() - should be done in tab's ctor with setMapping()")
@@ -563,8 +627,8 @@ class Canvas(QtWidgets.QWidget):
             txt = ""
         elif self.persister.showROIs:
             # if we're displaying all ROIs, show that pixel count (and ROI count)
-            txt = "{} pixels in {} ROIs".format(sum([x.pixels() for x in self.previmg.rois]),
-                                                len(self.previmg.rois))
+            txt = "{} pixels\nin {} ROIs".format(sum([x.pixels() for x in self.previmg.rois]),
+                                                 len(self.previmg.rois))
         elif self.ROInode is not None:
             # if there's an ROI being set from this node (and we're not showing all ROIs), show its details
             # Also have to check the ROI itself is OK (the method will do this)
