@@ -14,6 +14,7 @@ import numpy as np
 import pcot
 import pcot.ui as ui
 from pcot.datum import Datum
+from pcot.ui.specplot import SpecPlot
 from pcot.ui.texttogglebutton import TextToggleButton
 
 if TYPE_CHECKING:
@@ -183,9 +184,12 @@ class InnerCanvas(QtWidgets.QWidget):
                 if 0 <= curx < self.cutw and 0 <= cury < self.cuth:
                     img = img.copy()  # copy for drawing (to avoid trails)
                     r, g, b = img[cury, curx, :]
-
-                    img[cury, curx, :] = (1 - r, 1 - g, 1 - b)
-                    ui.log(f"{curx},{cury}")
+                    # we normally negate the point - but if it's too close to grey, do something else
+                    diff = max(abs(r - 0.5), abs(g - 0.5), abs(b - 0.5))
+                    if diff > 0.3:
+                        img[cury, curx, :] = (1 - r, 1 - g, 1 - b)
+                    else:
+                        img[cury, curx, :] = (1, 1, 1)  # too grey; replace with white
 
             # now resize the cut area up to fit the widget. Using area interpolation here:
             # cubic produced odd artifacts on float images
@@ -205,11 +209,15 @@ class InnerCanvas(QtWidgets.QWidget):
     def getScale(self):
         return self.scale * self.zoomscale
 
-    ## given point in the widget, return coords in the image. Takes a QPoint.
-    def getImgCoords(self, p: QtCore.QPoint):
-        x = int(p.x() * (self.getScale()) + self.x)
-        y = int(p.y() * (self.getScale()) + self.y)
-        return x, y
+    ## given point in the widget, return coords in the image. Takes a QPoint or None; if the latter
+    # we get the point under the cursor
+    def getImgCoords(self, p: Optional[QtCore.QPoint] = None):
+        if p is None:
+            return self.cursorX, self.cursorY
+        else:
+            x = int(p.x() * (self.getScale()) + self.x)
+            y = int(p.y() * (self.getScale()) + self.y)
+            return x, y
 
     ## given a point in the image, give coordinates in the widget
     def getCanvasCoords(self, x, y):
@@ -373,8 +381,10 @@ class Canvas(QtWidgets.QWidget):
         outerlayout = QtWidgets.QHBoxLayout()
         self.setLayout(outerlayout)
 
-        # the sidebar is a grid, with labels (red,green,blue)
+        # the sidebar is a vbox, with labels (red,green,blue)
         # and channel name comboboxes below each.
+        # Some of these are hideable and so go into a subwidget.
+
         self.sidebarwidget = QtWidgets.QWidget()
         sidebar = QtWidgets.QVBoxLayout()
         self.sidebarwidget.setLayout(sidebar)
@@ -384,30 +394,36 @@ class Canvas(QtWidgets.QWidget):
         outerlayout.addWidget(self.sidebarwidget)
         outerlayout.setAlignment(Qt.AlignTop)
 
+        self.hideablebuttons = QtWidgets.QWidget()
+        hideable = QtWidgets.QVBoxLayout()
+        self.hideablebuttons.setLayout(hideable)
+        sidebar.addWidget(self.hideablebuttons)
+
         # these are the actual widgets specifying which channel in the cube is viewed.
         # We need to deal with these carefully.
-        sidebar.addWidget(makesidebarLabel("RED source"))
+        hideable.addWidget(makesidebarLabel("RED source"))
         self.redChanCombo = QtWidgets.QComboBox()
         self.redChanCombo.currentIndexChanged.connect(self.redIndexChanged)
-        sidebar.addWidget(self.redChanCombo)
-        sidebar.addWidget(makesidebarLabel("GREEN source"))
+        hideable.addWidget(self.redChanCombo)
+        hideable.addWidget(makesidebarLabel("GREEN source"))
         self.greenChanCombo = QtWidgets.QComboBox()
         self.greenChanCombo.currentIndexChanged.connect(self.greenIndexChanged)
-        sidebar.addWidget(self.greenChanCombo)
-        sidebar.addWidget(makesidebarLabel("BLUE source"))
+        hideable.addWidget(self.greenChanCombo)
+        hideable.addWidget(makesidebarLabel("BLUE source"))
         self.blueChanCombo = QtWidgets.QComboBox()
         self.blueChanCombo.currentIndexChanged.connect(self.blueIndexChanged)
-        sidebar.addWidget(self.blueChanCombo)
+        hideable.addWidget(self.blueChanCombo)
 
         self.roiToggle = TextToggleButton("ROIs", "ROIs")
-        sidebar.addWidget(self.roiToggle)
+        hideable.addWidget(self.roiToggle)
         self.roiToggle.toggled.connect(self.roiToggleChanged)
 
         self.spectrumToggle = TextToggleButton("Spectrum", "Spectrum")
-        sidebar.addWidget(self.spectrumToggle)
+        hideable.addWidget(self.spectrumToggle)
+        self.spectrumToggle.toggled.connect(self.spectrumToggleChanged)
 
         self.saveButton = QtWidgets.QPushButton("Save RGB")
-        sidebar.addWidget(self.saveButton)
+        hideable.addWidget(self.saveButton)
         self.saveButton.clicked.connect(self.saveButtonClicked)
 
         self.coordsText = QtWidgets.QLabel('')
@@ -428,6 +444,13 @@ class Canvas(QtWidgets.QWidget):
         outerlayout.addLayout(layout)
         outerlayout.setContentsMargins(0, 0, 0, 0)
         layout.setContentsMargins(0, 0, 0, 0)
+
+        self.spectrumWidget = SpecPlot()
+        self.spectrumWidget.setMinimumSize(300, 300)
+        self.spectrumWidget.setMaximumWidth(600)
+        self.spectrumWidget.setStyleSheet("background-color: red")
+        self.spectrumWidget.setHidden(True)
+        outerlayout.addWidget(self.spectrumWidget)
 
         ## now the canvas and scrollbars
 
@@ -459,13 +482,14 @@ class Canvas(QtWidgets.QWidget):
 
     def mouseMove(self, x, y, event):
         self.coordsText.setText(f"{x},{y}")
+        self.showSpectrum()
         if self.mouseHook is not None:
             self.mouseHook.canvasMouseMoveEvent(x, y, event)
 
     ## call this if this is only ever going to display single channel images
     # or annotated RGB images (obviating the need for source drop-downs)
     def hideMapping(self):
-        self.sidebarwidget.setVisible(False)
+        self.hideablebuttons.setVisible(False)
 
     ## this works by setting a data structure which is persisted, and holds some of our
     # data rather than us. Ugly, yes.
@@ -524,6 +548,9 @@ class Canvas(QtWidgets.QWidget):
         # Hopefully we can disable the toggle.
         self.persister.showROIs = v
         self.redisplay()
+
+    def spectrumToggleChanged(self, v):
+        self.spectrumWidget.setHidden(not v)
 
     def saveButtonClicked(self, c):
         if self.previmg is None:
@@ -645,11 +672,13 @@ class Canvas(QtWidgets.QWidget):
         self.dimensions.setText(txt)
 
         self.canvas.display(self.previmg, self.isPremapped, showROIs=self.persister.showROIs)
+        self.showSpectrum()
 
     ## reset the canvas to x1 magnification
     def reset(self):
         self.canvas.reset()
         self.canvas.update()
+        self.showSpectrum()
 
     ## set the scroll bars from the position and zoom of the underlying canvas
     # first, we set the min and max of the bars to the pixel range, minus the size of the bar itself
@@ -675,14 +704,36 @@ class Canvas(QtWidgets.QWidget):
     def vertScrollChanged(self, v):
         self.canvas.y = v
         self.canvas.update()
+        self.showSpectrum()
 
     ## horizontal scrollbar handler
     def horzScrollChanged(self, v):
         self.canvas.x = v
         self.canvas.update()
+        self.showSpectrum()
 
     def getCanvasCoords(self, x, y):
         return self.canvas.getCanvasCoords(x, y)
 
     def getImgCoords(self, p):
         return self.canvas.getImgCoords(p)
+
+    def showSpectrum(self):
+        x, y = self.canvas.getImgCoords()
+        if self.previmg:
+            # got to be within the coords, and got to be multichannel
+            if 0 <= x < self.previmg.w and 0 <= y < self.previmg.h and self.previmg.channels > 1:
+                img = self.previmg
+                dat = img.img[y, x, :]  # get the pixel data
+
+                # get the channels which have a single wavelength
+                # what do we do if they don't? I don't think you can display a spectrum!
+
+                wavelengths = [img.wavelength(x) for x in range(img.channels)]
+                # wavelengths = [x for x in wavelengths if x > 0]    # Surely
+                chans = [x for x in range(img.channels) if wavelengths[x] > 0]
+                # and get the data from the pixel which si for those wavelengths
+                dat = [dat[x] for x in chans]
+
+                # now plot x=wavelengths,y=dat
+                self.spectrumWidget.setData(zip(wavelengths, dat))

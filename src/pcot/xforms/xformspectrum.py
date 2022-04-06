@@ -25,21 +25,6 @@ def getSpectrum(chanImg, mask):
     return a.mean(), a.std()
 
 
-# return wavelength if all sources in channel are of the same wavelength, else -1.
-def wavelength(channelNumber, img):
-    # get the SourceSet
-    sources = img.sources.sourceSets[channelNumber]
-    # all sources in this channel should have a filter
-    sources = [s for s in sources.sourceSet if s.getFilter()]
-    # all the sources in this channel should have the same cwl
-    wavelengths = set([s.getFilter().cwl for s in sources])
-    if len(wavelengths) != 1:
-        return -1
-    # looks weird, but just unpacks this single-item set
-    [cwl] = wavelengths
-    return cwl
-
-
 def processData(table, legend, data, pxct, wavelengths, spectrum, chans, chanlabels):
     """
     table: Table object for dump output
@@ -164,7 +149,7 @@ class XFormSpectrum(XFormType):
             if img is not None:
                 # first, generate a list of indices of channels with a single source which has a wavelength,
                 # and a list of those wavelengths
-                wavelengths = [wavelength(x, img) for x in range(img.channels)]
+                wavelengths = [img.wavelength(x) for x in range(img.channels)]
                 wavelengths = [x for x in wavelengths if x > 0]
                 chans = [x for x in range(img.channels) if wavelengths[x] > 0]
 

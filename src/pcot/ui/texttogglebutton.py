@@ -75,3 +75,4 @@ class TextToggleButton(QtWidgets.QWidget):
             p.setPen(crossOutCol)
             p.drawLine(r.topLeft(), r.bottomRight())
 
+        p.end()

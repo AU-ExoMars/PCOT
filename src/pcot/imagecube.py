@@ -498,3 +498,18 @@ class ImageCube(SourcesObtainable):
         defmapping = None if d['defmapping'] is None else ChannelMapping.deserialise(d['defmapping'])
         sources = MultiBandSource.deserialise(d['sources'], document)
         return cls(data, rgbMapping=mapping, sources=sources, defaultMapping=defmapping)
+
+    def wavelength(self, channelNumber):
+        """return wavelength if all sources in channel are of the same wavelength, else -1."""
+        # get the SourceSet
+        sources = self.sources.sourceSets[channelNumber]
+        # all sources in this channel should have a filter
+        sources = [s for s in sources.sourceSet if s.getFilter()]
+        # all the sources in this channel should have the same cwl
+        wavelengths = set([s.getFilter().cwl for s in sources])
+        if len(wavelengths) != 1:
+            return -1
+        # looks weird, but just unpacks this single-item set
+        [cwl] = wavelengths
+        return cwl
+

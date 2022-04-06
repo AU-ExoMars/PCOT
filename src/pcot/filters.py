@@ -59,7 +59,7 @@ class Filter:
         return self._gaussian(x, self.cwl, self.fwhm)
 
 
-def wav2RGB(wavelength):
+def wav2RGB(wavelength, scale=1.0):
     """This is  VERY CRUDE wavelength to RGB converter, for visualisation use only!
     Originally from an algorithm in FORTRAN by Dan Bruton."""
     w = int(wavelength)
@@ -103,7 +103,7 @@ def wav2RGB(wavelength):
         SSS = 0.3 + 0.7 * (780 - w) / (780 - 700)
     else:
         SSS = 0.0
-    #    SSS *= 255
+    SSS *= scale
 
     return [(SSS * R), (SSS * G), (SSS * B)]
 
