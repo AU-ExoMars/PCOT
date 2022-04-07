@@ -443,23 +443,31 @@ class Canvas(QtWidgets.QWidget):
 
         sidebar.setContentsMargins(0, 0, 0, 0)
 
+        splitter = QtWidgets.QSplitter()
+        outerlayout.addWidget(splitter)
+
+        innercanvasContainer = QtWidgets.QWidget()
         layout = QtWidgets.QGridLayout()
-        outerlayout.addLayout(layout)
+        innercanvasContainer.setLayout(layout)
+        innercanvasContainer.setSizePolicy(
+            QtWidgets.QSizePolicy.MinimumExpanding,
+            QtWidgets.QSizePolicy.MinimumExpanding
+        )
+        splitter.addWidget(innercanvasContainer)
         outerlayout.setContentsMargins(0, 0, 0, 0)
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.spectrumWidget = SpecPlot()
         self.spectrumWidget.setMinimumSize(300, 300)
         self.spectrumWidget.setMaximumWidth(600)
-        self.spectrumWidget.setStyleSheet("background-color: red")
         self.spectrumWidget.setHidden(True)
-        outerlayout.addWidget(self.spectrumWidget)
+        splitter.addWidget(self.spectrumWidget)
 
         ## now the canvas and scrollbars
 
         self.canvas = InnerCanvas(self)
         layout.addWidget(self.canvas, 0, 0)
-        layout.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
+        # layout.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
 
         self.scrollV = QtWidgets.QScrollBar(Qt.Vertical)
         self.scrollV.valueChanged.connect(self.vertScrollChanged)
@@ -741,10 +749,12 @@ class Canvas(QtWidgets.QWidget):
             # what do we do if they don't? I don't think you can display a spectrum!
 
             wavelengths = [img.wavelength(x) for x in range(img.channels)]
-            # wavelengths = [x for x in wavelengths if x > 0]    # Surely
+
+            goodWavelengths = [x for x in wavelengths if x > 0]
             chans = [x for x in range(img.channels) if wavelengths[x] > 0]
+
             # and get the data from the pixel which si for those wavelengths
             dat = [dat[x] for x in chans]
 
             # now plot x=wavelengths,y=dat
-            self.spectrumWidget.setData(zip(wavelengths, dat))
+            self.spectrumWidget.setData(zip(goodWavelengths, dat))

@@ -23,21 +23,28 @@ class SpecPlot(QtWidgets.QWidget):
         else:
             return x, y
 
+
     def setData(self, d):
         """Takes iterable of (x,y) tuples OR a string"""
         if isinstance(d, str):
             self.data = d
         else:
             self.data = list(d)
-            self.data.sort(key=lambda x: x[0])  # sort into wavelength order
+            if len(self.data) == 0:
+                self.data = "There are no single-wavelength\nchannels in the data"
+            else:
+                self.data.sort(key=lambda x: x[0])  # sort into wavelength order
         self.repaint()
+
+    def drawText(self, p, s):
+        p.drawText(10, 10, self.width() - 10, self.height() - 10, QtCore.Qt.TextWordWrap, s)
 
     def paintEvent(self, event: QPaintEvent):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         if isinstance(self.data, str):
-            p.drawText(QPoint(10, 10), self.data)
+            self.drawText(p, self.data)
         elif self.data is not None and len(self.data) > 0:
             # get x-range so we can check it (and use it later for rendering)
             xs = [x for x, _ in self.data]
@@ -45,8 +52,7 @@ class SpecPlot(QtWidgets.QWidget):
             rngx = maxx - minx
 
             if rngx < 0.0001:
-                p.drawText(10, 10, self.width() - 10, self.height() - 10, QtCore.Qt.TextWordWrap,
-                           "There is only one single wavelength\nchannel in the data")
+                self.drawText(p, "There is only one single-wavelength\nchannel in the data")
                 return
 
             # draw axes
