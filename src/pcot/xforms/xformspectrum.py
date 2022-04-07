@@ -150,7 +150,7 @@ class XFormSpectrum(XFormType):
                 # first, generate a list of indices of channels with a single source which has a wavelength,
                 # and a list of those wavelengths
                 wavelengths = [img.wavelength(x) for x in range(img.channels)]
-                wavelengths = [x for x in wavelengths if x > 0]
+                # wavelengths = [x for x in wavelengths if x > 0]     removed; given the filter on the next line it does nowt
                 chans = [x for x in range(img.channels) if wavelengths[x] > 0]
 
                 # add the channels we found to a set of sources

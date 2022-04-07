@@ -10,6 +10,7 @@ from PyQt5.QtCore import Qt
 
 import cv2 as cv
 import numpy as np
+from PyQt5.QtWidgets import QCheckBox
 
 import pcot
 import pcot.ui as ui
@@ -414,11 +415,13 @@ class Canvas(QtWidgets.QWidget):
         self.blueChanCombo.currentIndexChanged.connect(self.blueIndexChanged)
         hideable.addWidget(self.blueChanCombo)
 
-        self.roiToggle = TextToggleButton("ROIs", "ROIs")
+        # self.roiToggle = TextToggleButton("ROIs", "ROIs")
+        self.roiToggle = QCheckBox("Show ROIs")
         hideable.addWidget(self.roiToggle)
         self.roiToggle.toggled.connect(self.roiToggleChanged)
 
-        self.spectrumToggle = TextToggleButton("Spectrum", "Spectrum")
+        # self.spectrumToggle = TextToggleButton("Spectrum", "Spectrum")
+        self.spectrumToggle = QCheckBox("Show spectrum")
         hideable.addWidget(self.spectrumToggle)
         self.spectrumToggle.toggled.connect(self.spectrumToggleChanged)
 
@@ -720,20 +723,28 @@ class Canvas(QtWidgets.QWidget):
 
     def showSpectrum(self):
         x, y = self.canvas.getImgCoords()
-        if self.previmg:
-            # got to be within the coords, and got to be multichannel
-            if 0 <= x < self.previmg.w and 0 <= y < self.previmg.h and self.previmg.channels > 1:
-                img = self.previmg
-                dat = img.img[y, x, :]  # get the pixel data
+        if self.previmg is None:
+            self.spectrumWidget.setData("No image in canvas")
+            return
+        if self.previmg.channels < 2:
+            if 0 <= x < self.previmg.w and 0 <= y < self.previmg.h:
+                self.spectrumWidget.setData(f"Single channel - intensity {self.previmg.img[y,x]}")
+            return
 
-                # get the channels which have a single wavelength
-                # what do we do if they don't? I don't think you can display a spectrum!
+        # within the coords, and multichannel image present
 
-                wavelengths = [img.wavelength(x) for x in range(img.channels)]
-                # wavelengths = [x for x in wavelengths if x > 0]    # Surely
-                chans = [x for x in range(img.channels) if wavelengths[x] > 0]
-                # and get the data from the pixel which si for those wavelengths
-                dat = [dat[x] for x in chans]
+        if 0 <= x < self.previmg.w and 0 <= y < self.previmg.h and self.previmg.channels > 1:
+            img = self.previmg
+            dat = img.img[y, x, :]  # get the pixel data
 
-                # now plot x=wavelengths,y=dat
-                self.spectrumWidget.setData(zip(wavelengths, dat))
+            # get the channels which have a single wavelength
+            # what do we do if they don't? I don't think you can display a spectrum!
+
+            wavelengths = [img.wavelength(x) for x in range(img.channels)]
+            # wavelengths = [x for x in wavelengths if x > 0]    # Surely
+            chans = [x for x in range(img.channels) if wavelengths[x] > 0]
+            # and get the data from the pixel which si for those wavelengths
+            dat = [dat[x] for x in chans]
+
+            # now plot x=wavelengths,y=dat
+            self.spectrumWidget.setData(zip(wavelengths, dat))
