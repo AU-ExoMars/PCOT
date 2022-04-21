@@ -44,6 +44,31 @@ To make a new release, follow this checklist.
 This is currently a bit more complicated because I'm having to
 commandeer a teaching machine to do it on.
 
+download the code 
+
+export PATH=/usr/local/anaconda3/bin/:$PATH
+
+echo ". /usr/local/anaconda3/etc/profile.d/conda.sh" >> ~/.bash_profile
+source ~/.bash_profile
+
+conda create -n pcot python=3.8 poetry
+
+conda activate pcot
+poetry install
+
+run pcot (to test)
+remove reference to splash screen from main.py
+(the try block which doesn't currently work)
+run pcot again
+
+pip3 install pyinstaller
+cd into pyinstaller dir
+pyinstaller macos.spec
+conda deactivate
+dist/pcot to test
+cd dist
+mv pcot pcot-macos
+
 
 ## Uploading to the release repo
 
