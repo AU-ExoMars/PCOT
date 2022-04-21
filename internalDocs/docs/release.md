@@ -44,31 +44,23 @@ To make a new release, follow this checklist.
 This is currently a bit more complicated because I'm having to
 commandeer a teaching machine to do it on.
 
-download the code 
-
-export PATH=/usr/local/anaconda3/bin/:$PATH
-
-echo ". /usr/local/anaconda3/etc/profile.d/conda.sh" >> ~/.bash_profile
-source ~/.bash_profile
-
-conda create -n pcot python=3.8 poetry
-
-conda activate pcot
-poetry install
-
-run pcot (to test)
-remove reference to splash screen from main.py
+1. download the code 
+2. ```export PATH=/usr/local/anaconda3/bin/:$PATH```
+3. ```echo ". /usr/local/anaconda3/etc/profile.d/conda.sh" >> ~/.bash_profile```
+4. ```source ~/.bash_profile```
+5. ```conda create -n pcot python=3.8 poetry```
+6. ```conda activate pcot```
+7. ```poetry install```
+8. run pcot (to test)
+9. remove references to splash screen from main.py
 (the try block which doesn't currently work)
-run pcot again
-
-pip3 install pyinstaller
-cd into pyinstaller dir
-pyinstaller macos.spec
-conda deactivate
-dist/pcot to test
-cd dist
-mv pcot pcot-macos
-
+10. run pcot again to make sure it's still fine
+11. ```pip3 install pyinstaller```
+12. cd into pyinstaller dir
+13. ```pyinstaller macos.spec```
+14. ```conda deactivate```
+15. ```dist/pcot``` to test
+16. rename **dist/pcot** to **dist/pcot-macos**
 
 ## Uploading to the release repo
 
@@ -79,9 +71,9 @@ have installed FM and the remote mine link is set up, the commands
 to add the new files and set the text metadata are:
 
 ```sh
-femtomine add pcot_windows.exe --tkey=brief_md --textfile=windows_note +new +v0.2.0
-femtomine add pcot_linux.exe --tkey=brief_md --textfile=linux_note +new +v0.2.0
-femtomine add pcot_macos.exe --tkey=brief_md --textfile=macos_note +new +v0.2.0
+femtomine add pcot-windows.exe --tkey=brief_md --textfile=windows_note +new +v0.2.0
+femtomine add pcot-linux.exe --tkey=brief_md --textfile=linux_note +new +v0.2.0
+femtomine add pcot-macos.exe --tkey=brief_md --textfile=macos_note +new +v0.2.0
 ```
 assuming that all files are in the current working directory - and you'll have to change
 the version number tag! 
