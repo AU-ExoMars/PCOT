@@ -1,0 +1,8 @@
+This is the **MacOS** PCOT build. It consists of a MacOS executable - to
+run it you will need to set its execute permission. The easiest way to
+do this is
+
+* open a Terminal, **cd** to the folder containing the file,
+* type ```chmod 755 pcot-macos```
+* run it with ```./pcot-macos```
+

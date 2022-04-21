@@ -33,7 +33,7 @@ To make a new release, follow this checklist.
    VERSION.txt, so if it looks weird, check here.
 1. Make a MacOS pyInstaller build. This is more complex, and is shown
    below.
-1. Upload the releases to the release site.
+1. Upload to the release repo (see below).
 1. Upload the docs to the documentation site.
 1. Make sure the dev branch is merged into the master branch.
 1. Make a release tag in the repository.
@@ -43,3 +43,30 @@ To make a new release, follow this checklist.
 
 This is currently a bit more complicated because I'm having to
 commandeer a teaching machine to do it on.
+
+
+## Uploading to the release repo
+
+This currently uses Jim Finnis' Femtomine server system.
+I'm not going to talk about how Femtomine works here - it's a fairly
+complex command-line app (at least for adding data). Assuming you
+have installed FM and the remote mine link is set up, the commands
+to add the new files and set the text metadata are:
+
+```sh
+femtomine add pcot_windows.exe --tkey=brief_md --textfile=windows_note +new +v0.2.0
+femtomine add pcot_linux.exe --tkey=brief_md --textfile=linux_note +new +v0.2.0
+femtomine add pcot_macos.exe --tkey=brief_md --textfile=macos_note +new +v0.2.0
+```
+assuming that all files are in the current working directory - and you'll have to change
+the version number tag! 
+
+This will take some time, and the new items will not appear in the query results until their tags
+are set. Once they are uploaded, set this up by first removing the "latest" tag from the current
+latest items and then adding tags to the newly uploaded items:
+```sh
+femtomine mod :latest +latest
+femtomine mod :new,+latest,+pcot,+apps +new
+```
+
+
