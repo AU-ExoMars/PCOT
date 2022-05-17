@@ -24,6 +24,7 @@ if tmp is None:
 # this string gets turned into pcot.__fullversion__, while pcot.__version__
 # is just the number part (0.0.0 in the example).
 
-__fullversion__ = tmp.decode('utf-8')
+__fullversion__ = tmp.decode('utf-8').strip()
 __version__ = __fullversion__.split(maxsplit=1)[0]
+
 
