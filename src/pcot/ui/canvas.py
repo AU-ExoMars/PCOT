@@ -2,6 +2,7 @@
 import logging
 import math
 import os
+import platform
 from typing import TYPE_CHECKING, Optional, Union
 
 from PyQt5 import QtWidgets, QtCore
@@ -79,9 +80,20 @@ class InnerCanvas(QtWidgets.QWidget):
             ptr.drawPoint(16, 16)
 
             ptr.end()
-
-            mask = QBitmap(32, 32)
-            mask.clear()
+            # BM and MASK work like this:
+            # B=0 M=0 gives transparent
+            # B=0 M=1 gives white
+            # B=1 M=1 gives black
+            # B=1 M=0 is XOR under Windows, but undefined elsewhere!
+            if platform.system() == 'Windows':
+                # we want to use XOR under windows
+                mask = QBitmap(32, 32)
+                mask.clear()
+            else:
+                # on other platforms we want white on transparent.
+                mask = bm   # gives white
+                bm = QBitmap(32, 32)
+                bm.clear()
 
             cls.cursor = QCursor(bm, mask, 16, 16)
         return cls.cursor
