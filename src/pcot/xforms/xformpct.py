@@ -104,6 +104,7 @@ class XformPCT(XFormType):
         # TODO output!
 
     def createTab(self, n, w):
+        pcot.ui.msg("creating a tab with a plot widget takes time...")
         return TabPCT(n, w)
 
     def serialise(self, n):

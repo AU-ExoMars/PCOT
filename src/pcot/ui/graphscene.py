@@ -666,7 +666,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 outlinecol = QColor(0, 0, 0) if n.enabled else QColor(255, 0, 0)
                 n.rect.setPen(outlinecol)
 
-                r, g, b = n.type.getTextColour(n) if n.enabled else QColor(255, 0, 0)
+                r, g, b = n.type.getTextColour(n) if n.enabled else (255, 0, 0)
                 n.rect.text.setColour(QColor(r, g, b))
         self.update()
 

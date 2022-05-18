@@ -25,6 +25,7 @@ class XFormHistogram(XFormType):
         self.addInputConnector("", Datum.IMG)
 
     def createTab(self, n, w):
+        ui.msg("creating a tab with a plot widget takes time...")
         return TabHistogram(n, w)
 
     def init(self, node):

@@ -19,6 +19,7 @@ class XformCurve(XFormType):
         self.hasEnable = True
 
     def createTab(self, n, w):
+        pcot.ui.msg("creating a tab with a plot widget takes time...")
         return TabCurve(n, w)
 
     def init(self, node):

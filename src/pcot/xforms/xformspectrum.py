@@ -121,6 +121,7 @@ class XFormSpectrum(XFormType):
         self.addOutputConnector("data", Datum.DATA, "a CSV output (use 'dump' to read it)")
 
     def createTab(self, n, w):
+        pcot.ui.msg("creating a tab with a plot widget takes time...")
         return TabSpectrum(n, w)
 
     def init(self, node):
