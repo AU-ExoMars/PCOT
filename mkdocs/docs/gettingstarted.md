@@ -65,7 +65,7 @@ where you wish.
 
 ### "Undocking" a node's tab
 
-<img src="/tab.png" style="float: left; margin-right:20px">
+<img src="../tab.png" style="float: left; margin-right:20px">
 Sometimes it is useful to see several node tabs at the same time.
 Double-clicking on the actual "tab" part, where the name of the
 node type appears, will make the tab open in a separate window.
