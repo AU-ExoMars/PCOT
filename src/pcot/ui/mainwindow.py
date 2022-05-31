@@ -264,7 +264,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         if self.isMacro():
             MainUI.windows.remove(self)
             evt.accept()
-        elif QMessageBox.question(self.parent(), "Close graph", "Are you sure?",
+        elif QMessageBox.question(self, "Close graph", "Are you sure?",
                                   QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
             MainUI.windows.remove(self)
             self.closeAllTabs()

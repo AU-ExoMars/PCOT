@@ -165,7 +165,6 @@ class UiLoader(QUiLoader):
             return self.baseinstance
 
         else:
-
             # For some reason, Line is not in the list of available
             # widgets, but works fine, so we have to special case it here.
             if class_name in self.availableWidgets() or class_name == 'Line':
@@ -189,7 +188,6 @@ class UiLoader(QUiLoader):
                 # set an attribute for the new child widget on the base
                 # instance, just like PyQt4.uic.loadUi does.
                 setattr(self.baseinstance, name, widget)
-
             return widget
 
 

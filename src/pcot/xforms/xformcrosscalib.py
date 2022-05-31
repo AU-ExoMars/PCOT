@@ -227,7 +227,7 @@ class TabCrossCalib(pcot.ui.tabs.Tab):
         self.w.clearButton.clicked.connect(self.clearClicked)
 
     def clearClicked(self):
-        if QMessageBox.question(self.parent(), "Clear all points", "Are you sure?",
+        if QMessageBox.question(self.window, "Clear all points", "Are you sure?",
                                 QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
             self.mark()
             self.node.dest = []
@@ -263,7 +263,6 @@ class TabCrossCalib(pcot.ui.tabs.Tab):
         self.w.radioSource.setChecked(self.node.imagemode == IMAGEMODE_SOURCE)
         self.w.radioDest.setChecked(self.node.imagemode == IMAGEMODE_DEST)
         self.w.radioResult.setChecked(self.node.imagemode == IMAGEMODE_RESULT)
-
         self.w.checkBoxSrc.setChecked(self.node.showSrc)
         self.w.checkBoxDest.setChecked(self.node.showDest)
 

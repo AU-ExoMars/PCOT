@@ -249,7 +249,7 @@ class TabPCT(pcot.ui.tabs.Tab):
         self.changed()
 
     def clearPressed(self):
-        if QMessageBox.question(self.parent(), "Clear points", "Are you sure?",
+        if QMessageBox.question(self.window, "Clear points", "Are you sure?",
                                 QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
             self.mark()
             self.node.pctPoints.clear()

@@ -257,7 +257,7 @@ class TabManualReg(pcot.ui.tabs.Tab):
         self.w.clearButton.clicked.connect(self.clearClicked)
 
     def clearClicked(self):
-        if QMessageBox.question(self.parent(), "Clear all points", "Are you sure?",
+        if QMessageBox.question(self.window, "Clear all points", "Are you sure?",
                                 QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
             self.mark()
             self.node.dest = []

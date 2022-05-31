@@ -495,7 +495,7 @@ class PDS4ImageMethodWidget(MethodWidget):
 
     def scanDirClicked(self):
         """Does a scanDir() if we confirm it"""
-        if QMessageBox.question(self.parent(), "Rescan directory",
+        if QMessageBox.question(None, "Rescan directory",
                                 "This will clear all loaded products. Are you sure?",
                                 QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
             self.scanDir()

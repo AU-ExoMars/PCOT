@@ -169,7 +169,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.changed()
 
     def clearPressed(self):
-        if QMessageBox.question(self.parent(), "Clear regions", "Are you sure?",
+        if QMessageBox.question(self.window, "Clear regions", "Are you sure?",
                                 QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
             self.mark()
             self.node.rois = []
