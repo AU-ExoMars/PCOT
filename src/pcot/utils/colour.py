@@ -1,6 +1,6 @@
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QColor
-
+import numpy as np
 
 # functions for colour manipulation: converting from (r,g,b) range 0-1 triples to QColor
 # and back etc.
@@ -25,4 +25,7 @@ def qcol2rgb(qcol):
 
 def rgb2qcol(rgb):
     r, g, b = rgb
-    return QColor(int(r * 255), int(g * 255), int(b * 255))
+    r = np.clip(r*256, 0, 255)
+    g = np.clip(g*256, 0, 255)
+    b = np.clip(b*256, 0, 255)
+    return QColor(int(r), int(g), int(b))
