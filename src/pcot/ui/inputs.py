@@ -167,7 +167,7 @@ class TreeMethodWidget(MethodWidget):
     and which use single files - ENVI and RGB are examples."""
     def __init__(self, m, uiFile: str, filterList: List[str]):
         super().__init__(m)
-        uiloader.loadUi(pcot.config.getAssetAsFile(uiFile), self)
+        uiloader.loadUi(uiFile, self)
         # set up the file tree
         self.dirModel = QFileSystemModel()
         # pretty ugly way to get hold of the config, done to avoid cyclic imports

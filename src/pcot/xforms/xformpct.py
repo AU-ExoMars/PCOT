@@ -298,7 +298,7 @@ class TabPCT(pcot.ui.tabs.Tab):
             # done in the canvas for display purposes only
             self.w.canvas.display(self.node.rgbImage, self.node.img, self.node)
         self.w.brushSize.setValue(self.node.brushSize)
-        self.w.stddevsBox.setCheckState(2 if self.node.showStdDevs else 0)
+        self.w.stddevsBox.setCheckState(Qt.Checked if self.node.showStdDevs else Qt.Unchecked)
         if len(self.node.rois) < 1:
             if rotateEnabled:
                 t = "adjust the image of the PCT by dragging the three control points " \

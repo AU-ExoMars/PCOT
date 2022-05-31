@@ -306,7 +306,7 @@ class ImageLinearSetEntity(LinearSetEntity):
 class PDS4ImageMethodWidget(MethodWidget):
     def __init__(self, m):
         super().__init__(m)
-        uiloader.loadUi(pcot.config.getAssetAsFile('inputpdsfile.ui'), self)
+        uiloader.loadUi('inputpdsfile.ui', self)
 
         # set widget states from method data
         if self.method.dir is None or not os.path.isdir(self.method.dir):
@@ -316,7 +316,7 @@ class PDS4ImageMethodWidget(MethodWidget):
             self.method.dir = d
         self.fileEdit.setText(self.method.dir)
 
-        self.recurseBox.setCheckState(2 if self.method.recurse else 0)
+        self.recurseBox.setCheckState(Qt.Checked if self.method.recurse else Qt.Unchecked)
 
         self.canvas.setMapping(m.mapping)
         self.canvas.setGraph(self.method.input.mgr.doc.graph)

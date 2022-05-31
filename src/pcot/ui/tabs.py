@@ -212,8 +212,7 @@ class Tab(QtWidgets.QWidget):
             self.enable = None
 
         # load the UI file into the main widget
-        x = pcot.config.getAssetAsFile(uifile)
-        uiloader.loadUi(x, self.w)
+        uiloader.loadUi(uifile, self.w)
         # add the containing widget (self) to the tabs,
         # keeping the index at which it was created
         self.idx = window.tabWidget.addTab(self, self.title)

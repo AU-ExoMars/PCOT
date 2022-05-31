@@ -405,7 +405,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     def aboutAction(self):
         dialog = QDialog(self)
-        uiloader.loadUi(pcot.config.getAssetAsFile('about.ui'), dialog)
+        uiloader.loadUi('about.ui', dialog)
         txt = Template(pcot.config.getAssetAsString('about.md')).substitute(version=pcot.__fullversion__)
         doc = dialog.textEdit.document()
         doc.setDefaultStyleSheet(pcot.config.getAssetAsString('about.css'))

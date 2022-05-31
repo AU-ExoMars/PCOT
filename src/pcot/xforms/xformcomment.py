@@ -1,7 +1,7 @@
 from typing import Tuple
 
 from PySide2 import QtGui, QtWidgets, QtCore
-from PySide2.QtGui import QColor, QFont
+from PySide2.QtGui import QColor, QFont, QPen
 
 from pcot import ui
 from pcot.ui.tabs import Tab
@@ -87,7 +87,7 @@ class XFormComment(XFormType):
         t.setTextWidth(n.w - 10)
 
     def setRectParams(self, r):
-        r.setPen(QColor(200, 200, 200))
+        r.setPen(QPen(QColor(200, 200, 200)))
 
     def createTab(self, n, w):
         return TabComment(n, w)

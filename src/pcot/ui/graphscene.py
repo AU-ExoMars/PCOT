@@ -7,7 +7,7 @@ from typing import List, Optional
 
 from PySide2 import QtWidgets, QtGui
 from PySide2.QtCore import Qt, QPointF
-from PySide2.QtGui import QColor, QFont, QTransform
+from PySide2.QtGui import QColor, QFont, QTransform, QPen, QBrush
 
 from pcot.datum import Datum, isCompatibleConnection
 import pcot.ui as ui
@@ -365,7 +365,7 @@ class GArrow(QtWidgets.QGraphicsLineItem):
         super().__init__(x1, y1, x2, y2)
         self.head = None
         self.col = Qt.black if compat else Qt.red
-        self.setPen(self.col)
+        self.setPen(QPen(self.col))
         self.makeHead()
 
     def __str__(self):
@@ -391,11 +391,14 @@ class GArrow(QtWidgets.QGraphicsLineItem):
         poly = QtGui.QPolygonF()
         x2 = line.p2().x()
         y2 = line.p2().y()
-        poly << QPointF(x2, y2) << QPointF(x2 + xa * ARROWHEADLENGTH, y2 + ya * ARROWHEADLENGTH) << \
-        QPointF(x2 + xb * ARROWHEADLENGTH, y2 + yb * ARROWHEADLENGTH)
+        # for some reason the "<<" operator doesn't work in Pyside2, at least not for me.
+        poly.append(QPointF(x2, y2))
+        poly.append(QPointF(x2 + xa * ARROWHEADLENGTH, y2 + ya * ARROWHEADLENGTH))
+        poly.append(QPointF(x2 + xb * ARROWHEADLENGTH, y2 + yb * ARROWHEADLENGTH))
+
         self.head = QtWidgets.QGraphicsPolygonItem(poly, parent=self)
-        self.head.setBrush(self.col)
-        self.head.setPen(self.col)
+        self.head.setBrush(QBrush(self.col))
+        self.head.setPen(QPen(self.col))
 
     def setLine(self, line):
         """whenever we change the line, rebuild the head"""
@@ -664,7 +667,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 b = max(b, 10)
                 n.rect.setBrush(QColor(r, g, b))
                 outlinecol = QColor(0, 0, 0) if n.enabled else QColor(255, 0, 0)
-                n.rect.setPen(outlinecol)
+                n.rect.setPen(QPen(outlinecol))
 
                 r, g, b = n.type.getTextColour(n) if n.enabled else (255, 0, 0)
                 n.rect.text.setColour(QColor(r, g, b))

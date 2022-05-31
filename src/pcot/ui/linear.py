@@ -2,7 +2,7 @@ from typing import List, Any, Set, Callable
 
 from PySide2 import QtWidgets, QtGui
 from PySide2.QtCore import Qt, Signal
-from PySide2.QtGui import QColor, QFont
+from PySide2.QtGui import QColor, QFont, QBrush, QPen
 
 import numpy as np
 import pcot.ui as ui
@@ -21,8 +21,8 @@ def entityMarkerInitSetup(obj, ent):
     """Setups up some common stuff in item initialisation - the problem is that the base class of all these items
     is a QGraphicsItem, but we want common stuff to happen. We could do this with mixins and careful use of the MRO,
     but this is easier to understand (I think)."""
-    obj.setBrush(Qt.blue)
-    obj.setPen(Qt.black)
+    obj.setBrush(QBrush(Qt.blue))
+    obj.setPen(QPen(Qt.black))
     obj.selCol = Qt.red
     obj.unselCol = Qt.blue
     obj.setFlag(QtWidgets.QGraphicsItem.ItemIsSelectable)
@@ -144,7 +144,7 @@ class TickRenderer:
                 # only do something if there isn't a tick there
                 # create the line
                 i = QtWidgets.QGraphicsLineItem(xx, 0, xx, h * self.linelen)
-                i.setPen(self.linecol)
+                i.setPen(QPen(self.linecol))
                 scene.addItem(i)
             if not scene.hasTickAlready(xx) or self.textalways:
                 scene.markTick(xx)  # NOW mark the tick.
