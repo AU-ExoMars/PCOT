@@ -1,7 +1,7 @@
 """A simple dialog for renaming things: use do(oldname)"""
 
-from PyQt5 import QtWidgets, uic, QtGui, QtCore
-from PyQt5.QtWidgets import QDialog, QDialogButtonBox
+from PySide2 import QtWidgets
+from PySide2.QtWidgets import QDialog, QDialogButtonBox
 
 
 class NameDialog(QDialog):

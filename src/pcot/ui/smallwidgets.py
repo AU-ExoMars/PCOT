@@ -1,5 +1,5 @@
 # Various little widgets that are too small to go into their own module.
-from PyQt5 import QtWidgets
+from PySide2 import QtWidgets
 
 
 class MouseReleaseSpinBox(QtWidgets.QSpinBox):

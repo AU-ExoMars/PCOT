@@ -1,8 +1,8 @@
 """This module deals with the widget which displays the graphical scene which
 represents a graph (graphscene).
 """
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import Qt
+from PySide2 import QtWidgets, QtCore
+from PySide2.QtCore import Qt
 
 
 class GraphView(QtWidgets.QGraphicsView):

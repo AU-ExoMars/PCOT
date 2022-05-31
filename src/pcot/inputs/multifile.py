@@ -4,10 +4,10 @@ import logging
 import os
 import re
 
-import PyQt5
 import cv2 as cv
-from PyQt5 import uic, QtWidgets, QtGui
-from PyQt5.QtCore import Qt
+import PySide2
+from PySide2 import QtWidgets, QtGui
+from PySide2.QtCore import Qt
 
 import pcot
 from .inputmethod import InputMethod
@@ -18,6 +18,7 @@ from .. import ui
 from ..datum import Datum
 from ..filters import getFilterByPos
 from ..sources import InputSource, SourceSet, MultiBandSource
+from ..ui import uiloader
 
 logger = logging.getLogger(__name__)
 
@@ -177,7 +178,7 @@ class MultifileMethodWidget(MethodWidget):
     def __init__(self, m):
         super().__init__(m)
         self.model = None
-        uic.loadUi(pcot.config.getAssetAsFile('inputmultifile.ui'), self)
+        uiloader.loadUi(pcot.config.getAssetAsFile('inputmultifile.ui'), self)
         self.getinitial.clicked.connect(self.getInitial)
         self.filters.textChanged.connect(self.filtersChanged)
         self.filelist.activated.connect(self.itemActivated)
@@ -303,7 +304,7 @@ class MultifileMethodWidget(MethodWidget):
                 item = QtGui.QStandardItem(x)
                 item.setCheckable(True)
                 if x in self.method.files:
-                    item.setCheckState(PyQt5.QtCore.Qt.Checked)
+                    item.setCheckState(PySide2.QtCore.Qt.Checked)
                 self.model.appendRow(item)
 
         self.filelist.setModel(self.model)

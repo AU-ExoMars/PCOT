@@ -6,8 +6,7 @@ https://www.learnpyqt.com/courses/graphics-plotting/plotting-matplotlib/
 """
 import os
 
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import Qt
+from PySide2 import QtWidgets
 
 import matplotlib
 

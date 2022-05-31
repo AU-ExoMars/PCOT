@@ -1,6 +1,6 @@
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPainter, QColor
-from PyQt5.QtWidgets import QMessageBox
+from PySide2.QtCore import Qt
+from PySide2.QtGui import QPainter, QColor
+from PySide2.QtWidgets import QMessageBox
 
 import pcot.ui.tabs
 import pcot.utils.colour

@@ -1,13 +1,13 @@
-from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import pyqtSignal, QSize, QRect
-from PyQt5.QtGui import QPaintEvent, QPainter, QColor
-from PyQt5.QtCore import Qt
+from PySide2 import QtWidgets, QtGui
+from PySide2.QtCore import Signal, QSize, QRect
+from PySide2.QtGui import QPaintEvent, QPainter, QColor
+from PySide2.QtCore import Qt
 
 
 class TextToggleButton(QtWidgets.QWidget):
     """a simple toggling switch consisting of a string inside a box. Takes up less room than a
     checkbox."""
-    toggled = pyqtSignal(bool)
+    toggled = Signal(bool)
 
     def __init__(self, textOn, textOff, initState=False, parent=None):
         QtWidgets.QWidget.__init__(self, parent)  # Inherit from QWidget

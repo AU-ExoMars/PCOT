@@ -5,9 +5,9 @@ from pcot.datum import Datum
 import cv2 as cv
 
 import pcot
-from PyQt5.QtCore import Qt, QPoint
-from PyQt5.QtGui import QColor, QPainter, QPolygon, QFont
-from PyQt5.QtWidgets import QMessageBox
+from PySide2.QtCore import Qt, QPoint
+from PySide2.QtGui import QColor, QPainter, QPolygon, QFont
+from PySide2.QtWidgets import QMessageBox
 from pcot.calib import pct
 from pcot.rois import getRadiusFromSlider, ROIPainted
 from pcot.xform import xformtype, XFormType

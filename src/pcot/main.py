@@ -5,8 +5,8 @@ import os
 import sys
 import importlib
 
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import QCommandLineParser
+from PySide2 import QtWidgets
+from PySide2.QtCore import QCommandLineParser
 
 import pcot.config
 import pcot.ui.mainwindow

@@ -1,7 +1,7 @@
 import logging
 import traceback
 import pcot.ui.mainwindow as mainwindow
-from PyQt5 import QtWidgets
+from PySide2 import QtWidgets
 
 logger = logging.getLogger(__name__)
 

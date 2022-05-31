@@ -1,8 +1,8 @@
 from typing import List, Any, Set, Callable
 
-from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QColor, QFont
+from PySide2 import QtWidgets, QtGui
+from PySide2.QtCore import Qt, Signal
+from PySide2.QtGui import QColor, QFont
 
 import numpy as np
 import pcot.ui as ui
@@ -250,7 +250,7 @@ class LinearSetWidget(QtWidgets.QGraphicsView):
     scene: LinearSetScene
     items: List[LinearSetEntity]
 
-    selChanged = pyqtSignal()  # signal emitted when the selection changes
+    selChanged = Signal()  # signal emitted when the selection changes
 
     def __init__(self, parent=None):
         super().__init__(parent)

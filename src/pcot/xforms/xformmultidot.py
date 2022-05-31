@@ -1,7 +1,7 @@
 import matplotlib
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPainter, QColor, QKeyEvent
-from PyQt5.QtWidgets import QMessageBox, QSpinBox
+from PySide2.QtCore import Qt
+from PySide2.QtGui import QPainter, QColor, QKeyEvent
+from PySide2.QtWidgets import QMessageBox, QSpinBox
 
 import pcot.ui.tabs
 import pcot.utils.colour

@@ -1,9 +1,9 @@
 """The palette widget module, which handles the palette of
 nodes on the right hand side."""
 
-from PyQt5 import QtWidgets, uic, QtCore, QtGui
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QMessageBox, QSizePolicy, QAction
+from PySide2 import QtWidgets, QtCore, QtGui
+from PySide2.QtCore import Qt
+from PySide2.QtWidgets import QMessageBox, QSizePolicy, QAction
 
 import pcot.macros as macros
 from pcot.xform import XFormType, XFormException

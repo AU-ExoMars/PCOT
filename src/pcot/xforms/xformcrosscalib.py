@@ -2,9 +2,9 @@ import logging
 
 import cv2 as cv
 import numpy as np
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QKeyEvent
-from PyQt5.QtWidgets import QMessageBox
+from PySide2.QtCore import Qt
+from PySide2.QtGui import QKeyEvent
+from PySide2.QtWidgets import QMessageBox
 
 from pcot.datum import Datum
 import pcot.ui.tabs

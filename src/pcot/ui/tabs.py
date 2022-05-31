@@ -2,15 +2,17 @@
 should inherit DockableTabWindow.
 """
 
-from PyQt5 import QtWidgets, uic, QtCore
-from PyQt5.QtCore import Qt
+from PySide2 import QtWidgets, QtCore
+from PySide2.QtCore import Qt
 import collections
 
 import pcot
 
 ## the main UI window class. Your application window should inherit from
 # this to use dockable tabs, and have a tabWidget tab container.
-from PyQt5.QtGui import QFont
+from PySide2.QtGui import QFont
+
+from pcot.ui import uiloader
 
 
 class DockableTabWindow(QtWidgets.QMainWindow):
@@ -211,7 +213,7 @@ class Tab(QtWidgets.QWidget):
 
         # load the UI file into the main widget
         x = pcot.config.getAssetAsFile(uifile)
-        uic.loadUi(x, self.w)
+        uiloader.loadUi(x, self.w)
         # add the containing widget (self) to the tabs,
         # keeping the index at which it was created
         self.idx = window.tabWidget.addTab(self, self.title)

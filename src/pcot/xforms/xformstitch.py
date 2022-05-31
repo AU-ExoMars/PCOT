@@ -1,10 +1,10 @@
 import logging
 
 import numpy as np
-from PyQt5 import QtCore
-from PyQt5.QtCore import Qt, QItemSelection, QItemSelectionModel
+from PySide2 import QtCore
+from PySide2.QtCore import Qt, QItemSelection, QItemSelectionModel
 import cv2 as cv
-from PyQt5.QtGui import QKeyEvent
+from PySide2.QtGui import QKeyEvent
 
 from pcot.datum import Datum
 from pcot.imagecube import ImageCube

@@ -5,19 +5,18 @@ import os
 import platform
 from typing import TYPE_CHECKING, Optional, Union
 
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtGui import QImage, QPainter, QBitmap, QCursor, QPen
-from PyQt5.QtCore import Qt
+from PySide2 import QtWidgets, QtCore
+from PySide2.QtGui import QImage, QPainter, QBitmap, QCursor, QPen
+from PySide2.QtCore import Qt
 
 import cv2 as cv
 import numpy as np
-from PyQt5.QtWidgets import QCheckBox
+from PySide2.QtWidgets import QCheckBox
 
 import pcot
 import pcot.ui as ui
 from pcot.datum import Datum
 from pcot.ui.specplot import SpecPlot
-from pcot.ui.texttogglebutton import TextToggleButton
 
 if TYPE_CHECKING:
     from pcot.xform import XFormGraph, XForm

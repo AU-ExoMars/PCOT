@@ -1,5 +1,5 @@
-from PyQt5.QtGui import QTextCursor
-from PyQt5.QtWidgets import QPlainTextEdit, QTextEdit
+from PySide2.QtGui import QTextCursor
+from PySide2.QtWidgets import QPlainTextEdit, QTextEdit
 
 from pcot import ui
 from pcot.ui.help import markdownWrapper

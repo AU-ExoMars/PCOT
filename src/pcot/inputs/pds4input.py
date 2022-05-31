@@ -4,16 +4,17 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any
 
 import numpy as np
-from PyQt5.QtGui import QPen
+from PySide2.QtGui import QPen
 from dateutil import parser
-from PyQt5 import uic, QtWidgets
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QMessageBox, QTableWidgetItem
+from PySide2 import QtWidgets
+from PySide2.QtCore import Qt
+from PySide2.QtWidgets import QMessageBox, QTableWidgetItem
 
 from pcot import filters
 from pcot.dataformats import pds4
 from pcot.dataformats.pds4 import PDS4ImageProduct, PDS4Product
 from pcot.datum import Datum
+from pcot.ui import uiloader
 from pcot.ui.help import HelpWindow
 from proctools.products import DataProduct
 from proctools.products.loader import ProductLoader
@@ -305,7 +306,7 @@ class ImageLinearSetEntity(LinearSetEntity):
 class PDS4ImageMethodWidget(MethodWidget):
     def __init__(self, m):
         super().__init__(m)
-        uic.loadUi(pcot.config.getAssetAsFile('inputpdsfile.ui'), self)
+        uiloader.loadUi(pcot.config.getAssetAsFile('inputpdsfile.ui'), self)
 
         # set widget states from method data
         if self.method.dir is None or not os.path.isdir(self.method.dir):

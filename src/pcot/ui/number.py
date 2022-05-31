@@ -1,7 +1,7 @@
 """Number widget made up of a dial and text"""
 
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt
+from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import Qt
 
 MAXVAL = 100
 

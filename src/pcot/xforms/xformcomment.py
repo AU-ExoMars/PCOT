@@ -1,8 +1,7 @@
 from typing import Tuple
 
-from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtGui import QColor, QFont
-from PyQt5.QtWidgets import QGraphicsRectItem
+from PySide2 import QtGui, QtWidgets, QtCore
+from PySide2.QtGui import QColor, QFont
 
 from pcot import ui
 from pcot.ui.tabs import Tab

@@ -1,5 +1,5 @@
-from PyQt5 import QtWidgets
-from PyQt5.QtGui import QColor
+from PySide2 import QtWidgets
+from PySide2.QtGui import QColor
 
 
 # functions for colour manipulation: converting from (r,g,b) range 0-1 triples to QColor

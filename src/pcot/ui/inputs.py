@@ -2,11 +2,12 @@ import logging
 import os
 from typing import List
 
-from PyQt5 import QtWidgets, uic, QtCore, QtGui
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QFileSystemModel
+from PySide2 import QtWidgets, QtCore, QtGui
+from PySide2.QtCore import Qt
+from PySide2.QtWidgets import QFileSystemModel
 
 import pcot
+from pcot.ui import uiloader
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +167,7 @@ class TreeMethodWidget(MethodWidget):
     and which use single files - ENVI and RGB are examples."""
     def __init__(self, m, uiFile: str, filterList: List[str]):
         super().__init__(m)
-        uic.loadUi(pcot.config.getAssetAsFile(uiFile), self)
+        uiloader.loadUi(pcot.config.getAssetAsFile(uiFile), self)
         # set up the file tree
         self.dirModel = QFileSystemModel()
         # pretty ugly way to get hold of the config, done to avoid cyclic imports

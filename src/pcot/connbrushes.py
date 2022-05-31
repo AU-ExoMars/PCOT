@@ -1,8 +1,8 @@
 ## dictionary of name -> brush for connection pad drawing
 import logging
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor, QBrush, QLinearGradient
+from PySide2.QtCore import Qt
+from PySide2.QtGui import QColor, QBrush, QLinearGradient
 
 from pcot.datum import Datum, Type
 

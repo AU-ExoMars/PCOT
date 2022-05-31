@@ -40,4 +40,4 @@ def getLabelsFromDirectory(d):
                     filt = lab.find(".//img:center_filter_wavelength").text
                     filtId = lab.find(".//img:filter_id").text
 
-                    d = LabelDataImage(f, cam, typeId, sol, seq, ivn, filt, filtId)
+                    d = LabelDataImage(f, "getcamnamehere", typeId, sol, seq, ivn, filt, filtId)

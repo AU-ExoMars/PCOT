@@ -1,5 +1,5 @@
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import pyqtSignal
+from PySide2 import QtWidgets
+from PySide2.QtCore import Signal
 
 from pcot import datum
 from pcot.datum import Datum
@@ -14,7 +14,7 @@ class VariantWidget(QtWidgets.QGroupBox):
         set(conntype.Type) to set the value
     """
 
-    changed = pyqtSignal(datum.Type)
+    changed = Signal(datum.Type)
 
     def __init__(self, parent):
         super().__init__(parent)

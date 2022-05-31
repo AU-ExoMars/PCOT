@@ -2,14 +2,15 @@ import math
 
 import matplotlib
 import numpy as np
-from PyQt5 import uic, QtWidgets
-from PyQt5.QtWidgets import QDialog
+from PySide2 import QtWidgets
+from PySide2.QtWidgets import QDialog
 
 import pcot
 import pcot.ui as ui
 from pcot.datum import Datum
 from pcot.filters import wav2RGB
 from pcot.sources import SourceSet
+from pcot.ui import uiloader
 from pcot.ui.tabs import Tab
 from pcot.utils.table import Table
 from pcot.xform import XFormType, xformtype, XFormException
@@ -204,7 +205,7 @@ class ReorderDialog(QDialog):
         super().__init__(parent)
         # load the UI file into the actual dialog (as the UI was created as "dialog with buttons")
         x = pcot.config.getAssetAsFile('reorderplots.ui')
-        uic.loadUi(x, self)
+        uiloader.loadUi(x, self)
         self.upButton.clicked.connect(self.upClicked)
         self.downButton.clicked.connect(self.downClicked)
         self.revButton.clicked.connect(self.revClicked)

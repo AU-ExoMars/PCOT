@@ -10,12 +10,12 @@ from string import Template
 from typing import List, Optional, OrderedDict, ClassVar
 
 import markdown
-from PyQt5 import QtWidgets, uic
-from PyQt5.QtGui import QTextCursor
-from PyQt5.QtWidgets import QAction, QMessageBox, QDialog
+from PySide2 import QtWidgets
+from PySide2.QtGui import QTextCursor
+from PySide2.QtWidgets import QAction, QMessageBox, QDialog
 
 import pcot
-from pcot.ui import graphscene, graphview
+from pcot.ui import graphscene, graphview, uiloader
 import pcot.macros as macros
 import pcot.palette as palette
 import pcot.ui as ui
@@ -92,7 +92,7 @@ class MainUI(ui.tabs.DockableTabWindow):
                  doAutoLayout: bool = True):
         """Constructor which just calls _init()"""
         super().__init__()
-        uic.loadUi(pcot.config.getAssetAsFile('main.ui'), self)
+        uiloader.loadUi('main.ui', self)
         # connect buttons etc.
         self.autolayoutButton.clicked.connect(self.autoLayoutButton)
         self.dumpButton.clicked.connect(lambda: self.graph.dump())
@@ -405,7 +405,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     def aboutAction(self):
         dialog = QDialog(self)
-        uic.loadUi(pcot.config.getAssetAsFile('about.ui'), dialog)
+        uiloader.loadUi(pcot.config.getAssetAsFile('about.ui'), dialog)
         txt = Template(pcot.config.getAssetAsString('about.md')).substitute(version=pcot.__fullversion__)
         doc = dialog.textEdit.document()
         doc.setDefaultStyleSheet(pcot.config.getAssetAsString('about.css'))

@@ -4,7 +4,7 @@
 import re
 
 import cv2 as cv
-from PyQt5.QtWidgets import QGraphicsSimpleTextItem
+from PySide2.QtWidgets import QGraphicsSimpleTextItem
 
 
 def write(img, txt, x, y, above, fontsize, fontthickness, fontcol, bg=None):
