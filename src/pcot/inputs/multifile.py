@@ -44,7 +44,6 @@ class MultifileInputMethod(InputMethod):
         self.cachedFiles = {}
 
         self.mapping = ChannelMapping()
-        self.img = None
 
     def long(self):
         lst = [f"{i}: {f}" for i, f in enumerate(self.files)]
@@ -148,7 +147,6 @@ class MultifileInputMethod(InputMethod):
              }
         if internal:
             x['cache'] = self.cachedFiles
-            x['img'] = self.img
 
         Canvas.serialise(self, x)
         return x
@@ -163,7 +161,6 @@ class MultifileInputMethod(InputMethod):
         self.defaultLens = data.get('defaultlens', 'L')
         if internal:
             self.cachedFiles = data['cache']
-            self.img = data['img']
 
         Canvas.deserialise(self, data)
 
@@ -187,7 +184,7 @@ class MultifileMethodWidget(MethodWidget):
         self.mult.currentTextChanged.connect(self.multChanged)
         self.camCombo.currentIndexChanged.connect(self.cameraChanged)
         self.canvas.setMapping(m.mapping)
-        self.canvas.hideMapping()  # because we're showing greyscale for each image
+        # self.canvas.hideMapping()  # because we're showing greyscale for each image
         self.canvas.setGraph(self.method.input.mgr.doc.graph)
         self.canvas.setPersister(m)
 
@@ -200,7 +197,8 @@ class MultifileMethodWidget(MethodWidget):
         self.activatedImage = None
         # all the files in the current directory (which match the filters)
         self.allFiles = []
-        self.method.dir = pcot.config.getDefaultDir('images')
+        if self.method.dir is None or len(self.method.dir)==0:
+            self.method.dir = pcot.config.getDefaultDir('images')
         self.onInputChanged()
 
     def cameraChanged(self, i):
@@ -228,7 +226,7 @@ class MultifileMethodWidget(MethodWidget):
         # we don't do this when the window is opening, otherwise it happens a lot!
         if not self.method.openingWindow:
             self.method.input.performGraph()
-        self.canvas.display(self.method.img)
+        self.canvas.display(self.method.get())
 
     def fileClickedAction(self, idx):
         if not self.dirModel.isDir(idx):

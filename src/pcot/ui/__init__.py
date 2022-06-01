@@ -2,6 +2,7 @@ import logging
 import traceback
 import pcot.ui.mainwindow as mainwindow
 from PySide2 import QtWidgets
+from PySide2.QtCore import Qt
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ def msg(t):
     if application is not None:
         for x in mainwindow.MainUI.windows:
             x.statusBar.showMessage(t)
-            x.statusBar.repaint()   # make sure the message appears!
+            x.statusBar.repaint()  # make sure the message appears!
     else:
         logger.info(f"LOG MSG {t}")
 
@@ -91,3 +92,39 @@ def versionWarn(n):
         log('Current MD5 hash: {}'.format(n.type.md5()))
         log('MD5 hash in file: {}'.format(n.savedmd5))
 
+
+def decorateSplitter(splitter: QtWidgets.QSplitter, index: int):
+    """Often splitters in Qt are really hard to see - especially true for those on the Canvas. This code makes
+    them more visible, creating a double-bar handle that goes the whole width/height.
+    Adapted from https://stackoverflow.com/questions/2545577/qsplitter-becoming-undistinguishable-between-qwidget-and-qtabwidget/13513631#13513631
+    """
+    gripLength = 1200
+    gripWidth = 2
+    grips = 2
+
+    splitter.setOpaqueResize(False)
+    splitter.setChildrenCollapsible(False)
+
+    splitter.setHandleWidth(7)
+    handle = splitter.handle(index)
+    layout = QtWidgets.QHBoxLayout(handle)
+    layout.setSpacing(0)
+    layout.setMargin(0)
+    if splitter.orientation() == Qt.Horizontal:
+        for i in range(grips):
+            line = QtWidgets.QFrame(handle)
+            line.setMinimumSize(gripWidth, gripLength)
+            line.setMaximumSize(gripWidth, gripLength)
+            line.setFrameShape(QtWidgets.QFrame.StyledPanel)
+            layout.addWidget(line)
+    else:
+        layout.addStretch()
+        vbox = QtWidgets.QVBoxLayout();
+        for i in range(grips):
+            line = QtWidgets.QFrame(handle)
+            line.setMinimumSize(gripWidth, gripLength)
+            line.setMaximumSize(gripWidth, gripLength)
+            line.setFrameShape(QtWidgets.QFrame.StyledPanel)
+            vbox.addWidget(line)
+        layout.addWidget(vbox)
+        layout.addStretch()

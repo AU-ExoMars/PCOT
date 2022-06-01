@@ -489,6 +489,7 @@ class Canvas(QtWidgets.QWidget):
         layout.addWidget(self.scrollH, 1, 0)
 
         self.resetButton = QtWidgets.QPushButton()
+        self.resetButton.setMaximumWidth(20)
         layout.addWidget(self.resetButton, 1, 1)
         self.resetButton.clicked.connect(self.reset)
 
@@ -501,6 +502,9 @@ class Canvas(QtWidgets.QWidget):
         # entity to persist data in; should serialise and deserialise canvas settings
         self.persister = None
         self.roiToggle.setEnabled(False)  # because persister is None at first.
+
+        pcot.ui.decorateSplitter(splitter,1)
+
 
     def mouseMove(self, x, y, event):
         self.coordsText.setText(f"{x},{y}")

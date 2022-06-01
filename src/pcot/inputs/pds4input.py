@@ -61,8 +61,6 @@ class PDS4InputMethod(InputMethod):
 
     # Here is the data model. This all gets persisted.
 
-    img: Optional[Any]  # the output - could be an ImageCube or something else, or None.
-
     products: List[PDS4Product]  # list of PDS4 products found under the directory "dir". Not all will be selected.
     selected: List[int]  # indices of selected items in the above list
     lidToLabel: Dict[str, DataProduct]  # dictionary of LIDs to proctools Labels.
