@@ -10,7 +10,7 @@ PCOT is a Python program (and library) with a number of dependencies, including
 * OpenCV
 * numpy
 * scikit-image
-* pyperclip
+* pyperclip (may also require other packages in Linux e.g. xsel)
 * matplotlib
 
 I find the best way to manage these is to use Anaconda. Installation has been tested on Windows 10

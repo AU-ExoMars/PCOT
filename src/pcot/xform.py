@@ -1008,7 +1008,11 @@ class XFormGraph:
         # copy to clipboard as a string; this is ugly and may be slow. Particularly if we
         # end up serialising lots of numpy data! However, it is still compressed with DEFLATE.
         s = base64.b64encode(a.get().getvalue()).decode()  # get memory from bytesio, encode as b64, convert to string.
-        pyperclip.copy(s)
+        try:
+            pyperclip.copy(s)
+        except pyperclip.PyperclipException as e:
+            ui.error(str(e))
+            ui.pyperclipErrorDialog()
 
     def paste(self):
         """paste the clipboard.
@@ -1016,19 +1020,23 @@ class XFormGraph:
         Returns a list of new nodes.
         """
         # get data from clipboard as a b64 encoded string
-        s = pyperclip.paste()
-        if len(s) > 0:
-            try:
-                # decode the b64 string into bytes
-                s = base64.b64decode(s)
-                # make a memory archive out of these bytes and read it
-                with archive.MemoryArchive(BytesIO(s)) as a:
-                    d = a.readJson("clipboard")
-            except json.decoder.JSONDecodeError:
-                raise Exception("Clipboard does not contain valid data")
-            return self.deserialise(d, False)
-        else:
-            return []
+        try:
+            s = pyperclip.paste()
+            if len(s) > 0:
+                try:
+                    # decode the b64 string into bytes
+                    s = base64.b64decode(s)
+                    # make a memory archive out of these bytes and read it
+                    with archive.MemoryArchive(BytesIO(s)) as a:
+                        d = a.readJson("clipboard")
+                except json.decoder.JSONDecodeError:
+                    raise Exception("Clipboard does not contain valid data")
+                return self.deserialise(d, False)
+        except pyperclip.PyperclipException as e:
+            ui.error(str(e))
+            ui.pyperclipErrorDialog()
+        return []
+
 
     def remove(self, node, closetabs=True):
         """remove a node from the graph, and close any tab/window (but not always; when doing Undo
