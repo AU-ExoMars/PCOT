@@ -1,4 +1,14 @@
-import pcot.macros as macros
+import traceback
+try:
+    import pcot.macros as macros
+except AttributeError as e:
+    traceback.print_exc()
+    print("""
+    This error MAY mean that you should turn off Qt Compatible debugging in PyCharm. It's a bug
+    https://youtrack.jetbrains.com/issue/PY-50959
+    """)
+    exit(0)
+
 import pcot.ui as ui
 import pcot.xform as xform
 import pcot.xforms
