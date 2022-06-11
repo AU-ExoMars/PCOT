@@ -1202,11 +1202,19 @@ class XFormGraph:
             app must then patch these tabs to point to replacement nodes, if they exist.
             If not they should be closed. This is used in undo/redo.
             """
+
         if deleteExistingNodes:
+            # we temporarily disable graph performance by telling the system we are already
+            # performing a graph. This will stop it doing it again, which messing things up
+            # because we perform child nodes on .remove. Well, it doesn't mess things up
+            # fatally but you do get a lot of spurious errors.
+            oldPerfG = self.performingGraph
+            self.performingGraph = True
             # remove from a copy; can't modify a list while traversing
             for n in self.nodes.copy():
                 # this will close any open tabs, but NOT when closetabs is false.
                 self.remove(n, closetabs=closetabs)
+            self.performingGraph = oldPerfG
 
         # disambiguate nodes in the dict, to make sure they don't
         # have the same nodes as ones already in the graph
