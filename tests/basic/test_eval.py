@@ -1,40 +1,72 @@
 """
 Parser/Evaluator tests - not PCOT specific, just the shunting yard algorithm and VM.
+This was written with unittest, but you don't need to write every test suite that way -
+it's just that this was done first.
 """
 from math import sqrt
-
-import parse
 import unittest
+from typing import Callable, Any, Optional, Type
 
-variable_1 = 0
-variable_2 = 0
+from pcot.datum import Datum
+from pcot.expressions import parse, Parameter
+from pcot.sources import nullSourceSet
+
+
+def mknum(n: float):
+    """Create a null source set numerical datum for testing"""
+    return Datum(Datum.NUMBER, n, sources=nullSourceSet)
+
+
+variable_1 = mknum(0)
+variable_2 = mknum(0)
+
+
+def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: Optional[Type]) -> Datum:
+    assert a.tp == Datum.NUMBER
+    assert b.tp == Datum.NUMBER
+    return mknum(op(a.get(Datum.NUMBER), b.get(Datum.NUMBER)))
 
 
 def execute(s, nakedIdents=False):
     p = parse.Parser(nakedIdents=nakedIdents)
-    p.registerFunc('sqrt', lambda a: sqrt(a[0]))
-    p.registerFunc('sqr', lambda a: a[0] * a[0])
-    p.registerFunc('max', lambda a: max(a))
-    p.registerFunc('min', lambda a: min(a))
-    p.registerFunc('firstarg',lambda a: a[0])
-    p.registerFunc('lastarg',lambda a: a[-1])
-    p.registerFunc('noargs',lambda a: 100)
-    p.registerBinop('*', 20, lambda a, b: a * b)
-    p.registerBinop('/', 20, lambda a, b: a / b)
-    p.registerBinop('+', 10, lambda a, b: a + b)
-    p.registerBinop('-', 10, lambda a, b: a - b)
-    p.registerUnop('-', 200, lambda a: -a)
-    p.registerVar('var1', lambda: variable_1)
-    p.registerVar('var2', lambda: variable_2)
+    p.registerFunc("sqrt", "calculate the square root",
+                   [Parameter("angle", "value(s) to input", Datum.NUMBER)],
+                   [],
+                   lambda args, optargs: mknum(sqrt(args[0].get(Datum.NUMBER))))
+
+    p.registerFunc("min", "find the minimum value of pixels in a list of ROIs, images or values",
+                   [Parameter("val", "value(s) to input", Datum.NUMBER)],
+                   [],
+                   lambda args, optargs: mknum(min([x.get(Datum.NUMBER) for x in args])), True)
+    p.registerFunc("max", "find the maximum value of pixels in a list of ROIs, images or values",
+                   [Parameter("val", "value(s) to input", Datum.NUMBER)],
+                   [],
+                   lambda args, optargs: mknum(max([x.get(Datum.NUMBER) for x in args])), True)
+    p.registerFunc("noargs", "just return a constant",
+                   [],
+                   [],
+                   lambda args, optargs: mknum(100.0), False)
+
+    p.registerBinop('+', 10, lambda a, b: binop(a, b, lambda x, y: x + y, None))
+    p.registerBinop('-', 10, lambda a, b: binop(a, b, lambda x, y: x - y, None))
+    p.registerBinop('/', 20, lambda a, b: binop(a, b, lambda x, y: x / y, None))
+    p.registerBinop('*', 20, lambda a, b: binop(a, b, lambda x, y: x * y, None))
+    p.registerUnop('-', 200, lambda a: mknum(-(a.get(Datum.NUMBER))))
+    p.registerVar('var1', "test var", lambda: variable_1)
+    p.registerVar('var2', "test var", lambda: variable_2)
 
     p.parse(s)
 
     stack = []
     r = parse.execute(p.output, stack)
-    return r
+    # if the returned value is a number, extract it. Otherwise just return the Datum.
+    if r.tp == Datum.NUMBER:
+        return r.get(Datum.NUMBER)
+    else:
+        return r
 
 
-class TestBasic(unittest.TestCase):
+class TestCoreBinops(unittest.TestCase):
     def test_add(self):
         self.assertEqual(execute('6+6'), 12.0)
 
@@ -106,41 +138,37 @@ class TestUnaryMinus(unittest.TestCase):
 class TestVariables(unittest.TestCase):
     def test_1(self):
         global variable_1
-        variable_1 = 10
+        variable_1 = mknum(10)
         self.assertEqual(execute('var1'), 10)
 
     def test_2(self):
         global variable_1
         global variable_2
-        variable_1 = 10
-        variable_2 = 21
+        variable_1 = mknum(10)
+        variable_2 = mknum(21)
         self.assertEqual(execute('var1-var2'), -11)
 
     def test_3(self):
         global variable_1
         global variable_2
-        variable_1 = 10
-        variable_2 = 21
+        variable_1 = mknum(10)
+        variable_2 = mknum(21)
         self.assertEqual(execute('var1-(var2)'), -11)
 
     def test_4(self):
         global variable_1
         global variable_2
-        variable_1 = 10
-        variable_2 = 21
+        variable_1 = mknum(10)
+        variable_2 = mknum(21)
         self.assertEqual(execute('var1-(var2/2)'), -0.5)
 
 
 class TestNakedIdents(unittest.TestCase):
     def test_1(self):
-        self.assertEqual(execute('foo', True), 'foo')
+        self.assertEqual(execute('foo', True).get(Datum.IDENT), 'foo')
 
     def test_2(self):
         self.assertRaises(parse.ParseException, lambda: execute('foo'))
-
-    def test_3(self):
-        # not much point to this, but hey.
-        self.assertEqual(execute('blart+foo', True), 'blartfoo')
 
 
 class TestFunctions(unittest.TestCase):
@@ -152,12 +180,6 @@ class TestFunctions(unittest.TestCase):
 
     def test_3(self):
         self.assertEqual(execute('max(45,1,56,12,2)'), 56)
-
-    def test_4(self):
-        self.assertEqual(execute('firstarg(45,1,56,12,2)'), 45)
-
-    def test_5(self):
-        self.assertEqual(execute('lastarg(45,1,56,12,2)'), 2)
 
     def test_6(self):
         self.assertEqual(execute('10+noargs()'), 110)

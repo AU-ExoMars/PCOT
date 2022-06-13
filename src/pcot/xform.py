@@ -678,14 +678,14 @@ class XForm:
 
     def changeOutputType(self, index, tp):
         """this should be used to change an output type in generateOutputTypes"""
-#        old = self.outputTypes[index]
+        #        old = self.outputTypes[index]
         self.outputTypes[index] = tp
         if self.outrects[index] is not None:
             #            print("MATCHING: {} becomes {}".format(index,type))
             self.outrects[index].typeChanged()
-#        if old != tp:
-#            self.graph.rebuildGraphics()
 
+    #        if old != tp:
+    #            self.graph.rebuildGraphics()
 
     ## this can be used in XFormType's generateOutputTypes if the polymorphism
     # is simply that some outputs should match the types of some inputs. The
@@ -1037,14 +1037,13 @@ class XFormGraph:
             ui.pyperclipErrorDialog()
         return []
 
-
     def remove(self, node, closetabs=True):
         """remove a node from the graph, and close any tab/window (but not always; when doing Undo
         we monkey patch the existing tabs to point at the replacement nodes)"""
 
         if node in self.nodes:
             oldChildren = list(node.children)  # shallow copy of children
-            node.disconnectAll()               # because it gets cleared here
+            node.disconnectAll()  # because it gets cleared here
             if closetabs:
                 for x in node.tabs:
                     x.nodeDeleted()

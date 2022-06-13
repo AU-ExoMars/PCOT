@@ -113,6 +113,7 @@ class InputSource(Source):
         return self.filterOrName if isinstance(self.filterOrName, Filter) else None
 
     def getPDS4(self):
+        """return any associated PDS4 data"""
         return self.pds4
 
     def copy(self):
