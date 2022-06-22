@@ -29,11 +29,15 @@ def test_load_image(bwimage):
 
 
 def test_load_image2(rectimage):
-    """A slightly tougher image; let's make sure the orientation is good"""
+    """A slightly tougher image - a white rect with colour blobs at the corners. Let's make sure the orientation
+    is good, and that we are converting 8bit into 32bit float correctly"""
     assert rectimage.channels == 3
     assert rectimage.w == 40
     assert rectimage.h == 30
 
-    assert np.allclose(rectimage.img[0][0], [1.0, 0.6, 0.2])
-    assert np.allclose(rectimage.img[rectimage.h - 1][0], [1,1,1])
-    assert np.allclose(rectimage.img[rectimage.h - 1][rectimage.w - 1], [30.2, 80, 60])
+    assert np.allclose(rectimage.img[0][0], [1.0, 0.6, 0.2])        # 100%, 60%, 20% = FF9933
+    assert np.allclose(rectimage.img[rectimage.h - 1][0], [0.4, 0.8, 0.0])
+    assert np.allclose(rectimage.img[0][rectimage.w - 1], [1, 1, 1])
+    # note the atol here, that's to deal with the 0.302
+    # Colour is : 30.2% (ish), 80%, 60% = 4DCC99
+    assert np.allclose(rectimage.img[rectimage.h - 1][rectimage.w - 1], [0.302, 0.8, 0.6], atol=0.0001)
