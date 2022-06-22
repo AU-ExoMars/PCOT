@@ -9,4 +9,5 @@ be misleading.
 * [Maths](maths.md)
 * [PDS4](pds4.md)
 * [Finding PCT](findingPCT.md)
+* [8-bit conversion](convert8bit.md)
 * [Data quality for images](quality.md)
