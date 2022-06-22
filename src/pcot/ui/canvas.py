@@ -28,15 +28,14 @@ def img2qimage(img):
     """convert a cv/numpy image to a Qt image
     input must be 3 channels, 0-1 floats
     """
-    i = img * 255.0
-    i = i.astype(np.ubyte)
+    i = (img * 256).clip(max=255).astype(np.ubyte)
     height, width, channel = i.shape
     bytesPerLine = 3 * width
     return QImage(i.data, width, height,
                   bytesPerLine, QImage.Format_RGB888)
 
 
-## the actual drawing widget, contained within the Canvas widget
+# the actual drawing widget, contained within the Canvas widget
 class InnerCanvas(QtWidgets.QWidget):
     ## @var img
     # the numpy image we are rendering (1 or 3 chans)
@@ -583,7 +582,7 @@ class Canvas(QtWidgets.QWidget):
             return
         img = self.previmg.rgb()
         # convert to 8-bit integer from 32-bit float
-        img8 = (img * 255).astype('uint8')
+        img8 = (img*256).clip(max=255).astype(np.ubyte)
         # and change endianness
         img8 = cv.cvtColor(img8, cv.COLOR_RGB2BGR)
         res = QtWidgets.QFileDialog.getSaveFileName(self, 'Save RGB image as PNG',
