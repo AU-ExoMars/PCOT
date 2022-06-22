@@ -232,7 +232,8 @@ class SourceSet(SourcesObtainable):
 
     def __str__(self):
         """internal text description; uses (none) for null sources"""
-        return "&".join([str(x) if x else "(none)" for x in self.sourceSet])
+        strdata = [x.brief() for x in self.sourceSet]
+        return "&".join(sorted([x if x else "(none)" for x in strdata]))
 
     def brief(self, captionType=DocumentSettings.CAP_DEFAULT):
         """external (user-facing) text description, skips null sources"""

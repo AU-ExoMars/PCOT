@@ -21,7 +21,7 @@ import pkgutil
 
 logging.basicConfig(format='%(levelname)s %(asctime)s %(name)s: %(message)s', force=True)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 logger.info("Starting PCOT")
 
