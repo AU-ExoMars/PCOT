@@ -267,7 +267,7 @@ class ImageCube(SourcesObtainable):
     # rgbImage if you want an imagecube. If there is more than one channel we need to have
     # an RGB mapping in the image. If showROIs is true, we create an image with the ROIs
     # on it. We can specify a different mapping than that of the image.
-    def rgb(self, showROIs: bool = False, mapping: Optional[ChannelMapping] = None):
+    def rgb(self, showROIs: bool = False, mapping: Optional[ChannelMapping] = None) -> np.ndarray:
         # assume we're 8 bit
         if self.channels == 1:
             # single channel images are a special case, rather than
@@ -288,7 +288,7 @@ class ImageCube(SourcesObtainable):
 
     ## as rgb, but wraps in an ImageCube. Also works out the sources, which should be for
     # the channels in the result. A different mapping from the image mapping can be specified.
-    def rgbImage(self, mapping: Optional[ChannelMapping] = None):
+    def rgbImage(self, mapping: Optional[ChannelMapping] = None) -> 'ImageCube':
         if mapping is None:
             mapping = self.mapping
         if mapping is None:

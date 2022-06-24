@@ -19,6 +19,12 @@ import logging
 import pkgutil
 
 
+def setup():
+    """Call this to initialise PCOT. We could just call it here, but other things would break then.
+    You'll see that main() calls it."""
+    xform.createXFormTypeInstances()
+
+
 logging.basicConfig(format='%(levelname)s %(asctime)s %(name)s: %(message)s', force=True)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
