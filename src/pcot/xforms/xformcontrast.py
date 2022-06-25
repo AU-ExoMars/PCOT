@@ -1,8 +1,8 @@
-import cv2 as cv
 import numpy as np
 
 from pcot.datum import Datum
 import pcot.ui.tabs
+from pcot.utils import image
 from pcot.xform import xformtype, XFormType
 
 
@@ -85,8 +85,7 @@ class XformContrast(XFormType):
             if img.channels == 1:
                 newsubimg = contrast1(subimage.img, node.tol, subimage.mask)
             else:
-                # TODO won't work on non-RGB (see comment)
-                newsubimg = cv.merge([contrast1(x, node.tol, subimage.mask) for x in cv.split(subimage.img)])
+                newsubimg = image.imgmerge([contrast1, node.tol, subimage.mask] for x in image.imgsplit(subimage.img))
             # having got a modified subimage, we need to splice it in
             node.img = img.modifyWithSub(subimage, newsubimg)
         # Now we have generated the internally stored image, output it to output 0. This will

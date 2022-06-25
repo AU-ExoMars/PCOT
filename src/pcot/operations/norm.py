@@ -5,6 +5,7 @@ from typing import Optional, Tuple
 
 import numpy as np
 
+import pcot.utils.image as image
 from pcot.imagecube import SubImageCubeROI
 from pcot.xform import XFormException
 
@@ -34,10 +35,7 @@ def norm(img: SubImageCubeROI, clip: int, splitchans=False) -> np.array:
         if splitchans == 0:
             res = _norm(masked)
         else:
-            w, h, _ = img.shape
-            chans = [np.reshape(x, (w, h)) for x in np.dsplit(masked, img.shape[-1])]              # same as cv.split
-            chans = [_norm(x) for x in chans]
-            res = np.dstack(chans)   # same as cv.merge
+            res = image.imgmerge([_norm(x) for x in image.imgsplit(img)])
     else:  # clip
         # do the thing, only using the masked region
         masked[masked > 1] = 1

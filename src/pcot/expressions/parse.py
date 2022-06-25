@@ -130,7 +130,7 @@ class Function:
                 t.add("types", x.validArgsString() + ("" if not self.varargs else "..."))
                 t.add("description", x.desc)
             margs = t.markdown()
-            s += f"\n\n  ## Mandatory arguments\n{margs}"
+            s += f"\n\n## Mandatory arguments\n\n{margs}"
         t = Table()
         if len(self.optParams)>0:
             for x in self.optParams:
@@ -140,7 +140,8 @@ class Function:
                 t.add("description", x.desc)
                 t.add("default", x.deflt)
             oargs = t.markdown()
-            s += f"\n\n  ## Optional arguments\n{oargs}"
+            s += f"\n\n## Optional arguments\n\n{oargs}"
+        return s
 
     def chkargs(self, args: List[Optional[Datum]]):
         """Process arguments, returning a pair of lists of Datum items: mandatory and optional args.

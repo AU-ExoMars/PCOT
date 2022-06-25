@@ -5,6 +5,7 @@ from pcot.document import Document
 from pcot.filters import Filter
 from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.sources import InputSource, MultiBandSource
+import pcot.utils.image as image
 from . import *
 
 pcot.setup()
@@ -73,6 +74,21 @@ def test_load_image2(rectimage):
     assert np.allclose(rectimage.img[rectimage.h - 1][rectimage.w - 1], [0.302, 0.8, 0.6], atol=0.0001)
 
 
+def test_split_merge(rectimage):
+    # make sure this does the same as cv.split
+    img = image.imgsplit(rectimage.img)
+    assert img[0].shape == (30, 40)
+    assert img[1].shape == (30, 40)
+    assert img[2].shape == (30, 40)
+    # here we do the same tests as test_load_image2 but on each channel
+    assert np.allclose(img[0][0][0], 1.0)
+    assert np.allclose(img[1][0][0], 0.6)
+    assert np.allclose(img[2][0][0], 0.2)
+    assert np.allclose(img[0][rectimage.h - 1][0], 0.4)
+    assert np.allclose(img[1][rectimage.h - 1][0], 0.8)
+    assert np.allclose(img[2][rectimage.h - 1][0], 0.0)
+
+
 def test_msimage(multispecimage):
     """Just check that we created this MS image OK, and that we have some kind of mapping in there."""
     assert multispecimage.channels == MS_NUMCHANS
@@ -80,5 +96,21 @@ def test_msimage(multispecimage):
     assert multispecimage.w == MS_WIDTH
     assert type(multispecimage.mapping) == ChannelMapping
 
-    # try to get an RGB image out
+    # the image will have been made without a default mapping, so the mapping should be 0,1,2.
+    assert multispecimage.mapping.red == 0
+    assert multispecimage.mapping.green == 1
+    assert multispecimage.mapping.blue == 2
+
+    # try to get an RGB image out which is the right shape and has the right values according to
+    # the mapping we established above.
     rgb = multispecimage.rgb()
+    assert type(rgb) == np.ndarray
+    assert rgb.shape == (MS_HEIGHT, MS_WIDTH, 3)
+
+    # make sure the RGB values are what they should be: channelnumber / MS_NUMCHANS
+    r, g, b = image.imgsplit(rgb)
+    assert np.max(r) == np.min(r) == 0
+    assert np.isclose(np.max(g), 0.1)
+    assert np.isclose(np.min(g), 0.1)
+    assert np.isclose(np.max(b), 0.2)
+    assert np.isclose(np.min(b), 0.2)

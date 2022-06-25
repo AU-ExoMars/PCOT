@@ -18,6 +18,7 @@ from .parse import Parameter, Parser, execute
 # TODO: keep expression guide in help updated
 from .. import rois
 from ..sources import SourceSet, MultiBandSource
+from ..utils import image
 
 
 def extractChannelByName(a: Datum, b: Datum):
@@ -79,10 +80,10 @@ def funcMerge(args: List[Datum], optargs):
         if x.channels == 1:
             bands.append(x.img[:h, :w])
         else:
-            bands = bands + cv.split(x.img[:h, :w])
+            bands = bands + image.imgsplit(x.img)
         sources = sources + x.sources.sourceSets
 
-    img = np.stack(bands, axis=-1)
+    img = image.imgmerge(bands)
     img = ImageCube(img, None, MultiBandSource(sources))
 
     return Datum(Datum.IMG, img)

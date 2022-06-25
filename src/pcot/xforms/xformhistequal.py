@@ -2,6 +2,7 @@ import cv2 as cv
 import numpy as np
 
 from pcot.datum import Datum
+from pcot.utils import image
 from pcot.xform import xformtype, XFormType
 from pcot.xforms.tabimage import TabImage
 
@@ -82,19 +83,11 @@ class XformHistEqual(XFormType):
             if img.channels == 1:
                 equalized = subimage.img.copy()
                 equalize(equalized, subimage.mask)
-            elif img.channels == 3:
-                r, g, b = cv.split(subimage.img)
-                equalize(r, subimage.mask)
-                equalize(g, subimage.mask)
-                equalize(b, subimage.mask)
-                equalized = cv.merge((r, g, b))
             else:
-                lst = []
-                for i in range(img.channels):
-                    c = subimage.img[:, :, i]
-                    equalize(c, subimage.mask)
-                    lst.append(c)
-                equalized = np.stack(lst, axis=-1)
+                lst = [x.copy() for x in image.imgsplit(subimage.img)]
+                for band in lst:
+                    equalize(band, subimage.mask)
+                equalized = image.imgmerge(lst)
 
             # make a copy of the image and paste the modified version of the subimage into it
             out = img.modifyWithSub(subimage, equalized)

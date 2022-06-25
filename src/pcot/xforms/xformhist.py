@@ -1,9 +1,9 @@
-import cv2 as cv
 import numpy as np
 
 from pcot import ui
 from pcot.datum import Datum
 from pcot.ui.tabs import Tab
+from pcot.utils import image
 from pcot.xform import xformtype, XFormType
 
 from matplotlib import cm
@@ -45,7 +45,7 @@ class XFormHistogram(XFormType):
             labels = [s.brief(node.graph.doc.settings.captionType) for s in img.sources.sourceSets]
 
             # generate a (weights,bins) tuple for each channel
-            hists = [gethistogram(chan, weights, node.bincount) for chan in cv.split(subimg.img)]
+            hists = [gethistogram(chan, weights, node.bincount) for chan in image.imgsplit(subimg.img)]
             # they must be the same size
             assert (len(labels) == len(hists))
             # unzips the (weights,bins) tuple list into two lists of weights and bins

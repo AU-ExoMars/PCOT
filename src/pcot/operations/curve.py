@@ -6,6 +6,8 @@ import cv2 as cv
 from pcot.imagecube import SubImageCubeROI
 
 # number of points in lookup table
+from pcot.utils import image
+
 NUMPOINTS = 1000
 # x-coords of table
 lutxcoords = np.linspace(0, 1, NUMPOINTS)
@@ -30,6 +32,6 @@ def curve(subimage: SubImageCubeROI, mul: float, add: float) -> np.array:
     if subimage.channels == 1:
         newsubimg = doCurve(subimage.img, subimage.mask, lut)
     else:
-        newsubimg = cv.merge([doCurve(x, subimage.mask, lut) for x in cv.split(subimage.img)])
+        newsubimg = image.imgmerge([doCurve(x, subimage.mask, lut) for x in image.imgsplit(subimage.img)])
 
     return newsubimg

@@ -4,7 +4,6 @@ import logging
 import os
 import re
 
-import cv2 as cv
 import PySide2
 from PySide2 import QtWidgets, QtGui
 from PySide2.QtCore import Qt
@@ -19,6 +18,7 @@ from ..datum import Datum
 from ..filters import getFilterByPos
 from ..sources import InputSource, SourceSet, MultiBandSource
 from ..ui import uiloader
+from ..utils import image
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +107,7 @@ class MultifileInputMethod(InputMethod):
                     # aaaand this pretty much always happens, because load always
                     # loads as BGR.
                     if img.channels != 1:
-                        c = cv.split(img.img)[0]  # just use channel 0
+                        c = image.imgsplit(img.img)[0]  # just use channel 0
                         img = ImageCube(c, None, None)
                 # store in cache
                 newCachedFiles[path] = img
@@ -116,9 +116,9 @@ class MultifileInputMethod(InputMethod):
 
         # replace the old cache dict with the new one we have built
         self.cachedFiles = newCachedFiles
-        # assemble the images - cv.merge can cope with non-3 channels
+        # assemble the images
         if len(imgs) > 0:
-            img = cv.merge(imgs)
+            img = image.imgmerge(img)
             img = ImageCube(img * self.mult, self.mapping, MultiBandSource(sources))
         else:
             img = None

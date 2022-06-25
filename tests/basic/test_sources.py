@@ -1,5 +1,9 @@
 from typing import Optional
-from pcot.sources import SourceSet, Source, nullSource
+
+from pcot.document import Document
+from pcot.documentsettings import DocumentSettings
+from pcot.filters import Filter
+from pcot.sources import SourceSet, Source, nullSource, InputSource
 
 
 class SimpleTestSource(Source):
@@ -34,7 +38,7 @@ s4 = SimpleTestSource("four")
 s5 = SimpleTestSource("five")
 s6 = SimpleTestSource("six")
 
-sourceset1 = SourceSet([s1,s2,s3])
+sourceset1 = SourceSet([s1, s2, s3])
 # this should produce FIVE results when unioned with the above; note the overlap with s1
 sourceset2 = SourceSet([s4, s5, s1])
 sourceset1withnulls = SourceSet([s1, s2, s3, nullSource])
@@ -90,4 +94,12 @@ def test_sourcesetmatches():
     assert sourceset1withnulls.matches(None, 'one')
 
 
+def test_inputsourcenames():
+    doc = Document()
+    source = InputSource(doc, inputIdx=1, filterOrName=Filter(cwl=1000, fwhm=100, transmission=20, position="pos1", name="name1"))
 
+    assert source.long() == "nullmethod: wavelength 1000"
+    assert source.brief() == "nullmethod:1000"  # default caption is wavelength
+    assert source.brief(captionType=DocumentSettings.CAP_CWL) == "nullmethod:1000"
+    assert source.brief(captionType=DocumentSettings.CAP_NAMES) == "nullmethod:name1"
+    assert source.brief(captionType=DocumentSettings.CAP_POSITIONS) == "nullmethod:pos1"

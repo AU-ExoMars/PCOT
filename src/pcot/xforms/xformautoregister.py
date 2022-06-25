@@ -1,5 +1,6 @@
 from pcot.datum import Datum
 from pcot.imagecube import ImageCube
+from pcot.utils import image
 from pcot.xform import xformtype, XFormType
 import cv2 as cv
 import numpy as np
@@ -52,10 +53,9 @@ class XFormAutoRegister(XFormType):
             if movingImg.channels == 1:
                 out = warp(movingImg.img, warpdata, mode='edge')
             else:
-                chans = [np.reshape(x, (nr, nc)) for x in
-                         np.dsplit(movingImg.img, movingImg.channels)]  # same as cv.split
+                chans = image.imgsplit(movingImg)
                 outs = [warp(x, warpdata, mode='edge') for x in chans]
-                out = np.dstack(outs)
+                out = image.imgmerge(outs)
 
             out = ImageCube(out, node.mapping, movingImg.sources)
 

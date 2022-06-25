@@ -26,9 +26,9 @@ class NullInputMethod(InputMethod):
         pass
 
     def brief(self):
-        """really this should never be seen"""
-        return "null"
+        """really this should never be seen, but could be in certain tests"""
+        return "nullmethod"
 
     def long(self):
-        """really this should never be seen"""
-        return "null"
+        """really this should never be seen, but could be in certain tests"""
+        return "nullmethod"
