@@ -24,18 +24,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def img2qimage(img):
-    """convert a cv/numpy image to a Qt image
-    input must be 3 channels, 0-1 floats
-    """
-    i = (img * 256).clip(max=255).astype(np.ubyte)
-    height, width, channel = i.shape
-    assert channel == 3
-    bytesPerLine = 3 * width
-    return QImage(i.data, width, height,
-                  bytesPerLine, QImage.Format_RGB888)
-
-
 # the actual drawing widget, contained within the Canvas widget
 class InnerCanvas(QtWidgets.QWidget):
     ## @var img
@@ -52,6 +40,25 @@ class InnerCanvas(QtWidgets.QWidget):
     # offset of top left pixel in canvas
 
     cursor = None  # custom cursor; created once on first use
+
+
+    def img2qimage(self, img):
+        """convert a cv/numpy image to a Qt image. input must be 3 channels, 0-1 floats.
+        Ugly attempt at a hack - there appears to be a bug in Pyside whereby the underlying
+        image is a temporary but Qt thinks it's permanent. This bug will be fixed in Pyside 5.15.4 -
+        I think it's this: https://bugreports.qt.io/browse/PYSIDE-1563
+
+        Workaround - stash the original image in a field so it sticks around.
+
+        Repro: set an input. Set a rect on the input. Set an expr on the rect (I use a*0.5).
+        Click around, opening and closing tabs in various ways.
+        """
+        self.origimg = (img * 256).clip(max=255).astype(np.ubyte)
+        height, width, channel = self.origimg.shape
+        assert channel == 3
+        bytesPerLine = 3 * width
+        return QImage(self.origimg.data, width, height,
+                      bytesPerLine, QImage.Format_RGB888)
 
     @classmethod
     def getCursor(cls):
@@ -205,13 +212,9 @@ class InnerCanvas(QtWidgets.QWidget):
 
             # now resize the cut area up to fit the widget. Using area interpolation here:
             # cubic produced odd artifacts on float images
-            print(img.shape)
             img = cv.resize(img, dsize=(int(self.cutw / scale), int(self.cuth / scale)), interpolation=cv.INTER_AREA)
-            print(f"cutw={self.cutw}, cuth={self.cuth}, scale={scale}, resized={img.shape}")
-            qq = img2qimage(img)
-            print(qq)
+            qq = self.img2qimage(img)
             p.drawImage(0, 0, qq)
-            print("DRAW OK")
             if self.canv.paintHook is not None:
                 self.canv.paintHook.canvasPaintHook(p)
             p.setPen(Qt.yellow)
