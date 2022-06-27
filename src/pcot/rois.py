@@ -356,7 +356,7 @@ class ROICircle(ROI):
 
     def bb(self):
         if self.isSet:
-            return Rect(self.x - self.r, self.y - self.r, self.r * 2, self.r * 2)
+            return Rect(self.x - self.r, self.y - self.r, self.r * 2+1, self.r * 2+1)
         else:
             return None
 
@@ -364,7 +364,7 @@ class ROICircle(ROI):
         # there are a few ways we can generate a circular
         # mask bounded by the BB. This is one of them, which
         # leverages cv's drawing code.
-        m = np.zeros((self.r * 2, self.r * 2), dtype=np.uint8)
+        m = np.zeros((self.r * 2+1, self.r * 2+1), dtype=np.uint8)
         cv.circle(m, (self.r, self.r), self.r, 255, -1)
         return m > 0
 

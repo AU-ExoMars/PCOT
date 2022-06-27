@@ -1,6 +1,6 @@
 """It's quite difficult to test ROIs, but we'll try to at least do rect and poly"""
 from fixtures import *
-from pcot.rois import ROIRect, ROIBoundsException
+from pcot.rois import ROIRect, ROIBoundsException, ROICircle
 from pcot.utils.geom import Rect
 
 
@@ -69,3 +69,19 @@ def test_rect_change(allblack):
             else:
                 tst = [0, 0, 0]
             assert np.array_equal(img.img[y, x], np.array(tst))
+
+
+def test_circle_change_masked(allblack):
+    # make a circular ROI
+    roi = ROICircle(4, 4, 3)
+    allblack.rois.append(roi)
+    subimg = allblack.subimage()
+
+    # make a red full array of the right shape (I'll test masks separately)
+    out = np.full(subimg.img.shape, [1, 0, 0]).astype(np.float32)
+    # and now plug that back into the image, telling it which subimage we're modifying
+    # and the output data.
+    img = allblack.modifyWithSub(subimg, out)
+    # and do some checks. A radius 3 circle at low res is a bit crude - it's a 5x5 square
+    # with single pixels sticking out of each side.
+    assert np.sum(img.img) == 29
