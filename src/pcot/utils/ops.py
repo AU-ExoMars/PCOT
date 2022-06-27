@@ -115,7 +115,7 @@ def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: Optional[T
         except BadOpException as e:
             raise BinopException("unimplemented operation for ROIs")
     else:
-        raise BinopException("incompatible types for operator")
+        raise BinopException(f"incompatible types for operator: {a.tp}, {b.tp}")
 
     return r
 

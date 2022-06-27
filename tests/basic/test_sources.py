@@ -3,7 +3,7 @@ from typing import Optional
 from pcot.document import Document
 from pcot.documentsettings import DocumentSettings
 from pcot.filters import Filter
-from pcot.sources import SourceSet, Source, nullSource, InputSource
+from pcot.sources import SourceSet, Source, nullSource, InputSource, MultiBandSource
 
 
 class SimpleTestSource(Source):
@@ -50,20 +50,24 @@ def test_sourcesetctors():
     ss = SourceSet(s1)
     assert len(ss.sourceSet) == 1
     assert s1 in ss.sourceSet
+    assert ss.brief() == "one"
 
     ss = SourceSet([s1])
     assert len(ss.sourceSet) == 1
     assert s1 in ss.sourceSet
+    assert ss.brief() == "one"
 
     ss = SourceSet([s1, s2])
     assert len(ss.sourceSet) == 2
     assert s1 in ss.sourceSet
     assert s2 in ss.sourceSet
+    assert ss.brief() == "one&two"
 
     ss = SourceSet([s1, SourceSet(s2)])
     assert len(ss.sourceSet) == 2
     assert s1 in ss.sourceSet
     assert s2 in ss.sourceSet
+    assert ss.brief() == "one&two"
 
 
 def test_sourcesetunion():
@@ -73,6 +77,8 @@ def test_sourcesetunion():
     assert s3 in sourcesetunion.sourceSet
     assert s4 in sourcesetunion.sourceSet
     assert s5 in sourcesetunion.sourceSet
+    assert sourcesetunion.brief() == "five&four&one&three&two"  # alphabetical
+
 
 
 def test_sourcesetbrief():
@@ -96,10 +102,22 @@ def test_sourcesetmatches():
 
 def test_inputsourcenames():
     doc = Document()
-    source = InputSource(doc, inputIdx=1, filterOrName=Filter(cwl=1000, fwhm=100, transmission=20, position="pos1", name="name1"))
+    source = InputSource(doc, inputIdx=1,
+                         filterOrName=Filter(cwl=1000, fwhm=100, transmission=20, position="pos1", name="name1"))
 
     assert source.long() == "nullmethod: wavelength 1000"
     assert source.brief() == "nullmethod:1000"  # default caption is wavelength
     assert source.brief(captionType=DocumentSettings.CAP_CWL) == "nullmethod:1000"
     assert source.brief(captionType=DocumentSettings.CAP_NAMES) == "nullmethod:name1"
     assert source.brief(captionType=DocumentSettings.CAP_POSITIONS) == "nullmethod:pos1"
+
+
+def test_multibandsourcenames():
+    doc = Document()
+    sources = [InputSource(doc, inputIdx=1,
+                           filterOrName=Filter(cwl=(i + 1) * 1000, fwhm=100, transmission=20,
+                                               position=f"pos{i}", name=f"name{i}")) for i in range(3)]
+
+    # check this kind of ctor works
+    ms = MultiBandSource(sources)
+    assert ms.brief() == "nullmethod:1000|nullmethod:2000|nullmethod:3000"

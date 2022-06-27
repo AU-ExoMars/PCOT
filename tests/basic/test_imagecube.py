@@ -3,26 +3,13 @@ import numpy as np
 import pcot
 from pcot.document import Document
 from pcot.filters import Filter
-from pcot.imagecube import ImageCube, ChannelMapping
+from pcot.imagecube import ChannelMapping
 from pcot.sources import InputSource, MultiBandSource
 import pcot.utils.image as image
-from . import *
+
+from fixtures import *
 
 pcot.setup()
-
-
-@pytest.fixture
-def bwimage(globaldatadir):
-    """Fixture to load a b/w image"""
-    path = globaldatadir / 'basn0g01.png'
-    return ImageCube.load(str(path), None, None)
-
-
-@pytest.fixture
-def rectimage(globaldatadir):
-    """Fixture to load a rectangular test image"""
-    path = globaldatadir / 'rect1.png'
-    return ImageCube.load(str(path), None, None)
 
 
 MS_NUMCHANS = 10

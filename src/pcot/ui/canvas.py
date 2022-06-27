@@ -30,6 +30,7 @@ def img2qimage(img):
     """
     i = (img * 256).clip(max=255).astype(np.ubyte)
     height, width, channel = i.shape
+    assert channel == 3
     bytesPerLine = 3 * width
     return QImage(i.data, width, height,
                   bytesPerLine, QImage.Format_RGB888)
@@ -204,8 +205,13 @@ class InnerCanvas(QtWidgets.QWidget):
 
             # now resize the cut area up to fit the widget. Using area interpolation here:
             # cubic produced odd artifacts on float images
+            print(img.shape)
             img = cv.resize(img, dsize=(int(self.cutw / scale), int(self.cuth / scale)), interpolation=cv.INTER_AREA)
-            p.drawImage(0, 0, img2qimage(img))
+            print(f"cutw={self.cutw}, cuth={self.cuth}, scale={scale}, resized={img.shape}")
+            qq = img2qimage(img)
+            print(qq)
+            p.drawImage(0, 0, qq)
+            print("DRAW OK")
             if self.canv.paintHook is not None:
                 self.canv.paintHook.canvasPaintHook(p)
             p.setPen(Qt.yellow)

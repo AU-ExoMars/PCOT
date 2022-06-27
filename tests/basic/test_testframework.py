@@ -2,7 +2,7 @@
 # template for other tests.
 
 # this is required, despite what PyCharm says.
-from . import *
+from fixtures import *
 
 
 def test_datadir(datadir):

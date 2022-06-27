@@ -18,6 +18,10 @@ from pcot.xforms import *
 import logging
 import pkgutil
 
+import faulthandler
+
+faulthandler.enable()
+
 
 def setup():
     """Call this to initialise PCOT. We could just call it here, but other things would break then.
