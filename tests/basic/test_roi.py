@@ -32,5 +32,40 @@ def test_rect_clipped(allblack):
     allblack.rois.append(roi)
 
     subimg = allblack.subimage()
-    assert subimg.bb == Rect(2, 2, 10, 6)   # will be clipped (ROI bigger than image)
+    assert subimg.bb == Rect(2, 2, 10, 6)  # will be clipped (ROI bigger than image)
 
+
+def test_rect_clipped_topleft(allblack):
+    """Now an ROI that's been clipped at top-left (i.e. xy -ve)"""
+
+    roi = ROIRect()
+    roi.setBB(-2, -5, 10, 10)
+    allblack.rois.append(roi)
+
+    subimg = allblack.subimage()
+    assert subimg.bb == Rect(0, 0, 8, 5)
+
+
+def test_rect_change(allblack):
+    # make a boring ROI
+    roi = ROIRect()
+    roi.setBB(2, 2, 5, 5)
+    allblack.rois.append(roi)
+    subimg = allblack.subimage()
+    assert subimg.bb == Rect(2, 2, 5, 5)
+
+    # make a red full array of the right shape (I'll test masks separately)
+    out = np.full(subimg.img.shape, [1, 0, 0]).astype(np.float32)
+    # and now plug that back into the image, telling it which subimage we're modifying
+    # and the output data.
+    img = allblack.modifyWithSub(subimg, out)
+    # and do some checks
+    assert np.sum(img.img) == 25  # we're setting 5x5 to 1,0,0 - should sum to 25
+    # make sure every cell is what it should be
+    for x in range(16):
+        for y in range(8):
+            if (2 <= x < 7) and (2 <= y < 7):
+                tst = [1, 0, 0]
+            else:
+                tst = [0, 0, 0]
+            assert np.array_equal(img.img[y, x], np.array(tst))

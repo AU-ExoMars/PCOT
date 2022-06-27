@@ -78,7 +78,7 @@ class ROI(SourcesObtainable):
         if bb is not None:
             x, y, w, h = bb
             return "{} pixels\n{},{}\n{}x{}".format(self.pixels(),
-                                                          x, y, w, h)
+                                                    x, y, w, h)
         else:
             return "No ROI"
 
@@ -289,26 +289,28 @@ class ROI(SourcesObtainable):
 class ROIRect(ROI):
     def __init__(self):
         super().__init__('rect')
-        self.x = -1
+        self.x = 0
         self.y = 0
         self.w = 0
         self.h = 0
+        self.isSet = False
         self.colour = (1, 1, 0)  # annotation colour
         self.fontline = 2
         self.fontsize = 10
 
     def bb(self):
-        if self.x < 0:
+        if self.isSet:
+            return Rect(self.x, self.y, self.w, self.h)
+        else:
             return None
-        return Rect(self.x, self.y, self.w, self.h)
 
     def details(self):
         """Information string on this ROI."""
-        if self.x < 0:
+        if self.x is None:
             return "No ROI"
         else:
             return "{} pixels\n{},{}\n{}x{}".format(self.pixels(),
-                                                   self.x, self.y, self.w, self.h)
+                                                    self.x, self.y, self.w, self.h)
 
     def draw(self, img: np.ndarray):
         self.drawBB(img, self.colour)
@@ -319,6 +321,7 @@ class ROIRect(ROI):
         return np.full((self.h, self.w), True)
 
     def setBB(self, x, y, w, h):
+        self.isSet = True
         self.x = x
         self.y = y
         self.w = w
@@ -342,18 +345,20 @@ class ROICircle(ROI):
 
     def __init__(self, x=-1, y=0, r=0):
         super().__init__('circle')
-        self.x = int(x)
+        self.x = int(x)     # if this is -ve, isSet will be false.
         self.y = int(y)
         self.r = int(r)
+        self.isSet = (x >= 0)
         self.colour = (1, 1, 0)  # annotation colour
         self.fontline = 2
         self.fontsize = 10
         self.drawBox = False
 
     def bb(self):
-        if self.x < 0:
+        if self.isSet:
+            return Rect(self.x - self.r, self.y - self.r, self.r * 2, self.r * 2)
+        else:
             return None
-        return Rect(self.x - self.r, self.y - self.r, self.r * 2, self.r * 2)
 
     def mask(self):
         # there are a few ways we can generate a circular

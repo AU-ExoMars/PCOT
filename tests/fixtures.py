@@ -71,4 +71,7 @@ def allblack():
     sources = MultiBandSource([nullSource, nullSource, nullSource])
     bands = np.dstack([np.full((8, 16), 0.0) for i in range(3)]).astype(np.float32)
     assert bands.shape == (8, 16, 3)
-    return ImageCube(bands, ChannelMapping(), sources, defaultMapping=None)
+    imgc = ImageCube(bands, ChannelMapping(), sources, defaultMapping=None)
+    assert imgc.w == 16
+    assert imgc.h == 8
+    return imgc

@@ -379,7 +379,8 @@ class ImageCube(SourcesObtainable):
     def hasROI(self):
         return len(self.rois) > 0
 
-    def modifyWithSub(self, subimage: SubImageCubeROI, newimg: np.ndarray, sources=None, keepMapping=False):
+    def modifyWithSub(self, subimage: SubImageCubeROI, newimg: np.ndarray,
+                      sources=None, keepMapping=False) -> 'ImageCube':
         """return a copy of the image, with the given image spliced in at the
         subimage's coordinates and masked according to the subimage.
         keppMapping will ensure that the new image has the same mapping as the old."""

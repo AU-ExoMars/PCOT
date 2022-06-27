@@ -130,8 +130,11 @@ class TabRect(pcot.ui.tabs.Tab):
 
     def canvasMouseMoveEvent(self, x2, y2, e):
         if self.mouseDown:
-            p = e.pos()
-            x, y, w, h = self.node.roi.bb()
+            bb = self.node.roi.bb()
+            if bb is None:
+                x, y, w, h = 0, 0, 0, 0
+            else:
+                x, y, w, h = bb
             w = x2 - x
             h = y2 - y
             if w < 10:
