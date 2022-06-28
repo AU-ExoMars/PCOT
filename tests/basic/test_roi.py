@@ -65,10 +65,36 @@ def test_rect_change(allblack):
     for x in range(16):
         for y in range(8):
             if (2 <= x < 7) and (2 <= y < 7):
-                tst = [1, 0, 0]
+                tst = (1, 0, 0)
             else:
-                tst = [0, 0, 0]
-            assert np.array_equal(img.img[y, x], np.array(tst))
+                tst = (0, 0, 0)
+            assert np.array_equal(img.img[y, x], tst)
+
+
+def test_rect_change_red_to_cyan(allblack):
+    # first, change the entire image to red.
+    allblack.img[:] = (1, 0, 0)
+
+    # make a boring ROI
+    roi = ROIRect()
+    roi.setBB(2, 2, 5, 5)
+    allblack.rois.append(roi)
+    subimg = allblack.subimage()
+    assert subimg.bb == Rect(2, 2, 5, 5)
+
+    # make a cyan array of the right shape (I'll test masks separately)
+    out = np.full(subimg.img.shape, [0, 1, 1]).astype(np.float32)
+    # and now plug that back into the image, telling it which subimage we're modifying
+    # and the output data.
+    img = allblack.modifyWithSub(subimg, out)
+    # make sure every cell is what it should be
+    for x in range(16):
+        for y in range(8):
+            if (2 <= x < 7) and (2 <= y < 7):
+                tst = (0, 1, 1)
+            else:
+                tst = (1, 0, 0)
+            assert np.array_equal(img.img[y, x], tst)
 
 
 def test_circle_change_masked(allblack):
@@ -85,3 +111,23 @@ def test_circle_change_masked(allblack):
     # and do some checks. A radius 3 circle at low res is a bit crude - it's a 5x5 square
     # with single pixels sticking out of each side.
     assert np.sum(img.img) == 29
+
+
+def test_circle_change_masked_red_to_cyan(allblack):
+    allblack.img[:] = (1, 0, 0)
+    oldsum = np.sum(allblack.img)
+    assert oldsum == allblack.w * allblack.h
+
+    roi = ROICircle(4, 4, 3)
+    allblack.rois.append(roi)
+    subimg = allblack.subimage()
+
+    out = np.full(subimg.img.shape, [0, 1, 1]).astype(np.float32)
+    img = allblack.modifyWithSub(subimg, out)
+    # now this time the number of set values should have gone up by 29 from whatever it was before, because
+    # we are changing (1,0,0) to (0,1,1).
+    assert np.sum(img.img) == oldsum + 29
+
+    # and some arbitrary checks
+    assert np.array_equal(img.img[1, 1], (1, 0, 0))
+    assert np.array_equal(img.img[4, 4], (0, 1, 1))
