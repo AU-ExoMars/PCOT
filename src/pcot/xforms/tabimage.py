@@ -17,10 +17,18 @@ class TabImage(pcot.ui.tabs.Tab):
         out = self.node.out
         if out is not None:
             if out.isImage():
+                self.w.canvas.setVisible(True)
+                self.w.textEdit.setVisible(False)
                 self.w.canvas.setMapping(self.node.mapping)
                 self.w.canvas.setGraph(self.node.graph)
                 self.w.canvas.setPersister(self.node)
                 self.w.canvas.display(self.node.out.val)
             else:
-                # TODO display other data types
-                pass
+                self.w.canvas.setVisible(False)
+                self.w.textEdit.setVisible(True)
+                self.w.textEdit.setText(str(out.val))
+        else:
+            self.w.canvas.setVisible(False)
+            self.w.textEdit.setVisible(True)
+            self.w.textEdit.setText("No data present")
+

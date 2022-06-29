@@ -33,9 +33,14 @@ class XformSink(XFormType):
         if out is not None:
             # if it's an image we need to use a copy using this node's mapping
             if out.isImage():
-                outimg = out.val.copy()
-                outimg.mapping = node.mapping
-                out = Datum(Datum.IMG, outimg)
+                if out.val is None:
+                    # but if it's Datum(Datum.IMG, None) (perfectly valid at the moment)
+                    # just set it to None.
+                    out = None
+                else:
+                    outimg = out.val.copy()
+                    outimg.mapping = node.mapping
+                    out = Datum(Datum.IMG, outimg)
         node.out = out
 
     def init(self, node):
