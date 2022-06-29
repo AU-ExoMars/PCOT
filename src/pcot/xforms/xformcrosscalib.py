@@ -22,10 +22,17 @@ IMAGEMODE_RESULT = 2
 IMAGEMODE_CT = 3
 
 
-# channel-agnostic RGB of an image
-def prep(img: ImageCube) -> np.array:
+def greyscale(img: ImageCube) -> np.array:
+    """generate a single channel normalized grey scale of an image for viewing"""
+    # this generates an array of 1/imagechannels times the number of channels, so for 4 channels
+    # we get [[0.25,0.25,0.25,0.25]]
     mat = np.array([1 / img.channels] * img.channels).reshape((1, img.channels))
+    # we then transform the incoming image by that matrix. This effectively combines all the
+    # channels into a single greyscale. For the above example, we get
+    # c0*0.25 + c1*0.25 + c2*0.25 + c3*0.25. It's the mean of the channels.
     canvimg = cv.transform(img.img, mat)
+    # We don't really need to do that 0.25 part, that could just be 1,
+    # because we then normalise the result.
     mn = np.min(canvimg)
     mx = np.max(canvimg)
     return (canvimg - mn) / (mx - mn)
@@ -66,7 +73,7 @@ class XFormCrossCalib(XFormType):
     """
     "Cross-calibrate" two images: given points S in a source image and corresponding points D in a
     destination image, find a vector of factors v for the bands such that S=vD, and transform S accordingly.
-    Essentially, and crudely speaking, make the colours in S match those in D by sampling the same point in each.
+    Essentially, and crudely speaking, make the colours in S match those in D by sampling the same points in each.
     """
 
     def __init__(self):
@@ -114,12 +121,12 @@ class XFormCrossCalib(XFormType):
             # but does so PURELY FOR OUTPUT ON THE LOCAL CANVAS. It DOES NOT
             # tweak the output image, which is in node.img!
             if node.imagemode == IMAGEMODE_DEST:
-                img = prep(destImg)
+                img = greyscale(destImg)
             elif node.imagemode == IMAGEMODE_SOURCE:
-                img = prep(sourceImg)
+                img = greyscale(sourceImg)
             else:
                 if node.img is not None:
-                    img = prep(node.img)
+                    img = greyscale(node.img)
                 else:
                     img = None
 
@@ -200,9 +207,12 @@ class XFormCrossCalib(XFormType):
 
             factors.append(dmean / smean)
 
-        factors = np.array(factors)
-        factors = np.mean(factors, axis=0)
-        return (srcImg.img * factors).astype(np.float32)
+        if len(factors) > 0:
+            factors = np.array(factors)
+            factors = np.mean(factors, axis=0)
+            return (srcImg.img * factors).astype(np.float32)
+        else:
+            return srcImg.img
 
     def createTab(self, n, w):
         return TabCrossCalib(n, w)
