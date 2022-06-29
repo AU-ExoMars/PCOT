@@ -622,9 +622,10 @@ class XForm:
         # run the additional deserialisation method
         self.type.deserialise(self, d)
 
-    def getOutputType(self, i):
+    def getOutputType(self, i) -> Optional[datum.Type]:
         """return the actual type of an output, taking account of overrides (node outputTypes).
         Note that this returns the *connection* type, not the *datum* type stored in that connection.
+        Returns None if there is no connection, not Datum.NONE.
         """
         try:
             if 0 <= i < len(self.outputs):
@@ -655,7 +656,8 @@ class XForm:
 
     def getOutput(self, i, tp=None):
         """get an output, raising an exception if the type is incorrect or the index is output range
-        used in external code; compare with Datum.get() which doesn't raise.
+        used in external code; compare with Datum.get() which doesn't raise. Dereferences the output,
+        so you get the value stored in the Datum.
         """
         d = self.outputs[i]  # may raise IndexError
         if d is None:
