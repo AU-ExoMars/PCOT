@@ -8,7 +8,7 @@ import numpy as np
 from skimage.transform import warp
 from skimage.registration import optical_flow_tvl1
 
-from pcot.xforms.tabimage import TabImage
+from pcot.xforms.tabdata import TabData
 
 
 @xformtype
@@ -63,4 +63,4 @@ class XFormAutoRegister(XFormType):
         node.setOutput(0, node.out)
 
     def createTab(self, n, w):
-        return TabImage(n, w)
+        return TabData(n, w)

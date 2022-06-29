@@ -3,7 +3,7 @@ import numpy as np
 from pcot.datum import Datum
 from pcot.sources import MultiBandSource, SourceSet
 from pcot.xform import xformtype, XFormType, XFormException
-from pcot.xforms.tabimage import TabImage
+from pcot.xforms.tabdata import TabData
 
 from functools import reduce
 
@@ -19,7 +19,7 @@ class XformDecorr(XFormType):
         self.hasEnable = True
 
     def createTab(self, n, w):
-        return TabImage(n, w)
+        return TabData(n, w)
 
     def init(self, node):
         node.out = None

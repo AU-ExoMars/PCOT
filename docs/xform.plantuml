@@ -1,8 +1,5 @@
 @startuml
 skinparam classAttributeIconSize 0
-skinparam class {
-    BackgroundColor<<root>> PaleGreen
-}
 
 class Document<<root>>
 
@@ -57,7 +54,7 @@ example singleton
 end note
 
 XformRect --> TabRect: creates
-XformNormImage --> TabImage: creates
+XformNormImage --> TabData: creates
 
 abstract class Tab {
 }

@@ -1,6 +1,6 @@
 from pcot.datum import Datum
 from pcot.xform import xformtype, XFormType
-from pcot.xforms.tabimage import TabImage
+from pcot.xforms.tabdata import TabData
 
 
 @xformtype
@@ -19,7 +19,7 @@ class XformStripROI(XFormType):
     def createTab(self, n, w):
         # it doesn't use a custom tab - just the standard tab for
         # showing images (maybe later this will show other data types too)
-        return TabImage(n, w)
+        return TabData(n, w)
 
     def init(self, node):
         # The tab requires an "out" field which contains a Datum.

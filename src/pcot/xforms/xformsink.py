@@ -1,6 +1,6 @@
 from pcot.datum import Datum
 from pcot.xform import xformtype, XFormType
-from pcot.xforms.tabimage import TabImage
+from pcot.xforms.tabdata import TabData
 
 
 # The node type itself, a subclass of XFormType with the @xformtype decorator which will
@@ -21,7 +21,7 @@ class XformSink(XFormType):
     # this creates a tab when we want to control or view a node of this type. This uses
     # the built-in TabImage, which contains an OpenCV image viewer.
     def createTab(self, n, w):
-        return TabImage(n, w)
+        return TabData(n, w)
 
     # actually perform a node's action, which happens when any of the nodes "upstream" are changed
     # and on loading.

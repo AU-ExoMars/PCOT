@@ -1,6 +1,6 @@
 from pcot.datum import Datum
 from pcot.xform import xformtype, XFormType
-from pcot.xforms.tabimage import TabImage
+from pcot.xforms.tabdata import TabData
 
 
 @xformtype
@@ -14,7 +14,7 @@ class XformCropROI(XFormType):
         self.addOutputConnector("", Datum.IMG)
 
     def createTab(self, n, w):
-        return TabImage(n, w)
+        return TabData(n, w)
 
     def init(self, node):
         node.out = None

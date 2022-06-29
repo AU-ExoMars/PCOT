@@ -58,13 +58,15 @@ class XformImportROI(XFormType):
 
 class TabImportROI(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
-        super().__init__(w, node, 'tabimage.ui')  # same UI as sink
+        super().__init__(w, node, 'tabdata.ui')
         self.w.canvas.setPersister(node)
         # sync tab with node
         self.nodeChanged()
 
     def onNodeChanged(self):
         # have to do canvas set up here to handle extreme undo events which change the graph and nodes
+        self.w.canvas.setVisible(True)  # this is the generic data viewer, but we're just using it for images.
+        self.w.tabEdit.setVisible(False)
         self.w.canvas.setMapping(self.node.mapping)
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)

@@ -2,7 +2,7 @@ from pcot.datum import Datum
 import pcot.inputs
 
 from pcot.xform import xformtype, XFormType, XFormException
-from pcot.xforms.tabimage import TabImage
+from pcot.xforms.tabdata import TabData
 
 
 class XFormInput(XFormType):
@@ -13,7 +13,7 @@ class XFormInput(XFormType):
         self.idx = idx
 
     def createTab(self, n, w):
-        return TabImage(n, w)
+        return TabData(n, w)
 
     def init(self, node):
         node.out = None

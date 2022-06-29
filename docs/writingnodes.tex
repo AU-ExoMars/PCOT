@@ -24,7 +24,7 @@ Sec.~\ref{xformtype}.
 In addition to an \texttt{XFormType}, it may be necessary to write
 a subclass of \texttt{ui.tabs.Tab} to display its controls and output.
 If the new node only displays
-an image and has no extra controls, the built-in \texttt{TabImage}
+data and has no extra controls, the built-in \texttt{TabData}
 can be used: I will discuss this case first.
 
 \subsection{An example}
@@ -118,14 +118,15 @@ associated toggle button. This is used in nodes which may be computationally
 intensive, to temporarily ``turn them off.'' This will usually be handled by
 passing through the data unchanged.
 
-The next method is \texttt{createTab()}, which is used to create a tab for a particular node. Like most
-methods in this class, it takes a reference to the node. It also takes a reference to the main window
-in which the tab should be created:
+The next method is \texttt{createTab()}, which is used to create a tab for a
+particular node. Like most methods in this class, it takes a reference to the
+node. It also takes a reference to the main window in which the tab should be
+created:
 \begin{lstlisting}
     def createTab(self, n, w):
-        return TabImage(n, w)
+        return TabData(n, w)
 \end{lstlisting}
-In this class, we are using the built-in \texttt{TabImage} tab which has a single canvas widget
+In this class, we are using the built-in \texttt{TabData} tab which has a single canvas widget
 displaying an image. Many node types use this.
 
 The \texttt{init()} method is used to initialise an \texttt{XForm} node to be a

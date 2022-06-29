@@ -2,12 +2,12 @@ import pcot.ui.tabs
 from pcot.datum import Datum
 
 
-class TabImage(pcot.ui.tabs.Tab):
+class TabData(pcot.ui.tabs.Tab):
     """this is a tab type for transforms which just display an image. They
     have one datum - "out" - in the node."""
 
     def __init__(self, node, w):
-        super().__init__(w, node, 'tabimage.ui')  # same UI as sink
+        super().__init__(w, node, 'tabdata.ui')
         # sync tab with node
         self.nodeChanged()
 
