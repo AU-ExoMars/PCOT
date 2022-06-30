@@ -64,6 +64,9 @@ _xformctors = []  # list of (xformtype,classobject,args,kwargs,md5) tuples
 
 
 def createXFormTypeInstances():
+    # clear allTypes just in case we call this multiple times (as we do from tests)
+    global allTypes
+    allTypes = {}
     for xft, cls, args, kwargs, md5 in _xformctors:
         i = cls(*args, *kwargs)
         xft._instance = i
@@ -778,6 +781,8 @@ class XForm:
 
     def setOutput(self, i: int, data: Datum):
         """change an output. This should be called by the type's perform method. Takes the type and datum."""
+        if data is not None and not isinstance(data, Datum):
+            raise Exception("setOutput requires a Datum or None, not a raw value")
         self.outputs[i] = data
 
     ## used in connection            
