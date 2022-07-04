@@ -118,7 +118,7 @@ class MultifileInputMethod(InputMethod):
         self.cachedFiles = newCachedFiles
         # assemble the images
         if len(imgs) > 0:
-            img = image.imgmerge(img)
+            img = image.imgmerge(imgs)
             img = ImageCube(img * self.mult, self.mapping, MultiBandSource(sources))
         else:
             img = None

@@ -13,6 +13,7 @@ import pcot.sources
 from pcot import rois
 from pcot.imagecube import ImageCube
 from pcot.sources import SourcesObtainable, nullSource
+from pcot.utils import singleton
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +23,41 @@ logger = logging.getLogger(__name__)
 _typesByName = dict()
 
 
+class DatumException(Exception):
+    """Exception class for Datum exceptions. Not (at the moment) a subclass XFormException,
+    so gets handled slightly differently when run in a perform()."""
+    def __init__(self, message):
+        super().__init__(message)
+
+
+class CannotSerialiseDatumType(DatumException):
+    """thrown when we try to serialise/deserialise a datum type which can't be."""
+    def __init__(self, typename):
+        super().__init__(f"Datum type {typename} is not yet serialisable")
+
+
+class UnknownDatumTypeException(DatumException):
+    """thrown when we try to process an unknown datum type by name."""
+    def __init__(self, typename):
+        super().__init__(f"Datum type {typename} is unknown")
+
+
+class BadDatumCtorCallException(DatumException):
+    """Thrown when we try to init a datum with the wrong arguments."""
+    def __init__(self):
+        super().__init__("bad call to datum ctor: should be Datum(Type,Value)")
+
+
+class DatumWithNoSourcesException(DatumException):
+    """Datum constructor should be supplied with explicit source set if not an image or None"""
+    def __init__(self):
+        super().__init__("Datum objects which are not images must have an explicit source set")
+
+
 class Type:
     """The type of a Datum passed between nodes and inside the expression evaluator.
-    Must be a singleton but I'm not going to enforce it."""
+    Must be a singleton but I'm not going to enforce it - I did for a while, but it made things
+    rather more complicated. Particularly for custom types. Just be careful."""
 
     def __init__(self, name, image=False, internal=False):
         self.name = name
@@ -36,10 +69,10 @@ class Type:
         return self.name
 
     def serialise(self, d):
-        raise Exception(f"Datum type {self.name} is not yet serialisable")
+        raise CannotSerialiseDatumType(self.name)
 
     def deserialise(self, d, document) -> 'Datum':
-        raise Exception(f"Datum type {self.name} is not yet serialisable")
+        raise CannotSerialiseDatumType(self.name)
 
 
 # Built-in datum types
@@ -184,7 +217,7 @@ class Datum(SourcesObtainable):
         the one stored in the image)."""
         from pcot.xform import XFormException
         if not isinstance(t, Type):
-            raise XFormException("CODE", "bad call to datum ctor: should be Datum(Type,Value)")
+            raise BadDatumCtorCallException()
 
         self.tp = t
         self.val = v
@@ -193,7 +226,7 @@ class Datum(SourcesObtainable):
             if self.isNone():
                 sources = nullSource
             elif not self.isImage():
-                raise XFormException("CODE", "Datum objects which are not images must have an explicit source set")
+                raise DatumWithNoSourcesException()
             elif self.val is not None:
                 sources = self.val.sources
             else:
@@ -236,7 +269,7 @@ class Datum(SourcesObtainable):
         try:
             t = _typesByName[tp]
         except KeyError:
-            raise Exception(f"{tp} is not a known type")
+            raise UnknownDatumTypeException(tp)
 
         # and run the deserialisation
         return t.deserialise(d, document)
@@ -246,12 +279,13 @@ class Datum(SourcesObtainable):
 Datum.null = Datum(Datum.NONE, None)
 
 
-def deserialise(n):
+def deserialise(tp):
     """Given a type name, return the type object; used in deserialising
     macro connectors"""
-    if n not in _typesByName:
-        raise Exception("cannot find type {} for a connector".format(n))
-    return _typesByName[n]
+    try:
+        return _typesByName[tp]
+    except KeyError:
+        raise UnknownDatumTypeException(tp)
 
 
 def isCompatibleConnection(outtype, intype):
@@ -274,4 +308,3 @@ def isCompatibleConnection(outtype, intype):
     else:
         # otherwise has to match exactly
         return outtype == intype
-

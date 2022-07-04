@@ -131,19 +131,37 @@ class ChannelMapping:
         self.blue = b
 
     # generate a default mapping
-    def generateDefaultMapping(self, img):
+    def generateMappingFromDefaultOrGuess(self, img):
         if img.defaultMapping is not None:
             self.set(img.defaultMapping.red, img.defaultMapping.green, img.defaultMapping.blue)
         else:
             # TODO - do this properly, looking at filters
-            self.red, self.green, self.blue = [img.channels - 1 if x >= img.channels else x for x in range(0, 3)]
+
+            # get indices of closest band to wavelength,
+            # or -1 if one can't be found
+
+            r = img.wavelengthBand(640)
+            g = img.wavelengthBand(540)
+            b = img.wavelengthBand(440)
+
+            # generate a list of all the channels, with the ones found NOT in it.
+            lst = [x for x in range(img.channels) if x not in (r, g, b)]
+            # and finally replace r,g,b with things from the above list if they are -ve, but
+            # first appending the entire range to lst just in case it is empty.
+            lst = lst + [0, 1, 2]
+            self.red = r if r >= 0 else lst.pop()
+            self.green = g if g >= 0 else lst.pop()
+            self.blue = b if b >= 0 else lst.pop()
 
     # generate a mapping from a new image if required - or keep using the old mapping
-    # if we can.
+    # if we can. Return self, for fluent.
     def ensureValid(self, img):
         # make sure there is a mapping, and that it's in range. If not, regenerate.
         if self.red < 0 or self.red >= img.channels or self.green >= img.channels or self.blue >= img.channels:
-            self.generateDefaultMapping(img)
+            # if there's a default mapping in the image we will use that. If not, then we'll guess!
+            # This can also be used to generate a default mapping itself.
+            self.generateMappingFromDefaultOrGuess(img)
+        return self
 
     def serialise(self):
         return [self.red, self.green, self.blue]
@@ -218,11 +236,12 @@ class ImageCube(SourcesObtainable):
         # an image may have a list of source data attached to it indexed by channel. Or if none is
         # provided, an empty one.
         self.sources = sources if sources else MultiBandSource.createEmptySourceSets(self.channels)
-        self.defaultMapping = defaultMapping
+        self.defaultMapping = None
 
         # get the mapping sorted, which may be None (in which case rgb() might not work).
         # Has to be done after the sources are set.
-        self.mapping = None  # stops complaints...
+        if rgbMapping is None:
+            rgbMapping = ChannelMapping().ensureValid(self)
         self.setMapping(rgbMapping)
 
     #        if len(sources)==0:
@@ -399,7 +418,7 @@ class ImageCube(SourcesObtainable):
         # get list of matching channel indices (often only one)
         lstOfChannels = self.sources.search(filterNameOrCWL=filterNameOrCWL)
         if len(lstOfChannels) == 0:
-            return None # no matches found
+            return None  # no matches found
         chans = []
         sources = []
         # now create a list of source sets and a list of single channel images
@@ -475,7 +494,7 @@ class ImageCube(SourcesObtainable):
 
             self.mapping = ChannelMapping(ridx, gidx, bidx)
         else:
-            self.mapping = ChannelMapping()
+            self.mapping = ChannelMapping()  # default
 
         self.mapping.ensureValid(self)
 
@@ -494,7 +513,7 @@ class ImageCube(SourcesObtainable):
     @classmethod
     def deserialise(cls, d, document):
         """Inverse of serialise(), requires a document to get the inputs"""
-        data = d['data']    # should already have been converted into an ndarray
+        data = d['data']  # should already have been converted into an ndarray
         mapping = ChannelMapping.deserialise(d['mapping'])
         defmapping = None if d['defmapping'] is None else ChannelMapping.deserialise(d['defmapping'])
         sources = MultiBandSource.deserialise(d['sources'], document)
@@ -514,3 +533,11 @@ class ImageCube(SourcesObtainable):
         [cwl] = wavelengths
         return cwl
 
+    def wavelengthBand(self, cwl):
+        wavelengthsByChan = {i: self.wavelength(i) for i in range(self.channels)}
+        wavelengthsByChan = {k: v for k, v in wavelengthsByChan.items() if v >= 0}
+        if len(wavelengthsByChan) > 0:
+            closest = min(wavelengthsByChan.items(), key=lambda v: abs(v[1] - cwl))
+            return closest[0]  # return index
+        else:
+            return -1

@@ -75,3 +75,4 @@ def allblack():
     assert imgc.w == 16
     assert imgc.h == 8
     return imgc
+
