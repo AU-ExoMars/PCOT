@@ -150,9 +150,15 @@ class ChannelMapping:
             # and finally replace r,g,b with things from the above list if they are -ve, but
             # first appending the entire range to lst just in case it is empty.
             lst = lst + [0, 1, 2]
-            self.red = r if r >= 0 else lst.pop()
-            self.green = g if g >= 0 else lst.pop()
-            self.blue = b if b >= 0 else lst.pop()
+            r = r if r >= 0 else lst.pop()
+            g = g if g >= 0 else lst.pop()
+            b = b if b >= 0 else lst.pop()
+            # FINALLY, finally. Make sure those bands are in descending wavelength order. This
+            # deals with cases where all the wavelengths (say) are very high.
+            lst = [(x, img.wavelength(x)) for x in (r,g,b)]
+            lst.sort(key=lambda v: -v[1])
+            self.red, self.green, self.blue = [x[0] for x in lst]
+
 
     # generate a mapping from a new image if required - or keep using the old mapping
     # if we can. Return self, for fluent.
