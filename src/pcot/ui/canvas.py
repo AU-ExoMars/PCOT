@@ -448,6 +448,10 @@ class Canvas(QtWidgets.QWidget):
         hideable.addWidget(self.saveButton)
         self.saveButton.clicked.connect(self.saveButtonClicked)
 
+        self.resetMapButton = QtWidgets.QPushButton("Guess RGB")
+        hideable.addWidget(self.resetMapButton)
+        self.resetMapButton.clicked.connect(self.resetMapButtonClicked)
+
         self.coordsText = QtWidgets.QLabel('')
         sidebar.addWidget(self.coordsText)
 
@@ -513,7 +517,6 @@ class Canvas(QtWidgets.QWidget):
 
         pcot.ui.decorateSplitter(splitter,1)
 
-
     def mouseMove(self, x, y, event):
         self.coordsText.setText(f"{x},{y}")
         self.showSpectrum()
@@ -557,6 +560,10 @@ class Canvas(QtWidgets.QWidget):
     # that mapping!
     def setMapping(self, mapping):
         self.mapping = mapping
+
+    def resetMapButtonClicked(self):
+        self.mapping.red = -1   # should force a remap!
+        self.redisplay()
 
     # set the graph I'm part of
     def setGraph(self, g):
