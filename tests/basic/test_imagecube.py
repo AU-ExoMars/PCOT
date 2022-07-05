@@ -110,16 +110,17 @@ def test_msimage(multispecimage):
     assert np.isclose(np.min(b), 0.3)
 
 
+def makesource(doc, pos, cwl, fwhm):
+    return InputSource(doc, inputIdx=-1, filterOrName=Filter(cwl, fwhm=fwhm, transmission=20 + pos * 5,
+                                                             position=f"pos{pos}", name=f"name{pos}"))
+
+
 def test_wavelength():
     """Create an image with some weird bands in it - bands with combined wavelengths"""
 
     doc = Document()
     # note - NOT the same as in multispecimage.
-    rootsources = [InputSource(doc, inputIdx=1,
-                               filterOrName=Filter(cwl=100 + i * 100, fwhm=10 + i,
-                                                   transmission=20 + i * 5,
-                                                   position=f"pos{i}",
-                                                   name=f"name{i}")) for i in range(10)]
+    rootsources = [makesource(doc, i, cwl=100 + i * 100, fwhm=10 + i) for i in range(10)]
 
     sources = [
         rootsources[0],
@@ -131,10 +132,43 @@ def test_wavelength():
 
     sources = MultiBandSource(sources)
     # and some image data, which is the channel index * 0.1 (if there are 10 channels).
-    bands = np.stack([np.full((MS_HEIGHT, MS_WIDTH), i / MS_NUMCHANS) for i in range(count)], axis=-1).astype(
+    bands = np.stack([np.full((MS_HEIGHT, MS_WIDTH), i / count) for i in range(count)], axis=-1).astype(
         np.float32)
     img = ImageCube(bands, ChannelMapping(), sources, defaultMapping=None)
 
     assert img.wavelengthBand(100) == 0
     assert img.wavelengthBand(200) == 1
     assert img.wavelengthBand(300) == 3
+
+
+def test_wavelength_widest():
+    """Create an image with multiple RGB bands (among others) with the same CWL and make sure that
+    wavelengthBand gets the widest one. This gets used in guessing RGB channels."""
+    doc = Document()
+    sources = [
+        makesource(doc, 0, 640, 10),
+        makesource(doc, 1, 640, 20),
+        makesource(doc, 2, 640, 30),
+
+        makesource(doc, 3, 540, 30),
+        makesource(doc, 4, 540, 10),
+        makesource(doc, 5, 540, 30),    # correct 540 candidate
+        makesource(doc, 6, 300, 50),
+        makesource(doc, 7, 550, 100),  # interesting case!
+
+        makesource(doc, 8, 440, 10),
+        makesource(doc, 9, 440, 20),
+        makesource(doc, 10, 200, 10),
+        makesource(doc, 11, 440, 30),   # correct 440 candidate
+        makesource(doc, 12, 440, 20),
+        makesource(doc, 13, 440, 8),
+        makesource(doc, 14, 640, 100),    # correct 640 candidate
+        makesource(doc, 15, 640, 5)
+    ]
+    count = len(sources)
+    sources = MultiBandSource(sources)
+    bands = np.stack([np.full((MS_HEIGHT, MS_WIDTH), i / count) for i in range(count)], axis=-1).astype(
+        np.float32)
+    img = ImageCube(bands, ChannelMapping(), sources, defaultMapping=None)
+
+    assert img.wavelengthBand(640) == 14

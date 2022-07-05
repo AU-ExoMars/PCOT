@@ -130,14 +130,15 @@ class ChannelMapping:
         self.green = g
         self.blue = b
 
-    # generate a default mapping
     def generateMappingFromDefaultOrGuess(self, img):
+        """Generate a new RGB mapping. If defaultMapping is present in the image, we use that. Otherwise, we try to
+        guess one from the bands in the image by picking the single-channel band with a wavelength closest to the
+        R,G,B wavelengths. If there are more than one (e.g. PanCam's left camera has two 440 filters) we use the
+        widest. If no candidates can be found we just use any band."""
         if img.defaultMapping is not None:
             self.set(img.defaultMapping.red, img.defaultMapping.green, img.defaultMapping.blue)
         else:
-            # TODO - do this properly, looking at filters
-
-            # get indices of closest band to wavelength,
+            # get indices of closest and widest band to wavelength,
             # or -1 if one can't be found
 
             r = img.wavelengthBand(640)
@@ -519,25 +520,38 @@ class ImageCube(SourcesObtainable):
         sources = MultiBandSource.deserialise(d['sources'], document)
         return cls(data, rgbMapping=mapping, sources=sources, defaultMapping=defmapping)
 
-    def wavelength(self, channelNumber):
-        """return wavelength if all sources in channel are of the same wavelength, else -1."""
+    def wavelengthAndFWHM(self, channelNumber):
+        """get cwl and mean fwhm for a channel if all sources are of the same wavelength, else -1. Compare with
+        wavelength() below."""
         # get the SourceSet
         sources = self.sources.sourceSets[channelNumber]
         # all sources in this channel should have a filter
         sources = [s for s in sources.sourceSet if s.getFilter()]
         # all the sources in this channel should have the same cwl
-        wavelengths = set([s.getFilter().cwl for s in sources])
+        wavelengthsAndFWHMs = set([(s.getFilter().cwl, s.getFilter().fwhm) for s in sources])
+        # extract the wavelengths and make sure there's only one
+        wavelengths = set([t[0] for t in wavelengthsAndFWHMs])
         if len(wavelengths) != 1:
-            return -1
-        # looks weird, but just unpacks this single-item set
+            return -1, -1  # too many wavelengths
+        # looks weird, but just unpacks that single-item wavelength set
         [cwl] = wavelengths
+        # and find the mean of the fwhms
+        return cwl, np.mean([t[1] for t in wavelengthsAndFWHMs])
+
+    def wavelength(self, channelNumber):
+        """return wavelength if all sources in channel are of the same wavelength, else -1."""
+        cwl, fwhm = self.wavelengthAndFWHM(channelNumber)
         return cwl
 
     def wavelengthBand(self, cwl):
-        wavelengthsByChan = {i: self.wavelength(i) for i in range(self.channels)}
-        wavelengthsByChan = {k: v for k, v in wavelengthsByChan.items() if v >= 0}
-        if len(wavelengthsByChan) > 0:
-            closest = min(wavelengthsByChan.items(), key=lambda v: abs(v[1] - cwl))
+        wavelengthAndFHWMByChan = {i: self.wavelengthAndFWHM(i) for i in range(self.channels)}
+        # now get list of (index, distance from cwl, fwhm), filtering out multi-wavelength channels (for which wavelength() returns -1)
+        wavelengthAndFHWMByChan = [(k, abs(v[0]-cwl), v[1]) for k, v in wavelengthAndFHWMByChan.items() if v[0] >= 0]
+        if len(wavelengthAndFHWMByChan) > 0:
+            # now sort that list by CWL distance and then negative FWHM (widest first)
+            wavelengthAndFHWMByChan.sort(key=lambda v: (v[1], -v[2]))
+            closest = min(wavelengthAndFHWMByChan, key=lambda v: (v[1], -v[2]))
             return closest[0]  # return index
         else:
+            # No wavelengths found ,return -1
             return -1

@@ -119,6 +119,7 @@ class MultifileInputMethod(InputMethod):
         # assemble the images
         if len(imgs) > 0:
             img = image.imgmerge(imgs)
+            self.mapping.red = -1  # force repeat of "guessing" of RGB mapping
             img = ImageCube(img * self.mult, self.mapping, MultiBandSource(sources))
         else:
             img = None
