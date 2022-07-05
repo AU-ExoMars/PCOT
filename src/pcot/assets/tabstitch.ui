@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>888</width>
-    <height>563</height>
+    <width>889</width>
+    <height>613</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -34,6 +34,34 @@
        </size>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
+       <item row="3" column="0">
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <item>
+          <widget class="QLabel" name="label_2">
+           <property name="text">
+            <string>Transparency</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSlider" name="transparency">
+           <property name="maximum">
+            <number>100</number>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="2" column="0">
+        <widget class="QCheckBox" name="showimage">
+         <property name="text">
+          <string>Show image outline</string>
+         </property>
+        </widget>
+       </item>
        <item row="0" column="0">
         <widget class="QTableView" name="table">
          <property name="selectionBehavior">
@@ -65,14 +93,7 @@
          </item>
         </layout>
        </item>
-       <item row="2" column="0">
-        <widget class="QCheckBox" name="showimage">
-         <property name="text">
-          <string>Show image outline</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0">
+       <item row="4" column="0">
         <widget class="QLabel" name="label">
          <property name="text">
           <string>Arrow keys to move the selected image - make sure you have clicked on the canvas. Shift and Ctrl for slow/fast move.</string>

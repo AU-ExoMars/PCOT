@@ -62,6 +62,7 @@ class XFormStitch(XFormType):
         # output image
         node.img = None
         node.showImage = True
+        node.transparency = 1.0
 
     def perform(self, node):
         inputs = [node.getInput(i, Datum.IMG) for i in range(NUMINPUTS)]
@@ -106,10 +107,16 @@ class XFormStitch(XFormType):
                 # paste in
                 srcimg = inputs[i]
                 try:
-                    img[y:y + srcimg.h, x:x + srcimg.w] = srcimg.img
+                    trans = node.transparency
+                    if drawOrder == 0:
+                        img[y:y + srcimg.h, x:x + srcimg.w] = srcimg.img
+                    else:
+                        under = img[y:y + srcimg.h, x:x + srcimg.w]
+                        img[y:y + srcimg.h, x:x + srcimg.w] = under * (1 - trans) + srcimg.img * trans
                 except ValueError as e:
-                    logger.error("stored offset:{},{} min:{},{} xy:{},{}".format(node.offsets[i][0], node.offsets[i][1], minx,
-                                                                          miny, x, y))
+                    logger.error(
+                        "stored offset:{},{} min:{},{} xy:{},{}".format(node.offsets[i][0], node.offsets[i][1], minx,
+                                                                        miny, x, y))
                     logger.error(img.shape)
                     logger.error(srcimg.img.shape)
                     logger.error(y, y + srcimg.h, x, x + srcimg.w)
@@ -191,8 +198,13 @@ class TabStitch(Tab):
         self.w.up.pressed.connect(self.upPressed)
         self.w.down.pressed.connect(self.downPressed)
         self.w.table.selectionModel().selectionChanged.connect(self.selChanged)
+        self.w.transparency.valueChanged.connect(self.transChanged)
         self.w.showimage.toggled.connect(self.showImageToggled)
         self.nodeChanged()
+
+    def transChanged(self, v):
+        self.node.transparency = v / self.w.transparency.maximum()
+        self.changed(uiOnly=True)
 
     def showImageToggled(self):
         self.node.showImage = self.w.showimage.isChecked()
@@ -232,6 +244,7 @@ class TabStitch(Tab):
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)
         self.w.showimage.setChecked(self.node.showImage)
+        self.w.transparency.setSliderPosition(round(self.node.transparency * 100))
         if self.node.img is not None:  # premapped rgb
             self.w.canvas.display(self.node.rgbImage, self.node.img, self.node)
         self.w.table.viewport().update()  # force table redraw

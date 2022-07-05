@@ -336,7 +336,10 @@ class ROIRect(ROI):
     def deserialise(self, d):
         super().deserialise(d)
         self.x, self.y, self.w, self.h = d['bb']
-        self.isSet = d['isset']
+        if 'isset' in d:
+            self.isSet = d['isset']
+        else:
+            self.isSet = self.x >= 0  # legacy
 
     def __str__(self):
         return "ROI-RECT {} {} {}x{}".format(self.x, self.y, self.w, self.h)
@@ -381,7 +384,11 @@ class ROICircle(ROI):
 
     def deserialise(self, d):
         super().deserialise(d)
-        self.x, self.y, self.r, self.isSet = d['croi']
+        if len(d['croi'])==3:
+            self.x, self.y, self.r = d['croi']
+            self.isSet = (self.x >= 0)  # legacy
+        else:
+            self.x, self.y, self.r, self.isSet = d['croi']
 
     def __str__(self):
         return "ROI-CIRCLE {} {} {}".format(self.x, self.y, self.r)
