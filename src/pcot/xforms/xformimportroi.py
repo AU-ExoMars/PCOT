@@ -66,7 +66,7 @@ class TabImportROI(pcot.ui.tabs.Tab):
     def onNodeChanged(self):
         # have to do canvas set up here to handle extreme undo events which change the graph and nodes
         self.w.canvas.setVisible(True)  # this is the generic data viewer, but we're just using it for images.
-        self.w.tabEdit.setVisible(False)
+        self.w.textEdit.setVisible(False)
         self.w.canvas.setMapping(self.node.mapping)
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)

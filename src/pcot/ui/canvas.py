@@ -41,7 +41,6 @@ class InnerCanvas(QtWidgets.QWidget):
 
     cursor = None  # custom cursor; created once on first use
 
-
     def img2qimage(self, img):
         """convert a cv/numpy image to a Qt image. input must be 3 channels, 0-1 floats.
         Ugly attempt at a hack - there appears to be a bug in Pyside whereby the underlying
@@ -97,7 +96,7 @@ class InnerCanvas(QtWidgets.QWidget):
                 mask.clear()
             else:
                 # on other platforms we want white on transparent.
-                mask = bm   # gives white
+                mask = bm  # gives white
                 bm = QBitmap(32, 32)
                 bm.clear()
 
@@ -515,7 +514,7 @@ class Canvas(QtWidgets.QWidget):
         self.persister = None
         self.roiToggle.setEnabled(False)  # because persister is None at first.
 
-        pcot.ui.decorateSplitter(splitter,1)
+        pcot.ui.decorateSplitter(splitter, 1)
 
     def mouseMove(self, x, y, event):
         self.coordsText.setText(f"{x},{y}")
@@ -562,8 +561,10 @@ class Canvas(QtWidgets.QWidget):
         self.mapping = mapping
 
     def resetMapButtonClicked(self):
-        self.mapping.red = -1   # should force a remap!
+        if self.previmg is not None:
+            self.previmg.mapping.generateMappingFromDefaultOrGuess(self.previmg)
         self.redisplay()
+        self.updateChannelSelections()
 
     # set the graph I'm part of
     def setGraph(self, g):
@@ -598,7 +599,7 @@ class Canvas(QtWidgets.QWidget):
             return
         img = self.previmg.rgb()
         # convert to 8-bit integer from 32-bit float
-        img8 = (img*256).clip(max=255).astype(np.ubyte)
+        img8 = (img * 256).clip(max=255).astype(np.ubyte)
         # and change endianness
         img8 = cv.cvtColor(img8, cv.COLOR_RGB2BGR)
         res = QtWidgets.QFileDialog.getSaveFileName(self, 'Save RGB image as PNG',
@@ -675,6 +676,14 @@ class Canvas(QtWidgets.QWidget):
         self.nodeToUIChange = nodeToUIChange
         # This will clear the screen if img is None
         self.redisplay()
+
+    def updateChannelSelections(self):
+        # update the channel selections in the combo boxes if they've been changed in code
+        self.blockSignalsOnComboBoxes(True)  # temporarily disable signals to avoid indexChanged calls
+        self.redChanCombo.setCurrentIndex(self.mapping.red)
+        self.greenChanCombo.setCurrentIndex(self.mapping.green)
+        self.blueChanCombo.setCurrentIndex(self.mapping.blue)
+        self.blockSignalsOnComboBoxes(False)  # and enable signals again
 
     def redisplay(self):
         # Note that we are doing ugly things to avoid recursion here. In some of the ROI nodes, this can happen:
@@ -766,7 +775,7 @@ class Canvas(QtWidgets.QWidget):
             return
         if self.previmg.channels < 2:
             if 0 <= x < self.previmg.w and 0 <= y < self.previmg.h:
-                self.spectrumWidget.setData(f"Single channel - intensity {self.previmg.img[y,x]}")
+                self.spectrumWidget.setData(f"Single channel - intensity {self.previmg.img[y, x]}")
             return
 
         # within the coords, and multichannel image present
