@@ -6,7 +6,7 @@ import sys
 import importlib
 
 from PySide2 import QtWidgets
-from PySide2.QtCore import QCommandLineParser
+from PySide2.QtCore import QCommandLineParser, QCommandLineOption
 
 import pcot.config
 import pcot.ui.mainwindow
@@ -29,6 +29,7 @@ try:
     pyi_splash.close()
 except ImportError as e:
     pass
+
 
 def load_plugins():
     """plugin dirs are colon separated, stored in Locations/plugins"""
@@ -67,10 +68,15 @@ def main():
     parser = QCommandLineParser()
     parser.addHelpOption()
     parser.addVersionOption()
-    parser.addPositionalArgument("file", "A JSON graph file to open")
+    parser.addPositionalArgument("file", "A PCOT document to open")
+    logopt = QCommandLineOption(["l", "log"], "set debugging level", "loglevel", defaultValue="info")
+    parser.addOption(logopt)
 
     parser.process(app)
     args = parser.positionalArguments()
+
+    log = parser.value(logopt)
+    logger.setLevel(log.upper())
 
     pcot.setup()
 
@@ -85,7 +91,8 @@ def main():
             doc = Document()
 
     # Create an instance of a main window on that document
-    window = pcot.ui.mainwindow.MainUI(doc, doAutoLayout=True)
+    # Autolayout not done by default - the user might have arranged things how they like.
+    window = pcot.ui.mainwindow.MainUI(doc, doAutoLayout=False)
 
     # run the application until exit
     app.exec_()
