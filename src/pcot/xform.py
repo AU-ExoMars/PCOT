@@ -983,7 +983,7 @@ class XFormGraph:
             tp = self.doc.macros[typename]
         else:
             if "dummy" not in allTypes:
-                raise XFormException("Can't find the 'dummy' XFormType - looks like no types have been registered.")
+                raise Exception("Can't find the 'dummy' XFormType - looks like no types have been registered.")
             ui.warn("Transformation type not found: " + typename)
             return self.create("dummy")
 
