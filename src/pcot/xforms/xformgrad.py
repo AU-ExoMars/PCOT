@@ -58,11 +58,13 @@ presetGradients = {
 class XformGradient(XFormType):
     """
     Convert a greyscale image to an RGB gradient image for better visibility.
+
     The gradient widget has the following behaviour:
-        click and drag to move a colour point
-        doubleclick to delete an existing colour point
-        doubleclick to add a new colour point
-        right click to edit an existing colour point
+
+        * click and drag to move a colour point
+        * doubleclick to delete an existing colour point
+        * doubleclick to add a new colour point
+        * right click to edit an existing colour point
     """
 
     def __init__(self):
