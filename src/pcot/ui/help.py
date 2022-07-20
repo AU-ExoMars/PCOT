@@ -3,6 +3,7 @@ handled elsewhere. This is used to both generate in-app HTML and Markdown for ot
 Markdown, and then use the Markdown library to convert to HTML.
 """
 import logging
+import re
 
 from PySide2 import QtWidgets
 from PySide2.QtCore import Qt
@@ -81,6 +82,23 @@ def getHelpHTML(xt, errorState: XFormException = None):
     return markdownWrapper(s)
 
 
+def replaceImageSourcesWithAssetPath(s):
+    """Replaces items of the form IMGASSET[foo] with <img src='...'/> where the src is the
+    correct asset path for foo. This is assumed to be in the pcot.assets package, but could
+    be elsewhere - just change the package kwarg on getAssetPath. This is used to import images
+    into help data.
+
+    UNUSED AT THE MOMENT
+    """
+
+    def repl(m):
+        name = m.group(1)
+        path = pcot.config.getAssetPath(name)
+        return f'<img src="{path}"/>'
+
+    return re.sub(r"IMAGEASSET\[([\w\-._]+)]", repl, s)
+
+
 class HelpWindow(QtWidgets.QDialog):
     def __init__(self, parent, tp=None, md=None, title=None, node=None):
         """Either node or md should be set.
@@ -101,6 +119,7 @@ class HelpWindow(QtWidgets.QDialog):
         else:
             txt = "<h1>Bad help!</h1><p>No markdown or node type provided</p>"
             logger.error("Bad help - no markdown or node type provided")
+
         wid = QtWidgets.QTextEdit()
         wid.setReadOnly(True)
         font = QFont("Consolas")
@@ -117,6 +136,3 @@ class HelpWindow(QtWidgets.QDialog):
         #        layout.addWidget(button)
 
         self.show()
-
-
-
