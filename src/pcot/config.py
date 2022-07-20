@@ -1,5 +1,6 @@
 import configparser
 import getpass
+import importlib.resources
 import io
 import logging
 import os
@@ -9,15 +10,20 @@ from collections import deque
 logger = logging.getLogger(__name__)
 
 
-def getAssetAsString(fn):
-    s = pkgutil.get_data('pcot.assets', fn)
+def getAssetAsString(fn, package="pcot.assets"):
+    s = pkgutil.get_data(package, fn)
     if s is None:
         raise ValueError(f'cannot find asset {fn}')
     return s.decode('utf-8')
 
 
-def getAssetAsFile(fn):
-    return io.StringIO(getAssetAsString(fn))
+def getAssetAsFile(fn, package="pcot.assets"):
+    return io.StringIO(getAssetAsString(fn, package=package))
+
+
+def getAssetPath(fn, package="pcot.assets"):
+    with importlib.resources.path(package, fn) as p:
+        return p
 
 
 def getUserName():
