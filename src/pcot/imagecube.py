@@ -149,7 +149,9 @@ class ChannelMapping:
             lst = [x for x in range(img.channels) if x not in (r, g, b)]
             # and finally replace r,g,b with things from the above list if they are -ve, but
             # first appending the entire range to lst just in case it is empty.
-            lst = lst + [0, 1, 2]
+            lst = lst + [min(x,img.channels-1) for x in (0, 1, 2)]
+
+            # and extract
             r = r if r >= 0 else lst.pop()
             g = g if g >= 0 else lst.pop()
             b = b if b >= 0 else lst.pop()
@@ -530,7 +532,10 @@ class ImageCube(SourcesObtainable):
         """get cwl and mean fwhm for a channel if all sources are of the same wavelength, else -1. Compare with
         wavelength() below."""
         # get the SourceSet
-        sources = self.sources.sourceSets[channelNumber]
+        try:
+            sources = self.sources.sourceSets[channelNumber]
+        except:
+            print("Fuck")
         # all sources in this channel should have a filter
         sources = [s for s in sources.sourceSet if s.getFilter()]
         # all the sources in this channel should have the same cwl
