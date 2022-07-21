@@ -4,6 +4,10 @@ This page is a gentle introduction to PCOT's user interface elements,
 and will walk you through loading image data and performing some
 simple manipulations.
 
+There is a [video guide](https://www.youtube.com/watch?v=vo5KrOAtMQ8) - please ignore the opening comments
+on installation and Anaconda; these only apply to installing from source
+
+
 @@@ danger
 Be aware that this is very much an early version and there are 
 no doubt a lot of serious problems!
@@ -27,7 +31,7 @@ the document and their connections.
 * To the right of the graph is the **palette**. Clicking on a button in
 the palette will add a node of the given type to the graph.
 * At the bottom is the **log area** and a set of
-[global controls](globalcontrols.md).
+[global controls](../userguide/globalcontrols.md).
 
 ## Working with graph nodes
 
@@ -114,7 +118,7 @@ Above the canvas itself are three combo boxes which determine the image
 RGB channels for viewing. Each band in the combo box shows the input number, a
 colon, and typically the name, position or wavelength of the band. Exactly
 what is shown depends on the image being loaded and the Caption [global
-control](globalcontrols.md).
+control](../userguide/globalcontrols.md).
 
 It is also possible to save the RGB-mapped image as a PNG, and show any
 regions of interest which have been added to the image.

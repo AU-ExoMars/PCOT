@@ -5,19 +5,27 @@ theme:
     custom_dir: theme
 
 markdown_extensions:
-  - lightbox:LightBoxExtension
-  - alert:AlertExtension
-  - pymdownx.arithmatex
-  - pymdownx.magiclink
-  - pymdownx.mark
-  - pymdownx.snippets:
+  - lightbox:LightBoxExtension # lightbox images with ![!Caption](img.png)
+  - alert:AlertExtension # alert with @@@ tag .. @@@ markup
+  - pymdownx.arithmatex # permits $..$ and \[ .. \] for maths; \begin{..}..\end{..} works too
+  - pymdownx.magiclink  # converts raw URLs to links, and can do github issue/commit links
+  - pymdownx.mark       # permits <mark> tags with ==this markup==
+  - pymdownx.snippets:  # transclusion with --8<-- "filename.ext"
         check_paths: True
         base_path: ['docs/','.']
 
 nav:
-    - PCOT concepts: concepts.md
-    - Getting Started: gettingstarted.md
-    - Autodocs: autodocs/index.md
+    - Getting Started:
+        - Overview: gettingstarted/index.md
+        - Installing and running: gettingstarted/installrun.md
+        - PCOT concepts: gettingstarted/concepts.md
+        - Tutorial: gettingstarted/tutorial.md
+    - User Guide: 
+        - Overview: userguide/index.md
+        - Operating principles: userguide/principles.md
+        - Autodocs: autodocs/index.md
+    - Developer's Guide:
+        - Overview: devguide/index.md
 
 extra_javascript:
     - https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML
