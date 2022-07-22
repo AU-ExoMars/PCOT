@@ -16,13 +16,13 @@ and some of the options don't work, because I'm using Lightbox2.
 
 from markdown import Extension
 from markdown.treeprocessors import Treeprocessor
-from markdown.util import etree
+import xml.etree.ElementTree as etree
 import re
 
 
 class ImagesTreeprocessor(Treeprocessor):
     def __init__(self, config, md):
-        Treeprocessor.__init__(self, md)
+        Treeprocessor.__init__(self, md) 
         self.re = re.compile(r'^!.*')
         self.config = config
 
@@ -71,9 +71,9 @@ class LightBoxExtension(Extension):
         super(LightBoxExtension, self).__init__(**kwargs)
 
 
-    def extendMarkdown(self, md, md_globals):
+    def extendMarkdown(self, md):
         config = self.getConfigs()
-        md.treeprocessors.add("lightbox", ImagesTreeprocessor(config, md), "_end")
+        md.treeprocessors.register(ImagesTreeprocessor(config, md), "lightbox", 5)  # must be processed LATE.
 
 
 def makeExtension(*args, **kwargs):

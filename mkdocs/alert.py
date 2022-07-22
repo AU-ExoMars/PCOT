@@ -15,7 +15,7 @@ Tags are in classNameDict, and correspond to Bootstrap alert types.
 
 from markdown import Extension
 from markdown.blockprocessors import BlockProcessor
-from markdown.util import etree
+import xml.etree.ElementTree as etree
 import re
 
 classNameDict = {
