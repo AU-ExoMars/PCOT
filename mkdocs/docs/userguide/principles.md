@@ -86,11 +86,36 @@ This addition is done bandwise. There is only one band, so the result is:
         [ {1:780, 1:640, 1:540, 1:440, 2, 0:540} ]
 
 ## ROI rules
+@@@
+TODO - ROI rules in progress
+@@@
 
-@@@
-TODO - describe how ROIs are processed. When they are accounted for,
-when they aren't.
-@@@
+Images may contain regions of interest. If this is the case, then 
+any operation should only be performed on the region of interest if possible.
+
+This rule has the following practical outcomes, in which 
+
+* images are denoted by capitals $A, B, \dots$
+* scalars are denoted by lowercase $x, y, \dots$
+* the ROIs of image $A$ are $R_A$
+
+So:
+
+* In binary operations on an image and a scalar such as $x+A$ or $A+x$, the operation is only performed on the region covered by the union of all ROIs on $A$. 
+
+    Other parts of $A$ are left unchanged in the output, which carries the same ROIs.
+
+* In binary operations on two images $A+B$ etc., the operation is only performed on the region covered by the intersection of the unions of the ROIs. That is
+    \\[
+        \bigcup R_A \cap \bigcup R_B
+    \\]
+    Parts of the image which are not processed are set to the left-hand input image for binary operations.
+
+* In general, a function of a set of images $S$ always attempts to perform the action on $\bigcap_i \bigcup R_{S_i}$, i.e. the intersection of the unions of the ROIs
+of each image. Parts of the image which are not processed are set to image $S_1$, the first image in the set.
+
+* If the output is an image of a different depth, the unprocessed parts of the output are set to zero.
+
 
 
 ## Uncertainty and error
