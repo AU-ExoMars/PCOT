@@ -145,11 +145,20 @@ class ChannelMapping:
             g = img.wavelengthBand(540)
             b = img.wavelengthBand(440)
 
+            # if any of those fail, look for bands whose names filter names are 'R', 'G' or 'B'. These
+            # still also return -1 if not found.
+            if r < 0:
+                r = img.namedFilterBand('R')
+            if g < 0:
+                g = img.namedFilterBand('G')
+            if b < 0:
+                b = img.namedFilterBand('B')
+
             # generate a list of all the channels, with the ones found NOT in it.
             lst = [x for x in range(img.channels) if x not in (r, g, b)]
             # and finally replace r,g,b with things from the above list if they are -ve, but
             # first appending the entire range to lst just in case it is empty.
-            lst = lst + [min(x,img.channels-1) for x in (0, 1, 2)]
+            lst = lst + [min(x, img.channels-1) for x in (0, 1, 2)]
 
             # and extract
             r = r if r >= 0 else lst.pop()
@@ -532,10 +541,7 @@ class ImageCube(SourcesObtainable):
         """get cwl and mean fwhm for a channel if all sources are of the same wavelength, else -1. Compare with
         wavelength() below."""
         # get the SourceSet
-        try:
-            sources = self.sources.sourceSets[channelNumber]
-        except:
-            print("Fuck")
+        sources = self.sources.sourceSets[channelNumber]
         # all sources in this channel should have a filter
         sources = [s for s in sources.sourceSet if s.getFilter()]
         # all the sources in this channel should have the same cwl
@@ -555,8 +561,12 @@ class ImageCube(SourcesObtainable):
         return cwl
 
     def wavelengthBand(self, cwl):
+        """Try to find the index of the band in the image which is closest to the given centre wavelength,
+        disregarding bands with no wavelength or multiple wavelengths."""
+        # first, get dict of wavelength and fwhm by channel.
         wavelengthAndFHWMByChan = {i: self.wavelengthAndFWHM(i) for i in range(self.channels)}
-        # now get list of (index, distance from cwl, fwhm), filtering out multi-wavelength channels (for which wavelength() returns -1)
+        # now get list of (index, distance from cwl, fwhm), filtering out multi-wavelength channels (for which
+        # wavelength() returns -1)
         wavelengthAndFHWMByChan = [(k, abs(v[0]-cwl), v[1]) for k, v in wavelengthAndFHWMByChan.items() if v[0] >= 0]
         if len(wavelengthAndFHWMByChan) > 0:
             # now sort that list by CWL distance and then negative FWHM (widest first)
@@ -566,3 +576,11 @@ class ImageCube(SourcesObtainable):
         else:
             # No wavelengths found ,return -1
             return -1
+
+    def namedFilterBand(self, name):
+        """Try to find the index of the first band in the image which has the filterName provided"""
+        for i, s in enumerate(self.sources.sourceSets):
+            if s.matches(filterNameOrCWL=name, all_match=True):
+                return i
+        return -1
+

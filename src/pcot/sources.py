@@ -245,11 +245,21 @@ class SourceSet(SourcesObtainable):
         lst = "\n".join(sorted([s for s in x if s]))
         return f"SET[\n{lst}\n]\n"
 
-    def matches(self, inp=None, filterNameOrCWL=None, single=False, hasFilter=None):
-        """Returns true if ANY source in the set matches ALL the criteria"""
+    def matches(self, inp=None, filterNameOrCWL=None, single=False, hasFilter=None, all_match=False):
+        """Returns true if ANY source in the set matches ALL the criteria; or if all_match is true if ALL
+        sources match the criteria:
+        inp: input index
+        filterNameOrCWL: either a filter name or a centre wavelength
+        single: set must be a single item
+        hasFilter: set must have a filter
+        all_match: all items in set must match
+        """
         if single and len(self.sourceSet) > 1:  # if required, ignore this set if it's not from a single source
             return False
-        return any([x.matches(inp, filterNameOrCWL, hasFilter) for x in self.sourceSet])
+        if all_match:
+            return any([x.matches(inp, filterNameOrCWL, hasFilter) for x in self.sourceSet])
+        else:
+            return all([x.matches(inp, filterNameOrCWL, hasFilter) for x in self.sourceSet])
 
     def getSources(self):
         return self
