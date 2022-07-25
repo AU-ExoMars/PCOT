@@ -580,7 +580,8 @@ class ImageCube(SourcesObtainable):
     def namedFilterBand(self, name):
         """Try to find the index of the first band in the image which has the filterName provided"""
         for i, s in enumerate(self.sources.sourceSets):
-            if s.matches(filterNameOrCWL=name, all_match=True):
+            # we are looking for a band in which ANY of the sources has the given name
+            if s.matches(filterNameOrCWL=name, all_match=False):
                 return i
         return -1
 

@@ -47,6 +47,8 @@ def test_rect_clipped_topleft(allblack):
 
 
 def test_rect_change(allblack):
+    """Test that a rectangular ROI entirely within a black image, when modified, only changes the
+    right number of pixels"""
     # make a boring ROI
     roi = ROIRect()
     roi.setBB(2, 2, 5, 5)
@@ -72,6 +74,8 @@ def test_rect_change(allblack):
 
 
 def test_rect_change_red_to_cyan(allblack):
+    """Test that a rectangular ROI entirely within a red image, when modified, only changes the
+    right number of pixels to cyan"""
     # first, change the entire image to red.
     allblack.img[:] = (1, 0, 0)
 
@@ -98,6 +102,7 @@ def test_rect_change_red_to_cyan(allblack):
 
 
 def test_circle_change_masked(allblack):
+    """change a circle in black image to red, count red pixels."""
     # make a circular ROI
     roi = ROICircle(4, 4, 3)
     allblack.rois.append(roi)
@@ -114,6 +119,7 @@ def test_circle_change_masked(allblack):
 
 
 def test_circle_change_masked_red_to_cyan(allblack):
+    """change a circle in a red image to cyan, count cyan pixels."""
     allblack.img[:] = (1, 0, 0)
     oldsum = np.sum(allblack.img)
     assert oldsum == allblack.w * allblack.h
@@ -131,3 +137,14 @@ def test_circle_change_masked_red_to_cyan(allblack):
     # and some arbitrary checks
     assert np.array_equal(img.img[1, 1], (1, 0, 0))
     assert np.array_equal(img.img[4, 4], (0, 1, 1))
+
+
+def test_multi_roi_change(allblack):
+    """Two circles within an image - we should change the union of those two circles"""
+
+    allblack.rois.append(ROICircle(4, 4, 3))
+    allblack.rois.append(ROICircle(12, 4, 3))
+    subimg = allblack.subimage()
+    out = np.full(subimg.img.shape, [0, 0, 1]).astype(np.float32)
+    img = allblack.modifyWithSub(subimg, out)
+    assert np.sum(img.img) ==  29*2

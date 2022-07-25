@@ -179,7 +179,7 @@ class InputSource(Source):
     def serialise(self):
         # deserialisation is done in SourceSet
 
-        if isinstance(self.filterOrName,Filter):
+        if isinstance(self.filterOrName, Filter):
             filtorname = ('filter', self.filterOrName.serialise())
         elif isinstance(self.filterOrName, str):
             filtorname = ('name', self.filterOrName)
@@ -256,10 +256,14 @@ class SourceSet(SourcesObtainable):
         """
         if single and len(self.sourceSet) > 1:  # if required, ignore this set if it's not from a single source
             return False
+        if len(self.sourceSet) == 0:  # if there isn't an item there can't be a match (note: all([]) == True, dammit)
+            return False
+        smatches = [x.matches(inp, filterNameOrCWL, hasFilter) for x in self.sourceSet]
+
         if all_match:
-            return any([x.matches(inp, filterNameOrCWL, hasFilter) for x in self.sourceSet])
+            return all(smatches)
         else:
-            return all([x.matches(inp, filterNameOrCWL, hasFilter) for x in self.sourceSet])
+            return any(smatches)
 
     def getSources(self):
         return self
@@ -271,7 +275,7 @@ class SourceSet(SourcesObtainable):
     @classmethod
     def deserialise(cls, lst, document) -> 'SourceSet':
         out = []
-        for tp,d in lst:
+        for tp, d in lst:
             if tp == 'nullsource':
                 v = nullSource
             elif tp == 'inputsource':
