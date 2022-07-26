@@ -8,7 +8,7 @@ to install and run PCOT and give you a tutorial covering the basics.
 
 
 ## Contents
-* 
+* [Operating principles](principles)
 * [Automatically generated documentation](autodocs) for nodes, expression functions and
 expression properties.
 * [Global controls](globalcontrols) on the PCOT UI.
