@@ -3,7 +3,7 @@ site_name: PCOT Documentation
 theme:
     name: mkdocs
     custom_dir: theme
-
+    
 markdown_extensions:
   - lightbox:LightBoxExtension # lightbox images with ![!Caption](img.png)
   - alert:AlertExtension # alert with @@@ tag .. @@@ markup
