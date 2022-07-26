@@ -12,3 +12,4 @@ to install and run PCOT and give you a tutorial covering the basics.
 * [Automatically generated documentation](autodocs) for nodes, expression functions and
 expression properties.
 * [Global controls](globalcontrols) on the PCOT UI.
+* [The canvas and its optional views](canvas)

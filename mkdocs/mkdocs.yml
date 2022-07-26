@@ -23,6 +23,7 @@ nav:
     - User Guide: 
         - Overview: userguide/index.md
         - Operating principles: userguide/principles.md
+        - The Canvas: userguide/canvas.md
         - Autodocs: autodocs/index.md
     - Developer's Guide:
         - Overview: devguide/index.md

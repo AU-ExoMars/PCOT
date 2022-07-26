@@ -168,7 +168,8 @@ are combined (either from the same image or from different images) these are OR-
 When a pixel is not used in a particular band, the value is set to zero for that band and the ERROR bit is passed through. 
 
 It should be possible to set bits based on per-pixel conditions with the *bits* node. For example, convert all uncertainties
-greater than a given value into errors.
+greater than a given value into errors. In fact, **this should be done
+by default for a certain global value** if possible.
 
 ### Error ROIs
 It should
@@ -192,3 +193,14 @@ the aberration value which could be used in calculations
 * It should be possible to set the ERROR bit for excessive aberration values
 
 
+## Canvas information
+
+@@@
+Again, TODO
+@@@
+
+The following should be visible in the canvas as optional overlays:
+
+* Pixel information bits as colour overlays (default ON)
+* Uncertainty data (default OFF)
+* Filter aberration as a heat map (default OFF)
