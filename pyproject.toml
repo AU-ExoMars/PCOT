@@ -29,13 +29,12 @@ pds4-tools = "^1.2"
 markdown = "^3.3.6"
 mkdocs = "^1.2.3"
 pymdown-extensions = ">=9.1"
-proctools = { path = "./dist/proctools", develop = true }
+# proctools = { path = "./dist/proctools", develop = true }
+proctools = "^0.2.1"
 
 
 # Future:
 #passthrough = "0.3.2"
-#proctools = "0.1.1"
-#proctools = { path = "../proctools", develop = true }
 
 [tool.poetry.dev-dependencies]
 pytest = ">=3.5"
