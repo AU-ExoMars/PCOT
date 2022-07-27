@@ -136,10 +136,11 @@ Consists of:
 * image quality/info bits (byte per band)
 
 ### Uncertainty
-Each pixel each band of an imagecube contains an uncertainty value,
-which is a root mean squared error. Operations need to 
-combine this data in a sensible way. For example,
-denoting the RMS error in $a$ as $\Delta a$, binary operations work like this:
+
+Each pixel each band of an imagecube contains an uncertainty value, which is a
+root mean squared error. Operations need to combine this data in a sensible
+way. For example, denoting the RMS error in $a$ as $\Delta a$, binary
+operations work like this:
 
 \begin{align}
 \Delta (a+b), \quad \Delta (a+b) &= \sqrt{(\Delta a)^2 + (\Delta b)^2}\\
@@ -162,20 +163,43 @@ is always a covariance between them.
 A lot of this is TODO
 @@@ 
 
-Each pixel in each band has an associated set of bits which indicate error states, etc. In general, when multiple image bands
-are combined (either from the same image or from different images) these are OR-ed together. Bits are:
+Each pixel in each band has an associated set of bits which indicate error states, etc. 
+
+Bits are:
 
 | Bit name | Meaning | Effect on calculations|
 |-----------|------|----|
 |ERROR|Pixel is an error in this band|should not be used in any calculation (see below).|
-|SAT|Pixel is saturated in this band|**???**|
+|SATHIGH|Pixel is saturated high in this band|**???**|
+|SATLOW|Pixel is saturated low in this band (i.e. zero or less)|**???**|
 |NOUNC|No uncertainty data (error propagation was not possible)|**???**|
 
-When a pixel is not used in a particular band, the value is set to zero for that band and the ERROR bit is passed through. 
+* When a pixel is not used in a particular band, the value is set to zero for that band and the ERROR bit is passed through. 
 
-It should be possible to set bits based on per-pixel conditions with the *bits* node. For example, convert all uncertainties
+* It should be possible to set bits based on per-pixel conditions with the *bits* node. For example, convert all uncertainties
 greater than a given value into errors. In fact, **this should be done
 by default for a certain global value** if possible.
+
+* In general, when multiple image bands
+are combined (either from the same image or from different images) these are OR-ed together. This typically happens in a band-wise fashion
+because images are combined band-wise. Thus, when two images $a$ and $b$ are
+added, and the bits for channel $i$ of image $a$ are $B_i(a)$,
+
+\\[
+B_i(a+b) = B_i(a) \vee B_i(b)\quad \text{for all channels } i
+\\]
+
+* However, some operations have a more complex flow of information. For example, a decorrelation stretch results in information from all
+bands being used in each band. In cases like this, the resulting bands are all ORed toether:
+\\[
+B_i(\text{decorr}(a)) = \bigvee_i B_i(a)
+\\]
+
+
+* Nodes which produce a scalar should ignore error pixels (e.g. finding the mean value)
+* Nodes which perform a convolution operation or similar should propagate the error pixel to all affected pixels, leading to a blob of pixels in the output.
+I realise **This isn't ideal**; another possibility could be to just zero the mask? But then we lose the error data. At the moment I don't believe we have any
+"non-local" behaviour where pixels affect regions of pixels in the output, so the point could be moot.
 
 ### Error ROIs
 It should
