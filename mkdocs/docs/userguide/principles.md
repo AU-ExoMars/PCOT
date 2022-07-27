@@ -123,13 +123,19 @@ image $S_1$, the first image in the set.
 
 
 
-## Image uncertainty data
+## Image quality data
 
 @@@
 TODO - describe how these are processed. Could probably use a separate
 page describing the data?
 @@@
 
+Consists of:
+
+* image uncertainty map (float per band)
+* image quality/info bits (byte per band)
+
+### Uncertainty
 Each pixel each band of an imagecube contains an uncertainty value,
 which is a root mean squared error. Operations need to 
 combine this data in a sensible way. For example,
@@ -150,7 +156,7 @@ Remember that this only applies if the bands are independent. In reality there
 is always a covariance between them.
 @@@
 
-## Pixel information bits
+### Pixel information bits
 
 @@@
 A lot of this is TODO
