@@ -1,7 +1,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict
 
 import numpy as np
 from PySide2.QtGui import QPen
@@ -9,6 +9,7 @@ from dateutil import parser
 from PySide2 import QtWidgets
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QMessageBox, QTableWidgetItem
+from proctools.products import ProductDepot
 
 from pcot import filters
 from pcot.dataformats import pds4
@@ -16,8 +17,7 @@ from pcot.dataformats.pds4 import PDS4ImageProduct, PDS4Product
 from pcot.datum import Datum
 from pcot.ui import uiloader
 from pcot.ui.help import HelpWindow
-from proctools.products import DataProduct
-from proctools.products.loader import ProductLoader
+import proctools
 
 import pcot
 import pcot.ui as ui
@@ -63,7 +63,7 @@ class PDS4InputMethod(InputMethod):
 
     products: List[PDS4Product]  # list of PDS4 products found under the directory "dir". Not all will be selected.
     selected: List[int]  # indices of selected items in the above list
-    lidToLabel: Dict[str, DataProduct]  # dictionary of LIDs to proctools Labels.
+    lidToLabel: Dict[str, proctools.products.DataProduct]  # dictionary of LIDs to proctools products.
 
     dir: Optional[str]  # the directory we have got the data from; just used to set up the widget
     mapping: ChannelMapping  # the mapping for the canvas
@@ -105,14 +105,14 @@ class PDS4InputMethod(InputMethod):
                 p.label = None
 
             # Exceptions might get thrown; the caller must handle them.
-            loader = ProductLoader()
+            depot = ProductDepot()
             # this is actually loading 'labels' in *my* terminology
             logger.debug("Loading products...")
-            loader.load_products(Path(self.dir), recursive=self.recurse)
+            depot.load(Path(self.dir), recursive=self.recurse)
             logger.debug("...products loaded")
             # Retrieve labels for all loaded PAN-PP-220/spec-rad products as instances of
             # proctools.products.pancam:SpecRad; sub in the mnemonic of the product you're after
-            for dat in loader.all("spec-rad"):
+            for dat in depot.retrieve("spec-rad"):
                 m = dat.meta
                 start = parser.isoparse(m.start)
                 if m.lid not in lidToProduct:
