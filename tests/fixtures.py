@@ -1,3 +1,4 @@
+from gen_envi import gen_envi
 from pcot.imagecube import ImageCube, ChannelMapping
 
 import os
@@ -76,3 +77,24 @@ def allblack():
     assert imgc.h == 8
     return imgc
 
+
+def fillrect(img, x, y, w, h, v):
+    img[y:y + h, x:x + w] = v
+
+
+@pytest.fixture
+def envi_image_1(tmp_path):
+    fn = tmp_path / "temp"
+    freqs = (800, 640, 550, 440)
+
+    # this is h,w order - so an 80x60 image
+    img = np.zeros((60, 80, len(freqs)), dtype=np.float32)
+    # fill the rectangle x=50, y=40, w=20, h=10
+    # with (1,0,1,1)
+    fillrect(img, 50, 40, 20, 10, (1, 0, 1, 1))
+
+    # write the data
+    gen_envi(fn, freqs, img)
+
+    # return the filename (with a .hdr)
+    return fn.with_suffix(".hdr")

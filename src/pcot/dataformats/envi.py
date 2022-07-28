@@ -142,7 +142,7 @@ class ENVIHeader:
 
 
 def _load(fn):
-    """Actually loads the envi, returning a tuple of (header, ndarray)"""
+    """Takes the ENVI header name. Actually loads the envi, returning a tuple of (header, ndarray)"""
     with open(fn) as f:
         h = ENVIHeader(f)
 
@@ -182,7 +182,7 @@ def _load(fn):
 
 
 def load(fn, doc, inpidx, mapping: ChannelMapping = None) -> ImageCube:
-    """Load a file as an ENVI.
+    """Load a file as an ENVI. The filename is the header filename (.hdr).
     Requires a Document and an input index, so don't call this directly - Document.setInputENVI()."""
 
     # perform cached load

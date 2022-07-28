@@ -1,9 +1,7 @@
-import numpy as np
 
 import pcot
 from pcot.document import Document
 from pcot.filters import Filter
-from pcot.imagecube import ChannelMapping
 from pcot.sources import InputSource, MultiBandSource, SourceSet
 import pcot.utils.image as image
 
