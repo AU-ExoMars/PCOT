@@ -137,9 +137,9 @@ Consists of:
 
 ### Uncertainty
 
-Each pixel each band of an imagecube contains an uncertainty value, which is a
-root mean squared error. Operations need to combine this data in a sensible
-way. For example, denoting the RMS error in $a$ as $\Delta a$, binary
+Each pixel each band of an imagecube usually contains an uncertainty value,
+which is a root mean squared error. Operations need to combine this data in a
+sensible way. For example, denoting the RMS error in $a$ as $\Delta a$, binary
 operations work like this:
 
 \begin{align}
@@ -149,13 +149,17 @@ operations work like this:
 \Delta (a | b) &= \max (\Delta{a}, \Delta{b})
 \end{align}
 
-For functions which don't work nicely in this system, **we set the uncertainty
-to zero but set the "no uncertainty" error bit** (see below).
-
-@@@ warning
+    @@@ warning
 Remember that this only applies if the bands are independent. In reality there
 is always a covariance between them.
 @@@
+
+
+**Not all images contain uncertainty data** - it may be that the input
+image doesn't have this data, or that a function has been performed on the
+image which does not permit uncertainty data to be carried through
+(consider a decorrelation stretch, for example). In this case, **this
+should be clearly visible in the canvas**.
 
 ### Pixel information bits
 
@@ -172,7 +176,6 @@ Bits are:
 |ERROR|Pixel is an error in this band|should not be used in any calculation (see below).|
 |SATHIGH|Pixel is saturated high in this band|**???**|
 |SATLOW|Pixel is saturated low in this band (i.e. zero or less)|**???**|
-|NOUNC|No uncertainty data (error propagation was not possible)|**???**|
 
 * When a pixel is not used in a particular band, the value is set to zero for that band and the ERROR bit is passed through. 
 
