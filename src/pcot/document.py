@@ -192,9 +192,10 @@ class Document:
         """set graph's input to RGB"""
         return self.setInputData(inputidx, inputs.Input.RGB, lambda method: method.setFileName(fname))
 
-    def setInputMulti(self, inputidx, directory, fnames):
+    def setInputMulti(self, inputidx, directory, fnames, filterpat=None):
         """set graph's input to multiple files"""
-        return self.setInputData(inputidx, inputs.Input.RGB, lambda method: method.setFileNames(directory, fnames))
+        return self.setInputData(inputidx, inputs.Input.MULTIFILE,
+                                 lambda method: method.setFileNames(directory, fnames, filterpat))
 
     def getNodeByName(self, name):
         """get a node by its DISPLAY name, not its internal UUID. Raises a NameError if not found."""

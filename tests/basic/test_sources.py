@@ -67,7 +67,26 @@ def test_sourcesetctors():
     assert len(ss.sourceSet) == 2
     assert s1 in ss.sourceSet
     assert s2 in ss.sourceSet
+    assert s3 not in ss.sourceSet
     assert ss.brief() == "one&two"
+
+
+def test_sourcesetdunder():
+    """Test that for some purposes, a SourceSet can be interacted with directly as if one were interacting
+    with the underlying set (the sourceSet member). SourceSet implements:
+    * __iter__
+    * __contains__
+    * __len__
+    """
+    ss = SourceSet([s1, s2])
+    assert s1 in ss
+    assert s2 in ss
+    assert s3 not in ss
+    assert len(ss) == 2
+    outlist = [x for x in ss]
+    assert len(outlist) == 2
+    assert s1 in outlist
+    assert s2 in outlist
 
 
 def test_sourcesetunion():

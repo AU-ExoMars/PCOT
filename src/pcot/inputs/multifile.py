@@ -118,6 +118,8 @@ class MultifileInputMethod(InputMethod):
         self.cachedFiles = newCachedFiles
         # assemble the images
         if len(imgs) > 0:
+            if len(set([x.shape for x in imgs])) != 1:
+                raise Exception("all images must be the same size in a multifile")
             img = image.imgmerge(imgs)
             self.mapping.red = -1  # force repeat of "guessing" of RGB mapping
             img = ImageCube(img * self.mult, self.mapping, MultiBandSource(sources))
@@ -128,10 +130,12 @@ class MultifileInputMethod(InputMethod):
     def getName(self):
         return "Multifile"
 
-    # used from external code
-    def setFileNames(self, directory, fnames):
+    # used from external code. Filterpat == none means leave unchanged.
+    def setFileNames(self, directory, fnames, filterpat=None):
         self.dir = directory
         self.files = fnames
+        if filterpat is not None:
+            self.filterpat = filterpat
         self.mapping = ChannelMapping()
 
     def createWidget(self):

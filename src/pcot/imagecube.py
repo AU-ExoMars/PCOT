@@ -276,12 +276,13 @@ class ImageCube(SourcesObtainable):
     # Always builds an RGB image. Sources must be provided.
     @classmethod
     def load(cls, fname, mapping, sources):
+        fname = str(fname)  # fname could potentially be some kind of Path object.
         logger.info(f"ImageCube load: {fname}")
         # imread with this argument will load any depth, any
         # number of channels
         img = cv.imread(fname, -1)
         if img is None:
-            raise Exception('cannot read image {}'.format(fname))
+            raise Exception(f'Cannot read file {fname}')
         if len(img.shape) == 2:  # expand to RGB. Annoyingly we cut it down later sometimes.
             img = cv.merge((img, img, img))
         # get the scaling factor

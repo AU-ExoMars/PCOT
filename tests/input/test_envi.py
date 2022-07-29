@@ -5,10 +5,9 @@ from pcot.datum import Datum
 from pcot.document import Document
 from fixtures import *
 from pcot.filters import Filter
-from pcot.sources import SourceSet
 
 
-def test_envi_1(envi_image_1):
+def test_envi_load(envi_image_1):
     pcot.setup()
     doc = Document()
     # having created a document, set an input. Try one that doesn't exist first.
@@ -27,20 +26,21 @@ def test_envi_1(envi_image_1):
     assert img.h == 60
 
     # check the sources.
-    for ss in img.sources.sourceSets:
+    assert len(img.sources) == 4
+    for sourceSet in img.sources:
         #  First, make sure each band has a source set of a single source
-        assert len(ss.sourceSet) == 1
-        s, = img.sources.sourceSets[0].sourceSet
+        assert len(sourceSet) == 1
+        s = img.sources.sourceSets[0].getOnlyItem()
         # and that it's from input 0, and that it's attached to a Filter
         assert s.inputIdx == 0
         assert isinstance(s.filterOrName, Filter)
     # now check the filter frequencies and names
-    for i, cwl in enumerate((800, 640, 550, 440)):
-        s, = img.sources.sourceSets[i].sourceSet
+    for ss, cwl, idx in zip(img.sources, (800, 640, 550, 440), (1, 2, 3)):
+        s = ss.getOnlyItem()
         f = s.filterOrName
         assert f.cwl == cwl
-        assert f.name == f"L{i+1}_{cwl}"        # gen_envi generates names in the form Ln_cwl, n starts at 1
-        assert f.position == f"L{i+1}_{cwl}"
+        assert f.name == f"L{idx}_{cwl}"        # gen_envi generates names in the form Ln_cwl, n starts at 1
+        assert f.position == f"L{idx}_{cwl}"
         assert f.fwhm == 25                     # gen_envi sets all fwhm to 25
 
     # crude test of every single pixel.

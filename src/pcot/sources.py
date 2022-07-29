@@ -265,7 +265,24 @@ class SourceSet(SourcesObtainable):
         else:
             return any(smatches)
 
+    ### wrappers around dunder methods of set for convenience. Could inherit set, but that's messy.
+    def __len__(self):
+        return len(self.sourceSet)
+
+    def __iter__(self):
+        return self.sourceSet.__iter__()
+
+    def __contains__(self, item):
+        return self.sourceSet.__contains__(item)
+
+    def getOnlyItem(self):
+        """return singleton item"""
+        assert len(self.sourceSet) == 1
+        e, = self.sourceSet
+        return e
+
     def getSources(self):
+        """implements SourcesObtainable"""
         return self
 
     def serialise(self):
@@ -373,6 +390,11 @@ class MultiBandSource(SourcesObtainable):
         lst = [SourceSet.deserialise(x, document) for x in lst]
         return cls(lst)
 
+    def __len__(self):
+        return len(self.sourceSets)
+
+    def __iter__(self):
+        return self.sourceSets.__iter__()
 
 # use these to avoid the creation of lots of identical objects
 
