@@ -117,7 +117,7 @@ class InputSource(Source):
         return self.pds4
 
     def copy(self):
-        return InputSource(self.doc, self.inputIdx, self.filterOrName)
+        return InputSource(self.doc, self.inputIdx, self.filterOrName, pds4=self.pds4)
 
     def __eq__(self, other: 'InputSource'):
         return self._uniqid == other._uniqid

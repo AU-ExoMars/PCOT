@@ -29,6 +29,7 @@ class Input:
     RGB = 1
     MULTIFILE = 2
     ENVI = 3
+    PDS4 = 4
 
     def __init__(self, mgr, idx):
         """this will intialise an Input from scratch, typically when

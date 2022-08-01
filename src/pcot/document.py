@@ -197,6 +197,11 @@ class Document:
         return self.setInputData(inputidx, inputs.Input.MULTIFILE,
                                  lambda method: method.setFileNames(directory, fnames, filterpat))
 
+    def setInputPDS4(self, inputidx, products):
+        """Set a PDS4 input to a set of proctools DataProducts. Must be able to combine them into a single datum
+        (e.g. could be mono images of the same resolution)"""
+        return self.setInputData(inputidx, inputs.Input.PDS4, lambda method: method.setProducts(products))
+
     def getNodeByName(self, name):
         """get a node by its DISPLAY name, not its internal UUID. Raises a NameError if not found."""
         # this is a little ugly, but it's plenty quick enough and avoids problems

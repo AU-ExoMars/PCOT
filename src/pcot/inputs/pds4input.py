@@ -9,7 +9,7 @@ from dateutil import parser
 from PySide2 import QtWidgets
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QMessageBox, QTableWidgetItem
-from proctools.products import ProductDepot
+from proctools.products import ProductDepot, DataProduct
 
 from pcot import filters
 from pcot.dataformats import pds4
@@ -83,6 +83,43 @@ class PDS4InputMethod(InputMethod):
         self.camera = 'PANCAM'
         self.multValue = 1.0
 
+    def _getProducts(self, products: List[DataProduct]):
+        """Does a lot of the work for both loadLabelsFromDirectory and setProducts, converting
+        proctools' DataProduct into my own PDS4Product and PDS4ImageProduct. Needs work for other
+        kinds of product than image."""
+
+        # construct dictionaries
+        self.products = []
+        self.lidToLabel = {}  # clear the lid->label, we're about to reload all labels (or try to)
+
+        # remove all label data from existing products
+        for p in self.products:
+            p.label = None
+
+        for dat in products:
+            m = dat.meta
+            start = parser.isoparse(m.start)
+
+            logger.debug(f"Creating new product {m.lid}")
+            # only generate a new product object if we don't have it already
+            cwl = int(m.filter_cwl)
+            sol = int(m.sol_id)
+            seq = int(m.seq_num)
+            ptu = float(m.rmc_ptu)
+
+            # try to work out what filter we are. This is a complete pig - we might
+            # be AUPE, we might be PANCAM. We have to rely on document settings.
+            filt = filters.findFilter(self.camera, m.filter_id)
+            if filt.cwl != cwl:
+                raise Exception(
+                    f"Filter CWL does not match for filter {m.filter_id}: file says {cwl}, should be {filt.cwl}")
+            prod = PDS4ImageProduct(m.lid, sol, seq, filt, m.camera, ptu, start)
+            self.products.append(prod)
+
+            self.lidToLabel[m.lid] = dat
+
+        self.products.sort(key=lambda p: (p.start, p.filt.cwl))
+
     def loadLabelsFromDirectory(self, clear=False):
         """This will actually load data from the directory into the linear widget, either ab initio
         or associating that data with existing PDS4Product info.
@@ -96,14 +133,6 @@ class PDS4InputMethod(InputMethod):
                 self.products = []
                 self.selected = []
 
-            # construct dictionaries
-            lidToProduct = {p.lid: p for p in self.products}  # lid->product for all the products we already have
-            self.lidToLabel = {}  # clear the lid->label, we're about to reload all labels (or try to)
-
-            # remove all label data from existing products
-            for p in self.products:
-                p.label = None
-
             # Exceptions might get thrown; the caller must handle them.
             depot = ProductDepot()
             # this is actually loading 'labels' in *my* terminology
@@ -112,51 +141,23 @@ class PDS4InputMethod(InputMethod):
             logger.debug("...products loaded")
             # Retrieve labels for all loaded PAN-PP-220/spec-rad products as instances of
             # proctools.products.pancam:SpecRad; sub in the mnemonic of the product you're after
-            for dat in depot.retrieve("spec-rad"):
-                m = dat.meta
-                start = parser.isoparse(m.start)
-                if m.lid not in lidToProduct:
-                    logger.debug(f"Creating new product {m.lid}")
-                    # only generate a new product object if we don't have it already
-                    cwl = int(m.filter_cwl)
-                    sol = int(m.sol_id)
-                    seq = int(m.seq_num)
-                    ptu = float(m.rmc_ptu)
-
-                    # try to work out what filter we are. This is a complete pig - we might
-                    # be AUPE, we might be PANCAM. We have to rely on document settings.
-                    filt = filters.findFilter(self.camera, m.filter_id)
-                    if filt.cwl != cwl:
-                        raise Exception(
-                            f"Filter CWL does not match for filter {m.filter_id}: file says {cwl}, should be {filt.cwl}")
-                    prod = PDS4ImageProduct(m.lid, sol, seq, filt, m.camera, ptu, start)
-                    self.products.append(prod)
-                    lidToProduct[m.lid] = prod
-                else:
-                    logger.debug(f"Using existing product {m.lid}")
-
-                self.lidToLabel[m.lid] = dat
-
-            # remove any products which didn't get a label
-            remove = [(lid, prod) for lid, prod in lidToProduct.items() if lid not in self.lidToLabel]
-            selProds = [self.products[x] for x in self.selected]
-            for lid, prod in remove:
-                logger.debug(f"removing {lid},{prod} from products - no label was loaded")
-                if prod in selProds:
-                    logger.debug(" -- also removing from selected items")
-                    # also have to remove selected products from that array
-                    selIdx = self.products.index(prod)  # find index in products list
-                    self.selected.remove(selIdx)  # remove that index from selected list
-                self.products.remove(prod)
-                del lidToProduct[lid]
-
-            self.products.sort(key=lambda p: p.start)
+            products = depot.retrieve("spec-rad")
+            self._getProducts(products)  # convert from DataProduct to my PDS4Product and subclasses
             pcot.config.setDefaultDir('images', self.dir)
 
+    def setProducts(self, products):
+        """Used from the document's setInputPDS4() method when we're using PCOT as a library and loaded
+        a bunch of DataProducts from code"""
+        self.lidToLabel = {}
+        self.selected = [i for i, _ in enumerate(products)]
+        self._getProducts(products)  # convert from DataProduct to my PDS4Product and subclasses
+
     def loadData(self):
-        """Actually load the data. This might get a bit hairy."""
+        """Actually load the data; or rather load the actual data from my PDS4.. objects and the proctools DataProduct
+        "label" objects. This might get a bit hairy."""
         # ensure the data is actually a valid combination. That is, all images or a single datum of any type
         logger.debug(f"loadData on {len(self.products)} products")
+
         ok = True
         self.out = None
         if len(self.selected) == 0:
@@ -193,7 +194,8 @@ class PDS4InputMethod(InputMethod):
             # if not, we're going to have to reread
             self.loadLabelsFromDirectory(False)
         if len(self.selected) != oldSelLen:
-            logger.debug(f"sel. count has changed after loadLabelsFromDirectory (was {oldSelLen}, now {len(self.selected)})")
+            logger.debug(
+                f"sel. count has changed after loadLabelsFromDirectory (was {oldSelLen}, now {len(self.selected)})")
             if len(self.selected) == 0:  # dammit, they've *ALL* gone.
                 ui.error("Product labels cannot be found in their old location - cannot rebuild.")
                 return None
@@ -219,7 +221,7 @@ class PDS4InputMethod(InputMethod):
         # this will need to be changed once we can output different data types
         if self.out is not None and not isinstance(self.out, ImageCube):
             raise Exception(f"bad data type being output from PDS4: {type(self.out)}")
-        return Datum(Datum.IMG, self.out) # self.out could be None, of course.
+        return Datum(Datum.IMG, self.out)  # self.out could be None, of course.
 
     def getName(self):
         return "PDS4"
@@ -532,7 +534,8 @@ class PDS4ImageMethodWidget(MethodWidget):
         if idx >= 0:
             self.multCombo.setCurrentIndex(idx)
         else:
-            logger.error(f"setting multiplier combo index to 0, because I don't know about multiplier {self.method.multValue}!")
+            logger.error(
+                f"setting multiplier combo index to 0, because I don't know about multiplier {self.method.multValue}!")
 
         logger.debug("Displaying data {}, mapping {}".format(self.method.out, self.method.mapping))
         self.invalidate()  # input has changed, invalidate so the cache is dirtied
