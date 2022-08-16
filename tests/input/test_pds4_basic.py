@@ -40,6 +40,9 @@ def test_pds4_load():
     doc.changed()
     img = node.getOutput(0, Datum.IMG)
 
+    # for this test, we confirm that there are 9 channels in the image we just loaded, and that
+    # they have the correct source data (including LIDs).
+
     assert img.channels == 9  # should have 9 channels
     _lids = [
         # oddly, the LIDS l04-l08 are for filter positions L01-L06 (i.e. the G filters)
@@ -80,5 +83,3 @@ def test_pds4_load():
         assert s.getPDS4().lid == lid
         assert s.brief() == f'0:{cwl}'
         assert s.long() == f"PDS4-0: wavelength {cwl} {s.getPDS4().lid}"
-
-        pytest.fail("PDS4 data not yet tested")

@@ -396,6 +396,13 @@ class MultiBandSource(SourcesObtainable):
     def __iter__(self):
         return self.sourceSets.__iter__()
 
+    def __contains__(self, item):
+        return item in self.sourceSets
+
+    def __getitem__(self, item):
+        return self.sourceSets[item]
+
+
 # use these to avoid the creation of lots of identical objects
 
 nullSource = _NullSource()

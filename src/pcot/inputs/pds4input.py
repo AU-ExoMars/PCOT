@@ -269,7 +269,7 @@ class PDS4InputMethod(InputMethod):
             ui.error(f"can't read '{e}' from serialised PDS4 input data")
 
     def long(self):
-        # TODO ??
+        # might look basic, but will have CWL and LID appended to it downstream
         return f"PDS4-{self.input.idx}"
 
 

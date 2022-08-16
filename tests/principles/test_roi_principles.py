@@ -1,6 +1,5 @@
-from fixtures import *
+import pytest
 
 
-def test_greyscale_sources():
-    # TODO - load ENVI file with bands. Convert to GS. Check sources.
-    pytest.fail("Not yet implemented")
+def test_roi_principles_todo():
+    pytest.fail("ROI principle tests not done")

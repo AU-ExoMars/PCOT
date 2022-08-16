@@ -94,7 +94,9 @@ def funcGrey(args, optargs):
     conversion equation rather than just the mean."""
 
     img = args[0].get(Datum.IMG)
-    sources = MultiBandSource([SourceSet(img.sources.getSources())])
+
+    ss = SourceSet([img.sources, optargs[0].getSources()])
+    sources = MultiBandSource([ss])
 
     if optargs[0].get(Datum.NUMBER) != 0:
         if img.channels != 3:
