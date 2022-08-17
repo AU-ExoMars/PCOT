@@ -657,6 +657,10 @@ class XForm:
         except IndexError:
             return None
 
+    def getOutputDatum(self, i):
+        """Get a 'raw' output as just a datum"""
+        return self.outputs[i]  # may raise IndexError
+
     def getOutput(self, i, tp=None):
         """get an output, raising an exception if the type is incorrect or the index is output range
         used in external code; compare with Datum.get() which doesn't raise. Dereferences the output,

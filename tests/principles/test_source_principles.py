@@ -116,9 +116,9 @@ def test_binop_2images(envi_image_1, envi_image_2):
         assert channelFreqs[1] == b
 
 
-def test_binop_image_and_number(envi_image_1, envi_image_2):
-    """Make sure that sources work with two images combined in an expr node, but where one image is converted
-    to a single value - thus becoming a source set made up of all its channels."""
+def test_binop_number_and_number(envi_image_1, envi_image_2):
+    """Make sure that sources work with two images combined in an expr node, but where both images are converted
+    to numbers (using mean). We should get a single source set made up of all the sources."""
     pcot.setup()
     doc = Document()
     assert doc.setInputENVI(0, envi_image_1) is None
@@ -127,24 +127,18 @@ def test_binop_image_and_number(envi_image_1, envi_image_2):
     inputNode1 = doc.graph.create("input 0")
     inputNode2 = doc.graph.create("input 1")
     exprNode = doc.graph.create("expr")
-    exprNode.expr = "a*mean(b)"  # multiply image A by the mean of image B
+    exprNode.expr = "mean(a)*mean(b)"  # multiply image A by the mean of image B
     exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
     exprNode.connect(1, inputNode2, 0)  # expr:1 <- input2:0
 
     doc.changed()
-    img = exprNode.getOutput(0, Datum.IMG)
-    assert img is not None
-    assert len(img.sources) == 4  # 4-band image
+    datum = exprNode.getOutputDatum(0)  # don't actually care what the answer is - we just want to check the sources.
+    assert len(datum.sources) == 8  # 2 images with 4 bands
 
-    # each band should be made up of the appropriate frequency from image 1, and all the bands from image 2 (since
-    # they were combined by the mean operation).
+    # split into sources which came from each input - each should have 4 members
+    fromImage1 = [x for x in datum.sources if x.inputIdx == 0]
+    fromImage2 = [x for x in datum.sources if x.inputIdx == 1]
 
-    for channelSourceSet, freq in zip(img.sources, (800, 640, 550, 440)):
-        assert len(channelSourceSet) == 5
-        fromImage1 = [x for x in channelSourceSet if x.inputIdx == 0]
-        assert len(fromImage1) == 1
-        fromImage2 = [x for x in channelSourceSet if x.inputIdx == 1]
-        assert len(fromImage2) == 4
-
-        assert fromImage1[0].getFilter().cwl == freq
-        assert set([x.getFilter().cwl for x in fromImage2]) == {1000, 2000, 3000, 4000}
+    # and check the sets have the right frequencies
+    assert set([x.getFilter().cwl for x in fromImage1]) == {800, 640, 550, 440}
+    assert set([x.getFilter().cwl for x in fromImage2]) == {1000, 2000, 3000, 4000}
