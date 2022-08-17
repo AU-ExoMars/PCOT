@@ -1,3 +1,8 @@
+"""
+Test low-level source operations. Higher level operations, such as combining in expr nodes,
+are tested in test_source_principles.py
+"""
+
 from typing import Optional
 
 import pytest

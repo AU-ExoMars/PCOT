@@ -2,6 +2,8 @@
 Parser/Evaluator tests - not PCOT specific, just the shunting yard algorithm and VM.
 This was written with unittest, but you don't need to write every test suite that way -
 it's just that this was done first.
+
+Note that there are a lot of tests for how expr nodes manage sources in test_source_principles.py
 """
 from math import sqrt
 import unittest

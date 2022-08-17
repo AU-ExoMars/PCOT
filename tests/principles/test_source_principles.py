@@ -73,6 +73,7 @@ def test_extract_sources(envi_image_1):
     inputNode = doc.graph.create("input 0")
     exprNode = doc.graph.create("expr")
     exprNode.expr = "a$640"
+    # connect input 0 on self to output 0 in the input node
     exprNode.connect(0, inputNode, 0)
 
     doc.changed()
@@ -83,3 +84,67 @@ def test_extract_sources(envi_image_1):
     assert len(sourceset) == 1
     source = sourceset.getOnlyItem()
     assert source.getFilter().cwl == 640
+
+
+def test_binop_2images(envi_image_1, envi_image_2):
+    """Make sure that sources work with two images combined in an expr node."""
+    pcot.setup()
+    doc = Document()
+    assert doc.setInputENVI(0, envi_image_1) is None
+    assert doc.setInputENVI(1, envi_image_2) is None
+
+    inputNode1 = doc.graph.create("input 0")
+    inputNode2 = doc.graph.create("input 1")
+    exprNode = doc.graph.create("expr")
+    exprNode.expr = "a+b"
+    exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
+    exprNode.connect(1, inputNode2, 0)  # expr:1 <- input2:0
+
+    doc.changed()
+    img = exprNode.getOutput(0, Datum.IMG)
+    assert img is not None
+    assert len(img.sources) == 4  # 4-band image
+    # here we test each source - it should have a pair of frequencies, one of which comes from the band in input1,
+    # the other comes from the band in input2.
+    for freqPair, channelSourceSet in zip(((800, 1000), (640, 2000), (550, 3000), (440, 4000)), img.sources):
+        assert len(channelSourceSet) == 2
+        a, b = freqPair
+        # we do this because the source set is a set and we can't guarantee the order, so we get
+        # the frequencies and sort them. Relies on input 0's freqs all being below input 1's.
+        channelFreqs = sorted([x.getFilter().cwl for x in channelSourceSet])
+        assert channelFreqs[0] == a
+        assert channelFreqs[1] == b
+
+
+def test_binop_image_and_number(envi_image_1, envi_image_2):
+    """Make sure that sources work with two images combined in an expr node, but where one image is converted
+    to a single value - thus becoming a source set made up of all its channels."""
+    pcot.setup()
+    doc = Document()
+    assert doc.setInputENVI(0, envi_image_1) is None
+    assert doc.setInputENVI(1, envi_image_2) is None
+
+    inputNode1 = doc.graph.create("input 0")
+    inputNode2 = doc.graph.create("input 1")
+    exprNode = doc.graph.create("expr")
+    exprNode.expr = "a*mean(b)"  # multiply image A by the mean of image B
+    exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
+    exprNode.connect(1, inputNode2, 0)  # expr:1 <- input2:0
+
+    doc.changed()
+    img = exprNode.getOutput(0, Datum.IMG)
+    assert img is not None
+    assert len(img.sources) == 4  # 4-band image
+
+    # each band should be made up of the appropriate frequency from image 1, and all the bands from image 2 (since
+    # they were combined by the mean operation).
+
+    for channelSourceSet, freq in zip(img.sources, (800, 640, 550, 440)):
+        assert len(channelSourceSet) == 5
+        fromImage1 = [x for x in channelSourceSet if x.inputIdx == 0]
+        assert len(fromImage1) == 1
+        fromImage2 = [x for x in channelSourceSet if x.inputIdx == 1]
+        assert len(fromImage2) == 4
+
+        assert fromImage1[0].getFilter().cwl == freq
+        assert set([x.getFilter().cwl for x in fromImage2]) == {1000, 2000, 3000, 4000}

@@ -84,14 +84,34 @@ def fillrect(img, x, y, w, h, v):
 
 @pytest.fixture
 def envi_image_1(tmp_path):
-    fn = tmp_path / "temp"
+    """generate a 4-channel 80x60 image, zeroed but with a rectangle filled in"""
     freqs = (800, 640, 550, 440)
+    fn = tmp_path / "temp_envi_1"
 
     # this is h,w order - so an 80x60 image
     img = np.zeros((60, 80, len(freqs)), dtype=np.float32)
     # fill the rectangle x=50, y=40, w=20, h=10
     # with (1,0,1,1)
     fillrect(img, 50, 40, 20, 10, (1, 0, 1, 1))
+
+    # write the data
+    gen_envi(fn, freqs, img)
+
+    # return the filename (with a .hdr)
+    return fn.with_suffix(".hdr")
+
+
+@pytest.fixture
+def envi_image_2(tmp_path):
+    """generate a 4-channel 80x60 image, zeroed but with a rectangle filled in"""
+    freqs = (1000, 2000, 3000, 4000)
+    fn = tmp_path / "temp_envi_2"
+
+    # this is h,w order - so an 80x60 image
+    img = np.zeros((60, 80, len(freqs)), dtype=np.float32)
+    # fill the rectangle x=10, y=10, w=20, h=20
+    # with (0,1,1,0.5)
+    fillrect(img, 10, 10, 20, 20, (0,1,1,0.5))
 
     # write the data
     gen_envi(fn, freqs, img)
