@@ -119,8 +119,11 @@ class InputSource(Source):
     def copy(self):
         return InputSource(self.doc, self.inputIdx, self.filterOrName, pds4=self.pds4)
 
-    def __eq__(self, other: 'InputSource'):
-        return self._uniqid == other._uniqid
+    def __eq__(self, other: Source):
+        if isinstance(other, InputSource):
+            return self._uniqid == other._uniqid
+        else:
+            return False
 
     def __hash__(self):
         return hash(self._uniqid)
