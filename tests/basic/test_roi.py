@@ -1,6 +1,6 @@
 """It's quite difficult to test ROIs, but we'll try to at least do rect and poly"""
 from fixtures import *
-from pcot.rois import ROIRect, ROIBoundsException, ROICircle
+from pcot.rois import ROIRect, ROIBoundsException, ROICircle, ROIPoly
 from pcot.utils.geom import Rect
 
 
@@ -147,4 +147,46 @@ def test_multi_roi_change(allblack):
     subimg = allblack.subimage()
     out = np.full(subimg.img.shape, [0, 0, 1]).astype(np.float32)
     img = allblack.modifyWithSub(subimg, out)
-    assert np.sum(img.img) ==  29*2
+    assert np.sum(img.img) == 29 * 2
+
+
+def test_poly_change_red_to_cyan_nopoints(allblack):
+    """change a polygon in a red image to cyan, count cyan pixels. No points selected, so
+    entire image changes."""
+    allblack.img[:] = (1, 0, 0)
+    oldsum = np.sum(allblack.img)
+    assert oldsum == allblack.w * allblack.h
+
+    roi = ROIPoly()
+    allblack.rois.append(roi)
+    subimg = allblack.subimage()
+
+    out = np.full(subimg.img.shape, [0, 1, 1]).astype(np.float32)
+    img = allblack.modifyWithSub(subimg, out)
+    # now this time the number of set values should have doubled from whatever it was before, because
+    # we are changing (1,0,0) to (0,1,1).
+    assert np.sum(img.img) == oldsum * 2
+    assert np.array_equal(img.img[4, 4], (0, 1, 1))
+
+
+def test_poly_change_red_to_cyan(allblack):
+    """Change a polygon in a red image to cyan"""
+    allblack.img[:] = (1, 0, 0)
+    oldsum = np.sum(allblack.img)
+    assert oldsum == allblack.w * allblack.h
+
+    roi = ROIPoly()
+    roi.addPoint(1, 1)
+    roi.addPoint(3, 1)
+    roi.addPoint(3, 2)
+    roi.addPoint(1, 2)
+
+    allblack.rois.append(roi)
+    subimg = allblack.subimage()
+
+    out = np.full(subimg.img.shape, [0, 1, 1]).astype(np.float32)
+    img = allblack.modifyWithSub(subimg, out)
+    # now this time the number of set values should have increased by the size of
+    # the rectangle.
+    assert np.sum(img.img) == oldsum + 2
+    assert np.array_equal(img.img[1, 1], (0, 1, 1))
