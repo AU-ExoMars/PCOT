@@ -1,6 +1,6 @@
 """It's quite difficult to test ROIs, but we'll try to at least do rect and poly"""
 from fixtures import *
-from pcot.rois import ROIRect, ROIBoundsException, ROICircle, ROIPoly
+from pcot.rois import ROIRect, ROIBoundsException, ROICircle, ROIPoly, ROIPainted
 from pcot.utils.geom import Rect
 
 
@@ -147,7 +147,7 @@ def test_multi_roi_change(allblack):
     subimg = allblack.subimage()
     out = np.full(subimg.img.shape, [0, 0, 1]).astype(np.float32)
     img = allblack.modifyWithSub(subimg, out)
-    assert np.sum(img.img) ==  29*2
+    assert np.sum(img.img) == 29 * 2
 
 
 def test_poly_change_red_to_cyan_nopoints(allblack):
@@ -223,8 +223,8 @@ def test_poly_change_red_to_cyan_clipped_right_triangle(allblack):
     assert oldsum == allblack.w * allblack.h
 
     roi = ROIPoly()
-    roi.addPoint(12, 1)   # right-angled, clipped off to the right.
-    roi.addPoint(17, 6)   # Clockwise winding.
+    roi.addPoint(12, 1)  # right-angled, clipped off to the right.
+    roi.addPoint(17, 6)  # Clockwise winding.
     roi.addPoint(12, 6)
 
     allblack.rois.append(roi)
@@ -248,7 +248,7 @@ def test_poly_change_red_to_cyan_clipped_left_bottom_triangle(allblack):
 
     roi = ROIPoly()
     roi.addPoint(-4, 9)  # right-angled.
-    roi.addPoint(3, 9)   # Anticlockwise winding.
+    roi.addPoint(3, 9)  # Anticlockwise winding.
     roi.addPoint(3, 2)
 
     allblack.rois.append(roi)
@@ -265,3 +265,44 @@ def test_poly_change_red_to_cyan_clipped_left_bottom_triangle(allblack):
     assert np.array_equal(img.img[4, 1], (0, 1, 1))
     assert np.array_equal(img.img[5, 3], (0, 1, 1))
     assert np.array_equal(img.img[5, 4], (1, 0, 0))
+
+
+def test_painted_change_masked_red_to_cyan(allblack):
+    """Simple test of painted using a single circle"""
+    allblack.img[:] = (1, 0, 0)
+    oldsum = np.sum(allblack.img)
+    assert oldsum == allblack.w * allblack.h
+
+    roi = ROIPainted()
+    roi.setImageSize(allblack.w, allblack.h)  # must be called before any call to setCircle.
+    roi.setCircle(4, 4, 75)     # the last value should give a brush radius of 3 via getRadiusFromSlider
+    allblack.rois.append(roi)
+    subimg = allblack.subimage()
+
+    out = np.full(subimg.img.shape, [0, 1, 1]).astype(np.float32)
+    img = allblack.modifyWithSub(subimg, out)
+    # now this time the number of set values should have gone up by 29 from whatever it was before, because
+    # we are changing (1,0,0) to (0,1,1).
+    assert np.sum(img.img) == oldsum + 29
+
+    # and some arbitrary checks
+    assert np.array_equal(img.img[1, 1], (1, 0, 0))
+    assert np.array_equal(img.img[4, 4], (0, 1, 1))
+
+
+def test_painted_change_masked_red_to_cyan_imagesize_not_set(allblack):
+    """Simple test of painted using a single circle; won't set an ROI because the image size
+    needs to be set"""
+    allblack.img[:] = (1, 0, 0)
+    oldsum = np.sum(allblack.img)
+    assert oldsum == allblack.w * allblack.h
+
+    roi = ROIPainted()
+    roi.setCircle(4, 4, 75)  # nothing will happen here; the ROI will still be empty.
+    allblack.rois.append(roi)
+    subimg = allblack.subimage()
+
+    out = np.full(subimg.img.shape, [0, 1, 1]).astype(np.float32)
+    img = allblack.modifyWithSub(subimg, out)
+    # all pixels will have changed
+    assert np.sum(img.img) == oldsum*2
