@@ -188,5 +188,5 @@ def test_poly_change_red_to_cyan(allblack):
     img = allblack.modifyWithSub(subimg, out)
     # now this time the number of set values should have increased by the size of
     # the rectangle.
-    assert np.sum(img.img) == oldsum + 2
+    assert np.sum(img.img) == oldsum + 6
     assert np.array_equal(img.img[1, 1], (0, 1, 1))
