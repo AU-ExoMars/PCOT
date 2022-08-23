@@ -278,7 +278,7 @@ class ExpressionEvaluator(Parser):
                           [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                           [],
                           lambda args, optargs: statsWrapper(np.std, args), varargs=True)
-        self.registerFunc("mean", "find the standard deviation of pixels in a list of ROIs, images or values",
+        self.registerFunc("mean", "find the mean of pixels in a list of ROIs, images or values",
                           [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                           [],
                           lambda args, optargs: statsWrapper(np.mean, args), varargs=True)
