@@ -147,7 +147,7 @@ def test_multi_roi_change(allblack):
     subimg = allblack.subimage()
     out = np.full(subimg.img.shape, [0, 0, 1]).astype(np.float32)
     img = allblack.modifyWithSub(subimg, out)
-    assert np.sum(img.img) == 29 * 2
+    assert np.sum(img.img) ==  29*2
 
 
 def test_poly_change_red_to_cyan_nopoints(allblack):
