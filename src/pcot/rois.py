@@ -545,7 +545,7 @@ class ROIPoly(ROI):
         ymin = min([p[1] for p in self.points])
         ymax = max([p[1] for p in self.points])
 
-        return Rect(xmin, ymin, xmax - xmin, ymax - ymin)
+        return Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1)
 
     def serialise(self):
         d = super().serialise()
