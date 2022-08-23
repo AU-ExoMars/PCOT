@@ -170,13 +170,13 @@ def test_poly_change_red_to_cyan_nopoints(allblack):
 
 
 def test_poly_change_red_to_cyan(allblack):
-    """Change a polygon in a red image to cyan"""
+    """Change a polygon in a red image to cyan - rectangle"""
     allblack.img[:] = (1, 0, 0)
     oldsum = np.sum(allblack.img)
     assert oldsum == allblack.w * allblack.h
 
     roi = ROIPoly()
-    roi.addPoint(1, 1)
+    roi.addPoint(1, 1)  # create a 3x2 rectangle - note that the points are included in it.
     roi.addPoint(3, 1)
     roi.addPoint(3, 2)
     roi.addPoint(1, 2)
@@ -190,3 +190,78 @@ def test_poly_change_red_to_cyan(allblack):
     # the rectangle.
     assert np.sum(img.img) == oldsum + 6
     assert np.array_equal(img.img[1, 1], (0, 1, 1))
+
+
+def test_poly_change_red_to_cyan_triangle(allblack):
+    """Change a polygon in a red image to cyan - triangle"""
+    allblack.img[:] = (1, 0, 0)
+    oldsum = np.sum(allblack.img)
+    assert oldsum == allblack.w * allblack.h
+
+    roi = ROIPoly()
+    roi.addPoint(8, 1)  # Isoceles triangle with 45 deg. angles, should be 16 pixels.
+    roi.addPoint(5, 4)  # Anticlockwise winding.
+    roi.addPoint(11, 4)
+
+    allblack.rois.append(roi)
+    subimg = allblack.subimage()
+
+    out = np.full(subimg.img.shape, [0, 1, 1]).astype(np.float32)
+    img = allblack.modifyWithSub(subimg, out)
+    # now this time the number of set values should have increased by the size of
+    # the triangle.
+    assert np.sum(img.img) == oldsum + 16
+    assert np.array_equal(img.img[0, 8], (1, 0, 0))
+    assert np.array_equal(img.img[1, 8], (0, 1, 1))
+    assert np.array_equal(img.img[2, 8], (0, 1, 1))
+
+
+def test_poly_change_red_to_cyan_clipped_right_triangle(allblack):
+    """Change a polygon in a red image to cyan - triangle"""
+    allblack.img[:] = (1, 0, 0)
+    oldsum = np.sum(allblack.img)
+    assert oldsum == allblack.w * allblack.h
+
+    roi = ROIPoly()
+    roi.addPoint(12, 1)   # right-angled, clipped off to the right.
+    roi.addPoint(17, 6)   # Clockwise winding.
+    roi.addPoint(12, 6)
+
+    allblack.rois.append(roi)
+    subimg = allblack.subimage()
+
+    out = np.full(subimg.img.shape, [0, 1, 1]).astype(np.float32)
+    img = allblack.modifyWithSub(subimg, out)
+    # now this time the number of set values should have increased by the size of
+    # the triangle.
+    assert np.sum(img.img) == oldsum + 18
+    assert np.array_equal(img.img[0, 12], (1, 0, 0))
+    assert np.array_equal(img.img[1, 12], (0, 1, 1))
+    assert np.array_equal(img.img[6, 15], (0, 1, 1))
+
+
+def test_poly_change_red_to_cyan_clipped_left_bottom_triangle(allblack):
+    """Change a polygon in a red image to cyan - triangle"""
+    allblack.img[:] = (1, 0, 0)
+    oldsum = np.sum(allblack.img)
+    assert oldsum == allblack.w * allblack.h
+
+    roi = ROIPoly()
+    roi.addPoint(-4, 9)  # right-angled.
+    roi.addPoint(3, 9)   # Anticlockwise winding.
+    roi.addPoint(3, 2)
+
+    allblack.rois.append(roi)
+    subimg = allblack.subimage()
+
+    out = np.full(subimg.img.shape, [0, 1, 1]).astype(np.float32)
+    img = allblack.modifyWithSub(subimg, out)
+    # now this time the number of set values should have increased by the size of
+    # the triangle.
+    assert np.sum(img.img) == oldsum + 18
+    assert np.array_equal(img.img[3, 1], (1, 0, 0))
+    assert np.array_equal(img.img[2, 2], (1, 0, 0))
+    assert np.array_equal(img.img[3, 2], (0, 1, 1))
+    assert np.array_equal(img.img[4, 1], (0, 1, 1))
+    assert np.array_equal(img.img[5, 3], (0, 1, 1))
+    assert np.array_equal(img.img[5, 4], (1, 0, 0))
