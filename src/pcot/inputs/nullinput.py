@@ -1,4 +1,3 @@
-## the Null input, which does nothing and outputs None
 
 from .inputmethod import InputMethod
 from pcot.ui.inputs import PlaceholderMethodWidget
@@ -6,6 +5,8 @@ from ..datum import Datum
 
 
 class NullInputMethod(InputMethod):
+    """the Null input, which does nothing and outputs None"""
+
     def __init__(self, inp):
         super().__init__(inp)
 

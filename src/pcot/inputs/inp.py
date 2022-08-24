@@ -1,5 +1,6 @@
 from typing import List, Optional, TYPE_CHECKING
 
+from .directinput import DirectInputMethod
 from .envimethod import ENVIInputMethod
 from .inputmethod import InputMethod
 from .multifile import MultifileInputMethod
@@ -30,6 +31,7 @@ class Input:
     MULTIFILE = 2
     ENVI = 3
     PDS4 = 4
+    DIRECT = 5
 
     def __init__(self, mgr, idx):
         """this will intialise an Input from scratch, typically when
@@ -45,7 +47,8 @@ class Input:
             RGBInputMethod(self),
             MultifileInputMethod(self),
             ENVIInputMethod(self),
-            PDS4InputMethod(self)
+            PDS4InputMethod(self),
+            DirectInputMethod(self),
         ]
 
     def get(self) -> Datum:

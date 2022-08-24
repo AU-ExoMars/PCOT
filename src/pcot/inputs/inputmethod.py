@@ -99,8 +99,9 @@ class InputMethod(ABC):
 
     @abstractmethod
     def createWidget(self):
-        """to override - creates the editing widget in the input window"""
-        pass
+        """to override - creates the editing widget in the input window. If not overriden, you won't get
+        a button to select that input method (useful for DirectInputMethod)"""
+        return None
 
     def serialise(self, internal):
         """to override - converts this object's state into a bunch of plain data

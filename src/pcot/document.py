@@ -202,6 +202,10 @@ class Document:
         (e.g. could be mono images of the same resolution)"""
         return self.setInputData(inputidx, inputs.Input.PDS4, lambda method: method.setProducts(products))
 
+    def setInputDirect(self, inputidx, imageCube):
+        """Set graph's input directly to an imagecube (used in scripting)"""
+        return self.setInputData(inputidx, inputs.Input.DIRECT, lambda method: method.setImageCube(imageCube))
+
     def getNodeByName(self, name):
         """get a node by its DISPLAY name, not its internal UUID. Raises a NameError if not found."""
         # this is a little ugly, but it's plenty quick enough and avoids problems

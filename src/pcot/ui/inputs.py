@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 class MethodSelectButton(QtWidgets.QPushButton):
     """Subclass of button used for the buttons at the top of the input window for each method"""
+
     def __init__(self, w, m):
         """Method select buttons know about both the owning input window and the method"""
         super().__init__()
@@ -28,7 +29,7 @@ class MethodSelectButton(QtWidgets.QPushButton):
         """When clicked, make this method active"""
         self.window.input.selectMethod(self.method)
         self.window.showActiveMethod()
-        
+
     def sizeHint(self):
         """The buttons are always rather too tall and I have no idea why. To fix this, I'm setting the height
            to the required height for the text. There must be a better way. For one thing, adding padding to that
@@ -36,15 +37,15 @@ class MethodSelectButton(QtWidgets.QPushButton):
         size = super().sizeHint()
         metrics = QtGui.QFontMetrics(self.font())
         textSize = metrics.size(Qt.TextShowMnemonic, self.text())
-        size.setHeight(textSize.height()+15)
+        size.setHeight(textSize.height() + 15)
         return size
 
     def showActive(self):
         """Colour the button to show that this method is active"""
         if self.method.isActive():
-            r, g, b = 200,200,255
+            r, g, b = 200, 200, 255
         else:
-            r, g, b = 200,200,200
+            r, g, b = 200, 200, 200
         self.setStyleSheet(
             f"border-style: outset; padding: 40px; border-width:1px; border-color:black; background-color:rgb({r},{g},{b})")
 
@@ -64,7 +65,7 @@ class InputWindow(QtWidgets.QMainWindow):
 
         central = QtWidgets.QWidget()
         central.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
-                                                   QtWidgets.QSizePolicy.Expanding))
+                                                    QtWidgets.QSizePolicy.Expanding))
         self.setCentralWidget(central)
         self.setMinimumSize(1000, 700)
 
@@ -78,20 +79,21 @@ class InputWindow(QtWidgets.QMainWindow):
         topBoxLayout = QtWidgets.QHBoxLayout()
         topBox.setLayout(topBoxLayout)
         layout.addWidget(topBox)
-#        topBox.setMaximumHeight(50)
+        #        topBox.setMaximumHeight(50)
 
         for m in self.input.methods:
-            b = MethodSelectButton(self, m)
-            self.buttons.append(b)
-            topBoxLayout.addWidget(b)
-            m.openingWindow = True
+            m.openingWindow = True  # this avoids graph running when the window is opening
             widget = m.createWidget()
             m.openingWindow = False
-            self.widgets.append(widget)
-            layout.addWidget(widget)
+            if widget is not None:
+                b = MethodSelectButton(self, m)
+                self.buttons.append(b)
+                topBoxLayout.addWidget(b)
+                self.widgets.append(widget)
+                layout.addWidget(widget)
 
-            if not m.isActive():
-                widget.setVisible(False)
+                if not m.isActive():
+                    widget.setVisible(False)
 
         self.showActiveMethod()
         self.show()
@@ -136,7 +138,7 @@ class MethodWidget(QtWidgets.QWidget):
 
     def __init__(self, m):
         self.method = m
-        self.openingWindow = False   # true if the window is opening
+        self.openingWindow = False  # true if the window is opening
         super().__init__()
 
     def onInputChanged(self):
@@ -165,6 +167,7 @@ class MethodWidget(QtWidgets.QWidget):
 class TreeMethodWidget(MethodWidget):
     """This class is for displaying input methods which rely on a tree view of files,
     and which use single files - ENVI and RGB are examples."""
+
     def __init__(self, m, uiFile: str, filterList: List[str]):
         super().__init__(m)
         uiloader.loadUi(uiFile, self)
@@ -246,6 +249,7 @@ class TreeMethodWidget(MethodWidget):
 
 class NullMethodWidget(MethodWidget):
     """This method widget does nothing at all."""
+
     def __init__(self, m):
         super().__init__(m)
         layout = QtWidgets.QVBoxLayout()
@@ -255,6 +259,7 @@ class NullMethodWidget(MethodWidget):
 
 class PlaceholderMethodWidget(MethodWidget):
     """This method widget does nothing at all, but differently."""
+
     def __init__(self, m):
         super().__init__(m)
         layout = QtWidgets.QVBoxLayout()
