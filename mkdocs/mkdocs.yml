@@ -28,6 +28,7 @@ nav:
     - Developer's Guide:
         - Overview: devguide/index.md
     - Roadmap: roadmap.md
+    - Known issues: gettingstarted/issues.md
 
 extra_javascript:
     - https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML

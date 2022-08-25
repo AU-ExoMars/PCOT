@@ -12,6 +12,14 @@ This is a rough guide, and things may change!
     * canvas viewer for both the above
     * error propagation in *expr* and all nodes (see [Principles](/userguide/principles))
     
+* Consider a vector type
+    * It might be useful if functions
+    such as max(), sd() etc. produced a vector of a values
+    rather than a single value in multiband image contexts. For example,
+    a 4-band image with the first channel set to 1 while all others are zero
+    could produce a mean vector of [1,0,0,0]. We would then perform a max()
+    on this vector to get a single value.
+    
 * Testing
     * Testing of the operating principles (see [Principles](/userguide/principles))
         * Source rules (**in progress**)
