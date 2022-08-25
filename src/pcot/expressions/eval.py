@@ -282,6 +282,10 @@ class ExpressionEvaluator(Parser):
                           [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                           [],
                           lambda args, optargs: statsWrapper(np.mean, args), varargs=True)
+        self.registerFunc("sum", "find the sum of pixels in a list of ROIs, images or values",
+                          [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
+                          [],
+                          lambda args, optargs: statsWrapper(np.sum, args), varargs=True)
 
         self.registerFunc("grey", "convert an image to greyscale",
                           [Parameter("image", "an image to process", Datum.IMG)],

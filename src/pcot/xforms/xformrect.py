@@ -142,7 +142,7 @@ class TabRect(pcot.ui.tabs.Tab):
             if h < 10:
                 h = 10
             # we don't do a mark here to avoid multiple marks - one is done on mousedown.
-            self.node.roi.setBB(x, y, w, h)
+            self.node.roi.set(x, y, w, h)
             self.changed()
         self.w.canvas.update()
 
@@ -152,7 +152,7 @@ class TabRect(pcot.ui.tabs.Tab):
         h = 10
         self.mouseDown = True
         self.mark()
-        self.node.roi.setBB(x, y, w, h)
+        self.node.roi.set(x, y, w, h)
         self.changed()
         self.w.canvas.update()
 

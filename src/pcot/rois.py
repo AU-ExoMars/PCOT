@@ -320,7 +320,7 @@ class ROIRect(ROI):
         # return a boolean array of True, same size as BB
         return np.full((self.h, self.w), True)
 
-    def setBB(self, x, y, w, h):
+    def set(self, x, y, w, h):
         self.isSet = True
         self.x = x
         self.y = y
@@ -348,20 +348,28 @@ class ROIRect(ROI):
 class ROICircle(ROI):
     """A simple circular ROI designed for use with multidot regions"""
 
+    x: int
+    y: int
+    r: int
+    isSet: bool
+
     def __init__(self, x=-1, y=0, r=0):
         super().__init__('circle')
-        self.x = int(x)     # if this is -ve, isSet will be false.
-        self.y = int(y)
-        self.r = int(r)
-        self.isSet = (x >= 0)
+        self.set(x, y, r)
         self.colour = (1, 1, 0)  # annotation colour
         self.fontline = 2
         self.fontsize = 10
         self.drawBox = False
 
+    def set(self, x, y, r):
+        self.x = int(x)  # if this is -ve, isSet will be false.
+        self.y = int(y)
+        self.r = int(r)
+        self.isSet = (x >= 0)
+
     def bb(self):
         if self.isSet:
-            return Rect(self.x - self.r, self.y - self.r, self.r * 2+1, self.r * 2+1)
+            return Rect(self.x - self.r, self.y - self.r, self.r * 2 + 1, self.r * 2 + 1)
         else:
             return None
 
@@ -369,7 +377,7 @@ class ROICircle(ROI):
         # there are a few ways we can generate a circular
         # mask bounded by the BB. This is one of them, which
         # leverages cv's drawing code.
-        m = np.zeros((self.r * 2+1, self.r * 2+1), dtype=np.uint8)
+        m = np.zeros((self.r * 2 + 1, self.r * 2 + 1), dtype=np.uint8)
         cv.circle(m, (self.r, self.r), self.r, 255, -1)
         return m > 0
 
@@ -384,7 +392,7 @@ class ROICircle(ROI):
 
     def deserialise(self, d):
         super().deserialise(d)
-        if len(d['croi'])==3:
+        if len(d['croi']) == 3:
             self.x, self.y, self.r = d['croi']
             self.isSet = (self.x >= 0)  # legacy
         else:

@@ -64,6 +64,43 @@ def test_greyscale_sources(envi_img: ImageCube):
     assert {800, 640, 550, 440} == freqs
 
 
+def test_greyscale_sources_expr(envi_image_1):
+    """Make sure conversion to greyscale using the grey() function works with regard to sources - this will
+    stand in for certain aspects of the sources principles. As test_greyscale_sources(), but uses an actual
+    expr node."""
+    pcot.setup()
+    doc = Document()
+    assert doc.setInputENVI(0, envi_image_1) is None
+
+    inputNode = doc.graph.create("input 0")
+    exprNode = doc.graph.create("expr")
+    exprNode.expr = "grey(a,0)"
+    # connect input 0 on self to output 0 in the input node
+    exprNode.connect(0, inputNode, 0)
+
+    doc.changed()
+    img = exprNode.getOutput(0, Datum.IMG)
+    assert img is not None
+
+    assert img.channels == 1  # single channel
+    assert len(img.sources) == 1  # and therefore a single sourceset
+
+    sources = img.sources[0]
+    assert len(sources) == 5  # four channels plus the number determining type
+
+    # separate into sources which have filters (those from images) and others
+    filts = [x for x in sources if x.getFilter() is not None]
+    nonfilts = [x for x in sources if x.getFilter() is None]
+    assert len(nonfilts) == 1
+    assert len(filts) == 4
+
+    # make sure that the number source is the null source
+    assert nonfilts[0] == nullSource
+    # and get the filter freqs to make sure they are correct
+    freqs = set(x.getFilter().cwl for x in sources if x.getFilter() is not None)
+    assert {800, 640, 550, 440} == freqs
+
+
 def test_extract_sources(envi_image_1):
     """Make sure that an expression of the form a$n works as expected with sources, this time
     using an actual expr node"""

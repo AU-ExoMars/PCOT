@@ -8,7 +8,7 @@ def test_nonintersecting_roi(allblack):
     """Check that trying to get the subimage for an ROI which doesn't intersect
     the image throws an exception"""
     roi = ROIRect()
-    roi.setBB(20, 20, 10, 10)
+    roi.set(20, 20, 10, 10)
     allblack.rois.append(roi)
 
     with pytest.raises(ROIBoundsException):
@@ -18,7 +18,7 @@ def test_nonintersecting_roi(allblack):
 def test_nonintersecting_negative_roi(allblack):
     """As above, but the ROI starts at negative coords"""
     roi = ROIRect()
-    roi.setBB(-20, -20, 10, 10)
+    roi.set(-20, -20, 10, 10)
     allblack.rois.append(roi)
 
     with pytest.raises(ROIBoundsException):
@@ -28,7 +28,7 @@ def test_nonintersecting_negative_roi(allblack):
 def test_rect_clipped(allblack):
     """Test a rect ROI that gets clipped to the bottom-right of the image (i.e. ROI is too big)"""
     roi = ROIRect()
-    roi.setBB(2, 2, 10, 10)
+    roi.set(2, 2, 10, 10)
     allblack.rois.append(roi)
 
     subimg = allblack.subimage()
@@ -39,7 +39,7 @@ def test_rect_clipped_topleft(allblack):
     """Now an ROI that's been clipped at top-left (i.e. xy -ve)"""
 
     roi = ROIRect()
-    roi.setBB(-2, -5, 10, 10)
+    roi.set(-2, -5, 10, 10)
     allblack.rois.append(roi)
 
     subimg = allblack.subimage()
@@ -51,7 +51,7 @@ def test_rect_change(allblack):
     right number of pixels"""
     # make a boring ROI
     roi = ROIRect()
-    roi.setBB(2, 2, 5, 5)
+    roi.set(2, 2, 5, 5)
     allblack.rois.append(roi)
     subimg = allblack.subimage()
     assert subimg.bb == Rect(2, 2, 5, 5)
@@ -81,7 +81,7 @@ def test_rect_change_red_to_cyan(allblack):
 
     # make a boring ROI
     roi = ROIRect()
-    roi.setBB(2, 2, 5, 5)
+    roi.set(2, 2, 5, 5)
     allblack.rois.append(roi)
     subimg = allblack.subimage()
     assert subimg.bb == Rect(2, 2, 5, 5)

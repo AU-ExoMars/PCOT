@@ -23,6 +23,7 @@ def _norm(masked: np.ma.masked_array):
 
 
 def norm(img: SubImageCubeROI, clip: int, splitchans=False) -> np.array:
+    """Does both normalisation and clipping depending on the clip value (integer boolean because it's used in expr nodes)"""
     mask = img.fullmask()  # get mask with same shape as below image
     img = img.img  # get imagecube bounded by ROIs as np array
 

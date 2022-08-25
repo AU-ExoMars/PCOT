@@ -6,23 +6,22 @@ from pcot import ui
 from pcot.filters import wav2RGB
 
 
-class SpecPlot(QtWidgets.QWidget):
+class SpectrumWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)  # Inherit from QWidget
         self.data = None  # None, or a string, or a list of (x,y) tuples
 
     def map(self, x, y, asPoint=True, xoff=0, yoff=0):
+        """map 0-1 in both coords to widget space"""
         topmargin, rightmargin, bottommargin, leftmargin = 4, 10, 30, 30
         width = self.width() - (leftmargin + rightmargin)
         height = self.height() - (topmargin + bottommargin)
-        """map 0-1 in both coords to widget space"""
         x = x * width + leftmargin + xoff
         y = (1 - y) * height + topmargin + yoff
         if asPoint:
             return QPointF(x, y)
         else:
             return x, y
-
 
     def setData(self, d):
         """Takes iterable of (x,y) tuples OR a string"""
@@ -51,6 +50,12 @@ class SpecPlot(QtWidgets.QWidget):
             minx, maxx = min(xs), max(xs)
             rngx = maxx - minx
 
+            # get Y range if it's not 0-1.
+            ymax = 1
+            for x, y in self.data:
+                while y > ymax:
+                    ymax = y
+
             if rngx < 0.0001:
                 self.drawText(p, "There is only one single-wavelength\nchannel in the data")
                 return
@@ -70,15 +75,24 @@ class SpecPlot(QtWidgets.QWidget):
             metrics = self.fontMetrics()
 
             lastPt = None
+            halftextheight = metrics.height() / 2
             for x, y in self.data:
                 x01 = (x - minx) / rngx
 
+                # draw x value on axis with a tick
                 t = f"{x}"
                 tw = metrics.width(t)
                 p.drawText(self.map(x01, -0.05, xoff=-tw / 2), t)
                 p.drawLine(self.map(x01, -0.01), self.map(x01, 0.01))
 
-                pt = self.map(x01, y)
+                # draw a 1 on the y-axis
+                p.drawText(self.map(0, 1.0/ymax, xoff=-15, yoff=halftextheight), "1")
+                p.drawLine(self.map(-0.01, 1.0/ymax), self.map(0.01, 1.0/ymax))
+
+                pt = self.map(x01, y/ymax)  # point is scaled by ymax
+                # draw y value next to point, offset down a little
+                t = f"{y:.2f}"
+                p.drawText(pt+QPointF(10, halftextheight), t)
 
                 r, g, b = wav2RGB(x, scale=255.0)
                 p.setBrush(QColor(r, g, b))

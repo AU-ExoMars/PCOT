@@ -16,7 +16,7 @@ from PySide2.QtWidgets import QCheckBox
 import pcot
 import pcot.ui as ui
 from pcot.datum import Datum
-from pcot.ui.specplot import SpecPlot
+from pcot.ui.spectrumwidget import SpectrumWidget
 
 if TYPE_CHECKING:
     from pcot.xform import XFormGraph, XForm
@@ -479,7 +479,7 @@ class Canvas(QtWidgets.QWidget):
         outerlayout.setContentsMargins(0, 0, 0, 0)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.spectrumWidget = SpecPlot()
+        self.spectrumWidget = SpectrumWidget()
         self.spectrumWidget.setMinimumSize(300, 300)
         self.spectrumWidget.setMaximumWidth(600)
         self.spectrumWidget.setHidden(True)
