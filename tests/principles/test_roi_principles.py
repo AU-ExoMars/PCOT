@@ -147,3 +147,10 @@ def test_roi_union(allblack):
 def test_roi_intersection_node(allblack):
     """Test ROI intersection node"""
     pytest.fail("Not yet implemented")
+
+
+def test_roi_binop_intersection_of_union(allblack):
+    """Test that operations on two images (e.g. a+b) take place only on the intersection
+    of the unions of the ROIs in the images - on the ROI given by
+    intersect(union(rois_a),union(rois_b))"""
+    pytest.fail("Not yet tested")
