@@ -149,8 +149,48 @@ def test_roi_intersection_node(allblack):
     pytest.fail("Not yet implemented")
 
 
-def test_roi_binop_intersection_of_union(allblack):
+def test_roi_binop_intersection_of_union():
     """Test that operations on two images (e.g. a+b) take place only on the intersection
     of the unions of the ROIs in the images - on the ROI given by
     intersect(union(rois_a),union(rois_b))"""
-    pytest.fail("Not yet tested")
+
+    pcot.setup()
+    doc = Document()
+
+    # make 2 images, one red and one blue.
+    redimg = genrgb(50, 50, 1, 0, 0)  # red 50x50
+    blueimg = genrgb(50, 50, 0, 0, 1)  # blue 50x50
+
+    assert doc.setInputDirect(0, redimg) is None
+    assert doc.setInputDirect(1, blueimg) is None
+    red = doc.graph.create("input 0")
+    blue = doc.graph.create("input 1")
+
+    # add different ROIs to each image, two in each one.
+    roi1a = doc.graph.create("rect")
+    roi1a.roi.set(10, 10, 30, 30)
+    roi1a.connect(0, red, 0)
+
+    roi1b = doc.graph.create("rect")
+    roi1b.roi.set(10, 20, 30, 30)  # below the other. Union will be 10,10 30x40
+    roi1b.connect(0, roi1a, 0)
+
+    roi2a = doc.graph.create("rect")
+    roi2a.roi.set(20, 10, 30, 30)
+    roi2a.connect(0, blue, 0)
+
+    roi2b = doc.graph.create("rect")
+    roi2b.roi.set(20, 20, 30, 30)  # below the other. Union will be 20,10 30x40
+    roi2b.connect(0, roi2a, 0)
+
+    # feed both images into an expr, adding the two together.
+
+    expr = doc.graph.create("expr")
+    expr.expr = "a+b"
+    expr.connect(0, roi1b, 0)
+    expr.connect(1, roi2b, 0)
+
+    doc.changed()
+    img = expr.getOutput(0,Datum.IMG)
+
+    pytest.fail("Not yet tested and current principle needs thought")

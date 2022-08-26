@@ -66,16 +66,22 @@ def rectimage(globaldatadir):
     return ImageCube.load(str(path), None, None)
 
 
+def genrgb(w, h, r, g, b):
+    """Generate an RGB image"""
+    sources = MultiBandSource([nullSource, nullSource, nullSource])
+    bands = [np.full((h, w), x) for x in (r, g, b)]
+    bands = np.dstack(bands).astype(np.float32)
+    assert bands.shape == (h, w, 3)
+    imgc = ImageCube(bands, ChannelMapping(), sources, defaultMapping=None)
+    assert imgc.w == w
+    assert imgc.h == h
+    return imgc
+
+
 @pytest.fixture
 def allblack():
     """Generate an all black 16x8 RGB image"""
-    sources = MultiBandSource([nullSource, nullSource, nullSource])
-    bands = np.dstack([np.full((8, 16), 0.0) for i in range(3)]).astype(np.float32)
-    assert bands.shape == (8, 16, 3)
-    imgc = ImageCube(bands, ChannelMapping(), sources, defaultMapping=None)
-    assert imgc.w == 16
-    assert imgc.h == 8
-    return imgc
+    return genrgb(16, 8, 0, 0, 0)
 
 
 def fillrect(img, x, y, w, h, v):
@@ -111,7 +117,7 @@ def envi_image_2(tmp_path):
     img = np.zeros((60, 80, len(freqs)), dtype=np.float32)
     # fill the rectangle x=10, y=10, w=20, h=20
     # with (0,1,1,0.5)
-    fillrect(img, 10, 10, 20, 20, (0,1,1,0.5))
+    fillrect(img, 10, 10, 20, 20, (0, 1, 1, 0.5))
 
     # write the data
     gen_envi(fn, freqs, img)

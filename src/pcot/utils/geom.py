@@ -3,7 +3,6 @@ Assorted geometry
 """
 
 from typing import Tuple, Optional
-from unittest import TestCase
 
 
 class Rect:
@@ -62,44 +61,3 @@ class Rect:
             return None
         else:
             return Rect(*t)
-
-
-class T1(TestCase):
-    def test1(self):
-        rr = Rect(10, 20, 30, 40)
-        x, y, w, h = rr
-        self.assertEqual(10, x)
-        self.assertEqual(20, y)
-        self.assertEqual(30, w)
-        self.assertEqual(40, h)
-
-    def test2(self):
-        a = Rect(10, 20, 30, 40)
-        b = Rect(0, 0, 100, 100)
-        self.assertEqual(a, a.intersection(b))
-        self.assertEqual(a, b.intersection(a))
-
-    def test3(self):
-        a = Rect(13, 23, 4, 3)
-        b = Rect(14, 24, 5, 4)
-        self.assertEqual(Rect(14, 24, 3, 2), a.intersection(b))
-        self.assertEqual(Rect(14, 24, 3, 2), b.intersection(a))
-
-    def test4(self):
-        a = Rect(13, 23, 4, 3)
-        b = Rect(12, 24, 7, 3)
-        self.assertEqual(Rect(13, 24, 4, 2), a.intersection(b))
-
-    def test5(self):
-        a = Rect(13, 23, 4, 3)
-        b = Rect(14, 21, 2, 4)
-        self.assertEqual(Rect(14, 23, 2, 2), a.intersection(b))
-
-    def test6(self):
-        a = Rect(13, 23, 100, 300)
-        x1, y1, x2, y2 = a.corners()
-        self.assertEqual(13, x1)
-        self.assertEqual(23, y1)
-        self.assertEqual(113, x2)
-        self.assertEqual(323, y2)
-
