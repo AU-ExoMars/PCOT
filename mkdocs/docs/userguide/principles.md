@@ -87,7 +87,23 @@ This addition is done bandwise. There is only one band, so the result is:
 
 ## ROI rules
 @@@
-TODO - ROI rules in progress
+TODO - ROI rules in progress. In particular, the rule alluded to below
+on multiple ROI images in a single op (the "intersection of unions" rule)
+has ramifications which need some thought.
+
+What do we do with the rest of the image? If we (say) have a red image and a blue image, and each has a small ROI near the middle, and we add them, is the bit outside the intersection black? Red? Even if we go with the existing thing (both ROIs must be the same) what do we do with the area outside?
+
+Options:
+
+* Keep as is, fill surrounding area with black (eventually with NODATA bit set)
+* Use intersection-of-unions, fill with black+NODATA
+* Make sure there is exactly one image with no ROI, use
+intersection-of-unions of the others
+* Make sure there is exactly one image with no ROI, make sure all others
+have the same ROI
+
+Of course, if you read the description below I do say that we pass through the LHS image - that's what's in the background.
+But I still need to think. Note "The rest of the image should be passed through for context." 
 @@@
 
 Images may contain regions of interest. If this is the case, then 
