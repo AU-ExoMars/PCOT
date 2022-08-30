@@ -87,23 +87,7 @@ This addition is done bandwise. There is only one band, so the result is:
 
 ## ROI rules
 @@@
-TODO - ROI rules in progress. In particular, the rule alluded to below
-on multiple ROI images in a single op (the "intersection of unions" rule)
-has ramifications which need some thought.
-
-What do we do with the rest of the image? If we (say) have a red image and a blue image, and each has a small ROI near the middle, and we add them, is the bit outside the intersection black? Red? Even if we go with the existing thing (both ROIs must be the same) what do we do with the area outside?
-
-Options:
-
-* Keep as is, fill surrounding area with black (eventually with NODATA bit set)
-* Use intersection-of-unions, fill with black+NODATA
-* Make sure there is exactly one image with no ROI, use
-intersection-of-unions of the others
-* Make sure there is exactly one image with no ROI, make sure all others
-have the same ROI
-
-Of course, if you read the description below I do say that we pass through the LHS image - that's what's in the background.
-But I still need to think. Note "The rest of the image should be passed through for context." 
+TODO - ROI rules in progress. 
 @@@
 
 Images may contain regions of interest. If this is the case, then 
@@ -121,23 +105,20 @@ This rule has the following practical outcomes, in which
 So:
 
 * In binary operations on an image and a scalar such as $x+A$ or $A+x$, the operation is only performed on the region covered by the union of all ROIs on $A$. 
+ Other parts of $A$ are left unchanged in the output, which carries the same ROIs.
 
-    Other parts of $A$ are left unchanged in the output, which carries the same ROIs.
+* In binary operations on two images $A+B$ etc., at most one of the two images should have a region of interest (or union of multiple ROIs).
+If both images have an ROI the result is an error. The part of the resulting image outside the ROI comes from the input which does not have an ROI, as shown
+in the figure.
 
-* In binary operations on two images $A+B$ etc., the operation is only performed on the region covered by the intersection of the unions of the ROIs. That is
-    \\[
-        \bigcup R_A \cap \bigcup R_B
-    \\]
-    Parts of the image which are outside the ROIs are set to the left-hand input image for binary operations.
-
-* In general, a function of a set of images $S$ always attempts to perform the
-action on $\bigcap \left(\bigcup_i R_{S_i}\right)$, i.e. the intersection of the unions of
-the ROIs of each image. Parts of the image which are not processed are set to
-image $S_1$, the first image in the set.
-
-* If the output is an image of a different depth, the unprocessed parts of the output are set to zero.
+![!Two images A and B, B has an ROI. In the result, the area covered by the ROI is A+B, the rest of the image is passed through from A (which has no ROI).](ROIs.svg)
 
 
+@@@info
+Originally the rule was that the intersection of the unions of the ROIs would be processed, while the rest of the output would be from the left-hand side
+(in the case of image data). That was too complicated, and broke the "principle of least astonishment." If the user has put ROIs on both sides of their
+image they have probably made a mistake.
+@@@
 
 ## Image quality data
 

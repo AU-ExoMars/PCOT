@@ -149,10 +149,13 @@ def test_roi_intersection_node(allblack):
     pytest.fail("Not yet implemented")
 
 
-def test_roi_binop_intersection_of_union():
-    """Test that operations on two images (e.g. a+b) take place only on the intersection
-    of the unions of the ROIs in the images - on the ROI given by
-    intersect(union(rois_a),union(rois_b))"""
+def test_rois_on_both_sides_of_binop():
+    """Test that operations on two images (e.g. a+b) don't work when there is an ROI on both sides.
+    This test looks overcomplicated, and that's because it is. Originally the principle was that if
+    we had two unions of ROIs being fed into both sides of a binop, that the operation would only
+    modify the intersection - with the LHS being passed through for the rest. This is OK, but really
+    breaks the principle of least astonishment. If the user has fed two images with ROIs into a binary
+    operation it probably means they've done something wrong. Therefore we should throw an error."""
 
     pcot.setup()
     doc = Document()
@@ -191,6 +194,7 @@ def test_roi_binop_intersection_of_union():
     expr.connect(1, roi2b, 0)
 
     doc.changed()
-    img = expr.getOutput(0,Datum.IMG)
+    img = expr.getOutput(0, Datum.IMG)
 
-    pytest.fail("Not yet tested and current principle needs thought")
+    assert img is None
+    assert expr.error.message == "cannot have two images with ROIs on both sides of a binary operation"
