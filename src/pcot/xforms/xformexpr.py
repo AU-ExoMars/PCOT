@@ -67,10 +67,12 @@ class XFormExpr(XFormType):
     This probably isn't what you wanted. Note that this is obviously not an issue when an operation is being performed
     on bands in a single image.
 
-    ### ROIs on images in binary operators
-    If one of the two images has an ROI, the operation is only performed on that ROI; the remaining image is
-    the left-hand side of the operation passed through unchanged. If both images have an ROI, the ROIs must have
-    identical bounding boxes (see ops.py:twoImageBinop() ).
+    ### binary operators on images with regions of interest
+    If one of the two images has an ROI, the operation is only performed on that ROI; the remaining area of output is
+    taken from the image without an ROI. If both images have an ROI an error will result - it is likely that this
+    is a mistake on the user's part, and doing something more "intelligent" might conceal this. The desired result
+    can be achieved using expr nodes on ROIs and an importroi node.
+
 
     ### Operators on ROIs themselves (as opposed to images with ROIs)
     |operator    |description|
