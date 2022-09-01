@@ -57,7 +57,8 @@ class SpectrumWidget(QtWidgets.QWidget):
                     ymax = y
 
             if rngx < 0.0001:
-                self.drawText(p, "There is only one single-wavelength\nchannel in the data")
+                text = f"There is only one single-wavelength\nchannel in the data, value = {minx}"
+                self.drawText(p, text)
                 return
 
             # draw axes

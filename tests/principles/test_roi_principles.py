@@ -144,11 +144,6 @@ def test_roi_union(allblack):
     assert np.sum(img.img) == 14 * 3  # right number of pixels changed for a 3 channel image
 
 
-def test_roi_intersection_node(allblack):
-    """Test ROI intersection node"""
-    pytest.fail("Not yet implemented")
-
-
 def test_roi_binop_image_lhs():
     """Test image with ROI on LHS of binary operation where RHS is image with no binop.
     The left image is entirely red, and has a square ROI in the middle.
@@ -184,6 +179,46 @@ def test_roi_binop_image_lhs():
     assert np.array_equal(img.img[0, 0], (1, 0, 0))
     # and that the area inside is from the sum.
     assert np.array_equal(img.img[20, 20], (1, 1, 0))
+    # and check the image sum - it's a 50x50 image with one channel set, so that's 50*50,
+    # plus a the 30x30 region adding into another channel.
+    assert np.sum(img.img) == 50 * 50 + 30 * 30
+
+
+def test_roi_binop_image_rhs():
+    """Test image with ROI on RHS of binary operation where LHS is image with no binop.
+    The left image is entirely green.
+    The right image is entirely blue and has a square ROI in the middle.
+    Adding the two images should result in a green image with a cyan square."""
+
+    pcot.setup()
+    doc = Document()
+
+    greenimg = genrgb(50, 50, 0, 1, 0, doc=doc, inpidx=0)
+    assert doc.setInputDirect(0, greenimg) is None
+    green = doc.graph.create("input 0", displayName="GREEN input")
+
+    blueimg = genrgb(50, 50, 0, 0, 1, doc=doc, inpidx=1)
+    assert doc.setInputDirect(1, blueimg) is None
+    blue = doc.graph.create("input 1", displayName="Blue input")
+
+    # add ROI to image on RHS (blue)
+    roi = doc.graph.create("rect")
+    roi.roi.set(10, 10, 30, 30)
+    roi.connect(0, blue, 0)
+
+    expr = doc.graph.create("expr")
+    expr.expr = "a+b"
+    expr.connect(0, green, 0)  # left hand side (green) has no ROI
+    expr.connect(1, roi, 0)  # right hand side (blue) does not
+
+    doc.changed()
+    img = expr.getOutput(0, Datum.IMG)
+    assert img is not None
+
+    # assert that the area outside the ROI is from the LHS
+    assert np.array_equal(img.img[0, 0], (0, 1, 0))
+    # and that the area inside is from the sum.
+    assert np.array_equal(img.img[20, 20], (0, 1, 1))
     # and check the image sum - it's a 50x50 image with one channel set, so that's 50*50,
     # plus a the 30x30 region adding into another channel.
     assert np.sum(img.img) == 50 * 50 + 30 * 30
@@ -239,3 +274,154 @@ def test_rois_on_both_sides_of_binop():
 
     assert img is None
     assert expr.error.message == "cannot have two images with ROIs on both sides of a binary operation"
+
+
+def _testinternal_image_and_scalar(exprString):
+    """Performs imagewithroi+scalar and scalar+imagewithroi"""
+    pcot.setup()
+    doc = Document()
+
+    greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # dark green
+    assert doc.setInputDirect(0, greenimg) is None
+    green = doc.graph.create("input 0", displayName="GREEN input")
+
+    roi = doc.graph.create("rect")
+    roi.roi.set(10, 10, 30, 30)
+    roi.connect(0, green, 0)
+
+    expr = doc.graph.create("expr")
+    expr.expr = exprString
+    expr.connect(0, roi, 0)
+
+    doc.changed()
+    img = expr.getOutput(0, Datum.IMG)
+    assert img is not None
+
+    # assert that the area outside the ROI is unchanged
+    assert np.array_equal(img.img[0, 0], (0, 0.5, 0))
+    # and that the area inside is from the sum (note rounding errors)
+    assert np.allclose(img.img[20, 20], [0.2, 0.7, 0.2])
+
+    assert np.sum(img.img) == 50 * 50 * 0.5 + 30 * 30 * 0.2 * 3
+
+
+def test_roi_image_plus_scalar():
+    """Test that a imageWithROI+scalar uses the ROI"""
+    _testinternal_image_and_scalar("a+0.2")
+
+
+def test_roi_image_plus_scalar():
+    """Test that a imageWithROI+scalar uses the ROI"""
+    _testinternal_image_and_scalar("0.2+a")
+
+
+def perform_roi_op(exprString) -> ImageCube:
+    """Perform a binop on two rect. ROIs: (10,10,30,30) and (20,20,30,30).
+    The resulting ROI is used to add 1 to an all black 50x50 image."""
+    pcot.setup()
+    doc = Document()
+
+    redimg = genrgb(50, 50, 1, 0, 0, doc=doc, inpidx=0)  # red 50x50
+    assert doc.setInputDirect(0, redimg) is None
+    red = doc.graph.create("input 0")
+
+    roi1 = doc.graph.create("rect")
+    roi1.roi.set(10, 10, 30, 30)
+    roi1.connect(0, red, 0)
+
+    roi2 = doc.graph.create("rect")
+    roi2.roi.set(20, 20, 30, 30)
+    roi2.connect(0, red, 0)
+
+    expr = doc.graph.create("expr")
+    expr.expr = exprString
+    expr.connect(0, roi1, 2)  # use the ROI output
+    expr.connect(1, roi2, 2)
+
+    importroi = doc.graph.create("importroi")
+    importroi.connect(0, red, 0)
+    importroi.connect(1, expr, 0)
+
+    expr2 = doc.graph.create("expr")
+    expr2.expr = "a+1"
+    expr2.connect(0, importroi, 0)
+
+    # doc.save("c:/users/jim/xxxx.pcot")
+
+    doc.changed()
+    img = expr2.getOutput(0, Datum.IMG)
+    assert img is not None
+    return img
+
+
+def test_roi_intersection_expr():
+    """Test that we can intersect two ROIs correctly with expr and importroi"""
+    img = perform_roi_op("a*b")
+
+    for x in range(0, 50):
+        for y in range(0, 50):
+            pix = img.img[y, x]
+            expected = (2, 1, 1) if 20 <= x < 40 and 20 <= y < 40 else (1, 0, 0)
+            assert np.array_equal(pix, expected)
+
+
+def test_roi_union_expr():
+    """Test that we can union two ROIs correctly with expr and importroi"""
+    img = perform_roi_op("a+b")
+
+    for x in range(0, 50):
+        for y in range(0, 50):
+            pix = img.img[y, x]
+            in1 = 10 <= x < 30 and 10 <= y < 30
+            in2 = 20 <= x < 50 and 20 <= y < 50
+            expected = (2, 1, 1) if in1 or in2 else (1, 0, 0)
+        assert np.array_equal(pix, expected), f"pixel {x}, {y} should be {expected}, is {pix}"
+
+
+def test_roi_diff_expr():
+    """Test that we can difference two ROIs correctly with expr and importroi"""
+    img = perform_roi_op("a-b")
+
+    for x in range(0, 50):
+        for y in range(0, 50):
+            pix = img.img[y, x]
+            in1 = 10 <= x < 30 and 10 <= y < 30
+            in2 = 20 <= x < 50 and 20 <= y < 50
+            expected = (2, 1, 1) if in1 and not in2 else (1, 0, 0)
+        assert np.array_equal(pix, expected), f"pixel {x}, {y} should be {expected}, is {pix}"
+
+
+def test_roi_diff_exp2():
+    """Test that we can difference two ROIs correctly with expr and importroi"""
+    img = perform_roi_op("b-a")
+
+    for x in range(0, 50):
+        for y in range(0, 50):
+            pix = img.img[y, x]
+            in1 = 10 <= x < 30 and 10 <= y < 30
+            in2 = 20 <= x < 50 and 20 <= y < 50
+            expected = (2, 1, 1) if in2 and not in1 else (1, 0, 0)
+        assert np.array_equal(pix, expected), f"pixel {x}, {y} should be {expected}, is {pix}"
+
+
+def test_roi_neg_expr_unimplemented():
+    """Unary negate is not implemented (yet?)"""
+
+    pcot.setup()
+    doc = Document()
+
+    redimg = genrgb(50, 50, 1, 0, 0, doc=doc, inpidx=0)  # red 50x50
+    assert doc.setInputDirect(0, redimg) is None
+    red = doc.graph.create("input 0")
+
+    roi1 = doc.graph.create("rect")
+    roi1.roi.set(10, 10, 30, 30)
+    roi1.connect(0, red, 0)
+
+    expr = doc.graph.create("expr")
+    expr.expr = "-a"
+    expr.connect(0, roi1, 2)  # use the ROI output
+
+    doc.changed()
+
+    assert expr.error.message == "bad type for unary operator"

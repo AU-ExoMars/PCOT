@@ -777,7 +777,7 @@ class Canvas(QtWidgets.QWidget):
 
         if 0 <= x < self.previmg.w and 0 <= y < self.previmg.h and self.previmg.channels > 1:
             img = self.previmg
-            dat = img.img[y, x, :]  # get the pixel data
+            pixel = img.img[y, x, :]  # get the pixel data
 
             # get the channels which have a single wavelength
             # what do we do if they don't? I don't think you can display a spectrum!
@@ -787,8 +787,16 @@ class Canvas(QtWidgets.QWidget):
             goodWavelengths = [x for x in wavelengths if x > 0]
             chans = [x for x in range(img.channels) if wavelengths[x] > 0]
 
-            # and get the data from the pixel which si for those wavelengths
-            dat = [dat[x] for x in chans]
+            # and get the data from the pixel which is for those wavelengths
+            dat = [pixel[x] for x in chans]
 
             # now plot x=wavelengths,y=dat
-            self.spectrumWidget.setData(zip(goodWavelengths, dat))
+            if len(dat) > 1:
+                data = zip(goodWavelengths, dat)
+            else:
+                # but if there aren't enough data with wavelengths,
+                # just show the values as text.
+                data = "Cannot plot: no frequency data in channel sources\n"
+                for i, ss in enumerate(img.sources):
+                    data += f"{i}) {ss.brief()} = {pixel[i]}\n"
+            self.spectrumWidget.setData(data)

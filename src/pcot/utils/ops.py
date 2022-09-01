@@ -138,6 +138,6 @@ def unop(a: Datum, op: Callable[[Any], Any], outType: Optional[Type]) -> Datum:
     elif a.tp == Datum.NUMBER:
         r = Datum(Datum.NUMBER, op(a.val), a.getSources())
     else:
-        raise BinopException("bad type type for unary operator")
+        raise BinopException("bad type for unary operator")
 
     return r
