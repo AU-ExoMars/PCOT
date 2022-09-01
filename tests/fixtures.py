@@ -8,7 +8,7 @@ import pytest
 from distutils import dir_util
 import numpy as np
 
-from pcot.sources import MultiBandSource, nullSource
+from pcot.sources import MultiBandSource, nullSource, InputSource
 
 """
 Assorted test fixtures, mainly for generating input data (typically images)
@@ -66,9 +66,16 @@ def rectimage(globaldatadir):
     return ImageCube.load(str(path), None, None)
 
 
-def genrgb(w, h, r, g, b):
-    """Generate an RGB image"""
-    sources = MultiBandSource([nullSource, nullSource, nullSource])
+def genrgb(w, h, r, g, b, doc=None, inpidx=None):
+    """Generate an RGB image. If document and input index are given, we create an InputSource, otherwise
+    it has to be a nullSource."""
+    if doc is not None and inpidx is not None:
+        sources = MultiBandSource([InputSource(doc, inpidx, 'R'),
+                                   InputSource(doc, inpidx, 'G'),
+                                   InputSource(doc, inpidx, 'B')])
+    else:
+        sources = MultiBandSource([nullSource, nullSource, nullSource])
+
     bands = [np.full((h, w), x) for x in (r, g, b)]
     bands = np.dstack(bands).astype(np.float32)
     assert bands.shape == (h, w, 3)

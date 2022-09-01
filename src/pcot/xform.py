@@ -974,9 +974,9 @@ class XFormGraph:
         """construct a graphical representation for this graph"""
         self.scene = graphscene.XFormGraphScene(self, doAutoLayout)
 
-    def create(self, typename):
+    def create(self, typename, displayName = None):
         """create a new node, passing in a type name. We look in both the 'global' dictionary,
-        allTypes,  but also the macros for this document"""
+        allTypes,  but also the macros for this document. We can pass in an optional display name."""
 
         # note that we don't mark here - this is called in deserialisation so that would be bad. We do the mark
         # before the UI calls this.
@@ -1001,6 +1001,8 @@ class XFormGraph:
         xform.graph = self
         tp.init(xform)  # run the init
         self.nodeDict[xform.name] = xform
+        if displayName is not None:
+            xform.displayName = displayName
         # force a recalc in those nodes that require it,
         # will generate internal data dependent on a combination
         # of all controls

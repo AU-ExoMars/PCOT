@@ -149,6 +149,46 @@ def test_roi_intersection_node(allblack):
     pytest.fail("Not yet implemented")
 
 
+def test_roi_binop_image_lhs():
+    """Test image with ROI on LHS of binary operation where RHS is image with no binop.
+    The left image is entirely red, and has a square ROI in the middle.
+    The right image is entirely green.
+    Adding the two images should result in a red image with a yellow square."""
+
+    pcot.setup()
+    doc = Document()
+
+    redimg = genrgb(50, 50, 1, 0, 0, doc=doc, inpidx=0)
+    assert doc.setInputDirect(0, redimg) is None
+    red = doc.graph.create("input 0", displayName="RED input")
+
+    greenimg = genrgb(50, 50, 0, 1, 0, doc=doc, inpidx=1)
+    assert doc.setInputDirect(1, greenimg) is None
+    green = doc.graph.create("input 1", displayName="GREEN input")
+
+    # add ROI to image on LHS (red)
+    roi = doc.graph.create("rect")
+    roi.roi.set(10, 10, 30, 30)
+    roi.connect(0, red, 0)
+
+    expr = doc.graph.create("expr")
+    expr.expr = "a+b"
+    expr.connect(0, roi, 0)  # left hand side (red) has ROI
+    expr.connect(1, green, 0)  # right hand side (green) does not
+
+    doc.changed()
+    img = expr.getOutput(0, Datum.IMG)
+    assert img is not None
+
+    # assert that the area outside the ROI is from the LHS
+    assert np.array_equal(img.img[0, 0], (1, 0, 0))
+    # and that the area inside is from the sum.
+    assert np.array_equal(img.img[20, 20], (1, 1, 0))
+    # and check the image sum - it's a 50x50 image with one channel set, so that's 50*50,
+    # plus a the 30x30 region adding into another channel.
+    assert np.sum(img.img) == 50 * 50 + 30 * 30
+
+
 def test_rois_on_both_sides_of_binop():
     """Test that operations on two images (e.g. a+b) don't work when there is an ROI on both sides.
     This test looks overcomplicated, and that's because it is. Originally the principle was that if
@@ -160,9 +200,10 @@ def test_rois_on_both_sides_of_binop():
     pcot.setup()
     doc = Document()
 
-    # make 2 images, one red and one blue.
-    redimg = genrgb(50, 50, 1, 0, 0)  # red 50x50
-    blueimg = genrgb(50, 50, 0, 0, 1)  # blue 50x50
+    # make 2 images, one red and one blue. Make sure the input indices are correct
+    # for the sources!
+    redimg = genrgb(50, 50, 1, 0, 0, doc=doc, inpidx=0)  # red 50x50
+    blueimg = genrgb(50, 50, 0, 0, 1, doc=doc, inpidx=1)  # blue 50x50
 
     assert doc.setInputDirect(0, redimg) is None
     assert doc.setInputDirect(1, blueimg) is None

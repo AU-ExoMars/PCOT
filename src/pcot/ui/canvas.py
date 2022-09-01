@@ -597,11 +597,6 @@ class Canvas(QtWidgets.QWidget):
     def saveButtonClicked(self, c):
         if self.previmg is None:
             return
-        img = self.previmg.rgb()
-        # convert to 8-bit integer from 32-bit float
-        img8 = (img * 256).clip(max=255).astype(np.ubyte)
-        # and change endianness
-        img8 = cv.cvtColor(img8, cv.COLOR_RGB2BGR)
         res = QtWidgets.QFileDialog.getSaveFileName(self, 'Save RGB image as PNG',
                                                     os.path.expanduser(pcot.config.getDefaultDir('savedimages')),
                                                     "PNG images (*.png)")
@@ -613,7 +608,7 @@ class Canvas(QtWidgets.QWidget):
                 ext += '.png'
             path = root + ext
             pcot.config.setDefaultDir('images', os.path.dirname(os.path.realpath(path)))
-            cv.imwrite(path, img8)
+            self.previmg.rgbWrite(path)
             ui.log("Image written to " + path)
 
         pass

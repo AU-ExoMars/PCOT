@@ -340,8 +340,13 @@ class ImageCube(SourcesObtainable):
 
     ## save RGB representation
     def rgbWrite(self, filename):
+        """save RGB representation"""
         img = self.rgb()
-        cv.imwrite(filename, img * 255)  # convert from 0-1
+        # convert to 8-bit integer from 32-bit float
+        img8 = (img * 256).clip(max=255).astype(np.ubyte)
+        # and change endianness
+        img8 = cv.cvtColor(img8, cv.COLOR_RGB2BGR)
+        cv.imwrite(filename, img8)
 
     def drawROIs(self, rgb: np.ndarray = None, onlyROI: Union[ROI, Sequence] = None) -> np.ndarray:
         """Return an RGB representation of this image with any ROIs drawn on it - an image may be provided.
