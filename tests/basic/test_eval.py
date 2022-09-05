@@ -23,7 +23,7 @@ variable_1 = mknum(0)
 variable_2 = mknum(0)
 
 
-def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: Optional[Type]) -> Datum:
+def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any]) -> Datum:
     assert a.tp == Datum.NUMBER
     assert b.tp == Datum.NUMBER
     return mknum(op(a.get(Datum.NUMBER), b.get(Datum.NUMBER)))
@@ -49,10 +49,10 @@ def execute(s, nakedIdents=False):
                    [],
                    lambda args, optargs: mknum(100.0), False)
 
-    p.registerBinop('+', 10, lambda a, b: binop(a, b, lambda x, y: x + y, None))
-    p.registerBinop('-', 10, lambda a, b: binop(a, b, lambda x, y: x - y, None))
-    p.registerBinop('/', 20, lambda a, b: binop(a, b, lambda x, y: x / y, None))
-    p.registerBinop('*', 20, lambda a, b: binop(a, b, lambda x, y: x * y, None))
+    p.registerBinop('+', 10, lambda a, b: binop(a, b, lambda x, y: x + y))
+    p.registerBinop('-', 10, lambda a, b: binop(a, b, lambda x, y: x - y))
+    p.registerBinop('/', 20, lambda a, b: binop(a, b, lambda x, y: x / y))
+    p.registerBinop('*', 20, lambda a, b: binop(a, b, lambda x, y: x * y))
     p.registerUnop('-', 200, lambda a: mknum(-(a.get(Datum.NUMBER))))
     p.registerVar('var1', "test var", lambda: variable_1)
     p.registerVar('var2', "test var", lambda: variable_2)

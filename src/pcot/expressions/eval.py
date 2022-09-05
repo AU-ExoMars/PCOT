@@ -227,17 +227,17 @@ class ExpressionEvaluator(Parser):
         """Initialise the evaluator, registering functions and operators.
         Caller may add other things (e.g. variables)"""
         super().__init__(True)  # naked identifiers permitted
-        self.registerBinop('+', 10, lambda a, b: binop(a, b, lambda x, y: x + y, None))
-        self.registerBinop('-', 10, lambda a, b: binop(a, b, lambda x, y: x - y, None))
-        self.registerBinop('/', 20, lambda a, b: binop(a, b, lambda x, y: x / y, None))
-        self.registerBinop('*', 20, lambda a, b: binop(a, b, lambda x, y: x * y, None))
-        self.registerBinop('^', 30, lambda a, b: binop(a, b, lambda x, y: x ** y, None))
-        self.registerUnop('-', 50, lambda x: unop(x, lambda a: -a, None))
+        self.registerBinop('+', 10, lambda a, b: binop(a, b, lambda x, y: x + y))
+        self.registerBinop('-', 10, lambda a, b: binop(a, b, lambda x, y: x - y))
+        self.registerBinop('/', 20, lambda a, b: binop(a, b, lambda x, y: x / y))
+        self.registerBinop('*', 20, lambda a, b: binop(a, b, lambda x, y: x * y))
+        self.registerBinop('^', 30, lambda a, b: binop(a, b, lambda x, y: x ** y))
+        self.registerUnop('-', 50, lambda x: unop(x, lambda a: -a))
 
         # standard fuzzy operators (i.e. Zadeh)
-        self.registerBinop('&', 20, lambda a, b: binop(a, b, lambda x, y: np.minimum(x, y), None))
-        self.registerBinop('|', 20, lambda a, b: binop(a, b, lambda x, y: np.maximum(x, y), None))
-        self.registerUnop('!', 50, lambda x: unop(x, lambda a: 1 - a, None))
+        self.registerBinop('&', 20, lambda a, b: binop(a, b, lambda x, y: np.minimum(x, y)))
+        self.registerBinop('|', 20, lambda a, b: binop(a, b, lambda x, y: np.maximum(x, y)))
+        self.registerUnop('!', 50, lambda x: unop(x, lambda a: 1 - a))
 
         self.registerBinop('$', 100, extractChannelByName)
 

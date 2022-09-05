@@ -1,7 +1,6 @@
-## binary operations which work on many kinds of data sensibly.
-from typing import Any, Callable, Optional
+"""binary and unary operations which work on many kinds of data sensibly."""
 
-import numpy as np
+from typing import Any, Callable, Optional
 
 from pcot.datum import Datum, Type
 from pcot.imagecube import ImageCube
@@ -14,7 +13,7 @@ class OperatorException(Exception):
         super().__init__(msg)
 
 
-def twoImageBinop(imga: ImageCube, imgb: ImageCube, op: Callable[[Any, Any], Any]) -> ImageCube:
+def twoImageBinop(imga: ImageCube, imgb: ImageCube, op: Callable[[Any, Any], Any]) -> Datum:
     # check images are same size/depth
     if imga.img.shape != imgb.img.shape:
         raise OperatorException('Images must be same shape in binary operation')
@@ -65,21 +64,13 @@ def combineImageWithNumberSources(img: ImageCube, other: SourceSet) -> MultiBand
 # ANY is no use. So in this, we have to check that the type being generated is
 # correct. Of course, in an expression we don't do that.
 
-def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: Optional[Type]) -> Datum:
+def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any]) -> Optional[Datum]:
     # if either input is None, the output will be None
     if a is None or b is None:
         return None
 
-    # if either input is an image, the output will be an image, so check the output type
-    # is correct. But only do the check if there IS an output type.
-
-    if outType is not None and outType != Datum.IMG and (a.isImage() or b.isImage()):
-        raise OperatorException('Output type must be image if either input is image')
-
-    if a.isImage() and a.isNone():
-        raise OperatorException("Cannot perform binary operation on None image")
-    if b.isImage() and b.isNone():
-        raise OperatorException("Cannot perform binary operation on None image")
+    if a.isImage() and a.isNone() or b.isImage() and b.isNone():
+        raise OperatorException("cannot perform binary operation on None image")
 
     if a.isImage() and b.isImage():
         r = twoImageBinop(a.val, b.val, op)
@@ -116,12 +107,9 @@ def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: Optional[T
     return r
 
 
-def unop(a: Datum, op: Callable[[Any], Any], outType: Optional[Type]) -> Datum:
+def unop(a: Datum, op: Callable[[Any], Any]) -> Optional[Datum]:
     if a is None:
         return None
-
-    if outType is not None and outType != Datum.IMG and a.isImage():
-        raise OperatorException('Output type must be image if input is image')
 
     if a.isImage():
         img = a.val
@@ -141,3 +129,4 @@ def unop(a: Datum, op: Callable[[Any], Any], outType: Optional[Type]) -> Datum:
         raise OperatorException("bad type for unary operator")
 
     return r
+
