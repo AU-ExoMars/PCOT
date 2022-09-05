@@ -9,7 +9,7 @@ from pcot.rois import BadOpException
 from pcot.sources import MultiBandSource, SourceSet
 
 
-class BinopException(Exception):
+class OperatorException(Exception):
     def __init__(self, msg):
         super().__init__(msg)
 
@@ -17,14 +17,14 @@ class BinopException(Exception):
 def twoImageBinop(imga: ImageCube, imgb: ImageCube, op: Callable[[Any, Any], Any]) -> ImageCube:
     # check images are same size/depth
     if imga.img.shape != imgb.img.shape:
-        raise BinopException('Images must be same shape in binary operation')
+        raise OperatorException('Images must be same shape in binary operation')
     # if imga has an ROI, use that for both. Similarly, if imgb has an ROI, use that.
     # But if they both have a subimage they must be the same.
     ahasroi = imga.hasROI()
     bhasroi = imgb.hasROI()
     if ahasroi or bhasroi:
         if ahasroi and bhasroi:
-            raise BinopException('cannot have two images with ROIs on both sides of a binary operation')
+            raise OperatorException('cannot have two images with ROIs on both sides of a binary operation')
         else:
             # get subimages, using their own image's ROI if it has one, otherwise the other image's ROI.
             # One of these will be true.
@@ -74,12 +74,12 @@ def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: Optional[T
     # is correct. But only do the check if there IS an output type.
 
     if outType is not None and outType != Datum.IMG and (a.isImage() or b.isImage()):
-        raise BinopException('Output type must be image if either input is image')
+        raise OperatorException('Output type must be image if either input is image')
 
     if a.isImage() and a.isNone():
-        raise BinopException("Cannot perform binary operation on None image")
+        raise OperatorException("Cannot perform binary operation on None image")
     if b.isImage() and b.isNone():
-        raise BinopException("Cannot perform binary operation on None image")
+        raise OperatorException("Cannot perform binary operation on None image")
 
     if a.isImage() and b.isImage():
         r = twoImageBinop(a.val, b.val, op)
@@ -109,9 +109,9 @@ def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any], outType: Optional[T
         try:
             r = Datum(Datum.ROI, op(a.val, b.val), SourceSet([a.getSources(), b.getSources()]))
         except BadOpException as e:
-            raise BinopException("unimplemented operation for ROIs")
+            raise OperatorException("unimplemented operation for ROIs")
     else:
-        raise BinopException(f"incompatible types for operator: {a.tp}, {b.tp}")
+        raise OperatorException(f"incompatible types for operator: {a.tp}, {b.tp}")
 
     return r
 
@@ -121,7 +121,7 @@ def unop(a: Datum, op: Callable[[Any], Any], outType: Optional[Type]) -> Datum:
         return None
 
     if outType is not None and outType != Datum.IMG and a.isImage():
-        raise BinopException('Output type must be image if input is image')
+        raise OperatorException('Output type must be image if input is image')
 
     if a.isImage():
         img = a.val
@@ -138,6 +138,6 @@ def unop(a: Datum, op: Callable[[Any], Any], outType: Optional[Type]) -> Datum:
     elif a.tp == Datum.NUMBER:
         r = Datum(Datum.NUMBER, op(a.val), a.getSources())
     else:
-        raise BinopException("bad type for unary operator")
+        raise OperatorException("bad type for unary operator")
 
     return r
