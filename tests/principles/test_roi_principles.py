@@ -424,4 +424,4 @@ def test_roi_neg_expr_unimplemented():
 
     doc.changed()
 
-    assert expr.error.message == "bad type for unary operator"
+    assert expr.error.message == "incompatible type for operator NEG: roi"

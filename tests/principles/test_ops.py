@@ -19,8 +19,8 @@ def test_scalar_ops():
 
     pcot.setup()
 
-    runop("10", 10)
     runop("12-10", 2)
+    runop("10", 10)
     runop("4+10+16", 30)
     runop("4*3+2", 14)
     runop("2+4*3", 14)
@@ -210,7 +210,7 @@ def test_null_datum_input_binop():
         doc.changed()
         out = expr.getOutputDatum(0)
         assert out is None
-        assert expr.error.message == f"incompatible types for operator: {ts}"
+        assert expr.error.message == f"incompatible types for operator ADD: {ts}"
 
 
 def test_null_image_input_binop():

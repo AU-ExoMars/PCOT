@@ -68,10 +68,10 @@ class Type:
     def __str__(self):
         return self.name
 
-    def serialise(self, d):
+    def serialise(self, d: 'Datum'):
         raise CannotSerialiseDatumType(self.name)
 
-    def deserialise(self, d, document) -> 'Datum':
+    def deserialise(self, d, document: 'Document') -> 'Datum':
         raise CannotSerialiseDatumType(self.name)
 
 

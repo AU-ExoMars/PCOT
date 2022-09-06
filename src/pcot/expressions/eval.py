@@ -11,7 +11,7 @@ import pcot.config
 import pcot.operations as operations
 from pcot.datum import Datum
 from pcot.imagecube import ImageCube
-from pcot.utils.ops import binop, unop
+from pcot.utils.ops import binop, unop, Operator
 from pcot.xform import XFormException
 from .parse import Parameter, Parser, execute
 
@@ -19,31 +19,6 @@ from .parse import Parameter, Parser, execute
 from .. import rois
 from ..sources import SourceSet, MultiBandSource
 from ..utils import image
-
-
-def extractChannelByName(a: Datum, b: Datum):
-    """Extract a channel by name from an image, used for the $ operator.
-    a: a Datum which must be an image
-    b: a Datum which must be an identifier or numeric wavelength
-    return: a new single-channel image datum
-    """
-    if a is None or b is None:
-        return None
-
-    if a.tp != Datum.IMG:
-        raise XFormException('DATA', "channel extract operator '$' requires image LHS")
-    img = a.val
-
-    if b.tp == Datum.NUMBER or b.tp == Datum.IDENT:
-        img = img.getChannelImageByFilter(b.val)
-    else:
-        raise XFormException('DATA', "channel extract operator '$' requires ident or numeric wavelength RHS")
-
-    if img is None:
-        raise XFormException('EXPR', "unable to get this wavelength from an image: " + str(b))
-
-    img.rois = a.val.rois.copy()
-    return Datum(Datum.IMG, img)
 
 
 def funcMerge(args: List[Datum], optargs):
@@ -227,19 +202,19 @@ class ExpressionEvaluator(Parser):
         """Initialise the evaluator, registering functions and operators.
         Caller may add other things (e.g. variables)"""
         super().__init__(True)  # naked identifiers permitted
-        self.registerBinop('+', 10, lambda a, b: binop(a, b, lambda x, y: x + y))
-        self.registerBinop('-', 10, lambda a, b: binop(a, b, lambda x, y: x - y))
-        self.registerBinop('/', 20, lambda a, b: binop(a, b, lambda x, y: x / y))
-        self.registerBinop('*', 20, lambda a, b: binop(a, b, lambda x, y: x * y))
-        self.registerBinop('^', 30, lambda a, b: binop(a, b, lambda x, y: x ** y))
-        self.registerUnop('-', 50, lambda x: unop(x, lambda a: -a))
+        self.registerBinop('+', 10, lambda a, b: binop(Operator.ADD, a, b))
+        self.registerBinop('-', 10, lambda a, b: binop(Operator.SUB, a, b))
+        self.registerBinop('/', 20, lambda a, b: binop(Operator.DIV, a, b))
+        self.registerBinop('*', 20, lambda a, b: binop(Operator.MUL, a, b))
+        self.registerBinop('^', 30, lambda a, b: binop(Operator.POW, a, b))
+        self.registerUnop('-', 50, lambda a: unop(Operator.NEG, a))
 
         # standard fuzzy operators (i.e. Zadeh)
-        self.registerBinop('&', 20, lambda a, b: binop(a, b, lambda x, y: np.minimum(x, y)))
-        self.registerBinop('|', 20, lambda a, b: binop(a, b, lambda x, y: np.maximum(x, y)))
-        self.registerUnop('!', 50, lambda x: unop(x, lambda a: 1 - a))
+        self.registerBinop('&', 20, lambda a, b: binop(Operator.AND, a, b))
+        self.registerBinop('|', 20, lambda a, b: binop(Operator.OR, a, b))
+        self.registerUnop('!', 50, lambda a: unop(Operator.NOT, a))
 
-        self.registerBinop('$', 100, extractChannelByName)
+        self.registerBinop('$', 100, lambda a, b: binop(Operator.DOLLAR, a, b))
 
         # additional functions and properties - this is in the __init__.py in the operations package.
         operations.registerOpFunctionsAndProperties(self)
