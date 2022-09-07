@@ -203,7 +203,7 @@ class SourceSet(SourcesObtainable):
 
     sourceSet: Set[Source]  # the underlying set of sources
 
-    def __init__(self, ss: Union[Source, 'SourceSet', Iterable[Union[Source, 'SourceSet']]] = ()):
+    def __init__(self, ss: Union[Source, 'SourceSet', Iterable[Union[Source, 'SourceSet', SourcesObtainable]]] = ()):
         """The constructor takes a collection of sources and source sets, or just one, and generates a new source
         set which is  a union of all of them"""
         if isinstance(ss, Source):
@@ -213,12 +213,8 @@ class SourceSet(SourcesObtainable):
         elif isinstance(ss, Iterable):
             result = set()
             for x in ss:
-                if isinstance(x, SourceSet):
-                    result |= x.sourceSet
-                elif isinstance(x, Source):
-                    result.add(x)
-                elif isinstance(x, SourcesObtainable):
-                    result |= x.getSources()
+                if isinstance(x, SourcesObtainable):
+                    result |= x.getSources().sourceSet
                 else:
                     raise Exception(f"Bad list argument to source set constructor: {type(x).__name__}")
         else:
@@ -383,7 +379,7 @@ class MultiBandSource(SourcesObtainable):
     def getSources(self):
         """Merge all the bands' source sets into a single set (used in, for example, making a greyscale
         image, or any calculation where all bands have input)"""
-        return set().union(*[s.sourceSet for s in self.sourceSets])
+        return SourceSet(set().union(*[s.sourceSet for s in self.sourceSets]))
 
     def serialise(self):
         return [x.serialise() for x in self.sourceSets]
