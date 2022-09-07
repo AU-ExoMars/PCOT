@@ -28,6 +28,12 @@ def test_scalar_ops():
     runop("(3+2)*4", 20)
     runop("(3+2)/4", 1.25)
     runop("(3+2)/4-10", -8.75)
+    runop("2^4",16)
+    runop("4^0.5",2)
+    runop("2&1",1)
+    runop("2&20",2)
+    runop("2|1",2)
+    runop("2|20",20)
 
 
 def test_image_scalar_ops():
