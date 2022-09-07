@@ -291,12 +291,16 @@ class InstOp(Instruction):
         self.prefix = pre
 
     def exec(self, stack: Stack):
+        # these are written in a rather long-winded way to ease breakpointing
         if self.prefix:
-            stack.append(self.callback(stack.pop()))
+            a = stack.pop()
+            r = self.callback(a)
+            stack.append(r)
         else:
             b = stack.pop()
             a = stack.pop()
-            stack.append(self.callback(a, b))
+            r = self.callback(a, b)
+            stack.append(r)
 
     def __str__(self):
         return "OP {} {}".format(self.name, "PRE" if self.prefix else "IN")

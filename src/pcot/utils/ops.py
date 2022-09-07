@@ -1,10 +1,12 @@
 """binary and unary operations which work on many kinds of data sensibly."""
+from enum import Enum, auto
+from typing import Any, Callable, Optional, Dict, Tuple
 
-from typing import Any, Callable, Optional
+import numpy as np
 
 from pcot.datum import Datum, Type
 from pcot.imagecube import ImageCube
-from pcot.rois import BadOpException
+from pcot.rois import BadOpException, ROI
 from pcot.sources import MultiBandSource, SourceSet
 
 
@@ -13,12 +15,118 @@ class OperatorException(Exception):
         super().__init__(msg)
 
 
-def twoImageBinop(imga: ImageCube, imgb: ImageCube, op: Callable[[Any, Any], Any]) -> Datum:
-    # check images are same size/depth
+# Define operator names. Yes, there's a nice functional way of doing this,
+# but Pycharm doesn't do completion with that.
+
+class Operator(Enum):
+    ADD = auto()
+    SUB = auto()
+    MUL = auto()
+    DIV = auto()
+    NEG = auto()
+    POW = auto()
+    AND = auto()
+    OR = auto()
+    NOT = auto()
+    DOLLAR = auto()
+
+
+# binary operations are stored in a dictionary of (Type,Type,Operator) tuples mapping onto
+# functions which take a pair of Datums of the appropriate type and return Datum.
+# Opname is the character.
+
+binops: Dict[Tuple[Operator, Type, Type], Callable[[Datum, Datum], Datum]] = {}
+
+# unary operations are stored in a dictionary of key (Type,Operator), mapping onto functions which
+# take a Datum and return a Datum
+
+unops: Dict[Tuple[Operator, Type], Callable[[Datum], Datum]] = {}
+
+
+def registerBinop(op: Operator, lhs: Type, rhs: Type, f: Callable[[Datum, Datum], Datum], forceReplace=False):
+    """Register a binary operator function for two types and an operator ID"""
+    t = (op, lhs, rhs)
+    if t in binops and not forceReplace:
+        raise OperatorException(f"trying to re-register binary operation {op.name} for {lhs.name}, {rhs.name}")
+    binops[t] = f
+
+
+def registerUnop(op: Operator, tp: Type, f: Callable[[Datum], Datum], forceReplace=False):
+    """Register a unary operator function for a type and an operator ID"""
+    t = (op, tp)
+    if t in unops and not forceReplace:
+        raise OperatorException(f"trying to re-register a unary operation for {tp.name}")
+    unops[t] = f
+
+
+def binop(op: Operator, lhs: Datum, rhs: Datum):
+    """Perform a binary operator"""
+    try:
+        # if either input is None, the output will be None
+        if lhs is None or lhs is None:
+            return None
+        if lhs.isImage() and lhs.isNone() or rhs.isImage() and rhs.isNone():
+            raise OperatorException("cannot perform binary operation on None image")
+
+        f = binops[(op, lhs.tp, rhs.tp)]
+        return f(lhs, rhs)
+
+    except KeyError:
+        raise OperatorException(f"incompatible types for operator {op.name}: {lhs.tp}, {rhs.tp}")
+
+
+def unop(op: Operator, arg: Datum):
+    """Perform a unary operator"""
+    try:
+        if arg is None:
+            return None
+        if arg.isImage() and arg.isNone():
+            raise OperatorException("cannot perform unary operation on None image")
+
+        f = unops[(op, arg.tp)]
+        return f(arg)
+    except KeyError:
+        raise OperatorException(f"incompatible type for operator {op.name}: {arg.tp}")
+
+
+def combineImageWithNumberSources(img: ImageCube, other: SourceSet) -> MultiBandSource:
+    """This is used to generate the source sets when an image is combined with something else,
+    e.g. an image is multiplied by a number. In this case, each band of the image is combined with
+    the other sources."""
+    x = [x.sourceSet for x in img.sources.sourceSets]
+
+    return MultiBandSource([SourceSet(x.sourceSet.union(other.sourceSet)) for x in img.sources.sourceSets])
+
+
+def imageUnop(d: Datum, f: Callable[[np.ndarray], np.ndarray]) -> Datum:
+    """This wraps unary operations on imagecubes"""
+    img = d.val
+    if img.hasROI():
+        subimg = img.subimage()
+        masked = subimg.masked()
+        ressubimg = f(masked)
+        rimg = img.modifyWithSub(subimg, ressubimg).img
+    else:
+        rimg = f(img.img)
+    out = ImageCube(rimg, sources=img.sources)  # originally this built a new source set. Don't know why.
+    out.rois = img.rois.copy()
+    return Datum(Datum.IMG, out)
+
+
+def numberUnop(d: Datum, f: Callable[[float], float]) -> Datum:
+    """This wraps unary operations on numbers"""
+    return Datum(Datum.NUMBER, f(d.val), d.getSources())
+
+
+def imageBinop(dx: Datum, dy: Datum, f: Callable[[np.ndarray, np.ndarray], ImageCube]) -> Datum:
+    """This wraps binary operations on imagecubes"""
+    imga = dx.val
+    imgb = dy.val
+
     if imga.img.shape != imgb.img.shape:
         raise OperatorException('Images must be same shape in binary operation')
     # if imga has an ROI, use that for both. Similarly, if imgb has an ROI, use that.
-    # But if they both have a subimage they must be the same.
+    # But they can't both have ROIs.
     ahasroi = imga.hasROI()
     bhasroi = imgb.hasROI()
     if ahasroi or bhasroi:
@@ -35,13 +143,13 @@ def twoImageBinop(imga: ImageCube, imgb: ImageCube, op: Callable[[Any, Any], Any
         maskedb = subimgb.masked()
         # get masked subimages
         # perform calculation and get result subimage
-        ressubimg = op(maskeda, maskedb)  # will generate a numpy array
+        ressubimg = f(maskeda, maskedb)  # will generate a numpy array
         # splice that back into a copy of image A, but just take its image, because we're going to
         # rebuild the sources
         img = imga.modifyWithSub(subimga, ressubimg).img
     else:
         # neither image has a roi
-        img = op(imga.img, imgb.img)
+        img = f(imga.img, imgb.img)
         rois = None
 
     sources = MultiBandSource.createBandwiseUnion([imga.sources, imgb.sources])
@@ -51,82 +159,99 @@ def twoImageBinop(imga: ImageCube, imgb: ImageCube, op: Callable[[Any, Any], Any
     return Datum(Datum.IMG, outimg)
 
 
-def combineImageWithNumberSources(img: ImageCube, other: SourceSet) -> MultiBandSource:
-    """This is used to generate the source sets when an image is combined with something else,
-    e.g. an image is multiplied by a number. In this case, each band of the image is combined with
-    the other sources."""
-    x = [x.sourceSet for x in img.sources.sourceSets]
+def numberImageBinop(dx: Datum, dy: Datum, f: Callable[[float, np.ndarray], ImageCube]) -> Datum:
+    """This wraps binary operations number x imagecube"""
+    num = dx.val
+    img = dy.val
+    subimg = img.subimage()
+    img = img.modifyWithSub(subimg, f(num, subimg.masked()))
+    img.rois = dy.val.rois.copy()
+    img.sources = combineImageWithNumberSources(img, dx.getSources())
+    return Datum(Datum.IMG, img)
 
-    return MultiBandSource([SourceSet(x.sourceSet.union(other.sourceSet)) for x in img.sources.sourceSets])
+
+def imageNumberBinop(dx: Datum, dy: Datum, f: Callable[[float, np.ndarray], ImageCube]) -> Datum:
+    """This wraps binary operations imagecube x number"""
+    img = dx.val
+    num = dy.val
+    subimg = img.subimage()
+    img = img.modifyWithSub(subimg, f(subimg.masked(), num))
+    img.rois = dx.val.rois.copy()
+    img.sources = combineImageWithNumberSources(img, dy.getSources())
+    return Datum(Datum.IMG, img)
 
 
-# The problem with binary operation NODES is that we have to set an output type:
-# ANY is no use. So in this, we have to check that the type being generated is
-# correct. Of course, in an expression we don't do that.
+def numberBinop(dx: Datum, dy: Datum, f: Callable[[float, float], ImageCube]) -> Datum:
+    """Wraps number x number -> number"""
+    r = f(dx.val, dy.val)
+    return Datum(Datum.NUMBER, r, SourceSet([dx.getSources(), dy.getSources()]))
 
-def binop(a: Datum, b: Datum, op: Callable[[Any, Any], Any]) -> Optional[Datum]:
-    # if either input is None, the output will be None
-    if a is None or b is None:
-        return None
 
-    if a.isImage() and a.isNone() or b.isImage() and b.isNone():
-        raise OperatorException("cannot perform binary operation on None image")
+def ROIBinop(dx: Datum, dy:Datum, f: Callable[[ROI, ROI], ROI]) -> Datum:
+    """wraps ROI x ROI -> ROI"""
+    r = f(dx.val, dy.val)
+    return Datum(Datum.ROI, r, SourceSet([dx.getSources(), dy.getSources()]))
 
-    if a.isImage() and b.isImage():
-        r = twoImageBinop(a.val, b.val, op)
-    elif a.tp == Datum.NUMBER and b.isImage():
-        # here, we're combining a number with an image to give an image
-        # which will have the same sources
-        img = b.val
-        subimg = img.subimage()
-        img = img.modifyWithSub(subimg, op(a.val, subimg.masked()))
-        img.rois = b.val.rois.copy()
-        img.sources = combineImageWithNumberSources(img, a.getSources())
-        r = Datum(Datum.IMG, img)
-    elif a.isImage() and b.tp == Datum.NUMBER:
-        # same as previous case, other way round
-        img = a.val
-        subimg = img.subimage()
-        img = img.modifyWithSub(subimg, op(subimg.masked(), b.val))
-        img.rois = a.val.rois.copy()
-        img.sources = combineImageWithNumberSources(img, b.getSources())
-        r = Datum(Datum.IMG, img)
-    elif a.tp == Datum.NUMBER and b.tp == Datum.NUMBER:
-        # easy case:  op(number,number)->number
-        r = Datum(Datum.NUMBER, op(a.val, b.val), SourceSet([a.getSources(), b.getSources()]))
-    elif a.tp == Datum.ROI and b.tp == Datum.ROI:
-        # again, easy case because ROI has most operations overloaded. Indeed, those that aren't valid
-        # will fail.
-        try:
-            r = Datum(Datum.ROI, op(a.val, b.val), SourceSet([a.getSources(), b.getSources()]))
-        except BadOpException as e:
-            raise OperatorException("unimplemented operation for ROIs")
+
+def extractChannelByName(a: Datum, b: Datum) -> Datum:
+    """Extract a channel by name from an image, used for the $ operator.
+    a: a Datum which must be an image
+    b: a Datum which must be an identifier or numeric wavelength
+    return: a new single-channel image datum
+    """
+    img = a.val
+
+    if b.tp == Datum.NUMBER or b.tp == Datum.IDENT:
+        img = img.getChannelImageByFilter(b.val)
     else:
-        raise OperatorException(f"incompatible types for operator: {a.tp}, {b.tp}")
+        raise OperatorException("channel extract operator '$' requires ident or numeric wavelength RHS")
 
-    return r
+    if img is None:
+        raise OperatorException("unable to get this wavelength from an image: " + str(b))
+
+    img.rois = a.val.rois.copy()
+    return Datum(Datum.IMG, img)
 
 
-def unop(a: Datum, op: Callable[[Any], Any]) -> Optional[Datum]:
-    if a is None:
-        return None
+def initOps():
+    """Initialise functions. Would be in the top-level, but I get
+    some spurious warnings."""
 
-    if a.isImage():
-        img = a.val
-        if img.hasROI():
-            subimg = img.subimage()
-            masked = subimg.masked()
-            ressubimg = op(masked)
-            rimg = img.modifyWithSub(subimg, ressubimg).img
-        else:
-            rimg = op(img.img)
-        out = ImageCube(rimg, sources=img.sources)  # originally this built a new source set. Don't know why.
-        out.rois = img.rois.copy()
-        r = Datum(Datum.IMG, out)
-    elif a.tp == Datum.NUMBER:
-        r = Datum(Datum.NUMBER, op(a.val), a.getSources())
-    else:
-        raise OperatorException("bad type for unary operator")
+    # should be no need to check for None or Datum.NONE here, that will
+    # be done in binop() and unop()
 
-    return r
+    registerUnop(Operator.NEG, Datum.IMG, lambda datum: imageUnop(datum, lambda x: -x))
+    registerUnop(Operator.NOT, Datum.IMG, lambda datum: imageUnop(datum, lambda x: 1 - x))
+    registerUnop(Operator.NEG, Datum.NUMBER, lambda datum: numberUnop(datum, lambda x: -x))
+    registerUnop(Operator.NOT, Datum.NUMBER, lambda datum: numberUnop(datum, lambda x: 1 - x))
 
+    def regAllBinops(op, fn):
+        """Used to register binops for types which support all operations, including max and min"""
+        registerBinop(op, Datum.IMG, Datum.IMG, lambda dx, dy: imageBinop(dx, dy, fn))
+        registerBinop(op, Datum.NUMBER, Datum.IMG, lambda dx, dy: numberImageBinop(dx, dy, fn))
+        registerBinop(op, Datum.IMG, Datum.NUMBER, lambda dx, dy: imageNumberBinop(dx, dy, fn))
+        registerBinop(op, Datum.NUMBER, Datum.NUMBER, lambda dx, dy: numberBinop(dx, dy, fn))
+
+    regAllBinops(Operator.ADD, lambda x, y: x + y)
+    regAllBinops(Operator.SUB, lambda x, y: x - y)
+    regAllBinops(Operator.MUL, lambda x, y: x * y)
+    regAllBinops(Operator.DIV, lambda x, y: x / y)
+    regAllBinops(Operator.POW, lambda x, y: x ** y)
+    regAllBinops(Operator.AND, lambda x, y: np.minimum(x, y))
+    regAllBinops(Operator.OR, lambda x, y: np.maximum(x, y))
+
+    def regROIBinop(op, fn):
+        """Used to register binops for ROIs, which support a subset of ops."""
+        registerBinop(op, Datum.ROI, Datum.ROI, lambda dx, dy: ROIBinop(dx, dy, fn))
+
+    regROIBinop(Operator.ADD, lambda x, y: x + y)
+    regROIBinop(Operator.SUB, lambda x, y: x - y)
+    regROIBinop(Operator.MUL, lambda x, y: x * y)
+    regROIBinop(Operator.DIV, lambda x, y: x / y)
+    regROIBinop(Operator.POW, lambda x, y: x ** y)
+
+    registerBinop(Operator.DOLLAR, Datum.IMG, Datum.NUMBER, extractChannelByName)
+    registerBinop(Operator.DOLLAR, Datum.IMG, Datum.IDENT, extractChannelByName)
+
+
+initOps()
