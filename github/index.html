@@ -160,12 +160,30 @@
 and describes how to install PCOT if you have access to the source code.</p>
 </div>
 <h1 id="pcot">PCOT</h1>
-<p>This is the prototype of the Pancam Operations Toolkit. </p>
+<p>This is the prototype of the Pancam Operations Toolkit. This is primarily
+a Python application and library for processing data from the Pancam
+instrument on the Rosalind Franklin rover, although it lends itself
+to any task involving processing multispectral image data.</p>
+<p>For example, with PCOT you can:
+* load ENVI and PDS4 multispectral images
+* load multiple images in other formats (e.g. PNG) and combine them into
+multispectral images
+* define regions of interest in the data
+* perform mathematical operations
+* view spectra and histograms</p>
+<p>and many other things besides. PCOT is highly extensible and open-source,
+so any missing functionality is easily added.</p>
+<p>PCOT operates on a graph model - the data is processed through a set of nodes
+which manipulate it in various ways (e.g. add regions of interest, perform
+maths, splice images together, merge image channels, plot spectra). A PCOT
+document describes this graph, and we
+intend that documents are distributed along with the data they generate
+to help reproducibility.</p>
 <h2 id="installing-with-anaconda">Installing with Anaconda</h2>
 <p>PCOT is a Python program (and library) with a number of dependencies, including</p>
 <ul>
 <li>Python &gt;3.8</li>
-<li>PyQt</li>
+<li>PySide2</li>
 <li>OpenCV</li>
 <li>numpy</li>
 <li>scikit-image</li>
@@ -307,7 +325,7 @@ QLibraryPrivate::loadPlugin failed on &quot;...[stuff removed].. (libxcb-xineram
 <p>If that's the case, install the missing package:</p>
 <pre><code>sudo apt install libxcb-xinerama0
 </code></pre>
-<p>That might help. Otherwise, send a message to us with the output from the <code>QT_DEBUG_PLUGINS</code> run and we will investigate.</p></div>
+<p>That should help. Otherwise, send a message to us with the output from the <code>QT_DEBUG_PLUGINS</code> run and we will investigate.</p></div>
             </div>
         </div>
 

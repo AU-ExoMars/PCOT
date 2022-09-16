@@ -158,7 +158,26 @@
 <h2 id="next-release-beacon-hut">Next release: BEACON HUT</h2>
 <ul>
 <li>Open source!</li>
-<li>PDS4 importer with proctools (<strong>done</strong> for ExoMars)</li>
+<li>PDS4 importer with proctools</li>
+<li>Ad-hoc Spectrum viewer in canvas</li>
+<li>Significant rewrite of expression execution code, permitting custom
+types to have operations defined on them</li>
+<li>Direct input method for library use</li>
+<li>Improved default RGB mapping in canvas</li>
+<li>Testing<ul>
+<li>Basics testing</li>
+<li>Testing of the operating principles (see <a href="/userguide/principles">Principles</a>)<ul>
+<li>Source rules</li>
+<li>ROI rules</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>rect node can now be edited numerically</li>
+<li>circle node can add circular ROIs, which can be edited numerically.</li>
+</ul>
+<h2 id="future-releases">Future releases</h2>
+<ul>
 <li>
 <p>Data quality</p>
 <ul>
@@ -166,28 +185,7 @@
 <li>pixel data bits</li>
 <li>canvas viewer for both the above</li>
 <li>error propagation in <em>expr</em> and all nodes (see <a href="/userguide/principles">Principles</a>)</li>
-</ul>
-</li>
-<li>
-<p>Consider a vector type</p>
-<ul>
-<li>It might be useful if functions
-such as max(), sd() etc. produced a vector of a values
-rather than a single value in multiband image contexts. For example,
-a 4-band image with the first channel set to 1 while all others are zero
-could produce a mean vector of [1,0,0,0]. We would then perform a max()
-on this vector to get a single value.</li>
-</ul>
-</li>
-<li>
-<p>Testing</p>
-<ul>
-<li>Testing of the operating principles (see <a href="/userguide/principles">Principles</a>)<ul>
-<li>Source rules (<strong>in progress</strong>)</li>
-<li>ROI rules</li>
-<li>Image quality rules</li>
-</ul>
-</li>
+<li>Testing quality rules</li>
 </ul>
 </li>
 <li>
@@ -206,16 +204,28 @@ on this vector to get a single value.</li>
 <p>Obtain user stories for analysis of HK data (which could potentially
 get messy, as these are likely to be time series)</p>
 </li>
-</ul>
-<h2 id="future-releases">Future releases</h2>
+<li>
+<p>Consider a vector type</p>
 <ul>
-<li>Preparing for filter aberration and de-hardwiring cameras:<ul>
+<li>It might be useful if functions
+such as max(), sd() etc. produced a vector of a values
+rather than a single value in multiband image contexts. For example,
+a 4-band image with the first channel set to 1 while all others are zero
+could produce a mean vector of [1,0,0,0]. We would then perform a max()
+on this vector to get a single value.</li>
+</ul>
+</li>
+<li>
+<p>Preparing for filter aberration and de-hardwiring cameras:</p>
+<ul>
 <li>Actual values removed from filters.py and put into a config file</li>
 <li>PANCAM/AUPE camera types no longer hardwired but got from that config</li>
 <li>Filter aberration parameters added to this config</li>
 </ul>
 </li>
-<li>Filter aberration<ul>
+<li>
+<p>Filter aberration</p>
+<ul>
 <li>Node (or func??) to convert aberration to image</li>
 <li>Calculate and process in canvas spectrum</li>
 <li>Calculate and process in <em>spectrum</em> node</li>
