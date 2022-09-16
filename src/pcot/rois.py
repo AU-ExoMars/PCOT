@@ -352,6 +352,7 @@ class ROICircle(ROI):
     y: int
     r: int
     isSet: bool
+    drawEdge: bool
 
     def __init__(self, x=-1, y=0, r=0):
         super().__init__('circle')
@@ -360,12 +361,19 @@ class ROICircle(ROI):
         self.fontline = 2
         self.fontsize = 10
         self.drawBox = False
+        self.drawEdge = False
 
     def set(self, x, y, r):
         self.x = int(x)  # if this is -ve, isSet will be false.
         self.y = int(y)
         self.r = int(r)
         self.isSet = (x >= 0)
+
+    def get(self):
+        if self.isSet:
+            return self.x, self.y, self.r
+        else:
+            return None
 
     def bb(self):
         if self.isSet:
@@ -382,21 +390,26 @@ class ROICircle(ROI):
         return m > 0
 
     def draw(self, img):
-        self.baseDraw(img, drawEdge=False, drawBox=self.drawBox)
+        self.baseDraw(img, drawEdge=self.drawEdge, drawBox=self.drawBox)
         self.drawText(img, self.colour)  # these always show label
 
     def serialise(self):
         d = super().serialise()
-        d.update({'croi': (self.x, self.y, self.r, self.isSet)})
+        d.update({'croi': (self.x, self.y, self.r, self.isSet, self.drawBox, self.drawEdge)})
         return d
 
     def deserialise(self, d):
         super().deserialise(d)
+        self.drawEdge = False
+        self.drawBox = False
+        # lot of legacy files causing hackery here.
         if len(d['croi']) == 3:
             self.x, self.y, self.r = d['croi']
             self.isSet = (self.x >= 0)  # legacy
-        else:
+        elif len(d['croi']) == 4:
             self.x, self.y, self.r, self.isSet = d['croi']
+        else:
+            self.x, self.y, self.r, self.isSet, self.drawBox, self.drawEdge = d['croi']
 
     def __str__(self):
         return "ROI-CIRCLE {} {} {}".format(self.x, self.y, self.r)
