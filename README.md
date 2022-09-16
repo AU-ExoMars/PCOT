@@ -14,12 +14,14 @@ multispectral images
 * view spectra and histograms
 
 and many other things besides. PCOT is highly extensible and open-source,
-and operates on a graph model - the data is processed through a set of nodes
+so any missing functionality is easily added.
+
+PCOT operates on a graph model - the data is processed through a set of nodes
 which manipulate it in various ways (e.g. add regions of interest, perform
-maths, splice images together, merge image channels, plot spectra). It is
-intended that PCOT documents describing the manipulations performed to
-extract data from images is distributed along with the data, to help
-reproducibility.
+maths, splice images together, merge image channels, plot spectra). A PCOT
+document describes this graph, and we
+intend that documents are distributed along with the data they generate
+to help reproducibility.
 
 ## Installing with Anaconda
 PCOT is a Python program (and library) with a number of dependencies, including
