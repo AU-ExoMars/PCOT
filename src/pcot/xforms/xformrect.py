@@ -1,9 +1,18 @@
+from PySide2.QtGui import QIntValidator
+
 import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
 from pcot.rois import ROIRect
 from pcot.xform import xformtype, XFormROIType
 
+
+def getInt(s):
+    try:
+        x = int(s)
+    except ValueError:
+        return -1
+    return x
 
 @xformtype
 class XformRect(XFormROIType):
@@ -55,6 +64,17 @@ class TabRect(pcot.ui.tabs.Tab):
         self.w.colourButton.pressed.connect(self.colourPressed)
         self.w.captionTop.toggled.connect(self.topChanged)
 
+        self.w.leftEdit.editingFinished.connect(self.leftEditChanged)
+        self.w.topEdit.editingFinished.connect(self.topEditChanged)
+        self.w.widthEdit.editingFinished.connect(self.widthEditChanged)
+        self.w.heightEdit.editingFinished.connect(self.heightEditChanged)
+
+        validator = QIntValidator(0, 10000, w)
+        self.w.leftEdit.setValidator(validator)
+        self.w.topEdit.setValidator(validator)
+        self.w.widthEdit.setValidator(validator)
+        self.w.heightEdit.setValidator(validator)
+
         self.mouseDown = False
         self.dontSetText = False
         # sync tab with node
@@ -96,6 +116,51 @@ class TabRect(pcot.ui.tabs.Tab):
             self.node.colour = col
             self.changed()
 
+    def roiSet(self,x,y,w,h):
+        self.mark()
+        self.node.roi.set(x,y,w,h)
+        self.changed()
+
+    def leftEditChanged(self):
+        bb = self.node.roi.bb()
+        x, y, w, h = bb if bb is not None else (0,0,0,0)
+        x = getInt(self.w.leftEdit.text())
+        if x < 0:
+            x = 0
+        if self.node.img and x >= self.node.img.w:
+            x = self.node.img.w - w
+        self.roiSet(x, y, w, h)
+
+    def topEditChanged(self):
+        bb = self.node.roi.bb()
+        x, y, w, h = bb if bb is not None else (0, 0, 0, 0)
+        y = getInt(self.w.topEdit.text())
+        if y < 0:
+            y = 0
+        if self.node.img and y >= self.node.img.h:
+            y = self.node.img.h - h
+        self.roiSet(x, y, w, h)
+
+    def widthEditChanged(self):
+        bb = self.node.roi.bb()
+        x, y, w, h = bb if bb is not None else (0, 0, 0, 0)
+        w = getInt(self.w.widthEdit.text())
+        if w < 1:
+            w = 1
+        if self.node.img and x + w >= self.node.img.w:
+            w = self.node.img.w - x
+        self.roiSet(x, y, w, h)
+
+    def heightEditChanged(self):
+        bb = self.node.roi.bb()
+        x, y, w, h = bb if bb is not None else (0, 0, 0, 0)
+        h = getInt(self.w.heightEdit.text())
+        if h < 1:
+            h = 1
+        if self.node.img and y + h >= self.node.img.h:
+            h = self.node.img.h - y
+        self.roiSet(x, y, w, h)
+
     # causes the tab to update itself from the node
     def onNodeChanged(self):
         # have to do canvas set up here to handle extreme undo events which change the graph and nodes
@@ -121,6 +186,13 @@ class TabRect(pcot.ui.tabs.Tab):
         self.w.drawbg.setChecked(self.node.drawbg)
         r, g, b = [x * 255 for x in self.node.colour]
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
+        bb = self.node.roi.bb()
+        if bb is not None:
+            x, y, w, h = [str(x) for x in (bb.x, bb.y, bb.w, bb.h)]
+            self.w.leftEdit.setText(x)
+            self.w.topEdit.setText(y)
+            self.w.widthEdit.setText(w)
+            self.w.heightEdit.setText(h)
 
     # extra drawing!
     def canvasPaintHook(self, p):
