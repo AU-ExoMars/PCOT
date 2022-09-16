@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+    
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="robots" content="noindex,nofollow">
+
+        <title>Installing and running - PCOT Documentation</title>
+    
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+    <link rel="stylesheet" href="../../css/lightbox.min.css">
+    <link rel="stylesheet" href="../../css/site.css">
+
+    
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
+    <script src="../../js/lightbox-plus-jquery.min.js"></script>
+ 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">PCOT Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="dropdown active">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Getting Started <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active">Installing and running</a>
+</li>
+                                    
+<li>
+    <a href="../concepts/" class="dropdown-item">PCOT concepts</a>
+</li>
+                                    
+<li>
+    <a href="../tutorial/" class="dropdown-item">Tutorial</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../userguide/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/principles/" class="dropdown-item">Operating principles</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/canvas/" class="dropdown-item">The Canvas</a>
+</li>
+                                    
+<li>
+    <a href="../../autodocs/" class="dropdown-item">Autodocs</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer's Guide <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../devguide/" class="dropdown-item">Overview</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="navitem">
+                                <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../issues/" class="nav-link">Known issues</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../concepts/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="1"><a href="#installing-and-running-pcot" class="nav-link">Installing and running PCOT</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#standalone-version" class="nav-link">Standalone version</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#installing-from-source" class="nav-link">Installing from source</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#running-pcot-from-source" class="nav-link">Running PCOT from source</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#running-pcot-inside-pycharm" class="nav-link">Running PCOT inside Pycharm</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#environment-variables" class="nav-link">Environment variables</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#in-case-of-problems" class="nav-link">In case of problems</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="installing-and-running-pcot">Installing and running PCOT</h1>
+<p>PCOT is available in two forms: a standalone executable and
+a source distribution. While the standalone version is much easier to install, it's
+harder to use as a library and to modify. It's also quite a large file.</p>
+<h2 id="standalone-version">Standalone version</h2>
+<p>The standalone executables are available on request from the Aberystwyth team. Once you
+have the appropriate executable for your operating system, just run it to run PCOT. No
+installation is necessary.</p>
+<h2 id="installing-from-source">Installing from source</h2>
+<p>PCOT is a Python program (and library) with a number of dependencies, including</p>
+<ul>
+<li>Python &gt;3.8</li>
+<li>PyQt</li>
+<li>OpenCV</li>
+<li>numpy</li>
+<li>scikit-image</li>
+<li>pyperclip (may also require other packages in Linux e.g. xsel)</li>
+<li>matplotlib</li>
+</ul>
+<h3 id="install-anaconda">Install Anaconda</h3>
+<p>We find the best way to manage these is to use Anaconda. Installation has been tested on Windows 10,
+MacOS and Ubuntu 20.04.
+The first thing you will need to do is install Anaconda, which can be done from here:</p>
+<ul>
+<li>Windows: <a href="https://docs.anaconda.com/anaconda/install/linux/">https://docs.anaconda.com/anaconda/install/linux/</a></li>
+<li>Linux: <a href="https://docs.anaconda.com/anaconda/install/linux/">https://docs.anaconda.com/anaconda/install/linux/</a></li>
+<li>MacOS: <a href="https://docs.anaconda.com/anaconda/install/mac-os/">https://docs.anaconda.com/anaconda/install/mac-os/</a> (untested)</li>
+</ul>
+<h3 id="obtain-the-software">Obtain the software</h3>
+<p>This can be done by
+either downloading the archive from Github and extracting it into a new directory,
+or cloning the repository. In both cases, the top level directory should be called
+PCOT (this isn't really mandatory but makes the instructions below simpler).
+The best way to download is this:</p>
+<ul>
+<li>Make sure you have a Github account and membership of the AU-ExoMars group.</li>
+<li>Open an Anaconda shell window (see below)  </li>
+<li>If you have an SSH key set up for GitHub, type this command into the shell
+(<strong>changing the repository address if it is different</strong>):</li>
+</ul>
+<pre><code class="language-shell">git clone git@github.com:AU-ExoMars/PCOT.git
+</code></pre>
+<ul>
+<li>Otherwise type this:</li>
+</ul>
+<pre><code class="language-shell">git clone https://github.com/AU-ExoMars/PCOT.git
+</code></pre>
+<ul>
+<li>You should now have a PCOT directory which will contain this file (as README.md)
+and quite a few others.</li>
+</ul>
+<h4 id="opening-anacondas-shell-on-different-oss">Opening Anaconda's shell on different OSs</h4>
+<ul>
+<li><strong>Windows:</strong> Open the <strong>Anaconda PowerShell Prompt</strong> application, which will have been installed when you
+installed Anaconda.</li>
+<li><strong>Linux and MacOS</strong>: just open a Bash shell  </li>
+</ul>
+<h3 id="installing-on-ubuntu-macos">Installing on Ubuntu / MacOS</h3>
+<p>Assuming you have successfully installed Anaconda and cloned or downloaded PCOT as above:</p>
+<ul>
+<li>Open a bash shell</li>
+<li><strong>cd</strong> to the PCOT directory (which contains this file).</li>
+<li>Run the command <strong>conda create -n pcot python=3.8 poetry</strong>.
+This will create an environment called <strong>pcot</strong> which uses Python 3.8 and the Poetry dependency
+and packaging manager. It may take some time.</li>
+<li>Activate the environment with <strong>conda activate pcot</strong>.</li>
+<li>Now run <strong>poetry install</strong>. This will set up all the packages PCOT is dependent on and install
+PCOT.</li>
+<li>You should now be able to run <strong>pcot</strong> to start the application.</li>
+</ul>
+<h3 id="installing-on-windows">Installing on Windows</h3>
+<p>Assuming you have successfully installed Anaconda and cloned or downloaded PCOT as above:</p>
+<ul>
+<li>Open the Anaconda PowerShell Prompt application from the Start Menu.</li>
+<li><strong>cd</strong> to the PCOT directory (which contains this file).</li>
+<li>Run the command <strong>conda create -n pcot python=3.8 poetry</strong>.
+This will create an environment called <strong>pcot</strong> which uses Python 3.8 and the Poetry dependency
+and packaging manager. It may take some time.</li>
+<li>Activate the environment with <strong>conda activate pcot</strong>.</li>
+<li>Now run <strong>poetry install</strong>. This will set up all the packages PCOT is dependent on and install
+PCOT.</li>
+<li>You should now be able to run <strong>pcot</strong> to start the application.</li>
+</ul>
+<!---
+## One last step
+Because the **pds4-tools** package isn't in any Anaconda reposities yet,
+you'll need to install it manually. With the pcot environment active, run
+
+<pre><code>pip3 install pds4-tools
+</code></pre>
+
+-->
+
+<h2 id="running-pcot-from-source">Running PCOT from source</h2>
+<p>Open an Anaconda shell and run the following commands (assuming you installed PCOT into your home directory):</p>
+<pre><code class="language-shell">conda activate pcot
+pcot
+</code></pre>
+<p>If you have installed the binary version you don't need to activate a conda environment.</p>
+<h2 id="running-pcot-inside-pycharm">Running PCOT inside Pycharm</h2>
+<p>These instructions apply to source installations.</p>
+<ul>
+<li>First set up the Conda environment and interpreter:<ul>
+<li>Open PyCharm and open the PCOT directory as an existing project.</li>
+<li>Open <strong>File/Settings..</strong> (Ctrl+Alt+S)</li>
+<li>Select <strong>Project:PCOT / Python Interpreter</strong></li>
+<li>If the Python Interpreter is not already Python 3.8 with something like <strong>anaconda3/envs/pcot/bin/python</strong><ul>
+<li>Select the cogwheel to the right of the Python Interpreter dropdown and then select  <strong>Add</strong>.</li>
+<li>Select <strong>Conda Environment</strong>.</li>
+<li>Select <strong>Existing Environment</strong>.</li>
+<li>Select the environment: it should be something like <strong>anaconda3/envs/pcot/bin/python</strong>.</li>
+<li>Select <strong>OK</strong>.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Now set up the run configuration:<ul>
+<li>Select <strong>Edit Configurations...</strong> (or it might be <strong>Add Configuration...</strong>) from the configurations drop down in the menu bar</li>
+<li>Add a new configuration (the + symbol) and select <strong>Python</strong></li>
+<li>Set <strong>Script Path</strong> to <strong>PCOT/src/pcot/__main__.py</strong></li>
+<li>Make sure the interpreter is something like <strong>Project Default (Python 3.8 (pcot))</strong>, i.e. the Python interpreter of the pcot environment.</li>
+</ul>
+</li>
+<li>You should now be able to run and debug PCOT.</li>
+</ul>
+<h2 id="environment-variables">Environment variables</h2>
+<p>It's a good idea, but not mandatory, to set the environment variable
+<strong>PCOTUSER</strong> to a string of the form <code>name &lt;email&gt;</code>. For example,
+in Linux I have added the following to my <strong>.bashrc</strong> file:</p>
+<pre><code>export PCOT_USER=&quot;Jim Finnis &lt;jcf12@aber.ac.uk&gt;&quot;
+</code></pre>
+<p>This data is added to all saved PCOT graphs. If the environment variable
+is not set, the username returned by Python's getpass module is used
+(e.g. 'jcf12').</p>
+<h2 id="in-case-of-problems">In case of problems</h2>
+<p>There are a few things which can stop PCOT running - see <a href="../issues/">issues</a>.</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
+        <script src="../../search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+    
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="robots" content="noindex,nofollow">
+
+        <title>A quick test of LaTeX support - PCOT Documentation</title>
+    
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+    <link rel="stylesheet" href="../../css/lightbox.min.css">
+    <link rel="stylesheet" href="../../css/site.css">
+
+    
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
+    <script src="../../js/lightbox-plus-jquery.min.js"></script>
+ 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">PCOT Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Getting Started <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../gettingstarted/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/installrun/" class="dropdown-item">Installing and running</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/concepts/" class="dropdown-item">PCOT concepts</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/tutorial/" class="dropdown-item">Tutorial</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../userguide/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/principles/" class="dropdown-item">Operating principles</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/canvas/" class="dropdown-item">The Canvas</a>
+</li>
+                                    
+<li>
+    <a href="../../autodocs/" class="dropdown-item">Autodocs</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer's Guide <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../" class="dropdown-item">Overview</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="navitem">
+                                <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../../gettingstarted/issues/" class="nav-link">Known issues</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="1"><a href="#a-quick-test-of-latex-support" class="nav-link">A quick test of LaTeX support</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="a-quick-test-of-latex-support">A quick test of LaTeX support</h1>
+<p>LaTeX in these documents is handled with the pymdownx.arithmatex plugin, which really just hands
+processing off to MathJax. MathJax then renders the LaTeX using JavaScript. Lots and lots of 
+very clever JavaScript.</p>
+<p>Here are some tests:</p>
+<p>Inline equation: <span class="arithmatex"><span class="MathJax_Preview">y = \sigma\left(b+\sum_i w_i x_i (1+h) s_i\right)</span><script type="math/tex">y = \sigma\left(b+\sum_i w_i x_i (1+h) s_i\right)</script></span> should work.</p>
+<pre><code>Inline equation: $y = \sigma\left(b+\sum_i w_i x_i (1+h) s_i\right)$ should work.
+</code></pre>
+<hr />
+<p>Block equations. This has to use double-backslash:
+\[
+y =  \sigma\left(b+\sum_i w_i x_i (1+h) s_i\right)
+\]</p>
+<pre><code>\\[
+y =  \sigma\left(b+\sum_i w_i x_i (1+h) s_i\right)
+\\]
+</code></pre>
+<p>but this one doesn't:</p>
+<div class="arithmatex">
+<div class="MathJax_Preview">\begin{equation}
+f(1,0)=1 \iff w_1 \ge -b \label{eq:f101}
+\end{equation}</div>
+<script type="math/tex; mode=display">\begin{equation}
+f(1,0)=1 \iff w_1 \ge -b \label{eq:f101}
+\end{equation}</script>
+</div>
+<pre><code>\begin{equation}
+f(1,0)=1 \iff w_1 \ge -b \label{eq:f101}
+\end{equation}
+</code></pre>
+<hr />
+<p>Align. Note that the reference doesn't work!</p>
+<div class="arithmatex">
+<div class="MathJax_Preview">\begin{align}
+f(x,y) &amp;= H (b+w_1 x + w_2 y)&amp;\text{(Eq.~\ref{eq:f101})}\\
+0 &amp;= H(b+w_1+w_2)&amp;\text{(subst.)}\\
+H(b+w_1+w_2) &amp;= 0\label{eq:f110in}\\
+b+w_1+w_2 &amp; &lt; 0 &amp; \text{(Heaviside step)}\\
+w_1+w_2 &amp; &lt; -b.
+\end{align}</div>
+<script type="math/tex; mode=display">\begin{align}
+f(x,y) &= H (b+w_1 x + w_2 y)&\text{(Eq.~\ref{eq:f101})}\\
+0 &= H(b+w_1+w_2)&\text{(subst.)}\\
+H(b+w_1+w_2) &= 0\label{eq:f110in}\\
+b+w_1+w_2 & < 0 & \text{(Heaviside step)}\\
+w_1+w_2 & < -b.
+\end{align}</script>
+</div>
+<pre><code>\begin{align}
+f(x,y) &amp;= H (b+w_1 x + w_2 y)&amp;\text{(Eq.~\ref{eq:f101})}\\
+0 &amp;= H(b+w_1+w_2)&amp;\text{(subst.)}\\
+H(b+w_1+w_2) &amp;= 0\label{eq:f110in}\\
+b+w_1+w_2 &amp; &lt; 0 &amp; \text{(Heaviside step)}\\
+w_1+w_2 &amp; &lt; -b.
+\end{align}
+</code></pre>
+<hr />
+<p>Matrix. Note I've had to wrap in an equation.</p>
+<div class="arithmatex">
+<div class="MathJax_Preview">\begin{equation}
+X=
+\left(\begin{matrix}
+1 &amp; 2 &amp; 1\\
+2 &amp; 4 &amp; 2\\
+1 &amp; 2 &amp; 1
+\end{matrix}\right)
+\end{equation}</div>
+<script type="math/tex; mode=display">\begin{equation}
+X=
+\left(\begin{matrix}
+1 & 2 & 1\\
+2 & 4 & 2\\
+1 & 2 & 1
+\end{matrix}\right)
+\end{equation}</script>
+</div>
+<pre><code>\begin{equation}
+X=
+\left(\begin{matrix}
+1 &amp; 2 &amp; 1\\
+2 &amp; 4 &amp; 2\\
+1 &amp; 2 &amp; 1
+\end{matrix}\right)
+\end{equation}
+
+</code></pre></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
+        <script src="../../search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+    
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="robots" content="noindex,nofollow">
+
+        <title>expr - PCOT Documentation</title>
+    
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+    <link rel="stylesheet" href="../../css/lightbox.min.css">
+    <link rel="stylesheet" href="../../css/site.css">
+
+    
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
+    <script src="../../js/lightbox-plus-jquery.min.js"></script>
+ 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">PCOT Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Getting Started <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../gettingstarted/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/installrun/" class="dropdown-item">Installing and running</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/concepts/" class="dropdown-item">PCOT concepts</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/tutorial/" class="dropdown-item">Tutorial</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../userguide/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/principles/" class="dropdown-item">Operating principles</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/canvas/" class="dropdown-item">The Canvas</a>
+</li>
+                                    
+<li>
+    <a href="../" class="dropdown-item">Autodocs</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer's Guide <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../devguide/" class="dropdown-item">Overview</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="navitem">
+                                <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../../gettingstarted/issues/" class="nav-link">Known issues</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="1"><a href="#expr" class="nav-link">expr</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#description" class="nav-link">Description</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#connections" class="nav-link">Connections</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="expr">expr</h1>
+<h2 id="description">Description</h2>
+<p>Expression evaluator. The node box will show the text of the expression. The "run" button must be clicked to
+set the node to the new expression and perform it. Additionally, the output type must be set - the system cannot
+determine the output type from the input types.</p>
+<p>The four inputs are assigned to the variables a, b, c, and d. They are typically (but not necessarily) images
+or scalar values.</p>
+<p>The standard operators +,/,*,- and ^ all have their usual meanings. When applied to images they work in
+a pixel-wise fashion, so if <strong>a</strong> is an image, <strong>2*a</strong> will double the brightness. If <strong>b</strong> is also an image,
+<strong>a+b</strong> will add the two images, pixel by pixel. There are two non-standard operators: <strong>.</strong> for properties
+and <strong>$</strong> for band extraction. These are described below.</p>
+<h3>Image/numeric operators:</h3>
+<table>
+<thead>
+<tr>
+<th>operator</th>
+<th>description</th>
+<th>precedence (higher binds tighter)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+</td>
+<td>add [r]</td>
+<td>10</td>
+</tr>
+<tr>
+<td>-</td>
+<td>subtract [r]</td>
+<td>10</td>
+</tr>
+<tr>
+<td>/</td>
+<td>divide [r]</td>
+<td>20</td>
+</tr>
+<tr>
+<td>*</td>
+<td>multiply [r]</td>
+<td>20</td>
+</tr>
+<tr>
+<td>^</td>
+<td>exponentiate [r]</td>
+<td>30</td>
+</tr>
+<tr>
+<td>-A</td>
+<td>element-wise -A</td>
+<td>50</td>
+</tr>
+<tr>
+<td>A.B</td>
+<td>property B of entity A (e.g. a.h is height of image a)</td>
+<td>80</td>
+</tr>
+<tr>
+<td>A$546</td>
+<td>extract single channel image of wavelength 546</td>
+<td>100</td>
+</tr>
+<tr>
+<td>A&amp;B</td>
+<td>element-wise minimum of A and B (Zadeh's AND operator)</td>
+<td>20</td>
+</tr>
+<tr>
+<td>A|B</td>
+<td>element-wise maximum of A and B (Zadeh's OR operator)</td>
+<td>20</td>
+</tr>
+<tr>
+<td>!A</td>
+<td>element-wise 1-A (Zadeh's NOT operator)</td>
+<td>50</td>
+</tr>
+</tbody>
+</table>
+<p>All operators can act on images and scalars (numeric values),
+with the exception of <strong>.</strong> and <strong>$</strong> which have images on the left-hand side and identifiers
+or integers on the right-hand side.
+Those operators marked with [r] can also act on pairs of ROIs (regions of interest, see below).</p>
+<h3>Binary operations on image pairs</h3>
+<p>These act by performing the binary operation on the two underlying Numpy arrays. This means you may need to be
+careful about the ordering of the bands in the two images, because they will simply be operated on in the order
+they appear.</p>
+<p>For example, consider adding two images $a$ and $b$ with the same bands in a slightly different order:</p>
+<table>
+<thead>
+<tr>
+<th>image <em>a</em></th>
+<th>image <em>b</em></th>
+<th>result of addition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>480nm</td>
+<td>480nm</td>
+<td>sum of 480nm bands</td>
+</tr>
+<tr>
+<td>500nm</td>
+<td>500nm</td>
+<td>sum of 500nm bands</td>
+</tr>
+<tr>
+<td>610nm</td>
+<td>670nm</td>
+<td><em>a</em>'s 610nm band plus <em>b</em>'s 670nm band</td>
+</tr>
+<tr>
+<td>670nm</td>
+<td>610nm</td>
+<td>copy of previous band (addition being commutative)</td>
+</tr>
+</tbody>
+</table>
+<p>This probably isn't what you wanted. Note that this is obviously not an issue when an operation is being performed
+on bands in a single image.</p>
+<h3>binary operators on images with regions of interest</h3>
+<p>If one of the two images has an ROI, the operation is only performed on that ROI; the remaining area of output is
+taken from the image without an ROI. If both images have an ROI an error will result - it is likely that this
+is a mistake on the user's part, and doing something more "intelligent" might conceal this. The desired result
+can be achieved using expr nodes on ROIs and an importroi node.</p>
+<h3>Operators on ROIs themselves (as opposed to images with ROIs)</h3>
+<table>
+<thead>
+<tr>
+<th>operator</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a+b</td>
+<td>union</td>
+</tr>
+<tr>
+<td>a*b</td>
+<td>intersection</td>
+</tr>
+<tr>
+<td>a-b</td>
+<td>difference</td>
+</tr>
+</tbody>
+</table>
+<p>You can source ROIs from the "roi" output of ROI nodes, and impose resulting ROIs on images with "importroi" node.</p>
+<h3>Band extraction</h3>
+<p>The notation <strong>$name</strong> or <strong>$wavelength</strong> takes an image on the left-hand
+side and extracts a single band, generating a new monochrome image.
+The right-hand side is either a filter name, a filter position or a
+wavelength. Depending on the camera, all these could be valid:</p>
+<table>
+<thead>
+<tr>
+<th>expression</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>a$780</strong></td>
+<td>the 780nm band in image <em>a</em></td>
+</tr>
+<tr>
+<td><strong>(a+b)$G0</strong></td>
+<td>the band named G0 in the image formed by adding images <em>a</em> and <em>b</em></td>
+</tr>
+<tr>
+<td><strong>((a+b)/2)$780</strong></td>
+<td>the average of the 780nm bands of images <em>a</em> and <em>b</em></td>
+</tr>
+</tbody>
+</table>
+<p>Be aware of caveats in the "binary operations on image pairs" section above: it may be better to extract
+the band before performing the operation, thus:</p>
+<table>
+<thead>
+<tr>
+<th>old expression</th>
+<th>better expression</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>(a+b)$G0</strong></td>
+<td><strong>a$G0 + b$G0</strong></td>
+</tr>
+<tr>
+<td><strong>((a+b)/2)$780</strong></td>
+<td><strong>(a$780+b$780)/2</strong></td>
+</tr>
+</tbody>
+</table>
+<h3>Properties</h3>
+<p>Properties are indicated by the <strong>.</strong> operator, e.g. <strong>a.w</strong> to find an
+image's width.</p>
+<h3>Help on functions and properties</h3>
+<p>A list of functions can be obtained by right-clicking on either the log pane or function entry pane
+and selecting "List all functions." Help on an individual function can be found by hovering over
+the name of a function, right-clicking and selecting "Get help on 'somefunction'".
+Similar actions are supported for properties.</p>
+
+<hr />
+<h2 id="connections">Connections</h2>
+<h3 id="inputs">Inputs</h3>
+<table>
+<thead>
+<tr>
+<th>Index</th>
+<th>Name</th>
+<th>Type</th>
+<th>Desc</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>a</td>
+<td>any</td>
+<td>(none)</td>
+</tr>
+<tr>
+<td>1</td>
+<td>b</td>
+<td>any</td>
+<td>(none)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>c</td>
+<td>any</td>
+<td>(none)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>d</td>
+<td>any</td>
+<td>(none)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="outputs">Outputs</h3>
+<table>
+<thead>
+<tr>
+<th>Index</th>
+<th>Name</th>
+<th>Type</th>
+<th>Desc</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>(none)</td>
+<td>none</td>
+<td>(none)</td>
+</tr>
+</tbody>
+</table></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
+        <script src="../../search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

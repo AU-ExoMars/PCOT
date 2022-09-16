@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+    
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="robots" content="noindex,nofollow">
+
+        <title>Operating principles - PCOT Documentation</title>
+    
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+    <link rel="stylesheet" href="../../css/lightbox.min.css">
+    <link rel="stylesheet" href="../../css/site.css">
+
+    
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
+    <script src="../../js/lightbox-plus-jquery.min.js"></script>
+ 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">PCOT Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Getting Started <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../gettingstarted/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/installrun/" class="dropdown-item">Installing and running</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/concepts/" class="dropdown-item">PCOT concepts</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/tutorial/" class="dropdown-item">Tutorial</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown active">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active">Operating principles</a>
+</li>
+                                    
+<li>
+    <a href="../canvas/" class="dropdown-item">The Canvas</a>
+</li>
+                                    
+<li>
+    <a href="../../autodocs/" class="dropdown-item">Autodocs</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer's Guide <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../devguide/" class="dropdown-item">Overview</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="navitem">
+                                <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../../gettingstarted/issues/" class="nav-link">Known issues</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../canvas/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="1"><a href="#operating-principles" class="nav-link">Operating principles</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#source-handling-rules" class="nav-link">Source handling rules</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#roi-rules" class="nav-link">ROI rules</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#image-quality-data" class="nav-link">Image quality data</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#filter-aberration" class="nav-link">Filter aberration</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#canvas-information" class="nav-link">Canvas information</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="operating-principles">Operating principles</h1>
+<p>PCOT nodes need to follow a set of rules to ensure that the information
+they process is handled consistently. This page describes these rules,
+most of which apply to image data.</p>
+<h2 id="source-handling-rules">Source handling rules</h2>
+<p>Each datum handled by PCOT has a "source set" describing where that
+datum ultimately comes from. Sources vary: in images, each band in an input image carries
+a source datum describing where it comes from. For a PDS4 source it could be a LIDVID, or it
+could simply be a filename (although ideally it should have some archive indexing data).</p>
+<p>Because data can be combined in various ways, each datum could have multiple
+sources. Image data in PCOT have a separate source set for each band. </p>
+<p>The rules for sources are simple:</p>
+<ul>
+<li>Every datum has a source set.</li>
+<li>This may be a null source if the datum is generated internally (consider the output from <em>constant</em> nodes).</li>
+<li>In the case of an image, this source set is actually a separate source set for each band, but may still be considered as a single
+source set for some operations (since the union of the band sets is available).</li>
+<li>If a datum, or band in a multi-band image, is constructed from data from more than once source set, the resulting datum or band
+consists of the union of the sets.</li>
+</ul>
+<p>As an example, consider the rather contrived example below.</p>
+<p><figure><a data-lightbox="SourcesExample.svg" href="../SourcesExample.svg"><img alt="An example graph with each datum marked as a black circle. Image inputs are in yellow,
+scalar inputs are in blue." src="../SourcesExample.svg" /></a><figcaption class="figure-caption text-right">Figure: An example graph with each datum marked as a black circle. Image inputs are in yellow,
+scalar inputs are in blue.. Click on image to expand.</figcaption></figure></p>
+<p>We have three inputs into the graph:</p>
+<ul>
+<li>Input 0 has an image with three bands centered on 640nm, 540nm and 440nm.</li>
+<li>Input 1 has a different image with four bands.</li>
+<li>Input 2 has a numeric value of 0.2 (perhaps a housekeeping datum of some kind).</li>
+</ul>
+<p>These data are then combined in various ways:</p>
+<ul>
+<li>Input 1 is converted to a single greyscale band and multiplied by input 2 (the scalar 0.2)</li>
+<li>The result of this operation is then added to the 540nm band of input 0.</li>
+</ul>
+<p>What do the sources look like for each datum?</p>
+<ul>
+<li>
+<p>Datum A is an image, and as such it has one source set per band. 
+Each source set consists of a single "image source" giving details of input and
+filter wavelength. So here, the sources for A could be written as</p>
+<pre><code>[ {0:640}, {0:540}, {0:440} ]
+</code></pre>
+<p>That is, a list of three sets, each of which contains a single source which I've written
+in the form <code>input:wavelength</code>.</p>
+</li>
+<li>
+<p>Datum B is the extracted 540nm band of input A, so its sources are:</p>
+<pre><code>[ {0:540} ]
+</code></pre>
+</li>
+<li>
+<p>Datum C is another multiband image, this time from input 1:</p>
+<pre><code>[ {1:780}, {1:640}, {1:540}, {1:440} ]
+</code></pre>
+</li>
+<li>
+<p>Datum D is the greyscale conversion of Datum C above. This creates a single-band image,
+but that band combines all the bands of datum C. This results in a single source set containing
+all the bands:</p>
+<pre><code>[ {1:780, 1:640, 1:540, 1:440} ]
+</code></pre>
+</li>
+<li>
+<p>Datum E is the only non-image source. I will denote it here as just "2" indicating that it
+is input 2. It is worth noting here that sources may contain a lot of extra data describing
+exactly where they come from. For example, this input may come from PDS4, in which case at least
+the LIDVID will be included. But for now this is simply</p>
+<pre><code>{2}
+</code></pre>
+<p>Note that this is not shown as a list because it is not a multiband source.</p>
+</li>
+<li>
+<p>Datum F multiplies each band in datum D by the scalar E. This means that the source for E must
+be added to the source set for each band. There is only one band at this point because of the 
+greyscale conversion:</p>
+<pre><code>[ {1:780, 1:640, 1:540, 1:440, 2} ]
+</code></pre>
+</li>
+<li>
+<p>Finally, we add the single-band images B and F together, resulting in another single-band image.
+This addition is done bandwise. There is only one band, so the result is:</p>
+<pre><code>[ {1:780, 1:640, 1:540, 1:440, 2, 0:540} ]
+</code></pre>
+</li>
+</ul>
+<h2 id="roi-rules">ROI rules</h2>
+<div class="alert alert-danger" role="alert">
+<p>TODO - ROI rules in progress. </p>
+</div>
+<p>Images may contain regions of interest. If this is the case, then 
+any operation should only be performed on the region of interest if possible.
+However, the rest of the image should be passed through unchanged to
+provide context - it is always possible to use a <em>croproi</em> node before
+the operation if cropping is required.</p>
+<p>This rule has the following practical outcomes, in which </p>
+<ul>
+<li>images are denoted by capitals <span class="arithmatex"><span class="MathJax_Preview">A, B, \dots</span><script type="math/tex">A, B, \dots</script></span></li>
+<li>scalars are denoted by lowercase <span class="arithmatex"><span class="MathJax_Preview">x, y, \dots</span><script type="math/tex">x, y, \dots</script></span></li>
+<li>the ROIs of image <span class="arithmatex"><span class="MathJax_Preview">A</span><script type="math/tex">A</script></span> are the set <span class="arithmatex"><span class="MathJax_Preview">R_A</span><script type="math/tex">R_A</script></span></li>
+</ul>
+<p>So:</p>
+<ul>
+<li>
+<p>In binary operations on an image and a scalar such as <span class="arithmatex"><span class="MathJax_Preview">x+A</span><script type="math/tex">x+A</script></span> or <span class="arithmatex"><span class="MathJax_Preview">A+x</span><script type="math/tex">A+x</script></span>, the operation is only performed on the region covered by the union of all ROIs on <span class="arithmatex"><span class="MathJax_Preview">A</span><script type="math/tex">A</script></span>. 
+ Other parts of <span class="arithmatex"><span class="MathJax_Preview">A</span><script type="math/tex">A</script></span> are left unchanged in the output, which carries the same ROIs.</p>
+</li>
+<li>
+<p>In binary operations on two images <span class="arithmatex"><span class="MathJax_Preview">A+B</span><script type="math/tex">A+B</script></span> etc., at most one of the two images should have a region of interest (or union of multiple ROIs).
+If both images have an ROI the result is an error. The part of the resulting image outside the ROI comes from the input which does not have an ROI, as shown
+in the figure.</p>
+</li>
+</ul>
+<p><figure><a data-lightbox="ROIs.svg" href="../ROIs.svg"><img alt="Two images A and B, B has an ROI. In the result, the area covered by the ROI is A+B, the rest of the image is passed through from A (which has no ROI)." src="../ROIs.svg" /></a><figcaption class="figure-caption text-right">Figure: Two images A and B, B has an ROI. In the result, the area covered by the ROI is A+B, the rest of the image is passed through from A (which has no ROI).. Click on image to expand.</figcaption></figure></p>
+<div class="alert alert-info" role="alert">
+<p>Originally the rule was that the intersection of the unions of the ROIs would be processed, while the rest of the output would be from the left-hand side
+(in the case of image data). That was too complicated, and broke the "principle of least astonishment." If the user has put ROIs on both sides of their
+image they have probably made a mistake.</p>
+</div>
+<h2 id="image-quality-data">Image quality data</h2>
+<div class="alert alert-danger" role="alert">
+<p>TODO - describe how these are processed. Could probably use a separate
+page describing the data?</p>
+</div>
+<p>Consists of:</p>
+<ul>
+<li>image uncertainty map (float per band)</li>
+<li>image quality/info bits (byte per band)</li>
+</ul>
+<h3 id="uncertainty">Uncertainty</h3>
+<p>Each pixel each band of an imagecube usually contains an uncertainty value,
+which is a root mean squared error. Operations need to combine this data in a
+sensible way. For example, denoting the RMS error in <span class="arithmatex"><span class="MathJax_Preview">a</span><script type="math/tex">a</script></span> as <span class="arithmatex"><span class="MathJax_Preview">\Delta a</span><script type="math/tex">\Delta a</script></span>, binary
+operations work like this:</p>
+<div class="arithmatex">
+<div class="MathJax_Preview">\begin{align}
+\Delta (a+b), \quad \Delta (a+b) &amp;= \sqrt{(\Delta a)^2 + (\Delta b)^2}\\
+\Delta (ab),\quad \Delta (a/b) &amp;= \sqrt{\left(\frac{\Delta a}{a}\right)^2 + \left(\frac{\Delta b}{b}\right)^2}\\
+\Delta (a \&amp; b) &amp;= \min (\Delta{a}, \Delta{b})\\
+\Delta (a | b) &amp;= \max (\Delta{a}, \Delta{b})
+\end{align}</div>
+<script type="math/tex; mode=display">\begin{align}
+\Delta (a+b), \quad \Delta (a+b) &= \sqrt{(\Delta a)^2 + (\Delta b)^2}\\
+\Delta (ab),\quad \Delta (a/b) &= \sqrt{\left(\frac{\Delta a}{a}\right)^2 + \left(\frac{\Delta b}{b}\right)^2}\\
+\Delta (a \& b) &= \min (\Delta{a}, \Delta{b})\\
+\Delta (a | b) &= \max (\Delta{a}, \Delta{b})
+\end{align}</script>
+</div>
+<div class="alert alert-warning" role="alert">
+<p>Remember that this only applies if the bands are independent. In reality there
+is always a covariance between them.</p>
+</div>
+<p><strong>Not all images contain uncertainty data</strong> - it may be that the input
+image doesn't have this data, or that a function has been performed on the
+image which does not permit uncertainty data to be carried through
+(consider a decorrelation stretch, for example). In this case, <strong>this
+should be clearly visible in the canvas</strong>.</p>
+<h3 id="pixel-information-bits">Pixel information bits</h3>
+<div class="alert alert-danger" role="alert">
+<p>A lot of this is TODO</p>
+</div>
+<p>Each pixel in each band has an associated set of bits which indicate error states, etc. </p>
+<p>Bits are:</p>
+<table>
+<thead>
+<tr>
+<th>Bit name</th>
+<th>Meaning</th>
+<th>Effect on calculations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ERROR</td>
+<td>Pixel is an error in this band</td>
+<td>should not be used in any calculation (see below).</td>
+</tr>
+<tr>
+<td>SATHIGH</td>
+<td>Pixel is saturated high in this band</td>
+<td><strong>???</strong></td>
+</tr>
+<tr>
+<td>SATLOW</td>
+<td>Pixel is saturated low in this band (i.e. zero or less)</td>
+<td><strong>???</strong></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>
+<p>When a pixel is not used in a particular band, the value is set to zero for that band and the ERROR bit is passed through. </p>
+</li>
+<li>
+<p>It should be possible to set bits based on per-pixel conditions with the <em>bits</em> node. For example, convert all uncertainties
+greater than a given value into errors. In fact, <strong>this should be done
+by default for a certain global value</strong> if possible.</p>
+</li>
+<li>
+<p>In general, when multiple image bands
+are combined (either from the same image or from different images) these are OR-ed together. This typically happens in a band-wise fashion
+because images are combined band-wise. Thus, when two images <span class="arithmatex"><span class="MathJax_Preview">a</span><script type="math/tex">a</script></span> and <span class="arithmatex"><span class="MathJax_Preview">b</span><script type="math/tex">b</script></span> are
+added, and the bits for channel <span class="arithmatex"><span class="MathJax_Preview">i</span><script type="math/tex">i</script></span> of image <span class="arithmatex"><span class="MathJax_Preview">a</span><script type="math/tex">a</script></span> are <span class="arithmatex"><span class="MathJax_Preview">B_i(a)</span><script type="math/tex">B_i(a)</script></span>,</p>
+</li>
+</ul>
+<p>\[
+B_i(a+b) = B_i(a) \vee B_i(b)\quad \text{for all channels } i
+\]</p>
+<ul>
+<li>
+<p>However, some operations have a more complex flow of information. For example, a decorrelation stretch results in information from all
+bands being used in each band. In cases like this, the resulting bands are all ORed toether:
+\[
+B_i(\text{decorr}(a)) = \bigvee_i B_i(a)
+\]</p>
+</li>
+<li>
+<p>Nodes which produce a scalar should ignore error pixels (e.g. finding the mean value)</p>
+</li>
+<li>Nodes which perform a convolution operation or similar should propagate the error pixel to all affected pixels, leading to a blob of pixels in the output.
+I realise <strong>This isn't ideal</strong>; another possibility could be to just zero the mask? But then we lose the error data. At the moment I don't believe we have any
+"non-local" behaviour where pixels affect regions of pixels in the output, so the point could be moot.</li>
+</ul>
+<h3 id="error-rois">Error ROIs</h3>
+<p>It should
+be possible to construct an ROI of error or non-error pixels in an image (i.e. pixels which have an error on any band).</p>
+<h2 id="filter-aberration">Filter aberration</h2>
+<div class="alert alert-danger" role="alert">
+<p>A lot of this is TODO</p>
+</div>
+<p>The filter wavelengths are only accurate for pixels in the centre of the image, due to the difference in the light path through the filter
+at different angles of incidence. Therefore:</p>
+<ul>
+<li>There will be a system in place to calculate the actual filter wavelength for a given pixel and use this in spectral plots (using the centre
+of the ROI for the <em>spectrum</em> node)</li>
+<li>A function should be available to generate the filter aberration value in <em>expr</em> - this would allow an "image" to be made of
+the aberration value which could be used in calculations</li>
+<li>It should be possible to set the ERROR bit for excessive aberration values</li>
+</ul>
+<h2 id="canvas-information">Canvas information</h2>
+<div class="alert alert-danger" role="alert">
+<p>Again, TODO</p>
+</div>
+<p>The following should be visible in the canvas as optional overlays:</p>
+<ul>
+<li>Pixel information bits as colour overlays (default ON)</li>
+<li>Uncertainty data (default OFF)</li>
+<li>Filter aberration as a heat map (default OFF)</li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
+        <script src="../../search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
