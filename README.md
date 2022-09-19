@@ -1,12 +1,33 @@
 # PCOT
 
-This is the prototype of the Pancam Operations Toolkit. 
+This is the prototype of the Pancam Operations Toolkit. This is primarily
+a Python application and library for processing data from the Pancam
+instrument on the Rosalind Franklin rover, although it lends itself
+to any task involving processing multispectral image data.
+
+For example, with PCOT you can:
+* load ENVI and PDS4 multispectral images
+* load multiple images in other formats (e.g. PNG) and combine them into
+multispectral images
+* define regions of interest in the data
+* perform mathematical operations
+* view spectra and histograms
+
+and many other things besides. PCOT is highly extensible and open-source,
+so any missing functionality is easily added.
+
+PCOT operates on a graph model - the data is processed through a set of nodes
+which manipulate it in various ways (e.g. add regions of interest, perform
+maths, splice images together, merge image channels, plot spectra). A PCOT
+document describes this graph, and we
+intend that documents are distributed along with the data they generate
+to help reproducibility.
 
 ## Installing with Anaconda
 PCOT is a Python program (and library) with a number of dependencies, including
 
 * Python >3.8
-* PyQt
+* PySide2
 * OpenCV
 * numpy
 * scikit-image
@@ -19,7 +40,6 @@ and Ubuntu 20.04. The first thing you'll need to do is install Anaconda, which c
 * Windows: https://docs.anaconda.com/anaconda/install/linux/
 * Linux: https://docs.anaconda.com/anaconda/install/linux/
 * MacOS: https://docs.anaconda.com/anaconda/install/mac-os/ (untested)
-
 
 ### Obtain the software
 
@@ -47,8 +67,6 @@ and quite a few others.
 * **Windows:** Open the **Anaconda PowerShell Prompt** application, which will have been installed when you
 installed Anaconda.
 * **Linux and MacOS**: just open a Bash shell  
-
-
 
 
 ### Installing on Ubuntu / MacOS
@@ -154,4 +172,4 @@ If that's the case, install the missing package:
 ```
 sudo apt install libxcb-xinerama0
 ```
-That might help. Otherwise, send a message to us with the output from the ```QT_DEBUG_PLUGINS``` run and we will investigate.
+That should help. Otherwise, send a message to us with the output from the ```QT_DEBUG_PLUGINS``` run and we will investigate.

@@ -1,9 +1,12 @@
-from PySide2.QtGui import QIntValidator
+import math
+
+from PySide2.QtCore import Qt
+from PySide2.QtGui import QIntValidator, QMouseEvent
 
 import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
-from pcot.rois import ROIRect
+from pcot.rois import ROICircle
 from pcot.xform import xformtype, XFormROIType
 
 
@@ -14,10 +17,11 @@ def getInt(s):
         return -1
     return x
 
+
 @xformtype
-class XformRect(XFormROIType):
+class XformCirc(XFormROIType):
     """
-    Add a rectangular ROI to an image.
+    Add a circular ROI to an image (see multidot for multiple circles). Can edit numerically.
     Most subsequent operations will only
     be performed on the union of all regions of interest.
     Also outputs an RGB image annotated with the ROI on the 'ann' RGB input, or the input
@@ -25,10 +29,10 @@ class XformRect(XFormROIType):
     """
 
     def __init__(self):
-        super().__init__("rect", "regions", "0.0.0")
+        super().__init__("circle", "regions", "0.0.0")
 
     def createTab(self, n, w):
-        return TabRect(n, w)
+        return TabCirc(n, w)
 
     def init(self, node):
         node.img = None
@@ -39,7 +43,8 @@ class XformRect(XFormROIType):
         node.drawbg = True
         node.fontline = 2
         node.colour = (1, 1, 0)
-        node.roi = ROIRect()
+        node.roi = ROICircle()
+        node.roi.drawEdge = True
 
     def serialise(self, node):
         return node.roi.serialise()
@@ -51,9 +56,9 @@ class XformRect(XFormROIType):
         node.roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.fontline, node.drawbg)
 
 
-class TabRect(pcot.ui.tabs.Tab):
+class TabCirc(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
-        super().__init__(w, node, 'tabrect.ui')
+        super().__init__(w, node, 'tabcirc.ui')
         # set the paint hook in the canvas so we can draw on the image
         self.w.canvas.paintHook = self
         self.w.canvas.mouseHook = self
@@ -64,16 +69,14 @@ class TabRect(pcot.ui.tabs.Tab):
         self.w.colourButton.pressed.connect(self.colourPressed)
         self.w.captionTop.toggled.connect(self.topChanged)
 
-        self.w.leftEdit.editingFinished.connect(self.leftEditChanged)
-        self.w.topEdit.editingFinished.connect(self.topEditChanged)
-        self.w.widthEdit.editingFinished.connect(self.widthEditChanged)
-        self.w.heightEdit.editingFinished.connect(self.heightEditChanged)
+        self.w.XEdit.editingFinished.connect(self.XEditChanged)
+        self.w.YEdit.editingFinished.connect(self.YEditChanged)
+        self.w.radiusEdit.editingFinished.connect(self.radiusEditChanged)
 
         validator = QIntValidator(0, 10000, w)
-        self.w.leftEdit.setValidator(validator)
-        self.w.topEdit.setValidator(validator)
-        self.w.widthEdit.setValidator(validator)
-        self.w.heightEdit.setValidator(validator)
+        self.w.XEdit.setValidator(validator)
+        self.w.YEdit.setValidator(validator)
+        self.w.radiusEdit.setValidator(validator)
 
         self.mouseDown = False
         self.dontSetText = False
@@ -116,50 +119,28 @@ class TabRect(pcot.ui.tabs.Tab):
             self.node.colour = col
             self.changed()
 
-    def roiSet(self,x,y,w,h):
+    def roiSet(self, x, y, r):
         self.mark()
-        self.node.roi.set(x,y,w,h)
+        self.node.roi.set(x, y, r)
         self.changed()
 
-    def leftEditChanged(self):
-        bb = self.node.roi.bb()
-        x, y, w, h = bb if bb is not None else (0,0,0,0)
-        x = getInt(self.w.leftEdit.text())
-        if x < 0:
-            x = 0
-        if self.node.img and x >= self.node.img.w:
-            x = self.node.img.w - w
-        self.roiSet(x, y, w, h)
+    def XEditChanged(self):
+        c = self.node.roi.get()
+        x, y, r = c if c is not None else (0, 0, 0)
+        x = getInt(self.w.XEdit.text())
+        self.roiSet(x, y, r)
 
-    def topEditChanged(self):
-        bb = self.node.roi.bb()
-        x, y, w, h = bb if bb is not None else (0, 0, 0, 0)
-        y = getInt(self.w.topEdit.text())
-        if y < 0:
-            y = 0
-        if self.node.img and y >= self.node.img.h:
-            y = self.node.img.h - h
-        self.roiSet(x, y, w, h)
+    def YEditChanged(self):
+        c = self.node.roi.get()
+        x, y, r = c if c is not None else (0, 0, 0)
+        y = getInt(self.w.XEdit.text())
+        self.roiSet(x, y, r)
 
-    def widthEditChanged(self):
-        bb = self.node.roi.bb()
-        x, y, w, h = bb if bb is not None else (0, 0, 0, 0)
-        w = getInt(self.w.widthEdit.text())
-        if w < 1:
-            w = 1
-        if self.node.img and x + w >= self.node.img.w:
-            w = self.node.img.w - x
-        self.roiSet(x, y, w, h)
-
-    def heightEditChanged(self):
-        bb = self.node.roi.bb()
-        x, y, w, h = bb if bb is not None else (0, 0, 0, 0)
-        h = getInt(self.w.heightEdit.text())
-        if h < 1:
-            h = 1
-        if self.node.img and y + h >= self.node.img.h:
-            h = self.node.img.h - y
-        self.roiSet(x, y, w, h)
+    def radiusEditChanged(self):
+        c = self.node.roi.get()
+        x, y, r = c if c is not None else (0, 0, 0)
+        r = getInt(self.w.radiusEdit.text())
+        self.roiSet(x, y, r)
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
@@ -186,13 +167,12 @@ class TabRect(pcot.ui.tabs.Tab):
         self.w.drawbg.setChecked(self.node.drawbg)
         r, g, b = [x * 255 for x in self.node.colour]
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
-        bb = self.node.roi.bb()
-        if bb is not None:
-            x, y, w, h = [str(x) for x in (bb.x, bb.y, bb.w, bb.h)]
-            self.w.leftEdit.setText(x)
-            self.w.topEdit.setText(y)
-            self.w.widthEdit.setText(w)
-            self.w.heightEdit.setText(h)
+        c = self.node.roi.get()
+        if c is not None:
+            x, y, r = [str(x) for x in c]
+            self.w.XEdit.setText(x)
+            self.w.YEdit.setText(y)
+            self.w.radiusEdit.setText(r)
 
     # extra drawing!
     def canvasPaintHook(self, p):
@@ -200,30 +180,37 @@ class TabRect(pcot.ui.tabs.Tab):
         # but it's more accurate done as above in onNodeChanged
         pass
 
-    def canvasMouseMoveEvent(self, x2, y2, e):
-        if self.mouseDown:
-            bb = self.node.roi.bb()
-            if bb is None:
-                x, y, w, h = 0, 0, 0, 0
-            else:
-                x, y, w, h = bb
-            w = x2 - x
-            h = y2 - y
-            if w < 10:
-                w = 10
-            if h < 10:
-                h = 10
-            # we don't do a mark here to avoid multiple marks - one is done on mousedown.
-            self.node.roi.set(x, y, w, h)
-            self.changed()
-        self.w.canvas.update()
-
-    def canvasMousePressEvent(self, x, y, e):
-        self.mouseDown = True
-        self.mark()
-        self.node.roi.set(x, y, 5, 5)
+    def setRadius(self, x2, y2):
+        c = self.node.roi.get()
+        x, y, r = c if c is not None else (0, 0, 0)
+        dx = x - x2
+        dy = y - y2
+        r = math.sqrt(dx * dx + dy * dy)
+        if r < 1:
+            r = 1
+        # we don't do a mark here to avoid multiple marks - one is done on mousedown.
+        self.node.roi.set(x, y, r)
         self.changed()
         self.w.canvas.update()
 
+    def canvasMouseMoveEvent(self, x2, y2, e):
+        if self.mouseDown:
+            self.setRadius(x2, y2)
+
+    def canvasMousePressEvent(self, x, y, e: QMouseEvent):
+        self.mouseDown = True
+        self.mark()
+        if e.button() == Qt.RightButton and self.node.roi.get() is not None:
+            self.setRadius(x, y)
+        else:
+            if e.modifiers() & Qt.ShiftModifier and self.node.roi.get() is not None:
+                _, _, r = self.node.roi.get()
+            else:
+                r = 10
+            self.node.roi.set(x, y, r)
+            self.changed()
+            self.w.canvas.update()
+
     def canvasMouseReleaseEvent(self, x, y, e):
         self.mouseDown = False
+
