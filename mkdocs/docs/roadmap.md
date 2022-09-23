@@ -23,8 +23,9 @@ types to have operations defined on them
 
 * Data quality
     * uncertainty map
-    * pixel data bits
+    * pixel data bits (how many?)
     * canvas viewer for both the above
+    * use flashing pixels??
     * error propagation in *expr* and all nodes (see [Principles](/userguide/principles))
     * Testing quality rules
     
@@ -56,8 +57,3 @@ get messy, as these are likely to be time series)
     * Node (or func??) to convert aberration to image
     * Calculate and process in canvas spectrum
     * Calculate and process in *spectrum* node
-    
-
-Saturated pixels in any channel flash?
-
-DQ array byte size
