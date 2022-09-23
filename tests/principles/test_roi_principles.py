@@ -276,6 +276,31 @@ def test_rois_on_both_sides_of_binop():
     assert expr.error.message == "cannot have two images with ROIs on both sides of a binary operation"
 
 
+def test_rois_same_on_both_sides():
+    """It can happen that the ROIs on both sides of a binop are the same ROI, which is fine. This
+    can happen when two channels of the same image are being manipulated."""
+    pcot.setup()
+    doc = Document()
+
+    # make 2 images, one red and one blue. Make sure the input indices are correct
+    # for the sources!
+    greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # dark green
+    assert doc.setInputDirect(0, greenimg) is None
+    green = doc.graph.create("input 0", displayName="GREEN input")
+
+    roi = doc.graph.create("rect")
+    roi.roi.set(10, 10, 30, 30)
+    roi.connect(0, green, 0)
+
+    expr = doc.graph.create("expr")
+    expr.expr = "a$R+a$G"
+    expr.connect(0, roi, 0)
+
+    doc.changed()
+    img = expr.getOutput(0, Datum.IMG)
+    assert img is not None
+
+
 def _testinternal_image_and_scalar(exprString):
     """Performs imagewithroi+scalar and scalar+imagewithroi"""
     pcot.setup()

@@ -13,7 +13,9 @@ def test_datum_can_create_and_serialise_img(bwimage):
 
     # make some assumptions about what's in the data dict!
     assert tp == 'img'
-    assert datadict['mapping'] == [2, 1, 0]
+    # this is arbitrary - 0,1,2 is the RGB channel order when you don't know anything better.
+    # It used to be 2,1,0 but that caused problems in inset.
+    assert datadict['mapping'] == [0, 1, 2]
     assert datadict['defmapping'] is None
     assert datadict['sources'] == [[], [], []]
     assert type(datadict['data']) == numpy.ndarray

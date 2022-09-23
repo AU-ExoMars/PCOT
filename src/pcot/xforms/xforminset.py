@@ -4,6 +4,7 @@ from pcot.datum import Datum
 import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
+from pcot.sources import MultiBandSource
 from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.xform import xformtype, XFormType
 
@@ -57,26 +58,34 @@ class XformInset(XFormType):
             # neither rects are set, just dupe the input as RGB
             if image is None:
                 out = None
+                src = None
             else:
                 # we're outputting only RGB, because nothing else really makes sense with
                 # an inset. This will get the RGB image for the input, with which it was mapped
                 # in the previous node.
                 out = image.rgb()
+                src = image.rgbSources()
         elif image is None:
             # if there's no image we can't put anything on it.
             out = None
+            src = None
         else:
             x, y, w, h = inrect  # get the rectangle
             # Similarly, this will get the RGB for the image as mapped in the previous node.
             out = image.rgb()
+            src = image.rgbSources()
             if inset is None:
                 # there's no inset image, draw a rectangle
                 cv.rectangle(out, (x, y), (x + w, y + h), (0, 0, 255), -1)  # -1=filled
             elif node.enabled:  # only add the inset if enabled
                 # resize the inset (and cvt to RGB if necessary); note that we're again
                 # using the RGB mapping it should have been given in the previous node.
-                t = cv.resize(inset.rgb(), dsize=(w, h), interpolation=cv.INTER_AREA)
+                insetrgb = inset.rgb()
+
+                t = cv.resize(insetrgb, dsize=(w, h), interpolation=cv.INTER_AREA)
                 out[y:y + h, x:x + w] = t
+                # build sources - these will be bandwise unions of inset and background
+                src = MultiBandSource.createBandwiseUnion([image.rgbSources(), inset.rgbSources()])
 
             for i in range(node.fontline):
                 cv.rectangle(out, (x - i - 1, y - i - 1), (x + w + i, y + h + i), node.colour, thickness=1)
@@ -86,8 +95,8 @@ class XformInset(XFormType):
                 pcot.utils.text.write(out, node.caption, x, ty, node.captiontop, node.fontsize,
                                  node.fontline, node.colour)
 
-        # this just builds an rgb image with an inset, using fake sources
-        node.img = None if out is None else ImageCube(out, node.mapping, sources=None)
+        # build output image
+        node.img = None if out is None else ImageCube(out, node.mapping, sources=src)
         node.setOutput(0, Datum(Datum.IMG, node.img))
 
 
