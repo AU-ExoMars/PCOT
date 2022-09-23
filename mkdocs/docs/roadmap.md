@@ -57,3 +57,7 @@ get messy, as these are likely to be time series)
     * Calculate and process in canvas spectrum
     * Calculate and process in *spectrum* node
     
+
+Saturated pixels in any channel flash?
+
+DQ array byte size

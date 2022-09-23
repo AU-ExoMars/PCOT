@@ -126,11 +126,12 @@ def imageBinop(dx: Datum, dy: Datum, f: Callable[[np.ndarray, np.ndarray], Image
     if imga.img.shape != imgb.img.shape:
         raise OperatorException('Images must be same shape in binary operation')
     # if imga has an ROI, use that for both. Similarly, if imgb has an ROI, use that.
-    # But they can't both have ROIs.
+    # But they can't both have ROIs unless they are identical.
+
     ahasroi = imga.hasROI()
     bhasroi = imgb.hasROI()
     if ahasroi or bhasroi:
-        if ahasroi and bhasroi:
+        if ahasroi and bhasroi and imga.rois != imgb.rois:
             raise OperatorException('cannot have two images with ROIs on both sides of a binary operation')
         else:
             # get subimages, using their own image's ROI if it has one, otherwise the other image's ROI.

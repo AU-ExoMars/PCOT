@@ -6,9 +6,10 @@ from pathlib import Path
 from proctools.products import ProductDepot
 
 import pcot
-from fixtures import *
+
 from pcot.datum import Datum
 from pcot.document import Document
+import pytest
 
 
 def test_pds4_load():

@@ -160,10 +160,11 @@ class ChannelMapping:
             # first appending the entire range to lst just in case it is empty.
             lst = lst + [min(x, img.channels-1) for x in (0, 1, 2)]
 
-            # and extract
-            r = r if r >= 0 else lst.pop()
-            g = g if g >= 0 else lst.pop()
+            # and extract, popping in reverse order to ensure the "default" mapping
+            # is 0,1,2 when there is no wavelength data at all.
             b = b if b >= 0 else lst.pop()
+            g = g if g >= 0 else lst.pop()
+            r = r if r >= 0 else lst.pop()
             # FINALLY, finally. Make sure those bands are in descending wavelength order. This
             # deals with cases where all the wavelengths (say) are very high.
             lst = [(x, img.wavelength(x)) for x in (r,g,b)]
@@ -301,12 +302,11 @@ class ImageCube(SourcesObtainable):
         # and construct the image
         return cls(img, mapping, sources)
 
-    ## get a numpy image (not another ImageCube) we can display on an RGB surface - see
-    # rgbImage if you want an imagecube. If there is more than one channel we need to have
-    # an RGB mapping in the image. If showROIs is true, we create an image with the ROIs
-    # on it. We can specify a different mapping than that of the image.
     def rgb(self, showROIs: bool = False, mapping: Optional[ChannelMapping] = None) -> np.ndarray:
-        # assume we're 8 bit
+        """get a numpy image (not another ImageCube) we can display on an RGB surface - see
+        rgbImage if you want an imagecube. If there is more than one channel we need to have
+        an RGB mapping in the image. If showROIs is true, we create an image with the ROIs
+        on it. We can specify a different mapping than that of the image."""
         if self.channels == 1:
             # single channel images are a special case, rather than
             # [chans,w,h] they are just [w,h]
@@ -324,9 +324,16 @@ class ImageCube(SourcesObtainable):
             self.drawROIs(img)
         return img
 
-    ## as rgb, but wraps in an ImageCube. Also works out the sources, which should be for
-    # the channels in the result. A different mapping from the image mapping can be specified.
     def rgbImage(self, mapping: Optional[ChannelMapping] = None) -> 'ImageCube':
+        """as rgb, but wraps in an ImageCube. Also works out the sources, which should be for
+        the channels in the result. A different mapping from the image mapping can be specified."""
+
+        # The RGB mapping here should be just [0,1,2], since this output is the RGB representation.
+        return ImageCube(self.rgb(mapping=mapping), ChannelMapping(0, 1, 2), self.rgbSources(mapping))
+
+    def rgbSources(self, mapping=None):
+        """Return the sources for the RGB mapped channels - used in rgbImage(), but handy in association
+        with rgb() if you don't want a full ImageCube but need sources."""
         if mapping is None:
             mapping = self.mapping
         if mapping is None:
@@ -334,11 +341,8 @@ class ImageCube(SourcesObtainable):
         sourcesR = self.sources.sourceSets[mapping.red]
         sourcesG = self.sources.sourceSets[mapping.green]
         sourcesB = self.sources.sourceSets[mapping.blue]
-        sources = MultiBandSource([sourcesR, sourcesG, sourcesB])
-        # The RGB mapping here should be just [0,1,2], since this output is the RGB representation.
-        return ImageCube(self.rgb(mapping=mapping), ChannelMapping(0, 1, 2), sources)
+        return MultiBandSource([sourcesR, sourcesG, sourcesB])
 
-    ## save RGB representation
     def rgbWrite(self, filename):
         """save RGB representation"""
         img = self.rgb()
