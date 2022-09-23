@@ -1,4 +1,4 @@
-# Getting started with PCOT
+# A first tutorial
 
 This page is a gentle introduction to PCOT's user interface elements,
 and will walk you through loading image data and performing some
@@ -15,7 +15,8 @@ no doubt a lot of serious problems!
         
 ## Introduction to the UI
 
-The image below shows the PCOT interface (with some extra information in red).
+The image below shows the PCOT interface with text in red describing
+each part.
 
 ![!The PCOT user interface](app.png)
 
@@ -30,7 +31,7 @@ open a tab for that node, allowing you to view it and edit its parameters.
 the document and their connections.
 * To the right of the graph is the **palette**. Clicking on a button in
 the palette will add a node of the given type to the graph.
-* At the bottom is the **log area** and a set of
+* At the bottom is the **log area**, the **status bar**, and a set of
 [global controls](../userguide/globalcontrols.md).
 
 ## Working with graph nodes
@@ -57,6 +58,9 @@ two selection models:
 * A single node's tab can be open and currently being edited, this node
 is tinted green in the graph.
 * Nodes which are both being edited and are selected are tinted cyan.
+
+The tab for this particular node - *input* - shows what is being input. In
+this case it shows "None" because there is currently no input. 
 
 ### Creating a new node
 
@@ -96,52 +100,23 @@ text directly in its box.
 
 ![!Comment and constant nodes](comment.png)
 
-
-
-## Canvases
-
-Most nodes use a **canvas** to display some bands of an image as RGB.
-This will take up a large proportion of their tab - in some cases
-(such as *input*) all of it, with no other controls. It is worth discussing
-in some detail.
-
-The main area of the canvas is blue if no image is currently input. 
-You can pan the canvas using the scroll bars at the edge, and zoom with
-the mouse wheel. The button at bottom right will reset to show the entire
-image.
-
-
-
-
-Above the canvas itself are three combo boxes which determine the image
-*mapping* : how the bands within the (probably) multispectral image map onto
-RGB channels for viewing. Each band in the combo box shows the input number, a
-colon, and typically the name, position or wavelength of the band. Exactly
-what is shown depends on the image being loaded and the Caption [global
-control](../userguide/globalcontrols.md).
-
-It is also possible to save the RGB-mapped image as a PNG, and show any
-regions of interest which have been added to the image.
-
-
 ## Loading an image
 
-For now, we will load an RGB image into PCOT. Clicking on the *Input 0*
-button at the top of the main window will open the first of the four
-input's editor window. This will show a number of buttons, one for each
-input method. Click on RGB, and the window will show that input's 
-RGB method settings and select the RGB method as being active (see below).
-Using the
-directory tree widget, double-click any image file (PNG or RGB). The
-canvas on the right-hand side will show the image selected, and you can
-modify how the RGB channels are mapped using the three source widgets
-as described above. Here, the widgets will just hold "R", "G" and "B"
-as the source band names, because this is an RGB image source.
+While PCOT can support several types of multispectral data file, we will load
+an RGB image into PCOT for now. Clicking on the *Input 0* button at the top of
+the main window will open the first of the four input's editor window. This
+will show a number of buttons, one for each input method. Click on RGB, and
+the window will show that input's RGB method settings and select the RGB
+method as being active (see below). Using the directory tree widget,
+double-click any image file (PNG or RGB). The right-hand side (known as a 
+"canvas") will show the
+image selected, and you can modify how the RGB channels are mapped using the
+three combo boxes. Here, they will just hold "R", "G" and "B" as the source
+band names because this is an RGB image source.
 
 ![!An open RGB input|inputrgb](inputrgb.png)
 
-
-At the bottom right of the image are three **source indicators**: these
+At the bottom of the image are three **source indicators**: these
 show what bands within which inputs were used to generate the canvas
 image. They should show something like
 
@@ -149,6 +124,52 @@ image. They should show something like
     
 meaning that the red channel was generated from the band labelled "R" in
 input 0, and so on.
+
+
+## Canvases
+
+Most nodes use a **canvas** to display some bands of an image as RGB.
+This will take up a large proportion of their tab - in some cases
+all of it - with no other controls. It is worth discussing
+in some detail. A canvas is shown in the previous section as the right-hand
+side of an input widget. Another is shown below as the entire control area
+for an actual *input* node, which brings one of the four inputs into
+the graph.
+
+![!An open *input 0* node|inputnode](inputnode.png)
+
+
+You can pan the canvas using the scroll bars at the edge, and zoom with
+the mouse wheel. The button at bottom right will reset to show the entire
+image.
+
+To the left of the canvas image itself are three combo boxes which determine
+the image *mapping* : how the bands within the (probably) multispectral image
+map onto RGB channels for viewing. Each band in the combo box shows the input
+number, a colon, and typically the name, position or wavelength of the band.
+Exactly what is shown depends on the image being loaded and the Caption
+[global control](../userguide/globalcontrols.md).
+
+Below this are some assorted controls:
+
+* **Show ROIs** will mark any regions of interest the image has - these
+are added using nodes like *rect* (for a rectangle) and are carried forward
+through subsequent nodes (where appropriate), delimiting the area upon
+which calculations are performed. They also control the regions used
+for calculating spectra. Normally an ROI is only shown in the node which adds
+it.
+* **Show spectrum** opens a side pane, and dragging the cursor across the
+image will plot the spectrum of the pixel under the cursor in this pane. If
+no filter wavelengths are available, a list of the values for each band
+is shown.
+* **Save RGB** saves the RGB-mapped image as a PNG.
+* **Guess RGB** tries to guess appropriate channels for the RGB canvas image.
+
+@@@warning
+The canvas is going to get a lot more complex in the next release,
+because it needs to show image quality and uncertainty data for each band.
+This information will be moved into [its own page](../userguide/canvas.md)
+@@@
 
 ## Manipulating an image
 
@@ -203,6 +224,11 @@ displaying something like
     
 This indicates that all three RGB channels shown in the canvas are getting
 their data from both the R and G bands of input 0.
+
+The end result should look something like this:
+
+![!A "red-green slope" calculated from an RGB image|rgslope](rgslope.png)
+
 
 ## Getting help
 
@@ -283,4 +309,5 @@ to examine the resulting multispectral image.
 
 ### PDS4 products
 
-This is very much work in progress - please contact the developers if you need this functionality soon.
+This is very much work in progress - please contact the developers if you need
+this functionality soon.

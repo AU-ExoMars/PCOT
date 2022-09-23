@@ -16,6 +16,8 @@ types to have operations defined on them
     * Testing of the operating principles (see [Principles](/userguide/principles))
         * Source rules
         * ROI rules
+* rect node can now be edited numerically
+* circle node can add circular ROIs, which can be edited numerically.
 
 ## Future releases
 

@@ -42,12 +42,12 @@ Here's what each node in the graph is doing:
 and can be multispectral images or other data (e.g. housekeeping) from outside PCOT.
 * The *rect* node lets the user draw a rectangle on the image to define a region of interest. Images
 can have many regions of interest and several different kinds are available.
+* The *croproi* node will crop the image to its region of interest - the rectangle we just added.
 * The node with 4 inputs *a,b,c,d* is an *expr* node, which 
 calculates the result of a mathematical expression performed on each pixel. The node is showing the expression it is running: ```norm(a$671 / a$438)```.
 This will read the bands whose wavelengths are 671nm and 438nm in the node's *a* input, and find their ratio for every pixel.
 It will then normalise the result
 to the range [0,1]. The result will be a single-band image. *Expr* nodes can perform much more complex calculations than this.
-* The *croproi* node will crop that resulting image to its region of interest - the rectangle we added earlier.
 * The *gradient* node will convert a single-band image into an RGB image with a user-defined gradient.
 * Finally, the *inset* node will inset this RGB image into an RGB representation of the original image - the mapping of bands in
 that image onto RGB is done in the *input* node. A label can be added here.
@@ -69,7 +69,7 @@ as easy as clicking on the image.
 ![!Spectrogram example](spec.png)
 
 Here I have "undocked" the *spectrum* node's tab to be a separate window for easy viewing. The spectrum can also be saved as a PDF
-or converted into CSV data.
+or converted into CSV data. I'm also showing the entire app, including the menu bar and four input buttons.
 
 ## The Document
 A PCOT document is a file which can be shared among users. It consists of 
