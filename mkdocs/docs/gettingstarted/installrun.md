@@ -26,15 +26,17 @@ We find the best way to manage these is to use Anaconda. Installation has been t
 MacOS and Ubuntu 20.04.
 The first thing you will need to do is install Anaconda, which can be done from here:
 
-* Windows: https://docs.anaconda.com/anaconda/install/linux/
+* Windows: https://docs.anaconda.com/anaconda/install/windows/
 * Linux: https://docs.anaconda.com/anaconda/install/linux/
 * MacOS: https://docs.anaconda.com/anaconda/install/mac-os/ (untested)
 
 ### Obtain the software
 
 This can be done by
-either downloading the archive from Github and extracting it into a new directory,
-or cloning the repository. In both cases, the top level directory should be called
+either downloading the archive from Github and extracting it into a new
+directory,
+or cloning the repository. In both cases, the top level directory should be
+called
 PCOT (this isn't really mandatory but makes the instructions below simpler).
 The best way to download is this:
 
@@ -53,24 +55,24 @@ git clone https://github.com/AU-ExoMars/PCOT.git
 and quite a few others.
 
 #### Opening Anaconda's shell on different OSs
-* **Windows:** Open the **Anaconda PowerShell Prompt** application, which will have been installed when you
-installed Anaconda.
+* **Windows:** Open the **Anaconda Powershell Prompt** application, which will have been installed when you
+installed Anaconda. This can be found in the Start menu under Anaconda3,
+or in the applications list in Anaconda Navigator (which is also in the Start
+menu in the same place).
 * **Linux and MacOS**: just open a Bash shell  
 
-
-
-
 ### Installing on Ubuntu / MacOS
-Assuming you have successfully installed Anaconda and cloned or downloaded PCOT as above:
+Assuming you have successfully installed Anaconda and cloned or downloaded
+PCOT as above:
 
 * Open a bash shell
 * **cd** to the PCOT directory (which contains this file).
 * Run the command **conda create -n pcot python=3.8 poetry**.
-This will create an environment called **pcot** which uses Python 3.8 and the Poetry dependency
-and packaging manager. It may take some time.
+This will create an environment called **pcot** which uses Python 3.8 and
+the Poetry dependency and packaging manager. It may take some time.
 * Activate the environment with **conda activate pcot**.
-* Now run **poetry install**. This will set up all the packages PCOT is dependent on and install
-PCOT.
+* Now run **poetry install**. This will set up all the packages PCOT is
+dependent on and install PCOT.
 * You should now be able to run **pcot** to start the application.
 
 ### Installing on Windows
@@ -86,7 +88,7 @@ and packaging manager. It may take some time.
 PCOT.
 * You should now be able to run **pcot** to start the application.
 
-<!---
+<!--- No longer necessary now that everything is in Pypi.
 ## One last step
 Because the **pds4-tools** package isn't in any Anaconda reposities yet,
 you'll need to install it manually. With the pcot environment active, run
@@ -126,7 +128,7 @@ These instructions apply to source installations.
 ## Environment variables
 
 It's a good idea, but not mandatory, to set the environment variable
-**PCOTUSER** to a string of the form ```name <email>```. For example,
+**PCOT_USER** to a string of the form ```name <email>```. For example,
 in Linux I have added the following to my **.bashrc** file:
 ```
 export PCOT_USER="Jim Finnis <jcf12@aber.ac.uk>"

@@ -86,9 +86,6 @@ This addition is done bandwise. There is only one band, so the result is:
         [ {1:780, 1:640, 1:540, 1:440, 2, 0:540} ]
 
 ## ROI rules
-@@@
-TODO - ROI rules in progress. 
-@@@
 
 Images may contain regions of interest. If this is the case, then 
 any operation should only be performed on the region of interest if possible.
@@ -96,35 +93,39 @@ However, the rest of the image should be passed through unchanged to
 provide context - it is always possible to use a *croproi* node before
 the operation if cropping is required.
 
-This rule has the following practical outcomes, in which 
-
-* images are denoted by capitals $A, B, \dots$
-* scalars are denoted by lowercase $x, y, \dots$
-* the ROIs of image $A$ are the set $R_A$
+This rule has the following practical outcomes, in which images are denoted
+by capitals $A, B, \dots$ and scalars are denoted by lowercase $x, y. \dots$
 
 So:
 
-* In binary operations on an image and a scalar such as $x+A$ or $A+x$, the operation is only performed on the region covered by the union of all ROIs on $A$. 
- Other parts of $A$ are left unchanged in the output, which carries the same ROIs.
+* In binary operations on an image and a scalar such as $x+A$ or $A+x$, the
+operation is only performed on the region covered by the union of all
+ROIs on $A$. Other parts of $A$ are left unchanged in the output,
+which carries the same ROIs.
 
-* In binary operations on two images $A+B$ etc., at most one of the two images should have a region of interest (or union of multiple ROIs).
-If both images have an ROI the result is an error. The part of the resulting image outside the ROI comes from the input which does not have an ROI, as shown
-in the figure.
+* In binary operations on two images $A+B$ etc., there should be only one set of ROIs
+in operation. This means that either only one image has an ROI, or the sets of ROIs for
+both images are identical.
 
-![!Two images A and B, B has an ROI. In the result, the area covered by the ROI is A+B, the rest of the image is passed through from A (which has no ROI).](ROIs.svg)
+The part of the resulting image outside left-hand side, as shown in the figure below.
+
+![!Two images A and B, B has an ROI. In the result, the area covered by the ROI is A+B, the rest of the image is passed through from A (which has no ROI)](ROIs.svg)
 
 
 @@@info
-Originally the rule was that the intersection of the unions of the ROIs would be processed, while the rest of the output would be from the left-hand side
-(in the case of image data). That was too complicated, and broke the "principle of least astonishment." If the user has put ROIs on both sides of their
-image they have probably made a mistake.
+Originally the rule was that the intersection of the unions of the ROIs would
+be processed, while the rest of the output would be from the left-hand side
+(in the case of image data). That was too complicated, and broke the
+"principle of least astonishment." If the user has put different ROIs on both sides of
+their image they have probably made a mistake. However, it's quite possible
+for the same ROIs to be on both sides of an expression if they were derived from the same
+image.
 @@@
 
-## Image quality data
+## Image quality data <font color="red">UNIMPLEMENTED</font>
 
 @@@
-TODO - describe how these are processed. Could probably use a separate
-page describing the data?
+This is a set of preliminary notes on features which have yet to be implemented.
 @@@
 
 Consists of:
@@ -132,7 +133,7 @@ Consists of:
 * image uncertainty map (float per band)
 * image quality/info bits (byte per band)
 
-### Uncertainty
+### Uncertainty <font color="red">UNIMPLEMENTED</font>
 
 Each pixel each band of an imagecube usually contains an uncertainty value,
 which is a root mean squared error. Operations need to combine this data in a
@@ -146,7 +147,7 @@ operations work like this:
 \Delta (a | b) &= \max (\Delta{a}, \Delta{b})
 \end{align}
 
-    @@@ warning
+@@@ warning
 Remember that this only applies if the bands are independent. In reality there
 is always a covariance between them.
 @@@
@@ -158,15 +159,11 @@ image which does not permit uncertainty data to be carried through
 (consider a decorrelation stretch, for example). In this case, **this
 should be clearly visible in the canvas**.
 
-### Pixel information bits
-
-@@@
-A lot of this is TODO
-@@@ 
+### Pixel information bits <font color="red">UNIMPLEMENTED</font>
 
 Each pixel in each band has an associated set of bits which indicate error states, etc. 
 
-Bits are:
+Bits are (<font color="red">this list is incomplete</font>):
 
 | Bit name | Meaning | Effect on calculations|
 |-----------|------|----|
@@ -201,17 +198,13 @@ B_i(\text{decorr}(a)) = \bigvee_i B_i(a)
 I realise **This isn't ideal**; another possibility could be to just zero the mask? But then we lose the error data. At the moment I don't believe we have any
 "non-local" behaviour where pixels affect regions of pixels in the output, so the point could be moot.
 
-### Error ROIs
+### Error ROIs <font color="red">UNIMPLEMENTED</font>
 It should
 be possible to construct an ROI of error or non-error pixels in an image (i.e. pixels which have an error on any band).
 
 
 
-## Filter aberration
-
-@@@
-A lot of this is TODO
-@@@ 
+## Filter aberration <font color="red">UNIMPLEMENTED</font>
 
 The filter wavelengths are only accurate for pixels in the centre of the image, due to the difference in the light path through the filter
 at different angles of incidence. Therefore:
@@ -223,11 +216,7 @@ the aberration value which could be used in calculations
 * It should be possible to set the ERROR bit for excessive aberration values
 
 
-## Canvas information
-
-@@@
-Again, TODO
-@@@
+## Canvas information <font color="red">UNIMPLEMENTED</font>
 
 The following should be visible in the canvas as optional overlays:
 

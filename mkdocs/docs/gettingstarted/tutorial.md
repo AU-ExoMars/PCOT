@@ -4,8 +4,10 @@ This page is a gentle introduction to PCOT's user interface elements,
 and will walk you through loading image data and performing some
 simple manipulations.
 
-There is a [video guide](https://www.youtube.com/watch?v=vo5KrOAtMQ8) - please ignore the opening comments
-on installation and Anaconda; these only apply to installing from source
+There is a [video guide](https://www.youtube.com/watch?v=vo5KrOAtMQ8) - 
+it may be a little out of date, because development is progressing
+quickly but the basics will be the same
+(this also applies to this document).
 
 
 @@@ danger
@@ -259,6 +261,7 @@ on most things and ask for help.
 
 The examples above use RGB images, which aren't much use for real work.
 Other image formats are available:
+
 * ENVI images
 * "multiband" images (multiple monochrome PNG images, one per band)
 * PDS4 products (work in progress)

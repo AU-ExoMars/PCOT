@@ -2,13 +2,18 @@
 
 **How PCOT works (and why)**
 
-PCOT is a tool designed to help scientists and engineers analyse PanCam data
-and produce useful secondary data. It acts downstream from the ROCC on images
-which have already been processed to some extent, and is a successor to
+PCOT was originally designed to help scientists and engineers analyse PanCam
+data and produce useful secondary data. It acts downstream from the ROCC on
+images which have already been processed to some extent, and is a successor to
 ExoSpec. As such, its primary purpose is to generate relative reflectance
-images and spectral parameter maps, although it will also be able
-to produce spectra from small regions of interest. Indeed, it should
-be flexible enough to perform a wide range of unforeseen calculations.
+images and spectral parameter maps, although it will also be able to produce
+spectra from small regions of interest. Indeed, it should be flexible enough
+to perform a wide range of unforeseen calculations.
+
+Of course, PCOT can handle many other kinds of data. It is particularly suited
+to processing multispectral images with uncertainty and error data, and can
+currently read PDS4 and ENVI formats, alongside more common RGB formats
+which can be collated into multispectral images.
 
 Of paramount importance is the verifiability and reproducibility of data
 generated from PCOT. To this end, a PCOT document is a data product which can
@@ -94,4 +99,4 @@ to be stored - you can send the document to someone and it will still work
 even if they don't have the sources.
 @@@
 
-Move on to [Getting Started](/gettingstarted)
+Move on to [a First Tutorial](../tutorial)
