@@ -176,7 +176,7 @@ class Tab(QtWidgets.QWidget):
         self.w = QtWidgets.QWidget()
         splitter.addWidget(self.w)
         self.comment = QtWidgets.QTextEdit()
-        self.comment.setPlaceholderText("add a comment on this transformation here")
+        self.comment.setPlaceholderText("add a comment on this node here")
         self.comment.setMinimumHeight(30)
         self.comment.setMaximumHeight(150)
         widlower = QtWidgets.QWidget()
