@@ -193,14 +193,16 @@ installation is necessary.</p>
 MacOS and Ubuntu 20.04.
 The first thing you will need to do is install Anaconda, which can be done from here:</p>
 <ul>
-<li>Windows: <a href="https://docs.anaconda.com/anaconda/install/linux/">https://docs.anaconda.com/anaconda/install/linux/</a></li>
+<li>Windows: <a href="https://docs.anaconda.com/anaconda/install/windows/">https://docs.anaconda.com/anaconda/install/windows/</a></li>
 <li>Linux: <a href="https://docs.anaconda.com/anaconda/install/linux/">https://docs.anaconda.com/anaconda/install/linux/</a></li>
 <li>MacOS: <a href="https://docs.anaconda.com/anaconda/install/mac-os/">https://docs.anaconda.com/anaconda/install/mac-os/</a> (untested)</li>
 </ul>
 <h3 id="obtain-the-software">Obtain the software</h3>
 <p>This can be done by
-either downloading the archive from Github and extracting it into a new directory,
-or cloning the repository. In both cases, the top level directory should be called
+either downloading the archive from Github and extracting it into a new
+directory,
+or cloning the repository. In both cases, the top level directory should be
+called
 PCOT (this isn't really mandatory but makes the instructions below simpler).
 The best way to download is this:</p>
 <ul>
@@ -222,21 +224,24 @@ and quite a few others.</li>
 </ul>
 <h4 id="opening-anacondas-shell-on-different-oss">Opening Anaconda's shell on different OSs</h4>
 <ul>
-<li><strong>Windows:</strong> Open the <strong>Anaconda PowerShell Prompt</strong> application, which will have been installed when you
-installed Anaconda.</li>
+<li><strong>Windows:</strong> Open the <strong>Anaconda Powershell Prompt</strong> application, which will have been installed when you
+installed Anaconda. This can be found in the Start menu under Anaconda3,
+or in the applications list in Anaconda Navigator (which is also in the Start
+menu in the same place).</li>
 <li><strong>Linux and MacOS</strong>: just open a Bash shell  </li>
 </ul>
 <h3 id="installing-on-ubuntu-macos">Installing on Ubuntu / MacOS</h3>
-<p>Assuming you have successfully installed Anaconda and cloned or downloaded PCOT as above:</p>
+<p>Assuming you have successfully installed Anaconda and cloned or downloaded
+PCOT as above:</p>
 <ul>
 <li>Open a bash shell</li>
 <li><strong>cd</strong> to the PCOT directory (which contains this file).</li>
 <li>Run the command <strong>conda create -n pcot python=3.8 poetry</strong>.
-This will create an environment called <strong>pcot</strong> which uses Python 3.8 and the Poetry dependency
-and packaging manager. It may take some time.</li>
+This will create an environment called <strong>pcot</strong> which uses Python 3.8 and
+the Poetry dependency and packaging manager. It may take some time.</li>
 <li>Activate the environment with <strong>conda activate pcot</strong>.</li>
-<li>Now run <strong>poetry install</strong>. This will set up all the packages PCOT is dependent on and install
-PCOT.</li>
+<li>Now run <strong>poetry install</strong>. This will set up all the packages PCOT is
+dependent on and install PCOT.</li>
 <li>You should now be able to run <strong>pcot</strong> to start the application.</li>
 </ul>
 <h3 id="installing-on-windows">Installing on Windows</h3>
@@ -252,7 +257,7 @@ and packaging manager. It may take some time.</li>
 PCOT.</li>
 <li>You should now be able to run <strong>pcot</strong> to start the application.</li>
 </ul>
-<!---
+<!--- No longer necessary now that everything is in Pypi.
 ## One last step
 Because the **pds4-tools** package isn't in any Anaconda reposities yet,
 you'll need to install it manually. With the pcot environment active, run
@@ -296,7 +301,7 @@ pcot
 </ul>
 <h2 id="environment-variables">Environment variables</h2>
 <p>It's a good idea, but not mandatory, to set the environment variable
-<strong>PCOTUSER</strong> to a string of the form <code>name &lt;email&gt;</code>. For example,
+<strong>PCOT_USER</strong> to a string of the form <code>name &lt;email&gt;</code>. For example,
 in Linux I have added the following to my <strong>.bashrc</strong> file:</p>
 <pre><code>export PCOT_USER=&quot;Jim Finnis &lt;jcf12@aber.ac.uk&gt;&quot;
 </code></pre>

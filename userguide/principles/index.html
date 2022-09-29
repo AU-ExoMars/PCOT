@@ -146,15 +146,15 @@
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-level="2"><a href="#image-quality-data" class="nav-link">Image quality data</a>
+            <li class="nav-item" data-level="2"><a href="#image-quality-data-unimplemented" class="nav-link">Image quality data UNIMPLEMENTED</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-level="2"><a href="#filter-aberration" class="nav-link">Filter aberration</a>
+            <li class="nav-item" data-level="2"><a href="#filter-aberration-unimplemented" class="nav-link">Filter aberration UNIMPLEMENTED</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-level="2"><a href="#canvas-information" class="nav-link">Canvas information</a>
+            <li class="nav-item" data-level="2"><a href="#canvas-information-unimplemented" class="nav-link">Canvas information UNIMPLEMENTED</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -252,49 +252,48 @@ This addition is done bandwise. There is only one band, so the result is:</p>
 </li>
 </ul>
 <h2 id="roi-rules">ROI rules</h2>
-<div class="alert alert-danger" role="alert">
-<p>TODO - ROI rules in progress. </p>
-</div>
 <p>Images may contain regions of interest. If this is the case, then 
 any operation should only be performed on the region of interest if possible.
 However, the rest of the image should be passed through unchanged to
 provide context - it is always possible to use a <em>croproi</em> node before
 the operation if cropping is required.</p>
-<p>This rule has the following practical outcomes, in which </p>
-<ul>
-<li>images are denoted by capitals <span class="arithmatex"><span class="MathJax_Preview">A, B, \dots</span><script type="math/tex">A, B, \dots</script></span></li>
-<li>scalars are denoted by lowercase <span class="arithmatex"><span class="MathJax_Preview">x, y, \dots</span><script type="math/tex">x, y, \dots</script></span></li>
-<li>the ROIs of image <span class="arithmatex"><span class="MathJax_Preview">A</span><script type="math/tex">A</script></span> are the set <span class="arithmatex"><span class="MathJax_Preview">R_A</span><script type="math/tex">R_A</script></span></li>
-</ul>
+<p>This rule has the following practical outcomes, in which images are denoted
+by capitals <span class="arithmatex"><span class="MathJax_Preview">A, B, \dots</span><script type="math/tex">A, B, \dots</script></span> and scalars are denoted by lowercase <span class="arithmatex"><span class="MathJax_Preview">x, y. \dots</span><script type="math/tex">x, y. \dots</script></span></p>
 <p>So:</p>
 <ul>
 <li>
-<p>In binary operations on an image and a scalar such as <span class="arithmatex"><span class="MathJax_Preview">x+A</span><script type="math/tex">x+A</script></span> or <span class="arithmatex"><span class="MathJax_Preview">A+x</span><script type="math/tex">A+x</script></span>, the operation is only performed on the region covered by the union of all ROIs on <span class="arithmatex"><span class="MathJax_Preview">A</span><script type="math/tex">A</script></span>. 
- Other parts of <span class="arithmatex"><span class="MathJax_Preview">A</span><script type="math/tex">A</script></span> are left unchanged in the output, which carries the same ROIs.</p>
+<p>In binary operations on an image and a scalar such as <span class="arithmatex"><span class="MathJax_Preview">x+A</span><script type="math/tex">x+A</script></span> or <span class="arithmatex"><span class="MathJax_Preview">A+x</span><script type="math/tex">A+x</script></span>, the
+operation is only performed on the region covered by the union of all
+ROIs on <span class="arithmatex"><span class="MathJax_Preview">A</span><script type="math/tex">A</script></span>. Other parts of <span class="arithmatex"><span class="MathJax_Preview">A</span><script type="math/tex">A</script></span> are left unchanged in the output,
+which carries the same ROIs.</p>
 </li>
 <li>
-<p>In binary operations on two images <span class="arithmatex"><span class="MathJax_Preview">A+B</span><script type="math/tex">A+B</script></span> etc., at most one of the two images should have a region of interest (or union of multiple ROIs).
-If both images have an ROI the result is an error. The part of the resulting image outside the ROI comes from the input which does not have an ROI, as shown
-in the figure.</p>
+<p>In binary operations on two images <span class="arithmatex"><span class="MathJax_Preview">A+B</span><script type="math/tex">A+B</script></span> etc., there should be only one set of ROIs
+in operation. This means that either only one image has an ROI, or the sets of ROIs for
+both images are identical.</p>
 </li>
 </ul>
-<p><figure><a data-lightbox="ROIs.svg" href="../ROIs.svg"><img alt="Two images A and B, B has an ROI. In the result, the area covered by the ROI is A+B, the rest of the image is passed through from A (which has no ROI)." src="../ROIs.svg" /></a><figcaption class="figure-caption text-right">Figure: Two images A and B, B has an ROI. In the result, the area covered by the ROI is A+B, the rest of the image is passed through from A (which has no ROI).. Click on image to expand.</figcaption></figure></p>
+<p>The part of the resulting image outside left-hand side, as shown in the figure below.</p>
+<p><figure><a data-lightbox="ROIs.svg" href="../ROIs.svg"><img alt="Two images A and B, B has an ROI. In the result, the area covered by the ROI is A+B, the rest of the image is passed through from A (which has no ROI)" src="../ROIs.svg" /></a><figcaption class="figure-caption text-right">Figure: Two images A and B, B has an ROI. In the result, the area covered by the ROI is A+B, the rest of the image is passed through from A (which has no ROI). Click on image to expand.</figcaption></figure></p>
 <div class="alert alert-info" role="alert">
-<p>Originally the rule was that the intersection of the unions of the ROIs would be processed, while the rest of the output would be from the left-hand side
-(in the case of image data). That was too complicated, and broke the "principle of least astonishment." If the user has put ROIs on both sides of their
-image they have probably made a mistake.</p>
+<p>Originally the rule was that the intersection of the unions of the ROIs would
+be processed, while the rest of the output would be from the left-hand side
+(in the case of image data). That was too complicated, and broke the
+"principle of least astonishment." If the user has put different ROIs on both sides of
+their image they have probably made a mistake. However, it's quite possible
+for the same ROIs to be on both sides of an expression if they were derived from the same
+image.</p>
 </div>
-<h2 id="image-quality-data">Image quality data</h2>
+<h2 id="image-quality-data-unimplemented">Image quality data <font color="red">UNIMPLEMENTED</font></h2>
 <div class="alert alert-danger" role="alert">
-<p>TODO - describe how these are processed. Could probably use a separate
-page describing the data?</p>
+<p>This is a set of preliminary notes on features which have yet to be implemented.</p>
 </div>
 <p>Consists of:</p>
 <ul>
 <li>image uncertainty map (float per band)</li>
 <li>image quality/info bits (byte per band)</li>
 </ul>
-<h3 id="uncertainty">Uncertainty</h3>
+<h3 id="uncertainty-unimplemented">Uncertainty <font color="red">UNIMPLEMENTED</font></h3>
 <p>Each pixel each band of an imagecube usually contains an uncertainty value,
 which is a root mean squared error. Operations need to combine this data in a
 sensible way. For example, denoting the RMS error in <span class="arithmatex"><span class="MathJax_Preview">a</span><script type="math/tex">a</script></span> as <span class="arithmatex"><span class="MathJax_Preview">\Delta a</span><script type="math/tex">\Delta a</script></span>, binary
@@ -322,12 +321,9 @@ image doesn't have this data, or that a function has been performed on the
 image which does not permit uncertainty data to be carried through
 (consider a decorrelation stretch, for example). In this case, <strong>this
 should be clearly visible in the canvas</strong>.</p>
-<h3 id="pixel-information-bits">Pixel information bits</h3>
-<div class="alert alert-danger" role="alert">
-<p>A lot of this is TODO</p>
-</div>
+<h3 id="pixel-information-bits-unimplemented">Pixel information bits <font color="red">UNIMPLEMENTED</font></h3>
 <p>Each pixel in each band has an associated set of bits which indicate error states, etc. </p>
-<p>Bits are:</p>
+<p>Bits are (<font color="red">this list is incomplete</font>):</p>
 <table>
 <thead>
 <tr>
@@ -388,13 +384,10 @@ B_i(\text{decorr}(a)) = \bigvee_i B_i(a)
 I realise <strong>This isn't ideal</strong>; another possibility could be to just zero the mask? But then we lose the error data. At the moment I don't believe we have any
 "non-local" behaviour where pixels affect regions of pixels in the output, so the point could be moot.</li>
 </ul>
-<h3 id="error-rois">Error ROIs</h3>
+<h3 id="error-rois-unimplemented">Error ROIs <font color="red">UNIMPLEMENTED</font></h3>
 <p>It should
 be possible to construct an ROI of error or non-error pixels in an image (i.e. pixels which have an error on any band).</p>
-<h2 id="filter-aberration">Filter aberration</h2>
-<div class="alert alert-danger" role="alert">
-<p>A lot of this is TODO</p>
-</div>
+<h2 id="filter-aberration-unimplemented">Filter aberration <font color="red">UNIMPLEMENTED</font></h2>
 <p>The filter wavelengths are only accurate for pixels in the centre of the image, due to the difference in the light path through the filter
 at different angles of incidence. Therefore:</p>
 <ul>
@@ -404,10 +397,7 @@ of the ROI for the <em>spectrum</em> node)</li>
 the aberration value which could be used in calculations</li>
 <li>It should be possible to set the ERROR bit for excessive aberration values</li>
 </ul>
-<h2 id="canvas-information">Canvas information</h2>
-<div class="alert alert-danger" role="alert">
-<p>Again, TODO</p>
-</div>
+<h2 id="canvas-information-unimplemented">Canvas information <font color="red">UNIMPLEMENTED</font></h2>
 <p>The following should be visible in the canvas as optional overlays:</p>
 <ul>
 <li>Pixel information bits as colour overlays (default ON)</li>

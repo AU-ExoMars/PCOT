@@ -155,13 +155,17 @@
 
 <h1 id="concepts">Concepts</h1>
 <p><strong>How PCOT works (and why)</strong></p>
-<p>PCOT is a tool designed to help scientists and engineers analyse PanCam data
-and produce useful secondary data. It acts downstream from the ROCC on images
-which have already been processed to some extent, and is a successor to
+<p>PCOT was originally designed to help scientists and engineers analyse PanCam
+data and produce useful secondary data. It acts downstream from the ROCC on
+images which have already been processed to some extent, and is a successor to
 ExoSpec. As such, its primary purpose is to generate relative reflectance
-images and spectral parameter maps, although it will also be able
-to produce spectra from small regions of interest. Indeed, it should
-be flexible enough to perform a wide range of unforeseen calculations.</p>
+images and spectral parameter maps, although it will also be able to produce
+spectra from small regions of interest. Indeed, it should be flexible enough
+to perform a wide range of unforeseen calculations.</p>
+<p>Of course, PCOT can handle many other kinds of data. It is particularly suited
+to processing multispectral images with uncertainty and error data, and can
+currently read PDS4 and ENVI formats, alongside more common RGB formats
+which can be collated into multispectral images.</p>
 <p>Of paramount importance is the verifiability and reproducibility of data
 generated from PCOT. To this end, a PCOT document is a data product which can
 be shared between users, which also fully describes how the data was generated
@@ -189,12 +193,12 @@ Here's what each node in the graph is doing:</p>
 and can be multispectral images or other data (e.g. housekeeping) from outside PCOT.</li>
 <li>The <em>rect</em> node lets the user draw a rectangle on the image to define a region of interest. Images
 can have many regions of interest and several different kinds are available.</li>
+<li>The <em>croproi</em> node will crop the image to its region of interest - the rectangle we just added.</li>
 <li>The node with 4 inputs <em>a,b,c,d</em> is an <em>expr</em> node, which 
 calculates the result of a mathematical expression performed on each pixel. The node is showing the expression it is running: <code>norm(a$671 / a$438)</code>.
 This will read the bands whose wavelengths are 671nm and 438nm in the node's <em>a</em> input, and find their ratio for every pixel.
 It will then normalise the result
 to the range [0,1]. The result will be a single-band image. <em>Expr</em> nodes can perform much more complex calculations than this.</li>
-<li>The <em>croproi</em> node will crop that resulting image to its region of interest - the rectangle we added earlier.</li>
 <li>The <em>gradient</em> node will convert a single-band image into an RGB image with a user-defined gradient.</li>
 <li>Finally, the <em>inset</em> node will inset this RGB image into an RGB representation of the original image - the mapping of bands in
 that image onto RGB is done in the <em>input</em> node. A label can be added here.</li>
@@ -213,7 +217,7 @@ as easy as clicking on the image.</li>
 </ul>
 <p><figure><a data-lightbox="spec.png" href="../spec.png"><img alt="Spectrogram example" src="../spec.png" /></a><figcaption class="figure-caption text-right">Figure: Spectrogram example. Click on image to expand.</figcaption></figure></p>
 <p>Here I have "undocked" the <em>spectrum</em> node's tab to be a separate window for easy viewing. The spectrum can also be saved as a PDF
-or converted into CSV data.</p>
+or converted into CSV data. I'm also showing the entire app, including the menu bar and four input buttons.</p>
 <h2 id="the-document">The Document</h2>
 <p>A PCOT document is a file which can be shared among users. It consists of </p>
 <ul>
@@ -235,7 +239,7 @@ and loaded with the document, so the original source data does not need
 to be stored - you can send the document to someone and it will still work
 even if they don't have the sources.</p>
 </div>
-<p>Move on to <a href="/gettingstarted">Getting Started</a></p></div>
+<p>Move on to <a href="../tutorial">a First Tutorial</a></p></div>
             </div>
         </div>
 

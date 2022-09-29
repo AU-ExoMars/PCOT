@@ -136,7 +136,7 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-level="1"><a href="#getting-started-with-pcot" class="nav-link">Getting started with PCOT</a>
+            <li class="nav-item" data-level="1"><a href="#a-first-tutorial" class="nav-link">A first tutorial</a>
               <ul class="nav flex-column">
             <li class="nav-item" data-level="2"><a href="#introduction-to-the-ui" class="nav-link">Introduction to the UI</a>
               <ul class="nav flex-column">
@@ -146,11 +146,11 @@
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-level="2"><a href="#canvases" class="nav-link">Canvases</a>
+            <li class="nav-item" data-level="2"><a href="#loading-an-image" class="nav-link">Loading an image</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-level="2"><a href="#loading-an-image" class="nav-link">Loading an image</a>
+            <li class="nav-item" data-level="2"><a href="#canvases" class="nav-link">Canvases</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -173,18 +173,21 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="getting-started-with-pcot">Getting started with PCOT</h1>
+<h1 id="a-first-tutorial">A first tutorial</h1>
 <p>This page is a gentle introduction to PCOT's user interface elements,
 and will walk you through loading image data and performing some
 simple manipulations.</p>
-<p>There is a <a href="https://www.youtube.com/watch?v=vo5KrOAtMQ8">video guide</a> - please ignore the opening comments
-on installation and Anaconda; these only apply to installing from source</p>
+<p>There is a <a href="https://www.youtube.com/watch?v=vo5KrOAtMQ8">video guide</a> - 
+it may be a little out of date, because development is progressing
+quickly but the basics will be the same
+(this also applies to this document).</p>
 <div class="alert alert-danger" role="alert">
 <p>Be aware that this is very much an early version and there are 
 no doubt a lot of serious problems!</p>
 </div>
 <h2 id="introduction-to-the-ui">Introduction to the UI</h2>
-<p>The image below shows the PCOT interface (with some extra information in red).</p>
+<p>The image below shows the PCOT interface with text in red describing
+each part.</p>
 <p><figure><a data-lightbox="app.png" href="../app.png"><img alt="The PCOT user interface" src="../app.png" /></a><figcaption class="figure-caption text-right">Figure: The PCOT user interface. Click on image to expand.</figcaption></figure></p>
 <p>The window is divided into several areas:</p>
 <ul>
@@ -197,7 +200,7 @@ open a tab for that node, allowing you to view it and edit its parameters.</li>
 the document and their connections.</li>
 <li>To the right of the graph is the <strong>palette</strong>. Clicking on a button in
 the palette will add a node of the given type to the graph.</li>
-<li>At the bottom is the <strong>log area</strong> and a set of
+<li>At the bottom is the <strong>log area</strong>, the <strong>status bar</strong>, and a set of
 <a href="../../userguide/globalcontrols/">global controls</a>.</li>
 </ul>
 <h2 id="working-with-graph-nodes">Working with graph nodes</h2>
@@ -220,6 +223,8 @@ two selection models:</p>
 is tinted green in the graph.</li>
 <li>Nodes which are both being edited and are selected are tinted cyan.</li>
 </ul>
+<p>The tab for this particular node - <em>input</em> - shows what is being input. In
+this case it shows "None" because there is currently no input. </p>
 <h3 id="creating-a-new-node">Creating a new node</h3>
 <p>This can be done in two ways:</p>
 <ul>
@@ -253,43 +258,64 @@ hitting the "enter" key will stop editing when you are editing the node
 text directly in its box.</li>
 </ul>
 <p><figure><a data-lightbox="comment.png" href="../comment.png"><img alt="Comment and constant nodes" src="../comment.png" /></a><figcaption class="figure-caption text-right">Figure: Comment and constant nodes. Click on image to expand.</figcaption></figure></p>
-<h2 id="canvases">Canvases</h2>
-<p>Most nodes use a <strong>canvas</strong> to display some bands of an image as RGB.
-This will take up a large proportion of their tab - in some cases
-(such as <em>input</em>) all of it, with no other controls. It is worth discussing
-in some detail.</p>
-<p>The main area of the canvas is blue if no image is currently input. 
-You can pan the canvas using the scroll bars at the edge, and zoom with
-the mouse wheel. The button at bottom right will reset to show the entire
-image.</p>
-<p>Above the canvas itself are three combo boxes which determine the image
-<em>mapping</em> : how the bands within the (probably) multispectral image map onto
-RGB channels for viewing. Each band in the combo box shows the input number, a
-colon, and typically the name, position or wavelength of the band. Exactly
-what is shown depends on the image being loaded and the Caption <a href="../../userguide/globalcontrols/">global
-control</a>.</p>
-<p>It is also possible to save the RGB-mapped image as a PNG, and show any
-regions of interest which have been added to the image.</p>
 <h2 id="loading-an-image">Loading an image</h2>
-<p>For now, we will load an RGB image into PCOT. Clicking on the <em>Input 0</em>
-button at the top of the main window will open the first of the four
-input's editor window. This will show a number of buttons, one for each
-input method. Click on RGB, and the window will show that input's 
-RGB method settings and select the RGB method as being active (see below).
-Using the
-directory tree widget, double-click any image file (PNG or RGB). The
-canvas on the right-hand side will show the image selected, and you can
-modify how the RGB channels are mapped using the three source widgets
-as described above. Here, the widgets will just hold "R", "G" and "B"
-as the source band names, because this is an RGB image source.</p>
+<p>While PCOT can support several types of multispectral data file, we will load
+an RGB image into PCOT for now. Clicking on the <em>Input 0</em> button at the top of
+the main window will open the first of the four input's editor window. This
+will show a number of buttons, one for each input method. Click on RGB, and
+the window will show that input's RGB method settings and select the RGB
+method as being active (see below). Using the directory tree widget,
+double-click any image file (PNG or RGB). The right-hand side (known as a 
+"canvas") will show the
+image selected, and you can modify how the RGB channels are mapped using the
+three combo boxes. Here, they will just hold "R", "G" and "B" as the source
+band names because this is an RGB image source.</p>
 <p><figure><a data-lightbox="inputrgb.png" href="../inputrgb.png" name="inputrgb"><img alt="An open RGB input" src="../inputrgb.png" /></a><figcaption class="figure-caption text-right">Figure: An open RGB input. Click on image to expand.</figcaption></figure></p>
-<p>At the bottom right of the image are three <strong>source indicators</strong>: these
+<p>At the bottom of the image are three <strong>source indicators</strong>: these
 show what bands within which inputs were used to generate the canvas
 image. They should show something like</p>
 <pre><code>[0:R][0:G][0:B]
 </code></pre>
 <p>meaning that the red channel was generated from the band labelled "R" in
 input 0, and so on.</p>
+<h2 id="canvases">Canvases</h2>
+<p>Most nodes use a <strong>canvas</strong> to display some bands of an image as RGB.
+This will take up a large proportion of their tab - in some cases
+all of it - with no other controls. It is worth discussing
+in some detail. A canvas is shown in the previous section as the right-hand
+side of an input widget. Another is shown below as the entire control area
+for an actual <em>input</em> node, which brings one of the four inputs into
+the graph.</p>
+<p><figure><a data-lightbox="inputnode.png" href="../inputnode.png" name="inputnode"><img alt="An open *input 0* node" src="../inputnode.png" /></a><figcaption class="figure-caption text-right">Figure: An open *input 0* node. Click on image to expand.</figcaption></figure></p>
+<p>You can pan the canvas using the scroll bars at the edge, and zoom with
+the mouse wheel. The button at bottom right will reset to show the entire
+image.</p>
+<p>To the left of the canvas image itself are three combo boxes which determine
+the image <em>mapping</em> : how the bands within the (probably) multispectral image
+map onto RGB channels for viewing. Each band in the combo box shows the input
+number, a colon, and typically the name, position or wavelength of the band.
+Exactly what is shown depends on the image being loaded and the Caption
+<a href="../../userguide/globalcontrols/">global control</a>.</p>
+<p>Below this are some assorted controls:</p>
+<ul>
+<li><strong>Show ROIs</strong> will mark any regions of interest the image has - these
+are added using nodes like <em>rect</em> (for a rectangle) and are carried forward
+through subsequent nodes (where appropriate), delimiting the area upon
+which calculations are performed. They also control the regions used
+for calculating spectra. Normally an ROI is only shown in the node which adds
+it.</li>
+<li><strong>Show spectrum</strong> opens a side pane, and dragging the cursor across the
+image will plot the spectrum of the pixel under the cursor in this pane. If
+no filter wavelengths are available, a list of the values for each band
+is shown.</li>
+<li><strong>Save RGB</strong> saves the RGB-mapped image as a PNG.</li>
+<li><strong>Guess RGB</strong> tries to guess appropriate channels for the RGB canvas image.</li>
+</ul>
+<div class="alert alert-warning" role="alert">
+<p>The canvas is going to get a lot more complex in the next release,
+because it needs to show image quality and uncertainty data for each band.
+This information will be moved into <a href="../../userguide/canvas/">its own page</a></p>
+</div>
 <h2 id="manipulating-an-image">Manipulating an image</h2>
 <p>Let's perform a simple manipulation on an RGB image. It's not what PCOT
 is for, but it will demonstrate some of the principles without requiring
@@ -336,6 +362,8 @@ displaying something like</p>
 </code></pre>
 <p>This indicates that all three RGB channels shown in the canvas are getting
 their data from both the R and G bands of input 0.</p>
+<p>The end result should look something like this:</p>
+<p><figure><a data-lightbox="rgslope.png" href="../rgslope.png" name="rgslope"><img alt="A &quot;red-green slope&quot; calculated from an RGB image" src="../rgslope.png" /></a><figcaption class="figure-caption text-right">Figure: A "red-green slope" calculated from an RGB image. Click on image to expand.</figcaption></figure></p>
 <h2 id="getting-help">Getting help</h2>
 <h3 id="nodes">Nodes</h3>
 <p>Inside the PCOT app there are three ways to get help on a node:</p>
@@ -359,10 +387,12 @@ option. Inside the expression box in the <em>expr</em> node, you can right-click
 on most things and ask for help.</p>
 <h2 id="loading-different-image-formats">Loading different image formats</h2>
 <p>The examples above use RGB images, which aren't much use for real work.
-Other image formats are available:
-* ENVI images
-* "multiband" images (multiple monochrome PNG images, one per band)
-* PDS4 products (work in progress)</p>
+Other image formats are available:</p>
+<ul>
+<li>ENVI images</li>
+<li>"multiband" images (multiple monochrome PNG images, one per band)</li>
+<li>PDS4 products (work in progress)</li>
+</ul>
 <h3 id="loading-an-envi-image">Loading an ENVI image</h3>
 <p>ENVI images consists of a header (.hdr) file and the actual data (.dat) file. Currently PCOT can only load
 ENVI files which are 32-bit floating point, BSQ (band sequential) interleaved. To load ENVI, open an input
@@ -403,7 +433,8 @@ If they are dark, select an appropriate multiplier and double-click again.</li>
 <p>Close the dialog when you have the selected images you want. It might be a good idea to create an <em>input</em> node
 to examine the resulting multispectral image.</p>
 <h3 id="pds4-products">PDS4 products</h3>
-<p>This is very much work in progress - please contact the developers if you need this functionality soon.</p></div>
+<p>This is very much work in progress - please contact the developers if you need
+this functionality soon.</p></div>
             </div>
         </div>
 
