@@ -7,27 +7,29 @@ harder to use as a library and to modify. It's also quite a large file.
 
 ## Standalone version
 The standalone executables are available on request from the Aberystwyth team. Once you
-have the appropriate executable for your operating system, just run it to run PCOT. No
-installation is necessary.
+have the appropriate executable for your operating system, just run it to run PCOT. 
+
+* **Pros**: no installation is necessary
+* **Cons**: PCOT can take a little while to start up; it's very difficult to
+use PCOT as a library in this configuration.
 
 ## Installing from source
-PCOT is a Python program (and library) with a number of dependencies, including
+Another choice is to install the Python source code from Github.
 
-* Python >3.8
-* PyQt
-* OpenCV
-* numpy
-* scikit-image
-* pyperclip (may also require other packages in Linux e.g. xsel)
-* matplotlib
+* **Pros**: instant startup, access to the source code and regular updates;
+very easy to use as a library; very easy to write extensions.
+* **Cons**: requires a little more work (but hopefully not too much).
 
-### Install Anaconda
+PCOT is a Python program (and library) with a number of dependencies,
+notably numpy and PySide2 (the official Python interface to Qt).
 We find the best way to manage these is to use
 [Anaconda](https://anaconda.com/)
 and
 [Poetry](https://python-poetry.org/).
 Installation has been tested on Windows 10,
 MacOS and Ubuntu 20.04.
+
+### Install Anaconda
 The first thing you will need to do is install Anaconda, which can be done from here:
 
 * Windows: https://docs.anaconda.com/anaconda/install/windows/
@@ -100,16 +102,19 @@ pip3 install pds4-tools
 ```
 -->
 
-## Running PCOT from source
-Open an Anaconda shell and run the following commands (assuming you installed PCOT into your home directory):
+## Running PCOT
+Once you have installed PCOT as above, you can run it by 
+opening an Anaconda shell and entering the following commands:
 ```shell
 conda activate pcot
 pcot
 ```
-If you have installed the binary version you don't need to activate a conda environment.
+If you have installed the binary version you don't need to activate a conda environment,
+just navigate to the directory containing the execuable and run it.
 
 ## Running PCOT inside Pycharm
-These instructions apply to source installations.
+These instructions apply to source installations, and can be useful if you
+are debugging extensions or library code or debugging PCOT itself.
 
 * First set up the Conda environment and interpreter:
     * Open PyCharm and open the PCOT directory as an existing project.

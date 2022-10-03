@@ -26,10 +26,12 @@ The window is divided into several areas:
 
 * At the top, the **input buttons** each open one of PCOT's input windows.
 These describe how information is read into PCOT.
-* Below this and to the left is the **node tab area**, which will be empty
+* Below this and to the left is the **node area**, which will be empty
 on startup. Double-clicking on a node in the graph (see below) will
-open a tab for that node, allowing you to view it and edit its parameters.
-* To the right of the tab area is the **graph**. This shows the nodes in
+open a detailed view for that node.
+You can have several views open in this area looking at different nodes, and 
+you can undock by double-clicking on the tab at the top of the view.
+* To the right of the node area is the **graph**. This shows the nodes in
 the document and their connections.
 * To the right of the graph is the **palette**. Clicking on a button in
 the palette will add a node of the given type to the graph.
@@ -45,23 +47,25 @@ a single *input* node, with no nodes open. You can select a node in the graph
 by clicking on it, or by dragging a box which intersects the node.
 A selected node will be tinted blue.
 
-### Opening a node's tab for editing
-Double-clicking on a node will open that node's tab for editing.
+### Opening a node for editing
+Double-clicking on a node will open that node for editing.
 If you double-click on the *input* node, it will turn a dark cyan colour
-and the node's tab will appear on the left:
+and a view of the node will appear on the left, along with a tab to select that
+view when multiple node views are open:
 
 ![!An open but unused input node](inputopen.png)
 
-The node is cyan because the currently selected tab's node is tinted green,
-and the node is already tinted blue because it is selected. There are 
+The node is cyan because the current view's node is tinted green,
+and the node is already tinted blue because it is selected in the graph. There are 
 two selection models:
 
 * Multiple nodes can be selected in the graph; these are tinted blue.
-* A single node's tab can be open and currently being edited, this node
+* A single node's view can be open and currently being edited, this node
 is tinted green in the graph.
 * Nodes which are both being edited and are selected are tinted cyan.
 
-The tab for this particular node - *input* - shows what is being input. In
+The view for this particular node - *input 0* - shows what external input is currently being
+read into PCOT on the input numbered 0. In
 this case it shows "None" because there is currently no input. 
 
 ### Creating a new node
@@ -73,15 +77,15 @@ that type in the graph, hopefully somewhere sensible.
 * **Right-clicking a node type from the palette and dragging onto the graph** will create a node
 where you wish.
 
-### "Undocking" a node's tab
+### "Undocking" a node's view
 
 <img src="../tab.png" style="float: left; margin-right:20px">
-Sometimes it is useful to see several node tabs at the same time.
-Double-clicking on the actual "tab" part, where the name of the
-node type appears, will make the tab open in a separate window.
-This can be done for several tabs, and the windows can be rearranged
-as you wish. Closing the window will "redock" the tab so it appears
-in the tab area as before.
+Sometimes it is useful to see several node views at the same time.
+Double-clicking on the tab, where the name of the
+node type appears, will make the view open in a separate window.
+This can be done for several views, and the windows can be rearranged
+as you wish. Closing the window will "redock" the view so it appears
+in the node area as before.
 
 ### Constant and comment nodes
 
@@ -89,12 +93,12 @@ These two nodes are special - the boxes in the graph have text fields
 which can be edited.
 
 *  For *constant* nodes, the value in the box 
-will be the numeric output of the node. This node has no tab, and double-clicking
+will be the numeric output of the node. This node has no view, and double-clicking
 has no effect.
 * For *comment* nodes, the value in the box is a text comment that can help
 other users navigate the graph. Once edited, the box can be resized by
 clicking and dragging its bottom-right corner. The text will flow to fit
-the box. Double-clicking on a *comment* node opens a tab which provides
+the box. Double-clicking on a *comment* node opens a view which provides
 an alternative way of editing the text, as well as changing the font size and
 colours. It's also the only way of getting blank lines into the text, since
 hitting the "enter" key will stop editing when you are editing the node
@@ -110,9 +114,9 @@ the main window will open the first of the four input's editor window. This
 will show a number of buttons, one for each input method. Click on RGB, and
 the window will show that input's RGB method settings and select the RGB
 method as being active (see below). Using the directory tree widget,
-double-click any image file (PNG or RGB). The right-hand side (known as a 
-"canvas") will show the
-image selected, and you can modify how the RGB channels are mapped using the
+double-click any image file (PNG or RGB). The right-hand side is a common component in PCOT
+known as a "canvas", which will show the
+image selected. The canvas lets you modify how the RGB channels are mapped using the
 three combo boxes. Here, they will just hold "R", "G" and "B" as the source
 band names because this is an RGB image source.
 
@@ -131,7 +135,7 @@ input 0, and so on.
 ## Canvases
 
 Most nodes use a **canvas** to display some bands of an image as RGB.
-This will take up a large proportion of their tab - in some cases
+This will take up a large proportion of their view - in some cases
 all of it - with no other controls. It is worth discussing
 in some detail. A canvas is shown in the previous section as the right-hand
 side of an input widget. Another is shown below as the entire control area
@@ -188,11 +192,11 @@ bring input 0 into the graph.
 evaluation node.
 * Drag a connection from the output of *input 0* to the *a* input
 of *expr*
-* Double-click on the *expr* node to open its tab for editing
+* Double-click on the *expr* node to open its view for editing
 
 We now have an input feeding into an expression evaluator, which we can
 edit. First, let's just see one band.
-Click in the *expr* tab's expression box: this is the box which
+Click in the *expr* view's expression box: this is the box which
 says "Enter expression here...". Enter the string
 
     a$R
@@ -202,7 +206,7 @@ the red channel in RGB images (in multispectral images we typically
 use wavelengths on the right-hand side of the ```$``` operator, such as
 ```a$640```).
 
-Press "Run" in the node's tab. You should now see a monochrome image in the
+Press "Run" in the node's view. You should now see a monochrome image in the
 node's canvas: the result of the calculation, containing only the red channel.
 Now change the expression to
 

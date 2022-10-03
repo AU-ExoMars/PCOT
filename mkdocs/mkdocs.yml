@@ -5,6 +5,7 @@ theme:
     custom_dir: theme
     
 markdown_extensions:
+  - footnotes
   - lightbox:LightBoxExtension # lightbox images with ![!Caption](img.png)
   - alert:AlertExtension # alert with @@@ tag .. @@@ markup
   - pymdownx.arithmatex # permits $..$ and \[ .. \] for maths; \begin{..}..\end{..} works too

@@ -3,14 +3,15 @@
 **How PCOT works (and why)**
 
 PCOT was originally designed to help scientists and engineers analyse PanCam
-data and produce useful secondary data. It acts downstream from the ROCC on
+data and produce useful secondary data. It acts downstream from the
+Rover Operations Control Centre (ROCC) on
 images which have already been processed to some extent, and is a successor to
-ExoSpec. As such, its primary purpose is to generate relative reflectance
+ExoSpec [^1]. As such, its primary purpose is to generate relative reflectance
 images and spectral parameter maps, although it will also be able to produce
-spectra from small regions of interest. Indeed, it should be flexible enough
+spectra from regions of interest. Indeed, it should be flexible enough
 to perform a wide range of unforeseen calculations.
 
-Of course, PCOT can handle many other kinds of data. It is particularly suited
+PCOT can also handle many other kinds of data. It is particularly suited
 to processing multispectral images with uncertainty and error data, and can
 currently read PDS4 and ENVI formats, alongside more common RGB formats
 which can be collated into multispectral images.
@@ -57,7 +58,7 @@ to the range [0,1]. The result will be a single-band image. *Expr* nodes can per
 * Finally, the *inset* node will inset this RGB image into an RGB representation of the original image - the mapping of bands in
 that image onto RGB is done in the *input* node. A label can be added here.
 
-Of course, if you feel the gradient is rather artificial, the inset can just
+If you feel the gradient is rather artificial, the inset can just
 be the original band ratio image expanded to RGB greyscale using another
 *expr* node:
 
@@ -73,7 +74,7 @@ as easy as clicking on the image.
 
 ![!Spectrogram example](spec.png)
 
-Here I have "undocked" the *spectrum* node's tab to be a separate window for easy viewing. The spectrum can also be saved as a PDF
+Here I have "undocked" the *spectrum* node's view to be a separate window for easy viewing. The spectrum can also be saved as a PDF
 or converted into CSV data. I'm also showing the entire app, including the menu bar and four input buttons.
 
 ## The Document
@@ -100,3 +101,11 @@ even if they don't have the sources.
 @@@
 
 Move on to [a First Tutorial](../tutorial)
+
+[^1]: 
+Allender, Elyse J., Roger B. Stabbins, Matthew D. Gunn, Claire R. Cousins,
+and Andrew J. Coates. 
+["The ExoMars spectral tool (ExoSpec): An image analysis tool for ExoMars 2020 PanCam imagery."](https://www.spiedigitallibrary.org/conference-proceedings-of-spie/10789/107890I/The-ExoMars-Spectral-Tool-ExoSpec--an-image-analysis-tool/10.1117/12.2325659.short?SSO=1)
+In 
+*Image and Signal Processing for Remote Sensing XXIV*, vol. 10789, pp. 163-181. SPIE, 2018.
+[link to PDF]((https://research-repository.st-andrews.ac.uk/bitstream/handle/10023/16973/Allender_2018_ExoMars_SPIE_107890I.pdf?sequence=1&isAllowed=y))

@@ -28,9 +28,8 @@ from the ExoMars PANCAM instrument - but we also support
 ## Reporting bugs
 
 There are known issues which can stop PCOT running - see
-[issues](gettingstarted/issues.md). If your problem isn't described there, you
-should have been given the address and a user ID to access our bug tracking
-system. If you haven't, please contact the Aberystwyth team.
+[issues](gettingstarted/issues.md). If your problem isn't described there
+please create a new issue on Github or contact the Aberystwyth team.
 
 ## Release history
 [Can be found here](releases.md)
