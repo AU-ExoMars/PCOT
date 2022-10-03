@@ -12,7 +12,7 @@ from typing import List, Optional, OrderedDict, ClassVar
 import markdown
 from PySide2 import QtWidgets
 from PySide2.QtGui import QTextCursor
-from PySide2.QtWidgets import QAction, QMessageBox, QDialog
+from PySide2.QtWidgets import QAction, QMessageBox, QDialog, QMenuBar, QMenu
 
 import pcot
 from pcot.ui import graphscene, graphview, uiloader
@@ -414,6 +414,16 @@ class MainUI(ui.tabs.DockableTabWindow):
         dialog.textEdit.moveCursor(QTextCursor.Start)
         # print(dialog.textEdit.toHtml())
         dialog.show()
+
+    def findOrAddMenu(self, name):
+        """Find a menu or add a new one"""
+        for m in self.menubar.findChildren(QMenu):
+            if m.objectName() == name or m.title() == name:
+                return m
+        m = QMenu(name)
+        self.menubar.addMenu(m)
+        return m
+
 
     ## this gets called from way down in the scene to open tabs for nodes
     def openTab(self, node):
