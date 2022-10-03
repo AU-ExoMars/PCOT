@@ -182,7 +182,6 @@ class Document:
         # a success/failure status/
         i.invalidate()
         i.get()
-        return i.exception
 
     def setInputENVI(self, inputidx, fname):
         """set graph's input to an ENVI"""

@@ -1,4 +1,12 @@
 # A quick test of LaTeX support
+
+@@@info
+Please ignore this page - I use it as a scratchpad for various
+LaTeX tests. It might seem a bit unpleasant to have this as part
+of the live documentation, but that absolutely guarantees that it
+works everywhere!
+@@@
+
 LaTeX in these documents is handled with the pymdownx.arithmatex plugin, which really just hands
 processing off to MathJax. MathJax then renders the LaTeX using JavaScript. Lots and lots of 
 very clever JavaScript.
