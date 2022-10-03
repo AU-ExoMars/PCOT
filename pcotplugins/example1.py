@@ -152,7 +152,9 @@ def dumpToDot(w):
 def addMenuItem(w):
     # Add an extra menu to the window, and a single menu item. The argument for this function is
     # the window, from which we can easily get the graph.
-    menu = w.menubar.addMenu("Extras")
+
+    print("blark")
+    menu = w.findOrAddMenu("Extras")
     menu.addAction('Graphviz', lambda: dumpToDot(w))
 
 
