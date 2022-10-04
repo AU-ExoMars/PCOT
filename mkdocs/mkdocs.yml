@@ -28,6 +28,8 @@ nav:
         - Autodocs: autodocs/index.md
     - Developer's Guide:
         - Overview: devguide/index.md
+        - Using PCOT as a library: devguide/library.md
+        - Writing PCOT plugins: devguide/plugins.md
     - Roadmap: roadmap.md
     - Known issues: gettingstarted/issues.md
 
