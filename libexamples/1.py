@@ -30,6 +30,7 @@ for file in ("1",):
     
     # get its output
     img = outNode.out.get(Datum.IMG)
+    print(f"Image size: {img.w} x {img.h} x {img.channels}");
  
     # write to new ENVI, e.g. 1b.hdr
     envi.write(file+"b",img)
