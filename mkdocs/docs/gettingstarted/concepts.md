@@ -108,4 +108,4 @@ and Andrew J. Coates.
 ["The ExoMars spectral tool (ExoSpec): An image analysis tool for ExoMars 2020 PanCam imagery."](https://www.spiedigitallibrary.org/conference-proceedings-of-spie/10789/107890I/The-ExoMars-Spectral-Tool-ExoSpec--an-image-analysis-tool/10.1117/12.2325659.short?SSO=1)
 In 
 *Image and Signal Processing for Remote Sensing XXIV*, vol. 10789, pp. 163-181. SPIE, 2018.
-[link to PDF]((https://research-repository.st-andrews.ac.uk/bitstream/handle/10023/16973/Allender_2018_ExoMars_SPIE_107890I.pdf?sequence=1&isAllowed=y))
+[link to PDF](https://research-repository.st-andrews.ac.uk/bitstream/handle/10023/16973/Allender_2018_ExoMars_SPIE_107890I.pdf)

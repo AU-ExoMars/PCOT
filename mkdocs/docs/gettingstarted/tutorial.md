@@ -14,9 +14,25 @@ quickly but the basics will be the same
 Be aware that this is very much an early version and there are 
 no doubt a lot of serious problems!
 @@@
-        
-## Introduction to the UI
 
+## Preparation
+PCOT is primarily designed to work with multispectral images. For this tutorial
+we have prepared an image and packaged it with the rest of the system, but you will
+need to uncompress it: it's an ENVI image and these can be rather large.
+It can be found in the **exampleData** directory
+as **obj4-sand-subset.zip**. Uncompress it somewhere (perhaps into the same directory) producing two files:
+**1.hdr** (the header file) and **1.dat** (the data itself).
+
+This is a 256x256 image with taken using AUPE (Aberystwyth University Pancam Emulator), with 11 bands
+of data. It is a subset of a larger image used in testing, and is shown below as an RGB image:
+
+![!The example image (640nm, 550nm and 440nm bands)](obj4-sand-subset.png)
+
+Now you have this image you can start PCOT.
+
+## Introduction to the user interface
+
+First, a quick look at the UI with a document open.
 The image below shows the PCOT interface with text in red describing
 each part.
 
@@ -42,7 +58,7 @@ the palette will add a node of the given type to the graph.
 
 ### Selecting in the graph
 
-When you open the program, the first thing you will see is a graph containing
+When you open the program the first thing you will see is a graph containing
 a single *input* node, with no nodes open. You can select a node in the graph
 by clicking on it, or by dragging a box which intersects the node.
 A selected node will be tinted blue.

@@ -43,7 +43,7 @@ class ImagesTreeprocessor(Treeprocessor):
                 image.set("alt", desc)
                 parent = parent_map[image]
                 ix = list(parent).index(image)
-                top = etree.Element('figure')
+                top = etree.Element('figure', attrib={"class": "text-center"})
                 new_node = etree.SubElement(top,'a')
                 new_node.set("href", image.attrib["src"])
                 if anchor is not None:
@@ -55,7 +55,7 @@ class ImagesTreeprocessor(Treeprocessor):
                     inline_caption_node.text = desc
                     parent.insert(ix + 1, inline_caption_node)
                 new_node.append(image)
-                caption = etree.Element('figcaption',attrib={"class":"figure-caption text-right"})
+                caption = etree.Element('figcaption',attrib={"class":"figure-caption text-center"})
                 caption.text=f"Figure: {desc}. Click on image to expand."
                 top.insert(1,caption)
                 parent.insert(ix, top)
