@@ -1,6 +1,6 @@
 
 from .inputmethod import InputMethod
-from pcot.ui.inputs import PlaceholderMethodWidget
+from pcot.ui.inputs import NullMethodWidget
 from ..datum import Datum
 
 
@@ -18,7 +18,7 @@ class NullInputMethod(InputMethod):
         return "Null"
 
     def createWidget(self):
-        return PlaceholderMethodWidget(self)
+        return NullMethodWidget(self)
 
     def serialise(self, internal):
         return None

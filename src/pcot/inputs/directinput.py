@@ -1,7 +1,6 @@
 from typing import Optional
 
 from .inputmethod import InputMethod
-from pcot.ui.inputs import PlaceholderMethodWidget
 from ..datum import Datum
 from ..imagecube import ImageCube
 

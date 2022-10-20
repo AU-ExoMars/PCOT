@@ -254,15 +254,5 @@ class NullMethodWidget(MethodWidget):
         super().__init__(m)
         layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
-        layout.addWidget(QtWidgets.QLabel("NULL INPUT"))
+        layout.addWidget(QtWidgets.QLabel("No input method is in use."))
 
-
-class PlaceholderMethodWidget(MethodWidget):
-    """This method widget does nothing at all, but differently."""
-
-    def __init__(self, m):
-        super().__init__(m)
-        layout = QtWidgets.QVBoxLayout()
-        self.setLayout(layout)
-        text = m.getName() + " PLACEHOLDER"
-        layout.addWidget(QtWidgets.QLabel(text))
