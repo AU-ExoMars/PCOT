@@ -21,6 +21,8 @@ nav:
         - Installing and running: gettingstarted/installrun.md
         - PCOT concepts: gettingstarted/concepts.md
         - Tutorial: gettingstarted/tutorial.md
+        - Loading other image formats: gettingstarted/inputs.md
+        - Getting help: gettingstarted/help.md
     - User Guide: 
         - Overview: userguide/index.md
         - Operating principles: userguide/principles.md

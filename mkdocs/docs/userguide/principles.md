@@ -107,7 +107,8 @@ which carries the same ROIs.
 in operation. This means that either only one image has an ROI, or the sets of ROIs for
 both images are identical.
 
-The part of the resulting image outside left-hand side, as shown in the figure below.
+Outside the ROI, the image pixels are taken from the left-hand side of the operator
+as shown in the figure below.
 
 ![!Two images A and B, B has an ROI. In the result, the area covered by the ROI is A+B, the rest of the image is passed through from A (which has no ROI)](ROIs.svg)
 
