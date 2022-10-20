@@ -6,7 +6,7 @@ import platform
 from typing import TYPE_CHECKING, Optional, Union
 
 from PySide2 import QtWidgets, QtCore
-from PySide2.QtGui import QImage, QPainter, QBitmap, QCursor, QPen
+from PySide2.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent
 from PySide2.QtCore import Qt
 
 import cv2 as cv
@@ -244,7 +244,7 @@ class InnerCanvas(QtWidgets.QWidget):
         y = (y - self.y) / self.getScale()
         return x, y
 
-    def keyPressEvent(self, e):
+    def keyPressEvent(self, e: QKeyEvent):
         if self.canv.keyHook is not None:
             self.canv.keyHook.canvasKeyPressEvent(e)
         return super().keyPressEvent(e)

@@ -167,7 +167,7 @@ class ChannelMapping:
             r = r if r >= 0 else lst.pop()
             # FINALLY, finally. Make sure those bands are in descending wavelength order. This
             # deals with cases where all the wavelengths (say) are very high.
-            lst = [(x, img.wavelength(x)) for x in (r,g,b)]
+            lst = [(x, img.wavelength(x)) for x in (r, g, b)]
             lst.sort(key=lambda v: -v[1])
             self.red, self.green, self.blue = [x[0] for x in lst]
 

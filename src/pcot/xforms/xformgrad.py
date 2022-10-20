@@ -44,7 +44,7 @@ presetGradients = {
         (0.666667, (0.901961, 1.000000, 0.000000)),
         (0.777778, (1.000000, 1.000000, 0.000000)),
         (0.888889, (1.000000, 0.870588, 0.349020)),
-        (1.000000, (1.000000, 0.878431, 0.701961)),
+        (1.000000, (1.000000, 0.000000, 0.000000)),
     ],
 
     "grey": [
@@ -93,6 +93,7 @@ class XformGradient(XFormType):
                 # onto the ROI. We use the default channel mapping, and the same source on each channel.
                 source = img.sources.getSources()
                 outimg = ImageCube(img.rgb(), node.mapping, sources=MultiBandSource([source, source, source]))
+                outimg.rois = img.rois  # copy ROIs in so they are visible if desired
 
                 # we keep the same RGB mapping
                 node.img = outimg.modifyWithSub(subimage, newsubimg, keepMapping=True)

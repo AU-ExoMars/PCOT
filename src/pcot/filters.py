@@ -61,7 +61,9 @@ class Filter:
 
 def wav2RGB(wavelength, scale=1.0):
     """This is  VERY CRUDE wavelength to RGB converter, for visualisation use only!
-    Originally from an algorithm in FORTRAN by Dan Bruton."""
+    Originally from an algorithm in FORTRAN by Dan Bruton.
+    http://www.physics.sfasu.edu/astro/color/spectra.html
+    """
     w = int(wavelength)
 
     # colour
