@@ -4,10 +4,9 @@ This page is a gentle introduction to PCOT's user interface elements,
 and will walk you through loading image data and performing some
 simple manipulations.
 
-There is a [video guide](https://www.youtube.com/watch?v=vo5KrOAtMQ8) - 
+There is also a [video guide](https://www.youtube.com/watch?v=vo5KrOAtMQ8) - 
 it may be a little out of date, because development is progressing
-quickly but the basics will be the same
-(this also applies to this document).
+quickly but the basics will be the same.
 
 
 @@@ danger
@@ -32,8 +31,8 @@ Now you have this image you can start PCOT.
 
 ## Introduction to the user interface
 
-First, a quick look at the UI with a document open.
-The image below shows the PCOT interface with text in red describing
+The image below shows the PCOT interface when the program has just been started,
+with text in red describing
 each part.
 
 ![!The PCOT user interface](app.png)
@@ -48,28 +47,28 @@ open a detailed view for that node.
 You can have several views open in this area looking at different nodes, and 
 you can undock by double-clicking on the tab at the top of the view.
 * To the right of the node area is the **graph**. This shows the nodes in
-the document and their connections.
+the document and their connections. A new document always has an *input 0* node,
+which brings input 0 into the graph.
 * To the right of the graph is the **palette**. Clicking on a button in
-the palette will add a node of the given type to the graph.
+the palette will add a node of the given type to the graph. 
 * At the bottom is the **log area**, the **status bar**, and a set of
 [global controls](../userguide/globalcontrols.md).
 
 ## Working with graph nodes
 
-### Selecting in the graph
+### Selecting and opening graph nodes
 
-When you open the program the first thing you will see is a graph containing
-a single *input* node, with no nodes open. You can select a node in the graph
+* You can **select a node** in the graph
 by clicking on it, or by dragging a box which intersects the node.
 A selected node will be tinted blue.
-
-### Opening a node for editing
-Double-clicking on a node will open that node for editing.
-If you double-click on the *input* node, it will turn a dark cyan colour
+* You can **open a node** for viewing or editing in the node area by double-clicking.
+If you double-click on the *input 0* node, it will turn a dark cyan colour
 and a view of the node will appear on the left, along with a tab to select that
-view when multiple node views are open:
+view when multiple node views are open.
+* You can **close an open node** by clicking on the cross in the node's tab.
 
-![!An open but unused input node](inputopen.png)
+If you open the *input 0* node in a new document you will see this:
+![!PCOT with an open but unused input node](inputopen.png)
 
 The node is cyan because the current view's node is tinted green,
 and the node is already tinted blue because it is selected in the graph. There are 
@@ -124,29 +123,46 @@ text directly in its box.
 
 ## Loading an image
 
-While PCOT can support several types of multispectral data file, we will load
-an RGB image into PCOT for now. Clicking on the *Input 0* button at the top of
-the main window will open the first of the four input's editor window. This
-will show a number of buttons, one for each input method. Click on RGB, and
-the window will show that input's RGB method settings and select the RGB
-method as being active (see below). Using the directory tree widget,
-double-click any image file (PNG or RGB). The right-hand side is a common component in PCOT
+The purpose of the *input 0* node is to bring the an input into the graph for manipulation.
+As noted [elsewhere](../concepts/), the graph is separate from the inputs. This makes it easier
+to run different graphs on the same inputs, or the same graph on different inputs.
+Clicking on the "Input 0" button at the top of the window will open a window to let us change the
+input, which looks like this:
+
+![!An input window, with the null input selected](inputnull.png)
+
+Each input supports a number of *input methods*, only one of which can be active at a time. By
+default, the method is *null*, meaning that no data is loaded into that input.
+
+PCOT can support several types of multispectral data file: we will load
+a small ENVI image we uncompressed earlier. Click on ENVI, and
+the window will show that input's ENVI method settings and select the ENVI
+method as being active (see below). 
+
+Using the directory tree widget, navigate to and double-click the **1.hdr** file extracted earlier.
+You should see something like this:
+
+![!An open ENVI input|inputenvi](inputenvi.png)
+
+
+The right-hand side is a common component in PCOT
 known as a "canvas", which will show the
 image selected. The canvas lets you modify how the RGB channels are mapped using the
-three combo boxes. Here, they will just hold "R", "G" and "B" as the source
-band names because this is an RGB image source.
+three combo boxes. Each box gives the band number, the input number and the wavelength. For example,
+the red channel is coming from band 2, which is from input 0, and has a wavelength of 640nm.
+If the RGB method is used to load an ordinary RGB image (e.g. from a PNG), the wavelength will
+not be shown.
 
-![!An open RGB input|inputrgb](inputrgb.png)
 
-At the bottom of the image are three **source indicators**: these
+At the bottom of the image itself are three **source indicators**: these
 show what bands within which inputs were used to generate the canvas
 image. They should show something like
 
-    [0:R][0:G][0:B]
+    [0:640][0:540][0:480]
     
-meaning that the red channel was generated from the band labelled "R" in
-input 0, and so on.
-
+again indicating that the red, green and blue channels come from the 640nm, 540nm and 480nm
+bands in input 0's image. The source indicator may get quite complex - it shows all inputs that
+have had an effect on each channel of the image.
 
 ## Canvases
 
@@ -187,18 +203,26 @@ is shown.
 * **Save RGB** saves the RGB-mapped image as a PNG.
 * **Guess RGB** tries to guess appropriate channels for the RGB canvas image.
 
+The show spectrum pane looks like this:
+![!The "show spectrum" pane on an input node's canvas|canvasspec](canvasspec.png)
+
+Typically the actual image pane is tiny - to fix this you can resize the PCOT window (or undocked node
+window), and drag the separator between the image and the spectrum (the two vertical bars).
+Each dot is shown with an approximation of its wavelength colour (using 
+[Dan Bruton's algorithm](http://www.physics.sfasu.edu/astro/color/spectra.html)) or
+black if the wavelength is not visible.
+
 @@@warning
 The canvas is going to get a lot more complex in the next release,
 because it needs to show image quality and uncertainty data for each band.
 This information will be moved into [its own page](../userguide/canvas.md)
 @@@
 
-## Manipulating an image
+## Manipulating an image: obtaining a spectral parameter map
 
-Let's perform a simple manipulation on an RGB image. It's not what PCOT
-is for, but it will demonstrate some of the principles without requiring
-actual multispectral data. In this example, we'll generate a "red/green
-slope" image (which is pretty meaningless). 
+Let's perform a simple manipulation on an image. Here we will generate
+a spectral parameter map from two of the image bands. This parameter is
+**R438_671**, showing the ratio between the 438nm and 671nm bands.
 
 * Start PCOT and load an image into input 0 as before, by clicking on
 the Input 0 button, selecting RGB and double-clicking on an image file.
@@ -207,130 +231,89 @@ bring input 0 into the graph.
 * Click on *expr* in the palette (on the right) to create an expression
 evaluation node.
 * Drag a connection from the output of *input 0* to the *a* input
-of *expr*
-* Double-click on the *expr* node to open its view for editing
+of *expr*.
+* Double-click on the *expr* node to open its view for editing - this will show an empty
+output because our mathematical expression is empty.
 
 We now have an input feeding into an expression evaluator, which we can
 edit. First, let's just see one band.
 Click in the *expr* view's expression box: this is the box which
 says "Enter expression here...". Enter the string
 
-    a$R
+    a$671
     
-This says "select band *R* from input *a*" - "R" is the name given to
-the red channel in RGB images (in multispectral images we typically
-use wavelengths on the right-hand side of the ```$``` operator, such as
-```a$640```).
+This says "select the band with centre wavelength 671nm from input *a*".
 
 Press "Run" in the node's view. You should now see a monochrome image in the
-node's canvas: the result of the calculation, containing only the red channel.
+node's canvas: the result of the calculation, containing only that single band.
 Now change the expression to
 
-    a$R - a$G
+    a$671/a$438
     
-and press "Run". This will set each pixel to the result of subtracting the
-green value for that pixel from the red value, giving us our
-"red/green slope." You will probably see quite a
-mess, because the canvas expects data between 0 and 1 and some of the pixels
-will probably be negative. We need to normalise the image to that range.
-Change the expression to 
+and press "Run". You will see a largely white image, because the canvas
+expects data between 0 and 1.
+We need to normalise the image to that range. Change the expression to 
 
-    norm(a$R - a$G)
+    norm(a$671/a$438)
     
-and press "Run" again to see the final result.
+and press "Run" again to see the result.
 
 Note that the source indicators in the bottom left of the image are now
-displaying something like
+displaying
 
-    [0:G&0:R][0:G&0:R][0:G&0:R]
+    [0:438&0:671] [0:438&0:671] [0:438&0:671]
     
 This indicates that all three RGB channels shown in the canvas are getting
-their data from both the R and G bands of input 0.
+their data from the 438 and 671 bands of input 0.
 
 The end result should look something like this:
 
-![!A "red-green slope" calculated from an RGB image|rgslope](rgslope.png)
+![!R671_438 parameter from an multispectral image|R671_438](R671_438.png)
+
+### Adding a region of interest
+
+It's a little hard to see what's going on, so we will add a region of interest.
+This will make the *expr* node treat the operation differently - only the area inside
+the rectangle will be ```norm(a$671/a$438)```. Everywhere
+else in the image, the output will come from the left-hand side of the expression (the 671nm channel).
+The rules for ROIs are explained more fully [on this page](../../userguide/principles).
+
+Add a *rect* node between the *input* and *expr* nodes (the latter of which will be
+labelled with its expression). Nothing will change, because the rectangle has not been set.
+Edit the *rect* node and draw a rectangle by clicking and dragging on the canvas.
+Set the scale to 5 pixels and type "R671_438" in the Annotation box, something like this:
+
+![!R671_438 with a rectangle|R671_438b](R671_438b.png)
+
+Now the *expr* node shows this - only the rectangle has the parameter, while the rest of
+the image shows the 671nm band:
+
+![!R671_438 with a rectangle|R671_438c](R671_438c.png)
+
+This means that we're normalising a much narrower range to 0-1. 
+It can be hard to adjust the rectangle when you can't see what's happening in the final image -
+try undocking the *rect* node and dragging it to a different part of the screen, so you can edit
+the rectangle while the *expr* output is visible.
+
+To make things more visible still, add a *gradient* node after the *expr* node and view it, clicking
+on the Show ROIs button to make any ROIs on the image visible (ROIs are typically retained on derived
+images):
+
+![!R671_438 with a rectangle and gradient|R671_438d](R671_438d.png)
+
+@@@alert
+The ROI annotations are drawn onto the RGB representation of the image, which makes the resolution
+rather poor on small images. That will change. Also, it will be possible to add a legend to the
+gradient node.
+@@@
 
 
-## Getting help
 
-### Nodes
-Inside the PCOT app there are three ways to get help on a node:
 
-* Double-clicking on the little blue box in the top right
-corner of that node in the graph,
-* Using the right-click context menu on a node,
-* Using the right-click context menu on a button in the palette.
 
-The node help texts are also available
-in the [automatically generated documentation](/autodocs). If this isn't
-enough, don't hesitate to contact the Aberystwyth team.
 
-### Expressions
-Doing the above on an *expr* node will tell you what
-operations, functions and properties are available. This text is also
-available in the automatically generated [documentation for this
-node](/autodocs/expr). 
-
-You can also get help on properties and functions by 
-right clicking in the log box at the bottom and selecting the appropriate
-option. Inside the expression box in the *expr* node, you can right-click
-on most things and ask for help.
-
-## Loading different image formats
-
-The examples above use RGB images, which aren't much use for real work.
-Other image formats are available:
-
-* ENVI images
-* "multiband" images (multiple monochrome PNG images, one per band)
-* PDS4 products (work in progress)
-
-### Loading an ENVI image
-ENVI images consists of a header (.hdr) file and the actual data (.dat) file. Currently PCOT can only load
-ENVI files which are 32-bit floating point, BSQ (band sequential) interleaved. To load ENVI, open an input
-and click the ENVI button. A dialog will appear which is very similar to the [RGB file dialog above](#inputrgb), 
-but showing ENVI header files instead of image files. Double-click on such a file to load its associated data,
-which is assumed to be in the same directory with the same name. Filter name and wavelength information will be taken
-from the file.
-
-### Loading a "multiband" image
-
-Sometimes data is provided as a set of monochrome PNG files, although this is clearly far from ideal.
-In this case we need to tell PCOT how to work out which filter is being used for each file. Again, we open
-the dialog by clicking on an input button and clicking the appropriate method - "Multifile" in this case. This
-will open the ENVI dialog, which is rather more complex than the RGB or ENVI dialogs:
-
-![!An open ENVI input|inputenvi](inputenvi.png)
-
-The procedure here is roughly this:
-
-* Make sure the file names contain the the lens (left or right) as L or R,
-and the filter position number.
-* Work out a regular expression which can find these in the file name.
-Hopefully you can just use the default, which assumes that the filename 
-contains a string like ```LWAC01``` for left lens, position 01; or
-```RWAC10``` for right lens, position 10. If your filenames don't have this
-format and it's too difficult to rename them, you'll have to write
-an RE yourself or find a handy IT person to help.
-* Get the files into a single directory and open the input dialog as shown
-above.
-* Determine which camera configuration - PANCAM or AUPE - produced the
-images and set the Camera option accordingly. These two setups use
-different filter sets, and will translate filter positions into different
-filter wavelengths and names.
-* Click the "Get Directory" button.
-* In the new dialog, select a directory containing the ENVI .hdr files and
-their accompanying .dat files, and click "Select Folder".
-* A lot of files will appear in the Files box.
-* Double-click images to preview them as a single channel.
-If they are dark, select an appropriate multiplier and double-click again.
-* Click in image checkboxes to select them; selected images will be combined into a single multispectral mage.
-
-Close the dialog when you have the selected images you want. It might be a good idea to create an *input* node
-to examine the resulting multispectral image.
-
-### PDS4 products
-
-This is very much work in progress - please contact the developers if you need
-this functionality soon.
+[^1]:
+Allender, E. J., C. R. Cousins, M. D. Gunn, and C. M. Caudill.
+["Multiscale and multispectral characterization of mineralogy with the ExoMars 2022 rover
+remote sensing payload."](https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2019EA000692)
+*Earth and Space Science* 7, no. 4 (2020): e2019EA000692.
