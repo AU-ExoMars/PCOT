@@ -1,7 +1,8 @@
 # PCOT
 
-This is an early version of the Pancam Operations Toolkit. This is primarily
-a Python application and library for processing data from the Pancam
+This is an early version of the Pancam Operations Toolkit. This is
+a Python application and library for primarily intended for 
+processing data from the Pancam
 instrument on the Rosalind Franklin rover, although it lends itself
 to any task involving processing multispectral image data.
 
@@ -22,6 +23,10 @@ maths, splice images together, merge image channels, plot spectra). A PCOT
 document describes this graph, and we
 intend that documents are distributed along with the data they generate
 to help reproducibility.
+
+More documentation can be found [here](https://www.docs.pale.org/pcot/).
+
+## Installation
 
 PCOT is a Python program (and library) with a number of dependencies,
 notably numpy and PySide2 (the official Python interface to Qt).
