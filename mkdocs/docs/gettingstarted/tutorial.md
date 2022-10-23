@@ -56,6 +56,28 @@ the palette will add a node of the given type to the graph.
 
 ## Working with graph nodes
 
+Each node is shown as a box with input connections on the top and output connections on
+the bottom. To illustrate this, here is a more complex graph used later in the tutorial:
+
+![!R671_438 inset into source image RGB representation|R671_438e](R671_438e.png)
+
+### Node boxes
+Looking at a pair of nodes in the graph:
+![!A pair of nodes|node](node.svg)
+
+* The inputs and outputs are coloured by type: blue is perhaps the most common and indicates an image. A black band with a tiny
+"rainbow" indicates an RGB image. Red means any kind of data can be connected here, and generally only appears
+on inputs.
+* Inputs and outputs can also have names (but don't always).
+* Each node has a help box - double-clicking on this pops up help for the node.
+* Each node has a name - usually this is the node's type, but in the case of the *expr* node it is the expression being
+calculated (see below).
+* Nodes can have a "display text" in blue. These show extra data, such as the output of a numerical calculation in an *expr* node
+or (as here) the annotation on a region of interest.
+* Currently nodes also show the number of times they have been calculated as a debugging aid.
+
+
+
 ### Selecting and opening graph nodes
 
 * You can **select a node** in the graph
@@ -160,7 +182,7 @@ image. They should show something like
 
     [0:640][0:540][0:480]
     
-again indicating that the red, green and blue channels come from the 640nm, 540nm and 480nm
+indicating that the red, green and blue channels come from the 640nm, 540nm and 480nm
 bands in input 0's image. The source indicator may get quite complex - it shows all inputs that
 have had an effect on each channel of the image.
 
@@ -168,7 +190,7 @@ have had an effect on each channel of the image.
 
 Most nodes use a **canvas** to display some bands of an image as RGB.
 This will take up a large proportion of their view - in some cases
-all of it - with no other controls. It is worth discussing
+all of it. It is worth discussing
 in some detail. A canvas is shown in the previous section as the right-hand
 side of an input widget. Another is shown below as the entire control area
 for an actual *input* node, which brings one of the four inputs into
@@ -206,11 +228,12 @@ is shown.
 The show spectrum pane looks like this:
 ![!The "show spectrum" pane on an input node's canvas|canvasspec](canvasspec.png)
 
-Typically the actual image pane is tiny - to fix this you can resize the PCOT window (or undocked node
-window), and drag the separator between the image and the spectrum (the two vertical bars).
-Each dot is shown with an approximation of its wavelength colour (using 
-[Dan Bruton's algorithm](http://www.physics.sfasu.edu/astro/color/spectra.html)) or
-black if the wavelength is not visible.
+When a spectrum view is opened the image pane can be tiny - to fix this you
+can resize the PCOT window (or undocked node window), or drag the separator
+between the image and the spectrum (the two vertical bars). Each dot is shown
+with an approximation of its wavelength colour (using [Dan Bruton's
+algorithm](http://www.physics.sfasu.edu/astro/color/spectra.html)) or black if
+the wavelength is not visible.
 
 @@@warning
 The canvas is going to get a lot more complex in the next release,
@@ -222,7 +245,8 @@ This information will be moved into [its own page](../userguide/canvas.md)
 
 Let's perform a simple manipulation on an image. Here we will generate
 a spectral parameter map from two of the image bands. This parameter is
-**R438_671**, showing the ratio between the 438nm and 671nm bands.
+**R671_438**, the ratio between the 671nm and 438nm bands, which indicates
+the presence of ferric minerals[^1].
 
 * Start PCOT and load an image into input 0 as before, by clicking on
 the Input 0 button, selecting RGB and double-clicking on an image file.
@@ -251,12 +275,16 @@ Now change the expression to
     a$671/a$438
     
 and press "Run". You will see a largely white image, because the canvas
-expects data between 0 and 1.
+expects data between 0 and 1 (future versions of the canvas will show this saturation
+more clearly).
 We need to normalise the image to that range. Change the expression to 
 
     norm(a$671/a$438)
     
-and press "Run" again to see the result.
+and press "Run" again to see the result, which should be this:
+
+![!R671_438 parameter from an multispectral image|R671_438](R671_438.png)
+
 
 Note that the source indicators in the bottom left of the image are now
 displaying
@@ -266,15 +294,25 @@ displaying
 This indicates that all three RGB channels shown in the canvas are getting
 their data from the 438 and 671 bands of input 0.
 
-The end result should look something like this:
+### Disconnecting nodes and node error states
+Disconnect the input node by dragging the arrowhead from the *a* box and releasing it in empty space. This will cause an error:
+![!A node in an error state|errornode](errornode.png)
 
-![!R671_438 parameter from an multispectral image|R671_438](R671_438.png)
+The EXPR is the kind of error - EXPR is an error in expression parsing/execution. More details can be seen in the log window,
+which in this case reads 
+
+```
+Error in expression: cannot perform binary operation on None image
+```
+This is because there is no longer an image feeding into the *expr* node, so the binary ```$``` operation cannot run.
+
 
 ### Adding a region of interest
 
 It's a little hard to see what's going on, so we will add a region of interest.
 This will make the *expr* node treat the operation differently - only the area inside
-the rectangle will be ```norm(a$671/a$438)```. Everywhere
+the rectangle will be ```norm(a$671/a$438)```.
+Everywhere
 else in the image, the output will come from the left-hand side of the expression (the 671nm channel).
 The rules for ROIs are explained more fully [on this page](../../userguide/principles).
 
@@ -300,6 +338,13 @@ on the Show ROIs button to make any ROIs on the image visible (ROIs are typicall
 images):
 
 ![!R671_438 with a rectangle and gradient|R671_438d](R671_438d.png)
+
+There's not much to see because of the nature of the image, unfortunately!
+
+It is possible to "inset" the gradient into the RGB representation used in the *input* node
+by cropping it to its region of interest with *croproi* and using an *inset*:
+
+![!R671_438 inset into source image RGB representation|R671_438e](R671_438e.png)
 
 @@@alert
 The ROI annotations are drawn onto the RGB representation of the image, which makes the resolution
