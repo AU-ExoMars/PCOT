@@ -43,7 +43,7 @@ def test_roi_intersection(allblack):
     roiNode1.roi.set(2, 2, 3, 3)
     roiNode1.connect(0, inputNode, 0)
 
-    # another rectangular 3x3 ROI, this one offset 1 in both axes, so the intersect is 2x2.
+    # another rectangular 3x3 ROI, this one offset 1 in both axes, so the intersection is 2x2.
     roiNode2 = doc.graph.create("rect")
     roiNode2.roi.set(3, 3, 3, 3)
     roiNode2.connect(0, inputNode, 0)
@@ -180,7 +180,7 @@ def test_roi_binop_image_lhs():
     # and that the area inside is from the sum.
     assert np.array_equal(img.img[20, 20], (1, 1, 0))
     # and check the image sum - it's a 50x50 image with one channel set, so that's 50*50,
-    # plus a the 30x30 region adding into another channel.
+    # plus the 30x30 region adding into another channel.
     assert np.sum(img.img) == 50 * 50 + 30 * 30
 
 
@@ -220,7 +220,7 @@ def test_roi_binop_image_rhs():
     # and that the area inside is from the sum.
     assert np.array_equal(img.img[20, 20], (0, 1, 1))
     # and check the image sum - it's a 50x50 image with one channel set, so that's 50*50,
-    # plus a the 30x30 region adding into another channel.
+    # plus the 30x30 region adding into another channel.
     assert np.sum(img.img) == 50 * 50 + 30 * 30
 
 
@@ -230,7 +230,7 @@ def test_rois_on_both_sides_of_binop():
     we had two unions of ROIs being fed into both sides of a binop, that the operation would only
     modify the intersection - with the LHS being passed through for the rest. This is OK, but really
     breaks the principle of least astonishment. If the user has fed two images with ROIs into a binary
-    operation it probably means they've done something wrong. Therefore we should throw an error."""
+    operation it probably means they've done something wrong. Therefore, we should throw an error."""
 
     pcot.setup()
     doc = Document()
@@ -413,7 +413,7 @@ def test_roi_diff_expr():
             in1 = 10 <= x < 30 and 10 <= y < 30
             in2 = 20 <= x < 50 and 20 <= y < 50
             expected = (2, 1, 1) if in1 and not in2 else (1, 0, 0)
-        assert np.array_equal(pix, expected), f"pixel {x}, {y} should be {expected}, is {pix}"
+            assert np.array_equal(pix, expected), f"pixel {x}, {y} should be {expected}, is {pix}"
 
 
 def test_roi_diff_exp2():
