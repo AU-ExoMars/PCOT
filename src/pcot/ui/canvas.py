@@ -23,7 +23,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-
 # the actual drawing widget, contained within the Canvas widget
 class InnerCanvas(QtWidgets.QWidget):
     ## @var img
@@ -107,6 +106,7 @@ class InnerCanvas(QtWidgets.QWidget):
     def __init__(self, canv, parent=None):
         super().__init__(parent)
         self.img = None
+        self.imgCube = None
         self.desc = ""
         self.zoomscale = 1
         self.scale = 1
@@ -143,6 +143,7 @@ class InnerCanvas(QtWidgets.QWidget):
     ## display an image next time paintEvent
     # happens, and update to cause that. Allow it to handle None too.
     def display(self, img: 'ImageCube', isPremapped: bool, showROIs: bool = False):
+        self.imgCube = img
         if img is not None:
             self.desc = img.getDesc(self.getGraph())
             if not isPremapped:
@@ -164,6 +165,24 @@ class InnerCanvas(QtWidgets.QWidget):
             self.img = None
             self.reset()
         self.update()
+
+    def drawCursor(self, img, cutx, cuty):
+        """"highlight the pixel under the cursor, but only if the cut canvas area is
+        small enough that there's any point (it's a slow operation!)
+        img: the "cut" region in the image; i.e. the part of the image being displayed.
+        cutx,cuty: the top left of the 'cut' region in the image"""
+
+        if min(self.cutw, self.cuth) < 200:
+            curx, cury = self.cursorX - cutx, self.cursorY - cuty
+            if 0 <= curx < self.cutw and 0 <= cury < self.cuth:
+                img = img.copy()  # copy for drawing (to avoid trails)
+                r, g, b = img[cury, curx, :]
+                # we normally negate the point - but if it's too close to grey, do something else
+                diff = max(abs(r - 0.5), abs(g - 0.5), abs(b - 0.5))
+                if diff > 0.3:
+                    img[cury, curx, :] = (1 - r, 1 - g, 1 - b)
+                else:
+                    img[cury, curx, :] = (1, 1, 1)  # too grey; replace with white
 
     ## the paint event
     def paintEvent(self, event):
@@ -195,33 +214,31 @@ class InnerCanvas(QtWidgets.QWidget):
             # now get the size of the image that was actually cut (some areas may be out of range)
             self.cuth, self.cutw = img.shape[:2]
 
-            # highlight the pixel under the cursor, but only if the cut canvas area is
-            # small enough that there's any point (it's a slow operation!)
-            if min(self.cutw, self.cuth) < 200:
-                curx, cury = self.cursorX - cutx, self.cursorY - cuty
-                if 0 <= curx < self.cutw and 0 <= cury < self.cuth:
-                    img = img.copy()  # copy for drawing (to avoid trails)
-                    r, g, b = img[cury, curx, :]
-                    # we normally negate the point - but if it's too close to grey, do something else
-                    diff = max(abs(r - 0.5), abs(g - 0.5), abs(b - 0.5))
-                    if diff > 0.3:
-                        img[cury, curx, :] = (1 - r, 1 - g, 1 - b)
-                    else:
-                        img[cury, curx, :] = (1, 1, 1)  # too grey; replace with white
-
-            # now resize the cut area up to fit the widget. Using area interpolation here:
-            # cubic produced odd artifacts on float images
+            self.drawCursor(img, cutx, cuty)
+            # now resize the cut area up to fit the widget and draw it. Using area interpolation here:
+            # cubic produced odd artifacts on float images.
             img = cv.resize(img, dsize=(int(self.cutw / scale), int(self.cuth / scale)), interpolation=cv.INTER_AREA)
             qq = self.img2qimage(img)
             p.drawImage(0, 0, qq)
+
+            # draw annotations on the image
+
+            from pcot.utils import annotations  # local import to avoid cyclic imports for typing
+            annotations.draw(p, self.imgCube.annotations, self.getScale(), lambda x, y: self.getCanvasCoords(x, y))
+
+            # now do any extra drawing onto the image itself.
             if self.canv.paintHook is not None:
                 self.canv.paintHook.canvasPaintHook(p)
+
+            # and draw the descriptor
             p.setPen(Qt.yellow)
             p.setBrush(Qt.yellow)
             r = QtCore.QRect(0, widgh - 20, widgw, 20)
             p.drawText(r, Qt.AlignLeft, self.desc)
-
+            r = QtCore.QRect(0,widgh-50,widgw,20)
+            p.drawText(r, Qt.AlignLeft, f"IMG: {img.shape} CUT:{cutx},{cuty} {self.cutw}x{self.cuth} SC:{scale}")
         else:
+            # there's nothing to draw
             self.scale = 1
         p.end()
 

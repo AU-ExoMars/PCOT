@@ -16,6 +16,7 @@ import numpy as np
 from pcot.documentsettings import DocumentSettings
 from pcot.rois import ROI, ROIPainted, ROIBoundsException
 from pcot.sources import MultiBandSource, SourcesObtainable
+from pcot.utils.annotations import Annotation, TestAnnotation
 from pcot.utils.geom import Rect
 
 logger = logging.getLogger(__name__)
@@ -215,6 +216,9 @@ class ImageCube(SourcesObtainable):
     # the regions of interest
     rois: List[ROI]
 
+    ## list of annotations - things that can be drawn on an image.
+    annotations: List[Annotation]
+
     ## @var shape
     # the shape of the image array (i.e. the .shape field) - a single channel image will be a 2D array,
     # a multichannel image will be 3D.
@@ -242,7 +246,8 @@ class ImageCube(SourcesObtainable):
         # first, check the dtype is valid
         if self.img.dtype != np.float32:
             raise Exception("Images must be 32-bit floating point")
-        self.rois = []  # no ROI
+        self.rois = []         # no ROI
+        self.annotations = []  # and no annotations
         self.shape = img.shape
         # set the image type
         if len(img.shape) == 2:
