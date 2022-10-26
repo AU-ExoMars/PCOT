@@ -1,10 +1,16 @@
+from typing import Callable, Tuple
+
 import numpy as np
 import cv2 as cv
+from PySide2.QtCore import QRect, Qt, QPoint
+from PySide2.QtGui import QPainter
 from numpy import ndarray
 from scipy import ndimage
 
 from pcot.sources import SourcesObtainable, SourceSet, nullSourceSet
 from pcot.utils import text, serialiseFields, deserialiseFields
+from pcot.utils.annotations import Annotation, annotFont, annotDrawText
+from pcot.utils.colour import rgb2qcol
 from pcot.utils.geom import Rect
 
 
@@ -22,13 +28,14 @@ class ROIBoundsException(Exception):
 ROISERIALISEFIELDS = ['label', 'labeltop', 'colour', 'fontline', 'fontsize', 'drawbg']
 
 
-class ROI(SourcesObtainable):
+class ROI(SourcesObtainable, Annotation):
     """definition of base type for regions of interest - this is useful in itself
     because it defines an ROI consisting of a predefined BB and mask."""
 
     def __init__(self, tpname, bbrect: Rect = None, maskimg: np.array = None):
         """Ctor. ROIs have a label, which is used to label data in nodes like 'spectrum' and appears in annotations"""
         self.label = None
+        self.bbrect = bbrect
         self.bbrect = bbrect
         self.maskimg = maskimg
         self.tpname = tpname  # subtype name (e.g. 'rect', 'poly')
@@ -111,6 +118,32 @@ class ROI(SourcesObtainable):
 
                 # write a colour
                 np.putmask(imgslice, x, todraw.colour)
+
+    def annotateBB(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
+        """Draw the BB onto a QPainter"""
+        if (bb := self.bb()) is not None:
+            x, y, w, h = bb.astuple()
+            x, y = mapcoords(x, y)
+            p.setBrush(Qt.NoBrush)
+            p.setPen(rgb2qcol(self.colour))
+            p.drawRect(x, y, w / scale, h / scale)
+
+    def annotateText(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
+        if (bb := self.bb()) is not None and self.fontsize > 0:
+            x, y, x2, y2 = bb.corners()
+            ty = y if self.labeltop else y2
+            x, ty = mapcoords(x, ty)
+            # basetop is the neg of labeltop because if the label is at the TOP,
+            # the base of the text is y coord.
+            annotDrawText(p, x, ty, self.label, self.colour,
+                          basetop=not self.labeltop,
+                          bgcol=(0,0,0) if self.drawbg else None,
+                          fontsize=self.fontsize)
+
+    def annotate(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
+        """This draws the ROI onto a QPainter as part of the annotations system"""
+        self.annotateBB(p, scale, mapcoords)
+        self.annotateText(p, scale, mapcoords)
 
     def draw(self, img):
         self.baseDraw(img)
@@ -313,6 +346,7 @@ class ROIRect(ROI):
                                                     self.x, self.y, self.w, self.h)
 
     def draw(self, img: np.ndarray):
+        return  # DISABLED
         self.drawBB(img, self.colour)
         self.drawText(img, self.colour)
 

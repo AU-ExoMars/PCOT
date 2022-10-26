@@ -4,23 +4,23 @@ done in many operations. Avoiding floats saves memory and speeds things up,
 but we could change things later.
 """
 
-import collections
 import logging
 import math
 import numbers
-from typing import List, Optional, Tuple, Sequence, Union
+from typing import List, Optional, Tuple, Sequence, Union, Callable
 
 import cv2 as cv
 import numpy as np
+from PySide2.QtGui import QPainter
 
 from pcot.documentsettings import DocumentSettings
 from pcot.rois import ROI, ROIPainted, ROIBoundsException
 from pcot.sources import MultiBandSource, SourcesObtainable
-from pcot.utils.annotations import Annotation, TestAnnotation
+from pcot.utils import annotations
+from pcot.utils.annotations import TestAnnotation, annotFont
 from pcot.utils.geom import Rect
 
 logger = logging.getLogger(__name__)
-
 
 class SubImageCubeROI:
     """This is a class representing the parts of an imagecube which are covered by ROIs or an ROI.
@@ -159,7 +159,7 @@ class ChannelMapping:
             lst = [x for x in range(img.channels) if x not in (r, g, b)]
             # and finally replace r,g,b with things from the above list if they are -ve, but
             # first appending the entire range to lst just in case it is empty.
-            lst = lst + [min(x, img.channels-1) for x in (0, 1, 2)]
+            lst = lst + [min(x, img.channels - 1) for x in (0, 1, 2)]
 
             # and extract, popping in reverse order to ensure the "default" mapping
             # is 0,1,2 when there is no wavelength data at all.
@@ -171,7 +171,6 @@ class ChannelMapping:
             lst = [(x, img.wavelength(x)) for x in (r, g, b)]
             lst.sort(key=lambda v: -v[1])
             self.red, self.green, self.blue = [x[0] for x in lst]
-
 
     # generate a mapping from a new image if required - or keep using the old mapping
     # if we can. Return self, for fluent.
@@ -213,11 +212,12 @@ class ImageCube(SourcesObtainable):
     img: np.ndarray
 
     ## @var rois
-    # the regions of interest
+    # the regions of interest - these are also annotations! They are in a separate list
+    # so they can be passed through or removed separately.
     rois: List[ROI]
 
     ## list of annotations - things that can be drawn on an image.
-    annotations: List[Annotation]
+    annotations: List[annotations.Annotation]
 
     ## @var shape
     # the shape of the image array (i.e. the .shape field) - a single channel image will be a 2D array,
@@ -246,7 +246,7 @@ class ImageCube(SourcesObtainable):
         # first, check the dtype is valid
         if self.img.dtype != np.float32:
             raise Exception("Images must be 32-bit floating point")
-        self.rois = []         # no ROI
+        self.rois = []  # no ROI
         self.annotations = []  # and no annotations
         self.shape = img.shape
         # set the image type
@@ -582,7 +582,7 @@ class ImageCube(SourcesObtainable):
         wavelengthAndFHWMByChan = {i: self.wavelengthAndFWHM(i) for i in range(self.channels)}
         # now get list of (index, distance from cwl, fwhm), filtering out multi-wavelength channels (for which
         # wavelength() returns -1)
-        wavelengthAndFHWMByChan = [(k, abs(v[0]-cwl), v[1]) for k, v in wavelengthAndFHWMByChan.items() if v[0] >= 0]
+        wavelengthAndFHWMByChan = [(k, abs(v[0] - cwl), v[1]) for k, v in wavelengthAndFHWMByChan.items() if v[0] >= 0]
         if len(wavelengthAndFHWMByChan) > 0:
             # now sort that list by CWL distance and then negative FWHM (widest first)
             wavelengthAndFHWMByChan.sort(key=lambda v: (v[1], -v[2]))
@@ -600,3 +600,16 @@ class ImageCube(SourcesObtainable):
                 return i
         return -1
 
+    def drawAnnotationsAndROIs(self, p: QPainter,
+                        scale: float,
+                        mapcoords: Callable[[float, float], Tuple[float, float]]):
+        """Draw annotations and ROIs onto a painter (either in a canvas or an output device.
+        Will save and restore font because we might be doing font resizing"""
+
+        oldFont = p.font()
+        p.setFont(annotFont)
+
+        for ann in self.annotations+self.rois:
+            ann.annotate(p, scale, mapcoords)
+
+        p.setFont(oldFont)

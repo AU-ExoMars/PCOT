@@ -221,10 +221,10 @@ class InnerCanvas(QtWidgets.QWidget):
             qq = self.img2qimage(img)
             p.drawImage(0, 0, qq)
 
-            # draw annotations on the image
+            # draw annotations (and ROIs, which are annotations too)
+            # on the image
 
-            from pcot.utils import annotations  # local import to avoid cyclic imports for typing
-            annotations.draw(p, self.imgCube.annotations, self.getScale(), lambda x, y: self.getCanvasCoords(x, y))
+            self.imgCube.drawAnnotationsAndROIs(p, self.getScale(), lambda x, y: self.getCanvasCoords(x, y))
 
             # now do any extra drawing onto the image itself.
             if self.canv.paintHook is not None:
