@@ -8,6 +8,25 @@ None
 
 ## Alpha releases
 
+### 0.3.0-alpha 2022-10-27 BEACON HUT
+
+
+* Open source!
+* PDS4 importer with proctools
+* Ad-hoc Spectrum viewer in canvas
+* Significant rewrite of expression execution code, permitting custom
+types to have operations defined on them
+* Direct input method for library use
+* Improved default RGB mapping in canvas
+* Testing
+    * Basics testing
+    * Testing of the operating principles (see [Principles](/userguide/principles))
+        * Source rules
+        * ROI rules
+* rect node can now be edited numerically
+* circle node can add circular ROIs, which can be edited numerically.
+
+
 ### 0.2.0-alpha 2022-04-21 ANJARDEN SPRING
 
 * "pixel scanning" on canvases, shows spectrum of pixel when active
