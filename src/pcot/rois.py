@@ -2,8 +2,8 @@ from typing import Callable, Tuple
 
 import numpy as np
 import cv2 as cv
-from PySide2.QtCore import QRect, Qt, QPoint
-from PySide2.QtGui import QPainter
+from PySide2.QtCore import QRect, Qt, QPoint, QPointF
+from PySide2.QtGui import QPainter, QImage
 from numpy import ndarray
 from scipy import ndimage
 
@@ -89,6 +89,72 @@ class ROI(SourcesObtainable, Annotation):
         else:
             return "No ROI"
 
+    def annotateBB(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
+        """Draw the BB onto a QPainter"""
+        if (bb := self.bb()) is not None:
+            x, y, w, h = bb.astuple()
+            x, y = mapcoords(x, y)
+            p.setBrush(Qt.NoBrush)
+            p.setPen(rgb2qcol(self.colour))
+            p.drawRect(x, y, w / scale, h / scale)
+
+    def annotateMask(self, p: QPainter,
+                     scale: float,
+                     mapcoords: Callable[[float, float], Tuple[float, float]],
+                     drawEdge=False):
+        """This is the 'default' annotate, which draws the ROI onto the painter by
+        using its actual mask. It takes the mask, edge detects (if drawEdge), converts into
+        an image."""
+        if (bb := self.bb()) is not None:
+            # now get the mask
+            mask = self.mask()
+            # run sobel edge-detection on it if required
+            if drawEdge:
+                sx = ndimage.sobel(mask, axis=0, mode='constant')
+                sy = ndimage.sobel(mask, axis=1, mode='constant')
+                mask = np.hypot(sx, sy)
+            mask = mask.clip(max=1.0).astype(np.float)
+            ww = int(bb.w / scale)
+            hh = int(bb.h / scale)
+            mask = cv.resize(mask, dsize=(ww, hh), interpolation=cv.INTER_AREA)
+            # make sure everything is maxed out
+            mask = (mask*10).clip(max=1.0)
+            # now prepare the actual image, which is just a coloured fill rectangle (we'll add alpha)
+            img = np.full((hh, ww, 3), [1, 1, 0], dtype=np.float)  # the second arg is the colour
+            # add the alpha channel
+            x = np.dstack((img, mask))
+            # to byte
+            x = (x * 255).astype(np.ubyte)
+            # resize to canvas/painter scale
+            # to qimage, stashing the data into a field to avoid the problem
+            # discussed in canvas.img2qimage where memory is freed by accident in Qt
+            # (https://bugreports.qt.io/browse/PYSIDE-1563)
+            self.workaround = x
+            q = QImage(x.data, ww, hh, ww * 4, QImage.Format_RGBA8888)
+            # now we have a QImage we can draw it onto the painter.
+            xx, yy = mapcoords(bb.x, bb.y)
+            p.drawImage(xx, yy, q)
+
+    def annotateText(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
+        """Draw the text for the ROI onto the painter"""
+        if (bb := self.bb()) is not None and self.fontsize > 0:
+            x, y, x2, y2 = bb.corners()
+            ty = y if self.labeltop else y2
+            x, ty = mapcoords(x, ty)
+            # basetop is the neg of labeltop because if the label is at the TOP,
+            # the base of the text is y coord.
+            annotDrawText(p, x, ty, self.label, self.colour,
+                          basetop=not self.labeltop,
+                          bgcol=(0, 0, 0) if self.drawbg else None,
+                          fontsize=self.fontsize)
+
+    def annotate(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
+        """This is the default annotation method drawing the ROI onto a QPainter as part of the annotations system.
+        It should be replaced with a more specialised method if possible."""
+        self.annotateBB(p, scale, mapcoords)
+        self.annotateText(p, scale, mapcoords)
+        self.annotateMask(p, scale, mapcoords, drawEdge=True)
+
     def baseDraw(self, img: ndarray, drawBox=False, drawEdge=True):
         """Draw the ROI onto an RGB image using the set colour (yellow by default)"""
         # clip the ROI to the image, perhaps getting a new ROI
@@ -118,32 +184,6 @@ class ROI(SourcesObtainable, Annotation):
 
                 # write a colour
                 np.putmask(imgslice, x, todraw.colour)
-
-    def annotateBB(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
-        """Draw the BB onto a QPainter"""
-        if (bb := self.bb()) is not None:
-            x, y, w, h = bb.astuple()
-            x, y = mapcoords(x, y)
-            p.setBrush(Qt.NoBrush)
-            p.setPen(rgb2qcol(self.colour))
-            p.drawRect(x, y, w / scale, h / scale)
-
-    def annotateText(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
-        if (bb := self.bb()) is not None and self.fontsize > 0:
-            x, y, x2, y2 = bb.corners()
-            ty = y if self.labeltop else y2
-            x, ty = mapcoords(x, ty)
-            # basetop is the neg of labeltop because if the label is at the TOP,
-            # the base of the text is y coord.
-            annotDrawText(p, x, ty, self.label, self.colour,
-                          basetop=not self.labeltop,
-                          bgcol=(0,0,0) if self.drawbg else None,
-                          fontsize=self.fontsize)
-
-    def annotate(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
-        """This draws the ROI onto a QPainter as part of the annotations system"""
-        self.annotateBB(p, scale, mapcoords)
-        self.annotateText(p, scale, mapcoords)
 
     def draw(self, img):
         self.baseDraw(img)
@@ -345,6 +385,11 @@ class ROIRect(ROI):
             return "{} pixels\n{},{}\n{}x{}".format(self.pixels(),
                                                     self.x, self.y, self.w, self.h)
 
+    def annotate(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
+        """Simpler version of annotate for rects; doesn't draw the mask"""
+        self.annotateBB(p, scale, mapcoords)
+        self.annotateText(p, scale, mapcoords)
+
     def draw(self, img: np.ndarray):
         return  # DISABLED
         self.drawBB(img, self.colour)
@@ -424,6 +469,7 @@ class ROICircle(ROI):
         return m > 0
 
     def draw(self, img):
+        return  # DISABLED
         self.baseDraw(img, drawEdge=self.drawEdge, drawBox=self.drawBox)
         self.drawText(img, self.colour)  # these always show label
 
@@ -483,6 +529,7 @@ class ROIPainted(ROI):
 
     def draw(self, img):
         """Draw the ROI onto an rgb image"""
+        return  # DISABLED
         self.baseDraw(img, self.drawBox, self.drawEdge)
 
     def setImageSize(self, imgw, imgh):
@@ -633,7 +680,42 @@ class ROIPoly(ROI):
         # convert to boolean
         return polyimg > 0
 
+    def annotatePoly(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
+        """draw the polygon as annotation onto a painter"""
+
+        p.setBrush(Qt.NoBrush)
+        p.setPen(rgb2qcol(self.colour))
+
+        # map the into painter coords
+        points = [mapcoords(x, y) for (x, y) in self.points]
+
+        # first draw the points as little circles
+        if self.drawPoints:
+            for (x, y) in points:
+                p.drawEllipse(QPointF(x, y), 7, 7)
+
+        # then the selected point, correcting if it's gone out of range
+        # this is drawn as a bigger ring around the point
+        if self.selectedPoint is not None:
+            if self.selectedPoint >= len(self.points):
+                self.selectedPoint = None
+            else:
+                x, y = points[self.selectedPoint]
+                p.drawEllipse(QPointF(x, y), 10, 10)
+
+        # then as a polyline
+        p.drawPolyline([QPointF(x,y) for (x,y) in points])
+
+
+
+
+    def annotate(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
+        self.annotatePoly(p, scale, mapcoords)
+        self.annotateBB(p, scale, mapcoords)
+        self.annotateText(p, scale, mapcoords)
+
     def draw(self, img):
+        return  # DISABLED
         if self.drawBox:
             self.drawBB(img, self.colour)
             self.drawText(img, self.colour)
