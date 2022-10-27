@@ -1,7 +1,7 @@
 # PCOT
 
 This is an early version of the Pancam Operations Toolkit. This is
-a Python application and library for primarily intended for 
+a Python application and library primarily intended for 
 processing data from the Pancam
 instrument on the Rosalind Franklin rover, although it lends itself
 to any task involving processing multispectral image data.
