@@ -10,7 +10,6 @@ None
 
 ### 0.3.0-alpha 2022-10-27 BEACON HUT
 
-
 * Open source!
 * PDS4 importer with proctools
 * Ad-hoc Spectrum viewer in canvas
