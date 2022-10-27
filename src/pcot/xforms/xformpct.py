@@ -345,6 +345,7 @@ class TabPCT(pcot.ui.tabs.Tab):
         c = self.w.canvas
         n = self.node
         if not n.rois:  # if there are ROIs
+            p.setBrush(Qt.NoBrush)
             p.setPen(QColor(255, 255, 255))
             for idx, pt in enumerate(n.pctPoints):
                 if idx == n.selPoint:

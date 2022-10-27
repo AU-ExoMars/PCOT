@@ -50,12 +50,13 @@ class XformRect(XFormROIType):
     def setProps(self, node, img):
         node.roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.fontline, node.drawbg)
 
+    def getMyROIs(self, node):
+        return [node.roi]
+
 
 class TabRect(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabrect.ui')
-        # set the paint hook in the canvas so we can draw on the image
-        self.w.canvas.paintHook = self
         self.w.canvas.mouseHook = self
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
         self.w.drawbg.stateChanged.connect(self.drawbgChanged)
@@ -196,8 +197,6 @@ class TabRect(pcot.ui.tabs.Tab):
 
     # extra drawing!
     def canvasPaintHook(self, p):
-        # we could draw the rectangle in here (dividing all sizes down by the canvas scale)
-        # but it's more accurate done as above in onNodeChanged
         pass
 
     def canvasMouseMoveEvent(self, x2, y2, e):

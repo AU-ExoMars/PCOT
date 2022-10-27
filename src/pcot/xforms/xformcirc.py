@@ -55,12 +55,14 @@ class XformCirc(XFormROIType):
     def setProps(self, node, img):
         node.roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.fontline, node.drawbg)
 
+    def getMyROIs(self, node):
+        return [node.roi]
+
+
 
 class TabCirc(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabcirc.ui')
-        # set the paint hook in the canvas so we can draw on the image
-        self.w.canvas.paintHook = self
         self.w.canvas.mouseHook = self
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
         self.w.drawbg.stateChanged.connect(self.drawbgChanged)
@@ -173,12 +175,6 @@ class TabCirc(pcot.ui.tabs.Tab):
             self.w.XEdit.setText(x)
             self.w.YEdit.setText(y)
             self.w.radiusEdit.setText(r)
-
-    # extra drawing!
-    def canvasPaintHook(self, p):
-        # we could draw the rectangle in here (dividing all sizes down by the canvas scale)
-        # but it's more accurate done as above in onNodeChanged
-        pass
 
     def setRadius(self, x2, y2):
         c = self.node.roi.get()

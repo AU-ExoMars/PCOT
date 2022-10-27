@@ -1,15 +1,15 @@
 from typing import Callable, Tuple
 
-import numpy as np
 import cv2 as cv
-from PySide2.QtCore import QRect, Qt, QPoint, QPointF
+import numpy as np
+from PySide2.QtCore import Qt, QPointF
 from PySide2.QtGui import QPainter, QImage
 from numpy import ndarray
 from scipy import ndimage
 
-from pcot.sources import SourcesObtainable, SourceSet, nullSourceSet
+from pcot.sources import SourcesObtainable, nullSourceSet
 from pcot.utils import text, serialiseFields, deserialiseFields
-from pcot.utils.annotations import Annotation, annotFont, annotDrawText
+from pcot.utils.annotations import Annotation, annotDrawText
 from pcot.utils.colour import rgb2qcol
 from pcot.utils.geom import Rect
 
@@ -117,8 +117,7 @@ class ROI(SourcesObtainable, Annotation):
             ww = int(bb.w / scale)
             hh = int(bb.h / scale)
             mask = cv.resize(mask, dsize=(ww, hh), interpolation=cv.INTER_AREA)
-            # make sure everything is maxed out
-            mask = (mask*10).clip(max=1.0)
+            # does a little dilation
             # now prepare the actual image, which is just a coloured fill rectangle (we'll add alpha)
             img = np.full((hh, ww, 3), [1, 1, 0], dtype=np.float)  # the second arg is the colour
             # add the alpha channel
@@ -137,7 +136,7 @@ class ROI(SourcesObtainable, Annotation):
 
     def annotateText(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
         """Draw the text for the ROI onto the painter"""
-        if (bb := self.bb()) is not None and self.fontsize > 0:
+        if (bb := self.bb()) is not None and self.fontsize > 0 and self.label is not None and self.label != '':
             x, y, x2, y2 = bb.corners()
             ty = y if self.labeltop else y2
             x, ty = mapcoords(x, ty)
@@ -683,31 +682,30 @@ class ROIPoly(ROI):
     def annotatePoly(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
         """draw the polygon as annotation onto a painter"""
 
-        p.setBrush(Qt.NoBrush)
-        p.setPen(rgb2qcol(self.colour))
+        if len(self.points)>0:
+            p.setBrush(Qt.NoBrush)
+            p.setPen(rgb2qcol(self.colour))
 
-        # map the into painter coords
-        points = [mapcoords(x, y) for (x, y) in self.points]
+            # map the into painter coords
+            points = [mapcoords(x, y) for (x, y) in self.points]
 
-        # first draw the points as little circles
-        if self.drawPoints:
-            for (x, y) in points:
-                p.drawEllipse(QPointF(x, y), 7, 7)
+            # first draw the points as little circles
+            if self.drawPoints:
+                for (x, y) in points:
+                    p.drawEllipse(QPointF(x, y), 5, 5)
 
-        # then the selected point, correcting if it's gone out of range
-        # this is drawn as a bigger ring around the point
-        if self.selectedPoint is not None:
-            if self.selectedPoint >= len(self.points):
-                self.selectedPoint = None
-            else:
-                x, y = points[self.selectedPoint]
-                p.drawEllipse(QPointF(x, y), 10, 10)
+            # then the selected point, correcting if it's gone out of range
+            # this is drawn as a bigger ring around the point
+            if self.selectedPoint is not None:
+                if self.selectedPoint >= len(self.points):
+                    self.selectedPoint = None
+                else:
+                    x, y = points[self.selectedPoint]
+                    p.drawEllipse(QPointF(x, y), 8, 8)
 
-        # then as a polyline
-        p.drawPolyline([QPointF(x,y) for (x,y) in points])
-
-
-
+            # then as a polyline
+            points.append(points[0])  # close the loop
+            p.drawPolyline([QPointF(x, y) for (x, y) in points])
 
     def annotate(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
         self.annotatePoly(p, scale, mapcoords)

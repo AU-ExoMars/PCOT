@@ -1315,6 +1315,10 @@ class XFormGraph:
         for n in self.nodes:
             n.ensureConnectionsValid()
 
+    def getMyROIs(self, node):
+        """If this node creates an ROI or ROIs, return it/them as a list, otherwise None (not an empty list)"""
+        return None
+
 
 class XFormROIType(XFormType):
     """Class for handling ROI xform types, does most of the heavy lifting of the node's perform

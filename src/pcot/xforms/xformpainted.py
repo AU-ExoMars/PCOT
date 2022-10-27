@@ -71,6 +71,9 @@ class XFormPainted(XFormROIType):
 
         node.previewRadius = getRadiusFromSlider(node.brushSize, img.w, img.h)
 
+    def getMyROIs(self, node):
+        return [node.roi]
+
 
 class TabPainted(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
@@ -182,6 +185,7 @@ class TabPainted(pcot.ui.tabs.Tab):
     def canvasPaintHook(self, p: QPainter):
         c = self.w.canvas
         if self.mousePos is not None and self.node.previewRadius is not None:
+            p.setBrush(Qt.NoBrush)
             p.setPen(QColor(*[v * 255 for v in self.node.colour]))
             r = self.node.previewRadius / (self.w.canvas.canvas.getScale())
             p.drawEllipse(self.mousePos, r, r)

@@ -602,14 +602,22 @@ class ImageCube(SourcesObtainable):
 
     def drawAnnotationsAndROIs(self, p: QPainter,
                         scale: float,
-                        mapcoords: Callable[[float, float], Tuple[float, float]]):
+                        mapcoords: Callable[[float, float], Tuple[float, float]],
+                        onlyROI: Union[ROI, Sequence] = None):
         """Draw annotations and ROIs onto a painter (either in a canvas or an output device.
         Will save and restore font because we might be doing font resizing"""
 
         oldFont = p.font()
         p.setFont(annotFont)
 
-        for ann in self.annotations+self.rois:
+        if onlyROI is None:
+            rois = self.rois
+        elif isinstance(onlyROI, Sequence):
+            rois = onlyROI
+        else:
+            rois = [onlyROI]
+
+        for ann in self.annotations+rois:
             ann.annotate(p, scale, mapcoords)
 
         p.setFont(oldFont)

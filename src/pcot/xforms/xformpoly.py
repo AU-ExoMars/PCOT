@@ -64,12 +64,15 @@ class XformPoly(XFormROIType):
         node.roi.drawPoints = drawPoints
         node.roi.drawBox = drawBox
 
+    def getMyROIs(self, node):
+        return [node.roi]
+
+
 
 class TabPoly(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabpoly.ui')
         # set the paint hook in the canvas so we can draw on the image
-        self.w.canvas.paintHook = self
         self.w.canvas.mouseHook = self
         self.w.canvas.keyHook = self
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
@@ -160,12 +163,6 @@ class TabPoly(pcot.ui.tabs.Tab):
         self.w.drawMode.setCurrentIndex(self.node.drawMode)
         r, g, b = [x * 255 for x in self.node.colour]
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
-
-    # extra drawing!
-    def canvasPaintHook(self, p):
-        # we could draw the rectangle in here (dividing all sizes down by the canvas scale)
-        # but it's more accurate done as above in onNodeChanged
-        pass
 
     def canvasMouseMoveEvent(self, x, y, e):
         if self.mouseDown:

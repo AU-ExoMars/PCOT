@@ -168,12 +168,6 @@ class TabInset(pcot.ui.tabs.Tab):
         r, g, b = [x * 255 for x in self.node.colour]
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b))
 
-    # extra drawing!
-    def canvasPaintHook(self, p):
-        # we could draw the rectangle in here (dividing all sizes down by the canvas scale)
-        # but it's more accurate done as above in onNodeChanged
-        pass
-
     def canvasMouseMoveEvent(self, x2, y2, e):
         if self.mouseDown:
             p = e.pos()

@@ -140,15 +140,22 @@ class InnerCanvas(QtWidgets.QWidget):
     def getGraph(self):
         return self.canv.graph
 
+    def getShowROIs(self):
+        """Ugly, and I'm not sure it's necessary. Is there always a persister?"""
+        if self.canv.persister.showROIs is None:
+            return False
+        else:
+            return self.canv.persister.showROIs
+
     ## display an image next time paintEvent
     # happens, and update to cause that. Allow it to handle None too.
-    def display(self, img: 'ImageCube', isPremapped: bool, showROIs: bool = False):
+    def display(self, img: 'ImageCube', isPremapped: bool,):
         self.imgCube = img
         if img is not None:
             self.desc = img.getDesc(self.getGraph())
             if not isPremapped:
                 # convert to RGB
-                img = img.rgb(showROIs=showROIs)  # convert to RGB
+                img = img.rgb(showROIs=self.getShowROIs())
                 if img is None:
                     ui.error("Unusual - the RGB representation is None")
             else:
@@ -224,7 +231,18 @@ class InnerCanvas(QtWidgets.QWidget):
             # draw annotations (and ROIs, which are annotations too)
             # on the image
 
-            self.imgCube.drawAnnotationsAndROIs(p, self.getScale(), lambda x, y: self.getCanvasCoords(x, y))
+            if self.getShowROIs():
+                # we're showing ALL rois
+                rois = None
+            elif self.canv.ROInode is not None:
+                # this is a canvas for a node which generates ROIs, show only those (if showROIs is false)
+                rois = self.canv.ROInode.type.getMyROIs(self.canv.ROInode)
+            else:
+                # don't show any ROIs if this isn't an ROI-generator and showROIs is false.
+                rois = []
+
+            self.imgCube.drawAnnotationsAndROIs(p, self.getScale(), lambda x, y: self.getCanvasCoords(x, y),
+                                                onlyROI=rois)
 
             # now do any extra drawing onto the image itself.
             if self.canv.paintHook is not None:
@@ -714,7 +732,7 @@ class Canvas(QtWidgets.QWidget):
         if self.previmg is None:
             # if there's no image, then there are no pixels
             txt = ""
-        elif self.persister.showROIs:
+        elif self.persister is not None and self.persister.showROIs:
             # if we're displaying all ROIs, show that pixel count (and ROI count)
             txt = "{} pixels\nin {} ROIs".format(sum([x.pixels() for x in self.previmg.rois]),
                                                  len(self.previmg.rois))
@@ -733,7 +751,7 @@ class Canvas(QtWidgets.QWidget):
             txt = f"{self.previmg.w} x {self.previmg.h} x {self.previmg.channels}"
         self.dimensions.setText(txt)
 
-        self.canvas.display(self.previmg, self.isPremapped, showROIs=self.persister.showROIs)
+        self.canvas.display(self.previmg, self.isPremapped)
         self.showSpectrum()
 
     ## reset the canvas to x1 magnification
