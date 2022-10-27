@@ -173,8 +173,8 @@ class Document:
     def changed(self):
         self.graph.changed()
 
-    ## helper for external code - set input to some input type and run code to set data.
     def setInputData(self, inputidx, inputType, fn):
+        """helper for external code - set input to some input type and run code to set data."""
         i = self.inputMgr.inputs[inputidx]
         i.setActiveMethod(inputType)
         fn(i.getActive())  # run a function on active method
@@ -182,6 +182,7 @@ class Document:
         # a success/failure status/
         i.invalidate()
         i.get()
+        return i.exception
 
     def setInputENVI(self, inputidx, fname):
         """set graph's input to an ENVI"""

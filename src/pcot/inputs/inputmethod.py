@@ -75,7 +75,7 @@ class InputMethod(ABC):
                 else:
                     logger.info("CACHE WAS INVALID, DATA HAS BEEN READ")
             except FileNotFoundError as e:
-                # this one usually doesn't happen
+                # this one usually doesn't happen except in a library
                 self.input.exception = f"Cannot read file {e.filename}"
                 ui.error(self.input.exception)
             except Exception as e:

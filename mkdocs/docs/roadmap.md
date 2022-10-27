@@ -2,22 +2,9 @@
 
 This is a rough guide, and things may change!
 
-## Next release: BEACON HUT
+## Next release: CAER BRAN
 
-* Open source!
-* PDS4 importer with proctools
-* Ad-hoc Spectrum viewer in canvas
-* Significant rewrite of expression execution code, permitting custom
-types to have operations defined on them
-* Direct input method for library use
-* Improved default RGB mapping in canvas
-* Testing
-    * Basics testing
-    * Testing of the operating principles (see [Principles](/userguide/principles))
-        * Source rules
-        * ROI rules
-* rect node can now be edited numerically
-* circle node can add circular ROIs, which can be edited numerically.
+TBD
 
 ## Future releases
 
