@@ -397,7 +397,7 @@ def test_roi_union_expr():
     for x in range(0, 50):
         for y in range(0, 50):
             pix = img.img[y, x]
-            in1 = 10 <= x < 30 and 10 <= y < 30
+            in1 = 10 <= x < 40 and 10 <= y < 40
             in2 = 20 <= x < 50 and 20 <= y < 50
             expected = (2, 1, 1) if in1 or in2 else (1, 0, 0)
             assert np.array_equal(pix, expected), f"pixel {x}, {y} should be {expected}, is {pix}"
@@ -410,7 +410,7 @@ def test_roi_diff_expr():
     for x in range(0, 50):
         for y in range(0, 50):
             pix = img.img[y, x]
-            in1 = 10 <= x < 30 and 10 <= y < 30
+            in1 = 10 <= x < 40 and 10 <= y < 40
             in2 = 20 <= x < 50 and 20 <= y < 50
             expected = (2, 1, 1) if in1 and not in2 else (1, 0, 0)
             assert np.array_equal(pix, expected), f"pixel {x}, {y} should be {expected}, is {pix}"
@@ -423,7 +423,7 @@ def test_roi_diff_exp2():
     for x in range(0, 50):
         for y in range(0, 50):
             pix = img.img[y, x]
-            in1 = 10 <= x < 30 and 10 <= y < 30
+            in1 = 10 <= x < 40 and 10 <= y < 40
             in2 = 20 <= x < 50 and 20 <= y < 50
             expected = (2, 1, 1) if in2 and not in1 else (1, 0, 0)
             assert np.array_equal(pix, expected), f"pixel {x}, {y} should be {expected}, is {pix}"
