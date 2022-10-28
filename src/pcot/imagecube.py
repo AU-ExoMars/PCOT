@@ -22,6 +22,7 @@ from pcot.utils.geom import Rect
 
 logger = logging.getLogger(__name__)
 
+
 class SubImageCubeROI:
     """This is a class representing the parts of an imagecube which are covered by ROIs or an ROI.
     It consists of
@@ -238,6 +239,7 @@ class ImageCube(SourcesObtainable):
 
     # create image from numpy array
     def __init__(self, img: np.ndarray, rgbMapping: ChannelMapping = None, sources: MultiBandSource = None,
+                 rois=None,
                  defaultMapping: ChannelMapping = None):
 
         if img is None:
@@ -246,7 +248,10 @@ class ImageCube(SourcesObtainable):
         # first, check the dtype is valid
         if self.img.dtype != np.float32:
             raise Exception("Images must be 32-bit floating point")
-        self.rois = []  # no ROI
+        if rois is None:
+            self.rois = []  # no ROI
+        else:
+            self.rois = rois
         self.annotations = []  # and no annotations
         self.shape = img.shape
         # set the image type
@@ -260,7 +265,7 @@ class ImageCube(SourcesObtainable):
         # an image may have a list of source data attached to it indexed by channel. Or if none is
         # provided, an empty one.
         self.sources = sources if sources else MultiBandSource.createEmptySourceSets(self.channels)
-        self.defaultMapping = None
+        self.defaultMapping = defaultMapping
 
         # get the mapping sorted, which may be None (in which case rgb() might not work).
         # Has to be done after the sources are set.
@@ -354,7 +359,6 @@ class ImageCube(SourcesObtainable):
         # and change endianness
         img8 = cv.cvtColor(img8, cv.COLOR_RGB2BGR)
         cv.imwrite(filename, img8)
-
 
     ## extract the "subimage" - the image cropped to regions of interest,
     # with a mask for those ROIs. Note that you can also supply an image,
@@ -583,9 +587,9 @@ class ImageCube(SourcesObtainable):
         return -1
 
     def drawAnnotationsAndROIs(self, p: QPainter,
-                        scale: float,
-                        mapcoords: Callable[[float, float], Tuple[float, float]],
-                        onlyROI: Union[ROI, Sequence] = None):
+                               scale: float,
+                               mapcoords: Callable[[float, float], Tuple[float, float]],
+                               onlyROI: Union[ROI, Sequence] = None):
         """Draw annotations and ROIs onto a painter (either in a canvas or an output device.
         Will save and restore font because we might be doing font resizing"""
 
@@ -599,7 +603,7 @@ class ImageCube(SourcesObtainable):
         else:
             rois = [onlyROI]
 
-        for ann in self.annotations+rois:
+        for ann in self.annotations + rois:
             ann.annotate(p, scale, mapcoords)
 
         p.setFont(oldFont)

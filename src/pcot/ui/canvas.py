@@ -470,16 +470,16 @@ class Canvas(QtWidgets.QWidget):
 
         # self.roiToggle = TextToggleButton("ROIs", "ROIs")
         self.roiToggle = QCheckBox("Show ROIs")
-        hideable.addWidget(self.roiToggle)
+        sidebar.addWidget(self.roiToggle)
         self.roiToggle.toggled.connect(self.roiToggleChanged)
 
         # self.spectrumToggle = TextToggleButton("Spectrum", "Spectrum")
         self.spectrumToggle = QCheckBox("Show spectrum")
-        hideable.addWidget(self.spectrumToggle)
+        sidebar.addWidget(self.spectrumToggle)
         self.spectrumToggle.toggled.connect(self.spectrumToggleChanged)
 
         self.saveButton = QtWidgets.QPushButton("Save RGB")
-        hideable.addWidget(self.saveButton)
+        sidebar.addWidget(self.saveButton)
         self.saveButton.clicked.connect(self.saveButtonClicked)
 
         self.resetMapButton = QtWidgets.QPushButton("Guess RGB")
