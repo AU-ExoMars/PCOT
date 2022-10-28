@@ -1324,21 +1324,16 @@ class XFormROIType(XFormType):
     """Class for handling ROI xform types, does most of the heavy lifting of the node's perform
     function. The actual ROIs are dealt with in imagecube.py"""
 
-    # constants enumerating the outputs
-    OUT_IMG = 0
-    OUT_ANNOT = 1
-    OUT_ROI = 2
-
+    # constants enumerating connections
     IN_IMG = 0
-    IN_ANNOT = 1
+
+    OUT_IMG = 0
+    OUT_ROI = 1
 
     def __init__(self, name, group, ver):
         super().__init__(name, group, ver)
         self.addInputConnector("input", Datum.IMG)
-        self.addInputConnector("ann", Datum.IMGRGB, "used as base for annotated image")
         self.addOutputConnector("img", Datum.IMG, "image with ROI")  # image+roi
-        self.addOutputConnector("ann", Datum.IMGRGB,
-                                "image as RGB with ROI, with added annotations around ROI")  # annotated image
         self.addOutputConnector("roi", Datum.ROI, "the region of interest")
 
         self.autoserialise = ('caption', 'captiontop', 'fontsize', 'fontline', 'colour', 'drawbg')
@@ -1350,7 +1345,6 @@ class XFormROIType(XFormType):
 
     def perform(self, node):
         img = node.getInput(self.IN_IMG, Datum.IMG)
-        inAnnot = node.getInput(self.IN_ANNOT, Datum.IMG)
         # label the ROI
         node.roi.label = node.caption
         node.setRectText(node.caption)
@@ -1358,7 +1352,6 @@ class XFormROIType(XFormType):
         if img is None:
             # no image
             outImgDatum = Datum(Datum.IMG, None, nullSourceSet)
-            outAnnotDatum = Datum(Datum.IMGRGB, None, nullSourceSet)
             outROIDatum = Datum(Datum.ROI, None, nullSourceSet)
         else:
             # sources are a combo of the image sources and that of the ROI
@@ -1371,21 +1364,12 @@ class XFormROIType(XFormType):
             img.rois.append(node.roi)
             # set mapping from node
             img.setMapping(node.mapping)
-            # create a new RGB image or use the input one
-            rgb = img.rgbImage() if inAnnot is None else inAnnot.copy()
-            # now make an annotated image by drawing ROIS on the RGB image; ours should be a bit different
-            # if showROIs (handled by canvas) is true, draw all ROIs, otherwise only draw one.
-            img.drawROIs(rgb.img, onlyROI=None if node.showROIs else node.roi)
-            rgb.rois = img.rois  # with same ROI list as unannotated image
-            node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
             node.img = img
 
             outImgDatum = Datum(Datum.IMG, img, sources)
             outROIDatum = Datum(Datum.ROI, node.roi, node.roi.sources)  # not a copy!
-            outAnnotDatum = Datum(Datum.IMGRGB, rgb, sources)
 
         node.setOutput(self.OUT_IMG, outImgDatum)
-        node.setOutput(self.OUT_ANNOT, outAnnotDatum)
         node.setOutput(self.OUT_ROI, outROIDatum)
 
     def uichange(self, node):

@@ -307,11 +307,11 @@ class ImageCube(SourcesObtainable):
         # and construct the image
         return cls(img, mapping, sources)
 
-    def rgb(self, showROIs: bool = False, mapping: Optional[ChannelMapping] = None) -> np.ndarray:
+    def rgb(self, mapping: Optional[ChannelMapping] = None) -> np.ndarray:
         """get a numpy image (not another ImageCube) we can display on an RGB surface - see
         rgbImage if you want an imagecube. If there is more than one channel we need to have
-        an RGB mapping in the image. If showROIs is true, we create an image with the ROIs
-        on it. We can specify a different mapping than that of the image."""
+        an RGB mapping in the image."""
+
         if self.channels == 1:
             # single channel images are a special case, rather than
             # [chans,w,h] they are just [w,h]
@@ -325,8 +325,6 @@ class ImageCube(SourcesObtainable):
             green = self.img[:, :, mapping.green]
             blue = self.img[:, :, mapping.blue]
         img = cv.merge([red, green, blue])
-        if showROIs:
-            self.drawROIs(img)
         return img
 
     def rgbImage(self, mapping: Optional[ChannelMapping] = None) -> 'ImageCube':
@@ -357,22 +355,6 @@ class ImageCube(SourcesObtainable):
         img8 = cv.cvtColor(img8, cv.COLOR_RGB2BGR)
         cv.imwrite(filename, img8)
 
-    def drawROIs(self, rgb: np.ndarray = None, onlyROI: Union[ROI, Sequence] = None) -> np.ndarray:
-        """Return an RGB representation of this image with any ROIs drawn on it - an image may be provided.
-        onlyROI indicates that only one ROI should be drawn. We can also pass a Sequence of ROIs in (added
-        later to support multidot ROIs)."""
-        if rgb is None:
-            rgb = self.rgb()
-
-        if onlyROI is None:
-            for r in self.rois:
-                r.draw(rgb)
-        elif isinstance(onlyROI, Sequence):
-            for r in onlyROI:
-                r.draw(rgb)
-        else:
-            onlyROI.draw(rgb)
-        return rgb
 
     ## extract the "subimage" - the image cropped to regions of interest,
     # with a mask for those ROIs. Note that you can also supply an image,

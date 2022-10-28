@@ -151,16 +151,7 @@ class TabCirc(pcot.ui.tabs.Tab):
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)
         self.w.canvas.setROINode(self.node)
-        if self.node.img is not None:
-            # We're displaying a "premapped" image : this node's perform code is
-            # responsible for doing the RGB mapping, unlike most other nodes where it's
-            # done in the canvas for display purposes only. This is so that we can
-            # actually output the RGB.
-            # To render this, we call display in its three-argument form:
-            # mapped RGB image, source image, node.
-            # We need to node so we can force it to perform (and regenerate the mapped image)
-            # when the mappings change.
-            self.w.canvas.display(self.node.rgbImage, self.node.img, self.node)
+        self.w.canvas.display(self.node.img)
         if not self.dontSetText:
             self.w.caption.setText(self.node.caption)
         self.w.fontsize.setValue(self.node.fontsize)

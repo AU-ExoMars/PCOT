@@ -23,19 +23,12 @@ class XFormMultiDot(XFormType):
 
     # constants enumerating the outputs
     OUT_IMG = 0
-    OUT_ANNOT = 1
-
     IN_IMG = 0
-    IN_ANNOT = 1
 
     def __init__(self):
         super().__init__("multidot", "regions", "0.0.0")
         self.addInputConnector("input", Datum.IMG)
-        self.addInputConnector("ann", Datum.IMGRGB, "used as base for annotated image")
         self.addOutputConnector("img", Datum.IMG, "image with ROIs")
-        self.addOutputConnector("ann", Datum.IMGRGB,
-                                "image as RGB with ROIs, with added annotations around ROIs")  # annotated image
-
         self.autoserialise = ('fontsize', 'fontline', 'colour', 'dotSize', 'drawbg')
 
     def createTab(self, n, w):
@@ -59,35 +52,24 @@ class XFormMultiDot(XFormType):
 
     def perform(self, node):
         img = node.getInput(self.IN_IMG, Datum.IMG)
-        inAnnot = node.getInput(self.IN_ANNOT, Datum.IMG)
 
         if img is None:
             # no image
             node.setOutput(self.OUT_IMG, None)
-            node.setOutput(self.OUT_ANNOT, None if inAnnot is None else Datum(Datum.IMGRGB, inAnnot))
             node.img = None
         else:
             self.setProps(node, img)
-            # copy image and append ROIs to it
-            img = img.copy()
-            img.rois += node.rois
-            # set mapping from node
-            img.setMapping(node.mapping)
-            # create a new RGB image or use the input one
-            rgb = img.rgbImage() if inAnnot is None else inAnnot.copy()
-            # now make an annotated image by drawing ROIS on the RGB image; ours should be a bit different
-            # if showROIs (handled by canvas) is true, draw all ROIs, otherwise only draw our list.
             for r in node.rois:
                 # copy parameters shared by all these ROIs into each one. Ugh, I know.
                 r.drawBox = (r == node.selected)
                 r.fontline = node.fontline
                 r.fontsize = node.fontsize
                 r.drawbg = node.drawbg
-
-            img.drawROIs(rgb.img, onlyROI=None if node.showROIs else node.rois)
-            rgb.rois = img.rois  # with same ROI list as unannotated image
-            node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
-            node.setOutput(self.OUT_ANNOT, Datum(Datum.IMG, rgb))
+            # copy image and append ROIs to it
+            img = img.copy()
+            img.rois += node.rois
+            # set mapping from node
+            img.setMapping(node.mapping)
             node.img = img
 
         node.setOutput(self.OUT_IMG, Datum(Datum.IMG, node.img))  # output image and ROI
@@ -220,16 +202,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)
         self.w.canvas.setROINode(self.node)
-        if self.node.img is not None:
-            # We're displaying a "premapped" image : this node's perform code is
-            # responsible for doing the RGB mapping, unlike most other nodes where it's
-            # done in the canvas for display purposes only. This is so that we c    an
-            # actually output the RGB.
-            # To render this, we call display in its three-argument form:
-            # mapped RGB image, source image, node.
-            # We need to node so we can force it to perform (and regenerate the mapped image)
-            # when the mappings change.
-            self.w.canvas.display(self.node.rgbImage, self.node.img, self.node)
+        self.w.canvas.display(self.node.img)
 
         if self.node.selected:
             ds = self.node.selected.r

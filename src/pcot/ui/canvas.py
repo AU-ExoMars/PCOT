@@ -155,7 +155,7 @@ class InnerCanvas(QtWidgets.QWidget):
             self.desc = img.getDesc(self.getGraph())
             if not isPremapped:
                 # convert to RGB
-                img = img.rgb(showROIs=self.getShowROIs())
+                img = img.rgb()
                 if img is None:
                     ui.error("Unusual - the RGB representation is None")
             else:

@@ -154,66 +154,6 @@ class ROI(SourcesObtainable, Annotation):
         self.annotateText(p, scale, mapcoords)
         self.annotateMask(p, scale, mapcoords, drawEdge=True)
 
-    def baseDraw(self, img: ndarray, drawBox=False, drawEdge=True):
-        """Draw the ROI onto an RGB image using the set colour (yellow by default)"""
-        # clip the ROI to the image, perhaps getting a new ROI
-        todraw = self.clipToImage(img)
-        if todraw is not None:
-            if drawBox:
-                todraw.drawBB(img, self.colour)
-                todraw.drawText(img, self.colour)  # drawBox will also draw the text (usually)
-
-            # draw into an RGB image
-            # first, get the slice into the real image
-            if (bb := todraw.bb()) is not None:
-                x, y, x2, y2 = bb.corners()
-                imgslice = img[y:y2, x:x2]
-
-                # now get the mask and run sobel edge-detection on it if required
-                mask = todraw.mask()
-                if drawEdge:
-                    sx = ndimage.sobel(mask, axis=0, mode='constant')
-                    sy = ndimage.sobel(mask, axis=1, mode='constant')
-                    mask = np.hypot(sx, sy)
-
-                # flatten and repeat each element of the mask for each channel
-                x = np.repeat(np.ravel(mask), 3)
-                # and reshape into the same shape as the image slice
-                x = np.reshape(x, imgslice.shape)
-
-                # write a colour
-                np.putmask(imgslice, x, todraw.colour)
-
-    def draw(self, img):
-        self.baseDraw(img)
-
-    def drawBB(self, rgb: 'ImageCube', col):
-        """draw BB onto existing RGB image"""
-        # write on it - but we MUST WRITE OUTSIDE THE BOUNDS, otherwise we interfere
-        # with the image! Doing this predictably with the thickness function
-        # in cv.rectangle is a pain, so I'm doing it by hand.
-        if (bb := self.bb()) is not None:
-            x, y, x2, y2 = bb.corners()
-            for i in range(self.fontline):
-                cv.rectangle(rgb, (x - i - 1, y - i - 1), (x2 + i, y2 + i), col, thickness=1)
-
-    def drawText(self, rgb: 'ImageCube', col, label=None):
-        if (bb := self.bb()) is not None:
-            x, y, x2, y2 = bb.corners()
-            ty = y if self.labeltop else y2
-            if self.fontsize > 0:
-                if label is None:
-                    label = self.label
-                if self.drawbg:
-                    # dark text has a white background; light text has a black background
-                    bg = (1, 1, 1) if sum(col) < 1.5 else (0, 0, 0)
-                else:
-                    bg = None
-                text.write(rgb,
-                           "NO ANNOTATION" if label is None or label == '' else label,
-                           x, ty, self.labeltop, self.fontsize, self.fontline, col,
-                           bg=bg)
-
     def serialise(self):
         if self.tpname == 'tmp':
             raise Exception("attempt to serialise a temporary ROI")
@@ -236,14 +176,15 @@ class ROI(SourcesObtainable, Annotation):
             mask = np.full((y2 - y1, x2 - x1), False)
             # and OR the ROIs into it
             for r in rois:
-                rx, ry, rw, rh = r.bb()
-                # calculate ROI's position inside subimage
-                x = rx - x1
-                y = ry - y1
-                # get ROI's mask
-                roimask = r.mask()
-                # add it at that position
-                mask[y:y + rh, x:x + rw] |= roimask
+                if (bb2 := r.bb()) is not None:  # ignore undefined ROIs
+                    rx, ry, rw, rh = bb2
+                    # calculate ROI's position inside subimage
+                    x = rx - x1
+                    y = ry - y1
+                    # get ROI's mask
+                    roimask = r.mask()
+                    # add it at that position
+                    mask[y:y + rh, x:x + rw] |= roimask
             return ROI('tmp', bb, mask)  # should not be saved
         else:
             # return a null ROI
@@ -389,11 +330,6 @@ class ROIRect(ROI):
         self.annotateBB(p, scale, mapcoords)
         self.annotateText(p, scale, mapcoords)
 
-    def draw(self, img: np.ndarray):
-        return  # DISABLED
-        self.drawBB(img, self.colour)
-        self.drawText(img, self.colour)
-
     def mask(self):
         # return a boolean array of True, same size as BB
         return np.full((self.h, self.w), True)
@@ -467,11 +403,6 @@ class ROICircle(ROI):
         cv.circle(m, (self.r, self.r), self.r, 255, -1)
         return m > 0
 
-    def draw(self, img):
-        return  # DISABLED
-        self.baseDraw(img, drawEdge=self.drawEdge, drawBox=self.drawBox)
-        self.drawText(img, self.colour)  # these always show label
-
     def serialise(self):
         d = super().serialise()
         d.update({'croi': (self.x, self.y, self.r, self.isSet, self.drawBox, self.drawEdge)})
@@ -525,11 +456,6 @@ class ROIPainted(ROI):
     def clear(self):
         self.map = None
         self.bbrect = None
-
-    def draw(self, img):
-        """Draw the ROI onto an rgb image"""
-        return  # DISABLED
-        self.baseDraw(img, self.drawBox, self.drawEdge)
 
     def setImageSize(self, imgw, imgh):
         if self.imgw is not None:
@@ -711,32 +637,6 @@ class ROIPoly(ROI):
         self.annotatePoly(p, scale, mapcoords)
         self.annotateBB(p, scale, mapcoords)
         self.annotateText(p, scale, mapcoords)
-
-    def draw(self, img):
-        return  # DISABLED
-        if self.drawBox:
-            self.drawBB(img, self.colour)
-            self.drawText(img, self.colour)
-
-        # first write the points in the actual image
-        if self.drawPoints:
-            for p in self.points:
-                cv.circle(img, p, 7, self.colour, self.fontline)
-
-        if self.selectedPoint is not None:
-            if self.selectedPoint >= len(self.points):
-                self.selectedPoint = None
-            else:
-                p = self.points[self.selectedPoint]
-                cv.circle(img, p, 10, self.colour, self.fontline + 1)
-
-        if not self.hasPoly():
-            return
-
-        # draw the polygon
-        pts = np.array(self.points, np.int32)
-        pts = pts.reshape((-1, 1, 2))
-        cv.polylines(img, [pts], True, self.colour, thickness=self.fontline)
 
     def addPoint(self, x, y):
         self.points.append((x, y))
