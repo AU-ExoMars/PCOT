@@ -110,14 +110,14 @@ class TabRect(pcot.ui.tabs.Tab):
             self.node.colour = col
             self.changed()
 
-    def roiSet(self,x,y,w,h):
+    def roiSet(self, x, y, w, h):
         self.mark()
-        self.node.roi.set(x,y,w,h)
+        self.node.roi.set(x, y, w, h)
         self.changed()
 
     def leftEditChanged(self):
         bb = self.node.roi.bb()
-        x, y, w, h = bb if bb is not None else (0,0,0,0)
+        x, y, w, h = bb if bb is not None else (0, 0, 0, 0)
         try:
             x = int(self.w.leftEdit.text())
         except ValueError:

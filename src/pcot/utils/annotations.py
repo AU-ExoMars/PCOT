@@ -18,6 +18,7 @@ def annotDrawText(p: QPainter,
     """Draw text for annotation. Coords must be in painter space."""
     p.setPen(rgb2qcol(col))
     annotFont.setPixelSize(fontsize)
+    p.setFont(annotFont)
     metrics = QFontMetrics(annotFont)
     h = metrics.height()
     w = metrics.width(s)
@@ -39,37 +40,25 @@ class Annotation:
     def __init__(self):
         pass
 
-    def annotate(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
+    def annotate(self, p: QPainter):
         """
         Draw the annotation
         Parameters:
         p: painter
         annotations: list of annotations
-        scale: scaling factor from img to painter (for sizes)
-        mapcoords: function to map coords from img to painter - takes x,y; yields (x,y) tuple
-
-        See TestAnnotation for an example.
         """
         pass
 
 
 class TestAnnotation(Annotation):
-    def annotate(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
+    def annotate(self, p: QPainter):
         p.setPen(Qt.yellow)
         p.setBrush(Qt.yellow)
 
-        # now for the important bit...
-
-        # DIVIDE by scale to get canvas width/heights
-        # use mapcoords to get canvas coords.
-
-        cx, cy = mapcoords(20, 20)
-
         # inspections off because these should be float, but drawRect expects int.
         # noinspection PyTypeChecker
-        p.drawRect(cx, cy, 40 / scale, 40 / scale)
+        p.drawRect(20, 20, 40, 40)
 
-        cx, cy = mapcoords(20, 10)
         # noinspection PyTypeChecker
-        r = QRect(cx, cy, 100 / scale, 10 / scale)
+        r = QRect(20, 10, 100, 10)
         p.drawText(r, Qt.AlignLeft | Qt.AlignBottom, "Hello World")

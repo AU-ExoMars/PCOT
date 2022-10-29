@@ -11,7 +11,8 @@ from typing import List, Optional, Tuple, Sequence, Union, Callable
 
 import cv2 as cv
 import numpy as np
-from PySide2.QtGui import QPainter
+from PySide2.QtCore import QSizeF, Qt, QRect, QMarginsF
+from PySide2.QtGui import QPainter, QPdfWriter, QImage
 
 from pcot.documentsettings import DocumentSettings
 from pcot.rois import ROI, ROIPainted, ROIBoundsException
@@ -587,8 +588,6 @@ class ImageCube(SourcesObtainable):
         return -1
 
     def drawAnnotationsAndROIs(self, p: QPainter,
-                               scale: float,
-                               mapcoords: Callable[[float, float], Tuple[float, float]],
                                onlyROI: Union[ROI, Sequence] = None):
         """Draw annotations and ROIs onto a painter (either in a canvas or an output device.
         Will save and restore font because we might be doing font resizing"""
@@ -604,6 +603,43 @@ class ImageCube(SourcesObtainable):
             rois = [onlyROI]
 
         for ann in self.annotations + rois:
-            ann.annotate(p, scale, mapcoords)
+            ann.annotate(p)
 
         p.setFont(oldFont)
+
+    def savePDF(self, path):
+        """Save the image along with the viewed annotations and ROIs as a PDF"""
+        # a lot of this code will necessarily be similar to the paintEvent in InnerCanvas;
+        # if there are commonalities I'll refactor them later.
+        # WARNING - DOESN'T DEAL WITH PREMAPPING
+
+        pdf = QPdfWriter(path)
+        dpi = 300  # So... setPageSize takes mm,
+        pixpermm = dpi / 25.4  # and setResolution takes DPI.
+        imgw = self.w
+        imgh = self.h
+        pdfw = imgw / pixpermm
+        pdfh = imgh / pixpermm
+
+        pdf.setPageSizeMM(QSizeF(pdfw, pdfh))
+        pdf.setPageMargins(QMarginsF(0, 0, 0, 0))
+        pdf.setResolution(dpi)
+        p = QPainter(pdf)
+        img = self.rgb()  # get numpy image
+
+        # again, see other comments about problems with QImage using preset data.
+        # (https://bugreports.qt.io/browse/PYSIDE-1563)
+        # We stash into a field to avoid this.
+
+        self.tmpimage = (img * 256).clip(max=255).astype(np.ubyte)
+        height, width, channel = self.tmpimage.shape
+        assert channel == 3
+        bytesPerLine = 3 * width
+        qimg = QImage(self.tmpimage.data, width, height,
+                      bytesPerLine, QImage.Format_RGB888)
+        p.drawImage(0, 0, qimg)
+        self.tmpimage = None
+
+        self.drawAnnotationsAndROIs(p)
+
+        p.end()

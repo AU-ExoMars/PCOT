@@ -1,14 +1,12 @@
-from typing import Callable, Tuple
-
 import cv2 as cv
 import numpy as np
 from PySide2.QtCore import Qt, QPointF
-from PySide2.QtGui import QPainter, QImage
+from PySide2.QtGui import QPainter, QImage, QPen
 from numpy import ndarray
 from scipy import ndimage
 
 from pcot.sources import SourcesObtainable, nullSourceSet
-from pcot.utils import text, serialiseFields, deserialiseFields
+from pcot.utils import serialiseFields, deserialiseFields
 from pcot.utils.annotations import Annotation, annotDrawText
 from pcot.utils.colour import rgb2qcol
 from pcot.utils.geom import Rect
@@ -89,19 +87,22 @@ class ROI(SourcesObtainable, Annotation):
         else:
             return "No ROI"
 
-    def annotateBB(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
+    def setPen(self, p: QPainter):
+        """A more "custom" pen setter so we can tweak the width, although it only takes ints.
+        1 is probably better than 0, just for looks (although it is the default)."""
+        pen = QPen(rgb2qcol(self.colour))
+        pen.setWidth(1)     # working with 1 pixel at the moment.
+        p.setPen(pen)
+
+    def annotateBB(self, p: QPainter):
         """Draw the BB onto a QPainter"""
         if (bb := self.bb()) is not None:
             x, y, w, h = bb.astuple()
-            x, y = mapcoords(x, y)
             p.setBrush(Qt.NoBrush)
-            p.setPen(rgb2qcol(self.colour))
-            p.drawRect(x, y, w / scale, h / scale)
+            self.setPen(p)
+            p.drawRect(x, y, w, h)
 
-    def annotateMask(self, p: QPainter,
-                     scale: float,
-                     mapcoords: Callable[[float, float], Tuple[float, float]],
-                     drawEdge=False):
+    def annotateMask(self, p: QPainter, drawEdge=False):
         """This is the 'default' annotate, which draws the ROI onto the painter by
         using its actual mask. It takes the mask, edge detects (if drawEdge), converts into
         an image."""
@@ -114,13 +115,14 @@ class ROI(SourcesObtainable, Annotation):
                 sy = ndimage.sobel(mask, axis=1, mode='constant')
                 mask = np.hypot(sx, sy)
             mask = mask.clip(max=1.0).astype(np.float)
-            ww = int(bb.w / scale)
-            hh = int(bb.h / scale)
+            # mask = skimage.morphology.erosion(mask)
+            ww = int(bb.w)
+            hh = int(bb.h)
             mask = cv.resize(mask, dsize=(ww, hh), interpolation=cv.INTER_AREA)
-            # does a little dilation
-            # now prepare the actual image, which is just a coloured fill rectangle (we'll add alpha)
+            # now prepare the actual image, which is just a coloured fill rectangle - we
+            # will add the mask as an alpha
             img = np.full((hh, ww, 3), [1, 1, 0], dtype=np.float)  # the second arg is the colour
-            # add the alpha channel
+            # add the mask as the alpha channel
             x = np.dstack((img, mask))
             # to byte
             x = (x * 255).astype(np.ubyte)
@@ -131,15 +133,13 @@ class ROI(SourcesObtainable, Annotation):
             self.workaround = x
             q = QImage(x.data, ww, hh, ww * 4, QImage.Format_RGBA8888)
             # now we have a QImage we can draw it onto the painter.
-            xx, yy = mapcoords(bb.x, bb.y)
-            p.drawImage(xx, yy, q)
+            p.drawImage(bb.x, bb.y, q)
 
-    def annotateText(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
+    def annotateText(self, p: QPainter):
         """Draw the text for the ROI onto the painter"""
         if (bb := self.bb()) is not None and self.fontsize > 0 and self.label is not None and self.label != '':
             x, y, x2, y2 = bb.corners()
             ty = y if self.labeltop else y2
-            x, ty = mapcoords(x, ty)
             # basetop is the neg of labeltop because if the label is at the TOP,
             # the base of the text is y coord.
             annotDrawText(p, x, ty, self.label, self.colour,
@@ -147,12 +147,12 @@ class ROI(SourcesObtainable, Annotation):
                           bgcol=(0, 0, 0) if self.drawbg else None,
                           fontsize=self.fontsize)
 
-    def annotate(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
+    def annotate(self, p: QPainter):
         """This is the default annotation method drawing the ROI onto a QPainter as part of the annotations system.
         It should be replaced with a more specialised method if possible."""
-        self.annotateBB(p, scale, mapcoords)
-        self.annotateText(p, scale, mapcoords)
-        self.annotateMask(p, scale, mapcoords, drawEdge=True)
+        self.annotateBB(p)
+        self.annotateText(p)
+        self.annotateMask(p, drawEdge=True)
 
     def serialise(self):
         if self.tpname == 'tmp':
@@ -325,10 +325,10 @@ class ROIRect(ROI):
             return "{} pixels\n{},{}\n{}x{}".format(self.pixels(),
                                                     self.x, self.y, self.w, self.h)
 
-    def annotate(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
+    def annotate(self, p: QPainter):
         """Simpler version of annotate for rects; doesn't draw the mask"""
-        self.annotateBB(p, scale, mapcoords)
-        self.annotateText(p, scale, mapcoords)
+        self.annotateBB(p)
+        self.annotateText(p)
 
     def mask(self):
         # return a boolean array of True, same size as BB
@@ -382,6 +382,17 @@ class ROICircle(ROI):
         self.y = int(y)
         self.r = int(r)
         self.isSet = (x >= 0)
+
+
+    def annotate(self, p: QPainter):
+        """Simpler version of annotate for rects; doesn't draw the mask"""
+        if (bb := self.bb()) is not None:
+            self.annotateBB(p)
+            self.annotateText(p)
+            x, y, w, h = bb.astuple()
+            p.setBrush(Qt.NoBrush)
+            self.setPen(p)
+            p.drawEllipse(x, y, w, h)
 
     def get(self):
         if self.isSet:
@@ -605,17 +616,15 @@ class ROIPoly(ROI):
         # convert to boolean
         return polyimg > 0
 
-    def annotatePoly(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
+    def annotatePoly(self, p: QPainter):
         """draw the polygon as annotation onto a painter"""
 
         if len(self.points)>0:
             p.setBrush(Qt.NoBrush)
-            p.setPen(rgb2qcol(self.colour))
-
-            # map the into painter coords
-            points = [mapcoords(x, y) for (x, y) in self.points]
+            self.setPen(p)
 
             # first draw the points as little circles
+            points = self.points.copy()  # we make a copy because we append a temporary later...
             if self.drawPoints:
                 for (x, y) in points:
                     p.drawEllipse(QPointF(x, y), 5, 5)
@@ -633,10 +642,10 @@ class ROIPoly(ROI):
             points.append(points[0])  # close the loop
             p.drawPolyline([QPointF(x, y) for (x, y) in points])
 
-    def annotate(self, p: QPainter, scale: float, mapcoords: Callable[[float, float], Tuple[float, float]]):
-        self.annotatePoly(p, scale, mapcoords)
-        self.annotateBB(p, scale, mapcoords)
-        self.annotateText(p, scale, mapcoords)
+    def annotate(self, p: QPainter):
+        self.annotatePoly(p)
+        self.annotateBB(p)
+        self.annotateText(p)
 
     def addPoint(self, x, y):
         self.points.append((x, y))

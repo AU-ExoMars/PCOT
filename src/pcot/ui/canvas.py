@@ -5,12 +5,11 @@ import os
 import platform
 from typing import TYPE_CHECKING, Optional, Union
 
-from PySide2 import QtWidgets, QtCore
-from PySide2.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent
-from PySide2.QtCore import Qt
-
 import cv2 as cv
 import numpy as np
+from PySide2 import QtWidgets, QtCore
+from PySide2.QtCore import Qt
+from PySide2.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent
 from PySide2.QtWidgets import QCheckBox
 
 import pcot
@@ -22,6 +21,7 @@ if TYPE_CHECKING:
     from pcot.xform import XFormGraph, XForm
 
 logger = logging.getLogger(__name__)
+
 
 # the actual drawing widget, contained within the Canvas widget
 class InnerCanvas(QtWidgets.QWidget):
@@ -149,7 +149,7 @@ class InnerCanvas(QtWidgets.QWidget):
 
     ## display an image next time paintEvent
     # happens, and update to cause that. Allow it to handle None too.
-    def display(self, img: 'ImageCube', isPremapped: bool,):
+    def display(self, img: 'ImageCube', isPremapped: bool, ):
         self.imgCube = img
         if img is not None:
             self.desc = img.getDesc(self.getGraph())
@@ -241,8 +241,11 @@ class InnerCanvas(QtWidgets.QWidget):
                 # don't show any ROIs if this isn't an ROI-generator and showROIs is false.
                 rois = []
 
-            self.imgCube.drawAnnotationsAndROIs(p, self.getScale(), lambda x, y: self.getCanvasCoords(x, y),
-                                                onlyROI=rois)
+            p.save()
+            p.scale(1 / self.getScale(), 1 / self.getScale())
+            p.translate(-self.x, -self.y)
+            self.imgCube.drawAnnotationsAndROIs(p, onlyROI=rois)
+            p.restore()
 
             # now do any extra drawing onto the image itself.
             if self.canv.paintHook is not None:
@@ -253,8 +256,6 @@ class InnerCanvas(QtWidgets.QWidget):
             p.setBrush(Qt.yellow)
             r = QtCore.QRect(0, widgh - 20, widgw, 20)
             p.drawText(r, Qt.AlignLeft, self.desc)
-            r = QtCore.QRect(0,widgh-50,widgw,20)
-            p.drawText(r, Qt.AlignLeft, f"IMG: {img.shape} CUT:{cutx},{cuty} {self.cutw}x{self.cuth} SC:{scale}")
         else:
             # there's nothing to draw
             self.scale = 1
@@ -478,9 +479,9 @@ class Canvas(QtWidgets.QWidget):
         sidebar.addWidget(self.spectrumToggle)
         self.spectrumToggle.toggled.connect(self.spectrumToggleChanged)
 
-        self.saveButton = QtWidgets.QPushButton("Save RGB")
+        self.saveButton = QtWidgets.QPushButton("Save PDF")
         sidebar.addWidget(self.saveButton)
-        self.saveButton.clicked.connect(self.saveButtonClicked)
+        self.saveButton.clicked.connect(self.savePDFButtonClicked)
 
         self.resetMapButton = QtWidgets.QPushButton("Guess RGB")
         hideable.addWidget(self.resetMapButton)
@@ -629,24 +630,35 @@ class Canvas(QtWidgets.QWidget):
     def spectrumToggleChanged(self, v):
         self.spectrumWidget.setHidden(not v)
 
+    def getSaveFileName(self, title, typename, typeext):
+        res = QtWidgets.QFileDialog.getSaveFileName(self, title,
+                                                    os.path.expanduser(pcot.config.getDefaultDir('savedimages')),
+                                                    f"{typename} (*.{typeext})")
+        if res[0] != '':
+            path = res[0]
+            # make sure it ends with ext!
+            (root, ext) = os.path.splitext(path)
+            if ext != '.' + typeext:
+                ext += '.' + typeext
+            path = root + ext
+            pcot.config.setDefaultDir('savedimages', os.path.dirname(os.path.realpath(path)))
+            return path
+        else:
+            return None
+
     def saveButtonClicked(self, c):
         if self.previmg is None:
             return
-        res = QtWidgets.QFileDialog.getSaveFileName(self, 'Save RGB image as PNG',
-                                                    os.path.expanduser(pcot.config.getDefaultDir('savedimages')),
-                                                    "PNG images (*.png)")
-        if res[0] != '':
-            path = res[0]
-            # make sure it ends with PNG!
-            (root, ext) = os.path.splitext(path)
-            if ext != '.png':
-                ext += '.png'
-            path = root + ext
-            pcot.config.setDefaultDir('images', os.path.dirname(os.path.realpath(path)))
+        if (path := self.getSaveFileName('Save RGB image as PNG', 'PNG images', 'png')) is not None:
             self.previmg.rgbWrite(path)
             ui.log("Image written to " + path)
 
-        pass
+    def savePDFButtonClicked(self, c):
+        if self.previmg is None:
+            return
+        if (path := self.getSaveFileName('Save RGB image as PDF', 'PDF files', 'pdf')) is not None:
+            self.previmg.savePDF(path)
+            ui.log("Image written to " + path)
 
     ## this initialises a combo box, setting the possible values to be the channels in the image
     # input
