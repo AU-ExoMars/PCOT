@@ -7,13 +7,6 @@ from pcot.rois import ROIRect
 from pcot.xform import xformtype, XFormROIType
 
 
-def getInt(s):
-    try:
-        x = int(s)
-    except ValueError:
-        return -1
-    return x
-
 @xformtype
 class XformRect(XFormROIType):
     """
@@ -125,8 +118,9 @@ class TabRect(pcot.ui.tabs.Tab):
     def leftEditChanged(self):
         bb = self.node.roi.bb()
         x, y, w, h = bb if bb is not None else (0,0,0,0)
-        x = getInt(self.w.leftEdit.text())
-        if x < 0:
+        try:
+            x = int(self.w.leftEdit.text())
+        except ValueError:
             x = 0
         if self.node.img and x >= self.node.img.w:
             x = self.node.img.w - w
@@ -135,8 +129,9 @@ class TabRect(pcot.ui.tabs.Tab):
     def topEditChanged(self):
         bb = self.node.roi.bb()
         x, y, w, h = bb if bb is not None else (0, 0, 0, 0)
-        y = getInt(self.w.topEdit.text())
-        if y < 0:
+        try:
+            y = int(self.w.topEdit.text())
+        except ValueError:
             y = 0
         if self.node.img and y >= self.node.img.h:
             y = self.node.img.h - h
@@ -145,8 +140,9 @@ class TabRect(pcot.ui.tabs.Tab):
     def widthEditChanged(self):
         bb = self.node.roi.bb()
         x, y, w, h = bb if bb is not None else (0, 0, 0, 0)
-        w = getInt(self.w.widthEdit.text())
-        if w < 1:
+        try:
+            w = int(self.w.widthEdit.text())
+        except ValueError:
             w = 1
         if self.node.img and x + w >= self.node.img.w:
             w = self.node.img.w - x
@@ -155,8 +151,9 @@ class TabRect(pcot.ui.tabs.Tab):
     def heightEditChanged(self):
         bb = self.node.roi.bb()
         x, y, w, h = bb if bb is not None else (0, 0, 0, 0)
-        h = getInt(self.w.heightEdit.text())
-        if h < 1:
+        try:
+            h = int(self.w.heightEdit.text())
+        except ValueError:
             h = 1
         if self.node.img and y + h >= self.node.img.h:
             h = self.node.img.h - y
