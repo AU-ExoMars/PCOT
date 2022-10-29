@@ -91,7 +91,7 @@ class ROI(SourcesObtainable, Annotation):
         """A more "custom" pen setter so we can tweak the width, although it only takes ints.
         1 is probably better than 0, just for looks (although it is the default)."""
         pen = QPen(rgb2qcol(self.colour))
-        pen.setWidth(1)     # working with 1 pixel at the moment.
+        pen.setWidth(1)  # working with 1 pixel at the moment.
         p.setPen(pen)
 
     def annotateBB(self, p: QPainter):
@@ -383,7 +383,6 @@ class ROICircle(ROI):
         self.r = int(r)
         self.isSet = (x >= 0)
 
-
     def annotate(self, p: QPainter):
         """Simpler version of annotate for rects; doesn't draw the mask"""
         if (bb := self.bb()) is not None:
@@ -619,7 +618,7 @@ class ROIPoly(ROI):
     def annotatePoly(self, p: QPainter):
         """draw the polygon as annotation onto a painter"""
 
-        if len(self.points)>0:
+        if len(self.points) > 0:
             p.setBrush(Qt.NoBrush)
             self.setPen(p)
 
@@ -644,7 +643,8 @@ class ROIPoly(ROI):
 
     def annotate(self, p: QPainter):
         self.annotatePoly(p)
-        self.annotateBB(p)
+        if self.drawBox:
+            self.annotateBB(p)
         self.annotateText(p)
 
     def addPoint(self, x, y):
