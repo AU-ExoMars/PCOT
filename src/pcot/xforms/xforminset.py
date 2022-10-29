@@ -96,7 +96,10 @@ class XformInset(XFormType):
                                  node.fontline, node.colour)
 
         # build output image
-        node.img = None if out is None else ImageCube(out, node.mapping, sources=src)
+        if out is None:
+            node.img = None
+        else:
+            node.img = ImageCube(out, node.mapping, sources=src, rois=[roi])
         node.setOutput(0, Datum(Datum.IMG, node.img))
 
 
@@ -104,7 +107,6 @@ class TabInset(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabinset.ui')
         # set the paint hook in the canvas so we can draw on the image
-        self.w.canvas.paintHook = self
         self.w.canvas.mouseHook = self
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
         self.w.fontline.valueChanged.connect(self.fontLineChanged)
