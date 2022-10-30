@@ -745,7 +745,7 @@ class Canvas(QtWidgets.QWidget):
             # if there's no image, then there are no pixels
             txt = ""
         elif self.persister is not None and self.persister.showROIs:
-            # if we're displaying all ROIs, show that pixel count (and ROI count)
+            # if we're displaying all ROIs, show that pixel count (and ROI count))
             txt = "{} pixels\nin {} ROIs".format(sum([x.pixels() for x in self.previmg.rois]),
                                                  len(self.previmg.rois))
         elif self.ROInode is not None:

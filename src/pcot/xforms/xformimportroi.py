@@ -1,6 +1,6 @@
-import pcot
 from pcot.datum import Datum
 from pcot.xform import xformtype, XFormType, XFormException
+from pcot.xforms.tabdata import TabData
 
 
 @xformtype
@@ -18,56 +18,29 @@ class XformImportROI(XFormType):
         self.addOutputConnector("", Datum.IMG)
 
     def createTab(self, n, w):
-        t = TabImportROI(n, w)
-        # modify the canvas to show own-ROI data
-        t.w.canvas.setROINode(n)
-        return t
+        return TabData(n, w)
 
     def init(self, node):
-        node.img = None
+        node.out = None
 
     def perform(self, node):
         img = node.getInput(0, Datum.IMG)
-        node.roi = None
-        rgb = None
         if img is not None:
             roiinput = node.getInput(1)
             if roiinput is not None:
+                # make a clone of the input image
                 img = img.copy()
                 if roiinput.tp == Datum.IMG:
-                    img.rois += roiinput.val.rois
+                    # if the ROI input is an image, add that image's ROIs to ours
+                    img.rois += [x for x in roiinput.val.rois if x is not None]
                 elif roiinput.tp == Datum.ROI:
-                    img.rois.append(roiinput.val)
-                    node.roi = roiinput.val
+                    # otherwise if it's an ROI, append the ROI to ours.
+                    if roiinput.val is not None:
+                        img.rois.append(roiinput.val)
+                    else:
+                        raise XFormException('DATA', 'ROI input is None')
                 else:
                     raise XFormException('DATA', "bad type: must be ROI or image on 'roi' input")
-            # create a premapped rgb image for the canvas and give it the same ROIs as the main image
-            # (so the pixel counts will still work)
-            rgb = img.rgbImage()
-            rgb.rois = img.rois
-            img.drawROIs(rgb.img, onlyROI=None if node.showROIs else node.roi)
 
-        node.img = img
-        node.rgbImage = rgb  # the RGB image shown in the canvas (using the "premapping" idea)
-
-        node.setOutput(0, Datum(Datum.IMG, img))
-
-    def getROIDesc(self, node):
-        return "no ROI" if node.roi is None else node.roi.details()
-
-
-class TabImportROI(pcot.ui.tabs.Tab):
-    def __init__(self, node, w):
-        super().__init__(w, node, 'tabdata.ui')
-        self.w.canvas.setPersister(node)
-        # sync tab with node
-        self.nodeChanged()
-
-    def onNodeChanged(self):
-        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
-        self.w.canvas.setVisible(True)  # this is the generic data viewer, but we're just using it for images.
-        self.w.textEdit.setVisible(False)
-        self.w.canvas.setMapping(self.node.mapping)
-        self.w.canvas.setGraph(self.node.graph)
-        self.w.canvas.setPersister(self.node)
-        self.w.canvas.display(self.node.rgbImage, self.node.img, self.node)
+        node.out = Datum(Datum.IMG, img)
+        node.setOutput(0, node.out)

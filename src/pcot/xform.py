@@ -1351,6 +1351,7 @@ class XFormROIType(XFormType):
 
         if img is None:
             # no image
+            node.img = None
             outImgDatum = Datum(Datum.IMG, None, nullSourceSet)
             outROIDatum = Datum(Datum.ROI, None, nullSourceSet)
         else:
