@@ -611,7 +611,6 @@ class ImageCube(SourcesObtainable):
         """Save the image along with the viewed annotations and ROIs as a PDF"""
         # a lot of this code will necessarily be similar to the paintEvent in InnerCanvas;
         # if there are commonalities I'll refactor them later.
-        # WARNING - DOESN'T DEAL WITH PREMAPPING
 
         pdf = QPdfWriter(path)
         dpi = 300  # So... setPageSize takes mm,
@@ -622,10 +621,17 @@ class ImageCube(SourcesObtainable):
         pdfh = imgh / pixpermm
 
         pdf.setPageSizeMM(QSizeF(pdfw, pdfh))
-        pdf.setPageMargins(QMarginsF(0, 0, 0, 0))
+        pdf.setPageMargins(QMarginsF(0, 0, 0, 0))  # see below about margins
         pdf.setResolution(dpi)
         p = QPainter(pdf)
         img = self.rgb()  # get numpy image
+
+        # this puts a margin around the painter; we're not using actual margins because this
+        # is here so we can add legends etc.
+        marginRatio = 0.02
+        p.save()
+        p.translate(imgw*marginRatio, imgh*marginRatio)
+        p.scale(1-marginRatio*2, 1-marginRatio*2)
 
         # again, see other comments about problems with QImage using preset data.
         # (https://bugreports.qt.io/browse/PYSIDE-1563)
@@ -641,5 +647,13 @@ class ImageCube(SourcesObtainable):
         self.tmpimage = None
 
         self.drawAnnotationsAndROIs(p)
+
+        # this removes the margin and puts us back in the coordinate space where the image takes the whole width
+        p.restore()
+
+        # once this is done, the coordinate space is 0,0 to 500,500. I'm really leaving this here for illustrative
+        # purposes; it might be useful to change this to something else if we want to write interesting stuff in
+        # the "margins."
+        p.setWindow(0,0,500,500)
 
         p.end()
