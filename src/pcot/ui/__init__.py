@@ -8,17 +8,22 @@ from pcot.ui.help import markdownWrapper
 
 logger = logging.getLogger(__name__)
 
-# Stores the QApplication if we have one.
+# Stores the QApplication if we have one. But it *only* does this for when there really is a UI.
 
 application = None
 
 
 def setApp(a):
+    """Set the QApplication singleton - only for use when the PCOT GUI is running.
+    There is another QApplication stored in main.py - this is always set to something.
+    In the PCOT application it's this, in other programs it is created by checkApp() in
+    that file."""
     global application
     application = a
 
 
 def app():
+    """Get the QApplication singleton if this is running the PCOT GUI"""
     return application
 
 
