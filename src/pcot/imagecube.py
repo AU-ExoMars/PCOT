@@ -11,8 +11,8 @@ from typing import List, Optional, Tuple, Sequence, Union, Callable
 
 import cv2 as cv
 import numpy as np
-from PySide2.QtCore import QSizeF, Qt, QRect, QMarginsF
-from PySide2.QtGui import QPainter, QPdfWriter, QImage
+from PySide2.QtCore import QSizeF, Qt, QRect, QMarginsF, QRectF
+from PySide2.QtGui import QPainter, QPdfWriter, QImage, QPagedPaintDevice, QPageSize
 
 from pcot.documentsettings import DocumentSettings
 from pcot.rois import ROI, ROIPainted, ROIBoundsException
@@ -613,26 +613,54 @@ class ImageCube(SourcesObtainable):
         # if there are commonalities I'll refactor them later.
 
         pdf = QPdfWriter(path)
-        dpi = 300  # So... setPageSize takes mm,
-        pixpermm = dpi / 25.4  # and setResolution takes DPI.
-        imgw = self.w
-        imgh = self.h
-        pdfw = imgw / pixpermm
-        pdfh = imgh / pixpermm
-
-        pdf.setPageSizeMM(QSizeF(pdfw, pdfh))
         pdf.setPageMargins(QMarginsF(0, 0, 0, 0))  # see below about margins
-        pdf.setResolution(dpi)
+
+        # this is the width of the PDF in inches excluding margins. We'll calculate the height from this.
+        win = 10
+        # this is the width of the PDF in our internal units - required because the drawing
+        # functions actually take ints!
+        w = 10000
+
+        inchesToUnits = w / win
+
+        # these are "pseudomargins" in inches; we can draw inside them so we aren't using
+        # actual margins.
+
+        marginTop = 0.2
+        marginBottom = 0.2
+        marginLeft = 0.2
+        marginRight = 0.2
+
+        imgAspect = self.h / self.w  # calculate aspect ratio of the image (not the PDF because margins!)
+
+        wIMGin = win - (marginLeft + marginRight)  # calculate width of image in inches
+        hIMGin = wIMGin * imgAspect  # calculate height of image in inches
+        hin = hIMGin + marginTop + marginBottom  # calculate height of PDF in inches
+        h = w * (hin/win)       # unit in our coordinate system (where width is 1000)
+
+        # set the page size to win x hin inches. Having bother with overloading here,
+        # so doing it in mm.
+        pdf.setPageSizeMM(QSizeF(win * 25.4, hin * 25.4))
+
         p = QPainter(pdf)
-        img = self.rgb()  # get numpy image
 
-        # this puts a margin around the painter; we're not using actual margins because this
-        # is here so we can add legends etc.
-        marginRatio = 0.02
-        p.save()
-        p.translate(imgw*marginRatio, imgh*marginRatio)
-        p.scale(1-marginRatio*2, 1-marginRatio*2)
+        p.setWindow(0, 0, w, h)  # set coordinate system
 
+        # we can render arbitrary text in here.
+#        fontSize = inchesToUnits*0.3
+#        annotFont.setPixelSize(fontSize)    # ints!
+#        p.setFont(annotFont)
+#        p.drawText(0, int(marginTop*inchesToUnits), "FISHHEAD")
+
+        p.save()  # we're about to transform into a space where we can draw on the image
+        p.translate(marginLeft*inchesToUnits, marginTop*inchesToUnits)
+        sx = wIMGin*inchesToUnits / self.w
+        sy = hIMGin*inchesToUnits / self.h
+        p.scale(sx, sy)
+
+        img = self.rgb()  # get numpy RGB image to draw
+
+        # Convert and draw the image
         # again, see other comments about problems with QImage using preset data.
         # (https://bugreports.qt.io/browse/PYSIDE-1563)
         # We stash into a field to avoid this.
@@ -648,12 +676,7 @@ class ImageCube(SourcesObtainable):
 
         self.drawAnnotationsAndROIs(p)
 
-        # this removes the margin and puts us back in the coordinate space where the image takes the whole width
+        # this removes the margin and puts us back into our coord space where w=1000
         p.restore()
-
-        # once this is done, the coordinate space is 0,0 to 500,500. I'm really leaving this here for illustrative
-        # purposes; it might be useful to change this to something else if we want to write interesting stuff in
-        # the "margins."
-        p.setWindow(0,0,500,500)
 
         p.end()
