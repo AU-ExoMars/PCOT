@@ -52,8 +52,8 @@ def test_roi_intersection(allblack):
     # outputs (not the images)
     exprNode = doc.graph.create("expr")
     exprNode.expr = "a*b"  # multiply = intersect for ROIs
-    exprNode.connect(0, roiNode1, 2)
-    exprNode.connect(1, roiNode2, 2)
+    exprNode.connect(0, roiNode1, 1)
+    exprNode.connect(1, roiNode2, 1)
 
     # take that intersected ROI and apply it to the image
     importNode = doc.graph.create("importroi")
@@ -360,8 +360,8 @@ def perform_roi_op(exprString) -> ImageCube:
 
     expr = doc.graph.create("expr")
     expr.expr = exprString
-    expr.connect(0, roi1, 2)  # use the ROI output
-    expr.connect(1, roi2, 2)
+    expr.connect(0, roi1, 1)  # use the ROI output
+    expr.connect(1, roi2, 1)
 
     importroi = doc.graph.create("importroi")
     importroi.connect(0, red, 0)

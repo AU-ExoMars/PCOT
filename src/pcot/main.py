@@ -30,6 +30,12 @@ try:
 except ImportError as e:
     pass
 
+def checkApp():
+    """Makes sure an app exists - we can't run certain code without one, and we often
+    won't have one if we're not using a GUI"""
+    global app
+    if app is None:
+        app = QtWidgets.QApplication()
 
 def load_plugins():
     """plugin dirs are colon separated, stored in Locations/plugins"""

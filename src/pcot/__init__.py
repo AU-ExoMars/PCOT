@@ -1,4 +1,5 @@
 import traceback
+
 try:
     import pcot.macros as macros
 except AttributeError as e:
@@ -26,7 +27,12 @@ faulthandler.enable()
 def setup():
     """Call this to initialise PCOT. We could just call it here, but other things would break then.
     You'll see that main() calls it."""
+
     xform.createXFormTypeInstances()
+
+    # If we run without a GUI, we still need an application. This will provide that.
+    from pcot.main import checkApp
+    checkApp()
 
 
 logging.basicConfig(format='%(levelname)s %(asctime)s %(name)s: %(message)s', force=True)
@@ -46,5 +52,3 @@ if tmp is None:
 
 __fullversion__ = tmp.decode('utf-8').strip()
 __version__ = __fullversion__.split(maxsplit=1)[0]
-
-
