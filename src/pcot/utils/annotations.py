@@ -3,6 +3,7 @@ from PySide2.QtGui import QPainter, QFont, QFontMetrics
 from typing import Callable, Tuple, Optional
 
 # use this font for annotations
+from pcot import ui
 from pcot.utils.colour import rgb2qcol
 
 annotFont = QFont()
@@ -20,20 +21,23 @@ def annotDrawText(p: QPainter,
     annotFont.setPixelSize(fontsize)
     p.setFont(annotFont)
     metrics = QFontMetrics(annotFont)
-    h = metrics.height()
-    w = metrics.width(s)
-    if basetop:     # if the y-coord is the top of the text...
-        y = y + fontsize
-    else:
-        y = y-metrics.descent()
+    vmargin = metrics.height() * 0.1     # top-bottom margin as factor of height
+    hmargin = metrics.height() * 0.1     # left-right margin as factor of height (not width)
+
+    h = metrics.height()+vmargin*2
+    w = metrics.width(s)+hmargin*2
+
+    if not basetop:
+        y = y + h
 
     if bgcol is not None:
-        r = QRect(x, y-fontsize, w, h)
+        r = QRect(x, y-h, w, h)
         p.setBrush(rgb2qcol(bgcol))
         p.drawRect(r)
 
     # We need to do something with font weight!
-    p.drawText(QPoint(x, y), s)
+    y -= metrics.descent()+vmargin
+    p.drawText(QPoint(x+hmargin, y), s)
 
 
 class Annotation:

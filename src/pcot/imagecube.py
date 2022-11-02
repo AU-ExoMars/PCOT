@@ -646,7 +646,8 @@ class ImageCube(SourcesObtainable):
 
         p.setWindow(0, 0, w, h)  # set coordinate system
 
-        # we can render arbitrary text in here.
+        # We can render arbitrary things in here, in "virtual units" space (i.e. width=10000).
+        # We'll use this to put stuff in the margins.
 #        fontSize = inchesToUnits*0.3
 #        annotFont.setPixelSize(fontSize)    # ints!
 #        p.setFont(annotFont)

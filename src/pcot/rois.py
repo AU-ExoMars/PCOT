@@ -140,10 +140,9 @@ class ROI(SourcesObtainable, Annotation):
         if (bb := self.bb()) is not None and self.fontsize > 0 and self.label is not None and self.label != '':
             x, y, x2, y2 = bb.corners()
             ty = y if self.labeltop else y2
-            # basetop is the neg of labeltop because if the label is at the TOP,
-            # the base of the text is y coord.
+
             annotDrawText(p, x, ty, self.label, self.colour,
-                          basetop=not self.labeltop,
+                          basetop=self.labeltop,
                           bgcol=(0, 0, 0) if self.drawbg else None,
                           fontsize=self.fontsize)
 
