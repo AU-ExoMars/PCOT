@@ -3,7 +3,7 @@ import logging
 import cv2 as cv
 import numpy as np
 from PySide2.QtCore import Qt
-from PySide2.QtGui import QKeyEvent
+from PySide2.QtGui import QKeyEvent, QPainter, QPen
 from PySide2.QtWidgets import QMessageBox
 
 from pcot.datum import Datum
@@ -11,6 +11,7 @@ import pcot.ui.tabs
 from pcot.imagecube import ImageCube
 from pcot.rois import ROICircle
 from pcot.utils import text
+from pcot.utils.annotations import Annotation, annotDrawText, annotFont
 from pcot.xform import XFormType, xformtype, XFormException
 
 logger = logging.Logger(__name__)
@@ -22,38 +23,41 @@ IMAGEMODE_RESULT = 2
 IMAGEMODE_CT = 3
 
 
-def greyscale(img: ImageCube) -> np.array:
-    """generate a single channel normalized grey scale of an image for viewing"""
-    # this generates an array of 1/imagechannels times the number of channels, so for 4 channels
-    # we get [[0.25,0.25,0.25,0.25]]
-    mat = np.array([1 / img.channels] * img.channels).reshape((1, img.channels))
-    # we then transform the incoming image by that matrix. This effectively combines all the
-    # channels into a single greyscale. For the above example, we get
-    # c0*0.25 + c1*0.25 + c2*0.25 + c3*0.25. It's the mean of the channels.
-    canvimg = cv.transform(img.img, mat)
-    # We don't really need to do that 0.25 part, that could just be 1,
-    # because we then normalise the result.
-    mn = np.min(canvimg)
-    mx = np.max(canvimg)
-    return (canvimg - mn) / (mx - mn)
+class CrossCalibAnnotation(Annotation):
+    """An annotation added to the viewed image in crosscalib"""
+    def __init__(self, idx, x, y, issel, col):
+        self.col = col
+        self.x = x
+        self.y = y
+        self.issel = issel
+        self.idx = idx
+        pass
 
+    def annotate(self, p: QPainter, img):
+        # we want to scale the font and line thickness with the image size here,
+        # to make it easier to view on large images. Calculate the biggest dimension of the image.
+        maxsize = max(img.w, img.h)
+        # Work out a scaling factor
+        scale = maxsize / 300
+        # Create a pen of that size (min 2)
+        pen = QPen(self.col)
+        pen.setWidth(max(scale, 2))
+        p.setPen(pen)
+        # And scale the radii of the circles too
+        p.drawEllipse(self.x, self.y, 7*scale, 7*scale)
+        if self.issel:
+            # we draw the selected point with an extra circle
+            p.drawEllipse(self.x, self.y, 10*scale, 10*scale)
 
-def drawpoints(img, lst, selidx, col):
-    i = 0
-    thickness = 2
-    fontsize = 10
-
-    for p in lst:
-        cv.circle(img, p, 7, col, thickness)
-        x, y = p
-        text.write(img, str(i), x + 10, y + 10, False, fontsize, thickness, col)
-        i = i + 1
-
-    if selidx is not None:
-        cv.circle(img, lst[selidx], 10, col, thickness + 2)
+        fontsize = 10*scale   # scale the font
+        annotFont.setPixelSize(fontsize)
+        p.setFont(annotFont)
+        p.drawText(self.x+12*scale, self.y+4*scale, f"{self.idx}")
 
 
 def findInList(lst, x, y):
+    """Used to find a point in a list of points which is near a pair of coordinates.
+    Returns the point index in the list. Crude, but doesn't need to be fast."""
     pt = None
     mindist = None
 
@@ -111,40 +115,33 @@ class XFormCrossCalib(XFormType):
             node.img = None  # output image (i.e. warped)
         else:
             if doApply:
+                # actually do the work.
                 outimg = self.apply(node, sourceImg, destImg)
                 if outimg is not None:
                     node.img = ImageCube(outimg, sourceImg.mapping, sourceImg.sources)
 
-            # this gets the appropriate image and also manipulates it.
-            # Generally we convert RGB to grey; otherwise we'd have to store
-            # quite a few mappings. Note that prep() here greys and normalises the image,
-            # but does so PURELY FOR OUTPUT ON THE LOCAL CANVAS. It DOES NOT
-            # tweak the output image, which is in node.img!
+            # which image are we viewing
             if node.imagemode == IMAGEMODE_DEST:
-                img = greyscale(destImg)
+                img = destImg
             elif node.imagemode == IMAGEMODE_SOURCE:
-                img = greyscale(sourceImg)
+                img = sourceImg
+            elif node.img is not None:
+                img = node.img
             else:
-                if node.img is not None:
-                    img = greyscale(node.img)
-                else:
-                    img = None
+                img = None
+
+            node.canvimg = img.copy()
 
             if img is not None:
-                # create a new image for the canvas; we'll draw on it.
-                canvimg = cv.merge([img, img, img])
-
-                # now draw the points
-
+                # add annotations to the image
                 if node.showSrc:
                     issel = node.selIdx if not node.selIsDest else None
-                    drawpoints(canvimg, node.src, issel, (1, 1, 0))
+                    for i, (x, y) in enumerate(node.src):
+                        node.canvimg.annotations.append(CrossCalibAnnotation(i, x, y, issel, Qt.yellow))
                 if node.showDest:
                     issel = node.selIdx if node.selIsDest else None
-                    drawpoints(canvimg, node.dest, issel, (0, 1, 1))
-
-                # grey, but 3 channels so I can draw on it!
-                node.canvimg = ImageCube(canvimg, node.mapping, sources=None)
+                    for i, (x, y) in enumerate(node.dest):
+                        node.canvimg.annotations.append(CrossCalibAnnotation(i, x, y, issel, Qt.cyan))
             else:
                 node.canvimg = None
 
@@ -194,7 +191,10 @@ class XFormCrossCalib(XFormType):
         # errors here must not be thrown, we need later stuff to run.
         if len(n.src) != len(n.dest):
             n.setError(XFormException('DATA', "Number of source and dest points must be the same"))
-            return
+            return None
+        if srcImg.channels != destImg.channels:
+            n.setError(XFormException('DATA', "Source and dest images must have same number of channels"))
+            return None
 
         # for each point, calculate the mean of the surrounding area for src and dest for each channel
 
@@ -283,8 +283,7 @@ class TabCrossCalib(pcot.ui.tabs.Tab):
         self.w.checkBoxSrc.setChecked(self.node.showSrc)
         self.w.checkBoxDest.setChecked(self.node.showDest)
 
-        # displaying a premapped image
-        self.w.canvas.display(self.node.canvimg, self.node.canvimg, self.node)
+        self.w.canvas.display(self.node.canvimg)
 
     def canvasKeyPressEvent(self, e: QKeyEvent):
         k = e.key()

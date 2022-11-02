@@ -603,7 +603,7 @@ class ImageCube(SourcesObtainable):
             rois = [onlyROI]
 
         for ann in self.annotations + rois:
-            ann.annotate(p)
+            ann.annotate(p, self)
 
         p.setFont(oldFont)
 

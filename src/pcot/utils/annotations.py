@@ -44,18 +44,18 @@ class Annotation:
     def __init__(self):
         pass
 
-    def annotate(self, p: QPainter):
+    def annotate(self, p: QPainter, img):
         """
         Draw the annotation
         Parameters:
         p: painter
-        annotations: list of annotations
+        img: imagecube - we *may* scale the font and pen width up on larger images.
         """
         pass
 
 
 class TestAnnotation(Annotation):
-    def annotate(self, p: QPainter):
+    def annotate(self, p: QPainter, img):
         p.setPen(Qt.yellow)
         p.setBrush(Qt.yellow)
 
