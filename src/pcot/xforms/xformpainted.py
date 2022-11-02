@@ -32,7 +32,7 @@ class XFormPainted(XFormROIType):
         node.captiontop = False
         node.fontsize = 10
         node.drawbg = True
-        node.fontline = 2
+        node.thickness = 2
         node.colour = (1, 1, 0)
         node.brushSize = 20  # scale of 0-99 i.e. a slider value. Converted to pixel radius in getRadiusFromSlider()
         node.previewRadius = None  # previewing needs the image, but that's awkward - so we stash this data in perform()
@@ -65,7 +65,7 @@ class XFormPainted(XFormROIType):
             drawEdge = False
             drawBox = False
 
-        node.roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.fontline, node.drawbg)
+        node.roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.thickness, node.drawbg)
         node.roi.drawEdge = drawEdge
         node.roi.drawBox = drawBox
 
@@ -82,7 +82,7 @@ class TabPainted(pcot.ui.tabs.Tab):
         self.w.canvas.paintHook = self
         self.w.canvas.mouseHook = self
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
-        self.w.fontline.valueChanged.connect(self.fontLineChanged)
+        self.w.thickness.valueChanged.connect(self.thicknessChanged)
         self.w.caption.textChanged.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
         self.w.drawbg.stateChanged.connect(self.drawbgChanged)
@@ -140,9 +140,9 @@ class TabPainted(pcot.ui.tabs.Tab):
         ui.mainwindow.MainUI.rebuildAll(scene=False)
         self.dontSetText = False
 
-    def fontLineChanged(self, i):
+    def thicknessChanged(self, i):
         self.mark()
-        self.node.fontline = i
+        self.node.thickness = i
         self.changed()
 
     def colourPressed(self):
@@ -164,7 +164,7 @@ class TabPainted(pcot.ui.tabs.Tab):
         if not self.dontSetText:
             self.w.caption.setText(self.node.caption)
         self.w.fontsize.setValue(self.node.fontsize)
-        self.w.fontline.setValue(self.node.fontline)
+        self.w.thickness.setValue(self.node.thickness)
         self.w.captionTop.setChecked(self.node.captiontop)
         self.w.brushSize.setValue(self.node.brushSize)
         self.w.drawMode.setCurrentIndex(self.node.drawMode)

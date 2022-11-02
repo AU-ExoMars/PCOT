@@ -1336,7 +1336,7 @@ class XFormROIType(XFormType):
         self.addOutputConnector("img", Datum.IMG, "image with ROI")  # image+roi
         self.addOutputConnector("roi", Datum.ROI, "the region of interest")
 
-        self.autoserialise = ('caption', 'captiontop', 'fontsize', 'fontline', 'colour', 'drawbg')
+        self.autoserialise = ('caption', 'captiontop', 'fontsize', 'thickness', 'colour', 'drawbg')
 
     def setProps(self, node, img):
         """Set properties in the node and ROI attached to the node. Assumes img is a valid

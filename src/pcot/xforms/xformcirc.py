@@ -41,7 +41,7 @@ class XformCirc(XFormROIType):
         node.captiontop = False
         node.fontsize = 10
         node.drawbg = True
-        node.fontline = 2
+        node.thickness = 2
         node.colour = (1, 1, 0)
         node.roi = ROICircle()
         node.roi.drawEdge = True
@@ -53,7 +53,7 @@ class XformCirc(XFormROIType):
         node.roi.deserialise(d)
 
     def setProps(self, node, img):
-        node.roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.fontline, node.drawbg)
+        node.roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.thickness, node.drawbg)
 
     def getMyROIs(self, node):
         return [node.roi]
@@ -66,7 +66,7 @@ class TabCirc(pcot.ui.tabs.Tab):
         self.w.canvas.mouseHook = self
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
         self.w.drawbg.stateChanged.connect(self.drawbgChanged)
-        self.w.fontline.valueChanged.connect(self.fontLineChanged)
+        self.w.thickness.valueChanged.connect(self.thicknessChanged)
         self.w.caption.textChanged.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
         self.w.captionTop.toggled.connect(self.topChanged)
@@ -109,9 +109,9 @@ class TabCirc(pcot.ui.tabs.Tab):
         self.changed()
         self.dontSetText = False
 
-    def fontLineChanged(self, i):
+    def thicknessChanged(self, i):
         self.mark()
-        self.node.fontline = i
+        self.node.thickness = i
         self.changed()
 
     def colourPressed(self):
@@ -155,7 +155,7 @@ class TabCirc(pcot.ui.tabs.Tab):
         if not self.dontSetText:
             self.w.caption.setText(self.node.caption)
         self.w.fontsize.setValue(self.node.fontsize)
-        self.w.fontline.setValue(self.node.fontline)
+        self.w.thickness.setValue(self.node.thickness)
         self.w.captionTop.setChecked(self.node.captiontop)
         self.w.drawbg.setChecked(self.node.drawbg)
         r, g, b = [x * 255 for x in self.node.colour]

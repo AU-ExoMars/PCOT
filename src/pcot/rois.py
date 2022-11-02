@@ -23,7 +23,7 @@ class ROIBoundsException(Exception):
             "ROI is out of bounds or entirely outside image. Have you loaded a new image?")
 
 
-ROISERIALISEFIELDS = ['label', 'labeltop', 'colour', 'fontline', 'fontsize', 'drawbg']
+ROISERIALISEFIELDS = ['label', 'labeltop', 'colour', 'thickness', 'fontsize', 'drawbg']
 
 
 class ROI(SourcesObtainable, Annotation):
@@ -40,18 +40,18 @@ class ROI(SourcesObtainable, Annotation):
 
         self.labeltop = False  # draw the label at the top?
         self.colour = (1, 1, 0)  # annotation colour
-        self.fontline = 2  # thickness of lines and text
+        self.thickness = 2  # thickness of lines
         self.fontsize = 10  # annotation font size
         self.drawbg = True
         # by default, the source of an ROI is null.
         # The only time this might not be true is if the ROI is derived somehow from an actual data source.
         self.sources = nullSourceSet
 
-    def setDrawProps(self, labeltop, colour, fontsize, fontline, drawbg):
+    def setDrawProps(self, labeltop, colour, fontsize, thickness, drawbg):
         """set the common draw properties for all ROIs"""
         self.labeltop = labeltop
         self.colour = colour
-        self.fontline = fontline
+        self.thickness = thickness
         self.fontsize = fontsize
         self.drawbg = drawbg
 
@@ -307,7 +307,7 @@ class ROIRect(ROI):
         self.h = 0
         self.isSet = False
         self.colour = (1, 1, 0)  # annotation colour
-        self.fontline = 2
+        self.thickness = 2
         self.fontsize = 10
 
     def bb(self):
@@ -371,7 +371,7 @@ class ROICircle(ROI):
         super().__init__('circle')
         self.set(x, y, r)
         self.colour = (1, 1, 0)  # annotation colour
-        self.fontline = 2
+        self.thickness = 2
         self.fontsize = 10
         self.drawBox = False
         self.drawEdge = False

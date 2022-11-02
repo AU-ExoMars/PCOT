@@ -30,7 +30,7 @@ def prep(img: ImageCube) -> np.array:
 
 def drawpoints(img, lst, translate, selidx, col):
     i = 0
-    fontline = 2
+    thickness = 2
     fontsize = 10
 
     if translate:
@@ -39,13 +39,13 @@ def drawpoints(img, lst, translate, selidx, col):
             lst = [lst[0]]
 
     for p in lst:
-        cv.circle(img, p, 7, col, fontline)
+        cv.circle(img, p, 7, col, thickness)
         x, y = p
-        text.write(img, str(i), x + 10, y + 10, False, fontsize, fontline, col)
+        text.write(img, str(i), x + 10, y + 10, False, fontsize, thickness, col)
         i = i + 1
 
     if selidx is not None:
-        cv.circle(img, lst[selidx], 10, col, fontline + 2)
+        cv.circle(img, lst[selidx], 10, col, thickness + 2)
 
 
 def findInList(lst, x, y, translate):

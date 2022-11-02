@@ -29,7 +29,7 @@ class XFormMultiDot(XFormType):
         super().__init__("multidot", "regions", "0.0.0")
         self.addInputConnector("input", Datum.IMG)
         self.addOutputConnector("img", Datum.IMG, "image with ROIs")
-        self.autoserialise = ('fontsize', 'fontline', 'colour', 'dotSize', 'drawbg')
+        self.autoserialise = ('fontsize', 'thickness', 'colour', 'dotSize', 'drawbg')
 
     def createTab(self, n, w):
         return TabMultiDot(n, w)
@@ -37,7 +37,7 @@ class XFormMultiDot(XFormType):
     def init(self, node):
         node.img = None
         node.fontsize = 10
-        node.fontline = 2
+        node.thickness = 2
         node.colour = (1, 1, 0)
         node.drawbg = True
         node.prefix = ''  # the name we're going to set by default, it will be followed by an int
@@ -62,7 +62,7 @@ class XFormMultiDot(XFormType):
             for r in node.rois:
                 # copy parameters shared by all these ROIs into each one. Ugh, I know.
                 r.drawBox = (r == node.selected)
-                r.fontline = node.fontline
+                r.thickness = node.thickness
                 r.fontsize = node.fontsize
                 r.drawbg = node.drawbg
             # copy image and append ROIs to it
@@ -110,7 +110,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.canvas.keyHook = self
         self.w.canvas.mouseHook = self
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
-        self.w.fontline.valueChanged.connect(self.fontLineChanged)
+        self.w.thickness.valueChanged.connect(self.thicknessChanged)
         self.w.drawbg.stateChanged.connect(self.drawbgChanged)
         self.w.caption.returnPressed.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
@@ -168,9 +168,9 @@ class TabMultiDot(pcot.ui.tabs.Tab):
             self.changed()
         self.w.canvas.setFocus(Qt.OtherFocusReason)
 
-    def fontLineChanged(self, i):
+    def thicknessChanged(self, i):
         self.mark()
-        self.node.fontline = i
+        self.node.thickness = i
         self.changed()
 
     def colourPressed(self):
@@ -217,7 +217,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.dotSize.setValue(ds)
 
         self.w.fontsize.setValue(self.node.fontsize)
-        self.w.fontline.setValue(self.node.fontline)
+        self.w.thickness.setValue(self.node.thickness)
         self.w.drawbg.setChecked(self.node.drawbg)
 
         r, g, b = [x * 255 for x in self.node.colour]

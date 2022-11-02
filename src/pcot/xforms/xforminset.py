@@ -28,7 +28,7 @@ class XformInset(XFormType):
         self.addInputConnector("roi", Datum.ROI)
         self.addOutputConnector("", Datum.IMG)
         self.autoserialise = ('insetrect', 'caption', 'captiontop',
-                              'fontsize', 'fontline', 'colour')
+                              'fontsize', 'thickness', 'colour')
         self.hasEnable = True
 
     def createTab(self, n, w):
@@ -40,7 +40,7 @@ class XformInset(XFormType):
         node.caption = ''
         node.captiontop = False
         node.fontsize = 10
-        node.fontline = 2
+        node.thickness = 2
         node.colour = (1, 1, 0)
 
     def perform(self, node):
@@ -87,13 +87,13 @@ class XformInset(XFormType):
                 # build sources - these will be bandwise unions of inset and background
                 src = MultiBandSource.createBandwiseUnion([image.rgbSources(), inset.rgbSources()])
 
-            for i in range(node.fontline):
+            for i in range(node.thickness):
                 cv.rectangle(out, (x - i - 1, y - i - 1), (x + w + i, y + h + i), node.colour, thickness=1)
             # add in the caption
             if node.caption != '':
                 ty = y if node.captiontop else y + h
                 pcot.utils.text.write(out, node.caption, x, ty, node.captiontop, node.fontsize,
-                                 node.fontline, node.colour)
+                                 node.thickness, node.colour)
 
         # build output image
         if out is None:
@@ -109,7 +109,7 @@ class TabInset(pcot.ui.tabs.Tab):
         # set the paint hook in the canvas so we can draw on the image
         self.w.canvas.mouseHook = self
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
-        self.w.fontline.valueChanged.connect(self.fontLineChanged)
+        self.w.thickness.valueChanged.connect(self.thicknessChanged)
         self.w.caption.textChanged.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
         self.w.captionTop.toggled.connect(self.topChanged)
@@ -142,9 +142,9 @@ class TabInset(pcot.ui.tabs.Tab):
         self.changed()
         self.dontSetText = False
 
-    def fontLineChanged(self, i):
+    def thicknessChanged(self, i):
         self.mark()
-        self.node.fontline = i
+        self.node.thickness = i
         self.changed()
 
     def colourPressed(self):
@@ -164,7 +164,7 @@ class TabInset(pcot.ui.tabs.Tab):
         if not self.dontSetText:
             self.w.caption.setText(self.node.caption)
         self.w.fontsize.setValue(self.node.fontsize)
-        self.w.fontline.setValue(self.node.fontline)
+        self.w.thickness.setValue(self.node.thickness)
         self.w.captionTop.setChecked(self.node.captiontop)
 
         r, g, b = [x * 255 for x in self.node.colour]
