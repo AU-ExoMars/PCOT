@@ -196,20 +196,27 @@ class XFormCrossCalib(XFormType):
             n.setError(XFormException('DATA', "Number of source and dest points must be the same"))
             return
 
-        # for each point, calculate the mean of the surrounding area for src and dest
+        # for each point, calculate the mean of the surrounding area for src and dest for each channel
 
         factors = []
         for (sx, sy), (dx, dy) in zip(n.src, n.dest):
             s = srcImg.subimage(roi=ROICircle(sx, sy, 100))
             d = destImg.subimage(roi=ROICircle(dx, dy, 100))
-            smean = s.masked().mean(axis=(0, 1))
-            dmean = d.masked().mean(axis=(0, 1))
+            # each of these will be an array of means, one for each channel
+            smeans = s.masked().mean(axis=(0, 1))
+            dmeans = d.masked().mean(axis=(0, 1))
 
-            factors.append(dmean / smean)
+            # we add to the factors list the ratios of the means, band-wise, for each point. So
+            # if the mean for band 0 in the source is s0 and the mean for band 0 in the dest is d0,
+            # we add the array [d0/s0, d1/s1, d2/s2...]
+            factors.append(dmeans / smeans)
 
         if len(factors) > 0:
+            # so we then turn this into a points x band array..
             factors = np.array(factors)
+            # and find the means across all the points.
             factors = np.mean(factors, axis=0)
+            # we now have an array of ratios - one for each band - to convert source into dest!
             return (srcImg.img * factors).astype(np.float32)
         else:
             return srcImg.img
