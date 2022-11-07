@@ -71,7 +71,7 @@ class Gradient:
     def getGradient(self, vertical=False):
         """Create a QLinearGradient"""
         if vertical:
-            grad = QLinearGradient(QPointF(0, 0), QPointF(0, 1))
+            grad = QLinearGradient(QPointF(0, 1), QPointF(0, 0))
         else:
             grad = QLinearGradient(QPointF(0, 0), QPointF(1, 0))
         grad.setCoordinateMode(QGradient.ObjectMode)

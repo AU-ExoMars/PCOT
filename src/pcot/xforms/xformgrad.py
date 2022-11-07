@@ -1,16 +1,17 @@
 from functools import partial
+from typing import Tuple
 
-import cv2 as cv
 import numpy as np
-from PySide2.QtCore import QRect
-from PySide2.QtGui import QPainter, QLinearGradient
+from PySide2.QtCore import QRect, Qt, QPoint, QRectF
+from PySide2.QtGui import QPainter, QLinearGradient, QPen, QFontMetrics
 
 from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.imagecube import ImageCube
+from pcot.rois import ROI
 from pcot.sources import MultiBandSource
-from pcot.utils.annotations import Annotation
-from pcot.utils.colour import colDialog
+from pcot.utils.annotations import Annotation, annotFont
+from pcot.utils.colour import colDialog, rgb2qcol
 from pcot.utils.gradient import Gradient
 from pcot.xform import xformtype, XFormType, XFormException
 
@@ -35,24 +36,68 @@ presetGradients = {
 }
 
 
+def sigfigs(val: float, n: int):
+    return '{:g}'.format(float('{:.{p}g}'.format(val, p=n)))
+
+
 class GradientLegend(Annotation):
     grad: QLinearGradient
     mn: float
     mx: float
     fontsize: float
 
-    def __init__(self, grad: Gradient, vertical=False):
+    def __init__(self, grad: Gradient,
+                 legendpos: str,
+                 legendrect: Tuple[float, float, float, float],
+                 vertical: bool,
+                 colour: Tuple[float, float, float],
+                 fontscale: float,
+                 thickness: float,
+                 rangestrs: Tuple[str, str]):
         super().__init__()
+        self.legendpos = legendpos
+        self.colour = colour
+        self.fontscale = fontscale
+        self.rect = legendrect
+        self.thickness = thickness
+        self.vertical = vertical
         self.grad = grad.getGradient(vertical=vertical)
+        self.rangestrs = rangestrs
 
     def annotate(self, p: QPainter, img):
-        p.fillRect(QRect(0, 0, 100, 100), self.grad)
+        x, y, w, h = self.rect
+        p.fillRect(QRectF(x, y, w, h), self.grad)
+        p.setBrush(Qt.NoBrush)
+        pen = QPen(rgb2qcol(self.colour))
+        pen.setWidth(self.thickness)
+        p.setPen(pen)
+        p.drawRect(int(x),int(y),int(w),int(h))
+        annotFont.setPixelSize(self.fontscale)
+        p.setFont(annotFont)
+        metrics = QFontMetrics(annotFont)
+
+        mintext, maxtext = self.rangestrs
+        if self.vertical:
+            xt = x-(self.thickness+2)
+
+            p.drawText(QPoint(xt-metrics.width(maxtext), int(y)), f"{maxtext}")
+            p.drawText(QPoint(xt-metrics.width(mintext), int(y+h)), f"{mintext}")
+
+
+def _normAndGetRange(data):
+    maxval = np.max(data)
+    minval = np.min(data)
+    if maxval == minval:
+        raise XFormException('DATA', 'Data is uniform, cannot normalize for gradient')
+    return minval, maxval, (data - minval) / (maxval - minval)
 
 
 @xformtype
 class XformGradient(XFormType):
     """
-    Convert a greyscale image to an RGB gradient image for better visibility.
+    Convert a mono image to an RGB gradient image for better visibility. If the "insetinto" input has an
+    image AND there is a valid ROI in the mono image, the image will be inset into the RGB of the insetinto image.
+    NOTE: if you change the "insetinto" image's RGB mapping you may need to "run all" to see the the change reflected.
 
     The gradient widget has the following behaviour:
 
@@ -64,7 +109,7 @@ class XformGradient(XFormType):
     Node parameters:
         * gradient: utils.Gradient object containing gradient info
         * colour: (r,g,b) [0:1] colour of text and border for in-image legend
-        * rect: (x,y,w,h) rectangle for in-image legend
+        * legendrect: (x,y,w,h) rectangle for in-image legend
         * vertical: true if vertical legend
         * fontscale: size of font
         * thickness: border thickness
@@ -74,10 +119,11 @@ class XformGradient(XFormType):
 
     def __init__(self):
         super().__init__("gradient", "data", "0.0.0")
-        self.addInputConnector("", Datum.IMG)
+        self.addInputConnector("mono", Datum.IMG)
+        self.addInputConnector("insetinto", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
         self.hasEnable = True
-        self.autoserialise = ('colour', 'rect', 'vertical', 'thickness', 'fontscale', 'legendPos')
+        self.autoserialise = ('colour', 'legendrect', 'vertical', 'thickness', 'fontscale', 'legendPos')
 
     def serialise(self, node):
         return {'gradient': node.gradient.data}
@@ -99,26 +145,58 @@ class XformGradient(XFormType):
         node.legendPos = 'In image'
 
     def perform(self, node):
-        img = node.getInput(0, Datum.IMG)
-        if img is None:
-            node.img = None
-        elif node.enabled:
-            if img.channels == 1:
-                subimage = img.subimage()
-                newsubimg = node.gradient.apply(subimage.img, subimage.mask)
-                # Here we make an RGB image from the input image. We then slap the gradient
-                # onto the ROI. We use the default channel mapping, and the same source on each channel.
-                source = img.sources.getSources()
-                outimg = ImageCube(img.rgb(), node.mapping, sources=MultiBandSource([source, source, source]))
-                outimg.rois = img.rois  # copy ROIs in so they are visible if desired
+        mono = node.getInput(0, Datum.IMG)
+        rgb = node.getInput(1, Datum.IMG)
 
-                # we keep the same RGB mapping
-                node.img = outimg.modifyWithSub(subimage, newsubimg, keepMapping=True)
-                node.img.annotations.append(GradientLegend(node.gradient, True))
-            else:
-                raise XFormException('DATA', 'Gradient must be on greyscale images')
+        if not node.enabled:
+            return
+
+        if mono is None and rgb is None:
+            node.img = None
+        elif mono.channels != 1:
+            raise XFormException('DATA', 'Gradient must be on greyscale images')
+
+        if rgb is None or len(mono.rois) == 0:
+            # we're just outputting the mono image, or there are no ROIs
+            subimage = mono.subimage()
+            minval, maxval, subimage.img = _normAndGetRange(subimage.img)
+            newsubimg = node.gradient.apply(subimage.img, subimage.mask)
+            # Here we make an RGB image from the input image. We then slap the gradient
+            # onto the ROI. We use the default channel mapping, and the same source on each channel.
+            source = mono.sources.getSources()
+            outimg = ImageCube(mono.rgb(), node.mapping, sources=MultiBandSource([source, source, source]))
+            outimg.rois = mono.rois  # copy ROIs in so they are visible if desired
+            node.img = outimg.modifyWithSub(subimage, newsubimg, keepMapping=True)
         else:
-            node.img = img
+            # save the ROIs, because we're going to need them later
+            monoROIs = mono.rois
+            mono = mono.cropROI()  # crop to ROI, keeping that ROI (but cropped, which is why we keep it above)
+            subimage = mono.subimage()
+            minval, maxval, subimage.img = _normAndGetRange(subimage.img)
+            newsubimg = node.gradient.apply(subimage.img, subimage.mask)
+            source = mono.sources.getSources()
+            # this time we get the RGB from the rgb input
+            outimg = ImageCube(rgb.rgb(), node.mapping, sources=MultiBandSource([source, source, source]))
+            outimg.rois = monoROIs  # copy ROIs in so they are visible if desired
+            # we keep the same RGB mapping and this time we're modifying an image at the original size,
+            # so we splice the old ROIs back in. This is pretty horrific; I hope it makes sense. Remember
+            # that the gradient image - which we're splicing back in - has been cropped to its ROI which
+            # has also been modified so its BB will start at the origin. We need to splice into the RGB image
+            # at the correct point, so we're doing this...
+            subimage.bb = ROI.roiUnion(monoROIs).bb()
+            node.img = outimg.modifyWithSub(subimage, newsubimg, keepMapping=True)
+
+        if node.img is not None:
+            node.img.annotations.append(GradientLegend(node.gradient,
+                                                       node.legendPos,
+                                                       node.legendrect,
+                                                       node.vertical,
+                                                       node.colour,
+                                                       node.fontscale,
+                                                       node.thickness,
+                                                       (f"{sigfigs(minval,3)}", f"{sigfigs(maxval,3)}")
+                                                       ))
+
         node.setOutput(0, Datum(Datum.IMG, node.img))
 
 
@@ -136,7 +214,7 @@ class TabGradient(pcot.ui.tabs.Tab):
         self.w.legendPos.currentTextChanged.connect(self.legendPosChanged)
         self.w.fontSpin.valueChanged.connect(self.fontChanged)
         for x in [self.w.xSpin, self.w.ySpin, self.w.wSpin, self.w.hSpin]:
-            x.valueChanged.connect(self.rectChanged)
+            x.editingFinished.connect(self.rectChanged)
         self.w.thicknessSpin.valueChanged.connect(self.thicknessChanged)
         self.w.orientCombo.currentTextChanged.connect(self.orientChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
@@ -172,7 +250,7 @@ class TabGradient(pcot.ui.tabs.Tab):
         self.node.fontscale = val
         self.changed()
 
-    def rectChanged(self, _):
+    def rectChanged(self):
         self.mark()
         self.node.legendrect = [
             self.w.xSpin.value(),
