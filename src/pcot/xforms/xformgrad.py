@@ -1,3 +1,5 @@
+from functools import partial
+
 import cv2 as cv
 import numpy as np
 from PySide2.QtCore import QRect
@@ -8,6 +10,7 @@ import pcot.ui.tabs
 from pcot.imagecube import ImageCube
 from pcot.sources import MultiBandSource
 from pcot.utils.annotations import Annotation
+from pcot.utils.colour import colDialog
 from pcot.utils.gradient import Gradient
 from pcot.xform import xformtype, XFormType, XFormException
 
@@ -57,6 +60,16 @@ class XformGradient(XFormType):
         * doubleclick to delete an existing colour point
         * doubleclick to add a new colour point
         * right click to edit an existing colour point
+
+    Node parameters:
+        * gradient: utils.Gradient object containing gradient info
+        * colour: (r,g,b) [0:1] colour of text and border for in-image legend
+        * rect: (x,y,w,h) rectangle for in-image legend
+        * vertical: true if vertical legend
+        * fontscale: size of font
+        * thickness: border thickness
+        * legendPos: string describing position:
+            'In image', 'Top margin', 'Bottom margin', 'Left margin', 'Right margin', 'None'
     """
 
     def __init__(self):
@@ -64,6 +77,7 @@ class XformGradient(XFormType):
         self.addInputConnector("", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
         self.hasEnable = True
+        self.autoserialise = ('colour', 'rect', 'vertical', 'thickness', 'fontscale', 'legendPos')
 
     def serialise(self, node):
         return {'gradient': node.gradient.data}
@@ -75,8 +89,14 @@ class XformGradient(XFormType):
         return TabGradient(n, w)
 
     def init(self, node):
-        node.gradient = presetGradients['topo']
         node.img = None
+        node.gradient = presetGradients['topo']
+        node.colour = (1, 1, 0)
+        node.legendrect = (0, 0, 100, 20)
+        node.vertical = False
+        node.fontscale = 10
+        node.thickness = 1
+        node.legendPos = 'In image'
 
     def perform(self, node):
         img = node.getInput(0, Datum.IMG)
@@ -94,12 +114,15 @@ class XformGradient(XFormType):
 
                 # we keep the same RGB mapping
                 node.img = outimg.modifyWithSub(subimage, newsubimg, keepMapping=True)
-                node.img.annotations.append(GradientLegend(node.gradient,True))
+                node.img.annotations.append(GradientLegend(node.gradient, True))
             else:
                 raise XFormException('DATA', 'Gradient must be on greyscale images')
         else:
             node.img = img
         node.setOutput(0, Datum(Datum.IMG, node.img))
+
+
+removeSpaces = str.maketrans('', '', ' ')
 
 
 class TabGradient(pcot.ui.tabs.Tab):
@@ -109,7 +132,65 @@ class TabGradient(pcot.ui.tabs.Tab):
         for n in presetGradients:
             self.w.presetCombo.insertItem(1000, n)
         self.w.presetCombo.currentIndexChanged.connect(self.loadPreset)
+
+        self.w.legendPos.currentTextChanged.connect(self.legendPosChanged)
+        self.w.fontSpin.valueChanged.connect(self.fontChanged)
+        for x in [self.w.xSpin, self.w.ySpin, self.w.wSpin, self.w.hSpin]:
+            x.valueChanged.connect(self.rectChanged)
+        self.w.thicknessSpin.valueChanged.connect(self.thicknessChanged)
+        self.w.orientCombo.currentTextChanged.connect(self.orientChanged)
+        self.w.colourButton.pressed.connect(self.colourPressed)
+
+        self.pageButtons = [
+            self.w.gradPageButton,
+            self.w.legendPageButton
+        ]
+        for x in self.pageButtons:
+            # late binding closure hack.
+            x.clicked.connect(partial(lambda xx: self.pageButtonClicked(xx), x))
+
+        self.setPage(0)
         self.nodeChanged()
+
+    def setPage(self, i):
+        """Select page in the stacked widget"""
+        self.w.stackedWidget.setCurrentIndex(i)
+        for idx, x in enumerate(self.pageButtons):
+            x.setChecked(i == idx)
+
+    def pageButtonClicked(self, x):
+        i = self.pageButtons.index(x)
+        self.setPage(i)
+
+    def legendPosChanged(self, string):
+        self.mark()
+        self.node.legendPos = string
+        self.changed()
+
+    def fontChanged(self, val):
+        self.mark()
+        self.node.fontscale = val
+        self.changed()
+
+    def rectChanged(self, _):
+        self.mark()
+        self.node.legendrect = [
+            self.w.xSpin.value(),
+            self.w.ySpin.value(),
+            self.w.wSpin.value(),
+            self.w.hSpin.value()
+        ]
+        self.changed()
+
+    def thicknessChanged(self, val):
+        self.mark()
+        self.node.thickness = val
+        self.changed()
+
+    def orientChanged(self, val):
+        self.mark()
+        self.node.vertical = (val == 'Vertical')
+        self.changed()
 
     def loadPreset(self):
         name = self.w.presetCombo.currentText()
@@ -125,6 +206,18 @@ class TabGradient(pcot.ui.tabs.Tab):
             self.node.gradient.setData(self.w.gradient.gradient())
             self.changed()
 
+    def gradientChanged(self):
+        self.mark()
+        self.node.gradient.setData(self.w.gradient.gradient())
+        self.changed()
+
+    def colourPressed(self):
+        col = colDialog(self.node.colour)
+        if col is not None:
+            self.mark()
+            self.node.colour = col
+            self.changed()
+
     def onNodeChanged(self):
         # have to do canvas set up here to handle extreme undo events which change the graph and nodes
         self.w.canvas.setMapping(self.node.mapping)
@@ -133,7 +226,19 @@ class TabGradient(pcot.ui.tabs.Tab):
         self.w.gradient.setGradient(self.node.gradient.data)
         self.w.canvas.display(self.node.img)
 
-    def gradientChanged(self):
-        self.mark()
-        self.node.gradient.setData(self.w.gradient.gradient())
-        self.changed()
+        self.w.legendPos.setCurrentText(self.node.legendPos)
+        self.w.fontSpin.setValue(self.node.fontscale)
+        x, y, w, h = self.node.legendrect
+        self.w.xSpin.setValue(x)
+        self.w.ySpin.setValue(y)
+        self.w.wSpin.setValue(w)
+        self.w.hSpin.setValue(h)
+        self.w.orientCombo.setCurrentText('Vertical' if self.node.vertical else 'Horizontal')
+        r, g, b = [x * 255 for x in self.node.colour]
+        self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
+
+        if self.node.img is not None:
+            self.w.xSpin.setMaximum(self.node.img.w)
+            self.w.ySpin.setMaximum(self.node.img.h)
+            self.w.wSpin.setMaximum(self.node.img.w)
+            self.w.hSpin.setMaximum(self.node.img.h)
