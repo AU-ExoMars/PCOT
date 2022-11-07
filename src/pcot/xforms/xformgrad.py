@@ -77,11 +77,16 @@ class GradientLegend(Annotation):
         metrics = QFontMetrics(annotFont)
 
         mintext, maxtext = self.rangestrs
+        minw = metrics.width(mintext)
+        maxw = metrics.width(maxtext)
         if self.vertical:
             xt = x-(self.thickness+2)
 
-            p.drawText(QPoint(xt-metrics.width(maxtext), int(y)), f"{maxtext}")
-            p.drawText(QPoint(xt-metrics.width(mintext), int(y+h)), f"{mintext}")
+            p.drawText(QPoint(xt-minw, int(y+h)), f"{mintext}")
+            p.drawText(QPoint(xt-maxw, int(y)), f"{maxtext}")
+        else:
+            p.drawText(QPoint(x-minw, int(y-self.fontscale+2)), f"{mintext}")
+            p.drawText(QPoint(x+w, int(y-self.fontscale+2)), f"{maxtext}")
 
 
 def _normAndGetRange(data):
