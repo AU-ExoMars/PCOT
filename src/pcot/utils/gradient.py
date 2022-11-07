@@ -1,7 +1,10 @@
 from typing import Tuple, List, Optional
 
 import numpy as np
-from PySide2.QtGui import QImage
+from PySide2.QtCore import QPointF
+from PySide2.QtGui import QImage, QLinearGradient, QGradient
+
+from pcot.utils.colour import rgb2qcol
 
 
 class Gradient:
@@ -65,37 +68,18 @@ class Gradient:
         np.putmask(cp, mask3, np.dstack((rs, gs, bs)).astype(np.float32))
         return cp
 
-    def getImage(self, vertical=False):
-        """This returns a cached QImage we can use for rendering a legend."""
-        if self.image is None or self.vertical != vertical:
-            # need to rebuild the image; either it's not there or the orientation is wrong
-            self.vertical = vertical
-            # we'll construct the image horizontally and transpose if we want vertical.
-            width = 64
-            height = 8
-            # turn gradient into lookup tables for each channel
-            xs = np.array([x for x, (r, g, b) in self.data])
-            rs = np.array([r for x, (r, g, b) in self.data])
-            gs = np.array([g for x, (r, g, b) in self.data])
-            bs = np.array([b for x, (r, g, b) in self.data])
-            # we're looking at n=width values from 0..1
-            vals = np.linspace(0, 1, num=width)
-            # and build those values for each channel
-            rs = np.interp(vals, xs, rs)
-            gs = np.interp(vals, xs, gs)
-            bs = np.interp(vals, xs, bs)
-            # this is a rubbish way to do it
-            img = np.zeros((height, width, 3), dtype=np.float)
-            for i in range(width):
-                img[:, i] = (rs[i], gs[i], bs[i])
-            if vertical:
-                img = img.transpose().copy()  # copy to make it column-contiguous memory for QImage
-                width, height = height, width
-            self.image = QImage(img.data, width, height, width*3, QImage.Format_RGB888)
-            self.membuffer = img    # to avoid the annoying early free (see other uses of QImage)
-
-        return self.image
-
-    def clearImage(self):
-        """Clear cached image"""
-        self.image = None
+    def getGradient(self, vertical=False):
+        """Create a QLinearGradient"""
+        if vertical:
+            grad = QLinearGradient(QPointF(0, 0), QPointF(0, 1))
+        else:
+            grad = QLinearGradient(QPointF(0, 0), QPointF(1, 0))
+        grad.setCoordinateMode(QGradient.ObjectMode)
+        dat = self.data.copy()
+        if dat[0][0] != 0.0:
+            dat.insert(0, (0, dat[0][1]))
+        if dat[-1][0] != 1.0:
+            dat.append((1, dat[-1][1]))
+        for x, (r, g, b) in dat:
+            grad.setColorAt(x, rgb2qcol((r, g, b)))
+        return grad

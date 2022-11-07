@@ -1,10 +1,13 @@
 import cv2 as cv
 import numpy as np
+from PySide2.QtCore import QRect
+from PySide2.QtGui import QPainter, QLinearGradient
 
 from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.imagecube import ImageCube
 from pcot.sources import MultiBandSource
+from pcot.utils.annotations import Annotation
 from pcot.utils.gradient import Gradient
 from pcot.xform import xformtype, XFormType, XFormException
 
@@ -27,6 +30,20 @@ presetGradients = {
         (1, (1, 1, 1)),
     ]),
 }
+
+
+class GradientLegend(Annotation):
+    grad: QLinearGradient
+    mn: float
+    mx: float
+    fontsize: float
+
+    def __init__(self, grad: Gradient, vertical=False):
+        super().__init__()
+        self.grad = grad.getGradient(vertical=vertical)
+
+    def annotate(self, p: QPainter, img):
+        p.fillRect(QRect(0, 0, 100, 100), self.grad)
 
 
 @xformtype
@@ -77,7 +94,7 @@ class XformGradient(XFormType):
 
                 # we keep the same RGB mapping
                 node.img = outimg.modifyWithSub(subimage, newsubimg, keepMapping=True)
-                snark = node.gradient.getImage(True)
+                node.img.annotations.append(GradientLegend(node.gradient,True))
             else:
                 raise XFormException('DATA', 'Gradient must be on greyscale images')
         else:
