@@ -681,15 +681,18 @@ class ROIPoly(ROI):
         return "ROI-POLY {} {} {}x{}".format(x, y, w, h)
 
 
-def deserialise(self, tp, d):
+def deserialise(tp, d):
     """Not to be confused with ROI.deserialise(). This deserialises an serialised ROI datum given its type"""
+
     if tp == 'rect':
-        return ROIRect.deserialise(d)
+        r = ROIRect()
     elif tp == 'circle':
-        return ROICircle.deserialise(d)
+        r = ROICircle()
     elif tp == 'painted':
-        return ROIPainted.deserialise(d)
+        r = ROIPainted()
     elif tp == 'poly':
-        return ROIPoly.deserialise(d)
+        r = ROIPoly()
     else:
         raise Exception(f"cannot deserialise ROI type '{tp}'")
+    r.deserialise(d)
+    return r

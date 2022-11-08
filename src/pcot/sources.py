@@ -209,7 +209,7 @@ class SourceSet(SourcesObtainable):
         if isinstance(ss, Source):
             result = {ss}
         elif isinstance(ss, SourceSet):
-            result = ss
+            result = ss.sourceSet
         elif isinstance(ss, Iterable):
             result = set()
             for x in ss:
@@ -340,8 +340,9 @@ class MultiBandSource(SourcesObtainable):
             for mbs in lst:
                 # for each input MultiBandSource
                 if i < len(mbs.sourceSets):
+                    xx = mbs.sourceSets[i]
                     # add the source for that channel to the set
-                    newSet.add(mbs.sourceSets[i])
+                    newSet.add(xx)
             sets.append(newSet)
         return cls(sets)
 
