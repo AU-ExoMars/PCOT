@@ -89,12 +89,13 @@ class GradientLegend(Annotation):
             p.drawText(QPoint(x+w, int(y-self.fontscale+2)), f"{maxtext}")
 
 
-def _normAndGetRange(data):
-    maxval = np.max(data)
-    minval = np.min(data)
+def _normAndGetRange(subimage):
+    masked = np.ma.masked_array(subimage.img, mask=~subimage.fullmask())
+    maxval = np.max(masked)
+    minval = np.min(masked)
     if maxval == minval:
         raise XFormException('DATA', 'Data is uniform, cannot normalize for gradient')
-    return minval, maxval, (data - minval) / (maxval - minval)
+    return minval, maxval, (masked - minval) / (maxval - minval)
 
 
 @xformtype
@@ -164,7 +165,7 @@ class XformGradient(XFormType):
         if rgb is None or len(mono.rois) == 0:
             # we're just outputting the mono image, or there are no ROIs
             subimage = mono.subimage()
-            minval, maxval, subimage.img = _normAndGetRange(subimage.img)
+            minval, maxval, subimage.img = _normAndGetRange(subimage)
             newsubimg = node.gradient.apply(subimage.img, subimage.mask)
             # Here we make an RGB image from the input image. We then slap the gradient
             # onto the ROI. We use the default channel mapping, and the same source on each channel.
@@ -177,7 +178,7 @@ class XformGradient(XFormType):
             monoROIs = mono.rois
             mono = mono.cropROI()  # crop to ROI, keeping that ROI (but cropped, which is why we keep it above)
             subimage = mono.subimage()
-            minval, maxval, subimage.img = _normAndGetRange(subimage.img)
+            minval, maxval, subimage.img = _normAndGetRange(subimage)
             newsubimg = node.gradient.apply(subimage.img, subimage.mask)
             source = mono.sources.getSources()
             # this time we get the RGB from the rgb input
