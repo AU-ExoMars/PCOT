@@ -33,7 +33,7 @@ class CrossCalibAnnotation(Annotation):
         self.idx = idx
         pass
 
-    def annotate(self, p: QPainter, img):
+    def annotate(self, p: QPainter, img, inPDF):
         # we want to scale the font and line thickness with the image size here,
         # to make it easier to view on large images. Calculate the biggest dimension of the image.
         maxsize = max(img.w, img.h)

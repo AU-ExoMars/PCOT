@@ -44,25 +44,12 @@ class Annotation:
     def __init__(self):
         pass
 
-    def annotate(self, p: QPainter, img):
+    def annotate(self, p: QPainter, img, inPDF: bool):
         """
         Draw the annotation
         Parameters:
         p: painter
         img: imagecube - we *may* scale the font and pen width up on larger images.
+        inPDF: true if we're drawing to a PDF or some other canvas with margins etc.
         """
         pass
-
-
-class TestAnnotation(Annotation):
-    def annotate(self, p: QPainter, img):
-        p.setPen(Qt.yellow)
-        p.setBrush(Qt.yellow)
-
-        # inspections off because these should be float, but drawRect expects int.
-        # noinspection PyTypeChecker
-        p.drawRect(20, 20, 40, 40)
-
-        # noinspection PyTypeChecker
-        r = QRect(20, 10, 100, 10)
-        p.drawText(r, Qt.AlignLeft | Qt.AlignBottom, "Hello World")

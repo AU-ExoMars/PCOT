@@ -64,7 +64,7 @@ class GradientLegend(Annotation):
         self.grad = grad.getGradient(vertical=vertical)
         self.rangestrs = rangestrs
 
-    def annotate(self, p: QPainter, img):
+    def annotate(self, p: QPainter, img, inPDF: bool):
         x, y, w, h = self.rect
         p.fillRect(QRectF(x, y, w, h), self.grad)
         p.setBrush(Qt.NoBrush)

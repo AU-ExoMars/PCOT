@@ -7,18 +7,18 @@ but we could change things later.
 import logging
 import math
 import numbers
-from typing import List, Optional, Tuple, Sequence, Union, Callable
+from typing import List, Optional, Tuple, Sequence, Union
 
 import cv2 as cv
 import numpy as np
-from PySide2.QtCore import QSizeF, Qt, QRect, QMarginsF, QRectF
-from PySide2.QtGui import QPainter, QPdfWriter, QImage, QPagedPaintDevice, QPageSize
+from PySide2.QtCore import QSizeF, QMarginsF
+from PySide2.QtGui import QPainter, QPdfWriter, QImage
 
 from pcot.documentsettings import DocumentSettings
 from pcot.rois import ROI, ROIPainted, ROIBoundsException
 from pcot.sources import MultiBandSource, SourcesObtainable
 from pcot.utils import annotations
-from pcot.utils.annotations import TestAnnotation, annotFont
+from pcot.utils.annotations import annotFont
 from pcot.utils.geom import Rect
 
 logger = logging.getLogger(__name__)
@@ -616,7 +616,8 @@ class ImageCube(SourcesObtainable):
         return -1
 
     def drawAnnotationsAndROIs(self, p: QPainter,
-                               onlyROI: Union[ROI, Sequence] = None):
+                               onlyROI: Union[ROI, Sequence] = None,
+                               inPDF: bool = False):
         """Draw annotations and ROIs onto a painter (either in a canvas or an output device.
         Will save and restore font because we might be doing font resizing"""
 
@@ -631,7 +632,7 @@ class ImageCube(SourcesObtainable):
             rois = [onlyROI]
 
         for ann in self.annotations + rois:
-            ann.annotate(p, self)
+            ann.annotate(p, self, inPDF)
 
         p.setFont(oldFont)
 
@@ -703,7 +704,7 @@ class ImageCube(SourcesObtainable):
         p.drawImage(0, 0, qimg)
         self.tmpimage = None
 
-        self.drawAnnotationsAndROIs(p)
+        self.drawAnnotationsAndROIs(p, inPDF=True)
 
         # this removes the margin and puts us back into our coord space where w=1000
         p.restore()
