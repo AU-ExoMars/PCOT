@@ -41,4 +41,4 @@ class XformStripROI(XFormType):
         # so the tab can read it
         node.out = Datum(Datum.IMG, out)
         # and also output it.
-        node.setOutput(0, out)
+        node.setOutput(0, node.out)

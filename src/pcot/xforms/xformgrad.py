@@ -159,10 +159,13 @@ class XformGradient(XFormType):
 
         if mono is None and rgb is None:
             node.img = None
+        elif mono is None:
+            node.img = ImageCube(rgb.rgb(), node.mapping, sources=rgb.rgbSources())
+            minval = 0
+            maxval = 1
         elif mono.channels != 1:
             raise XFormException('DATA', 'Gradient must be on greyscale images')
-
-        if rgb is None or len(mono.rois) == 0:
+        elif rgb is None or len(mono.rois) == 0:
             # we're just outputting the mono image, or there are no ROIs
             subimage = mono.subimage()
             minval, maxval, subimage.img = _normAndGetRange(subimage)
@@ -189,7 +192,9 @@ class XformGradient(XFormType):
             # that the gradient image - which we're splicing back in - has been cropped to its ROI which
             # has also been modified so its BB will start at the origin. We need to splice into the RGB image
             # at the correct point, so we're doing this...
-            subimage.bb = ROI.roiUnion(monoROIs).bb()
+            roiUnion = ROI.roiUnion(monoROIs)  # may return None if there is an unset ROI
+            if roiUnion is not None:
+                subimage.setROI(outimg, roiUnion)
             node.img = outimg.modifyWithSub(subimage, newsubimg, keepMapping=True)
 
         if node.img is not None:

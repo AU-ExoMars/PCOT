@@ -682,8 +682,10 @@ class ROIPoly(ROI):
 
 
 def deserialise(tp, d):
-    """Not to be confused with ROI.deserialise(). This deserialises an serialised ROI datum given its type"""
+    """Not to be confused with ROI.deserialise(). This deserialises an serialised ROI **datum** given its type. This
+    likely only happens when serialising an input whose value is an ROI, which is unlikely!"""
 
+    # first create the ROI
     if tp == 'rect':
         r = ROIRect()
     elif tp == 'circle':
@@ -694,5 +696,6 @@ def deserialise(tp, d):
         r = ROIPoly()
     else:
         raise Exception(f"cannot deserialise ROI type '{tp}'")
+    # then construct its data
     r.deserialise(d)
     return r

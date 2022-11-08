@@ -84,10 +84,11 @@ class SubImageCubeROI:
             self.bb = Rect(0, 0, img.w, img.h)  # whole image
             self.mask = np.full((img.h, img.w), True)  # full mask
 
-    ## the main mask is just a single channel - this will generate a mask
-    # of the same number of channels, so an x,y image will make an x,y mask
-    # and an x,y,n image will make an x,y,n mask.
     def fullmask(self):
+        """the main mask is just a single channel - this will generate a mask
+        of the same number of channels, so an x,y image will make an x,y mask
+         and an x,y,n image will make an x,y,n mask.
+        """
         if len(self.img.shape) == 2:
             return self.mask  # the existing mask is fine
         else:
@@ -97,24 +98,51 @@ class SubImageCubeROI:
             # put into a h,w,chans array
             return np.reshape(x, (h, w, chans))
 
-    # get the masked image
     def masked(self):
+        """get the masked image as a numpy masked array"""
         return np.ma.masked_array(self.img, mask=~self.fullmask())
 
-    ## use this ROI to crop the image in img2. Doesn't do masking, though.
-    # Copies the sources list from that image.
     def cropother(self, img2):
+        """use this ROI to crop the image in img2. Doesn't do masking, though.
+        Copies the sources list from that image."""
         x, y, w, h = self.bb
         return ImageCube(img2.img[y:y + h, x:x + w], img2.mapping, img2.sources)
 
-    ## Compare two subimages - just their regions of interest, not the actual image data
-    # Will also work if the images are different depths.
     def sameROI(self, other):
+        """Compare two subimages - just their regions of interest, not the actual image data
+        Will also work if the images are different depths."""
         return self.bb == other.bb and self.mask == other.mask
 
-    ## pixel count
     def pixelCount(self):
+        """How many pixels in the masked subimage?"""
         return self.mask.sum()
+
+    def setROI(self, img, roi):
+        """Change the ROI of the subimage to be an ROI inside another
+        image while keeping the subimage the same size (clipping it
+        to the bounds of the new image). Sounds weird, but it used when
+        we take a subimage and paste it into a different image, as in
+        gradient offsetting."""
+
+        bb = roi.bb()
+
+        self.bb = bb.copy()
+        imgBB = (0,0,img.w,img.h)
+        # get intersection of ROI BB and image BB.
+        # SOME CODE DUPLICATION with __init__
+        intersect = self.bb.intersection(imgBB)
+        if intersect is None:
+            # no intersection, ROI outside image
+            raise ROIBoundsException()
+        if intersect != self.bb:
+            # intersection is not equal to ROI BB, we must clip
+            roi = roi.clipToImage(img)
+            self.bb = roi.bb()
+            self.mask = roi.mask()
+            print(self.mask.sum())
+
+        x, y, w, h = self.bb  # this works even though self.bb is Rect
+        self.img = img.img[y:y + h, x:x + w]
 
 
 ## A mapping from a multichannel image into RGB. All nodes have one of these, although some may have more and some

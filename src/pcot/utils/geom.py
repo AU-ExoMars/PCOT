@@ -14,6 +14,9 @@ class Rect:
         self.w = w
         self.h = h
 
+    def copy(self):
+        return Rect(self.x, self.y, self.w, self.h)
+
     def __str__(self):
         return "Rect-{}-{}-{}x{}".format(self.x, self.y, self.w, self.h)
 
