@@ -127,7 +127,7 @@ class SubImageCubeROI:
         bb = roi.bb()
 
         self.bb = bb.copy()
-        imgBB = (0,0,img.w,img.h)
+        imgBB = (0, 0, img.w, img.h)
         # get intersection of ROI BB and image BB.
         # SOME CODE DUPLICATION with __init__
         intersect = self.bb.intersection(imgBB)
@@ -615,26 +615,38 @@ class ImageCube(SourcesObtainable):
                 return i
         return -1
 
-    def drawAnnotationsAndROIs(self, p: QPainter,
-                               onlyROI: Union[ROI, Sequence] = None,
-                               inPDF: bool = False):
-        """Draw annotations and ROIs onto a painter (either in a canvas or an output device.
-        Will save and restore font because we might be doing font resizing"""
-
-        oldFont = p.font()
-        p.setFont(annotFont)
-
+    def _getROIList(self, onlyROI: Union[ROI, Sequence]):
+        """Get a list of ROIs to process, from either our ROI (if none) or a list or
+        single ROI"""
         if onlyROI is None:
             rois = self.rois
         elif isinstance(onlyROI, Sequence):
             rois = onlyROI
         else:
             rois = [onlyROI]
+        return rois
 
-        for ann in self.annotations + rois:
-            ann.annotate(p, self, inPDF)
+    def drawAnnotationsAndROIs(self, p: QPainter,
+                               onlyROI: Union[ROI, Sequence] = None,
+                               inPDF: bool = False):
+        """Draw annotations and ROIs onto a painter (either in a canvas or an output device).
+        Will save and restore font because we might be doing font resizing"""
+
+        oldFont = p.font()
+        p.setFont(annotFont)
+
+        rois = self._getROIList(onlyROI)
+
+        if inPDF:
+            for ann in self.annotations + rois:
+                ann.annotatePDF(p, self)
+        else:
+            for ann in self.annotations + rois:
+                ann.annotate(p, self)
 
         p.setFont(oldFont)
+
+    PDFPixelWidth = 10000.0  # size of a PDF image in "pixels"; an internal unit.
 
     def savePDF(self, path):
         """Save the image along with the viewed annotations and ROIs as a PDF"""
@@ -648,24 +660,33 @@ class ImageCube(SourcesObtainable):
         win = 10
         # this is the width of the PDF in our internal units - required because the drawing
         # functions actually take ints!
-        w = 10000
+        w = ImageCube.PDFPixelWidth
 
         inchesToUnits = w / win
 
         # these are "pseudomargins" in inches; we can draw inside them so we aren't using
         # actual margins.
 
-        marginTop = 0.2
+        marginTop = 0.2  # these are all minima
         marginBottom = 0.2
         marginLeft = 0.2
         marginRight = 0.2
+
+        # and then expand the margins if annotations require it
+        for ann in self.annotations + self.rois:
+            t, r, b, ll = ann.minPDFMargins()
+            ann.inchesToUnits = inchesToUnits
+            marginTop = max(t, marginTop)
+            marginRight = max(r, marginRight)
+            marginBottom = max(b, marginBottom)
+            marginLeft = max(ll, marginLeft)
 
         imgAspect = self.h / self.w  # calculate aspect ratio of the image (not the PDF because margins!)
 
         wIMGin = win - (marginLeft + marginRight)  # calculate width of image in inches
         hIMGin = wIMGin * imgAspect  # calculate height of image in inches
         hin = hIMGin + marginTop + marginBottom  # calculate height of PDF in inches
-        h = w * (hin/win)       # unit in our coordinate system (where width is 1000)
+        h = w * (hin / win)  # unit in our coordinate system (where width is 1000)
 
         # set the page size to win x hin inches. Having bother with overloading here,
         # so doing it in mm.
@@ -673,19 +694,19 @@ class ImageCube(SourcesObtainable):
 
         p = QPainter(pdf)
 
-        p.setWindow(0, 0, w, h)  # set coordinate system
+        p.setWindow(0, 0, int(w), int(h))  # set coordinate system
 
         # We can render arbitrary things in here, in "virtual units" space (i.e. width=10000).
         # We'll use this to put stuff in the margins.
-#        fontSize = inchesToUnits*0.3
-#        annotFont.setPixelSize(fontSize)    # ints!
-#        p.setFont(annotFont)
-#        p.drawText(0, int(marginTop*inchesToUnits), "FISHHEAD")
+        #        fontSize = inchesToUnits*0.3
+        #        annotFont.setPixelSize(fontSize)    # ints!
+        #        p.setFont(annotFont)
+        #        p.drawText(0, int(marginTop*inchesToUnits), "FISHHEAD")
 
         p.save()  # we're about to transform into a space where we can draw on the image
-        p.translate(marginLeft*inchesToUnits, marginTop*inchesToUnits)
-        sx = wIMGin*inchesToUnits / self.w
-        sy = hIMGin*inchesToUnits / self.h
+        p.translate(marginLeft * inchesToUnits, marginTop * inchesToUnits)
+        sx = wIMGin * inchesToUnits / self.w
+        sy = hIMGin * inchesToUnits / self.h
         p.scale(sx, sy)
 
         img = self.rgb()  # get numpy RGB image to draw
@@ -704,9 +725,12 @@ class ImageCube(SourcesObtainable):
         p.drawImage(0, 0, qimg)
         self.tmpimage = None
 
-        self.drawAnnotationsAndROIs(p, inPDF=True)
+        # draw the annotations - this is the same method the canvas calls.
+        self.drawAnnotationsAndROIs(p, inPDF=False)
 
-        # this removes the margin and puts us back into our coord space where w=1000
+        # this removes the margin and puts us back into our coord space where w=10000
         p.restore()
+        # and draw the annotations calling the annotatePDF methods this time.
+        self.drawAnnotationsAndROIs(p, inPDF=True)
 
         p.end()

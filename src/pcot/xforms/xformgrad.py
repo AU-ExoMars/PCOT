@@ -61,32 +61,58 @@ class GradientLegend(Annotation):
         self.rect = legendrect
         self.thickness = thickness
         self.vertical = vertical
-        self.grad = grad.getGradient(vertical=vertical)
+        self.grad = grad
         self.rangestrs = rangestrs
 
-    def annotate(self, p: QPainter, img, inPDF: bool):
-        x, y, w, h = self.rect
-        p.fillRect(QRectF(x, y, w, h), self.grad)
+    def minPDFMargins(self):
+        return 1, 0, 0, 0
+
+    def _doAnnotate(self, p: QPainter, inPDF):
+        """Core annotation method"""
+        # if we're doing a margin annotation we override many of the values passed in
+        i2u = self.inchesToUnits
+        if inPDF:
+            colour = (0, 0, 0)
+            vertical = False
+            x, y, w, h = (2000, i2u*0.3, 6000, i2u*0.3)
+            fontscale = i2u*0.2
+            thickness = 10
+        else:
+            x, y, w, h = self.rect
+            colour = self.colour
+            vertical = self.vertical
+            fontscale = self.fontscale
+            thickness = self.thickness
+
+        p.fillRect(QRectF(x, y, w, h), self.grad.getGradient(vertical=vertical))
         p.setBrush(Qt.NoBrush)
-        pen = QPen(rgb2qcol(self.colour))
-        pen.setWidth(self.thickness)
+        pen = QPen(rgb2qcol(colour))
+        pen.setWidth(thickness)
         p.setPen(pen)
-        p.drawRect(int(x),int(y),int(w),int(h))
-        annotFont.setPixelSize(self.fontscale)
+        p.drawRect(int(x), int(y), int(w), int(h))
+        annotFont.setPixelSize(fontscale)
         p.setFont(annotFont)
         metrics = QFontMetrics(annotFont)
 
         mintext, maxtext = self.rangestrs
         minw = metrics.width(mintext)
         maxw = metrics.width(maxtext)
-        if self.vertical:
-            xt = x-(self.thickness+2)
+        if vertical:
+            xt = x - (self.thickness + 2)
 
-            p.drawText(QPoint(xt-minw, int(y+h)), f"{mintext}")
-            p.drawText(QPoint(xt-maxw, int(y)), f"{maxtext}")
+            p.drawText(QPoint(xt - minw, int(y + h)), f"{mintext}")
+            p.drawText(QPoint(xt - maxw, int(y)), f"{maxtext}")
         else:
-            p.drawText(QPoint(x-minw, int(y-self.fontscale+2)), f"{mintext}")
-            p.drawText(QPoint(x+w, int(y-self.fontscale+2)), f"{maxtext}")
+            p.drawText(QPoint(x - minw, int(y - self.fontscale + 2)), f"{mintext}")
+            p.drawText(QPoint(x + w, int(y - self.fontscale + 2)), f"{maxtext}")
+
+    def annotatePDF(self, p: QPainter, img):
+        if self.legendpos != 'In image':
+            self._doAnnotate(p, True)
+
+    def annotate(self, p: QPainter, img):
+        if self.legendpos == 'In image':
+            self._doAnnotate(p, False)
 
 
 def _normAndGetRange(subimage):
@@ -205,7 +231,7 @@ class XformGradient(XFormType):
                                                        node.colour,
                                                        node.fontscale,
                                                        node.thickness,
-                                                       (f"{sigfigs(minval,3)}", f"{sigfigs(maxval,3)}")
+                                                       (f"{sigfigs(minval, 3)}", f"{sigfigs(maxval, 3)}")
                                                        ))
 
         node.setOutput(0, Datum(Datum.IMG, node.img))

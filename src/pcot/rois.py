@@ -144,7 +144,7 @@ class ROI(SourcesObtainable, Annotation):
                           bgcol=(0, 0, 0) if self.drawbg else None,
                           fontsize=self.fontsize)
 
-    def annotate(self, p: QPainter, img, inPDF):
+    def annotate(self, p: QPainter, img):
         """This is the default annotation method drawing the ROI onto a QPainter as part of the annotations system.
         It should be replaced with a more specialised method if possible."""
         self.annotateBB(p)
@@ -322,7 +322,7 @@ class ROIRect(ROI):
             return "{} pixels\n{},{}\n{}x{}".format(self.pixels(),
                                                     self.x, self.y, self.w, self.h)
 
-    def annotate(self, p: QPainter, img, inPDF):
+    def annotate(self, p: QPainter, img):
         """Simpler version of annotate for rects; doesn't draw the mask"""
         self.annotateBB(p)
         self.annotateText(p)
@@ -380,7 +380,7 @@ class ROICircle(ROI):
         self.r = int(r)
         self.isSet = (x >= 0)
 
-    def annotate(self, p: QPainter, img, inPDF):
+    def annotate(self, p: QPainter, img):
         """Simpler version of annotate for rects; doesn't draw the mask"""
         if (bb := self.bb()) is not None:
             self.annotateBB(p)
@@ -638,7 +638,7 @@ class ROIPoly(ROI):
             points.append(points[0])  # close the loop
             p.drawPolyline([QPointF(x, y) for (x, y) in points])
 
-    def annotate(self, p: QPainter, img, inPDF):
+    def annotate(self, p: QPainter, img):
         self.annotatePoly(p)
         if self.drawBox:
             self.annotateBB(p)
