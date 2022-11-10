@@ -633,7 +633,8 @@ class Canvas(QtWidgets.QWidget):
     def getSaveFileName(self, title, typename, typeext):
         res = QtWidgets.QFileDialog.getSaveFileName(self, title,
                                                     os.path.expanduser(pcot.config.getDefaultDir('savedimages')),
-                                                    f"{typename} (*.{typeext})")
+                                                    f"{typename} (*.{typeext})",
+                                                    options=pcot.config.getFileDialogOptions())
         if res[0] != '':
             path = res[0]
             # make sure it ends with ext!

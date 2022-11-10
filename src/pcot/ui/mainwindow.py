@@ -323,7 +323,8 @@ class MainUI(ui.tabs.DockableTabWindow):
         res = QtWidgets.QFileDialog.getSaveFileName(self,
                                                     "Save file " if saveInputs else "Save file (WITHOUT INPUTS)",
                                                     os.path.expanduser(pcot.config.getDefaultDir('pcotfiles')),
-                                                    "PCOT files (*.pcot)")  #,  options=QtWidgets.QFileDialog.DontUseNativeDialog)
+                                                    "PCOT files (*.pcot)",
+                                                    options=pcot.config.getFileDialogOptions())
         logger.info(f"Dialog result: {res[0]}")
         if res[0] != '':
             path = res[0]
@@ -349,10 +350,12 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     ## the "open" menu handler
     def openAction(self):
+        ops = pcot.config.getFileDialogOptions()
         res = QtWidgets.QFileDialog.getOpenFileName(self,
                                                     'Open file',
                                                     os.path.expanduser(pcot.config.getDefaultDir('pcotfiles')),
-                                                    "PCOT files (*.pcot)")
+                                                    "PCOT files (*.pcot)",
+                                                    options=pcot.config.getFileDialogOptions())
         if res[0] != '':
             self.closeAllTabs()
             self.load(res[0])

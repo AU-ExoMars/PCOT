@@ -244,7 +244,8 @@ class MultifileMethodWidget(MethodWidget):
         # select a directory
         d = pcot.config.getDefaultDir('images')
         res = QtWidgets.QFileDialog.getExistingDirectory(None, 'Directory for images',
-                                                         os.path.expanduser(d))
+                                                         os.path.expanduser(d),
+                                                         options=pcot.config.getFileDialogOptions())
         if res != '':
             self.selectDir(res)
 
