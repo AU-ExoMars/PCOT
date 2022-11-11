@@ -10,10 +10,11 @@ import numpy as np
 from PySide2 import QtWidgets, QtCore
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent
-from PySide2.QtWidgets import QCheckBox
+from PySide2.QtWidgets import QCheckBox, QMessageBox
 
 import pcot
 import pcot.ui as ui
+from pcot import imageexport
 from pcot.datum import Datum
 from pcot.ui.spectrumwidget import SpectrumWidget
 
@@ -479,9 +480,9 @@ class Canvas(QtWidgets.QWidget):
         sidebar.addWidget(self.spectrumToggle)
         self.spectrumToggle.toggled.connect(self.spectrumToggleChanged)
 
-        self.saveButton = QtWidgets.QPushButton("Save PDF")
+        self.saveButton = QtWidgets.QPushButton("Export image")
         sidebar.addWidget(self.saveButton)
-        self.saveButton.clicked.connect(self.savePDFButtonClicked)
+        self.saveButton.clicked.connect(self.exportButtonClicked)
 
         self.resetMapButton = QtWidgets.QPushButton("Guess RGB")
         hideable.addWidget(self.resetMapButton)
@@ -646,19 +647,38 @@ class Canvas(QtWidgets.QWidget):
         else:
             return None
 
-    def saveButtonClicked(self, c):
+    def exportButtonClicked(self, c):
         if self.previmg is None:
             return
-        if (path := self.getSaveFileName('Save RGB image as PNG', 'PNG images', 'png')) is not None:
-            self.previmg.rgbWrite(path)
-            ui.log("Image written to " + path)
-
-    def savePDFButtonClicked(self, c):
-        if self.previmg is None:
-            return
-        if (path := self.getSaveFileName('Save RGB image as PDF', 'PDF files', 'pdf')) is not None:
-            self.previmg.savePDF(path)
-            ui.log("Image written to " + path)
+        res = QtWidgets.QFileDialog.getSaveFileName(self,
+                                                    'Save RGB image as PNG (without annotations)',
+                                                    os.path.expanduser(pcot.config.getDefaultDir('savedimages')),
+                                                    "PNG files (*.png) ;; PDF files (*.pdf) ;; SVG files (*.svg)"
+                                                    )
+        if res[0] != '':
+            path, filt = res
+            (_, ext) = os.path.splitext(path)
+            ext = ext.lower()
+            if ext == '':
+                QMessageBox.critical(self, 'Error', "Filename should have an extension.")
+            elif ext == '.png':
+                r = QMessageBox.question(self, "Export to PNG", "Save with annotations?",
+                                         QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
+                if r == QMessageBox.No:
+                    self.previmg.rgbWrite(path)
+                    ui.log(f"Image written to {path}")
+                elif r == QMessageBox.Yes:
+                    QMessageBox.critical(self, "Error", "NOT YET IMPLEMENTED")
+                else:
+                    ui.log("Export cancelled")
+            elif ext == '.pdf':
+                imageexport.exportPDF(self.previmg, path)
+                ui.log(f"Image and annotations exported to {path}")
+            elif ext == '.svg':
+                QMessageBox.critical(self, "Error", "NOT YET IMPLEMENTED")
+            else:
+                QMessageBox.critical(self, 'Error', "Filename has a strange extension.")
+                ui.log(ext)
 
     ## this initialises a combo box, setting the possible values to be the channels in the image
     # input
