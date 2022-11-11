@@ -511,7 +511,8 @@ class PDS4ImageMethodWidget(MethodWidget):
 
     def browseClicked(self):
         res = QtWidgets.QFileDialog.getExistingDirectory(None, 'Directory for products',
-                                                         os.path.expanduser(self.method.dir))
+                                                         os.path.expanduser(self.method.dir),
+                                                         options=pcot.config.getFileDialogOptions())
         if res != '':
             self.fileEdit.setText(res)
             self.method.dir = res

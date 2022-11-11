@@ -7,6 +7,8 @@ import os
 import pkgutil
 from collections import deque
 
+from PySide2 import QtWidgets
+
 logger = logging.getLogger(__name__)
 
 
@@ -39,6 +41,11 @@ data = None
 data = configparser.ConfigParser()
 data.read_file(getAssetAsFile('defaults.ini'))
 data.read(['site.cfg', os.path.expanduser('~/.pcot.ini')], encoding='utf_8')
+
+
+def str2bool(s):
+    """intelligently (heh) convert a string to a bool - for use in config data"""
+    return s.lower() in ["yes", "1", "y", "true", "t", "on"]
 
 
 def getDef(key, fallback='nofallback'):
@@ -107,6 +114,16 @@ def addRecent(fn):
     Recents.add(fn)
     setDefaultDir('pcotfiles', os.path.dirname(fn))
     save()
+
+
+def getFileDialogOptions():
+    """There is a problem in the Qt->native file dialog code which causes native file dialogs to crash
+    on some systems. For that reason, I'm defaulting to the Qt implementations.
+    """
+    if not str2bool(data['Default'].get('nativefiledialog', 'no')):
+        return QtWidgets.QFileDialog.DontUseNativeDialog
+    else:
+        return QtWidgets.QFileDialog.Options()
 
 
 # These are used to add plugins: main window hooks run when a main window is opened,

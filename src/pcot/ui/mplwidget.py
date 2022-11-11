@@ -49,7 +49,8 @@ class MplWidget(QtWidgets.QWidget):
 
         res = QtWidgets.QFileDialog.getSaveFileName(self, 'Save figure',
                                                     os.path.expanduser(pcot.config.getDefaultDir('mplplots')),
-                                                    "Figures (*.png *.pdf *.jpg)")
+                                                    "Figures (*.png *.pdf *.jpg)",
+                                                    options=pcot.config.getFileDialogOptions())
         if res[0] != '':
             path = res[0]
             self.fig.savefig(path)
