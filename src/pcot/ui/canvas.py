@@ -631,30 +631,14 @@ class Canvas(QtWidgets.QWidget):
     def spectrumToggleChanged(self, v):
         self.spectrumWidget.setHidden(not v)
 
-    def getSaveFileName(self, title, typename, typeext):
-        res = QtWidgets.QFileDialog.getSaveFileName(self, title,
-                                                    os.path.expanduser(pcot.config.getDefaultDir('savedimages')),
-                                                    f"{typename} (*.{typeext})",
-                                                    options=pcot.config.getFileDialogOptions())
-        if res[0] != '':
-            path = res[0]
-            # make sure it ends with ext!
-            (root, ext) = os.path.splitext(path)
-            if ext != '.' + typeext:
-                ext += '.' + typeext
-            path = root + ext
-            pcot.config.setDefaultDir('savedimages', os.path.dirname(os.path.realpath(path)))
-            return path
-        else:
-            return None
-
     def exportButtonClicked(self, c):
         if self.previmg is None:
             return
         res = QtWidgets.QFileDialog.getSaveFileName(self,
                                                     'Save RGB image as PNG (without annotations)',
                                                     os.path.expanduser(pcot.config.getDefaultDir('savedimages')),
-                                                    "PNG files (*.png) ;; PDF files (*.pdf) ;; SVG files (*.svg)"
+                                                    "PNG files (*.png) ;; PDF files (*.pdf) ;; SVG files (*.svg)",
+                                                    options=pcot.config.getFileDialogOptions()
                                                     )
         if res[0] != '':
             path, filt = res
