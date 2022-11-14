@@ -23,7 +23,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="page1">
       <layout class="QGridLayout" name="gridLayout_2">
@@ -332,6 +332,20 @@ Colour</string>
    <container>1</container>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>gradPageButton</tabstop>
+  <tabstop>legendPageButton</tabstop>
+  <tabstop>xSpin</tabstop>
+  <tabstop>ySpin</tabstop>
+  <tabstop>wSpin</tabstop>
+  <tabstop>hSpin</tabstop>
+  <tabstop>thicknessSpin</tabstop>
+  <tabstop>colourButton</tabstop>
+  <tabstop>orientCombo</tabstop>
+  <tabstop>legendPos</tabstop>
+  <tabstop>fontSpin</tabstop>
+  <tabstop>presetCombo</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

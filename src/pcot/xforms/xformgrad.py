@@ -2,7 +2,7 @@ from functools import partial
 from typing import Tuple
 
 import numpy as np
-from PySide2.QtCore import QRect, Qt, QPoint, QRectF
+from PySide2.QtCore import Qt, QPoint, QRectF
 from PySide2.QtGui import QPainter, QLinearGradient, QPen, QFontMetrics
 
 from pcot.datum import Datum
@@ -14,6 +14,13 @@ from pcot.utils.annotations import Annotation, annotFont
 from pcot.utils.colour import colDialog, rgb2qcol
 from pcot.utils.gradient import Gradient
 from pcot.xform import xformtype, XFormType, XFormException
+
+LEFT_MARGIN = "Left margin"
+RIGHT_MARGIN = "Right margin"
+TOP_MARGIN = "Top margin"
+BOTTOM_MARGIN = "Bottom margin"
+IN_IMAGE = "In image"
+NONE = "None"
 
 presetGradients = {
     "topo": Gradient([
@@ -65,31 +72,70 @@ class GradientLegend(Annotation):
         self.rangestrs = rangestrs
 
     def minPDFMargins(self):
-        return 1, 0, 0, 0
+        if self.legendpos == TOP_MARGIN:
+            return 1, 0, 0, 0
+        elif self.legendpos == BOTTOM_MARGIN:
+            return 0, 0, 1, 0
+        elif self.legendpos == LEFT_MARGIN:
+            return 0, 0, 0, 1
+        elif self.legendpos == RIGHT_MARGIN:
+            return 0, 1, 0, 0
+        else:
+            return 0, 0, 0, 0
 
     def _doAnnotate(self, p: QPainter, inPDF):
         """Core annotation method"""
         # if we're doing a margin annotation we override many of the values passed in
         i2u = self.inchesToUnits
+        heightUnits = p.window().height()
+        textGap = 0
+
         if inPDF:
+            textGap = i2u * 0.1  # gap between text and bar
+            fontscale = i2u * 0.2
+            barThickness = i2u * 0.3
+            borderThickness = 10
             colour = (0, 0, 0)
-            vertical = False
-            x, y, w, h = (2000, i2u*0.3, 6000, i2u*0.3)
-            fontscale = i2u*0.2
-            thickness = 10
+
+            if self.legendpos == TOP_MARGIN:
+                vertical = False
+                x, y, w, h = (2000, i2u * 0.3, 6000, barThickness)
+            elif self.legendpos == BOTTOM_MARGIN:
+                vertical = False
+                x, y, w, h = (2000, heightUnits - i2u * 0.66, 6000, barThickness)
+            elif self.legendpos == LEFT_MARGIN:
+                vertical = True
+                x, y, w, h = (i2u * 0.5 - barThickness / 2,
+                              i2u * 0.2 + fontscale + textGap,
+                              barThickness,
+                              heightUnits -  # height of image
+                              i2u * 0.4 -  # -2*margin
+                              (fontscale + textGap) * 2)  # -font size and a little bit
+            elif self.legendpos == RIGHT_MARGIN:
+                vertical = True
+                x, y, w, h = (10000 - (i2u * 0.5 + barThickness / 2),
+                              i2u * 0.2 + fontscale + textGap,
+                              barThickness,
+                              heightUnits -  # height of image
+                              i2u * 0.4 -  # -2*margin
+                              (fontscale + textGap) * 2)  # -font size and a little bit
+            else:
+                raise XFormException('DATA', 'Bad margin placement option')
         else:
             x, y, w, h = self.rect
             colour = self.colour
             vertical = self.vertical
             fontscale = self.fontscale
-            thickness = self.thickness
+            borderThickness = self.thickness
+            barThickness = w
 
         p.fillRect(QRectF(x, y, w, h), self.grad.getGradient(vertical=vertical))
         p.setBrush(Qt.NoBrush)
         pen = QPen(rgb2qcol(colour))
-        pen.setWidth(thickness)
+        pen.setWidth(borderThickness)
         p.setPen(pen)
         p.drawRect(int(x), int(y), int(w), int(h))
+
         annotFont.setPixelSize(fontscale)
         p.setFont(annotFont)
         metrics = QFontMetrics(annotFont)
@@ -98,20 +144,20 @@ class GradientLegend(Annotation):
         minw = metrics.width(mintext)
         maxw = metrics.width(maxtext)
         if vertical:
-            xt = x - (self.thickness + 2)
+            xt = x - (self.thickness + 2) + barThickness / 2
 
-            p.drawText(QPoint(xt - minw, int(y + h)), f"{mintext}")
-            p.drawText(QPoint(xt - maxw, int(y)), f"{maxtext}")
+            p.drawText(QPoint(xt - minw / 2, int(y + h + fontscale + textGap)), f"{mintext}")
+            p.drawText(QPoint(xt - maxw / 2, int(y - textGap)), f"{maxtext}")
         else:
-            p.drawText(QPoint(x - minw, int(y - self.fontscale + 2)), f"{mintext}")
-            p.drawText(QPoint(x + w, int(y - self.fontscale + 2)), f"{maxtext}")
+            p.drawText(QPoint(x - minw / 2, int(y - self.fontscale + 2)), f"{mintext}")
+            p.drawText(QPoint((x + w) - maxw / 2, int(y - self.fontscale + 2)), f"{maxtext}")
 
     def annotatePDF(self, p: QPainter, img):
-        if self.legendpos != 'In image':
+        if self.legendpos != IN_IMAGE and self.legendpos != NONE and self.legendpos is not None:
             self._doAnnotate(p, True)
 
     def annotate(self, p: QPainter, img):
-        if self.legendpos == 'In image':
+        if self.legendpos == IN_IMAGE:
             self._doAnnotate(p, False)
 
 
@@ -147,6 +193,7 @@ class XformGradient(XFormType):
         * thickness: border thickness
         * legendPos: string describing position:
             'In image', 'Top margin', 'Bottom margin', 'Left margin', 'Right margin', 'None'
+            These are also defined as constants LEFT_MARGIN... IN_IMAGE (and None)
     """
 
     def __init__(self):
@@ -174,7 +221,7 @@ class XformGradient(XFormType):
         node.vertical = False
         node.fontscale = 10
         node.thickness = 1
-        node.legendPos = 'In image'
+        node.legendPos = IN_IMAGE
 
     def perform(self, node):
         mono = node.getInput(0, Datum.IMG)
