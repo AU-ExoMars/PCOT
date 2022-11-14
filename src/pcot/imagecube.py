@@ -645,5 +645,3 @@ class ImageCube(SourcesObtainable):
                 ann.annotate(p, self)
 
         p.setFont(oldFont)
-
-    PDFPixelWidth = 10000.0  # size of a PDF image in "pixels"; an internal unit.

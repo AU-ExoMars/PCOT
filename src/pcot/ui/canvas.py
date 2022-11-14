@@ -637,7 +637,7 @@ class Canvas(QtWidgets.QWidget):
         res = QtWidgets.QFileDialog.getSaveFileName(self,
                                                     'Save RGB image as PNG (without annotations)',
                                                     os.path.expanduser(pcot.config.getDefaultDir('savedimages')),
-                                                    "PNG files (*.png) ;; PDF files (*.pdf) ;; SVG files (*.svg)",
+                                                    "PDF files (*.pdf) ;; PNG files (*.png)  ;; SVG files (*.svg)",
                                                     options=pcot.config.getFileDialogOptions()
                                                     )
         if res[0] != '':
@@ -653,14 +653,14 @@ class Canvas(QtWidgets.QWidget):
                     self.previmg.rgbWrite(path)
                     ui.log(f"Image written to {path}")
                 elif r == QMessageBox.Yes:
-                    QMessageBox.critical(self, "Error", "NOT YET IMPLEMENTED")
+                    imageexport.exportRaster(self.previmg, path)
                 else:
                     ui.log("Export cancelled")
             elif ext == '.pdf':
                 imageexport.exportPDF(self.previmg, path)
                 ui.log(f"Image and annotations exported to {path}")
             elif ext == '.svg':
-                QMessageBox.critical(self, "Error", "NOT YET IMPLEMENTED")
+                imageexport.exportSVG(self.previmg, path)
             else:
                 QMessageBox.critical(self, 'Error', "Filename has a strange extension.")
                 ui.log(ext)

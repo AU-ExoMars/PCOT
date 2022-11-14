@@ -1,22 +1,25 @@
+from math import ceil
+
 import numpy as np
-from PySide2.QtCore import QSizeF, QMarginsF
-from PySide2.QtGui import QImage, QPainter, QPdfWriter
+from PySide2.QtCore import QSizeF, QMarginsF, Qt, QSize, QRect, QRectF
+from PySide2.QtGui import QImage, QPainter, QPdfWriter, QColor
+from PySide2.QtSvg import QSvgGenerator
 
-from pcot.imagecube import ImageCube
+EXPORT_UNIT_WIDTH = 10000.0  # size of an image and its borders in internal units.
 
 
-def exportPDF(imgcube, path):
-    # a lot of this code will necessarily be similar to the paintEvent in InnerCanvas;
-    # if there are commonalities I'll refactor them later.
+def export(imgcube, prepfunction):
+    """A bit functional. The drawing process consists of a lot of prep which creates a QPainter drawing
+    on some backing object - such as a QPdfWriter or a QImage. So here we calculate all the things necessary
+    to do the drawing and to create that backing object, and call a 'prepfunction' to create said object and
+    the painter to draw on it. We then do the drawing and return.
 
-    pdf = QPdfWriter(path)
-    pdf.setPageMargins(QMarginsF(0, 0, 0, 0))  # see below about margins
-
+    The exporters therefore have to provide a prepfunction, call this function with it, and do any other work."""
     # this is the width of the PDF in inches excluding margins. We'll calculate the height from this.
     win = 10
     # this is the width of the PDF in our internal units - required because the drawing
     # functions actually take ints!
-    w = ImageCube.PDFPixelWidth
+    w = EXPORT_UNIT_WIDTH
 
     inchesToUnits = w / win
 
@@ -44,13 +47,7 @@ def exportPDF(imgcube, path):
     hin = hIMGin + marginTop + marginBottom  # calculate height of PDF in inches
     h = w * (hin / win)  # unit in our coordinate system (where width is 1000)
 
-    # set the page size to win x hin inches. Having bother with overloading here,
-    # so doing it in mm.
-    pdf.setPageSizeMM(QSizeF(win * 25.4, hin * 25.4))
-
-    p = QPainter(pdf)
-
-    p.setWindow(0, 0, int(w), int(h))  # set coordinate system
+    p = prepfunction(win, hin)  # call the setup function for the export method, getting a painter
 
     # We can render arbitrary things in here, in "virtual units" space (i.e. width=10000).
     # We'll use this to put stuff in the margins.
@@ -59,6 +56,7 @@ def exportPDF(imgcube, path):
     #        p.setFont(annotFont)
     #        p.drawText(0, int(marginTop*inchesToUnits), "FISHHEAD")
 
+    p.setWindow(0, 0, int(w), int(h))  # set coordinate system
     p.save()  # we're about to transform into a space where we can draw on the image
     p.translate(marginLeft * inchesToUnits, marginTop * inchesToUnits)
     sx = wIMGin * inchesToUnits / imgcube.w
@@ -89,4 +87,73 @@ def exportPDF(imgcube, path):
     # and draw the annotations calling the annotatePDF methods this time.
     imgcube.drawAnnotationsAndROIs(p, inPDF=True)
 
-    p.end()
+
+def exportPDF(imgcube, path):
+    # have to create a PDF writer in the outer scope or things crash; it looks like QPainter
+    # doesn't store a backreference, so when prepfunc exits, a QPdfWriter created inside
+    # will go away.
+
+    pdf = QPdfWriter(path)
+
+    def prepfunc(win, hin):
+        nonlocal pdf
+        # create a PDF writer and set it to have no margins (we're handling margins ourselves)
+        pdf.setPageMargins(QMarginsF(0, 0, 0, 0))
+        # set the page size to win x hin inches. Having bother with overloading here,
+        # so doing it in mm.
+        pdf.setPageSizeMM(QSizeF(win * 25.4, hin * 25.4))
+        return QPainter(pdf)
+
+    export(imgcube, prepfunc)
+
+
+def exportRaster(imgcube, path, pixelWidth=1000, transparentBackground=False):
+    """Export an image to a PNG, JPG, GIF, PBM, PPM, BMP... Gets the format from
+    the extension (see https://doc.qt.io/qt-6/qimage.html#reading-and-writing-image-files)
+    Params:
+        imgcube: the imagecube (current rgb mapping will be used)
+        path: the filename, extension must be a supported type
+        pixelWidth: the width in pixels
+        transparentbackground: in the case of PNGs, will use an alpha=0 rather than white background"""
+
+    outputImage = None   # see note on exportPDF
+
+    def prepfunc(win, hin):
+        # now calculate image size. That's THREE coordinate systems: pixels, nominal "inches", and "units" (required because
+        # too many things take ints so we can't use inches)
+
+        pixelHeight = pixelWidth * (hin / win)
+
+        # create an image in memory - 32bit ARGB if we need a transparent background, 24bit RGB if we don't
+        nonlocal outputImage
+        outputImage = QImage(pixelWidth, pixelHeight,
+                             QImage.Format_ARGB32 if transparentBackground else QImage.Format_RGB888)
+        # if we don't want a transparent background, fill with white
+        if not transparentBackground:
+            outputImage.fill(Qt.white)
+        # and now paint on it.
+        return QPainter(outputImage)
+
+    export(imgcube, prepfunc)
+
+    # and save the image. Ignore the error here; outputImage is a reference to
+    # None but that changes in the callback.
+    outputImage.save(path)
+
+
+def exportSVG(imgcube, path):
+    svg = QSvgGenerator()
+    svg.setFileName(path)
+
+    def prepfunc(win, hin):
+        nonlocal svg
+        # sizes in svg are weird, and setSize requires ints. This will do. The roundup
+        # of h stops bleeding.
+        w = int(200 / 0.254)
+        h = ceil(w * (hin / win))
+        svg.setResolution(100)
+        svg.setSize(QSize(w, h))
+        svg.setViewBox(QRect(0, 0, w, h))
+        return QPainter(svg)
+
+    export(imgcube, prepfunc)
