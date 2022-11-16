@@ -21,7 +21,7 @@ from matplotlib.figure import Figure
 ## Matplotlib canvas class containing a single figure
 class MplCanvas(Canvas):
     def __init__(self):
-        self.fig = Figure()
+        self.fig = Figure(figsize=(4, 2))
         self.ax = self.fig.add_subplot(111)  # make new one
         Canvas.__init__(self, self.fig)
         Canvas.setSizePolicy(self, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
@@ -62,4 +62,5 @@ class MplWidget(QtWidgets.QWidget):
 
     ## force redraw
     def draw(self):
+        self.fig.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
         self.canvas.draw()
