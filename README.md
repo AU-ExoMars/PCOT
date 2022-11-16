@@ -110,6 +110,25 @@ conda activate pcot
 pcot
 ```
 
+### Create an 'executable' icon
+(Note these istructions were created and tested under MacOS but with some adapting should be usable for other systems)
+
+You can adapt these commands into a bash script that will run PCOT from being clicked on as an icon. Open a text editor (e.g. TextEdit, Notepad++, Sublime, etc) and create a new file called **pcot.sh**, and save it to your desktop (or wherever you want the icon). Add the following into your file:
+```shell
+#!/usr/bin/env bash
+eval "$(conda shell.bash hook)"
+conda activate pcot
+pcot
+```
+Open a terminal window and navigate to the location of your new script, then run the following command to give it permissions to run:
+```shell
+chmod +x pcot
+```
+
+You can now use the icon to run PCOT.
+
+Note: you may need to set up your system to open .sh files with Terminal by default.
+
 ## Running PCOT inside Pycharm
 These instructions apply to Anaconda installations.
 
