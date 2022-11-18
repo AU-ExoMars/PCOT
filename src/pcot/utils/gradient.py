@@ -1,3 +1,4 @@
+import copy
 from typing import Tuple, List, Optional
 
 import numpy as np
@@ -23,7 +24,7 @@ class Gradient:
         self.setData(d)
 
     def setData(self, d):
-        self.data = d
+        self.data = copy.deepcopy(d)       # just to make VERY sure we don't end up modifying presets
 
     def serialise(self):
         return self.data
