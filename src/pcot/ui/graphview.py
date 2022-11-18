@@ -92,7 +92,7 @@ class GraphView(QtWidgets.QGraphicsView):
 
     def keyPressEvent(self, event):
         """handle key presses"""
-        if event.key() == Qt.Key_Delete:
+        if event.key() == Qt.Key_Delete or event.key() == Qt.Key.Key_Backspace:
             scene = self.scene()
             scene.mark()
             for n in scene.selection:
