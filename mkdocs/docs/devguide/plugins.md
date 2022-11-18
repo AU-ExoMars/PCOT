@@ -7,6 +7,13 @@ but it can be changed by editing the ```.pcot.ini``` file in that directory
 and modifying the ```pluginpath``` value in the ```Locations``` section.
 This should be a colon-separated list of directories.
 
+@@@warning
+You may be tempted to use quotes in the names of you plugin directories:
+don't. It should work fine, even if your directories have spaces in them.
+For example, use ```~/blah/RIM Dewarping``` and not 
+```~/blah/"RIM Dewarping"```
+@@@
+
 ## Adding new *expr* functions
 
 Here is a snippet of code which will add a function to take two numbers a,b
