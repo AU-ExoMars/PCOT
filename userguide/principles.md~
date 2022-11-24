@@ -122,7 +122,7 @@ for the same ROIs to be on both sides of an expression if they were derived from
 image.
 @@@
 
-## Image quality data
+## Image quality data <font color="red">UNIMPLEMENTED</font>
 
 @@@
 This is a set of preliminary notes on features which have yet to be implemented.
@@ -133,7 +133,7 @@ Consists of:
 * image uncertainty map (float per band)
 * image quality/info bits (byte per band)
 
-### Uncertainty
+### Uncertainty <font color="red">UNIMPLEMENTED</font>
 
 Each pixel each band of an imagecube usually contains an uncertainty value,
 which is a root mean squared error. Operations need to combine this data in a
@@ -147,7 +147,7 @@ operations work like this:
 \Delta (a | b) &= \max (\Delta{a}, \Delta{b})
 \end{align}
 
-    @@@ warning
+@@@ warning
 Remember that this only applies if the bands are independent. In reality there
 is always a covariance between them.
 @@@
@@ -159,7 +159,7 @@ image which does not permit uncertainty data to be carried through
 (consider a decorrelation stretch, for example). In this case, **this
 should be clearly visible in the canvas**.
 
-### Pixel information bits
+### Pixel information bits <font color="red">UNIMPLEMENTED</font>
 
 Each pixel in each band has an associated set of bits which indicate error states, etc. 
 
@@ -198,17 +198,13 @@ B_i(\text{decorr}(a)) = \bigvee_i B_i(a)
 I realise **This isn't ideal**; another possibility could be to just zero the mask? But then we lose the error data. At the moment I don't believe we have any
 "non-local" behaviour where pixels affect regions of pixels in the output, so the point could be moot.
 
-### Error ROIs
+### Error ROIs <font color="red">UNIMPLEMENTED</font>
 It should
 be possible to construct an ROI of error or non-error pixels in an image (i.e. pixels which have an error on any band).
 
 
 
-## Filter aberration
-
-@@@
-A lot of this is TODO
-@@@ 
+## Filter aberration <font color="red">UNIMPLEMENTED</font>
 
 The filter wavelengths are only accurate for pixels in the centre of the image, due to the difference in the light path through the filter
 at different angles of incidence. Therefore:
@@ -220,11 +216,7 @@ the aberration value which could be used in calculations
 * It should be possible to set the ERROR bit for excessive aberration values
 
 
-## Canvas information
-
-@@@
-Again, TODO
-@@@
+## Canvas information <font color="red">UNIMPLEMENTED</font>
 
 The following should be visible in the canvas as optional overlays:
 

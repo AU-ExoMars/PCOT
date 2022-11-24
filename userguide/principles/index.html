@@ -62,6 +62,14 @@
 <li>
     <a href="../../gettingstarted/tutorial/" class="dropdown-item">Tutorial</a>
 </li>
+                                    
+<li>
+    <a href="../../gettingstarted/inputs/" class="dropdown-item">Loading other image formats</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/help/" class="dropdown-item">Getting help</a>
+</li>
                                 </ul>
                             </li>
                             <li class="dropdown active">
@@ -91,6 +99,14 @@
                                     
 <li>
     <a href="../../devguide/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../devguide/library/" class="dropdown-item">Using PCOT as a library</a>
+</li>
+                                    
+<li>
+    <a href="../../devguide/plugins/" class="dropdown-item">Writing PCOT plugins</a>
 </li>
                                 </ul>
                             </li>
@@ -186,8 +202,8 @@ source set for some operations (since the union of the band sets is available).<
 consists of the union of the sets.</li>
 </ul>
 <p>As an example, consider the rather contrived example below.</p>
-<p><figure><a data-lightbox="SourcesExample.svg" href="../SourcesExample.svg"><img alt="An example graph with each datum marked as a black circle. Image inputs are in yellow,
-scalar inputs are in blue." src="../SourcesExample.svg" /></a><figcaption class="figure-caption text-right">Figure: An example graph with each datum marked as a black circle. Image inputs are in yellow,
+<p><figure class="text-center"><a data-lightbox="SourcesExample.svg" href="../SourcesExample.svg"><img alt="An example graph with each datum marked as a black circle. Image inputs are in yellow,
+scalar inputs are in blue." src="../SourcesExample.svg" /></a><figcaption class="figure-caption text-center">Figure: An example graph with each datum marked as a black circle. Image inputs are in yellow,
 scalar inputs are in blue.. Click on image to expand.</figcaption></figure></p>
 <p>We have three inputs into the graph:</p>
 <ul>
@@ -273,8 +289,9 @@ in operation. This means that either only one image has an ROI, or the sets of R
 both images are identical.</p>
 </li>
 </ul>
-<p>The part of the resulting image outside left-hand side, as shown in the figure below.</p>
-<p><figure><a data-lightbox="ROIs.svg" href="../ROIs.svg"><img alt="Two images A and B, B has an ROI. In the result, the area covered by the ROI is A+B, the rest of the image is passed through from A (which has no ROI)" src="../ROIs.svg" /></a><figcaption class="figure-caption text-right">Figure: Two images A and B, B has an ROI. In the result, the area covered by the ROI is A+B, the rest of the image is passed through from A (which has no ROI). Click on image to expand.</figcaption></figure></p>
+<p>Outside the ROI, the image pixels are taken from the left-hand side of the operator
+as shown in the figure below.</p>
+<p><figure class="text-center"><a data-lightbox="ROIs.svg" href="../ROIs.svg"><img alt="Two images A and B, B has an ROI. In the result, the area covered by the ROI is A+B, the rest of the image is passed through from A (which has no ROI)" src="../ROIs.svg" /></a><figcaption class="figure-caption text-center">Figure: Two images A and B, B has an ROI. In the result, the area covered by the ROI is A+B, the rest of the image is passed through from A (which has no ROI). Click on image to expand.</figcaption></figure></p>
 <div class="alert alert-info" role="alert">
 <p>Originally the rule was that the intersection of the unions of the ROIs would
 be processed, while the rest of the output would be from the left-hand side

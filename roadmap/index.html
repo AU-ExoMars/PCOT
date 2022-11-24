@@ -62,6 +62,14 @@
 <li>
     <a href="../gettingstarted/tutorial/" class="dropdown-item">Tutorial</a>
 </li>
+                                    
+<li>
+    <a href="../gettingstarted/inputs/" class="dropdown-item">Loading other image formats</a>
+</li>
+                                    
+<li>
+    <a href="../gettingstarted/help/" class="dropdown-item">Getting help</a>
+</li>
                                 </ul>
                             </li>
                             <li class="dropdown">
@@ -92,6 +100,14 @@
 <li>
     <a href="../devguide/" class="dropdown-item">Overview</a>
 </li>
+                                    
+<li>
+    <a href="../devguide/library/" class="dropdown-item">Using PCOT as a library</a>
+</li>
+                                    
+<li>
+    <a href="../devguide/plugins/" class="dropdown-item">Writing PCOT plugins</a>
+</li>
                                 </ul>
                             </li>
                             <li class="navitem active">
@@ -109,7 +125,7 @@
                             </a>
                         </li>
                             <li class="nav-item">
-                                <a rel="prev" href="../devguide/" class="nav-link">
+                                <a rel="prev" href="../devguide/plugins/" class="nav-link">
                                     <i class="fa fa-arrow-left"></i> Previous
                                 </a>
                             </li>
@@ -138,7 +154,7 @@
             
             <li class="nav-item" data-level="1"><a href="#development-roadmap" class="nav-link">Development roadmap</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-level="2"><a href="#next-release-beacon-hut" class="nav-link">Next release: BEACON HUT</a>
+            <li class="nav-item" data-level="2"><a href="#next-release-caer-bran" class="nav-link">Next release: CAER BRAN</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -155,27 +171,8 @@
 
 <h1 id="development-roadmap">Development roadmap</h1>
 <p>This is a rough guide, and things may change!</p>
-<h2 id="next-release-beacon-hut">Next release: BEACON HUT</h2>
-<ul>
-<li>Open source!</li>
-<li>PDS4 importer with proctools</li>
-<li>Ad-hoc Spectrum viewer in canvas</li>
-<li>Significant rewrite of expression execution code, permitting custom
-types to have operations defined on them</li>
-<li>Direct input method for library use</li>
-<li>Improved default RGB mapping in canvas</li>
-<li>Testing<ul>
-<li>Basics testing</li>
-<li>Testing of the operating principles (see <a href="/userguide/principles">Principles</a>)<ul>
-<li>Source rules</li>
-<li>ROI rules</li>
-</ul>
-</li>
-</ul>
-</li>
-<li>rect node can now be edited numerically</li>
-<li>circle node can add circular ROIs, which can be edited numerically.</li>
-</ul>
+<h2 id="next-release-caer-bran">Next release: CAER BRAN</h2>
+<p>TBD</p>
 <h2 id="future-releases">Future releases</h2>
 <ul>
 <li>
@@ -197,6 +194,23 @@ types to have operations defined on them</li>
 <li>Page on <em>expr</em> nodes</li>
 <li>documentation for properties of nodes for library use (e.g. <em>expr</em> nodes have ".expr")</li>
 <li>How-to for common tasks</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>Output enhancements</p>
+<ul>
+<li>Gradient node <ul>
+<li>should also be able to output image to a matplotlib PDF with a legend</li>
+<li>How would this work where the gradient is inset?</li>
+</ul>
+</li>
+<li>showing text labels on low res images?<ul>
+<li>canvas should display ROIs etc, and not draw onto the RGB of the image as it currently does.
+It should work how the source descriptor works.
+This would avoid the resolution problem. We could do away with "ann" outputs?</li>
+<li>This could imply a whole new way of adding stuff to images.</li>
 </ul>
 </li>
 </ul>

@@ -62,6 +62,14 @@
 <li>
     <a href="../gettingstarted/tutorial/" class="dropdown-item">Tutorial</a>
 </li>
+                                    
+<li>
+    <a href="../gettingstarted/inputs/" class="dropdown-item">Loading other image formats</a>
+</li>
+                                    
+<li>
+    <a href="../gettingstarted/help/" class="dropdown-item">Getting help</a>
+</li>
                                 </ul>
                             </li>
                             <li class="dropdown">
@@ -91,6 +99,14 @@
                                     
 <li>
     <a href="../devguide/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../devguide/library/" class="dropdown-item">Using PCOT as a library</a>
+</li>
+                                    
+<li>
+    <a href="../devguide/plugins/" class="dropdown-item">Writing PCOT plugins</a>
 </li>
                                 </ul>
                             </li>
@@ -128,7 +144,7 @@
             
             <li class="nav-item" data-level="1"><a href="#pcot" class="nav-link">PCOT</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-level="2"><a href="#installing-with-anaconda" class="nav-link">Installing with Anaconda</a>
+            <li class="nav-item" data-level="2"><a href="#installation" class="nav-link">Installation</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -160,12 +176,13 @@
 and describes how to install PCOT if you have access to the source code.</p>
 </div>
 <h1 id="pcot">PCOT</h1>
-<p>This is the prototype of the Pancam Operations Toolkit. This is primarily
-a Python application and library for processing data from the Pancam
+<p>This is an early version of the Pancam Operations Toolkit. This is
+a Python application and library primarily intended for 
+processing data from the Pancam
 instrument on the Rosalind Franklin rover, although it lends itself
 to any task involving processing multispectral image data.</p>
 <p>For example, with PCOT you can:
-* load ENVI and PDS4 multispectral images
+* load ENVI (BSQ interleaved 4-byte float) and (to a basic level) PDS4 multispectral images
 * load multiple images in other formats (e.g. PNG) and combine them into
 multispectral images
 * define regions of interest in the data
@@ -179,32 +196,32 @@ maths, splice images together, merge image channels, plot spectra). A PCOT
 document describes this graph, and we
 intend that documents are distributed along with the data they generate
 to help reproducibility.</p>
-<h2 id="installing-with-anaconda">Installing with Anaconda</h2>
-<p>PCOT is a Python program (and library) with a number of dependencies, including</p>
+<p>More documentation can be found <a href="https://www.docs.pale.org/pcot/">here</a>.</p>
+<h2 id="installation">Installation</h2>
+<p>PCOT is a Python program (and library) with a number of dependencies,
+notably numpy and PySide2 (the official Python interface to Qt).
+We find the best way to manage these is to use
+<a href="https://anaconda.com/">Anaconda</a>
+and
+<a href="https://python-poetry.org/">Poetry</a>.
+Installation has been tested on Windows 10,
+MacOS and Ubuntu 20.04.</p>
+<h3 id="install-anaconda">Install Anaconda</h3>
+<p>The first thing you will need to do is install Anaconda, which can be done from here:</p>
 <ul>
-<li>Python &gt;3.8</li>
-<li>PySide2</li>
-<li>OpenCV</li>
-<li>numpy</li>
-<li>scikit-image</li>
-<li>pyperclip (may also require other packages in Linux e.g. xsel)</li>
-<li>matplotlib</li>
-</ul>
-<p>I find the best way to manage these is to use Anaconda. Installation has been tested on Windows 10
-and Ubuntu 20.04. The first thing you'll need to do is install Anaconda, which can be done from here:</p>
-<ul>
-<li>Windows: <a href="https://docs.anaconda.com/anaconda/install/linux/">https://docs.anaconda.com/anaconda/install/linux/</a></li>
+<li>Windows: <a href="https://docs.anaconda.com/anaconda/install/windows/">https://docs.anaconda.com/anaconda/install/windows/</a></li>
 <li>Linux: <a href="https://docs.anaconda.com/anaconda/install/linux/">https://docs.anaconda.com/anaconda/install/linux/</a></li>
 <li>MacOS: <a href="https://docs.anaconda.com/anaconda/install/mac-os/">https://docs.anaconda.com/anaconda/install/mac-os/</a> (untested)</li>
 </ul>
 <h3 id="obtain-the-software">Obtain the software</h3>
-<p>For both Windows and Ubuntu this is the obvious first step. This can be done by
-either downloading the archive from Github and extracting it into a new directory,
-or cloning the repository. In both cases, the top level directory should be called
+<p>This can be done by
+either downloading the archive from Github and extracting it into a new
+directory,
+or cloning the repository. In both cases, the top level directory should be
+called
 PCOT (this isn't really mandatory but makes the instructions below simpler).
 The best way to download is this:</p>
 <ul>
-<li>Make sure you have a Github account and membership of the AU-ExoMars group.</li>
 <li>Open an Anaconda shell window (see below)  </li>
 <li>If you have an SSH key set up for GitHub, type this command into the shell
 (<strong>changing the repository address if it is different</strong>):</li>
@@ -222,21 +239,24 @@ and quite a few others.</li>
 </ul>
 <h4 id="opening-anacondas-shell-on-different-oss">Opening Anaconda's shell on different OSs</h4>
 <ul>
-<li><strong>Windows:</strong> Open the <strong>Anaconda PowerShell Prompt</strong> application, which will have been installed when you
-installed Anaconda.</li>
+<li><strong>Windows:</strong> Open the <strong>Anaconda Powershell Prompt</strong> application, which will have been installed when you
+installed Anaconda. This can be found in the Start menu under Anaconda3,
+or in the applications list in Anaconda Navigator (which is also in the Start
+menu in the same place).</li>
 <li><strong>Linux and MacOS</strong>: just open a Bash shell  </li>
 </ul>
 <h3 id="installing-on-ubuntu-macos">Installing on Ubuntu / MacOS</h3>
-<p>Assuming you have successfully installed Anaconda and cloned or downloaded PCOT as above:</p>
+<p>Assuming you have successfully installed Anaconda and cloned or downloaded
+PCOT as above:</p>
 <ul>
 <li>Open a bash shell</li>
 <li><strong>cd</strong> to the PCOT directory (which contains this file).</li>
 <li>Run the command <strong>conda create -n pcot python=3.8 poetry</strong>.
-This will create an environment called <strong>pcot</strong> which uses Python 3.8 and the Poetry dependency
-and packaging manager. It may take some time.</li>
+This will create an environment called <strong>pcot</strong> which uses Python 3.8 and
+the Poetry dependency and packaging manager. It may take some time.</li>
 <li>Activate the environment with <strong>conda activate pcot</strong>.</li>
-<li>Now run <strong>poetry install</strong>. This will set up all the packages PCOT is dependent on and install
-PCOT.</li>
+<li>Now run <strong>poetry install</strong>. This will set up all the packages PCOT is
+dependent on and install PCOT.</li>
 <li>You should now be able to run <strong>pcot</strong> to start the application.</li>
 </ul>
 <h3 id="installing-on-windows">Installing on Windows</h3>
@@ -252,22 +272,29 @@ and packaging manager. It may take some time.</li>
 PCOT.</li>
 <li>You should now be able to run <strong>pcot</strong> to start the application.</li>
 </ul>
-<!---
-## One last step
-Because the **pds4-tools** package isn't in any Anaconda reposities yet,
-you'll need to install it manually. With the pcot environment active, run
-
-<pre><code>pip3 install pds4-tools
-</code></pre>
-
--->
-
 <h2 id="running-pcot">Running PCOT</h2>
 <p>Open an Anaconda shell and run the following commands (assuming you installed PCOT into your home directory):</p>
 <pre><code class="language-shell">cd PCOT
 conda activate pcot
 pcot
 </code></pre>
+<h3 id="create-an-executable-icon-macos">Create an 'executable' icon (MacOS)</h3>
+<p>Note: these instructions were created and tested under MacOS but should be usable on other systems
+with some adaptation.</p>
+<p>The above commands can be put into a bash script which will allow PCOT to be run by clicking on an icon.</p>
+<p>Open a text editor (e.g. TextEdit, Notepad++, Sublime, etc) and create a new file called <strong>pcot.sh</strong>, and save it
+ to your desktop (or wherever you want the icon). Add the following to this file:</p>
+<pre><code class="language-shell">#!/usr/bin/env bash
+eval &quot;$(conda shell.bash hook)&quot;
+conda activate pcot
+pcot
+</code></pre>
+<p>Open a terminal window and navigate to the location of your new script, then run the following command to give it
+permission to run:</p>
+<pre><code class="language-shell">chmod +x pcot
+</code></pre>
+<p>You can now use the icon to run PCOT.</p>
+<p>Note: you may need to set up your system to open <code>.sh</code> files with Terminal by default.</p>
 <h2 id="running-pcot-inside-pycharm">Running PCOT inside Pycharm</h2>
 <p>These instructions apply to Anaconda installations.</p>
 <ul>

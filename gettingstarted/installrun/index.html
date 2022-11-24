@@ -62,6 +62,14 @@
 <li>
     <a href="../tutorial/" class="dropdown-item">Tutorial</a>
 </li>
+                                    
+<li>
+    <a href="../inputs/" class="dropdown-item">Loading other image formats</a>
+</li>
+                                    
+<li>
+    <a href="../help/" class="dropdown-item">Getting help</a>
+</li>
                                 </ul>
                             </li>
                             <li class="dropdown">
@@ -91,6 +99,14 @@
                                     
 <li>
     <a href="../../devguide/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../devguide/library/" class="dropdown-item">Using PCOT as a library</a>
+</li>
+                                    
+<li>
+    <a href="../../devguide/plugins/" class="dropdown-item">Writing PCOT plugins</a>
 </li>
                                 </ul>
                             </li>
@@ -146,7 +162,7 @@
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-level="2"><a href="#running-pcot-from-source" class="nav-link">Running PCOT from source</a>
+            <li class="nav-item" data-level="2"><a href="#running-pcot" class="nav-link">Running PCOT</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -175,23 +191,29 @@ a source distribution. While the standalone version is much easier to install, i
 harder to use as a library and to modify. It's also quite a large file.</p>
 <h2 id="standalone-version">Standalone version</h2>
 <p>The standalone executables are available on request from the Aberystwyth team. Once you
-have the appropriate executable for your operating system, just run it to run PCOT. No
-installation is necessary.</p>
-<h2 id="installing-from-source">Installing from source</h2>
-<p>PCOT is a Python program (and library) with a number of dependencies, including</p>
+have the appropriate executable for your operating system, just run it to run PCOT. </p>
 <ul>
-<li>Python &gt;3.8</li>
-<li>PyQt</li>
-<li>OpenCV</li>
-<li>numpy</li>
-<li>scikit-image</li>
-<li>pyperclip (may also require other packages in Linux e.g. xsel)</li>
-<li>matplotlib</li>
+<li><strong>Pros</strong>: no installation is necessary</li>
+<li><strong>Cons</strong>: PCOT can take a little while to start up; it's very difficult to
+use PCOT as a library in this configuration.</li>
 </ul>
+<h2 id="installing-from-source">Installing from source</h2>
+<p>Another choice is to install the Python source code from Github.</p>
+<ul>
+<li><strong>Pros</strong>: instant startup, access to the source code and regular updates;
+very easy to use as a library; very easy to write extensions.</li>
+<li><strong>Cons</strong>: requires a little more work (but hopefully not too much).</li>
+</ul>
+<p>PCOT is a Python program (and library) with a number of dependencies,
+notably numpy and PySide2 (the official Python interface to Qt).
+We find the best way to manage these is to use
+<a href="https://anaconda.com/">Anaconda</a>
+and
+<a href="https://python-poetry.org/">Poetry</a>.
+Installation has been tested on Windows 10,
+MacOS and Ubuntu 20.04.</p>
 <h3 id="install-anaconda">Install Anaconda</h3>
-<p>We find the best way to manage these is to use Anaconda. Installation has been tested on Windows 10,
-MacOS and Ubuntu 20.04.
-The first thing you will need to do is install Anaconda, which can be done from here:</p>
+<p>The first thing you will need to do is install Anaconda, which can be done from here:</p>
 <ul>
 <li>Windows: <a href="https://docs.anaconda.com/anaconda/install/windows/">https://docs.anaconda.com/anaconda/install/windows/</a></li>
 <li>Linux: <a href="https://docs.anaconda.com/anaconda/install/linux/">https://docs.anaconda.com/anaconda/install/linux/</a></li>
@@ -206,7 +228,6 @@ called
 PCOT (this isn't really mandatory but makes the instructions below simpler).
 The best way to download is this:</p>
 <ul>
-<li>Make sure you have a Github account and membership of the AU-ExoMars group.</li>
 <li>Open an Anaconda shell window (see below)  </li>
 <li>If you have an SSH key set up for GitHub, type this command into the shell
 (<strong>changing the repository address if it is different</strong>):</li>
@@ -267,14 +288,17 @@ you'll need to install it manually. With the pcot environment active, run
 
 -->
 
-<h2 id="running-pcot-from-source">Running PCOT from source</h2>
-<p>Open an Anaconda shell and run the following commands (assuming you installed PCOT into your home directory):</p>
+<h2 id="running-pcot">Running PCOT</h2>
+<p>Once you have installed PCOT as above, you can run it by 
+opening an Anaconda shell and entering the following commands:</p>
 <pre><code class="language-shell">conda activate pcot
 pcot
 </code></pre>
-<p>If you have installed the binary version you don't need to activate a conda environment.</p>
+<p>If you have installed the binary version you don't need to activate a conda environment,
+just navigate to the directory containing the execuable and run it.</p>
 <h2 id="running-pcot-inside-pycharm">Running PCOT inside Pycharm</h2>
-<p>These instructions apply to source installations.</p>
+<p>These instructions apply to source installations, and can be useful if you
+are debugging extensions or library code or debugging PCOT itself.</p>
 <ul>
 <li>First set up the Conda environment and interpreter:<ul>
 <li>Open PyCharm and open the PCOT directory as an existing project.</li>
