@@ -2,7 +2,7 @@
 
 This is a rough guide, and things may change!
 
-## Next release: CAER BRAN
+## Next release: CARLENNO ROUND
 
 TBD
 
