@@ -8,6 +8,13 @@ None
 
 ## Alpha releases
 
+### 0.4.0-alpha 2022-11-30 CAER BRAN
+
+* Annotation system entirely rewritten
+* PDF/PNG/SVG exporter
+* Gradient legend annotation
+* Doc updates
+
 ### 0.3.0-alpha 2022-10-27 BEACON HUT
 
 * Open source!
