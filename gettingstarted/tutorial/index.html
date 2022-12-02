@@ -447,7 +447,7 @@ Edit the <em>rect</em> node and draw a rectangle by clicking and dragging on the
 Set the scale to 5 pixels and type "R671_438" in the Annotation box, something like this:</p>
 <p><figure class="text-center"><a data-lightbox="R671_438b.png" href="../R671_438b.png" name="R671_438b"><img alt="R671_438 with a rectangle" src="../R671_438b.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 with a rectangle. Click on image to expand.</figcaption></figure></p>
 <p>Now the <em>expr</em> node shows this - only the rectangle has the parameter, while the rest of
-the image shows the 671nm band:</p>
+the image shows the 671nm band. To see this, click on the <em>expr</em> tab:</p>
 <p><figure class="text-center"><a data-lightbox="R671_438c.png" href="../R671_438c.png" name="R671_438c"><img alt="R671_438 with a rectangle" src="../R671_438c.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 with a rectangle. Click on image to expand.</figcaption></figure></p>
 <p>This means that we're normalising a much narrower range to 0-1. 
 It can be hard to adjust the rectangle when you can't see what's happening in the final image -
@@ -457,15 +457,20 @@ the rectangle while the <em>expr</em> output is visible.</p>
 on the Show ROIs button to make any ROIs on the image visible (ROIs are typically retained on derived
 images):</p>
 <p><figure class="text-center"><a data-lightbox="R671_438d.png" href="../R671_438d.png" name="R671_438d"><img alt="R671_438 with a rectangle and gradient" src="../R671_438d.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 with a rectangle and gradient. Click on image to expand.</figcaption></figure></p>
-<p>There's not much to see because of the nature of the image, unfortunately!</p>
-<p>It is possible to "inset" the gradient into the RGB representation used in the <em>input</em> node
-by cropping it to its region of interest with <em>croproi</em> and using an <em>inset</em>:</p>
+<p>There's not much to see because of the nature of the image, unfortunately! Note that there is a "legend"
+at top left, and this can be edited and placed by clicking on the Legend button:</p>
+<p><figure class="text-center"><a data-lightbox="R671_438da.png" href="../R671_438da.png" name="R671_438da"><img alt="R671_438 with a better gradient legend" src="../R671_438da.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 with a better gradient legend. Click on image to expand.</figcaption></figure></p>
+<p>It is possible to "inset" the gradient into the RGB representation used in the <em>input</em> node by passing
+that to the <em>insetinto</em> input of the gradient:</p>
 <p><figure class="text-center"><a data-lightbox="R671_438e.png" href="../R671_438e.png" name="R671_438e"><img alt="R671_438 inset into source image RGB representation" src="../R671_438e.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 inset into source image RGB representation. Click on image to expand.</figcaption></figure></p>
+<p>Finally, the gradient node will automatically normalise its data to a range. That makes the <em>norm</em> function
+used in the expression redundant. We can remove it, and we'll see the full range on the legend:</p>
+<p><figure class="text-center"><a data-lightbox="R671_438f.png" href="../R671_438f.png" name="R671_438f"><img alt="R671_438 showing full range" src="../R671_438f.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 showing full range. Click on image to expand.</figcaption></figure></p>
 <div class="alert alert-danger" role="alert">
-<p>The ROI annotations are drawn onto the RGB representation of the image, which makes the resolution
-rather poor on small images. That will change. Also, it will be possible to add a legend to the
-gradient node.</p>
+<p>Note that the positioning of the legend text is slightly off; we'll fix that.</p>
 </div>
+<p>It is also possible to export the data as a PDF, SVG or PNG with the legend in the margin:</p>
+<p><figure class="text-center"><a data-lightbox="leg.svg" href="../leg.svg" name="leg"><img alt="Exported R671_438 (svg)" src="../leg.svg" /></a><figcaption class="figure-caption text-center">Figure: Exported R671_438 (svg). Click on image to expand.</figcaption></figure></p>
 <div class="footnote">
 <hr />
 <ol>

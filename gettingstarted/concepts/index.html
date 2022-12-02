@@ -206,24 +206,18 @@ with connections to other nodes (ignore the green numbers, they just show
 how many times each node has run - it's a debugging aid!)
 Here's what each node in the graph is doing:</p>
 <ul>
-<li>The <em>input 3</em> node reads input number 3 into the graph. The inputs are set up separately from the graph,
+<li>The <em>input 0</em> node reads input number 0 into the graph. The inputs are set up separately from the graph,
 and can be multispectral images or other data (e.g. housekeeping) from outside PCOT.</li>
 <li>The <em>rect</em> node lets the user draw a rectangle on the image to define a region of interest. Images
 can have many regions of interest and several different kinds are available.</li>
-<li>The <em>croproi</em> node will crop the image to its region of interest - the rectangle we just added.</li>
 <li>The node with 4 inputs <em>a,b,c,d</em> is an <em>expr</em> node, which 
 calculates the result of a mathematical expression performed on each pixel. The node is showing the expression it is running: <code>norm(a$671 / a$438)</code>.
 This will read the bands whose wavelengths are 671nm and 438nm in the node's <em>a</em> input, and find their ratio for every pixel.
-It will then normalise the result
-to the range [0,1]. The result will be a single-band image. <em>Expr</em> nodes can perform much more complex calculations than this.</li>
-<li>The <em>gradient</em> node will convert a single-band image into an RGB image with a user-defined gradient.</li>
-<li>Finally, the <em>inset</em> node will inset this RGB image into an RGB representation of the original image - the mapping of bands in
-that image onto RGB is done in the <em>input</em> node. A label can be added here.</li>
+The result will be a single-band image. <em>Expr</em> nodes can perform much more complex calculations than this.</li>
+<li>The <em>gradient</em> node will convert a single-band image into an RGB image with a user-defined gradient and
+inset it into the RGB representation of another image - here we are insetting into the input image, using
+the RGB representation used by that node.</li>
 </ul>
-<p>If you feel the gradient is rather artificial, the inset can just
-be the original band ratio image expanded to RGB greyscale using another
-<em>expr</em> node:</p>
-<p><figure class="text-center"><a data-lightbox="671438grey.png" href="../671438grey.png"><img alt="Using a greyscale inset" src="../671438grey.png" /></a><figcaption class="figure-caption text-center">Figure: Using a greyscale inset. Click on image to expand.</figcaption></figure></p>
 <p>Here is another example, showing a spectral plot:</p>
 <ul>
 <li>The <em>input</em> node again brings a multispectral image into the graph.</li>
