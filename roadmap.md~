@@ -2,22 +2,9 @@
 
 This is a rough guide, and things may change!
 
-## Next release: BEACON HUT
+## Next release: CAER BRAN
 
-* Open source!
-* PDS4 importer with proctools
-* Ad-hoc Spectrum viewer in canvas
-* Significant rewrite of expression execution code, permitting custom
-types to have operations defined on them
-* Direct input method for library use
-* Improved default RGB mapping in canvas
-* Testing
-    * Basics testing
-    * Testing of the operating principles (see [Principles](/userguide/principles))
-        * Source rules
-        * ROI rules
-* rect node can now be edited numerically
-* circle node can add circular ROIs, which can be edited numerically.
+TBD
 
 ## Future releases
 
@@ -44,7 +31,7 @@ types to have operations defined on them
         * canvas should display ROIs etc, and not draw onto the RGB of the image as it currently does.
         It should work how the source descriptor works.
         This would avoid the resolution problem. We could do away with "ann" outputs?
-        * This could imply a whole new way of adding data to images.
+        * This could imply a whole new way of adding stuff to images.
 
 * Obtain user stories for analysis of HK data (which could potentially
 get messy, as these are likely to be time series)
