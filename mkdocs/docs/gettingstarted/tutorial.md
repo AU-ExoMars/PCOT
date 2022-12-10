@@ -324,7 +324,7 @@ Set the scale to 5 pixels and type "R671_438" in the Annotation box, something l
 ![!R671_438 with a rectangle|R671_438b](R671_438b.png)
 
 Now the *expr* node shows this - only the rectangle has the parameter, while the rest of
-the image shows the 671nm band:
+the image shows the 671nm band. To see this, click on the *expr* tab:
 
 ![!R671_438 with a rectangle|R671_438c](R671_438c.png)
 
@@ -339,21 +339,29 @@ images):
 
 ![!R671_438 with a rectangle and gradient|R671_438d](R671_438d.png)
 
-There's not much to see because of the nature of the image, unfortunately!
+There's not much to see because of the nature of the image, unfortunately! Note that there is a "legend"
+at top left, and this can be edited and placed by clicking on the Legend button:
 
-It is possible to "inset" the gradient into the RGB representation used in the *input* node
-by cropping it to its region of interest with *croproi* and using an *inset*:
+![!R671_438 with a better gradient legend|R671_438da](R671_438da.png)
+
+
+It is possible to "inset" the gradient into the RGB representation used in the *input* node by passing
+that to the *insetinto* input of the gradient:
 
 ![!R671_438 inset into source image RGB representation|R671_438e](R671_438e.png)
 
+Finally, the gradient node will automatically normalise its data to a range. That makes the *norm* function
+used in the expression redundant. We can remove it, and we'll see the full range on the legend:
+
+![!R671_438 showing full range|R671_438f](R671_438f.png)
+
 @@@alert
-The ROI annotations are drawn onto the RGB representation of the image, which makes the resolution
-rather poor on small images. That will change. Also, it will be possible to add a legend to the
-gradient node.
+Note that the positioning of the legend text is slightly off; we'll fix that.
 @@@
 
+It is also possible to export the data as a PDF, SVG or PNG with the legend in the margin:
 
-
+![!Exported R671_438 (svg)|leg](leg.svg)
 
 
 
