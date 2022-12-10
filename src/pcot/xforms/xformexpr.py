@@ -164,10 +164,11 @@ class XFormExpr(XFormType):
                     if res.tp.image:
                         # if there's an image on the output, show it
                         node.img = res.val
-                        # if the number of channels has changed, reset the mapping
-                        if oldChans is not None and node.img.channels != oldChans:
-                            node.mapping = ChannelMapping()
-                        node.img.setMapping(node.mapping)
+                        if node.img is not None:
+                            # if the number of channels has changed, reset the mapping
+                            if oldChans is not None and node.img.channels != oldChans:
+                                node.mapping = ChannelMapping()
+                            node.img.setMapping(node.mapping)
                         node.resultStr = "IMAGE"
                     elif res.tp == Datum.NUMBER:
                         node.resultStr = str(res.val)

@@ -123,6 +123,13 @@ def funcAddROI(args, _):
         return None
 
 
+def funcUncertaintyImage(args, _):
+    img = args[0].get(Datum.IMG)
+    if img is not None:
+        img = ImageCube(img.uncertainty, None, img.sources)
+    return Datum(Datum.IMG, img)
+
+
 def funcWrapper(fn, d, *args):
     """Wrapper around a evaluator function that deals with ROIs etc.
     compare this with exprWrapper in operations, which only handles images and delegates
@@ -289,6 +296,14 @@ class ExpressionEvaluator(Parser):
                            ],
                           [],
                           funcAddROI)
+
+        self.registerFunc(
+            "uncertainty",
+            "create an image made up of uncertainty data for all channels (or a zero channel if none)",
+            [Parameter("image", "the image to process", Datum.IMG)],
+            [],
+            funcUncertaintyImage
+        )
 
         self.registerProperty('w', Datum.IMG,
                               "give the width of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",

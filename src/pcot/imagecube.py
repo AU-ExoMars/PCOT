@@ -20,6 +20,7 @@ from pcot.sources import MultiBandSource, SourcesObtainable
 from pcot.utils import annotations
 from pcot.utils.annotations import annotFont
 from pcot.utils.geom import Rect
+import pcot.dq
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +75,8 @@ class SubImageCubeROI:
 
                 x, y, w, h = self.bb  # this works even though self.bb is Rect
                 self.img = img.img[y:y + h, x:x + w]
+                self.dq = img.dq[y:y + h, x:x + w]
+                self.uncertainty = img.uncertainty[y:y + h, x:x + w]
 
                 if self.img.shape[:2] != self.mask.shape:
                     raise Exception("Internal error: shape still incorrect after clip")
@@ -81,6 +84,8 @@ class SubImageCubeROI:
         if genFullImage:
             # here we just make a copy of the image
             self.img = np.copy(img.img)  # make a copy to avoid descendant nodes changing their input nodes' outputs
+            self.dq = np.copy(img.dq)
+            self.uncertainty = np.copy(img.uncertainty)
             self.bb = Rect(0, 0, img.w, img.h)  # whole image
             self.mask = np.full((img.h, img.w), True)  # full mask
 
@@ -102,11 +107,22 @@ class SubImageCubeROI:
         """get the masked image as a numpy masked array"""
         return np.ma.masked_array(self.img, mask=~self.fullmask())
 
+    def maskedDQ(self):
+        """get the masked DQ as a numpy masked array"""
+        return np.ma.masked_array(self.dq, mask=~self.fullmask())
+
+    def maskedUncertainty(self):
+        """get the masked uncertainty as a numpy masked array"""
+        return np.ma.masked_array(self.uncertainty, mask=~self.fullmask())
+
     def cropother(self, img2):
         """use this ROI to crop the image in img2. Doesn't do masking, though.
         Copies the sources list from that image."""
         x, y, w, h = self.bb
-        return ImageCube(img2.img[y:y + h, x:x + w], img2.mapping, img2.sources)
+        return ImageCube(img2.img[y:y + h, x:x + w], img2.mapping, img2.sources,
+                         dq=img2.dq[y:y + h, x:x + w],
+                         uncertainty=img2.uncertainty[y:y + h, x:x + w]
+                         )
 
     def sameROI(self, other):
         """Compare two subimages - just their regions of interest, not the actual image data
@@ -143,13 +159,16 @@ class SubImageCubeROI:
 
         x, y, w, h = self.bb  # this works even though self.bb is Rect
         self.img = img.img[y:y + h, x:x + w]
+        self.dq = img.dq[y:y + h, x:x + w]
+        self.uncertainty = img.uncertainty[y:y + h, x:x + w]
 
-
-## A mapping from a multichannel image into RGB. All nodes have one of these, although some may have more and some
-# might not even use this one. That's because most (or at least many) nodes generate a single image and show it
-# in their tab. Ideally, I should create one of these in just those nodes but I'm lazy.
 
 class ChannelMapping:
+    """A mapping from a multichannel image into RGB. All nodes have one of these, although some may have more
+    and some might not even use this one. That's because most (or at least many) nodes generate a single image and
+    show it in their tab. Ideally, I should create one of these in just those nodes but I'm lazy.
+    """
+
     def __init__(self, red=-1, green=-1, blue=-1):
         # the mapping itself : channels to use in the source image for red,green,blue
         self.red = red
@@ -202,9 +221,9 @@ class ChannelMapping:
             lst.sort(key=lambda v: -v[1])
             self.red, self.green, self.blue = [x[0] for x in lst]
 
-    # generate a mapping from a new image if required - or keep using the old mapping
-    # if we can. Return self, for fluent.
     def ensureValid(self, img):
+        """generate a mapping from a new image if required - or keep using the old mapping
+        if we can. Return self, for fluent."""
         # make sure there is a mapping, and that it's in range. If not, regenerate.
         if self.red < 0 or self.red >= img.channels or self.green >= img.channels or self.blue >= img.channels:
             # if there's a default mapping in the image we will use that. If not, then we'll guess!
@@ -237,11 +256,11 @@ class ImageCube(SourcesObtainable):
     An RGB mapping can be provided, saying how the image should be represented in RGB (via the rgb() method)
     There is also a MultiBandSource describing the source sets associated with each channel.
     """
-    ## @var img
-    # the numpy array containing the image data
-    img: np.ndarray
+    # the numpy arrays containing the image data, the uncertainty data and the data quality bit data
+    img: np.ndarray  # H x W x Depth, float32
+    uncertainty: np.ndarray  # H x W x Depth, float32
+    dq: np.ndarray  # H x W x Depth, int16
 
-    ## @var rois
     # the regions of interest - these are also annotations! They are in a separate list
     # so they can be passed through or removed separately.
     rois: List[ROI]
@@ -249,27 +268,43 @@ class ImageCube(SourcesObtainable):
     ## list of annotations - things that can be drawn on an image.
     annotations: List[annotations.Annotation]
 
-    ## @var shape
     # the shape of the image array (i.e. the .shape field) - a single channel image will be a 2D array,
     # a multichannel image will be 3D.
     shape: Tuple
 
-    ## @var channels
     # how many channels the image has.
     channels: int
 
-    ## @var sources
     # a list of sets of sources - one set for each channel - describing where this data came from
     sources: MultiBandSource
 
-    ## @var mapping
     # The RGB mapping to convert this image into RGB. May be None
     mapping: Optional[ChannelMapping]
 
-    # create image from numpy array
-    def __init__(self, img: np.ndarray, rgbMapping: ChannelMapping = None, sources: MultiBandSource = None,
+    def __init__(self, img: np.ndarray,
+                 rgbMapping: ChannelMapping = None,
+                 sources: MultiBandSource = None,
                  rois=None,
-                 defaultMapping: ChannelMapping = None):
+                 defaultMapping: ChannelMapping = None,
+                 uncertainty=None, dq=None
+                 ):
+        """create imagecube from numpy array. Other fields are optional.
+            image:          input numpy array: float32, Height x Width x Depth
+            rgbMapping:     where the image stores its mapping. If None, it will use its own storage - but it
+                            might also be a reference to an rgbMapping stored in a node or even from
+                            another image; typically done because the node stores the rgbMapping
+            sources:        a MultiBandSource, a wrapper around an array of sets of sources. If None, empty source sets
+                            will be created
+            rois:           a list of regions of interest, if None, an empty list will be created
+            defaultMapping: a ChannelMapping object; this is consulted when we "guess RGB" - if it's not there,
+                            we do genuinely guess (intelligently).
+            uncertainty:    a float32 numpy array of the same dimensions as the image. If None, a zero array is created.
+                            (but see dq below)
+            dq:             data quality bits, a 16-bit unsigned int array of the same shape as the image.
+                            If None, a zero array is created - but if a zero array is used (or created) for
+                            uncertainty, the "no uncertainty data" bit is set on all pixels.
+
+        """
 
         if img is None:
             raise Exception("trying to initialise image from None")
@@ -302,11 +337,33 @@ class ImageCube(SourcesObtainable):
             rgbMapping = ChannelMapping().ensureValid(self)
         self.setMapping(rgbMapping)
 
-    #        if len(sources)==0:
-    #            raise Exception("No source")
+        # bits we are going to set on every pixel's DQ data
+        dqOnAllPixels = 0
 
-    # Set the RGB mapping for this image, and create default channel mappings if necessary.
+        # uncertainty data
+        if uncertainty is None:
+            uncertainty = np.zeros(img.shape, dtype=np.float32)
+            dqOnAllPixels |= pcot.dq.NOUNCERTAINTY
+        if uncertainty.dtype != np.float32:
+            raise Exception("uncertainty data is not float32")
+        if uncertainty.shape != img.shape:
+            raise Exception("uncertainty data is not same shape as image data")
+
+        self.uncertainty = uncertainty
+
+        # DQ data
+        if dq is None:
+            dq = np.zeros(img.shape, dtype=np.uint16)
+        if dq.dtype != np.uint16:
+            raise Exception("DQ data is not 16-bit unsigned integers")
+        if dq.shape != img.shape:
+            raise Exception("DQ data is not same shape as image data")
+
+        dq |= dqOnAllPixels
+        self.dq = dq
+
     def setMapping(self, mapping: ChannelMapping):
+        """Set the RGB mapping for this image, and create default channel mappings if necessary."""
         #        print("{} changing mapping to {}".format(self, self.mapping))
         self.mapping = mapping
         if mapping is not None:
@@ -439,7 +496,9 @@ class ImageCube(SourcesObtainable):
         srcs = self.sources.copy()
 
         # we should be able to copy the default mapping reference OK, it won't change.
-        i = ImageCube(self.img.copy(), m, srcs, defaultMapping=self.defaultMapping)
+        i = ImageCube(self.img.copy(), m, srcs, defaultMapping=self.defaultMapping,
+                      uncertainty=self.uncertainty.copy(),
+                      dq=self.dq.copy())
         i.rois = self.rois.copy()
         return i
 
@@ -469,18 +528,27 @@ class ImageCube(SourcesObtainable):
             return None  # no matches found
         chans = []
         sources = []
+        dqs = []
+        uncertainties = []
         # now create a list of source sets and a list of single channel images
         for i in lstOfChannels:
             sources.append(self.sources.sourceSets[i])
             chans.append(self.img[:, :, i])
+            dqs.append(self.dq[:, :, i])
+            uncertainties.append(self.uncertainties[:, :, i])
+
         if len(lstOfChannels) == 1:
             # single channel case
             img = chans[0]
+            dqs = dqs[0]
+            uncertainties = uncertainties[0]
         else:
             # else create a new multichannel image
             img = np.stack(chans, axis=-1)
+            dqs = np.stack(dqs, axis=-1)
+            uncertainties = np.stack(uncertainties, axis=-1)
         # and a new imagecube
-        return ImageCube(img, sources=MultiBandSource(sources))
+        return ImageCube(img, sources=MultiBandSource(sources), uncertainties=uncertainties, dq=dqs)
 
     ## annoyingly similar to the two methods above, this is used to get a channel _index_.
     def getChannelIdx(self, nameOrCwl):
@@ -551,21 +619,42 @@ class ImageCube(SourcesObtainable):
 
     def serialise(self):
         """Used to serialise imagecube Datums for serialisation of inputs when saving to a file"""
+
+        def encodeArrayValue(e):
+            # return value as tuple - if bool is true we compressed the array down to a single
+            # value and store shape and type data too
+            v = e.ravel()[0]
+            return (True, float(v), e.shape, str(e.dtype)) if np.all(e == v) else (False, e, None, None)
+
         return {
             'data': self.img,
             'mapping': self.mapping.serialise(),
             'defmapping': self.defaultMapping.serialise() if self.defaultMapping else None,
-            'sources': self.sources.serialise()
+            'sources': self.sources.serialise(),
+            'dq': encodeArrayValue(self.dq),
+            'uncertainty': encodeArrayValue(self.uncertainty)
         }
 
     @classmethod
     def deserialise(cls, d, document):
         """Inverse of serialise(), requires a document to get the inputs"""
+
+        def decodeArrayValue(tup):
+            isAllSame, v, shape, tp = tup
+            if isAllSame:
+                v = np.full(shape, v, dtype=np.dtype(tp))
+            return v
+
         data = d['data']  # should already have been converted into an ndarray
         mapping = ChannelMapping.deserialise(d['mapping'])
         defmapping = None if d['defmapping'] is None else ChannelMapping.deserialise(d['defmapping'])
         sources = MultiBandSource.deserialise(d['sources'], document)
-        return cls(data, rgbMapping=mapping, sources=sources, defaultMapping=defmapping)
+
+        dq = decodeArrayValue(d['dq']) if 'dq' in d else None
+        uncertainty = decodeArrayValue(d['uncertainty']) if 'uncertainty' in d else None
+
+        return cls(data, rgbMapping=mapping, sources=sources, defaultMapping=defmapping,
+                   uncertainty=uncertainty, dq=dq)
 
     def wavelengthAndFWHM(self, channelNumber):
         """get cwl and mean fwhm for a channel if all sources are of the same wavelength, else -1. Compare with

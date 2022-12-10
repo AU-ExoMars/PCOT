@@ -27,6 +27,7 @@ from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
 from pcot.ui.linear import LinearSetEntity, entityMarkerInitSetup, entityMarkerPaintSetup, TickRenderer
+import pcot.dq
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,13 @@ def timestr(t):
 # list of multiplication factors - sets the combo in the UI
 MULTVALUES = [1, 1024, 2048]
 
+
+def getDQBits(data, uncertainty, dq):
+    """Converts DQ data in the PDS4 QUALITY array into our DQ bits, and adds others
+    depending on the other data too."""
+    out = np.where(dq == 1, 0, pcot.dq.NODATA)  # where DQ is 1, output 0. Else output NODATA.
+    out |= np.where(data >= 0.9999999, pcot.dq.SAT,  0)
+    return out.astype(np.uint16)
 
 class PDS4InputMethod(InputMethod):
     """PDS4 inputs are unusual in that they can come from several PDS4 products, not a single file.
@@ -208,12 +216,15 @@ class PDS4InputMethod(InputMethod):
         logger.debug(f"building image data, multval={self.multValue}")
         try:
             imgdata = np.dstack([x.data for x in labels]) * self.multValue
+            uncertainty = np.dstack([x.err for x in labels])
+            dq = np.dstack([getDQBits(x.data, x.err, x.dq) for x in labels])
+
         except ValueError as e:
             ui.error("Error in combining image products - are they all the same size?")
             return None
         sources = MultiBandSource([InputSource(self.input.mgr.doc, self.input.idx, p.filt, pds4=p) for p in selProds])
 
-        return ImageCube(imgdata, rgbMapping=self.mapping, sources=sources)
+        return ImageCube(imgdata, rgbMapping=self.mapping, sources=sources, uncertainty=uncertainty, dq=dq)
 
     def readData(self):
         logger.debug("readData")
