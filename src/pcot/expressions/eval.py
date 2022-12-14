@@ -126,7 +126,16 @@ def funcAddROI(args, _):
 def funcUncertaintyImage(args, _):
     img = args[0].get(Datum.IMG)
     if img is not None:
-        img = ImageCube(img.uncertainty, None, img.sources)
+        img = ImageCube(img.uncertainty, None, img.sources, rois=img.rois)
+
+    return Datum(Datum.IMG, img)
+
+
+def funcRGBImage(args, _):
+    img = args[0].get(Datum.IMG)
+    if img is not None:
+        img = img.rgbImage()
+
     return Datum(Datum.IMG, img)
 
 
@@ -303,6 +312,14 @@ class ExpressionEvaluator(Parser):
             [Parameter("image", "the image to process", Datum.IMG)],
             [],
             funcUncertaintyImage
+        )
+
+        self.registerFunc(
+            "rgb",
+            "create a 3-channel image consisting of the current RGB mapping of the input image",
+            [Parameter("image", "the image to process", Datum.IMG)],
+            [],
+            funcRGBImage
         )
 
         self.registerProperty('w', Datum.IMG,

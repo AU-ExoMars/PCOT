@@ -341,18 +341,18 @@ class XformGradient(XFormType):
         if not node.enabled:
             return
 
+        node.minval = 0
+        node.maxval = 1
         if mono is None and rgb is None:
             node.img = None
         elif mono is None:
             node.img = ImageCube(rgb.rgb(), node.mapping, sources=rgb.rgbSources())
-            minval = 0
-            maxval = 1
         elif mono.channels != 1:
             raise XFormException('DATA', 'Gradient must be on greyscale images')
         elif rgb is None or len(mono.rois) == 0:
             # we're just outputting the mono image, or there are no ROIs
             subimage = mono.subimage()
-            minval, maxval, subimage.img = _normAndGetRange(subimage)
+            node.minval, node.maxval, subimage.img = _normAndGetRange(subimage)
             newsubimg = node.gradient.apply(subimage.img, subimage.mask)
             # Here we make an RGB image from the input image. We then slap the gradient
             # onto the ROI. We use the default channel mapping, and the same source on each channel.
@@ -365,7 +365,7 @@ class XformGradient(XFormType):
             monoROIs = mono.rois
             mono = mono.cropROI()  # crop to ROI, keeping that ROI (but cropped, which is why we keep it above)
             subimage = mono.subimage()
-            minval, maxval, subimage.img = _normAndGetRange(subimage)
+            node.minval, node.maxval, subimage.img = _normAndGetRange(subimage)
             newsubimg = node.gradient.apply(subimage.img, subimage.mask)
             source = mono.sources.getSources()
             # this time we get the RGB from the rgb input
@@ -389,7 +389,7 @@ class XformGradient(XFormType):
                                                        node.colour,
                                                        node.fontscale,
                                                        node.thickness,
-                                                       (f"{sigfigs(minval, 3)}", f"{sigfigs(maxval, 3)}")
+                                                       (f"{sigfigs(node.minval, 3)}", f"{sigfigs(node.maxval, 3)}")
                                                        ))
 
         node.setOutput(0, Datum(Datum.IMG, node.img))
@@ -498,6 +498,8 @@ class TabGradient(pcot.ui.tabs.Tab):
         self.w.canvas.setPersister(self.node)
         self.w.gradient.setGradient(self.node.gradient.data)
         self.w.canvas.display(self.node.img)
+        s = f"Min:{sigfigs(self.node.minval, 3)}\nMax:{sigfigs(self.node.maxval, 3)}"
+        self.w.rangeLabel.setText(s)
 
         self.w.legendPos.setCurrentText(self.node.legendPos)
         self.w.fontSpin.setValue(self.node.fontscale)

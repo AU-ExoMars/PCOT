@@ -423,7 +423,8 @@ class ImageCube(SourcesObtainable):
         the channels in the result. A different mapping from the image mapping can be specified."""
 
         # The RGB mapping here should be just [0,1,2], since this output is the RGB representation.
-        return ImageCube(self.rgb(mapping=mapping), ChannelMapping(0, 1, 2), self.rgbSources(mapping))
+        return ImageCube(self.rgb(mapping=mapping), ChannelMapping(0, 1, 2), self.rgbSources(mapping),
+                         rois=self.rois)
 
     def rgbSources(self, mapping=None):
         """Return the sources for the RGB mapped channels - used in rgbImage(), but handy in association

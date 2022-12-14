@@ -23,7 +23,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="page1">
       <layout class="QGridLayout" name="gridLayout_2">
@@ -307,6 +307,13 @@ Colour</string>
        <widget class="QRadioButton" name="legendPageButton">
         <property name="text">
          <string>Legend</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="rangeLabel">
+        <property name="text">
+         <string>TextLabel</string>
         </property>
        </widget>
       </item>
