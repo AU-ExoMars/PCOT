@@ -535,7 +535,7 @@ class ImageCube(SourcesObtainable):
             sources.append(self.sources.sourceSets[i])
             chans.append(self.img[:, :, i])
             dqs.append(self.dq[:, :, i])
-            uncertainties.append(self.uncertainties[:, :, i])
+            uncertainties.append(self.uncertainty[:, :, i])
 
         if len(lstOfChannels) == 1:
             # single channel case
@@ -548,7 +548,7 @@ class ImageCube(SourcesObtainable):
             dqs = np.stack(dqs, axis=-1)
             uncertainties = np.stack(uncertainties, axis=-1)
         # and a new imagecube
-        return ImageCube(img, sources=MultiBandSource(sources), uncertainties=uncertainties, dq=dqs)
+        return ImageCube(img, sources=MultiBandSource(sources), uncertainty=uncertainties, dq=dqs)
 
     ## annoyingly similar to the two methods above, this is used to get a channel _index_.
     def getChannelIdx(self, nameOrCwl):
