@@ -14,14 +14,15 @@ class TextToggleButton(QtWidgets.QWidget):
 
         self.textOn = textOn
         self.textOff = textOff
-        self.margin = 5
+        self.hmargin = 5
+        self.vmargin = 2
         self.state = initState
 
         metrics = QtGui.QFontMetrics(self.font())
         s1 = metrics.size(Qt.TextShowMnemonic, textOn)
         s2 = metrics.size(Qt.TextShowMnemonic, textOff)
         s = s1 if s1.width() >= s2.width() else s2
-        self.size = QSize(s.width() + self.margin * 2, s.height() + self.margin * 2)
+        self.size = QSize(s.width() + self.hmargin * 2, s.height() + self.vmargin * 2)
 
     def sizeHint(self):
         return self.size
@@ -65,7 +66,7 @@ class TextToggleButton(QtWidgets.QWidget):
 
         p.setPen(boxOutline)
         p.setBrush(boxFill)
-        p.drawRoundedRect(r, self.margin, self.margin)
+        p.drawRoundedRect(r, self.hmargin, self.vmargin)
 
         t = self.textOn if self.state else self.textOff
         p.setPen(textCol)

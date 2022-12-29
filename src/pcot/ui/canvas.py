@@ -17,6 +17,7 @@ import pcot.ui as ui
 from pcot import imageexport
 from pcot.datum import Datum
 from pcot.ui.spectrumwidget import SpectrumWidget
+from pcot.ui.texttogglebutton import TextToggleButton
 
 if TYPE_CHECKING:
     from pcot.xform import XFormGraph, XForm
@@ -370,8 +371,7 @@ class InnerCanvas(QtWidgets.QWidget):
 
 def makesidebarLabel(t):
     lab = QtWidgets.QLabel(t)
-    # lab.setMaximumHeight(15)
-    lab.setMinimumWidth(100)
+    lab.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
     return lab
 
 
@@ -437,12 +437,11 @@ class Canvas(QtWidgets.QWidget):
         outerlayout = QtWidgets.QHBoxLayout()
         self.setLayout(outerlayout)
 
-        # the sidebar is a vbox, with labels (red,green,blue)
-        # and channel name comboboxes below each.
+        # Sidebar widgets.
         # Some of these are hideable and so go into a subwidget.
 
         self.sidebarwidget = QtWidgets.QWidget()
-        sidebar = QtWidgets.QVBoxLayout()
+        sidebar = QtWidgets.QGridLayout()
         self.sidebarwidget.setLayout(sidebar)
         self.sidebarwidget.setSizePolicy(QtWidgets.QSizePolicy.Maximum,
                                          QtWidgets.QSizePolicy.MinimumExpanding)
@@ -450,55 +449,59 @@ class Canvas(QtWidgets.QWidget):
         outerlayout.addWidget(self.sidebarwidget)
         outerlayout.setAlignment(Qt.AlignTop)
 
-        self.hideablebuttons = QtWidgets.QWidget()
-        hideable = QtWidgets.QVBoxLayout()
-        self.hideablebuttons.setLayout(hideable)
-        sidebar.addWidget(self.hideablebuttons)
+        # These widgets are "hideable" in that we don't show them when we don't need to, e.g. for a single-channel
+        # or RGB image.
 
+        self.hideablebuttons = QtWidgets.QWidget()
+        hideable = QtWidgets.QGridLayout()
+        self.hideablebuttons.setLayout(hideable)
+        sidebar.addWidget(self.hideablebuttons, 0, 0, 1, 2)   # hideable stuff spans 2 columns
         # these are the actual widgets specifying which channel in the cube is viewed.
         # We need to deal with these carefully.
-        hideable.addWidget(makesidebarLabel("RED source"))
+        hideable.addWidget(makesidebarLabel("R"), 0, 0)
         self.redChanCombo = QtWidgets.QComboBox()
         self.redChanCombo.currentIndexChanged.connect(self.redIndexChanged)
-        hideable.addWidget(self.redChanCombo)
-        hideable.addWidget(makesidebarLabel("GREEN source"))
+        hideable.addWidget(self.redChanCombo, 0, 1)
+
+        hideable.addWidget(makesidebarLabel("G"), 1, 0)
         self.greenChanCombo = QtWidgets.QComboBox()
         self.greenChanCombo.currentIndexChanged.connect(self.greenIndexChanged)
-        hideable.addWidget(self.greenChanCombo)
-        hideable.addWidget(makesidebarLabel("BLUE source"))
+        hideable.addWidget(self.greenChanCombo, 1, 1)
+
+        hideable.addWidget(makesidebarLabel("B"), 2, 0)
         self.blueChanCombo = QtWidgets.QComboBox()
         self.blueChanCombo.currentIndexChanged.connect(self.blueIndexChanged)
-        hideable.addWidget(self.blueChanCombo)
+        hideable.addWidget(self.blueChanCombo, 2, 1)
+
+        self.resetMapButton = QtWidgets.QPushButton("Guess RGB")
+        hideable.addWidget(self.resetMapButton, 3, 0, 1, 2)
+        self.resetMapButton.clicked.connect(self.resetMapButtonClicked)
 
         # self.roiToggle = TextToggleButton("ROIs", "ROIs")
-        self.roiToggle = QCheckBox("Show ROIs")
-        sidebar.addWidget(self.roiToggle)
+        self.roiToggle = QCheckBox("ROIs")
+        sidebar.addWidget(self.roiToggle, 1, 0)
         self.roiToggle.toggled.connect(self.roiToggleChanged)
 
         # self.spectrumToggle = TextToggleButton("Spectrum", "Spectrum")
-        self.spectrumToggle = QCheckBox("Show spectrum")
-        sidebar.addWidget(self.spectrumToggle)
+        self.spectrumToggle = QCheckBox("spectrum")
+        sidebar.addWidget(self.spectrumToggle, 1, 1)
         self.spectrumToggle.toggled.connect(self.spectrumToggleChanged)
 
         self.saveButton = QtWidgets.QPushButton("Export image")
-        sidebar.addWidget(self.saveButton)
+        sidebar.addWidget(self.saveButton, 2, 0, 1, 2)
         self.saveButton.clicked.connect(self.exportButtonClicked)
 
-        self.resetMapButton = QtWidgets.QPushButton("Guess RGB")
-        hideable.addWidget(self.resetMapButton)
-        self.resetMapButton.clicked.connect(self.resetMapButtonClicked)
-
         self.coordsText = QtWidgets.QLabel('')
-        sidebar.addWidget(self.coordsText)
+        sidebar.addWidget(self.coordsText,3, 0, 1, 2)
 
         self.roiText = QtWidgets.QLabel('')
-        sidebar.addWidget(self.roiText)
+        sidebar.addWidget(self.roiText, 4, 0, 1, 2)
 
         self.dimensions = QtWidgets.QLabel('')
-        sidebar.addWidget(self.dimensions)
+        sidebar.addWidget(self.dimensions, 5, 0, 1, 2)
 
         ## widgets done; add stretch at the end so that the above widgets don't expand.
-        sidebar.addStretch(10)
+        #sidebar.addStretch(10)
 
         sidebar.setContentsMargins(0, 0, 0, 0)
 
