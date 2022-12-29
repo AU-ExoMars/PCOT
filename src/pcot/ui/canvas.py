@@ -3,12 +3,12 @@ import logging
 import math
 import os
 import platform
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union, List
 
 import cv2 as cv
 import numpy as np
 from PySide2 import QtWidgets, QtCore
-from PySide2.QtCore import Qt
+from PySide2.QtCore import Qt, QSize
 from PySide2.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent
 from PySide2.QtWidgets import QCheckBox, QMessageBox
 
@@ -16,6 +16,7 @@ import pcot
 import pcot.ui as ui
 from pcot import imageexport
 from pcot.datum import Datum
+from pcot.ui.canvasdq import CanvasDQSpec
 from pcot.ui.spectrumwidget import SpectrumWidget
 from pcot.ui.texttogglebutton import TextToggleButton
 
@@ -23,6 +24,10 @@ if TYPE_CHECKING:
     from pcot.xform import XFormGraph, XForm
 
 logger = logging.getLogger(__name__)
+
+# how many DQ overlays we can have
+NUMDQS = 3
+
 
 
 # the actual drawing widget, contained within the Canvas widget
@@ -422,6 +427,9 @@ class Canvas(QtWidgets.QWidget):
     # so we can display stats for just its ROI. Otherwise None.
     ROInode: Optional['XForm']
 
+    # the DQ display data
+    dqs: List[CanvasDQSpec]
+
     ## constructor
     def __init__(self, parent):
         super().__init__(parent)
@@ -432,6 +440,7 @@ class Canvas(QtWidgets.QWidget):
         self.nodeToUIChange = None
         self.ROInode = None
         self.recursing = False  # An ugly hack to avoid recursion in ROI nodes
+        self.dqs = [CanvasDQSpec() for i in range(NUMDQS)]  # 3 of these set to defaults
 
         # outer layout is a horizontal box - the sidebar and canvas+scrollbars are in this
         outerlayout = QtWidgets.QHBoxLayout()
@@ -455,7 +464,7 @@ class Canvas(QtWidgets.QWidget):
         self.hideablebuttons = QtWidgets.QWidget()
         hideable = QtWidgets.QGridLayout()
         self.hideablebuttons.setLayout(hideable)
-        sidebar.addWidget(self.hideablebuttons, 0, 0, 1, 2)   # hideable stuff spans 2 columns
+        sidebar.addWidget(self.hideablebuttons, 0, 0, 1, 2)  # hideable stuff spans 2 columns
         # these are the actual widgets specifying which channel in the cube is viewed.
         # We need to deal with these carefully.
         hideable.addWidget(makesidebarLabel("R"), 0, 0)
@@ -492,7 +501,7 @@ class Canvas(QtWidgets.QWidget):
         self.saveButton.clicked.connect(self.exportButtonClicked)
 
         self.coordsText = QtWidgets.QLabel('')
-        sidebar.addWidget(self.coordsText,3, 0, 1, 2)
+        sidebar.addWidget(self.coordsText, 3, 0, 1, 2)
 
         self.roiText = QtWidgets.QLabel('')
         sidebar.addWidget(self.roiText, 4, 0, 1, 2)
@@ -500,8 +509,10 @@ class Canvas(QtWidgets.QWidget):
         self.dimensions = QtWidgets.QLabel('')
         sidebar.addWidget(self.dimensions, 5, 0, 1, 2)
 
-        ## widgets done; add stretch at the end so that the above widgets don't expand.
-        #sidebar.addStretch(10)
+        self.dqtable = self.createDQTable()
+        sidebar.addWidget(self.dqtable, 6, 0, 1, 2)
+
+        # widgets done.
 
         sidebar.setContentsMargins(0, 0, 0, 0)
 
@@ -555,6 +566,48 @@ class Canvas(QtWidgets.QWidget):
         self.roiToggle.setEnabled(False)  # because persister is None at first.
 
         pcot.ui.decorateSplitter(splitter, 1)
+
+    def createDQTable(self):
+        dqw = QtWidgets.QWidget()
+        dqtable = QtWidgets.QGridLayout()
+        dqw.setLayout(dqtable)
+
+        dqwidgets = []
+        for i in range(NUMDQS):
+            # set up widgets for each dq and add them to a dict
+            row = dict()
+            dqwidgets.append(row)
+            sourcecb = QtWidgets.QComboBox()  # leave empty for now
+            sourcecb.addItem("this is a test value")    # BEWARE LONG STRINGS IN HERE!
+            sourcecb.setMinimumContentsLength(5)
+            dqtable.addWidget(sourcecb, i, 0)
+            row['source'] = sourcecb
+
+            datacb = QtWidgets.QComboBox()
+            for name, val in CanvasDQSpec.getDataItems():
+                datacb.addItem(name, userData=val)
+            dqtable.addWidget(datacb, i, 1)
+            row['data'] = datacb
+
+            colcb = QtWidgets.QComboBox()
+            for x in ('red', 'green', 'blue', 'magenta', 'yellow', 'cyan'):
+                colcb.addItem(x)
+            dqtable.addWidget(colcb, i, 2)
+            row['col'] = colcb
+
+            for widget in row.values():  # adjust each combobox
+                widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
+
+        dqw.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
+        self.setDQTableState()
+        dqtable.setVerticalSpacing(0)
+        dqtable.setHorizontalSpacing(0)
+        return dqw
+
+    def setDQTableState(self):
+        """Set the DQ table state to that stored in this canvas"""
+        for i, x in enumerate(self.dqs):
+            pass
 
     def mouseMove(self, x, y, event):
         self.coordsText.setText(f"{x},{y}")
