@@ -3,7 +3,7 @@ import logging
 import math
 import os
 import platform
-from typing import TYPE_CHECKING, Optional, Union, List
+from typing import TYPE_CHECKING, Optional, Union, List, Tuple, Dict
 
 import cv2 as cv
 import numpy as np
@@ -16,6 +16,7 @@ import pcot
 import pcot.ui as ui
 from pcot import imageexport
 from pcot.datum import Datum
+from pcot.ui import canvasdq
 from pcot.ui.canvasdq import CanvasDQSpec
 from pcot.ui.spectrumwidget import SpectrumWidget
 from pcot.ui.texttogglebutton import TextToggleButton
@@ -509,7 +510,7 @@ class Canvas(QtWidgets.QWidget):
         self.dimensions = QtWidgets.QLabel('')
         sidebar.addWidget(self.dimensions, 5, 0, 1, 2)
 
-        self.dqtable = self.createDQTable()
+        self.dqtable, self.dqwidgets = self.createDQTable()
         sidebar.addWidget(self.dqtable, 6, 0, 1, 2)
 
         # widgets done.
@@ -567,16 +568,24 @@ class Canvas(QtWidgets.QWidget):
 
         pcot.ui.decorateSplitter(splitter, 1)
 
-    def createDQTable(self):
+    def createDQTable(self) -> Tuple[QtWidgets.QWidget, List[Dict]]:
+        """Create the DQ overlay control table of widgets and store the widgets in a list of NUMDQS dicts
+        (see below). Returns the containing widget and the list of dicts."""
         dqw = QtWidgets.QWidget()
         dqtable = QtWidgets.QGridLayout()
         dqw.setLayout(dqtable)
 
+        # this will end up as a list of dictionaries, one for each overlay. Each dict has:
+        #  source: the source channel combo box (which must include MaxAll and SumAll as well as channels)
+        #  data: the data combo box for the data type (DQ bit, uncertainty... or None)
+        #  col: the colour of the overlay
+
         dqwidgets = []
+
         for i in range(NUMDQS):
-            # set up widgets for each dq and add them to a dict
-            row = dict()
+            row = dict()                # create and add the (empty as yet) dict
             dqwidgets.append(row)
+
             sourcecb = QtWidgets.QComboBox()  # leave empty for now
             sourcecb.addItem("this is a test value")    # BEWARE LONG STRINGS IN HERE!
             sourcecb.setMinimumContentsLength(5)
@@ -599,15 +608,64 @@ class Canvas(QtWidgets.QWidget):
                 widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
 
         dqw.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
-        self.setDQTableState()
         dqtable.setVerticalSpacing(0)
         dqtable.setHorizontalSpacing(0)
-        return dqw
+        return dqw, dqwidgets
 
-    def setDQTableState(self):
-        """Set the DQ table state to that stored in this canvas"""
-        for i, x in enumerate(self.dqs):
-            pass
+    def ensureDQValid(self):
+        """Make sure the DQ data is valid for the image if present; if not reset to None"""
+        for i, dq in enumerate(self.dqs):
+            if dq.stype == canvasdq.STypeChannel:
+                if self.previmg is None or dq.channel >= self.previmg.channels:
+                    dq.stype = canvasdq.STypeMaxAll
+                    dq.data = canvasdq.DTypeNone
+
+    def setDQWidgetState(self):
+        """Set the DQ table widget state to the DQ specs stored in this canvas"""
+        self.ensureDQValid()    # first, make sure the data is valid
+        for i, dq in enumerate(self.dqs):
+            # first, make sure the source combo box is correctly populated
+            sourcecombo = self.dqwidgets[i]['source']
+            sourcecombo.clear()
+            sourcecombo.addItem("MaxAll", userData='maxall')
+            sourcecombo.addItem("SumAll", userData='sumall')
+            if self.previmg is not None:
+                sources = [s.brief(captionType=self.graph.doc.settings.captionType)
+                           for s in self.previmg.sources.sourceSets]
+                for chanidx, brief in enumerate(sources):
+                    sourcecombo.addItem(f"{chanidx}) {brief}", userData=chanidx)
+            # then select the source - if it's not found (perhaps a channel disappeared) we'll
+            # get a sourceItemIdx<0, but that should never happen.
+            if dq.stype == canvasdq.STypeMaxAll:
+                val = 'maxall'
+            elif dq.stype == canvasdq.STypeSumAll:
+                val = 'sumall'
+            elif dq.stype == canvasdq.STypeChannel:
+                val = dq.channel
+            sourceItemIdx = sourcecombo.findData(val)
+            if sourceItemIdx >= 0:
+                sourcecombo.setCurrentIndex(sourceItemIdx)
+            else:
+                # override if we couldn't find a channel - that shouldn't happen because we
+                # called ensureDQValid
+                sourcecombo.setCurrentIndex(sourcecombo.findData('maxall'))
+                ui.error(f"invalid channel {dq.channel} in DQ source combo box")
+
+            # Now the data type
+            datacombo = self.dqwidgets[i]['data']
+            dataidx = datacombo.findData(dq.data)
+            if dataidx >= 0:
+                datacombo.setCurrentIndex(dataidx)
+            else:
+                ui.error(f"Can't find data value {dq.data} in data combo for canvas DQ overlay")
+
+            # and colour data
+            colcombo = self.dqwidgets[i]['col']
+            colidx = colcombo.findText(dq.col)
+            if colidx >= 0:
+                colcombo.setCurrentIndex(colidx)
+            else:
+                ui.error(f"Can't find colour value {dq.col} in colour combo for canvas DQ overlay")
 
     def mouseMove(self, x, y, event):
         self.coordsText.setText(f"{x},{y}")
@@ -825,6 +883,7 @@ class Canvas(QtWidgets.QWidget):
         self.dimensions.setText(txt)
 
         self.canvas.display(self.previmg, self.isPremapped)
+        self.setDQWidgetState()
         self.showSpectrum()
 
     ## reset the canvas to x1 magnification
