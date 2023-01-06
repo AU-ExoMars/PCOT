@@ -263,7 +263,7 @@ class InnerCanvas(QtWidgets.QWidget):
             p.setPen(Qt.yellow)
             p.setBrush(Qt.yellow)
             r = QtCore.QRect(0, widgh - 20, widgw, 20)
-            p.drawText(r, Qt.AlignLeft, self.desc)
+            p.drawText(r, Qt.AlignLeft, f"{self.desc}")
         else:
             # there's nothing to draw
             self.scale = 1
@@ -442,7 +442,7 @@ class Canvas(QtWidgets.QWidget):
         self.ROInode = None
         self.recursing = False  # An ugly hack to avoid recursion in ROI nodes
         self.dqs = [CanvasDQSpec() for i in range(NUMDQS)]  # 3 of these set to defaults
-
+        self.dqSourceCache = [None for i in range(NUMDQS)]  # source name cache for each channel
         # outer layout is a horizontal box - the sidebar and canvas+scrollbars are in this
         outerlayout = QtWidgets.QHBoxLayout()
         self.setLayout(outerlayout)
@@ -621,19 +621,34 @@ class Canvas(QtWidgets.QWidget):
                     dq.data = canvasdq.DTypeNone
 
     def setDQWidgetState(self):
-        """Set the DQ table widget state to the DQ specs stored in this canvas"""
+        """Set the DQ table widget state to the DQ specs stored in this canvas. Also may repopulate
+        the source combo because channels may have changed.
+        """
+
         self.ensureDQValid()    # first, make sure the data is valid
         for i, dq in enumerate(self.dqs):
-            # first, make sure the source combo box is correctly populated
-            sourcecombo = self.dqwidgets[i]['source']
-            sourcecombo.clear()
-            sourcecombo.addItem("MaxAll", userData='maxall')
-            sourcecombo.addItem("SumAll", userData='sumall')
+            # first, make sure the source combo box is correctly populated.
+            # We should have a list of brief source names for each channel.
+            # If this is empty or changed, we repopulate.
+
+            # first build a list of the source names
             if self.previmg is not None:
                 sources = [s.brief(captionType=self.graph.doc.settings.captionType)
                            for s in self.previmg.sources.sourceSets]
-                for chanidx, brief in enumerate(sources):
-                    sourcecombo.addItem(f"{chanidx}) {brief}", userData=chanidx)
+            else:
+                sources = []
+
+            # and compare with the cached list of source names. If not the same, repopulate
+            if sources != self.dqSourceCache[i]:
+                self.dqSourceCache[i] = sources
+                sourcecombo = self.dqwidgets[i]['source']
+                sourcecombo.clear()
+                sourcecombo.addItem("MaxAll", userData='maxall')
+                sourcecombo.addItem("SumAll", userData='sumall')
+                if self.previmg is not None:
+                    for chanidx, brief in enumerate(sources):
+                        sourcecombo.addItem(f"{chanidx}) {brief}", userData=chanidx)
+
             # then select the source - if it's not found (perhaps a channel disappeared) we'll
             # get a sourceItemIdx<0, but that should never happen.
             if dq.stype == canvasdq.STypeMaxAll:
