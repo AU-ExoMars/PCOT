@@ -43,5 +43,8 @@ class CanvasDQSpec:
         self.data = d.get('data', DTypeNone)
         self.col = d.get('col', 'magenta')
 
+    def __str__(self):
+        return f"DQ(STYPE={self.stype} CHAN={self.channel} DAT={self.data} COL={self.col})"
+
     def __init__(self):
         self.deserialise({})

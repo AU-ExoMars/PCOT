@@ -510,7 +510,7 @@ class Canvas(QtWidgets.QWidget):
         self.dimensions = QtWidgets.QLabel('')
         sidebar.addWidget(self.dimensions, 5, 0, 1, 2)
 
-        self.dqtable, self.dqwidgets = self.createDQTable()
+        self.dqtable, self.dqwidgets = self.createDQWidgets()
         sidebar.addWidget(self.dqtable, 6, 0, 1, 2)
 
         # widgets done.
@@ -568,7 +568,7 @@ class Canvas(QtWidgets.QWidget):
 
         pcot.ui.decorateSplitter(splitter, 1)
 
-    def createDQTable(self) -> Tuple[QtWidgets.QWidget, List[Dict]]:
+    def createDQWidgets(self) -> Tuple[QtWidgets.QWidget, List[Dict]]:
         """Create the DQ overlay control table of widgets and store the widgets in a list of NUMDQS dicts
         (see below). Returns the containing widget and the list of dicts."""
         dqw = QtWidgets.QWidget()
@@ -607,10 +607,20 @@ class Canvas(QtWidgets.QWidget):
             for widget in row.values():  # adjust each combobox
                 widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
 
+            colcb.currentIndexChanged.connect(self.dqWidgetChanged)
+            datacb.currentIndexChanged.connect(self.dqWidgetChanged)
+            sourcecb.currentIndexChanged.connect(self.dqWidgetChanged)
+
         dqw.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         dqtable.setVerticalSpacing(0)
         dqtable.setHorizontalSpacing(0)
         return dqw, dqwidgets
+
+    def dqWidgetChanged(self, _):
+        if not self.recursing:  # avoid programmatic changes messing things up
+            self.recursing = True
+            self.getDQWidgetState()
+            self.recursing = False
 
     def ensureDQValid(self):
         """Make sure the DQ data is valid for the image if present; if not reset to None"""
@@ -624,6 +634,9 @@ class Canvas(QtWidgets.QWidget):
         """Set the DQ table widget state to the DQ specs stored in this canvas. Also may repopulate
         the source combo because channels may have changed.
         """
+
+        old = self.recursing
+        self.recursing = True
 
         self.ensureDQValid()    # first, make sure the data is valid
         for i, dq in enumerate(self.dqs):
@@ -681,6 +694,31 @@ class Canvas(QtWidgets.QWidget):
                 colcombo.setCurrentIndex(colidx)
             else:
                 ui.error(f"Can't find colour value {dq.col} in colour combo for canvas DQ overlay")
+        self.recursing = old
+
+    def getDQWidgetState(self):
+        """Can't think of a better name at the moment - this regenerates the dqs (CanvasDQSpec list)
+        from the DQ widgets. It assumes those objects already exist, so we just modify them."""
+
+        for i, dq in enumerate(self.dqs):
+            # first set the dq source from the source widget data
+            sourcedata = self.dqwidgets[i]['source'].currentData()
+            if sourcedata == 'maxall':
+                dq.stype = canvasdq.STypeMaxAll
+            elif sourcedata == 'sumall':
+                dq.stype = canvasdq.STypeSumAll
+            else:
+                dq.stype = canvasdq.STypeChannel
+                dq.channel = sourcedata
+
+            # then the 'data' field; this goes directly in
+            dq.data = self.dqwidgets[i]['data'].currentData()
+
+            # as does the colour field (from 'text' this time)
+            dq.col = self.dqwidgets[i]['col'].currentText()
+            print(i,str(dq))
+
+        self.ensureDQValid()
 
     def mouseMove(self, x, y, event):
         self.coordsText.setText(f"{x},{y}")
