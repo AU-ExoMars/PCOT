@@ -19,6 +19,7 @@ from pcot.datum import Datum
 from pcot.ui import canvasdq
 from pcot.ui.canvasdq import CanvasDQSpec
 from pcot.ui.spectrumwidget import SpectrumWidget
+import pcot.dq
 from pcot.ui.texttogglebutton import TextToggleButton
 
 if TYPE_CHECKING:
@@ -28,7 +29,6 @@ logger = logging.getLogger(__name__)
 
 # how many DQ overlays we can have
 NUMDQS = 3
-
 
 
 # the actual drawing widget, contained within the Canvas widget
@@ -155,8 +155,8 @@ class InnerCanvas(QtWidgets.QWidget):
         else:
             return self.canv.persister.showROIs
 
-    ## display an image next time paintEvent
-    # happens, and update to cause that. Allow it to handle None too.
+    ## display an image next time paintEvent happens, and update to cause that.
+    # Allow it to handle None too.
     def display(self, img: 'ImageCube', isPremapped: bool, ):
         self.imgCube = img
         if img is not None:
@@ -229,12 +229,15 @@ class InnerCanvas(QtWidgets.QWidget):
             # now get the size of the image that was actually cut (some areas may be out of range)
             self.cuth, self.cutw = img.shape[:2]
 
+            # Here we draw the overlays.
+            img = self.drawDQOverlays(img, cutx, cuty, cutw, cuth)
+
+            # draw the cursor crosshair into the image for accuracy
             self.drawCursor(img, cutx, cuty)
             # now resize the cut area up to fit the widget and draw it. Using area interpolation here:
             # cubic produced odd artifacts on float images.
             img = cv.resize(img, dsize=(int(self.cutw / scale), int(self.cuth / scale)), interpolation=cv.INTER_AREA)
-            qq = self.img2qimage(img)
-            p.drawImage(0, 0, qq)
+            p.drawImage(0, 0, self.img2qimage(img))
 
             # draw annotations (and ROIs, which are annotations too)
             # on the image
@@ -268,6 +271,59 @@ class InnerCanvas(QtWidgets.QWidget):
             # there's nothing to draw
             self.scale = 1
         p.end()
+
+    def drawDQOverlays(self, img, cutx, cuty, cutw, cuth) -> np.ndarray:
+        """Draw the DQ overlays onto the RGB image img, which has already been cropped down to
+        cutx,cuty,cutw,cuth. That cropping will need to be done on other data.
+
+        It may be necessary to add code to handle missing / NA data. I'd rather not do that here
+        for speed; we should just set the uncertainty to zero elsewhere for no data."""
+
+        threshold = 1  # fixed for now!
+        transparency = 0.5  # fixed for now!
+
+        for d in self.canv.dqs:
+            if d.isActive():
+                if d.data == canvasdq.DTypeUnc or d.data == canvasdq.DTypeUncThresh:
+                    # we're viewing uncertainty data, so cut out the relevant area
+                    data = self.imgCube.uncertainty[cuty:cuty + cuth, cutx:cutx + cutw]
+                    # and process it
+                    if d.stype == canvasdq.STypeMaxAll:
+                        # single-channel vs multichannel images.
+                        if self.imgCube.channels > 1:
+                            data = np.amax(data, axis=2)
+                    elif d.stype == canvasdq.STypeSumAll:
+                        if self.imgCube.channels > 1:
+                            data = np.sum(data, axis=2)
+                    else:
+                        if self.imgCube.channels > 1:
+                            data = data[:, :, d.channel]
+                    # now we have the uncertainty data, threshold if that's what's wanted.
+                    if d.data == canvasdq.DTypeUncThresh:
+                        data = (data > threshold).astype(np.float32)
+                    else:
+                        # otherwise normalize
+                        mn = np.min(data)
+                        rng = np.max(data) - mn
+                        if rng > 0.0000001:
+                            data = (data - mn) / rng
+                        else:
+                            data = 0
+
+                elif d.data > 0:
+                    # otherwise it's a DQ bit, so cut that out
+                    data = self.imgCube.dq[cuty:cuty + cuth, cutx:cutx + cutw]
+                    if d.stype == canvasdq.STypeMaxAll or d.stype == canvasdq.STypeSumAll:
+                        # union all channels
+                        data = np.bitwise_or.reduce(data, axis=2)
+                    # now convert that to float.
+                    data = data.astype(np.float32)
+                # expand the data to RGB, but in different ways depending on the colour!
+                r, g, b = canvasdq.colours[d.col]
+                data = np.dstack((data * r, data * g, data * b))
+                # combine with image
+                img = np.clip(transparency * data + img, 0, 1)
+        return img
 
     def getScale(self):
         return self.scale * self.zoomscale
@@ -583,11 +639,11 @@ class Canvas(QtWidgets.QWidget):
         dqwidgets = []
 
         for i in range(NUMDQS):
-            row = dict()                # create and add the (empty as yet) dict
+            row = dict()  # create and add the (empty as yet) dict
             dqwidgets.append(row)
 
             sourcecb = QtWidgets.QComboBox()  # leave empty for now
-            sourcecb.addItem("this is a test value")    # BEWARE LONG STRINGS IN HERE!
+            sourcecb.addItem("this is a test value")  # BEWARE LONG STRINGS IN HERE!
             sourcecb.setMinimumContentsLength(5)
             dqtable.addWidget(sourcecb, i, 0)
             row['source'] = sourcecb
@@ -599,7 +655,7 @@ class Canvas(QtWidgets.QWidget):
             row['data'] = datacb
 
             colcb = QtWidgets.QComboBox()
-            for x in ('red', 'green', 'blue', 'magenta', 'yellow', 'cyan'):
+            for x in canvasdq.colours:
                 colcb.addItem(x)
             dqtable.addWidget(colcb, i, 2)
             row['col'] = colcb
@@ -621,14 +677,15 @@ class Canvas(QtWidgets.QWidget):
             self.recursing = True
             self.getDQWidgetState()
             self.recursing = False
+            self.redisplay()
 
     def ensureDQValid(self):
         """Make sure the DQ data is valid for the image if present; if not reset to None"""
-        for i, dq in enumerate(self.dqs):
-            if dq.stype == canvasdq.STypeChannel:
-                if self.previmg is None or dq.channel >= self.previmg.channels:
-                    dq.stype = canvasdq.STypeMaxAll
-                    dq.data = canvasdq.DTypeNone
+        for i, d in enumerate(self.dqs):
+            if d.stype == canvasdq.STypeChannel:
+                if self.previmg is None or d.channel >= self.previmg.channels:
+                    d.stype = canvasdq.STypeMaxAll
+                    d.data = canvasdq.DTypeNone
 
     def setDQWidgetState(self):
         """Set the DQ table widget state to the DQ specs stored in this canvas. Also may repopulate
@@ -638,8 +695,8 @@ class Canvas(QtWidgets.QWidget):
         old = self.recursing
         self.recursing = True
 
-        self.ensureDQValid()    # first, make sure the data is valid
-        for i, dq in enumerate(self.dqs):
+        self.ensureDQValid()  # first, make sure the data is valid
+        for i, d in enumerate(self.dqs):
             # first, make sure the source combo box is correctly populated.
             # We should have a list of brief source names for each channel.
             # If this is empty or changed, we repopulate.
@@ -652,9 +709,9 @@ class Canvas(QtWidgets.QWidget):
                 sources = []
 
             # and compare with the cached list of source names. If not the same, repopulate
+            sourcecombo = self.dqwidgets[i]['source']
             if sources != self.dqSourceCache[i]:
                 self.dqSourceCache[i] = sources
-                sourcecombo = self.dqwidgets[i]['source']
                 sourcecombo.clear()
                 sourcecombo.addItem("MaxAll", userData='maxall')
                 sourcecombo.addItem("SumAll", userData='sumall')
@@ -664,12 +721,12 @@ class Canvas(QtWidgets.QWidget):
 
             # then select the source - if it's not found (perhaps a channel disappeared) we'll
             # get a sourceItemIdx<0, but that should never happen.
-            if dq.stype == canvasdq.STypeMaxAll:
+            if d.stype == canvasdq.STypeMaxAll:
                 val = 'maxall'
-            elif dq.stype == canvasdq.STypeSumAll:
+            elif d.stype == canvasdq.STypeSumAll:
                 val = 'sumall'
-            elif dq.stype == canvasdq.STypeChannel:
-                val = dq.channel
+            elif d.stype == canvasdq.STypeChannel:
+                val = d.channel
             sourceItemIdx = sourcecombo.findData(val)
             if sourceItemIdx >= 0:
                 sourcecombo.setCurrentIndex(sourceItemIdx)
@@ -677,46 +734,46 @@ class Canvas(QtWidgets.QWidget):
                 # override if we couldn't find a channel - that shouldn't happen because we
                 # called ensureDQValid
                 sourcecombo.setCurrentIndex(sourcecombo.findData('maxall'))
-                ui.error(f"invalid channel {dq.channel} in DQ source combo box")
+                ui.error(f"invalid channel {d.channel} in DQ source combo box")
 
             # Now the data type
             datacombo = self.dqwidgets[i]['data']
-            dataidx = datacombo.findData(dq.data)
+            dataidx = datacombo.findData(d.data)
             if dataidx >= 0:
                 datacombo.setCurrentIndex(dataidx)
             else:
-                ui.error(f"Can't find data value {dq.data} in data combo for canvas DQ overlay")
+                ui.error(f"Can't find data value {d.data} in data combo for canvas DQ overlay")
 
             # and colour data
             colcombo = self.dqwidgets[i]['col']
-            colidx = colcombo.findText(dq.col)
+            colidx = colcombo.findText(d.col)
             if colidx >= 0:
                 colcombo.setCurrentIndex(colidx)
             else:
-                ui.error(f"Can't find colour value {dq.col} in colour combo for canvas DQ overlay")
+                ui.error(f"Can't find colour value {d.col} in colour combo for canvas DQ overlay")
         self.recursing = old
 
     def getDQWidgetState(self):
         """Can't think of a better name at the moment - this regenerates the dqs (CanvasDQSpec list)
         from the DQ widgets. It assumes those objects already exist, so we just modify them."""
 
-        for i, dq in enumerate(self.dqs):
+        for i, d in enumerate(self.dqs):
             # first set the dq source from the source widget data
             sourcedata = self.dqwidgets[i]['source'].currentData()
             if sourcedata == 'maxall':
-                dq.stype = canvasdq.STypeMaxAll
+                d.stype = canvasdq.STypeMaxAll
             elif sourcedata == 'sumall':
-                dq.stype = canvasdq.STypeSumAll
+                d.stype = canvasdq.STypeSumAll
             else:
-                dq.stype = canvasdq.STypeChannel
-                dq.channel = sourcedata
+                d.stype = canvasdq.STypeChannel
+                d.channel = sourcedata
 
             # then the 'data' field; this goes directly in
-            dq.data = self.dqwidgets[i]['data'].currentData()
+            d.data = self.dqwidgets[i]['data'].currentData()
 
             # as does the colour field (from 'text' this time)
-            dq.col = self.dqwidgets[i]['col'].currentText()
-            print(i,str(dq))
+            d.col = self.dqwidgets[i]['col'].currentText()
+            print(i, str(d))
 
         self.ensureDQValid()
 
