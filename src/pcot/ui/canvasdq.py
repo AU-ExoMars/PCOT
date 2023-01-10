@@ -23,7 +23,7 @@ class CanvasDQSpec:
     @staticmethod
     def getDataItems():
         """Return a list of (name,int) tuples for the data fields"""
-        x = [(name, val) for name, val in dq.DQs.items()]  # must all be > 0
+        x = [(f"BIT:{name}", val) for name, val in dq.DQs.items()]  # must all be > 0
         x.append(('NONE', DTypeNone))
         x.append(('UNC', DTypeUnc))
         x.append(('UNCTHR', DTypeUncThresh))
@@ -45,7 +45,7 @@ class CanvasDQSpec:
         self.stype = d.get('stype', STypeMaxAll)
         self.channel = d.get('source', 0)
         self.data = d.get('data', DTypeNone)
-        self.col = d.get('col', 'magenta')
+        self.col = d.get('col', 'mag')
 
     def __str__(self):
         return f"DQ(STYPE={self.stype} CHAN={self.channel} DAT={self.data} COL={self.col})"
@@ -54,11 +54,16 @@ class CanvasDQSpec:
         self.deserialise({})
 
 
-colours = {
+coloursBase = {
     'red': (1.0, 0.0, 0.0),
     'green': (0.0, 1.0, 0.0),
     'blue': (0.0, 0.0, 1.0),
-    'magenta': (1.0, 0.0, 1.0),
+    'mag': (1.0, 0.0, 1.0),
     'cyan': (0.0, 1.0, 1.0),
-    'yellow': (1.0, 1.0, 0.0)
+    'yel': (1.0, 1.0, 0.0)
 }
+
+# now add 0 to the end of the tuple for non-flashing colours
+colours = {n: c + (0,) for n, c in coloursBase.items()}
+# and add the flashing colours with -f at the end of the name and 1 at the end of the tuple
+colours.update({f"{n}-f": c + (1,) for n, c in coloursBase.items()})

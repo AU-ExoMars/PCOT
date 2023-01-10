@@ -3,12 +3,13 @@ import logging
 import math
 import os
 import platform
+import time
 from typing import TYPE_CHECKING, Optional, Union, List, Tuple, Dict
 
 import cv2 as cv
 import numpy as np
 from PySide2 import QtWidgets, QtCore
-from PySide2.QtCore import Qt, QSize
+from PySide2.QtCore import Qt, QSize, QTimer
 from PySide2.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent
 from PySide2.QtWidgets import QCheckBox, QMessageBox
 
@@ -21,6 +22,7 @@ from pcot.ui.canvasdq import CanvasDQSpec
 from pcot.ui.spectrumwidget import SpectrumWidget
 import pcot.dq
 from pcot.ui.texttogglebutton import TextToggleButton
+from pcot.utils.deb import Timer
 
 if TYPE_CHECKING:
     from pcot.xform import XFormGraph, XForm
@@ -129,6 +131,14 @@ class InnerCanvas(QtWidgets.QWidget):
         self.panX = None
         self.panY = None
         self.canv = canv
+        self.timer = QTimer(self)
+
+        # used to regularly redraw the canvas if elements are flashing
+        self.redrawOnTick = False
+        self.flashCycle = True
+        self.timer.timeout.connect(self.tick)
+        self.timer.start(300)       # flash rate
+
         # needs to do this to get key events
         self.setFocusPolicy(QtCore.Qt.ClickFocus)
         self.setCursor(InnerCanvas.getCursor())
@@ -143,6 +153,12 @@ class InnerCanvas(QtWidgets.QWidget):
         # pixel at top-left of visible image within window (when zoomed)
         self.x = 0
         self.y = 0
+
+    def tick(self):
+        """Timer tick"""
+        if self.redrawOnTick:
+            self.flashCycle = 1-self.flashCycle
+            self.update()
 
     ## returns the graph this canvas is part of
     def getGraph(self):
@@ -229,8 +245,8 @@ class InnerCanvas(QtWidgets.QWidget):
             # now get the size of the image that was actually cut (some areas may be out of range)
             self.cuth, self.cutw = img.shape[:2]
 
-            # Here we draw the overlays.
-            img = self.drawDQOverlays(img, cutx, cuty, cutw, cuth)
+            # Here we draw the overlays and get any extra text required
+            img, dqtext = self.drawDQOverlays(img, cutx, cuty, cutw, cuth)
 
             # draw the cursor crosshair into the image for accuracy
             self.drawCursor(img, cutx, cuty)
@@ -266,21 +282,25 @@ class InnerCanvas(QtWidgets.QWidget):
             p.setPen(Qt.yellow)
             p.setBrush(Qt.yellow)
             r = QtCore.QRect(0, widgh - 20, widgw, 20)
-            p.drawText(r, Qt.AlignLeft, f"{self.desc}")
+            p.drawText(r, Qt.AlignLeft, f"{self.desc} {dqtext}")
         else:
             # there's nothing to draw
             self.scale = 1
         p.end()
 
-    def drawDQOverlays(self, img, cutx, cuty, cutw, cuth) -> np.ndarray:
+    def drawDQOverlays(self, img, cutx, cuty, cutw, cuth) -> Tuple[np.ndarray, str]:
         """Draw the DQ overlays onto the RGB image img, which has already been cropped down to
         cutx,cuty,cutw,cuth. That cropping will need to be done on other data.
 
         It may be necessary to add code to handle missing / NA data. I'd rather not do that here
-        for speed; we should just set the uncertainty to zero elsewhere for no data."""
+        for speed; we should just set the uncertainty to zero elsewhere for no data.
+
+        We return the modified image and any extra text that gets tacked onto the descriptor"""
 
         threshold = 1  # fixed for now!
         transparency = 0.5  # fixed for now!
+        txt = ""
+        self.redrawOnTick = False
 
         for d in self.canv.dqs:
             if d.isActive():
@@ -291,10 +311,10 @@ class InnerCanvas(QtWidgets.QWidget):
                     if d.stype == canvasdq.STypeMaxAll:
                         # single-channel vs multichannel images.
                         if self.imgCube.channels > 1:
-                            data = np.amax(data, axis=2)
+                            data = np.amax(data, axis=2)    # a bit slow
                     elif d.stype == canvasdq.STypeSumAll:
                         if self.imgCube.channels > 1:
-                            data = np.sum(data, axis=2)
+                            data = np.sum(data, axis=2)     # a bit slot
                     else:
                         if self.imgCube.channels > 1:
                             data = data[:, :, d.channel]
@@ -305,6 +325,7 @@ class InnerCanvas(QtWidgets.QWidget):
                         # otherwise normalize
                         mn = np.min(data)
                         rng = np.max(data) - mn
+                        txt = f": RANGE {mn:0.3f}, {np.max(data):0.3f}"
                         if rng > 0.0000001:
                             data = (data - mn) / rng
                         else:
@@ -319,11 +340,22 @@ class InnerCanvas(QtWidgets.QWidget):
                     # now convert that to float.
                     data = data.astype(np.float32)
                 # expand the data to RGB, but in different ways depending on the colour!
-                r, g, b = canvasdq.colours[d.col]
-                data = np.dstack((data * r, data * g, data * b))
-                # combine with image
-                img = np.clip(transparency * data + img, 0, 1)
-        return img
+                r, g, b, flash = canvasdq.colours[d.col]
+                if flash:
+                    self.redrawOnTick = True
+                # avoiding the creating of new arrays where we can.
+                if not flash or self.flashCycle:
+                    zeroes = np.zeros(data.shape)
+                    r = data if r > 0.5 else zeroes
+                    g = data if g > 0.5 else zeroes
+                    b = data if b > 0.5 else zeroes
+                    data = np.dstack((r, g, b))
+                    # combine with image, avoiding copies.
+                    np.multiply(data, transparency, out=data)
+                    np.add(data, img, out=data)
+                    np.clip(data, 0, 1, out=data)
+                    img = data
+        return img, txt
 
     def getScale(self):
         return self.scale * self.zoomscale
