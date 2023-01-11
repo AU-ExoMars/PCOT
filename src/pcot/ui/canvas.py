@@ -35,20 +35,61 @@ NUMDQS = 3
 
 # the actual drawing widget, contained within the Canvas widget
 class InnerCanvas(QtWidgets.QWidget):
-    ## @var img
     # the numpy image we are rendering (1 or 3 chans)
-    ## @var canv
+    img: Optional[np.ndarray]
+    # the imagecube we are rendering, from which the above is generated
+    imgCube: Optional['ImageCube']
+    # the text that appears at bottom of the image
+    desc: str
     # our main Canvas widget, which contains this widget
-    ## @var zoomscale
+    canv: 'Canvas'
     # the current zoom level: 1 to contain the entire image onscreen
-    ## @var scale
+    zoomscale: float
     # defines the zoom factor which scales the canvas to hold the image
-    ## @var x
-    # offset of top left pixel in canvas
-    ## @var y
-    # offset of top left pixel in canvas
+    scale: float
+    # coords of top left pixel in canvas
+    x: float
+    y: float
+    # cursor coords in image space
+    cursorX: float
+    cursorY: float
+    # the size of that part of the image which is in view
+    cutw: int
+    cuth: int
 
     cursor = None  # custom cursor; created once on first use
+
+    def __init__(self, canv, parent=None):
+        super().__init__(parent)
+        self.img = None
+        self.imgCube = None
+        self.desc = ""
+        self.zoomscale = 1
+        self.scale = 1
+        self.cursorX = 0  # coords of cursor in image space
+        self.cursorY = 0
+
+        self.x = 0  # coords of top left of img in view
+        self.y = 0
+        self.cutw = 0  # size of image in view
+        self.cuth = 0
+        self.panning = False
+        self.panX = None
+        self.panY = None
+        self.canv = canv
+        self.timer = QTimer(self)
+
+        # used to regularly redraw the canvas if elements are flashing
+        self.redrawOnTick = False
+        self.flashCycle = True
+        self.timer.timeout.connect(self.tick)
+        self.timer.start(300)  # flash rate
+
+        # needs to do this to get key events
+        self.setFocusPolicy(QtCore.Qt.ClickFocus)
+        self.setCursor(InnerCanvas.getCursor())
+        self.setMouseTracking(True)  # so we get move events with no button press
+        self.reset()
 
     def img2qimage(self, img):
         """convert a cv/numpy image to a Qt image. input must be 3 channels, 0-1 floats.
@@ -112,39 +153,6 @@ class InnerCanvas(QtWidgets.QWidget):
             cls.cursor = QCursor(bm, mask, 16, 16)
         return cls.cursor
 
-    ## constructor
-    def __init__(self, canv, parent=None):
-        super().__init__(parent)
-        self.img = None
-        self.imgCube = None
-        self.desc = ""
-        self.zoomscale = 1
-        self.scale = 1
-        self.cursorX = 0  # coords of cursor in image space
-        self.cursorY = 0
-
-        self.x = 0  # coords of top left of img in view
-        self.y = 0
-        self.cutw = 0  # size of image in view
-        self.cuth = 0
-        self.panning = False
-        self.panX = None
-        self.panY = None
-        self.canv = canv
-        self.timer = QTimer(self)
-
-        # used to regularly redraw the canvas if elements are flashing
-        self.redrawOnTick = False
-        self.flashCycle = True
-        self.timer.timeout.connect(self.tick)
-        self.timer.start(300)       # flash rate
-
-        # needs to do this to get key events
-        self.setFocusPolicy(QtCore.Qt.ClickFocus)
-        self.setCursor(InnerCanvas.getCursor())
-        self.setMouseTracking(True)  # so we get move events with no button press
-        self.reset()
-
     ## resets the canvas to zoom level 1, top left pan
     def reset(self):
         # not the same as self.scale, which defines the scale of the image 
@@ -157,7 +165,7 @@ class InnerCanvas(QtWidgets.QWidget):
     def tick(self):
         """Timer tick"""
         if self.redrawOnTick:
-            self.flashCycle = 1-self.flashCycle
+            self.flashCycle = 1 - self.flashCycle
             self.update()
 
     ## returns the graph this canvas is part of
@@ -298,7 +306,6 @@ class InnerCanvas(QtWidgets.QWidget):
         We return the modified image and any extra text that gets tacked onto the descriptor"""
 
         threshold = 1  # fixed for now!
-        transparency = 0.5  # fixed for now!
         txt = ""
         self.redrawOnTick = False
 
@@ -311,10 +318,10 @@ class InnerCanvas(QtWidgets.QWidget):
                     if d.stype == canvasdq.STypeMaxAll:
                         # single-channel vs multichannel images.
                         if self.imgCube.channels > 1:
-                            data = np.amax(data, axis=2)    # a bit slow
+                            data = np.amax(data, axis=2)  # a bit slow
                     elif d.stype == canvasdq.STypeSumAll:
                         if self.imgCube.channels > 1:
-                            data = np.sum(data, axis=2)     # a bit slot
+                            data = np.sum(data, axis=2)  # a bit slot
                     else:
                         if self.imgCube.channels > 1:
                             data = data[:, :, d.channel]
@@ -351,8 +358,10 @@ class InnerCanvas(QtWidgets.QWidget):
                     b = data if b > 0.5 else zeroes
                     data = np.dstack((r, g, b))
                     # combine with image, avoiding copies.
-                    np.multiply(data, transparency, out=data)
-                    np.add(data, img, out=data)
+                    np.power(data, 2*self.canv.dqContrast,out=data)      # data should be normalised, so this acts as a gamma
+                    np.multiply(data, 1.0-self.canv.dqTransparency, out=data)
+                    img2 = np.multiply(img, self.canv.dqTransparency)  # TODO can we avoid a copy here?
+                    np.add(data, img2, out=data)
                     np.clip(data, 0, 1, out=data)
                     img = data
         return img, txt
@@ -534,6 +543,8 @@ class Canvas(QtWidgets.QWidget):
         # outer layout is a horizontal box - the sidebar and canvas+scrollbars are in this
         outerlayout = QtWidgets.QHBoxLayout()
         self.setLayout(outerlayout)
+        self.dqContrast = 0.5
+        self.dqTransparency = 0.5
 
         # Sidebar widgets.
         # Some of these are hideable and so go into a subwidget.
@@ -600,6 +611,18 @@ class Canvas(QtWidgets.QWidget):
 
         self.dqtable, self.dqwidgets = self.createDQWidgets()
         sidebar.addWidget(self.dqtable, 6, 0, 1, 2)
+
+        l = QtWidgets.QLabel("trans.")
+        sidebar.addWidget(l, 7, 0, 1, 1)
+        l = QtWidgets.QLabel("contrast")
+        sidebar.addWidget(l, 7, 1, 1, 1)
+
+        self.transSlider = QtWidgets.QSlider(Qt.Orientation.Horizontal)
+        sidebar.addWidget(self.transSlider, 8, 0, 1, 1)
+        self.transSlider.sliderReleased.connect(self.transChanged)
+        self.contrastSlider = QtWidgets.QSlider(Qt.Orientation.Horizontal)
+        sidebar.addWidget(self.contrastSlider, 8, 1, 1, 1)
+        self.contrastSlider.sliderReleased.connect(self.contrastChanged)
 
         # widgets done.
 
@@ -710,6 +733,20 @@ class Canvas(QtWidgets.QWidget):
             self.getDQWidgetState()
             self.recursing = False
             self.redisplay()
+
+    def transChanged(self):
+        v = self.transSlider.value()
+        self.dqTransparency = float(v) / 99.0
+        self.redisplay()
+
+    def contrastChanged(self):
+        v = self.contrastSlider.value()
+        self.dqContrast = float(v) / 99.0
+        self.redisplay()
+
+    def setTransAndContrastSliders(self):
+        self.transSlider.setValue(int(self.dqTransparency * 99))
+        self.contrastSlider.setValue(int(self.dqContrast * 99))
 
     def ensureDQValid(self):
         """Make sure the DQ data is valid for the image if present; if not reset to None"""
@@ -836,17 +873,21 @@ class Canvas(QtWidgets.QWidget):
     @staticmethod
     def serialise(o, data):
         data['showROIs'] = o.showROIs
+        data['dqContrast'] = o.dqContrast
+        data['dqTransparency'] = o.dqTransparency
 
     ## inverse of setPersistData, done when we deserialise something
     @staticmethod
     def deserialise(o, data):
         o.showROIs = data.get('showROIs', False)
+        o.dqContrast = data.get('dqContrast', 0.5)
+        o.dqTransparency = data.get('dqTransparency', 0.5)
 
     ## prepare an object for holding some of our data
     @staticmethod
     def initPersistData(o):
         if not hasattr(o, 'showROIs'):
-            o.showROIs = False
+            Canvas.deserialise(o, {})    # uses default get in deserialise; probably entire method unnecessary!
 
     # these sets a reference to the mapping this canvas is using - bear in mind this class can mutate
     # that mapping!
@@ -969,6 +1010,8 @@ class Canvas(QtWidgets.QWidget):
             self.redChanCombo.setCurrentIndex(self.mapping.red)
             self.greenChanCombo.setCurrentIndex(self.mapping.green)
             self.blueChanCombo.setCurrentIndex(self.mapping.blue)
+            self.setTransAndContrastSliders()
+            self.setDQWidgetState()
             self.blockSignalsOnComboBoxes(False)  # and enable signals again
             self.setScrollBarsFromCanvas()
         # cache the image in case the mapping changes
