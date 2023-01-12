@@ -13,3 +13,4 @@ def reg(name, bit):
 NODATA = reg('nodata', 0)               # Pixel has no data
 NOUNCERTAINTY = reg('nounc', 1)         # Pixel has no uncertainty information.
 SAT = reg('sat', 2)                     # Pixel is saturated high
+TEST = reg('test', 4)

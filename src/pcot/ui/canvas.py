@@ -363,8 +363,13 @@ class InnerCanvas(QtWidgets.QWidget):
                     if d.stype == canvasdq.STypeMaxAll or d.stype == canvasdq.STypeSumAll:
                         # union all channels
                         data = np.bitwise_or.reduce(data, axis=2)
-                    # now convert that to float.
-                    data = data.astype(np.float32)
+                    else:
+                        # or extract relevant channel
+                        data = data[:, :, d.channel]
+                    # extract the relevant bit
+                    np.bitwise_and(data, d.data, out=data)
+                    # now convert that to float, setting nonzero to 1 and zero to 0.
+                    data = (data > 0).astype(np.float32)
                 # expand the data to RGB, but in different ways depending on the colour!
                 r, g, b, flash = canvasdq.colours[d.col]
                 if flash:
