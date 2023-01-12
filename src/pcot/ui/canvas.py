@@ -4,6 +4,7 @@ import math
 import os
 import platform
 import time
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional, Union, List, Tuple, Dict
 
 import cv2 as cv
@@ -31,6 +32,31 @@ logger = logging.getLogger(__name__)
 
 # how many DQ overlays we can have
 NUMDQS = 3
+
+
+class PersistBlock:
+    """This is the block owned by a node which has a canvas, to store data which is persisted
+    for the canvas only."""
+    showROIs: bool
+    dqTransparency: float
+    dqContrast: float
+
+    def __init__(self, d=None):
+        """sets default values, or perform the inverse of serialise(), turning the serialisable form into one
+        of these objects"""
+        if d is None:
+            self.showROIs = True
+            self.dqTransparency = 0.5
+            self.dqContrast = 0.5
+            self.dqs = [CanvasDQSpec() for i in range(NUMDQS)]  # 3 of these set to defaults
+        else:
+            self.showROIs, self.dqTransparency, self.dqContrast, dqs = d
+            self.dqs = [CanvasDQSpec(d) for d in dqs]
+
+    def serialise(self):
+        """return a version of this type which can be serialised into JSON"""
+        dqs = [d.serialise() for d in self.dqs]
+        return [self.showROIs, self.dqTransparency, self.dqContrast, dqs]
 
 
 # the actual drawing widget, contained within the Canvas widget
@@ -172,13 +198,6 @@ class InnerCanvas(QtWidgets.QWidget):
     def getGraph(self):
         return self.canv.graph
 
-    def getShowROIs(self):
-        """Ugly, and I'm not sure it's necessary. Is there always a persister?"""
-        if self.canv.persister.showROIs is None:
-            return False
-        else:
-            return self.canv.persister.showROIs
-
     ## display an image next time paintEvent happens, and update to cause that.
     # Allow it to handle None too.
     def display(self, img: 'ImageCube', isPremapped: bool, ):
@@ -266,7 +285,7 @@ class InnerCanvas(QtWidgets.QWidget):
             # draw annotations (and ROIs, which are annotations too)
             # on the image
 
-            if self.getShowROIs():
+            if self.canv.persist.showROIs:
                 # we're showing ALL rois
                 rois = None
             elif self.canv.ROInode is not None:
@@ -309,7 +328,7 @@ class InnerCanvas(QtWidgets.QWidget):
         txt = ""
         self.redrawOnTick = False
 
-        for d in self.canv.dqs:
+        for d in self.canv.persist.dqs:
             if d.isActive():
                 if d.data == canvasdq.DTypeUnc or d.data == canvasdq.DTypeUncThresh:
                     # we're viewing uncertainty data, so cut out the relevant area
@@ -358,9 +377,10 @@ class InnerCanvas(QtWidgets.QWidget):
                     b = data if b > 0.5 else zeroes
                     data = np.dstack((r, g, b))
                     # combine with image, avoiding copies.
-                    np.power(data, 2*self.canv.dqContrast,out=data)      # data should be normalised, so this acts as a gamma
-                    np.multiply(data, 1.0-self.canv.dqTransparency, out=data)
-                    img2 = np.multiply(img, self.canv.dqTransparency)  # TODO can we avoid a copy here?
+                    np.power(data, 2 * self.canv.persist.dqContrast,
+                             out=data)  # data should be normalised, so this acts as a gamma
+                    np.multiply(data, 1.0 - self.canv.persist.dqTransparency, out=data)
+                    img2 = np.multiply(img, self.canv.persist.dqTransparency)  # TODO can we avoid a copy here?
                     np.add(data, img2, out=data)
                     np.clip(data, 0, 1, out=data)
                     img = data
@@ -531,6 +551,7 @@ class Canvas(QtWidgets.QWidget):
     ## constructor
     def __init__(self, parent):
         super().__init__(parent)
+        self.firstDisplayDone = False
         self.paintHook = None
         self.mouseHook = None
         self.keyHook = None
@@ -538,13 +559,14 @@ class Canvas(QtWidgets.QWidget):
         self.nodeToUIChange = None
         self.ROInode = None
         self.recursing = False  # An ugly hack to avoid recursion in ROI nodes
-        self.dqs = [CanvasDQSpec() for i in range(NUMDQS)]  # 3 of these set to defaults
         self.dqSourceCache = [None for i in range(NUMDQS)]  # source name cache for each channel
         # outer layout is a horizontal box - the sidebar and canvas+scrollbars are in this
         outerlayout = QtWidgets.QHBoxLayout()
         self.setLayout(outerlayout)
-        self.dqContrast = 0.5
-        self.dqTransparency = 0.5
+        # by default we don't have a persister node, so we persist data privately (i.e. not at all).
+        # If we set a persister we use a persist block in that. I'm tempted to set this to None because
+        # really we should always have a persister!
+        self.persist = PersistBlock()       # TODO better name!
 
         # Sidebar widgets.
         # Some of these are hideable and so go into a subwidget.
@@ -673,9 +695,6 @@ class Canvas(QtWidgets.QWidget):
         # previous image (in case mapping changes and we need to redisplay the old image with a new mapping)
         self.previmg = None
         self.isPremapped = False
-        # entity to persist data in; should serialise and deserialise canvas settings
-        self.persister = None
-        self.roiToggle.setEnabled(False)  # because persister is None at first.
 
         pcot.ui.decorateSplitter(splitter, 1)
 
@@ -736,23 +755,24 @@ class Canvas(QtWidgets.QWidget):
 
     def transChanged(self):
         v = self.transSlider.value()
-        self.dqTransparency = float(v) / 99.0
+        self.persist.dqTransparency = float(v) / 99.0
         self.redisplay()
 
     def contrastChanged(self):
         v = self.contrastSlider.value()
-        self.dqContrast = float(v) / 99.0
+        self.persist.dqContrast = float(v) / 99.0
         self.redisplay()
 
     def setTransAndContrastSliders(self):
-        self.transSlider.setValue(int(self.dqTransparency * 99))
-        self.contrastSlider.setValue(int(self.dqContrast * 99))
+        self.transSlider.setValue(int(self.persist.dqTransparency * 99))
+        self.contrastSlider.setValue(int(self.persist.dqContrast * 99))
 
     def ensureDQValid(self):
         """Make sure the DQ data is valid for the image if present; if not reset to None"""
-        for i, d in enumerate(self.dqs):
+        for i, d in enumerate(self.persist.dqs):
             if d.stype == canvasdq.STypeChannel:
                 if self.previmg is None or d.channel >= self.previmg.channels:
+                    print("ENSURE DQ VALID OVERRIDE")
                     d.stype = canvasdq.STypeMaxAll
                     d.data = canvasdq.DTypeNone
 
@@ -765,7 +785,7 @@ class Canvas(QtWidgets.QWidget):
         self.recursing = True
 
         self.ensureDQValid()  # first, make sure the data is valid
-        for i, d in enumerate(self.dqs):
+        for i, d in enumerate(self.persist.dqs):
             # first, make sure the source combo box is correctly populated.
             # We should have a list of brief source names for each channel.
             # If this is empty or changed, we repopulate.
@@ -826,7 +846,7 @@ class Canvas(QtWidgets.QWidget):
         """Can't think of a better name at the moment - this regenerates the dqs (CanvasDQSpec list)
         from the DQ widgets. It assumes those objects already exist, so we just modify them."""
 
-        for i, d in enumerate(self.dqs):
+        for i, d in enumerate(self.persist.dqs):
             # first set the dq source from the source widget data
             sourcedata = self.dqwidgets[i]['source'].currentData()
             if sourcedata == 'maxall':
@@ -860,9 +880,10 @@ class Canvas(QtWidgets.QWidget):
     ## this works by setting a data structure which is persisted, and holds some of our
     # data rather than us. Ugly, yes.
     def setPersister(self, p):
-        self.persister = p
+        self.persist = p.persist
         self.roiToggle.setEnabled(True)
-        self.roiToggle.setChecked(p.showROIs)
+        self.roiToggle.setChecked(p.persist.showROIs)
+        # contrast/transparency should be handled in the inner canvas setup
 
     ## if this is a canvas for an ROI node, set that node.
     def setROINode(self, n):
@@ -872,22 +893,18 @@ class Canvas(QtWidgets.QWidget):
     # Get the data from the object and store it in the dict.
     @staticmethod
     def serialise(o, data):
-        data['showROIs'] = o.showROIs
-        data['dqContrast'] = o.dqContrast
-        data['dqTransparency'] = o.dqTransparency
+        data['canvas'] = o.persist.serialise()
 
     ## inverse of setPersistData, done when we deserialise something
     @staticmethod
     def deserialise(o, data):
-        o.showROIs = data.get('showROIs', False)
-        o.dqContrast = data.get('dqContrast', 0.5)
-        o.dqTransparency = data.get('dqTransparency', 0.5)
+        o.persist = PersistBlock(data.get('canvas', None))
 
     ## prepare an object for holding some of our data
     @staticmethod
     def initPersistData(o):
-        if not hasattr(o, 'showROIs'):
-            Canvas.deserialise(o, {})    # uses default get in deserialise; probably entire method unnecessary!
+        if not hasattr(o, 'persist'):
+            o.persist = PersistBlock()
 
     # these sets a reference to the mapping this canvas is using - bear in mind this class can mutate
     # that mapping!
@@ -922,7 +939,7 @@ class Canvas(QtWidgets.QWidget):
     def roiToggleChanged(self, v):
         # can only work when a persister is there; if there isn't, will crash.
         # Hopefully we can disable the toggle.
-        self.persister.showROIs = v
+        self.persist.showROIs = v
         self.redisplay()
 
     def spectrumToggleChanged(self, v):
@@ -987,6 +1004,8 @@ class Canvas(QtWidgets.QWidget):
     # In the premapped case, call with the premapped RGB image, the source image, and the node.
 
     def display(self, img: Union[Datum, 'ImageCube'], alreadyRGBMappedImageSource=None, nodeToUIChange=None):
+        self.firstDisplayDone = True
+
         if isinstance(img, Datum):
             img = img.get(Datum.IMG)  # if we are given a Datum, "unwrap" it
         if self.mapping is None:
@@ -1011,11 +1030,12 @@ class Canvas(QtWidgets.QWidget):
             self.greenChanCombo.setCurrentIndex(self.mapping.green)
             self.blueChanCombo.setCurrentIndex(self.mapping.blue)
             self.setTransAndContrastSliders()
-            self.setDQWidgetState()
             self.blockSignalsOnComboBoxes(False)  # and enable signals again
             self.setScrollBarsFromCanvas()
-        # cache the image in case the mapping changes
+        # cache the image in case the mapping changes, and also for redisplay itself
         self.previmg = img
+        # do this *after* setting the previmg
+        self.setDQWidgetState()
         # When we're using a "premapped" image, whenever we redisplay, we'll have to recalculate the node:
         # when we change the mapping (which is why we would redisplay) it's the node code which regenerates
         # the remapped image.
@@ -1032,9 +1052,14 @@ class Canvas(QtWidgets.QWidget):
         self.blockSignalsOnComboBoxes(False)  # and enable signals again
 
     def redisplay(self):
+        # similar to the below; avoid redisplay when we haven't displayed anything yet!
+        if not self.firstDisplayDone:
+            return
         # Note that we are doing ugly things to avoid recursion here. In some of the ROI nodes, this can happen:
         # updatetabs -> onNodeChanged -> display -> redisplay -> updatetabs...
         # This is the simplest way to avoid it.
+
+        print(f"REDISPLAY of {self.previmg}")
         if not self.recursing:
             self.recursing = True
             n = self.nodeToUIChange
@@ -1048,7 +1073,7 @@ class Canvas(QtWidgets.QWidget):
         if self.previmg is None:
             # if there's no image, then there are no pixels
             txt = ""
-        elif self.persister is not None and self.persister.showROIs:
+        elif self.persist.showROIs:
             # if we're displaying all ROIs, show that pixel count (and ROI count))
             txt = "{} pixels\nin {} ROIs".format(sum([x.pixels() for x in self.previmg.rois]),
                                                  len(self.previmg.rois))

@@ -33,6 +33,14 @@ class CanvasDQSpec:
         """Is this DQ spec actually drawing anything?"""
         return self.data != DTypeNone
 
+    def __init__(self, d=None):
+        if d is None:
+            d = {}
+        self.stype = d.get('stype', STypeMaxAll)
+        self.channel = d.get('channel', 0)
+        self.data = d.get('data', DTypeNone)
+        self.col = d.get('col', 'mag')
+
     def serialise(self):
         return {
             'stype': self.stype,
@@ -41,17 +49,9 @@ class CanvasDQSpec:
             'col': self.col
         }
 
-    def deserialise(self, d):
-        self.stype = d.get('stype', STypeMaxAll)
-        self.channel = d.get('source', 0)
-        self.data = d.get('data', DTypeNone)
-        self.col = d.get('col', 'mag')
-
     def __str__(self):
         return f"DQ(STYPE={self.stype} CHAN={self.channel} DAT={self.data} COL={self.col})"
 
-    def __init__(self):
-        self.deserialise({})
 
 
 coloursBase = {
