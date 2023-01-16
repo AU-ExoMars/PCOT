@@ -355,7 +355,7 @@ class InnerCanvas(QtWidgets.QWidget):
                         if rng > 0.0000001:
                             data = (data - mn) / rng
                         else:
-                            data = 0
+                            data = np.zeros(data.shape, dtype=float)
 
                 elif d.data > 0:
                     # otherwise it's a DQ bit, so cut that out
@@ -376,7 +376,7 @@ class InnerCanvas(QtWidgets.QWidget):
                     self.redrawOnTick = True
                 # avoiding the creating of new arrays where we can.
                 if not flash or self.flashCycle:
-                    zeroes = np.zeros(data.shape)
+                    zeroes = np.zeros(data.shape, dtype=float)
                     r = data if r > 0.5 else zeroes
                     g = data if g > 0.5 else zeroes
                     b = data if b > 0.5 else zeroes
