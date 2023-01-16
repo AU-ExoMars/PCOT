@@ -35,11 +35,19 @@ end note
 ImageCube *-- "1..1" MultiBandSource: "sources: set of sources\nper band/channel"
 ImageCube o-- "0..1" ChannelMapping: rgbMapping
 ImageCube *-- ndarray : img
+ImageCube *-- ndarray : uncertainty
+ImageCube *-- ndarray : dq
 ImageCube *-- "0..*" ROI : rois
 
 note bottom of ndarray
-numpy array 
-storing image
+numpy arrays - all have the same shape
+               h x w x bands
+               **OR** h x w (if there is
+               only 1 band)
+
+img : actual image data (32-bit float)
+uncertainty : uncertainty data (32-bit float)
+dq : data quality and other info bits (16-bit int)
 end note
 
 @enduml

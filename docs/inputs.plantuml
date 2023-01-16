@@ -23,6 +23,8 @@ Input *--o "0..*" InputMethod : methods
 InputMethod <|-- MultifileInput
 InputMethod <|-- RGBInput
 InputMethod <|-- NullInput
+InputMethod <|-- ENVIInput
+InputMethod <|-- PDS4Input
 
 XFormGraph *-- "0..*" XForm: nodes
 XFormInput ..> Input: "reads from"
@@ -40,5 +42,5 @@ class XFormInput {
     -getInput():Input
 }
 
-XFormInput ..> InputManager: "can fetch"
+XFormInput ..> InputManager: "can fetch\nsingleton of"
 @enduml

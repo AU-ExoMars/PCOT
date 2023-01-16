@@ -34,9 +34,11 @@ A combination of sources which have
 produced a single-band datum
 end note
 class SourceSet implements SourcesObtainable{
++sourceSet: Set[Source]
+--
 }
 
-SourceSet "1..*" *-- Source:  "sources {set}"
+SourceSet "1..*" *-- Source:  "sourceSet {set}"
 
 note top of MultiBandSource
 A group of SourceSets, one
