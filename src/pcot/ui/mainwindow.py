@@ -191,8 +191,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         # also will tint the view if we are a macro
         self.view.setWindow(self, macro is not None)
 
-        for x in pcot.config.mainWindowHooks:
-            x(self)
+        pcot.config.executeWindowHooks(self)
 
         self.show()
         ui.msg("OK")

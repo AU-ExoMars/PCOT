@@ -28,6 +28,12 @@ def setup():
     """Call this to initialise PCOT. We could just call it here, but other things would break then.
     You'll see that main() calls it."""
 
+    # forces the file to be parsed, which uses decorators to register functions etc.
+    import pcot.expressions.builtins
+
+    # creates xform type singletons, which also causes the expression evaluator to be
+    # created as part of XFormExpr, running the functions registered above and thus
+    # allowing *them* to register functions etc.
     xform.createXFormTypeInstances()
 
     # If we run without a GUI, we still need an application. This will provide that.
