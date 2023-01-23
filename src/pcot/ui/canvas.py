@@ -707,6 +707,7 @@ class Canvas(QtWidgets.QWidget):
         """Create the DQ overlay control table of widgets and store the widgets in a list of NUMDQS dicts
         (see below). Returns the containing widget and the list of dicts."""
         dqw = QtWidgets.QWidget()
+        dqw.setMaximumWidth(250)
         dqtable = QtWidgets.QGridLayout()
         dqw.setLayout(dqtable)
 
@@ -807,8 +808,8 @@ class Canvas(QtWidgets.QWidget):
             if sources != self.dqSourceCache[i]:
                 self.dqSourceCache[i] = sources
                 sourcecombo.clear()
-                sourcecombo.addItem("MaxAll", userData='maxall')
-                sourcecombo.addItem("SumAll", userData='sumall')
+                sourcecombo.addItem("max", userData='maxall')
+                sourcecombo.addItem("sum", userData='sumall')
                 if self.previmg is not None:
                     for chanidx, brief in enumerate(sources):
                         sourcecombo.addItem(f"{chanidx}) {brief}", userData=chanidx)
