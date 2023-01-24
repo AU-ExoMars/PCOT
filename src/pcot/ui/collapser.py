@@ -17,10 +17,9 @@
         # finish with this, to create a big stretcher at the bottom
 
         coll.end()
-
-
-
 """
+
+
 from PySide2 import QtWidgets, QtCore
 
 
@@ -34,6 +33,7 @@ class CollapserSection(QtWidgets.QWidget):
 
         self.animationDuration = animationDuration
         self.toggleAnimation = QtCore.QParallelAnimationGroup()
+
         self.contentArea = QtWidgets.QScrollArea()
         self.headerLine = QtWidgets.QFrame()
         self.toggleButton = QtWidgets.QToolButton()
@@ -100,6 +100,7 @@ class CollapserSection(QtWidgets.QWidget):
 class Collapser(QtWidgets.QScrollArea):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.secs=[]
         self.w = QtWidgets.QWidget()
         self.setWidget(self.w)
         self.setWidgetResizable(True)
@@ -110,11 +111,22 @@ class Collapser(QtWidgets.QScrollArea):
         sec = CollapserSection(parent=self, title=title)
         sec.setObjectName("foo")
         self.layout.addWidget(sec)
+        self.secs.append(sec)
         sec.setContentLayout(layout)
+
+    def clear(self):
+        # runs through the groups in reverse order (3,2,1..) to delete
+        # each item by setting its parent to None. Except that doesn't work
+        # on spacers, we need to do that a different way.
+        for i in reversed(range(self.layout.count())):
+            xx = self.layout.itemAt(i)
+            if xx.spacerItem():
+                self.layout.removeItem(xx)
+            else:
+                xx.widget().setParent(None)
 
     def end(self):
         self.layout.addStretch(10)
-
 
 
 class TestWindow(QtWidgets.QMainWindow):

@@ -116,7 +116,7 @@
          </item>
         </layout>
        </widget>
-       <widget class="QScrollArea" name="paletteArea">
+       <widget class="Collapser" name="paletteArea">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
           <horstretch>0</horstretch>
@@ -141,16 +141,6 @@
         <property name="widgetResizable">
          <bool>true</bool>
         </property>
-        <widget class="QWidget" name="paletteContents">
-         <property name="geometry">
-          <rect>
-           <x>0</x>
-           <y>0</y>
-           <width>118</width>
-           <height>499</height>
-          </rect>
-         </property>
-        </widget>
        </widget>
       </widget>
       <widget class="QWidget" name="horizontalWidget" native="true">
@@ -422,6 +412,12 @@
    <class>TextEditWithHelp</class>
    <extends>QTextEdit</extends>
    <header>pcot.ui.textedit</header>
+  </customwidget>
+  <customwidget>
+   <class>Collapser</class>
+   <extends>QScrollArea</extends>
+   <header>pcot.ui.collapser</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>

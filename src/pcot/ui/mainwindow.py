@@ -145,7 +145,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.rebuildRecents()
 
         # set up the scrolling palette and make the buttons therein
-        self.palette = palette.Palette(doc, self.paletteArea, self.paletteContents, self.view)
+        self.palette = palette.Palette(doc, self.paletteArea, self.view)
 
         # and remove some things which don't apply to macro windows
         if macro is not None:
