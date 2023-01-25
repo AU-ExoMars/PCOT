@@ -20,6 +20,7 @@ from pcot import imageexport
 from pcot.datum import Datum
 from pcot.ui import canvasdq
 from pcot.ui.canvasdq import CanvasDQSpec
+from pcot.ui.collapser import Collapser
 from pcot.ui.spectrumwidget import SpectrumWidget
 import pcot.dq
 from pcot.ui.texttogglebutton import TextToggleButton
@@ -574,88 +575,20 @@ class Canvas(QtWidgets.QWidget):
         self.canvaspersist = PersistBlock()
 
         # Sidebar widgets.
-        # Some of these are hideable and so go into a subwidget.
 
-        self.sidebarwidget = QtWidgets.QWidget()
-        sidebar = QtWidgets.QGridLayout()
-        self.sidebarwidget.setLayout(sidebar)
-        self.sidebarwidget.setSizePolicy(QtWidgets.QSizePolicy.Maximum,
-                                         QtWidgets.QSizePolicy.MinimumExpanding)
+        self.collapser = Collapser()
+        self.collapser.setSizePolicy(QtWidgets.QSizePolicy.Maximum,
+                                     QtWidgets.QSizePolicy.MinimumExpanding)
 
-        outerlayout.addWidget(self.sidebarwidget)
+        outerlayout.addWidget(self.collapser)
         outerlayout.setAlignment(Qt.AlignTop)
 
-        # These widgets are "hideable" in that we don't show them when we don't need to, e.g. for a single-channel
-        # or RGB image.
-
-        self.hideablebuttons = QtWidgets.QWidget()
-        hideable = QtWidgets.QGridLayout()
-        self.hideablebuttons.setLayout(hideable)
-        sidebar.addWidget(self.hideablebuttons, 0, 0, 1, 2)  # hideable stuff spans 2 columns
-        # these are the actual widgets specifying which channel in the cube is viewed.
-        # We need to deal with these carefully.
-        hideable.addWidget(makesidebarLabel("R"), 0, 0)
-        self.redChanCombo = QtWidgets.QComboBox()
-        self.redChanCombo.currentIndexChanged.connect(self.redIndexChanged)
-        hideable.addWidget(self.redChanCombo, 0, 1)
-
-        hideable.addWidget(makesidebarLabel("G"), 1, 0)
-        self.greenChanCombo = QtWidgets.QComboBox()
-        self.greenChanCombo.currentIndexChanged.connect(self.greenIndexChanged)
-        hideable.addWidget(self.greenChanCombo, 1, 1)
-
-        hideable.addWidget(makesidebarLabel("B"), 2, 0)
-        self.blueChanCombo = QtWidgets.QComboBox()
-        self.blueChanCombo.currentIndexChanged.connect(self.blueIndexChanged)
-        hideable.addWidget(self.blueChanCombo, 2, 1)
-
-        self.resetMapButton = QtWidgets.QPushButton("Guess RGB")
-        hideable.addWidget(self.resetMapButton, 3, 0, 1, 2)
-        self.resetMapButton.clicked.connect(self.resetMapButtonClicked)
-
-        # self.roiToggle = TextToggleButton("ROIs", "ROIs")
-        self.roiToggle = QCheckBox("ROIs")
-        sidebar.addWidget(self.roiToggle, 1, 0)
-        self.roiToggle.toggled.connect(self.roiToggleChanged)
-
-        # self.spectrumToggle = TextToggleButton("Spectrum", "Spectrum")
-        self.spectrumToggle = QCheckBox("spectrum")
-        sidebar.addWidget(self.spectrumToggle, 1, 1)
-        self.spectrumToggle.toggled.connect(self.spectrumToggleChanged)
-
-        self.saveButton = QtWidgets.QPushButton("Export image")
-        sidebar.addWidget(self.saveButton, 2, 0, 1, 2)
-        self.saveButton.clicked.connect(self.exportButtonClicked)
-
-        self.coordsText = QtWidgets.QLabel('')
-        sidebar.addWidget(self.coordsText, 3, 0, 1, 2)
-
-        self.roiText = QtWidgets.QLabel('')
-        sidebar.addWidget(self.roiText, 4, 0, 1, 2)
-
-        self.dimensions = QtWidgets.QLabel('')
-        sidebar.addWidget(self.dimensions, 5, 0, 1, 2)
-
-        self.dqtable, self.dqwidgets = self.createDQWidgets()
-        sidebar.addWidget(self.dqtable, 6, 0, 1, 2)
-
-        l = QtWidgets.QLabel("trans.")
-        sidebar.addWidget(l, 7, 0, 1, 1)
-        l = QtWidgets.QLabel("contrast")
-        sidebar.addWidget(l, 7, 1, 1, 1)
-
-        self.transSlider = QtWidgets.QSlider(Qt.Orientation.Horizontal)
-        sidebar.addWidget(self.transSlider, 8, 0, 1, 1)
-        self.transSlider.sliderReleased.connect(self.transChanged)
-        self.contrastSlider = QtWidgets.QSlider(Qt.Orientation.Horizontal)
-        sidebar.addWidget(self.contrastSlider, 8, 1, 1, 1)
-        self.contrastSlider.sliderReleased.connect(self.contrastChanged)
-
-        # widgets done.
-
-        sidebar.setContentsMargins(0, 0, 0, 0)
+        # create the widgets that go inside the collapser
+        self.createWidgets()
+        self.collapser.end()
 
         splitter = QtWidgets.QSplitter()
+        splitter.setHandleWidth(10)
         outerlayout.addWidget(splitter)
 
         innercanvasContainer = QtWidgets.QWidget()
@@ -703,13 +636,87 @@ class Canvas(QtWidgets.QWidget):
 
         pcot.ui.decorateSplitter(splitter, 1)
 
-    def createDQWidgets(self) -> Tuple[QtWidgets.QWidget, List[Dict]]:
-        """Create the DQ overlay control table of widgets and store the widgets in a list of NUMDQS dicts
-        (see below). Returns the containing widget and the list of dicts."""
-        dqw = QtWidgets.QWidget()
-        dqw.setMaximumWidth(250)
-        dqtable = QtWidgets.QGridLayout()
-        dqw.setLayout(dqtable)
+    def createWidgets(self):
+        # These widgets are "hideable" in that we don't show them when we don't need to, e.g. for a single-channel
+        # or RGB image.
+
+        hideable = QtWidgets.QGridLayout()
+        hideable.setContentsMargins(3, 10, 3, 10)  # LTBR
+        # these are the actual widgets specifying which channel in the cube is viewed.
+        # We need to deal with these carefully.
+        hideable.addWidget(makesidebarLabel("R"), 0, 0)
+        self.redChanCombo = QtWidgets.QComboBox()
+        self.redChanCombo.currentIndexChanged.connect(self.redIndexChanged)
+        hideable.addWidget(self.redChanCombo, 0, 1)
+
+        hideable.addWidget(makesidebarLabel("G"), 1, 0)
+        self.greenChanCombo = QtWidgets.QComboBox()
+        self.greenChanCombo.currentIndexChanged.connect(self.greenIndexChanged)
+        hideable.addWidget(self.greenChanCombo, 1, 1)
+
+        hideable.addWidget(makesidebarLabel("B"), 2, 0)
+        self.blueChanCombo = QtWidgets.QComboBox()
+        self.blueChanCombo.currentIndexChanged.connect(self.blueIndexChanged)
+        hideable.addWidget(self.blueChanCombo, 2, 1)
+
+        self.resetMapButton = QtWidgets.QPushButton("Guess RGB")
+        hideable.addWidget(self.resetMapButton, 3, 0, 1, 2)
+        self.resetMapButton.clicked.connect(self.resetMapButtonClicked)
+
+        self.collapser.addSection("hideable", hideable, isAlwaysOpen=True)
+
+        # next section
+
+        layout = QtWidgets.QGridLayout()
+        layout.setContentsMargins(2, 10, 2, 10)
+        # self.roiToggle = TextToggleButton("ROIs", "ROIs")
+        self.roiToggle = QCheckBox("ROIs")
+        layout.addWidget(self.roiToggle, 1, 0)
+        self.roiToggle.toggled.connect(self.roiToggleChanged)
+
+        # self.spectrumToggle = TextToggleButton("Spectrum", "Spectrum")
+        self.spectrumToggle = QCheckBox("spectrum")
+        layout.addWidget(self.spectrumToggle, 1, 1)
+        self.spectrumToggle.toggled.connect(self.spectrumToggleChanged)
+
+        self.saveButton = QtWidgets.QPushButton("Export image")
+        layout.addWidget(self.saveButton, 2, 0, 1, 2)
+        self.saveButton.clicked.connect(self.exportButtonClicked)
+
+        self.coordsText = QtWidgets.QLabel('')
+        layout.addWidget(self.coordsText, 3, 0, 1, 2)
+
+        self.roiText = QtWidgets.QLabel('')
+        layout.addWidget(self.roiText, 4, 0, 1, 2)
+
+        self.dimensions = QtWidgets.QLabel('')
+        layout.addWidget(self.dimensions, 5, 0, 1, 2)
+
+        self.collapser.addSection("data", layout, isOpen=True)
+
+        self.dqwidgets = self.createDQWidgets(self.collapser)
+
+        layout = QtWidgets.QGridLayout()
+        layout.setContentsMargins(2,10,2,10)
+
+        ll = QtWidgets.QLabel("trans.")
+        layout.addWidget(ll, 0, 0, 1, 1)
+        ll = QtWidgets.QLabel("contrast")
+        layout.addWidget(ll, 0, 1, 1, 1)
+
+        self.transSlider = QtWidgets.QSlider(Qt.Orientation.Horizontal)
+        layout.addWidget(self.transSlider, 8, 0, 1, 1)
+        self.transSlider.sliderReleased.connect(self.transChanged)
+        self.contrastSlider = QtWidgets.QSlider(Qt.Orientation.Horizontal)
+        layout.addWidget(self.contrastSlider, 8, 1, 1, 1)
+        self.contrastSlider.sliderReleased.connect(self.contrastChanged)
+
+        self.collapser.addSection("mods", layout)
+
+    def createDQWidgets(self, collapser) -> List[Dict]:
+        """Create the DQ overlay controls and store the widgets in a list of NUMDQS dicts.
+        Takes the collapser to add the controls to; each one gets a section.
+        (see below). Returns the list of dicts."""
 
         # this will end up as a list of dictionaries, one for each overlay. Each dict has:
         #  source: the source channel combo box (which must include MaxAll and SumAll as well as channels)
@@ -722,35 +729,42 @@ class Canvas(QtWidgets.QWidget):
             row = dict()  # create and add the (empty as yet) dict
             dqwidgets.append(row)
 
+            layout = QtWidgets.QGridLayout()
+            layout.setContentsMargins(2,10,2,10)
+            layout.setHorizontalSpacing(0)
+            layout.setVerticalSpacing(0)
+
             sourcecb = QtWidgets.QComboBox()  # leave empty for now
             sourcecb.addItem("this is a test value")  # BEWARE LONG STRINGS IN HERE!
             sourcecb.setMinimumContentsLength(5)
-            dqtable.addWidget(sourcecb, i, 0)
+            layout.addWidget(QtWidgets.QLabel("SRC"), 0, 0)
+            layout.addWidget(sourcecb, 0, 1)
             row['source'] = sourcecb
 
             datacb = QtWidgets.QComboBox()
             for name, val in CanvasDQSpec.getDataItems():
                 datacb.addItem(name, userData=val)
-            dqtable.addWidget(datacb, i, 1)
+            layout.addWidget(QtWidgets.QLabel("DATA"), 1, 0)
+            layout.addWidget(datacb, 1, 1)
             row['data'] = datacb
 
             colcb = QtWidgets.QComboBox()
             for x in canvasdq.colours:
                 colcb.addItem(x)
-            dqtable.addWidget(colcb, i, 2)
+            layout.addWidget(QtWidgets.QLabel("COL"), 2, 0)
+            layout.addWidget(colcb, 2, 1)
             row['col'] = colcb
 
-            for widget in row.values():  # adjust each combobox
-                widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
+#            for widget in row.values():  # adjust each combobox
+#                widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
 
             colcb.currentIndexChanged.connect(self.dqWidgetChanged)
             datacb.currentIndexChanged.connect(self.dqWidgetChanged)
             sourcecb.currentIndexChanged.connect(self.dqWidgetChanged)
 
-        dqw.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
-        dqtable.setVerticalSpacing(0)
-        dqtable.setHorizontalSpacing(0)
-        return dqw, dqwidgets
+            collapser.addSection(f"DQ layer {i}", layout)
+
+        return dqwidgets
 
     def dqWidgetChanged(self, _):
         if not self.recursing:  # avoid programmatic changes messing things up

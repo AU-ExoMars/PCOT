@@ -144,7 +144,8 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.setWindowTitle(ui.app().applicationName() + ' ' + ui.app().applicationVersion())
         self.rebuildRecents()
 
-        # set up the scrolling palette and make the buttons therein
+        # set up the scrolling palette and make the buttons therein. The paletteArea
+        # is a Collapser created in Designer.
         self.palette = palette.Palette(doc, self.paletteArea, self.view)
 
         # and remove some things which don't apply to macro windows

@@ -1,4 +1,4 @@
-from typing import Union, Optional
+"""The CanvasDQSpec class, which handles how the canvas should render data quality data"""
 
 # Source Types
 from pcot import dq
@@ -51,7 +51,6 @@ class CanvasDQSpec:
 
     def __str__(self):
         return f"DQ(STYPE={self.stype} CHAN={self.channel} DAT={self.data} COL={self.col})"
-
 
 
 coloursBase = {

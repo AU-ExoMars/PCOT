@@ -28,47 +28,59 @@ class CollapserSection(QtWidgets.QWidget):
     with a few modifications. We use setContentLayout to add layouts.
 
     Don't use this directly - use Collapser. """
-    def __init__(self, parent=None, animationDuration=100, title="xxx"):
+    def __init__(self, title, parent=None, animationDuration=100, isOpen=False, isAlwaysOpen=False):
         super(CollapserSection, self).__init__(parent=parent)
 
-        self.animationDuration = animationDuration
-        self.toggleAnimation = QtCore.QParallelAnimationGroup()
+        if isAlwaysOpen:
+            isOpen = True
+        self.isAlwaysOpen = isAlwaysOpen
 
         self.contentArea = QtWidgets.QScrollArea()
-        self.headerLine = QtWidgets.QFrame()
-        self.toggleButton = QtWidgets.QToolButton()
-        toggleButton = self.toggleButton
-        toggleButton.setStyleSheet("QToolButton { border: none; }")
-        toggleButton.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
-        toggleButton.setArrowType(QtCore.Qt.RightArrow)
-        toggleButton.setText(str(title))
-        toggleButton.setCheckable(True)
-        toggleButton.setChecked(False)
 
-        headerLine = self.headerLine
-        headerLine.setFrameShape(QtWidgets.QFrame.HLine)
-        headerLine.setFrameShadow(QtWidgets.QFrame.Sunken)
-        headerLine.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Maximum)
+        if not isAlwaysOpen:
+            self.animationDuration = animationDuration
+            self.toggleAnimation = QtCore.QParallelAnimationGroup()
+            self.headerLine = QtWidgets.QFrame()
+            self.toggleButton = QtWidgets.QToolButton()
+            toggleButton = self.toggleButton
+            toggleButton.setStyleSheet("QToolButton { border: none; }")
+            toggleButton.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
+            toggleButton.setArrowType(QtCore.Qt.RightArrow)
+            toggleButton.setText(str(title))
+            toggleButton.setCheckable(True)
+            toggleButton.setChecked(isOpen)
+
+            headerLine = self.headerLine
+            headerLine.setFrameShape(QtWidgets.QFrame.HLine)
+            headerLine.setFrameShadow(QtWidgets.QFrame.Sunken)
+            headerLine.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Maximum)
 
         self.contentArea.setStyleSheet("QScrollArea { background-color: white; border: none; }")
         self.contentArea.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
-        # start out collapsed
-        self.contentArea.setMaximumHeight(0)
-        self.contentArea.setMinimumHeight(0)
-        # let the entire widget grow and shrink with its content
-        toggleAnimation = self.toggleAnimation
-        toggleAnimation.addAnimation(QtCore.QPropertyAnimation(self, b"minimumHeight"))
-        toggleAnimation.addAnimation(QtCore.QPropertyAnimation(self, b"maximumHeight"))
-        toggleAnimation.addAnimation(QtCore.QPropertyAnimation(self.contentArea, b"maximumHeight"))
+
+        if not isAlwaysOpen:
+            # start out collapsed
+            self.contentArea.setMaximumHeight(0)
+            self.contentArea.setMinimumHeight(0)
+            # let the entire widget grow and shrink with its content
+            toggleAnimation = self.toggleAnimation
+            toggleAnimation.addAnimation(QtCore.QPropertyAnimation(self, b"minimumHeight"))
+            toggleAnimation.addAnimation(QtCore.QPropertyAnimation(self, b"maximumHeight"))
+            toggleAnimation.addAnimation(QtCore.QPropertyAnimation(self.contentArea, b"maximumHeight"))
 
         self.mainLayout = QtWidgets.QGridLayout()
         mainLayout = self.mainLayout
         # don't waste space
         mainLayout.setVerticalSpacing(0)
         mainLayout.setContentsMargins(0, 0, 0, 0)
-        mainLayout.addWidget(self.toggleButton, 0, 0, 1, 1, QtCore.Qt.AlignLeft)
-        mainLayout.addWidget(self.headerLine, 0, 2, 1, 1)
-        mainLayout.addWidget(self.contentArea, 1, 0, 1, 3)
+
+        if isAlwaysOpen:
+            mainLayout.addWidget(self.contentArea, 0, 0, 1, 3)
+        else:
+            mainLayout.addWidget(self.toggleButton, 0, 0, 1, 1, QtCore.Qt.AlignLeft)
+            mainLayout.addWidget(self.headerLine, 0, 2, 1, 1)
+            mainLayout.addWidget(self.contentArea, 1, 0, 1, 3)
+
         self.setLayout(self.mainLayout)
 
         def start_animation(checked):
@@ -78,38 +90,46 @@ class CollapserSection(QtWidgets.QWidget):
             self.toggleAnimation.setDirection(direction)
             self.toggleAnimation.start()
 
-        self.toggleButton.clicked.connect(start_animation)
+        if not isAlwaysOpen:
+            self.toggleButton.clicked.connect(start_animation)
+            if isOpen:
+                start_animation(True)
 
     def setContentLayout(self, contentLayout):
         # Not sure if this is equivalent to self.contentArea.destroy()
         self.contentArea.destroy()
         self.contentArea.setLayout(contentLayout)
-        collapsedHeight = self.sizeHint().height() - self.contentArea.maximumHeight()
-        contentHeight = contentLayout.sizeHint().height()
-        for i in range(self.toggleAnimation.animationCount() - 1):
-            expandAnimation = self.toggleAnimation.animationAt(i)
-            expandAnimation.setDuration(self.animationDuration)
-            expandAnimation.setStartValue(collapsedHeight)
-            expandAnimation.setEndValue(collapsedHeight + contentHeight)
-        contentAnimation = self.toggleAnimation.animationAt(self.toggleAnimation.animationCount() - 1)
-        contentAnimation.setDuration(self.animationDuration)
-        contentAnimation.setStartValue(0)
-        contentAnimation.setEndValue(contentHeight)
+        if not self.isAlwaysOpen:
+            collapsedHeight = self.sizeHint().height() - self.contentArea.maximumHeight()
+            contentHeight = contentLayout.sizeHint().height()
+            for i in range(self.toggleAnimation.animationCount() - 1):
+                expandAnimation = self.toggleAnimation.animationAt(i)
+                expandAnimation.setDuration(self.animationDuration)
+                expandAnimation.setStartValue(collapsedHeight)
+                expandAnimation.setEndValue(collapsedHeight + contentHeight)
+            contentAnimation = self.toggleAnimation.animationAt(self.toggleAnimation.animationCount() - 1)
+            contentAnimation.setDuration(self.animationDuration)
+            contentAnimation.setStartValue(0)
+            contentAnimation.setEndValue(contentHeight)
 
 
 class Collapser(QtWidgets.QScrollArea):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, animationDuration=200, lrmargins=2, topmargin=2, bottommargin=2):
         super().__init__(parent)
         self.secs=[]
         self.w = QtWidgets.QWidget()
         self.setWidget(self.w)
         self.setWidgetResizable(True)
         self.layout = QtWidgets.QVBoxLayout()
+        self.animationDuration=animationDuration
         self.w.setLayout(self.layout)
+        self.layout.setContentsMargins(lrmargins, topmargin, lrmargins, bottommargin)
 
-    def addSection(self, title, layout):
-        sec = CollapserSection(parent=self, title=title)
-        sec.setObjectName("foo")
+    def addSection(self, title, layout, isOpen=False, isAlwaysOpen=False):
+        sec = CollapserSection(title, parent=self,
+                               animationDuration=self.animationDuration,
+                               isOpen=isOpen,
+                               isAlwaysOpen=isAlwaysOpen)
         self.layout.addWidget(sec)
         self.secs.append(sec)
         sec.setContentLayout(layout)
