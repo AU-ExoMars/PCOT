@@ -25,6 +25,7 @@ class PaletteButton(QtWidgets.QPushButton):
         self.view = view
         self.xformtype = xformtype
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         self.customContextMenuRequested.connect(self.contextMenu)
 
     def contextMenu(self, e):

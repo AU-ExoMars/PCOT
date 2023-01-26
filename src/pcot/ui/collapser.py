@@ -19,9 +19,13 @@
         coll.end()
 """
 
-
 from PySide2 import QtWidgets, QtCore, QtGui
 from PySide2.QtCore import Qt
+
+
+class ContentArea(QtWidgets.QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
 
 
 class CollapserSection(QtWidgets.QWidget):
@@ -29,6 +33,7 @@ class CollapserSection(QtWidgets.QWidget):
     with a few modifications. We use setContentLayout to add layouts.
 
     Don't use this directly - use Collapser. """
+
     def __init__(self, title, parent=None, animationDuration=100, isOpen=False, isAlwaysOpen=False):
         super(CollapserSection, self).__init__(parent=parent)
 
@@ -36,7 +41,7 @@ class CollapserSection(QtWidgets.QWidget):
             isOpen = True
         self.isAlwaysOpen = isAlwaysOpen
 
-        self.contentArea = QtWidgets.QScrollArea()
+        self.contentArea = ContentArea()
 
         if not isAlwaysOpen:
             self.animationDuration = animationDuration
@@ -102,10 +107,10 @@ class CollapserSection(QtWidgets.QWidget):
     def setContentLayout(self, contentLayout):
         self.contentArea.destroy()
         self.contentArea.setLayout(contentLayout)
-        self.contentArea.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding,
+        self.contentArea.setSizePolicy(QtWidgets.QSizePolicy.Maximum,
                                        QtWidgets.QSizePolicy.MinimumExpanding)
-#        self.contentArea.adjustSize()
-#        self.contentArea.updateGeometry()
+        #        self.contentArea.adjustSize()
+        #        self.contentArea.updateGeometry()
 
         contentHeight = contentLayout.sizeHint().height()
 
@@ -127,7 +132,7 @@ class Collapser(QtWidgets.QScrollArea):
         super().__init__(parent)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-        self.secs=[]
+        self.secs = []
         self.w = QtWidgets.QWidget()
         self.setWidget(self.w)
         self.setWidgetResizable(True)
@@ -135,14 +140,6 @@ class Collapser(QtWidgets.QScrollArea):
         self.animationDuration = animationDuration
         self.w.setLayout(self.layout)
         self.layout.setContentsMargins(lrmargins, topmargin, lrmargins, bottommargin)
-
-    def resizeEvent(self, e:QtGui.QResizeEvent) -> None:
-        """Code to effectively make this a vertical-only scroll area, nabbed from
-        https://forum.qt.io/topic/13374/solved-qscrollarea-vertical-scroll-only/11
-        """
-        w = self.widget().minimumSizeHint().width() + self.verticalScrollBar().width()
-        self.setMinimumWidth(w)
-        super(QtWidgets.QScrollArea, self).resizeEvent(e)
 
     def addSection(self, title, layout, isOpen=False, isAlwaysOpen=False):
         sec = CollapserSection(title, parent=self,
@@ -166,6 +163,8 @@ class Collapser(QtWidgets.QScrollArea):
 
     def end(self):
         self.layout.addStretch(10)
+        self.adjustSize()
+        self.updateGeometry()
 
 
 class TestWindow(QtWidgets.QMainWindow):
@@ -187,7 +186,7 @@ class TestWindow(QtWidgets.QMainWindow):
         coll.addSection("Section 1", ll)
 
         ll = QtWidgets.QGridLayout()
-        for x in range(0,20):
+        for x in range(0, 20):
             ll.addWidget(QtWidgets.QLabel("p1: label"), x, 0)
             ll.addWidget(QtWidgets.QPushButton(f"p1: button {x}"), x, 1)
         coll.addSection("Section 2", ll)
