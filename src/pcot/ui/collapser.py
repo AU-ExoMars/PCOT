@@ -20,7 +20,8 @@
 """
 
 
-from PySide2 import QtWidgets, QtCore
+from PySide2 import QtWidgets, QtCore, QtGui
+from PySide2.QtCore import Qt
 
 
 class CollapserSection(QtWidgets.QWidget):
@@ -124,6 +125,8 @@ class CollapserSection(QtWidgets.QWidget):
 class Collapser(QtWidgets.QScrollArea):
     def __init__(self, parent=None, animationDuration=200, lrmargins=2, topmargin=2, bottommargin=2):
         super().__init__(parent)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
         self.secs=[]
         self.w = QtWidgets.QWidget()
         self.setWidget(self.w)
@@ -132,6 +135,14 @@ class Collapser(QtWidgets.QScrollArea):
         self.animationDuration = animationDuration
         self.w.setLayout(self.layout)
         self.layout.setContentsMargins(lrmargins, topmargin, lrmargins, bottommargin)
+
+    def resizeEvent(self, e:QtGui.QResizeEvent) -> None:
+        """Code to effectively make this a vertical-only scroll area, nabbed from
+        https://forum.qt.io/topic/13374/solved-qscrollarea-vertical-scroll-only/11
+        """
+        w = self.widget().minimumSizeHint().width() + self.verticalScrollBar().width()
+        self.setMinimumWidth(w)
+        super(QtWidgets.QScrollArea, self).resizeEvent(e)
 
     def addSection(self, title, layout, isOpen=False, isAlwaysOpen=False):
         sec = CollapserSection(title, parent=self,
