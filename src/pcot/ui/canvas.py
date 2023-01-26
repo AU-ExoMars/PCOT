@@ -641,7 +641,7 @@ class Canvas(QtWidgets.QWidget):
         # or RGB image.
 
         hideable = QtWidgets.QGridLayout()
-        hideable.setContentsMargins(3, 10, 3, 10)  # LTBR
+        hideable.setContentsMargins(3, 10, 3, 10)  # LTRB
         # these are the actual widgets specifying which channel in the cube is viewed.
         # We need to deal with these carefully.
         hideable.addWidget(makesidebarLabel("R"), 0, 0)
@@ -668,7 +668,7 @@ class Canvas(QtWidgets.QWidget):
         # next section
 
         layout = QtWidgets.QGridLayout()
-        layout.setContentsMargins(2, 10, 2, 10)
+        layout.setContentsMargins(3, 10, 3, 10)  # LTRB
         # self.roiToggle = TextToggleButton("ROIs", "ROIs")
         self.roiToggle = QCheckBox("ROIs")
         layout.addWidget(self.roiToggle, 1, 0)
@@ -694,10 +694,14 @@ class Canvas(QtWidgets.QWidget):
 
         self.collapser.addSection("data", layout, isOpen=True)
 
+        # next sections(s)
+
         self.dqwidgets = self.createDQWidgets(self.collapser)
 
+        # next section
+
         layout = QtWidgets.QGridLayout()
-        layout.setContentsMargins(2,10,2,10)
+        layout.setContentsMargins(3, 10, 3, 10)  # LTRB
 
         ll = QtWidgets.QLabel("trans.")
         layout.addWidget(ll, 0, 0, 1, 1)
@@ -730,7 +734,7 @@ class Canvas(QtWidgets.QWidget):
             dqwidgets.append(row)
 
             layout = QtWidgets.QGridLayout()
-            layout.setContentsMargins(2,10,2,10)
+            layout.setContentsMargins(3, 10, 3, 10)  # LTRB
             layout.setHorizontalSpacing(0)
             layout.setVerticalSpacing(0)
 
@@ -755,8 +759,8 @@ class Canvas(QtWidgets.QWidget):
             layout.addWidget(colcb, 2, 1)
             row['col'] = colcb
 
-#            for widget in row.values():  # adjust each combobox
-#                widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
+            #            for widget in row.values():  # adjust each combobox
+            #                widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
 
             colcb.currentIndexChanged.connect(self.dqWidgetChanged)
             datacb.currentIndexChanged.connect(self.dqWidgetChanged)
@@ -1095,8 +1099,8 @@ class Canvas(QtWidgets.QWidget):
             txt = ""
         elif self.canvaspersist.showROIs:
             # if we're displaying all ROIs, show that pixel count (and ROI count))
-            txt = "{} pixels\nin {} ROIs".format(sum([x.pixels() for x in self.previmg.rois]),
-                                                 len(self.previmg.rois))
+            txt = "{} pixels/{} ROIs".format(sum([x.pixels() for x in self.previmg.rois]),
+                                             len(self.previmg.rois))
         elif self.ROInode is not None:
             # if there's an ROI being set from this node (and we're not showing all ROIs), show its details
             # Also have to check the ROI itself is OK (the method will do this)

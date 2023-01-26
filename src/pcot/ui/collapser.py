@@ -55,8 +55,11 @@ class CollapserSection(QtWidgets.QWidget):
             headerLine.setFrameShadow(QtWidgets.QFrame.Sunken)
             headerLine.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Maximum)
 
-        self.contentArea.setStyleSheet("QScrollArea { background-color: white; border: none; }")
-        self.contentArea.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        self.contentArea.setStyleSheet("""
+        QScrollArea { background-color: white; border: none; }
+        """)
+        self.contentArea.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
+                                       QtWidgets.QSizePolicy.Minimum)
 
         if not isAlwaysOpen:
             # start out collapsed
@@ -96,12 +99,17 @@ class CollapserSection(QtWidgets.QWidget):
                 start_animation(True)
 
     def setContentLayout(self, contentLayout):
-        # Not sure if this is equivalent to self.contentArea.destroy()
         self.contentArea.destroy()
         self.contentArea.setLayout(contentLayout)
+        self.contentArea.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding,
+                                       QtWidgets.QSizePolicy.MinimumExpanding)
+#        self.contentArea.adjustSize()
+#        self.contentArea.updateGeometry()
+
+        contentHeight = contentLayout.sizeHint().height()
+
         if not self.isAlwaysOpen:
             collapsedHeight = self.sizeHint().height() - self.contentArea.maximumHeight()
-            contentHeight = contentLayout.sizeHint().height()
             for i in range(self.toggleAnimation.animationCount() - 1):
                 expandAnimation = self.toggleAnimation.animationAt(i)
                 expandAnimation.setDuration(self.animationDuration)
@@ -121,7 +129,7 @@ class Collapser(QtWidgets.QScrollArea):
         self.setWidget(self.w)
         self.setWidgetResizable(True)
         self.layout = QtWidgets.QVBoxLayout()
-        self.animationDuration=animationDuration
+        self.animationDuration = animationDuration
         self.w.setLayout(self.layout)
         self.layout.setContentsMargins(lrmargins, topmargin, lrmargins, bottommargin)
 
