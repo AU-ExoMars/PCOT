@@ -20,7 +20,7 @@ from pcot import imageexport
 from pcot.datum import Datum
 from pcot.ui import canvasdq
 from pcot.ui.canvasdq import CanvasDQSpec
-from pcot.ui.collapser import Collapser
+from pcot.ui.collapser import Collapser, CollapserSection
 from pcot.ui.spectrumwidget import SpectrumWidget
 import pcot.dq
 from pcot.ui.texttogglebutton import TextToggleButton
@@ -39,25 +39,23 @@ class PersistBlock:
     """This is the block owned by a node which has a canvas, to store data which is persisted
     for the canvas only."""
     showROIs: bool
-    dqTransparency: float
-    dqContrast: float
 
     def __init__(self, d=None):
         """sets default values, or perform the inverse of serialise(), turning the serialisable form into one
         of these objects"""
         if d is None:
             self.showROIs = True
-            self.dqTransparency = 0.5
-            self.dqContrast = 0.5
-            self.dqs = [CanvasDQSpec() for i in range(NUMDQS)]  # 3 of these set to defaults
+            self.dqs = [CanvasDQSpec() for _ in range(NUMDQS)]  # 3 of these set to defaults
         else:
-            self.showROIs, self.dqTransparency, self.dqContrast, dqs = d
+            # two dummy entries that are now in CanvasDQSpec, kept here for compatibility
+            self.showROIs, _, _, dqs = d
             self.dqs = [CanvasDQSpec(d) for d in dqs]
 
     def serialise(self):
         """return a version of this type which can be serialised into JSON"""
         dqs = [d.serialise() for d in self.dqs]
-        return [self.showROIs, self.dqTransparency, self.dqContrast, dqs]
+        # The zeroes are two dummy entries that are now in CanvasDQSpec, kept here for compatibility
+        return [self.showROIs, 0, 0, dqs]
 
 
 # the actual drawing widget, contained within the Canvas widget
@@ -329,9 +327,13 @@ class InnerCanvas(QtWidgets.QWidget):
         txt = ""
         self.redrawOnTick = False
 
+        if self.canv.isDQHidden:        # are DQs temporarily disabled?
+            return img, txt
+
         for d in self.canv.canvaspersist.dqs:
             if d.isActive():
-                if d.data == canvasdq.DTypeUnc or d.data == canvasdq.DTypeUncThresh:
+                if d.data == canvasdq.DTypeUnc or d.data == canvasdq.DTypeUncGtThresh or \
+                        d.data == canvasdq.DTypeUncLtThresh:
                     # we're viewing uncertainty data, so cut out the relevant area
                     data = self.imgCube.uncertainty[cuty:cuty + cuth, cutx:cutx + cutw]
                     # and process it
@@ -346,8 +348,10 @@ class InnerCanvas(QtWidgets.QWidget):
                         if self.imgCube.channels > 1:
                             data = data[:, :, d.channel]
                     # now we have the uncertainty data, threshold if that's what's wanted.
-                    if d.data == canvasdq.DTypeUncThresh:
-                        data = (data > threshold).astype(np.float32)
+                    if d.data == canvasdq.DTypeUncGtThresh:
+                        data = (data > d.thresh).astype(np.float32)
+                    elif d.data == canvasdq.DTypeUncLtThresh:
+                        data = (data < d.thresh).astype(np.float32)
                     else:
                         # otherwise normalize
                         mn = np.min(data)
@@ -383,11 +387,16 @@ class InnerCanvas(QtWidgets.QWidget):
                     b = data if b > 0.5 else zeroes
                     data = np.dstack((r, g, b))
                     # combine with image, avoiding copies.
-                    np.power(data, 2 * self.canv.canvaspersist.dqContrast,
+                    np.power(data, 2 * d.thresh,
                              out=data)  # data should be normalised, so this acts as a gamma
-                    np.multiply(data, 1.0 - self.canv.canvaspersist.dqTransparency, out=data)
-                    img2 = np.multiply(img, self.canv.canvaspersist.dqTransparency)  # TODO can we avoid a copy here?
-                    np.add(data, img2, out=data)
+                    # add to the image
+                    np.multiply(data, 1.0 - d.trans, out=data)
+                    # additive or "normal" blending
+                    if d.additive:
+                        np.add(data, img, out=data)
+                    else:
+                        img2 = np.multiply(img, d.trans)  # TODO can we avoid a copy here?
+                        np.add(data, img2, out=data)
                     np.clip(data, 0, 1, out=data)
                     img = data
         return img, txt
@@ -554,6 +563,12 @@ class Canvas(QtWidgets.QWidget):
     # the DQ display data
     dqs: List[CanvasDQSpec]
 
+    # is the DQ data hidden?
+    isDQHidden: bool
+
+    # List of the DQ section widgets
+    dqSections: List[CollapserSection]
+
     ## constructor
     def __init__(self, parent):
         super().__init__(parent)
@@ -564,6 +579,7 @@ class Canvas(QtWidgets.QWidget):
         self.graph = None
         self.nodeToUIChange = None
         self.ROInode = None
+        self.isDQHidden = False # does not persist!
         self.recursing = False  # An ugly hack to avoid recursion in ROI nodes
         self.dqSourceCache = [None for i in range(NUMDQS)]  # source name cache for each channel
         # outer layout is a horizontal box - the sidebar and canvas+scrollbars are in this
@@ -584,6 +600,7 @@ class Canvas(QtWidgets.QWidget):
         outerlayout.setAlignment(Qt.AlignTop)
 
         # create the widgets that go inside the collapser
+        self.dqSections = []
         self.createWidgets()
         self.collapser.end()
 
@@ -637,8 +654,13 @@ class Canvas(QtWidgets.QWidget):
         pcot.ui.decorateSplitter(splitter, 1)
 
     def createWidgets(self):
-        # These widgets are "hideable" in that we don't show them when we don't need to, e.g. for a single-channel
-        # or RGB image.
+        # These widgets are "hideable" in that we might not show them when we don't need to, e.g. for a single-channel
+        # or RGB image. This isn't actually used at the moment, but could be. We add them into their own widget
+        # with its own layout, and then that widget is added to a single-widget layout which is what gets set in the
+        # collapser. Necessary because the collapser takes layouts.
+
+        self.hideablebuttons = QtWidgets.QWidget()
+        self.hideablebuttons.setContentsMargins(0, 0, 0, 0)
 
         hideable = QtWidgets.QGridLayout()
         hideable.setContentsMargins(3, 10, 3, 10)  # LTRB
@@ -663,7 +685,12 @@ class Canvas(QtWidgets.QWidget):
         hideable.addWidget(self.resetMapButton, 3, 0, 1, 2)
         self.resetMapButton.clicked.connect(self.resetMapButtonClicked)
 
-        self.collapser.addSection("hideable", hideable, isAlwaysOpen=True)
+        self.hideablebuttons.setLayout(hideable)  # add layout to widget
+        hideableLayout = QtWidgets.QVBoxLayout()  # make a single-widget layout
+        hideableLayout.setContentsMargins(0, 0, 0, 0)
+        hideableLayout.addWidget(self.hideablebuttons)  # add the widget to it
+        # add that layout to the collapser
+        self.collapser.addSection("hideable", hideableLayout, isAlwaysOpen=True)
 
         # next section
 
@@ -692,30 +719,16 @@ class Canvas(QtWidgets.QWidget):
         self.dimensions = QtWidgets.QLabel('')
         layout.addWidget(self.dimensions, 5, 0, 1, 2)
 
+        self.hideDQ = QtWidgets.QCheckBox("hide DQ")
+        layout.addWidget(self.hideDQ, 6, 0, 1, 2)
+        self.hideDQ.toggled.connect(self.hideDQChanged)
+
+
         self.collapser.addSection("data", layout, isOpen=True)
 
         # next sections(s)
 
         self.dqwidgets = self.createDQWidgets(self.collapser)
-
-        # next section
-
-        layout = QtWidgets.QGridLayout()
-        layout.setContentsMargins(3, 10, 3, 10)  # LTRB
-
-        ll = QtWidgets.QLabel("trans.")
-        layout.addWidget(ll, 0, 0, 1, 1)
-        ll = QtWidgets.QLabel("contrast")
-        layout.addWidget(ll, 0, 1, 1, 1)
-
-        self.transSlider = QtWidgets.QSlider(Qt.Orientation.Horizontal)
-        layout.addWidget(self.transSlider, 8, 0, 1, 1)
-        self.transSlider.sliderReleased.connect(self.transChanged)
-        self.contrastSlider = QtWidgets.QSlider(Qt.Orientation.Horizontal)
-        layout.addWidget(self.contrastSlider, 8, 1, 1, 1)
-        self.contrastSlider.sliderReleased.connect(self.contrastChanged)
-
-        self.collapser.addSection("mods", layout)
 
     def createDQWidgets(self, collapser) -> List[Dict]:
         """Create the DQ overlay controls and store the widgets in a list of NUMDQS dicts.
@@ -762,34 +775,52 @@ class Canvas(QtWidgets.QWidget):
             #            for widget in row.values():  # adjust each combobox
             #                widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
 
-            colcb.currentIndexChanged.connect(self.dqWidgetChanged)
-            datacb.currentIndexChanged.connect(self.dqWidgetChanged)
-            sourcecb.currentIndexChanged.connect(self.dqWidgetChanged)
+            # sliders etc
+            ll = QtWidgets.QLabel("transp")
+            layout.addWidget(ll, 3, 0)
+            transSlider = QtWidgets.QSlider(Qt.Orientation.Horizontal)
+            layout.addWidget(transSlider, 3, 1)
+            row['trans'] = transSlider
 
-            collapser.addSection(f"DQ layer {i}", layout)
+            ll = QtWidgets.QLabel("contrast")
+            layout.addWidget(ll, 4, 0)
+            contrastSlider = QtWidgets.QSlider(Qt.Orientation.Horizontal)
+            layout.addWidget(contrastSlider, 4, 1)
+            row['contrast'] = contrastSlider
+
+            ll = QtWidgets.QLabel("thresh")
+            layout.addWidget(ll, 5, 0)
+            threshBox = QtWidgets.QDoubleSpinBox()
+            threshBox.setMaximum(9.99)
+            threshBox.setStepType(QtWidgets.QDoubleSpinBox.AdaptiveDecimalStepType)
+            layout.addWidget(threshBox, 5, 1)
+            row['thresh'] = threshBox
+
+            ll = QtWidgets.QLabel("additive")
+            layout.addWidget(ll, 6, 0)
+            additive = QtWidgets.QCheckBox()
+            layout.addWidget(additive, 6, 1)
+            row['additive'] = additive
+
+            colcb.currentIndexChanged.connect(lambda _: self.dqWidgetChanged())
+            datacb.currentIndexChanged.connect(lambda _: self.dqWidgetChanged())
+            sourcecb.currentIndexChanged.connect(lambda _: self.dqWidgetChanged())
+
+            transSlider.sliderReleased.connect(self.dqWidgetChanged)
+            contrastSlider.sliderReleased.connect(self.dqWidgetChanged)
+            threshBox.valueChanged.connect(lambda _: self.dqWidgetChanged())
+            additive.stateChanged.connect(lambda _: self.dqWidgetChanged())
+
+            self.dqSections.append(collapser.addSection(f"DQ layer {i}", layout))
 
         return dqwidgets
 
-    def dqWidgetChanged(self, _):
+    def dqWidgetChanged(self):
         if not self.recursing:  # avoid programmatic changes messing things up
             self.recursing = True
             self.getDQWidgetState()
             self.recursing = False
             self.redisplay()
-
-    def transChanged(self):
-        v = self.transSlider.value()
-        self.canvaspersist.dqTransparency = float(v) / 99.0
-        self.redisplay()
-
-    def contrastChanged(self):
-        v = self.contrastSlider.value()
-        self.canvaspersist.dqContrast = float(v) / 99.0
-        self.redisplay()
-
-    def setTransAndContrastSliders(self):
-        self.transSlider.setValue(int(self.canvaspersist.dqTransparency * 99))
-        self.contrastSlider.setValue(int(self.canvaspersist.dqContrast * 99))
 
     def ensureDQValid(self):
         """Make sure the DQ data is valid for the image if present; if not reset to None"""
@@ -810,6 +841,8 @@ class Canvas(QtWidgets.QWidget):
 
         self.ensureDQValid()  # first, make sure the data is valid
         for i, d in enumerate(self.canvaspersist.dqs):
+            w = self.dqwidgets[i]  # get the dictionary holding the widgets for this DQ block
+
             # first, make sure the source combo box is correctly populated.
             # We should have a list of brief source names for each channel.
             # If this is empty or changed, we repopulate.
@@ -822,7 +855,7 @@ class Canvas(QtWidgets.QWidget):
                 sources = []
 
             # and compare with the cached list of source names. If not the same, repopulate
-            sourcecombo = self.dqwidgets[i]['source']
+            sourcecombo = w['source']
             if sources != self.dqSourceCache[i]:
                 self.dqSourceCache[i] = sources
                 sourcecombo.clear()
@@ -850,7 +883,7 @@ class Canvas(QtWidgets.QWidget):
                 ui.error(f"invalid channel {d.channel} in DQ source combo box")
 
             # Now the data type
-            datacombo = self.dqwidgets[i]['data']
+            datacombo = w['data']
             dataidx = datacombo.findData(d.data)
             if dataidx >= 0:
                 datacombo.setCurrentIndex(dataidx)
@@ -858,12 +891,19 @@ class Canvas(QtWidgets.QWidget):
                 ui.error(f"Can't find data value {d.data} in data combo for canvas DQ overlay")
 
             # and colour data
-            colcombo = self.dqwidgets[i]['col']
+            colcombo = w['col']
             colidx = colcombo.findText(d.col)
             if colidx >= 0:
                 colcombo.setCurrentIndex(colidx)
             else:
                 ui.error(f"Can't find colour value {d.col} in colour combo for canvas DQ overlay")
+
+            # finally the sliders etc.
+            w['trans'].setValue(int(d.trans * 99))
+            w['contrast'].setValue(int(d.contrast * 99))
+            w['thresh'].setValue(d.thresh)
+            w['additive'].setChecked(d.additive)
+
         self.recursing = old
 
     def getDQWidgetState(self):
@@ -871,8 +911,9 @@ class Canvas(QtWidgets.QWidget):
         from the DQ widgets. It assumes those objects already exist, so we just modify them."""
 
         for i, d in enumerate(self.canvaspersist.dqs):
+            w = self.dqwidgets[i]  # get the dictionary holding the widgets for this DQ block
             # first set the dq source from the source widget data
-            sourcedata = self.dqwidgets[i]['source'].currentData()
+            sourcedata = w['source'].currentData()
             if sourcedata == 'maxall':
                 d.stype = canvasdq.STypeMaxAll
             elif sourcedata == 'sumall':
@@ -882,11 +923,17 @@ class Canvas(QtWidgets.QWidget):
                 d.channel = sourcedata
 
             # then the 'data' field; this goes directly in
-            d.data = self.dqwidgets[i]['data'].currentData()
+            d.data = w['data'].currentData()
 
             # as does the colour field (from 'text' this time)
-            d.col = self.dqwidgets[i]['col'].currentText()
+            d.col = w['col'].currentText()
             print(i, str(d))
+
+            # the sliders etc.
+            d.trans = float(w['trans'].value()) / 99.0
+            d.contrast = float(w['contrast'].value()) / 99.0
+            d.thresh = w['thresh'].value()
+            d.additive = w['additive'].isChecked()
 
         self.ensureDQValid()
 
@@ -897,7 +944,8 @@ class Canvas(QtWidgets.QWidget):
             self.mouseHook.canvasMouseMoveEvent(x, y, event)
 
     ## call this if this is only ever going to display single channel images
-    # or annotated RGB images (obviating the need for source drop-downs)
+    # or annotated RGB images (obviating the need for source drop-downs). Actually
+    # not used at the moment.
     def hideMapping(self):
         self.hideablebuttons.setVisible(False)
 
@@ -907,7 +955,6 @@ class Canvas(QtWidgets.QWidget):
         self.canvaspersist = p.canvaspersist
         self.roiToggle.setEnabled(True)
         self.roiToggle.setChecked(p.canvaspersist.showROIs)
-        # contrast/transparency should be handled in the inner canvas setup
 
     ## if this is a canvas for an ROI node, set that node.
     def setROINode(self, n):
@@ -968,6 +1015,12 @@ class Canvas(QtWidgets.QWidget):
 
     def spectrumToggleChanged(self, v):
         self.spectrumWidget.setHidden(not v)
+
+    def hideDQChanged(self, v):
+        self.isDQHidden = self.hideDQ.isChecked()
+        for x in self.dqSections:
+            x.setVisible(not self.isDQHidden)
+        self.redisplay()
 
     def exportButtonClicked(self, c):
         if self.previmg is None:
@@ -1053,7 +1106,6 @@ class Canvas(QtWidgets.QWidget):
             self.redChanCombo.setCurrentIndex(self.mapping.red)
             self.greenChanCombo.setCurrentIndex(self.mapping.green)
             self.blueChanCombo.setCurrentIndex(self.mapping.blue)
-            self.setTransAndContrastSliders()
             self.blockSignalsOnComboBoxes(False)  # and enable signals again
             self.setScrollBarsFromCanvas()
         # cache the image in case the mapping changes, and also for redisplay itself

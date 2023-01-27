@@ -149,6 +149,7 @@ class Collapser(QtWidgets.QScrollArea):
         self.layout.addWidget(sec)
         self.secs.append(sec)
         sec.setContentLayout(layout)
+        return sec
 
     def clear(self):
         # runs through the groups in reverse order (3,2,1..) to delete
