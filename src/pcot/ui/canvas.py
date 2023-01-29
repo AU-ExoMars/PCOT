@@ -16,7 +16,7 @@ from PySide2.QtWidgets import QCheckBox, QMessageBox
 
 import pcot
 import pcot.ui as ui
-from pcot import imageexport
+from pcot import imageexport, canvasnormalise
 from pcot.datum import Datum
 from pcot.ui import canvasdq
 from pcot.ui.canvasdq import CanvasDQSpec
@@ -60,8 +60,8 @@ class PersistBlock:
 
 # the actual drawing widget, contained within the Canvas widget
 class InnerCanvas(QtWidgets.QWidget):
-    # the numpy image we are rendering (1 or 3 chans)
-    img: Optional[np.ndarray]
+    # the numpy image we are rendering, having been converted to RGB
+    rgb: Optional[np.ndarray]
     # the imagecube we are rendering, from which the above is generated
     imgCube: Optional['ImageCube']
     # the text that appears at bottom of the image
@@ -86,7 +86,7 @@ class InnerCanvas(QtWidgets.QWidget):
 
     def __init__(self, canv, parent=None):
         super().__init__(parent)
-        self.img = None
+        self.rgb = None
         self.imgCube = None
         self.desc = ""
         self.zoomscale = 1
@@ -197,19 +197,20 @@ class InnerCanvas(QtWidgets.QWidget):
     def getGraph(self):
         return self.canv.graph
 
-    ## display an image next time paintEvent happens, and update to cause that.
-    # Allow it to handle None too.
     def display(self, img: 'ImageCube', isPremapped: bool, ):
+        """display an image next time paintEvent happens, and update to cause that.
+        Will also handle None (by doing nothing)"""
         self.imgCube = img
         if img is not None:
             self.desc = img.getDesc(self.getGraph())
+
             if not isPremapped:
                 # convert to RGB
-                img = img.rgb()
-                if img is None:
+                rgb = img.rgb()
+                if rgb is None:
                     ui.error("Unusual - the RGB representation is None")
             else:
-                img = img.img  # already done
+                rgb = img.img  # already done
                 if img is None:
                     ui.error("Unusual - the image has no numpy array")
 
@@ -217,9 +218,9 @@ class InnerCanvas(QtWidgets.QWidget):
             # DISABLED so that image stitching is bearable.
             #            if self.img is None or self.img.shape[:2] != img.shape[:2]:
             #                self.reset()
-            self.img = img
+            self.rgb = rgb
         else:
-            self.img = None
+            self.rgb = None
             self.reset()
         self.update()
 
@@ -248,8 +249,8 @@ class InnerCanvas(QtWidgets.QWidget):
         widgw = self.size().width()  # widget dimensions
         widgh = self.size().height()
         # here self.img is a numpy image
-        if self.img is not None:
-            imgh, imgw = self.img.shape[0], self.img.shape[1]
+        if self.rgb is not None:
+            imgh, imgw = self.rgb.shape[0], self.rgb.shape[1]
 
             # work out the "base scale" so that a zoomscale of 1 fits the entire
             # image            
@@ -267,9 +268,17 @@ class InnerCanvas(QtWidgets.QWidget):
             # get the top-left coordinate and cut the area.            
             cutx = int(self.x)
             cuty = int(self.y)
-            img = self.img[cuty:cuty + cuth, cutx:cutx + cutw]
+
+            img = self.rgb[cuty:cuty + cuth, cutx:cutx + cutw]
+
             # now get the size of the image that was actually cut (some areas may be out of range)
             self.cuth, self.cutw = img.shape[:2]
+
+            # img now holds the cropped RGB image. This is where we normalise according to the current normalisation
+            # scheme. We need to pass in the crop rectangle for finding the normalisation range in NormToImg mode.
+
+            img = canvasnormalise.canvasNormalise(self.imgCube.img, img, canvasnormalise.NormToImg,
+                                                  (cutx, cuty, self.cutw, self.cuth))
 
             # Here we draw the overlays and get any extra text required
             img, dqtext = self.drawDQOverlays(img, cutx, cuty, cutw, cuth)
@@ -397,6 +406,8 @@ class InnerCanvas(QtWidgets.QWidget):
                     else:
                         img2 = np.multiply(img, d.trans)  # TODO can we avoid a copy here?
                         np.add(data, img2, out=data)
+                    # clip the data (mainly because of additive, but just in case other
+                    # stuff has happened)
                     np.clip(data, 0, 1, out=data)
                     img = data
         return img, txt
@@ -444,8 +455,8 @@ class InnerCanvas(QtWidgets.QWidget):
             dy = y - self.panY
             self.x -= dx * 0.5
             self.y -= dy * 0.5
-            self.x = max(0, min(self.x, self.img.shape[1] - self.cutw))
-            self.y = max(0, min(self.y, self.img.shape[0] - self.cuth))
+            self.x = max(0, min(self.x, self.rgb.shape[1] - self.cutw))
+            self.y = max(0, min(self.y, self.rgb.shape[0] - self.cuth))
             self.panX, self.panY = x, y
         else:
             self.canv.mouseMove(x, y, e)
@@ -470,12 +481,12 @@ class InnerCanvas(QtWidgets.QWidget):
         newzoom = self.zoomscale * math.exp(wheel * 0.2)
 
         # can't zoom when there's no image
-        if self.img is None:
+        if self.rgb is None:
             return
 
         # get image coords, and clip the event's coords to those
         # (to make sure we're not clicking on the background of the canvas)
-        imgh, imgw = self.img.shape[0], self.img.shape[1]
+        imgh, imgw = self.rgb.shape[0], self.rgb.shape[1]
         if x >= imgw:
             x = imgw - 1
         if y >= imgh:
@@ -513,9 +524,10 @@ def makesidebarLabel(t):
     return lab
 
 
-## the containing widget, holding scroll bars and InnerCanvas widget
-
 class Canvas(QtWidgets.QWidget):
+    """Canvas : a widget for drawing multispectral ImageCube data. Consists of InnerCanvas (the image as RGB),
+    scrollbars and extra controls."""
+
     ## @var paintHook
     # an object with a paintEvent() which can do extra drawing (or None)
     paintHook: Optional[object]
@@ -1183,9 +1195,9 @@ class Canvas(QtWidgets.QWidget):
     def setScrollBarsFromCanvas(self):
         self.scrollH.setMinimum(0)
         self.scrollV.setMinimum(0)
-        img = self.canvas.img
-        if img is not None:
-            h, w = img.shape[:2]
+        rgb = self.canvas.rgb
+        if rgb is not None:
+            h, w = rgb.shape[:2]
             # work out the size of the scroll bar from the zoom factor
             hsize = w * self.canvas.zoomscale
             vsize = h * self.canvas.zoomscale
