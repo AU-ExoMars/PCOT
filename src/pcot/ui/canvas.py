@@ -39,6 +39,9 @@ class PersistBlock:
     """This is the block owned by a node which has a canvas, to store data which is persisted
     for the canvas only."""
     showROIs: bool
+    normToCropped: bool
+    normMode: int
+    dqs: List[CanvasDQSpec]
 
     def __init__(self, d=None):
         """sets default values, or perform the inverse of serialise(), turning the serialisable form into one
@@ -46,16 +49,16 @@ class PersistBlock:
         if d is None:
             self.showROIs = True
             self.dqs = [CanvasDQSpec() for _ in range(NUMDQS)]  # 3 of these set to defaults
+            self.normToCropped = False
+            self.normMode = canvasnormalise.NormToImg
         else:
-            # two dummy entries that are now in CanvasDQSpec, kept here for compatibility
-            self.showROIs, _, _, dqs = d
+            self.showROIs, self.normMode, self.normToCropped, dqs = d
             self.dqs = [CanvasDQSpec(d) for d in dqs]
 
     def serialise(self):
         """return a version of this type which can be serialised into JSON"""
         dqs = [d.serialise() for d in self.dqs]
-        # The zeroes are two dummy entries that are now in CanvasDQSpec, kept here for compatibility
-        return [self.showROIs, 0, 0, dqs]
+        return [self.showROIs, self.normMode, self.normToCropped, dqs]
 
 
 # the actual drawing widget, contained within the Canvas widget
@@ -268,27 +271,33 @@ class InnerCanvas(QtWidgets.QWidget):
             # get the top-left coordinate and cut the area.            
             cutx = int(self.x)
             cuty = int(self.y)
-
-            img = self.rgb[cuty:cuty + cuth, cutx:cutx + cutw]
+            # get the viewable section of the RGB
+            rgbcropped = self.rgb[cuty:cuty + cuth, cutx:cutx + cutw]
 
             # now get the size of the image that was actually cut (some areas may be out of range)
-            self.cuth, self.cutw = img.shape[:2]
+            self.cuth, self.cutw = rgbcropped.shape[:2]
 
-            # img now holds the cropped RGB image. This is where we normalise according to the current normalisation
+            # This is where we normalise according to the current normalisation
             # scheme. We need to pass in the crop rectangle for finding the normalisation range in NormToImg mode.
 
-            img = canvasnormalise.canvasNormalise(self.imgCube.img, img, canvasnormalise.NormToImg,
-                                                  (cutx, cuty, self.cutw, self.cuth))
+#            print(f"Norm Mode: {self.canv.canvaspersist.normMode} / {self.canv.canvaspersist.normToCropped}")
+            rgbcropped = canvasnormalise.canvasNormalise(self.imgCube.img,
+                                                         rgbcropped,
+                                                         self.rgb,
+                                                         self.canv.canvaspersist.normMode,
+                                                         self.canv.canvaspersist.normToCropped,
+                                                         (cutx, cuty, self.cutw, self.cuth))
 
             # Here we draw the overlays and get any extra text required
-            img, dqtext = self.drawDQOverlays(img, cutx, cuty, cutw, cuth)
+            rgbcropped, dqtext = self.drawDQOverlays(rgbcropped, cutx, cuty, cutw, cuth)
 
             # draw the cursor crosshair into the image for accuracy
-            self.drawCursor(img, cutx, cuty)
+            self.drawCursor(rgbcropped, cutx, cuty)
             # now resize the cut area up to fit the widget and draw it. Using area interpolation here:
             # cubic produced odd artifacts on float images.
-            img = cv.resize(img, dsize=(int(self.cutw / scale), int(self.cuth / scale)), interpolation=cv.INTER_AREA)
-            p.drawImage(0, 0, self.img2qimage(img))
+            rgbcropped = cv.resize(rgbcropped, dsize=(int(self.cutw / scale), int(self.cuth / scale)),
+                                   interpolation=cv.INTER_AREA)
+            p.drawImage(0, 0, self.img2qimage(rgbcropped))
 
             # draw annotations (and ROIs, which are annotations too)
             # on the image
@@ -336,7 +345,7 @@ class InnerCanvas(QtWidgets.QWidget):
         txt = ""
         self.redrawOnTick = False
 
-        if self.canv.isDQHidden:        # are DQs temporarily disabled?
+        if self.canv.isDQHidden:  # are DQs temporarily disabled?
             return img, txt
 
         for d in self.canv.canvaspersist.dqs:
@@ -396,7 +405,7 @@ class InnerCanvas(QtWidgets.QWidget):
                     b = data if b > 0.5 else zeroes
                     data = np.dstack((r, g, b))
                     # combine with image, avoiding copies.
-                    np.power(data, 2 * d.thresh,
+                    np.power(data, 2 * d.contrast,
                              out=data)  # data should be normalised, so this acts as a gamma
                     # add to the image
                     np.multiply(data, 1.0 - d.trans, out=data)
@@ -591,7 +600,7 @@ class Canvas(QtWidgets.QWidget):
         self.graph = None
         self.nodeToUIChange = None
         self.ROInode = None
-        self.isDQHidden = False # does not persist!
+        self.isDQHidden = False  # does not persist!
         self.recursing = False  # An ugly hack to avoid recursion in ROI nodes
         self.dqSourceCache = [None for i in range(NUMDQS)]  # source name cache for each channel
         # outer layout is a horizontal box - the sidebar and canvas+scrollbars are in this
@@ -735,10 +744,29 @@ class Canvas(QtWidgets.QWidget):
         layout.addWidget(self.hideDQ, 6, 0, 1, 2)
         self.hideDQ.toggled.connect(self.hideDQChanged)
 
-
         self.collapser.addSection("data", layout, isOpen=True)
 
-        # next sections(s)
+        # normalisation section
+
+        layout = QtWidgets.QGridLayout()
+        layout.setContentsMargins(3, 10, 3, 10)  # LTRB
+
+        ll = QtWidgets.QLabel("norm")
+        layout.addWidget(ll, 0, 0)
+        self.normComboBox = QtWidgets.QComboBox()
+        self.normComboBox.addItem("to RGB", userData=canvasnormalise.NormToRGB)
+        self.normComboBox.addItem("independent", userData=canvasnormalise.NormSeparately)
+        self.normComboBox.addItem("to all bands", userData=canvasnormalise.NormToImg)
+        self.normComboBox.currentIndexChanged.connect(self.normChanged)
+        layout.addWidget(self.normComboBox, 0, 1)
+
+        self.normCroppedCheckBox = QtWidgets.QCheckBox("to cropped area")
+        self.normCroppedCheckBox.toggled.connect(self.normChanged)
+        layout.addWidget(self.normCroppedCheckBox, 1, 0, 1, 2)
+
+        self.collapser.addSection("normalisation", layout, isOpen=False)
+
+        # DQ sections(s)
 
         self.dqwidgets = self.createDQWidgets(self.collapser)
 
@@ -966,7 +994,12 @@ class Canvas(QtWidgets.QWidget):
     def setPersister(self, p):
         self.canvaspersist = p.canvaspersist
         self.roiToggle.setEnabled(True)
+        self.recursing = True
         self.roiToggle.setChecked(p.canvaspersist.showROIs)
+        self.normCroppedCheckBox.setChecked(p.canvaspersist.normToCropped)
+        i = self.normComboBox.findData(self.canvaspersist.normMode)
+        self.normComboBox.setCurrentIndex(i)
+        self.recursing = False
 
     ## if this is a canvas for an ROI node, set that node.
     def setROINode(self, n):
@@ -1024,6 +1057,12 @@ class Canvas(QtWidgets.QWidget):
         # Hopefully we can disable the toggle.
         self.canvaspersist.showROIs = v
         self.redisplay()
+
+    def normChanged(self):
+        if not self.recursing:
+            self.canvaspersist.normToCropped = self.normCroppedCheckBox.isChecked()
+            self.canvaspersist.normMode = self.normComboBox.currentData()
+            self.redisplay()
 
     def spectrumToggleChanged(self, v):
         self.spectrumWidget.setHidden(not v)

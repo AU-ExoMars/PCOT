@@ -3,14 +3,16 @@ This takes an image and an RGB image and generates a normalised RGB image. It ca
 an RGB image because the incoming image might be "premapped" by another node.
 
 It will also:
-    - only consider a rectangle of the image if one is provided (for canvas zooming)
+    - only consider a rectangle of the image if required
     - TODO ignore "bad" pixels
 
 Modes and their actions:
     NormSeparately: each rgb channel is normalised separately
-    NormToRGB: each rgb channel is normalised to the range of all the RGB image's channels
-    NormToImg: each rgb channel is normalised to the range of the entire image
-    NormNone: nothing is done,
+    NormToRGB: each rgb channel is normalised to the range of RGB image's bands
+    NormToImg: each rgb channel is normalised to the range all bands in the image
+    NormNone: nothing is done
+
+A boolean flag determines if the normalisation range is for the cropped image or the entire image.
 """
 
 from typing import Optional, Tuple
@@ -44,28 +46,39 @@ def normOrZero(img, mn, mx):
 
 def canvasNormalise(img: ImageCube,
                     rgbCropped: np.ndarray,
+                    rgbUncropped: np.ndarray,
                     normMode: int,
+                    normToCropped: bool,
                     rect: Optional[Tuple[int, int, int, int]]) -> np.ndarray:
     """
+    This does normalisation for the canvas. The parameter list may seem rather eccentric, but this
+    set of parameters helps things run more smoothly with fewer copies and cuts.
     Arguments:
         img: image cube for entire image, all channels, not cropped
-        rgbCropped: RGB numpy array, cropped to view
+        rgbCropped: RGB numpy image array, cropped to view
+        rgbUncropped: uncropped RGB image array (need this for normToEntireImage)
         normMode: see above
+        normToCropped: do we normalise to he range of the entire image or just the cropped section?
         rect: rectangle we are 'cutting' which may be None. Only this range is considered.
     """
     if normMode == NormSeparately:
+        # process each band in the cropped image separately
         bands = []
-        for x in imgsplit(rgbCropped):  # process each band in the cropped image separately
-            mn = np.min(x)
-            mx = np.max(x)
-            bands.append(normOrZero(x, mn, mx))
+        for normband, imageband in zip(imgsplit(rgbCropped if normToCropped else rgbUncropped), imgsplit(rgbCropped)):
+            mn = np.min(normband)
+            mx = np.max(normband)
+            bands.append(normOrZero(imageband, mn, mx))
         out = imgmerge(bands)
     elif normMode == NormToRGB:  # we're normalising to the entire cropped image
-        mn = np.min(rgbCropped)  # so we get the normalisation range from there
-        mx = np.max(rgbCropped)
+        x = rgbCropped if normToCropped else rgbUncropped
+        mn = np.min(x)  # so we get the normalisation range from there
+        mx = np.max(x)
         out = normOrZero(rgbCropped, mn, mx)
     elif normMode == NormToImg:  # now normalising to all bands
-        img = getimg(img, rect)  # remember, img is not cropped.
+        if normToCropped:
+            # crop if required
+            x, y, w, h = rect
+            img = img[y:y + h, x:x + w]
         mn = np.min(img)  # so we get the normalisation range from there
         mx = np.max(img)
         out = normOrZero(rgbCropped, mn, mx)
