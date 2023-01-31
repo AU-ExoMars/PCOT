@@ -5,7 +5,7 @@ PCOT can be extended by adding Python scripts to a directory in the plugin
 path. By default this is just ```pcotplugins``` in the user's home directory,
 but it can be changed by editing the ```.pcot.ini``` file in that directory
 and modifying the ```pluginpath``` value in the ```Locations``` section.
-This should be a colon-separated list of directories.
+This should be a semicolon-separated list of directories.
 
 @@@warning
 You may be tempted to use quotes in the names of you plugin directories:
@@ -13,6 +13,11 @@ don't. It should work fine, even if your directories have spaces in them.
 For example, use ```~/blah/RIM Dewarping``` and not 
 ```~/blah/"RIM Dewarping"```
 @@@
+
+## Adding new types 
+
+This is covered in [a separate document](types.md), as it's not often done
+and is a little involved.
 
 ## Adding new *expr* functions
 
