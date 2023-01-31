@@ -158,6 +158,10 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-level="2"><a href="#adding-new-types" class="nav-link">Adding new types</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-level="2"><a href="#adding-new-expr-functions" class="nav-link">Adding new expr functions</a>
               <ul class="nav flex-column">
               </ul>
@@ -183,13 +187,16 @@
 path. By default this is just <code>pcotplugins</code> in the user's home directory,
 but it can be changed by editing the <code>.pcot.ini</code> file in that directory
 and modifying the <code>pluginpath</code> value in the <code>Locations</code> section.
-This should be a colon-separated list of directories.</p>
+This should be a semicolon-separated list of directories.</p>
 <div class="alert alert-warning" role="alert">
 <p>You may be tempted to use quotes in the names of you plugin directories:
 don't. It should work fine, even if your directories have spaces in them.
 For example, use <code>~/blah/RIM Dewarping</code> and not 
 <code>~/blah/"RIM Dewarping"</code></p>
 </div>
+<h2 id="adding-new-types">Adding new types</h2>
+<p>This is covered in <a href="../types/">a separate document</a>, as it's not often done
+and is a little involved.</p>
 <h2 id="adding-new-expr-functions">Adding new <em>expr</em> functions</h2>
 <p>Here is a snippet of code which will add a function to take two numbers a,b
 and calculate a+b*2. It works by adding a registration function, which will
