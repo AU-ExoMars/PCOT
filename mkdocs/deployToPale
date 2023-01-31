@@ -2,5 +2,11 @@
 
 export PYTHONPATH="../mkdocs"
 #mkdocs gh-deploy
+#rsync -avLc site/ pale.org:docs.pale.org/pcot
 
-rsync -avLc site/ pale.org:docs.pale.org/pcot
+cat << EOF
+This has been disabled; docs.pale.org now has a redirect page to
+Github Pages. Use the "deploy" script to deploy the docs there
+instead.
+EOF
+
