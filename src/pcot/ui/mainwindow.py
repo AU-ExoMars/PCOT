@@ -144,8 +144,9 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.setWindowTitle(ui.app().applicationName() + ' ' + ui.app().applicationVersion())
         self.rebuildRecents()
 
-        # set up the scrolling palette and make the buttons therein
-        self.palette = palette.Palette(doc, self.paletteArea, self.paletteContents, self.view)
+        # set up the scrolling palette and make the buttons therein. The paletteArea
+        # is a Collapser created in Designer.
+        self.palette = palette.Palette(doc, self.paletteArea, self.view)
 
         # and remove some things which don't apply to macro windows
         if macro is not None:
@@ -191,8 +192,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         # also will tint the view if we are a macro
         self.view.setWindow(self, macro is not None)
 
-        for x in pcot.config.mainWindowHooks:
-            x(self)
+        pcot.config.executeWindowHooks(self)
 
         self.show()
         ui.msg("OK")

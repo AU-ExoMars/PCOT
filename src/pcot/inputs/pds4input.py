@@ -59,7 +59,9 @@ def getDQBits(data, uncertainty, dq):
     depending on the other data too."""
     out = np.where(dq == 1, 0, pcot.dq.NODATA)  # where DQ is 1, output 0. Else output NODATA.
     out |= np.where(data >= 0.9999999, pcot.dq.SAT,  0)
+    out |= np.where(data >= 0.2, pcot.dq.TEST, 0)
     return out.astype(np.uint16)
+
 
 class PDS4InputMethod(InputMethod):
     """PDS4 inputs are unusual in that they can come from several PDS4 products, not a single file.
@@ -217,7 +219,7 @@ class PDS4InputMethod(InputMethod):
         try:
             imgdata = np.dstack([x.data for x in labels]) * self.multValue
             uncertainty = np.dstack([x.err for x in labels])
-            dq = np.dstack([getDQBits(x.data, x.err, x.dq) for x in labels])
+            dq = np.dstack([getDQBits(x.data * self.multValue, x.err, x.dq) for x in labels])
 
         except ValueError as e:
             ui.error("Error in combining image products - are they all the same size?")

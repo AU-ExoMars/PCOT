@@ -23,12 +23,19 @@ def simpleExceptFormat(e: Exception):
 
 
 class Timer:
-    def __init__(self,desc):
+    def __init__(self, desc):
         self.desc = desc
 
     def __enter__(self):
-        self.start = time.time()
+        self.start = time.perf_counter()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        end = time.time()
+        end = time.perf_counter()
         print(f"Timer {self.desc}: {end - self.start}")
+
+    def start(self):
+        self.start = time.perf_counter()
+
+    def mark(self, txt):
+        now = time.perf_counter()
+        print(f"Timer {self.desc}/{txt}: {now - self.start}")

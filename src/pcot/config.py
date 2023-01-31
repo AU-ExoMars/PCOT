@@ -135,8 +135,33 @@ exprFuncHooks = []
 
 
 def addMainWindowHook(x):
+    """Call this function with another function, which takes a MainWindow. It is called when that window is
+    created and can be used to add (say) menu items to the window."""
     mainWindowHooks.append(x)
 
 
+def executeWindowHooks(x):
+    """Execute the window hooks on a given MainWindow"""
+    for f in mainWindowHooks:
+        f(x)
+
+
 def addExprFuncHook(x):
+    """Call this function with another function. This function is called with a Parser argument, and can add
+    new functions, operators and properties. Consider using the @parserhook decorator instead - it does the
+    same thing."""
+    print(f"Adding parser hook {x}")
     exprFuncHooks.append(x)
+
+
+def parserhook(f):
+    """This is a decorator used to register a parser callback - the decorated function will be called at startup
+    with a Parser object to which functions, operators and properties can be added."""
+    addExprFuncHook(f)
+    return f
+
+
+def executeParserHooks(p):
+    """Execute the parser callbacks on the given parser"""
+    for f in exprFuncHooks:
+        f(p)
