@@ -42,9 +42,9 @@ def checkApp():
 
 
 def load_plugins():
-    """plugin dirs are colon separated, stored in Locations/plugins"""
+    """plugin dirs are semicolon separated, stored in Locations/plugins"""
 
-    pluginDirs = [os.path.expanduser(x) for x in pcot.config.getDefaultDir('pluginpath').split(':')]
+    pluginDirs = [os.path.expanduser(x) for x in pcot.config.getDefaultDir('pluginpath').split(';')]
     logger.info(f"Plugin directories {','.join(pluginDirs)}")
     # Load any plugins by recursively walking the plugin directories and importing .py files.
 

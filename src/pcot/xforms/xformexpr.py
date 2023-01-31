@@ -170,7 +170,7 @@ class XFormExpr(XFormType):
                                 node.mapping = ChannelMapping()
                             node.img.setMapping(node.mapping)
                         node.resultStr = "IMAGE"
-                    elif res.tp == Datum.NUMBER:
+                    elif res.tp.outputStringShort:
                         node.resultStr = str(res.val)
                         node.setRectText("res: "+node.resultStr)
                     else:

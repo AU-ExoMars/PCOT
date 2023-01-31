@@ -12,7 +12,7 @@ from typing import Any, Optional
 import pcot.sources
 from pcot import rois
 from pcot.imagecube import ImageCube
-from pcot.sources import SourcesObtainable, nullSource
+from pcot.sources import SourcesObtainable, nullSource, SourceSet
 from pcot.utils import singleton
 
 logger = logging.getLogger(__name__)
@@ -57,12 +57,20 @@ class DatumWithNoSourcesException(DatumException):
 class Type:
     """The type of a Datum passed between nodes and inside the expression evaluator.
     Must be a singleton but I'm not going to enforce it - I did for a while, but it made things
-    rather more complicated. Particularly for custom types. Just be careful."""
+    rather more complicated. Particularly for custom types. Just be careful.
+    """
 
-    def __init__(self, name, image=False, internal=False):
+    def __init__(self, name, image=False, internal=False, outputStringShort=False):
+        """Parameters:
+            name: the name of the type
+            image: is the type for an image (i.e. is it a 'subtype' of Type("img")?)
+            internal: is it an internal type used in the expression evaluator, not for connectors?
+            outputStringShort: is the __str__ result applied to the value short enough for an expr box?
+        """
         self.name = name
-        self.image = image  # is the type for an image (i.e. is it a 'subtype' of Type("img")?)
-        self.internal = internal  # is it an internal type used in the expression evaluator, not for connectors?
+        self.image = image
+        self.internal = internal
+        self.outputStringShort = outputStringShort
         _typesByName[name] = self  # register by name
 
     def __str__(self):
@@ -122,19 +130,21 @@ class RoiType(Type):
 
     def deserialise(self, d, document):
         roitype, roidata, s = d
-        r = rois.deserialise(roidata)
+        s = SourceSet.deserialise(s, document)
+        r = rois.deserialise(self.name, roidata)
         return Datum(self, r, s)
 
 
 class NumberType(Type):
     def __init__(self):
-        super().__init__('number')
+        super().__init__('number', outputStringShort=True)
 
     def serialise(self, d):
         return self.name, (d.val, d.getSources().serialise())
 
     def deserialise(self, d, document):
         n, s = d
+        s = SourceSet.deserialise(s, document)
         return Datum(self, n, s)
 
 
