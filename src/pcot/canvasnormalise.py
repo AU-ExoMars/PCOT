@@ -17,6 +17,8 @@ A boolean flag determines if the normalisation range is for the cropped image or
 
 from typing import Optional, Tuple
 import numpy as np
+
+from pcot import ui
 from pcot.imagecube import ImageCube
 
 # normalisation modes
@@ -25,6 +27,7 @@ from pcot.utils.image import imgsplit, imgmerge
 NormToRGB = 0  # normalise to visible RGB bands' range
 NormToImg = 1  # normalise to entire image's range
 NormSeparately = 2  # normalise each band separately
+NormNone = 3  # do nothing
 
 
 def getimg(img: np.ndarray, rect: Optional[Tuple[int, int, int, int]]):
@@ -82,7 +85,10 @@ def canvasNormalise(img: ImageCube,
         mn = np.min(img)  # so we get the normalisation range from there
         mx = np.max(img)
         out = normOrZero(rgbCropped, mn, mx)
-    else:
+    elif normMode == NormNone:
         out = rgbCropped  # otherwise we leave the RGB unchanged
+    else:
+        out = rgbCropped
+        ui.error(f"unknown canvas normalisation mode {normMode}")
 
     return out

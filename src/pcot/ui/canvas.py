@@ -757,6 +757,7 @@ class Canvas(QtWidgets.QWidget):
         self.normComboBox.addItem("to RGB", userData=canvasnormalise.NormToRGB)
         self.normComboBox.addItem("independent", userData=canvasnormalise.NormSeparately)
         self.normComboBox.addItem("to all bands", userData=canvasnormalise.NormToImg)
+        self.normComboBox.addItem("none", userData=canvasnormalise.NormNone)
         self.normComboBox.currentIndexChanged.connect(self.normChanged)
         layout.addWidget(self.normComboBox, 0, 1)
 
