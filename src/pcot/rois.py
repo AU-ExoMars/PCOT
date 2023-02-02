@@ -43,6 +43,7 @@ class ROI(SourcesObtainable, Annotation):
         self.thickness = 2  # thickness of lines
         self.fontsize = 10  # annotation font size
         self.drawbg = True
+        self.drawEdge = True  # draw the edge only?
         # by default, the source of an ROI is null.
         # The only time this might not be true is if the ROI is derived somehow from an actual data source.
         self.sources = nullSourceSet
@@ -100,7 +101,7 @@ class ROI(SourcesObtainable, Annotation):
             self.setPen(p)
             p.drawRect(x, y, w, h)
 
-    def annotateMask(self, p: QPainter, drawEdge=False):
+    def annotateMask(self, p: QPainter):
         """This is the 'default' annotate, which draws the ROI onto the painter by
         using its actual mask. It takes the mask, edge detects (if drawEdge), converts into
         an image."""
@@ -108,7 +109,7 @@ class ROI(SourcesObtainable, Annotation):
             # now get the mask
             mask = self.mask()
             # run sobel edge-detection on it if required
-            if drawEdge:
+            if self.drawEdge:
                 sx = ndimage.sobel(mask, axis=0, mode='constant')
                 sy = ndimage.sobel(mask, axis=1, mode='constant')
                 mask = np.hypot(sx, sy)
@@ -119,7 +120,7 @@ class ROI(SourcesObtainable, Annotation):
             mask = cv.resize(mask, dsize=(ww, hh), interpolation=cv.INTER_AREA)
             # now prepare the actual image, which is just a coloured fill rectangle - we
             # will add the mask as an alpha
-            img = np.full((hh, ww, 3), [1, 1, 0], dtype=np.float)  # the second arg is the colour
+            img = np.full((hh, ww, 3), self.colour, dtype=np.float)  # the second arg is the colour
             # add the mask as the alpha channel
             x = np.dstack((img, mask))
             # to byte
@@ -147,9 +148,10 @@ class ROI(SourcesObtainable, Annotation):
     def annotate(self, p: QPainter, img):
         """This is the default annotation method drawing the ROI onto a QPainter as part of the annotations system.
         It should be replaced with a more specialised method if possible."""
-        self.annotateBB(p)
+        if self.drawBox:
+            self.annotateBB(p)
         self.annotateText(p)
-        self.annotateMask(p, drawEdge=True)
+        self.annotateMask(p)
 
     def serialise(self):
         if self.tpname == 'tmp':
@@ -363,7 +365,6 @@ class ROICircle(ROI):
     y: int
     r: int
     isSet: bool
-    drawEdge: bool
 
     def __init__(self, x=-1, y=0, r=0):
         super().__init__('circle')

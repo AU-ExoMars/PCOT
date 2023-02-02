@@ -147,6 +147,8 @@ class XformPCT(XFormType):
             # get the RGB image we are going to draw the ROIs onto. Will only draw if there are ROIs!
 
             node.rgbImage = img.rgbImage()
+
+            # add the annotations to it.
             if node.drawMode != 'None':
                 for i, r in enumerate(node.rois):
                     if r is not None:
@@ -155,7 +157,7 @@ class XformPCT(XFormType):
                                        True)
                         r.drawEdge = (node.drawMode == 'Edge')
                         r.drawBox = (i == node.selROI)
-                        r.draw(node.rgbImage.img)
+                        node.rgbImage.annotations.append(r)
         node.img = img
 
     def uichange(self, n):
