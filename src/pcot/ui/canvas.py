@@ -995,12 +995,13 @@ class Canvas(QtWidgets.QWidget):
     def setPersister(self, p):
         self.canvaspersist = p.canvaspersist
         self.roiToggle.setEnabled(True)
+        old = self.recursing
         self.recursing = True
         self.roiToggle.setChecked(p.canvaspersist.showROIs)
         self.normCroppedCheckBox.setChecked(p.canvaspersist.normToCropped)
         i = self.normComboBox.findData(self.canvaspersist.normMode)
         self.normComboBox.setCurrentIndex(i)
-        self.recursing = False
+        self.recursing = old
 
     ## if this is a canvas for an ROI node, set that node.
     def setROINode(self, n):
