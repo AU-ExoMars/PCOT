@@ -484,11 +484,42 @@ class ImageCube(SourcesObtainable):
         desc = " ".join(["[" + s + "]" for s in out])
         return desc
 
+    def shallowCopy(self):
+        """Create a shallow copy - this points to the same image data and same mapping data, but allows
+        it to be changed later.
+
+        We still copy sources, ROIs and annotations, in the latter case making shallow copies of those lists.
+
+        Sometimes a node reads an image from a parent node, and then changes the image's mapping - changing
+        it for the parent node too and decoupling the mapping in the image from that parent node, which causes
+        problems if the parent node has tab open. Typical symptom: changing RGB mapping in the parent's tab has
+        no effect because the mapping used in the canvas (the parent node's mapping) has become uncoupled from
+        the mapping the displayed image is using (which was changed to the child node's mapping).
+
+        See Issue #56 for this.
+        """
+        i = ImageCube(self.img,
+                      self.mapping,
+                      self.sources.copy(),
+                      defaultMapping=self.defaultMapping,
+                      uncertainty=self.uncertainty,
+                      dq=self.dq)
+        i.rois = self.rois.copy()
+        i.annotations = self.annotations.copy()
+        return i
+
     def copy(self, keepMapping=False):
         """copy an image. If keepMapping is false, the image mapping will also be a copy. If true, the mapping
-        is a reference to the same mapping as in the original image. If you notice
-        # that you're changing the RGB mappings in a canvas and the image isn't changing,
-        # it might be because of this."""
+        is a reference to the same mapping as in the original image.
+
+        If you notice that you're changing the RGB mappings in a canvas and the image isn't changing,
+        it might be because of this.
+
+        But it also might be because a child node is reading an image and changing its mapping to its own
+        node mapping, which means that it also changes for the parent node - because the child node isn't making
+        a copy of the image! If you want to make a shallow copy of the image, use shallowCopy.
+
+        """
         if self.mapping is None or keepMapping:
             m = self.mapping
         else:
@@ -501,6 +532,7 @@ class ImageCube(SourcesObtainable):
                       uncertainty=self.uncertainty.copy(),
                       dq=self.dq.copy())
         i.rois = self.rois.copy()
+        i.annotations = self.annotations.copy()
         return i
 
     def hasROI(self):
