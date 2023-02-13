@@ -1,3 +1,5 @@
+import random
+
 import matplotlib
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QPainter, QColor, QKeyEvent
@@ -68,6 +70,11 @@ class XFormMultiDot(XFormType):
             # copy image and append ROIs to it
             img = img.copy()
             img.rois += node.rois
+            # we now add any selection as an extra annotation
+            if node.selected:
+                r = ROICircle(node.selected.x, node.selected.y, node.selected.r*1.3)
+                r.colour = node.selected.colour
+                img.annotations = [r]
             # set mapping from node
             img.setMapping(node.mapping)
             node.img = img
@@ -147,11 +154,13 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.changed()
 
     def recolourPressed(self):
+        """recolour all dots randomly, and do it differently each time pressed"""
         self.mark()
         cols = matplotlib.cm.get_cmap('Dark2').colors
-
+        base = random.randint(0, 1000)
         for idx, r in enumerate(self.node.rois):
-            r.colour = cols[idx % len(cols)]
+            xx = idx+base
+            r.colour = cols[xx % len(cols)]
         self.changed()
 
     def clearPressed(self):
@@ -267,6 +276,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
                 if d < 100 and (mindist is None or d < mindist):
                     node.selected = r
                     mindist = d
+
         self.updateSelected()
         self.changed()
         self.w.canvas.update()
