@@ -345,7 +345,7 @@ class ImageCube(SourcesObtainable):
             uncertainty = np.zeros(img.shape, dtype=np.float32)
             dqOnAllPixels |= pcot.dq.NOUNCERTAINTY
         if uncertainty.dtype != np.float32:
-            raise Exception("uncertainty data is not float32")
+            uncertainty = uncertainty.astype(np.float32)
         if uncertainty.shape != img.shape:
             raise Exception("uncertainty data is not same shape as image data")
 

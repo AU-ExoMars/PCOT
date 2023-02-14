@@ -406,7 +406,11 @@ class PDS4ImageMethodWidget(MethodWidget):
         # first the table.
         self.table.clearContents()  # this will just make all the data empty strings (or null widgets)
         self.table.setRowCount(0)  # and this will remove the rows
-        for p in self.method.products:
+
+        # sort by start time
+        products = sorted(self.method.products, key=lambda x: x.start)
+
+        for p in products:
             strs = [
                 str(p.sol_id),
                 timestr(p.start),
@@ -418,12 +422,18 @@ class PDS4ImageMethodWidget(MethodWidget):
             self.addTableRow(strs, p)
         self.table.resizeColumnsToContents()
 
-        # then the timeline
-
         items = []
-        for p in self.method.products:
+        xspacing = dict()  # this is used so that points with filter and sol the same have different X (slightly)
+        for p in products:
+            key = (p.filt.idx, p.sol_id)
+            if key in xspacing:
+                xspac = xspacing[key]+0.1
+            else:
+                xspac = 0
+            xspacing[key]=xspac
+
             yOffset = p.filt.idx * 12
-            items.append(ImageLinearSetEntity(p.sol_id, yOffset, f"{p.filt.cwl} ({p.filt.name})", p))
+            items.append(ImageLinearSetEntity(p.sol_id+xspac, yOffset, f"{p.filt.cwl} ({p.filt.name})", p))
         self.timeline.setItems(items)
         self.timeline.rescale()
         self.timeline.rebuild()
