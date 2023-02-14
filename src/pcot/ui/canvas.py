@@ -38,10 +38,10 @@ NUMDQS = 3
 class PersistBlock:
     """This is the block owned by a node which has a canvas, to store data which is persisted
     for the canvas only."""
-    showROIs: bool
-    normToCropped: bool
-    normMode: int
-    dqs: List[CanvasDQSpec]
+    showROIs: bool              # should we show all ROIs and not just the ones defined in this node?
+    normToCropped: bool         # boolean, should we normalise to only the visible part of the image?
+    normMode: int               # normalisation mode e.g. NormToRGB, see canvasnormalise.py
+    dqs: List[CanvasDQSpec]     # settings for each DQ layer
 
     def __init__(self, d=None):
         """sets default values, or perform the inverse of serialise(), turning the serialisable form into one
@@ -53,6 +53,8 @@ class PersistBlock:
             self.normMode = canvasnormalise.NormToImg
         else:
             self.showROIs, self.normMode, self.normToCropped, dqs = d
+            self.normMode = int(self.normMode)  # deal with legacy files
+            self.normToCropped = bool(self.normToCropped)
             self.dqs = [CanvasDQSpec(d) for d in dqs]
 
     def serialise(self):

@@ -723,8 +723,9 @@ class ImageCube(SourcesObtainable):
         if len(wavelengthAndFHWMByChan) > 0:
             # now sort that list by CWL distance and then negative FWHM (widest first)
             wavelengthAndFHWMByChan.sort(key=lambda v: (v[1], -v[2]))
-            closest = min(wavelengthAndFHWMByChan, key=lambda v: (v[1], -v[2]))
-            return closest[0]  # return index
+            closest = wavelengthAndFHWMByChan[0]   # we return "index", the first item in the first tuple
+#            closest = min(wavelengthAndFHWMByChan, key=lambda v: (v[1], -v[2]))
+            return closest[0]
         else:
             # No wavelengths found ,return -1
             return -1
