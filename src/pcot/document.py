@@ -192,10 +192,10 @@ class Document:
         """set graph's input to RGB"""
         return self.setInputData(inputidx, inputs.Input.RGB, lambda method: method.setFileName(fname))
 
-    def setInputMulti(self, inputidx, directory, fnames, filterpat=None):
+    def setInputMulti(self, inputidx, directory, fnames, filterpat=None, camname="PANCAM"):
         """set graph's input to multiple files"""
         return self.setInputData(inputidx, inputs.Input.MULTIFILE,
-                                 lambda method: method.setFileNames(directory, fnames, filterpat))
+                                 lambda method: method.setFileNames(directory, fnames, filterpat, camname))
 
     def setInputPDS4(self, inputidx, products):
         """Set a PDS4 input to a set of proctools DataProducts. Must be able to combine them into a single datum
