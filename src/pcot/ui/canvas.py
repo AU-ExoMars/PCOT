@@ -1033,6 +1033,7 @@ class Canvas(QtWidgets.QWidget):
 
     def resetMapButtonClicked(self):
         if self.previmg is not None:
+            self.previmg.defaultMapping = None  # force a guess even if there is a default mat
             self.previmg.mapping.generateMappingFromDefaultOrGuess(self.previmg)
         self.redisplay()
         self.updateChannelSelections()

@@ -211,9 +211,9 @@ def _genheader(f, w: int, h: int, freqs: List[float],camname="LWAC"):
     f.write(f"    0.00000000, {h - 1}.00000000, {h - 1}.00000000,    0.00000000,\n")
     f.write(f" {w - 1}.00000000, {h - 1}.00000000, {w - 1}.00000000, {h - 1}.00000000}}\n")
 
-    defbands = [min(x, len(freqs)) for x in [1, 2, 3]]
-    s = ",".join([str(x) for x in defbands])
-    f.write(f"default bands = {{{s}}}\n")
+#    defbands = [min(x, len(freqs)) for x in [1, 2, 3]]
+#    s = ",".join([str(x) for x in defbands])
+#    f.write(f"default bands = {{{s}}}\n")
     bandnames = ", ".join([f"L{i + 1}_{f}" for i, f in enumerate(freqs)])
     f.write(f"band names = {{\n {bandnames}}}\n")
     s = ", ".join([f"{f:0.6f}" for f in freqs])
