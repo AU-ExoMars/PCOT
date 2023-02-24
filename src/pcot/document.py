@@ -261,3 +261,10 @@ class Document:
     def showUndoStatus(self):
         for w in MainUI.getWindowsForDocument(self):
             w.showUndoStatus()
+
+    def clear(self):
+        """Delete all nodes - do this if you intend to drop the document. Here's why:
+        Macros require that all static type objects keep a list of their instances. That means that
+        when a document variable is set to null, it doesn't get garbage collected because all those
+        instances still contain refs to that doc's nodes."""
+        self.graph.clearAllNodes(True)

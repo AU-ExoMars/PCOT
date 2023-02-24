@@ -1208,6 +1208,20 @@ class XFormGraph:
 
         return d
 
+    def clearAllNodes(self, closetabs=True):
+        """Delete all nodes - done on deserialising into an existing graph and on clearing a document"""
+        # we temporarily disable graph performance by telling the system we are already
+        # performing a graph. This will stop it doing it again, which messing things up
+        # because we perform child nodes on .remove. Well, it doesn't mess things up
+        # fatally but you do get a lot of spurious errors.
+        oldPerfG = self.performingGraph
+        self.performingGraph = True
+        # remove from a copy; can't modify a list while traversing
+        for n in self.nodes.copy():
+            # this will close any open tabs, but NOT when closetabs is false.
+            self.remove(n, closetabs=closetabs)
+        self.performingGraph = oldPerfG
+
     def deserialise(self, d, deleteExistingNodes, closetabs=True):
         """given a dictionary, add nodes stored in it in serialized form.
             Do not delete any existing nodes unless asked and do not perform the nodes.
@@ -1218,17 +1232,7 @@ class XFormGraph:
             """
 
         if deleteExistingNodes:
-            # we temporarily disable graph performance by telling the system we are already
-            # performing a graph. This will stop it doing it again, which messing things up
-            # because we perform child nodes on .remove. Well, it doesn't mess things up
-            # fatally but you do get a lot of spurious errors.
-            oldPerfG = self.performingGraph
-            self.performingGraph = True
-            # remove from a copy; can't modify a list while traversing
-            for n in self.nodes.copy():
-                # this will close any open tabs, but NOT when closetabs is false.
-                self.remove(n, closetabs=closetabs)
-            self.performingGraph = oldPerfG
+            self.clearAllNodes(closetabs=True)
 
         # disambiguate nodes in the dict, to make sure they don't
         # have the same nodes as ones already in the graph
