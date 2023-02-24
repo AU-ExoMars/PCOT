@@ -113,7 +113,7 @@ class Input:
         # this when we are doing an internal (undo) serialise because the data there is 'saved'
         # internally as simple references to the objects; this is done in the methods. Note that
         # we only save the active method's data in the external (save to file) case.
-
+        
         if saveInputs and not internal:
             activeData = self.get().serialise()  # returns Datum
         else:
