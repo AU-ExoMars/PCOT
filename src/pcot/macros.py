@@ -178,6 +178,9 @@ class XFormMacro(XFormType):
         # the palette
         self.setConnectors()
 
+    def getInstances(self):
+        return self.doc.getInstances(self)
+
     def init(self, node):
         """This creates an instance of the macro by setting the node's instance value to a
         new MacroInstance. Other aspects of the xform's macro behaviour are, of course,
@@ -232,7 +235,7 @@ class XFormMacro(XFormType):
                 n.inputTypes[0] = n.conntype  # set the overrides
                 outputs += 1
         # rebuild the various connector structures in each instance
-        for n in self.instances:
+        for n in self.getInstances():
             n.connCountChanged()
 
         # make sure all connections in the graph are still valid, disconnecting
@@ -240,7 +243,7 @@ class XFormMacro(XFormType):
         self.graph.ensureConnectionsValid()
         # and do the same thing in all the graphs which use this macro, but only
         # once on each one!
-        for x in set([y.graph for y in self.instances]):
+        for x in set([y.graph for y in self.getInstances()]):
             x.ensureConnectionsValid()
 
         # and we're also going to have to rebuild the palette, so inform all main
@@ -253,7 +256,7 @@ class XFormMacro(XFormType):
         """renaming a macro - we have to update more things than default XFormType rename"""
         import pcot.ui
         # rename all instances if their displayName is the same as the old type name
-        for x in self.instances:
+        for x in self.getInstances():
             if x.displayName == self.name:
                 x.displayName = newname
         # do the default
@@ -300,7 +303,7 @@ class XFormMacro(XFormType):
         """delete a macro"""
         # delete all instances
         toRebuild = set()
-        for x in xformtype.instances:
+        for x in xformtype.doc.nodeInstances[xformtype]:
             x.graph.remove(x)
             toRebuild.add(x.graph)
         for x in toRebuild:

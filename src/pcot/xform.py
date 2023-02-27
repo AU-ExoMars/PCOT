@@ -137,8 +137,6 @@ class XFormType:
     ver: str
     # does it have an enable button?
     hasEnable: bool
-    # all instances of this type in all graphs
-    instances: List['XForm']
     # an open help window, or None
     helpwin: Optional['PyQt5.QtWidgets.QMainWindow']
     inputConnectors: List[Tuple[str, Type, str]]  # the inputs (name,connection type,description)
@@ -162,7 +160,6 @@ class XFormType:
         self.group = group
         self.name = name
         self.ver = ver
-        self.instances = []
         self.helpwin = None
         # does this node have an "enabled" button? Change in subclass if reqd.
         self.hasEnable = False
@@ -186,10 +183,6 @@ class XFormType:
         self.resizable = False
         self.showPerformedCount = True
         self.setRectParams = None
-
-    def remove(self, node):
-        """call to remove node from instance list"""
-        self.instances.remove(node)
 
     def md5(self):
         """returns a checksum of the sourcecode for the module defining the type, MD5 hash, used to check versions"""
@@ -493,7 +486,6 @@ class XForm:
         self.inUIChange = False
         # all nodes have a channel mapping, because it's easier. See docs for that class.
         self.mapping = ChannelMapping()
-        tp.instances.append(self)
         Canvas.initPersistData(self)
 
     def dumpInputs(self, t):
@@ -557,7 +549,7 @@ class XForm:
 
     def onRemove(self):
         """called when a node is deleted"""
-        self.type.remove(self)
+        self.graph.doc.nodeRemoved(self)
 
     def setEnabled(self, b):
         """set or clear the enabled field"""
@@ -998,6 +990,7 @@ class XFormGraph:
         # display name is just the type name to start with.
         xform = XForm(tp, tp.name)
         self.nodes.append(xform)
+        self.doc.nodeAdded(xform)
         xform.graph = self
         tp.init(xform)  # run the init
         self.nodeDict[xform.name] = xform
@@ -1118,7 +1111,7 @@ class XFormGraph:
                 # This could be optimised to run only the relevant (changed) component
                 # within the macro, but that's very hairy.
 
-                for inst in self.proto.instances:
+                for inst in self.proto.getInstances():
                     inst.instance.copyProto()
                     # "inst" is an XFormMacro node inside the graph which contains the macro,
                     # it is not the instance graph inside the "inst" node. Not sure how this

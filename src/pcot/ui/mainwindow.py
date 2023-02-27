@@ -250,6 +250,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     @staticmethod
     def rebuildPalettes():
         for w in MainUI.windows:
+            print(f"Rebuilding window {w}")
             w.palette.populate()
 
     ## rebuild the graphics in all main windows and also all the tab titles
@@ -286,6 +287,9 @@ class MainUI(ui.tabs.DockableTabWindow):
     def autoLayoutButton(self):
         self.graph.constructScene(True)
         self.view.setScene(self.graph.scene)
+        self.rebuildPalettes()      # snark
+        self.rebuildPalettes()
+        self.rebuildPalettes()
 
     ## saving to a file  
     def save(self, fname, saveInputs=True):
@@ -524,7 +528,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.graph.rebuildGraphics()
         # we also have to rebuild any graphs the macro is in, because
         # the number of connectors will have changed.
-        for inst in n.proto.instances:
+        for inst in n.proto.getInstances():
             inst.graph.rebuildGraphics()
 
     ## add a macro in connector, only should be used on macro prototypes   

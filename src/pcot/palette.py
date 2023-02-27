@@ -6,6 +6,7 @@ from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QMessageBox, QSizePolicy, QAction
 
 import pcot.macros as macros
+from pcot.ui.collapser import Collapser
 from pcot.xform import XFormType, XFormException
 import pcot.ui as ui
 
@@ -103,7 +104,7 @@ class PaletteButton(QtWidgets.QPushButton):
 class Palette:
     """the palette itself, which isn't a widget but a plain class containing all the necessary widgets etc."""
 
-    def __init__(self, doc, collapser, vw):
+    def __init__(self, doc, collapser: Collapser, vw):
         """set up the scrolling palette as part of view initialisation, will populate with initial data"""
         self.doc = doc
         self.view = vw

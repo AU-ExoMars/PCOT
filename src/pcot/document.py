@@ -1,7 +1,7 @@
 import logging
 import time
 from collections import deque
-from typing import Dict
+from typing import Dict, List
 
 import pcot.config
 from pcot import inputs, ui
@@ -10,7 +10,7 @@ from pcot.inputs.inp import InputManager
 from pcot.macros import XFormMacro
 from pcot.ui.mainwindow import MainUI
 from pcot.utils import archive
-from pcot.xform import XFormGraph
+from pcot.xform import XFormGraph, XForm, XFormType
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +88,7 @@ class Document:
     inputMgr: InputManager
     settings: DocumentSettings
     undoRedoStore: UndoRedoStore
+    nodeInstances: Dict[XFormType, List[XForm]]
 
     def __del__(self):
         print(f"----{self}")
@@ -100,6 +101,7 @@ class Document:
         self.macros = {}
         self.settings = DocumentSettings()
         self.undoRedoStore = UndoRedoStore()
+        self.nodeInstances = {}
 
         if fileName is not None:
             self.load(fileName)
@@ -239,6 +241,23 @@ class Document:
         for w in MainUI.getWindowsForDocument(self):
             w.replaceDocument(self)  # and this must repatch the tabs we didn't delete
         self.showUndoStatus()
+
+    def nodeAdded(self, node):
+        """A node has been added, insert it into the instance list for the type"""
+        if node.type not in self.nodeInstances:
+            self.nodeInstances[node.type] = []
+        self.nodeInstances[node.type].append(node)
+
+    def nodeRemoved(self, node):
+        """A node has been removed, remove it from the instance list for the type"""
+        if node.type in self.nodeInstances:
+            self.nodeInstances[node.type].remove(node)
+
+    def getInstances(self, tp):
+        if tp in self.nodeInstances:
+            return self.nodeInstances[tp]
+        else:
+            return []
 
     def canUndo(self):
         return self.undoRedoStore.canUndo()
