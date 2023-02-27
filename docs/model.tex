@@ -652,6 +652,16 @@ inputs into the macro instance node's outputs
 \end{itemize}
 \item Node 3 can now run, reading its inputs from the macro instance node.
 \end{itemize}
+An illustration of the data model is shown in Fig.~\ref{macros.pdf};
+this should be read together with Fig.~\ref{xform.pdf}.
+\begin{figure}[ht]
+\center
+\includegraphics[width=3in]{macros.pdf}
+\caption{UML diagram for macros}
+\label{macros.pdf}
+\end{figure}
+
+\clearpage
 
 \subsubsection{Macro inefficiencies}
 \label{macroineff}
@@ -685,16 +695,7 @@ the instance node which corresponds to the prototype node which was changed, and
 run that inside the instance graph for the macro. The child nodes of the instance node
 would then need to be run.
 
-\begin{figure}[ht]
-\center
-\includegraphics[width=4in]{macros.pdf}
-\caption{UML diagram for macros}
-\label{macros.pdf}
-\end{figure}
-\ref{macros.pdf}
-
-
-\subsection{User interface}
+i\subsection{User interface}
 The user interface is mainly in the \texttt{ui} package, although each
 node type's file contains its UI code (a subclass of \texttt{ui.tabs.Tab}.
 A reasonably full view of the system is shown as a class diagram

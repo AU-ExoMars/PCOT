@@ -33,7 +33,7 @@ XFormType *-- "0..*" XFormType : allTypes
 
 XFormGraph *-- "0..*" XForm : nodes
 
-XFormType o-- "0..*" XForm : instances
+Document o-- "0..*" XForm : instances\n(dict of XFormType to List[XForm])
 
 XForm o-- XFormType : type 
 XForm o-- XFormGraph : graph
