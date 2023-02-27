@@ -111,7 +111,7 @@ class ENVIHeader:
             # based at one, for heaven's sake.
             self.defaultBands = [int(x)-1 for x in d['default bands']]
         else:
-            self.defaultBands = [0, 1, 2]
+            self.defaultBands = None
 
         if 'band names' in d:
             bandNames = d['band names']
@@ -194,8 +194,12 @@ def load(fn, doc, inpidx, mapping: ChannelMapping = None) -> ImageCube:
 
     if mapping is None:
         mapping = ChannelMapping()
-    mapping.set(*h.defaultBands)
-    return ImageCube(img, mapping, sources, defaultMapping=mapping.copy())
+    if h.defaultBands is not None:
+        mapping.set(*h.defaultBands)
+        return ImageCube(img, mapping, sources, defaultMapping=mapping.copy())
+    else:
+        return ImageCube(img, mapping, sources)
+
 
 
 def _genheader(f, w: int, h: int, freqs: List[float],camname="LWAC"):

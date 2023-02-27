@@ -1,6 +1,6 @@
 #!/bin/sh
 
-java -jar ~/bin/plantuml-1.2022.6.jar -tsvg $1
+java -jar ~/bin/plantuml.jar -tsvg $1
 inkscape -D --export-pdf=${1%.*}.pdf ${1%.*}.svg
 pdfcrop ${1%.*}.pdf tmp.pdf
 mv tmp.pdf ${1%.*}.pdf
