@@ -195,7 +195,8 @@ class TabExpr(pcot.ui.tabs.Tab):
 
     def exprChanged(self):
         self.node.tmpexpr = self.w.expr.toPlainText()
-        self.node.displayName = self.node.expr.replace('\r', '').replace('\n', '').replace('\t', '')
+#        self.node.displayName = self.node.expr.replace('\r', '').replace('\n', '').replace('\t', '')
+        self.node.displayName = self.node.tmpexpr.replace('\r', '').replace('\n', '').replace('\t', '')
         # don't call changed() or we'll run the expr on every key press!
 
     def run(self):

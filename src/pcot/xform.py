@@ -26,7 +26,7 @@ from pcot.sources import nullSourceSet, SourceSet
 from pcot.ui import graphscene
 from pcot.ui.canvas import Canvas
 from pcot.ui.tabs import Tab
-from pcot.utils import archive
+from pcot.utils import archive, deb
 
 if TYPE_CHECKING:
     import PyQt5.QtWidgets
@@ -890,6 +890,9 @@ class XForm:
 
     def ensureConnectionsValid(self):
         """ensure connections are valid and break them if not"""
+        # THIS IS NOW OBSOLETE AND SHOULDN'T BE CALLED
+        raise XFormException('TYPE', 'ensureConnectionsValid should not be called (see issue #60)')
+        doPerform = False
         for i in range(0, len(self.inputs)):
             inp = self.inputs[i]
             if inp is not None:
@@ -897,7 +900,9 @@ class XForm:
                 outtype = n.getOutputType(idx)
                 intype = self.getInputType(i)
                 if not datum.isCompatibleConnection(outtype, intype):
-                    self.disconnect(i)
+                    doPerform = True
+                    self.disconnect(i, perform=False)
+        return doPerform
 
     def rename(self, name):
         """rename a node - changes the displayname."""
@@ -1049,6 +1054,7 @@ class XFormGraph:
         """remove a node from the graph, and close any tab/window (but not always; when doing Undo
         we monkey patch the existing tabs to point at the replacement nodes)"""
 
+        deb.shortTrace("del", line=True)
         if node in self.nodes:
             oldChildren = list(node.children)  # shallow copy of children
             node.disconnectAll()  # because it gets cleared here
@@ -1056,6 +1062,7 @@ class XFormGraph:
                 for x in node.tabs:
                     x.nodeDeleted()
             self.nodes.remove(node)
+            print(f"DELETE {node.name}")
             del self.nodeDict[node.name]
 
             # having deleted the node try to call all the children. That might seem a bit
@@ -1307,10 +1314,13 @@ class XFormGraph:
 
     def ensureConnectionsValid(self):
         """ensure all connections are valid (i.e. in/out types are compatible)
-            and break those which aren't
+            and break those which aren't. Reperform the graph if there was a change.
             """
+        doPerform = False
         for n in self.nodes:
-            n.ensureConnectionsValid()
+            doPerform |= n.ensureConnectionsValid()
+        if doPerform:
+            self.changed()
 
     def getMyROIs(self, node):
         """If this node creates an ROI or ROIs, return it/them as a list, otherwise None (not an empty list)"""

@@ -8,6 +8,7 @@ from pcot import datum
 from pcot.datum import Datum
 from pcot.imagecube import ChannelMapping
 from pcot.ui.tabs import Tab
+from pcot.utils import deb
 from pcot.xform import XFormType, XFormGraph
 
 logger = logging.getLogger(__name__)
@@ -38,6 +39,7 @@ class MacroInstance:
         graph, giving us a fresh copy of the nodes. However, the UUID "names"
         are the same so that corresponding nodes in instance and copy
         have the same UUID (not really "U", but you get the idea)"""
+        deb.shortTrace("copyProto")
         d = self.proto.graph.serialise()
         self.proto.graph.dump()
         logger.debug(f"PROTOTYPE keys: {self.proto.graph.nodeDict.keys()}")
@@ -237,14 +239,6 @@ class XFormMacro(XFormType):
         # rebuild the various connector structures in each instance
         for n in self.getInstances():
             n.connCountChanged()
-
-        # make sure all connections in the graph are still valid, disconnecting
-        # bad ones
-        self.graph.ensureConnectionsValid()
-        # and do the same thing in all the graphs which use this macro, but only
-        # once on each one!
-        for x in set([y.graph for y in self.getInstances()]):
-            x.ensureConnectionsValid()
 
         # and we're also going to have to rebuild the palette, so inform all main
         # windows
