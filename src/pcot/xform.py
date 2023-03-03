@@ -1054,7 +1054,6 @@ class XFormGraph:
         """remove a node from the graph, and close any tab/window (but not always; when doing Undo
         we monkey patch the existing tabs to point at the replacement nodes)"""
 
-        deb.shortTrace("del", line=True)
         if node in self.nodes:
             oldChildren = list(node.children)  # shallow copy of children
             node.disconnectAll()  # because it gets cleared here

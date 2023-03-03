@@ -39,7 +39,6 @@ class MacroInstance:
         graph, giving us a fresh copy of the nodes. However, the UUID "names"
         are the same so that corresponding nodes in instance and copy
         have the same UUID (not really "U", but you get the idea)"""
-        deb.shortTrace("copyProto")
         d = self.proto.graph.serialise()
         self.proto.graph.dump()
         logger.debug(f"PROTOTYPE keys: {self.proto.graph.nodeDict.keys()}")
