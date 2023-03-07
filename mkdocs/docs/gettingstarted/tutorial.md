@@ -49,7 +49,8 @@ you can undock by double-clicking on the tab at the top of the view.
 * To the right of the node area is the **graph**. This shows the nodes in
 the document and their connections. A new document always has an *input 0* node,
 which brings input 0 into the graph.
-* To the right of the graph is the **palette**. Clicking on a button in
+* To the right of the graph is the **palette**, which consists of a number
+of sections which can be expanded or hidden. Clicking on a button in
 the palette will add a node of the given type to the graph. 
 * At the bottom is the **log area**, the **status bar**, and a set of
 [global controls](../userguide/globalcontrols.md).
@@ -57,9 +58,9 @@ the palette will add a node of the given type to the graph.
 ## Working with graph nodes
 
 Each node is shown as a box with input connections on the top and output connections on
-the bottom. To illustrate this, here is a more complex graph used later in the tutorial:
+the bottom. To illustrate this, consider the following graph you've seen before:
 
-![!R671_438 inset into source image RGB representation|R671_438e](R671_438e.png)
+![!R671_438 inset into source image RGB representation|671438grad](671438grad.png)
 
 ### Node boxes
 Looking at a pair of nodes in the graph:
@@ -72,9 +73,9 @@ on inputs.
 * Each node has a help box - double-clicking on this pops up help for the node.
 * Each node has a name - usually this is the node's type, but in the case of the *expr* node it is the expression being
 calculated (see below).
-* Nodes can have a "display text" in blue. These show extra data, such as the output of a numerical calculation in an *expr* node
-or (as here) the annotation on a region of interest.
-* Currently nodes also show the number of times they have been calculated as a debugging aid.
+* Nodes can have a "display text" in blue. These show extra data, such as the output of a calculation in an *expr* node
+or the annotation given to a region of interest.
+* Currently nodes without a display text also show the number of times they have been calculated as a debugging aid.
 
 
 

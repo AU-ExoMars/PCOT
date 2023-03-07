@@ -49,7 +49,8 @@ and can be multispectral images or other data (e.g. housekeeping) from outside P
 * The *rect* node lets the user draw a rectangle on the image to define a region of interest. Images
 can have many regions of interest and several different kinds are available.
 * The node with 4 inputs *a,b,c,d* is an *expr* node, which 
-calculates the result of a mathematical expression performed on each pixel. The node is showing the expression it is running: ```norm(a$671 / a$438)```.
+calculates the result of a mathematical expression performed on each pixel. The node is showing the expression it
+is running: ```a$671 / a$438```.
 This will read the bands whose wavelengths are 671nm and 438nm in the node's *a* input, and find their ratio for every pixel.
 The result will be a single-band image. *Expr* nodes can perform much more complex calculations than this.
 * The *gradient* node will convert a single-band image into an RGB image with a user-defined gradient and
