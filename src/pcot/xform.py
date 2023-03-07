@@ -14,7 +14,7 @@ import sys
 import uuid
 from collections import deque
 from io import BytesIO
-from typing import List, Dict, Tuple, ClassVar, Optional, TYPE_CHECKING, Callable
+from typing import List, Dict, Tuple, ClassVar, Optional, TYPE_CHECKING, Callable, Union, Any
 
 import pyperclip
 
@@ -142,7 +142,9 @@ class XFormType:
     inputConnectors: List[Tuple[str, Type, str]]  # the inputs (name,connection type,description)
     outputConnectors: List[Tuple[str, Type, str]]  # the outputs (name,connection type,description)
     # tuple of autoserialisable attributes in each node of this type
-    autoserialise: Tuple[str, ...]
+    # These are either strings or tuples, in which case the first element is the name and the second
+    # is a default value used when legacy files are loaded which doesn't have that value.
+    autoserialise: Tuple[Union[str, Tuple[str, Any]], ...]
     # MD5 hash of source code (generated automatically)
     _md5: str
     # minimum width of node on screen
@@ -191,18 +193,21 @@ class XFormType:
     def doAutoserialise(self, node):
         """run autoserialisation for a node"""
         try:
-            return {name: node.__dict__[name] for name in self.autoserialise}
+            # if elements are tuples (i.e. value and default), only get the first item
+            ser = [f[0] if type(f) == tuple else f for f in self.autoserialise]
+            # and build the dictionary
+            return {name: node.__dict__[name] for name in ser}
         except KeyError as e:
             raise Exception("autoserialise value not in node {}: {}".format(self.name, e.args[0]))
 
     def doAutodeserialise(self, node, ent):
         """run autodeserialisation for a node"""
-        for name in self.autoserialise:
-            # ignore key errors, for when we add data during development
-            try:
-                node.__dict__[name] = ent[name]
-            except KeyError:
-                pass
+        for item in self.autoserialise:
+            if type(item) == tuple:
+                name, deflt = item
+                node.__dict__[name] = ent.get(name, deflt)
+            else:
+                node.__dict__[item] = ent.get(item)
 
     def addInputConnector(self, name, conntype, desc=""):
         """create a new input connector; done in subclass constructor"""
@@ -971,7 +976,7 @@ class XFormGraph:
         """construct a graphical representation for this graph"""
         self.scene = graphscene.XFormGraphScene(self, doAutoLayout)
 
-    def create(self, typename, displayName = None):
+    def create(self, typename, displayName=None):
         """create a new node, passing in a type name. We look in both the 'global' dictionary,
         allTypes,  but also the macros for this document. We can pass in an optional display name."""
 

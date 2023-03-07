@@ -60,20 +60,23 @@ class Type:
     rather more complicated. Particularly for custom types. Just be careful.
     """
 
-    def __init__(self, name, image=False, internal=False, outputStringShort=False):
+    def __init__(self, name, image=False, internal=False):
         """Parameters:
             name: the name of the type
             image: is the type for an image (i.e. is it a 'subtype' of Type("img")?)
             internal: is it an internal type used in the expression evaluator, not for connectors?
-            outputStringShort: is the __str__ result applied to the value short enough for an expr box?
         """
         self.name = name
         self.image = image
         self.internal = internal
-        self.outputStringShort = outputStringShort
         _typesByName[name] = self  # register by name
 
     def __str__(self):
+        return self.name
+
+    def getDisplayString(self, d: 'Datum'):
+        """Return the datum as a SHORT string - small enough to fit in a graph box; default
+        is just to return the name"""
         return self.name
 
     def serialise(self, d: 'Datum'):
@@ -89,10 +92,23 @@ class AnyType(Type):
     def __init__(self):
         super().__init__('any')
 
+    def getDisplayString(self, d: 'Datum'):
+        """Might seem a bit weird, but an unconnected input actually gives "any" as its type."""
+        if d.val is None:
+            return "none"
+        else:
+            return "any"
+
 
 class ImgType(Type):
     def __init__(self):
         super().__init__('img', image=True)
+
+    def getDisplayString(self, d: 'Datum'):
+        if d.val is None:
+            return "IMG(NONE)"
+        else:
+            return f"IMG[{d.val.channels}]"
 
     def serialise(self, d):
         return self.name, d.val.serialise()
@@ -108,6 +124,12 @@ class ImgRGBType(Type):
 
     def serialise(self, d):
         return self.name, d.val.serialise()
+
+    def getDisplayString(self, d: 'Datum'):
+        if d.val is None:
+            return "IMG(NONE)"
+        else:
+            return "IMG[RGB]"
 
     def deserialise(self, d, document):
         img = ImageCube.deserialise(d, document)
@@ -137,7 +159,10 @@ class RoiType(Type):
 
 class NumberType(Type):
     def __init__(self):
-        super().__init__('number', outputStringShort=True)
+        super().__init__('number')
+
+    def getDisplayString(self, d: 'Datum'):
+        return f"{d.val:.5g}"
 
     def serialise(self, d):
         return self.name, (d.val, d.getSources().serialise())

@@ -154,10 +154,6 @@ presetGradients = {
 }
 
 
-def sigfigs(val: float, n: int):
-    return '{:g}'.format(float('{:.{p}g}'.format(val, p=n)))
-
-
 class GradientLegend(Annotation):
     grad: QLinearGradient
     mn: float
@@ -313,7 +309,8 @@ class XformGradient(XFormType):
         self.addInputConnector("insetinto", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
         self.hasEnable = True
-        self.autoserialise = ('colour', 'legendrect', 'vertical', 'thickness', 'fontscale', 'legendPos')
+        self.autoserialise = ('colour', 'legendrect', 'vertical', 'thickness', 'fontscale', 'legendPos',
+                              ('sigfigs', 6))
 
     def serialise(self, node):
         return {'gradient': node.gradient.data}
@@ -331,6 +328,7 @@ class XformGradient(XFormType):
         node.legendrect = (0, 0, 100, 20)
         node.vertical = False
         node.fontscale = 10
+        node.sigfigs = 6
         node.thickness = 1
         node.legendPos = IN_IMAGE
 
@@ -381,6 +379,7 @@ class XformGradient(XFormType):
                 subimage.setROI(outimg, roiUnion)
             node.img = outimg.modifyWithSub(subimage, newsubimg, keepMapping=True)
 
+        fs = "{:."+str(node.sigfigs)+"}"
         if node.img is not None:
             node.img.annotations.append(GradientLegend(node.gradient,
                                                        node.legendPos,
@@ -389,7 +388,7 @@ class XformGradient(XFormType):
                                                        node.colour,
                                                        node.fontscale,
                                                        node.thickness,
-                                                       (f"{sigfigs(node.minval, 3)}", f"{sigfigs(node.maxval, 3)}")
+                                                       (fs.format(node.minval), fs.format(node.maxval))
                                                        ))
 
         node.setOutput(0, Datum(Datum.IMG, node.img))
@@ -411,6 +410,7 @@ class TabGradient(pcot.ui.tabs.Tab):
         for x in [self.w.xSpin, self.w.ySpin, self.w.wSpin, self.w.hSpin]:
             x.editingFinished.connect(self.rectChanged)
         self.w.thicknessSpin.valueChanged.connect(self.thicknessChanged)
+        self.w.sigFigs.valueChanged.connect(self.sigFigsChanged)
         self.w.orientCombo.currentTextChanged.connect(self.orientChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
 
@@ -460,6 +460,11 @@ class TabGradient(pcot.ui.tabs.Tab):
         self.node.thickness = val
         self.changed()
 
+    def sigFigsChanged(self, val):
+        self.mark()
+        self.node.sigfigs = val
+        self.changed()
+
     def orientChanged(self, val):
         self.mark()
         self.node.vertical = (val == 'Vertical')
@@ -498,11 +503,12 @@ class TabGradient(pcot.ui.tabs.Tab):
         self.w.canvas.setPersister(self.node)
         self.w.gradient.setGradient(self.node.gradient.data)
         self.w.canvas.display(self.node.img)
-        s = f"Min:{sigfigs(self.node.minval, 3)}\nMax:{sigfigs(self.node.maxval, 3)}"
+        s = f"Min:{self.node.minval:.6g}\nMax:{self.node.maxval:.6g}"
         self.w.rangeLabel.setText(s)
 
         self.w.legendPos.setCurrentText(self.node.legendPos)
         self.w.fontSpin.setValue(self.node.fontscale)
+        self.w.sigFigs.setValue(self.node.sigfigs)
         x, y, w, h = self.node.legendrect
         self.w.xSpin.setValue(x)
         self.w.ySpin.setValue(y)

@@ -5,7 +5,7 @@ from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.expressions import ExpressionEvaluator
 from pcot.imagecube import ChannelMapping
-from pcot.xform import XFormType, xformtype, XFormException
+from pcot.xform import XFormType, xformtype, XFormException, XForm
 
 
 def getvar(v):
@@ -142,7 +142,7 @@ class XFormExpr(XFormType):
         node.resultStr = ""
         node.w = -1
 
-    def perform(self, node):
+    def perform(self, node: XForm):
         # we register the input vars here because we have to, they are temporary and apply to
         # this run only. To register other things, go to expression/eval.py.
 
@@ -169,13 +169,8 @@ class XFormExpr(XFormType):
                             if oldChans is not None and node.img.channels != oldChans:
                                 node.mapping = ChannelMapping()
                             node.img.setMapping(node.mapping)
-                        node.resultStr = "IMAGE"
-                    elif res.tp.outputStringShort:
-                        node.resultStr = str(res.val)
-                        node.setRectText("res: "+node.resultStr)
-                    else:
-                        node.resultStr = str(res.val)
-                        node.setRectText("res: "+str(res.tp))
+                    node.resultStr = res.tp.getDisplayString(res)
+                    node.setRectText(node.resultStr)
 
         except Exception as e:
             traceback.print_exc()

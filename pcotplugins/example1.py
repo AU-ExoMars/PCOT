@@ -109,10 +109,12 @@ class TestObject:
 class _TestObjectType(Type):
     def __init__(self):
         # just call the superconstructor telling it the name of the type
-        # and in this case, that the stringification (the result of __str__ on the
-        # value) is short enough to fit into an expr node's graph box.
-        super().__init__('testtuple', outputStringShort=True)
-        
+        super().__init__('testtuple')
+
+    def getDisplayString(self, d: 'Datum'):
+        # how to turn this into a string for a graph box
+        return "TUPLE"
+
     # now we have to write code which converts Datums of this type into
     # stuff which can be converted to JSON and back again. Converting
     # into JSON-serialisable is termed "serialisation" and reconstructing
