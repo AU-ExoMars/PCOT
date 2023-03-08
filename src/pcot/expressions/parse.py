@@ -417,6 +417,7 @@ class Parser:
                      ):
         """register a function - the callable should take a list of args, a list of optional args and return a value.
         Also takes a description and two lists of argument types: mandatory and optional."""
+        print(f"Registered func {name}")
         self.funcRegistry[name] = Function(name, fn, description, mandatoryParams, optParams, varargs)
 
     # property dict - keys are (name,type), values are (desc,func) where the func

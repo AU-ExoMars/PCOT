@@ -14,7 +14,7 @@ import sys
 import uuid
 from collections import deque
 from io import BytesIO
-from typing import List, Dict, Tuple, ClassVar, Optional, TYPE_CHECKING, Callable
+from typing import List, Dict, Tuple, ClassVar, Optional, TYPE_CHECKING, Callable, Union, Any
 
 import pyperclip
 
@@ -26,7 +26,7 @@ from pcot.sources import nullSourceSet, SourceSet
 from pcot.ui import graphscene
 from pcot.ui.canvas import Canvas
 from pcot.ui.tabs import Tab
-from pcot.utils import archive
+from pcot.utils import archive, deb
 
 if TYPE_CHECKING:
     import PyQt5.QtWidgets
@@ -137,14 +137,14 @@ class XFormType:
     ver: str
     # does it have an enable button?
     hasEnable: bool
-    # all instances of this type in all graphs
-    instances: List['XForm']
     # an open help window, or None
     helpwin: Optional['PyQt5.QtWidgets.QMainWindow']
     inputConnectors: List[Tuple[str, Type, str]]  # the inputs (name,connection type,description)
     outputConnectors: List[Tuple[str, Type, str]]  # the outputs (name,connection type,description)
     # tuple of autoserialisable attributes in each node of this type
-    autoserialise: Tuple[str, ...]
+    # These are either strings or tuples, in which case the first element is the name and the second
+    # is a default value used when legacy files are loaded which doesn't have that value.
+    autoserialise: Tuple[Union[str, Tuple[str, Any]], ...]
     # MD5 hash of source code (generated automatically)
     _md5: str
     # minimum width of node on screen
@@ -162,7 +162,6 @@ class XFormType:
         self.group = group
         self.name = name
         self.ver = ver
-        self.instances = []
         self.helpwin = None
         # does this node have an "enabled" button? Change in subclass if reqd.
         self.hasEnable = False
@@ -187,10 +186,6 @@ class XFormType:
         self.showPerformedCount = True
         self.setRectParams = None
 
-    def remove(self, node):
-        """call to remove node from instance list"""
-        self.instances.remove(node)
-
     def md5(self):
         """returns a checksum of the sourcecode for the module defining the type, MD5 hash, used to check versions"""
         return self._md5
@@ -198,18 +193,21 @@ class XFormType:
     def doAutoserialise(self, node):
         """run autoserialisation for a node"""
         try:
-            return {name: node.__dict__[name] for name in self.autoserialise}
+            # if elements are tuples (i.e. value and default), only get the first item
+            ser = [f[0] if type(f) == tuple else f for f in self.autoserialise]
+            # and build the dictionary
+            return {name: node.__dict__[name] for name in ser}
         except KeyError as e:
             raise Exception("autoserialise value not in node {}: {}".format(self.name, e.args[0]))
 
     def doAutodeserialise(self, node, ent):
         """run autodeserialisation for a node"""
-        for name in self.autoserialise:
-            # ignore key errors, for when we add data during development
-            try:
-                node.__dict__[name] = ent[name]
-            except KeyError:
-                pass
+        for item in self.autoserialise:
+            if type(item) == tuple:
+                name, deflt = item
+                node.__dict__[name] = ent.get(name, deflt)
+            else:
+                node.__dict__[item] = ent.get(item)
 
     def addInputConnector(self, name, conntype, desc=""):
         """create a new input connector; done in subclass constructor"""
@@ -493,7 +491,6 @@ class XForm:
         self.inUIChange = False
         # all nodes have a channel mapping, because it's easier. See docs for that class.
         self.mapping = ChannelMapping()
-        tp.instances.append(self)
         Canvas.initPersistData(self)
 
     def dumpInputs(self, t):
@@ -557,7 +554,7 @@ class XForm:
 
     def onRemove(self):
         """called when a node is deleted"""
-        self.type.remove(self)
+        self.graph.doc.nodeRemoved(self)
 
     def setEnabled(self, b):
         """set or clear the enabled field"""
@@ -898,6 +895,9 @@ class XForm:
 
     def ensureConnectionsValid(self):
         """ensure connections are valid and break them if not"""
+        # THIS IS NOW OBSOLETE AND SHOULDN'T BE CALLED
+        raise XFormException('TYPE', 'ensureConnectionsValid should not be called (see issue #60)')
+        doPerform = False
         for i in range(0, len(self.inputs)):
             inp = self.inputs[i]
             if inp is not None:
@@ -905,7 +905,9 @@ class XForm:
                 outtype = n.getOutputType(idx)
                 intype = self.getInputType(i)
                 if not datum.isCompatibleConnection(outtype, intype):
-                    self.disconnect(i)
+                    doPerform = True
+                    self.disconnect(i, perform=False)
+        return doPerform
 
     def rename(self, name):
         """rename a node - changes the displayname."""
@@ -974,7 +976,7 @@ class XFormGraph:
         """construct a graphical representation for this graph"""
         self.scene = graphscene.XFormGraphScene(self, doAutoLayout)
 
-    def create(self, typename, displayName = None):
+    def create(self, typename, displayName=None):
         """create a new node, passing in a type name. We look in both the 'global' dictionary,
         allTypes,  but also the macros for this document. We can pass in an optional display name."""
 
@@ -998,6 +1000,7 @@ class XFormGraph:
         # display name is just the type name to start with.
         xform = XForm(tp, tp.name)
         self.nodes.append(xform)
+        self.doc.nodeAdded(xform)
         xform.graph = self
         tp.init(xform)  # run the init
         self.nodeDict[xform.name] = xform
@@ -1063,6 +1066,7 @@ class XFormGraph:
                 for x in node.tabs:
                     x.nodeDeleted()
             self.nodes.remove(node)
+            print(f"DELETE {node.name}")
             del self.nodeDict[node.name]
 
             # having deleted the node try to call all the children. That might seem a bit
@@ -1118,7 +1122,7 @@ class XFormGraph:
                 # This could be optimised to run only the relevant (changed) component
                 # within the macro, but that's very hairy.
 
-                for inst in self.proto.instances:
+                for inst in self.proto.getInstances():
                     inst.instance.copyProto()
                     # "inst" is an XFormMacro node inside the graph which contains the macro,
                     # it is not the instance graph inside the "inst" node. Not sure how this
@@ -1208,6 +1212,20 @@ class XFormGraph:
 
         return d
 
+    def clearAllNodes(self, closetabs=True):
+        """Delete all nodes - done on deserialising into an existing graph and on clearing a document"""
+        # we temporarily disable graph performance by telling the system we are already
+        # performing a graph. This will stop it doing it again, which messing things up
+        # because we perform child nodes on .remove. Well, it doesn't mess things up
+        # fatally but you do get a lot of spurious errors.
+        oldPerfG = self.performingGraph
+        self.performingGraph = True
+        # remove from a copy; can't modify a list while traversing
+        for n in self.nodes.copy():
+            # this will close any open tabs, but NOT when closetabs is false.
+            self.remove(n, closetabs=closetabs)
+        self.performingGraph = oldPerfG
+
     def deserialise(self, d, deleteExistingNodes, closetabs=True):
         """given a dictionary, add nodes stored in it in serialized form.
             Do not delete any existing nodes unless asked and do not perform the nodes.
@@ -1218,17 +1236,7 @@ class XFormGraph:
             """
 
         if deleteExistingNodes:
-            # we temporarily disable graph performance by telling the system we are already
-            # performing a graph. This will stop it doing it again, which messing things up
-            # because we perform child nodes on .remove. Well, it doesn't mess things up
-            # fatally but you do get a lot of spurious errors.
-            oldPerfG = self.performingGraph
-            self.performingGraph = True
-            # remove from a copy; can't modify a list while traversing
-            for n in self.nodes.copy():
-                # this will close any open tabs, but NOT when closetabs is false.
-                self.remove(n, closetabs=closetabs)
-            self.performingGraph = oldPerfG
+            self.clearAllNodes(closetabs=True)
 
         # disambiguate nodes in the dict, to make sure they don't
         # have the same nodes as ones already in the graph
@@ -1310,10 +1318,13 @@ class XFormGraph:
 
     def ensureConnectionsValid(self):
         """ensure all connections are valid (i.e. in/out types are compatible)
-            and break those which aren't
+            and break those which aren't. Reperform the graph if there was a change.
             """
+        doPerform = False
         for n in self.nodes:
-            n.ensureConnectionsValid()
+            doPerform |= n.ensureConnectionsValid()
+        if doPerform:
+            self.changed()
 
     def getMyROIs(self, node):
         """If this node creates an ROI or ROIs, return it/them as a list, otherwise None (not an empty list)"""

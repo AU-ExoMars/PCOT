@@ -1,5 +1,13 @@
 #!/usr/bin/env python
 
+"""
+This script generates autodoc markdown files into the 
+docs/autodocs directory. It needs to have the PCOT
+conda environment active, as it uses PCOT as a library,
+generating documentation for nodes and functions from 
+their doc strings.
+"""
+
 import pcot
 import os
 import shutil

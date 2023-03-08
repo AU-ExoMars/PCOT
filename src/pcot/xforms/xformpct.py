@@ -137,6 +137,7 @@ class XformPCT(XFormType):
         # the perform for this node mainly draws ROIs once they are generated. The PCT outline is drawn
         # in the canvas draw hook.
         if img is not None:
+            img = img.shallowCopy() # Issue 56!
             node.previewRadius = getRadiusFromSlider(node.brushSize, img.w, img.h, scale=BRUSHSCALE)
             img.setMapping(node.mapping)
 
@@ -147,6 +148,8 @@ class XformPCT(XFormType):
             # get the RGB image we are going to draw the ROIs onto. Will only draw if there are ROIs!
 
             node.rgbImage = img.rgbImage()
+
+            # add the annotations to it.
             if node.drawMode != 'None':
                 for i, r in enumerate(node.rois):
                     if r is not None:
@@ -155,7 +158,7 @@ class XformPCT(XFormType):
                                        True)
                         r.drawEdge = (node.drawMode == 'Edge')
                         r.drawBox = (i == node.selROI)
-                        r.draw(node.rgbImage.img)
+                        node.rgbImage.annotations.append(r)
         node.img = img
 
     def uichange(self, n):

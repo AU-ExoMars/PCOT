@@ -131,9 +131,10 @@ class MultifileInputMethod(InputMethod):
         return "Multifile"
 
     # used from external code. Filterpat == none means leave unchanged.
-    def setFileNames(self, directory, fnames, filterpat=None):
+    def setFileNames(self, directory, fnames, filterpat=None, camname="PANCAM"):
         self.dir = directory
         self.files = fnames
+        self.camera = camname
         if filterpat is not None:
             self.filterpat = filterpat
         self.mapping = ChannelMapping()

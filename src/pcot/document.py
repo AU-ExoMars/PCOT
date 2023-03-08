@@ -1,7 +1,7 @@
 import logging
 import time
 from collections import deque
-from typing import Dict
+from typing import Dict, List
 
 import pcot.config
 from pcot import inputs, ui
@@ -10,7 +10,7 @@ from pcot.inputs.inp import InputManager
 from pcot.macros import XFormMacro
 from pcot.ui.mainwindow import MainUI
 from pcot.utils import archive
-from pcot.xform import XFormGraph
+from pcot.xform import XFormGraph, XForm, XFormType
 
 logger = logging.getLogger(__name__)
 
@@ -88,14 +88,20 @@ class Document:
     inputMgr: InputManager
     settings: DocumentSettings
     undoRedoStore: UndoRedoStore
+    nodeInstances: Dict[XFormType, List[XForm]]
+
+    def __del__(self):
+        print(f"----{self}")
 
     def __init__(self, fileName=None):
         """Create a new document, and (optionally) load a file into it"""
+        print(f"++++{self}")
         self.graph = XFormGraph(self, False)  # false - is not a macro
         self.inputMgr = InputManager(self)
         self.macros = {}
         self.settings = DocumentSettings()
         self.undoRedoStore = UndoRedoStore()
+        self.nodeInstances = {}
 
         if fileName is not None:
             self.load(fileName)
@@ -192,10 +198,10 @@ class Document:
         """set graph's input to RGB"""
         return self.setInputData(inputidx, inputs.Input.RGB, lambda method: method.setFileName(fname))
 
-    def setInputMulti(self, inputidx, directory, fnames, filterpat=None):
+    def setInputMulti(self, inputidx, directory, fnames, filterpat=None, camname="PANCAM"):
         """set graph's input to multiple files"""
         return self.setInputData(inputidx, inputs.Input.MULTIFILE,
-                                 lambda method: method.setFileNames(directory, fnames, filterpat))
+                                 lambda method: method.setFileNames(directory, fnames, filterpat, camname))
 
     def setInputPDS4(self, inputidx, products):
         """Set a PDS4 input to a set of proctools DataProducts. Must be able to combine them into a single datum
@@ -236,6 +242,23 @@ class Document:
             w.replaceDocument(self)  # and this must repatch the tabs we didn't delete
         self.showUndoStatus()
 
+    def nodeAdded(self, node):
+        """A node has been added, insert it into the instance list for the type"""
+        if node.type not in self.nodeInstances:
+            self.nodeInstances[node.type] = []
+        self.nodeInstances[node.type].append(node)
+
+    def nodeRemoved(self, node):
+        """A node has been removed, remove it from the instance list for the type"""
+        if node.type in self.nodeInstances:
+            self.nodeInstances[node.type].remove(node)
+
+    def getInstances(self, tp):
+        if tp in self.nodeInstances:
+            return self.nodeInstances[tp]
+        else:
+            return []
+
     def canUndo(self):
         return self.undoRedoStore.canUndo()
 
@@ -261,3 +284,10 @@ class Document:
     def showUndoStatus(self):
         for w in MainUI.getWindowsForDocument(self):
             w.showUndoStatus()
+
+    def clear(self):
+        """Delete all nodes - do this if you intend to drop the document. Here's why:
+        Macros require that all static type objects keep a list of their instances. That means that
+        when a document variable is set to null, it doesn't get garbage collected because all those
+        instances still contain refs to that doc's nodes."""
+        self.graph.clearAllNodes(True)

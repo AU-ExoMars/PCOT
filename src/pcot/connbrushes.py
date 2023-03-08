@@ -19,10 +19,9 @@ def register(t: Type, colOrBrush):
         brushDict[t] = QBrush(colOrBrush)
 
 
-## creates a gradient consisting of three colours in quick succession
-# followed by a wide band of another colour. Used to mark connections such as RGB.
-
-def quickGrad(c1, c2, c3, finalC):
+def quickGrad(c1: QColor, c2: QColor, c3: QColor, finalC: QColor) -> QBrush:
+    """creates a gradient consisting of three colours in quick succession
+    followed by a wide band of another colour. Used to mark connections such as RGB."""
     grad = QLinearGradient(0, 0, 20, 0)
     grad.setColorAt(0, c1)
     grad.setColorAt(0.4, c2)
@@ -42,7 +41,6 @@ register(Datum.DATA, Qt.darkMagenta)
 register(Datum.NUMBER, Qt.darkGreen)
 register(Datum.VARIANT, QBrush(Qt.black, Qt.DiagCrossPattern))
 register(Datum.NONE, QBrush(Qt.red, Qt.BDiagPattern))
-
 
 _unknown = QBrush(Qt.magenta)
 

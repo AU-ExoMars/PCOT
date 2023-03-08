@@ -3,43 +3,123 @@ import logging
 import math
 import os
 import platform
-from typing import TYPE_CHECKING, Optional, Union
+import time
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Optional, Union, List, Tuple, Dict
 
 import cv2 as cv
 import numpy as np
 from PySide2 import QtWidgets, QtCore
-from PySide2.QtCore import Qt
+from PySide2.QtCore import Qt, QSize, QTimer
 from PySide2.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent
 from PySide2.QtWidgets import QCheckBox, QMessageBox
 
 import pcot
 import pcot.ui as ui
-from pcot import imageexport
+from pcot import imageexport, canvasnormalise
 from pcot.datum import Datum
+from pcot.ui import canvasdq
+from pcot.ui.canvasdq import CanvasDQSpec
+from pcot.ui.collapser import Collapser, CollapserSection
 from pcot.ui.spectrumwidget import SpectrumWidget
+import pcot.dq
+from pcot.ui.texttogglebutton import TextToggleButton
+from pcot.utils.deb import Timer
 
 if TYPE_CHECKING:
     from pcot.xform import XFormGraph, XForm
 
 logger = logging.getLogger(__name__)
 
+# how many DQ overlays we can have
+NUMDQS = 3
+
+
+class PersistBlock:
+    """This is the block owned by a node which has a canvas, to store data which is persisted
+    for the canvas only."""
+    showROIs: bool              # should we show all ROIs and not just the ones defined in this node?
+    normToCropped: bool         # boolean, should we normalise to only the visible part of the image?
+    normMode: int               # normalisation mode e.g. NormToRGB, see canvasnormalise.py
+    dqs: List[CanvasDQSpec]     # settings for each DQ layer
+
+    def __init__(self, d=None):
+        """sets default values, or perform the inverse of serialise(), turning the serialisable form into one
+        of these objects"""
+        if d is None:
+            self.showROIs = True
+            self.dqs = [CanvasDQSpec() for _ in range(NUMDQS)]  # 3 of these set to defaults
+            self.normToCropped = False
+            self.normMode = canvasnormalise.NormToImg
+        else:
+            self.showROIs, self.normMode, self.normToCropped, dqs = d
+            self.normMode = int(self.normMode)  # deal with legacy files
+            self.normToCropped = bool(self.normToCropped)
+            self.dqs = [CanvasDQSpec(d) for d in dqs]
+
+    def serialise(self):
+        """return a version of this type which can be serialised into JSON"""
+        dqs = [d.serialise() for d in self.dqs]
+        return [self.showROIs, self.normMode, self.normToCropped, dqs]
+
 
 # the actual drawing widget, contained within the Canvas widget
 class InnerCanvas(QtWidgets.QWidget):
-    ## @var img
-    # the numpy image we are rendering (1 or 3 chans)
-    ## @var canv
+    # the numpy image we are rendering, having been converted to RGB
+    rgb: Optional[np.ndarray]
+    # the imagecube we are rendering, from which the above is generated
+    imgCube: Optional['ImageCube']
+    # the text that appears at bottom of the image
+    desc: str
     # our main Canvas widget, which contains this widget
-    ## @var zoomscale
+    canv: 'Canvas'
     # the current zoom level: 1 to contain the entire image onscreen
-    ## @var scale
+    zoomscale: float
     # defines the zoom factor which scales the canvas to hold the image
-    ## @var x
-    # offset of top left pixel in canvas
-    ## @var y
-    # offset of top left pixel in canvas
+    scale: float
+    # coords of top left pixel in canvas
+    x: float
+    y: float
+    # cursor coords in image space
+    cursorX: float
+    cursorY: float
+    # the size of that part of the image which is in view
+    cutw: int
+    cuth: int
 
     cursor = None  # custom cursor; created once on first use
+
+    def __init__(self, canv, parent=None):
+        super().__init__(parent)
+        self.rgb = None
+        self.imgCube = None
+        self.desc = ""
+        self.zoomscale = 1
+        self.scale = 1
+        self.cursorX = 0  # coords of cursor in image space
+        self.cursorY = 0
+
+        self.x = 0  # coords of top left of img in view
+        self.y = 0
+        self.cutw = 0  # size of image in view
+        self.cuth = 0
+        self.panning = False
+        self.panX = None
+        self.panY = None
+        self.canv = canv
+        self.timer = QTimer(self)
+
+        # used to regularly redraw the canvas if elements are flashing
+        self.redrawOnTick = False
+        self.flashCycle = True
+        self.timer.timeout.connect(self.tick)
+        self.timer.start(300)  # flash rate
+
+        # needs to do this to get key events
+        self.setFocusPolicy(QtCore.Qt.ClickFocus)
+        self.setCursor(InnerCanvas.getCursor())
+        self.setMouseTracking(True)  # so we get move events with no button press
+        self.reset()
 
     def img2qimage(self, img):
         """convert a cv/numpy image to a Qt image. input must be 3 channels, 0-1 floats.
@@ -103,31 +183,6 @@ class InnerCanvas(QtWidgets.QWidget):
             cls.cursor = QCursor(bm, mask, 16, 16)
         return cls.cursor
 
-    ## constructor
-    def __init__(self, canv, parent=None):
-        super().__init__(parent)
-        self.img = None
-        self.imgCube = None
-        self.desc = ""
-        self.zoomscale = 1
-        self.scale = 1
-        self.cursorX = 0  # coords of cursor in image space
-        self.cursorY = 0
-
-        self.x = 0  # coords of top left of img in view
-        self.y = 0
-        self.cutw = 0  # size of image in view
-        self.cuth = 0
-        self.panning = False
-        self.panX = None
-        self.panY = None
-        self.canv = canv
-        # needs to do this to get key events
-        self.setFocusPolicy(QtCore.Qt.ClickFocus)
-        self.setCursor(InnerCanvas.getCursor())
-        self.setMouseTracking(True)  # so we get move events with no button press
-        self.reset()
-
     ## resets the canvas to zoom level 1, top left pan
     def reset(self):
         # not the same as self.scale, which defines the scale of the image 
@@ -137,30 +192,30 @@ class InnerCanvas(QtWidgets.QWidget):
         self.x = 0
         self.y = 0
 
+    def tick(self):
+        """Timer tick"""
+        if self.redrawOnTick:
+            self.flashCycle = 1 - self.flashCycle
+            self.update()
+
     ## returns the graph this canvas is part of
     def getGraph(self):
         return self.canv.graph
 
-    def getShowROIs(self):
-        """Ugly, and I'm not sure it's necessary. Is there always a persister?"""
-        if self.canv.persister.showROIs is None:
-            return False
-        else:
-            return self.canv.persister.showROIs
-
-    ## display an image next time paintEvent
-    # happens, and update to cause that. Allow it to handle None too.
     def display(self, img: 'ImageCube', isPremapped: bool, ):
+        """display an image next time paintEvent happens, and update to cause that.
+        Will also handle None (by doing nothing)"""
         self.imgCube = img
         if img is not None:
             self.desc = img.getDesc(self.getGraph())
+
             if not isPremapped:
                 # convert to RGB
-                img = img.rgb()
-                if img is None:
+                rgb = img.rgb()
+                if rgb is None:
                     ui.error("Unusual - the RGB representation is None")
             else:
-                img = img.img  # already done
+                rgb = img.img  # already done
                 if img is None:
                     ui.error("Unusual - the image has no numpy array")
 
@@ -168,9 +223,9 @@ class InnerCanvas(QtWidgets.QWidget):
             # DISABLED so that image stitching is bearable.
             #            if self.img is None or self.img.shape[:2] != img.shape[:2]:
             #                self.reset()
-            self.img = img
+            self.rgb = rgb
         else:
-            self.img = None
+            self.rgb = None
             self.reset()
         self.update()
 
@@ -199,8 +254,8 @@ class InnerCanvas(QtWidgets.QWidget):
         widgw = self.size().width()  # widget dimensions
         widgh = self.size().height()
         # here self.img is a numpy image
-        if self.img is not None:
-            imgh, imgw = self.img.shape[0], self.img.shape[1]
+        if self.rgb is not None:
+            imgh, imgw = self.rgb.shape[0], self.rgb.shape[1]
 
             # work out the "base scale" so that a zoomscale of 1 fits the entire
             # image            
@@ -218,21 +273,38 @@ class InnerCanvas(QtWidgets.QWidget):
             # get the top-left coordinate and cut the area.            
             cutx = int(self.x)
             cuty = int(self.y)
-            img = self.img[cuty:cuty + cuth, cutx:cutx + cutw]
-            # now get the size of the image that was actually cut (some areas may be out of range)
-            self.cuth, self.cutw = img.shape[:2]
+            # get the viewable section of the RGB
+            rgbcropped = self.rgb[cuty:cuty + cuth, cutx:cutx + cutw]
 
-            self.drawCursor(img, cutx, cuty)
+            # now get the size of the image that was actually cut (some areas may be out of range)
+            self.cuth, self.cutw = rgbcropped.shape[:2]
+
+            # This is where we normalise according to the current normalisation
+            # scheme. We need to pass in the crop rectangle for finding the normalisation range in NormToImg mode.
+
+#            print(f"Norm Mode: {self.canv.canvaspersist.normMode} / {self.canv.canvaspersist.normToCropped}")
+            rgbcropped = canvasnormalise.canvasNormalise(self.imgCube.img,
+                                                         rgbcropped,
+                                                         self.rgb,
+                                                         self.canv.canvaspersist.normMode,
+                                                         self.canv.canvaspersist.normToCropped,
+                                                         (cutx, cuty, self.cutw, self.cuth))
+
+            # Here we draw the overlays and get any extra text required
+            rgbcropped, dqtext = self.drawDQOverlays(rgbcropped, cutx, cuty, cutw, cuth)
+
+            # draw the cursor crosshair into the image for accuracy
+            self.drawCursor(rgbcropped, cutx, cuty)
             # now resize the cut area up to fit the widget and draw it. Using area interpolation here:
             # cubic produced odd artifacts on float images.
-            img = cv.resize(img, dsize=(int(self.cutw / scale), int(self.cuth / scale)), interpolation=cv.INTER_AREA)
-            qq = self.img2qimage(img)
-            p.drawImage(0, 0, qq)
+            rgbcropped = cv.resize(rgbcropped, dsize=(int(self.cutw / scale), int(self.cuth / scale)),
+                                   interpolation=cv.INTER_AREA)
+            p.drawImage(0, 0, self.img2qimage(rgbcropped))
 
             # draw annotations (and ROIs, which are annotations too)
             # on the image
 
-            if self.getShowROIs():
+            if self.canv.canvaspersist.showROIs:
                 # we're showing ALL rois
                 rois = None
             elif self.canv.ROInode is not None:
@@ -256,11 +328,100 @@ class InnerCanvas(QtWidgets.QWidget):
             p.setPen(Qt.yellow)
             p.setBrush(Qt.yellow)
             r = QtCore.QRect(0, widgh - 20, widgw, 20)
-            p.drawText(r, Qt.AlignLeft, self.desc)
+            p.drawText(r, Qt.AlignLeft, f"{self.desc} {dqtext}")
         else:
             # there's nothing to draw
             self.scale = 1
         p.end()
+
+    def drawDQOverlays(self, img, cutx, cuty, cutw, cuth) -> Tuple[np.ndarray, str]:
+        """Draw the DQ overlays onto the RGB image img, which has already been cropped down to
+        cutx,cuty,cutw,cuth. That cropping will need to be done on other data.
+
+        It may be necessary to add code to handle missing / NA data. I'd rather not do that here
+        for speed; we should just set the uncertainty to zero elsewhere for no data.
+
+        We return the modified image and any extra text that gets tacked onto the descriptor"""
+
+        threshold = 1  # fixed for now!
+        txt = ""
+        self.redrawOnTick = False
+
+        if self.canv.isDQHidden:  # are DQs temporarily disabled?
+            return img, txt
+
+        for d in self.canv.canvaspersist.dqs:
+            if d.isActive():
+                if d.data == canvasdq.DTypeUnc or d.data == canvasdq.DTypeUncGtThresh or \
+                        d.data == canvasdq.DTypeUncLtThresh:
+                    # we're viewing uncertainty data, so cut out the relevant area
+                    data = self.imgCube.uncertainty[cuty:cuty + cuth, cutx:cutx + cutw]
+                    # and process it
+                    if d.stype == canvasdq.STypeMaxAll:
+                        # single-channel vs multichannel images.
+                        if self.imgCube.channels > 1:
+                            data = np.amax(data, axis=2)  # a bit slow
+                    elif d.stype == canvasdq.STypeSumAll:
+                        if self.imgCube.channels > 1:
+                            data = np.sum(data, axis=2)  # a bit slot
+                    else:
+                        if self.imgCube.channels > 1:
+                            data = data[:, :, d.channel]
+                    # now we have the uncertainty data, threshold if that's what's wanted.
+                    if d.data == canvasdq.DTypeUncGtThresh:
+                        data = (data > d.thresh).astype(np.float32)
+                    elif d.data == canvasdq.DTypeUncLtThresh:
+                        data = (data < d.thresh).astype(np.float32)
+                    else:
+                        # otherwise normalize
+                        mn = np.min(data)
+                        rng = np.max(data) - mn
+                        txt = f": RANGE {mn:0.3f}, {np.max(data):0.3f}"
+                        if rng > 0.0000001:
+                            data = (data - mn) / rng
+                        else:
+                            data = np.zeros(data.shape, dtype=float)
+
+                elif d.data > 0:
+                    # otherwise it's a DQ bit, so cut that out
+                    data = self.imgCube.dq[cuty:cuty + cuth, cutx:cutx + cutw]
+                    if d.stype == canvasdq.STypeMaxAll or d.stype == canvasdq.STypeSumAll:
+                        # union all channels
+                        data = np.bitwise_or.reduce(data, axis=2)
+                    else:
+                        # or extract relevant channel
+                        data = data[:, :, d.channel]
+                    # extract the relevant bit
+                    np.bitwise_and(data, d.data, out=data)
+                    # now convert that to float, setting nonzero to 1 and zero to 0.
+                    data = (data > 0).astype(np.float32)
+                # expand the data to RGB, but in different ways depending on the colour!
+                r, g, b, flash = canvasdq.colours[d.col]
+                if flash:
+                    self.redrawOnTick = True
+                # avoiding the creating of new arrays where we can.
+                if not flash or self.flashCycle:
+                    zeroes = np.zeros(data.shape, dtype=float)
+                    r = data if r > 0.5 else zeroes
+                    g = data if g > 0.5 else zeroes
+                    b = data if b > 0.5 else zeroes
+                    data = np.dstack((r, g, b))
+                    # combine with image, avoiding copies.
+                    np.power(data, 2 * d.contrast,
+                             out=data)  # data should be normalised, so this acts as a gamma
+                    # add to the image
+                    np.multiply(data, 1.0 - d.trans, out=data)
+                    # additive or "normal" blending
+                    if d.additive:
+                        np.add(data, img, out=data)
+                    else:
+                        img2 = np.multiply(img, d.trans)  # TODO can we avoid a copy here?
+                        np.add(data, img2, out=data)
+                    # clip the data (mainly because of additive, but just in case other
+                    # stuff has happened)
+                    np.clip(data, 0, 1, out=data)
+                    img = data
+        return img, txt
 
     def getScale(self):
         return self.scale * self.zoomscale
@@ -305,8 +466,8 @@ class InnerCanvas(QtWidgets.QWidget):
             dy = y - self.panY
             self.x -= dx * 0.5
             self.y -= dy * 0.5
-            self.x = max(0, min(self.x, self.img.shape[1] - self.cutw))
-            self.y = max(0, min(self.y, self.img.shape[0] - self.cuth))
+            self.x = max(0, min(self.x, self.rgb.shape[1] - self.cutw))
+            self.y = max(0, min(self.y, self.rgb.shape[0] - self.cuth))
             self.panX, self.panY = x, y
         else:
             self.canv.mouseMove(x, y, e)
@@ -331,12 +492,12 @@ class InnerCanvas(QtWidgets.QWidget):
         newzoom = self.zoomscale * math.exp(wheel * 0.2)
 
         # can't zoom when there's no image
-        if self.img is None:
+        if self.rgb is None:
             return
 
         # get image coords, and clip the event's coords to those
         # (to make sure we're not clicking on the background of the canvas)
-        imgh, imgw = self.img.shape[0], self.img.shape[1]
+        imgh, imgw = self.rgb.shape[0], self.rgb.shape[1]
         if x >= imgw:
             x = imgw - 1
         if y >= imgh:
@@ -370,14 +531,14 @@ class InnerCanvas(QtWidgets.QWidget):
 
 def makesidebarLabel(t):
     lab = QtWidgets.QLabel(t)
-    # lab.setMaximumHeight(15)
-    lab.setMinimumWidth(100)
+    lab.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
     return lab
 
 
-## the containing widget, holding scroll bars and InnerCanvas widget
-
 class Canvas(QtWidgets.QWidget):
+    """Canvas : a widget for drawing multispectral ImageCube data. Consists of InnerCanvas (the image as RGB),
+    scrollbars and extra controls."""
+
     ## @var paintHook
     # an object with a paintEvent() which can do extra drawing (or None)
     paintHook: Optional[object]
@@ -422,87 +583,52 @@ class Canvas(QtWidgets.QWidget):
     # so we can display stats for just its ROI. Otherwise None.
     ROInode: Optional['XForm']
 
+    # the DQ display data
+    dqs: List[CanvasDQSpec]
+
+    # is the DQ data hidden?
+    isDQHidden: bool
+
+    # List of the DQ section widgets
+    dqSections: List[CollapserSection]
+
     ## constructor
     def __init__(self, parent):
         super().__init__(parent)
+        self.firstDisplayDone = False
         self.paintHook = None
         self.mouseHook = None
         self.keyHook = None
         self.graph = None
         self.nodeToUIChange = None
         self.ROInode = None
+        self.isDQHidden = False  # does not persist!
         self.recursing = False  # An ugly hack to avoid recursion in ROI nodes
-
+        self.dqSourceCache = [None for i in range(NUMDQS)]  # source name cache for each channel
         # outer layout is a horizontal box - the sidebar and canvas+scrollbars are in this
         outerlayout = QtWidgets.QHBoxLayout()
         self.setLayout(outerlayout)
+        # by default we don't have a persister node, so we persist data privately (i.e. not at all).
+        # If we set a persister we use a persist block in that. I'm tempted to set this to None because
+        # really we should always have a persister!
+        self.canvaspersist = PersistBlock()
 
-        # the sidebar is a vbox, with labels (red,green,blue)
-        # and channel name comboboxes below each.
-        # Some of these are hideable and so go into a subwidget.
+        # Sidebar widgets.
 
-        self.sidebarwidget = QtWidgets.QWidget()
-        sidebar = QtWidgets.QVBoxLayout()
-        self.sidebarwidget.setLayout(sidebar)
-        self.sidebarwidget.setSizePolicy(QtWidgets.QSizePolicy.Maximum,
-                                         QtWidgets.QSizePolicy.MinimumExpanding)
+        self.collapser = Collapser()
+        self.collapser.setSizePolicy(QtWidgets.QSizePolicy.Maximum,
+                                     QtWidgets.QSizePolicy.MinimumExpanding)
 
-        outerlayout.addWidget(self.sidebarwidget)
+        outerlayout.addWidget(self.collapser)
         outerlayout.setAlignment(Qt.AlignTop)
 
-        self.hideablebuttons = QtWidgets.QWidget()
-        hideable = QtWidgets.QVBoxLayout()
-        self.hideablebuttons.setLayout(hideable)
-        sidebar.addWidget(self.hideablebuttons)
-
-        # these are the actual widgets specifying which channel in the cube is viewed.
-        # We need to deal with these carefully.
-        hideable.addWidget(makesidebarLabel("RED source"))
-        self.redChanCombo = QtWidgets.QComboBox()
-        self.redChanCombo.currentIndexChanged.connect(self.redIndexChanged)
-        hideable.addWidget(self.redChanCombo)
-        hideable.addWidget(makesidebarLabel("GREEN source"))
-        self.greenChanCombo = QtWidgets.QComboBox()
-        self.greenChanCombo.currentIndexChanged.connect(self.greenIndexChanged)
-        hideable.addWidget(self.greenChanCombo)
-        hideable.addWidget(makesidebarLabel("BLUE source"))
-        self.blueChanCombo = QtWidgets.QComboBox()
-        self.blueChanCombo.currentIndexChanged.connect(self.blueIndexChanged)
-        hideable.addWidget(self.blueChanCombo)
-
-        # self.roiToggle = TextToggleButton("ROIs", "ROIs")
-        self.roiToggle = QCheckBox("Show ROIs")
-        sidebar.addWidget(self.roiToggle)
-        self.roiToggle.toggled.connect(self.roiToggleChanged)
-
-        # self.spectrumToggle = TextToggleButton("Spectrum", "Spectrum")
-        self.spectrumToggle = QCheckBox("Show spectrum")
-        sidebar.addWidget(self.spectrumToggle)
-        self.spectrumToggle.toggled.connect(self.spectrumToggleChanged)
-
-        self.saveButton = QtWidgets.QPushButton("Export image")
-        sidebar.addWidget(self.saveButton)
-        self.saveButton.clicked.connect(self.exportButtonClicked)
-
-        self.resetMapButton = QtWidgets.QPushButton("Guess RGB")
-        hideable.addWidget(self.resetMapButton)
-        self.resetMapButton.clicked.connect(self.resetMapButtonClicked)
-
-        self.coordsText = QtWidgets.QLabel('')
-        sidebar.addWidget(self.coordsText)
-
-        self.roiText = QtWidgets.QLabel('')
-        sidebar.addWidget(self.roiText)
-
-        self.dimensions = QtWidgets.QLabel('')
-        sidebar.addWidget(self.dimensions)
-
-        ## widgets done; add stretch at the end so that the above widgets don't expand.
-        sidebar.addStretch(10)
-
-        sidebar.setContentsMargins(0, 0, 0, 0)
+        # create the widgets that go inside the collapser
+        self.dqSections = []
+        self.createWidgets()
+        self.collapser.end()
 
         splitter = QtWidgets.QSplitter()
+        splitter.setHandleWidth(10)
         outerlayout.addWidget(splitter)
 
         innercanvasContainer = QtWidgets.QWidget()
@@ -547,11 +673,312 @@ class Canvas(QtWidgets.QWidget):
         # previous image (in case mapping changes and we need to redisplay the old image with a new mapping)
         self.previmg = None
         self.isPremapped = False
-        # entity to persist data in; should serialise and deserialise canvas settings
-        self.persister = None
-        self.roiToggle.setEnabled(False)  # because persister is None at first.
 
         pcot.ui.decorateSplitter(splitter, 1)
+
+    def createWidgets(self):
+        # These widgets are "hideable" in that we might not show them when we don't need to, e.g. for a single-channel
+        # or RGB image. This isn't actually used at the moment, but could be. We add them into their own widget
+        # with its own layout, and then that widget is added to a single-widget layout which is what gets set in the
+        # collapser. Necessary because the collapser takes layouts.
+
+        self.hideablebuttons = QtWidgets.QWidget()
+        self.hideablebuttons.setContentsMargins(0, 0, 0, 0)
+
+        hideable = QtWidgets.QGridLayout()
+        hideable.setContentsMargins(3, 10, 3, 10)  # LTRB
+        # these are the actual widgets specifying which channel in the cube is viewed.
+        # We need to deal with these carefully.
+        hideable.addWidget(makesidebarLabel("R"), 0, 0)
+        self.redChanCombo = QtWidgets.QComboBox()
+        self.redChanCombo.currentIndexChanged.connect(self.redIndexChanged)
+        hideable.addWidget(self.redChanCombo, 0, 1)
+
+        hideable.addWidget(makesidebarLabel("G"), 1, 0)
+        self.greenChanCombo = QtWidgets.QComboBox()
+        self.greenChanCombo.currentIndexChanged.connect(self.greenIndexChanged)
+        hideable.addWidget(self.greenChanCombo, 1, 1)
+
+        hideable.addWidget(makesidebarLabel("B"), 2, 0)
+        self.blueChanCombo = QtWidgets.QComboBox()
+        self.blueChanCombo.currentIndexChanged.connect(self.blueIndexChanged)
+        hideable.addWidget(self.blueChanCombo, 2, 1)
+
+        self.resetMapButton = QtWidgets.QPushButton("Guess RGB")
+        hideable.addWidget(self.resetMapButton, 3, 0, 1, 2)
+        self.resetMapButton.clicked.connect(self.resetMapButtonClicked)
+
+        self.hideablebuttons.setLayout(hideable)  # add layout to widget
+        hideableLayout = QtWidgets.QVBoxLayout()  # make a single-widget layout
+        hideableLayout.setContentsMargins(0, 0, 0, 0)
+        hideableLayout.addWidget(self.hideablebuttons)  # add the widget to it
+        # add that layout to the collapser
+        self.collapser.addSection("hideable", hideableLayout, isAlwaysOpen=True)
+
+        # next section
+
+        layout = QtWidgets.QGridLayout()
+        layout.setContentsMargins(3, 10, 3, 10)  # LTRB
+        # self.roiToggle = TextToggleButton("ROIs", "ROIs")
+        self.roiToggle = QCheckBox("ROIs")
+        layout.addWidget(self.roiToggle, 1, 0)
+        self.roiToggle.toggled.connect(self.roiToggleChanged)
+
+        # self.spectrumToggle = TextToggleButton("Spectrum", "Spectrum")
+        self.spectrumToggle = QCheckBox("spectrum")
+        layout.addWidget(self.spectrumToggle, 1, 1)
+        self.spectrumToggle.toggled.connect(self.spectrumToggleChanged)
+
+        self.saveButton = QtWidgets.QPushButton("Export image")
+        layout.addWidget(self.saveButton, 2, 0, 1, 2)
+        self.saveButton.clicked.connect(self.exportButtonClicked)
+
+        self.coordsText = QtWidgets.QLabel('')
+        layout.addWidget(self.coordsText, 3, 0, 1, 2)
+
+        self.roiText = QtWidgets.QLabel('')
+        layout.addWidget(self.roiText, 4, 0, 1, 2)
+
+        self.dimensions = QtWidgets.QLabel('')
+        layout.addWidget(self.dimensions, 5, 0, 1, 2)
+
+        self.hideDQ = QtWidgets.QCheckBox("hide DQ")
+        layout.addWidget(self.hideDQ, 6, 0, 1, 2)
+        self.hideDQ.toggled.connect(self.hideDQChanged)
+
+        self.collapser.addSection("data", layout, isOpen=True)
+
+        # normalisation section
+
+        layout = QtWidgets.QGridLayout()
+        layout.setContentsMargins(3, 10, 3, 10)  # LTRB
+
+        ll = QtWidgets.QLabel("norm")
+        layout.addWidget(ll, 0, 0)
+        self.normComboBox = QtWidgets.QComboBox()
+        self.normComboBox.addItem("to RGB", userData=canvasnormalise.NormToRGB)
+        self.normComboBox.addItem("independent", userData=canvasnormalise.NormSeparately)
+        self.normComboBox.addItem("to all bands", userData=canvasnormalise.NormToImg)
+        self.normComboBox.addItem("none", userData=canvasnormalise.NormNone)
+        self.normComboBox.currentIndexChanged.connect(self.normChanged)
+        layout.addWidget(self.normComboBox, 0, 1)
+
+        self.normCroppedCheckBox = QtWidgets.QCheckBox("to cropped area")
+        self.normCroppedCheckBox.toggled.connect(self.normChanged)
+        layout.addWidget(self.normCroppedCheckBox, 1, 0, 1, 2)
+
+        self.collapser.addSection("normalisation", layout, isOpen=False)
+
+        # DQ sections(s)
+
+        self.dqwidgets = self.createDQWidgets(self.collapser)
+
+    def createDQWidgets(self, collapser) -> List[Dict]:
+        """Create the DQ overlay controls and store the widgets in a list of NUMDQS dicts.
+        Takes the collapser to add the controls to; each one gets a section.
+        (see below). Returns the list of dicts."""
+
+        # this will end up as a list of dictionaries, one for each overlay. Each dict has:
+        #  source: the source channel combo box (which must include MaxAll and SumAll as well as channels)
+        #  data: the data combo box for the data type (DQ bit, uncertainty... or None)
+        #  col: the colour of the overlay
+
+        dqwidgets = []
+
+        for i in range(NUMDQS):
+            row = dict()  # create and add the (empty as yet) dict
+            dqwidgets.append(row)
+
+            layout = QtWidgets.QGridLayout()
+            layout.setContentsMargins(3, 10, 3, 10)  # LTRB
+            layout.setHorizontalSpacing(0)
+            layout.setVerticalSpacing(0)
+
+            sourcecb = QtWidgets.QComboBox()  # leave empty for now
+            sourcecb.addItem("this is a test value")  # BEWARE LONG STRINGS IN HERE!
+            sourcecb.setMinimumContentsLength(5)
+            layout.addWidget(QtWidgets.QLabel("SRC"), 0, 0)
+            layout.addWidget(sourcecb, 0, 1)
+            row['source'] = sourcecb
+
+            datacb = QtWidgets.QComboBox()
+            for name, val in CanvasDQSpec.getDataItems():
+                datacb.addItem(name, userData=val)
+            layout.addWidget(QtWidgets.QLabel("DATA"), 1, 0)
+            layout.addWidget(datacb, 1, 1)
+            row['data'] = datacb
+
+            colcb = QtWidgets.QComboBox()
+            for x in canvasdq.colours:
+                colcb.addItem(x)
+            layout.addWidget(QtWidgets.QLabel("COL"), 2, 0)
+            layout.addWidget(colcb, 2, 1)
+            row['col'] = colcb
+
+            #            for widget in row.values():  # adjust each combobox
+            #                widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
+
+            # sliders etc
+            ll = QtWidgets.QLabel("transp")
+            layout.addWidget(ll, 3, 0)
+            transSlider = QtWidgets.QSlider(Qt.Orientation.Horizontal)
+            layout.addWidget(transSlider, 3, 1)
+            row['trans'] = transSlider
+
+            ll = QtWidgets.QLabel("contrast")
+            layout.addWidget(ll, 4, 0)
+            contrastSlider = QtWidgets.QSlider(Qt.Orientation.Horizontal)
+            layout.addWidget(contrastSlider, 4, 1)
+            row['contrast'] = contrastSlider
+
+            ll = QtWidgets.QLabel("thresh")
+            layout.addWidget(ll, 5, 0)
+            threshBox = QtWidgets.QDoubleSpinBox()
+            threshBox.setMaximum(9.99)
+            threshBox.setStepType(QtWidgets.QDoubleSpinBox.AdaptiveDecimalStepType)
+            layout.addWidget(threshBox, 5, 1)
+            row['thresh'] = threshBox
+
+            ll = QtWidgets.QLabel("additive")
+            layout.addWidget(ll, 6, 0)
+            additive = QtWidgets.QCheckBox()
+            layout.addWidget(additive, 6, 1)
+            row['additive'] = additive
+
+            colcb.currentIndexChanged.connect(lambda _: self.dqWidgetChanged())
+            datacb.currentIndexChanged.connect(lambda _: self.dqWidgetChanged())
+            sourcecb.currentIndexChanged.connect(lambda _: self.dqWidgetChanged())
+
+            transSlider.sliderReleased.connect(self.dqWidgetChanged)
+            contrastSlider.sliderReleased.connect(self.dqWidgetChanged)
+            threshBox.valueChanged.connect(lambda _: self.dqWidgetChanged())
+            additive.stateChanged.connect(lambda _: self.dqWidgetChanged())
+
+            self.dqSections.append(collapser.addSection(f"DQ layer {i}", layout))
+
+        return dqwidgets
+
+    def dqWidgetChanged(self):
+        if not self.recursing:  # avoid programmatic changes messing things up
+            self.recursing = True
+            self.getDQWidgetState()
+            self.recursing = False
+            self.redisplay()
+
+    def ensureDQValid(self):
+        """Make sure the DQ data is valid for the image if present; if not reset to None"""
+        for i, d in enumerate(self.canvaspersist.dqs):
+            if d.stype == canvasdq.STypeChannel:
+                if self.previmg is None or d.channel >= self.previmg.channels:
+                    print("ENSURE DQ VALID OVERRIDE")
+                    d.stype = canvasdq.STypeMaxAll
+                    d.data = canvasdq.DTypeNone
+
+    def setDQWidgetState(self):
+        """Set the DQ table widget state to the DQ specs stored in this canvas. Also may repopulate
+        the source combo because channels may have changed.
+        """
+
+        old = self.recursing
+        self.recursing = True
+
+        self.ensureDQValid()  # first, make sure the data is valid
+        for i, d in enumerate(self.canvaspersist.dqs):
+            w = self.dqwidgets[i]  # get the dictionary holding the widgets for this DQ block
+
+            # first, make sure the source combo box is correctly populated.
+            # We should have a list of brief source names for each channel.
+            # If this is empty or changed, we repopulate.
+
+            # first build a list of the source names
+            if self.previmg is not None:
+                sources = [s.brief(captionType=self.graph.doc.settings.captionType)
+                           for s in self.previmg.sources.sourceSets]
+            else:
+                sources = []
+
+            # and compare with the cached list of source names. If not the same, repopulate
+            sourcecombo = w['source']
+            if sources != self.dqSourceCache[i]:
+                self.dqSourceCache[i] = sources
+                sourcecombo.clear()
+                sourcecombo.addItem("max", userData='maxall')
+                sourcecombo.addItem("sum", userData='sumall')
+                if self.previmg is not None:
+                    for chanidx, brief in enumerate(sources):
+                        sourcecombo.addItem(f"{chanidx}) {brief}", userData=chanidx)
+
+            # then select the source - if it's not found (perhaps a channel disappeared) we'll
+            # get a sourceItemIdx<0, but that should never happen.
+            if d.stype == canvasdq.STypeMaxAll:
+                val = 'maxall'
+            elif d.stype == canvasdq.STypeSumAll:
+                val = 'sumall'
+            elif d.stype == canvasdq.STypeChannel:
+                val = d.channel
+            sourceItemIdx = sourcecombo.findData(val)
+            if sourceItemIdx >= 0:
+                sourcecombo.setCurrentIndex(sourceItemIdx)
+            else:
+                # override if we couldn't find a channel - that shouldn't happen because we
+                # called ensureDQValid
+                sourcecombo.setCurrentIndex(sourcecombo.findData('maxall'))
+                ui.error(f"invalid channel {d.channel} in DQ source combo box")
+
+            # Now the data type
+            datacombo = w['data']
+            dataidx = datacombo.findData(d.data)
+            if dataidx >= 0:
+                datacombo.setCurrentIndex(dataidx)
+            else:
+                ui.error(f"Can't find data value {d.data} in data combo for canvas DQ overlay")
+
+            # and colour data
+            colcombo = w['col']
+            colidx = colcombo.findText(d.col)
+            if colidx >= 0:
+                colcombo.setCurrentIndex(colidx)
+            else:
+                ui.error(f"Can't find colour value {d.col} in colour combo for canvas DQ overlay")
+
+            # finally the sliders etc.
+            w['trans'].setValue(int(d.trans * 99))
+            w['contrast'].setValue(int(d.contrast * 99))
+            w['thresh'].setValue(d.thresh)
+            w['additive'].setChecked(d.additive)
+
+        self.recursing = old
+
+    def getDQWidgetState(self):
+        """Can't think of a better name at the moment - this regenerates the dqs (CanvasDQSpec list)
+        from the DQ widgets. It assumes those objects already exist, so we just modify them."""
+
+        for i, d in enumerate(self.canvaspersist.dqs):
+            w = self.dqwidgets[i]  # get the dictionary holding the widgets for this DQ block
+            # first set the dq source from the source widget data
+            sourcedata = w['source'].currentData()
+            if sourcedata == 'maxall':
+                d.stype = canvasdq.STypeMaxAll
+            elif sourcedata == 'sumall':
+                d.stype = canvasdq.STypeSumAll
+            else:
+                d.stype = canvasdq.STypeChannel
+                d.channel = sourcedata
+
+            # then the 'data' field; this goes directly in
+            d.data = w['data'].currentData()
+
+            # as does the colour field (from 'text' this time)
+            d.col = w['col'].currentText()
+            print(i, str(d))
+
+            # the sliders etc.
+            d.trans = float(w['trans'].value()) / 99.0
+            d.contrast = float(w['contrast'].value()) / 99.0
+            d.thresh = w['thresh'].value()
+            d.additive = w['additive'].isChecked()
+
+        self.ensureDQValid()
 
     def mouseMove(self, x, y, event):
         self.coordsText.setText(f"{x},{y}")
@@ -560,16 +987,23 @@ class Canvas(QtWidgets.QWidget):
             self.mouseHook.canvasMouseMoveEvent(x, y, event)
 
     ## call this if this is only ever going to display single channel images
-    # or annotated RGB images (obviating the need for source drop-downs)
+    # or annotated RGB images (obviating the need for source drop-downs). Actually
+    # not used at the moment.
     def hideMapping(self):
         self.hideablebuttons.setVisible(False)
 
     ## this works by setting a data structure which is persisted, and holds some of our
     # data rather than us. Ugly, yes.
     def setPersister(self, p):
-        self.persister = p
+        self.canvaspersist = p.canvaspersist
         self.roiToggle.setEnabled(True)
-        self.roiToggle.setChecked(p.showROIs)
+        old = self.recursing
+        self.recursing = True
+        self.roiToggle.setChecked(p.canvaspersist.showROIs)
+        self.normCroppedCheckBox.setChecked(p.canvaspersist.normToCropped)
+        i = self.normComboBox.findData(self.canvaspersist.normMode)
+        self.normComboBox.setCurrentIndex(i)
+        self.recursing = old
 
     ## if this is a canvas for an ROI node, set that node.
     def setROINode(self, n):
@@ -579,18 +1013,18 @@ class Canvas(QtWidgets.QWidget):
     # Get the data from the object and store it in the dict.
     @staticmethod
     def serialise(o, data):
-        data['showROIs'] = o.showROIs
+        data['canvas'] = o.canvaspersist.serialise()
 
     ## inverse of setPersistData, done when we deserialise something
     @staticmethod
     def deserialise(o, data):
-        o.showROIs = data.get('showROIs', False)
+        o.canvaspersist = PersistBlock(data.get('canvas', None))
 
     ## prepare an object for holding some of our data
     @staticmethod
     def initPersistData(o):
-        if not hasattr(o, 'showROIs'):
-            o.showROIs = False
+        if not hasattr(o, 'persist'):
+            o.canvaspersist = PersistBlock()
 
     # these sets a reference to the mapping this canvas is using - bear in mind this class can mutate
     # that mapping!
@@ -599,6 +1033,7 @@ class Canvas(QtWidgets.QWidget):
 
     def resetMapButtonClicked(self):
         if self.previmg is not None:
+            self.previmg.defaultMapping = None  # force a guess even if there is a default mat
             self.previmg.mapping.generateMappingFromDefaultOrGuess(self.previmg)
         self.redisplay()
         self.updateChannelSelections()
@@ -625,11 +1060,23 @@ class Canvas(QtWidgets.QWidget):
     def roiToggleChanged(self, v):
         # can only work when a persister is there; if there isn't, will crash.
         # Hopefully we can disable the toggle.
-        self.persister.showROIs = v
+        self.canvaspersist.showROIs = v
         self.redisplay()
+
+    def normChanged(self):
+        if not self.recursing:
+            self.canvaspersist.normToCropped = self.normCroppedCheckBox.isChecked()
+            self.canvaspersist.normMode = self.normComboBox.currentData()
+            self.redisplay()
 
     def spectrumToggleChanged(self, v):
         self.spectrumWidget.setHidden(not v)
+
+    def hideDQChanged(self, v):
+        self.isDQHidden = self.hideDQ.isChecked()
+        for x in self.dqSections:
+            x.setVisible(not self.isDQHidden)
+        self.redisplay()
 
     def exportButtonClicked(self, c):
         if self.previmg is None:
@@ -690,6 +1137,8 @@ class Canvas(QtWidgets.QWidget):
     # In the premapped case, call with the premapped RGB image, the source image, and the node.
 
     def display(self, img: Union[Datum, 'ImageCube'], alreadyRGBMappedImageSource=None, nodeToUIChange=None):
+        self.firstDisplayDone = True
+
         if isinstance(img, Datum):
             img = img.get(Datum.IMG)  # if we are given a Datum, "unwrap" it
         if self.mapping is None:
@@ -715,8 +1164,10 @@ class Canvas(QtWidgets.QWidget):
             self.blueChanCombo.setCurrentIndex(self.mapping.blue)
             self.blockSignalsOnComboBoxes(False)  # and enable signals again
             self.setScrollBarsFromCanvas()
-        # cache the image in case the mapping changes
+        # cache the image in case the mapping changes, and also for redisplay itself
         self.previmg = img
+        # do this *after* setting the previmg
+        self.setDQWidgetState()
         # When we're using a "premapped" image, whenever we redisplay, we'll have to recalculate the node:
         # when we change the mapping (which is why we would redisplay) it's the node code which regenerates
         # the remapped image.
@@ -733,9 +1184,14 @@ class Canvas(QtWidgets.QWidget):
         self.blockSignalsOnComboBoxes(False)  # and enable signals again
 
     def redisplay(self):
+        # similar to the below; avoid redisplay when we haven't displayed anything yet!
+        if not self.firstDisplayDone:
+            return
         # Note that we are doing ugly things to avoid recursion here. In some of the ROI nodes, this can happen:
         # updatetabs -> onNodeChanged -> display -> redisplay -> updatetabs...
         # This is the simplest way to avoid it.
+
+        print(f"REDISPLAY of {self.previmg}")
         if not self.recursing:
             self.recursing = True
             n = self.nodeToUIChange
@@ -749,10 +1205,10 @@ class Canvas(QtWidgets.QWidget):
         if self.previmg is None:
             # if there's no image, then there are no pixels
             txt = ""
-        elif self.persister is not None and self.persister.showROIs:
+        elif self.canvaspersist.showROIs:
             # if we're displaying all ROIs, show that pixel count (and ROI count))
-            txt = "{} pixels\nin {} ROIs".format(sum([x.pixels() for x in self.previmg.rois]),
-                                                 len(self.previmg.rois))
+            txt = "{} pixels/{} ROIs".format(sum([x.pixels() for x in self.previmg.rois]),
+                                             len(self.previmg.rois))
         elif self.ROInode is not None:
             # if there's an ROI being set from this node (and we're not showing all ROIs), show its details
             # Also have to check the ROI itself is OK (the method will do this)
@@ -769,6 +1225,7 @@ class Canvas(QtWidgets.QWidget):
         self.dimensions.setText(txt)
 
         self.canvas.display(self.previmg, self.isPremapped)
+        self.setDQWidgetState()
         self.showSpectrum()
 
     ## reset the canvas to x1 magnification
@@ -782,9 +1239,9 @@ class Canvas(QtWidgets.QWidget):
     def setScrollBarsFromCanvas(self):
         self.scrollH.setMinimum(0)
         self.scrollV.setMinimum(0)
-        img = self.canvas.img
-        if img is not None:
-            h, w = img.shape[:2]
+        rgb = self.canvas.rgb
+        if rgb is not None:
+            h, w = rgb.shape[:2]
             # work out the size of the scroll bar from the zoom factor
             hsize = w * self.canvas.zoomscale
             vsize = h * self.canvas.zoomscale

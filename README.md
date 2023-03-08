@@ -24,7 +24,7 @@ document describes this graph, and we
 intend that documents are distributed along with the data they generate
 to help reproducibility.
 
-More documentation can be found [here](https://www.docs.pale.org/pcot/).
+More documentation can be found [here](https://au-exomars.github.io/PCOT/)
 
 ## Installation
 

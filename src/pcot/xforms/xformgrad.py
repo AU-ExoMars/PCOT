@@ -4,6 +4,7 @@ from typing import Tuple
 import numpy as np
 from PySide2.QtCore import Qt, QPoint, QRectF
 from PySide2.QtGui import QPainter, QLinearGradient, QPen, QFontMetrics
+from PySide2.QtWidgets import QInputDialog
 
 from pcot.datum import Datum
 import pcot.ui.tabs
@@ -152,10 +153,6 @@ presetGradients = {
     ])
 
 }
-
-
-def sigfigs(val: float, n: int):
-    return '{:g}'.format(float('{:.{p}g}'.format(val, p=n)))
 
 
 class GradientLegend(Annotation):
@@ -313,7 +310,8 @@ class XformGradient(XFormType):
         self.addInputConnector("insetinto", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
         self.hasEnable = True
-        self.autoserialise = ('colour', 'legendrect', 'vertical', 'thickness', 'fontscale', 'legendPos')
+        self.autoserialise = ('colour', 'legendrect', 'vertical', 'thickness', 'fontscale', 'legendPos',
+                              ('sigfigs', 6))
 
     def serialise(self, node):
         return {'gradient': node.gradient.data}
@@ -326,11 +324,12 @@ class XformGradient(XFormType):
 
     def init(self, node):
         node.img = None
-        node.gradient = presetGradients['topo']
+        node.gradient = presetGradients['viridis']
         node.colour = (1, 1, 0)
         node.legendrect = (0, 0, 100, 20)
         node.vertical = False
         node.fontscale = 10
+        node.sigfigs = 6
         node.thickness = 1
         node.legendPos = IN_IMAGE
 
@@ -341,18 +340,18 @@ class XformGradient(XFormType):
         if not node.enabled:
             return
 
+        node.minval = 0
+        node.maxval = 1
         if mono is None and rgb is None:
             node.img = None
         elif mono is None:
             node.img = ImageCube(rgb.rgb(), node.mapping, sources=rgb.rgbSources())
-            minval = 0
-            maxval = 1
         elif mono.channels != 1:
             raise XFormException('DATA', 'Gradient must be on greyscale images')
         elif rgb is None or len(mono.rois) == 0:
             # we're just outputting the mono image, or there are no ROIs
             subimage = mono.subimage()
-            minval, maxval, subimage.img = _normAndGetRange(subimage)
+            node.minval, node.maxval, subimage.img = _normAndGetRange(subimage)
             newsubimg = node.gradient.apply(subimage.img, subimage.mask)
             # Here we make an RGB image from the input image. We then slap the gradient
             # onto the ROI. We use the default channel mapping, and the same source on each channel.
@@ -365,7 +364,7 @@ class XformGradient(XFormType):
             monoROIs = mono.rois
             mono = mono.cropROI()  # crop to ROI, keeping that ROI (but cropped, which is why we keep it above)
             subimage = mono.subimage()
-            minval, maxval, subimage.img = _normAndGetRange(subimage)
+            node.minval, node.maxval, subimage.img = _normAndGetRange(subimage)
             newsubimg = node.gradient.apply(subimage.img, subimage.mask)
             source = mono.sources.getSources()
             # this time we get the RGB from the rgb input
@@ -381,6 +380,7 @@ class XformGradient(XFormType):
                 subimage.setROI(outimg, roiUnion)
             node.img = outimg.modifyWithSub(subimage, newsubimg, keepMapping=True)
 
+        fs = "{:."+str(node.sigfigs)+"}"
         if node.img is not None:
             node.img.annotations.append(GradientLegend(node.gradient,
                                                        node.legendPos,
@@ -389,7 +389,7 @@ class XformGradient(XFormType):
                                                        node.colour,
                                                        node.fontscale,
                                                        node.thickness,
-                                                       (f"{sigfigs(minval, 3)}", f"{sigfigs(maxval, 3)}")
+                                                       (fs.format(node.minval), fs.format(node.maxval))
                                                        ))
 
         node.setOutput(0, Datum(Datum.IMG, node.img))
@@ -402,15 +402,14 @@ class TabGradient(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabgrad.ui')
         self.w.gradient.gradientChanged.connect(self.gradientChanged)
-        for n in presetGradients:
-            self.w.presetCombo.insertItem(1000, n)
-        self.w.presetCombo.currentIndexChanged.connect(self.loadPreset)
+        self.w.loadPreset.pressed.connect(self.loadPreset)
 
         self.w.legendPos.currentTextChanged.connect(self.legendPosChanged)
         self.w.fontSpin.valueChanged.connect(self.fontChanged)
         for x in [self.w.xSpin, self.w.ySpin, self.w.wSpin, self.w.hSpin]:
             x.editingFinished.connect(self.rectChanged)
         self.w.thicknessSpin.valueChanged.connect(self.thicknessChanged)
+        self.w.sigFigs.valueChanged.connect(self.sigFigsChanged)
         self.w.orientCombo.currentTextChanged.connect(self.orientChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
 
@@ -460,14 +459,21 @@ class TabGradient(pcot.ui.tabs.Tab):
         self.node.thickness = val
         self.changed()
 
+    def sigFigsChanged(self, val):
+        self.mark()
+        self.node.sigfigs = val
+        self.changed()
+
     def orientChanged(self, val):
         self.mark()
         self.node.vertical = (val == 'Vertical')
         self.changed()
 
     def loadPreset(self):
-        name = self.w.presetCombo.currentText()
-        if name in presetGradients:
+        # show a dialog
+        name, ok = QInputDialog.getItem(self.window, "Select a preset", "Preset", presetGradients.keys(),
+                                        0, False)
+        if ok and name in presetGradients:
             # get a copy of the preset's data
             d = presetGradients[name].data.copy()
             # set the gradient to use that and update
@@ -498,9 +504,12 @@ class TabGradient(pcot.ui.tabs.Tab):
         self.w.canvas.setPersister(self.node)
         self.w.gradient.setGradient(self.node.gradient.data)
         self.w.canvas.display(self.node.img)
+        s = f"Min:{self.node.minval:.6g}\nMax:{self.node.maxval:.6g}"
+        self.w.rangeLabel.setText(s)
 
         self.w.legendPos.setCurrentText(self.node.legendPos)
         self.w.fontSpin.setValue(self.node.fontscale)
+        self.w.sigFigs.setValue(self.node.sigfigs)
         x, y, w, h = self.node.legendrect
         self.w.xSpin.setValue(x)
         self.w.ySpin.setValue(y)

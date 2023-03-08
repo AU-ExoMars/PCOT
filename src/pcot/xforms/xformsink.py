@@ -27,7 +27,7 @@ class XformSink(XFormType):
     # and on loading.
     def perform(self, node):
         # get the input (index 0, our first and only input). That's all - we just store a reference
-        # to the image in the node. The TabImage knows how to display nodes with "out" attributes,
+        # to the image in the node. The TabData knows how to display nodes with "out" attributes,
         # and does the rest.
         out = node.getInput(0)
         if out is not None:
@@ -42,6 +42,7 @@ class XformSink(XFormType):
                     outimg.mapping = node.mapping
                     out = Datum(Datum.IMG, outimg)
         node.out = out
+        node.setRectText(out.tp.getDisplayString(out))
 
     def init(self, node):
         # initialise the node by setting its img to None.

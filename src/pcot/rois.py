@@ -30,22 +30,24 @@ class ROI(SourcesObtainable, Annotation):
     """definition of base type for regions of interest - this is useful in itself
     because it defines an ROI consisting of a predefined BB and mask."""
 
-    def __init__(self, tpname, bbrect: Rect = None, maskimg: np.array = None):
-        """Ctor. ROIs have a label, which is used to label data in nodes like 'spectrum' and appears in annotations"""
-        self.label = None
+    def __init__(self, tpname, bbrect: Rect = None, maskimg: np.array = None, sourceROI=None):
+        """Constructor. Takes an ROI type name, optional rect and mask (for 'base' ROIs consisting of just these)
+        and an optional sourceROI from which some data is copied, for copy operations"""
         self.bbrect = bbrect
         self.bbrect = bbrect
         self.maskimg = maskimg
         self.tpname = tpname  # subtype name (e.g. 'rect', 'poly')
 
-        self.labeltop = False  # draw the label at the top?
-        self.colour = (1, 1, 0)  # annotation colour
-        self.thickness = 2  # thickness of lines
-        self.fontsize = 10  # annotation font size
-        self.drawbg = True
+        self.label = None if sourceROI is None else sourceROI.label
+        self.labeltop = False if sourceROI is None else sourceROI.labeltop  # draw the label at the top?
+        self.colour = (1, 1, 0) if sourceROI is None else sourceROI.colour  # annotation colour
+        self.thickness = 2 if sourceROI is None else sourceROI.thickness  # thickness of lines
+        self.fontsize = 10 if sourceROI is None else sourceROI.fontsize  # annotation font size
+        self.drawbg = True if sourceROI is None else sourceROI.drawbg
+        self.drawEdge = True if sourceROI is None else sourceROI.drawEdge  # draw the edge only?
         # by default, the source of an ROI is null.
         # The only time this might not be true is if the ROI is derived somehow from an actual data source.
-        self.sources = nullSourceSet
+        self.sources = nullSourceSet if sourceROI is None else sourceROI.sources
 
     def setDrawProps(self, labeltop, colour, fontsize, thickness, drawbg):
         """set the common draw properties for all ROIs"""
@@ -100,7 +102,7 @@ class ROI(SourcesObtainable, Annotation):
             self.setPen(p)
             p.drawRect(x, y, w, h)
 
-    def annotateMask(self, p: QPainter, drawEdge=False):
+    def annotateMask(self, p: QPainter):
         """This is the 'default' annotate, which draws the ROI onto the painter by
         using its actual mask. It takes the mask, edge detects (if drawEdge), converts into
         an image."""
@@ -108,7 +110,7 @@ class ROI(SourcesObtainable, Annotation):
             # now get the mask
             mask = self.mask()
             # run sobel edge-detection on it if required
-            if drawEdge:
+            if self.drawEdge:
                 sx = ndimage.sobel(mask, axis=0, mode='constant')
                 sy = ndimage.sobel(mask, axis=1, mode='constant')
                 mask = np.hypot(sx, sy)
@@ -119,7 +121,7 @@ class ROI(SourcesObtainable, Annotation):
             mask = cv.resize(mask, dsize=(ww, hh), interpolation=cv.INTER_AREA)
             # now prepare the actual image, which is just a coloured fill rectangle - we
             # will add the mask as an alpha
-            img = np.full((hh, ww, 3), [1, 1, 0], dtype=np.float)  # the second arg is the colour
+            img = np.full((hh, ww, 3), self.colour, dtype=np.float)  # the second arg is the colour
             # add the mask as the alpha channel
             x = np.dstack((img, mask))
             # to byte
@@ -147,9 +149,10 @@ class ROI(SourcesObtainable, Annotation):
     def annotate(self, p: QPainter, img):
         """This is the default annotation method drawing the ROI onto a QPainter as part of the annotations system.
         It should be replaced with a more specialised method if possible."""
-        self.annotateBB(p)
+        if self.drawBox:
+            self.annotateBB(p)
         self.annotateText(p)
-        self.annotateMask(p, drawEdge=True)
+        self.annotateMask(p)
 
     def serialise(self):
         if self.tpname == 'tmp':
@@ -293,20 +296,25 @@ class ROI(SourcesObtainable, Annotation):
     def getSources(self):
         return self.sources
 
+    def rebase(self, x, y):
+        """move the ROI by -x, -y: effectively moving it from an image into a subset of that image starting at (x,y)"""
+        pass
+
 
 ## a rectangle ROI
 
 class ROIRect(ROI):
-    def __init__(self):
-        super().__init__('rect')
-        self.x = 0
-        self.y = 0
-        self.w = 0
-        self.h = 0
-        self.isSet = False
-        self.colour = (1, 1, 0)  # annotation colour
-        self.thickness = 2
-        self.fontsize = 10
+    def __init__(self, sourceROI=None):
+        super().__init__('rect', sourceROI=sourceROI)
+        if sourceROI is None:
+            self.x = 0
+            self.y = 0
+            self.w = 0
+            self.h = 0
+            self.isSet = False
+        else:
+            self.x, self.y, self.w, self.h = sourceROI.x, sourceROI.y, sourceROI.w, sourceROI.h
+            self.isSet = sourceROI.isSet
 
     def bb(self):
         if self.isSet:
@@ -352,6 +360,16 @@ class ROIRect(ROI):
         else:
             self.isSet = self.x >= 0  # legacy
 
+    def __copy__(self):
+        r = ROIRect(sourceROI=self)
+        return r
+
+    def rebase(self, x, y):
+        r = ROIRect(sourceROI=self)
+        r.x -= x
+        r.y -= y
+        return r
+
     def __str__(self):
         return "ROI-RECT {} {} {}x{}".format(self.x, self.y, self.w, self.h)
 
@@ -363,16 +381,18 @@ class ROICircle(ROI):
     y: int
     r: int
     isSet: bool
-    drawEdge: bool
 
-    def __init__(self, x=-1, y=0, r=0):
-        super().__init__('circle')
-        self.set(x, y, r)
-        self.colour = (1, 1, 0)  # annotation colour
-        self.thickness = 2
-        self.fontsize = 10
-        self.drawBox = False
-        self.drawEdge = False
+    def __init__(self, x=-1, y=0, r=0, sourceROI=None):
+        super().__init__('circle', sourceROI=sourceROI)
+        if sourceROI is None:
+            self.set(x, y, r)
+            self.drawBox = False
+            self.drawEdge = False
+        else:
+            self.drawBox = sourceROI.drawBox
+            self.drawEdge = sourceROI.drawEdge
+            self.isSet = sourceROI.isSet
+            self.x, self.y, self.r = sourceROI.x, sourceROI.y, sourceROI.r
 
     def set(self, x, y, r):
         self.x = int(x)  # if this is -ve, isSet will be false.
@@ -428,6 +448,12 @@ class ROICircle(ROI):
         else:
             self.x, self.y, self.r, self.isSet, self.drawBox, self.drawEdge = d['croi']
 
+    def rebase(self, x, y):
+        r = ROICircle(sourceROI=self)
+        r.x -= x
+        r.y -= y
+        return r
+
     def __str__(self):
         return "ROI-CIRCLE {} {} {}".format(self.x, self.y, self.r)
 
@@ -438,33 +464,44 @@ def getRadiusFromSlider(sliderVal, imgw, imgh, scale=1.0):
     return (v / 400) * sliderVal * scale
 
 
-## a "painted" ROI
-
 class ROIPainted(ROI):
+    """A painted ROI, which is essentially just a mask"""
+
     # we can create this ab initio or from a subimage mask of an image.
-    def __init__(self, mask=None, label=None):
-        super().__init__('painted')
-        self.label = label
-        if mask is None:
-            self.bbrect = None
-            self.map = None
-            self.imgw = None
-            self.imgh = None
+    def __init__(self, mask=None, label=None, sourceROI=None):
+        super().__init__('painted', sourceROI=sourceROI)
+        if sourceROI is None:
+            self.label = label
+            if mask is None:
+                self.bbrect = None
+                self.map = None
+                self.imgw = None
+                self.imgh = None
+            else:
+                h, w = mask.shape[:2]
+                self.imgw = w
+                self.imgh = h
+                self.bbrect = Rect(0, 0, w, h)
+                self.map = np.zeros((h, w), dtype=np.uint8)
+                self.map[mask] = 255
+            self.drawEdge = True
+            self.drawBox = True
         else:
-            h, w = mask.shape[:2]
-            self.imgw = w
-            self.imgh = h
-            self.bbrect = Rect(0, 0, w, h)
-            self.map = np.zeros((h, w), dtype=np.uint8)
-            self.map[mask] = 255
-        self.drawEdge = True
-        self.drawBox = True
+            self.drawBox = sourceROI.drawBox
+            self.drawEdge = sourceROI.drawEdge
+            self.map = sourceROI.map  # NOTE: not a copy!
+            self.bbrect = Rect.copy(sourceROI.bbrect)
+            self.imgw = sourceROI.imgw
+            self.imgh = sourceROI.imgh
 
     def clear(self):
         self.map = None
         self.bbrect = None
 
     def setImageSize(self, imgw, imgh):
+        """Set size of the image of which this is a part. Used so
+        we can use getRadiusFromSlider to get a suitable brush size,
+        and so that if the image size changes we can delete the ROI"""
         if self.imgw is not None:
             if self.imgw != imgw or self.imgh != imgh:
                 self.clear()
@@ -535,6 +572,14 @@ class ROIPainted(ROI):
         if self.imgw is not None:
             self.cropDownWithDraw(draw=lambda fullsize: ROIPainted.drawBrush(fullsize, x, y, brushSize, self, delete))
 
+    def rebase(self, x, y):
+        r = ROIPainted(sourceROI=self)
+        r.imgw -= x  # we're shrinking the containing image by this much
+        r.imgh -= y
+        r.bbrect.x -= x
+        r.bbrect.y -= y
+        return r
+
     def __str__(self):
         if not self.bbrect:
             return "ROI-PAINTED (no points)"
@@ -546,14 +591,21 @@ class ROIPainted(ROI):
 ## a polygon ROI
 
 class ROIPoly(ROI):
-    def __init__(self):
-        super().__init__('poly')
-        self.imgw = None
-        self.imgh = None
-        self.points = []
-        self.selectedPoint = None
-        self.drawPoints = True
-        self.drawBox = True
+    def __init__(self, sourceROI=None):
+        super().__init__('poly', sourceROI=sourceROI)
+        self.selectedPoint = None  # don't set the selected point in copies
+        if sourceROI is None:
+            self.imgw = None
+            self.imgh = None
+            self.drawPoints = True
+            self.drawBox = True
+            self.points = []
+        else:
+            self.imgw = sourceROI.imgw
+            self.imgh = sourceROI.imgh
+            self.drawBox = sourceROI.drawBox
+            self.drawPoints = sourceROI.drawPoints
+            self.points = [(x, y) for x, y in sourceROI.points]  # deep copy
 
     def clear(self):
         self.points = []
@@ -563,6 +615,9 @@ class ROIPoly(ROI):
         return len(self.points) > 2
 
     def setImageSize(self, imgw, imgh):
+        """Set size of the image of which this is a part. Used so
+        that if the image size changes we can delete the ROI (although
+        we should probably do something smarter)"""
         if self.imgw is not None:
             if self.imgw != imgw or self.imgh != imgh:
                 self.clear()
@@ -673,6 +728,13 @@ class ROIPoly(ROI):
             return True
         else:
             return False
+
+    def rebase(self, x, y):
+        r = ROIPoly(sourceROI=self)
+        r.imgw -= x  # we're shrinking the containing image by this much
+        r.imgh -= y
+        r.points = [(xx-x, yy-y) for xx,yy in self.points]
+        return r
 
     def __str__(self):
         if not self.hasPoly():

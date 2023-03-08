@@ -111,7 +111,7 @@ class ENVIHeader:
             # based at one, for heaven's sake.
             self.defaultBands = [int(x)-1 for x in d['default bands']]
         else:
-            self.defaultBands = [0, 1, 2]
+            self.defaultBands = None
 
         if 'band names' in d:
             bandNames = d['band names']
@@ -194,11 +194,15 @@ def load(fn, doc, inpidx, mapping: ChannelMapping = None) -> ImageCube:
 
     if mapping is None:
         mapping = ChannelMapping()
-    mapping.set(*h.defaultBands)
-    return ImageCube(img, mapping, sources, defaultMapping=mapping.copy())
+    if h.defaultBands is not None:
+        mapping.set(*h.defaultBands)
+        return ImageCube(img, mapping, sources, defaultMapping=mapping.copy())
+    else:
+        return ImageCube(img, mapping, sources)
 
 
-def _genheader(f, w: int, h: int, freqs: List[float]):
+
+def _genheader(f, w: int, h: int, freqs: List[float],camname="LWAC"):
     """Crude envi header writer"""
     
     f.write("ENVI\n")
@@ -211,9 +215,9 @@ def _genheader(f, w: int, h: int, freqs: List[float]):
     f.write(f"    0.00000000, {h - 1}.00000000, {h - 1}.00000000,    0.00000000,\n")
     f.write(f" {w - 1}.00000000, {h - 1}.00000000, {w - 1}.00000000, {h - 1}.00000000}}\n")
 
-    defbands = [min(x, len(freqs)) for x in [1, 2, 3]]
-    s = ",".join([str(x) for x in defbands])
-    f.write(f"default bands = {{{s}}}\n")
+#    defbands = [min(x, len(freqs)) for x in [1, 2, 3]]
+#    s = ",".join([str(x) for x in defbands])
+#    f.write(f"default bands = {{{s}}}\n")
     bandnames = ", ".join([f"L{i + 1}_{f}" for i, f in enumerate(freqs)])
     f.write(f"band names = {{\n {bandnames}}}\n")
     s = ", ".join([f"{f:0.6f}" for f in freqs])
@@ -227,7 +231,7 @@ def _genheader(f, w: int, h: int, freqs: List[float]):
     s = ", ".join([f"{g:.4e}" for f in freqs])
     f.write(f"data gain values = {{\n {s}}}\n")
     f.write("calibration target label = MacBeth_ColorChecker\n")
-    f.write("camera name = LWAC\n")
+    f.write(f"camera name = {camname}\n")
     f.write("camera system = SIM\n")
     t = 0.01
     s = ", ".join([f"{t:0.2f}" for f in freqs])
@@ -237,7 +241,7 @@ def _genheader(f, w: int, h: int, freqs: List[float]):
     f.write("units = DN/s\n")
 
 
-def _write(name: str, freqs: List[float], img: np.ndarray):
+def _write(name: str, freqs: List[float], img: np.ndarray, camname):
     """The input here a filename base, a (h,w,depth) numpy array,
     and a set of frequencies of the same number as the depth."""
     assert (len(img.shape) == 3)
@@ -246,7 +250,7 @@ def _write(name: str, freqs: List[float], img: np.ndarray):
 
     # first, write out the header
     with open(f"{name}.hdr", "w") as f:
-        _genheader(f, w, h, freqs)
+        _genheader(f, w, h, freqs,camname)
 
     # now output the actual ENVI data
     bands = [np.reshape(x, img.shape[:2]) for x in np.dsplit(img, img.shape[-1])]
@@ -257,9 +261,9 @@ def _write(name: str, freqs: List[float], img: np.ndarray):
             f.write(data)
 
 
-def write(fn: str, img: ImageCube):
+def write(fn: str, img: ImageCube, camname="LWAC"):
         # convert the sources to frequencies, assuming there is only
         # one source per channel and they all have centre wavelength values
         freqs = [next(iter(s)).getFilter().cwl for s in img.sources]
 
-        _write(fn, freqs, img.img)
+        _write(fn, freqs, img.img, camname)

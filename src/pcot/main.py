@@ -11,6 +11,7 @@ from PySide2.QtCore import QCommandLineParser, QCommandLineOption
 import pcot.config
 import pcot.ui.mainwindow
 from pcot.document import Document
+from pcot.ui import collapser
 
 app = None
 
@@ -41,9 +42,9 @@ def checkApp():
 
 
 def load_plugins():
-    """plugin dirs are colon separated, stored in Locations/plugins"""
+    """plugin dirs are semicolon separated, stored in Locations/plugins"""
 
-    pluginDirs = [os.path.expanduser(x) for x in pcot.config.getDefaultDir('pluginpath').split(':')]
+    pluginDirs = [os.path.expanduser(x) for x in pcot.config.getDefaultDir('pluginpath').split(';')]
     logger.info(f"Plugin directories {','.join(pluginDirs)}")
     # Load any plugins by recursively walking the plugin directories and importing .py files.
 
@@ -107,6 +108,22 @@ def main():
     app.exec_()
     logger.info("Leaving app")
     pcot.config.save()
+
+
+def maintest():
+    global app
+    app = QtWidgets.QApplication(sys.argv)
+    app.setApplicationVersion(pcot.__fullversion__)  # this comes from the VERSION.txt file
+    app.setApplicationName("PCOT")
+    app.setOrganizationName('Aberystwyth University')
+    app.setOrganizationDomain('aber.ac.uk')
+    pcot.ui.setApp(app)
+
+    w = collapser.test()
+
+    w.show()
+
+    app.exec_()
 
 
 if __name__ == "__main__":

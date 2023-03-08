@@ -5,7 +5,7 @@ from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.expressions import ExpressionEvaluator
 from pcot.imagecube import ChannelMapping
-from pcot.xform import XFormType, xformtype, XFormException
+from pcot.xform import XFormType, xformtype, XFormException, XForm
 
 
 def getvar(v):
@@ -142,7 +142,7 @@ class XFormExpr(XFormType):
         node.resultStr = ""
         node.w = -1
 
-    def perform(self, node):
+    def perform(self, node: XForm):
         # we register the input vars here because we have to, they are temporary and apply to
         # this run only. To register other things, go to expression/eval.py.
 
@@ -164,17 +164,13 @@ class XFormExpr(XFormType):
                     if res.tp.image:
                         # if there's an image on the output, show it
                         node.img = res.val
-                        # if the number of channels has changed, reset the mapping
-                        if oldChans is not None and node.img.channels != oldChans:
-                            node.mapping = ChannelMapping()
-                        node.img.setMapping(node.mapping)
-                        node.resultStr = "IMAGE"
-                    elif res.tp == Datum.NUMBER:
-                        node.resultStr = str(res.val)
-                        node.setRectText("res: "+node.resultStr)
-                    else:
-                        node.resultStr = str(res.val)
-                        node.setRectText("res: "+str(res.tp))
+                        if node.img is not None:
+                            # if the number of channels has changed, reset the mapping
+                            if oldChans is not None and node.img.channels != oldChans:
+                                node.mapping = ChannelMapping()
+                            node.img.setMapping(node.mapping)
+                    node.resultStr = res.tp.getDisplayString(res)
+                    node.setRectText(node.resultStr)
 
         except Exception as e:
             traceback.print_exc()
@@ -194,7 +190,8 @@ class TabExpr(pcot.ui.tabs.Tab):
 
     def exprChanged(self):
         self.node.tmpexpr = self.w.expr.toPlainText()
-        self.node.displayName = self.node.expr.replace('\r', '').replace('\n', '').replace('\t', '')
+#        self.node.displayName = self.node.expr.replace('\r', '').replace('\n', '').replace('\t', '')
+        self.node.displayName = self.node.tmpexpr.replace('\r', '').replace('\n', '').replace('\t', '')
         # don't call changed() or we'll run the expr on every key press!
 
     def run(self):

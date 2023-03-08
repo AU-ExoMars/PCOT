@@ -7,7 +7,7 @@ import logging
 import os
 import traceback
 from string import Template
-from typing import List, Optional, OrderedDict, ClassVar
+from typing import List, Optional, OrderedDict, ClassVar, Dict
 
 import markdown
 from PySide2 import QtWidgets
@@ -80,11 +80,14 @@ class MainUI(ui.tabs.DockableTabWindow):
     # containing for macro controls
     extraCtrls: QtWidgets.QWidget
 
-    ## @var recentActs
+    # list of menu title->menu (findChildren should work to find a menu in a menu bar, but doesn't seem to).
+    menus: Dict[str, QMenu]
+
     # QActions for recent file list
     recentActs: List[QAction] = []
 
     windows = []  # list of all main windows open
+
 
     def __init__(self,
                  doc=None,  # XFormMacro
@@ -121,12 +124,14 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.isfLayout = QtWidgets.QHBoxLayout()
         self.inputSelectorFrame.setLayout(self.isfLayout)
         self.initTabs()
+        self.menus = {}  # we need to use a dict because findChildren doesn't seem to work right.
 
-        self._init(doc=doc, macro=macro, doAutoLayout=doAutoLayout)
+        self._init(doc=doc, macro=macro, doAutoLayout=doAutoLayout,initial=True)
 
     def _init(self,
               doc,  # Document
               macro=None,  # XFormMacro
+              initial=False,     # are we actually opening the window or reinitialing?
               doAutoLayout: bool = True):
         """This is the 'real' constructor, which is a separate function so
         we can reinitialise. Doc must always be supplied; it's the document
@@ -144,8 +149,9 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.setWindowTitle(ui.app().applicationName() + ' ' + ui.app().applicationVersion())
         self.rebuildRecents()
 
-        # set up the scrolling palette and make the buttons therein
-        self.palette = palette.Palette(doc, self.paletteArea, self.paletteContents, self.view)
+        # set up the scrolling palette and make the buttons therein. The paletteArea
+        # is a Collapser created in Designer.
+        self.palette = palette.Palette(doc, self.paletteArea, self.view)
 
         # and remove some things which don't apply to macro windows
         if macro is not None:
@@ -191,8 +197,8 @@ class MainUI(ui.tabs.DockableTabWindow):
         # also will tint the view if we are a macro
         self.view.setWindow(self, macro is not None)
 
-        for x in pcot.config.mainWindowHooks:
-            x(self)
+        if initial:
+            pcot.config.executeWindowHooks(self)
 
         self.show()
         ui.msg("OK")
@@ -244,6 +250,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     @staticmethod
     def rebuildPalettes():
         for w in MainUI.windows:
+            print(f"Rebuilding window {w}")
             w.palette.populate()
 
     ## rebuild the graphics in all main windows and also all the tab titles
@@ -280,6 +287,9 @@ class MainUI(ui.tabs.DockableTabWindow):
     def autoLayoutButton(self):
         self.graph.constructScene(True)
         self.view.setScene(self.graph.scene)
+        self.rebuildPalettes()      # snark
+        self.rebuildPalettes()
+        self.rebuildPalettes()
 
     ## saving to a file  
     def save(self, fname, saveInputs=True):
@@ -420,13 +430,20 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     def findOrAddMenu(self, name):
         """Find a menu or add a new one"""
-        for m in self.menubar.findChildren(QMenu):
-            if m.objectName() == name or m.title() == name:
-                return m
+
+        # this ought to work.
+#        for m in self.menubar.findChildren(QMenu):
+#            if m.objectName() == name or m.title() == name:
+#                return m
+
+        # but doesn't so we do this.
+        if name in self.menus:
+            return self.menus[name]
+
         m = QMenu(name)
+        self.menus[name] = m
         self.menubar.addMenu(m)
         return m
-
 
     ## this gets called from way down in the scene to open tabs for nodes
     def openTab(self, node):
@@ -511,7 +528,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.graph.rebuildGraphics()
         # we also have to rebuild any graphs the macro is in, because
         # the number of connectors will have changed.
-        for inst in n.proto.instances:
+        for inst in n.proto.getInstances():
             inst.graph.rebuildGraphics()
 
     ## add a macro in connector, only should be used on macro prototypes   

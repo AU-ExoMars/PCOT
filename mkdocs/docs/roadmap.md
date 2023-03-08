@@ -4,7 +4,12 @@ This is a rough guide, and things may change!
 
 ## Next release: CARLENNO ROUND
 
-TBD
+* Data quality and bit viewing on canvas
+* Palette and canvas interface with collapsable sections
+* Annotations (ROIs, legends) are now drawn onto the canvas rather than the image
+* Export to PDF, SVG and PNG with those hi-res annotations
+* *gradient* is much simpler, can overlay onto the image and can draw a legend
+
 
 ## Future releases
 

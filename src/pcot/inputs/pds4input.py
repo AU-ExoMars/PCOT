@@ -27,6 +27,7 @@ from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
 from pcot.ui.linear import LinearSetEntity, entityMarkerInitSetup, entityMarkerPaintSetup, TickRenderer
+import pcot.dq
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,15 @@ def timestr(t):
 
 # list of multiplication factors - sets the combo in the UI
 MULTVALUES = [1, 1024, 2048]
+
+
+def getDQBits(data, uncertainty, dq):
+    """Converts DQ data in the PDS4 QUALITY array into our DQ bits, and adds others
+    depending on the other data too."""
+    out = np.where(dq == 1, 0, pcot.dq.NODATA)  # where DQ is 1, output 0. Else output NODATA.
+    out |= np.where(data >= 0.9999999, pcot.dq.SAT,  0)
+    out |= np.where(data >= 0.2, pcot.dq.TEST, 0)
+    return out.astype(np.uint16)
 
 
 class PDS4InputMethod(InputMethod):
@@ -208,12 +218,15 @@ class PDS4InputMethod(InputMethod):
         logger.debug(f"building image data, multval={self.multValue}")
         try:
             imgdata = np.dstack([x.data for x in labels]) * self.multValue
+            uncertainty = np.dstack([x.err for x in labels])
+            dq = np.dstack([getDQBits(x.data * self.multValue, x.err, x.dq) for x in labels])
+
         except ValueError as e:
             ui.error("Error in combining image products - are they all the same size?")
             return None
         sources = MultiBandSource([InputSource(self.input.mgr.doc, self.input.idx, p.filt, pds4=p) for p in selProds])
 
-        return ImageCube(imgdata, rgbMapping=self.mapping, sources=sources)
+        return ImageCube(imgdata, rgbMapping=self.mapping, sources=sources, uncertainty=uncertainty, dq=dq)
 
     def readData(self):
         logger.debug("readData")
@@ -393,7 +406,11 @@ class PDS4ImageMethodWidget(MethodWidget):
         # first the table.
         self.table.clearContents()  # this will just make all the data empty strings (or null widgets)
         self.table.setRowCount(0)  # and this will remove the rows
-        for p in self.method.products:
+
+        # sort by start time
+        products = sorted(self.method.products, key=lambda x: x.start)
+
+        for p in products:
             strs = [
                 str(p.sol_id),
                 timestr(p.start),
@@ -405,12 +422,18 @@ class PDS4ImageMethodWidget(MethodWidget):
             self.addTableRow(strs, p)
         self.table.resizeColumnsToContents()
 
-        # then the timeline
-
         items = []
-        for p in self.method.products:
+        xspacing = dict()  # this is used so that points with filter and sol the same have different X (slightly)
+        for p in products:
+            key = (p.filt.idx, p.sol_id)
+            if key in xspacing:
+                xspac = xspacing[key]+0.1
+            else:
+                xspac = 0
+            xspacing[key]=xspac
+
             yOffset = p.filt.idx * 12
-            items.append(ImageLinearSetEntity(p.sol_id, yOffset, f"{p.filt.cwl} ({p.filt.name})", p))
+            items.append(ImageLinearSetEntity(p.sol_id+xspac, yOffset, f"{p.filt.cwl} ({p.filt.name})", p))
         self.timeline.setItems(items)
         self.timeline.rescale()
         self.timeline.rebuild()

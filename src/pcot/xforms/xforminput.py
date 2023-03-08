@@ -28,8 +28,8 @@ class XFormInput(XFormType):
             if inp.activeMethod != pcot.inputs.Input.NULL:
                 node.setError(XFormException('DATA', 'input node could not read data - {}'.format(inp.exception)))
         elif out.isImage():
-            # if it's an image, we make a copy for just this one input node.
-            out = Datum(Datum.IMG, out.val.copy())
+            cop = out.val.copy()
+            out = Datum(Datum.IMG, cop)
             out.val.setMapping(node.mapping)
         # other node types should just work
 

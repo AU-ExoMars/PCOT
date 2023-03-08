@@ -81,7 +81,7 @@ work).
 The base constructor for \texttt{XFormType} adds the singleton
 to a dictionary class variable \texttt{allTypes}, so we can always
 obtain the singleton object and create new nodes which perform that
-node type. In addition, each type singleton has a ``group'' field which 
+node type. In addition, each type singleton has a ``group'' string which 
 determines where in the palette to create a construction button for the type.
 
 Some other \texttt{XFormType} objects are dealt with differently:
@@ -89,10 +89,10 @@ Some other \texttt{XFormType} objects are dealt with differently:
 \item Macros are represented by \texttt{XFormMacro} objects --- a subclass
 of \texttt{XFormType}. However, these
 are stored inside the document, not in the global type
-dictionary --- this ensures that macros are document-local\footnote{The
-ramifications of macros being global to the application are problematic:
+dictionary --- this ensures that macros are document-local\footnote{Macros
+being global to the application would lead to problems:
 consider opening a file with a macro ``foo'' defined one way, and then
-opening another file with a different definition of the same macro!}
+opening another file with a different definition of the same macro!}.
 \item Some nodes are registered normally in \texttt{allTypes} but are given
 a ``non-existent'' group name to stop them appearing in the palette.
 These include the \texttt{XFormDummy} type, assigned to nodes whose
@@ -112,7 +112,7 @@ read any inputs, manipulate the data, set the outputs.
 \end{itemize}
 Several other methods may optionally be overridden.
 
-\subsubsection{Linkage}
+\subsubsection{Node connections}
 \label{linkage}
 \texttt{XForm} node objects are linked together by their inputs.
 Each \texttt{XForm} contains an \texttt{inputs} list indexed by
@@ -126,7 +126,7 @@ Methods are provided in \texttt{XForm} for connecting and disconnecting nodes
 inputs and setting outputs inside the type's \texttt{perform()} method.
 
 The number and types of inputs and outputs is set inside the 
-constructor for the \texttt{XFormType} singleton, by using methods
+constructor for the \texttt{XFormType} singleton by using methods
 to add these connectors. They are then indexed in order of creation.
 For example, the \emph{inset} \texttt{XFormType} has the constructor:
 \begin{lstlisting}
@@ -135,14 +135,14 @@ For example, the \emph{inset} \texttt{XFormType} has the constructor:
         self.addInputConnector("img", Datum.IMG)    # input 0
         self.addInputConnector("inset", Datum.IMG)  # input 1
         self.addInputConnector("rect", Datum.RECT)  # input 2
-        self.addOutputConnector("", "img")
+        self.addOutputConnector("", Datum.IMG)
 \end{lstlisting}
 The arguments for these methods are $(name,type,description)$ where the name
-is often empty (it just shows a hint) and the description is optional (it appears
-in help text). The type is a \texttt{datum.Type} value --- these are stored
-by name as static members of \texttt{Datum}.
+is often empty (it used to show a label in the graph) and the description is
+optional (it appears in help text). The type is a \texttt{datum.Type} value
+--- these are stored by name as static members of \texttt{Datum}.
 
-Within an executing graph, the data between nodes is stored as an \texttt{xform.Datum}
+Within an executing graph, the data between nodes is stored as an \texttt{Datum}
 object containing the type and value. Inside the node type's \texttt{perform()} method,
 we typically do something like:
 \begin{lstlisting}
@@ -163,11 +163,19 @@ Note that None is a permissible value in \texttt{setOutput()}, which \texttt{get
 always return as None.
 
 \subsubsection{Overriding types and the variant type}
-It is possible for an individual \texttt{XForm} node to override the input and output types
-set in its \texttt{XFormType}, by setting values in the \texttt{inputTypes} and \texttt{outputTypes}
-array. This is used in macros and mathematical operations. Often the ``default'' type is \texttt{Datum.VARIANT},
-which is a special type which must be overriden by some user action before the node becomes useful. A variant connection
-shows as crosshatched, and cannot be connected until its type is changed.
+
+It is possible for an individual \texttt{XForm} node to override the input and
+output types set in its \texttt{XFormType} by setting an explicit
+``overriding'' type in either the \texttt{inputTypes} or \texttt{outputTypes}
+array. For inputs, is only generally done for macros. For outputs, the
+expression evaluation node \emph{expr} does this through the
+\texttt{changeOutputType()} method when it finally ``knows'' the type of its
+result.
+
+Often the ``default'' type is \texttt{Datum.VARIANT},
+which is a special type which must be overriden before the
+node becomes useful. A variant connection shows as crosshatched, and cannot be
+connected until its type is changed.
 
 \subsection{Performing the graph}
 \label{graphperform}
@@ -210,7 +218,7 @@ has already run in this call to \texttt{performNodes()} or if it is not ready to
 \end{algorithmic}
 A node is ready to run if it has no inputs which do not yet have values set. This is
 determined by checking the outputs of the nodes from which the inputs come to see if
-they have yet been set with values. The \texttt{performNodes()} method is called from these places:
+they have yet been set with values. The \texttt{performNodes()} method is primarily called from these places:
 \begin{itemize}
 \item \texttt{XFormGraph.changed(node)}: when the graph or a node in a graph has been changed. This is the most
 frequent call, and is typically called with a node to avoid running the whole graph. The node is passed down into
@@ -229,6 +237,7 @@ The \texttt{XFormGraph.changed()} method is called from several places:
 \item \texttt{XFormGraph.deserialise()}: when a graph has been loaded.
 \end{itemize}
 
+\clearpage
 \subsubsection{Error handling}
 \label{errorhandling}
 Error handling is generally required in three cases:
@@ -296,7 +305,7 @@ How inputs work is summarised in Fig.~\ref{inputs.pdf}:
 \item Each \texttt{Input} has a number of input method objects,
 each of which is of a different subclass of \texttt{InputMethod}.
 These handle different kinds of input: RGB file, multifile, null (does nothing)
-and eventually different kinds of DAR input. Although all these methods are
+and so on. Although all these methods are
 always present (for persistence reasons), only one is active. An index
 to the active method is stored in \texttt{Input}.
 \item the \texttt{Input} may also have an \texttt{InputWindow}, if its
@@ -312,8 +321,8 @@ code which is in the \texttt{pcot.ui.inputs} module.
 Most classes making up the image data model are declared in the
 \texttt{imagecube.py} file, including the main \texttt{ImageCube} class.
 Some additional classes describing where images can come from are in
-\texttt{channelsource.py}. The model is shown in outline in
-Fig.~\ref{image.pdf} although some links to channel sources and mapping from
+\texttt{sources.py}. The model is shown in outline in
+Fig.~\ref{image.pdf} although some links to sources and mapping from
 nodes are omitted; these will be explained later.
 
 \begin{figure}[ht]
@@ -323,12 +332,21 @@ nodes are omitted; these will be explained later.
 \label{image.pdf}
 \end{figure}
 
-The main class is \texttt{ImageCube}: this encapsulates a numpy array
+The main class is \texttt{ImageCube}: this encapsulates
+\begin{itemize}
+\item a numpy array
 \texttt{img}
 which is the actual image data cube. This is either a 
-$w \times h \times depth$ array for genuine cubes with multiple channels,
-or a $w \times h$ array for a single channel image. The data type is 32-bit floating
-point, and images are typically normalized to the range [0,1].
+$h \times w \times depth$ array for genuine cubes with multiple channels,
+or a $h \times w$ array for a single channel image. The data type is 32-bit floating
+point, and images are typically normalized to the range [0,1];
+\item a numpy array \texttt{uncertainty} which is of the same shape as 
+\texttt{img} and contains float uncertainty values for each pixel;
+\item a numpy array \texttt{dq} which is again of the same shape as 
+\texttt{img} and contains 16-bit integer values describing data quality and
+other boolean
+properties for each pixel (e.g. saturated, error etc.)
+\end{itemize}
 
 \begin{notebox}
 In this document I have a tendency to refer to image data as both ``image'' and ``image cube.''
@@ -350,23 +368,25 @@ being passed between nodes and within expressions in the \emph{expr} node. Datum
 (see below), and the Datum constructor requires a Source (see below). The exception is image data: if the source passed
 to the constructor is None (the default), the image's source data will be used.
 \item \textbf{SourcesObtainable} is the root interface of the system, consisting of
-all classes which have the \texttt{getSources()} method which can return a set of sources.
+all classes which have the \texttt{getSources()} method which can return a 
+\texttt{SourceSet}.
 \item \textbf{SourceSet} is a set of \texttt{Source} objects, indicating which
 sources are contributing to a given piece of data. For example, some operation
-may have combined several bands into one using a mathematical operation ---
-the output band's SourceSet will consist of the all the contributing Sources.
-It is not a \texttt{Source} itself, but it is a \texttt{SourcesObtainable} and
-so a SourceSet which is the union of all its constituent SourceSets can be
-obtained.
+may have combined several bands into one using a mathematical operation, so
+the output band's \texttt{SourceSet} will consist of the all the contributing Sources.
+This implements \texttt{SourcesObtainable} (just returning \texttt{self}) and
+the individual \texttt{Source} objects can be obtained from the underlying
+\texttt{sourceSet} field, which is a set of \texttt{Source}.
 \item \textbf{Source} is the base class of all concrete source types, currently consisting
 of just \texttt{InputSource} and the dummy \texttt{\_NullSource} ``placeholder'' class for
 sources which can be filtered out. 
 \item \textbf{InputSource} represents a PCOT input source of data. It holds references to
-the Input, Document and may also hold information about which PanCam Filter (or other device)
+the \texttt{Input} and \texttt{Document}, and may also hold information about which
+PanCam Filter (or other device)
 the information comes from.
-\item \textbf{MultiBandSource} is a collection of SourceSets, one for each band in a multiband
+\item \textbf{MultiBandSource} is a collection of \texttt{SourceSet}, one for each band in a multiband
 image. It is not a \texttt{Source} itself, but it is a \texttt{SourcesObtainable} and so
-a SourceSet which is the union of all its constituent SourceSets can be obtained.
+a \texttt{SourceSet} which is the union of all its constituent SourceSets can be obtained.
 \end{itemize}
 These classes are shown as a UML diagram in Fig.~\ref{source.pdf}.
 \clearpage
@@ -379,20 +399,20 @@ These classes are shown as a UML diagram in Fig.~\ref{source.pdf}.
 
 Nodes generate and process source information in different ways. For example, a
 \emph{gradient} node takes a single band and converts it into an RGB image
-with a colour gradient: here, the output image has a MultiBandSource of three
-identical SourceSets, which are the SourceSet of the single band image input.
+with a colour gradient: here, the output image has a \texttt{MultiBandSource} of three
+identical SourceSets, which are the \texttt{SourceSet} of the single band image input.
 In contrast, a the \emph{curve} for performing a
 sigmoid function on all bands of an image will give the output image the
 same sources as the input image.
 
 \subsubsection{Important methods for sources}
-As well as \texttt{getSources()}, which return a SourceSet which is the union
+As well as \texttt{getSources()}, which returns a \texttt{SourceSet} which is the union
 of all constituent sources, all \texttt{Source} subclasses have the following
 methods:
 \begin{itemize}
 \item \textbf{copy()} produces a ``reasonably deep'' copy of the source
 \item \textbf{matches()} returns true if a source matches some criteria --- details are below
-\item \textbf{getFilter()} returns the Filter object if one is present (or None)
+\item \textbf{getFilter()} returns the \texttt{Filter} object if one is present (or None)
 \item \textbf{brief()} returns a brief description
 \item \textbf{long()} returns a long description
 \end{itemize}
@@ -430,7 +450,7 @@ This is typically in $expr$ binary operations such as image addition.
 \item \textbf{add(s)} adds a source set to the list
 \item \textbf{copy()} returns a ``reasonably deep'' copy
 \item \textbf{search()} returns a list of indices of bands whose source sets contain a
-source which match all of the criteria given (again, None criteria are ignored). Criteria are:
+source which match \underline{all} of the criteria given (again, None criteria are ignored). Criteria are:
 \begin{itemize}
 \item \textbf{hasFilter}: the Source has a filter
 \item \textbf{filterNameOrCWL}: the Source has a filter with the same name (if a string)
@@ -446,9 +466,9 @@ Sources are used to keep track of each datum as it moves through the graph
 so they can be processed and displayed appropriately, particularly for images:
 Fig.~\ref{app.png} (p.~\pageref{app.png}) shows
 a typical node in the ``node controls and output'' section. This section, as
-it does in many nodes, contains a canvas displaying an image. Above the
+it does in many nodes, contains a canvas displaying an image. In the
 canvas are three combo boxes which select the channels in the image cube to
-display on the canvas, and these are typically labelled by a string generated
+display, and these are typically labelled by a string generated
 from the source data for each channel (along with the index). Sources are also
 used to select channels to combine and manipulate in those nodes which do so.
 
@@ -571,6 +591,10 @@ Much of the ROI system is work in progress, particularly combining
 multiple ROIs. This documentation might change.
 \end{notebox}
 
+\begin{todoblock}
+Check and update
+\end{todoblock}
+
 
 \subsection{Macros}
 \label{macros}
@@ -628,6 +652,16 @@ inputs into the macro instance node's outputs
 \end{itemize}
 \item Node 3 can now run, reading its inputs from the macro instance node.
 \end{itemize}
+An illustration of the data model is shown in Fig.~\ref{macros.pdf};
+this should be read together with Fig.~\ref{xform.pdf}.
+\begin{figure}[ht]
+\center
+\includegraphics[width=3in]{macros.pdf}
+\caption{UML diagram for macros}
+\label{macros.pdf}
+\end{figure}
+
+\clearpage
 
 \subsubsection{Macro inefficiencies}
 \label{macroineff}
@@ -661,8 +695,7 @@ the instance node which corresponds to the prototype node which was changed, and
 run that inside the instance graph for the macro. The child nodes of the instance node
 would then need to be run.
 
-
-\subsection{User interface}
+i\subsection{User interface}
 The user interface is mainly in the \texttt{ui} package, although each
 node type's file contains its UI code (a subclass of \texttt{ui.tabs.Tab}.
 A reasonably full view of the system is shown as a class diagram

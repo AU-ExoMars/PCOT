@@ -1,25 +1,5 @@
 # Installing and running PCOT
 
-
-PCOT is available in two forms: a standalone executable and
-a source distribution. While the standalone version is much easier to install, it's
-harder to use as a library and to modify. It's also quite a large file.
-
-## Standalone version
-The standalone executables are available on request from the Aberystwyth team. Once you
-have the appropriate executable for your operating system, just run it to run PCOT. 
-
-* **Pros**: no installation is necessary
-* **Cons**: PCOT can take a little while to start up; it's very difficult to
-use PCOT as a library in this configuration.
-
-## Installing from source
-Another choice is to install the Python source code from Github.
-
-* **Pros**: instant startup, access to the source code and regular updates;
-very easy to use as a library; very easy to write extensions.
-* **Cons**: requires a little more work (but hopefully not too much).
-
 PCOT is a Python program (and library) with a number of dependencies,
 notably numpy and PySide2 (the official Python interface to Qt).
 We find the best way to manage these is to use
