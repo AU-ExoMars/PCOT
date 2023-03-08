@@ -8,6 +8,14 @@ None
 
 ## Alpha releases
 
+### 0.5.0-alpha 2023-03-08 CARLENNO ROUND
+
+* Data quality and bit viewing on canvas
+* Palette and canvas interface with collapsable sections
+* Annotations (ROIs, legends) are now drawn onto the canvas rather than the image
+* Export to PDF, SVG and PNG with those hi-res annotations
+* *gradient* is much simpler, can overlay onto the image and can draw a legend
+
 ### 0.4.0-alpha 2022-11-30 CAER BRAN
 
 * Annotation system entirely rewritten

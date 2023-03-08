@@ -2,25 +2,13 @@
 
 This is a rough guide, and things may change!
 
-## Next release: CARLENNO ROUND
+## Next release: DRIFT STONES
 
-* Data quality and bit viewing on canvas
-* Palette and canvas interface with collapsable sections
-* Annotations (ROIs, legends) are now drawn onto the canvas rather than the image
-* Export to PDF, SVG and PNG with those hi-res annotations
-* *gradient* is much simpler, can overlay onto the image and can draw a legend
-
+* uncertainty and error bit propagation in *expr* and all nodes 
+* Testing quality and propagation rules (see [Principles](/userguide/principles))
 
 ## Future releases
 
-* Data quality
-    * uncertainty map
-    * pixel data bits (how many?)
-    * canvas viewer for both the above
-    * use flashing pixels??
-    * error propagation in *expr* and all nodes (see [Principles](/userguide/principles))
-    * Testing quality rules
-    
 * Documentation
     * User guide
         * Page each on the main elements of the UI
