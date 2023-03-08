@@ -4,6 +4,7 @@ from typing import Tuple
 import numpy as np
 from PySide2.QtCore import Qt, QPoint, QRectF
 from PySide2.QtGui import QPainter, QLinearGradient, QPen, QFontMetrics
+from PySide2.QtWidgets import QInputDialog
 
 from pcot.datum import Datum
 import pcot.ui.tabs
@@ -323,7 +324,7 @@ class XformGradient(XFormType):
 
     def init(self, node):
         node.img = None
-        node.gradient = presetGradients['topo']
+        node.gradient = presetGradients['viridis']
         node.colour = (1, 1, 0)
         node.legendrect = (0, 0, 100, 20)
         node.vertical = False
@@ -401,9 +402,7 @@ class TabGradient(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabgrad.ui')
         self.w.gradient.gradientChanged.connect(self.gradientChanged)
-        for n in presetGradients:
-            self.w.presetCombo.insertItem(1000, n)
-        self.w.presetCombo.currentIndexChanged.connect(self.loadPreset)
+        self.w.loadPreset.pressed.connect(self.loadPreset)
 
         self.w.legendPos.currentTextChanged.connect(self.legendPosChanged)
         self.w.fontSpin.valueChanged.connect(self.fontChanged)
@@ -471,8 +470,10 @@ class TabGradient(pcot.ui.tabs.Tab):
         self.changed()
 
     def loadPreset(self):
-        name = self.w.presetCombo.currentText()
-        if name in presetGradients:
+        # show a dialog
+        name, ok = QInputDialog.getItem(self.window, "Select a preset", "Preset", presetGradients.keys(),
+                                        0, False)
+        if ok and name in presetGradients:
             # get a copy of the preset's data
             d = presetGradients[name].data.copy()
             # set the gradient to use that and update

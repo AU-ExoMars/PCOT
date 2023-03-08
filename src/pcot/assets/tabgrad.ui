@@ -23,29 +23,10 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="page1">
       <layout class="QGridLayout" name="gridLayout_2">
-       <item row="2" column="1">
-        <widget class="QComboBox" name="presetCombo"/>
-       </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="label">
-         <property name="maximumSize">
-          <size>
-           <width>16777215</width>
-           <height>20</height>
-          </size>
-         </property>
-         <property name="text">
-          <string>Presets</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-         </property>
-        </widget>
-       </item>
        <item row="1" column="0" colspan="2">
         <widget class="Gradient" name="gradient" native="true">
          <property name="minimumSize">
@@ -59,6 +40,13 @@
            <width>16777215</width>
            <height>50</height>
           </size>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QPushButton" name="loadPreset">
+         <property name="text">
+          <string>Load Preset</string>
          </property>
         </widget>
        </item>
@@ -364,7 +352,6 @@ Colour</string>
   <tabstop>colourButton</tabstop>
   <tabstop>legendPos</tabstop>
   <tabstop>fontSpin</tabstop>
-  <tabstop>presetCombo</tabstop>
  </tabstops>
  <resources/>
  <connections/>
