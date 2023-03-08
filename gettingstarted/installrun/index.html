@@ -154,14 +154,6 @@
             
             <li class="nav-item" data-level="1"><a href="#installing-and-running-pcot" class="nav-link">Installing and running PCOT</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-level="2"><a href="#standalone-version" class="nav-link">Standalone version</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-level="2"><a href="#installing-from-source" class="nav-link">Installing from source</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
             <li class="nav-item" data-level="2"><a href="#running-pcot" class="nav-link">Running PCOT</a>
               <ul class="nav flex-column">
               </ul>
@@ -186,24 +178,6 @@
                     <div class="col-md-9" role="main">
 
 <h1 id="installing-and-running-pcot">Installing and running PCOT</h1>
-<p>PCOT is available in two forms: a standalone executable and
-a source distribution. While the standalone version is much easier to install, it's
-harder to use as a library and to modify. It's also quite a large file.</p>
-<h2 id="standalone-version">Standalone version</h2>
-<p>The standalone executables are available on request from the Aberystwyth team. Once you
-have the appropriate executable for your operating system, just run it to run PCOT. </p>
-<ul>
-<li><strong>Pros</strong>: no installation is necessary</li>
-<li><strong>Cons</strong>: PCOT can take a little while to start up; it's very difficult to
-use PCOT as a library in this configuration.</li>
-</ul>
-<h2 id="installing-from-source">Installing from source</h2>
-<p>Another choice is to install the Python source code from Github.</p>
-<ul>
-<li><strong>Pros</strong>: instant startup, access to the source code and regular updates;
-very easy to use as a library; very easy to write extensions.</li>
-<li><strong>Cons</strong>: requires a little more work (but hopefully not too much).</li>
-</ul>
 <p>PCOT is a Python program (and library) with a number of dependencies,
 notably numpy and PySide2 (the official Python interface to Qt).
 We find the best way to manage these is to use

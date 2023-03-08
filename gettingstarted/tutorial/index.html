@@ -170,10 +170,6 @@
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-level="2"><a href="#canvases" class="nav-link">Canvases</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
             <li class="nav-item" data-level="2"><a href="#manipulating-an-image-obtaining-a-spectral-parameter-map" class="nav-link">Manipulating an image: obtaining a spectral parameter map</a>
               <ul class="nav flex-column">
               </ul>
@@ -192,6 +188,8 @@ simple manipulations.</p>
 <p>There is also a <a href="https://www.youtube.com/watch?v=vo5KrOAtMQ8">video guide</a> - 
 it may be a little out of date, because development is progressing
 quickly but the basics will be the same.</p>
+<p>In this document, text written <mark>with a highlight like this</mark> is
+an instruction to follow.</p>
 <div class="alert alert-danger" role="alert">
 <p>Be aware that this is very much an early version and there are 
 no doubt a lot of serious problems!</p>
@@ -200,13 +198,14 @@ no doubt a lot of serious problems!</p>
 <p>PCOT is primarily designed to work with multispectral images. For this tutorial
 we have prepared an image and packaged it with the rest of the system, but you will
 need to uncompress it: it's an ENVI image and these can be rather large.
-It can be found in the <strong>exampleData</strong> directory
-as <strong>obj4-sand-subset.zip</strong>. Uncompress it somewhere (perhaps into the same directory) producing two files:
-<strong>1.hdr</strong> (the header file) and <strong>1.dat</strong> (the data itself).</p>
+It can be found in the <em>exampleData</em> directory
+as <em>obj4-sand-subset.zip</em>. </p>
+<p><mark>Uncompress this image somewhere</mark> (perhaps into the same directory) producing two files:
+<em>1.hdr</em> (the header file) and <em>1.dat</em> (the data itself).</p>
 <p>This is a 256x256 image with taken using AUPE (Aberystwyth University Pancam Emulator), with 11 bands
 of data. It is a subset of a larger image used in testing, and is shown below as an RGB image:</p>
 <p><figure class="text-center"><a data-lightbox="obj4-sand-subset.png" href="../obj4-sand-subset.png"><img alt="The example image (640nm, 550nm and 440nm bands)" src="../obj4-sand-subset.png" /></a><figcaption class="figure-caption text-center">Figure: The example image (640nm, 550nm and 440nm bands). Click on image to expand.</figcaption></figure></p>
-<p>Now you have this image you can start PCOT.</p>
+<p>Now you have this image you can <mark>start PCOT</mark>.</p>
 <h2 id="introduction-to-the-user-interface">Introduction to the user interface</h2>
 <p>The image below shows the PCOT interface when the program has just been started,
 with text in red describing
@@ -224,15 +223,16 @@ you can undock by double-clicking on the tab at the top of the view.</li>
 <li>To the right of the node area is the <strong>graph</strong>. This shows the nodes in
 the document and their connections. A new document always has an <em>input 0</em> node,
 which brings input 0 into the graph.</li>
-<li>To the right of the graph is the <strong>palette</strong>. Clicking on a button in
+<li>To the right of the graph is the <strong>palette</strong>, which consists of a number
+of sections which can be expanded or hidden. Clicking on a button in
 the palette will add a node of the given type to the graph. </li>
 <li>At the bottom is the <strong>log area</strong>, the <strong>status bar</strong>, and a set of
 <a href="../../userguide/globalcontrols/">global controls</a>.</li>
 </ul>
 <h2 id="working-with-graph-nodes">Working with graph nodes</h2>
 <p>Each node is shown as a box with input connections on the top and output connections on
-the bottom. To illustrate this, here is a more complex graph used later in the tutorial:</p>
-<p><figure class="text-center"><a data-lightbox="R671_438e.png" href="../R671_438e.png" name="R671_438e"><img alt="R671_438 inset into source image RGB representation" src="../R671_438e.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 inset into source image RGB representation. Click on image to expand.</figcaption></figure></p>
+the bottom. To illustrate this, consider the following graph you've seen before:</p>
+<p><figure class="text-center"><a data-lightbox="671438grad.png" href="../671438grad.png" name="671438grad"><img alt="R671_438 inset into source image RGB representation" src="../671438grad.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 inset into source image RGB representation. Click on image to expand.</figcaption></figure></p>
 <h3 id="node-boxes">Node boxes</h3>
 <p>Looking at a pair of nodes in the graph:
 <figure class="text-center"><a data-lightbox="node.svg" href="../node.svg" name="node"><img alt="A pair of nodes" src="../node.svg" /></a><figcaption class="figure-caption text-center">Figure: A pair of nodes. Click on image to expand.</figcaption></figure></p>
@@ -244,9 +244,9 @@ on inputs.</li>
 <li>Each node has a help box - double-clicking on this pops up help for the node.</li>
 <li>Each node has a name - usually this is the node's type, but in the case of the <em>expr</em> node it is the expression being
 calculated (see below).</li>
-<li>Nodes can have a "display text" in blue. These show extra data, such as the output of a numerical calculation in an <em>expr</em> node
-or (as here) the annotation on a region of interest.</li>
-<li>Currently nodes also show the number of times they have been calculated as a debugging aid.</li>
+<li>Nodes can have a "display text" in blue. These show extra data, such as the output of a calculation in an <em>expr</em> node
+or the annotation given to a region of interest.</li>
+<li>Currently nodes without a display text also show the number of times they have been calculated as a debugging aid.</li>
 </ul>
 <h3 id="selecting-and-opening-graph-nodes">Selecting and opening graph nodes</h3>
 <ul>
@@ -259,7 +259,7 @@ and a view of the node will appear on the left, along with a tab to select that
 view when multiple node views are open.</li>
 <li>You can <strong>close an open node</strong> by clicking on the cross in the node's tab.</li>
 </ul>
-<p>If you open the <em>input 0</em> node in a new document you will see this:
+<p><mark>If you open the <em>input 0</em></mark> node in a new document you will see this:
 <figure class="text-center"><a data-lightbox="inputopen.png" href="../inputopen.png"><img alt="PCOT with an open but unused input node" src="../inputopen.png" /></a><figcaption class="figure-caption text-center">Figure: PCOT with an open but unused input node. Click on image to expand.</figcaption></figure></p>
 <p>The node is cyan because the current view's node is tinted green,
 and the node is already tinted blue because it is selected in the graph. There are 
@@ -310,25 +310,30 @@ text directly in its box.</li>
 <p>The purpose of the <em>input 0</em> node is to bring the an input into the graph for manipulation.
 As noted <a href="../concepts/">elsewhere</a>, the graph is separate from the inputs. This makes it easier
 to run different graphs on the same inputs, or the same graph on different inputs.
-Clicking on the "Input 0" button at the top of the window will open a window to let us change the
+<mark>Clicking on the "Input 0" button</mark> at the top of the window will open a window to let us change the
 input, which looks like this:</p>
 <p><figure class="text-center"><a data-lightbox="inputnull.png" href="../inputnull.png"><img alt="An input window, with the null input selected" src="../inputnull.png" /></a><figcaption class="figure-caption text-center">Figure: An input window, with the null input selected. Click on image to expand.</figcaption></figure></p>
 <p>Each input supports a number of <em>input methods</em>, only one of which can be active at a time. By
 default, the method is <em>null</em>, meaning that no data is loaded into that input.</p>
 <p>PCOT can support several types of multispectral data file: we will load
-a small ENVI image we uncompressed earlier. Click on ENVI, and
+a small ENVI image we uncompressed earlier. <mark>Click on ENVI</mark>, and
 the window will show that input's ENVI method settings and select the ENVI
 method as being active (see below). </p>
-<p>Using the directory tree widget, navigate to and double-click the <strong>1.hdr</strong> file extracted earlier.
+<p><mark>Using the directory tree widget, navigate to and double-click the <em>1.hdr</em></mark>
+file extracted earlier.
 You should see something like this:</p>
 <p><figure class="text-center"><a data-lightbox="inputenvi.png" href="../inputenvi.png" name="inputenvi"><img alt="An open ENVI input" src="../inputenvi.png" /></a><figcaption class="figure-caption text-center">Figure: An open ENVI input. Click on image to expand.</figcaption></figure></p>
-<p>The right-hand side is a common component in PCOT
-known as a "canvas", which will show the
-image selected. The canvas lets you modify how the RGB channels are mapped using the
-three combo boxes. Each box gives the band number, the input number and the wavelength. For example,
-the red channel is coming from band 2, which is from input 0, and has a wavelength of 640nm.
-If the RGB method is used to load an ordinary RGB image (e.g. from a PNG), the wavelength will
-not be shown.</p>
+<p>The right-hand side is a common component in PCOT known as a
+<strong>canvas</strong> which will show the image selected. The canvas
+lets you modify how the RGB channels are mapped using the three combo boxes.
+Each box gives the band number, the input number and the wavelength. For
+example, the red channel is coming from band 2, which is from input 0, and has
+a wavelength of 640nm. If the RGB method is used to load an ordinary RGB image
+(e.g. from a PNG), the wavelength will not be shown.</p>
+<p>The canvas is quite complicated because it does a lot of things, such as
+displaying spectra for each pixel,
+normalisation settings, and displaying data quality bits. More information
+can be found <a href="/userguide/canvas">here</a>.</p>
 <p>At the bottom of the image itself are three <strong>source indicators</strong>: these
 show what bands within which inputs were used to generate the canvas
 image. They should show something like</p>
@@ -337,88 +342,38 @@ image. They should show something like</p>
 <p>indicating that the red, green and blue channels come from the 640nm, 540nm and 480nm
 bands in input 0's image. The source indicator may get quite complex - it shows all inputs that
 have had an effect on each channel of the image.</p>
-<h2 id="canvases">Canvases</h2>
-<p>Most nodes use a <strong>canvas</strong> to display some bands of an image as RGB.
-This will take up a large proportion of their view - in some cases
-all of it. It is worth discussing
-in some detail. A canvas is shown in the previous section as the right-hand
-side of an input widget. Another is shown below as the entire control area
-for an actual <em>input</em> node, which brings one of the four inputs into
-the graph.</p>
-<p><figure class="text-center"><a data-lightbox="inputnode.png" href="../inputnode.png" name="inputnode"><img alt="An open *input 0* node" src="../inputnode.png" /></a><figcaption class="figure-caption text-center">Figure: An open *input 0* node. Click on image to expand.</figcaption></figure></p>
-<p>You can pan the canvas using the scroll bars at the edge, and zoom with
-the mouse wheel. The button at bottom right will reset to show the entire
-image.</p>
-<p>To the left of the canvas image itself are three combo boxes which determine
-the image <em>mapping</em> : how the bands within the (probably) multispectral image
-map onto RGB channels for viewing. Each band in the combo box shows the input
-number, a colon, and typically the name, position or wavelength of the band.
-Exactly what is shown depends on the image being loaded and the Caption
-<a href="../../userguide/globalcontrols/">global control</a>.</p>
-<p>Below this are some assorted controls:</p>
-<ul>
-<li><strong>Show ROIs</strong> will mark any regions of interest the image has - these
-are added using nodes like <em>rect</em> (for a rectangle) and are carried forward
-through subsequent nodes (where appropriate), delimiting the area upon
-which calculations are performed. They also control the regions used
-for calculating spectra. Normally an ROI is only shown in the node which adds
-it.</li>
-<li><strong>Show spectrum</strong> opens a side pane, and dragging the cursor across the
-image will plot the spectrum of the pixel under the cursor in this pane. If
-no filter wavelengths are available, a list of the values for each band
-is shown.</li>
-<li><strong>Save RGB</strong> saves the RGB-mapped image as a PNG.</li>
-<li><strong>Guess RGB</strong> tries to guess appropriate channels for the RGB canvas image.</li>
-</ul>
-<p>The show spectrum pane looks like this:
-<figure class="text-center"><a data-lightbox="canvasspec.png" href="../canvasspec.png" name="canvasspec"><img alt="The &quot;show spectrum&quot; pane on an input node's canvas" src="../canvasspec.png" /></a><figcaption class="figure-caption text-center">Figure: The "show spectrum" pane on an input node's canvas. Click on image to expand.</figcaption></figure></p>
-<p>When a spectrum view is opened the image pane can be tiny - to fix this you
-can resize the PCOT window (or undocked node window), or drag the separator
-between the image and the spectrum (the two vertical bars). Each dot is shown
-with an approximation of its wavelength colour (using <a href="http://www.physics.sfasu.edu/astro/color/spectra.html">Dan Bruton's
-algorithm</a>) or black if
-the wavelength is not visible.</p>
-<div class="alert alert-warning" role="alert">
-<p>The canvas is going to get a lot more complex in the next release,
-because it needs to show image quality and uncertainty data for each band.
-This information will be moved into <a href="../../userguide/canvas/">its own page</a></p>
-</div>
 <h2 id="manipulating-an-image-obtaining-a-spectral-parameter-map">Manipulating an image: obtaining a spectral parameter map</h2>
 <p>Let's perform a simple manipulation on an image. Here we will generate
 a spectral parameter map from two of the image bands. This parameter is
 <strong>R671_438</strong>, the ratio between the 671nm and 438nm bands, which indicates
 the presence of ferric minerals<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup>.</p>
 <ul>
-<li>Start PCOT and load an image into input 0 as before, by clicking on
+<li><mark>Start PCOT and load an image into input 0 as before</mark>, by clicking on
 the Input 0 button, selecting RGB and double-clicking on an image file.</li>
-<li>Double-click on the <em>input 0</em> node in the graph - instances of this node
+<li><mark>Double-click on the <em>input 0</em> node in the graph</mark> - instances of this node
 bring input 0 into the graph.</li>
-<li>Click on <em>expr</em> in the palette (on the right) to create an expression
+<li><mark>Open the <em>maths</em> section in the palette</mark> by clicking on it.</li>
+<li><mark>Click on <em>expr</em> in the maths section</mark> to create an expression
 evaluation node.</li>
-<li>Drag a connection from the output of <em>input 0</em> to the <em>a</em> input
-of <em>expr</em>.</li>
-<li>Double-click on the <em>expr</em> node to open its view for editing - this will show an empty
+<li><mark>Drag a connection from the output of <em>input 0</em> to the <em>a</em> input
+of <em>expr</em>.</mark></li>
+<li><mark>Double-click on the <em>expr</em> node to open its view for editing</mark> - this will show an empty
 output because our mathematical expression is empty.</li>
 </ul>
 <p>We now have an input feeding into an expression evaluator, which we can
 edit. First, let's just see one band.
-Click in the <em>expr</em> view's expression box: this is the box which
-says "Enter expression here...". Enter the string</p>
+<mark>Click in the <em>expr</em> view's expression box</mark>: this is the box which
+says "Enter expression here...".</p>
+<p><mark>Enter the string</mark></p>
 <pre><code>a$671
 </code></pre>
 <p>This says "select the band with centre wavelength 671nm from input <em>a</em>".</p>
-<p>Press "Run" in the node's view. You should now see a monochrome image in the
-node's canvas: the result of the calculation, containing only that single band.
-Now change the expression to</p>
+<p><mark>Press "Run" in the node's view</mark>. You should now see a monochrome image in the
+node's canvas: the result of the calculation, containing only that single band.</p>
+<p><mark>Now change the expression to</mark></p>
 <pre><code>a$671/a$438
 </code></pre>
-<p>and press "Run". You will see a largely white image, because the canvas
-expects data between 0 and 1 (future versions of the canvas will show this saturation
-more clearly).
-We need to normalise the image to that range. Change the expression to </p>
-<pre><code>norm(a$671/a$438)
-</code></pre>
-<p>and press "Run" again to see the result, which should be this:</p>
+<p><mark>and press "Run"</mark> to see the result, which should be this:</p>
 <p><figure class="text-center"><a data-lightbox="R671_438.png" href="../R671_438.png" name="R671_438"><img alt="R671_438 parameter from an multispectral image" src="../R671_438.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 parameter from an multispectral image. Click on image to expand.</figcaption></figure></p>
 <p>Note that the source indicators in the bottom left of the image are now
 displaying</p>
@@ -427,13 +382,15 @@ displaying</p>
 <p>This indicates that all three RGB channels shown in the canvas are getting
 their data from the 438 and 671 bands of input 0.</p>
 <h3 id="disconnecting-nodes-and-node-error-states">Disconnecting nodes and node error states</h3>
-<p>Disconnect the input node by dragging the arrowhead from the <em>a</em> box and releasing it in empty space. This will cause an error:
+<p><mark>Disconnect the input node</mark> by dragging the arrowhead from the <em>a</em> box and releasing it in empty space. This will cause an error:
 <figure class="text-center"><a data-lightbox="errornode.png" href="../errornode.png" name="errornode"><img alt="A node in an error state" src="../errornode.png" /></a><figcaption class="figure-caption text-center">Figure: A node in an error state. Click on image to expand.</figcaption></figure></p>
-<p>The EXPR is the kind of error - EXPR is an error in expression parsing/execution. More details can be seen in the log window,
-which in this case reads </p>
-<pre><code>Error in expression: cannot perform binary operation on None image
+<p>The EXPR is the kind of error - EXPR is an error in expression
+parsing/execution. More details can be seen in the log window, which in this
+case reads </p>
+<pre><code class="language-txt">Error in expression: variable's input is not connected
 </code></pre>
-<p>This is because there is no longer an image feeding into the <em>expr</em> node, so the binary <code>$</code> operation cannot run.</p>
+<p>This is because there is no longer an image feeding into the <em>expr</em> node's input for variable <em>a</em>.
+Now <mark>reconnect the input node to the <em>expr</em> node</mark> to fix the error.</p>
 <h3 id="adding-a-region-of-interest">Adding a region of interest</h3>
 <p>It's a little hard to see what's going on, so we will add a region of interest.
 This will make the <em>expr</em> node treat the operation differently - only the area inside
@@ -441,35 +398,41 @@ the rectangle will be <code>norm(a$671/a$438)</code>.
 Everywhere
 else in the image, the output will come from the left-hand side of the expression (the 671nm channel).
 The rules for ROIs are explained more fully <a href="../../userguide/principles">on this page</a>.</p>
-<p>Add a <em>rect</em> node between the <em>input</em> and <em>expr</em> nodes (the latter of which will be
+<p><mark>Open the <em>regions</em> section of the palette and add a <em>rect</em> node between the <em>input</em> and <em>expr</em> nodes</mark>
+(the latter of which will be
 labelled with its expression). Nothing will change, because the rectangle has not been set.
-Edit the <em>rect</em> node and draw a rectangle by clicking and dragging on the canvas.
-Set the scale to 5 pixels and type "R671_438" in the Annotation box, something like this:</p>
+<mark>Edit the <em>rect</em> node and draw a rectangle by clicking and dragging on the canvas.</mark>
+<mark>Set the scale to 5 pixels and type "671_438" in the Annotation box</mark>, something like this:</p>
 <p><figure class="text-center"><a data-lightbox="R671_438b.png" href="../R671_438b.png" name="R671_438b"><img alt="R671_438 with a rectangle" src="../R671_438b.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 with a rectangle. Click on image to expand.</figcaption></figure></p>
-<p>Now the <em>expr</em> node shows this - only the rectangle has the parameter, while the rest of
-the image shows the 671nm band. To see this, click on the <em>expr</em> tab:</p>
+<p>Now the <em>expr</em> node shows this - only the rectangle has the 671/438 parameter, while the rest of
+the image shows the 671nm band. To see this, <mark>click on the <em>expr</em> tab</mark>:</p>
 <p><figure class="text-center"><a data-lightbox="R671_438c.png" href="../R671_438c.png" name="R671_438c"><img alt="R671_438 with a rectangle" src="../R671_438c.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 with a rectangle. Click on image to expand.</figcaption></figure></p>
-<p>This means that we're normalising a much narrower range to 0-1. 
-It can be hard to adjust the rectangle when you can't see what's happening in the final image -
-try undocking the <em>rect</em> node and dragging it to a different part of the screen, so you can edit
-the rectangle while the <em>expr</em> output is visible.</p>
-<p>To make things more visible still, add a <em>gradient</em> node after the <em>expr</em> node and view it, clicking
-on the Show ROIs button to make any ROIs on the image visible (ROIs are typically retained on derived
+<p>The image is dark, because the values of the parameter shown in the rectangle are much greater
+than those of the 671nm band.</p>
+<p>It can be hard to adjust the rectangle when you can't see what's happening in the final image -
+<mark>try undocking the <em>rect</em> node and dragging it to a different part of the screen</mark> by double-clicking
+on the tab, so you can edit
+the rectangle while the <em>expr</em> output is visible. <mark>Dock it again by closing the undocked window</mark>.</p>
+<p>To make things more visible still, <mark>open the <em>data</em> section and add a <em>gradient</em> node after the <em>expr</em> node and view it</mark>, clicking
+making sure <strong>Show ROIs</strong> is enabled on its canvas (ROIs are typically retained on derived
 images):</p>
 <p><figure class="text-center"><a data-lightbox="R671_438d.png" href="../R671_438d.png" name="R671_438d"><img alt="R671_438 with a rectangle and gradient" src="../R671_438d.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 with a rectangle and gradient. Click on image to expand.</figcaption></figure></p>
 <p>There's not much to see because of the nature of the image, unfortunately! Note that there is a "legend"
-at top left, and this can be edited and placed by clicking on the Legend button:</p>
+at top left, and this can be <mark>edited and placed by clicking on the Legend button</mark>:</p>
 <p><figure class="text-center"><a data-lightbox="R671_438da.png" href="../R671_438da.png" name="R671_438da"><img alt="R671_438 with a better gradient legend" src="../R671_438da.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 with a better gradient legend. Click on image to expand.</figcaption></figure></p>
+<p>The colour palette for the gradient, incidentally, is the "viridis" palette which is helpful for people
+with certain kinds of colour blindness<sup id="fnref:2"><a class="footnote-ref" href="#fn:2">2</a></sup>. Other presets are available
+by clicking on the <strong>Load Preset</strong> button, or you can edit the gradient
+by hand: double-click to add or remove a point, drag to move a point.</p>
 <p>It is possible to "inset" the gradient into the RGB representation used in the <em>input</em> node by passing
 that to the <em>insetinto</em> input of the gradient:</p>
 <p><figure class="text-center"><a data-lightbox="R671_438e.png" href="../R671_438e.png" name="R671_438e"><img alt="R671_438 inset into source image RGB representation" src="../R671_438e.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 inset into source image RGB representation. Click on image to expand.</figcaption></figure></p>
-<p>Finally, the gradient node will automatically normalise its data to a range. That makes the <em>norm</em> function
-used in the expression redundant. We can remove it, and we'll see the full range on the legend:</p>
-<p><figure class="text-center"><a data-lightbox="R671_438f.png" href="../R671_438f.png" name="R671_438f"><img alt="R671_438 showing full range" src="../R671_438f.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 showing full range. Click on image to expand.</figcaption></figure></p>
 <div class="alert alert-danger" role="alert">
 <p>Note that the positioning of the legend text is slightly off; we'll fix that.</p>
 </div>
-<p>It is also possible to export the data as a PDF, SVG or PNG with the legend in the margin:</p>
+<p>If you <mark>switch to the Legend part of the <em>gradient</em> node</mark> and
+<mark>select <em>Left margin</em> for the <strong>Legend</strong> item</mark>, when you <mark>export the image</mark>
+with the canvas' Export Image button the legend will be in the margin:</p>
 <p><figure class="text-center"><a data-lightbox="leg.svg" href="../leg.svg" name="leg"><img alt="Exported R671_438 (svg)" src="../leg.svg" /></a><figcaption class="figure-caption text-center">Figure: Exported R671_438 (svg). Click on image to expand.</figcaption></figure></p>
 <div class="footnote">
 <hr />
@@ -479,6 +442,9 @@ used in the expression redundant. We can remove it, and we'll see the full range
 <a href="https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2019EA000692">"Multiscale and multispectral characterization of mineralogy with the ExoMars 2022 rover
 remote sensing payload."</a>
 <em>Earth and Space Science</em> 7, no. 4 (2020): e2019EA000692.&#160;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+</li>
+<li id="fn:2">
+<p>Simon Garnier, Noam Ross, Robert Rudis, Antônio P. Camargo, Marco Sciaini, and Cédric Scherer (2021). viridis(Lite) - Colorblind-Friendly Color Maps for R. viridis package version 0.6.2.&#160;<a class="footnote-backref" href="#fnref:2" title="Jump back to footnote 2 in the text">&#8617;</a></p>
 </li>
 </ol>
 </div></div>

@@ -154,6 +154,18 @@
             
             <li class="nav-item" data-level="1"><a href="#the-canvas-and-its-optional-views" class="nav-link">The Canvas and its optional views</a>
               <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#data-section" class="nav-link">Data section</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#normalisation-section" class="nav-link">Normalisation section</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#data-quality-layers" class="nav-link">Data quality layers</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -162,11 +174,97 @@
                     <div class="col-md-9" role="main">
 
 <h1 id="the-canvas-and-its-optional-views">The Canvas and its optional views</h1>
-<div class="alert alert-danger" role="alert">
-<p>This page will form the user guide for the ubiquitous Canvas view
-when the image quality, uncertainty and eventually filter aberration
-data are added.</p>
-</div></div>
+<p>Most nodes and inputs use a <strong>canvas</strong> to display some bands of an image as RGB.
+This will take up a large proportion of their view - in some cases
+all of it. It is worth discussing
+in some detail. Another is shown below as the entire control area
+for an actual <em>input</em> node, which brings one of the four inputs into
+the graph.</p>
+<p><figure class="text-center"><a data-lightbox="inputnode.png" href="../inputnode.png" name="inputnode"><img alt="An open *input 0* node" src="../inputnode.png" /></a><figcaption class="figure-caption text-center">Figure: An open *input 0* node. Click on image to expand.</figcaption></figure></p>
+<p>You can pan the canvas using the scroll bars at the edge, and zoom with
+the mouse wheel. The button at bottom right will reset to show the entire
+image.</p>
+<p>To the left of the canvas image itself is the canvas control area. This has quite a lot
+in it, so is scrollable with collapsible sections, rather like the palette.</p>
+<p>At the top - and not collapsible - are three combo boxes which determine
+the image <em>mapping</em> : how the bands within the (probably) multispectral image
+map onto RGB channels for viewing. Each band in the combo box shows the input
+number, a colon, and typically the name, position or wavelength of the band.
+Exactly what is shown depends on the image being loaded and the Caption
+<a href="../globalcontrols/">global control</a>.
+The <strong>Guess RGB</strong> button tries to guess appropriate channels for the RGB canvas image.</p>
+<h2 id="data-section">Data section</h2>
+<p>This is the first of the collapsible sections.</p>
+<ul>
+<li><strong>Show ROIs</strong> will mark any regions of interest the image has - these
+are added using nodes like <em>rect</em> (for a rectangle) and are carried forward
+through subsequent nodes (where appropriate), delimiting the area upon
+which calculations are performed. They also control the regions used
+for calculating spectra. Normally an ROI is only shown in the node which adds
+it.</li>
+<li><strong>Show spectrum</strong> opens a side pane, and dragging the cursor across the
+image will plot the spectrum of the pixel under the cursor in this pane. If
+no filter wavelengths are available, a list of the values for each band is shown.
+The show spectrum pane looks like this:
+<figure class="text-center"><a data-lightbox="canvasspec.png" href="../canvasspec.png" name="canvasspec"><img alt="The &quot;show spectrum&quot; pane on an input node's canvas" src="../canvasspec.png" />
+The screenshot isn't showing the cursor, unfortunately, but the spectrum is for
+the pixel under the cursor.</a><figcaption class="figure-caption text-center">Figure: The "show spectrum" pane on an input node's canvas. Click on image to expand.</figcaption></figure></li>
+</ul>
+<p>When a spectrum view is opened the image pane can be tiny - to fix this you
+can resize the PCOT window (or undocked node window), or drag the separator
+between the image and the spectrum (the two vertical bars). Each dot is shown
+with an approximation of its wavelength colour (using <a href="http://www.physics.sfasu.edu/astro/color/spectra.html">Dan Bruton's
+algorithm</a>) or black if
+the wavelength is not visible.</p>
+<ul>
+<li><strong>Export image</strong> saves the RGB-mapped image as a PDF, SVG or PNG. If a gradient has been
+plotted using the <em>gradient</em> node, it may add a legend to the image.</li>
+<li><strong>Cursor coordinates</strong> are shown next, followed by <strong>number of pixels and ROIs in the image</strong> and
+the <strong>image dimensions</strong> (width x height x bands).</li>
+<li>The <strong>hide DQ</strong> disables the data quality overlays and hides their sections - data quality can
+be slow to draw.</li>
+</ul>
+<h2 id="normalisation-section">Normalisation section</h2>
+<p>Nominally, the canvas channels are 0-1 with 0 being zero intensity and 1 being full intensity
+(so RGB 1,1,1 is white). Values outside the 0-1 range are clamped. However, this can be changed.</p>
+<ul>
+<li>The <strong>norm</strong> box selects the normalisation range:<ul>
+<li><strong>to all bands</strong> means that the normalisation range of each band for each pixel is
+the minimum and maximum of all the bands as a whole.</li>
+<li><strong>to RGB</strong> means that the normalisation range is taken from the channels mapped to RGB in the canvas.</li>
+<li><strong>independent</strong> means that each band is normalised independently, to its own range.</li>
+<li><strong>none</strong> means no normalisation is done.</li>
+</ul>
+</li>
+<li>If <strong>to cropped area</strong> is on, the range used for normalisation is taken from the portion of the image
+visible in the canvas.</li>
+</ul>
+<h2 id="data-quality-layers">Data quality layers</h2>
+<p>Each image has a set of data quality bits and an uncertainty value associated with each pixel
+of each band. Viewing this can be challenging. We make three "layers" of DQ data available: each
+works the same way:</p>
+<ul>
+<li><strong>SRC</strong> specifies which band we are viewing the DQ for. If <em>max</em> is
+specified, the maximum uncertainty across all bands is used. If <em>sum</em>, then
+the sum of the uncertainties is used. If a DQ bit is being shown, the
+intersection of those bits across all bands is used for both <em>max</em> and <em>sum</em>.</li>
+<li><strong>DATA</strong> specifies what data is being shown:<ul>
+<li><strong>NONE</strong> specifies that the DQ layer is inactive.</li>
+<li><strong>BIT:name</strong> options specify a particular DQ bit. These are subject to change, but are
+likely to include <em>nodata</em>, <em>nounc</em> (no uncertainty data), <em>sat</em> (saturated). </li>
+<li><strong>UNC</strong> specifies that the uncertainty data should be shown.</li>
+<li><strong>UNC&gt;THRESH</strong> specifies that the layer should be full intensity for pixels where the 
+uncertainty is above a threshold (see below).</li>
+<li><strong>UNC&lt;THRESH</strong> specifies that the layer should be full intensity for pixels where the 
+uncertainty is below a threshold (see below).</li>
+</ul>
+</li>
+<li><strong>COL</strong> specifies the colour for the DQ layer.</li>
+<li><strong>transp</strong> indicates the transparency of the layer</li>
+<li><strong>contrast</strong> may help improve visibility (it is a simple power function)</li>
+<li><strong>thresh</strong> is the threshold for the threshold DATA modes</li>
+<li><strong>additive</strong> indicates that the data quality layers should be added to the RGB image rather than blended.</li>
+</ul></div>
             </div>
         </div>
 

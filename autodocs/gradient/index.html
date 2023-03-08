@@ -161,7 +161,9 @@
 
 <h1 id="gradient">gradient</h1>
 <h2 id="description">Description</h2>
-<p>Convert a greyscale image to an RGB gradient image for better visibility.</p>
+<p>Convert a mono image to an RGB gradient image for better visibility. If the "insetinto" input has an
+image AND there is a valid ROI in the mono image, the image will be inset into the RGB of the insetinto image.
+NOTE: if you change the "insetinto" image's RGB mapping you may need to "run all" to see the the change reflected.</p>
 <p>The gradient widget has the following behaviour:</p>
 <ul>
 <li>click and drag to move a colour point</li>
@@ -169,6 +171,16 @@
 <li>doubleclick to add a new colour point</li>
 <li>right click to edit an existing colour point</li>
 </ul>
+<p>Node parameters:
+* gradient: utils.Gradient object containing gradient info
+* colour: (r,g,b) [0:1] colour of text and border for in-image legend
+* legendrect: (x,y,w,h) rectangle for in-image legend
+* vertical: true if vertical legend
+* fontscale: size of font
+* thickness: border thickness
+* legendPos: string describing position:
+'In image', 'Top margin', 'Bottom margin', 'Left margin', 'Right margin', 'None'
+These are also defined as constants LEFT_MARGIN... IN_IMAGE (and None)</p>
 
 <hr />
 <h2 id="connections">Connections</h2>
@@ -185,7 +197,13 @@
 <tbody>
 <tr>
 <td>0</td>
+<td>mono</td>
+<td>img</td>
 <td>(none)</td>
+</tr>
+<tr>
+<td>1</td>
+<td>insetinto</td>
 <td>img</td>
 <td>(none)</td>
 </tr>
