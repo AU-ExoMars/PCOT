@@ -80,7 +80,7 @@ PCOT as above:
 
 * Open a bash shell
 * **cd** to the PCOT directory (which contains this file).
-* Run the command **conda create -n pcot python=3.8 poetry**.
+* Run the command **conda create -n pcot python=3.8 poetry=1.1.6**.
 This will create an environment called **pcot** which uses Python 3.8 and
 the Poetry dependency and packaging manager. It may take some time.
 * Activate the environment with **conda activate pcot**.

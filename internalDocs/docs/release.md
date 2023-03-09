@@ -48,7 +48,7 @@ commandeer a teaching machine to do it on.
 2. ```export PATH=/usr/local/anaconda3/bin/:$PATH```
 3. ```echo ". /usr/local/anaconda3/etc/profile.d/conda.sh" >> ~/.bash_profile```
 4. ```source ~/.bash_profile```
-5. ```conda create -n pcot python=3.8 poetry```
+5. ```conda create -n pcot python=3.8 poetry=1.1.6```
 6. ```conda activate pcot```
 7. ```poetry install```
 8. run pcot (to test)
