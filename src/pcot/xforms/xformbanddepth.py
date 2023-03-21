@@ -112,12 +112,12 @@ class TabBandDepth(pcot.ui.tabs.Tab):
         # sensibly use QSignalBlocker. NOT WORKING.
         self.w.bandCombo.blockSignals(True)
         self.w.bandCombo.clear()
-        self.w.bandCombo.blockSignals(False)
 
         for (_, s) in self.node.freqs:
             self.w.bandCombo.addItem(s)
 
         if self.node.bandidx >= 0:
             self.w.bandCombo.setCurrentIndex(self.node.bandidx)
+        self.w.bandCombo.blockSignals(False)
 
         self.w.canvas.display(self.node.img)
