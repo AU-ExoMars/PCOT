@@ -747,14 +747,24 @@ class XForm:
     def connect(self, inputIdx, other, output, autoPerform=True):
         """connect an input to an output on another xform.
             Note that this doesn't check compatibility; that's done in the UI.
+            But it does check connection numbers.
             """
-        if 0 <= inputIdx < len(self.inputs) and self is not other:
-            if 0 <= output < len(other.type.outputConnectors):
-                if not self.cycle(other):  # this is a double check, the UI checks too.
-                    self.inputs[inputIdx] = (other, output)
-                    other.increaseChildCount(self)
-                    if autoPerform:
-                        other.graph.changed(other)  # perform the input node; the output should perform
+        if self is other:
+            raise XFormException('DATA', 'cannot connect output to input of same node!')
+        if inputIdx < 0:
+            raise XFormException('DATA', 'cannot connect to negative input')
+        if output < 0:
+            raise XFormException('DATA', 'cannot connect to negative output')
+        if inputIdx >= len(self.inputs):
+            raise XFormException('DATA', 'input index out of range')
+        if output >= len(other.type.outputConnectors):
+            raise XFormException('DATA', 'output index out of range')
+
+        if not self.cycle(other):  # this is a double check, the UI checks too.
+            self.inputs[inputIdx] = (other, output)
+            other.increaseChildCount(self)
+            if autoPerform:
+                other.graph.changed(other)  # perform the input node; the output should perform
 
     def disconnect(self, inputIdx, perform=True):
         """disconnect an input"""

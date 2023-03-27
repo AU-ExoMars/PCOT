@@ -9,11 +9,9 @@ These types are also used by the expression evaluator.
 import logging
 from typing import Any, Optional
 
-import pcot.sources
 from pcot import rois
 from pcot.imagecube import ImageCube
 from pcot.sources import SourcesObtainable, nullSource, SourceSet
-from pcot.utils import singleton
 
 logger = logging.getLogger(__name__)
 
