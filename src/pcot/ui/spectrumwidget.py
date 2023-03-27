@@ -24,7 +24,7 @@ class SpectrumWidget(QtWidgets.QWidget):
             return x, y
 
     def setData(self, d):
-        """Takes iterable of (x,y) tuples OR a string"""
+        """Takes iterable of (cwl,val,unc,dq) tuples OR a string"""
         if isinstance(d, str):
             self.data = d
         else:
@@ -46,18 +46,18 @@ class SpectrumWidget(QtWidgets.QWidget):
             self.drawText(p, self.data)
         elif self.data is not None and len(self.data) > 0:
             # get x-range so we can check it (and use it later for rendering)
-            xs = [x for x, _ in self.data]
+            xs = [x[0] for x in self.data]
             minx, maxx = min(xs), max(xs)
             rngx = maxx - minx
 
             # get Y range if it's not 0-1.
             ymax = 1
-            for x, y in self.data:
+            for x, y, _, _ in self.data:
                 while y > ymax:
                     ymax = y
 
             if rngx < 0.0001:
-                text = f"There is only one single-wavelength\nchannel in the data, value = {minx}"
+                text = f"There is only one single-wavelength\nchannel: wavelength {minx}nm"
                 self.drawText(p, text)
                 return
 
@@ -77,7 +77,7 @@ class SpectrumWidget(QtWidgets.QWidget):
 
             lastPt = None
             halftextheight = metrics.height() / 2
-            for x, y in self.data:
+            for x, y, unc, _ in self.data:
                 x01 = (x - minx) / rngx
 
                 # draw x value on axis with a tick
@@ -100,6 +100,14 @@ class SpectrumWidget(QtWidgets.QWidget):
                 p.drawEllipse(pt, 3, 3)
                 p.setBrush(QBrush())
 
+                # draw line between this and previous segment
                 if lastPt is not None:
                     p.drawLine(pt, lastPt)
                 lastPt = pt
+                
+                # draw error bar
+                errorHalfHeight = unc/2
+                
+                pt1 = self.map(x01,(y+errorHalfHeight)/ymax)
+                pt2 = self.map(x01,(y-errorHalfHeight)/ymax)
+                p.drawLine(pt1,pt2)

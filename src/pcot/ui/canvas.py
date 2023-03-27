@@ -1279,7 +1279,10 @@ class Canvas(QtWidgets.QWidget):
             return
         if self.previmg.channels < 2:
             if 0 <= x < self.previmg.w and 0 <= y < self.previmg.h:
-                self.spectrumWidget.setData(f"Single channel - intensity {self.previmg.img[y, x]}")
+                val = self.previmg.img[y,x]
+                unc = self.previmg.uncertainty[y,x]
+                dq = pcot.dq.names(self.previmg.dq[y,x])
+                self.spectrumWidget.setData(f"Single channel - {val:.3} +/- {unc:.3}. DQ:{dq}")
             return
 
         # within the coords, and multichannel image present
@@ -1287,6 +1290,8 @@ class Canvas(QtWidgets.QWidget):
         if 0 <= x < self.previmg.w and 0 <= y < self.previmg.h and self.previmg.channels > 1:
             img = self.previmg
             pixel = img.img[y, x, :]  # get the pixel data
+            pixuncs = img.uncertainty[y,x,:]
+            pixdqs = img.dq[y,x,:]
 
             # get the channels which have a single wavelength
             # what do we do if they don't? I don't think you can display a spectrum!
@@ -1297,15 +1302,20 @@ class Canvas(QtWidgets.QWidget):
             chans = [x for x in range(img.channels) if wavelengths[x] > 0]
 
             # and get the data from the pixel which is for those wavelengths
-            dat = [pixel[x] for x in chans]
-
-            # now plot x=wavelengths,y=dat
-            if len(dat) > 1:
-                data = zip(goodWavelengths, dat)
+            vals = [pixel[x] for x in chans]
+            uncs = [pixuncs[x] for x in chans]
+            dqs = [pixdqs[x] for x in chans]
+            
+            # now plot x=wavelengths,y=vals
+            if len(vals) > 1:
+                data = zip(goodWavelengths, vals, uncs, dqs)
             else:
                 # but if there aren't enough data with wavelengths,
                 # just show the values as text.
                 data = "Cannot plot: no frequency data in channel sources\n"
                 for i, ss in enumerate(img.sources):
-                    data += f"{i}) {ss.brief()} = {pixel[i]}\n"
+                    p = pixel[i]
+                    u = pixuncs[i]
+                    d = pixdqs[i]
+                    data += f"{i}) {ss.brief()} = {p:.3} +/- {u:.3} : {pcot.dq.names(d)}\n"
             self.spectrumWidget.setData(data)
