@@ -19,6 +19,7 @@ from pcot.rois import ROI, ROIPainted, ROIBoundsException
 from pcot.sources import MultiBandSource, SourcesObtainable
 from pcot.utils import annotations
 from pcot.utils.annotations import annotFont
+from pcot.utils import image
 from pcot.utils.geom import Rect
 import pcot.dq
 
@@ -308,9 +309,8 @@ class ImageCube(SourcesObtainable):
 
         if img is None:
             raise Exception("trying to initialise image from None")
-        self.img = img  # the image numpy array
         # first, check the dtype is valid
-        if self.img.dtype != np.float32:
+        if img.dtype != np.float32:
             raise Exception("Images must be 32-bit floating point")
         if rois is None:
             self.rois = []  # no ROI
@@ -322,10 +322,20 @@ class ImageCube(SourcesObtainable):
         if len(img.shape) == 2:
             # 2D image
             self.channels = 1
-        else:
+        elif len(img.shape) == 3:
             self.channels = img.shape[2]
+            if self.channels == 1:
+                # convert an (x,y,1) image to just (x,y)
+                img = image.imgsplit(img)[0]
+        else:
+            raise Exception("Images must be 3-dimensional arrays")
+            
+        # image should now be correct, set it into the object.
+            
+        self.img = img
         self.w = img.shape[1]
         self.h = img.shape[0]
+
         # an image may have a list of source data attached to it indexed by channel. Or if none is
         # provided, an empty one.
         self.sources = sources if sources else MultiBandSource.createEmptySourceSets(self.channels)
