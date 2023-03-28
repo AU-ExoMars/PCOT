@@ -222,6 +222,11 @@ class ChannelMapping:
             lst.sort(key=lambda v: -v[1])
             self.red, self.green, self.blue = [x[0] for x in lst]
 
+            # FINALLY, finally, finally - it could still happen that all the bands are the same
+            # despite there being more than one channel (e.g. a monochrome image mapped to RGB).
+            if self.red == self.green and self.green == self.blue:
+                self.red, self.green, self.blue = [x % img.channels for x in range(0, 3)]
+
     def ensureValid(self, img):
         """generate a mapping from a new image if required - or keep using the old mapping
         if we can. Return self, for fluent."""
