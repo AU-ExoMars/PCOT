@@ -502,11 +502,14 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
     arrows: List[GArrow]
     # dragging arrow or none if no arrow being dragged
     draggingArrow: Optional[GArrow]
+    # delete keys are ignored and passed down to Items because we're editing text in a node
+    lockDeleteKeys: bool
 
     def __init__(self, graph, doPlace):
         """initialise to a graph, and do autolayout if doPlace is true"""
         super().__init__()
         self.graph = graph
+        self.lockDeleteKeys = False
         self.selectionChanged.connect(self.selChanged)
         self.selection = []
         self.checkSelChange = True
