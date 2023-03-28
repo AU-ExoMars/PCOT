@@ -14,6 +14,12 @@ from pcot.sources import MultiBandSource, nullSource, InputSource
 Assorted test fixtures, mainly for generating input data (typically images)
 """
 
+def checkexpr(expr):
+    """Check an expression node for errors"""
+    if expr.error is not None:
+        pytest.fail(f"Error in expression: {expr.error}")
+
+
 
 @pytest.fixture
 def datadir(tmp_path, request):

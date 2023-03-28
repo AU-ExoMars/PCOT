@@ -20,9 +20,16 @@ class GNumberText(QtWidgets.QGraphicsTextItem):
         self.setTabChangesFocus(True)
         self.node = node
 
+    def focusInEvent(self, event:QtGui.QFocusEvent) -> None:
+        self.scene().lockDeleteKeys = True
+        super().focusInEvent(event)
+
     def focusOutEvent(self, event: QtGui.QFocusEvent) -> None:
-        self.setPlainText(str(self.node.val))
-        super().focusOutEvent(event)
+        self.scene().lockDeleteKeys = False
+        self.setFromTextAndRunIfRequired()
+        # If I leave this in, I get an "internal object already deleted" for this obj. and even
+        # keeping an extra ref. in the node doesn't seem to help.
+        # super().focusOutEvent(event)
 
     def contextMenuEvent(self, event: 'QGraphicsSceneContextMenuEvent') -> None:
         """In QT5, the context menu in QGraphicsTextItem causes a segfault - we disable
@@ -30,16 +37,20 @@ class GNumberText(QtWidgets.QGraphicsTextItem):
         This is probably a good idea anyway, as it lets the node's context menu run"""
         event.ignore()
 
+    def setFromTextAndRunIfRequired(self):
+        v = self.toPlainText()
+        if v != self.node.val:
+            self.node.val = float(v)
+            # we also have to tell the graph to perform from here
+            self.node.graph.performNodes(self.node)
+
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
         # return means "go!"
         if event.key() == Qt.Key_Return:
             try:
                 self.node.mark()
-                v = self.toPlainText()
-                self.node.val = float(v)
                 self.clearFocus()
-                # we also have to tell the graph to perform from here
-                self.node.graph.performNodes(self.node)
+                self.setFromTextAndRunIfRequired()
             except ValueError:
                 self.node.unmark()
                 ui.error("cannot convert text")

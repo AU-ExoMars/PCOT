@@ -3,7 +3,6 @@ from pcot.datum import Datum
 from pcot.document import Document
 from fixtures import *
 
-
 def test_roi_single_image(allblack):
     """Test that a single 'standard operation' - one which uses modifyWithSub - works
     correctly on an image with a single ROI. ROIs and modifyWithSub are tested at a lower
@@ -28,7 +27,7 @@ def test_roi_single_image(allblack):
     doc.changed()
     img = exprNode.getOutput(0, Datum.IMG)
     assert np.sum(img.img) == 12 * 3  # right number of pixels changed for a 3 channel image
-
+    checkexpr(exprNode)
 
 def test_roi_intersection(allblack):
     """Test using expr to intersect two ROIs"""
@@ -51,9 +50,9 @@ def test_roi_intersection(allblack):
     # now create an expression node to intersect the two ROIs, taking its input from the ROI
     # outputs (not the images)
     exprNode = doc.graph.create("expr")
-    exprNode.expr = "a*b"  # multiply = intersect for ROIs
     exprNode.connect(0, roiNode1, 1)
     exprNode.connect(1, roiNode2, 1)
+    exprNode.expr = "a*b"  # multiply = intersect for ROIs
 
     # take that intersected ROI and apply it to the image
     importNode = doc.graph.create("importroi")
@@ -68,6 +67,7 @@ def test_roi_intersection(allblack):
 
     doc.changed()
 
+    checkexpr(exprNode)
     img = setWhiteNode.getOutput(0, Datum.IMG)
     assert np.sum(img.img) == 4 * 3  # right number of pixels changed for a 3 channel image
 
@@ -111,6 +111,7 @@ def test_roi_union_expr(allblack):
     doc.changed()
 
     img = setWhiteNode.getOutput(0, Datum.IMG)
+    checkexpr(exprNode)
     assert np.sum(img.img) == 14 * 3  # right number of pixels changed for a 3 channel image
 
 
@@ -140,6 +141,7 @@ def test_roi_union(allblack):
 
     doc.changed()
 
+    checkexpr(setWhiteNode)
     img = setWhiteNode.getOutput(0, Datum.IMG)
     assert np.sum(img.img) == 14 * 3  # right number of pixels changed for a 3 channel image
 
@@ -167,12 +169,13 @@ def test_roi_binop_image_lhs():
     roi.connect(0, red, 0)
 
     expr = doc.graph.create("expr")
-    expr.expr = "a+b"
     expr.connect(0, roi, 0)  # left hand side (red) has ROI
     expr.connect(1, green, 0)  # right hand side (green) does not
+    expr.expr = "a+b"
 
     doc.changed()
     img = expr.getOutput(0, Datum.IMG)
+    checkexpr(expr)
     assert img is not None
 
     # assert that the area outside the ROI is from the LHS
@@ -207,12 +210,13 @@ def test_roi_binop_image_rhs():
     roi.connect(0, blue, 0)
 
     expr = doc.graph.create("expr")
-    expr.expr = "a+b"
     expr.connect(0, green, 0)  # left hand side (green) has no ROI
     expr.connect(1, roi, 0)  # right hand side (blue) does not
+    expr.expr = "a+b"
 
     doc.changed()
     img = expr.getOutput(0, Datum.IMG)
+    checkexpr(expr)
     assert img is not None
 
     # assert that the area outside the ROI is from the LHS
@@ -265,9 +269,9 @@ def test_rois_on_both_sides_of_binop():
     # feed both images into an expr, adding the two together.
 
     expr = doc.graph.create("expr")
-    expr.expr = "a+b"
     expr.connect(0, roi1b, 0)
     expr.connect(1, roi2b, 0)
+    expr.expr = "a+b"
 
     doc.changed()
     img = expr.getOutput(0, Datum.IMG)
@@ -293,10 +297,11 @@ def test_rois_same_on_both_sides():
     roi.connect(0, green, 0)
 
     expr = doc.graph.create("expr")
-    expr.expr = "a$R+a$G"
     expr.connect(0, roi, 0)
+    expr.expr = "a$R+a$G"
 
     doc.changed()
+    checkexpr(expr)
     img = expr.getOutput(0, Datum.IMG)
     assert img is not None
 
@@ -315,10 +320,11 @@ def _testinternal_image_and_scalar(exprString):
     roi.connect(0, green, 0)
 
     expr = doc.graph.create("expr")
-    expr.expr = exprString
     expr.connect(0, roi, 0)
+    expr.expr = exprString
 
     doc.changed()
+    checkexpr(expr)
     img = expr.getOutput(0, Datum.IMG)
     assert img is not None
 
@@ -359,21 +365,22 @@ def perform_roi_op(exprString) -> ImageCube:
     roi2.connect(0, red, 0)
 
     expr = doc.graph.create("expr")
-    expr.expr = exprString
     expr.connect(0, roi1, 1)  # use the ROI output
     expr.connect(1, roi2, 1)
+    expr.expr = exprString
 
     importroi = doc.graph.create("importroi")
     importroi.connect(0, red, 0)
     importroi.connect(1, expr, 0)
 
     expr2 = doc.graph.create("expr")
-    expr2.expr = "a+1"
     expr2.connect(0, importroi, 0)
+    expr2.expr = "a+1"
 
     # doc.save("c:/users/jim/xxxx.pcot")
 
     doc.changed()
+    checkexpr(expr)
     img = expr2.getOutput(0, Datum.IMG)
     assert img is not None
     return img
@@ -444,9 +451,11 @@ def test_roi_neg_expr_unimplemented():
     roi1.connect(0, red, 0)
 
     expr = doc.graph.create("expr")
+    expr.connect(0, roi1, 1)  # use the ROI output
     expr.expr = "-a"
-    expr.connect(0, roi1, 2)  # use the ROI output
 
     doc.changed()
 
-    assert expr.error.message == "incompatible type for operator NEG: roi"
+    if expr.error is not None and expr.error.message == "incompatible type for operator NEG: roi":
+        pytest.fail("negation not implemented for ROIs")
+    checkexpr(expr)

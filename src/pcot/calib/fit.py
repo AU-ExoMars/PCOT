@@ -24,6 +24,11 @@ def fit(rho: List[float], signal: List[List[float]]):
 
     """
 
+    # TODO deal with uncertainty!
+    # If variables are independent, this could be just aggregating the statistics for each pixel in the ROI
+    # by using Chan's batch extension to Welford's algorithm, like this:
+    # https://github.com/himbeles/pairwise-statistics
+
     a = sum([1 / np.var(ss) for ss in signal])
     b = sum([(r * r) / np.var(ss) for ss, r in zip(signal, rho)])
     e = sum([r / np.var(ss) for ss, r in zip(signal, rho)])

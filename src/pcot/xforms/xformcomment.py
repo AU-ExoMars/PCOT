@@ -34,7 +34,12 @@ class GStringText(QtWidgets.QGraphicsTextItem):
 
     def focusOutEvent(self, event: QtGui.QFocusEvent) -> None:
         self.editDone()
+        self.scene().lockDeleteKeys = False
         super().focusOutEvent(event)
+
+    def focusInEvent(self, event:QtGui.QFocusEvent) -> None:
+        self.scene().lockDeleteKeys = True
+        super().focusInEvent(event)
 
     def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
         # return means "go!"
@@ -55,7 +60,7 @@ class XFormComment(XFormType):
     """Comment box"""
 
     def __init__(self):
-        super().__init__("comment", "maths", "0.0.0")
+        super().__init__("comment", "utility", "0.0.0")
         self.resizable = True
         self.showPerformedCount = False
         self.autoserialise = ('string', 'boxColour', 'textColour', 'fontSize')

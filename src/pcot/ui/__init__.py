@@ -62,7 +62,7 @@ def warn(s):
         application.beep()
         QtWidgets.QMessageBox.warning(None, 'WARNING', s)
     else:
-        logger.warn(f"LOG WARN {s}")
+        logger.warning(f"LOG WARN {s}")
 
 
 ## log an XFormException

@@ -92,8 +92,9 @@ class GraphView(QtWidgets.QGraphicsView):
 
     def keyPressEvent(self, event):
         """handle key presses"""
-        if event.key() == Qt.Key_Delete or event.key() == Qt.Key.Key_Backspace:
-            scene = self.scene()
+        scene = self.scene()#
+        # we ignore these keys sometimes, typically when text item inside a box is being edited.
+        if not scene.lockDeleteKeys and (event.key() == Qt.Key_Delete or event.key() == Qt.Key.Key_Backspace):
             scene.mark()
             for n in scene.selection:
                 # remove the nodes
