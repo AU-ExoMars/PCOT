@@ -31,7 +31,14 @@ class XFormMultiDot(XFormType):
         super().__init__("multidot", "regions", "0.0.0")
         self.addInputConnector("input", Datum.IMG)
         self.addOutputConnector("img", Datum.IMG, "image with ROIs")
-        self.autoserialise = ('fontsize', 'thickness', 'colour', 'dotSize', 'drawbg')
+        self.autoserialise = (
+            ('dotSize', 10),
+            ('fontsize', 10),
+            ('thickness', 2),
+            ('colour', (1, 1, 0)),
+            ('drawbg', True)
+        )
+
 
     def createTab(self, n, w):
         return TabMultiDot(n, w)

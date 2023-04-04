@@ -1,10 +1,13 @@
 #
 
-def serialiseFields(obj, attrnames, d=None):
+def serialiseFields(obj, attrs, d=None):
     """Turn some fields of an object into a dict - can also
-    update an existing dict (and return it)"""
+    update an existing dict (and return it). 
+    attrs is a tuple of tuples: field names and default values.
+    of field names and default values."""
 
-    nd = {k: obj.__dict__[k] for k in attrnames}
+    ks = [x[0] for x in attrs]
+    nd = {k: obj.__dict__[k] for k in ks}
     if d is not None:
         d.update(nd)
         return d
@@ -12,11 +15,12 @@ def serialiseFields(obj, attrnames, d=None):
         return nd
 
 
-def deserialiseFields(obj, d, attrnames):
-    """Turn data in a dict into object fields"""
-    for x in attrnames:
-        if x in d:
-            obj.__dict__[x] = d[x]
+def deserialiseFields(obj, d, attrs):
+    """Turn data in a dict into object fields. Takes the dictionary
+    and attrs, which (as in serialiseFields) is a tuple of tuples: field
+    name and default values."""
+    for k, v in attrs:
+        obj.__dict__[k] = d[k] if k in d else v
 
 
 class SingletonException(Exception):
