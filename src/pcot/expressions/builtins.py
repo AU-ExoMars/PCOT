@@ -135,6 +135,13 @@ def funcRGBImage(args, _):
     return Datum(Datum.IMG, img)
 
 
+def funcV(args, _):
+    v = args[0].get(Datum.NUMBER)
+    u = args[1].get(Datum.NUMBER)
+    raise Exception("Damn, no numbers with uncertainty yet")
+    return Datum(Datum.NUMBER, (v, u))
+
+
 def funcWrapper(fn, d, *args):
     """Wrapper around a evaluator function that deals with ROIs etc.
     compare this with exprWrapper in operations, which only handles images and delegates
@@ -293,6 +300,16 @@ def registerBuiltinFunctions(p):
         [Parameter("image", "the image to process", Datum.IMG)],
         [],
         funcRGBImage
+    )
+
+    p.registerFunc(
+        "v",
+        "create a scalar value with uncertainty",
+        [
+            Parameter("value", "the nominal value", Datum.NUMBER),
+            Parameter("uncertainty","the uncertainty",Datum.NUMBER)
+        ], [],
+        funcV
     )
 
 
