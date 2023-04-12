@@ -38,7 +38,7 @@ def test_number_number_ops():
         """(a,ua) and (b,ub) are scalar inputs with uncertainties. E is the expression."""
         doc = Document()
         nodeA = numberWithUncNode(doc, a, ua)
-        nodeB = numberWithUncNode(doc, a, ub)
+        nodeB = numberWithUncNode(doc, b, ub)
 
         expr = doc.graph.create("expr")
         expr.connect(0, nodeA, 0)
