@@ -14,17 +14,16 @@ def add_sub_unc(ua, ub):
 
 
 def mul_unc(a, ua, b, ub):
-    """Multiplication - this is Goodman's formula"""
+    """Multiplication - this is derived from the standard answer
+    (thanks, Wolfram!) assuming the values are real"""
     return np.sqrt((a*ub)**2 + (b*ua)**2)
+    
 
 
 def div_unc(a, ua, b, ub):
-    """Division. This is a bit of a weird one; I used an online analytical calculator to obtain it
-    https://astro.subhashbose.com/tools/error-propagation-calculator
-    and had a chat with ChatGPT although that was a bit of a walk up the garden path (it was hopeless).
-    It does, however, match the values given by the uncertainties package when under test.
+    """Division. Also derived from the standard answer.
     """
-    return np.sqrt(((a*ub)**2 + (b*ua)**2)/(b**4))
+    return np.sqrt(((a*ub)**2 + (b*ua)**2))/(b**2)
 
 
 def pow_unc(a, ua, b, ub):

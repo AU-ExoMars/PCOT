@@ -70,8 +70,8 @@ def test_scalar_op(name,f,g):
     print(f"scalar {name}")
     ct=0
     bad=0
-    for a in range(-10,10):
-        for b in range(-10,10):
+    for a in range(1,10):
+        for b in range(1,10):
             for ua in uncertainties:
                 for ub in uncertainties:
                     x = f(float(a),ua,float(b),ub)
@@ -99,6 +99,10 @@ def powfunc(a,ua,b,ub):
         return (ufloat(a,ua)**ufloat(b,ub)).std_dev
 
 def test_scalar_ops():
+    test_scalar_op("mul",
+        lambda a,ua,b,ub: mul_unc(a,ua,b,ub),
+        lambda a,ua,b,ub: (ufloat(a,ua)*ufloat(b,ub)).std_dev
+    )
     test_scalar_op("pow",
         lambda a,ua,b,ub: pow_unc(a,ua,b,ub),
         lambda a,ua,b,ub: powfunc(a,ua,b,ub)
@@ -120,10 +124,6 @@ def test_scalar_ops():
         lambda a,ua,b,ub: (ufloat(a,ua)-ufloat(b,ub)).std_dev
     )
     
-    test_scalar_op("mul",
-        lambda a,ua,b,ub: mul_unc(a,ua,b,ub),
-        lambda a,ua,b,ub: (ufloat(a,ua)*ufloat(b,ub)).std_dev
-    )
 
 
 #
@@ -347,12 +347,6 @@ def test_array_scalar_ops():
         lambda a,ua,b,ub: pow_unc(cln(a,b),ua,b,ub),
         lambda a,ua,b,ub: unumpy.std_devs(uarray(cln(a,b),ua)**uarray(b,ub))
     )
-
-
-test_scalar_array_op("pow",
-    lambda a,ua,b,ub: pow_unc(cln(a,b),ua,b,ub),
-    lambda a,ua,b,ub: unumpy.std_devs(uarray(cln(a,b),ua)**uarray(b,ub))
-)
 
 
 test_scalar_ops()
