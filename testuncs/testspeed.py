@@ -30,7 +30,13 @@ from utils.deb import Timer
 # doesn't work for large data.
 TEST_UNCERTAINTIES_PACKAGE=False
 
-shape=(1024,1024,11)
+if TEST_UNCERTAINTIES_PACKAGE:
+    shape=(102,102,4)
+else:
+    shape=(1024,1024,11)
+    
+
+
 rng = np.random.default_rng()
 
 def gendata(shape=None):

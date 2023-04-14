@@ -25,6 +25,14 @@ def div_unc(a, ua, b, ub):
     """
     return np.sqrt(((a*ub)**2 + (b*ua)**2))/(b**2)
 
+def powcore(a, ua, b, ub):
+    """Core function for exponentiation uncertainty once values have
+    been cleaned"""
+    x = a ** (2 * b - 2)
+    y = (a * ub * np.log(a)) ** 2 + (b * ua) ** 2
+    return np.sqrt(x * y)
+#    return np.abs(a**b) * np.sqrt(((b/a)*ua)**2 + (np.log(a)*ub)**2)
+
 
 def pow_unc(a, ua, b, ub):
     """Exponentiation. This is horrible because there are special cases when a==0"""
@@ -72,9 +80,7 @@ def pow_unc(a, ua, b, ub):
             # set those values in a to be 1 for now.
             a[zeros]=1
             # Perform the core calculation
-            x = a ** (2 * b - 2)
-            y = (a * ub * np.log(a)) ** 2 + (b * ua) ** 2
-            result = np.sqrt(x * y)
+            result = powcore(a,ua,b,ub)
             # set the "zeros" back to zero
             result[zeros]=0
             # set to ua where b is 1 and zeros is true
@@ -82,9 +88,7 @@ def pow_unc(a, ua, b, ub):
             return result
 
     # the default calculation
-    x = a ** (2 * b - 2)
-    y = (a * ub * np.log(a)) ** 2 + (b * ua) ** 2
-    return np.sqrt(x * y)
+    return powcore(a,ua,b,ub)
 
 
 class Number:
