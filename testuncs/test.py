@@ -188,7 +188,7 @@ def cln(a,b):
         elif np.isscalar(b):
             b = np.full_like(a,b)
             
-        # b is an array
+        # b is an array. Find the parts where a==0 and b<0 and set a to 100.
         p = np.logical_and(a==0,b<0)
         r = np.copy(a)
         r[p]=100
@@ -350,7 +350,7 @@ def test_array_scalar_ops():
 
 
 test_scalar_ops()
+test_array_array_ops()
 test_scalar_array_ops()
 test_array_scalar_ops()
-test_array_array_ops()
 

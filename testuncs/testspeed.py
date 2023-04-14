@@ -28,7 +28,7 @@ from utils.deb import Timer
 
 # turn this off to stop using the uncertainties package to test against - it
 # doesn't work for large data.
-TEST_UNCERTAINTIES_PACKAGE=False
+TEST_UNCERTAINTIES_PACKAGE=True
 
 if TEST_UNCERTAINTIES_PACKAGE:
     shape=(102,102,4)
@@ -138,10 +138,10 @@ def test_array_scalar_ops_speed():
 
 
 def test_array_array_op_speed(name,f,g):
-    a = gendata()
-    ua = genunc()
-    b = gendata()
-    ub = genunc()
+    a = gendata(shape)
+    ua = genunc(shape)
+    b = gendata(shape)
+    ub = genunc(shape)
     
     x,y = 0,0
     with Timer(f"array/array mine {name}"):

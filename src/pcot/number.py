@@ -7,7 +7,6 @@
 import numpy as np
 from numpy import sqrt
 
-
 def add_sub_unc(ua, ub):
     """For addition and subtraction, errors add in quadrature"""
     return np.sqrt(ua**2 + ub**2)
@@ -37,58 +36,29 @@ def powcore(a, ua, b, ub):
 def pow_unc(a, ua, b, ub):
     """Exponentiation. This is horrible because there are special cases when a==0"""
 
-    ascal = np.isscalar(a)
-    bscal = np.isscalar(b)
-    
     # If a=0 we should
     #       if b=1:     output UA
     #       if b<0:     output 0 (INVALID)
     #       otherwise:  output 0
     # The standard calculation performed by the uncertainties module uses the absolute
     # value of a. I'm not sure this is correct, but I'll do it anyway.
-    
 
-    if ascal and bscal:
-        if a==0:
-            if b==1:
-                return ua
-            elif b<0:
-                return 0  # these two cases are the same, but it reality the <0 case is invalid.
-            else:
-                return 0
-        # if a!=0 we drop through to the main calculation, after absing a
-        a=abs(a)
-    elif ascal:
-        # a is scalar, b is an array
-        if a==0:
-            result = np.zeros_like(b)
-            result[b==1] = ua           # see below for what we're doing here
-            result[b<0] = 0
-            return result
-        # drop through to main calculation again
-        a=abs(a)
+    a = np.abs(a)   # this isn't ideal!
+    if np.any(a==0):
+        # first, work out where a is 0
+        zeros = a==0
+        # set those values in a to be 1 for now.
+        a[zeros]=1
+        # Perform the core calculation
+        result = powcore(a,ua,b,ub)
+        # set the "zeros" back to zero
+        result[zeros]=0
+        # set to ua where b is 1 and zeros is true
+        np.putmask(result,np.logical_and(zeros,b==1),ua)
+        return result
+        print(a,b,result)
     else:
-        # a is an array, b is a scalar or an array
-        # for now, just turn b into an array if it isn't one
-        if bscal:
-            b = np.full_like(a,b)
-        
-        a = np.abs(a)   # this isn't ideal!
-        if np.any(a==0):
-            # first, work out where a is 0
-            zeros = a==0
-            # set those values in a to be 1 for now.
-            a[zeros]=1
-            # Perform the core calculation
-            result = powcore(a,ua,b,ub)
-            # set the "zeros" back to zero
-            result[zeros]=0
-            # set to ua where b is 1 and zeros is true
-            np.putmask(result,np.logical_and(zeros,b==1),ua)
-            return result
-
-    # the default calculation
-    return powcore(a,ua,b,ub)
+        return powcore(a,ua,b,ub)
 
 
 class Number:
