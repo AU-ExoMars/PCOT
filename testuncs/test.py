@@ -99,15 +99,16 @@ def powfunc(a,ua,b,ub):
         return (ufloat(a,ua)**ufloat(b,ub)).std_dev
 
 def test_scalar_ops():
-    test_scalar_op("mul",
-        lambda a,ua,b,ub: mul_unc(a,ua,b,ub),
-        lambda a,ua,b,ub: (ufloat(a,ua)*ufloat(b,ub)).std_dev
-    )
     test_scalar_op("pow",
         lambda a,ua,b,ub: pow_unc(a,ua,b,ub),
         lambda a,ua,b,ub: powfunc(a,ua,b,ub)
     )
     
+    test_scalar_op("mul",
+        lambda a,ua,b,ub: mul_unc(a,ua,b,ub),
+        lambda a,ua,b,ub: (ufloat(a,ua)*ufloat(b,ub)).std_dev
+    )
+
     test_scalar_op("div",
         # divide by zero gives zero uncertainty.
         lambda a,ua,b,ub: 0 if b == 0 else div_unc(a,ua,b,ub),
