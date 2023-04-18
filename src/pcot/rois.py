@@ -23,8 +23,13 @@ class ROIBoundsException(Exception):
             "ROI is out of bounds or entirely outside image. Have you loaded a new image?")
 
 
-ROISERIALISEFIELDS = ['label', 'labeltop', 'colour', 'thickness', 'fontsize', 'drawbg']
-
+ROISERIALISEFIELDS = (
+    ('label', 'unknown!'),
+    ('colour', (1,1,0)),
+    ('thickness', 2),
+    ('fontsize', 10),
+    ('drawbg', True)
+)
 
 class ROI(SourcesObtainable, Annotation):
     """definition of base type for regions of interest - this is useful in itself

@@ -16,7 +16,7 @@ from pcot.sources import nullSourceSet
 
 def mknum(n: float):
     """Create a null source set numerical datum for testing"""
-    return Datum(Datum.NUMBER, n, sources=nullSourceSet)
+    return Datum(Datum.NUMBER, Number(n, 0), sources=nullSourceSet)
 
 
 variable_1 = mknum(0)
