@@ -11,7 +11,8 @@ from pcot.config import parserhook
 from pcot.datum import Datum
 from pcot.expressions import Parameter
 from pcot.imagecube import ImageCube
-from pcot.sources import SourceSet, MultiBandSource
+from pcot.number import Number
+from pcot.sources import SourceSet, MultiBandSource, nullSource
 from pcot.utils import image
 from pcot.xform import XFormException
 import cv2 as cv
@@ -39,8 +40,12 @@ def funcMerge(args: List[Datum], optargs):
         if x.isImage():
             imglist.append(x.val)
         elif x.tp == Datum.NUMBER:
-            dat = np.full((h, w), x.val, dtype=np.float32)
-            imglist.append(ImageCube(dat, None, None))
+            dat = np.full((h, w), x.val.n, dtype=np.float32)
+            if x.val.u > 0.0:
+                unc = np.full((h, w), x.val.u, dtype=np.float32)
+            else:
+                unc = None
+            imglist.append(ImageCube(dat, None, None, uncertainty=unc))
         else:
             raise XFormException('EXPR', 'arguments to merge must be images or numbers')
 
@@ -69,7 +74,7 @@ def funcGrey(args, optargs):
     ss = SourceSet([img.sources, optargs[0].getSources()])
     sources = MultiBandSource([ss])
 
-    if optargs[0].get(Datum.NUMBER) != 0:
+    if optargs[0].get(Datum.NUMBER).n != 0:
         if img.channels != 3:
             raise XFormException('DATA', "Image must be RGB for OpenCV greyscale conversion")
         img = ImageCube(cv.cvtColor(img.img, cv.COLOR_RGB2GRAY), img.mapping, sources)
@@ -84,7 +89,7 @@ def funcGrey(args, optargs):
 
 def funcCrop(args, _):
     img = args[0].get(Datum.IMG)
-    x, y, w, h = [int(x.get(Datum.NUMBER)) for x in args[1:]]
+    x, y, w, h = [int(x.get(Datum.NUMBER).n) for x in args[1:]]
     out = img.img[y:y + h, x:x + w]
     img = ImageCube(out, img.mapping, img.sources)
     return Datum(Datum.IMG, img)
@@ -136,10 +141,9 @@ def funcRGBImage(args, _):
 
 
 def funcV(args, _):
-    v = args[0].get(Datum.NUMBER)
-    u = args[1].get(Datum.NUMBER)
-    raise Exception("Damn, no numbers with uncertainty yet")
-    return Datum(Datum.NUMBER, (v, u))
+    v = args[0].get(Datum.NUMBER).n
+    u = args[1].get(Datum.NUMBER).n
+    return Datum(Datum.NUMBER, Number(v, u), nullSource)
 
 
 def funcWrapper(fn, d, *args):
@@ -161,15 +165,17 @@ def funcWrapper(fn, d, *args):
             img = img.modifyWithSub(subimage, newdata)
             return Datum(Datum.IMG, img)
         elif isinstance(newdata, SupportsFloat):
-            # 'img' is SourcesObtainable.
-            return Datum(Datum.NUMBER, float(newdata), img)
+            # 'img' is SourcesObtainable. Note that we set zero uncertainty here! TODO UNCERTAINTY!
+            val = Number(float(newdata), 0.0)
+            return Datum(Datum.NUMBER, val, img)
         else:
             raise XFormException('EXPR', 'internal: fn returns bad type in funcWrapper')
     elif d.tp == Datum.NUMBER:  # deal with numeric argument (always returns a numeric result)
         # get sources for all arguments
         ss = [a.getSources() for a in args]
         ss.append(d.getSources())
-        return Datum(Datum.NUMBER, fn(d.val, *args), SourceSet(ss))
+        val = Number(fn(d.val.n, *args), 0.0)  # TODO UNCERTAINTY!
+        return Datum(Datum.NUMBER, val, SourceSet(ss))
 
 
 def statsWrapper(fn, d: List[Optional[Datum]], *args):
@@ -198,7 +204,8 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
                 raise XFormException('EXPR', 'internal: fn returns bad type in statsWrapper')
         elif x.tp == Datum.NUMBER:
             # if a number, convert to a single-value array
-            newdata = np.array([x.val], np.float32)
+            # TODO UNCERTAINTY!
+            newdata = np.array([x.val.n], np.float32)
             sources.append(x.sources)
         else:
             raise XFormException('EXPR', 'internal: bad type passed to statsWrapper')
@@ -210,7 +217,9 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
             intermediate = np.concatenate((intermediate, newdata))
 
     # then we perform the function on the collated array
-    return Datum(Datum.NUMBER, fn(intermediate, *args), SourceSet(sources))
+    val = fn(intermediate, *args)
+    # TODO UNCERTAINTY!
+    return Datum(Datum.NUMBER, val, SourceSet(sources))
 
 
 @parserhook
@@ -307,7 +316,7 @@ def registerBuiltinFunctions(p):
         "create a scalar value with uncertainty",
         [
             Parameter("value", "the nominal value", Datum.NUMBER),
-            Parameter("uncertainty","the uncertainty",Datum.NUMBER)
+            Parameter("uncertainty", "the uncertainty", Datum.NUMBER)
         ], [],
         funcV
     )
@@ -317,19 +326,17 @@ def registerBuiltinFunctions(p):
 def registerBuiltinProperties(p):
     p.registerProperty('w', Datum.IMG,
                        "give the width of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",
-                       lambda q: Datum(Datum.NUMBER, q.subimage().bb.w, SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Number(q.subimage().bb.w, 0.0), SourceSet(q.getSources())))
     p.registerProperty('w', Datum.ROI, "give the width of an ROI in pixels",
-                       lambda q: Datum(Datum.NUMBER, q.bb().w, SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Number(q.bb().w,0.0), SourceSet(q.getSources())))
     p.registerProperty('h', Datum.IMG,
                        "give the height of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",
-                       lambda q: Datum(Datum.NUMBER, q.subimage().bb.h, SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Number(q.subimage().bb.h,0.0), SourceSet(q.getSources())))
     p.registerProperty('h', Datum.ROI, "give the width of an ROI in pixels",
-                       lambda q: Datum(Datum.NUMBER, q.bb().h, SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Number(q.bb().h,0.0), SourceSet(q.getSources())))
 
     p.registerProperty('n', Datum.IMG,
                        "give the area of an image in pixels (if there are ROIs, give the number of pixels in the ROI union)",
-                       lambda q: Datum(Datum.NUMBER, q.subimage().mask.sum(), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Number(q.subimage().mask.sum(), 0.0), SourceSet(q.getSources())))
     p.registerProperty('n', Datum.ROI, "give the number of pixels in an ROI",
-                       lambda q: Datum(Datum.NUMBER, q.pixels(), SourceSet(q.getSources())))
-
-
+                       lambda q: Datum(Datum.NUMBER, Number(q.pixels(), 0.0), SourceSet(q.getSources())))

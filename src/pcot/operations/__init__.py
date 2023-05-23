@@ -101,7 +101,7 @@ def registerOpFunctionsAndProperties(p: 'Parser'):
         "normalize all channels of an image to 0-1, operating on all channels combined (the default) or separately",
         [Parameter("image", "the image to process", Datum.IMG)],
         [Parameter("splitchans", "if nonzero, process each channel separately", Datum.NUMBER, deflt=0)],
-        lambda args, optargs: exprWrapper(norm.norm, getDatum(args[0], Datum.IMG), 0, getDatum(optargs[0], Datum.NUMBER))
+        lambda args, optargs: exprWrapper(norm.norm, getDatum(args[0], Datum.IMG), 0, getDatum(optargs[0], Datum.NUMBER).n)
     )
 
     p.registerFunc(

@@ -3,6 +3,7 @@ from PySide2.QtCore import Qt
 
 from pcot.datum import Datum
 import pcot.ui as ui
+from pcot.number import Number
 from pcot.sources import nullSourceSet
 from pcot.xform import xformtype, XFormType
 
@@ -89,4 +90,4 @@ class XFormConstant(XFormType):
         node.val = 0
 
     def perform(self, node):
-        node.setOutput(0, Datum(Datum.NUMBER, node.val, nullSourceSet))
+        node.setOutput(0, Datum(Datum.NUMBER, Number(node.val, 0.0), nullSourceSet))

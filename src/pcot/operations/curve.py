@@ -1,4 +1,4 @@
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Union
 
 import numpy as np
 import cv2 as cv
@@ -6,6 +6,7 @@ import cv2 as cv
 from pcot.imagecube import SubImageCubeROI
 
 # number of points in lookup table
+from pcot.number import Number
 from pcot.utils import image
 
 NUMPOINTS = 1000
@@ -26,7 +27,10 @@ def doCurve(img, mask, lut):
     return cp
 
 
-def curve(subimage: SubImageCubeROI, mul: float, add: float) -> np.array:
+def curve(subimage: SubImageCubeROI, mul: Union[Number, float], add: Union[Number, float]) -> np.array:
+    # TODO UNCERTAINTY
+    mul = mul.n if isinstance(mul, Number) else mul
+    add = add.n if isinstance(add, Number) else add
     lut = genLut(mul, add)
 
     if subimage.channels == 1:

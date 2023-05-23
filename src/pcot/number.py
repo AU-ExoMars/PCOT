@@ -96,6 +96,14 @@ class Number:
         self.n = float(n)
         self.u = float(u)
 
+    def serialise(self):
+        return self.n, self.u
+
+    @staticmethod
+    def deserialise(t):
+        n, u = t
+        return Number(n, u)
+
     def __add__(self, other):
         return Number(self.n + other.n, add_sub_unc(self.u, other.u))
 
@@ -112,4 +120,4 @@ class Number:
         return Number(self.n ** power.n, div_unc(self.n, self.u, power.n, power.u))
 
     def __str__(self):
-        return str(self.n)
+        return str(f"{self.n} ± {self.u}")

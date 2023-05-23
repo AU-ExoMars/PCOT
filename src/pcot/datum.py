@@ -11,6 +11,7 @@ from typing import Any, Optional
 
 from pcot import rois
 from pcot.imagecube import ImageCube
+from pcot.number import Number
 from pcot.sources import SourcesObtainable, nullSource, SourceSet
 
 logger = logging.getLogger(__name__)
@@ -156,17 +157,20 @@ class RoiType(Type):
 
 
 class NumberType(Type):
+    """Number datums contain a Number object."""
     def __init__(self):
         super().__init__('number')
 
     def getDisplayString(self, d: 'Datum'):
-        return f"{d.val:.5g}"
+        return f"{d.val.n:.5g}±{d.val.u:.5g}"
 
     def serialise(self, d):
-        return self.name, (d.val, d.getSources().serialise())
+        return self.name, (d.val.serialise(),
+                           d.getSources().serialise())
 
     def deserialise(self, d, document):
         n, s = d
+        n = Number.deserialise(n)
         s = SourceSet.deserialise(s, document)
         return Datum(self, n, s)
 

@@ -6,6 +6,7 @@ import numpy as np
 
 from pcot.datum import Datum, Type
 from pcot.imagecube import ImageCube
+from pcot.number import Number
 from pcot.rois import BadOpException, ROI
 from pcot.sources import MultiBandSource, SourceSet
 
@@ -113,11 +114,11 @@ def imageUnop(d: Datum, f: Callable[[np.ndarray], np.ndarray]) -> Datum:
     return Datum(Datum.IMG, out)
 
 
-def numberUnop(d: Datum, f: Callable[[float], float]) -> Datum:
+def numberUnop(d: Datum, f: Callable[[Number], Number]) -> Datum:
     """This wraps unary operations on numbers"""
     return Datum(Datum.NUMBER, f(d.val), d.getSources())
 
-
+# TODO UNCERTAINTY - work out what the args should be and pass them in
 def imageBinop(dx: Datum, dy: Datum, f: Callable[[np.ndarray, np.ndarray], ImageCube]) -> Datum:
     """This wraps binary operations on imagecubes"""
     imga = dx.val
@@ -160,6 +161,7 @@ def imageBinop(dx: Datum, dy: Datum, f: Callable[[np.ndarray, np.ndarray], Image
     return Datum(Datum.IMG, outimg)
 
 
+# TODO UNCERTAINTY - work out what the args should be and pass them in
 def numberImageBinop(dx: Datum, dy: Datum, f: Callable[[float, np.ndarray], ImageCube]) -> Datum:
     """This wraps binary operations number x imagecube"""
     num = dx.val
@@ -171,6 +173,7 @@ def numberImageBinop(dx: Datum, dy: Datum, f: Callable[[float, np.ndarray], Imag
     return Datum(Datum.IMG, img)
 
 
+# TODO UNCERTAINTY - work out what the args should be and pass them in
 def imageNumberBinop(dx: Datum, dy: Datum, f: Callable[[float, np.ndarray], ImageCube]) -> Datum:
     """This wraps binary operations imagecube x number"""
     img = dx.val
@@ -182,6 +185,7 @@ def imageNumberBinop(dx: Datum, dy: Datum, f: Callable[[float, np.ndarray], Imag
     return Datum(Datum.IMG, img)
 
 
+# TODO UNCERTAINTY - work out what the args should be and pass them in
 def numberBinop(dx: Datum, dy: Datum, f: Callable[[float, float], ImageCube]) -> Datum:
     """Wraps number x number -> number"""
     r = f(dx.val, dy.val)
@@ -202,7 +206,9 @@ def extractChannelByName(a: Datum, b: Datum) -> Datum:
     """
     img = a.val
 
-    if b.tp == Datum.NUMBER or b.tp == Datum.IDENT:
+    if b.tp == Datum.NUMBER:
+        img = img.getChannelImageByFilter(b.val.n)
+    elif b.tp == Datum.IDENT:
         img = img.getChannelImageByFilter(b.val)
     else:
         raise OperatorException("channel extract operator '$' requires ident or numeric wavelength RHS")
@@ -213,7 +219,7 @@ def extractChannelByName(a: Datum, b: Datum) -> Datum:
     img.rois = a.val.rois.copy()
     return Datum(Datum.IMG, img)
 
-
+# TODO UNCERTAINTY REWRITE THESE FUNCTIONS
 def initOps():
     """Initialise functions. Would be in the top-level, but I get
     some spurious warnings."""
@@ -223,8 +229,9 @@ def initOps():
 
     registerUnop(Operator.NEG, Datum.IMG, lambda datum: imageUnop(datum, lambda x: -x))
     registerUnop(Operator.NOT, Datum.IMG, lambda datum: imageUnop(datum, lambda x: 1 - x))
-    registerUnop(Operator.NEG, Datum.NUMBER, lambda datum: numberUnop(datum, lambda x: -x))
-    registerUnop(Operator.NOT, Datum.NUMBER, lambda datum: numberUnop(datum, lambda x: 1 - x))
+
+    registerUnop(Operator.NEG, Datum.NUMBER, lambda datum: numberUnop(datum, lambda x: Number(-x.n, x.u)))
+    registerUnop(Operator.NOT, Datum.NUMBER, lambda datum: numberUnop(datum, lambda x: Number(1 - x.n, x.u)))
 
     def regAllBinops(op, fn):
         """Used to register binops for types which support all operations, including max and min"""

@@ -15,8 +15,8 @@ def numberWithUncNode(doc, v,u):
     nodeU.val = u
     expr = doc.graph.create("expr")
     expr.expr = "v(a,b)"
-    expr.connect(0, nodeU, 0)
-    expr.connect(1, nodeV, 0)
+    expr.connect(0, nodeV, 0)
+    expr.connect(1, nodeU, 0)
     return expr
 
 
@@ -27,8 +27,9 @@ def test_make_unc():
     node = numberWithUncNode(doc, 1, 3)
     doc.changed()
     n = node.getOutput(0, Datum.NUMBER)
-    pytest.fail("Need to get nom,std out of this")
     assert n is not None
+    assert n.n == 1
+    assert n.u == 3
 
 
 def test_number_number_ops():

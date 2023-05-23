@@ -14,6 +14,7 @@ from typing import List, Any, Optional, Callable, Dict, Tuple, Union
 
 from pcot import datum
 from pcot.datum import Datum
+from pcot.number import Number
 from pcot.sources import nullSourceSet
 from pcot.utils.table import Table
 
@@ -179,7 +180,7 @@ class Function:
 
             for t in self.optParams:
                 if len(args) == 0:
-                    optArgs.append(Datum(Datum.NUMBER, t.getDefault(), nullSourceSet))
+                    optArgs.append(Datum(Datum.NUMBER, Number(t.getDefault(), 0.0), nullSourceSet))
                 else:
                     x = args.pop(0)
                     if x is None:
@@ -209,15 +210,14 @@ class Instruction:
 
 
 class InstNumber(Instruction):
-    """A VM instruction for stacking a number"""
+    """A VM instruction for stacking a number without uncertainty"""
     val: float
 
     def __init__(self, v: float):
         self.val = v
 
     def exec(self, stack: Stack):
-        # can't import NUMBER, it clashes with the one in tokenizer.
-        stack.append(Datum(Datum.NUMBER, self.val, nullSourceSet))
+        stack.append(Datum(Datum.NUMBER, Number(self.val, 0.0), nullSourceSet))
 
     def __str__(self):
         return "NUM {}".format(self.val)
