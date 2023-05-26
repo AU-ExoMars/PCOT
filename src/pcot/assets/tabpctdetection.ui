@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Display">
+  <property name="enabled">
+   <bool>true</bool>
+  </property>
+  <property name="Display">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>711</width>
+    <height>512</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <property name="autoFillBackground">
+   <bool>false</bool>
+  </property>
+  <property name="styleSheet">
+   <string notr="true"/>
+  </property>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <layout class="QVBoxLayout" name="leftColumn">
+       <item>
+        <widget class="QTextEdit" name="nodeDescription">
+         <property name="maximumSize">
+          <size>
+           <width>250</width>
+           <height>5000</height>
+          </size>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>200</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGraphicsView" name="pctpatchdiagram">
+         <property name="maximumSize">
+          <size>
+           <width>250</width>
+           <height>5000</height>
+          </size>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>200</width>
+           <height>200</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTextEdit" name="detectionsOutput">
+         <property name="maximumSize">
+          <size>
+           <width>250</width>
+           <height>5000</height>
+          </size>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>200</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="middleColumn">
+       <property name="minimumSize">
+        <size>
+         <width>300</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>400</width>
+         <height>5000</height>
+        </size>
+       </property>
+       <item>
+        <widget class="QGraphicsView" name="detectionsPlot">
+         <property name="maximumSize">
+          <size>
+           <width>400</width>
+           <height>5000</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QWidget" name = "parameterModificationWidget">
+         <property name="maximumSize">
+          <size>
+           <width>400</width>
+           <height>5000</height>
+          </size>
+         </property>
+         <layout class="QVBoxLayout" name="parameterModificationVBox">
+          <item>
+           <widget class="QLabel" name="detectionParametersLabel">
+            <property name="text">
+             <string>Detection Parameters</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QFormLayout" name="formLayout">
+            <item row="0" column="0">
+             <widget class="QCheckBox" name="lockParametersCheckBox">
+              <property name="text">
+               <string>Lock Parameters</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+            <widget class="QPushButton" name="resetDefaultsPushButton">
+             <property name="text">
+              <string>Reset Parameter Defaults</string>
+             </property>
+            </widget>
+            </item>
+            <item row="1" column="0">
+            <widget class="QLabel" name="dpLabel">
+             <property name="text">
+              <string>DP</string>
+             </property>
+            </widget>
+            </item>
+            <item row="1" column="1">
+             <layout class="QHBoxLayout" name="dpSection">
+              <item>
+               <widget class="QSlider" name="dpSlider">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="dpValueLabel"/>
+              </item>
+             </layout>
+            </item>
+            <item row="2" column="0">
+            <widget class="QLabel" name="minDistLabel">
+             <property name="text">
+              <string>Min Distance</string>
+             </property>
+            </widget>
+            </item>
+            <item row="2" column="1">
+             <layout class="QHBoxLayout" name="minDistSection">
+              <item>
+               <widget class="QSlider" name="minDistSlider">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="minDistValueLabel"/>
+              </item>
+             </layout>
+            </item>
+            <item row="3" column="0">
+            <widget class="QLabel" name="cannyHighLabel">
+             <property name="text">
+              <string>Canny High Param</string>
+             </property>
+            </widget>
+            </item>
+            <item row="3" column="1">
+             <layout class="QHBoxLayout" name="cannyHighSection">
+              <item>
+               <widget class="QSlider" name="cannyHighSlider">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="cannyHighValueLabel"/>
+              </item>
+             </layout>
+            </item>
+            <item row="4" column="0">
+            <widget class="QLabel" name="cannyLowLabel">
+             <property name="text">
+              <string>Canny Low Param</string>
+             </property>
+            </widget>
+            </item>
+            <item row="4" column="1">
+             <layout class="QHBoxLayout" name="cannyLowSection">
+              <item>
+               <widget class="QSlider" name="cannyLowSlider">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="cannyLowValueLabel"/>
+              </item>
+             </layout>
+            </item>
+             <item row="5" column="0">
+           <widget class="QLabel" name="minRadiusLabel">
+             <property name="text">
+              <string>Min Radius</string>
+             </property>
+            </widget>
+            </item>
+            <item row="5" column="1">
+             <layout class="QHBoxLayout" name="minRadiusSection">
+              <item>
+               <widget class="QSlider" name="minRadiusSlider">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="minRadiusValueLabel"/>
+              </item>
+             </layout>
+            </item>
+            <item row="6" column="0">
+            <widget class="QLabel" name="maxRadiusLabel">
+             <property name="text">
+              <string>Max Radius</string>
+             </property>
+            </widget>
+            </item>
+            <item row="6" column="1">
+             <layout class="QHBoxLayout" name="maxRadiusSection">
+              <item>
+               <widget class="QSlider" name="maxRadiusSlider">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="maxRadiusValueLabel"/>
+              </item>
+             </layout>
+          </item>
+         </layout>
+         </item>
+         <item>
+          <widget class="QPushButton" name="parameterDescButton">
+           <property name="text">
+            <string>View Parameter Descriptions</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+        </widget>
+       </item>
+      </layout>
+   </item>
+   <item>
+    <widget class="Canvas" name="canvas" native="true">
+     <property name="minimumSize">
+      <size>
+       <width>400</width>
+       <height>400</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>Canvas</class>
+   <extends>QWidget</extends>
+   <header>pcot.ui.canvas</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>
