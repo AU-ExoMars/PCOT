@@ -11,13 +11,14 @@ from pcot.config import parserhook
 from pcot.datum import Datum
 from pcot.expressions import Parameter
 from pcot.imagecube import ImageCube
-from pcot.number import Number
+from pcot.number import Number, add_sub_unc
 from pcot.sources import SourceSet, MultiBandSource, nullSource
 from pcot.utils import image
 from pcot.xform import XFormException
 import cv2 as cv
 
 
+# TODOUNCERTAINTY TEST
 def funcMerge(args: List[Datum], optargs):
     """Function for merging a number of images. Crops all images to same size as smallest image."""
     if any([x is None for x in args]):
@@ -51,23 +52,34 @@ def funcMerge(args: List[Datum], optargs):
 
     # and merge
     bands = []
+    banduncs = []
+    banddqs = []
+
     sources = []
     for x in imglist:
         if x.channels == 1:
             bands.append(x.img[:h, :w])
+            banduncs.append(x.uncertainty[:h, :w])
+            banddqs.append(x.dq[:h, :w])
         else:
             bands = bands + image.imgsplit(x.img)
+            banduncs = banduncs + image.imgsplit(x.uncertainty)
+            banddqs = banddqs + image.imgsplit(x.dq)
         sources = sources + x.sources.sourceSets
 
     img = image.imgmerge(bands)
-    img = ImageCube(img, None, MultiBandSource(sources))
+    unc = image.imgmerge(banduncs)
+    dqs = image.imgmerge(banddqs)
+    img = ImageCube(img, None, MultiBandSource(sources), uncertainty=unc, dq=dqs)
 
     return Datum(Datum.IMG, img)
 
 
+# TODOUNCERTAINTY TEST
 def funcGrey(args, optargs):
     """Greyscale conversion. If the optional second argument is nonzero, and the image has 3 channels, we'll use CV's
-    conversion equation rather than just the mean."""
+    conversion equation rather than just the mean. However, this loses uncertainty information. Otherwise uncertainty
+    is calculated by adding together the channels in quadrature and then dividing the number of channels."""
 
     img = args[0].get(Datum.IMG)
 
@@ -78,20 +90,35 @@ def funcGrey(args, optargs):
         if img.channels != 3:
             raise XFormException('DATA', "Image must be RGB for OpenCV greyscale conversion")
         img = ImageCube(cv.cvtColor(img.img, cv.COLOR_RGB2GRAY), img.mapping, sources)
+    elif img.channels == 1:
+        img = img.copy()   # 1 channel in the input, just copy it
     else:
         # create a transformation matrix specifying that the output is a single channel which
-        # is the mean of all the channels in the source
+        # is the mean of all the channels in the source. Any uncertainy data will also be combined.
         mat = np.array([1 / img.channels] * img.channels).reshape((1, img.channels))
         out = cv.transform(img.img, mat)
-        img = ImageCube(out, img.mapping, sources)
+        # uncertainty is messier - add the squared uncertainties, divide by N, and root.
+        # DQs are dealt with by ORing all the bits together from each channel
+        outu = np.zeros(img.uncertainty.shape[:2],dtype=np.float32)
+        dq = np.zeros(img.dq.shape[:2],dtype=np.uint16)
+        for i in range(0, img.channels):
+            c = img.uncertainty[:, :, i]
+            outu += c * c
+            dq |= img.dq[:, :, i]
+        # divide by the count and root
+        outu = np.sqrt(outu / img.channels)
+        img = ImageCube(out, img.mapping, sources, uncertainty=outu, dq=dq)
     return Datum(Datum.IMG, img)
 
 
+# TODOUNCERTAINTY TEST
 def funcCrop(args, _):
     img = args[0].get(Datum.IMG)
     x, y, w, h = [int(x.get(Datum.NUMBER).n) for x in args[1:]]
     out = img.img[y:y + h, x:x + w]
-    img = ImageCube(out, img.mapping, img.sources)
+    dq = img.dq[y:y + h, x:x + w]
+    unc = img.uncertainty[y:y + h, x:x + w]
+    img = ImageCube(out, img.mapping, img.sources, dq=dq, uncertainty=unc)
     return Datum(Datum.IMG, img)
 
 
@@ -137,6 +164,19 @@ def funcRGBImage(args, _):
     if img is not None:
         img = img.rgbImage()
 
+    return Datum(Datum.IMG, img)
+
+
+def funcTestImg(args, _):
+    ct = args[0].get(Datum.NUMBER).n
+    imgs = []
+    uncs = []
+    for i in range(0, int(ct)):
+        imgs.append(np.full((20, 20), i, dtype=np.float32))
+        uncs.append(np.full((20, 20), i*0.1, dtype=np.float32))
+    imgs = np.dstack(imgs)
+    uncs = np.dstack(uncs)
+    img = ImageCube(imgs, uncertainty=uncs)
     return Datum(Datum.IMG, img)
 
 
@@ -321,6 +361,14 @@ def registerBuiltinFunctions(p):
         funcV
     )
 
+    p.registerFunc(
+        "testimg",
+        "create a test image consisting of N channels of data (1,2,3,..,n) and uncertainty (0.1,0.2,0.3,..,n)",
+        [
+            Parameter("count", "number of channels", Datum.NUMBER)
+        ], [], funcTestImg
+    )
+
 
 @parserhook
 def registerBuiltinProperties(p):
@@ -328,12 +376,12 @@ def registerBuiltinProperties(p):
                        "give the width of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",
                        lambda q: Datum(Datum.NUMBER, Number(q.subimage().bb.w, 0.0), SourceSet(q.getSources())))
     p.registerProperty('w', Datum.ROI, "give the width of an ROI in pixels",
-                       lambda q: Datum(Datum.NUMBER, Number(q.bb().w,0.0), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Number(q.bb().w, 0.0), SourceSet(q.getSources())))
     p.registerProperty('h', Datum.IMG,
                        "give the height of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",
-                       lambda q: Datum(Datum.NUMBER, Number(q.subimage().bb.h,0.0), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Number(q.subimage().bb.h, 0.0), SourceSet(q.getSources())))
     p.registerProperty('h', Datum.ROI, "give the width of an ROI in pixels",
-                       lambda q: Datum(Datum.NUMBER, Number(q.bb().h,0.0), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Number(q.bb().h, 0.0), SourceSet(q.getSources())))
 
     p.registerProperty('n', Datum.IMG,
                        "give the area of an image in pixels (if there are ROIs, give the number of pixels in the ROI union)",

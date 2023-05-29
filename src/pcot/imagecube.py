@@ -265,7 +265,7 @@ class ImageCube(SourcesObtainable):
     # the numpy arrays containing the image data, the uncertainty data and the data quality bit data
     img: np.ndarray  # H x W x Depth, float32
     uncertainty: np.ndarray  # H x W x Depth, float32
-    dq: np.ndarray  # H x W x Depth, int16
+    dq: np.ndarray  # H x W x Depth, uint16
 
     # the regions of interest - these are also annotations! They are in a separate list
     # so they can be passed through or removed separately.
@@ -334,9 +334,9 @@ class ImageCube(SourcesObtainable):
                 img = image.imgsplit(img)[0]
         else:
             raise Exception("Images must be 3-dimensional arrays")
-            
+
         # image should now be correct, set it into the object.
-            
+
         self.img = img
         self.w = img.shape[1]
         self.h = img.shape[0]
@@ -435,10 +435,36 @@ class ImageCube(SourcesObtainable):
 
     def rgbImage(self, mapping: Optional[ChannelMapping] = None) -> 'ImageCube':
         """as rgb, but wraps in an ImageCube. Also works out the sources, which should be for
-        the channels in the result. A different mapping from the image mapping can be specified."""
+        the channels in the result. A different mapping from the image mapping can be specified.
+        Quite a bit of code duplication here from rgb() but it can't really be helped."""
 
+        if self.channels == 1:
+            unc = np.dstack([self.uncertainty, self.uncertainty, self.uncertainty])
+            dq = np.dstack([self.dq, self.dq, self.dq])
+            img = cv.merge([self.img, self.img, self.img])
+        else:
+            if mapping is None:
+                mapping = self.mapping
+            if mapping is None:
+                raise Exception("trying to get rgbImage of an imagecube with no mapping")
+            img = np.dstack(
+                self.img[:, :, mapping.red],
+                self.img[:, :, mapping.green],
+                self.img[:, :, mapping.blue]
+            )
+            dq = np.dstack(
+                self.dq[:, :, mapping.red],
+                self.dq[:, :, mapping.green],
+                self.dq[:, :, mapping.blue]
+            )
+            unc = np.dstack(
+                self.uncertainty[:, :, mapping.red],
+                self.uncertainty[:, :, mapping.green],
+                self.uncertainty[:, :, mapping.blue]
+            )
         # The RGB mapping here should be just [0,1,2], since this output is the RGB representation.
-        return ImageCube(self.rgb(mapping=mapping), ChannelMapping(0, 1, 2), self.rgbSources(mapping),
+        return ImageCube(img, ChannelMapping(0, 1, 2), self.rgbSources(mapping),
+                         dq=dq, uncertainty=unc,
                          rois=self.rois)
 
     def rgbSources(self, mapping=None):
@@ -562,6 +588,7 @@ class ImageCube(SourcesObtainable):
         i = self.copy(keepMapping)
         x, y, w, h = subimage.bb
         i.img[y:y + h, x:x + w][subimage.mask] = newimg[subimage.mask]
+
         # can replace sources if required
         if sources is not None:
             i.sources = sources
@@ -621,7 +648,7 @@ class ImageCube(SourcesObtainable):
         subimg = self.subimage()
         img = ImageCube(subimg.img, rgbMapping=self.mapping, defaultMapping=self.defaultMapping, sources=self.sources)
         img.rois = [roi.rebase(subimg.bb.x, subimg.bb.y) for roi in self.rois]
-#        img.rois = [ROIPainted(subimg.mask, "crop")]
+        #        img.rois = [ROIPainted(subimg.mask, "crop")]
         return img
 
     ## perform a simple function on an image's ROI or the whole image if there is no ROI
@@ -739,8 +766,8 @@ class ImageCube(SourcesObtainable):
         if len(wavelengthAndFHWMByChan) > 0:
             # now sort that list by CWL distance and then negative FWHM (widest first)
             wavelengthAndFHWMByChan.sort(key=lambda v: (v[1], -v[2]))
-            closest = wavelengthAndFHWMByChan[0]   # we return "index", the first item in the first tuple
-#            closest = min(wavelengthAndFHWMByChan, key=lambda v: (v[1], -v[2]))
+            closest = wavelengthAndFHWMByChan[0]  # we return "index", the first item in the first tuple
+            #            closest = min(wavelengthAndFHWMByChan, key=lambda v: (v[1], -v[2]))
             return closest[0]
         else:
             # No wavelengths found ,return -1
