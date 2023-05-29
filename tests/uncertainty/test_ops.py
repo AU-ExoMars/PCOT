@@ -1,4 +1,6 @@
 """Test binary and unary operators for uncertainty"""
+from math import sqrt
+
 import pytest
 
 import pcot
@@ -15,8 +17,8 @@ def numberWithUncNode(doc, v,u):
     nodeU.val = u
     expr = doc.graph.create("expr")
     expr.expr = "v(a,b)"
-    expr.connect(0, nodeV, 0)
-    expr.connect(1, nodeU, 0)
+    expr.connect(0, nodeV, 0, autoPerform=False)
+    expr.connect(1, nodeU, 0, autoPerform=False)
     return expr
 
 
@@ -42,5 +44,26 @@ def test_number_number_ops():
         nodeB = numberWithUncNode(doc, b, ub)
 
         expr = doc.graph.create("expr")
-        expr.connect(0, nodeA, 0)
-        expr.connect(1, nodeB, 0)
+        expr.expr = e
+        expr.connect(0, nodeA, 0, autoPerform=False)
+        expr.connect(1, nodeB, 0, autoPerform=False)
+
+        doc.changed()
+        n = expr.getOutput(0, Datum.NUMBER)
+        assert n is not None
+        assert n.n == pytest.approx(expected_val)
+        assert n.u == pytest.approx(expected_unc)
+
+    # these are all generated using the uncertainties package
+
+    runop(10, 0, 20, 0, "a+b", 30, 0)                   # 10 + 20 = 30
+    runop(10, 2, 20, 5, "a+b", 30, sqrt(2*2+5*5))       # 10±2 + 20±5 = 30±sqr(2^2+5^2)
+
+    runop(10, 0, 20, 0, "a-b", -10, 0)                   # 10 - 20 = 30
+    runop(10, 2, 20, 5, "a-b", -10, sqrt(2*2+5*5))       # 10±2 + 20±5 = 30±sqr(2^2+5^2)
+
+    runop(10, 0, 20, 0, "a*b", 200, 0)                   # 10 * 20 = 200
+    runop(10, 2, 20, 3, "a*b", 200, 50.0)               # 10±2 * 20±3 = 200±50
+    runop(20, 3, 10, 2, "a*b", 200, 50.0)               # 20±3 * 20±2 = 200±50
+    runop(10, 3, 20, 2, "a*b", 200, 63.24555)               # 10±3 * 20±2 = 200±63.24555 (approx)
+    runop(10, 3, -20, 2, "a*b", -200, 63.24555)               # 10±3 * -20±2 = -200±63.24555 (approx)
