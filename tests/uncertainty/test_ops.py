@@ -1,4 +1,8 @@
-"""Test binary and unary operators for uncertainty"""
+"""Test binary and unary operators for uncertainty
+
+There's a very handy calculator with uncertainties at https://uncertaintycalculator.com/
+
+"""
 from math import sqrt
 
 import pytest
@@ -67,3 +71,11 @@ def test_number_number_ops():
     runop(20, 3, 10, 2, "a*b", 200, 50.0)               # 20±3 * 20±2 = 200±50
     runop(10, 3, 20, 2, "a*b", 200, 63.24555)               # 10±3 * 20±2 = 200±63.24555 (approx)
     runop(10, 3, -20, 2, "a*b", -200, 63.24555)               # 10±3 * -20±2 = -200±63.24555 (approx)
+
+    runop(10, 0, 20, 0, "a/b", 0.5, 0)
+    runop(10, 0, 20, 2, "a/b", 0.5, 0.05)              # 10 / 20±2 = 200±0.05
+    runop(10, 2, 20, 0, "a/b", 0.5, 0.1)              # 10±2 / 20 = 200±0.1
+    runop(10, 2, 20, 3, "a/b", 0.5, 0.125)              # 10±2 / 20±3 = 200±0.125
+    runop(10, 3, 20, 2, "a/b", 0.5, 0.15811388)              # 10±3 / 20±2 = 200±0.158 (approx)
+    runop(0, 0, 20, 2, "a/b", 0, 0)              # 0 / 20±2 = 0
+    runop(0, 2, 20, 2, "a/b", 0, 0.1)              # 0±2 / 20±2 = 0±0.1

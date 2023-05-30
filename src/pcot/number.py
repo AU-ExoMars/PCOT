@@ -114,7 +114,7 @@ class Number:
         return Number(self.n * other.n, mul_unc(self.n, self.u, other.n, other.u))
 
     def __truediv__(self, other):
-        return Number(self.n * other.n, div_unc(self.n, self.u, other.n, other.u))
+        return Number(self.n / other.n, div_unc(self.n, self.u, other.n, other.u))
 
     def __pow__(self, power, modulo=None):
         return Number(self.n ** power.n, div_unc(self.n, self.u, power.n, power.u))
