@@ -14,11 +14,11 @@ from pcot.sources import MultiBandSource, nullSource, InputSource
 Assorted test fixtures, mainly for generating input data (typically images)
 """
 
+
 def checkexpr(expr):
     """Check an expression node for errors"""
     if expr.error is not None:
         pytest.fail(f"Error in expression: {expr.error}")
-
 
 
 @pytest.fixture
@@ -86,6 +86,33 @@ def genrgb(w, h, r, g, b, doc=None, inpidx=None):
     bands = np.dstack(bands).astype(np.float32)
     assert bands.shape == (h, w, 3)
     imgc = ImageCube(bands, ChannelMapping(), sources, defaultMapping=None)
+    assert imgc.w == w
+    assert imgc.h == h
+    return imgc
+
+
+def gen_two_halves(w, h, v1, u1, v2, u2, doc=None, inpidx=None):
+    """Generate an image of two halves. The top half is value v1 and uncertainty u1, the bottom half is v2,u2.
+    Each of the values must be a tuple.
+    """
+
+    if doc is not None and inpidx is not None:
+        # generate source names of the form r,g,b,c3,c4..
+        sourceNames = ["r", "g", "b"] + [f"c{i}" for i in range(3, len(v1))]
+        sources = MultiBandSource([InputSource(doc, inpidx, sourceNames[i]) for i in range(0, len(v1))])
+    else:
+        sources = MultiBandSource([nullSource] * len(v1))
+
+    h2 = int(h/2)
+    bands1 = np.dstack([np.full((h2, w), x) for x in v1]).astype(np.float32)
+    bands2 = np.dstack([np.full((h2, w), x) for x in v2]).astype(np.float32)
+    bands = np.vstack((bands1, bands2))
+    unc1 = np.dstack([np.full((h2, w), x) for x in u1]).astype(np.float32)
+    unc2 = np.dstack([np.full((h2, w), x) for x in u2]).astype(np.float32)
+    uncs = np.vstack([unc1, unc2])
+
+    assert bands.shape == (h, w, len(v1))
+    imgc = ImageCube(bands, ChannelMapping(), sources, defaultMapping=None, uncertainty=uncs)
     assert imgc.w == w
     assert imgc.h == h
     return imgc

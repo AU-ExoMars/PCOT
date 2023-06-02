@@ -3,6 +3,7 @@ from basic.test_sources import SimpleTestSource
 from fixtures import *
 from pcot.datum import Datum
 from pcot.document import Document
+from pcot.number import Number
 from pcot.sources import SourceSet, InputSource
 
 
@@ -43,7 +44,7 @@ def test_greyscale_sources(envi_img: ImageCube):
     nsource = SimpleTestSource("numbersource")  # numbers need explicit sources, so I'll fake one up
 
     from pcot.expressions.builtins import funcGrey
-    d = funcGrey([Datum(Datum.IMG, envi_img)], [Datum(Datum.NUMBER, 0, nsource)])
+    d = funcGrey([Datum(Datum.IMG, envi_img)], [Datum(Datum.NUMBER, Number(0, 0), nsource)])
     img = d.get(Datum.IMG)
     assert img.channels == 1  # single channel
     assert len(img.sources) == 1  # and therefore a single sourceset

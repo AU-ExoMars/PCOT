@@ -10,6 +10,7 @@ from collections import deque
 from PySide2 import QtWidgets
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 
 def getAssetAsString(fn, package="pcot.assets"):

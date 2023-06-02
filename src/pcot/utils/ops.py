@@ -164,8 +164,8 @@ def imageBinop(dx: Datum, dy: Datum, f: Callable[[np.ndarray, np.ndarray], Image
 # TODO UNCERTAINTY - work out what the args should be and pass them in
 def numberImageBinop(dx: Datum, dy: Datum, f: Callable[[float, np.ndarray], ImageCube]) -> Datum:
     """This wraps binary operations number x imagecube"""
-    num = dx.val
-    img = dy.val
+    num = dx.val.n    # Datum.NUMBER
+    img = dy.val    # Datum.IMG
     subimg = img.subimage()
     img = img.modifyWithSub(subimg, f(num, subimg.masked()))
     img.rois = dy.val.rois.copy()
@@ -176,10 +176,11 @@ def numberImageBinop(dx: Datum, dy: Datum, f: Callable[[float, np.ndarray], Imag
 # TODO UNCERTAINTY - work out what the args should be and pass them in
 def imageNumberBinop(dx: Datum, dy: Datum, f: Callable[[float, np.ndarray], ImageCube]) -> Datum:
     """This wraps binary operations imagecube x number"""
-    img = dx.val
-    num = dy.val
+    img = dx.val    # Datum.IMG
+    num = dy.val.n    # Datum.NUMBER
+
     subimg = img.subimage()
-    img = img.modifyWithSub(subimg, f(subimg.masked(), num))
+    img = img.modifyWithSub(subimg, f(subimg.masked(), num))  # uncertainty not handled
     img.rois = dx.val.rois.copy()
     img.sources = combineImageWithNumberSources(img, dy.getSources())
     return Datum(Datum.IMG, img)
@@ -245,8 +246,8 @@ def initOps():
     regAllBinops(Operator.MUL, lambda x, y: x * y)
     regAllBinops(Operator.DIV, lambda x, y: x / y)
     regAllBinops(Operator.POW, lambda x, y: x ** y)
-    regAllBinops(Operator.AND, lambda x, y: np.minimum(x, y))
-    regAllBinops(Operator.OR, lambda x, y: np.maximum(x, y))
+    regAllBinops(Operator.AND, lambda x, y: x & y)
+    regAllBinops(Operator.OR, lambda x, y: x | y)
 
     def regROIBinop(op, fn):
         """Used to register binops for ROIs, which support a subset of ops."""

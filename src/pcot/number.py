@@ -96,6 +96,9 @@ class Number:
         self.n = float(n)
         self.u = float(u)
 
+    def copy(self):
+        return Number(self.n, self.u)
+
     def serialise(self):
         return self.n, self.u
 
@@ -118,6 +121,20 @@ class Number:
 
     def __pow__(self, power, modulo=None):
         return Number(self.n ** power.n, div_unc(self.n, self.u, power.n, power.u))
+
+    def __and__(self, other):
+        """The & operator actually finds the minimum (Zadeh op)"""
+        if self.n > other.n:
+            return other.copy()
+        else:
+            return self.copy()
+
+    def __or__(self, other):
+        """The & operator actually finds the maximum (Zadeh op)"""
+        if self.n < other.n:
+            return other.copy()
+        else:
+            return self.copy()
 
     def __str__(self):
         return str(f"{self.n} ± {self.u}")

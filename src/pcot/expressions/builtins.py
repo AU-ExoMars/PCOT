@@ -222,7 +222,10 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
     """similar to funcWrapper, but can take lots of image and number arguments which it aggregates to do stats on.
     The result of fn must be a number. Works by flattening any images and concatenating them with any numbers,
     and doing the operation on the resulting data."""
+
     intermediate = None
+    uncintermediate = None
+
     sources = []
     for x in d:
         # get each datum, which is either numeric or an image.
@@ -233,19 +236,27 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
             subimage = x.val.subimage()
             mask = subimage.fullmask()
             cp = subimage.img.copy()
+            cpu = subimage.uncertainty.copy()
+
             sources.append(x.sources)
             masked = np.ma.masked_array(cp, mask=~mask)
+            uncmasked = np.ma.masked_array(cpu, mask=~mask)
+
             # we convert the data into a flat numpy array if it isn't one already
             if isinstance(masked, np.ma.masked_array):
                 newdata = masked.compressed()  # convert to 1d and remove masked elements
             elif isinstance(masked, np.ndarray):
                 newdata = masked.flatten()  # convert to 1d
-            else:
-                raise XFormException('EXPR', 'internal: fn returns bad type in statsWrapper')
+            if isinstance(uncmasked, np.ma.masked_array):
+                uncnewdata = uncmasked.compressed()  # convert to 1d and remove masked elements
+            elif isinstance(uncmasked, np.ndarray):
+                uncnewdata = uncmasked.flatten()  # convert to 1d
+
         elif x.tp == Datum.NUMBER:
             # if a number, convert to a single-value array
             # TODO UNCERTAINTY!
             newdata = np.array([x.val.n], np.float32)
+            uncnewdata = np.array([x.val.u], np.float32)
             sources.append(x.sources)
         else:
             raise XFormException('EXPR', 'internal: bad type passed to statsWrapper')
@@ -253,13 +264,17 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
         # and concat it to the intermediate array
         if intermediate is None:
             intermediate = newdata
+            uncintermediate = uncnewdata
         else:
             intermediate = np.concatenate((intermediate, newdata))
+            uncintermediate = np.concatenate((uncintermediate, uncnewdata))
 
     # then we perform the function on the collated array
+    # TODO UNCERTAINTY! It's ignored by this func TODOUNCERTAINTY
     val = fn(intermediate, *args)
-    # TODO UNCERTAINTY!
-    return Datum(Datum.NUMBER, val, SourceSet(sources))
+    return Datum(Datum.NUMBER, Number(val, 0.0), SourceSet(sources))
+
+
 
 
 @parserhook

@@ -1,8 +1,11 @@
 """Test operations - a lot of operations are covered already by things in test_roi_principles, however"""
+import math
+from math import isclose
+
 import pytest
 
 import pcot
-from fixtures import genrgb
+from fixtures import genrgb, gen_two_halves
 from pcot.datum import Datum
 from pcot.document import Document
 import numpy as np
@@ -14,7 +17,7 @@ def test_scalar_ops():
         expr = doc.graph.create("expr")
         expr.expr = e
         doc.changed()
-        n = expr.getOutput(0, Datum.NUMBER)
+        n = expr.getOutput(0, Datum.NUMBER).n
         assert n == expected
 
     pcot.setup()
@@ -28,12 +31,12 @@ def test_scalar_ops():
     runop("(3+2)*4", 20)
     runop("(3+2)/4", 1.25)
     runop("(3+2)/4-10", -8.75)
-    runop("2^4",16)
-    runop("4^0.5",2)
-    runop("2&1",1)
-    runop("2&20",2)
-    runop("2|1",2)
-    runop("2|20",20)
+    runop("2^4", 16)
+    runop("4^0.5", 2)
+    runop("2&1", 1)
+    runop("2&20", 2)
+    runop("2|1", 2)
+    runop("2|20", 20)
 
 
 def test_image_scalar_ops():
@@ -95,6 +98,59 @@ def test_image_image_ops():
     runop("b+a", (2, 0.5, 0))
     runop("a-b", (-2, 0.5, 0))
     runop("a*b", (0, 0, 0))
+
+def test_image_stats():
+    """Test functions that take an entire image and produce a scalar"""
+
+    pcot.setup()
+    doc = Document()
+    def runop(img, e, expectedn, expectedu):
+        assert doc.setInputDirect(0, img) is None
+        green = doc.graph.create("input 0", displayName="GREEN input")
+
+        expr = doc.graph.create("expr")
+        expr.expr = e
+        expr.connect(0, green, 0)
+
+        doc.changed()
+        out = expr.getOutput(0, Datum.NUMBER)
+        assert isclose(out.n, expectedn, abs_tol=1e-6)
+        assert isclose(out.u, expectedu, abs_tol=1e-6)
+
+    # TODOUNCERTAINTY???
+
+    # Currently the stats functions don't take account of any uncertainty in the pixels
+    # mean of a constant (0, 0.3, 0) image is 0.
+    img = genrgb(50, 50, 0, 0.3, 0, doc=doc, inpidx=0)  # dark green
+    runop(img, "mean(a)", 0.1, 0.0)
+
+    # mean of an image of two halves
+    img = gen_two_halves(50, 50, (0.1,), (0.0,), (0.2,), (0.0,), doc=doc, inpidx=0)
+    runop(img, "mean(a)", 0.15, 0.0)
+
+    # mean of an image of two halves with different uncertainties. It will be the same as the above,
+    # but we're going to get a result with zero uncertainty because that's too hard to handle.
+
+    img = gen_two_halves(50, 50, (0.1,), (1.0,), (0.2,), (2.0,), doc=doc, inpidx=0)
+    runop(img, "mean(a)", 0.15, 0.0)
+
+    # SD of an image with all pixels the same grey colour (should be zero)
+    img = genrgb(50, 50, 0.1, 0.1, 0.1, doc=doc, inpidx=0)  # dark green
+    runop(img, "sd(a)", 0.0, 0.0)
+
+    # SD of a tiny image with all pixels the same non-grey colour
+    img = genrgb(2, 2, 0, 1, 0, doc=doc, inpidx=0)  # dark green
+    # result should be SD of (0,1,0, 0,1,0, 0,1,0, 0,1,0)
+    runop(img, "sd(a)", 0.4714045207910317, 0.0)
+
+    # SD of a tiny image of two colours
+    img = gen_two_halves(2, 2, (1,), (0.0,), (2,), (0.0,), doc=doc, inpidx=0)
+    runop(img, "sd(a)", 0.5, 0.0)
+
+    # SD of a tiny image of two colours with two different SDs. SDs are just ignored when
+    # we combine them like this. This is almost certainly incorrect.
+    img = gen_two_halves(2, 2, (1,), (4.0,), (2,), (5.0,), doc=doc, inpidx=0)
+    runop(img, "sd(a)", 0.5, 0.0)
 
 
 def test_scalar_div_zero():

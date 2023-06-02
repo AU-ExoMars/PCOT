@@ -312,11 +312,20 @@ class ImageCube(SourcesObtainable):
 
         """
 
+        def cvt1channel(x):
+            ## convert array of the form(x,y,1) to just (x,y)
+            if len(x.shape) == 3 and x.shape[-1] == 1:
+                return image.imgsplit(x)[0]
+            else:
+                return x
+
         if img is None:
             raise Exception("trying to initialise image from None")
+
         # first, check the dtype is valid
         if img.dtype != np.float32:
             raise Exception("Images must be 32-bit floating point")
+        img = cvt1channel(img)  # convert (h,w,1) to (h,w)
         if rois is None:
             self.rois = []  # no ROI
         else:
@@ -329,9 +338,6 @@ class ImageCube(SourcesObtainable):
             self.channels = 1
         elif len(img.shape) == 3:
             self.channels = img.shape[2]
-            if self.channels == 1:
-                # convert an (x,y,1) image to just (x,y)
-                img = image.imgsplit(img)[0]
         else:
             raise Exception("Images must be 3-dimensional arrays")
 
@@ -359,6 +365,7 @@ class ImageCube(SourcesObtainable):
         if uncertainty is None:
             uncertainty = np.zeros(img.shape, dtype=np.float32)
             dqOnAllPixels |= pcot.dq.NOUNCERTAINTY
+        uncertainty = cvt1channel(uncertainty)
         if uncertainty.dtype != np.float32:
             raise Exception("uncertainty data must be 32-bit floating point")
         if uncertainty.shape != img.shape:
