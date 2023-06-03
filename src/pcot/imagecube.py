@@ -90,19 +90,28 @@ class SubImageCubeROI:
             self.bb = Rect(0, 0, img.w, img.h)  # whole image
             self.mask = np.full((img.h, img.w), True)  # full mask
 
-    def fullmask(self):
+    def fullmask(self, maskBadPixels=True):
         """the main mask is just a single channel - this will generate a mask
         of the same number of channels, so an x,y image will make an x,y mask
          and an x,y,n image will make an x,y,n mask.
+         It will also remove bad bits from the mask, as indicated by the DQ array.
         """
         if len(self.img.shape) == 2:
-            return self.mask  # the existing mask is fine
+            mask = self.mask  # the existing mask is fine
         else:
             h, w, chans = self.img.shape
             # flatten and repeat each element for each channel
             x = np.repeat(np.ravel(self.mask), chans)
             # put into a h,w,chans array
-            return np.reshape(x, (h, w, chans))
+            mask = np.reshape(x, (h, w, chans))
+        # remove bad bits if required
+        if maskBadPixels:
+            # make another mask out of the DQ bits, selecting any pixels with "bad" bits
+            badmask = (self.dq & pcot.dq.BAD).astype(bool)
+            # Negate that mask - it shows the bad pixels but we only want it to be
+            # true where the good pixels are - then AND it into the main mask
+            return mask & ~badmask
+        return mask
 
     def masked(self):
         """get the masked image as a numpy masked array"""

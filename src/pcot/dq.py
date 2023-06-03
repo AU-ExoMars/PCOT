@@ -28,7 +28,10 @@ def names(bits):
 NODATA = reg('nodata', 0)  # Pixel has no data
 NOUNCERTAINTY = reg('nounc', 1)  # Pixel has no uncertainty information.
 SAT = reg('sat', 2)  # Pixel is saturated high
-DIVZERO = reg('divzero', 3)     # Pixel is divided by zero
-
+DIVZERO = reg('divzero', 3)  # Pixel is divided by zero
 
 TEST = reg('test', 15)
+
+# Pixels with these bits are considered bad and are not to be used in aggregate calculations
+# like mean, std.
+BAD = NODATA | SAT | DIVZERO

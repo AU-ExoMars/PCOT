@@ -247,14 +247,17 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
                 newdata = masked.compressed()  # convert to 1d and remove masked elements
             elif isinstance(masked, np.ndarray):
                 newdata = masked.flatten()  # convert to 1d
+            else:
+                raise XFormException('EXPR', 'internal: data in masked array is wrong type in statsWrapper')
             if isinstance(uncmasked, np.ma.masked_array):
                 uncnewdata = uncmasked.compressed()  # convert to 1d and remove masked elements
             elif isinstance(uncmasked, np.ndarray):
                 uncnewdata = uncmasked.flatten()  # convert to 1d
+            else:
+                raise XFormException('EXPR', 'internal: data in uncmasked array is wrong type in statsWrapper')
 
         elif x.tp == Datum.NUMBER:
             # if a number, convert to a single-value array
-            # TODO UNCERTAINTY!
             newdata = np.array([x.val.n], np.float32)
             uncnewdata = np.array([x.val.u], np.float32)
             sources.append(x.sources)

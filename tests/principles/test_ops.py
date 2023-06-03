@@ -6,6 +6,7 @@ import pytest
 
 import pcot
 from fixtures import genrgb, gen_two_halves
+from pcot import dq
 from pcot.datum import Datum
 from pcot.document import Document
 import numpy as np
@@ -151,6 +152,15 @@ def test_image_stats():
     # we combine them like this. This is almost certainly incorrect.
     img = gen_two_halves(2, 2, (1,), (4.0,), (2,), (5.0,), doc=doc, inpidx=0)
     runop(img, "sd(a)", 0.5, 0.0)
+
+    # Now make an SD of two colours the same way. Then set the two pixels
+    # of the top half to be "BAD".
+    img = gen_two_halves(2, 2, (1,), (4.0,), (2,), (5.0,), doc=doc, inpidx=0)
+    runop(img, "mean(a)", 1.5, 0.0)  # "smoke test" first
+    img = gen_two_halves(2, 2, (1,), (4.0,), (2,), (5.0,), doc=doc, inpidx=0)
+    img.dq[0] = (dq.NODATA, dq.NODATA)
+    runop(img, "mean(a)", 2.0, 0.0)
+
 
 
 def test_scalar_div_zero():
