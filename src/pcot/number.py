@@ -120,7 +120,9 @@ class Number:
         return Number(self.n / other.n, div_unc(self.n, self.u, other.n, other.u))
 
     def __pow__(self, power, modulo=None):
-        return Number(self.n ** power.n, div_unc(self.n, self.u, power.n, power.u))
+        if self.n == 0.0 and power.n < 0:
+            return Number(0, 0)  # zero cannot be raised to -ve power so invalid, but we use zero as a dummy.
+        return Number(self.n ** power.n, pow_unc(self.n, self.u, power.n, power.u))
 
     def __and__(self, other):
         """The & operator actually finds the minimum (Zadeh op)"""
@@ -135,6 +137,12 @@ class Number:
             return other.copy()
         else:
             return self.copy()
+
+    def __neg__(self):
+        return Number(-self.n, self.u)
+
+    def __invert__(self):
+        return Number(1-self.n, self.u)
 
     def __str__(self):
         return str(f"{self.n} ± {self.u}")

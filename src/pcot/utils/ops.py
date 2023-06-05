@@ -187,7 +187,7 @@ def imageNumberBinop(dx: Datum, dy: Datum, f: Callable[[float, np.ndarray], Imag
 
 
 # TODO UNCERTAINTY - work out what the args should be and pass them in
-def numberBinop(dx: Datum, dy: Datum, f: Callable[[float, float], ImageCube]) -> Datum:
+def numberBinop(dx: Datum, dy: Datum, f: Callable[[Number, Number], Number]) -> Datum:
     """Wraps number x number -> number"""
     r = f(dx.val, dy.val)
     return Datum(Datum.NUMBER, r, SourceSet([dx.getSources(), dy.getSources()]))
@@ -231,8 +231,8 @@ def initOps():
     registerUnop(Operator.NEG, Datum.IMG, lambda datum: imageUnop(datum, lambda x: -x))
     registerUnop(Operator.NOT, Datum.IMG, lambda datum: imageUnop(datum, lambda x: 1 - x))
 
-    registerUnop(Operator.NEG, Datum.NUMBER, lambda datum: numberUnop(datum, lambda x: Number(-x.n, x.u)))
-    registerUnop(Operator.NOT, Datum.NUMBER, lambda datum: numberUnop(datum, lambda x: Number(1 - x.n, x.u)))
+    registerUnop(Operator.NEG, Datum.NUMBER, lambda datum: numberUnop(datum, lambda x: -x))
+    registerUnop(Operator.NOT, Datum.NUMBER, lambda datum: numberUnop(datum, lambda x: ~x))
 
     def regAllBinops(op, fn):
         """Used to register binops for types which support all operations, including max and min"""
