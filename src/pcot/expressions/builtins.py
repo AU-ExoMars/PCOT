@@ -11,7 +11,7 @@ from pcot.config import parserhook
 from pcot.datum import Datum
 from pcot.expressions import Parameter
 from pcot.imagecube import ImageCube
-from pcot.number import Number, add_sub_unc
+from pcot.number import Number, add_sub_unc, add_sub_unc_list
 from pcot.sources import SourceSet, MultiBandSource, nullSource
 from pcot.utils import image
 from pcot.xform import XFormException
@@ -91,7 +91,7 @@ def funcGrey(args, optargs):
             raise XFormException('DATA', "Image must be RGB for OpenCV greyscale conversion")
         img = ImageCube(cv.cvtColor(img.img, cv.COLOR_RGB2GRAY), img.mapping, sources)
     elif img.channels == 1:
-        img = img.copy()   # 1 channel in the input, just copy it
+        img = img.copy()  # 1 channel in the input, just copy it
     else:
         # create a transformation matrix specifying that the output is a single channel which
         # is the mean of all the channels in the source. Any uncertainy data will also be combined.
@@ -99,8 +99,8 @@ def funcGrey(args, optargs):
         out = cv.transform(img.img, mat)
         # uncertainty is messier - add the squared uncertainties, divide by N, and root.
         # DQs are dealt with by ORing all the bits together from each channel
-        outu = np.zeros(img.uncertainty.shape[:2],dtype=np.float32)
-        dq = np.zeros(img.dq.shape[:2],dtype=np.uint16)
+        outu = np.zeros(img.uncertainty.shape[:2], dtype=np.float32)
+        dq = np.zeros(img.dq.shape[:2], dtype=np.uint16)
         for i in range(0, img.channels):
             c = img.uncertainty[:, :, i]
             outu += c * c
@@ -173,7 +173,7 @@ def funcTestImg(args, _):
     uncs = []
     for i in range(0, int(ct)):
         imgs.append(np.full((20, 20), i, dtype=np.float32))
-        uncs.append(np.full((20, 20), i*0.1, dtype=np.float32))
+        uncs.append(np.full((20, 20), i * 0.1, dtype=np.float32))
     imgs = np.dstack(imgs)
     uncs = np.dstack(uncs)
     img = ImageCube(imgs, uncertainty=uncs)
@@ -218,10 +218,13 @@ def funcWrapper(fn, d, *args):
         return Datum(Datum.NUMBER, val, SourceSet(ss))
 
 
-def statsWrapper(fn, d: List[Optional[Datum]], *args):
+def statsWrapper(fn, fnu, d: List[Optional[Datum]], *args):
     """similar to funcWrapper, but can take lots of image and number arguments which it aggregates to do stats on.
     The result of fn must be a number. Works by flattening any images and concatenating them with any numbers,
-    and doing the operation on the resulting data."""
+    and doing the operation on the resulting data.
+
+    fn generates the nominal value and takes the nominal values,
+    fnu generates the uncertainty and takes nominal values and uncertainty."""
 
     intermediate = None
     uncintermediate = None
@@ -275,9 +278,8 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
     # then we perform the function on the collated array
     # TODO UNCERTAINTY! It's ignored by this func TODOUNCERTAINTY
     val = fn(intermediate, *args)
-    return Datum(Datum.NUMBER, Number(val, 0.0), SourceSet(sources))
-
-
+    u = fnu(intermediate, uncintermediate, *args)
+    return Datum(Datum.NUMBER, Number(val, u), SourceSet(sources))
 
 
 @parserhook
@@ -304,26 +306,29 @@ def registerBuiltinFunctions(p):
                    [],
                    lambda args, optargs: funcWrapper(np.sqrt, args[0]))
 
-    p.registerFunc("min", "find the minimum value of pixels in a list of ROIs, images or values",
+    p.registerFunc("min",
+                   "find the minimum value of pixels in a list of ROIs, images or values.  Disregards uncertainties.",
                    [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: statsWrapper(np.min, args), varargs=True)
-    p.registerFunc("max", "find the maximum value of pixels in a list of ROIs, images or values",
+                   lambda args, optargs: statsWrapper(np.min, lambda n, u: 0, args), varargs=True)
+    p.registerFunc("max",
+                   "find the maximum value of pixels in a list of ROIs, images or values. Disregards uncertainties.",
                    [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: statsWrapper(np.max, args), varargs=True)
-    p.registerFunc("sd", "find the standard deviation of pixels in a list of ROIs, images or values",
+                   lambda args, optargs: statsWrapper(np.max, lambda n, u: 0, args), varargs=True)
+    p.registerFunc("sd",
+                   "find the standard deviation of pixels in a list of ROIs, images or values. Disregards uncertainties.",
                    [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: statsWrapper(np.std, args), varargs=True)
-    p.registerFunc("mean", "find the mean of pixels in a list of ROIs, images or values",
+                   lambda args, optargs: statsWrapper(np.std, lambda n, u: 0, args), varargs=True)
+    p.registerFunc("mean", "find the mean±sd of pixels in a list of ROIs, images or values. Disregards uncertainties.",
                    [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: statsWrapper(np.mean, args), varargs=True)
+                   lambda args, optargs: statsWrapper(np.mean, lambda n, u: np.std(n), args), varargs=True)
     p.registerFunc("sum", "find the sum of pixels in a list of ROIs, images or values",
                    [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: statsWrapper(np.sum, args), varargs=True)
+                   lambda args, optargs: statsWrapper(np.sum, lambda n, u: add_sub_unc_list(u), args), varargs=True)
 
     p.registerFunc("grey", "convert an image to greyscale",
                    [Parameter("image", "an image to process", Datum.IMG)],
