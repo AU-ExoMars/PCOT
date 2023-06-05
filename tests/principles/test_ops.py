@@ -118,22 +118,24 @@ def test_image_stats():
         assert isclose(out.n, expectedn, abs_tol=1e-6)
         assert isclose(out.u, expectedu, abs_tol=1e-6)
 
-    # TODOUNCERTAINTY???
 
     # Currently the stats functions don't take account of any uncertainty in the pixels
-    # mean of a constant (0, 0.3, 0) image is 0.
+    # mean of a constant (0, 0.3, 0) image is 0.1. Why? Because "mean" doesn't work on
+    # channels separately - it flattens the image first, so the resulting array is 0, 0.3, 0, 0, 0.3, 0...
+    # The SD is going to be non-zero.
     img = genrgb(50, 50, 0, 0.3, 0, doc=doc, inpidx=0)  # dark green
-    runop(img, "mean(a)", 0.1, 0.0)
+    runop(img, "mean(a)", 0.1, 0.1414213627576828)
 
     # mean of an image of two halves
     img = gen_two_halves(50, 50, (0.1,), (0.0,), (0.2,), (0.0,), doc=doc, inpidx=0)
-    runop(img, "mean(a)", 0.15, 0.0)
+    runop(img, "mean(a)", 0.15, 0.05)
 
     # mean of an image of two halves with different uncertainties. It will be the same as the above,
-    # but we're going to get a result with zero uncertainty because that's too hard to handle.
+    # but we're going to get a result with same the uncertainty because that's probably (a) too hard
+    # (although we could use standard error of the mean) and (b) possibly meaningless?
 
     img = gen_two_halves(50, 50, (0.1,), (1.0,), (0.2,), (2.0,), doc=doc, inpidx=0)
-    runop(img, "mean(a)", 0.15, 0.0)
+    runop(img, "mean(a)", 0.15, 0.05)
 
     # SD of an image with all pixels the same grey colour (should be zero)
     img = genrgb(50, 50, 0.1, 0.1, 0.1, doc=doc, inpidx=0)  # dark green
@@ -156,11 +158,17 @@ def test_image_stats():
     # Now make an SD of two colours the same way. Then set the two pixels
     # of the top half to be "BAD".
     img = gen_two_halves(2, 2, (1,), (4.0,), (2,), (5.0,), doc=doc, inpidx=0)
-    runop(img, "mean(a)", 1.5, 0.0)  # "smoke test" first
+    runop(img, "mean(a)", 1.5, 0.5)  # "smoke test" first
     img = gen_two_halves(2, 2, (1,), (4.0,), (2,), (5.0,), doc=doc, inpidx=0)
     img.dq[0] = (dq.NODATA, dq.NODATA)
     runop(img, "mean(a)", 2.0, 0.0)
 
+    # Sum of image of two colours. This is an addition, so we output the root of
+    # the sum of the squares of the incoming SDs.
+    img = gen_two_halves(2, 2, (1,), (0.0,), (2,), (0.0,), doc=doc, inpidx=0)
+    runop(img, "sum(a)", 6, 0.0)
+    img = gen_two_halves(2, 2, (1,), (0.1,), (2,), (0.2,), doc=doc, inpidx=0)
+    runop(img, "sum(a)", 6, 0.31622776601683794)
 
 
 def test_scalar_div_zero():

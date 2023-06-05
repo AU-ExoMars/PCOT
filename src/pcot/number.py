@@ -12,6 +12,11 @@ def add_sub_unc(ua, ub):
     return np.sqrt(ua ** 2 + ub ** 2)
 
 
+def add_sub_unc_list(lst):
+    """Add a whole list of uncertainties"""
+    return np.sqrt(np.sum([x**2 for x in lst]))
+
+
 def mul_unc(a, ua, b, ub):
     """Multiplication - this is derived from the standard answer
     (thanks, Wolfram!) assuming the values are real"""
