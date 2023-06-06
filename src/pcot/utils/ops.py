@@ -4,6 +4,8 @@ from typing import Any, Callable, Optional, Dict, Tuple
 
 import numpy as np
 
+from pcot import number
+from pcot import dq
 from pcot.datum import Datum, Type
 from pcot.imagecube import ImageCube
 from pcot.number import Number
@@ -94,13 +96,13 @@ def combineImageWithNumberSources(img: ImageCube, other: SourceSet) -> MultiBand
     """This is used to generate the source sets when an image is combined with something else,
     e.g. an image is multiplied by a number. In this case, each band of the image is combined with
     the other sources."""
-    x = [x.sourceSet for x in img.sources.sourceSets]
-
     return MultiBandSource([SourceSet(x.sourceSet.union(other.sourceSet)) for x in img.sources.sourceSets])
 
 
 def imageUnop(d: Datum, f: Callable[[np.ndarray], np.ndarray]) -> Datum:
-    """This wraps unary operations on imagecubes"""
+    """This wraps unary operations on imagecubes
+
+    NOTE THAT this assumes that all unops have NO EFFECT on DQ or uncertainty."""
     img = d.val
     if img.hasROI():
         subimg = img.subimage()
@@ -117,6 +119,7 @@ def imageUnop(d: Datum, f: Callable[[np.ndarray], np.ndarray]) -> Datum:
 def numberUnop(d: Datum, f: Callable[[Number], Number]) -> Datum:
     """This wraps unary operations on numbers"""
     return Datum(Datum.NUMBER, f(d.val), d.getSources())
+
 
 # TODO UNCERTAINTY - work out what the args should be and pass them in
 def imageBinop(dx: Datum, dy: Datum, f: Callable[[np.ndarray, np.ndarray], ImageCube]) -> Datum:
@@ -161,26 +164,110 @@ def imageBinop(dx: Datum, dy: Datum, f: Callable[[np.ndarray, np.ndarray], Image
     return Datum(Datum.IMG, outimg)
 
 
+def combineDQs(a, b, extra=None):
+    """Bitwise OR DQs together. A and B are the DQs of the two data we're combining, which the result
+    should inherit. Extra is any extra bits that need to be set."""
+    if a.dq is None:
+        r = b.dq
+    elif b.dq is None:
+        r = a.dq
+    else:
+        r = a.dq | b.dq
+
+    if extra is not None:
+        # first, extra *could* be a 0-dimensional array because of how np.where works on scalar inputs
+        if extra.shape == ():
+            extra = int(extra)
+        else:
+            # if it isn't, it could well be the wrong integer type - so convert it to the correct one.
+            extra = extra.astype(np.uint16)
+        if r is None:
+            r = extra
+        else:
+            r |= extra
+
+    return r
+
+
+
+class OpData:
+    """Class used to pass data into and out of uncertainty/DQ-aware binops and wrap the operations,
+    because the dunders used in Number aren't enough."""
+
+    def __init__(self, n, u, dq=None):
+        self.n = n  # nominal, either float or ndarray
+        self.u = u  # uncertainty, either float or ndarray
+        self.dq = dq  # if a result, the DQ bits
+
+    def __add__(self, other):
+        return OpData(self.n + other.n, number.add_sub_unc(self.u, other.u),
+                      combineDQs(self, other))
+
+    def __sub__(self, other):
+        return OpData(self.n - other.n, number.add_sub_unc(self.u, other.u),
+                      combineDQs(self, other))
+
+    def __mul__(self, other):
+        return OpData(self.n * other.n, number.add_sub_unc(self.u, other.u),
+                      combineDQs(self, other))
+
+    def __truediv__(self, other):
+        n = np.where(other.n == 0, 0, self.n / other.n)
+        u = np.where(other.n == 0, 0, number.div_unc(self.n, self.u, other.n, other.u))
+        d = combineDQs(self, other, np.where(other.n == 0, dq.DIVZERO, 0))
+        return OpData(n, u, d)
+
+    def __pow__(self, power, modulo=None):
+        # zero cannot be raised to -ve power so invalid, but we use zero as a dummy.
+        n = np.where((self.n == 0.0) & (power.n < 0), 0, self.n ** power.n)
+        u = np.where((self.n == 0.0) & (power.n < 0), 0, number.pow_unc(self.n, self.u, power.n, power.u))
+        d = combineDQs(self, power, np.where((self.n == 0.0) & (power.n < 0), dq.UNDEF, 0))
+        return OpData(n, u, d)
+
+    def __and__(self, other):
+        """The & operator actually finds the minimum (Zadeh op)"""
+        n = np.where(self.n > other.n, other.n, self.n)
+        u = np.where(self.n > other.n, other.u, self.u)
+        d = np.where(self.n > other.n, other.dq, self.dq)
+        return OpData(n, u, d)
+
+    def __or__(self, other):
+        """The & operator actually finds the maximum (Zadeh op)"""
+        n = np.where(self.n < other.n, other.n, self.n)
+        u = np.where(self.n < other.n, other.u, self.u)
+        d = np.where(self.n < other.n, other.dq, self.dq)
+        return OpData(n, u, d)
+
+
 # TODO UNCERTAINTY - work out what the args should be and pass them in
-def numberImageBinop(dx: Datum, dy: Datum, f: Callable[[float, np.ndarray], ImageCube]) -> Datum:
+def numberImageBinop(dx: Datum, dy: Datum, f: Callable[[OpData, OpData], OpData]) -> Datum:
     """This wraps binary operations number x imagecube"""
-    num = dx.val.n    # Datum.NUMBER
-    img = dy.val    # Datum.IMG
+    # get the image
+    img = dy.val
+    # create a subimage
     subimg = img.subimage()
-    img = img.modifyWithSub(subimg, f(num, subimg.masked()))
+    # get the uncertainty-aware forms of the operands
+    a = OpData(dx.val.n, dx.val.u)
+    b = OpData(subimg.masked(), subimg.maskedUncertainty())
+    # perform the operation
+    r = f(a, b)
+    # put the result back into the image
+    img = img.modifyWithSub(subimg, r.n, uncertainty=r.u, dqOR=r.dq)
+    # handle ROIs and sources
     img.rois = dy.val.rois.copy()
     img.sources = combineImageWithNumberSources(img, dx.getSources())
     return Datum(Datum.IMG, img)
 
 
 # TODO UNCERTAINTY - work out what the args should be and pass them in
-def imageNumberBinop(dx: Datum, dy: Datum, f: Callable[[float, np.ndarray], ImageCube]) -> Datum:
+def imageNumberBinop(dx: Datum, dy: Datum, f: Callable[[OpData, OpData], OpData]) -> Datum:
     """This wraps binary operations imagecube x number"""
-    img = dx.val    # Datum.IMG
-    num = dy.val.n    # Datum.NUMBER
-
+    img = dx.val  # Datum.IMG
     subimg = img.subimage()
-    img = img.modifyWithSub(subimg, f(subimg.masked(), num))  # uncertainty not handled
+    a = OpData(subimg.masked(), subimg.maskedUncertainty())
+    b = OpData(dy.val.n, dy.val.u)
+    r = f(a, b)
+    img = img.modifyWithSub(subimg, r.n, uncertainty=r.u, dqOR=r.dq)
     img.rois = dx.val.rois.copy()
     img.sources = combineImageWithNumberSources(img, dy.getSources())
     return Datum(Datum.IMG, img)
@@ -193,7 +280,7 @@ def numberBinop(dx: Datum, dy: Datum, f: Callable[[Number, Number], Number]) -> 
     return Datum(Datum.NUMBER, r, SourceSet([dx.getSources(), dy.getSources()]))
 
 
-def ROIBinop(dx: Datum, dy:Datum, f: Callable[[ROI, ROI], ROI]) -> Datum:
+def ROIBinop(dx: Datum, dy: Datum, f: Callable[[ROI, ROI], ROI]) -> Datum:
     """wraps ROI x ROI -> ROI"""
     r = f(dx.val, dy.val)
     return Datum(Datum.ROI, r, SourceSet([dx.getSources(), dy.getSources()]))
@@ -219,6 +306,7 @@ def extractChannelByName(a: Datum, b: Datum) -> Datum:
 
     img.rois = a.val.rois.copy()
     return Datum(Datum.IMG, img)
+
 
 # TODO UNCERTAINTY REWRITE THESE FUNCTIONS
 def initOps():

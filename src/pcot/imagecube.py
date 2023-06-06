@@ -596,14 +596,29 @@ class ImageCube(SourcesObtainable):
         return len(self.rois) > 0
 
     def modifyWithSub(self, subimage: SubImageCubeROI, newimg: np.ndarray,
-                      sources=None, keepMapping=False) -> 'ImageCube':
+                      sources=None, keepMapping=False,
+                      dq=None, dqOR=None, uncertainty=None
+                      ) -> 'ImageCube':
         """return a copy of the image, with the given image spliced in at the
         subimage's coordinates and masked according to the subimage.
-        keppMapping will ensure that the new image has the same mapping as the old."""
+        keppMapping will ensure that the new image has the same mapping as the old.
+        If DQ or unc are set, they will replace the old values. If dqOR is set, these
+        values will be OR-ed in (overrides dq)"""
 
         i = self.copy(keepMapping)
         x, y, w, h = subimage.bb
-        i.img[y:y + h, x:x + w][subimage.mask] = newimg[subimage.mask]
+        mask = subimage.mask
+        i.img[y:y + h, x:x + w][mask] = newimg[mask]
+        if uncertainty is not None:
+            i.uncertainty[y:y + h, x:x + w][mask] = uncertainty[mask]
+        if dqOR is not None:  # dq and dqOR could be scalar
+            if not np.isscalar(dqOR):
+                dqOR = dqOR[mask]
+            i.dq[y:y + h, x:x + w][subimage.mask] |= dqOR
+        elif dq is not None:
+            if not np.isscalar(dq):
+                dq = dq[mask]
+            i.dq[y:y + h, x:x + w][subimage.mask] = dq
 
         # can replace sources if required
         if sources is not None:

@@ -60,14 +60,16 @@ def test_image_scalar_ops():
         assert img is not None
 
         for x, y in ((0, 0), (49, 0), (49, 49), (0, 49)):
-            assert np.array_equal(img.img[0, 0], expected), f"{e}, got {img.img[0][0]} at {x},{y}"
+            assert np.array_equal(img.img[0, 0], expected), f"{e}, got {img.img[0][0]} at {x},{y}. Expected {expected}, a=(0, 0.5, 0)"
 
+    runop("a^(2+1)", (0, 0.125, 0))
     runop("a+4", (4, 4.5, 4))
+    runop("4+a", (4, 4.5, 4))
     runop("a-0.5", (-0.5, 0, -0.5))
     runop("(a+2)/2", (1, 1.25, 1))
+    runop("(a+2)/0", (0,0,0))       # division by zero yields zero, but errors should be set. Tested elsewhere.
     runop("a*2+1", (1, 2, 1))
     runop("a*(2+1)", (0, 1.5, 0))
-    runop("4+a", (4, 4.5, 4))
 
 
 def test_image_image_ops():
