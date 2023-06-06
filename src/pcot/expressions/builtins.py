@@ -122,7 +122,7 @@ def funcCrop(args, _):
     return Datum(Datum.IMG, img)
 
 
-def funcROI(args, _):
+def funcROI(args: List[Datum], _):
     """Get ROI from image"""
     img = args[0].get(Datum.IMG)
     if len(img.rois) == 0:
@@ -151,14 +151,6 @@ def funcAddROI(args, _):
         return None
 
 
-def funcUncertaintyImage(args, _):
-    img = args[0].get(Datum.IMG)
-    if img is not None:
-        img = ImageCube(img.uncertainty, None, img.sources, rois=img.rois)
-
-    return Datum(Datum.IMG, img)
-
-
 def funcRGBImage(args, _):
     img = args[0].get(Datum.IMG)
     if img is not None:
@@ -184,6 +176,28 @@ def funcV(args, _):
     v = args[0].get(Datum.NUMBER).n
     u = args[1].get(Datum.NUMBER).n
     return Datum(Datum.NUMBER, Number(v, u), nullSource)
+
+
+def funcNominal(args: List[Datum], _):
+    if args[0].tp == Datum.IMG:
+        img = args[0].get(Datum.IMG)
+        if img is not None:
+            img = ImageCube(img.img, None, img.sources, rois=img.rois)
+        return Datum(Datum.IMG, img)
+    else:   # type is constrained to either image or number, so it's fine to do this
+        n = args[0].get(Datum.NUMBER)
+        return Datum(Datum.NUMBER, Number(n.n, 0), sources=args[0].sources)
+
+
+def funcUncertainty(args: List[Datum], _):
+    if args[0].tp == Datum.IMG:
+        img = args[0].get(Datum.IMG)
+        if img is not None:
+            img = ImageCube(img.uncertainty, None, img.sources, rois=img.rois)
+        return Datum(Datum.IMG, img)
+    else:   # type is constrained to either image or number, so it's fine to do this
+        n = args[0].get(Datum.NUMBER)
+        return Datum(Datum.NUMBER, Number(n.u, 0), sources=args[0].sources)
 
 
 def funcWrapper(fn, d, *args):
@@ -307,28 +321,41 @@ def registerBuiltinFunctions(p):
                    lambda args, optargs: funcWrapper(np.sqrt, args[0]))
 
     p.registerFunc("min",
-                   "find the minimum value of pixels in a list of ROIs, images or values.  Disregards uncertainties.",
+                   "find the minimum value of the nominal values in a set of images and/or values. "
+                   "Images will be flattened into a list of values, "
+                   "so the result for multiband images may not be what you expect.",
                    [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
                    lambda args, optargs: statsWrapper(np.min, lambda n, u: 0, args), varargs=True)
     p.registerFunc("max",
-                   "find the maximum value of pixels in a list of ROIs, images or values. Disregards uncertainties.",
+                   "find the minimum value of the nominal values in a set of images and/or values. "
+                   "Images will be flattened into a list of values, "
+                   "so the result for multiband images may not be what you expect.",
                    [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
                    lambda args, optargs: statsWrapper(np.max, lambda n, u: 0, args), varargs=True)
     p.registerFunc("sd",
-                   "find the standard deviation of pixels in a list of ROIs, images or values. Disregards uncertainties.",
+                   "find the standard deviation of the nominal values in a set of images and/or values. "
+                   "Images will be flattened into a list of values, "
+                   "so the result for multiband images may not be what you expect.",
                    [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
                    lambda args, optargs: statsWrapper(np.std, lambda n, u: 0, args), varargs=True)
-    p.registerFunc("mean", "find the mean±sd of pixels in a list of ROIs, images or values. Disregards uncertainties.",
-                   [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
-                   [],
-                   lambda args, optargs: statsWrapper(np.mean, lambda n, u: np.std(n), args), varargs=True)
-    p.registerFunc("sum", "find the sum of pixels in a list of ROIs, images or values",
+    p.registerFunc("sum",
+                   "find the sum of the nominal in a set of images and/or values. "
+                   "Images will be flattened into a list of values, "
+                   "so the result for multiband images may not be what you expect. "
+                   "The SD of the result is the SD of the sum, not the individual values.",
                    [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
                    lambda args, optargs: statsWrapper(np.sum, lambda n, u: add_sub_unc_list(u), args), varargs=True)
+    p.registerFunc("mean",
+                   "find the mean±sd of the nominal values of a set of images and/or values. "
+                   "Images will be flattened into a list of values, "
+                   "so the result for multiband images may not be what you expect.",
+                   [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
+                   [],
+                   lambda args, optargs: statsWrapper(np.mean, lambda n, u: np.std(n), args), varargs=True)
 
     p.registerFunc("grey", "convert an image to greyscale",
                    [Parameter("image", "an image to process", Datum.IMG)],
@@ -360,10 +387,20 @@ def registerBuiltinFunctions(p):
 
     p.registerFunc(
         "uncertainty",
-        "create an image made up of uncertainty data for all channels (or a zero channel if none)",
-        [Parameter("image", "the image to process", Datum.IMG)],
+        "If input is an image, create an image made up of uncertainty data for all channels; if input is numeric,"
+        " output the uncertainty",
+        [Parameter("image", "the image to process", (Datum.IMG, Datum.NUMBER))],
         [],
-        funcUncertaintyImage
+        funcUncertainty
+    )
+
+    p.registerFunc(
+        "nominal",
+        "If input is an image, create an image made up of nominal data for all channels; if input is numeric,"
+        " output the uncertainty. In other words, just remove the uncertainty.",
+        [Parameter("image", "the image to process", (Datum.IMG, Datum.NUMBER))],
+        [],
+        funcNominal
     )
 
     p.registerFunc(
