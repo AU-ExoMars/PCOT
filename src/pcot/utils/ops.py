@@ -174,6 +174,8 @@ def combineDQs(a, b, extra=None):
     else:
         r = a.dq | b.dq
 
+    # if r is a zero-dimensional array, convert it
+
     if extra is not None:
         # first, extra *could* be a 0-dimensional array because of how np.where works on scalar inputs
         if extra.shape == ():
@@ -189,15 +191,45 @@ def combineDQs(a, b, extra=None):
     return r
 
 
+def reduce_if_zero_dim(n):
+    if not np.isscalar(n):
+        n = n[()]
+    return n
+
+
+EPSILON = 0.00001
+
 
 class OpData:
     """Class used to pass data into and out of uncertainty/DQ-aware binops and wrap the operations,
     because the dunders used in Number aren't enough."""
 
-    def __init__(self, n, u, dq=None):
+    def __init__(self, n, u, dq=0):
         self.n = n  # nominal, either float or ndarray
         self.u = u  # uncertainty, either float or ndarray
-        self.dq = dq  # if a result, the DQ bits
+        self.dq = dq  # if a result, the DQ bits. May be zero, shouldn't be None.
+
+    def copy(self):
+        return OpData(self.n, self.u, self.dq)
+
+    def serialise(self):
+        return self.n, self.u, self.dq
+
+    @staticmethod
+    def deserialise(t):
+        n, u, d = t
+        return OpData(n, u, d)
+
+    def __eq__(self, other):
+        if not isinstance(other, OpData):
+            return False
+        aa = self.n == other.n
+        bb = self.u == other.u
+
+        return self.n == other.n and self.u == other.u and self.dq == other.dq
+
+    def approxeq(self, other):  # used in tests
+        return abs(self.n - other.n) < EPSILON and abs(self.u - other.u) < EPSILON and self.dq == other.dq
 
     def __add__(self, other):
         return OpData(self.n + other.n, number.add_sub_unc(self.u, other.u),
@@ -208,13 +240,22 @@ class OpData:
                       combineDQs(self, other))
 
     def __mul__(self, other):
-        return OpData(self.n * other.n, number.add_sub_unc(self.u, other.u),
+        return OpData(self.n * other.n, number.mul_unc(self.n, self.u, other.n, other.u),
                       combineDQs(self, other))
 
     def __truediv__(self, other):
-        n = np.where(other.n == 0, 0, self.n / other.n)
-        u = np.where(other.n == 0, 0, number.div_unc(self.n, self.u, other.n, other.u))
-        d = combineDQs(self, other, np.where(other.n == 0, dq.DIVZERO, 0))
+        try:
+            n = np.where(other.n == 0, 0, self.n / other.n)
+            u = np.where(other.n == 0, 0, number.div_unc(self.n, self.u, other.n, other.u))
+            d = combineDQs(self, other, np.where(other.n == 0, dq.DIVZERO, 0))
+            n = reduce_if_zero_dim(n)
+            u = reduce_if_zero_dim(u)
+            d = reduce_if_zero_dim(d)
+        except ZeroDivisionError:
+            # should only happen where we're dividing scalars
+            n = 0
+            u = 0
+            d = dq.DIVZERO
         return OpData(n, u, d)
 
     def __pow__(self, power, modulo=None):
@@ -222,6 +263,9 @@ class OpData:
         n = np.where((self.n == 0.0) & (power.n < 0), 0, self.n ** power.n)
         u = np.where((self.n == 0.0) & (power.n < 0), 0, number.pow_unc(self.n, self.u, power.n, power.u))
         d = combineDQs(self, power, np.where((self.n == 0.0) & (power.n < 0), dq.UNDEF, 0))
+        n = reduce_if_zero_dim(n)
+        u = reduce_if_zero_dim(u)
+        d = reduce_if_zero_dim(d)
         return OpData(n, u, d)
 
     def __and__(self, other):
@@ -238,6 +282,21 @@ class OpData:
         d = np.where(self.n < other.n, other.dq, self.dq)
         return OpData(n, u, d)
 
+    def __neg__(self):
+        return OpData(-self.n, self.u, self.dq)
+
+    def __invert__(self):
+        return OpData(1 - self.n, self.u, self.dq)
+
+    def __str__(self):
+        if np.isscalar(self.n):
+            names = dq.names(self.dq)
+            return f"Value:{self.n}±{self.u}{names}"
+        else:
+            return f"Value:array{self.n.shape}"
+
+    def __repr__(self):
+        return self.__str__()
 
 # TODO UNCERTAINTY - work out what the args should be and pass them in
 def numberImageBinop(dx: Datum, dy: Datum, f: Callable[[OpData, OpData], OpData]) -> Datum:
