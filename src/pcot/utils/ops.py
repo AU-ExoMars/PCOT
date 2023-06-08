@@ -248,6 +248,7 @@ class OpData:
             n = np.where(other.n == 0, 0, self.n / other.n)
             u = np.where(other.n == 0, 0, number.div_unc(self.n, self.u, other.n, other.u))
             d = combineDQs(self, other, np.where(other.n == 0, dq.DIVZERO, 0))
+            # fold zero dimensional arrays (from np.where) back into scalars
             n = reduce_if_zero_dim(n)
             u = reduce_if_zero_dim(u)
             d = reduce_if_zero_dim(d)
@@ -255,17 +256,27 @@ class OpData:
             # should only happen where we're dividing scalars
             n = 0
             u = 0
-            d = dq.DIVZERO
+            d = self.dq | other.dq | dq.DIVZERO
         return OpData(n, u, d)
 
     def __pow__(self, power, modulo=None):
         # zero cannot be raised to -ve power so invalid, but we use zero as a dummy.
-        n = np.where((self.n == 0.0) & (power.n < 0), 0, self.n ** power.n)
-        u = np.where((self.n == 0.0) & (power.n < 0), 0, number.pow_unc(self.n, self.u, power.n, power.u))
-        d = combineDQs(self, power, np.where((self.n == 0.0) & (power.n < 0), dq.UNDEF, 0))
-        n = reduce_if_zero_dim(n)
-        u = reduce_if_zero_dim(u)
-        d = reduce_if_zero_dim(d)
+        try:
+            n = np.where((self.n == 0.0) & (power.n < 0), 0, self.n ** power.n)
+            u = np.where((self.n == 0.0) & (power.n < 0), 0, number.pow_unc(self.n, self.u, power.n, power.u))
+            d = combineDQs(self, power, np.where((self.n == 0.0) & (power.n < 0), dq.UNDEF, 0))
+            # remove imaginary component of complex result but mark as complex in DQ
+            d |= np.where(n.imag != 0.0, dq.COMPLEX, 0)
+            n = n.real
+            # and fold zerodim arrays back to scalar
+            n = reduce_if_zero_dim(n)
+            u = reduce_if_zero_dim(u)
+            d = reduce_if_zero_dim(d)
+        except ZeroDivisionError:
+            # should only happen where we're processing scalars
+            n = 0
+            u = 0
+            d = self.dq | power.dq | dq.UNDEF
         return OpData(n, u, d)
 
     def __and__(self, other):
