@@ -247,7 +247,7 @@ class OpData:
         try:
             n = np.where(other.n == 0, 0, self.n / other.n)
             u = np.where(other.n == 0, 0, number.div_unc(self.n, self.u, other.n, other.u))
-            d = combineDQs(self, other, np.where(other.n == 0, dq.DIVZERO, 0))
+            d = combineDQs(self, other, np.where(other.n == 0, dq.DIVZERO, dq.NONE))
             # fold zero dimensional arrays (from np.where) back into scalars
             n = reduce_if_zero_dim(n)
             u = reduce_if_zero_dim(u)
@@ -264,7 +264,7 @@ class OpData:
         try:
             n = np.where((self.n == 0.0) & (power.n < 0), 0, self.n ** power.n)
             u = np.where((self.n == 0.0) & (power.n < 0), 0, number.pow_unc(self.n, self.u, power.n, power.u))
-            d = combineDQs(self, power, np.where((self.n == 0.0) & (power.n < 0), dq.UNDEF, 0))
+            d = combineDQs(self, power, np.where((self.n == 0.0) & (power.n < 0), dq.UNDEF, dq.NONE))
             # remove imaginary component of complex result but mark as complex in DQ
             qq = np.where(n.imag != 0.0, dq.COMPLEX, dq.NONE)
             d |= qq
