@@ -266,7 +266,8 @@ class OpData:
             u = np.where((self.n == 0.0) & (power.n < 0), 0, number.pow_unc(self.n, self.u, power.n, power.u))
             d = combineDQs(self, power, np.where((self.n == 0.0) & (power.n < 0), dq.UNDEF, 0))
             # remove imaginary component of complex result but mark as complex in DQ
-            d |= np.where(n.imag != 0.0, dq.COMPLEX, 0)
+            qq = np.where(n.imag != 0.0, dq.COMPLEX, dq.NONE)
+            d |= qq
             n = n.real
             # and fold zerodim arrays back to scalar
             n = reduce_if_zero_dim(n)

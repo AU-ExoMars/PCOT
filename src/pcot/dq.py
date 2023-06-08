@@ -1,4 +1,5 @@
 """Definitions of bits in the DQ data. These are bit values. so powers of two!"""
+import numpy as np
 
 DQs = dict()  # dictionary of name->poweroftwo gets created by calls to reg
 namedict = dict()  # poweroftwo->name
@@ -9,7 +10,7 @@ def reg(name, bit):
     b = 1 << bit
     DQs[name] = b
     namedict[b] = name
-    return b
+    return np.uint16(b)
 
 
 def names(bits):
@@ -31,6 +32,8 @@ SAT = reg('sat', 2)  # Pixel is saturated high
 DIVZERO = reg('divzero', 3)  # Pixel is divided by zero
 UNDEF = reg('undefined', 4)  # undefined value
 COMPLEX = reg('complex', 5)  # result is complex
+
+NONE = np.uint16(0)
 
 TEST = reg('test', 15)
 
