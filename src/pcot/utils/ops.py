@@ -221,15 +221,10 @@ class OpData:
         return OpData(n, u, d)
 
     def __eq__(self, other):
-        if not isinstance(other, OpData):
-            return False
-        aa = self.n == other.n
-        bb = self.u == other.u
-
-        return self.n == other.n and self.u == other.u and self.dq == other.dq
+        return np.array_equal(self.n, other.n) and np.array_equal(self.u, other.u) and np.array_equal(self.dq, other.dq)
 
     def approxeq(self, other):  # used in tests
-        return abs(self.n - other.n) < EPSILON and abs(self.u - other.u) < EPSILON and self.dq == other.dq
+        return np.allclose(self.n, other.n) and np.allclose(self.u, other.u) and np.array_equal(self.dq, other.dq)
 
     def __add__(self, other):
         return OpData(self.n + other.n, number.add_sub_unc(self.u, other.u),
@@ -265,9 +260,12 @@ class OpData:
             n = np.where((self.n == 0.0) & (power.n < 0), 0, self.n ** power.n)
             u = np.where((self.n == 0.0) & (power.n < 0), 0, number.pow_unc(self.n, self.u, power.n, power.u))
             d = combineDQs(self, power, np.where((self.n == 0.0) & (power.n < 0), dq.UNDEF, dq.NONE))
+            # remove NaN in n and u, and replace with zero, marking the n NaNs in the DQ
+            d |= np.where(np.isnan(n), dq.COMPLEX, dq.NONE)
+            n[np.isnan(n)] = 0
+            u[np.isnan(u)] = 0
             # remove imaginary component of complex result but mark as complex in DQ
-            qq = np.where(n.imag != 0.0, dq.COMPLEX, dq.NONE)
-            d |= qq
+            d |= np.where(n.imag != 0.0, dq.COMPLEX, dq.NONE)
             n = n.real
             # and fold zerodim arrays back to scalar
             n = reduce_if_zero_dim(n)
