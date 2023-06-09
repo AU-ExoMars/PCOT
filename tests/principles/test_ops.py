@@ -11,7 +11,7 @@ from pcot.datum import Datum
 from pcot.document import Document
 import numpy as np
 
-from pcot.value import OpData
+from pcot.value import Value
 
 
 def test_scalar_ops():
@@ -183,7 +183,7 @@ def test_scalar_div_zero():
     expr.expr = "1/0"
     doc.changed()
     d = expr.getOutputDatum(0)
-    assert d.val == OpData(0, 0, dq.DIVZERO)
+    assert d.val == Value(0, 0, dq.DIVZERO)
 
 
 def test_image_division_by_zero():

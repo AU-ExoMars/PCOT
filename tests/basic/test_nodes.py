@@ -4,7 +4,7 @@ import pcot
 from pcot.datum import Datum
 from pcot.document import Document
 from pcot.sources import nullSourceSet
-from pcot.value import OpData
+from pcot.value import Value
 from pcot.xform import XFormType, BadTypeException, xformtype
 
 
@@ -84,8 +84,8 @@ class XFormTest(XFormType):
         in0 = node.getInput(0, Datum.NUMBER)
         in1 = node.getInput(1, Datum.NUMBER)
         if in0 is not None and in1 is not None:
-            node.setOutput(0, Datum(Datum.NUMBER, OpData(in0.n*node.testval + in1.n*1000, 0.0), nullSourceSet))
-            node.setOutput(1, Datum(Datum.NUMBER, OpData(in1.n*node.testval + in0.n*1000, 0.0), nullSourceSet))
+            node.setOutput(0, Datum(Datum.NUMBER, Value(in0.n * node.testval + in1.n * 1000, 0.0), nullSourceSet))
+            node.setOutput(1, Datum(Datum.NUMBER, Value(in1.n * node.testval + in0.n * 1000, 0.0), nullSourceSet))
         else:
             node.setOutput(0, None)
             node.setOutput(1, None)

@@ -12,7 +12,7 @@ from typing import Any, Optional
 from pcot import rois
 from pcot.imagecube import ImageCube
 from pcot.sources import SourcesObtainable, nullSource, SourceSet
-from pcot.value import OpData
+from pcot.value import Value
 
 logger = logging.getLogger(__name__)
 
@@ -170,7 +170,7 @@ class NumberType(Type):
 
     def deserialise(self, d, document):
         n, s = d
-        n = OpData.deserialise(n)
+        n = Value.deserialise(n)
         s = SourceSet.deserialise(s, document)
         return Datum(self, n, s)
 

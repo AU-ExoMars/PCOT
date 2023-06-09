@@ -9,7 +9,7 @@ from pcot.datum import Datum, Type
 from pcot.imagecube import ImageCube
 from pcot.rois import BadOpException, ROI
 from pcot.sources import MultiBandSource, SourceSet
-from pcot.value import OpData
+from pcot.value import Value
 
 
 class OperatorException(Exception):
@@ -115,7 +115,7 @@ def imageUnop(d: Datum, f: Callable[[np.ndarray], np.ndarray]) -> Datum:
     return Datum(Datum.IMG, out)
 
 
-def numberUnop(d: Datum, f: Callable[[OpData], OpData]) -> Datum:
+def numberUnop(d: Datum, f: Callable[[Value], Value]) -> Datum:
     """This wraps unary operations on numbers"""
     return Datum(Datum.NUMBER, f(d.val), d.getSources())
 
@@ -163,15 +163,15 @@ def imageBinop(dx: Datum, dy: Datum, f: Callable[[np.ndarray, np.ndarray], Image
     return Datum(Datum.IMG, outimg)
 
 # TODO UNCERTAINTY - work out what the args should be and pass them in
-def numberImageBinop(dx: Datum, dy: Datum, f: Callable[[OpData, OpData], OpData]) -> Datum:
+def numberImageBinop(dx: Datum, dy: Datum, f: Callable[[Value, Value], Value]) -> Datum:
     """This wraps binary operations number x imagecube"""
     # get the image
     img = dy.val
     # create a subimage
     subimg = img.subimage()
     # get the uncertainty-aware forms of the operands
-    a = OpData(dx.val.n, dx.val.u)
-    b = OpData(subimg.masked(), subimg.maskedUncertainty())
+    a = Value(dx.val.n, dx.val.u)
+    b = Value(subimg.masked(), subimg.maskedUncertainty())
     # perform the operation
     r = f(a, b)
     # put the result back into the image
@@ -183,12 +183,12 @@ def numberImageBinop(dx: Datum, dy: Datum, f: Callable[[OpData, OpData], OpData]
 
 
 # TODO UNCERTAINTY - work out what the args should be and pass them in
-def imageNumberBinop(dx: Datum, dy: Datum, f: Callable[[OpData, OpData], OpData]) -> Datum:
+def imageNumberBinop(dx: Datum, dy: Datum, f: Callable[[Value, Value], Value]) -> Datum:
     """This wraps binary operations imagecube x number"""
     img = dx.val  # Datum.IMG
     subimg = img.subimage()
-    a = OpData(subimg.masked(), subimg.maskedUncertainty())
-    b = OpData(dy.val.n, dy.val.u)
+    a = Value(subimg.masked(), subimg.maskedUncertainty())
+    b = Value(dy.val.n, dy.val.u)
     r = f(a, b)
     img = img.modifyWithSub(subimg, r.n, uncertainty=r.u, dqOR=r.dq)
     img.rois = dx.val.rois.copy()
@@ -197,7 +197,7 @@ def imageNumberBinop(dx: Datum, dy: Datum, f: Callable[[OpData, OpData], OpData]
 
 
 # TODO UNCERTAINTY - work out what the args should be and pass them in
-def numberBinop(dx: Datum, dy: Datum, f: Callable[[OpData, OpData], OpData]) -> Datum:
+def numberBinop(dx: Datum, dy: Datum, f: Callable[[Value, Value], Value]) -> Datum:
     """Wraps number x number -> number"""
     r = f(dx.val, dy.val)
     return Datum(Datum.NUMBER, r, SourceSet([dx.getSources(), dy.getSources()]))

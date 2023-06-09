@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from pcot import dq
-from pcot.value import OpData
+from pcot.value import Value
 
 
 def genArray(n, u, d=dq.NONE):
@@ -12,7 +12,7 @@ def genArray(n, u, d=dq.NONE):
     n = np.full((5, 5), n, dtype=np.float32)
     u = np.full(n.shape, u, dtype=np.float32)
     d = np.full(n.shape, d, dtype=np.uint16)
-    return OpData(n, u, d)
+    return Value(n, u, d)
 
 
 def test_approx():
@@ -28,7 +28,7 @@ def test_approx():
         assert not a(0, 0).approxeq(a(0, 1))
         assert not a(0, 0.00001).approxeq(a(0, 0))
 
-    core(OpData)
+    core(Value)
     core(genArray)
 
 
@@ -46,10 +46,10 @@ def test_equality():
         assert a(0, 0, dq.BAD) != a(0, 0, dq.UNDEF)
         assert a(0, 0) == a(0, 0)
 
-    core(OpData)
+    core(Value)
     core(genArray)
 
-    assert OpData(0, 0) != genArray(0, 0)
+    assert Value(0, 0) != genArray(0, 0)
 
 
 # each test function is actually a "minisuite" and takes three arguments.
@@ -66,10 +66,10 @@ def test_addition():
         assert a(2, 3) + b(7, 4) == r(9, 5)
         assert a(2, 4) + b(7, 3) == r(9, 5)
 
-    core(OpData, OpData, OpData)
+    core(Value, Value, Value)
     core(genArray, genArray, genArray)
-    core(OpData, genArray, genArray)
-    core(genArray, OpData, genArray)
+    core(Value, genArray, genArray)
+    core(genArray, Value, genArray)
 
 
 def test_subtraction():
@@ -79,10 +79,10 @@ def test_subtraction():
         assert a(2, 3) - b(7, 4) == r(-5, 5)
         assert a(2, 4) - b(7, 3) == r(-5, 5)
 
-    core(OpData, OpData, OpData)
+    core(Value, Value, Value)
     core(genArray, genArray, genArray)
-    core(OpData, genArray, genArray)
-    core(genArray, OpData, genArray)
+    core(Value, genArray, genArray)
+    core(genArray, Value, genArray)
 
 
 def test_multiplication():
@@ -94,10 +94,10 @@ def test_multiplication():
         assert (a(3, 0.7) * b(2, 0.1)).approxeq(r(6, 1.43178210632764))
         assert (a(3, 0.1) * b(2, 0.7)).approxeq(r(6, 2.1095023109729))
 
-    core(OpData, OpData, OpData)
+    core(Value, Value, Value)
     core(genArray, genArray, genArray)
-    core(OpData, genArray, genArray)
-    core(genArray, OpData, genArray)
+    core(Value, genArray, genArray)
+    core(genArray, Value, genArray)
 
 
 def test_division():
@@ -111,10 +111,10 @@ def test_division():
 
         assert (a(6, 1) / b(2, 0.1)).approxeq(r(3, 0.522015325445528))
 
-    core(OpData, OpData, OpData)
+    core(Value, Value, Value)
     core(genArray, genArray, genArray)
-    core(OpData, genArray, genArray)
-    core(genArray, OpData, genArray)
+    core(Value, genArray, genArray)
+    core(genArray, Value, genArray)
 
 
 def test_power():
@@ -147,10 +147,10 @@ def test_power():
         assert (a(2, 0.3) ** b(3, 0.2)).approxeq(r(8, 3.76695629329975))
         assert (a(2, 0.2) ** b(3, 0.3)).approxeq(r(8, 2.92017283053056))
 
-    core(OpData, OpData, OpData)
+    core(Value, Value, Value)
     core(genArray, genArray, genArray)
-    core(OpData, genArray, genArray)
-    core(genArray, OpData, genArray)
+    core(Value, genArray, genArray)
+    core(genArray, Value, genArray)
 
 
 def test_minmax():
@@ -159,10 +159,10 @@ def test_minmax():
         assert a(2, 0) & b(3, 0) == r(2, 0)
         assert a(2, 5) | b(3, 6) == r(3, 6)
         assert a(2, 5) & b(3, 6) == r(2, 5)
-    core(OpData, OpData, OpData)
+    core(Value, Value, Value)
     core(genArray, genArray, genArray)
-    core(OpData, genArray, genArray)
-    core(genArray, OpData, genArray)
+    core(Value, genArray, genArray)
+    core(genArray, Value, genArray)
 
 
 def test_propagation():
@@ -174,10 +174,10 @@ def test_propagation():
         assert a(0, 0) ** b(-1, 0, dq.NOUNCERTAINTY) == r(0, 0, dq.UNDEF | dq.NOUNCERTAINTY)
         assert a(2, 0, dq.NOUNCERTAINTY) + b(3, 0) == r(5, 0, dq.NOUNCERTAINTY)
         assert a(2, 0) + b(3, 0, dq.NOUNCERTAINTY) == r(5, 0, dq.NOUNCERTAINTY)
-    core(OpData, OpData, OpData)
+    core(Value, Value, Value)
     core(genArray, genArray, genArray)
-    core(OpData, genArray, genArray)
-    core(genArray, OpData, genArray)
+    core(Value, genArray, genArray)
+    core(genArray, Value, genArray)
 
 
 def test_negate_invert():
@@ -185,5 +185,5 @@ def test_negate_invert():
         assert -a(2, 2) == a(-2, 2)
         assert -a(-2, 1) == a(2, 1)
         assert ~a(0.25, 2) == a(0.75, 2)
-    core(OpData)
+    core(Value)
     core(genArray)

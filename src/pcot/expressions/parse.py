@@ -16,7 +16,7 @@ from pcot import datum
 from pcot.datum import Datum
 from pcot.sources import nullSourceSet
 from pcot.utils.table import Table
-from pcot.value import OpData
+from pcot.value import Value
 
 Stack = List[Any]
 
@@ -180,7 +180,7 @@ class Function:
 
             for t in self.optParams:
                 if len(args) == 0:
-                    optArgs.append(Datum(Datum.NUMBER, OpData(t.getDefault(), 0.0), nullSourceSet))
+                    optArgs.append(Datum(Datum.NUMBER, Value(t.getDefault(), 0.0), nullSourceSet))
                 else:
                     x = args.pop(0)
                     if x is None:
@@ -217,7 +217,7 @@ class InstNumber(Instruction):
         self.val = v
 
     def exec(self, stack: Stack):
-        stack.append(Datum(Datum.NUMBER, OpData(self.val, 0.0), nullSourceSet))
+        stack.append(Datum(Datum.NUMBER, Value(self.val, 0.0), nullSourceSet))
 
     def __str__(self):
         return "NUM {}".format(self.val)

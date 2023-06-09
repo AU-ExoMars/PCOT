@@ -12,15 +12,15 @@ from typing import Callable, Any, Optional, Type
 from pcot.datum import Datum
 from pcot.expressions import parse, Parameter
 from pcot.sources import nullSourceSet
-from pcot.value import OpData
+from pcot.value import Value
 
 
 def mknumFloat(n: float):
     """Create a null source set numerical datum from a float for testing"""
-    return Datum(Datum.NUMBER, OpData(n, 0), sources=nullSourceSet)
+    return Datum(Datum.NUMBER, Value(n, 0), sources=nullSourceSet)
 
 
-def mknumNum(n: OpData):
+def mknumNum(n: Value):
     """Create a null source set numerical datum from a OpData for testing"""
     return Datum(Datum.NUMBER, n, sources=nullSourceSet)
 

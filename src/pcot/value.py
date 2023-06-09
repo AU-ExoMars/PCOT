@@ -129,17 +129,40 @@ def reduce_if_zero_dim(n):
 EPSILON = 0.00001
 
 
-class OpData:
-    """Class used to pass data into and out of uncertainty/DQ-aware binops and wrap the operations,
-    because the dunders used in Number aren't enough."""
+class Value:
+    """Wraps a value with uncertainty and data quality. This can be either an array or a scalar, but they
+    have to match."""
 
     def __init__(self, n, u, d=dq.NONE):
+        """Initialise a value - either array of float32 or scalar.
+        n = nominal value
+        u = uncertainty (SD)
+        d = data quality bits (see DQ; these are error bits).
+        This has to make sure that n, u and d are all the same dimensionality."""
+
         self.n = n  # nominal, either float or ndarray
         self.u = u  # uncertainty, either float or ndarray
         self.dq = d  # if a result, the DQ bits. May be zero, shouldn't be None.
 
+        # python doesn't do common subexpression elimination, apparently..
+        usc = np.isscalar(u)
+        dsc = np.isscalar(d)
+
+        if np.isscalar(n):
+            if not usc or not dsc:
+                raise Exception("Value nominal, uncertainty, and DQ bits must be either all scalar or all array")
+        elif dsc:
+            # data is not scalar, but no reasonable DQ is provided - make one.
+            d = np.full(n.shape, d)
+        elif usc or dsc:
+            raise Exception("Value nominal, uncertainty, and DQ bits must be either all scalar or all array")
+        elif n.shape!=u.shape or n.shape!=d.shape:
+            raise Exception("Value nominal, uncertainty, and DQ bits must be the same shape")
+
+
+
     def copy(self):
-        return OpData(self.n, self.u, self.dq)
+        return Value(self.n, self.u, self.dq)
 
     def serialise(self):
         return self.n, self.u, self.dq
@@ -147,7 +170,7 @@ class OpData:
     @staticmethod
     def deserialise(t):
         n, u, d = t
-        return OpData(n, u, d)
+        return Value(n, u, d)
 
     def __eq__(self, other):
         return np.array_equal(self.n, other.n) and np.array_equal(self.u, other.u) and np.array_equal(self.dq, other.dq)
@@ -156,16 +179,16 @@ class OpData:
         return np.allclose(self.n, other.n) and np.allclose(self.u, other.u) and np.array_equal(self.dq, other.dq)
 
     def __add__(self, other):
-        return OpData(self.n + other.n, add_sub_unc(self.u, other.u),
-                      combineDQs(self, other))
+        return Value(self.n + other.n, add_sub_unc(self.u, other.u),
+                     combineDQs(self, other))
 
     def __sub__(self, other):
-        return OpData(self.n - other.n, add_sub_unc(self.u, other.u),
-                      combineDQs(self, other))
+        return Value(self.n - other.n, add_sub_unc(self.u, other.u),
+                     combineDQs(self, other))
 
     def __mul__(self, other):
-        return OpData(self.n * other.n, mul_unc(self.n, self.u, other.n, other.u),
-                      combineDQs(self, other))
+        return Value(self.n * other.n, mul_unc(self.n, self.u, other.n, other.u),
+                     combineDQs(self, other))
 
     def __truediv__(self, other):
         try:
@@ -181,7 +204,7 @@ class OpData:
             n = 0
             u = 0
             d = self.dq | other.dq | dq.DIVZERO
-        return OpData(n, u, d)
+        return Value(n, u, d)
 
     def __pow__(self, power, modulo=None):
         # zero cannot be raised to -ve power so invalid, but we use zero as a dummy.
@@ -205,27 +228,27 @@ class OpData:
             n = 0
             u = 0
             d = self.dq | power.dq | dq.UNDEF
-        return OpData(n, u, d)
+        return Value(n, u, d)
 
     def __and__(self, other):
         """The & operator actually finds the minimum (Zadeh op)"""
         n = np.where(self.n > other.n, other.n, self.n)
         u = np.where(self.n > other.n, other.u, self.u)
         d = np.where(self.n > other.n, other.dq, self.dq)
-        return OpData(n, u, d)
+        return Value(n, u, d)
 
     def __or__(self, other):
         """The & operator actually finds the maximum (Zadeh op)"""
         n = np.where(self.n < other.n, other.n, self.n)
         u = np.where(self.n < other.n, other.u, self.u)
         d = np.where(self.n < other.n, other.dq, self.dq)
-        return OpData(n, u, d)
+        return Value(n, u, d)
 
     def __neg__(self):
-        return OpData(-self.n, self.u, self.dq)
+        return Value(-self.n, self.u, self.dq)
 
     def __invert__(self):
-        return OpData(1 - self.n, self.u, self.dq)
+        return Value(1 - self.n, self.u, self.dq)
 
     def __str__(self):
         if np.isscalar(self.n):

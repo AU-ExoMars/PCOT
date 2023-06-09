@@ -14,7 +14,7 @@ from pcot.imagecube import ImageCube
 from pcot.sources import SourceSet, MultiBandSource, nullSource
 from pcot.utils import image
 from pcot.utils.ops import combineImageWithNumberSources
-from pcot.value import OpData, add_sub_unc_list
+from pcot.value import Value, add_sub_unc_list
 from pcot.xform import XFormException
 import cv2 as cv
 
@@ -191,7 +191,7 @@ def funcV(args, _):
     if t0 == Datum.NUMBER:
         if t1 == Datum.NUMBER:
             # number, number
-            return Datum(Datum.NUMBER, OpData(v0.n, v1.n), SourceSet([s0, s1]))
+            return Datum(Datum.NUMBER, Value(v0.n, v1.n), SourceSet([s0, s1]))
         else:
             # here, we're creating a number,uncimage pair
             i = np.full(v1.img.shape, v0.n, dtype=np.float32)
@@ -219,7 +219,7 @@ def funcNominal(args: List[Datum], _):
         return Datum(Datum.IMG, img)
     else:  # type is constrained to either image or number, so it's fine to do this
         n = args[0].get(Datum.NUMBER)
-        return Datum(Datum.NUMBER, OpData(n.n, 0), sources=args[0].sources)
+        return Datum(Datum.NUMBER, Value(n.n, 0), sources=args[0].sources)
 
 
 def funcUncertainty(args: List[Datum], _):
@@ -230,7 +230,7 @@ def funcUncertainty(args: List[Datum], _):
         return Datum(Datum.IMG, img)
     else:  # type is constrained to either image or number, so it's fine to do this
         n = args[0].get(Datum.NUMBER)
-        return Datum(Datum.NUMBER, OpData(n.u, 0), sources=args[0].sources)
+        return Datum(Datum.NUMBER, Value(n.u, 0), sources=args[0].sources)
 
 
 def funcWrapper(fn, d, *args):
@@ -253,7 +253,7 @@ def funcWrapper(fn, d, *args):
             return Datum(Datum.IMG, img)
         elif isinstance(newdata, SupportsFloat):
             # 'img' is SourcesObtainable. Note that we set zero uncertainty here! TODO UNCERTAINTY!
-            val = OpData(float(newdata), 0.0)
+            val = Value(float(newdata), 0.0)
             return Datum(Datum.NUMBER, val, img)
         else:
             raise XFormException('EXPR', 'internal: fn returns bad type in funcWrapper')
@@ -261,7 +261,7 @@ def funcWrapper(fn, d, *args):
         # get sources for all arguments
         ss = [a.getSources() for a in args]
         ss.append(d.getSources())
-        val = OpData(fn(d.val.n, *args), 0.0)  # TODO UNCERTAINTY!
+        val = Value(fn(d.val.n, *args), 0.0)  # TODO UNCERTAINTY!
         return Datum(Datum.NUMBER, val, SourceSet(ss))
 
 
@@ -326,7 +326,7 @@ def statsWrapper(fn, fnu, d: List[Optional[Datum]], *args):
     # TODO UNCERTAINTY! It's ignored by this func TODOUNCERTAINTY
     val = fn(intermediate, *args)
     u = fnu(intermediate, uncintermediate, *args)
-    return Datum(Datum.NUMBER, OpData(val, u), SourceSet(sources))
+    return Datum(Datum.NUMBER, Value(val, u), SourceSet(sources))
 
 
 @parserhook
@@ -467,17 +467,17 @@ def registerBuiltinFunctions(p):
 def registerBuiltinProperties(p):
     p.registerProperty('w', Datum.IMG,
                        "give the width of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",
-                       lambda q: Datum(Datum.NUMBER, OpData(q.subimage().bb.w, 0.0), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Value(q.subimage().bb.w, 0.0), SourceSet(q.getSources())))
     p.registerProperty('w', Datum.ROI, "give the width of an ROI in pixels",
-                       lambda q: Datum(Datum.NUMBER, OpData(q.bb().w, 0.0), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Value(q.bb().w, 0.0), SourceSet(q.getSources())))
     p.registerProperty('h', Datum.IMG,
                        "give the height of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",
-                       lambda q: Datum(Datum.NUMBER, OpData(q.subimage().bb.h, 0.0), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Value(q.subimage().bb.h, 0.0), SourceSet(q.getSources())))
     p.registerProperty('h', Datum.ROI, "give the width of an ROI in pixels",
-                       lambda q: Datum(Datum.NUMBER, OpData(q.bb().h, 0.0), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Value(q.bb().h, 0.0), SourceSet(q.getSources())))
 
     p.registerProperty('n', Datum.IMG,
                        "give the area of an image in pixels (if there are ROIs, give the number of pixels in the ROI union)",
-                       lambda q: Datum(Datum.NUMBER, OpData(q.subimage().mask.sum(), 0.0), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Value(q.subimage().mask.sum(), 0.0), SourceSet(q.getSources())))
     p.registerProperty('n', Datum.ROI, "give the number of pixels in an ROI",
-                       lambda q: Datum(Datum.NUMBER, OpData(q.pixels(), 0.0), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Value(q.pixels(), 0.0), SourceSet(q.getSources())))

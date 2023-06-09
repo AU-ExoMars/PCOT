@@ -4,7 +4,7 @@ from PySide2.QtCore import Qt
 from pcot.datum import Datum
 import pcot.ui as ui
 from pcot.sources import nullSourceSet
-from pcot.value import OpData
+from pcot.value import Value
 from pcot.xform import xformtype, XFormType
 
 validKeys = {Qt.Key_0, Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5, Qt.Key_6, Qt.Key_7, Qt.Key_8, Qt.Key_9,
@@ -90,4 +90,4 @@ class XFormConstant(XFormType):
         node.val = 0
 
     def perform(self, node):
-        node.setOutput(0, Datum(Datum.NUMBER, OpData(node.val, 0.0), nullSourceSet))
+        node.setOutput(0, Datum(Datum.NUMBER, Value(node.val, 0.0), nullSourceSet))
