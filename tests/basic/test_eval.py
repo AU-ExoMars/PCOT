@@ -11,17 +11,19 @@ from typing import Callable, Any, Optional, Type
 
 from pcot.datum import Datum
 from pcot.expressions import parse, Parameter
-from pcot.number import Number
 from pcot.sources import nullSourceSet
+from pcot.value import OpData
 
 
 def mknumFloat(n: float):
     """Create a null source set numerical datum from a float for testing"""
-    return Datum(Datum.NUMBER, Number(n, 0), sources=nullSourceSet)
+    return Datum(Datum.NUMBER, OpData(n, 0), sources=nullSourceSet)
 
-def mknumNum(n: Number):
-    """Create a null source set numerical datum from a Number for testing"""
+
+def mknumNum(n: OpData):
+    """Create a null source set numerical datum from a OpData for testing"""
     return Datum(Datum.NUMBER, n, sources=nullSourceSet)
+
 
 variable_1 = mknumFloat(0)
 variable_2 = mknumFloat(0)

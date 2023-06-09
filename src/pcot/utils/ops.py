@@ -4,13 +4,12 @@ from typing import Any, Callable, Optional, Dict, Tuple
 
 import numpy as np
 
-from pcot import number
 from pcot import dq
 from pcot.datum import Datum, Type
 from pcot.imagecube import ImageCube
-from pcot.number import Number
 from pcot.rois import BadOpException, ROI
 from pcot.sources import MultiBandSource, SourceSet
+from pcot.value import OpData
 
 
 class OperatorException(Exception):
@@ -46,7 +45,7 @@ binops: Dict[Tuple[Operator, Type, Type], Callable[[Datum, Datum], Datum]] = {}
 unops: Dict[Tuple[Operator, Type], Callable[[Datum], Datum]] = {}
 
 
-def registerBinop(op: Operator, lhs: Type, rhs: Type, f: Callable[[Datum, Datum], Datum], forceReplace=False):
+def registerBinopSemantics(op: Operator, lhs: Type, rhs: Type, f: Callable[[Datum, Datum], Datum], forceReplace=False):
     """Register a binary operator function for two types and an operator ID"""
     t = (op, lhs, rhs)
     if t in binops and not forceReplace:
@@ -54,7 +53,7 @@ def registerBinop(op: Operator, lhs: Type, rhs: Type, f: Callable[[Datum, Datum]
     binops[t] = f
 
 
-def registerUnop(op: Operator, tp: Type, f: Callable[[Datum], Datum], forceReplace=False):
+def registerUnopSemantics(op: Operator, tp: Type, f: Callable[[Datum], Datum], forceReplace=False):
     """Register a unary operator function for a type and an operator ID"""
     t = (op, tp)
     if t in unops and not forceReplace:
@@ -116,7 +115,7 @@ def imageUnop(d: Datum, f: Callable[[np.ndarray], np.ndarray]) -> Datum:
     return Datum(Datum.IMG, out)
 
 
-def numberUnop(d: Datum, f: Callable[[Number], Number]) -> Datum:
+def numberUnop(d: Datum, f: Callable[[OpData], OpData]) -> Datum:
     """This wraps unary operations on numbers"""
     return Datum(Datum.NUMBER, f(d.val), d.getSources())
 
@@ -163,151 +162,6 @@ def imageBinop(dx: Datum, dy: Datum, f: Callable[[np.ndarray, np.ndarray], Image
         outimg.rois = rois.copy()
     return Datum(Datum.IMG, outimg)
 
-
-def combineDQs(a, b, extra=None):
-    """Bitwise OR DQs together. A and B are the DQs of the two data we're combining, which the result
-    should inherit. Extra is any extra bits that need to be set."""
-    if a.dq is None:
-        r = b.dq
-    elif b.dq is None:
-        r = a.dq
-    else:
-        r = a.dq | b.dq
-
-    # if r is a zero-dimensional array, convert it
-
-    if extra is not None:
-        # first, extra *could* be a 0-dimensional array because of how np.where works on scalar inputs
-        if extra.shape == ():
-            extra = int(extra)
-        else:
-            # if it isn't, it could well be the wrong integer type - so convert it to the correct one.
-            extra = extra.astype(np.uint16)
-        if r is None:
-            r = extra
-        else:
-            r |= extra
-
-    return r
-
-
-def reduce_if_zero_dim(n):
-    if not np.isscalar(n):
-        n = n[()]
-    return n
-
-
-EPSILON = 0.00001
-
-
-class OpData:
-    """Class used to pass data into and out of uncertainty/DQ-aware binops and wrap the operations,
-    because the dunders used in Number aren't enough."""
-
-    def __init__(self, n, u, dq=0):
-        self.n = n  # nominal, either float or ndarray
-        self.u = u  # uncertainty, either float or ndarray
-        self.dq = dq  # if a result, the DQ bits. May be zero, shouldn't be None.
-
-    def copy(self):
-        return OpData(self.n, self.u, self.dq)
-
-    def serialise(self):
-        return self.n, self.u, self.dq
-
-    @staticmethod
-    def deserialise(t):
-        n, u, d = t
-        return OpData(n, u, d)
-
-    def __eq__(self, other):
-        return np.array_equal(self.n, other.n) and np.array_equal(self.u, other.u) and np.array_equal(self.dq, other.dq)
-
-    def approxeq(self, other):  # used in tests
-        return np.allclose(self.n, other.n) and np.allclose(self.u, other.u) and np.array_equal(self.dq, other.dq)
-
-    def __add__(self, other):
-        return OpData(self.n + other.n, number.add_sub_unc(self.u, other.u),
-                      combineDQs(self, other))
-
-    def __sub__(self, other):
-        return OpData(self.n - other.n, number.add_sub_unc(self.u, other.u),
-                      combineDQs(self, other))
-
-    def __mul__(self, other):
-        return OpData(self.n * other.n, number.mul_unc(self.n, self.u, other.n, other.u),
-                      combineDQs(self, other))
-
-    def __truediv__(self, other):
-        try:
-            n = np.where(other.n == 0, 0, self.n / other.n)
-            u = np.where(other.n == 0, 0, number.div_unc(self.n, self.u, other.n, other.u))
-            d = combineDQs(self, other, np.where(other.n == 0, dq.DIVZERO, dq.NONE))
-            # fold zero dimensional arrays (from np.where) back into scalars
-            n = reduce_if_zero_dim(n)
-            u = reduce_if_zero_dim(u)
-            d = reduce_if_zero_dim(d)
-        except ZeroDivisionError:
-            # should only happen where we're dividing scalars
-            n = 0
-            u = 0
-            d = self.dq | other.dq | dq.DIVZERO
-        return OpData(n, u, d)
-
-    def __pow__(self, power, modulo=None):
-        # zero cannot be raised to -ve power so invalid, but we use zero as a dummy.
-        try:
-            n = np.where((self.n == 0.0) & (power.n < 0), 0, self.n ** power.n)
-            u = np.where((self.n == 0.0) & (power.n < 0), 0, number.pow_unc(self.n, self.u, power.n, power.u))
-            d = combineDQs(self, power, np.where((self.n == 0.0) & (power.n < 0), dq.UNDEF, dq.NONE))
-            # remove NaN in n and u, and replace with zero, marking the n NaNs in the DQ
-            d |= np.where(np.isnan(n), dq.COMPLEX, dq.NONE)
-            n[np.isnan(n)] = 0
-            u[np.isnan(u)] = 0
-            # remove imaginary component of complex result but mark as complex in DQ
-            d |= np.where(n.imag != 0.0, dq.COMPLEX, dq.NONE)
-            n = n.real
-            # and fold zerodim arrays back to scalar
-            n = reduce_if_zero_dim(n)
-            u = reduce_if_zero_dim(u)
-            d = reduce_if_zero_dim(d)
-        except ZeroDivisionError:
-            # should only happen where we're processing scalars
-            n = 0
-            u = 0
-            d = self.dq | power.dq | dq.UNDEF
-        return OpData(n, u, d)
-
-    def __and__(self, other):
-        """The & operator actually finds the minimum (Zadeh op)"""
-        n = np.where(self.n > other.n, other.n, self.n)
-        u = np.where(self.n > other.n, other.u, self.u)
-        d = np.where(self.n > other.n, other.dq, self.dq)
-        return OpData(n, u, d)
-
-    def __or__(self, other):
-        """The & operator actually finds the maximum (Zadeh op)"""
-        n = np.where(self.n < other.n, other.n, self.n)
-        u = np.where(self.n < other.n, other.u, self.u)
-        d = np.where(self.n < other.n, other.dq, self.dq)
-        return OpData(n, u, d)
-
-    def __neg__(self):
-        return OpData(-self.n, self.u, self.dq)
-
-    def __invert__(self):
-        return OpData(1 - self.n, self.u, self.dq)
-
-    def __str__(self):
-        if np.isscalar(self.n):
-            names = dq.names(self.dq)
-            return f"Value:{self.n}±{self.u}{names}"
-        else:
-            return f"Value:array{self.n.shape}"
-
-    def __repr__(self):
-        return self.__str__()
-
 # TODO UNCERTAINTY - work out what the args should be and pass them in
 def numberImageBinop(dx: Datum, dy: Datum, f: Callable[[OpData, OpData], OpData]) -> Datum:
     """This wraps binary operations number x imagecube"""
@@ -343,7 +197,7 @@ def imageNumberBinop(dx: Datum, dy: Datum, f: Callable[[OpData, OpData], OpData]
 
 
 # TODO UNCERTAINTY - work out what the args should be and pass them in
-def numberBinop(dx: Datum, dy: Datum, f: Callable[[Number, Number], Number]) -> Datum:
+def numberBinop(dx: Datum, dy: Datum, f: Callable[[OpData, OpData], OpData]) -> Datum:
     """Wraps number x number -> number"""
     r = f(dx.val, dy.val)
     return Datum(Datum.NUMBER, r, SourceSet([dx.getSources(), dy.getSources()]))
@@ -385,39 +239,39 @@ def initOps():
     # should be no need to check for None or Datum.NONE here, that will
     # be done in binop() and unop()
 
-    registerUnop(Operator.NEG, Datum.IMG, lambda datum: imageUnop(datum, lambda x: -x))
-    registerUnop(Operator.NOT, Datum.IMG, lambda datum: imageUnop(datum, lambda x: 1 - x))
+    registerUnopSemantics(Operator.NEG, Datum.IMG, lambda datum: imageUnop(datum, lambda x: -x))
+    registerUnopSemantics(Operator.NOT, Datum.IMG, lambda datum: imageUnop(datum, lambda x: 1 - x))
 
-    registerUnop(Operator.NEG, Datum.NUMBER, lambda datum: numberUnop(datum, lambda x: -x))
-    registerUnop(Operator.NOT, Datum.NUMBER, lambda datum: numberUnop(datum, lambda x: ~x))
+    registerUnopSemantics(Operator.NEG, Datum.NUMBER, lambda datum: numberUnop(datum, lambda x: -x))
+    registerUnopSemantics(Operator.NOT, Datum.NUMBER, lambda datum: numberUnop(datum, lambda x: ~x))
 
-    def regAllBinops(op, fn):
+    def regAllBinopSemantics(op, fn):
         """Used to register binops for types which support all operations, including max and min"""
-        registerBinop(op, Datum.IMG, Datum.IMG, lambda dx, dy: imageBinop(dx, dy, fn))
-        registerBinop(op, Datum.NUMBER, Datum.IMG, lambda dx, dy: numberImageBinop(dx, dy, fn))
-        registerBinop(op, Datum.IMG, Datum.NUMBER, lambda dx, dy: imageNumberBinop(dx, dy, fn))
-        registerBinop(op, Datum.NUMBER, Datum.NUMBER, lambda dx, dy: numberBinop(dx, dy, fn))
+        registerBinopSemantics(op, Datum.IMG, Datum.IMG, lambda dx, dy: imageBinop(dx, dy, fn))
+        registerBinopSemantics(op, Datum.NUMBER, Datum.IMG, lambda dx, dy: numberImageBinop(dx, dy, fn))
+        registerBinopSemantics(op, Datum.IMG, Datum.NUMBER, lambda dx, dy: imageNumberBinop(dx, dy, fn))
+        registerBinopSemantics(op, Datum.NUMBER, Datum.NUMBER, lambda dx, dy: numberBinop(dx, dy, fn))
 
-    regAllBinops(Operator.ADD, lambda x, y: x + y)
-    regAllBinops(Operator.SUB, lambda x, y: x - y)
-    regAllBinops(Operator.MUL, lambda x, y: x * y)
-    regAllBinops(Operator.DIV, lambda x, y: x / y)
-    regAllBinops(Operator.POW, lambda x, y: x ** y)
-    regAllBinops(Operator.AND, lambda x, y: x & y)
-    regAllBinops(Operator.OR, lambda x, y: x | y)
+    regAllBinopSemantics(Operator.ADD, lambda x, y: x + y)
+    regAllBinopSemantics(Operator.SUB, lambda x, y: x - y)
+    regAllBinopSemantics(Operator.MUL, lambda x, y: x * y)
+    regAllBinopSemantics(Operator.DIV, lambda x, y: x / y)
+    regAllBinopSemantics(Operator.POW, lambda x, y: x ** y)
+    regAllBinopSemantics(Operator.AND, lambda x, y: x & y)
+    regAllBinopSemantics(Operator.OR, lambda x, y: x | y)
 
-    def regROIBinop(op, fn):
+    def regROIBinopSemantics(op, fn):
         """Used to register binops for ROIs, which support a subset of ops."""
-        registerBinop(op, Datum.ROI, Datum.ROI, lambda dx, dy: ROIBinop(dx, dy, fn))
+        registerBinopSemantics(op, Datum.ROI, Datum.ROI, lambda dx, dy: ROIBinop(dx, dy, fn))
 
-    regROIBinop(Operator.ADD, lambda x, y: x + y)
-    regROIBinop(Operator.SUB, lambda x, y: x - y)
-    regROIBinop(Operator.MUL, lambda x, y: x * y)
-    regROIBinop(Operator.DIV, lambda x, y: x / y)
-    regROIBinop(Operator.POW, lambda x, y: x ** y)
+    regROIBinopSemantics(Operator.ADD, lambda x, y: x + y)
+    regROIBinopSemantics(Operator.SUB, lambda x, y: x - y)
+    regROIBinopSemantics(Operator.MUL, lambda x, y: x * y)
+    regROIBinopSemantics(Operator.DIV, lambda x, y: x / y)
+    regROIBinopSemantics(Operator.POW, lambda x, y: x ** y)
 
-    registerBinop(Operator.DOLLAR, Datum.IMG, Datum.NUMBER, extractChannelByName)
-    registerBinop(Operator.DOLLAR, Datum.IMG, Datum.IDENT, extractChannelByName)
+    registerBinopSemantics(Operator.DOLLAR, Datum.IMG, Datum.NUMBER, extractChannelByName)
+    registerBinopSemantics(Operator.DOLLAR, Datum.IMG, Datum.IDENT, extractChannelByName)
 
 
 initOps()

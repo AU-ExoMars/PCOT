@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from pcot import dq
-from pcot.utils.ops import OpData
+from pcot.value import OpData
 
 
 def genArray(n, u, d=dq.NONE):
@@ -115,11 +115,6 @@ def test_division():
     core(genArray, genArray, genArray)
     core(OpData, genArray, genArray)
     core(genArray, OpData, genArray)
-
-
-def test_foo():
-    a = OpData(-2, 0) ** OpData(0.5, 0)
-    print(a)
 
 
 def test_power():

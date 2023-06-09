@@ -11,8 +11,8 @@ from typing import Any, Optional
 
 from pcot import rois
 from pcot.imagecube import ImageCube
-from pcot.number import Number
 from pcot.sources import SourcesObtainable, nullSource, SourceSet
+from pcot.value import OpData
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ class UnknownDatumTypeException(DatumException):
 class BadDatumCtorCallException(DatumException):
     """Thrown when we try to init a datum with the wrong arguments."""
     def __init__(self):
-        super().__init__("bad call to datum ctor: should be Datum(Type,Value)")
+        super().__init__("bad call to datum ctor: should be Datum(type,val)")
 
 
 class DatumWithNoSourcesException(DatumException):
@@ -157,7 +157,7 @@ class RoiType(Type):
 
 
 class NumberType(Type):
-    """Number datums contain a Number object."""
+    """Number datums contain a scalar OpData object."""
     def __init__(self):
         super().__init__('number')
 
@@ -170,7 +170,7 @@ class NumberType(Type):
 
     def deserialise(self, d, document):
         n, s = d
-        n = Number.deserialise(n)
+        n = OpData.deserialise(n)
         s = SourceSet.deserialise(s, document)
         return Datum(self, n, s)
 

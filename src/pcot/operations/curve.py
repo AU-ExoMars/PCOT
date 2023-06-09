@@ -6,8 +6,8 @@ import cv2 as cv
 from pcot.imagecube import SubImageCubeROI
 
 # number of points in lookup table
-from pcot.number import Number
 from pcot.utils import image
+from pcot.value import OpData
 
 NUMPOINTS = 1000
 # x-coords of table
@@ -27,10 +27,10 @@ def doCurve(img, mask, lut):
     return cp
 
 
-def curve(subimage: SubImageCubeROI, mul: Union[Number, float], add: Union[Number, float]) -> np.array:
+def curve(subimage: SubImageCubeROI, mul: Union[OpData, float], add: Union[OpData, float]) -> np.array:
     # TODO UNCERTAINTY
-    mul = mul.n if isinstance(mul, Number) else mul
-    add = add.n if isinstance(add, Number) else add
+    mul = mul.n if isinstance(mul, OpData) else mul
+    add = add.n if isinstance(add, OpData) else add
     lut = genLut(mul, add)
 
     if subimage.channels == 1:

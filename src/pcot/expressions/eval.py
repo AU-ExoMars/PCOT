@@ -13,7 +13,7 @@ from .parse import Parser, execute
 
 
 @parserhook
-def registerBuiltinOperators(p):
+def registerBuiltinOperatorSyntax(p):
     p.registerBinop('+', 10, lambda a, b: binop(Operator.ADD, a, b))
     p.registerBinop('-', 10, lambda a, b: binop(Operator.SUB, a, b))
     p.registerBinop('/', 20, lambda a, b: binop(Operator.DIV, a, b))

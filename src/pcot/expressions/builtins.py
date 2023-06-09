@@ -11,9 +11,10 @@ from pcot.config import parserhook
 from pcot.datum import Datum
 from pcot.expressions import Parameter
 from pcot.imagecube import ImageCube
-from pcot.number import Number, add_sub_unc, add_sub_unc_list
 from pcot.sources import SourceSet, MultiBandSource, nullSource
 from pcot.utils import image
+from pcot.utils.ops import combineImageWithNumberSources
+from pcot.value import OpData, add_sub_unc_list
 from pcot.xform import XFormException
 import cv2 as cv
 
@@ -173,9 +174,41 @@ def funcTestImg(args, _):
 
 
 def funcV(args, _):
-    v = args[0].get(Datum.NUMBER).n
-    u = args[1].get(Datum.NUMBER).n
-    return Datum(Datum.NUMBER, Number(v, u), nullSource)
+    # create a new nominal,uncertainty value - image or number - from the nominal values of two inputs.
+    # So if you pass:
+    #  image, image - one image with uncertainty taken from the nominal values of second image
+    #  image, number - image with constant uncertainty
+    #  number, image - constant grey image with uncertainty taken from the nominal values of second image (a bit weird)
+    #  number, number - most common case, a number with uncertainty
+
+    t0 = args[0].tp
+    t1 = args[1].tp
+    v0 = args[0].get(t0)
+    v1 = args[1].get(t1)
+    s0 = args[0].sources
+    s1 = args[1].sources
+
+    if t0 == Datum.NUMBER:
+        if t1 == Datum.NUMBER:
+            # number, number
+            return Datum(Datum.NUMBER, OpData(v0.n, v1.n), SourceSet([s0, s1]))
+        else:
+            # here, we're creating a number,uncimage pair
+            i = np.full(v1.img.shape, v0.n, dtype=np.float32)
+            s = combineImageWithNumberSources(v1, s0)
+            img = ImageCube(i, uncertainty=v1.img, dq=v1.dq, sources=s)
+            return Datum(Datum.IMG, img)
+    else:
+        if t1 == Datum.NUMBER:
+            # image, number
+            i = np.full(v0.img.shape, v1.n, dtype=np.float32)
+            s = combineImageWithNumberSources(v0, s1)
+            img = ImageCube(v0.img, uncertainty=i, dq=v0.dq, sources=s)
+            return Datum(Datum.IMG, img)
+        else:
+            img = ImageCube(v0.img, uncertainty=v1.img, dq=v0.dq | v1.dq,
+                            sources=MultiBandSource.createBandwiseUnion([s0, s1]))
+            return Datum(Datum.IMG, img)
 
 
 def funcNominal(args: List[Datum], _):
@@ -184,9 +217,9 @@ def funcNominal(args: List[Datum], _):
         if img is not None:
             img = ImageCube(img.img, None, img.sources, rois=img.rois)
         return Datum(Datum.IMG, img)
-    else:   # type is constrained to either image or number, so it's fine to do this
+    else:  # type is constrained to either image or number, so it's fine to do this
         n = args[0].get(Datum.NUMBER)
-        return Datum(Datum.NUMBER, Number(n.n, 0), sources=args[0].sources)
+        return Datum(Datum.NUMBER, OpData(n.n, 0), sources=args[0].sources)
 
 
 def funcUncertainty(args: List[Datum], _):
@@ -195,9 +228,9 @@ def funcUncertainty(args: List[Datum], _):
         if img is not None:
             img = ImageCube(img.uncertainty, None, img.sources, rois=img.rois)
         return Datum(Datum.IMG, img)
-    else:   # type is constrained to either image or number, so it's fine to do this
+    else:  # type is constrained to either image or number, so it's fine to do this
         n = args[0].get(Datum.NUMBER)
-        return Datum(Datum.NUMBER, Number(n.u, 0), sources=args[0].sources)
+        return Datum(Datum.NUMBER, OpData(n.u, 0), sources=args[0].sources)
 
 
 def funcWrapper(fn, d, *args):
@@ -220,7 +253,7 @@ def funcWrapper(fn, d, *args):
             return Datum(Datum.IMG, img)
         elif isinstance(newdata, SupportsFloat):
             # 'img' is SourcesObtainable. Note that we set zero uncertainty here! TODO UNCERTAINTY!
-            val = Number(float(newdata), 0.0)
+            val = OpData(float(newdata), 0.0)
             return Datum(Datum.NUMBER, val, img)
         else:
             raise XFormException('EXPR', 'internal: fn returns bad type in funcWrapper')
@@ -228,7 +261,7 @@ def funcWrapper(fn, d, *args):
         # get sources for all arguments
         ss = [a.getSources() for a in args]
         ss.append(d.getSources())
-        val = Number(fn(d.val.n, *args), 0.0)  # TODO UNCERTAINTY!
+        val = OpData(fn(d.val.n, *args), 0.0)  # TODO UNCERTAINTY!
         return Datum(Datum.NUMBER, val, SourceSet(ss))
 
 
@@ -293,7 +326,7 @@ def statsWrapper(fn, fnu, d: List[Optional[Datum]], *args):
     # TODO UNCERTAINTY! It's ignored by this func TODOUNCERTAINTY
     val = fn(intermediate, *args)
     u = fnu(intermediate, uncintermediate, *args)
-    return Datum(Datum.NUMBER, Number(val, u), SourceSet(sources))
+    return Datum(Datum.NUMBER, OpData(val, u), SourceSet(sources))
 
 
 @parserhook
@@ -413,10 +446,10 @@ def registerBuiltinFunctions(p):
 
     p.registerFunc(
         "v",
-        "create a scalar value with uncertainty",
+        "create a new value with uncertainty by combining two nominal values. These can be either numbers or images.",
         [
-            Parameter("value", "the nominal value", Datum.NUMBER),
-            Parameter("uncertainty", "the uncertainty", Datum.NUMBER)
+            Parameter("value", "the nominal value", (Datum.NUMBER, Datum.IMG)),
+            Parameter("uncertainty", "the uncertainty", (Datum.NUMBER, Datum.IMG))
         ], [],
         funcV
     )
@@ -434,17 +467,17 @@ def registerBuiltinFunctions(p):
 def registerBuiltinProperties(p):
     p.registerProperty('w', Datum.IMG,
                        "give the width of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",
-                       lambda q: Datum(Datum.NUMBER, Number(q.subimage().bb.w, 0.0), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, OpData(q.subimage().bb.w, 0.0), SourceSet(q.getSources())))
     p.registerProperty('w', Datum.ROI, "give the width of an ROI in pixels",
-                       lambda q: Datum(Datum.NUMBER, Number(q.bb().w, 0.0), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, OpData(q.bb().w, 0.0), SourceSet(q.getSources())))
     p.registerProperty('h', Datum.IMG,
                        "give the height of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",
-                       lambda q: Datum(Datum.NUMBER, Number(q.subimage().bb.h, 0.0), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, OpData(q.subimage().bb.h, 0.0), SourceSet(q.getSources())))
     p.registerProperty('h', Datum.ROI, "give the width of an ROI in pixels",
-                       lambda q: Datum(Datum.NUMBER, Number(q.bb().h, 0.0), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, OpData(q.bb().h, 0.0), SourceSet(q.getSources())))
 
     p.registerProperty('n', Datum.IMG,
                        "give the area of an image in pixels (if there are ROIs, give the number of pixels in the ROI union)",
-                       lambda q: Datum(Datum.NUMBER, Number(q.subimage().mask.sum(), 0.0), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, OpData(q.subimage().mask.sum(), 0.0), SourceSet(q.getSources())))
     p.registerProperty('n', Datum.ROI, "give the number of pixels in an ROI",
-                       lambda q: Datum(Datum.NUMBER, Number(q.pixels(), 0.0), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, OpData(q.pixels(), 0.0), SourceSet(q.getSources())))
