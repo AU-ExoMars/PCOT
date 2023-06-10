@@ -170,10 +170,9 @@ def numberImageBinop(dx: Datum, dy: Datum, f: Callable[[Value, Value], Value]) -
     # create a subimage
     subimg = img.subimage()
     # get the uncertainty-aware forms of the operands
-    a = Value(dx.val.n, dx.val.u)
     b = Value(subimg.masked(), subimg.maskedUncertainty())
     # perform the operation
-    r = f(a, b)
+    r = f(dx.val, b)
     # put the result back into the image
     img = img.modifyWithSub(subimg, r.n, uncertainty=r.u, dqOR=r.dq)
     # handle ROIs and sources
@@ -188,8 +187,7 @@ def imageNumberBinop(dx: Datum, dy: Datum, f: Callable[[Value, Value], Value]) -
     img = dx.val  # Datum.IMG
     subimg = img.subimage()
     a = Value(subimg.masked(), subimg.maskedUncertainty())
-    b = Value(dy.val.n, dy.val.u)
-    r = f(a, b)
+    r = f(a, dy.val)
     img = img.modifyWithSub(subimg, r.n, uncertainty=r.u, dqOR=r.dq)
     img.rois = dx.val.rois.copy()
     img.sources = combineImageWithNumberSources(img, dy.getSources())
