@@ -421,7 +421,7 @@ def registerBuiltinFunctions(p):
     p.registerFunc(
         "uncertainty",
         "If input is an image, create an image made up of uncertainty data for all channels; if input is numeric,"
-        " output the uncertainty",
+        " output the uncertainty. Ignores ROIs.",
         [Parameter("image", "the image to process", (Datum.IMG, Datum.NUMBER))],
         [],
         funcUncertainty
@@ -430,7 +430,7 @@ def registerBuiltinFunctions(p):
     p.registerFunc(
         "nominal",
         "If input is an image, create an image made up of nominal data for all channels; if input is numeric,"
-        " output the uncertainty. In other words, just remove the uncertainty.",
+        " output the uncertainty. In other words, just remove the uncertainty. Ignores ROIs.",
         [Parameter("image", "the image to process", (Datum.IMG, Datum.NUMBER))],
         [],
         funcNominal
@@ -446,7 +446,8 @@ def registerBuiltinFunctions(p):
 
     p.registerFunc(
         "v",
-        "create a new value with uncertainty by combining two nominal values. These can be either numbers or images.",
+        "create a new value with uncertainty by combining two nominal values. These can be either numbers or images. "
+        "Ignores and discards ROIs.",
         [
             Parameter("value", "the nominal value", (Datum.NUMBER, Datum.IMG)),
             Parameter("uncertainty", "the uncertainty", (Datum.NUMBER, Datum.IMG))

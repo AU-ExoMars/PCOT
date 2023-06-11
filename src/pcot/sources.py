@@ -65,8 +65,8 @@ class Source(SourcesObtainable):
 
 class _NullSource(Source):
     """This is for "sources" where there isn't a source, the data has come from inside the program.
-    Typically this will get filtered out when we print the sources. Probably best to use nullSource and nullSourceSet
-    objects declared at the end of this module"""
+    Typically this will get filtered out when we print the sources or perhaps earlier.
+    Probably best to use nullSource and nullSourceSet objects declared at the end of this module"""
 
     def brief(self, captionType=DocumentSettings.CAP_DEFAULT) -> Optional[str]:
         """return a brief string for use in captions - this will just return None, which will
@@ -221,10 +221,16 @@ class SourceSet(SourcesObtainable):
             raise Exception(f"Bad argument to source set constructor: {type(ss).__name__}")
 
         self.sourceSet = result
+        self.stripNullSources()
+
+    def stripNullSources(self):
+        """Removes null sources from the set"""
+        self.sourceSet = {x for x in self.sourceSet if x is not None and not isinstance(x,_NullSource)}
 
     def add(self, other: 'SourceSet'):
         """add a source set to this one (i.e. this source set will become a union of irself and the other)"""
         self.sourceSet |= other.sourceSet
+        self.stripNullSources()
 
     def copy(self):
         return SourceSet([x.copy() for x in self.sourceSet])

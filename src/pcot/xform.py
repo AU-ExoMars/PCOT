@@ -22,7 +22,7 @@ import pcot.macros
 import pcot.ui as ui
 from pcot import datum
 from pcot.datum import Datum, Type
-from pcot.sources import nullSourceSet, SourceSet
+from pcot.sources import nullSourceSet, SourceSet, MultiBandSource
 from pcot.ui import graphscene
 from pcot.ui.canvas import Canvas
 from pcot.ui.tabs import Tab
@@ -1383,8 +1383,12 @@ class XFormROIType(XFormType):
             outImgDatum = Datum(Datum.IMG, None, nullSourceSet)
             outROIDatum = Datum(Datum.ROI, None, nullSourceSet)
         else:
-            # sources are a combo of the image sources and that of the ROI
-            sources = SourceSet([img, node.roi.sources])
+            # new image's sources are a combo of the image sources and that of the ROI
+            # So first we build a list of copies of the ROI source set, 1 for each channel. We turn that into
+            # a multibandsource.
+            tmp = MultiBandSource([node.roi.sources for _ in img.sources.sourceSets])
+            # then we create a bandwise union between this and the image's source sets.
+            sources = MultiBandSource.createBandwiseUnion([tmp, img.sources])
             # TODO ROI Source combination with objects not dealt with - need to be combined into images
             # (Yeah, I have no idea what this comment means either).
             self.setProps(node, img)
