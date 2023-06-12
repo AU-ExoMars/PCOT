@@ -221,7 +221,7 @@ def test_pixel_indexing_rgb():
     x = inpnode.getOutput(0, Datum.IMG)
     assert isinstance(x, ImageCube)
     p = x[0, 0]
-    assert isinstance(p, list)
+    assert isinstance(p, tuple)
     assert len(p) == 3
     r, g, b = p
     assert r.n == 4
@@ -282,7 +282,8 @@ def test_greyscaling():
 
 
 def test_scalar_divide_by_zero_image():
-    """Should also produce an error"""
+    """Dividing by zero. We're trying to reciprocate an image where two of the bands are zero, which should
+    lead to errors in those bands."""
     pcot.setup()
     doc = Document()
     greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # must have zeroes in it!
@@ -292,12 +293,15 @@ def test_scalar_divide_by_zero_image():
     expr.expr = "1/a"
     expr.connect(0, green, 0)
     doc.changed()
-    d = expr.getOutputDatum(0)
+    d = expr.getOutput(0, Datum.IMG)
 
-    pytest.fail("Error pixels not implemented")
+    p = d[0, 0]
 
-    assert d is None
-    assert expr.error.message == "float division by zero"
+    assert d[0, 0] == (
+        Value(0.0, 0.0, dq.NOUNCERTAINTY | dq.DIVZERO),
+        Value(2.0, 0.0, dq.NOUNCERTAINTY),
+        Value(0.0, 0.0, dq.NOUNCERTAINTY | dq.DIVZERO)
+    )
 
 
 def test_all_expr_inputs():

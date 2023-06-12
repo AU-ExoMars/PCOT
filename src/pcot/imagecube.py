@@ -851,7 +851,7 @@ class ImageCube(SourcesObtainable):
         p.setFont(oldFont)
 
     def __getitem__(self, pixTuple):
-        """get a Value (or list of Values for a multiband image) containing a pixel. Takes x,y."""
+        """get a Value (or tuple of Values for a multiband image) containing a pixel. Takes x,y."""
         x, y = pixTuple
         ns = self.img[x, y]
         us = self.uncertainty[x, y]
@@ -860,4 +860,4 @@ class ImageCube(SourcesObtainable):
         if self.channels == 1:
             return Value(ns, us, ds)
         else:
-            return [Value(n, u, d) for (n, u, d) in zip(ns, us, ds)]
+            return tuple([Value(n, u, d) for (n, u, d) in zip(ns, us, ds)])
