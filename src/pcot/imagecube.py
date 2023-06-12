@@ -22,6 +22,7 @@ from pcot.utils.annotations import annotFont
 from pcot.utils import image
 from pcot.utils.geom import Rect
 import pcot.dq
+from pcot.value import Value
 
 logger = logging.getLogger(__name__)
 
@@ -848,3 +849,15 @@ class ImageCube(SourcesObtainable):
                 ann.annotate(p, self)
 
         p.setFont(oldFont)
+
+    def __getitem__(self, pixTuple):
+        """get a Value (or list of Values for a multiband image) containing a pixel. Takes x,y."""
+        x, y = pixTuple
+        ns = self.img[x, y]
+        us = self.uncertainty[x, y]
+        ds = self.dq[x, y]
+
+        if self.channels == 1:
+            return Value(ns, us, ds)
+        else:
+            return [Value(n, u, d) for (n, u, d) in zip(ns, us, ds)]

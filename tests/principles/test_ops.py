@@ -11,6 +11,7 @@ from pcot.datum import Datum
 from pcot.document import Document
 import numpy as np
 
+from pcot.imagecube import ImageCube
 from pcot.value import Value
 
 
@@ -62,14 +63,15 @@ def test_image_scalar_ops():
         assert img is not None
 
         for x, y in ((0, 0), (49, 0), (49, 49), (0, 49)):
-            assert np.array_equal(img.img[0, 0], expected), f"{e}, got {img.img[0][0]} at {x},{y}. Expected {expected}, a=(0, 0.5, 0)"
+            assert np.array_equal(img.img[0, 0],
+                                  expected), f"{e}, got {img.img[0][0]} at {x},{y}. Expected {expected}, a=(0, 0.5, 0)"
 
     runop("a^(2+1)", (0, 0.125, 0))
     runop("a+4", (4, 4.5, 4))
     runop("4+a", (4, 4.5, 4))
     runop("a-0.5", (-0.5, 0, -0.5))
     runop("(a+2)/2", (1, 1.25, 1))
-    runop("(a+2)/0", (0,0,0))       # division by zero yields zero, but errors should be set. Tested elsewhere.
+    runop("(a+2)/0", (0, 0, 0))  # division by zero yields zero, but errors should be set. Tested elsewhere.
     runop("a*2+1", (1, 2, 1))
     runop("a*(2+1)", (0, 1.5, 0))
 
@@ -104,11 +106,13 @@ def test_image_image_ops():
     runop("a-b", (-2, 0.5, 0))
     runop("a*b", (0, 0, 0))
 
+
 def test_image_stats():
     """Test functions that take an entire image and produce a scalar"""
 
     pcot.setup()
     doc = Document()
+
     def runop(img, e, expectedn, expectedu):
         assert doc.setInputDirect(0, img) is None
         green = doc.graph.create("input 0", displayName="GREEN input")
@@ -121,7 +125,6 @@ def test_image_stats():
         out = expr.getOutput(0, Datum.NUMBER)
         assert isclose(out.n, expectedn, abs_tol=1e-6)
         assert isclose(out.u, expectedu, abs_tol=1e-6)
-
 
     # Currently the stats functions don't take account of any uncertainty in the pixels
     # mean of a constant (0, 0.3, 0) image is 0.1. Why? Because "mean" doesn't work on
@@ -160,12 +163,12 @@ def test_image_stats():
     runop(img, "sd(a)", 0.5, 0.0)
 
     # Now make an SD of two colours the same way. Then set the two pixels
-    # of the top half to be "BAD".
+    # of the top half to be "BAD". These bad pixels should be ignored
     img = gen_two_halves(2, 2, (1,), (4.0,), (2,), (5.0,), doc=doc, inpidx=0)
     runop(img, "mean(a)", 1.5, 0.5)  # "smoke test" first
     img = gen_two_halves(2, 2, (1,), (4.0,), (2,), (5.0,), doc=doc, inpidx=0)
     img.dq[0] = (dq.NODATA, dq.NODATA)
-    runop(img, "mean(a)", 2.0, 0.0)
+    runop(img, "mean(a)", 2.0, 0.0)  # bad pixels should be ignored
 
     # Sum of image of two colours. This is an addition, so we output the root of
     # the sum of the squares of the incoming SDs.
@@ -201,12 +204,81 @@ def test_image_division_by_zero():
     expr.expr = "a/0"
     expr.connect(0, green, 0)
     doc.changed()
-    d = expr.getOutputDatum(0)
+    d = expr.getOutput(0, Datum.IMG)
 
-    pytest.fail("Error pixels not implemented")
 
-    assert d is None
-    assert expr.error.message == "float division by zero"
+def test_pixel_indexing_rgb():
+    """Check that we can index into a multichannel ImageCube"""
+    pcot.setup()
+    doc = Document()
+    inputimg = genrgb(50, 50,
+                      4, 5, 6,  # rgb
+                      u=(7, 8, 9),
+                      doc=doc, inpidx=0)  # must have zeroes in it!
+    assert doc.setInputDirect(0, inputimg) is None
+    inpnode = doc.graph.create("input 0")
+    doc.changed()
+    x = inpnode.getOutput(0, Datum.IMG)
+    assert isinstance(x, ImageCube)
+    p = x[0, 0]
+    assert isinstance(p, list)
+    assert len(p) == 3
+    r, g, b = p
+    assert r.n == 4
+    assert r.u == 7
+    assert r.dq == dq.NONE
+
+    assert g.n == 5
+    assert g.u == 8
+    assert g.dq == dq.NONE
+
+    assert b.n == 6
+    assert b.u == 9
+    assert b.dq == dq.NONE
+
+
+def test_pixel_indexing_mono():
+    """Check that we can index into a 1-channel ImageCube."""
+    pcot.setup()
+    doc = Document()
+    inputimg = genrgb(50, 50,
+                      4, 5, 6,  # rgb
+                      u=(7, 8, 9),
+                      doc=doc, inpidx=0)  # must have zeroes in it!
+    assert doc.setInputDirect(0, inputimg) is None
+    inpnode = doc.graph.create("input 0")
+    expr = doc.graph.create("expr")
+    expr.expr = "grey(a)"
+    expr.connect(0, inpnode, 0)
+    doc.changed()
+    x = expr.getOutput(0, Datum.IMG)
+    assert isinstance(x, ImageCube)
+    p = x[0, 0]
+    assert isinstance(p, Value)
+    assert p.n == 5
+    assert p.u == pytest.approx(8.041558)
+    assert p.dq == dq.NONE
+
+
+def test_greyscaling():
+    # now test that greyscaling with human perception of RGB works.
+    pcot.setup()
+    doc = Document()
+    inputimg = genrgb(50, 50,
+                      4, 5, 6,  # rgb
+                      u=(7, 8, 9),
+                      doc=doc, inpidx=0)  # must have zeroes in it!
+    assert doc.setInputDirect(0, inputimg) is None
+    inpnode = doc.graph.create("input 0")
+    expr = doc.graph.create("expr")
+    expr.expr = "grey(a,1)"
+    expr.connect(0, inpnode, 0)
+    doc.changed()
+    x = expr.getOutput(0, Datum.IMG)
+    p = x[0, 0]
+    assert p.n == pytest.approx(4.815)
+    assert p.u == 0
+    assert p.dq == dq.NOUNCERTAINTY
 
 
 def test_scalar_divide_by_zero_image():

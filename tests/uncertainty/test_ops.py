@@ -1,4 +1,6 @@
-"""Test binary and unary operators for uncertainty
+"""Test binary and unary operators for uncertainty at the top (graph) level. Some
+of these tests might seem redundant, because we also do them at the lower (Value) level.
+But it's good to do some basic tests up here too.
 
 There's a very handy calculator with uncertainties at https://uncertaintycalculator.com/
 

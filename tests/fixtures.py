@@ -1,4 +1,5 @@
 from gen_envi import gen_envi
+from pcot import dq
 from pcot.imagecube import ImageCube, ChannelMapping
 
 import os
@@ -72,9 +73,12 @@ def rectimage(globaldatadir):
     return ImageCube.load(str(path), None, None)
 
 
-def genrgb(w, h, r, g, b, doc=None, inpidx=None):
+def genrgb(w, h, r, g, b, u=None, d=dq.NONE, doc=None, inpidx=None):
     """Generate an RGB image. If document and input index are given, we create an InputSource, otherwise
-    it has to be a nullSource."""
+    it has to be a nullSource.
+    If u is provided, it is an (r,g,b) uncertainty tuple.
+
+    """
     if doc is not None and inpidx is not None:
         sources = MultiBandSource([InputSource(doc, inpidx, 'R'),
                                    InputSource(doc, inpidx, 'G'),
@@ -85,7 +89,16 @@ def genrgb(w, h, r, g, b, doc=None, inpidx=None):
     bands = [np.full((h, w), x) for x in (r, g, b)]
     bands = np.dstack(bands).astype(np.float32)
     assert bands.shape == (h, w, 3)
-    imgc = ImageCube(bands, ChannelMapping(), sources, defaultMapping=None)
+
+    if u is not None:
+        u = [np.full((h, w), x) for x in u]
+        u = np.dstack(u).astype(np.float32)
+    else:
+        u = None
+
+    d = np.dstack([np.full((h, w), d) for _ in (r,g,b)]).astype(np.uint16)
+
+    imgc = ImageCube(bands, ChannelMapping(), sources, defaultMapping=None, uncertainty=u, dq=d)
     assert imgc.w == w
     assert imgc.h == h
     return imgc
