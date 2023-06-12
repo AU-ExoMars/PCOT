@@ -87,16 +87,19 @@ def test_greyscale_sources_expr(envi_image_1):
     assert len(img.sources) == 1  # and therefore a single sourceset
 
     sources = img.sources[0]
-    assert len(sources) == 5  # four channels plus the number determining type
+    # four channels - the number determining the type of greyscaling will be
+    # a null source that gets filtered out.
+    assert len(sources) == 4
 
     # separate into sources which have filters (those from images) and others
     filts = [x for x in sources if x.getFilter() is not None]
     nonfilts = [x for x in sources if x.getFilter() is None]
-    assert len(nonfilts) == 1
     assert len(filts) == 4
 
-    # make sure that the number source is the null source
-    assert nonfilts[0] == nullSource
+    assert len(nonfilts) == 0   # might seem an odd test, is a historical artifact (null sources now filtered out)
+    # make sure that the number source is the null source (commented out, see previous line)
+    # assert nonfilts[0] == nullSource
+
     # and get the filter freqs to make sure they are correct
     freqs = set(x.getFilter().cwl for x in sources if x.getFilter() is not None)
     assert {800, 640, 550, 440} == freqs
@@ -275,12 +278,13 @@ def test_binop_image_and_number_literal(envi_image_1, envi_image_2):
     assert len(img.sources) == 4  # 4 bands in the output
 
     for freq, channelSourceSet in zip((800, 640, 550, 440), img.sources):
-        # each channel's sources should be the relevant channel of A and the null source
-        assert len(channelSourceSet) == 2
+        # each channel's sources should be the relevant channel of A and the null source,
+        # but the null source gets filtered out
+        assert len(channelSourceSet) == 1
         fromImage = [x for x in channelSourceSet if isinstance(x, InputSource)]
         fromConst = [x for x in channelSourceSet if x == nullSource]
         assert len(fromImage) == 1
-        assert len(fromConst) == 1
+        assert len(fromConst) == 0
         assert fromImage[0].getFilter().cwl == freq
 
 

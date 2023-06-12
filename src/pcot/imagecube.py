@@ -358,7 +358,13 @@ class ImageCube(SourcesObtainable):
 
         # an image may have a list of source data attached to it indexed by channel. Or if none is
         # provided, an empty one.
-        self.sources = sources if sources else MultiBandSource.createEmptySourceSets(self.channels)
+        if sources is not None:
+            if not isinstance(sources, MultiBandSource):
+                raise Exception("Image sources must be MultiBandSource")
+            self.sources = sources
+        else:
+            self.sources = MultiBandSource.createEmptySourceSets(self.channels)
+            
         self.defaultMapping = defaultMapping
 
         # get the mapping sorted, which may be None (in which case rgb() might not work).

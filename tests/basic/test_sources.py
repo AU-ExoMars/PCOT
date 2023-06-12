@@ -135,7 +135,7 @@ def test_sourcesetlong():
 
 
 def test_sourcesetstr():
-    assert str(sourceset1withnulls) == '(none)&one&three&two'
+    assert str(sourceset1withnulls) == 'one&three&two'
 
 
 def test_sourcesetmatches():
