@@ -24,7 +24,7 @@ def dqset(args, optargs):
     img = inimg.modifyWithSub(s, None, dqOR=int(bits.n))
 
     img.rois = inimg.rois.copy()
-    img.sources = combineImageWithNumberSources(inimg, args[0].getSources())
+    img.sources = combineImageWithNumberSources(inimg, args[1].getSources())
     return Datum(Datum.IMG, img)
 
 

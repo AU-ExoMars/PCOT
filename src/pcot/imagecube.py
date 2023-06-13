@@ -14,6 +14,7 @@ import numpy as np
 from PySide2.QtGui import QPainter
 
 import pcot
+from pcot import dq
 from pcot.documentsettings import DocumentSettings
 from pcot.rois import ROI, ROIPainted, ROIBoundsException
 from pcot.sources import MultiBandSource, SourcesObtainable
@@ -863,3 +864,11 @@ class ImageCube(SourcesObtainable):
             return Value(ns, us, ds)
         else:
             return tuple([Value(n, u, d) for (n, u, d) in zip(ns, us, ds)])
+
+    def countBadPixels(self):
+        if self.channels == 1:
+            d = self.dq
+        else:
+            d = np.bitwise_or.reduce(self.dq, axis=2)
+        return np.count_nonzero(d & dq.BAD)
+

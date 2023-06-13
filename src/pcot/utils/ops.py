@@ -95,6 +95,7 @@ def combineImageWithNumberSources(img: ImageCube, other: SourceSet) -> MultiBand
     """This is used to generate the source sets when an image is combined with something else,
     e.g. an image is multiplied by a number. In this case, each band of the image is combined with
     the other sources."""
+
     return MultiBandSource([SourceSet(x.sourceSet.union(other.sourceSet)) for x in img.sources.sourceSets])
 
 
