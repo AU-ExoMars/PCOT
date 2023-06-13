@@ -31,25 +31,30 @@ class CanvasDQSpec:
     def getDataItems():
         """Return a list of (name,int) tuples for the data fields"""
         # see __init__ for why we force these to be int
-        x = [(f"BIT:{name}", int(val)) for name, val in dq.DQs.items()]  # must all be > 0
-        x.insert(0, ('BAD DQ', int(dq.BAD)))  # this is also >0 and forms a mask of all the bad bits
-        x.append(('NONE', DTypeNone))
-        x.append(('UNC', DTypeUnc))
-        x.append(('UNC>THR', DTypeUncGtThresh))
+        x = [
+            ('NONE', DTypeNone),     # zero
+            ('UNC', DTypeUnc),      # -ve int
+            ('BAD DQ', int(dq.BAD))  # this is also >0 and forms a mask of all the bad bits
+            ]
+        # add the bits, these are +ve ints
+        x += [(f"BIT:{name}", int(val)) for name, val in dq.DQs.items()]  # must all be > 0
+
+        x.append(('UNC>THR', DTypeUncGtThresh))     # -ve ints
         x.append(('UNC<THR', DTypeUncLtThresh))
+
         return x
 
     def isActive(self):
         """Is this DQ spec actually drawing anything?"""
         return self.data != DTypeNone
 
-    def __init__(self, d=None):
+    def __init__(self, d=None, showBad=False):
         if d is None:
             d = {}
         self.stype = d.get('stype', STypeMaxAll)
         self.channel = d.get('channel', 0)
-        # all dq bits are uint16, which isn't serialisable, or int. So we just force to int.
-        self.data = d.get('data', int(dq.BAD))
+        # all dq bits are uint16, which isn't serialisable, or int. So we just force to int. showBad sets this.
+        self.data = d.get('data', int(dq.BAD) if showBad else dq.NONE)
         self.col = d.get('col', 'mag')
         self.trans = d.get('trans', 0.5)  # transparency
         self.contrast = d.get('contrast', 0.5)   # 'contrast' for continuous values

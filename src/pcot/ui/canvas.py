@@ -16,7 +16,7 @@ from PySide2.QtWidgets import QCheckBox, QMessageBox
 
 import pcot
 import pcot.ui as ui
-from pcot import imageexport, canvasnormalise
+from pcot import imageexport, canvasnormalise, dq
 from pcot.datum import Datum
 from pcot.ui import canvasdq
 from pcot.ui.canvasdq import CanvasDQSpec
@@ -38,17 +38,17 @@ NUMDQS = 3
 class PersistBlock:
     """This is the block owned by a node which has a canvas, to store data which is persisted
     for the canvas only."""
-    showROIs: bool              # should we show all ROIs and not just the ones defined in this node?
-    normToCropped: bool         # boolean, should we normalise to only the visible part of the image?
-    normMode: int               # normalisation mode e.g. NormToRGB, see canvasnormalise.py
-    dqs: List[CanvasDQSpec]     # settings for each DQ layer
+    showROIs: bool  # should we show all ROIs and not just the ones defined in this node?
+    normToCropped: bool  # boolean, should we normalise to only the visible part of the image?
+    normMode: int  # normalisation mode e.g. NormToRGB, see canvasnormalise.py
+    dqs: List[CanvasDQSpec]  # settings for each DQ layer
 
     def __init__(self, d=None):
         """sets default values, or perform the inverse of serialise(), turning the serialisable form into one
         of these objects"""
         if d is None:
             self.showROIs = True
-            self.dqs = [CanvasDQSpec() for _ in range(NUMDQS)]  # 3 of these set to defaults
+            self.dqs = [CanvasDQSpec(showBad=(x == 0)) for x in range(NUMDQS)]  # 3 of these set to defaults
             self.normToCropped = False
             self.normMode = canvasnormalise.NormToImg
         else:
@@ -284,7 +284,7 @@ class InnerCanvas(QtWidgets.QWidget):
             # This is where we normalise according to the current normalisation
             # scheme. We need to pass in the crop rectangle for finding the normalisation range in NormToImg mode.
 
-#            print(f"Norm Mode: {self.canv.canvaspersist.normMode} / {self.canv.canvaspersist.normToCropped}")
+            #            print(f"Norm Mode: {self.canv.canvaspersist.normMode} / {self.canv.canvaspersist.normToCropped}")
             rgbcropped = canvasnormalise.canvasNormalise(self.imgCube.img,
                                                          rgbcropped,
                                                          self.rgb,
@@ -1303,9 +1303,9 @@ class Canvas(QtWidgets.QWidget):
             return
         if self.previmg.channels < 2:
             if 0 <= x < self.previmg.w and 0 <= y < self.previmg.h:
-                val = self.previmg.img[y,x]
-                unc = self.previmg.uncertainty[y,x]
-                dq = pcot.dq.names(self.previmg.dq[y,x])
+                val = self.previmg.img[y, x]
+                unc = self.previmg.uncertainty[y, x]
+                dq = pcot.dq.names(self.previmg.dq[y, x])
                 self.spectrumWidget.setData(f"Single channel - {val:.3} +/- {unc:.3}. DQ:{dq}")
             return
 
@@ -1314,8 +1314,8 @@ class Canvas(QtWidgets.QWidget):
         if 0 <= x < self.previmg.w and 0 <= y < self.previmg.h and self.previmg.channels > 1:
             img = self.previmg
             pixel = img.img[y, x, :]  # get the pixel data
-            pixuncs = img.uncertainty[y,x,:]
-            pixdqs = img.dq[y,x,:]
+            pixuncs = img.uncertainty[y, x, :]
+            pixdqs = img.dq[y, x, :]
 
             # get the channels which have a single wavelength
             # what do we do if they don't? I don't think you can display a spectrum!
