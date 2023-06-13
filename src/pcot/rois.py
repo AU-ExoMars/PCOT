@@ -525,12 +525,12 @@ class ROIPainted(ROI):
     def serialise(self):
         d = super().serialise()
         d['bbrect'] = self.bbrect.astuple() if self.bbrect else None
-        return serialiseFields(self, ['map'], d=d)
+        return serialiseFields(self, [('map', None)], d=d)
 
     def deserialise(self, d):
         super().deserialise(d)
         self.bbrect = Rect.fromtuple(d['bbrect'])
-        deserialiseFields(self, d, ['map'])
+        deserialiseFields(self, d, [('map', None)])
 
     def mask(self):
         """return a boolean array, same size as BB"""
@@ -643,7 +643,9 @@ class ROIPoly(ROI):
 
     def serialise(self):
         d = super().serialise()
-        return serialiseFields(self, ['points'], d=d)
+        return serialiseFields(self,
+                               [('points', 0)],
+                               d=d)
 
     def deserialise(self, d):
         super().deserialise(d)

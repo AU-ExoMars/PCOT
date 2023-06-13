@@ -38,10 +38,10 @@ NUMDQS = 3
 class PersistBlock:
     """This is the block owned by a node which has a canvas, to store data which is persisted
     for the canvas only."""
-    showROIs: bool              # should we show all ROIs and not just the ones defined in this node?
-    normToCropped: bool         # boolean, should we normalise to only the visible part of the image?
-    normMode: int               # normalisation mode e.g. NormToRGB, see canvasnormalise.py
-    dqs: List[CanvasDQSpec]     # settings for each DQ layer
+    showROIs: bool  # should we show all ROIs and not just the ones defined in this node?
+    normToCropped: bool  # boolean, should we normalise to only the visible part of the image?
+    normMode: int  # normalisation mode e.g. NormToRGB, see canvasnormalise.py
+    dqs: List[CanvasDQSpec]  # settings for each DQ layer
 
     def __init__(self, d=None):
         """sets default values, or perform the inverse of serialise(), turning the serialisable form into one
@@ -254,7 +254,7 @@ class InnerCanvas(QtWidgets.QWidget):
         widgw = self.size().width()  # widget dimensions
         widgh = self.size().height()
         # here self.img is a numpy image
-        tt = Timer("paint")
+        tt = Timer("paint", False)
         if self.rgb is not None:
             imgh, imgw = self.rgb.shape[0], self.rgb.shape[1]
 
@@ -284,7 +284,7 @@ class InnerCanvas(QtWidgets.QWidget):
             # This is where we normalise according to the current normalisation
             # scheme. We need to pass in the crop rectangle for finding the normalisation range in NormToImg mode.
 
-#            print(f"Norm Mode: {self.canv.canvaspersist.normMode} / {self.canv.canvaspersist.normToCropped}")
+            #            print(f"Norm Mode: {self.canv.canvaspersist.normMode} / {self.canv.canvaspersist.normToCropped}")
             rgbcropped = canvasnormalise.canvasNormalise(self.imgCube.img,
                                                          rgbcropped,
                                                          self.rgb,
@@ -354,14 +354,13 @@ class InnerCanvas(QtWidgets.QWidget):
 
         We return the modified image and any extra text that gets tacked onto the descriptor"""
 
-        threshold = 1  # fixed for now!
         txt = ""
         self.redrawOnTick = False
 
         if self.canv.isDQHidden:  # are DQs temporarily disabled?
             return img, txt
 
-        t = Timer("DQ")
+        t = Timer("DQ", False)
         for d in self.canv.canvaspersist.dqs:
             if d.isActive():
                 if d.data == canvasdq.DTypeUnc or d.data == canvasdq.DTypeUncGtThresh or \
@@ -398,12 +397,14 @@ class InnerCanvas(QtWidgets.QWidget):
                     # otherwise it's a DQ bit (or BAD dq bits), so cut that out
                     data = self.imgCube.dq[cuty:cuty + cuth, cutx:cutx + cutw]
                     t.mark("cut")
-                    if d.stype == canvasdq.STypeMaxAll or d.stype == canvasdq.STypeSumAll:
-                        # union all channels
-                        data = np.bitwise_or.reduce(data, axis=2)
-                    else:
-                        # or extract relevant channel
-                        data = data[:, :, d.channel]
+                    if self.imgCube.channels > 1:
+                        # we can leave single channel images alone
+                        if d.stype == canvasdq.STypeMaxAll or d.stype == canvasdq.STypeSumAll:
+                            # union all channels
+                            data = np.bitwise_or.reduce(data, axis=2)
+                        else:
+                            # or extract relevant channel
+                            data = data[:, :, d.channel]
                     t.mark("or/extract")
                     # extract the relevant bit(s). This should work with BAD too, which would
                     # give a selection of bits.
@@ -743,31 +744,37 @@ class Canvas(QtWidgets.QWidget):
 
         layout = QtWidgets.QGridLayout()
         layout.setContentsMargins(3, 10, 3, 10)  # LTRB
+
+        self.badpixels = QtWidgets.QLabel('')
+        self.badpixels.setStyleSheet("QLabel { background-color : white; color : red; }")
+        self.badpixels.setVisible(False)
+        layout.addWidget(self.badpixels, 1, 0, 1, 2)
+
         # self.roiToggle = TextToggleButton("ROIs", "ROIs")
         self.roiToggle = QCheckBox("ROIs")
-        layout.addWidget(self.roiToggle, 1, 0)
+        layout.addWidget(self.roiToggle, 2, 0)
         self.roiToggle.toggled.connect(self.roiToggleChanged)
 
         # self.spectrumToggle = TextToggleButton("Spectrum", "Spectrum")
         self.spectrumToggle = QCheckBox("spectrum")
-        layout.addWidget(self.spectrumToggle, 1, 1)
+        layout.addWidget(self.spectrumToggle, 2, 1)
         self.spectrumToggle.toggled.connect(self.spectrumToggleChanged)
 
         self.saveButton = QtWidgets.QPushButton("Export image")
-        layout.addWidget(self.saveButton, 2, 0, 1, 2)
+        layout.addWidget(self.saveButton, 3, 0, 1, 2)
         self.saveButton.clicked.connect(self.exportButtonClicked)
 
         self.coordsText = QtWidgets.QLabel('')
-        layout.addWidget(self.coordsText, 3, 0, 1, 2)
+        layout.addWidget(self.coordsText, 4, 0, 1, 2)
 
         self.roiText = QtWidgets.QLabel('')
-        layout.addWidget(self.roiText, 4, 0, 1, 2)
+        layout.addWidget(self.roiText, 5, 0, 1, 2)
 
         self.dimensions = QtWidgets.QLabel('')
-        layout.addWidget(self.dimensions, 5, 0, 1, 2)
+        layout.addWidget(self.dimensions, 6, 0, 1, 2)
 
         self.hideDQ = QtWidgets.QCheckBox("hide DQ")
-        layout.addWidget(self.hideDQ, 6, 0, 1, 2)
+        layout.addWidget(self.hideDQ, 7, 0, 1, 2)
         self.hideDQ.toggled.connect(self.hideDQChanged)
 
         self.collapser.addSection("data", layout, isOpen=True)
@@ -1246,7 +1253,17 @@ class Canvas(QtWidgets.QWidget):
             txt = ""
         else:
             txt = f"{self.previmg.w} x {self.previmg.h} x {self.previmg.channels}"
+
         self.dimensions.setText(txt)
+
+        # and bad pixels
+        bp = 0 if self.previmg is None else self.previmg.countBadPixels()
+        if bp > 0:
+            self.badpixels.setVisible(True)
+            self.badpixels.setText(f"{bp} BAD PIXELS")
+        else:
+            self.badpixels.setVisible(False)
+            self.badpixels.setText("")
 
         self.canvas.display(self.previmg, self.isPremapped)
         self.setDQWidgetState()
@@ -1299,14 +1316,14 @@ class Canvas(QtWidgets.QWidget):
     def showSpectrum(self):
         x, y = self.canvas.getImgCoords()
         if self.previmg is None:
-            self.spectrumWidget.setData("No image in canvas")
+            self.spectrumWidget.set(None, "No image in canvas")
             return
         if self.previmg.channels < 2:
             if 0 <= x < self.previmg.w and 0 <= y < self.previmg.h:
-                val = self.previmg.img[y,x]
-                unc = self.previmg.uncertainty[y,x]
-                dq = pcot.dq.names(self.previmg.dq[y,x])
-                self.spectrumWidget.setData(f"Single channel - {val:.3} +/- {unc:.3}. DQ:{dq}")
+                val = self.previmg.img[y, x]
+                unc = self.previmg.uncertainty[y, x]
+                dq = pcot.dq.names(self.previmg.dq[y, x])
+                self.spectrumWidget.set(None, f"Single channel - {val:.3} +/- {unc:.3}. DQ:{dq}")
             return
 
         # within the coords, and multichannel image present
@@ -1314,8 +1331,17 @@ class Canvas(QtWidgets.QWidget):
         if 0 <= x < self.previmg.w and 0 <= y < self.previmg.h and self.previmg.channels > 1:
             img = self.previmg
             pixel = img.img[y, x, :]  # get the pixel data
-            pixuncs = img.uncertainty[y,x,:]
-            pixdqs = img.dq[y,x,:]
+            pixuncs = img.uncertainty[y, x, :]
+            pixdqs = img.dq[y, x, :]
+
+            # build text string
+            text = ""
+            for i, ss in enumerate(img.sources):
+                p = pixel[i]
+                u = pixuncs[i]
+                d = pixdqs[i]
+                text += f"{i}) {ss.brief()} = {p:.3} +/- {u:.3} : {pcot.dq.names(d)}\n"
+
 
             # get the channels which have a single wavelength
             # what do we do if they don't? I don't think you can display a spectrum!
@@ -1336,10 +1362,5 @@ class Canvas(QtWidgets.QWidget):
             else:
                 # but if there aren't enough data with wavelengths,
                 # just show the values as text.
-                data = "Cannot plot: no frequency data in channel sources\n"
-                for i, ss in enumerate(img.sources):
-                    p = pixel[i]
-                    u = pixuncs[i]
-                    d = pixdqs[i]
-                    data += f"{i}) {ss.brief()} = {p:.3} +/- {u:.3} : {pcot.dq.names(d)}\n"
-            self.spectrumWidget.setData(data)
+                text = "Cannot plot: no frequency data in channel sources\n"+text
+            self.spectrumWidget.set(None, text)

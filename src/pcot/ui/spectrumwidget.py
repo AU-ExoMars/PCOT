@@ -9,7 +9,8 @@ from pcot.filters import wav2RGB
 class SpectrumWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)  # Inherit from QWidget
-        self.data = None  # None, or a string, or a list of (x,y) tuples
+        self.data = None  # None, or a list of (x,y) tuples
+        self.text = None
 
     def map(self, x, y, asPoint=True, xoff=0, yoff=0):
         """map 0-1 in both coords to widget space"""
@@ -23,28 +24,29 @@ class SpectrumWidget(QtWidgets.QWidget):
         else:
             return x, y
 
-    def setData(self, d):
-        """Takes iterable of (cwl,val,unc,dq) tuples OR a string"""
-        if isinstance(d, str):
-            self.data = d
-        else:
-            self.data = list(d)
+    def set(self, data=None, text=""):
+        """Takes iterable of (cwl,val,unc,dq) tuples AND a string. If the data is null, nothing is plotted"""
+        self.text = text
+        if data is not None:
+            self.data = list(data)
             if len(self.data) == 0:
-                self.data = "There are no single-wavelength\nchannels in the data"
+                self.data = None
             else:
                 self.data.sort(key=lambda x: x[0])  # sort into wavelength order
+        else:
+            self.data = None
         self.repaint()
 
     def drawText(self, p, s):
-        p.drawText(10, 10, self.width() - 10, self.height() - 10, QtCore.Qt.TextWordWrap, s)
+        p.drawText(50, 10, self.width() - 10, self.height() - 10, QtCore.Qt.TextWordWrap, s)
 
     def paintEvent(self, event: QPaintEvent):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        if isinstance(self.data, str):
-            self.drawText(p, self.data)
-        elif self.data is not None and len(self.data) > 0:
+        if self.text is not None:
+            self.drawText(p, self.text)
+        if self.data is not None and len(self.data) > 0:
             # get x-range so we can check it (and use it later for rendering)
             xs = [x[0] for x in self.data]
             minx, maxx = min(xs), max(xs)

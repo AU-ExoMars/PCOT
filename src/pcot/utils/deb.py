@@ -60,6 +60,9 @@ class Timer:
         self.enabled = enabled
         self.start()
 
+    def __enter__(self):
+        pass
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.mark("EXIT")
 
