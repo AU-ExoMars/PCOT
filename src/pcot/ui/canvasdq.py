@@ -1,6 +1,8 @@
 """The CanvasDQSpec class, which handles how the canvas should render data quality data"""
 
 # Source Types
+import numpy as np
+
 from pcot import dq
 
 # values of stype
@@ -28,7 +30,9 @@ class CanvasDQSpec:
     @staticmethod
     def getDataItems():
         """Return a list of (name,int) tuples for the data fields"""
-        x = [(f"BIT:{name}", val) for name, val in dq.DQs.items()]  # must all be > 0
+        # see __init__ for why we force these to be int
+        x = [(f"BIT:{name}", int(val)) for name, val in dq.DQs.items()]  # must all be > 0
+        x.insert(0, ('BAD DQ', int(dq.BAD)))  # this is also >0 and forms a mask of all the bad bits
         x.append(('NONE', DTypeNone))
         x.append(('UNC', DTypeUnc))
         x.append(('UNC>THR', DTypeUncGtThresh))
@@ -44,7 +48,8 @@ class CanvasDQSpec:
             d = {}
         self.stype = d.get('stype', STypeMaxAll)
         self.channel = d.get('channel', 0)
-        self.data = d.get('data', DTypeNone)
+        # all dq bits are uint16, which isn't serialisable, or int. So we just force to int.
+        self.data = d.get('data', int(dq.BAD))
         self.col = d.get('col', 'mag')
         self.trans = d.get('trans', 0.5)  # transparency
         self.contrast = d.get('contrast', 0.5)   # 'contrast' for continuous values
@@ -55,7 +60,7 @@ class CanvasDQSpec:
         return {
             'stype': self.stype,
             'channel': self.channel,
-            'data': self.data,
+            'data': int(self.data),
             'col': self.col,
             'trans': self.trans,
             'thresh': self.thresh,

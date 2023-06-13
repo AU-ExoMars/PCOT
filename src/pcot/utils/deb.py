@@ -53,19 +53,24 @@ def simpleExceptFormat(e: Exception):
 
 
 class Timer:
-    def __init__(self, desc):
+    def __init__(self, desc, enabled=True):
         self.desc = desc
-
-    def __enter__(self):
-        self.start = time.perf_counter()
+        self.prevTime = None
+        self.startTime = None
+        self.enabled = enabled
+        self.start()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        end = time.perf_counter()
-        print(f"Timer {self.desc}: {end - self.start}")
+        self.mark("EXIT")
 
     def start(self):
-        self.start = time.perf_counter()
+        if self.enabled:
+            print(f"Timer {self.desc} ------------------------------")
+            self.startTime = time.perf_counter()
+            self.prevTime = self.startTime
 
     def mark(self, txt):
-        now = time.perf_counter()
-        print(f"Timer {self.desc}/{txt}: {now - self.start}")
+        if self.enabled:
+            now = time.perf_counter()
+            print(f"Timer {self.desc} {txt}: {now-self.prevTime:.4f}, cum {now - self.startTime:.4f}")
+            self.prevTime = now

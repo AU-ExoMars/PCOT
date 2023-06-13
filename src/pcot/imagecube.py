@@ -610,12 +610,14 @@ class ImageCube(SourcesObtainable):
         subimage's coordinates and masked according to the subimage.
         keppMapping will ensure that the new image has the same mapping as the old.
         If DQ or unc are set, they will replace the old values. If dqOR is set, these
-        values will be OR-ed in (overrides dq)"""
+        values will be OR-ed in (overrides dq). The newimg array can also be None,
+        but it is mandatory."""
 
         i = self.copy(keepMapping)
         x, y, w, h = subimage.bb
         mask = subimage.mask
-        i.img[y:y + h, x:x + w][mask] = newimg[mask]
+        if newimg is not None:
+            i.img[y:y + h, x:x + w][mask] = newimg[mask]
         if uncertainty is not None:
             i.uncertainty[y:y + h, x:x + w][mask] = uncertainty[mask]
         if dqOR is not None:  # dq and dqOR could be scalar

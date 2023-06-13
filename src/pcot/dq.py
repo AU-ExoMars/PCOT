@@ -7,7 +7,7 @@ namedict = dict()  # poweroftwo->name
 
 def reg(name, bit):
     global DQs
-    b = 1 << bit
+    b = np.uint16(1 << bit)
     DQs[name] = b
     namedict[b] = name
     return np.uint16(b)

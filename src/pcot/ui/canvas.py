@@ -254,6 +254,7 @@ class InnerCanvas(QtWidgets.QWidget):
         widgw = self.size().width()  # widget dimensions
         widgh = self.size().height()
         # here self.img is a numpy image
+        tt = Timer("paint")
         if self.rgb is not None:
             imgh, imgw = self.rgb.shape[0], self.rgb.shape[1]
 
@@ -275,6 +276,7 @@ class InnerCanvas(QtWidgets.QWidget):
             cuty = int(self.y)
             # get the viewable section of the RGB
             rgbcropped = self.rgb[cuty:cuty + cuth, cutx:cutx + cutw]
+            tt.mark("rgb crop")
 
             # now get the size of the image that was actually cut (some areas may be out of range)
             self.cuth, self.cutw = rgbcropped.shape[:2]
@@ -289,17 +291,21 @@ class InnerCanvas(QtWidgets.QWidget):
                                                          self.canv.canvaspersist.normMode,
                                                          self.canv.canvaspersist.normToCropped,
                                                          (cutx, cuty, self.cutw, self.cuth))
-
+            tt.mark("norm")
             # Here we draw the overlays and get any extra text required
             rgbcropped, dqtext = self.drawDQOverlays(rgbcropped, cutx, cuty, cutw, cuth)
+            tt.mark("overlay")
 
             # draw the cursor crosshair into the image for accuracy
             self.drawCursor(rgbcropped, cutx, cuty)
+            tt.mark("cursor")
             # now resize the cut area up to fit the widget and draw it. Using area interpolation here:
             # cubic produced odd artifacts on float images.
             rgbcropped = cv.resize(rgbcropped, dsize=(int(self.cutw / scale), int(self.cuth / scale)),
                                    interpolation=cv.INTER_AREA)
+            tt.mark("resize")
             p.drawImage(0, 0, self.img2qimage(rgbcropped))
+            tt.mark("draw image")
 
             # draw annotations (and ROIs, which are annotations too)
             # on the image
@@ -320,15 +326,20 @@ class InnerCanvas(QtWidgets.QWidget):
             self.imgCube.drawAnnotationsAndROIs(p, onlyROI=rois)
             p.restore()
 
+            tt.mark("annotations")
+
             # now do any extra drawing onto the image itself.
             if self.canv.paintHook is not None:
                 self.canv.paintHook.canvasPaintHook(p)
+
+            tt.mark("hook")
 
             # and draw the descriptor
             p.setPen(Qt.yellow)
             p.setBrush(Qt.yellow)
             r = QtCore.QRect(0, widgh - 20, widgw, 20)
             p.drawText(r, Qt.AlignLeft, f"{self.desc} {dqtext}")
+            tt.mark("descriptor")
         else:
             # there's nothing to draw
             self.scale = 1
@@ -350,6 +361,7 @@ class InnerCanvas(QtWidgets.QWidget):
         if self.canv.isDQHidden:  # are DQs temporarily disabled?
             return img, txt
 
+        t = Timer("DQ")
         for d in self.canv.canvaspersist.dqs:
             if d.isActive():
                 if d.data == canvasdq.DTypeUnc or d.data == canvasdq.DTypeUncGtThresh or \
@@ -383,23 +395,29 @@ class InnerCanvas(QtWidgets.QWidget):
                             data = np.zeros(data.shape, dtype=float)
 
                 elif d.data > 0:
-                    # otherwise it's a DQ bit, so cut that out
+                    # otherwise it's a DQ bit (or BAD dq bits), so cut that out
                     data = self.imgCube.dq[cuty:cuty + cuth, cutx:cutx + cutw]
+                    t.mark("cut")
                     if d.stype == canvasdq.STypeMaxAll or d.stype == canvasdq.STypeSumAll:
                         # union all channels
                         data = np.bitwise_or.reduce(data, axis=2)
                     else:
                         # or extract relevant channel
                         data = data[:, :, d.channel]
-                    # extract the relevant bit
+                    t.mark("or/extract")
+                    # extract the relevant bit(s). This should work with BAD too, which would
+                    # give a selection of bits.
                     np.bitwise_and(data, d.data, out=data)
+                    t.mark("and")
                     # now convert that to float, setting nonzero to 1 and zero to 0.
                     data = (data > 0).astype(np.float32)
+                    t.mark("tofloat")
                 # expand the data to RGB, but in different ways depending on the colour!
                 r, g, b, flash = canvasdq.colours[d.col]
                 if flash:
                     self.redrawOnTick = True
                 # avoiding the creating of new arrays where we can.
+
                 if not flash or self.flashCycle:
                     zeroes = np.zeros(data.shape, dtype=float)
                     r = data if r > 0.5 else zeroes
@@ -407,19 +425,25 @@ class InnerCanvas(QtWidgets.QWidget):
                     b = data if b > 0.5 else zeroes
                     data = np.dstack((r, g, b))
                     # combine with image, avoiding copies.
+                    t.mark("stack")
                     np.power(data, 2 * d.contrast,
                              out=data)  # data should be normalised, so this acts as a gamma
+                    t.mark("contrast")
                     # add to the image
                     np.multiply(data, 1.0 - d.trans, out=data)
+                    t.mark("mult")
                     # additive or "normal" blending
                     if d.additive:
                         np.add(data, img, out=data)
+                        t.mark("add")
                     else:
                         img2 = np.multiply(img, d.trans)  # TODO can we avoid a copy here?
                         np.add(data, img2, out=data)
+                        t.mark("multadd")
                     # clip the data (mainly because of additive, but just in case other
                     # stuff has happened)
                     np.clip(data, 0, 1, out=data)
+                    t.mark("clip")
                     img = data
         return img, txt
 
@@ -1305,7 +1329,7 @@ class Canvas(QtWidgets.QWidget):
             vals = [pixel[x] for x in chans]
             uncs = [pixuncs[x] for x in chans]
             dqs = [pixdqs[x] for x in chans]
-            
+
             # now plot x=wavelengths,y=vals
             if len(vals) > 1:
                 data = zip(goodWavelengths, vals, uncs, dqs)
