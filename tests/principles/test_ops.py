@@ -189,12 +189,8 @@ def test_scalar_div_zero():
     assert d.val == Value(0, 0, dq.DIVZERO)
 
 
-def test_image_division_by_zero():
-    """This test fails because dividing a masked array by zero produces another masked array
-    in which the divzero members are masked out!
-
-    What it should do is produce a result, but all the pixels should have an error bit set.
-    """
+def test_image_division_by_scalar_zero():
+    """Test of dividing an image by zero, and dividing something by an image with zero in it."""
     pcot.setup()
     doc = Document()
     greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # dark green
@@ -205,6 +201,30 @@ def test_image_division_by_zero():
     expr.connect(0, green, 0)
     doc.changed()
     d = expr.getOutput(0, Datum.IMG)
+    assert d[0, 0] == (Value(0, 0, dq.DIVZERO | dq.NOUNCERTAINTY),
+                       Value(0, 0, dq.DIVZERO | dq.NOUNCERTAINTY),
+                       Value(0, 0, dq.DIVZERO | dq.NOUNCERTAINTY))
+
+
+def test_scalar_divide_by_zero_image():
+    """Dividing by zero. We're trying to reciprocate an image where two of the bands are zero, which should
+    lead to errors in those bands."""
+    pcot.setup()
+    doc = Document()
+    greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # must have zeroes in it!
+    assert doc.setInputDirect(0, greenimg) is None
+    green = doc.graph.create("input 0")
+    expr = doc.graph.create("expr")
+    expr.expr = "1/a"
+    expr.connect(0, green, 0)
+    doc.changed()
+    d = expr.getOutput(0, Datum.IMG)
+
+    assert d[0, 0] == (
+        Value(0.0, 0.0, dq.NOUNCERTAINTY | dq.DIVZERO),
+        Value(2.0, 0.0, dq.NOUNCERTAINTY),
+        Value(0.0, 0.0, dq.NOUNCERTAINTY | dq.DIVZERO)
+    )
 
 
 def test_pixel_indexing_rgb():
@@ -215,26 +235,30 @@ def test_pixel_indexing_rgb():
                       4, 5, 6,  # rgb
                       u=(7, 8, 9),
                       doc=doc, inpidx=0)  # must have zeroes in it!
+    inputimg.dq[0, 0, 0] = dq.SAT  # set 0,0 by hand
+
     assert doc.setInputDirect(0, inputimg) is None
     inpnode = doc.graph.create("input 0")
     doc.changed()
     x = inpnode.getOutput(0, Datum.IMG)
     assert isinstance(x, ImageCube)
-    p = x[0, 0]
+    p = x[0, 1]  # first check 0,1
     assert isinstance(p, tuple)
     assert len(p) == 3
     r, g, b = p
-    assert r.n == 4
-    assert r.u == 7
-    assert r.dq == dq.NONE
 
-    assert g.n == 5
-    assert g.u == 8
-    assert g.dq == dq.NONE
+    # these equality tests are checked in basics/test_values
+    assert r == Value(4, 7)
+    assert g == Value(5, 8)
+    assert b == Value(6, 9)
 
-    assert b.n == 6
-    assert b.u == 9
-    assert b.dq == dq.NONE
+    # now check the 0,0 we changed the DQ with
+    p = x[0, 0]
+    assert p == (
+        Value(4, 7, dq.SAT),
+        Value(5, 8),
+        Value(6, 9))
+    assert p[0] != Value(4, 7)
 
 
 def test_pixel_indexing_mono():
@@ -255,9 +279,7 @@ def test_pixel_indexing_mono():
     assert isinstance(x, ImageCube)
     p = x[0, 0]
     assert isinstance(p, Value)
-    assert p.n == 5
-    assert p.u == pytest.approx(8.041558)
-    assert p.dq == dq.NONE
+    assert p.approxeq(Value(5, 8.041558))
 
 
 def test_greyscaling():
@@ -279,29 +301,6 @@ def test_greyscaling():
     assert p.n == pytest.approx(4.815)
     assert p.u == 0
     assert p.dq == dq.NOUNCERTAINTY
-
-
-def test_scalar_divide_by_zero_image():
-    """Dividing by zero. We're trying to reciprocate an image where two of the bands are zero, which should
-    lead to errors in those bands."""
-    pcot.setup()
-    doc = Document()
-    greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # must have zeroes in it!
-    assert doc.setInputDirect(0, greenimg) is None
-    green = doc.graph.create("input 0")
-    expr = doc.graph.create("expr")
-    expr.expr = "1/a"
-    expr.connect(0, green, 0)
-    doc.changed()
-    d = expr.getOutput(0, Datum.IMG)
-
-    p = d[0, 0]
-
-    assert d[0, 0] == (
-        Value(0.0, 0.0, dq.NOUNCERTAINTY | dq.DIVZERO),
-        Value(2.0, 0.0, dq.NOUNCERTAINTY),
-        Value(0.0, 0.0, dq.NOUNCERTAINTY | dq.DIVZERO)
-    )
 
 
 def test_all_expr_inputs():
