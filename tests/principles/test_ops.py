@@ -190,7 +190,7 @@ def test_scalar_div_zero():
 
 
 def test_image_division_by_scalar_zero():
-    """Test of dividing an image by zero, and dividing something by an image with zero in it."""
+    """Test of dividing an image by scalar zero. Also checks that 0/0 comes out as undefined and divzero."""
     pcot.setup()
     doc = Document()
     greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # dark green
@@ -201,9 +201,9 @@ def test_image_division_by_scalar_zero():
     expr.connect(0, green, 0)
     doc.changed()
     d = expr.getOutput(0, Datum.IMG)
-    assert d[0, 0] == (Value(0, 0, dq.DIVZERO | dq.NOUNCERTAINTY),
+    assert d[0, 0] == (Value(0, 0, dq.DIVZERO | dq.NOUNCERTAINTY | dq.UNDEF),
                        Value(0, 0, dq.DIVZERO | dq.NOUNCERTAINTY),
-                       Value(0, 0, dq.DIVZERO | dq.NOUNCERTAINTY))
+                       Value(0, 0, dq.DIVZERO | dq.NOUNCERTAINTY | dq.UNDEF))
 
 
 def test_scalar_divide_by_zero_image():
@@ -224,6 +224,18 @@ def test_scalar_divide_by_zero_image():
         Value(0.0, 0.0, dq.NOUNCERTAINTY | dq.DIVZERO),
         Value(2.0, 0.0, dq.NOUNCERTAINTY),
         Value(0.0, 0.0, dq.NOUNCERTAINTY | dq.DIVZERO)
+    )
+
+    # now check 0/0
+
+    expr.expr = "0/a"
+    doc.changed()
+    d = expr.getOutput(0, Datum.IMG)
+
+    assert d[0, 0] == (
+        Value(0.0, 0.0, dq.NOUNCERTAINTY | dq.DIVZERO | dq.UNDEF),
+        Value(0.0, 0.0, dq.NOUNCERTAINTY),
+        Value(0.0, 0.0, dq.NOUNCERTAINTY | dq.DIVZERO | dq.UNDEF)
     )
 
 

@@ -108,6 +108,7 @@ def test_division():
 
         assert a(6, 0) / b(0, 0) != r(0, 0)  # division by zero!
         assert a(6, 0) / b(0, 0) == r(0, 0, dq.DIVZERO)
+        assert a(0, 0) / b(0, 0) == r(0, 0, dq.UNDEF|dq.DIVZERO)
 
         assert (a(6, 1) / b(2, 0.1)).approxeq(r(3, 0.522015325445528))
 

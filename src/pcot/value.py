@@ -10,7 +10,7 @@ def add_sub_unc(ua, ub):
 
 def add_sub_unc_list(lst):
     """Add a whole list of uncertainties"""
-    return np.sqrt(np.sum(lst**2))
+    return np.sqrt(np.sum(lst ** 2))
 
 
 def mul_unc(a, ua, b, ub):
@@ -92,7 +92,6 @@ def pow_unc(a, ua, b, ub):
     return powcore(a, ua, b, ub)
 
 
-
 def combineDQs(a, b, extra=None):
     """Bitwise OR DQs together. A and B are the DQs of the two data we're combining, which the result
     should inherit. Extra is any extra bits that need to be set."""
@@ -156,10 +155,8 @@ class Value:
             d = np.full(n.shape, d)
         elif usc or dsc:
             raise Exception("Value nominal, uncertainty, and DQ bits must be either all scalar or all array")
-        elif n.shape!=u.shape or n.shape!=d.shape:
+        elif n.shape != u.shape or n.shape != d.shape:
             raise Exception("Value nominal, uncertainty, and DQ bits must be the same shape")
-
-
 
     def copy(self):
         return Value(self.n, self.u, self.dq)
@@ -194,7 +191,11 @@ class Value:
         try:
             n = np.where(other.n == 0, 0, self.n / other.n)
             u = np.where(other.n == 0, 0, div_unc(self.n, self.u, other.n, other.u))
-            d = combineDQs(self, other, np.where(other.n == 0, dq.DIVZERO, dq.NONE))
+
+            extra = np.where(other.n == 0, dq.DIVZERO, dq.NONE) | \
+                    np.where((other.n == 0) & (self.n == 0), dq.UNDEF, dq.NONE)
+
+            d = combineDQs(self, other, extra)
             # fold zero dimensional arrays (from np.where) back into scalars
             n = reduce_if_zero_dim(n)
             u = reduce_if_zero_dim(u)
@@ -203,7 +204,11 @@ class Value:
             # should only happen where we're dividing scalars
             n = 0
             u = 0
-            d = self.dq | other.dq | dq.DIVZERO
+            if self.n == 0:
+                d = self.dq | other.dq | dq.DIVZERO | dq.UNDEF
+            else:
+                d = self.dq | other.dq | dq.DIVZERO
+
         return Value(n, u, d)
 
     def __pow__(self, power, modulo=None):
@@ -259,4 +264,3 @@ class Value:
 
     def __repr__(self):
         return self.__str__()
-
