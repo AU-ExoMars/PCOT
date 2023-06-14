@@ -73,10 +73,11 @@ def rectimage(globaldatadir):
     return ImageCube.load(str(path), None, None)
 
 
-def genrgb(w, h, r, g, b, u=None, d=dq.NONE, doc=None, inpidx=None):
+def genrgb(w, h, r, g, b, u=None, d=None, doc=None, inpidx=None):
     """Generate an RGB image. If document and input index are given, we create an InputSource, otherwise
     it has to be a nullSource.
     If u is provided, it is an (r,g,b) uncertainty tuple.
+    If d is provided, it is an (r,g,b) dq bits tuple
 
     """
     if doc is not None and inpidx is not None:
@@ -96,7 +97,11 @@ def genrgb(w, h, r, g, b, u=None, d=dq.NONE, doc=None, inpidx=None):
     else:
         u = None
 
-    d = np.dstack([np.full((h, w), d) for _ in (r,g,b)]).astype(np.uint16)
+    if d is not None:
+        d = [np.full((h, w), x) for x in d]
+        d = np.dstack(d).astype(np.uint16)
+    else:
+        d = None
 
     imgc = ImageCube(bands, ChannelMapping(), sources, defaultMapping=None, uncertainty=u, dq=d)
     assert imgc.w == w

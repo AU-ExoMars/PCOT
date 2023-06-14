@@ -1,3 +1,5 @@
+"""Basic tests on nodes in a document graph"""
+
 import pytest
 
 import pcot

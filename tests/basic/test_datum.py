@@ -1,14 +1,29 @@
 import numpy
 
+import pcot
 from pcot.datum import Datum
+from pcot.value import Value
 
 from fixtures import *
 from pcot.document import Document
 
 
 def test_datum_can_create_and_serialise_img(bwimage):
+    """This ensures that a Datum can serialise and deserialise an image
+    with uncertainty and DQ as well as nominal pixel data. This relies
+    on Value working."""
+    pcot.setup()
+    
     doc = Document()
-    img = Datum(Datum.IMG, bwimage)
+
+    data = genrgb(32,32,
+                  1.1, 2.2, 3.3,    # rgb
+                  u=(0.1, 0.2, 0.3), # unc
+                  d=(dq.NONE, dq.UNDEF, dq.DIVZERO), # dq
+                  doc = doc
+                  )
+
+    img = Datum(Datum.IMG, data)
     tp, datadict = img.serialise()
 
     # make some assumptions about what's in the data dict!
@@ -29,6 +44,20 @@ def test_datum_can_create_and_serialise_img(bwimage):
     assert img.h == 32
     assert img.w == 32
 
-    assert np.array_equal(img.img[0][0], [1, 1, 1])
-    assert np.array_equal(img.img[img.h - 1][img.w - 1], [0, 0, 0])
+    r, g, b = img[0,0]
+    assert r.approxeq(Value(1.1, 0.1, dq.NONE))
+    assert not r.approxeq(Value(1.6, 0.1, dq.NONE))
+    assert g.approxeq(Value(2.2, 0.2, dq.UNDEF))
+    assert b.approxeq(Value(3.3, 0.3, dq.DIVZERO))
+
+    # and we'll check at the low level too, for the actual pixel values
+    assert not np.allclose(img.img[0][0], (5.1, 2.2, 3.3))
+    assert np.allclose(img.img[0][0], (1.1, 2.2, 3.3))
+    assert np.allclose(img.img[img.h - 1][img.w - 1], (1.1,2.2,3.3))
+    assert np.allclose(img.uncertainty[0][0], (0.1, 0.2, 0.3))
+    assert np.allclose(img.uncertainty[img.h - 1][img.w - 1], (0.1,0.2,0.3))
+    assert np.allclose(img.dq[0][0], (dq.NONE, dq.UNDEF, dq.DIVZERO))
+    assert np.allclose(img.dq[img.h-1][img.w-1], (dq.NONE, dq.UNDEF, dq.DIVZERO))
+
+
 

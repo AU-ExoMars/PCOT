@@ -1,4 +1,6 @@
-"""It's quite difficult to test ROIs, but we'll try to at least do rect and poly"""
+"""It's quite difficult to test ROIs, but we'll try to at least do rect, circle and poly.
+Some tests here mainly work by performing a change to part of an image selected by an ROI
+and checking the results are correct. Does not test DQ or uncertainty!"""
 from fixtures import *
 from pcot.rois import ROIRect, ROIBoundsException, ROICircle, ROIPoly, ROIPainted
 from pcot.utils.geom import Rect
@@ -16,7 +18,7 @@ def test_nonintersecting_roi(allblack):
 
 
 def test_nonintersecting_negative_roi(allblack):
-    """As above, but the ROI starts at negative coords"""
+    """As test_nonintersecting_rois, but the ROI starts at negative coords - this should raise an ROIBoundsException"""
     roi = ROIRect()
     roi.set(-20, -20, 10, 10)
     allblack.rois.append(roi)

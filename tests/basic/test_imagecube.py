@@ -1,4 +1,4 @@
-
+"""Tests on basic imagecube operations"""
 import pcot
 from pcot.document import Document
 from pcot.filters import Filter
@@ -37,7 +37,8 @@ def multispecimage():
 
 
 def test_load_image(bwimage):
-    """Test that we can load an arbitrary BW image"""
+    """Test that we can load a 32x32 solid white image from a PNG. It just does some very basic checks on
+    the image pixels."""
     assert bwimage.channels == 3
     assert bwimage.h == 32
     assert bwimage.w == 32
@@ -48,7 +49,7 @@ def test_load_image(bwimage):
 
 def test_load_image2(rectimage):
     """A slightly tougher image - a white rect with colour blobs at the corners. Let's make sure the orientation
-    is good, and that we are converting 8bit into 32bit float correctly"""
+    is good, and that we are converting 8bit into 32bit float correctly. Again, it just loads an image from a PNG."""
     assert rectimage.channels == 3
     assert rectimage.w == 40
     assert rectimage.h == 30
@@ -62,6 +63,8 @@ def test_load_image2(rectimage):
 
 
 def test_split_merge(rectimage):
+    """Checks that we can split a colour RGB image and remerge it. Only tests the pixels, not uncertainty
+    or DQ."""
     # make sure this does the same as cv.split
     img = image.imgsplit(rectimage.img)
     assert img[0].shape == (30, 40)
@@ -77,7 +80,7 @@ def test_split_merge(rectimage):
 
 
 def test_msimage(multispecimage):
-    """Just check that we created this MS image OK, and that we have some kind of mapping in there."""
+    """Just check that we created this image OK, and that we have some kind of mapping in there."""
     assert multispecimage.channels == MS_NUMCHANS
     assert multispecimage.h == MS_HEIGHT
     assert multispecimage.w == MS_WIDTH
@@ -114,7 +117,8 @@ def makesource(doc, pos, cwl, fwhm):
 
 
 def test_wavelength():
-    """Create an image with some weird bands in it - bands with combined wavelengths"""
+    """Create an image with some weird bands in it - bands with combined wavelengths - and check that
+    wavelengthBand() works, correctly getting the single wavelength bands."""
 
     doc = Document()
     # note - NOT the same as in multispecimage.
