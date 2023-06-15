@@ -273,7 +273,7 @@ def test_pixel_indexing_rgb():
     assert p[0] != Value(4, 7)
 
 
-def test_pixel_indexing_mono():
+def test_greyscale_simple():
     """Check that we can index into a 1-channel ImageCube."""
     pcot.setup()
     doc = Document()
@@ -293,8 +293,15 @@ def test_pixel_indexing_mono():
     assert isinstance(p, Value)
     assert p.approxeq(Value(5, 8.041558))
 
+    # and with an explicit false argument
+    expr.expr = "grey(a,0)"
+    doc.changed()
+    x = expr.getOutput(0, Datum.IMG)
+    p = x[0, 0]
+    assert p.approxeq(Value(5, 8.041558))
 
-def test_greyscaling():
+
+def test_greyscale_human():
     # now test that greyscaling with human perception of RGB works.
     pcot.setup()
     doc = Document()

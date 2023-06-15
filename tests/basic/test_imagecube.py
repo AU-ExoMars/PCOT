@@ -6,6 +6,7 @@ from pcot.sources import InputSource, MultiBandSource, SourceSet
 import pcot.utils.image as image
 
 from fixtures import *
+from pcot.value import Value
 
 pcot.setup()
 
@@ -154,17 +155,17 @@ def test_wavelength_widest():
 
         makesource(doc, 3, 540, 30),
         makesource(doc, 4, 540, 10),
-        makesource(doc, 5, 540, 30),    # correct 540 candidate
+        makesource(doc, 5, 540, 30),  # correct 540 candidate
         makesource(doc, 6, 300, 50),
         makesource(doc, 7, 550, 100),  # interesting case!
 
         makesource(doc, 8, 440, 10),
         makesource(doc, 9, 440, 20),
         makesource(doc, 10, 200, 10),
-        makesource(doc, 11, 440, 30),   # correct 440 candidate
+        makesource(doc, 11, 440, 30),  # correct 440 candidate
         makesource(doc, 12, 440, 20),
         makesource(doc, 13, 440, 8),
-        makesource(doc, 14, 640, 100),    # correct 640 candidate
+        makesource(doc, 14, 640, 100),  # correct 640 candidate
         makesource(doc, 15, 640, 5)
     ]
     count = len(sources)
@@ -174,3 +175,20 @@ def test_wavelength_widest():
     img = ImageCube(bands, ChannelMapping(), sources, defaultMapping=None)
 
     assert img.wavelengthBand(640) == 14
+
+
+def test_imagecube_indexing():
+    """test that we can index into an imagecube to get a pixel value for both mono and multichannel images"""
+
+    # RGB image
+    inputimg = genrgb(50, 50,
+                      4, 5, 6,  # rgb
+                      u=(7, 8, 9),
+                      d=(dq.NONE, dq.NOUNCERTAINTY, dq.UNDEF))
+
+    assert inputimg[0, 0] == (
+        Value(4, 7, dq.NONE),
+        Value(5, 8, dq.NOUNCERTAINTY),
+        Value(6, 9, dq.UNDEF))
+
+    #TODO mono and possibly multichannel
