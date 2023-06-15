@@ -94,6 +94,7 @@ def test_getonlyitem():
 def test_sourcesetdunder():
     """Test that for some purposes, a SourceSet can be interacted with directly as if one were interacting
     with the underlying set (the sourceSet member). SourceSet implements:
+
     * __iter__
     * __contains__
     * __len__

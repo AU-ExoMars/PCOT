@@ -89,7 +89,7 @@ class TestCoreBinops(unittest.TestCase):
         self.assertEqual(execute('8-2'), 6.0)
 
     def test_mul(self):
-        """multiplication test, 8*4"""
+        """multiplication test, 8\*4"""
         self.assertEqual(execute('8*4'), 32.0)
 
     def test_div(self):
@@ -100,35 +100,35 @@ class TestCoreBinops(unittest.TestCase):
 class TestPrecedenceAndBrackets(unittest.TestCase):
     """Test that precedence rules are correct and that brackets work"""
     def test_1(self):
-        """10*12+4*3"""
+        """```10*12+4*3```"""
         self.assertEqual(execute('10*12+4*3'), 132.0)
 
     def test_2(self):
-        """10*(12+4)*3"""
+        """```10*(12+4)*3```"""
         self.assertEqual(execute('10*(12+4)*3'), 480.0)
 
     def test_3(self):
-        """(2+2)*(3+3)"""
+        """```(2+2)*(3+3)```"""
         self.assertEqual(execute('(2+2)*(3+3)'), 24.0)
 
     def test_4(self):
-        """10/2+9/3"""
+        """```10/2+9/3```"""
         self.assertEqual(execute('10/2+9/3'), 8.0)
 
     def test_5(self):
-        """10/2-9/3"""
+        """```10/2-9/3```"""
         self.assertEqual(execute('10/2-9/3'), 2.0)
 
     def test_6(self):
-        """10*(9-2)*3"""
+        """```10*(9-2)*3```"""
         self.assertEqual(execute('10*(9-2)*3'), 210.0)
 
     def test_7(self):
-        """(10-2)*2'"""
+        """```(10-2)*2```"""
         self.assertEqual(execute('(10-2)*2'), 16.0)
 
     def test_8(self):
-        """10-2*2"""
+        """```10-2*2```"""
         self.assertEqual(execute('10-2*2'), 6.0)
 
 
@@ -136,39 +136,39 @@ class TestUnaryMinus(unittest.TestCase):
     """Tests of the syntax for the unary minus operator
     (and by extension other unary operators that might be defined)"""
     def test_1(self):
-        """-43"""
+        """```-43```"""
         self.assertEqual(execute('-43'), -43)
 
     def test_2(self):
-        """-43+10"""
+        """```-43+10```"""
         self.assertEqual(execute('-43+10'), -33)
 
     def test_3(self):
-        """43*-1"""
+        """```43*-1```"""
         self.assertEqual(execute('43*-1'), -43)
 
     def test_4(self):
-        """43+-3"""
+        """```43+-3```"""
         self.assertEqual(execute('43+-3'), 40)
 
     def test_5(self):
-        """-4--3"""
+        """```-4--3```"""
         self.assertEqual(execute('-4--3'), -1)
 
     def test_6(self):
-        """(-4)"""
+        """```(-4)```"""
         self.assertEqual(execute('(-4)'), -4)
 
     def test_7(self):
-        """-(-4)"""
+        """```-(-4)```"""
         self.assertEqual(execute('-(-4)'), 4)
 
     def test_8(self):
-        """-(2*8)"""
+        """```-(2*8)```"""
         self.assertEqual(execute('-(2*8)'), -16)
 
     def test_9(self):
-        """-(2*-8)"""
+        """```-(2*-8)```"""
         self.assertEqual(execute('-(2*-8)'), 16)
 
 
@@ -240,11 +240,11 @@ class TestFunctions(unittest.TestCase):
         self.assertEqual(execute('10+noargs()'), 110)
 
     def test_7(self):
-        """max(1,2,4+7,5+1,2*6)"""
+        """```max(1,2,4+7,5+1,2*6)```"""
         self.assertEqual(execute('max(1,2,4+7,5+1,2*6)'), 12)
 
     def test_8(self):
-        """max(1,2,4+7,2*6,5+1)"""
+        """```max(1,2,4+7,2*6,5+1)```"""
         self.assertEqual(execute('max(1,2,4+7,2*6,5+1)'), 12)
 
     def test_9(self):

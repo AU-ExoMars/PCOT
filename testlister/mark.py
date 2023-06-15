@@ -1,32 +1,13 @@
-import markdown
-
-from md2latex import LaTeXExtension
 from processor import Processor
-md = markdown.Markdown()
-md2l = LaTeXExtension()
-md2l.extendMarkdown(md)
-
-
-def markdown2latex(s):
-    s = md.convert(s)
-    # strip out the root node stuff
-    return s.replace("<root>","").replace("</root>","").strip()
-
+from markdown import Markdown
 
 def proc(s,latex=True):
-    if latex:
-        s = s.replace("__","SNARKDUNDER")
     if len(s.strip())==0:
-        s="{\\color{red}MISSING}"
-    elif latex:
-        s = markdown2latex(s)
-        s = s.replace("SNARKDUNDER","__")
-    s = s.replace("_","\_")
-    s = s.replace("$","\$")
+        s="**MISSING**"
     return s
     
 
-class LatexProcessor(Processor):
+class MarkdownProcessor(Processor):
     def __init__(self):
         super().__init__()
         
@@ -36,7 +17,7 @@ class LatexProcessor(Processor):
         out = ""
         name = proc(name)
         docstring = proc(docstring)
-        out+=f"\\section{{Package {name}}}"
+        out+=f"# Package {name}\n\n"
         out+=docstring+"\n"
         return out
 
@@ -44,7 +25,7 @@ class LatexProcessor(Processor):
         out = ""
         name = proc(name)
         docstring = proc(docstring)
-        out+=f"\\subsection{{Module {name}}}"
+        out+=f"## Module {name}\n\n"
         out+=docstring+"\n"
         return out
 
@@ -52,10 +33,8 @@ class LatexProcessor(Processor):
         out = ""
         name = proc(name)
         docstring = proc(docstring)
-        out+=f"\\paragraph{{{name}}}"
-        out+=r"\begin{adjustwidth}{1cm}{}"
-        out+=docstring
-        out+=r"\end{adjustwidth}"+"\n"
+        out+=f"### Function {name}\n\n"
+        out+=docstring+"\n"
         return out
         
 
@@ -63,11 +42,12 @@ class LatexProcessor(Processor):
         out = ""
         name = proc(name)
         docstring = proc(docstring)
-        out+=f"\\subsubsection{{Test Class {name}}}"
+        out+=f"## Test Class {name}\n\n"
         out+=docstring+"\n"
         return out
 
     def test_case_func(self,name,docstring):
         return self.function(name,docstring)
 
-print(LatexProcessor().run())
+s=MarkdownProcessor().run()
+print(Markdown().convert(s))

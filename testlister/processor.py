@@ -1,6 +1,7 @@
 import pytest
 import sys
 import re
+
 from io import StringIO
 
 class Processor():
@@ -20,7 +21,7 @@ class Processor():
         pass
         
     def __init__(self):
-        pass
+        self.text = ""
 
     def fetch(self):
         old = sys.stdout
@@ -31,25 +32,26 @@ class Processor():
         self.data = sys.stdout.getvalue()
         sys.stdout.close()
         sys.stdout = old
-        
+
+    def add(self,s):
+        self.text += s        
     
     def process_previous_text(self,tp,name,docstring):
         if name is None or tp is None:
             return
         if tp == "Package":
-            self.package(name,docstring)
+            self.add(self.package(name,docstring))
         elif tp == "Module":
-            self.module(name,docstring)
+            self.add(self.module(name,docstring))
         elif tp == "Function":
-            self.function(name,docstring)
+            self.add(self.function(name,docstring))
         elif tp == "UnitTestCase":
-            self.unit_test_case(name,docstring)
+            self.add(self.unit_test_case(name,docstring))
         elif tp == "TestCaseFunction":
-            self.test_case_func(name,docstring)
+            self.add(self.test_case_func(name,docstring))
         else:
             raise Exception(f"unknown {tp}")
             
-
     def process(self):
         table = str.maketrans('','','<>')
         docstring = ""
@@ -73,4 +75,5 @@ class Processor():
         self.fetch()
         self.process()
         self.end()
+        return self.text
 
