@@ -282,6 +282,9 @@ class ROI(SourcesObtainable, Annotation):
 
         return ROI('tmp', bb, mask)
 
+    def __neg__(self):
+        return self # TODO does nothing yet
+
     def __mul__(self, other):
         return self.roiIntersection([self, other])
 

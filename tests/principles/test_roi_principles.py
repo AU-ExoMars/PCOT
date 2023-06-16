@@ -1,3 +1,7 @@
+"""Tests on basic ROI operations. Note that these mostly work by using the ROI control
+modification of an image and then testing pixels in the result. Only nominal data is
+checked, not uncertainty or DQ."""
+
 import pcot
 from pcot.datum import Datum
 from pcot.document import Document
@@ -454,8 +458,16 @@ def test_roi_neg_expr_unimplemented():
     expr.connect(0, roi1, 1)  # use the ROI output
     expr.expr = "-a"
 
+    imp = doc.graph.create("importroi")
+    imp.connect(0, red, 0)
+    imp.connect(1, expr, 0)
+
     doc.changed()
 
     if expr.error is not None and expr.error.message == "incompatible type for operator NEG: roi":
         pytest.fail("negation not implemented for ROIs")
     checkexpr(expr)
+
+    for x in range(0, 50):
+        for y in range(0, 50):
+            pass
