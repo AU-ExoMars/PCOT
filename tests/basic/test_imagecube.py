@@ -6,6 +6,7 @@ from pcot.sources import InputSource, MultiBandSource, SourceSet
 import pcot.utils.image as image
 
 from fixtures import *
+from pcot.value import Value
 
 pcot.setup()
 
@@ -154,17 +155,17 @@ def test_wavelength_widest():
 
         makesource(doc, 3, 540, 30),
         makesource(doc, 4, 540, 10),
-        makesource(doc, 5, 540, 30),    # correct 540 candidate
+        makesource(doc, 5, 540, 30),  # correct 540 candidate
         makesource(doc, 6, 300, 50),
         makesource(doc, 7, 550, 100),  # interesting case!
 
         makesource(doc, 8, 440, 10),
         makesource(doc, 9, 440, 20),
         makesource(doc, 10, 200, 10),
-        makesource(doc, 11, 440, 30),   # correct 440 candidate
+        makesource(doc, 11, 440, 30),  # correct 440 candidate
         makesource(doc, 12, 440, 20),
         makesource(doc, 13, 440, 8),
-        makesource(doc, 14, 640, 100),    # correct 640 candidate
+        makesource(doc, 14, 640, 100),  # correct 640 candidate
         makesource(doc, 15, 640, 5)
     ]
     count = len(sources)
@@ -174,3 +175,97 @@ def test_wavelength_widest():
     img = ImageCube(bands, ChannelMapping(), sources, defaultMapping=None)
 
     assert img.wavelengthBand(640) == 14
+
+
+def test_imagecube_indexing():
+    """test that we can index into an imagecube to get a pixel value for both mono and multichannel image.
+    We don't check limits here but we do check all coords, but all pixels are the same.
+    """
+
+    # RGB image
+    inputimg = genrgb(5, 5,
+                      4, 5, 6,  # rgb
+                      u=(7, 8, 9),
+                      d=(dq.NONE, dq.NOUNCERTAINTY, dq.UNDEF))
+
+    for x in range(0, 5):
+        for y in range(0, 5):
+            assert inputimg[x, y] == (
+                Value(4, 7, dq.NONE),
+                Value(5, 8, dq.NOUNCERTAINTY),
+                Value(6, 9, dq.UNDEF))
+
+    # mono
+
+    inputimg = genmono(50, 50, 2, 3, dq.UNDEF)
+
+    for x in range(0, 5):
+        for y in range(0, 5):
+            assert inputimg[x, y] == Value(2, 3, dq.UNDEF)
+
+
+def test_imagecube_indexing2(rectimage):
+    """test that indexing works on a more complex RGB image with coloured corners, so
+    we know the coordinate indexing is correct. Also double checks Value.approxeq."""
+
+    assert rectimage[0, 0][0].approxeq(Value(1, 0, dq.NOUNCERTAINTY))
+    assert rectimage[0, 0][1].approxeq(Value(0.6, 0, dq.NOUNCERTAINTY))
+    assert rectimage[0, 0][2].approxeq(Value(0.2, 0, dq.NOUNCERTAINTY))
+
+    assert not rectimage[0, 0][0].approxeq(Value(1.1, 0, dq.NOUNCERTAINTY))
+    assert not rectimage[0, 0][0].approxeq(Value(1, 0.1, dq.NOUNCERTAINTY))
+    assert not rectimage[0, 0][0].approxeq(Value(1, 0, dq.NONE))
+
+    x, y = 0, rectimage.h - 1
+    assert rectimage[x, y][0].approxeq(Value(0.4, 0, dq.NOUNCERTAINTY))
+    assert rectimage[x, y][1].approxeq(Value(0.8, 0, dq.NOUNCERTAINTY))
+    assert rectimage[x, y][2].approxeq(Value(0.0, 0, dq.NOUNCERTAINTY))
+
+    x, y = rectimage.w - 1, 0
+    assert rectimage[x, y][0].approxeq(Value(1, 0, dq.NOUNCERTAINTY))
+    assert rectimage[x, y][1].approxeq(Value(1, 0, dq.NOUNCERTAINTY))
+    assert rectimage[x, y][2].approxeq(Value(1, 0, dq.NOUNCERTAINTY))
+
+
+def test_imagecube_indexing_bad(rectimage):
+    """Test indexing on coordinates out of range: -ve indices count from the end, but not too -ve or too +ve"""
+
+    # exceptions caused by either trying to unpack just an int, or trying to unpack a tuple of too many items.
+    with pytest.raises(TypeError):
+        x = rectimage[0]
+
+    with pytest.raises(ValueError):
+        x = rectimage[0, 0, 0]
+
+    # -ve indices wrap
+    x, y = -1, 0
+    assert rectimage[x, y][0].approxeq(Value(1, 0, dq.NOUNCERTAINTY))
+    assert rectimage[x, y][1].approxeq(Value(1, 0, dq.NOUNCERTAINTY))
+    assert rectimage[x, y][2].approxeq(Value(1, 0, dq.NOUNCERTAINTY))
+
+    x, y = 0, -1
+    assert rectimage[x, y][0].approxeq(Value(0.4, 0, dq.NOUNCERTAINTY))
+    assert rectimage[x, y][1].approxeq(Value(0.8, 0, dq.NOUNCERTAINTY))
+    assert rectimage[x, y][2].approxeq(Value(0.0, 0, dq.NOUNCERTAINTY))
+
+    x, y = -rectimage.w, 0
+    assert rectimage[x, y][0].approxeq(Value(1, 0, dq.NOUNCERTAINTY))
+    assert rectimage[x, y][1].approxeq(Value(0.6, 0, dq.NOUNCERTAINTY))
+    assert rectimage[x, y][2].approxeq(Value(0.2, 0, dq.NOUNCERTAINTY))
+
+    x, y = 0, -rectimage.h
+    assert rectimage[x, y][0].approxeq(Value(1, 0, dq.NOUNCERTAINTY))
+    assert rectimage[x, y][1].approxeq(Value(0.6, 0, dq.NOUNCERTAINTY))
+    assert rectimage[x, y][2].approxeq(Value(0.2, 0, dq.NOUNCERTAINTY))
+
+    with pytest.raises(IndexError):
+        x = rectimage[rectimage.w, 0]
+
+    with pytest.raises(IndexError):
+        x = rectimage[0, rectimage.h]
+
+    with pytest.raises(IndexError):
+        x = rectimage[-(rectimage.w + 1), 0]
+
+    with pytest.raises(IndexError):
+        x = rectimage[0, -(rectimage.h + 1)]

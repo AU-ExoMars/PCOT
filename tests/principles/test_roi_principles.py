@@ -1,3 +1,7 @@
+"""Tests on basic ROI operations. Note that these mostly work by using the ROI control
+modification of an image and then testing pixels in the result. Only nominal data is
+checked, not uncertainty or DQ."""
+
 import pcot
 from pcot.datum import Datum
 from pcot.document import Document
@@ -436,7 +440,8 @@ def test_roi_diff_exp2():
             assert np.array_equal(pix, expected), f"pixel {x}, {y} should be {expected}, is {pix}"
 
 
-def test_roi_neg_expr_unimplemented():
+@pytest.mark.xfail
+def test_roi_neg_expr():
     """Unary negate is not implemented (yet?)"""
 
     pcot.setup()
@@ -451,11 +456,25 @@ def test_roi_neg_expr_unimplemented():
     roi1.connect(0, red, 0)
 
     expr = doc.graph.create("expr")
-    expr.connect(0, roi1, 1)  # use the ROI output
     expr.expr = "-a"
+    expr.connect(0, roi1, 1)  # use the ROI output
+
+    imp = doc.graph.create("importroi")
+    imp.connect(0, red, 0)
+    imp.connect(1, expr, 0)
+
+    mod = doc.graph.create("expr")
+    mod.expr = "a*0"
+    mod.connect(0, imp, 0)
 
     doc.changed()
 
-    if expr.error is not None and expr.error.message == "incompatible type for operator NEG: roi":
-        pytest.fail("negation not implemented for ROIs")
-    checkexpr(expr)
+    img = mod.getOutput(0, Datum.IMG)
+    assert img is not None
+
+    for x in range(0, 50):
+        for y in range(0, 50):
+            inroi = not (x>=10 and y>=10 and x<40 and y<40)
+            pix = img.img[y,x]
+            expected = (0,0,0) if inroi else (1,0,0)
+            assert np.array_equal(pix, expected), f"pixel {x}, {y} should be {expected}, is {pix}"

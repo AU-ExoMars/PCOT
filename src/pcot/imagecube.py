@@ -856,9 +856,9 @@ class ImageCube(SourcesObtainable):
     def __getitem__(self, pixTuple):
         """get a Value (or tuple of Values for a multiband image) containing a pixel. Takes x,y."""
         x, y = pixTuple
-        ns = self.img[x, y]
-        us = self.uncertainty[x, y]
-        ds = self.dq[x, y]
+        ns = self.img[y, x]
+        us = self.uncertainty[y, x]
+        ds = self.dq[y, x]
 
         if self.channels == 1:
             return Value(ns, us, ds)

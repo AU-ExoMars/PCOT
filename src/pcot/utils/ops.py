@@ -230,7 +230,6 @@ def extractChannelByName(a: Datum, b: Datum) -> Datum:
     return Datum(Datum.IMG, img)
 
 
-# TODO UNCERTAINTY REWRITE THESE FUNCTIONS
 def initOps():
     """Initialise functions. Would be in the top-level, but I get
     some spurious warnings."""
@@ -268,6 +267,9 @@ def initOps():
     regROIBinopSemantics(Operator.MUL, lambda x, y: x * y)
     regROIBinopSemantics(Operator.DIV, lambda x, y: x / y)
     regROIBinopSemantics(Operator.POW, lambda x, y: x ** y)
+
+    registerUnopSemantics(Operator.NEG, Datum.ROI,
+                          lambda d: Datum(Datum.ROI, -d.get(Datum.ROI), d.getSources()))
 
     registerBinopSemantics(Operator.DOLLAR, Datum.IMG, Datum.NUMBER, extractChannelByName)
     registerBinopSemantics(Operator.DOLLAR, Datum.IMG, Datum.IDENT, extractChannelByName)

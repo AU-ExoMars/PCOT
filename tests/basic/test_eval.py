@@ -89,7 +89,7 @@ class TestCoreBinops(unittest.TestCase):
         self.assertEqual(execute('8-2'), 6.0)
 
     def test_mul(self):
-        """multiplication test, 8\*4"""
+        """multiplication test, 8*4"""
         self.assertEqual(execute('8*4'), 32.0)
 
     def test_div(self):

@@ -73,6 +73,22 @@ def rectimage(globaldatadir):
     return ImageCube.load(str(path), None, None)
 
 
+def genmono(w,h,v,u,dq,doc=None,inpidx=None):
+    if doc is not None and inpidx is not None:
+        sources = MultiBandSource([InputSource(doc,inpidx,'M')])
+    else:
+        sources = MultiBandSource([nullSource])
+
+    band = np.full((h,w),v).astype(np.float32)
+    u = np.full((h,w),u).astype(np.float32)
+    dq = np.full((h,w),dq).astype(np.uint16)
+
+    imgc = ImageCube(band, ChannelMapping(), sources, defaultMapping=None, uncertainty=u, dq=dq)
+    assert imgc.w == w
+    assert imgc.h == h
+    return imgc
+
+
 def genrgb(w, h, r, g, b, u=None, d=None, doc=None, inpidx=None):
     """Generate an RGB image. If document and input index are given, we create an InputSource, otherwise
     it has to be a nullSource.
