@@ -161,7 +161,7 @@ def test_number_number_ops():
 
 def test_number_image_ops():
     """Test than binops in expr nodes on numbers and images work, with the image on the RHS. We want to
-    ensure that the part outside an ROI is unchanged."""
+    ensure that the part outside an ROI - and any "bad" parts of the image (with dq.BAD bits) - are unchanged."""
 
     pcot.setup()
 
@@ -203,7 +203,7 @@ def test_number_image_ops():
                 u = img.uncertainty[y, x, 1]
                 dqv = img.dq[y, x, 1]
                 # we should also leave the pixel at 8,8 unchanged because it's marked as UNDEF.
-                if 5 <= x < 15 and 5 <= y < 15 and x != 8 and y != 8:
+                if 5 <= x < 15 and 5 <= y < 15 and not (x == 8 and y == 8):
                     # check pixel is changed inside the rect
                     assert n == expected_n
                     assert u == expected_u

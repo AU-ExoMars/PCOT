@@ -616,7 +616,10 @@ class ImageCube(SourcesObtainable):
 
         i = self.copy(keepMapping)
         x, y, w, h = subimage.bb
-        mask = subimage.mask
+        # we only want to paste into the bits in the image that are covered
+        # by the mask - and we want the full mask, with "bad" pixels not
+        # modified.
+        mask = subimage.fullmask(maskBadPixels=True)
         if newimg is not None:
             i.img[y:y + h, x:x + w][mask] = newimg[mask]
         if uncertainty is not None:
@@ -624,11 +627,11 @@ class ImageCube(SourcesObtainable):
         if dqOR is not None:  # dq and dqOR could be scalar
             if not np.isscalar(dqOR):
                 dqOR = dqOR[mask]
-            i.dq[y:y + h, x:x + w][subimage.mask] |= dqOR
+            i.dq[y:y + h, x:x + w][mask] |= dqOR
         elif dq is not None:
             if not np.isscalar(dq):
                 dq = dq[mask]
-            i.dq[y:y + h, x:x + w][subimage.mask] = dq
+            i.dq[y:y + h, x:x + w][mask] = dq
 
         # can replace sources if required
         if sources is not None:
