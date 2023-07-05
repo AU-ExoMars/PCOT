@@ -185,14 +185,29 @@ def check_binop_test(doc, t, expr, origimg):
             # we should also leave the pixel at 8,8 unchanged because it's marked as UNDEF.
             if 5 <= x < 15 and 5 <= y < 15 and not (x == 8 and y == 8):
                 # check pixel is changed inside the rect
-                assert n == expected_n
-                assert u == expected_u
-                assert dqv == t.expected_dq | origimg.dq[y, x, 1]
+                en = expected_n
+                eu = expected_u
+                edq = t.expected_dq | origimg.dq[y, x, 1]
             else:
                 # and unchanged outside
-                assert n == origimg.img[y, x, 1]
-                assert u == origimg.uncertainty[y, x, 1]
-                assert dqv == origimg.dq[y, x, 1]
+                en = origimg.img[y, x, 1]
+                eu = origimg.uncertainty[y, x, 1]
+                edq = origimg.dq[y, x, 1]
+
+            ntest = n == en
+            utest = u == eu
+            dqtest = dqv == edq
+
+            if not (ntest and utest and dqtest):
+                logger.error(f"Error in binop test at pixel {x},{y} for expression {expr.expr}")
+                if not ntest:
+                    logger.error(f"N expected {en} got {n}")
+                if not utest:
+                    logger.error(f"U expected {eu} got {u}")
+                if not dqtest:
+                    logger.error(f"DQ expected {edq} got {dqv}")
+
+            assert ntest and utest and dqtest
 
 
 def test_number_image_ops():
@@ -260,6 +275,66 @@ def test_image_number_ops():
         expr.connect(0, rect, 0, autoPerform=False)
         expr.connect(1, nodeB, 0, autoPerform=False)
 
+        check_binop_test(doc, t, expr, origimg)
+
+
+def test_image_image_ops():
+    """Test that binops work on image/image pairs, where the LHS image has an ROI on it."""
+
+    pcot.setup()
+
+    for t in tests:
+        doc = Document()
+        # node A is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
+        imgA = gen_2b_unc(2, 0.1, t.a, t.ua)
+        # just to check that DQ bits get OR-ed in, we set some DQ in the image.
+        imgA.dq[2, 2, 1] = dq.COMPLEX
+        imgA.dq[8, 8, 1] = dq.UNDEF
+        doc.setInputDirect(0, imgA)
+        nodeA = doc.graph.create("input 0")
+        # which feeds into a rect ROI
+        rect = doc.graph.create("rect")
+        rect.roi.set(5, 5, 10, 10)  # set the rectangle to be at 5,5 extending 10x10
+        rect.connect(0, nodeA, 0, autoPerform=False)
+
+        # node B is a 20x20 2-band image with 3±0.2 in band 0 and the given values in band 1.
+        imgB = gen_2b_unc(3, 0.2, t.b, t.ub)
+        doc.setInputDirect(1, imgB)
+        nodeB = doc.graph.create("input 1")
+        # and connect an expression node to rect and nodeB.
+        expr = doc.graph.create("expr")
+        expr.expr = t.e
+        # this is where the connections are reversed.
+        expr.connect(0, rect, 0, autoPerform=False)
+        expr.connect(1, nodeB, 0, autoPerform=False)
+
+        check_binop_test(doc, t, expr, imgA)
+
+
+def test_image_image_ops_noroi():
+    """test image/image operations without a region of interest"""
+
+    pcot.setup()
+
+    for t in tests:
+        doc = Document()
+        # node A is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
+        imgA = gen_2b_unc(2, 0.1, t.a, t.ua)
+        # just to check that DQ bits get OR-ed in, we set some DQ in the image.
+        imgA.dq[8, 8, 1] = dq.UNDEF
+        doc.setInputDirect(0, imgA)
+        nodeA = doc.graph.create("input 0")
+        # node B is a 20x20 2-band image with 3±0.2 in band 0 and the given values in band 1.
+        imgB = gen_2b_unc(3, 0.2, t.b, t.ub)
+        doc.setInputDirect(1, imgB)
+        nodeB = doc.graph.create("input 1")
+        # and connect an expression node to rect and nodeB.
+        expr = doc.graph.create("expr")
+        expr.expr = t.e
+        # this is where the connections are reversed.
+        expr.connect(0, nodeA, 0, autoPerform=False)
+        expr.connect(1, nodeB, 0, autoPerform=False)
+
         logger.warning(f"Testing {t.e} : a={t.a}±{t.ua}, b={t.b}±{t.ub} ----------------------------------------------")
 
         doc.changed()
@@ -274,14 +349,27 @@ def test_image_number_ops():
                 n = img.img[y, x, 1]
                 u = img.uncertainty[y, x, 1]
                 dqv = img.dq[y, x, 1]
-                # we should also leave the pixel at 8,8 unchanged because it's marked as UNDEF.
-                if 5 <= x < 15 and 5 <= y < 15 and not (x == 8 and y == 8):
-                    # check pixel is changed inside the rect
-                    assert n == expected_n
-                    assert u == expected_u
-                    assert dqv == t.expected_dq | origimg.dq[y, x, 1]
+                # only the single bad pixel should be unchanged
+                if not (x == 8 and y == 8):
+                    en = expected_n
+                    eu = expected_u
+                    edq = t.expected_dq | imgA.dq[y, x, 1]
                 else:
-                    # and unchanged outside
-                    assert n == origimg.img[y, x, 1]
-                    assert u == origimg.uncertainty[y, x, 1]
-                    assert dqv == origimg.dq[y, x, 1]
+                    en = imgA.img[y, x, 1]
+                    eu = imgA.uncertainty[y, x, 1]
+                    edq = imgA.dq[y, x, 1]
+
+                ntest = n == en
+                utest = u == eu
+                dqtest = dqv == edq
+
+                if not (ntest and utest and dqtest):
+                    logger.error(f"Error in binop test at pixel {x},{y} for expression {expr.expr}")
+                    if not ntest:
+                        logger.error(f"N expected {en} got {n}")
+                    if not utest:
+                        logger.error(f"U expected {eu} got {u}")
+                    if not dqtest:
+                        logger.error(f"DQ expected {edq} got {dqv}")
+
+                assert ntest and utest and dqtest

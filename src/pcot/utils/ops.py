@@ -121,49 +121,42 @@ def numberUnop(d: Datum, f: Callable[[Value], Value]) -> Datum:
     return Datum(Datum.NUMBER, f(d.val), d.getSources())
 
 
-# TODO UNCERTAINTY - work out what the args should be and pass them in
-def imageBinop(dx: Datum, dy: Datum, f: Callable[[np.ndarray, np.ndarray], ImageCube]) -> Datum:
+def imageBinop(dx: Datum, dy: Datum, f: Callable[[Value, Value], Value]) -> Datum:
     """This wraps binary operations on imagecubes"""
     imga = dx.val
     imgb = dy.val
 
     if imga.img.shape != imgb.img.shape:
         raise OperatorException('Images must be same shape in binary operation')
+
     # if imga has an ROI, use that for both. Similarly, if imgb has an ROI, use that.
     # But they can't both have ROIs unless they are identical.
 
     ahasroi = imga.hasROI()
     bhasroi = imgb.hasROI()
-    if ahasroi or bhasroi:
-        if ahasroi and bhasroi and imga.rois != imgb.rois:
-            raise OperatorException('cannot have two images with ROIs on both sides of a binary operation')
-        else:
-            # get subimages, using their own image's ROI if it has one, otherwise the other image's ROI.
-            # One of these will be true.
-            rois = imga.rois if ahasroi else imgb.rois
-            subimga = imga.subimage(None if ahasroi else imgb)
-            subimgb = imgb.subimage(None if bhasroi else imga)
+    if ahasroi and bhasroi and imga.rois != imgb.rois:
+        raise OperatorException('cannot have two images with ROIs on both sides of a binary operation')
 
-        maskeda = subimga.masked()
-        maskedb = subimgb.masked()
-        # get masked subimages
-        # perform calculation and get result subimage
-        ressubimg = f(maskeda, maskedb)  # will generate a numpy array
-        # splice that back into a copy of image A, but just take its image, because we're going to
-        # rebuild the sources
-        img = imga.modifyWithSub(subimga, ressubimg).img
-    else:
-        # neither image has a roi
-        img = f(imga.img, imgb.img)
-        rois = None
+    # we make a subimage even if there is no ROI - it's just easier to manage.
 
-    sources = MultiBandSource.createBandwiseUnion([imga.sources, imgb.sources])
-    outimg = ImageCube(img, sources=sources)
+    rois = imga.rois if ahasroi else imgb.rois
+    subimga = imga.subimage(None if ahasroi else imgb)
+    subimgb = imgb.subimage(None if bhasroi else imga)
+
+    a = Value(subimga.masked(), subimga.maskedUncertainty(), subimga.maskedDQ())
+    b = Value(subimgb.masked(), subimgb.maskedUncertainty(), subimgb.maskedDQ())
+    # perform calculation and get result subimage
+    r = f(a, b)  # will generate a value
+    # splice that back into a copy of image A
+    outimg = imga.modifyWithSub(subimga, r.n, uncertainty=r.u, dqOR=r.dq)
+
+    outimg.sources = MultiBandSource.createBandwiseUnion([imga.sources, imgb.sources])
     if rois is not None:
         outimg.rois = rois.copy()
+
     return Datum(Datum.IMG, outimg)
 
-# TODO UNCERTAINTY - work out what the args should be and pass them in
+
 def numberImageBinop(dx: Datum, dy: Datum, f: Callable[[Value, Value], Value]) -> Datum:
     """This wraps binary operations number x imagecube"""
     # get the image
@@ -182,7 +175,6 @@ def numberImageBinop(dx: Datum, dy: Datum, f: Callable[[Value, Value], Value]) -
     return Datum(Datum.IMG, img)
 
 
-# TODO UNCERTAINTY - work out what the args should be and pass them in
 def imageNumberBinop(dx: Datum, dy: Datum, f: Callable[[Value, Value], Value]) -> Datum:
     """This wraps binary operations imagecube x number"""
     img = dx.val  # Datum.IMG
@@ -195,7 +187,6 @@ def imageNumberBinop(dx: Datum, dy: Datum, f: Callable[[Value, Value], Value]) -
     return Datum(Datum.IMG, img)
 
 
-# TODO UNCERTAINTY - work out what the args should be and pass them in
 def numberBinop(dx: Datum, dy: Datum, f: Callable[[Value, Value], Value]) -> Datum:
     """Wraps number x number -> number"""
     r = f(dx.val, dy.val)
