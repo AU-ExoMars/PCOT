@@ -833,8 +833,11 @@ class Canvas(QtWidgets.QWidget):
             row['source'] = sourcecb
 
             datacb = QtWidgets.QComboBox()
+            print("Creating new DQ widget")
             for name, val in CanvasDQSpec.getDataItems():
-                datacb.addItem(name, userData=val)
+                # note - these are integers, although they might be uint16 at source. When we do
+                # findData later we look for them as ints.
+                datacb.addItem(name, userData=int(val))
             layout.addWidget(QtWidgets.QLabel("DATA"), 1, 0)
             layout.addWidget(datacb, 1, 1)
             row['data'] = datacb
@@ -948,6 +951,7 @@ class Canvas(QtWidgets.QWidget):
             elif d.stype == canvasdq.STypeChannel:
                 val = d.channel
             sourceItemIdx = sourcecombo.findData(val)
+
             if sourceItemIdx >= 0:
                 sourcecombo.setCurrentIndex(sourceItemIdx)
             else:
@@ -958,7 +962,10 @@ class Canvas(QtWidgets.QWidget):
 
             # Now the data type
             datacombo = w['data']
-            dataidx = datacombo.findData(d.data)
+            # the d.data field is likely to be a uint16 if it represents a bit or bitmask. We need to
+            # convert to an int, because that's how they all get added to the combobox.
+            dataidx = datacombo.findData(int(d.data))
+
             if dataidx >= 0:
                 datacombo.setCurrentIndex(dataidx)
             else:

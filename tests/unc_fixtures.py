@@ -15,7 +15,7 @@ def gen_mono_unc(val, unc):
     return ImageCube(data, uncertainty=uncd)
 
 
-def gen_2b_unc(val1, val2, unc1, unc2):
+def gen_2b_unc(val1, unc1, val2,  unc2):
     """Generate a 2-channel image with fixed uncertainties and intensities. The image is 20x20 in size"""
     d1, d2, u1, u2 = [np.full((20, 20), x, np.float32) for x in (val1, val2, unc1, unc2)]
     d = np.dstack((d1, d2))

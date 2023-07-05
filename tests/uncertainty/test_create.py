@@ -44,16 +44,16 @@ def test_create_wrong_dq_type():
 
 def test_create_unc_2b_ok():
     """Basic test of creating a 2-band image with uncertainty"""
-    img = gen_2b_unc(1, 2, 3, 4)
+    img = gen_2b_unc(1, 3, 2, 4)
     u = img.uncertainty[10, 10]
     d = img.img[10, 10]
-    assert np.array_equal(u, np.array((3, 4), np.float32))
     assert np.array_equal(d, np.array((1, 2), np.float32))
+    assert np.array_equal(u, np.array((3, 4), np.float32))
 
 
 def test_default_dq():
     """Test that creating an image with uncertainty creates zero DQ (assuming no other problems)"""
-    img = gen_2b_unc(1, 2, 3, 4)
+    img = gen_2b_unc(1, 3, 2, 4)
     assert np.array_equal(np.zeros(img.shape, dtype=np.uint16), img.dq)
 
 
