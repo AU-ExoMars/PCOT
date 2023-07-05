@@ -159,6 +159,42 @@ def test_number_number_ops():
         assert n.dq == t.expected_dq
 
 
+def check_binop_test(doc, t, expr, origimg):
+    """Once the graph for a binop test is set up, we call this to check the answer.
+    The area inside the ROI must have the expected value, unc, and dq. The area
+    outside must be unchanged.
+
+    The pixel at 8,8 in band 1 must also be unchanged - while inside the rect,
+    it is marked as BAD.
+    """
+
+    logger.warning(f"Testing {t.e} : a={t.a}±{t.ua}, b={t.b}±{t.ub} ----------------------------------------------")
+
+    doc.changed()
+    img = expr.getOutput(0, Datum.IMG)  # has to be an image!
+    assert img is not None
+
+    expected_n = pytest.approx(t.expected_val)
+    expected_u = pytest.approx(t.expected_unc)
+
+    for x in range(0, 20):
+        for y in range(0, 20):
+            n = img.img[y, x, 1]
+            u = img.uncertainty[y, x, 1]
+            dqv = img.dq[y, x, 1]
+            # we should also leave the pixel at 8,8 unchanged because it's marked as UNDEF.
+            if 5 <= x < 15 and 5 <= y < 15 and not (x == 8 and y == 8):
+                # check pixel is changed inside the rect
+                assert n == expected_n
+                assert u == expected_u
+                assert dqv == t.expected_dq | origimg.dq[y, x, 1]
+            else:
+                # and unchanged outside
+                assert n == origimg.img[y, x, 1]
+                assert u == origimg.uncertainty[y, x, 1]
+                assert dqv == origimg.dq[y, x, 1]
+
+
 def test_number_image_ops():
     """Test than binops in expr nodes on numbers and images work, with the image on the RHS. We want to
     ensure that the part outside an ROI - and any "bad" parts of the image (with dq.BAD bits) - are unchanged."""
@@ -187,6 +223,42 @@ def test_number_image_ops():
         expr.expr = t.e
         expr.connect(0, nodeA, 0, autoPerform=False)
         expr.connect(1, rect, 0, autoPerform=False)
+
+        check_binop_test(doc, t, expr, origimg)
+
+
+def test_image_number_ops():
+    """Test than binops in expr nodes on images and numbers work, with the image on the LHS. We want to
+    ensure that the part outside an ROI - and any "bad" parts of the image (with dq.BAD bits) - are unchanged.
+    """
+
+    pcot.setup()
+
+    # I'm doing this deliberately without doing anything clever, as if I'd
+    # never written the previous test (number/image)
+
+    for t in tests:
+        doc = Document()
+        # node A is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
+        origimg = gen_2b_unc(2, 0.1, t.a, t.ua)
+        # just to check that DQ bits get OR-ed in, we set some DQ in the image.
+        origimg.dq[2, 2, 1] = dq.COMPLEX
+        origimg.dq[8, 8, 1] = dq.UNDEF
+        doc.setInputDirect(0, origimg)
+        nodeA = doc.graph.create("input 0")
+        # which feeds into a rect ROI
+        rect = doc.graph.create("rect")
+        rect.roi.set(5, 5, 10, 10)  # set the rectangle to be at 5,5 extending 10x10
+        rect.connect(0, nodeA, 0, autoPerform=False)
+
+        # node B just numeric.
+        nodeB = numberWithUncNode(doc, t.b, t.ub)
+        # and connect an expression node to rect and nodeB.
+        expr = doc.graph.create("expr")
+        expr.expr = t.e
+        # this is where the connections are reversed.
+        expr.connect(0, rect, 0, autoPerform=False)
+        expr.connect(1, nodeB, 0, autoPerform=False)
 
         logger.warning(f"Testing {t.e} : a={t.a}±{t.ua}, b={t.b}±{t.ub} ----------------------------------------------")
 
