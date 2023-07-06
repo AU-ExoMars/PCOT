@@ -50,9 +50,8 @@ def test_make_unc():
 def check_op_test(doc, t, expr, origimg):
     """Once the graph for a test is set up, we call this to check the answer.
     The area inside the ROI must have the expected value, unc, and dq. The area
-    outside must be unchanged.
-
-    The pixel at 8,8 in band 1 must also change despite being BAD.
+    outside must be unchanged. We can't check DQ propagation from binops, because
+    different binops do it differently (e.g. max, min). There's another test for that.
     """
 
     doc.changed()
@@ -72,8 +71,9 @@ def check_op_test(doc, t, expr, origimg):
                 # check pixel is changed inside the rect
                 en = expected_n
                 eu = expected_u
-                # and that the new DQ bit is OR-ed into the original - the 8,8 pixel is
-                # has an existing bit set, so that should still be set.
+                # can't test that DQs are merged from parents; different ops do different things.
+                # But we can at least do this for unary ops - we set the DQ on a couple of pixels
+                # in the incoming image. We can do it for binops too if they aren't min,max.
                 edq = t.expected_dq | origimg.dq[y, x, 1]
             else:
                 # and unchanged outside
@@ -272,10 +272,6 @@ def test_number_image_binops():
         # node B is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
         origimg = gen_2b_unc(2, 0.1, t.b, t.ub)
 
-        # just to check that DQ bits get OR-ed in, we set some DQ in the image.
-        origimg.dq[2, 2, 1] = dq.COMPLEX
-        origimg.dq[8, 8, 1] = dq.SAT
-
         doc.setInputDirect(0, origimg)
         nodeB = doc.graph.create("input 0")
         # which feeds into a rect ROI
@@ -306,9 +302,6 @@ def test_image_number_binops():
         doc = Document()
         # node A is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
         origimg = gen_2b_unc(2, 0.1, t.a, t.ua)
-        # just to check that DQ bits get OR-ed in, we set some DQ in the image.
-        origimg.dq[2, 2, 1] = dq.COMPLEX
-        origimg.dq[8, 8, 1] = dq.UNDEF
         doc.setInputDirect(0, origimg)
         nodeA = doc.graph.create("input 0")
         # which feeds into a rect ROI
@@ -338,9 +331,6 @@ def test_image_image_binops():
         doc = Document()
         # node A is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
         imgA = gen_2b_unc(2, 0.1, t.a, t.ua)
-        # just to check that DQ bits get OR-ed in, we set some DQ in the image.
-        imgA.dq[2, 2, 1] = dq.COMPLEX
-        imgA.dq[8, 8, 1] = dq.UNDEF
         doc.setInputDirect(0, imgA)
         nodeA = doc.graph.create("input 0")
         # which feeds into a rect ROI
@@ -364,7 +354,7 @@ def test_image_image_binops():
 
 
 def test_image_image_binops_noroi():
-    """test image/image operations without a region of interest"""
+    """test image/image operations without a region of interest."""
 
     pcot.setup()
 
@@ -372,14 +362,18 @@ def test_image_image_binops_noroi():
         doc = Document()
         # node A is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
         imgA = gen_2b_unc(2, 0.1, t.a, t.ua)
-        # just to check that DQ bits get OR-ed in, we set some DQ in the image.
-        imgA.dq[8, 8, 1] = dq.UNDEF
         doc.setInputDirect(0, imgA)
         nodeA = doc.graph.create("input 0")
+
         # node B is a 20x20 2-band image with 3±0.2 in band 0 and the given values in band 1.
         imgB = gen_2b_unc(3, 0.2, t.b, t.ub)
         doc.setInputDirect(1, imgB)
         nodeB = doc.graph.create("input 1")
+
+        # just to check that DQ bits get OR-ed in, we set some DQ in the image.
+        if t.e != "a|b" and t.e != "a&b":  # doesn't work with these, they handle dq differently
+            imgA.dq[8, 8, 1] = dq.UNDEF
+
         # and connect an expression node to rect and nodeB.
         expr = doc.graph.create("expr")
         expr.expr = t.e
@@ -404,7 +398,8 @@ def test_image_image_binops_noroi():
 
                 ntest = n == expected_n
                 utest = u == expected_u
-                dqtest = dqv == t.expected_dq | imgA.dq[y, x, 1]
+                edq = t.expected_dq | imgA.dq[y, x, 1]
+                dqtest = dqv == edq
 
                 if not (ntest and utest and dqtest):
                     logger.error(f"Error in binop test at pixel {x},{y} for expression {expr.expr}")
@@ -413,6 +408,79 @@ def test_image_image_binops_noroi():
                     if not utest:
                         logger.error(f"U expected {expected_u} got {u}")
                     if not dqtest:
-                        logger.error(f"DQ expected {t.expected_dq | imgA.dq[y, x, 1]} got {dqv}")
+                        logger.error(f"DQ expected {edq} got {dqv}")
 
                 assert ntest and utest and dqtest
+
+
+def test_dq_propagation_images():
+    """Test that DQ is propagated correctly in the binary operators on images"""
+
+    pcot.setup()
+
+    def runtest(a, ua, adq, b, ub, bdq, e, expected_val, expected_unc, expected_dq):
+        doc = Document()
+        # node A is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
+        imgA = gen_2b_unc(2, 0.1, a, ua, dq0=0, dq1=adq)
+        doc.setInputDirect(0, imgA)
+        nodeA = doc.graph.create("input 0")
+
+        # node B is a 20x20 2-band image with 3±0.2 in band 0 and the given values in band 1.
+        imgB = gen_2b_unc(3, 0.2, b, ub, dq0=0, dq1=bdq)
+        doc.setInputDirect(1, imgB)
+        nodeB = doc.graph.create("input 1")
+
+        # and connect an expression node to rect and nodeB.
+        expr = doc.graph.create("expr")
+        expr.expr = e
+        # this is where the connections are reversed.
+        expr.connect(0, nodeA, 0, autoPerform=False)
+        expr.connect(1, nodeB, 0, autoPerform=False)
+
+        logger.warning(f"Testing {e} : a={a}±{ua}dq={adq}, b={b}±{ub}dq={bdq} --------------------------------------")
+
+        doc.changed()
+        img = expr.getOutput(0, Datum.IMG)  # has to be an image!
+        assert img is not None
+
+        expected_n = pytest.approx(expected_val)
+        expected_u = pytest.approx(expected_unc)
+
+        for x in range(0, 20):
+            for y in range(0, 20):
+                n = img.img[y, x, 1]
+                u = img.uncertainty[y, x, 1]
+                dqv = img.dq[y, x, 1]
+
+                ntest = n == expected_n
+                utest = u == expected_u
+                dqtest = dqv == expected_dq
+
+                if not (ntest and utest and dqtest):
+                    logger.error(f"Error in binop test at pixel {x},{y} for expression {expr.expr}")
+                    if not ntest:
+                        logger.error(f"N expected {expected_n} got {n}")
+                    if not utest:
+                        logger.error(f"U expected {expected_u} got {u}")
+                    if not dqtest:
+                        logger.error(
+                            f"DQ expected {dq.names(expected_dq, shownone=True)} got {dq.names(dqv, shownone=True)}")
+
+                assert ntest and utest and dqtest
+
+    # for each of these ops, and also checking the result...
+    for op, res in [('+', 5), ('-', -1), ('*', 6), ('/', 0.66666666666), ('^', 8)]:
+        e = f"a{op}b"
+        # check no dq propagates
+        runtest(2, 0, dq.NONE, 3, 0, dq.NONE, e, res, 0, dq.NONE)
+        # check DQ on LHS propagates
+        runtest(2, 0, dq.UNDEF | dq.NOUNCERTAINTY, 3, 0, dq.NONE, e, res, 0, dq.UNDEF | dq.NOUNCERTAINTY)
+        # and on RHS
+        runtest(2, 0, dq.NONE, 3, 0, dq.UNDEF | dq.NOUNCERTAINTY, e, res, 0, dq.UNDEF | dq.NOUNCERTAINTY)
+        # and check both are ORed in.
+        runtest(2, 0, dq.SAT, 3, 0, dq.UNDEF | dq.NOUNCERTAINTY, e, res, 0, dq.SAT | dq.UNDEF | dq.NOUNCERTAINTY)
+
+    # min and max are different; the DQ comes from the side which "wins"
+    runtest(2, 0, dq.SAT, 3, 0, dq.UNDEF, "a|b", 3, 0, dq.UNDEF)      # max operator, dq comes from b
+    runtest(2, 0, dq.SAT, 3, 0, dq.UNDEF, "a&b", 2, 0, dq.SAT)      # min operator, dq comes from a
+

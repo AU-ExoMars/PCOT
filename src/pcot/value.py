@@ -236,14 +236,14 @@ class Value:
         return Value(n, u, d)
 
     def __and__(self, other):
-        """The & operator actually finds the minimum (Zadeh op)"""
+        """The & operator actually finds the minimum (Zadeh fuzzy op)"""
         n = np.where(self.n > other.n, other.n, self.n)
         u = np.where(self.n > other.n, other.u, self.u)
         d = np.where(self.n > other.n, other.dq, self.dq)
         return Value(n, u, d)
 
     def __or__(self, other):
-        """The & operator actually finds the maximum (Zadeh op)"""
+        """The | operator actually finds the maximum (Zadeh fuzzy op)"""
         n = np.where(self.n < other.n, other.n, self.n)
         u = np.where(self.n < other.n, other.u, self.u)
         d = np.where(self.n < other.n, other.dq, self.dq)

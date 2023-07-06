@@ -1331,10 +1331,6 @@ class Canvas(QtWidgets.QWidget):
                 unc = self.previmg.uncertainty[y, x]
                 dq = pcot.dq.names(self.previmg.dq[y, x])
                 self.spectrumWidget.set(None, f"Single channel - {val:.3} +/- {unc:.3}. DQ:{dq}")
-                val = self.previmg.img[y, x]
-                unc = self.previmg.uncertainty[y, x]
-                dq = pcot.dq.names(self.previmg.dq[y, x])
-                self.spectrumWidget.setData(f"Single channel - {val:.3} +/- {unc:.3}. DQ:{dq}")
             return
 
         # within the coords, and multichannel image present

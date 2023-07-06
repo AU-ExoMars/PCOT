@@ -13,13 +13,15 @@ def reg(name, bit):
     return np.uint16(b)
 
 
-def names(bits):
+def names(bits, shownone=False):
     """given a DQ bit field, return the names of the set flags"""
     out = []
     for i in range(0, 16):
         b = 1 << i
         if (b & bits) != 0:
             out.append(namedict[b])
+    if shownone and len(out) == 0:
+        return "none"
     return "|".join(out)
 
 

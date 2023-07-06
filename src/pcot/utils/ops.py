@@ -150,8 +150,8 @@ def imageBinop(dx: Datum, dy: Datum, f: Callable[[Value, Value], Value]) -> Datu
     b = Value(subimgb.masked(), subimgb.maskedUncertainty(), subimgb.maskedDQ())
     # perform calculation and get result subimage
     r = f(a, b)  # will generate a value
-    # splice that back into a copy of image A
-    outimg = imga.modifyWithSub(subimga, r.n, uncertainty=r.u, dqOR=r.dq)
+    # splice that back into a copy of image A replacing uncertainty and DQ too.
+    outimg = imga.modifyWithSub(subimga, r.n, uncertainty=r.u, dqv=r.dq)
 
     outimg.sources = MultiBandSource.createBandwiseUnion([imga.sources, imgb.sources])
     if rois is not None:
