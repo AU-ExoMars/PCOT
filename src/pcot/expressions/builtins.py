@@ -357,7 +357,7 @@ def registerBuiltinFunctions(p):
                    [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
                    lambda args, optargs: funcWrapper(np.tan, args[0]))
-    p.registerFunc("sqrt", "calculate the square root",
+    p.registerFunc("sqrt", "calculate the square root (note - uncertainty is cleared. Use ^0.5 instead).",
                    [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
                    lambda args, optargs: funcWrapper(np.sqrt, args[0]))
