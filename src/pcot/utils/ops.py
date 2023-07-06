@@ -111,7 +111,10 @@ def imageUnop(d: Datum, f: Callable[[np.ndarray], np.ndarray]) -> Datum:
         rimg = img.modifyWithSub(subimg, ressubimg).img
     else:
         rimg = f(img.img)
-    out = ImageCube(rimg, sources=img.sources)  # originally this built a new source set. Don't know why.
+
+    # originally this built a new source set. Don't know why. We do, however, copy the uncertainty
+    # and DQ from the original image.
+    out = ImageCube(rimg, sources=img.sources, uncertainty=np.copy(img.uncertainty), dq=np.copy(img.dq))
     out.rois = img.rois.copy()
     return Datum(Datum.IMG, out)
 

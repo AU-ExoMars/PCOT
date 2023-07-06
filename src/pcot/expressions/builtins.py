@@ -173,13 +173,15 @@ def funcTestImg(args, _):
     return Datum(Datum.IMG, img)
 
 
-def funcV(args, _):
+def funcV(args, optargs):
     # create a new nominal,uncertainty value - image or number - from the nominal values of two inputs.
     # So if you pass:
     #  image, image - one image with uncertainty taken from the nominal values of second image
     #  image, number - image with constant uncertainty
     #  number, image - constant grey image with uncertainty taken from the nominal values of second image (a bit weird)
     #  number, number - most common case, a number with uncertainty
+    #
+    # Any optional DQ is ORed into the DQ of the result - only works on numbers, though!
 
     t0 = args[0].tp
     t1 = args[1].tp
@@ -188,25 +190,31 @@ def funcV(args, _):
     s0 = args[0].sources
     s1 = args[1].sources
 
+    dq = optargs[0].get(Datum.NUMBER)
+    if dq is None:
+        dq = dq.NONE
+    else:
+        dq = np.uint16(dq.n)
+
     if t0 == Datum.NUMBER:
         if t1 == Datum.NUMBER:
             # number, number
-            return Datum(Datum.NUMBER, Value(v0.n, v1.n), SourceSet([s0, s1]))
+            return Datum(Datum.NUMBER, Value(v0.n, v1.n, dq), SourceSet([s0, s1]))
         else:
             # here, we're creating a number,uncimage pair
             i = np.full(v1.img.shape, v0.n, dtype=np.float32)
             s = combineImageWithNumberSources(v1, s0)
-            img = ImageCube(i, uncertainty=v1.img, dq=v1.dq, sources=s)
+            img = ImageCube(i, uncertainty=v1.img, dq=v1.dq | dq, sources=s)
             return Datum(Datum.IMG, img)
     else:
         if t1 == Datum.NUMBER:
             # image, number
             i = np.full(v0.img.shape, v1.n, dtype=np.float32)
             s = combineImageWithNumberSources(v0, s1)
-            img = ImageCube(v0.img, uncertainty=i, dq=v0.dq, sources=s)
+            img = ImageCube(v0.img, uncertainty=i, dq=v0.dq | dq, sources=s)
             return Datum(Datum.IMG, img)
         else:
-            img = ImageCube(v0.img, uncertainty=v1.img, dq=v0.dq | v1.dq,
+            img = ImageCube(v0.img, uncertainty=v1.img, dq=v0.dq | v1.dq | dq,
                             sources=MultiBandSource.createBandwiseUnion([s0, s1]))
             return Datum(Datum.IMG, img)
 
@@ -284,7 +292,8 @@ def statsWrapper(fn, fnu, d: List[Optional[Datum]], *args):
         elif x.isImage():
             # if an image, convert to a 1D array
             subimage = x.val.subimage()
-            mask = subimage.fullmask()
+            # we ignore "bad" pixels in the data
+            mask = subimage.fullmask(maskBadPixels=True)
             cp = subimage.img.copy()
             cpu = subimage.uncertainty.copy()
 
@@ -451,7 +460,11 @@ def registerBuiltinFunctions(p):
         [
             Parameter("value", "the nominal value", (Datum.NUMBER, Datum.IMG)),
             Parameter("uncertainty", "the uncertainty", (Datum.NUMBER, Datum.IMG))
-        ], [],
+        ], [
+            Parameter("dq",
+                       "if present, a DQ bit field (e.g. 36 for COMPLEX|SAT) (only works on numeric args)",
+                       Datum.NUMBER, deflt=0),
+            ],
         funcV
     )
 

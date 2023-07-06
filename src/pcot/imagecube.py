@@ -605,32 +605,49 @@ class ImageCube(SourcesObtainable):
 
     def modifyWithSub(self, subimage: SubImageCubeROI, newimg: np.ndarray,
                       sources=None, keepMapping=False,
-                      dq=None, dqOR=None, uncertainty=None
+                      dqv=None, dqOR=np.uint16(0), uncertainty=None
                       ) -> 'ImageCube':
-        """return a copy of the image, with the given image spliced in at the
-        subimage's coordinates and masked according to the subimage.
-        keppMapping will ensure that the new image has the same mapping as the old.
-        If DQ or unc are set, they will replace the old values. If dqOR is set, these
-        values will be OR-ed in (overrides dq). The newimg array can also be None,
-        but it is mandatory."""
+        """return a copy of the image, with the given image spliced in at the subimage's coordinates and masked
+        according to the subimage. keepMapping will ensure that the new image has the same mapping as the old.
+
+        There are some ... complexities involving DQ and uncertainty.
+
+        If no uncertainty is provided, the uncertainty in the result will be zero and NOUNCERTAINTY will be set
+        in the DQ bits.
+
+        DQ can either be set by passing in dqv (value or array), or a value or array can be provided to OR in.
+        """
 
         i = self.copy(keepMapping)
         x, y, w, h = subimage.bb
         # we only want to paste into the bits in the image that are covered
         # by the mask - and we want the full mask
         mask = subimage.fullmask()
+
+        # if the dq we're going to OR in isn't a scalar, make it fit the mask.
+        if not np.isscalar(dqOR):
+            dqOR = dqOR[mask]
+
         if newimg is not None:
+            # copy the new image bits in
             i.img[y:y + h, x:x + w][mask] = newimg[mask]
         if uncertainty is not None:
+            # if uncertainty is provided copy that in
             i.uncertainty[y:y + h, x:x + w][mask] = uncertainty[mask]
-        if dqOR is not None:  # dq and dqOR could be scalar
-            if not np.isscalar(dqOR):
-                dqOR = dqOR[mask]
+        else:
+            # if no uncertainty data is provided, set the uncertainty to zero and also OR in a NOUNCERTAINTY flag
+            i.uncertainty[y:y + h, x:x + w][mask] = 0
+            dqOR |= dq.NOUNCERTAINTY
+
+        if dqv is not None:
+            # DQ data is provided - make sure it fits the mask and then combine with the dqOR bits
+            # to generate the new DQ data
+            if not np.isscalar(dqv):
+                dqv = dqv[mask]
+            i.dq[y:y + h, x:x + w][mask] = dqv | dqOR
+        else:
+            # No DQ data is provided, just OR in the dqOR bits
             i.dq[y:y + h, x:x + w][mask] |= dqOR
-        elif dq is not None:
-            if not np.isscalar(dq):
-                dq = dq[mask]
-            i.dq[y:y + h, x:x + w][mask] = dq
 
         # can replace sources if required
         if sources is not None:
