@@ -164,8 +164,7 @@ def check_binop_test(doc, t, expr, origimg):
     The area inside the ROI must have the expected value, unc, and dq. The area
     outside must be unchanged.
 
-    The pixel at 8,8 in band 1 must also be unchanged - while inside the rect,
-    it is marked as BAD.
+    The pixel at 8,8 in band 1 must also change despite being BAD.
     """
 
     logger.warning(f"Testing {t.e} : a={t.a}±{t.ua}, b={t.b}±{t.ub} ----------------------------------------------")
@@ -182,11 +181,13 @@ def check_binop_test(doc, t, expr, origimg):
             n = img.img[y, x, 1]
             u = img.uncertainty[y, x, 1]
             dqv = img.dq[y, x, 1]
-            # we should also leave the pixel at 8,8 unchanged because it's marked as UNDEF.
-            if 5 <= x < 15 and 5 <= y < 15 and not (x == 8 and y == 8):
+
+            if 5 <= x < 15 and 5 <= y < 15:
                 # check pixel is changed inside the rect
                 en = expected_n
                 eu = expected_u
+                # and that the new DQ bit is OR-ed into the original - the 8,8 pixel is
+                # has an existing bit set, so that should still be set.
                 edq = t.expected_dq | origimg.dq[y, x, 1]
             else:
                 # and unchanged outside
@@ -225,7 +226,7 @@ def test_number_image_ops():
 
         # just to check that DQ bits get OR-ed in, we set some DQ in the image.
         origimg.dq[2, 2, 1] = dq.COMPLEX
-        origimg.dq[8, 8, 1] = dq.UNDEF
+        origimg.dq[8, 8, 1] = dq.SAT
 
         doc.setInputDirect(0, origimg)
         nodeB = doc.graph.create("input 0")
@@ -349,27 +350,18 @@ def test_image_image_ops_noroi():
                 n = img.img[y, x, 1]
                 u = img.uncertainty[y, x, 1]
                 dqv = img.dq[y, x, 1]
-                # only the single bad pixel should be unchanged
-                if not (x == 8 and y == 8):
-                    en = expected_n
-                    eu = expected_u
-                    edq = t.expected_dq | imgA.dq[y, x, 1]
-                else:
-                    en = imgA.img[y, x, 1]
-                    eu = imgA.uncertainty[y, x, 1]
-                    edq = imgA.dq[y, x, 1]
 
-                ntest = n == en
-                utest = u == eu
-                dqtest = dqv == edq
+                ntest = n == expected_n
+                utest = u == expected_u
+                dqtest = dqv == t.expected_dq | imgA.dq[y, x, 1]
 
                 if not (ntest and utest and dqtest):
                     logger.error(f"Error in binop test at pixel {x},{y} for expression {expr.expr}")
                     if not ntest:
-                        logger.error(f"N expected {en} got {n}")
+                        logger.error(f"N expected {expected_n} got {n}")
                     if not utest:
-                        logger.error(f"U expected {eu} got {u}")
+                        logger.error(f"U expected {expected_u} got {u}")
                     if not dqtest:
-                        logger.error(f"DQ expected {edq} got {dqv}")
+                        logger.error(f"DQ expected {t.expected_dq | imgA.dq[y, x, 1]} got {dqv}")
 
                 assert ntest and utest and dqtest

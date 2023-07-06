@@ -92,11 +92,11 @@ class SubImageCubeROI:
             self.bb = Rect(0, 0, img.w, img.h)  # whole image
             self.mask = np.full((img.h, img.w), True)  # full mask
 
-    def fullmask(self, maskBadPixels=True):
+    def fullmask(self, maskBadPixels=False):
         """the main mask is just a single channel - this will generate a mask
         of the same number of channels, so an x,y image will make an x,y mask
          and an x,y,n image will make an x,y,n mask.
-         It will also remove bad bits from the mask, as indicated by the DQ array.
+         It will also optionally remove BAD bits from the mask, as indicated by the DQ array.
         """
         if len(self.img.shape) == 2:
             mask = self.mask  # the existing mask is fine
@@ -617,9 +617,8 @@ class ImageCube(SourcesObtainable):
         i = self.copy(keepMapping)
         x, y, w, h = subimage.bb
         # we only want to paste into the bits in the image that are covered
-        # by the mask - and we want the full mask, with "bad" pixels not
-        # modified.
-        mask = subimage.fullmask(maskBadPixels=True)
+        # by the mask - and we want the full mask
+        mask = subimage.fullmask()
         if newimg is not None:
             i.img[y:y + h, x:x + w][mask] = newimg[mask]
         if uncertainty is not None:
