@@ -27,7 +27,7 @@ def hcluster(points, pn):
     # create a new nxn matrix of zeroes for the distances
     # also create initial clusters - we're using agglomerative clustering, so each item starts
     # in a cluster by itself
-    dists = np.zeros((n, n), np.float)
+    dists = np.zeros((n, n), np.float32)
     distsMask = np.zeros((n, n), np.ubyte)
     clusters = [[] for i in range(0, n)]
     for i in range(0, n):

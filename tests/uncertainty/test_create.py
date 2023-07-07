@@ -19,7 +19,7 @@ def test_create_unmatched_unc_shape():
 def test_create_wrong_unc_type():
     """Test that an incorrect type passed as uncertainty is converted."""
     data = np.full((20, 20), 0, np.float32)
-    uncd = np.full((20, 20), 0.5, np.float)
+    uncd = np.full((20, 20), 0.5, float)
     with pytest.raises(Exception) as info:
         img = ImageCube(data, uncertainty=uncd)
     assert "uncertainty data must be 32-bit floating point" == str(info.value)
@@ -36,7 +36,7 @@ def test_create_unmatched_dq_shape():
 def test_create_wrong_dq_type():
     """Test that an incorrect type passed as uncertainty is converted."""
     data = np.full((20, 20), 0, np.float32)
-    dqd = np.full((20, 20), 0.5, np.float)
+    dqd = np.full((20, 20), 0.5, np.float32)
     with pytest.raises(Exception) as info:
         img = ImageCube(data, dq=dqd)
     assert "DQ data is not 16-bit unsigned integers" == str(info.value)

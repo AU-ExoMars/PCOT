@@ -471,20 +471,20 @@ class ImageCube(SourcesObtainable):
                 mapping = self.mapping
             if mapping is None:
                 raise Exception("trying to get rgbImage of an imagecube with no mapping")
-            img = np.dstack(
+            img = np.dstack([
                 self.img[:, :, mapping.red],
                 self.img[:, :, mapping.green],
-                self.img[:, :, mapping.blue]
+                self.img[:, :, mapping.blue]]
             )
-            dq = np.dstack(
+            dq = np.dstack([
                 self.dq[:, :, mapping.red],
                 self.dq[:, :, mapping.green],
-                self.dq[:, :, mapping.blue]
+                self.dq[:, :, mapping.blue]]
             )
-            unc = np.dstack(
+            unc = np.dstack([
                 self.uncertainty[:, :, mapping.red],
                 self.uncertainty[:, :, mapping.green],
-                self.uncertainty[:, :, mapping.blue]
+                self.uncertainty[:, :, mapping.blue]]
             )
         # The RGB mapping here should be just [0,1,2], since this output is the RGB representation.
         return ImageCube(img, ChannelMapping(0, 1, 2), self.rgbSources(mapping),

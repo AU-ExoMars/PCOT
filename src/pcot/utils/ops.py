@@ -167,11 +167,11 @@ def numberImageBinop(dx: Datum, dy: Datum, f: Callable[[Value, Value], Value]) -
     # create a subimage
     subimg = img.subimage()
     # get the uncertainty-aware forms of the operands
-    b = Value(subimg.masked(), subimg.maskedUncertainty())
+    b = Value(subimg.masked(), subimg.maskedUncertainty(), subimg.maskedDQ())
     # perform the operation
     r = f(dx.val, b)
     # put the result back into the image
-    img = img.modifyWithSub(subimg, r.n, uncertainty=r.u, dqOR=r.dq)
+    img = img.modifyWithSub(subimg, r.n, uncertainty=r.u, dqv=r.dq)
     # handle ROIs and sources
     img.rois = dy.val.rois.copy()
     img.sources = combineImageWithNumberSources(img, dx.getSources())
@@ -182,9 +182,9 @@ def imageNumberBinop(dx: Datum, dy: Datum, f: Callable[[Value, Value], Value]) -
     """This wraps binary operations imagecube x number"""
     img = dx.val  # Datum.IMG
     subimg = img.subimage()
-    a = Value(subimg.masked(), subimg.maskedUncertainty())
+    a = Value(subimg.masked(), subimg.maskedUncertainty(), subimg.maskedDQ())
     r = f(a, dy.val)
-    img = img.modifyWithSub(subimg, r.n, uncertainty=r.u, dqOR=r.dq)
+    img = img.modifyWithSub(subimg, r.n, uncertainty=r.u, dqv=r.dq)
     img.rois = dx.val.rois.copy()
     img.sources = combineImageWithNumberSources(img, dy.getSources())
     return Datum(Datum.IMG, img)

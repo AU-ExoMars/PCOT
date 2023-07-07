@@ -122,14 +122,14 @@ class ROI(SourcesObtainable, Annotation):
                 sx = ndimage.sobel(mask, axis=0, mode='constant')
                 sy = ndimage.sobel(mask, axis=1, mode='constant')
                 mask = np.hypot(sx, sy)
-            mask = mask.clip(max=1.0).astype(np.float)
+            mask = mask.clip(max=1.0).astype(np.float32)
             # mask = skimage.morphology.erosion(mask)
             ww = int(bb.w)
             hh = int(bb.h)
             mask = cv.resize(mask, dsize=(ww, hh), interpolation=cv.INTER_AREA)
             # now prepare the actual image, which is just a coloured fill rectangle - we
             # will add the mask as an alpha
-            img = np.full((hh, ww, 3), self.colour, dtype=np.float)  # the second arg is the colour
+            img = np.full((hh, ww, 3), self.colour, dtype=np.float32)  # the second arg is the colour
             # add the mask as the alpha channel
             x = np.dstack((img, mask))
             # to byte
