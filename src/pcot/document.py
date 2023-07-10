@@ -91,7 +91,7 @@ class Document:
     nodeInstances: Dict[XFormType, List[XForm]]
 
     def __del__(self):
-        print(f"----{self}")
+        pass
 
     def __init__(self, fileName=None):
         """Create a new document, and (optionally) load a file into it"""

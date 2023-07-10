@@ -1279,14 +1279,18 @@ class XFormGraph:
             n.type.generateOutputTypes(n)
         return newnodes
 
-    ## a really ugly thing for just scanning through and returning true if a node
-    # of a given name exists. The *correct* thing to do would be have a dict of
-    # nodes by name, of course. But this is plenty fast enough.
-    def nodeExists(self, name):
+    def get(self, name):
+        """Really ugly thing for getting a node by name. Node names are unique.
+        The *correct* thing to do would be have a dict of
+        nodes by name, of course. But this is plenty fast enough."""
         for n in self.nodes:
             if n.name == name:
-                return True
-        return False
+                return n
+        return None
+
+    def nodeExists(self, name):
+        """Does a node exist (node names are unique)?"""
+        return self.get(name) is not None
 
     ## change the names of nodes in the dict which have the same names as
     # nodes in the existing graph. Returns a new dict.
