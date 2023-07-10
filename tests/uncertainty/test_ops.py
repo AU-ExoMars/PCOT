@@ -419,7 +419,7 @@ def test_dq_propagation_images():
 
     pcot.setup()
 
-    def runtest(a_is_scalar, b_is_scalar, a, ua, adq, b, ub, bdq, e, expected_val, expected_unc, expected_dq):
+    def runtest(a, ua, adq, b, ub, bdq, e, expected_val, expected_unc, expected_dq):
         doc = Document()
         if a_is_scalar:
             nodeA = doc.graph.create("expr")
@@ -492,19 +492,16 @@ def test_dq_propagation_images():
             for op, res in [('+', 5), ('-', -1), ('*', 6), ('/', 0.66666666666), ('^', 8)]:
                 e = f"a{op}b"
                 # check DQ on LHS propagates
-                runtest(a_is_scalar, b_is_scalar, 2, 0, dq.UNDEF | dq.NOUNCERTAINTY, 3, 0, dq.NONE, e, res, 0,
-                        dq.UNDEF | dq.NOUNCERTAINTY)
+                runtest(2, 0, dq.UNDEF | dq.NOUNCERTAINTY, 3, 0, dq.NONE, e, res, 0, dq.UNDEF | dq.NOUNCERTAINTY)
                 # check no dq propagates
-                runtest(a_is_scalar, b_is_scalar, 2, 0, dq.NONE, 3, 0, dq.NONE, e, res, 0, dq.NONE)
+                runtest(2, 0, dq.NONE, 3, 0, dq.NONE, e, res, 0, dq.NONE)
                 # and on RHS
-                runtest(a_is_scalar, b_is_scalar, 2, 0, dq.NONE, 3, 0, dq.UNDEF | dq.NOUNCERTAINTY, e, res, 0,
-                        dq.UNDEF | dq.NOUNCERTAINTY)
+                runtest(2, 0, dq.NONE, 3, 0, dq.UNDEF | dq.NOUNCERTAINTY, e, res, 0, dq.UNDEF | dq.NOUNCERTAINTY)
                 # and check both are ORed in.
-                runtest(a_is_scalar, b_is_scalar, 2, 0, dq.SAT, 3, 0, dq.UNDEF | dq.NOUNCERTAINTY, e, res, 0,
-                        dq.SAT | dq.UNDEF | dq.NOUNCERTAINTY)
+                runtest(2, 0, dq.SAT, 3, 0, dq.UNDEF | dq.NOUNCERTAINTY, e, res, 0, dq.SAT | dq.UNDEF | dq.NOUNCERTAINTY)
 
             # min and max are different; the DQ comes from the side which "wins"
             # max operator, dq comes from b
-            runtest(a_is_scalar, b_is_scalar, 2, 0, dq.SAT, 3, 0, dq.UNDEF, "a|b", 3, 0, dq.UNDEF)
+            runtest(2, 0, dq.SAT, 3, 0, dq.UNDEF, "a|b", 3, 0, dq.UNDEF)
             # min operator, dq comes from a
-            runtest(a_is_scalar, b_is_scalar, 2, 0, dq.SAT, 3, 0, dq.UNDEF, "a&b", 2, 0, dq.SAT)
+            runtest(2, 0, dq.SAT, 3, 0, dq.UNDEF, "a&b", 2, 0, dq.SAT)
