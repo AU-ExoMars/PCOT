@@ -1,4 +1,5 @@
-"""Test operations - a lot of operations are covered already by things in test_roi_principles, however"""
+"""Test operations - a lot of operations are covered already by things
+in test_roi_principles, however, and also uncertainty/test_ops.py!"""
 import math
 from math import isclose
 
@@ -16,6 +17,7 @@ from pcot.value import Value
 
 
 def test_scalar_ops():
+    """Basic scalar ops, testing precedence and brackets."""
     def runop(e, expected):
         doc = Document()
         expr = doc.graph.create("expr")
@@ -77,6 +79,7 @@ def test_image_scalar_ops():
 
 
 def test_image_image_ops():
+    """Very basic image ops"""
     pcot.setup()
 
     def runop(e, expected):
@@ -302,7 +305,7 @@ def test_greyscale_simple():
 
 
 def test_greyscale_human():
-    # now test that greyscaling with human perception of RGB works.
+    """now test that greyscaling with human perception of RGB works."""
     pcot.setup()
     doc = Document()
     inputimg = genrgb(50, 50,

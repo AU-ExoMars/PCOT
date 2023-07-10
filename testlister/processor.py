@@ -3,6 +3,9 @@ import sys
 import re
 
 from io import StringIO
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Processor():
     def package(self,name,docstring):
@@ -17,13 +20,17 @@ class Processor():
     def test_case_func(self,name,docstring):
         pass
         
+    def preamble(self, text):
+        pass
+        
     def end(self):
         pass
         
-    def __init__(self):
+    def __init__(self, opts):
         self.text = ""
 
     def fetch(self):
+        logger.info("Running pytest --co --verbose")
         old = sys.stdout
         sys.stdout = StringIO()
 

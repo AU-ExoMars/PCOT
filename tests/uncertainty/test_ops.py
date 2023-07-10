@@ -2,6 +2,9 @@
 of these tests might seem redundant, because we also do them at the lower (Value) level.
 But it's good to do some basic tests up here too.
 
+If these tests fail, but those tests in basic/test_values.py pass, the
+problem is probably in the nodes or expression parser.
+
 There's a very handy calculator with uncertainties at https://uncertaintycalculator.com/
 
 """

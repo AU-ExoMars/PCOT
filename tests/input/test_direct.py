@@ -1,3 +1,4 @@
+"""Test the direct input method"""
 import pcot
 from pcot.datum import Datum
 from pcot.document import Document

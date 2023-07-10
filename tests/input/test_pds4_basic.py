@@ -13,6 +13,9 @@ import pytest
 
 
 def test_pds4_load():
+    """Load some PDS4 data, check the channel count in the result, the LIDs, the filter properties
+    but NOT the image pixels (we need a small test image for that)"""
+    
     pcot.setup()
     doc = Document()
 

@@ -1,3 +1,19 @@
+"""Test the basics principles of the Value type for values with
+uncertainty - doesn't test the uncertainty parts themselves, that's
+done in uncertainty/test_ops.py.
+
+For binary operations,
+each test function is actually a "minisuite" and takes three arguments.
+Each of these is a function which generates a value, either a scalar or an array.
+Two functions generate the operands, the other generates the result.
+Then the main test functions call each of these four times, with combinations of
+the different types (scalar and array).
+
+More complex tests are done at the node level in uncertainty/test_ops.py,
+but if those tests fail and these pass then there is a likely to be a
+problem in the nodes or expression parser."""
+
+
 import math
 
 import numpy as np
@@ -52,14 +68,9 @@ def test_equality():
     assert Value(0, 0) != genArray(0, 0)
 
 
-# each test function is actually a "minisuite" and takes three arguments.
-# Each of these is a function which generates a value, either a scalar or an array.
-# Two functions generate the operands, the other generates the result.
-# Then the main test functions call each of these four times, with combinations of
-# the different types (scalar and array).
-
 
 def test_addition():
+    """Test addition - see notes for this module"""
     def core(a, b, r):
         assert a(2, 0) + b(3, 0) == r(5, 0)
         assert a(3, 0) + b(3, 0) != r(5, 0)
@@ -73,6 +84,7 @@ def test_addition():
 
 
 def test_subtraction():
+    """Test subtraction - see notes for this module"""
     def core(a, b, r):
         assert a(2, 0) - b(3, 0) == r(-1, 0)
         assert a(3, 0) - b(2, 0) == r(1, 0)
@@ -86,6 +98,7 @@ def test_subtraction():
 
 
 def test_multiplication():
+    """Test multiplication - see notes for this module"""
     def core(a, b, r):
         assert a(2, 0) * b(3, 0) == r(6, 0)
         assert a(3, 0) * b(2, 0) == r(6, 0)
@@ -101,6 +114,7 @@ def test_multiplication():
 
 
 def test_division():
+    """Test division - see notes for this module"""
     def core(a, b, r):
         assert a(6, 0) / b(2, 0) == r(3, 0)
         assert a(2, 0) / b(4, 0) == r(0.5, 0)
@@ -119,6 +133,7 @@ def test_division():
 
 
 def test_power():
+    """Test exponentiation - see notes for this module"""
     def core(a, b, r):
         assert a(6, 0) ** b(2, 0) == r(36, 0)
         assert a(2, 0) ** b(1, 0) == r(2, 0)
@@ -155,6 +170,7 @@ def test_power():
 
 
 def test_minmax():
+    """Test min and max - see notes for this module"""
     def core(a, b, r):
         assert a(2, 0) | b(3, 0) == r(3, 0)
         assert a(2, 0) & b(3, 0) == r(2, 0)
@@ -167,6 +183,7 @@ def test_minmax():
 
 
 def test_propagation():
+    """Test DQ propagation - see notes for this module"""
     def core(a, b, r):
         assert a(2, 0) | b(3, 0, dq.UNDEF) == r(3, 0, dq.UNDEF)
         assert a(2, 0) & b(3, 0, dq.UNDEF) == r(2, 0)
@@ -182,6 +199,7 @@ def test_propagation():
 
 
 def test_negate_invert():
+    """Test unary operations"""
     def core(a):
         assert -a(2, 2) == a(-2, 2)
         assert -a(-2, 1) == a(2, 1)

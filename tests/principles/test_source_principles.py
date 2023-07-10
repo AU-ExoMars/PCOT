@@ -1,3 +1,6 @@
+"""Test the basic principles behind how sources are propagated
+through the graph"""
+
 import pcot
 from basic.test_sources import SimpleTestSource
 from fixtures import *
@@ -289,6 +292,7 @@ def test_binop_image_and_number_literal(envi_image_1, envi_image_2):
 
 
 def test_unop_image(envi_image_1):
+    """Test that sources are propagated correctly through a unary op"""
     pcot.setup()
     doc = Document()
     assert doc.setInputENVI(0, envi_image_1) is None

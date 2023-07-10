@@ -119,6 +119,7 @@ def test_sourcesetdunder():
 
 
 def test_sourcesetunion():
+    """Test that source set unions contain union of all subsidiary sets"""
     assert len(sourcesetunion.sourceSet) == 5
     assert s1 in sourcesetunion.sourceSet
     assert s2 in sourcesetunion.sourceSet

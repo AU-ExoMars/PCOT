@@ -1,3 +1,5 @@
+"""Tests on basic datum operations such as serialization"""
+
 import numpy
 
 import pcot
@@ -6,8 +8,6 @@ from pcot.value import Value
 
 from fixtures import *
 from pcot.document import Document
-
-"""Tests on basic datum operations such as serialization"""
 
 
 def test_datum_can_create_and_serialise_img(bwimage):

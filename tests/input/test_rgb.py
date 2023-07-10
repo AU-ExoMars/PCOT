@@ -1,3 +1,4 @@
+"""RGB input tests"""
 import pcot
 from pcot.datum import Datum
 from pcot.document import Document
@@ -5,6 +6,7 @@ from fixtures import *
 
 
 def test_rgb_load(globaldatadir):
+    """Test we can load an RGB file (a PNG)"""
     pcot.setup()
     doc = Document()
     # having created a document, set an input. Try one that doesn't exist first.

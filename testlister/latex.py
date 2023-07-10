@@ -27,10 +27,11 @@ def proc(s,latex=True):
     
 
 class LatexProcessor(Processor):
-    def __init__(self):
-        super().__init__()
-        
-                
+    def __init__(self, opts):
+        super().__init__(opts)
+
+    def preamble(self, text):
+        self.add("\\section{Introduction}\n"+text+'\n\n\n')
 
     def package(self,name,docstring):
         out = ""
@@ -69,5 +70,3 @@ class LatexProcessor(Processor):
 
     def test_case_func(self,name,docstring):
         return self.function(name,docstring)
-
-print(LatexProcessor().run())
