@@ -55,6 +55,7 @@ sourcesetunion = SourceSet([sourceset1, sourceset2])
 
 
 def test_sourcesetctors():
+    """Make sure that the different valid forms of SourceSet constructor arguments work"""
     ss = SourceSet(s1)
     assert len(ss.sourceSet) == 1
     assert s1 in ss.sourceSet
@@ -128,25 +129,29 @@ def test_sourcesetunion():
 
 
 def test_sourcesetbrief():
+    """Source set brief description test"""
     assert str(sourceset1withnulls.brief()) == 'one&three&two'
 
 
 def test_sourcesetlong():
+    """Source set long description test"""
     assert str(sourceset1withnulls.long()) == 'SET[\nonelong\nthreelong\ntwolong\n]\n'
 
 
 def test_sourcesetstr():
-    assert str(sourceset1withnulls) == 'one&three&two'
+    """str(sourceset) should be the same as sourceset.brief()"""
+    assert str(sourceset1withnulls) == sourceset1withnulls.brief()
 
 
 def test_sourcesetmatches():
-    # "matches" checks to see if any source in a set matches some criterion. Our test source
-    # only has the name.
+    """" "matches" checks to see if any source in a set matches some criterion; in this case
+    we test that the name matches"""
     assert not sourceset1withnulls.matches(None, 'five')
     assert sourceset1withnulls.matches(None, 'one')
 
 
 def test_inputsourcenames():
+    """Test that input source brief() and long() are correct"""
     pcot.setup()
 
     doc = Document()
@@ -161,6 +166,7 @@ def test_inputsourcenames():
 
 
 def test_multibandsourcenames():
+    """Test that multiband source brief() is correct"""
     pcot.setup()
     doc = Document()
     sources = [InputSource(doc, inputIdx=1,
