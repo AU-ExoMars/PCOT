@@ -1370,4 +1370,5 @@ class Canvas(QtWidgets.QWidget):
                 # but if there aren't enough data with wavelengths,
                 # just show the values as text.
                 text = "Cannot plot: no frequency data in channel sources\n"+text
-            self.spectrumWidget.set(None, text)
+                data = None
+            self.spectrumWidget.set(data, text)
