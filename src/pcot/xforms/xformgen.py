@@ -4,8 +4,9 @@ from typing import Any, List
 
 import numpy as np
 from PySide2 import QtCore
-from PySide2.QtCore import QAbstractItemModel, QAbstractTableModel, QModelIndex, Signal
-from PySide2.QtWidgets import QSpinBox, QStyledItemDelegate, QComboBox
+from PySide2.QtCore import QAbstractItemModel, QAbstractTableModel, QModelIndex, Signal, Qt
+from PySide2.QtGui import QKeyEvent
+from PySide2.QtWidgets import QSpinBox, QStyledItemDelegate, QComboBox, QTableView
 
 from pcot import ui
 from pcot.datum import Datum
@@ -286,6 +287,15 @@ class SignalBlocker:
             o.blockSignals(False)
 
 
+class GenTableView(QTableView):
+    delete = Signal()
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        if event.key() == Qt.Key_Delete:
+            self.delete.emit()
+        super().keyPressEvent(event)
+
+
 class TabGen(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabgen.ui')
@@ -295,6 +305,7 @@ class TabGen(pcot.ui.tabs.Tab):
         self.w.rightButton.clicked.connect(self.rightClicked)
         self.w.addButton.clicked.connect(self.addClicked)
         self.w.deleteButton.clicked.connect(self.deleteClicked)
+        self.w.tableView.delete.connect(self.deleteClicked)
 
         self.model = Model(self, node.imgchannels)
         self.w.tableView.setModel(self.model)
