@@ -11,9 +11,9 @@ from pcot.config import parserhook
 from pcot.datum import Datum
 from pcot.expressions import Parameter
 from pcot.imagecube import ImageCube
-from pcot.sources import SourceSet, MultiBandSource, nullSource
+from pcot.sources import SourceSet, MultiBandSource
 from pcot.utils import image
-from pcot.utils.ops import combineImageWithNumberSources
+from pcot.expressions.ops import combineImageWithNumberSources
 from pcot.value import Value, add_sub_unc_list
 from pcot.xform import XFormException
 import cv2 as cv

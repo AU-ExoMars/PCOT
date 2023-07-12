@@ -4,7 +4,6 @@ from typing import Any, Callable, Optional, Dict, Tuple
 
 import numpy as np
 
-from pcot import dq
 from pcot.datum import Datum, Type
 from pcot.imagecube import ImageCube
 from pcot.rois import BadOpException, ROI

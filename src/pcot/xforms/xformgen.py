@@ -26,10 +26,10 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ChannelData:
     """These are the items stored in the array we generate the image from: one for each band"""
-    n: float = 0.0       # nominal value, used as multiplier for sine wave in ripple-n and ripple-un
-    u: float = 0.0       # uncertainty of value, used as multiplier for sine wave in ripple-n and ripple-un
-    cwl: int = 100       # centre wavelength
-    mode: str = 'flat'   # mode - see node description
+    n: float = 0.0  # nominal value, used as multiplier for sine wave in ripple-n and ripple-un
+    u: float = 0.0  # uncertainty of value, used as multiplier for sine wave in ripple-n and ripple-un
+    cwl: int = 100  # centre wavelength
+    mode: str = 'flat'  # mode - see node description
 
     def serialise(self):
         return self.n, self.u, self.cwl, self.mode
@@ -76,8 +76,8 @@ class XFormGen(XFormType):
 
         # build a meshgrid so we can make calculations based on position
         x, y = np.meshgrid(np.arange(node.imgwidth), np.arange(node.imgheight))
-        cx = node.imgwidth/2.0
-        cy = node.imgheight/2.0
+        cx = node.imgwidth / 2.0
+        cy = node.imgheight / 2.0
 
         for chan in node.imgchannels:
             if chan.mode == 'flat':
@@ -86,24 +86,24 @@ class XFormGen(XFormType):
                 us.append(np.full((node.imgheight, node.imgwidth), chan.u))
             elif chan.mode == 'ripple-n':
                 # we build an expression based on position to get a ripple pattern in n
-                d = np.sqrt((x-cx)**2 + (y-cy)**2) * chan.n
-                ns.append(np.sin(d)*0.5+0.5)
+                d = np.sqrt((x - cx) ** 2 + (y - cy) ** 2) * chan.n
+                ns.append(np.sin(d) * 0.5 + 0.5)
                 # but u remains flat
                 us.append(np.full((node.imgheight, node.imgwidth), chan.u))
             elif chan.mode == 'ripple-u':
                 # as above, but the other way around
                 ns.append(np.full((node.imgheight, node.imgwidth), chan.n))
-                d = np.sqrt((x-cx)**2 + (y-cy)**2) * chan.u
-                us.append(np.sin(d)*0.5+0.5)
+                d = np.sqrt((x - cx) ** 2 + (y - cy) ** 2) * chan.u
+                us.append(np.sin(d) * 0.5 + 0.5)
             elif chan.mode == 'ripple-un':
                 # two ripples
-                d = np.sqrt((x-cx)**2 + (y-cy)**2) * chan.n
-                ns.append(np.sin(d)*0.5+0.5)
-                d = np.sqrt((x-cx)**2 + (y-cy)**2) * chan.u
-                us.append(np.sin(d)*0.5+0.5)
+                d = np.sqrt((x - cx) ** 2 + (y - cy) ** 2) * chan.n
+                ns.append(np.sin(d) * 0.5 + 0.5)
+                d = np.sqrt((x - cx) ** 2 + (y - cy) ** 2) * chan.u
+                us.append(np.sin(d) * 0.5 + 0.5)
 
         # build the image arrays
-        if len(ns)>0:
+        if len(ns) > 0:
             ns = np.dstack(ns).astype(np.float32)
             us = np.dstack(us).astype(np.float32)
 
@@ -127,6 +127,7 @@ class ComboBoxDelegate(QStyledItemDelegate):
     """ComboBox view inside of a Table. It only shows the ComboBox when it is
        being edited. Could be used for anything, actually.
     """
+
     def __init__(self, model, itemlist=None):
         super().__init__(model)
         self.model = model
@@ -165,9 +166,9 @@ class Model(QAbstractTableModel):
 
     def __init__(self, tab, _data: List[ChannelData]):
         QAbstractTableModel.__init__(self)
-        self.header = ['N', 'U', 'CWL', 'mode']     # headers
-        self.tab = tab                              # the tab we're part of
-        self.d = _data                              # the list of data which is our model
+        self.header = ['N', 'U', 'CWL', 'mode']  # headers
+        self.tab = tab  # the tab we're part of
+        self.d = _data  # the list of data which is our model
 
     def headerData(self, section: int, orientation: QtCore.Qt.Orientation, role: int = ...) -> Any:
         if role == QtCore.Qt.DisplayRole:
@@ -210,17 +211,17 @@ class Model(QAbstractTableModel):
         """Move a row to the left. This stuff is messy."""
         if 0 < n < len(self.d):
             # I'm still not entirely sure what's going on in this line
-            self.beginMoveColumns(QModelIndex(), n, n, QModelIndex(), n-1)
-            self.d[n], self.d[n-1] = self.d[n-1], self.d[n]
+            self.beginMoveColumns(QModelIndex(), n, n, QModelIndex(), n - 1)
+            self.d[n], self.d[n - 1] = self.d[n - 1], self.d[n]
             self.endMoveColumns()
             self.changed.emit()
 
     def move_right(self, n):
         """Move a row to the right. This stuff is messy."""
-        if n < len(self.d)-1:
+        if n < len(self.d) - 1:
             # I'm still not entirely sure what's going on in this line
-            self.beginMoveColumns(QModelIndex(), n, n, QModelIndex(), n+2)
-            self.d[n], self.d[n+1] = self.d[n+1], self.d[n]
+            self.beginMoveColumns(QModelIndex(), n, n, QModelIndex(), n + 2)
+            self.d[n], self.d[n + 1] = self.d[n + 1], self.d[n]
             self.endMoveColumns()
             self.changed.emit()
 
@@ -244,7 +245,7 @@ class Model(QAbstractTableModel):
     def setData(self, index: QModelIndex, value: Any, role: int) -> bool:
         """Here we modify data in the underlying model in response to the tableview or any item delegates"""
         if index.isValid():
-            self.tab.mark()    # we do the undo mark here, before the data is changed
+            self.tab.mark()  # we do the undo mark here, before the data is changed
             row = index.row()
             col = index.column()
             d = self.d[col]
@@ -275,6 +276,7 @@ class Model(QAbstractTableModel):
 
 class SignalBlocker:
     """Handy class for blocking signals on several widgets at once"""
+
     def __init__(self, *args):
         self.objects = args
 
@@ -327,13 +329,13 @@ class TabGen(pcot.ui.tabs.Tab):
         """move left and then reselect the column we just moved"""
         if (col := self._getselcol()) is not None:
             self.model.move_left(col)
-            self.w.tableView.selectColumn(col-1)
+            self.w.tableView.selectColumn(col - 1)
 
     def rightClicked(self):
         """move right and then reselect the column we just moved"""
         if (col := self._getselcol()) is not None:
             self.model.move_right(col)
-            self.w.tableView.selectColumn(col+1)
+            self.w.tableView.selectColumn(col + 1)
 
     def addClicked(self):
         col = self.model.add_item()

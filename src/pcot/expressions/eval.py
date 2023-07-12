@@ -6,7 +6,7 @@ Anything in here should be specific to PCOT itself, and all data should be as Da
 import pcot.config
 import pcot.operations as operations
 from pcot.config import parserhook
-from pcot.utils.ops import binop, unop, Operator
+from pcot.expressions.ops import binop, unop, Operator
 from .parse import Parser, execute
 
 # TODO: keep expression guide in help updated

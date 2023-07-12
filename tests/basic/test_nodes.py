@@ -43,6 +43,11 @@ def test_node_output_none():
                     assert node.getOutput(0, Datum.DATA) is not None, f"Spectrum should return something always"
                 except BadTypeException:
                     pytest.fail("Spectrum should output Datum.DATA even when not connected")
+            elif x == 'gen':
+                try:
+                    assert node.getOutput(0, Datum.IMG) is not None, f"Gen should return an image with default args"
+                except BadTypeException:
+                    pytest.fail("Gen should return an image")
             else:
                 assert out is None, f"XForm {x} should output None when not connected"
 

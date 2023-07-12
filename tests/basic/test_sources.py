@@ -159,7 +159,7 @@ def test_inputsourcenames():
     source = InputSource(doc, inputIdx=1,
                          filterOrName=Filter(cwl=1000, fwhm=100, transmission=20, position="pos1", name="name1"))
 
-    assert source.long() == "nullmethod: wavelength 1000"
+    assert source.long() == "nullmethod: wavelength 1000, fwhm 100"
     assert source.brief() == "nullmethod:1000"  # default caption is wavelength
     assert source.brief(captionType=DocumentSettings.CAP_CWL) == "nullmethod:1000"
     assert source.brief(captionType=DocumentSettings.CAP_NAMES) == "nullmethod:name1"
