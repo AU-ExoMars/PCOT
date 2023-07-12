@@ -123,29 +123,33 @@ for the same ROIs to be on both sides of an expression if they were derived from
 image.
 @@@
 
-## Image quality data <font color="red">UNIMPLEMENTED</font>
+## Quality data 
+All values in PCOT - scalar and image - can have an uncertainty value and data quality (DQ) bits.
+In imagecubes, this applies to every pixel of every band. The uncertainty values are expressed
+as standard deviations. Operations need to combine these data in a sensible way.
 
-@@@
-This is a set of preliminary notes on features which have yet to be implemented.
-@@@
+This is currently implemented using the **Value** class.
 
 Consists of:
 
 * image uncertainty map (float per band)
-* image quality/info bits (byte per band)
+* image quality/info bits (uint16 per band)
 
-### Uncertainty <font color="red">UNIMPLEMENTED</font>
+### Uncertainty
 
-Each pixel each band of an imagecube usually contains an uncertainty value,
-which is a root mean squared error. Operations need to combine this data in a
-sensible way. For example, denoting the RMS error in $a$ as $\Delta a$, binary
-operations work like this:
+Uncertainty values are propagated through calculations in the *expr* node and elsewhere according to
+these rules:
 
 \begin{align}
-\Delta (a+b), \quad \Delta (a+b) &= \sqrt{(\Delta a)^2 + (\Delta b)^2}\\
-\Delta (ab),\quad \Delta (a/b) &= \sqrt{\left(\frac{\Delta a}{a}\right)^2 + \left(\frac{\Delta b}{b}\right)^2}\\
-\Delta (a \& b) &= \min (\Delta{a}, \Delta{b})\\
-\Delta (a | b) &= \max (\Delta{a}, \Delta{b})
+\sigma(a+b), \quad \sigma(a-b) &= \sqrt{\sigma^2 a + \sigma^2 b}\\
+\sigma(ab) &= |ab| \sqrt{\left(\frac{\sigma a}{a}\right)^2+\left(\frac{\sigma b}{b}\right)^2} \\
+&= \sqrt{a^2 \sigma^2 b + b^2 \sigma^2 a}\quad \text{when all values positive}\\
+\sigma(a/b) &= \left|\frac{a}{b}\right| \sqrt{\left(\frac{\sigma a}{a}\right)^2+\left(\frac{\sigma b}{b}\right)^2} \\
+&= \frac{\sqrt{a^2 \sigma^2 b + b^2 \sigma^2 a}}{b^2}\quad \text{when all values positive}\\
+\sigma(a^b) &= \sqrt{ (a^{b-1} b \sigma a)^2 + (a^b \log a \sigma b)^2} \\
+&= \sqrt{a^{2b-2} ((a \sigma b \log a)^2 + (b \sigma a)^2)}\\
+\sigma (a \& b) &= \min (\sigma a, \sigma b)\\
+\sigma (a | b) &= \max (\sigma a, \sigma b)
 \end{align}
 
 @@@ warning
@@ -157,26 +161,34 @@ is always a covariance between them.
 **Not all images contain uncertainty data** - it may be that the input
 image doesn't have this data, or that a function has been performed on the
 image which does not permit uncertainty data to be carried through
-(consider a decorrelation stretch, for example). In this case, **this
-should be clearly visible in the canvas**.
+(consider a decorrelation stretch, for example). **This
+can be viewed** by selecting the **nounc** (no uncertainty) bit for viewing in the [canvas](canvas.md).
 
-### Pixel information bits <font color="red">UNIMPLEMENTED</font>
+### DQ bits
 
-Each pixel in each band has an associated set of bits which indicate error states, etc. 
+Each scalar, or band value for each pixel, has an associated set of bits which indicate error states, etc. 
 
-Bits are (<font color="red">this list is incomplete</font>):
+Bits are currently:
 
-| Bit name | Meaning | Effect on calculations|
+| Bit name | Meaning | Effect on calculations (see notes below)|
 |-----------|------|----|
-|ERROR|Pixel is an error in this band|should not be used in any calculation (see below).|
-|SATHIGH|Pixel is saturated high in this band|**???**|
-|SATLOW|Pixel is saturated low in this band (i.e. zero or less)|**???**|
+|**NODATA**|There is no data here|BAD|
+|**SAT**|Pixel is saturated high in this band|BAD|
+|**DIVZERO**|The data is the result of a division by zero|BAD|
+|**UNDEF**|The data is the result of an undefined operation|BAD|
+|**COMPLEX**|The data is a complex number likely to be undefined (or just the real part)|BAD|
+|**ERROR**|There is an unspecified error in this data|BAD|
+|NOUNCERTAINTY|There is no uncertainty data||
 
-* When a pixel is not used in a particular band, the value is set to zero for that band and the ERROR bit is passed through. 
+All bits are propagated into the data generated from the data they are attached to. 
+**BAD** means that the data in these pixels should not be
+considered. While calculations will still be done on BAD data, the BAD bits will be propagated. In the case
+of nodes which generate a scalar from images, such as finding the mean or SD of a set of pixels (or similar operations in the 
+*spectrum* node) the pixels marked BAD should be ignored.
 
 * It should be possible to set bits based on per-pixel conditions with the *bits* node. For example, convert all uncertainties
 greater than a given value into errors. In fact, **this should be done
-by default for a certain global value** if possible.
+by default for a certain global value** if possible. <font color="red">BITS NODE NOT YET IMPLEMENTED</font>
 
 * In general, when multiple image bands
 are combined (either from the same image or from different images) these are OR-ed together. This typically happens in a band-wise fashion
@@ -193,8 +205,7 @@ bands being used in each band. In cases like this, the resulting bands are all O
 B_i(\text{decorr}(a)) = \bigvee_i B_i(a)
 \\]
 
-
-* Nodes which produce a scalar should ignore error pixels (e.g. finding the mean value)
+### <font color="red">UNIMPLEMENTED BIT OPERATIONS</font> 
 * Nodes which perform a convolution operation or similar should propagate the error pixel to all affected pixels, leading to a blob of pixels in the output.
 I realise **This isn't ideal**; another possibility could be to just zero the mask? But then we lose the error data. At the moment I don't believe we have any
 "non-local" behaviour where pixels affect regions of pixels in the output, so the point could be moot.
@@ -202,7 +213,6 @@ I realise **This isn't ideal**; another possibility could be to just zero the ma
 ### Error ROIs <font color="red">UNIMPLEMENTED</font>
 It should
 be possible to construct an ROI of error or non-error pixels in an image (i.e. pixels which have an error on any band).
-
 
 
 ## Filter aberration <font color="red">UNIMPLEMENTED</font>
@@ -221,6 +231,4 @@ the aberration value which could be used in calculations
 
 The following should be visible in the canvas as optional overlays:
 
-* Pixel information bits as colour overlays (default ON)
-* Uncertainty data (default OFF)
 * Filter aberration as a heat map (default OFF)
