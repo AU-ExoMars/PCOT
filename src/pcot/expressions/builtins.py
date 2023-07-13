@@ -6,6 +6,7 @@ from typing import List, SupportsFloat, Optional
 
 import numpy as np
 
+import pcot
 from pcot import rois
 from pcot.config import parserhook
 from pcot.datum import Datum
@@ -273,6 +274,22 @@ def funcWrapper(fn, d, *args):
         return Datum(Datum.NUMBER, val, SourceSet(ss))
 
 
+def funcMarkSat(args: List[Datum], _):
+    img = args[0].get(Datum.IMG)
+    mn = args[1].get(Datum.NUMBER).n
+    mx = args[2].get(Datum.NUMBER).n
+    if img is None:
+        return None
+
+    subimage = img.subimage()
+    data = subimage.masked(maskBadPixels=True)
+    dq = np.where(data <= mn, pcot.dq.ERROR, 0).astype(np.uint16)
+    dq |= np.where(data >= mx, pcot.dq.SAT, 0).astype(np.uint16)
+
+    img = img.modifyWithSub(subimage, None, dqOR=dq)
+    return Datum(Datum.IMG, img)
+
+
 def statsWrapper(fn, fnu, d: List[Optional[Datum]], *args):
     """similar to funcWrapper, but can take lots of image and number arguments which it aggregates to do stats on.
     The result of fn must be a number. Works by flattening any images and concatenating them with any numbers,
@@ -462,9 +479,9 @@ def registerBuiltinFunctions(p):
             Parameter("uncertainty", "the uncertainty", (Datum.NUMBER, Datum.IMG))
         ], [
             Parameter("dq",
-                       "if present, a DQ bit field (e.g. 36 for COMPLEX|SAT) (only works on numeric args)",
-                       Datum.NUMBER, deflt=0),
-            ],
+                      "if present, a DQ bit field (e.g. 36 for COMPLEX|SAT) (only works on numeric args)",
+                      Datum.NUMBER, deflt=0),
+        ],
         funcV
     )
 
@@ -474,6 +491,16 @@ def registerBuiltinFunctions(p):
         [
             Parameter("count", "number of channels", Datum.NUMBER)
         ], [], funcTestImg
+    )
+
+    p.registerFunc(
+        "marksat",
+        "mark pixels outside a certain range as SAT or ERROR (i.e BAD)",
+        [
+            Parameter("image", "the input image", Datum.IMG),
+            Parameter("min", "the minimum value below which pixels are ERROR", Datum.NUMBER),
+            Parameter("max", "the maximum value above which pixels are SAT", Datum.NUMBER)
+        ], [], funcMarkSat
     )
 
 

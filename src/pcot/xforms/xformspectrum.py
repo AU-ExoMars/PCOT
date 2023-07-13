@@ -2,7 +2,7 @@ import math
 
 import matplotlib
 import numpy as np
-from PySide2 import QtWidgets
+from PySide2 import QtWidgets, QtCore
 from PySide2.QtWidgets import QDialog
 
 import pcot
@@ -17,7 +17,7 @@ from pcot.xform import XFormType, xformtype, XFormException
 
 
 # find the mean/sd of all the masked values. Note mask negation!
-def getSpectrum(chanImg, mask):
+def getSpectrum(chanImg, chanUnc, mask, ignorePixSD=False):
     if mask is not None:
         a = np.ma.masked_array(data=chanImg, mask=~mask)
     else:
@@ -116,7 +116,9 @@ class XFormSpectrum(XFormType):
     def __init__(self):
         super().__init__("spectrum", "data", "0.0.0")
         self.autoserialise = ('sortlist', 'errorbarmode', 'legendFontSize', 'axisFontSize', 'stackSep', 'labelFontSize',
-                              'bottomSpace', 'colourmode', 'rightSpace')
+                              'bottomSpace', 'colourmode', 'rightSpace',
+                              ('ignorePixSD', False)  # this one has a default because it was developed later
+                              )
         for i in range(NUMINPUTS):
             self.addInputConnector(str(i), Datum.IMG, "a single line in the plot")
         self.addOutputConnector("data", Datum.DATA, "a CSV output (use 'dump' to read it)")
@@ -134,6 +136,7 @@ class XFormSpectrum(XFormType):
         node.bottomSpace = 0
         node.rightSpace = 0
         node.stackSep = 0
+        node.ignorePixSD = self.getAutoserialiseDefault('ignorePixSD')
         node.sortlist = []  # list of legends (ROI names) - the order in which spectra should be stacked.
         node.colsByLegend = None  # this is a legend->col dictionary used if colourmode is COLOUR_FROMROIS
         node.data = None
@@ -170,26 +173,31 @@ class XFormSpectrum(XFormType):
                 if len(img.rois) == 0:
                     # no ROIs, do the whole image
                     legend = "node input {}".format(i)
+                    cols[legend] = (0, 0, 0)  # what colour??
+
                     subimg = img.img
+                    unc = img.uncertainty
                     # this returns a tuple for each channel of (mean,sd)
-                    spectrum = [getSpectrum(subimg[:, :, i], None) for i in chans]
+                    spectrum = [getSpectrum(subimg[:, :, i], unc[:, :, i], None,
+                                            ignorePixSD=node.ignorePixSD) for i in chans]
                     processData(table, legend, data, img.w * img.h,
                                 wavelengths, spectrum, chans, chanlabels)
-                    cols[legend] = (0, 0, 0)  # what colour??
 
                 for roi in img.rois:
                     # only include valid ROIs
                     if roi.bb() is None:
                         continue
                     legend = roi.label  # get the name for this ROI, which will appear as a thingy.
+                    cols[legend] = roi.colour
+
                     # get the ROI bounded image
                     subimg = img.subimage(roi=roi)
                     # now we need to get the mean amplitude of the pixels in each channel in the ROI
                     # this returns a tuple for each channel of (mean,sd)
-                    spectrum = [getSpectrum(subimg.img[:, :, i], subimg.mask) for i in chans]
+                    spectrum = [getSpectrum(subimg.img[:, :, i], subimg.uncertainty[:, :, i], subimg.mask,
+                                            ignorePixSD=node.ignorePixSD) for i in chans]
                     processData(table, legend, data, subimg.pixelCount(),
                                 wavelengths, spectrum, chans, chanlabels)
-                    cols[legend] = roi.colour
 
         # now, for each list in the dict, build a new dict of the lists sorted
         # by wavelength
@@ -273,6 +281,7 @@ class TabSpectrum(ui.tabs.Tab):
         self.w.bottomSpaceSpin.valueChanged.connect(self.bottomSpaceChanged)
         self.w.rightSpaceSpin.valueChanged.connect(self.rightSpaceChanged)
         self.w.hideButton.clicked.connect(self.hideClicked)
+        self.w.ignorePixSD.stateChanged.connect(self.ignorePixSDChanged)
         self.nodeChanged()
 
     def replot(self):
@@ -351,6 +360,11 @@ class TabSpectrum(ui.tabs.Tab):
         self.w.hideButton.setText(
             "Hide controls" if self.w.controls.isVisible() else "Show controls"
         )
+
+    def ignorePixSDChanged(self, state):
+        self.mark()
+        self.node.ignorePixSD = state == QtCore.Qt.Checked
+        self.changed()
 
     def errorbarmodeChanged(self, mode):
         self.mark()

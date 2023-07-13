@@ -34,6 +34,7 @@ SAT = reg('sat', 2)  # Pixel is saturated high
 DIVZERO = reg('divzero', 3)  # Pixel is divided by zero
 UNDEF = reg('undefined', 4)  # undefined value
 COMPLEX = reg('complex', 5)  # result is complex
+ERROR = reg('error', 6)     # unspecified error
 
 NONE = np.uint16(0)
 
@@ -41,4 +42,4 @@ TEST = reg('test', 15)
 
 # Pixels with these bits are considered bad and are not to be used in aggregate calculations
 # like mean, std.
-BAD = NODATA | SAT | DIVZERO | UNDEF | COMPLEX
+BAD = NODATA | SAT | DIVZERO | UNDEF | COMPLEX | ERROR

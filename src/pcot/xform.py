@@ -200,6 +200,15 @@ class XFormType:
         except KeyError as e:
             raise Exception("autoserialise value not in node {}: {}".format(self.name, e.args[0]))
 
+    def getAutoserialiseDefault(self, name):
+        """Really ugly because of the way autoserialise was developed. This gets a default, if there is one!"""
+        for t in self.autoserialise:
+            if isinstance(t,tuple):
+                n, d = t
+                if name == n:
+                    return d
+        raise Exception(f"autoserialise value must have a default for getAutoSerialiseDefault: {name}")
+
     def doAutodeserialise(self, node, ent):
         """run autodeserialisation for a node"""
         for item in self.autoserialise:

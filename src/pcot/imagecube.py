@@ -33,6 +33,7 @@ class SubImageCubeROI:
     It consists of
     * the image cropped to the bounding box of the ROIs; this is a view into the original image.
     * the data for the BB (x,y,w,h)
+    * uncertainty and DQ too
     * a boolean mask the same size as the BB, True for pixels contained in the ROIs and which
       should be manipulated.
     """
@@ -115,17 +116,17 @@ class SubImageCubeROI:
             return mask & ~badmask
         return mask
 
-    def masked(self):
+    def masked(self, maskBadPixels=False):
         """get the masked image as a numpy masked array"""
-        return np.ma.masked_array(self.img, mask=~self.fullmask())
+        return np.ma.masked_array(self.img, mask=~self.fullmask(maskBadPixels=maskBadPixels))
 
-    def maskedDQ(self):
+    def maskedDQ(self, maskBadPixels=False):
         """get the masked DQ as a numpy masked array"""
-        return np.ma.masked_array(self.dq, mask=~self.fullmask())
+        return np.ma.masked_array(self.dq, mask=~self.fullmask(maskBadPixels=maskBadPixels))
 
-    def maskedUncertainty(self):
+    def maskedUncertainty(self, maskBadPixels=False):
         """get the masked uncertainty as a numpy masked array"""
-        return np.ma.masked_array(self.uncertainty, mask=~self.fullmask())
+        return np.ma.masked_array(self.uncertainty, mask=~self.fullmask(maskBadPixels=maskBadPixels))
 
     def cropother(self, img2):
         """use this ROI to crop the image in img2. Doesn't do masking, though.

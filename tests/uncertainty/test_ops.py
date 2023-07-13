@@ -203,6 +203,8 @@ class BinopTest:
 # Values are all generated using the uncertainties package or the uncertainty calculator
 # at https://uncertaintycalculator.com/
 binop_tests = [
+    BinopTest(0, 0, 20, 2, "a/b", 0, 0, dq.NONE),  # 0 / 20±2 = 0
+
     BinopTest(10, 0, 20, 0, "a+b", 30, 0, dq.NONE),  # 10 + 20 = 30
     BinopTest(10, 2, 20, 5, "a+b", 30, sqrt(2 * 2 + 5 * 5), dq.NONE),  # 10±2 + 20±5 = 30±sqr(2^2+5^2)
 
@@ -221,12 +223,16 @@ binop_tests = [
     BinopTest(10, 2, 20, 3, "a/b", 0.5, 0.125, dq.NONE),  # 10±2 / 20±3 = 200±0.125
     BinopTest(10, 3, 20, 2, "a/b", 0.5, 0.15811388, dq.NONE),  # 10±3 / 20±2 = 200±0.158 (approx)
     BinopTest(0, 0, 20, 2, "a/b", 0, 0, dq.NONE),  # 0 / 20±2 = 0
+    BinopTest(3, 0.1, 10, 0.3, "a/b", 0.3, 0.0134536240470737, dq.NONE), # 3±0.1 / 10±0.3 0.3±0.0134536240470737
     BinopTest(0, 2, 20, 2, "a/b", 0, 0.1, dq.NONE),  # 0±2 / 20±2 = 0±0.1
     BinopTest(2, 0, 0, 0, "a/b", 0, 0, dq.DIVZERO),  # 2/0 = 0 but divzero flag set
     BinopTest(0, 0, 0, 0, "a/b", 0, 0, dq.DIVZERO | dq.UNDEF),  # 0/0 = 0 but divzero and undef set
 
     BinopTest(10, 2, 2, 3, "a^b", 100, 691.932677319881, dq.NONE),  # 10±2 ^ 2±3 = 100±691.932677319881
     BinopTest(3, 0.1, 2, 0.02, "a^b", 9, 0.631747691986546, dq.NONE),  # 3±0.1 ^ 2±0.02 = 9±0.631747691986546
+
+    # 2.45±0.12 ^ 0.76±0.072 = 1.97590574573865±0.147178832101251
+    BinopTest(2.45, 0.12, 0.76, 0.072, "a^b", 1.97590574573865, 0.147178832101251, dq.NONE),
 
     BinopTest(0, 2, 1, 3, "a^b", 0, 2, dq.NONE),  # 0±2 ^ 1±3 = 0±2 (i.e. 0^1 equals 0, with the uncertainty of the 0)
     BinopTest(0, 2, 0, 3, "a^b", 1, 0, dq.NONE),  # 0±2 ^ 0±3 = 1±0 (i.e. 0^0 = 1, uncertainties ignored)
@@ -265,7 +271,7 @@ def test_number_number_binops():
 
 def test_number_image_binops():
     """Test than binops in expr nodes on numbers and images work, with the image on the RHS. We want to
-    ensure that the part outside an ROI - and any "bad" parts of the image (with dq.BAD bits) - are unchanged."""
+    ensure that the part outside an ROI are unchanged."""
 
     pcot.setup()
 
@@ -294,7 +300,7 @@ def test_number_image_binops():
 
 def test_image_number_binops():
     """Test than binops in expr nodes on images and numbers work, with the image on the LHS. We want to
-    ensure that the part outside an ROI - and any "bad" parts of the image (with dq.BAD bits) - are unchanged.
+    ensure that the part outside an ROI are unchanged.
     """
 
     pcot.setup()
