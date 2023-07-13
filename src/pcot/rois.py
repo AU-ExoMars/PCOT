@@ -305,7 +305,7 @@ class ROI(SourcesObtainable, Annotation):
             return "ROI-BASE (no data)"
         else:
             x, y, w, h = self.bb()
-            return "ROI-BASE {} {} {}x{}".format(x, y, w, h)
+            return f"ROI-BASE:{self.label} {x} {y} {w}x{h}"
 
     def getSources(self):
         return self.sources
@@ -385,7 +385,7 @@ class ROIRect(ROI):
         return r
 
     def __str__(self):
-        return "ROI-RECT {} {} {}x{}".format(self.x, self.y, self.w, self.h)
+        return f"ROI-RECT:{self.label} {self.x} {self.y} {self.w}x{self.h}"
 
 
 class ROICircle(ROI):
@@ -469,7 +469,7 @@ class ROICircle(ROI):
         return r
 
     def __str__(self):
-        return "ROI-CIRCLE {} {} {}".format(self.x, self.y, self.r)
+        return f"ROI-CIRCLE:{self.label} {self.x} {self.y} {self.r}"
 
 
 # used in ROIpainted to convert a 0-99 value into a brush size for painting
@@ -596,10 +596,10 @@ class ROIPainted(ROI):
 
     def __str__(self):
         if not self.bbrect:
-            return "ROI-PAINTED (no points)"
+            return f"ROI-PAINTED:{self.label}"
         else:
             x, y, w, h = self.bb()
-            return "ROI-PAINTED {} {} {}x{}".format(x, y, w, h)
+            return f"ROI-PAINTED:{self.label} {x} {y} {w}x{h}"
 
 
 ## a polygon ROI
@@ -754,9 +754,9 @@ class ROIPoly(ROI):
 
     def __str__(self):
         if not self.hasPoly():
-            return "ROI-POLY (no points)"
+            return f"ROI-POLY:{self.label} (no points)"
         x, y, w, h = self.bb()
-        return "ROI-POLY {} {} {}x{}".format(x, y, w, h)
+        return f"ROI-POLY:{self.label} {x} {y} {w}x{h}"
 
 
 def deserialise(tp, d):

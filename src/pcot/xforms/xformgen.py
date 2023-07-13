@@ -250,23 +250,26 @@ class Model(QAbstractTableModel):
             col = index.column()
             d = self.d[col]
             # got a reference to the datum, now change it by looking at the row index to see which item.
-            if row == 0:
-                d.n = float(value)
-            elif row == 1:
-                d.u = float(value)
-            elif row == 2:
-                value = int(value)
-                if value >= 0:
-                    d.cwl = value
-                else:
-                    return False
-            elif row == 3:
-                d.mode = value
+            try:
+                if row == 0:
+                    d.n = float(value)
+                elif row == 1:
+                    d.u = float(value)
+                elif row == 2:
+                    value = int(value)
+                    if value >= 0:
+                        d.cwl = value
+                    else:
+                        return False
+                elif row == 3:
+                    d.mode = value
 
-            # tell the view we changed
-            self.dataChanged.emit(index, index, (QtCore.Qt.DisplayRole,))
-            # and tell any other things too (such as the tab!)
-            self.changed.emit()
+                # tell the view we changed
+                self.dataChanged.emit(index, index, (QtCore.Qt.DisplayRole,))
+                # and tell any other things too (such as the tab!)
+                self.changed.emit()
+            except TypeError:
+                ui.log("Bad value type")
             return True
         return False
 

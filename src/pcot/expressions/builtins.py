@@ -286,7 +286,7 @@ def funcMarkSat(args: List[Datum], _):
     dq = np.where(data <= mn, pcot.dq.ERROR, 0).astype(np.uint16)
     dq |= np.where(data >= mx, pcot.dq.SAT, 0).astype(np.uint16)
 
-    img = img.modifyWithSub(subimage, None, dqOR=dq)
+    img = img.modifyWithSub(subimage, None, dqOR=dq, uncertainty=subimage.uncertainty)
     return Datum(Datum.IMG, img)
 
 

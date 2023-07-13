@@ -6,7 +6,7 @@ from pcot.xform import XFormType, xformtype
 from pcot.xforms.tabdata import TabData
 from pcot.imagecube import ImageCube
 from pcot.datum import Datum, Type
-from pcot.utils.ops import combineImageWithNumberSources
+from pcot.expressions.ops import combineImageWithNumberSources
 from PySide2.QtGui import QColor
 
 import pcot.config

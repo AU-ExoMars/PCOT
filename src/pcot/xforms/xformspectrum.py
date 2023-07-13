@@ -17,13 +17,28 @@ from pcot.xform import XFormType, xformtype, XFormException
 
 
 # find the mean/sd of all the masked values. Note mask negation!
-def getSpectrum(chanImg, chanUnc, mask, ignorePixSD=False):
-    if mask is not None:
-        a = np.ma.masked_array(data=chanImg, mask=~mask)
+def getSpectrum(chanImg, chanUnc, chanDQ, mask, ignorePixSD=False):
+    # note that "mask" is a positive mask - values are True if we are using them.
+    if mask is None:
+        mask = np.full(chanImg.shape, True)  # no bits masked out
     else:
-        a = chanImg
+        mask = np.copy(mask)    # need a copy or we'll change the mask in the subimage.
+    # we also have to mask out the bad bits. This will give us a mask which is True
+    # for the bits we want to hide.
+    badmask = (chanDQ & pcot.dq.BAD).astype(bool)
+    mask &= ~badmask  # REMOVE those pixels
 
-    return a.mean(), a.std()
+    a = np.ma.masked_array(data=chanImg, mask=~mask)
+    mean = a.mean()     # get the mean of the nominal values
+    std = a.std()       # get the SD of the nominal values
+
+    if not ignorePixSD:
+        # we're going to try to take account of the uncertainties of each pixel:
+        # "Thus the variance of the pooled set is the mean of the variances plus the variance of the means."
+        # by https://arxiv.org/ftp/arxiv/papers/1007/1007.1012.pdf
+        # So we'll add the mean of the variances (stddevs).
+        std += np.mean(np.ma.masked_array(data=chanUnc, mask=~mask))
+    return mean, std
 
 
 def processData(table, legend, data, pxct, wavelengths, spectrum, chans, chanlabels):
@@ -170,34 +185,41 @@ class XFormSpectrum(XFormType):
                 # the data elements, but the unzip in replot() throws it away when we come to do the plot.
                 chanlabels = [img.sources.sourceSets[x].brief(node.graph.doc.settings.captionType) for x in chans]
 
+                def proc(_subimg, _legend):
+                    # this nested function is used both when there is no ROI and for each ROI in the image.
+                    # It gets the spectrum for that ROI (or entire image), processes the data and adds
+                    # it to the plot. It's given a subimage with BAD pixels masked out.
+
+                    # now we need to get the mean amplitude of the pixels in each channel in the ROI
+                    # this returns a tuple for each channel of (mean,sd)
+
+                    # this is unfolded from a list comprehension for easier breakpoint debugging!
+                    spec = []
+                    for cc in chans:
+                        ss = getSpectrum(_subimg.img[:, :, cc], _subimg.uncertainty[:, :, cc], _subimg.dq[:, :, cc],
+                                         _subimg.mask,
+                                         ignorePixSD=node.ignorePixSD)
+                        spec.append(ss)
+
+                    processData(table, _legend, data, subimg.pixelCount(),
+                                wavelengths, spec, chans, chanlabels)
+
                 if len(img.rois) == 0:
                     # no ROIs, do the whole image
                     legend = "node input {}".format(i)
                     cols[legend] = (0, 0, 0)  # what colour??
-
-                    subimg = img.img
-                    unc = img.uncertainty
-                    # this returns a tuple for each channel of (mean,sd)
-                    spectrum = [getSpectrum(subimg[:, :, i], unc[:, :, i], None,
-                                            ignorePixSD=node.ignorePixSD) for i in chans]
-                    processData(table, legend, data, img.w * img.h,
-                                wavelengths, spectrum, chans, chanlabels)
-
-                for roi in img.rois:
-                    # only include valid ROIs
-                    if roi.bb() is None:
-                        continue
-                    legend = roi.label  # get the name for this ROI, which will appear as a thingy.
-                    cols[legend] = roi.colour
-
-                    # get the ROI bounded image
-                    subimg = img.subimage(roi=roi)
-                    # now we need to get the mean amplitude of the pixels in each channel in the ROI
-                    # this returns a tuple for each channel of (mean,sd)
-                    spectrum = [getSpectrum(subimg.img[:, :, i], subimg.uncertainty[:, :, i], subimg.mask,
-                                            ignorePixSD=node.ignorePixSD) for i in chans]
-                    processData(table, legend, data, subimg.pixelCount(),
-                                wavelengths, spectrum, chans, chanlabels)
+                    subimg = img.subimage()
+                    proc(subimg, legend)
+                else:
+                    for roi in img.rois:
+                        # only include valid ROIs
+                        if roi.bb() is None:
+                            continue
+                        legend = roi.label  # get the name for this ROI, which will appear as a thingy.
+                        cols[legend] = roi.colour
+                        # get the ROI bounded image
+                        subimg = img.subimage(roi=roi)
+                        proc(subimg, legend)
 
         # now, for each list in the dict, build a new dict of the lists sorted
         # by wavelength

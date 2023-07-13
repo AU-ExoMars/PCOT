@@ -99,6 +99,9 @@ class SubImageCubeROI:
          and an x,y,n image will make an x,y,n mask.
          It will also optionally remove BAD bits from the mask, as indicated by the DQ array.
         """
+
+        # so at this point the mask is (x,y).
+
         if len(self.img.shape) == 2:
             mask = self.mask  # the existing mask is fine
         else:
@@ -107,7 +110,10 @@ class SubImageCubeROI:
             x = np.repeat(np.ravel(self.mask), chans)
             # put into a h,w,chans array
             mask = np.reshape(x, (h, w, chans))
-        # remove bad bits if required
+
+        # now the mask is (x,y) for a 2-chan image or (x,y,n) for an n-channel image. We can
+        # remove the bad bits if required
+
         if maskBadPixels:
             # make another mask out of the DQ bits, selecting any pixels with "bad" bits
             badmask = (self.dq & pcot.dq.BAD).astype(bool)
