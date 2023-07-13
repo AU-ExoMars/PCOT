@@ -25,7 +25,7 @@ def test_roi_single_image(allblack):
     roiNode.connect(0, inputNode, 0)
 
     exprNode = doc.graph.create("expr")
-    exprNode.expr = "clip(a+4)"  # will add 4 to the value and clip to 1.
+    exprNode.expr = "clamp(a+4)"  # will add 4 to the value and clip to 1.
     exprNode.connect(0, roiNode, 0)
 
     doc.changed()
@@ -66,7 +66,7 @@ def test_roi_intersection(allblack):
     # now take that image with the intersected ROI and set it to white (by adding a large
     # number and clipping). The resulting image should have had 4 pixels set to white.
     setWhiteNode = doc.graph.create("expr")
-    setWhiteNode.expr = "clip(a+4)"
+    setWhiteNode.expr = "clamp(a+4)"
     setWhiteNode.connect(0, importNode, 0)
 
     doc.changed()
@@ -109,7 +109,7 @@ def test_roi_union_expr(allblack):
     # now take that image with the union ROI and set it to white (by adding a large
     # number and clipping). The resulting image should have had 14 pixels set to white.
     setWhiteNode = doc.graph.create("expr")
-    setWhiteNode.expr = "clip(a+4)"
+    setWhiteNode.expr = "clamp(a+4)"
     setWhiteNode.connect(0, importNode, 0)
 
     doc.changed()
@@ -140,7 +140,7 @@ def test_roi_union(allblack):
     # now take that image with the union ROI and set it to white (by adding a large
     # number and clipping). The resulting image should have had 14 pixels set to white.
     setWhiteNode = doc.graph.create("expr")
-    setWhiteNode.expr = "clip(a+4)"
+    setWhiteNode.expr = "clamp(a+4)"
     setWhiteNode.connect(0, roiNode2, 0)
 
     doc.changed()
