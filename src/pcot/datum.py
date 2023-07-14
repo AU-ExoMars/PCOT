@@ -185,6 +185,18 @@ class GenericDataType(Type):
         super().__init__('data')
 
 
+class TestResultType(Type):
+    def __init__(self):
+        super().__init__('testresult')
+
+    def getDisplayString(self, d: 'Datum'):
+        failed = len(d.val)
+        if failed > 0:
+            return f"FAILED {failed}"
+        else:
+            return "TESTS OK"
+
+
 class IdentType(Type):
     def __init__(self):
         super().__init__('ident', internal=True)
@@ -232,6 +244,8 @@ class Datum(SourcesObtainable):
         VARIANT := VariantType(),
         # generic data
         DATA := GenericDataType(),
+        # test results - this is a list of failing tests, or an empty list for all passed.
+        TESTRESULT := TestResultType(),
 
         # these types are not generally used for connections, but for values on the expression evaluation stack
         IDENT := IdentType(),
@@ -242,7 +256,7 @@ class Datum(SourcesObtainable):
     @classmethod
     def registerType(cls, t):
         """Register a custom type, which must be a singleton datum.Type object. You can then use it where you
-        would use Datum.IMG, etc.
+        would use Datum.IMG, etc. ONLY USE FOR TYPES IN PLUGINS!
         Remember to also register a connector brush with connbrushes.register()."""
         cls.types.append(t)
 

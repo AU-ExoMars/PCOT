@@ -1,0 +1,1 @@
+"""Test the normalisation functionality in a graph."""

@@ -11,7 +11,7 @@ import pcot.ui.tabs
 from pcot.imagecube import ImageCube
 from pcot.rois import ROICircle
 from pcot.utils import text
-from pcot.utils.annotations import Annotation, annotDrawText, annotFont
+from pcot.utils.annotations import Annotation, annotDrawText, annotFont, IndexedPointAnnotation
 from pcot.xform import XFormType, xformtype, XFormException
 
 logger = logging.Logger(__name__)
@@ -21,38 +21,6 @@ IMAGEMODE_DEST = 1
 IMAGEMODE_RESULT = 2
 
 IMAGEMODE_CT = 3
-
-
-class CrossCalibAnnotation(Annotation):
-    """An annotation added to the viewed image in crosscalib"""
-    def __init__(self, idx, x, y, issel, col):
-        self.col = col
-        self.x = x
-        self.y = y
-        self.issel = issel
-        self.idx = idx
-        pass
-
-    def annotate(self, p: QPainter, img):
-        # we want to scale the font and line thickness with the image size here,
-        # to make it easier to view on large images. Calculate the biggest dimension of the image.
-        maxsize = max(img.w, img.h)
-        # Work out a scaling factor
-        scale = maxsize / 300
-        # Create a pen of that size (min 2)
-        pen = QPen(self.col)
-        pen.setWidth(max(scale, 2))
-        p.setPen(pen)
-        # And scale the radii of the circles too
-        p.drawEllipse(self.x, self.y, 7*scale, 7*scale)
-        if self.issel:
-            # we draw the selected point with an extra circle
-            p.drawEllipse(self.x, self.y, 10*scale, 10*scale)
-
-        fontsize = 10*scale   # scale the font
-        annotFont.setPixelSize(fontsize)
-        p.setFont(annotFont)
-        p.drawText(self.x+12*scale, self.y+4*scale, f"{self.idx}")
 
 
 def findInList(lst, x, y):
@@ -130,18 +98,17 @@ class XFormCrossCalib(XFormType):
             else:
                 img = None
 
-            node.canvimg = img.copy()
-
             if img is not None:
+                node.canvimg = img.copy()
                 # add annotations to the image
                 if node.showSrc:
                     issel = node.selIdx if not node.selIsDest else None
                     for i, (x, y) in enumerate(node.src):
-                        node.canvimg.annotations.append(CrossCalibAnnotation(i, x, y, issel, Qt.yellow))
+                        node.canvimg.annotations.append(IndexedPointAnnotation(i, x, y, issel, Qt.yellow))
                 if node.showDest:
                     issel = node.selIdx if node.selIsDest else None
                     for i, (x, y) in enumerate(node.dest):
-                        node.canvimg.annotations.append(CrossCalibAnnotation(i, x, y, issel, Qt.cyan))
+                        node.canvimg.annotations.append(IndexedPointAnnotation(i, x, y, issel, Qt.cyan))
             else:
                 node.canvimg = None
 

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1104</width>
-    <height>558</height>
+    <width>1153</width>
+    <height>715</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,8 +18,14 @@
     <layout class="QVBoxLayout" name="verticalLayout_2">
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_2">
-       <item alignment="Qt::AlignTop">
+       <item>
         <widget class="QWidget" name="gridWidget" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="minimumSize">
           <size>
            <width>0</width>
@@ -28,7 +34,7 @@
          </property>
          <property name="maximumSize">
           <size>
-           <width>200</width>
+           <width>250</width>
            <height>1000</height>
           </size>
          </property>
@@ -45,12 +51,18 @@
              </size>
             </property>
             <property name="text">
-             <string>Channels</string>
+             <string>Tests</string>
             </property>
            </widget>
           </item>
           <item>
            <widget class="TableView" name="tableView">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="editTriggers">
              <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
             </property>
@@ -64,38 +76,7 @@
           </item>
           <item>
            <layout class="QGridLayout" name="gridLayout">
-            <item row="1" column="1">
-             <widget class="QSpinBox" name="spinHeight">
-              <property name="minimum">
-               <number>4</number>
-              </property>
-              <property name="maximum">
-               <number>1024</number>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="1">
-             <widget class="QPushButton" name="rightButton">
-              <property name="text">
-               <string>Move --&gt;</string>
-              </property>
-             </widget>
-            </item>
             <item row="0" column="0">
-             <widget class="QLabel" name="label">
-              <property name="text">
-               <string>Width</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_2">
-              <property name="text">
-               <string>Height</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0">
              <widget class="QPushButton" name="leftButton">
               <property name="text">
                <string>&lt;--- Move</string>
@@ -103,12 +84,9 @@
              </widget>
             </item>
             <item row="0" column="1">
-             <widget class="QSpinBox" name="spinWidth">
-              <property name="minimum">
-               <number>4</number>
-              </property>
-              <property name="maximum">
-               <number>1024</number>
+             <widget class="QPushButton" name="rightButton">
+              <property name="text">
+               <string>Move --&gt;</string>
               </property>
              </widget>
             </item>
@@ -117,34 +95,31 @@
           <item>
            <widget class="QPushButton" name="addButton">
             <property name="text">
-             <string>Add Band</string>
+             <string>Add Test</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="dupButton">
+            <property name="text">
+             <string>Duplicate Test</string>
             </property>
            </widget>
           </item>
           <item>
            <widget class="QPushButton" name="deleteButton">
             <property name="text">
-             <string>Delete Band</string>
+             <string>Delete Test</string>
             </property>
            </widget>
           </item>
           <item>
-           <spacer name="verticalSpacer">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
            <widget class="QLabel" name="label_3">
             <property name="text">
-             <string>Double click to edit a cell.</string>
+             <string>Double click to edit a cell. For moving, deleting, duplicating columns select a column by clicking on its header.</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
             </property>
            </widget>
           </item>

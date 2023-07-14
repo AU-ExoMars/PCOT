@@ -1,5 +1,5 @@
-from PySide2.QtCore import Qt, QRect, QPoint
-from PySide2.QtGui import QPainter, QFont, QFontMetrics
+from PySide2.QtCore import Qt, QRect, QPoint, QPointF
+from PySide2.QtGui import QPainter, QFont, QFontMetrics, QPen
 from typing import Callable, Tuple, Optional
 
 # use this font for annotations
@@ -66,3 +66,35 @@ class Annotation:
         we can convert inches to the internal units.
         """
         pass
+
+
+class IndexedPointAnnotation(Annotation):
+    """An annotation of a single point with an index and colour, which may or may
+    not be selected."""
+    def __init__(self, idx, x, y, issel, col):
+        self.col = col
+        self.x = x
+        self.y = y
+        self.issel = issel
+        self.idx = idx
+        pass
+
+    def annotate(self, p: QPainter, img):
+        # we want to scale the font and line thickness with the image size here,
+        # to make it easier to view on large images. Calculate the biggest dimension of the image.
+        maxsize = max(img.w, img.h)
+        # Work out a scaling factor
+        scale = maxsize / 300
+        pen = QPen(self.col)
+        pen.setWidth(0)  # "cosmetic" pen with width 0
+        p.setPen(pen)
+        # And scale the radii of the circles too
+        p.drawEllipse(QPointF(self.x, self.y), 5*scale, 5*scale)
+        if self.issel:
+            # we draw the selected point with an extra circle
+            p.drawEllipse(self.x, self.y, 7*scale, 7*scale)
+
+        fontsize = 12*scale   # scale the font
+        annotFont.setPixelSize(fontsize)
+        p.setFont(annotFont)
+        p.drawText(self.x+12*scale, self.y+4*scale, f"{self.idx}")

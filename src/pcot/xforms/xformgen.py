@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 from dataclasses import dataclass
 from typing import Any, List
@@ -6,7 +7,7 @@ import numpy as np
 from PySide2 import QtCore
 from PySide2.QtCore import QAbstractItemModel, QAbstractTableModel, QModelIndex, Signal, Qt
 from PySide2.QtGui import QKeyEvent
-from PySide2.QtWidgets import QSpinBox, QStyledItemDelegate, QComboBox, QTableView
+from PySide2.QtWidgets import QSpinBox, QStyledItemDelegate, QComboBox, QTableView, QMessageBox
 
 from pcot import ui
 from pcot.datum import Datum
@@ -14,10 +15,12 @@ import pcot.ui.tabs
 from pcot.filters import Filter
 from pcot.imagecube import ImageCube
 from pcot.sources import MultiBandSource, nullSource, InputSource, NullSource, FilterOnlySource
+from pcot.ui.tablemodel import TableModel, ComboBoxDelegate
+from pcot.utils import SignalBlocker
 from pcot.xform import xformtype, XFormType
 
 DEFAULTSIZE = 256
-MODES = ['flat', 'ripple-n', 'ripple-u', 'ripple-un']
+MODES = ['flat', 'ripple-n', 'ripple-u', 'ripple-un', 'half']
 DEFAULTMODE = 'flat'
 
 logger = logging.getLogger(__name__)
@@ -31,8 +34,12 @@ class ChannelData:
     cwl: int = 100  # centre wavelength
     mode: str = 'flat'  # mode - see node description
 
+    @staticmethod
+    def getHeader():
+        return ['N', 'U', 'CWL', 'mode']  # headers
+
     def serialise(self):
-        return self.n, self.u, self.cwl, self.mode
+        return dataclasses.astuple(self)
 
     @staticmethod
     def deserialise(t):
@@ -52,6 +59,7 @@ class XFormGen(XFormType):
     * ripple-u: as ripple-n, but this time U is used as a multiplier to generate the ripple pattern in uncertainty,
     while N is generated as in 'flat'
     * ripple-un: both values are ripple multipliers.
+    * half: nominal is N on the left, U on the right. Uncertainty is 0.1. (Test value)
 
     """
 
@@ -101,6 +109,9 @@ class XFormGen(XFormType):
                 ns.append(np.sin(d) * 0.5 + 0.5)
                 d = np.sqrt((x - cx) ** 2 + (y - cy) ** 2) * chan.u
                 us.append(np.sin(d) * 0.5 + 0.5)
+            elif chan.mode == 'half':
+                ns.append(np.where(x<node.imgwidth/2, chan.n, chan.u))
+                us.append(np.full((node.imgheight, node.imgwidth), 0.1))
 
         # build the image arrays
         if len(ns) > 0:
@@ -123,182 +134,42 @@ class XFormGen(XFormType):
         node.imgchannels = [ChannelData.deserialise(x) for x in d['chans']]
 
 
-class ComboBoxDelegate(QStyledItemDelegate):
-    """ComboBox view inside of a Table. It only shows the ComboBox when it is
-       being edited. Could be used for anything, actually.
-    """
-
-    def __init__(self, model, itemlist=None):
-        super().__init__(model)
-        self.model = model
-        self.itemlist = itemlist
-
-    def createEditor(self, parent, option, index):
-        editor = QComboBox(parent)
-        editor.addItems(self.itemlist)
-        editor.setCurrentIndex(0)
-        editor.installEventFilter(self)
-        # normally, the editor (the temporary combobox created when we double click) only closes when we
-        # hit enter or click away. This makes sure it closes when an item is modified, so the change gets
-        # sent to the model.
-        editor.currentIndexChanged.connect(lambda: editor.close())
-        return editor
-
-    def setEditorData(self, editor, index):
-        """Set the ComboBox's current index."""
-        value = index.data(QtCore.Qt.DisplayRole)
-        i = editor.findText(value)
-        if i == -1:
-            i = 0
-        editor.setCurrentIndex(i)
-
-    def setModelData(self, editor, model, index):
-        """Set the table's model's data when finished editing."""
-        value = editor.currentText()
-        model.setData(index, value, QtCore.Qt.EditRole)
-
-
-class Model(QAbstractTableModel):
+class GenModel(TableModel):
     """This is the model which acts between the list of ChannelData items and the table view."""
 
-    # custom signal used when we change data
-    changed = Signal()
-
     def __init__(self, tab, _data: List[ChannelData]):
-        QAbstractTableModel.__init__(self)
-        self.header = ['N', 'U', 'CWL', 'mode']  # headers
-        self.tab = tab  # the tab we're part of
-        self.d = _data  # the list of data which is our model
-
-    def headerData(self, section: int, orientation: QtCore.Qt.Orientation, role: int = ...) -> Any:
-        if role == QtCore.Qt.DisplayRole:
-            # data labels down the side
-            if orientation == QtCore.Qt.Vertical:
-                return self.header[section]
-            # channel indices along the top
-            elif orientation == QtCore.Qt.Horizontal:
-                return str(section)
-        return None
-
-    def rowCount(self, parent: QModelIndex) -> int:
-        return len(self.header)
-
-    def columnCount(self, parent: QModelIndex) -> int:
-        return len(self.d)
-
-    def data(self, index: QModelIndex, role: int) -> Any:
-        """Called by the table view to get data to show"""
-        if not index.isValid():
-            return None
-        elif role != QtCore.Qt.DisplayRole:
-            return None
-
-        row = index.row()
-        col = index.column()
-
-        if row == 0:
-            return self.d[col].n
-        elif row == 1:
-            return self.d[col].u
-        elif row == 2:
-            return self.d[col].cwl
-        elif row == 3:
-            return self.d[col].mode
-
-        return None
-
-    def move_left(self, n):
-        """Move a row to the left. This stuff is messy."""
-        if 0 < n < len(self.d):
-            # I'm still not entirely sure what's going on in this line
-            self.beginMoveColumns(QModelIndex(), n, n, QModelIndex(), n - 1)
-            self.d[n], self.d[n - 1] = self.d[n - 1], self.d[n]
-            self.endMoveColumns()
-            self.changed.emit()
-
-    def move_right(self, n):
-        """Move a row to the right. This stuff is messy."""
-        if n < len(self.d) - 1:
-            # I'm still not entirely sure what's going on in this line
-            self.beginMoveColumns(QModelIndex(), n, n, QModelIndex(), n + 2)
-            self.d[n], self.d[n + 1] = self.d[n + 1], self.d[n]
-            self.endMoveColumns()
-            self.changed.emit()
-
-    def add_item(self):
-        """Add a new channeldata to the end of the list"""
-        n = len(self.d)
-        self.beginInsertColumns(QModelIndex(), n, n)
-        self.d.append(ChannelData())
-        self.endInsertColumns()
-        self.changed.emit()
-        return n
-
-    def delete_item(self, n):
-        """Remove a given channeldata"""
-        if n < len(self.d):
-            self.beginRemoveColumns(QModelIndex(), n, n)
-            del self.d[n]
-            self.endRemoveColumns()
-            self.changed.emit()
+        super().__init__(tab, ChannelData, _data)
 
     def setData(self, index: QModelIndex, value: Any, role: int) -> bool:
         """Here we modify data in the underlying model in response to the tableview or any item delegates"""
         if index.isValid():
             self.tab.mark()  # we do the undo mark here, before the data is changed
-            row = index.row()
-            col = index.column()
-            d = self.d[col]
-            # got a reference to the datum, now change it by looking at the row index to see which item.
+            field = index.row()
+            item = index.column()
+            d = self.d[item]
+
             try:
-                if row == 0:
+                if field == 0:
                     d.n = float(value)
-                elif row == 1:
+                elif field == 1:
                     d.u = float(value)
-                elif row == 2:
+                elif field == 2:
                     value = int(value)
                     if value >= 0:
                         d.cwl = value
                     else:
                         return False
-                elif row == 3:
+                elif field == 3:
                     d.mode = value
 
                 # tell the view we changed
                 self.dataChanged.emit(index, index, (QtCore.Qt.DisplayRole,))
                 # and tell any other things too (such as the tab!)
                 self.changed.emit()
-            except TypeError:
+            except ValueError:
                 ui.log("Bad value type")
             return True
         return False
-
-    def flags(self, index: QModelIndex) -> QtCore.Qt.ItemFlags:
-        return QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled
-
-
-class SignalBlocker:
-    """Handy class for blocking signals on several widgets at once"""
-
-    def __init__(self, *args):
-        self.objects = args
-
-    def __enter__(self):
-        for o in self.objects:
-            o.blockSignals(True)
-
-    def __exit__(self, exctype, excval, tb):
-        for o in self.objects:
-            o.blockSignals(False)
-
-
-class GenTableView(QTableView):
-    delete = Signal()
-
-    def keyPressEvent(self, event: QKeyEvent) -> None:
-        if event.key() == Qt.Key_Delete:
-            self.delete.emit()
-        super().keyPressEvent(event)
 
 
 class TabGen(pcot.ui.tabs.Tab):
@@ -312,7 +183,7 @@ class TabGen(pcot.ui.tabs.Tab):
         self.w.deleteButton.clicked.connect(self.deleteClicked)
         self.w.tableView.delete.connect(self.deleteClicked)
 
-        self.model = Model(self, node.imgchannels)
+        self.model = GenModel(self, node.imgchannels)
         self.w.tableView.setModel(self.model)
         self.model.changed.connect(self.chansChanged)
         self.w.tableView.setItemDelegateForRow(3, ComboBoxDelegate(self.model, MODES))
@@ -346,7 +217,9 @@ class TabGen(pcot.ui.tabs.Tab):
 
     def deleteClicked(self):
         if (col := self._getselcol()) is not None:
-            self.model.delete_item(col)
+            if QMessageBox.question(self.window, "Delete channel", "Are you sure?",
+                                    QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                self.model.delete_item(col)
 
     def sizeChanged(self, _):
         self.mark()

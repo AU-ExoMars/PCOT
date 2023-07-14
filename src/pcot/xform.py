@@ -877,7 +877,7 @@ class XForm:
             traceback.print_exc()
             ui.logXFormException(self, e)
 
-    def getInput(self, i: int, tp=None) -> Optional[Datum]:
+    def getInput(self, i: int, tp=None):
         """get the value of an input.
             Optional type; if passed in will check for that type and dereference the contents if
             matched, else returning null.

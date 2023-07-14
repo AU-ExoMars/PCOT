@@ -35,6 +35,7 @@ def norm(subimg: SubImageCubeROI, clamp: int, splitchans=False) -> Tuple[np.arra
     masked = np.ma.masked_array(img, mask=~mask)
     # make a working copy
     cp = img.copy()
+    dqcopy = None
 
     if clamp == 0:  # normalize mode
         if splitchans == 0:
@@ -47,23 +48,27 @@ def norm(subimg: SubImageCubeROI, clamp: int, splitchans=False) -> Tuple[np.arra
         np.putmask(unccopy, mask, unc)
     else:  # clamp
         # do the thing, only using the masked region
+
+        # work out which pixels should be clamped, top and bottom
         top = masked > 1
         bottom = masked < 0
-        masked[top] = 1
-        masked[bottom] = 0
-        res = masked
+        masked[top] = 1         # do the top clamping
+        masked[bottom] = 0      # do the bottom clamping
+        res = masked            # and that will be the result
+
         # we need to clear uncertainty and set NOUNC on clipped data.
+
+        # TODO analyse this sequence and work out how to make it quicker. We do this kind of operation three times!
         unccopy = subimg.uncertainty.copy()
         unc = np.ma.masked_array(subimg.uncertainty, mask=~mask)
         unc[top | bottom] = 0
         np.putmask(unccopy, mask, unc)
+
         dqcopy = subimg.dq.copy()
         dq = np.ma.masked_array(subimg.dq, mask=~mask)
         dq[top | bottom] |= pcot.dq.NOUNCERTAINTY
         np.putmask(dqcopy, mask, dq)
 
-        unccopy = None  # uncertainty unchanged
-
     # overwrite the changed result into the working copy
     np.putmask(cp, mask, res)
-    return cp, unccopy, None
+    return cp, unccopy, dqcopy

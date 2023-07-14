@@ -7,6 +7,7 @@ from typing import List, SupportsFloat, Optional
 import numpy as np
 
 import pcot
+import pcot.dq
 from pcot import rois
 from pcot.config import parserhook
 from pcot.datum import Datum
@@ -193,7 +194,7 @@ def funcV(args, optargs):
 
     dq = optargs[0].get(Datum.NUMBER)
     if dq is None:
-        dq = dq.NONE
+        dq = pcot.dq.NONE
     else:
         dq = np.uint16(dq.n)
 
@@ -205,17 +206,22 @@ def funcV(args, optargs):
             # here, we're creating a number,uncimage pair
             i = np.full(v1.img.shape, v0.n, dtype=np.float32)
             s = combineImageWithNumberSources(v1, s0)
-            img = ImageCube(i, uncertainty=v1.img, dq=v1.dq | dq, sources=s)
+            # or in the new DQ but remove no uncertainty, unless it's in the data.
+            dqimg = (v1.dq | dq) & ~pcot.dq.NOUNCERTAINTY
+
+            img = ImageCube(i, uncertainty=v1.img, dq=dqimg, sources=s)
             return Datum(Datum.IMG, img)
     else:
         if t1 == Datum.NUMBER:
             # image, number
             i = np.full(v0.img.shape, v1.n, dtype=np.float32)
             s = combineImageWithNumberSources(v0, s1)
-            img = ImageCube(v0.img, uncertainty=i, dq=v0.dq | dq, sources=s)
+            dqimg = (v0.dq | dq) & ~pcot.dq.NOUNCERTAINTY
+            img = ImageCube(v0.img, uncertainty=i, dq=dqimg, sources=s)
             return Datum(Datum.IMG, img)
         else:
-            img = ImageCube(v0.img, uncertainty=v1.img, dq=v0.dq | v1.dq | dq,
+            dqimg = (v0.dq | v1.dq | dq) & ~pcot.dq.NOUNCERTAINTY
+            img = ImageCube(v0.img, uncertainty=v1.img, dq=dqimg,
                             sources=MultiBandSource.createBandwiseUnion([s0, s1]))
             return Datum(Datum.IMG, img)
 
