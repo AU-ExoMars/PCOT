@@ -298,7 +298,7 @@ class TabScalarTest(pcot.ui.tabs.Tab):
         self.w.uCombo.currentTextChanged.connect(self.uComboChanged)
         self.w.dqCombo.currentTextChanged.connect(self.dqComboChanged)
 
-        self.w.nEdit.setValidator(QDoubleValidator(float('-inf'), float('inf'), -1, w))
+        self.w.nEdit.setValidator(QDoubleValidator(-math.inf, math.inf, -1, w))
         self.w.uEdit.setValidator(QDoubleValidator(0.0, 1000.0, -1, w))
         self.w.dqEdit.setValidator(QIntValidator(0, 65535, w))
 

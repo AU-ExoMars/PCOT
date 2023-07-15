@@ -30,11 +30,12 @@ def norm(subimg: SubImageCubeROI, clamp: int, splitchans=False) -> Tuple[np.arra
     mask = subimg.fullmask()  # get mask with same shape as below image
     img = subimg.img  # get imagecube bounded by ROIs as np array
 
-    # get the part of the image we are working on
-
-    masked = np.ma.masked_array(img, mask=~mask)
     # make a working copy
     cp = img.copy()
+    # get the part of the working copy we are working on
+    masked = np.ma.masked_array(cp, mask=~mask)
+    # now we can perform operations on "masked", which acts as a slice into "cp" - see below
+    # for more examples of this, such as the triads of lines for dq and uncertainty.
     dqcopy = None
 
     if clamp == 0:  # normalize mode
@@ -44,8 +45,8 @@ def norm(subimg: SubImageCubeROI, clamp: int, splitchans=False) -> Tuple[np.arra
             res, scale = image.imgmerge([_norm(x) for x in image.imgsplit(img)])
         # now we need to scale the uncertainty
         unccopy = subimg.uncertainty.copy()
-        unc = scale * np.ma.masked_array(subimg.uncertainty, mask=~mask)
-        np.putmask(unccopy, mask, unc)
+        unc = np.ma.masked_array(unccopy, mask=~mask)
+        unc *= scale
     else:  # clamp
         # do the thing, only using the masked region
 
@@ -58,16 +59,13 @@ def norm(subimg: SubImageCubeROI, clamp: int, splitchans=False) -> Tuple[np.arra
 
         # we need to clear uncertainty and set NOUNC on clipped data.
 
-        # TODO analyse this sequence and work out how to make it quicker. We do this kind of operation three times!
         unccopy = subimg.uncertainty.copy()
-        unc = np.ma.masked_array(subimg.uncertainty, mask=~mask)
+        unc = np.ma.masked_array(unccopy, mask=~mask)
         unc[top | bottom] = 0
-        np.putmask(unccopy, mask, unc)
 
         dqcopy = subimg.dq.copy()
-        dq = np.ma.masked_array(subimg.dq, mask=~mask)
+        dq = np.ma.masked_array(dqcopy, mask=~mask)
         dq[top | bottom] |= pcot.dq.NOUNCERTAINTY
-        np.putmask(dqcopy, mask, dq)
 
     # overwrite the changed result into the working copy
     np.putmask(cp, mask, res)
