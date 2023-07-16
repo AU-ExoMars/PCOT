@@ -266,9 +266,11 @@ class Tab(QtWidgets.QWidget):
         """force update of tab title and return new title"""
         t = self.node.displayName
         if self.node.displayName != self.node.type.name:
-            t += " ({})".format(self.node.type.name)
+            t += f" ({self.node.type.name})"
+        if self.node.error is not None:
+            t += f" [{self.node.error.message}]"
         if self.node.rectText is not None:
-            t += " [{}]".format(self.node.rectText)
+            t += f" [{self.node.rectText}]"
         self.title = t
         return self.title
 

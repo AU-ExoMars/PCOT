@@ -482,6 +482,7 @@ class XForm:
         self.rectText = None
         self.runTime = 0
         self.timesPerformed = 0  # used for debugging/optimising
+        self.rebuildTabsAfterPerform = False
 
         # UI-DEPENDENT DATA DOWN HERE
 
@@ -972,14 +973,17 @@ class XFormGraph:
     # XFormMacro, itself a subclass of XFormType)
     proto: Optional['XFormMacro']
 
-    ## @var autorun
-    # should graphs be autorun
-    autoRun: ClassVar[bool]
-    autoRun = True
+    # texts may have change in perform, need to rebuild tabs
+    rebuildTabsAfterPerform: bool
 
     ## @var doc
     # the document of which I am a part, whether as the top-level graph or a macro.
     doc: 'Document'
+
+    ## @var autorun
+    # should graphs be autorun
+    autoRun: ClassVar[bool]
+    autoRun = True
 
     def __init__(self, doc, isMacro):
         """constructor, takes whether the graph is a macro prototype or not"""
@@ -990,6 +994,7 @@ class XFormGraph:
         self.scene = None  # the graph's scene is created by autoLayout
         self.isMacro = isMacro
         self.nodeDict = {}
+        self.rebuildTabsAfterPerform = False
 
     def constructScene(self, doAutoLayout):
         """construct a graphical representation for this graph"""
@@ -1110,6 +1115,7 @@ class XFormGraph:
     ## we are about to perform some nodes due to a UI change, so reset errors, hasRun flag, and outputs
     # of the descendants of the node we are running (or all nodes if we are running the entire graph)
     def prePerform(self, root: Optional[XForm]):
+        self.rebuildTabsAfterPerform = False
         nodeset = set()
         if root is not None:
             self.visit(root, lambda x: nodeset.add(x))
@@ -1199,6 +1205,9 @@ class XFormGraph:
 
         # force a rebuild of the scene; error states may have changed.
         self.rebuildGraphics()
+        if self.rebuildTabsAfterPerform:
+            self.rebuildTabsAfterPerform = False
+            ui.mainwindow.MainUI.rebuildAll(scene=False)
         ui.msg("Perform complete")
 
     def showPerformance(self):
@@ -1291,7 +1300,8 @@ class XFormGraph:
     def get(self, name):
         """Really ugly thing for getting a node by name. Node names are unique.
         The *correct* thing to do would be have a dict of
-        nodes by name, of course. But this is plenty fast enough."""
+        nodes by name, of course. But this is plenty fast enough.
+        These nodes are not visible to the user. SEE ALSO: getByDisplayName()"""
         for n in self.nodes:
             if n.name == name:
                 return n
@@ -1300,6 +1310,10 @@ class XFormGraph:
     def nodeExists(self, name):
         """Does a node exist (node names are unique)?"""
         return self.get(name) is not None
+
+    def getByDisplayName(self, name):
+        """Return a list of nodes which have this display name."""
+        return [x for x in self.nodes if x.displayName == name]
 
     ## change the names of nodes in the dict which have the same names as
     # nodes in the existing graph. Returns a new dict.

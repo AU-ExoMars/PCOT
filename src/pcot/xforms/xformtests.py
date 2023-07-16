@@ -18,6 +18,7 @@ from pcot.utils import SignalBlocker
 from pcot.value import Value
 from pcot.xform import XFormType, xformtype, XFormException
 from pcot.utils.annotations import Annotation, annotFont, IndexedPointAnnotation
+from pcot.xforms.tabdata import TabData
 
 
 @dataclass
@@ -147,14 +148,17 @@ class XFormPixTest(XFormType):
                 node.img.annotations.append(IndexedPointAnnotation(
                     i, t.x, t.y, ok, QColor(t.col)))
                 ui.log("\n".join(out))
-                resultStr = "FAILED" if len(out) > 0 else "OK"
+                if len(out) == 0:
+                    node.setRectText("ALL OK")
+                else:
+                    node.setError(XFormException('TEST', f"{len(out)} FAILED"))
         else:
             node.img = None
-            resultStr = "NOIMG"
+            node.setError(XFormException('TEST', 'NO IMAGE'))
 
-        node.setRectText(resultStr)
-
-        node.setOutput(0, Datum(Datum.TESTRESULT, out, sources=nullSourceSet))
+        node.graph.rebuildTabsAfterPerform = True
+        node.out = Datum(Datum.TESTRESULT, out, sources=nullSourceSet)
+        node.setOutput(0, node.out)
 
 
 class TabPixTest(pcot.ui.tabs.Tab):
@@ -229,7 +233,7 @@ class TabPixTest(pcot.ui.tabs.Tab):
 
 def testFloat(inpval, test, testval):
     if test == 'Equals':
-        return np.isclose(inpval,testval)
+        return np.isclose(inpval, testval)
     elif test == 'Not equals':
         return not np.isclose(inpval, testval)
     elif test == 'Less than':
@@ -284,11 +288,16 @@ class XFormScalarTest(XFormType):
                 out = f"Uncertainty fail: {v.u} {node.uTest} {node.u}"
             elif not testDQ(v.dq, node.dqTest, node.dq):
                 out = f"Uncertainty fail: {v.dq} {node.dqTest} {node.dq}"
-            resultStr = "OK" if out is None else "FAILED"
         out = [] if out is None else [out]
 
-        node.setOutput(0, Datum(Datum.TESTRESULT, out, nullSourceSet))
-        node.setRectText(resultStr)
+        if len(out) == 0:
+            node.setRectText("ALL OK")
+        else:
+            node.setError(XFormException('TEST', f"{len(out)} FAILED"))
+
+        node.graph.rebuildTabsAfterPerform = True
+        node.out = Datum(Datum.TESTRESULT, out, nullSourceSet)
+        node.setOutput(0, node.out)
 
 
 class TabScalarTest(pcot.ui.tabs.Tab):
@@ -357,3 +366,35 @@ class TabScalarTest(pcot.ui.tabs.Tab):
         self.dontSetText = True
         self.changed()
         self.dontSetText = False
+
+
+@xformtype
+class XFormMergeTests(XFormType):
+    """Merge the results of many tests into a single list of failures. Test results are always lists of test
+    failures, this simply concatenates those lists."""
+
+    def __init__(self):
+        super().__init__("mergetests", "utility", "0.0.0")
+        for i in range(0, 8):
+            self.addInputConnector("", Datum.TESTRESULT)
+        self.addOutputConnector("results", Datum.TESTRESULT)
+
+    def init(self, node):
+        pass
+
+    def createTab(self, xform, window):
+        return TabData(xform, window)
+
+    def perform(self, node):
+        out = []
+        for i in range(0, 8):
+            x = node.getInput(i, Datum.TESTRESULT)
+            if x is not None:
+                out += x
+        node.out = Datum(Datum.TESTRESULT, out, sources=nullSourceSet)
+        if len(out) == 0:
+            node.setRectText("ALL OK")
+        else:
+            node.setError(XFormException('TEST', f"{len(out)} FAILED"))
+        node.graph.rebuildTabsAfterPerform = True
+        node.setOutput(0, node.out)
