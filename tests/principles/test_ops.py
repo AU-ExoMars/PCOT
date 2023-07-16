@@ -1,6 +1,7 @@
 """Test operations - a lot of operations are covered already by things
 in test_roi_principles, however, and also uncertainty/test_ops.py!"""
 import math
+from dataclasses import dataclass
 from math import isclose
 
 import pytest
@@ -15,99 +16,110 @@ import numpy as np
 from pcot.imagecube import ImageCube
 from pcot.value import Value
 
+tests = [
+    ("12-10", 2),
+    ("10", 10),
+    ("4+10+16", 30),
+    ("4*3+2", 14),
+    ("2+4*3", 14),
+    ("4*(3+2)", 20),
+    ("(3+2)*4", 20),
+    ("(3+2)/4", 1.25),
+    ("(3+2)/4-10", -8.75),
+    ("2^4", 16),
+    ("4^0.5", 2),
+    ("2&1", 1),
+    ("2&20", 2),
+    ("2|1", 2),
+    ("2|20", 20)
+]
+testids = [f"{x[0]}=={x[1]}" for x in tests]
 
-def test_scalar_ops():
+
+@pytest.mark.parametrize("e,expected", tests, ids=testids)
+def test_scalar_ops(e, expected):
     """Basic scalar ops, testing precedence and brackets."""
-    def runop(e, expected):
-        doc = Document()
-        expr = doc.graph.create("expr")
-        expr.expr = e
-        doc.changed()
-        n = expr.getOutput(0, Datum.NUMBER).n
-        assert n == expected
-
     pcot.setup()
-
-    runop("12-10", 2)
-    runop("10", 10)
-    runop("4+10+16", 30)
-    runop("4*3+2", 14)
-    runop("2+4*3", 14)
-    runop("4*(3+2)", 20)
-    runop("(3+2)*4", 20)
-    runop("(3+2)/4", 1.25)
-    runop("(3+2)/4-10", -8.75)
-    runop("2^4", 16)
-    runop("4^0.5", 2)
-    runop("2&1", 1)
-    runop("2&20", 2)
-    runop("2|1", 2)
-    runop("2|20", 20)
+    doc = Document()
+    expr = doc.graph.create("expr")
+    expr.expr = e
+    doc.changed()
+    n = expr.getOutput(0, Datum.NUMBER).n
+    assert n == expected
 
 
-def test_image_scalar_ops():
+tests = [
+    # these are operations on an RGB image with pixels (0,0.5,0)
+    ("a^(2+1)", (0, 0.125, 0)),
+    ("a+4", (4, 4.5, 4)),
+    ("4+a", (4, 4.5, 4)),
+    ("a-0.5", (-0.5, 0, -0.5)),
+    ("(a+2)/2", (1, 1.25, 1)),
+    ("(a+2)/0", (0, 0, 0)),  # division by zero yields zero, but errors should be set. Tested elsewhere.
+    ("a*2+1", (1, 2, 1)),
+    ("a*(2+1)", (0, 1.5, 0))
+]
+testids = [f"{x[0]}=={x[1][0]},{x[1][1]},{x[1][2]}" for x in tests]
+
+
+@pytest.mark.parametrize("e,expected", tests, ids=testids)
+def test_image_scalar_ops(e, expected):
     """Smoke test for a basic image+scalar operation, no ROI"""
     pcot.setup()
 
-    def runop(e, expected):
-        doc = Document()
+    doc = Document()
 
-        greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # dark green
-        assert doc.setInputDirect(0, greenimg) is None
-        green = doc.graph.create("input 0", displayName="GREEN input")
+    greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # dark green
+    assert doc.setInputDirect(0, greenimg) is None
+    green = doc.graph.create("input 0", displayName="GREEN input")
 
-        expr = doc.graph.create("expr")
-        expr.expr = e
-        expr.connect(0, green, 0)
+    expr = doc.graph.create("expr")
+    expr.expr = e
+    expr.connect(0, green, 0, autoPerform=False)
 
-        doc.changed()
-        img = expr.getOutput(0, Datum.IMG)
-        assert img is not None
+    doc.changed()
+    img = expr.getOutput(0, Datum.IMG)
+    assert img is not None
 
-        for x, y in ((0, 0), (49, 0), (49, 49), (0, 49)):
-            assert np.array_equal(img.img[0, 0],
-                                  expected), f"{e}, got {img.img[0][0]} at {x},{y}. Expected {expected}, a=(0, 0.5, 0)"
-
-    runop("a^(2+1)", (0, 0.125, 0))
-    runop("a+4", (4, 4.5, 4))
-    runop("4+a", (4, 4.5, 4))
-    runop("a-0.5", (-0.5, 0, -0.5))
-    runop("(a+2)/2", (1, 1.25, 1))
-    runop("(a+2)/0", (0, 0, 0))  # division by zero yields zero, but errors should be set. Tested elsewhere.
-    runop("a*2+1", (1, 2, 1))
-    runop("a*(2+1)", (0, 1.5, 0))
+    for x, y in ((0, 0), (49, 0), (49, 49), (0, 49)):
+        assert np.array_equal(img.img[0, 0],
+                              expected), f"{e}, got {img.img[0][0]} at {x},{y}. Expected {expected}, a=(0, 0.5, 0)"
 
 
-def test_image_image_ops():
+# these are operations on an RGB image with pixels (0,0.5,0)
+tests = [
+    ("a+b", (2, 0.5, 0)),
+    ("b+a", (2, 0.5, 0)),
+    ("a-b", (-2, 0.5, 0)),
+    ("a*b", (0, 0, 0))
+]
+testids = [f"{x[0]}=={x[1][0]},{x[1][1]},{x[1][2]}" for x in tests]
+
+
+@pytest.mark.parametrize("e,expected", tests, ids=testids)
+def test_image_image_ops(e, expected):
     """Very basic image ops"""
     pcot.setup()
+    doc = Document()
 
-    def runop(e, expected):
-        doc = Document()
+    greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # dark green
+    doc.setInputDirect(0, greenimg)
+    redimg = genrgb(50, 50, 2, 0, 0, doc=doc, inpidx=1)  # oversaturated red
+    doc.setInputDirect(1, redimg)
+    green = doc.graph.create("input 0")
+    red = doc.graph.create("input 1")
 
-        greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # dark green
-        doc.setInputDirect(0, greenimg)
-        redimg = genrgb(50, 50, 2, 0, 0, doc=doc, inpidx=1)  # oversaturated red
-        doc.setInputDirect(1, redimg)
-        green = doc.graph.create("input 0")
-        red = doc.graph.create("input 1")
+    expr = doc.graph.create("expr")
+    expr.expr = e
+    expr.connect(0, green, 0, autoPerform=False)
+    expr.connect(1, red, 0, autoPerform=False)
 
-        expr = doc.graph.create("expr")
-        expr.expr = e
-        expr.connect(0, green, 0)
-        expr.connect(1, red, 0)
+    doc.changed()
+    img = expr.getOutput(0, Datum.IMG)
+    assert img is not None
 
-        doc.changed()
-        img = expr.getOutput(0, Datum.IMG)
-        assert img is not None
-
-        for x, y in ((0, 0), (49, 0), (49, 49), (0, 49)):
-            assert np.array_equal(img.img[0, 0], expected), f"{e}, got {img.img[0][0]} at {x},{y}"
-
-    runop("a+b", (2, 0.5, 0))
-    runop("b+a", (2, 0.5, 0))
-    runop("a-b", (-2, 0.5, 0))
-    runop("a*b", (0, 0, 0))
+    for x, y in ((0, 0), (49, 0), (49, 49), (0, 49)):
+        assert np.array_equal(img.img[0, 0], expected), f"{e}, got {img.img[0][0]} at {x},{y}"
 
 
 def test_image_stats():
@@ -122,7 +134,7 @@ def test_image_stats():
 
         expr = doc.graph.create("expr")
         expr.expr = e
-        expr.connect(0, green, 0)
+        expr.connect(0, green, 0, autoPerform=False)
 
         doc.changed()
         out = expr.getOutput(0, Datum.NUMBER)

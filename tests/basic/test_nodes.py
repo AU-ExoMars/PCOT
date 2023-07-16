@@ -48,6 +48,17 @@ def test_node_output_none():
                     assert node.getOutput(0, Datum.IMG) is not None, f"Gen should return an image with default args"
                 except BadTypeException:
                     pytest.fail("Gen should return an image")
+            elif x == 'pixtest':
+                try:
+                    assert len(node.getOutput(0, Datum.TESTRESULT))==0, f"Pixtest should return empty list when not connected"
+                except BadTypeException:
+                    pytest.fail("Pixtest should return a list")
+            elif x == 'scalartest':
+                try:
+                    assert len(node.getOutput(0, Datum.TESTRESULT))==0, f"Scalartest should return empty list when not connected"
+                except BadTypeException:
+                    pytest.fail("Scalartest should return a list")
+
             else:
                 assert out is None, f"XForm {x} should output None when not connected"
 

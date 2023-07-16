@@ -7,6 +7,7 @@ from pcot.datum import Datum
 from pcot.document import Document
 from fixtures import *
 
+
 def test_roi_single_image(allblack):
     """Test that a single 'standard operation' - one which uses modifyWithSub - works
     correctly on an image with a single ROI. ROIs and modifyWithSub are tested at a lower
@@ -32,6 +33,7 @@ def test_roi_single_image(allblack):
     img = exprNode.getOutput(0, Datum.IMG)
     assert np.sum(img.img) == 12 * 3  # right number of pixels changed for a 3 channel image
     checkexpr(exprNode)
+
 
 def test_roi_intersection(allblack):
     """Test using expr to intersect two ROIs"""
@@ -474,7 +476,7 @@ def test_roi_neg_expr():
 
     for x in range(0, 50):
         for y in range(0, 50):
-            inroi = not (x>=10 and y>=10 and x<40 and y<40)
-            pix = img.img[y,x]
-            expected = (0,0,0) if inroi else (1,0,0)
+            inroi = not (10 <= x < 40 and 10 <= y < 40)
+            pix = img.img[y, x]
+            expected = (0, 0, 0) if inroi else (1, 0, 0)
             assert np.array_equal(pix, expected), f"pixel {x}, {y} should be {expected}, is {pix}"

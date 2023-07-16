@@ -206,7 +206,6 @@ class BinopTest:
 # Values are all generated using the uncertainties package or the uncertainty calculator
 # at https://uncertaintycalculator.com/
 binop_tests = [
-    BinopTest(0, 0, 20, 2, "a/b", 0, 0, dq.NONE),  # 0 / 20±2 = 0
 
     BinopTest(10, 0, 20, 0, "a+b", 30, 0, dq.NONE),  # 10 + 20 = 30
     BinopTest(10, 2, 20, 5, "a+b", 30, sqrt(2 * 2 + 5 * 5), dq.NONE),  # 10±2 + 20±5 = 30±sqr(2^2+5^2)
@@ -225,7 +224,8 @@ binop_tests = [
     BinopTest(10, 2, 20, 0, "a/b", 0.5, 0.1, dq.NONE),  # 10±2 / 20 = 200±0.1
     BinopTest(10, 2, 20, 3, "a/b", 0.5, 0.125, dq.NONE),  # 10±2 / 20±3 = 200±0.125
     BinopTest(10, 3, 20, 2, "a/b", 0.5, 0.15811388, dq.NONE),  # 10±3 / 20±2 = 200±0.158 (approx)
-    BinopTest(0, 0, 20, 2, "a/b", 0, 0, dq.NONE),  # 0 / 20±2 = 0
+    BinopTest(0, 0, 20, 1, "a/b", 0, 0, dq.NONE),  # 0 / 20±anything = 0
+    BinopTest(0, 0, 20, 2, "a/b", 0, 0, dq.NONE),  # 0 / 20±anything = 0
     BinopTest(3, 0.1, 10, 0.3, "a/b", 0.3, 0.0134536240470737, dq.NONE), # 3±0.1 / 10±0.3 0.3±0.0134536240470737
     BinopTest(0, 2, 20, 2, "a/b", 0, 0.1, dq.NONE),  # 0±2 / 20±2 = 0±0.1
     BinopTest(2, 0, 0, 0, "a/b", 0, 0, dq.DIVZERO),  # 2/0 = 0 but divzero flag set
@@ -420,98 +420,125 @@ def test_image_image_binops_noroi(t):
 # generate test params for DQ propagation
 
 
+@dataclass
+class DQPropTest:
+    a_scalar: bool
+    b_scalar: bool
+    a: float  # Nominal value of A
+    ua: float  # uncertainty of A
+    dqa: np.uint16  # dq of a
+    b: float  # nominal value of B
+    ub: float  # uncertainty of B
+    dqb: np.uint16  # dq of b
+
+    e: str  # binary expression in A and B (e.g. "a+b")
+    expected_val: float  # expected nominal result
+    expected_unc: float  # expected uncertainty of result
+    expected_dq: np.uint16  # expected DQ in result
+
+    def __str__(self):
+        """Annoyingly the output console can't handle unicode, so I can't use the ± here. Using | instead.
+        Used to generate test names."""
+        return f"{'scal' if self.a_scalar else 'img'}|{'scal' if self.b_scalar else 'img'} " + \
+            f"{self.e}: a={self.a}|{self.ua}|{self.dqa}" + \
+            f"b={self.b}|{self.ub}|{self.dqb}" + \
+            f"exp={self.expected_val}|{self.expected_unc}{dq.names(self.expected_dq,True)}"
 
 
+dq_prop_tests = []
+for a_is_scalar in (True, False):
+    for b_is_scalar in (True, False):
+        for op, res in [('+', 5), ('-', -1), ('*', 6), ('/', 0.66666666666), ('^', 8)]:
+            e = f"a{op}b"
+            # check DQ on LHS propagates
+            dq_prop_tests.append(
+                DQPropTest(a_is_scalar, b_is_scalar, 2, 0, dq.UNDEF | dq.NOUNCERTAINTY, 3, 0, dq.NONE,
+                           e, res, 0, dq.UNDEF | dq.NOUNCERTAINTY))
+            # check no dq propagates
+            dq_prop_tests.append(
+                DQPropTest(a_is_scalar, b_is_scalar, 2, 0, dq.NONE, 3, 0, dq.NONE, e, res, 0, dq.NONE))
+            # and on RHS
+            dq_prop_tests.append(
+                DQPropTest(a_is_scalar, b_is_scalar, 2, 0, dq.NONE, 3, 0, dq.UNDEF | dq.NOUNCERTAINTY, e,
+                           res, 0, dq.UNDEF | dq.NOUNCERTAINTY))
+            # and check both are ORed in.
+            dq_prop_tests.append(
+                DQPropTest(a_is_scalar, b_is_scalar, 2, 0, dq.SAT, 3, 0, dq.UNDEF | dq.NOUNCERTAINTY, e,
+                           res, 0, dq.SAT | dq.UNDEF | dq.NOUNCERTAINTY))
 
-def test_dq_propagation_images():
+        # min and max are different; the DQ comes from the side which "wins"
+        # max operator, dq comes from b
+        dq_prop_tests.append(DQPropTest(a_is_scalar, b_is_scalar, 2, 0, dq.SAT, 3, 0, dq.UNDEF, "a|b", 3, 0, dq.UNDEF))
+        # min operator, dq comes from a
+        dq_prop_tests.append(DQPropTest(a_is_scalar, b_is_scalar, 2, 0, dq.SAT, 3, 0, dq.UNDEF, "a&b", 2, 0, dq.SAT))
+
+
+@pytest.mark.parametrize("t", dq_prop_tests, ids=lambda x: x.__str__())
+def test_dq_propagation_images(t):
     """Test that DQ is propagated correctly in the binary operators on images"""
 
     pcot.setup()
 
-    def runtest(a, ua, adq, b, ub, bdq, e, expected_val, expected_unc, expected_dq):
-        doc = Document()
-        if a_is_scalar:
-            nodeA = doc.graph.create("expr")
-            nodeA.expr = f"v({a},{ua},{adq})"
-        else:
-            # node A is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
-            imgA = gen_2b_unc(2, 0.1, a, ua, dq0=0, dq1=adq)
-            doc.setInputDirect(0, imgA)
-            nodeA = doc.graph.create("input 0")
+    doc = Document()
+    if t.a_scalar:
+        nodeA = doc.graph.create("expr")
+        nodeA.expr = f"v({t.a},{t.ua},{t.dqa})"
+    else:
+        # node A is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
+        imgA = gen_2b_unc(2, 0.1, t.a, t.ua, dq0=0, dq1=t.dqa)
+        doc.setInputDirect(0, imgA)
+        nodeA = doc.graph.create("input 0")
 
-        if b_is_scalar:
-            nodeB = doc.graph.create("expr")
-            nodeB.expr = f"v({b},{ub},{bdq})"
-        else:
-            # node B is a 20x20 2-band image with 3±0.2 in band 0 and the given values in band 1.
-            imgB = gen_2b_unc(3, 0.2, b, ub, dq0=0, dq1=bdq)
-            doc.setInputDirect(1, imgB)
-            nodeB = doc.graph.create("input 1")
+    if t.b_scalar:
+        nodeB = doc.graph.create("expr")
+        nodeB.expr = f"v({t.b},{t.ub},{t.dqb})"
+    else:
+        # node B is a 20x20 2-band image with 3±0.2 in band 0 and the given values in band 1.
+        imgB = gen_2b_unc(3, 0.2, t.b, t.ub, dq0=0, dq1=t.dqb)
+        doc.setInputDirect(1, imgB)
+        nodeB = doc.graph.create("input 1")
 
-        # and connect an expression node to rect and nodeB.
-        expr = doc.graph.create("expr")
-        expr.expr = e
-        # this is where the connections are reversed.
-        expr.connect(0, nodeA, 0, autoPerform=False)
-        expr.connect(1, nodeB, 0, autoPerform=False)
+    # and connect an expression node to rect and nodeB.
+    expr = doc.graph.create("expr")
+    expr.expr = t.e
+    # this is where the connections are reversed.
+    expr.connect(0, nodeA, 0, autoPerform=False)
+    expr.connect(1, nodeB, 0, autoPerform=False)
 
-        logger.warning(
-            f"Testing {a_is_scalar}/{b_is_scalar} {e} : a={a}±{ua}dq={adq}, b={b}±{ub}dq={bdq} --------------------------------------")
+    expected_n = pytest.approx(t.expected_val)
+    expected_u = pytest.approx(t.expected_unc)
 
-        expected_n = pytest.approx(expected_val)
-        expected_u = pytest.approx(expected_unc)
+    doc.changed()
 
-        doc.changed()
+    if t.a_scalar and t.b_scalar:
+        val = expr.getOutput(0, Datum.NUMBER)
+        assert val is not None
+        assert val.n == expected_n
+        assert val.u == expected_u
+        assert val.dq == t.expected_dq
+    else:
+        img = expr.getOutput(0, Datum.IMG)  # has to be an image!
+        assert img is not None
 
-        if a_is_scalar and b_is_scalar:
-            val = expr.getOutput(0, Datum.NUMBER)
-            assert val is not None
-            assert val.n == expected_n
-            assert val.u == expected_u
-            assert val.dq == expected_dq
-        else:
-            img = expr.getOutput(0, Datum.IMG)  # has to be an image!
-            assert img is not None
+        for x in range(0, 20):
+            for y in range(0, 20):
+                n = img.img[y, x, 1]
+                u = img.uncertainty[y, x, 1]
+                dqv = img.dq[y, x, 1]
 
-            for x in range(0, 20):
-                for y in range(0, 20):
-                    n = img.img[y, x, 1]
-                    u = img.uncertainty[y, x, 1]
-                    dqv = img.dq[y, x, 1]
+                ntest = n == expected_n
+                utest = u == expected_u
+                dqtest = dqv == t.expected_dq
 
-                    ntest = n == expected_n
-                    utest = u == expected_u
-                    dqtest = dqv == expected_dq
+                if not (ntest and utest and dqtest):
+                    logger.error(f"Error in binop test at pixel {x},{y} for expression {expr.expr}")
+                    if not ntest:
+                        logger.error(f"N expected {expected_n} got {n}")
+                    if not utest:
+                        logger.error(f"U expected {expected_u} got {u}")
+                    if not dqtest:
+                        logger.error(
+                            f"DQ expected {dq.names(t.expected_dq, shownone=True)} got {dq.names(dqv, shownone=True)}")
 
-                    if not (ntest and utest and dqtest):
-                        logger.error(f"Error in binop test at pixel {x},{y} for expression {expr.expr}")
-                        if not ntest:
-                            logger.error(f"N expected {expected_n} got {n}")
-                        if not utest:
-                            logger.error(f"U expected {expected_u} got {u}")
-                        if not dqtest:
-                            logger.error(
-                                f"DQ expected {dq.names(expected_dq, shownone=True)} got {dq.names(dqv, shownone=True)}")
+                assert ntest and utest and dqtest
 
-                    assert ntest and utest and dqtest
-
-    # for each of these ops, and also checking the result...
-
-    for a_is_scalar in (True, False):
-        for b_is_scalar in (True, False):
-            for op, res in [('+', 5), ('-', -1), ('*', 6), ('/', 0.66666666666), ('^', 8)]:
-                e = f"a{op}b"
-                # check DQ on LHS propagates
-                runtest(2, 0, dq.UNDEF | dq.NOUNCERTAINTY, 3, 0, dq.NONE, e, res, 0, dq.UNDEF | dq.NOUNCERTAINTY)
-                # check no dq propagates
-                runtest(2, 0, dq.NONE, 3, 0, dq.NONE, e, res, 0, dq.NONE)
-                # and on RHS
-                runtest(2, 0, dq.NONE, 3, 0, dq.UNDEF | dq.NOUNCERTAINTY, e, res, 0, dq.UNDEF | dq.NOUNCERTAINTY)
-                # and check both are ORed in.
-                runtest(2, 0, dq.SAT, 3, 0, dq.UNDEF | dq.NOUNCERTAINTY, e, res, 0, dq.SAT | dq.UNDEF | dq.NOUNCERTAINTY)
-
-            # min and max are different; the DQ comes from the side which "wins"
-            # max operator, dq comes from b
-            runtest(2, 0, dq.SAT, 3, 0, dq.UNDEF, "a|b", 3, 0, dq.UNDEF)
-            # min operator, dq comes from a
-            runtest(2, 0, dq.SAT, 3, 0, dq.UNDEF, "a&b", 2, 0, dq.SAT)

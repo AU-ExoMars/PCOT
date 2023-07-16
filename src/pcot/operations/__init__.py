@@ -92,7 +92,7 @@ def exprWrapper(fn, img, *args):
         return None
     subimage = img.subimage()
     nom, unc, dq = fn(subimage, *args)
-    img = img.modifyWithSub(subimage, nom, uncertainty=unc, dq=dq)
+    img = img.modifyWithSub(subimage, nom, uncertainty=unc, dqv=dq)
     return Datum(Datum.IMG, img)
 
 
