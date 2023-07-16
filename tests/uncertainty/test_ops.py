@@ -114,6 +114,11 @@ class UnopTest:
     expected_unc: float  # expected uncertainty of result
     expected_dq: np.uint16  # expected DQ in result
 
+    def __str__(self):
+        """Annoyingly the output console can't handle unicode, so I can't use the ± here. Using | instead.
+        Used to generate test names."""
+        return f"{self.e}: a={self.n}|{self.u}, exp={self.expected_val}|{self.expected_unc}|{dq.names(self.expected_dq,True)}"
+
 
 unop_tests = [
 
@@ -130,58 +135,51 @@ unop_tests = [
     UnopTest(0, 2, dq.NONE, "!a", 1, 2, dq.NONE),
     UnopTest(-1, 2, dq.NONE, "!a", 2, 2, dq.NONE),  # "not -1" is an inappropriate thing to do, but we don't flag it
     UnopTest(0.3, 2, dq.SAT | dq.COMPLEX, "!a", 0.7, 2, dq.SAT | dq.COMPLEX),  # DQ must get passed through
-
-    # ensure pass-through of DQ
 ]
 
 
-def test_number_unops():
+@pytest.mark.parametrize("t", unop_tests, ids=lambda x: x.__str__())
+def test_number_unops(t):
     """Test that unary operations in expr nodes on numbers with uncertainty work. In the case of
     unary negation and inverse, (- and !) the uncertainty is passed through unchanged"""
     pcot.setup()
-
-    for t in unop_tests:
-        logger.warning(f"Testing {t.e} : a={t.n}±{t.u} dq={t.dq}----------------------------------------------")
-        doc = Document()
-        node = numberWithUncNode(doc, t.n, t.u, t.dq)
-        expr = doc.graph.create("expr")
-        expr.expr = t.e
-        expr.connect(0, node, 0, autoPerform=False)
-        doc.changed()
-        n = expr.getOutput(0, Datum.NUMBER)
-        assert n is not None
-        assert n.n == pytest.approx(t.expected_val)
-        assert n.u == pytest.approx(t.expected_unc)
-        assert n.dq == t.expected_dq
+    doc = Document()
+    node = numberWithUncNode(doc, t.n, t.u, t.dq)
+    expr = doc.graph.create("expr")
+    expr.expr = t.e
+    expr.connect(0, node, 0, autoPerform=False)
+    doc.changed()
+    n = expr.getOutput(0, Datum.NUMBER)
+    assert n is not None
+    assert n.n == pytest.approx(t.expected_val)
+    assert n.u == pytest.approx(t.expected_unc)
+    assert n.dq == t.expected_dq
 
 
-def test_image_unops():
+@pytest.mark.parametrize("t", unop_tests, ids=lambda x: x.__str__())
+def test_image_unops(t):
     """Test that unary operations in expr nodes on images with uncertainty work. Also ensure that
     the operation only acts on areas covered by an ROI and that DQs are passed through."""
-
     pcot.setup()
-    for t in unop_tests:
-        doc = Document()
-        # node A is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
-        img = gen_2b_unc(2, 0.1, t.n, t.u, dq0=0, dq1=t.dq)
-        # just to check that DQ bits get OR-ed in (or rather passed through), we set some (more) DQ in the image.
-        img.dq[2, 2, 1] |= dq.COMPLEX
-        img.dq[8, 8, 1] |= dq.UNDEF
-        doc.setInputDirect(0, img)
-        nodeA = doc.graph.create("input 0")
-        # which feeds into a rect ROI
-        rect = doc.graph.create("rect")
-        rect.roi.set(5, 5, 10, 10)  # set the rectangle to be at 5,5 extending 10x10
-        rect.connect(0, nodeA, 0, autoPerform=False)
-        # and connect an expression node to the rect.
-        expr = doc.graph.create("expr")
-        expr.expr = t.e
-        # this is where the connections are reversed.
-        expr.connect(0, rect, 0, autoPerform=False)
-
-        # now run the test
-        logger.warning(f"Testing {t.e} : a={t.n}±{t.u} dq={t.dq}----------------------------------------------")
-        check_op_test(doc, t, expr, img)
+    doc = Document()
+    # node A is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
+    img = gen_2b_unc(2, 0.1, t.n, t.u, dq0=0, dq1=t.dq)
+    # just to check that DQ bits get OR-ed in (or rather passed through), we set some (more) DQ in the image.
+    img.dq[2, 2, 1] |= dq.COMPLEX
+    img.dq[8, 8, 1] |= dq.UNDEF
+    doc.setInputDirect(0, img)
+    nodeA = doc.graph.create("input 0")
+    # which feeds into a rect ROI
+    rect = doc.graph.create("rect")
+    rect.roi.set(5, 5, 10, 10)  # set the rectangle to be at 5,5 extending 10x10
+    rect.connect(0, nodeA, 0, autoPerform=False)
+    # and connect an expression node to the rect.
+    expr = doc.graph.create("expr")
+    expr.expr = t.e
+    # this is where the connections are reversed.
+    expr.connect(0, rect, 0, autoPerform=False)
+    # now run the test
+    check_op_test(doc, t, expr, img)
 
 
 ######################################### Binary operation tests
@@ -197,6 +195,11 @@ class BinopTest:
     expected_val: float  # expected nominal result
     expected_unc: float  # expected uncertainty of result
     expected_dq: np.uint16  # expected DQ in result
+
+    def __str__(self):
+        """Annoyingly the output console can't handle unicode, so I can't use the ± here. Using | instead.
+        Used to generate test names."""
+        return f"{self.e}: a={self.a}|{self.ua}, b={self.b}|{self.ub}, exp={self.expected_val}|{self.expected_unc}{dq.names(self.expected_dq,True)}"
 
 
 # These are the tests - we repeat these for number/number, number/image, image/number and image/image
@@ -246,181 +249,178 @@ binop_tests = [
 ]
 
 
-def test_number_number_binops():
+@pytest.mark.parametrize("t", binop_tests, ids=lambda x: x.__str__())
+def test_number_number_binops(t):
     """Test that binary operations in expr nodes on numbers with uncertainty work."""
     pcot.setup()
 
-    for t in binop_tests:
-        """(a,ua) and (b,ub) are scalar inputs with uncertainties. E is the expression."""
-        doc = Document()
-        nodeA = numberWithUncNode(doc, t.a, t.ua)
-        nodeB = numberWithUncNode(doc, t.b, t.ub)
-        expr = doc.graph.create("expr")
-        expr.expr = t.e
-        expr.connect(0, nodeA, 0, autoPerform=False)
-        expr.connect(1, nodeB, 0, autoPerform=False)
+    """(a,ua) and (b,ub) are scalar inputs with uncertainties. E is the expression."""
+    doc = Document()
+    nodeA = numberWithUncNode(doc, t.a, t.ua)
+    nodeB = numberWithUncNode(doc, t.b, t.ub)
+    expr = doc.graph.create("expr")
+    expr.expr = t.e
+    expr.connect(0, nodeA, 0, autoPerform=False)
+    expr.connect(1, nodeB, 0, autoPerform=False)
 
-        logger.warning(f"Testing {t.e} : a={t.a}±{t.ua}, b={t.b}±{t.ub} ----------------------------------------------")
-        doc.changed()
-        n = expr.getOutput(0, Datum.NUMBER)
-        assert n is not None
-        assert n.n == pytest.approx(t.expected_val)
-        assert n.u == pytest.approx(t.expected_unc)
-        assert n.dq == t.expected_dq
+    logger.warning(f"Testing {t.e} : a={t.a}±{t.ua}, b={t.b}±{t.ub} ----------------------------------------------")
+    doc.changed()
+    n = expr.getOutput(0, Datum.NUMBER)
+    assert n is not None
+    assert n.n == pytest.approx(t.expected_val)
+    assert n.u == pytest.approx(t.expected_unc)
+    assert n.dq == t.expected_dq
 
 
-def test_number_image_binops():
+@pytest.mark.parametrize("t", binop_tests, ids=lambda x: x.__str__())
+def test_number_image_binops(t):
     """Test than binops in expr nodes on numbers and images work, with the image on the RHS. We want to
     ensure that the part outside an ROI are unchanged."""
-
     pcot.setup()
+    doc = Document()
+    # node A just numeric.
+    nodeA = numberWithUncNode(doc, t.a, t.ua)
+    # node B is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
+    origimg = gen_2b_unc(2, 0.1, t.b, t.ub)
 
-    for t in binop_tests:
-        doc = Document()
-        # node A just numeric.
-        nodeA = numberWithUncNode(doc, t.a, t.ua)
-        # node B is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
-        origimg = gen_2b_unc(2, 0.1, t.b, t.ub)
+    doc.setInputDirect(0, origimg)
+    nodeB = doc.graph.create("input 0")
+    # which feeds into a rect ROI
+    rect = doc.graph.create("rect")
+    rect.roi.set(5, 5, 10, 10)  # set the rectangle to be at 5,5 extending 10x10
+    rect.connect(0, nodeB, 0, autoPerform=False)
+    # and connect an expression node to nodeA and rect.
+    expr = doc.graph.create("expr")
+    expr.expr = t.e
+    expr.connect(0, nodeA, 0, autoPerform=False)
+    expr.connect(1, rect, 0, autoPerform=False)
 
-        doc.setInputDirect(0, origimg)
-        nodeB = doc.graph.create("input 0")
-        # which feeds into a rect ROI
-        rect = doc.graph.create("rect")
-        rect.roi.set(5, 5, 10, 10)  # set the rectangle to be at 5,5 extending 10x10
-        rect.connect(0, nodeB, 0, autoPerform=False)
-        # and connect an expression node to nodeA and rect.
-        expr = doc.graph.create("expr")
-        expr.expr = t.e
-        expr.connect(0, nodeA, 0, autoPerform=False)
-        expr.connect(1, rect, 0, autoPerform=False)
-
-        logger.warning(f"Testing {t.e} : a={t.a}±{t.ua}, b={t.b}±{t.ub} ----------------------------------------------")
-        check_op_test(doc, t, expr, origimg)
+    logger.warning(f"Testing {t.e} : a={t.a}±{t.ua}, b={t.b}±{t.ub} ----------------------------------------------")
+    check_op_test(doc, t, expr, origimg)
 
 
-def test_image_number_binops():
+@pytest.mark.parametrize("t", binop_tests, ids=lambda x: x.__str__())
+def test_image_number_binops(t):
     """Test than binops in expr nodes on images and numbers work, with the image on the LHS. We want to
     ensure that the part outside an ROI are unchanged.
     """
-
     pcot.setup()
 
-    # I'm doing this deliberately without doing anything clever, as if I'd
-    # never written the previous test (number/image)
+    doc = Document()
+    # node A is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
+    origimg = gen_2b_unc(2, 0.1, t.a, t.ua)
+    doc.setInputDirect(0, origimg)
+    nodeA = doc.graph.create("input 0")
+    # which feeds into a rect ROI
+    rect = doc.graph.create("rect")
+    rect.roi.set(5, 5, 10, 10)  # set the rectangle to be at 5,5 extending 10x10
+    rect.connect(0, nodeA, 0, autoPerform=False)
 
-    for t in binop_tests:
-        doc = Document()
-        # node A is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
-        origimg = gen_2b_unc(2, 0.1, t.a, t.ua)
-        doc.setInputDirect(0, origimg)
-        nodeA = doc.graph.create("input 0")
-        # which feeds into a rect ROI
-        rect = doc.graph.create("rect")
-        rect.roi.set(5, 5, 10, 10)  # set the rectangle to be at 5,5 extending 10x10
-        rect.connect(0, nodeA, 0, autoPerform=False)
+    # node B just numeric.
+    nodeB = numberWithUncNode(doc, t.b, t.ub)
+    # and connect an expression node to rect and nodeB.
+    expr = doc.graph.create("expr")
+    expr.expr = t.e
+    # this is where the connections are reversed.
+    expr.connect(0, rect, 0, autoPerform=False)
+    expr.connect(1, nodeB, 0, autoPerform=False)
 
-        # node B just numeric.
-        nodeB = numberWithUncNode(doc, t.b, t.ub)
-        # and connect an expression node to rect and nodeB.
-        expr = doc.graph.create("expr")
-        expr.expr = t.e
-        # this is where the connections are reversed.
-        expr.connect(0, rect, 0, autoPerform=False)
-        expr.connect(1, nodeB, 0, autoPerform=False)
-
-        logger.warning(f"Testing {t.e} : a={t.a}±{t.ua}, b={t.b}±{t.ub} ----------------------------------------------")
-        check_op_test(doc, t, expr, origimg)
+    logger.warning(f"Testing {t.e} : a={t.a}±{t.ua}, b={t.b}±{t.ub} ----------------------------------------------")
+    check_op_test(doc, t, expr, origimg)
 
 
-def test_image_image_binops():
+@pytest.mark.parametrize("t", binop_tests, ids=lambda x: x.__str__())
+def test_image_image_binops(t):
     """Test that binops work on image/image pairs, where the LHS image has an ROI on it."""
 
     pcot.setup()
+    doc = Document()
+    # node A is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
+    imgA = gen_2b_unc(2, 0.1, t.a, t.ua)
+    doc.setInputDirect(0, imgA)
+    nodeA = doc.graph.create("input 0")
+    # which feeds into a rect ROI
+    rect = doc.graph.create("rect")
+    rect.roi.set(5, 5, 10, 10)  # set the rectangle to be at 5,5 extending 10x10
+    rect.connect(0, nodeA, 0, autoPerform=False)
 
-    for t in binop_tests:
-        doc = Document()
-        # node A is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
-        imgA = gen_2b_unc(2, 0.1, t.a, t.ua)
-        doc.setInputDirect(0, imgA)
-        nodeA = doc.graph.create("input 0")
-        # which feeds into a rect ROI
-        rect = doc.graph.create("rect")
-        rect.roi.set(5, 5, 10, 10)  # set the rectangle to be at 5,5 extending 10x10
-        rect.connect(0, nodeA, 0, autoPerform=False)
+    # node B is a 20x20 2-band image with 3±0.2 in band 0 and the given values in band 1.
+    imgB = gen_2b_unc(3, 0.2, t.b, t.ub)
+    doc.setInputDirect(1, imgB)
+    nodeB = doc.graph.create("input 1")
+    # and connect an expression node to rect and nodeB.
+    expr = doc.graph.create("expr")
+    expr.expr = t.e
+    # this is where the connections are reversed.
+    expr.connect(0, rect, 0, autoPerform=False)
+    expr.connect(1, nodeB, 0, autoPerform=False)
 
-        # node B is a 20x20 2-band image with 3±0.2 in band 0 and the given values in band 1.
-        imgB = gen_2b_unc(3, 0.2, t.b, t.ub)
-        doc.setInputDirect(1, imgB)
-        nodeB = doc.graph.create("input 1")
-        # and connect an expression node to rect and nodeB.
-        expr = doc.graph.create("expr")
-        expr.expr = t.e
-        # this is where the connections are reversed.
-        expr.connect(0, rect, 0, autoPerform=False)
-        expr.connect(1, nodeB, 0, autoPerform=False)
-
-        logger.warning(f"Testing {t.e} : a={t.a}±{t.ua}, b={t.b}±{t.ub} ----------------------------------------------")
-        check_op_test(doc, t, expr, imgA)
+    logger.warning(f"Testing {t.e} : a={t.a}±{t.ua}, b={t.b}±{t.ub} ----------------------------------------------")
+    check_op_test(doc, t, expr, imgA)
 
 
-def test_image_image_binops_noroi():
+@pytest.mark.parametrize("t", binop_tests, ids=lambda x: x.__str__())
+def test_image_image_binops_noroi(t):
     """test image/image operations without a region of interest."""
-
     pcot.setup()
+    doc = Document()
+    # node A is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
+    imgA = gen_2b_unc(2, 0.1, t.a, t.ua)
+    doc.setInputDirect(0, imgA)
+    nodeA = doc.graph.create("input 0")
 
-    for t in binop_tests:
-        doc = Document()
-        # node A is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
-        imgA = gen_2b_unc(2, 0.1, t.a, t.ua)
-        doc.setInputDirect(0, imgA)
-        nodeA = doc.graph.create("input 0")
+    # node B is a 20x20 2-band image with 3±0.2 in band 0 and the given values in band 1.
+    imgB = gen_2b_unc(3, 0.2, t.b, t.ub)
+    doc.setInputDirect(1, imgB)
+    nodeB = doc.graph.create("input 1")
 
-        # node B is a 20x20 2-band image with 3±0.2 in band 0 and the given values in band 1.
-        imgB = gen_2b_unc(3, 0.2, t.b, t.ub)
-        doc.setInputDirect(1, imgB)
-        nodeB = doc.graph.create("input 1")
+    # just to check that DQ bits get OR-ed in, we set some DQ in the image.
+    if t.e != "a|b" and t.e != "a&b":  # doesn't work with these, they handle dq differently
+        imgA.dq[8, 8, 1] = dq.UNDEF
 
-        # just to check that DQ bits get OR-ed in, we set some DQ in the image.
-        if t.e != "a|b" and t.e != "a&b":  # doesn't work with these, they handle dq differently
-            imgA.dq[8, 8, 1] = dq.UNDEF
+    # and connect an expression node to rect and nodeB.
+    expr = doc.graph.create("expr")
+    expr.expr = t.e
+    # this is where the connections are reversed.
+    expr.connect(0, nodeA, 0, autoPerform=False)
+    expr.connect(1, nodeB, 0, autoPerform=False)
 
-        # and connect an expression node to rect and nodeB.
-        expr = doc.graph.create("expr")
-        expr.expr = t.e
-        # this is where the connections are reversed.
-        expr.connect(0, nodeA, 0, autoPerform=False)
-        expr.connect(1, nodeB, 0, autoPerform=False)
+    logger.warning(f"Testing {t.e} : a={t.a}±{t.ua}, b={t.b}±{t.ub} ----------------------------------------------")
 
-        logger.warning(f"Testing {t.e} : a={t.a}±{t.ua}, b={t.b}±{t.ub} ----------------------------------------------")
+    doc.changed()
+    img = expr.getOutput(0, Datum.IMG)  # has to be an image!
+    assert img is not None
 
-        doc.changed()
-        img = expr.getOutput(0, Datum.IMG)  # has to be an image!
-        assert img is not None
+    expected_n = pytest.approx(t.expected_val)
+    expected_u = pytest.approx(t.expected_unc)
 
-        expected_n = pytest.approx(t.expected_val)
-        expected_u = pytest.approx(t.expected_unc)
+    for x in range(0, 20):
+        for y in range(0, 20):
+            n = img.img[y, x, 1]
+            u = img.uncertainty[y, x, 1]
+            dqv = img.dq[y, x, 1]
 
-        for x in range(0, 20):
-            for y in range(0, 20):
-                n = img.img[y, x, 1]
-                u = img.uncertainty[y, x, 1]
-                dqv = img.dq[y, x, 1]
+            ntest = n == expected_n
+            utest = u == expected_u
+            edq = t.expected_dq | imgA.dq[y, x, 1]
+            dqtest = dqv == edq
 
-                ntest = n == expected_n
-                utest = u == expected_u
-                edq = t.expected_dq | imgA.dq[y, x, 1]
-                dqtest = dqv == edq
+            if not (ntest and utest and dqtest):
+                logger.error(f"Error in binop test at pixel {x},{y} for expression {expr.expr}")
+                if not ntest:
+                    logger.error(f"N expected {expected_n} got {n}")
+                if not utest:
+                    logger.error(f"U expected {expected_u} got {u}")
+                if not dqtest:
+                    logger.error(f"DQ expected {edq} got {dqv}")
 
-                if not (ntest and utest and dqtest):
-                    logger.error(f"Error in binop test at pixel {x},{y} for expression {expr.expr}")
-                    if not ntest:
-                        logger.error(f"N expected {expected_n} got {n}")
-                    if not utest:
-                        logger.error(f"U expected {expected_u} got {u}")
-                    if not dqtest:
-                        logger.error(f"DQ expected {edq} got {dqv}")
+            assert ntest and utest and dqtest
 
-                assert ntest and utest and dqtest
+
+# generate test params for DQ propagation
+
+
+
 
 
 def test_dq_propagation_images():
@@ -496,6 +496,7 @@ def test_dq_propagation_images():
                     assert ntest and utest and dqtest
 
     # for each of these ops, and also checking the result...
+
     for a_is_scalar in (True, False):
         for b_is_scalar in (True, False):
             for op, res in [('+', 5), ('-', -1), ('*', 6), ('/', 0.66666666666), ('^', 8)]:
