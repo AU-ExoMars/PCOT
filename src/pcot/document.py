@@ -102,6 +102,7 @@ class Document:
         self.settings = DocumentSettings()
         self.undoRedoStore = UndoRedoStore()
         self.nodeInstances = {}
+        self.fileName = None
 
         if fileName is not None:
             self.load(fileName)
@@ -162,6 +163,7 @@ class Document:
             dd = arc.readJson("JSON")
             self.deserialise(dd)
             pcot.config.addRecent(fname)
+            self.fileName = fname
 
     ## generates a new unique name for a macro.
     def getUniqueUntitledMacroName(self):

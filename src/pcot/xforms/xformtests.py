@@ -155,6 +155,7 @@ class XFormPixTest(XFormType):
         else:
             node.img = None
             node.setError(XFormException('TEST', 'NO IMAGE'))
+            out = ['NO IMAGE']
 
         node.graph.rebuildTabsAfterPerform = True
         node.out = Datum(Datum.TESTRESULT, out, sources=nullSourceSet)
@@ -288,6 +289,8 @@ class XFormScalarTest(XFormType):
                 out = f"Uncertainty fail: {v.u} {node.uTest} {node.u}"
             elif not testDQ(v.dq, node.dqTest, node.dq):
                 out = f"Uncertainty fail: {v.dq} {node.dqTest} {node.dq}"
+        else:
+            out = "NO VALUE"
         out = [] if out is None else [out]
 
         if len(out) == 0:
@@ -387,14 +390,21 @@ class XFormMergeTests(XFormType):
 
     def perform(self, node):
         out = []
+        testFound = False
         for i in range(0, 8):
             x = node.getInput(i, Datum.TESTRESULT)
             if x is not None:
                 out += x
-        node.out = Datum(Datum.TESTRESULT, out, sources=nullSourceSet)
-        if len(out) == 0:
-            node.setRectText("ALL OK")
-        else:
+                testFound = True
+
+        if not testFound:
+            node.out = Datum(Datum.TESTRESULT, ["NO TESTS"], sources=nullSourceSet)
             node.setError(XFormException('TEST', f"{len(out)} FAILED"))
+        else:
+            node.out = Datum(Datum.TESTRESULT, out, sources=nullSourceSet)
+            if len(out) == 0:
+                node.setRectText("ALL OK")
+            else:
+                node.setError(XFormException('TEST', f"{len(out)} FAILED"))
         node.graph.rebuildTabsAfterPerform = True
         node.setOutput(0, node.out)
