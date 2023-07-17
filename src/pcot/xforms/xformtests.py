@@ -54,6 +54,7 @@ class Model(TableModel):
 
     def __init__(self, tab, _data: List[PixTest]):
         super().__init__(tab, PixTest, _data)
+        self.failed = set()
 
     def setData(self, index: QModelIndex, value: Any, role: int) -> bool:
         """Here we modify data in the underlying model in response to the tableview or any item delegates"""
@@ -95,6 +96,9 @@ class Model(TableModel):
             return True
         return False
 
+    def isFailed(self, item):
+        return item in self.failed
+
     def changePos(self, item, x, y):
         if 0 <= item < len(self.d):
             self.d[item].x = x
@@ -129,8 +133,10 @@ class XFormPixTest(XFormType):
     def perform(self, node):
         img = node.getInput(0, Datum.IMG)
         out = []
+        node.failed = set()
         if img is not None:
             node.img = img.copy()
+            node.img.setMapping(node.mapping)
             for i, t in enumerate(node.tests):
                 # do the test
                 ok = False
@@ -140,11 +146,14 @@ class XFormPixTest(XFormType):
                         if t.test(val):
                             ok = True
                         else:
-                            out.append(f"test {i} failed: {val} != {t.val()}")
+                            out.append(f"test {i} failed: actual {val} != expected {t.val()}")
+                            node.failed.add(i)
                     else:
                         out.append(f"band out of range in test {i}: {t.band}")
+                        node.failed.add(i)
                 else:
                     out.append(f"coords out of range in test{i}: {t.x}, {t.y}")
+                    node.failed.add(i)
                 node.img.annotations.append(IndexedPointAnnotation(
                     i, t.x, t.y, ok, QColor(t.col)))
                 ui.log("\n".join(out))
@@ -214,6 +223,7 @@ class TabPixTest(pcot.ui.tabs.Tab):
         self.changed()
 
     def onNodeChanged(self):
+        self.model.failed = self.node.failed
         self.w.canvas.setMapping(self.node.mapping)
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)
@@ -275,6 +285,7 @@ class XFormScalarTest(XFormType):
         node.nTest = "Equals"
         node.uTest = "Equals"
         node.dqTest = "Equals"
+        node.failed = set()
 
     def createTab(self, xform, window):
         return TabScalarTest(xform, window)
@@ -284,11 +295,11 @@ class XFormScalarTest(XFormType):
         out = None
         if v is not None:
             if not testFloat(v.n, node.nTest, node.n):
-                out = f"Nominal fail: {v.n} {node.nTest} {node.n}"
+                out = f"Nominal fail: actual {v.n} {node.nTest} expected {node.n}"
             elif not testFloat(v.u, node.uTest, node.u):
-                out = f"Uncertainty fail: {v.u} {node.uTest} {node.u}"
+                out = f"Uncertainty fail: actual {v.u} {node.uTest} expected {node.u}"
             elif not testDQ(v.dq, node.dqTest, node.dq):
-                out = f"Uncertainty fail: {v.dq} {node.dqTest} {node.dq}"
+                out = f"Uncertainty fail: actual {v.dq} {node.dqTest} expected {node.dq}"
         else:
             out = "NO VALUE"
         out = [] if out is None else [out]

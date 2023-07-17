@@ -34,19 +34,35 @@ def norm(subimg: SubImageCubeROI, clamp: int, splitchans=False) -> Tuple[np.arra
     cp = img.copy()
     # get the part of the working copy we are working on
     masked = np.ma.masked_array(cp, mask=~mask)
-    # now we can perform operations on "masked", which acts as a slice into "cp" - see below
-    # for more examples of this, such as the triads of lines for dq and uncertainty.
+    # now we can perform operations on "masked", which acts as a slice into "cp"
     dqcopy = None
 
     if clamp == 0:  # normalize mode
         if splitchans == 0:
             res, scale = _norm(masked)
+            unccopy = subimg.uncertainty.copy()
+            unc = np.ma.masked_array(unccopy, mask=~mask)
+            unc *= scale
         else:
-            res, scale = image.imgmerge([_norm(x) for x in image.imgsplit(img)])
-        # now we need to scale the uncertainty
-        unccopy = subimg.uncertainty.copy()
-        unc = np.ma.masked_array(unccopy, mask=~mask)
-        unc *= scale
+            # split into separate channels - we're going to be using min and max functions,
+            # so we need to pass in the masked parts of the image (we want to ignore outside the mask)
+            chans = image.imgsplit(masked)
+            uncs = image.imgsplit(subimg.uncertainty)
+
+            # this returns a tuple of normalised image and scale factor used to normalise for each channel.
+            resAndScales = [_norm(x) for x in chans]
+            # which we turn into two separate lists of normalised images and scales
+            res, scales = list(zip(*resAndScales))
+            # turn the normalised channel images into a single multi-band image
+            res = image.imgmerge(res)
+            # now we need to scale the uncertainty of each channel using the factor for each
+            uncs = [u * s for u, s in zip(uncs, scales)]
+            # and merge back into an uncertainty image
+            uncs = image.imgmerge(uncs)
+            unccopy = subimg.uncertainty.copy()
+            # and then write that back into the masked part of the uncertainty image copy
+            unccopy[mask] = uncs[mask]
+
     else:  # clamp
         # do the thing, only using the masked region
 

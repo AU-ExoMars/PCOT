@@ -3,7 +3,7 @@ from typing import List, Any
 
 from PySide2 import QtCore
 from PySide2.QtCore import QAbstractTableModel, Signal, QModelIndex, Qt
-from PySide2.QtGui import QKeyEvent
+from PySide2.QtGui import QKeyEvent, QBrush, QColor
 from PySide2.QtWidgets import QTableView, QStyledItemDelegate, QComboBox
 
 
@@ -90,16 +90,24 @@ class TableModel(QAbstractTableModel):
         be treated differently for validation, etc. YOU NEED TO IMPLEMENT THIS."""
         pass
 
+    def isFailed(self, item):
+        """Override if you want 'failed' items to show a highlight"""
+        return False
+
     def data(self, index, role):
         """Called by the table view to get data to show. We just convert the dataclass
         into a tuple and get the nth item, which is fine for builtin types like
         floats, ints and strings."""
         if not index.isValid():
             return None
-        elif role != QtCore.Qt.DisplayRole:
-            return None
         field = index.row()
         item = index.column()
+        if role == QtCore.Qt.BackgroundRole:
+            if self.isFailed(item):
+                return QBrush(QColor(255, 150, 150))
+
+        if role != QtCore.Qt.DisplayRole:
+            return None
         return dataclasses.astuple(self.d[item])[field]
 
     def headerData(self, section: int, orientation: QtCore.Qt.Orientation, role: int = ...) -> Any:
