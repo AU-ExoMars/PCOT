@@ -50,15 +50,25 @@ def test_node_output_none():
                     pytest.fail("Gen should return an image")
             elif x == 'pixtest':
                 try:
-                    assert len(node.getOutput(0, Datum.TESTRESULT))==0, f"Pixtest should return empty list when not connected"
+                    out = node.getOutput(0, Datum.TESTRESULT)
+                    assert len(out) == 1, f"Pixtest should 'NO IMAGE' in list when not connected"
+                    assert out[0] == 'NO IMAGE', f"Pixtest should 'NO IMAGE' in list when not connected"
                 except BadTypeException:
                     pytest.fail("Pixtest should return a list")
             elif x == 'scalartest':
                 try:
-                    assert len(node.getOutput(0, Datum.TESTRESULT))==0, f"Scalartest should return empty list when not connected"
+                    out = node.getOutput(0, Datum.TESTRESULT)
+                    assert len(out) == 1, f"Scalartest should 'NO VALUE' in list when not connected"
+                    assert out[0] == 'NO VALUE', f"Scalartest should 'NO VALUE' in list when not connected"
                 except BadTypeException:
                     pytest.fail("Scalartest should return a list")
-
+            elif x == 'mergetests':
+                try:
+                    out = node.getOutput(0, Datum.TESTRESULT)
+                    assert len(out) == 1, f"Mergetests should 'NO TESTS' in list when not connected"
+                    assert out[0] == 'NO TESTS', f"Mergetests should 'NO TESTS' in list when not connected"
+                except BadTypeException:
+                    pytest.fail("Mergetests should return a list")
             else:
                 assert out is None, f"XForm {x} should output None when not connected"
 

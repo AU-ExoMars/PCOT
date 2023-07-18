@@ -58,7 +58,7 @@ def test_graph_files(graphname):
         logger.info(f"Found a sink, output is {res}")
         if res is None:
             pytest.fail("output of sink is not an test result")
-        if "MUSTFAIL" in graphname:
+        if "mustfail" in graphname.lower():
             assert len(res) > 0
         else:
             assert len(res) == 0
