@@ -19,7 +19,7 @@ def names(bits, shownone=False):
     for i in range(0, 16):
         b = 1 << i
         if (b & bits) != 0:
-            out.append(namedict[b])
+            out.append(namedict[b] if b in namedict else f"??{b}??")
     if shownone and len(out) == 0:
         return "none"
     return "|".join(out)
@@ -39,6 +39,7 @@ ERROR = reg('error', 6)     # unspecified error
 NONE = np.uint16(0)
 
 TEST = reg('test', 15)
+
 
 # Pixels with these bits are considered bad and are not to be used in aggregate calculations
 # like mean, std.

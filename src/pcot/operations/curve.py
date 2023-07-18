@@ -23,27 +23,26 @@ def genLut(m, c):
 
 
 # noinspection PyUnreachableCode
-def doCurve(m, c, subimage, lut):
-    masked = np.ma.masked_array(subimage.img, mask=~subimage.mask)
-    cp = subimage.img.copy()
-    np.putmask(cp, subimage.mask, np.interp(masked, lutxcoords, lut).astype(np.float32))
+def doCurve(m, c, subimage: SubImageCubeROI, lut):
+    newimg = subimage.masked().copy()
+    newimg = np.interp(newimg, lutxcoords, lut).astype(np.float32)
 
     # UNCERTAINTY COMMENTED OUT for speed reasons, but this *should* work.
 
     # uncertainty calculated by plugging 1/(1+exp(m*(x-0.5)+c)) into https://astro.subhashbose.com/tools/error-propagation-calculator
     if False:
-        masked = np.ma_masked_array(subimage.uncertainty, mask=~subimage.mask)
-        newunc = subimage.uncertainty.copy()
-        n = np.cosh((c + m*(img-0.5))/2)**4
+        masked = subimage.maskedUncertainty().copy()
+        n = np.cosh((c + m*(newimg-0.5))/2)**4
         n = (unc * np.sqrt((m**2) / n))/4
         np.putmask(newunc, mask, n)
         newdqs = dq
     else:
         newunc = subimage.uncertainty.copy()
-        newunc[subimage.mask] = 0
+        mask = subimage.fullmask()
+        newunc[mask] = 0
         newdqs = subimage.dq.copy()
-        newdqs[subimage.mask] |= dq.NOUNCERTAINTY
-    return cp, newunc, newdqs
+        newdqs[mask] |= dq.NOUNCERTAINTY
+    return newimg, newunc, newdqs
 
 
 def curve(subimage: SubImageCubeROI, mul: Union[Value, float], add: Union[Value, float]) -> \

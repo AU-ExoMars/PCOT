@@ -407,8 +407,9 @@ class InnerCanvas(QtWidgets.QWidget):
                             data = data[:, :, d.channel]
                     t.mark("or/extract")
                     # extract the relevant bit(s). This should work with BAD too, which would
-                    # give a selection of bits.
-                    np.bitwise_and(data, d.data, out=data)
+                    # give a selection of bits. Remember that 'data' is a slice; we musn't
+                    # modify it!
+                    data  = np.bitwise_and(data, d.data)
                     t.mark("and")
                     # now convert that to float, setting nonzero to 1 and zero to 0.
                     data = (data > 0).astype(np.float32)
