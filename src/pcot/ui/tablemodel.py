@@ -1,6 +1,7 @@
 import dataclasses
 from typing import List, Any
 
+import PySide2
 from PySide2 import QtCore
 from PySide2.QtCore import QAbstractTableModel, Signal, QModelIndex, Qt
 from PySide2.QtGui import QKeyEvent, QBrush, QColor
@@ -46,6 +47,7 @@ class TableView(QTableView):
     """View to be used in association with the model; it handles a delete key and getting
     the selected item"""
     delete = Signal()
+    selChanged = Signal(int)
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
         if event.key() == Qt.Key_Delete:
@@ -61,6 +63,10 @@ class TableView(QTableView):
                 col = sel.selectedColumns()[0].column()
                 return col
         return None
+
+    def selectionChanged(self, selected, deselected):
+        super().selectionChanged(selected, deselected)
+        self.selChanged.emit(self.get_selected_item())
 
 
 class TableModel(QAbstractTableModel):

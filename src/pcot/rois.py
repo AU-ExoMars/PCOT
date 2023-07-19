@@ -53,6 +53,7 @@ class ROI(SourcesObtainable, Annotation):
         self.fontsize = 10 if sourceROI is None else sourceROI.fontsize  # annotation font size
         self.drawbg = True if sourceROI is None else sourceROI.drawbg
         self.drawEdge = True if sourceROI is None else sourceROI.drawEdge  # draw the edge only?
+        self.drawBox = True if sourceROI is None else sourceROI.drawBox  # draw the box?
         # by default, the source of an ROI is null.
         # The only time this might not be true is if the ROI is derived somehow from an actual data source.
         self.sources = nullSourceSet if sourceROI is None else sourceROI.sources

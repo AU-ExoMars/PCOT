@@ -77,7 +77,6 @@ class IndexedPointAnnotation(Annotation):
         self.y = y
         self.issel = issel
         self.idx = idx
-        pass
 
     def annotate(self, p: QPainter, img):
         # we want to scale the font and line thickness with the image size here,
@@ -92,7 +91,7 @@ class IndexedPointAnnotation(Annotation):
         p.drawEllipse(QPointF(self.x, self.y), 5*scale, 5*scale)
         if self.issel:
             # we draw the selected point with an extra circle
-            p.drawEllipse(self.x, self.y, 7*scale, 7*scale)
+            p.drawEllipse(QPointF(self.x, self.y), 7*scale, 7*scale)
 
         fontsize = 12*scale   # scale the font
         annotFont.setPixelSize(fontsize)

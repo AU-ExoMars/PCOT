@@ -803,6 +803,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             n.rect.setSelected(True)
         # colour selected nodes
         self.setColourToState()
+        self.graph.changed()
 
     def cut(self):
         """cut operation, serialises items to system clipboard and deletes them"""

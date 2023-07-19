@@ -1,24 +1,26 @@
 import dataclasses
+import logging
 import math
 from dataclasses import dataclass
 from typing import List, Any
 
 import numpy as np
 from PySide2 import QtCore
-from PySide2.QtCore import QModelIndex, Signal, Qt
-from PySide2.QtGui import QPainter, QPen, QColor, QIntValidator, QDoubleValidator
+from PySide2.QtCore import QModelIndex, Signal
+from PySide2.QtGui import QColor, QIntValidator, QDoubleValidator
 from PySide2.QtWidgets import QMessageBox
 
 import pcot
 from pcot import ui
 from pcot.datum import Datum
-from pcot.sources import nullSource, nullSourceSet
+from pcot.sources import nullSourceSet
 from pcot.ui.tablemodel import TableModel, ComboBoxDelegate
-from pcot.utils import SignalBlocker
+from pcot.utils.annotations import IndexedPointAnnotation
 from pcot.value import Value
 from pcot.xform import XFormType, xformtype, XFormException
-from pcot.utils.annotations import Annotation, annotFont, IndexedPointAnnotation
 from pcot.xforms.tabdata import TabData
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -120,6 +122,7 @@ class XFormPixTest(XFormType):
 
     def init(self, node):
         node.tests = []
+        node.selected = None  # not persisted deliberately
 
     def serialise(self, node):
         return {'tests': [x.serialise() for x in node.tests]}
@@ -139,13 +142,10 @@ class XFormPixTest(XFormType):
             node.img.setMapping(node.mapping)
             for i, t in enumerate(node.tests):
                 # do the test
-                ok = False
                 if 0 <= t.x < img.w and 0 <= t.y < img.h:
                     if 0 <= t.band < img.channels:
                         val = img[t.x, t.y] if img.channels == 1 else img[t.x, t.y][t.band]
-                        if t.test(val):
-                            ok = True
-                        else:
+                        if not t.test(val):
                             out.append(f"test {i} failed: actual {val} != expected {t.val()}")
                             node.failed.add(i)
                     else:
@@ -154,8 +154,9 @@ class XFormPixTest(XFormType):
                 else:
                     out.append(f"coords out of range in test{i}: {t.x}, {t.y}")
                     node.failed.add(i)
+
                 node.img.annotations.append(IndexedPointAnnotation(
-                    i, t.x, t.y, ok, QColor(t.col)))
+                    i, t.x, t.y, i==node.selected, QColor(t.col)))
                 ui.log("\n".join(out))
                 if len(out) == 0:
                     node.setRectText("ALL OK")
@@ -180,6 +181,7 @@ class TabPixTest(pcot.ui.tabs.Tab):
         self.w.dupButton.clicked.connect(self.dupClicked)
         self.w.deleteButton.clicked.connect(self.deleteClicked)
         self.w.tableView.delete.connect(self.deleteClicked)
+        self.w.tableView.selChanged.connect(self.selectionChanged)
 
         self.model = Model(self, node.tests)
         self.w.tableView.setModel(self.model)
@@ -191,6 +193,10 @@ class TabPixTest(pcot.ui.tabs.Tab):
                                                                  'cyan', 'magenta', 'brown']))
 
         self.nodeChanged()
+
+    def selectionChanged(self, idx):
+        self.node.selected = idx
+        self.changed()
 
     def leftClicked(self):
         """move left and then reselect the column we just moved"""
