@@ -55,15 +55,14 @@ class Model(TableModel):
     changed = Signal()
 
     def __init__(self, tab, _data: List[PixTest]):
-        super().__init__(tab, PixTest, _data)
+        super().__init__(tab, PixTest, _data, True)
         self.failed = set()
 
     def setData(self, index: QModelIndex, value: Any, role: int) -> bool:
         """Here we modify data in the underlying model in response to the tableview or any item delegates"""
         if index.isValid():
             self.tab.mark()  # we do the undo mark here, before the data is changed
-            field = index.row()
-            item = index.column()
+            item, field = self.getItemAndField(index)
             d = self.d[item]
 
             def convposint(v, prev):
@@ -202,22 +201,22 @@ class TabPixTest(pcot.ui.tabs.Tab):
         """move left and then reselect the column we just moved"""
         if (col := self.w.tableView.get_selected_item()) is not None:
             self.model.move_left(col)
-            self.w.tableView.selectColumn(col - 1)
+            self.w.tableView.selectItem(col - 1)
 
     def rightClicked(self):
         """move right and then reselect the column we just moved"""
         if (col := self.w.tableView.get_selected_item()) is not None:
             self.model.move_right(col)
-            self.w.tableView.selectColumn(col + 1)
+            self.w.tableView.selectItem(col + 1)
 
     def addClicked(self):
         col = self.model.add_item()
-        self.w.tableView.selectColumn(col)
+        self.w.tableView.selectItem(col)
 
     def dupClicked(self):
         if (col := self.w.tableView.get_selected_item()) is not None:
             col = self.model.add_item(col)
-            self.w.tableView.selectColumn(col)
+            self.w.tableView.selectItem(col)
 
     def deleteClicked(self):
         if (col := self.w.tableView.get_selected_item()) is not None:
@@ -236,9 +235,9 @@ class TabPixTest(pcot.ui.tabs.Tab):
         self.w.canvas.display(self.node.img)
 
     def canvasMousePressEvent(self, x, y, e):
-        if (col := self.w.tableView.get_selected_item()) is not None:
+        if (item := self.w.tableView.get_selected_item()) is not None:
             self.mark()
-            self.model.changePos(col, x, y)
+            self.model.changePos(item, x, y)
             self.changed()
 
     def canvasMouseMoveEvent(self, x, y, e):

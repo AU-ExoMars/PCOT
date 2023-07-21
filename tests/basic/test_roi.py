@@ -2,7 +2,7 @@
 Some tests here mainly work by performing a change to part of an image selected by an ROI
 and checking the results are correct. Does not test DQ or uncertainty!"""
 from fixtures import *
-from pcot.rois import ROIRect, ROIBoundsException, ROICircle, ROIPoly, ROIPainted
+from pcot.rois import ROIRect, ROIBoundsException, ROICircle, ROIPoly, ROIPainted, ROI
 from pcot.utils.geom import Rect
 
 
@@ -308,3 +308,11 @@ def test_painted_change_masked_red_to_cyan_imagesize_not_set(allblack):
     img = allblack.modifyWithSub(subimg, out)
     # all pixels will have changed
     assert np.sum(img.img) == oldsum*2
+
+
+def test_roi_tpnames_and_default_ctor():
+    """All ROI subclasses must have a meaningful TPname and default ctor"""
+    for x in ROI.__subclasses__():
+        assert x.tpname is not None
+        inst = x()
+        assert inst.tpname is not None

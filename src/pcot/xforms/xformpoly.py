@@ -7,6 +7,7 @@ import pcot.utils.colour
 import pcot.utils.text
 
 from pcot.rois import ROIPoly
+from pcot.ui.roiedit import PolyEditor
 from pcot.xform import xformtype, XFormROIType
 
 
@@ -68,10 +69,10 @@ class XformPoly(XFormROIType):
         return [node.roi]
 
 
-
 class TabPoly(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabpoly.ui')
+        self.editor = PolyEditor(self, node.roi)
         # set the paint hook in the canvas so we can draw on the image
         self.w.canvas.mouseHook = self
         self.w.canvas.keyHook = self
@@ -156,25 +157,13 @@ class TabPoly(pcot.ui.tabs.Tab):
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
 
     def canvasMouseMoveEvent(self, x, y, e):
-        if self.mouseDown:
-            if self.node.roi.moveSelPoint(x, y):
-                self.changed()
+        self.editor.canvasMouseMoveEvent(x, y, e)
 
     def canvasMousePressEvent(self, x, y, e):
-        self.mouseDown = True
-        self.mark()
-        if e.modifiers() & Qt.ShiftModifier:
-            self.node.roi.addPoint(x, y)
-        else:
-            self.node.roi.selPoint(x, y)
-        self.changed()
-        self.w.canvas.update()
+        self.editor.canvasMousePressEvent(x, y, e)
 
     def canvasMouseReleaseEvent(self, x, y, e):
-        self.mouseDown = False
+        self.editor.canvasMouseReleaseEvent(x, y, e)
 
-    def canvasKeyPressEvent(self, e: QKeyEvent):
-        if e.key() == Qt.Key_Delete:
-            self.mark()
-            self.node.roi.delSelPoint()
-            self.changed()
+    def canvasKeyPressEvent(self, e):
+        self.editor.canvasKeyPressEvent(e)

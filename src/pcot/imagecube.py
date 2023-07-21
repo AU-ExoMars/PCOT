@@ -556,7 +556,7 @@ class ImageCube(SourcesObtainable):
         desc = " ".join(["[" + s + "]" for s in out])
         return desc
 
-    def shallowCopy(self):
+    def shallowCopy(self, copyAnnotations=True):
         """Create a shallow copy - this points to the same image data and same mapping data, but allows
         it to be changed later.
 
@@ -577,10 +577,11 @@ class ImageCube(SourcesObtainable):
                       uncertainty=self.uncertainty,
                       dq=self.dq)
         i.rois = self.rois.copy()
-        i.annotations = self.annotations.copy()
+        if copyAnnotations:
+            i.annotations = self.annotations.copy()
         return i
 
-    def copy(self, keepMapping=False):
+    def copy(self, keepMapping=False, copyAnnotations=True):
         """copy an image. If keepMapping is false, the image mapping will also be a copy. If true, the mapping
         is a reference to the same mapping as in the original image.
 
@@ -604,7 +605,8 @@ class ImageCube(SourcesObtainable):
                       uncertainty=self.uncertainty.copy(),
                       dq=self.dq.copy())
         i.rois = self.rois.copy()
-        i.annotations = self.annotations.copy()
+        if copyAnnotations:
+            i.annotations = self.annotations.copy()
         return i
 
     def hasROI(self):

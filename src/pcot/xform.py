@@ -941,6 +941,12 @@ class XForm:
     def unmark(self):
         self.graph.doc.unmark()
 
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def __hash__(self):
+        return hash(self.name)
+
     def __str__(self):
         return "XForm-{}-{}-{}".format(id(self), self.displayName, self.type.name)
 

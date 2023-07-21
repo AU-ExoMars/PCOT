@@ -49,19 +49,34 @@ class TableView(QTableView):
     delete = Signal()
     selChanged = Signal(int)
 
+    def setModel(self, model):
+        """so we keep a record of the model ourselves"""
+        super().setModel(model)
+        self.model = model
+
+    def selectItem(self, item):
+        if self.model.columnItems:
+            self.selectColumn(item)
+        else:
+            self.selectRow(item)
+
     def keyPressEvent(self, event: QKeyEvent) -> None:
         if event.key() == Qt.Key_Delete:
             self.delete.emit()
         super().keyPressEvent(event)
 
     def get_selected_item(self):
-        """Get the selected column, only if an entire column is selected - and if more than one is,
+        """Get the selected item, only if an entire column or row is selected - and if more than one is,
         only consider the first."""
         sel = self.selectionModel()
         if sel.hasSelection():
-            if len(sel.selectedColumns()) > 0:
-                col = sel.selectedColumns()[0].column()
-                return col
+            if self.model.columnItems:
+                if len(sel.selectedColumns()) > 0:
+                    return sel.selectedColumns()[0].column()
+            else:
+                if len(sel.selectedRows()) > 0:
+                    return sel.selectedRows()[0].row()
+
         return None
 
     def selectionChanged(self, selected, deselected):
@@ -71,24 +86,20 @@ class TableView(QTableView):
 
 class TableModel(QAbstractTableModel):
     """This is a model which acts between a list of dataclass items a  table view.
-    Currently it organises the view as one COLUMN per data item and one ROW
-    per field in those items. That might seem a bit sideways, but it's because
-    the canvas occupies a large area to the right in most tabs and there are more
-    data fields than items.
-
     You must write setData() in any subclass."""
 
     # custom signal used when we change data
     changed = Signal()
 
-    def __init__(self, tab, dataClass: Any, _data: List):
-        """Takes the containing a tab, a dataclass,
-        and a list of whatever the item dataclass is"""
+    def __init__(self, tab, dataClass: Any, _data: List, columnItems):
+        """Takes the containing a tab, a dataclass, a list of whatever the item dataclass is, and whether items
+        are columns and rows are fields (as in pixtest)"""
         QAbstractTableModel.__init__(self)
         self.dataClass = dataClass
         self.header = dataClass.getHeader()  # get headers from static method
         self.tab = tab  # the tab we're part of
         self.d = _data  # the list of data which is our model
+        self.columnItems = columnItems
 
     def setData(self, index: QModelIndex, value: Any, role: int) -> bool:
         """Here we modify data in the underlying model in response to the tableview
@@ -100,14 +111,19 @@ class TableModel(QAbstractTableModel):
         """Override if you want 'failed' items to show a highlight"""
         return False
 
+    def getItemAndField(self, index):
+        if self.columnItems:
+            return index.column(), index.row()
+        else:
+            return index.row(), index.column()
+
     def data(self, index, role):
         """Called by the table view to get data to show. We just convert the dataclass
         into a tuple and get the nth item, which is fine for builtin types like
         floats, ints and strings."""
         if not index.isValid():
             return None
-        field = index.row()
-        item = index.column()
+        item, field = self.getItemAndField(index)
         if role == QtCore.Qt.BackgroundRole:
             if self.isFailed(item):
                 return QBrush(QColor(255, 150, 150))
@@ -118,57 +134,86 @@ class TableModel(QAbstractTableModel):
 
     def headerData(self, section: int, orientation: QtCore.Qt.Orientation, role: int = ...) -> Any:
         if role == QtCore.Qt.DisplayRole:
-            # data labels down the side
-            if orientation == QtCore.Qt.Vertical:
-                return self.header[section]
-            # channel indices along the top
-            elif orientation == QtCore.Qt.Horizontal:
-                return str(section)
+            if self.columnItems:
+                # data labels down the side
+                if orientation == QtCore.Qt.Vertical:
+                    return self.header[section]
+                # channel indices along the top
+                elif orientation == QtCore.Qt.Horizontal:
+                    return str(section)
+            else:
+                if orientation == QtCore.Qt.Vertical:
+                    return str(section)
+                elif orientation == QtCore.Qt.Horizontal:
+                    return self.header[section]
+
         return None
 
     def rowCount(self, parent: QModelIndex) -> int:
-        return len(self.header)
+        return len(self.header) if self.columnItems else len(self.d)
 
     def columnCount(self, parent: QModelIndex) -> int:
-        return len(self.d)
+        return len(self.d) if self.columnItems else len(self.header)
 
     def move_left(self, n):
-        """Move a row to the left. This stuff is messy."""
+        """Move an item to the left, or up if not columnItems. This stuff is messy."""
         if 0 < n < len(self.d):
-            # I'm still not entirely sure what's going on in this line
-            self.beginMoveColumns(QModelIndex(), n, n, QModelIndex(), n - 1)
+            if self.columnItems:
+                self.beginMoveColumns(QModelIndex(), n, n, QModelIndex(), n - 1)
+            else:
+                self.beginMoveRows(QModelIndex(), n, n, QModelIndex(), n - 1)
             self.d[n], self.d[n - 1] = self.d[n - 1], self.d[n]
-            self.endMoveColumns()
+            if self.columnItems:
+                self.endMoveColumns()
+            else:
+                self.endMoveRows()
             self.changed.emit()
 
     def move_right(self, n):
-        """Move a row to the right. This stuff is messy."""
+        """Move an item to the right, or down if not columnItems. This stuff is messy."""
         if n < len(self.d) - 1:
-            # I'm still not entirely sure what's going on in this line
-            self.beginMoveColumns(QModelIndex(), n, n, QModelIndex(), n + 2)
+            if self.columnItems:
+                self.beginMoveColumns(QModelIndex(), n, n, QModelIndex(), n + 2)
+            else:
+                self.beginMoveRows(QModelIndex(), n, n, QModelIndex(), n + 2)
             self.d[n], self.d[n + 1] = self.d[n + 1], self.d[n]
-            self.endMoveColumns()
+            if self.columnItems:
+                self.endMoveColumns()
+            else:
+                self.endMoveRows()
             self.changed.emit()
 
     def add_item(self, sourceIndex=None):
         """Add a new channeldata to the end of the list - could be copy of existing item"""
         n = len(self.d)
-        self.beginInsertColumns(QModelIndex(), n, n)
+        if self.columnItems:
+            self.beginInsertColumns(QModelIndex(), n, n)
+        else:
+            self.beginInsertRows(QModelIndex(), n, n)
         if sourceIndex is None:
             new = self.dataClass()
         else:
             new = dataclasses.replace(self.d[sourceIndex])  # weird idiom, this. Does a clone and optionally modifies.
         self.d.append(new)
-        self.endInsertColumns()
+        if self.columnItems:
+            self.endInsertColumns()
+        else:
+            self.endInsertRows()
         self.changed.emit()
         return n
 
     def delete_item(self, n):
         """Remove a given channeldata"""
         if n < len(self.d):
-            self.beginRemoveColumns(QModelIndex(), n, n)
+            if self.columnItems:
+                self.beginRemoveColumns(QModelIndex(), n, n)
+            else:
+                self.beginRemoveRows(QModelIndex(), n, n)
             del self.d[n]
-            self.endRemoveColumns()
+            if self.columnItems:
+                self.endRemoveColumns()
+            else:
+                self.endRemoveRows()
             self.changed.emit()
 
     def flags(self, index: QModelIndex) -> QtCore.Qt.ItemFlags:

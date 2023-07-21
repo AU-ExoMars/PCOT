@@ -146,7 +146,8 @@ class XFormStitch(XFormType):
 COLNAMES = ["index", "offset X", "offset Y"]
 
 
-class TableModel(QtCore.QAbstractTableModel):
+# TODO use the new TableModel??
+class StitchTableModel(QtCore.QAbstractTableModel):
     def __init__(self, node):
         super().__init__()
         self.node = node
@@ -189,7 +190,7 @@ class TableModel(QtCore.QAbstractTableModel):
 class TabStitch(Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabstitch.ui')
-        self.model = TableModel(node)
+        self.model = StitchTableModel(node)
         self.w.canvas.keyHook = self
         self.w.table.setModel(self.model)
         self.w.table.setColumnWidth(0, 30)
