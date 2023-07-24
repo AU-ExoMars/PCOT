@@ -112,11 +112,18 @@ class XFormROIExpr(XFormType):
         node.setOutput(0, outImgDatum)
         node.setOutput(1, outROIDatum)
 
+    def uichange(self, node):
+        """This might seem a bit weird, calling perform when a changed(uiOnly=True) happens - but while this will
+        recalculate the entire node just to draw the UI elements again, it will not cause child nodes to run."""
+        self.perform(node)
+
 
 COLNAMES = ["type", "info"]
 
 
 class Model(QAbstractTableModel):
+    """The model is what interfaces the table view to the data in the node's roi list. It also creates an editor
+    for all existing rois if it's been initialised from an existing node (as would happen in deserialisation)"""
     changed = Signal()
 
     def __init__(self, tab, node):
@@ -200,6 +207,7 @@ class TabROIExpr(Tab):
         self.w.selColButton.clicked.connect(self.selColButtonChanged)
         self.w.unselColButton.clicked.connect(self.unselColButtonChanged)
         self.w.brushSize.valueChanged.connect(self.brushSizeChanged)
+        self.w.tableView.doubleClicked.connect(self.doubleClick)
 
         self.model = Model(self, node)
         self.w.tableView.setModel(self.model)
@@ -216,6 +224,7 @@ class TabROIExpr(Tab):
         self.w.canvas.setPersister(self.node)
         self.w.canvas.setROINode(self.node)
         self.w.canvas.display(self.node.img)
+        self.w.tableView.dataChanged(QModelIndex(), QModelIndex())
 
         self.w.exprEdit.setText(self.node.expr)
         self.w.hideCheck.setChecked(self.node.hideROIs)
@@ -223,6 +232,20 @@ class TabROIExpr(Tab):
         setColourButton(self.w.outColButton, self.node.outColour)
         setColourButton(self.w.selColButton, self.node.selColour)
         setColourButton(self.w.unselColButton, self.node.unselColour)
+
+    def doubleClick(self, index):
+        item = index.row()
+        # we need to tell the dialog the size of the image we are working with so it can set limits
+        # in the editor dialogs.
+        w = 2000    # defaults
+        h = 2000
+        if self.node.img is not None:
+            w = self.node.img.w
+            h = self.node.img.h
+
+        if 0 <= item < len(self.node.rois):
+            item = self.node.rois[item]
+            self.node.editors[item].openDialog(w, h)
 
     def brushSizeChanged(self, val):
         self.mark()
@@ -261,7 +284,7 @@ class TabROIExpr(Tab):
 
     def selectionChanged(self, idx):
         self.node.selected = idx
-        self.changed()
+        self.changed(uiOnly=True)
 
     def roisChanged(self):
         pass

@@ -46,7 +46,7 @@ class ExpressionEvaluator(Parser):
         # generally used for user plugins.
         print("Registering function plugins")
         for x in pcot.config.exprFuncHooks:
-            print(f"Calling   {x}")
+            #  print(f"Calling   {x}")
             x(self)
 
     def run(self, s):
