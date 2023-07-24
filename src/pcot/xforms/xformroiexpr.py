@@ -1,5 +1,6 @@
 """This node manages several ROIs, allows editing, and combines them with an expression. Much more convenient
 than using multiple ROI and expr nodes with an importroi node."""
+from copy import copy
 from functools import partial
 
 from PyQt5.QtGui import QPainter
@@ -13,7 +14,7 @@ from pcot.expressions import ExpressionEvaluator
 from pcot.imagecube import ImageCube
 from pcot.sources import nullSourceSet
 from pcot.ui.tabs import Tab
-from pcot.xform import xformtype, XFormType
+from pcot.xform import xformtype, XFormType, XFormException
 
 
 def getROIName(i):
@@ -25,6 +26,9 @@ class XFormROIExpr(XFormType):
     def __init__(self):
         super().__init__("roiexpr", "regions", "0.0.0")
         self.addInputConnector("", Datum.IMG)
+        self.addInputConnector("p", Datum.ROI)
+        self.addInputConnector("q", Datum.ROI)
+        self.addInputConnector("r", Datum.ROI)
         self.addOutputConnector("", Datum.IMG)
         self.addOutputConnector("", Datum.ROI)
         self.autoserialise += ('expr',)
@@ -44,7 +48,7 @@ class XFormROIExpr(XFormType):
         node.brushSize = 20  # scale of 0-99 i.e. a slider value. Converted to pixel radius in getRadiusFromSlider()
         node.previewRadius = None  # see xformpainted.
 
-        self.autoserialise = ('selColour', 'unselColour', 'outColour', 'expr', 'hideRois', 'previewRadius')
+        self.autoserialise = ('selColour', 'unselColour', 'outColour', 'expr', 'hideROIs', 'previewRadius')
 
     def serialise(self, node):
         return {'rois': [(r.tpname, r.serialise()) for r in node.rois]}
@@ -80,11 +84,34 @@ class XFormROIExpr(XFormType):
                 for i, r in enumerate(node.rois):
                     # register the ROIs into the parser (or rather lambdas that return datums)
                     roiname = getROIName(i)
+                    # patch image size into the ROI so we can do negation
+                    node.rois[i].setContainingImageDimensions(img.w, img.h)
+                    # Register a variable which returns an ROI datum for that ROI
                     # *shakes fist at late-binding closures*
                     f = partial(lambda ii: Datum(Datum.ROI, node.rois[ii], sources=nullSourceSet), i)
                     parser.registerVar(roiname, f'value of ROI {i}', f)
                 # might be useful to have the input image there too
                 parser.registerVar('img', 'input image', lambda: Datum(Datum.IMG, img))
+                # and three extra ROI inputs that might come from other data
+
+                # this function gets an ROI input but patches the image width and height
+                # into that ROI, so we can do daft stuff like negating ROIs.
+                def getROIInput(i):
+                    # ugly, but we need to access this to get the sources
+                    d: Datum = node.getInput(i)
+                    # and then immediately do this to get the actual ROI even if I'm doing work again.
+                    rr = node.getInput(i, Datum.ROI)
+                    if rr is None:
+                        return Datum.null
+                    else:
+                        rr = copy(rr)
+                        rr.setContainingImageDimensions(img.w, img.h)
+                        return Datum(Datum.ROI, rr, sources=d.sources)
+
+                parser.registerVar("p", "ROI input p", lambda: getROIInput(1))
+                parser.registerVar("q", "ROI input q", lambda: getROIInput(1))
+                parser.registerVar("r", "ROI input r", lambda: getROIInput(1))
+
                 # now execute the expression and get it back as an ROI
                 res = parser.run(node.expr)
                 node.roi = res.get(Datum.ROI)
@@ -92,8 +119,8 @@ class XFormROIExpr(XFormType):
                 if node.roi is not None:
                     node.roi.drawBox = False
                     node.roi.colour = node.outColour
-                    # impose that ROI on the image
-                    img.rois.append(node.roi)
+                    # impose that ROI on the image - REMOVING existing ROIs
+                    img.rois = [node.roi]
                     outROIDatum = Datum(Datum.ROI, node.roi, node.roi.sources)
             # impose the individual ROIs as annotations
             if not node.hideROIs:
@@ -116,6 +143,13 @@ class XFormROIExpr(XFormType):
         """This might seem a bit weird, calling perform when a changed(uiOnly=True) happens - but while this will
         recalculate the entire node just to draw the UI elements again, it will not cause child nodes to run."""
         self.perform(node)
+
+    def getROIDesc(self, node):
+        return "no ROI" if node.roi is None else node.roi.details()
+
+    def getMyROIs(self, node):
+        """If this node creates an ROI or ROIs, return it/them as a list, otherwise None (not an empty list)"""
+        return [node.roi]
 
 
 COLNAMES = ["type", "info"]

@@ -442,9 +442,8 @@ def test_roi_diff_exp2():
             assert np.array_equal(pix, expected), f"pixel {x}, {y} should be {expected}, is {pix}"
 
 
-@pytest.mark.xfail
 def test_roi_neg_expr():
-    """Unary negate is not implemented (yet?)"""
+    """Unary negate """
 
     pcot.setup()
     doc = Document()

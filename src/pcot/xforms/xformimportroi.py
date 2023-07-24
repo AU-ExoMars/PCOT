@@ -1,6 +1,14 @@
+from copy import copy
+
 from pcot.datum import Datum
 from pcot.xform import xformtype, XFormType, XFormException
 from pcot.xforms.tabdata import TabData
+
+
+def modifyROISize(roi, img):
+    roi = copy(roi)
+    roi.setContainingImageDimensions(img.w, img.h)
+    return roi
 
 
 @xformtype
@@ -23,7 +31,7 @@ class XformImportROI(XFormType):
     def init(self, node):
         node.out = None
 
-    def perform(self, node):
+    def perform(self, node, x=None):
         img = node.getInput(0, Datum.IMG)
         if img is not None:
             roiinput = node.getInput(1)
@@ -32,11 +40,11 @@ class XformImportROI(XFormType):
                 img = img.copy()
                 if roiinput.tp == Datum.IMG:
                     # if the ROI input is an image, add that image's ROIs to ours
-                    img.rois += [x for x in roiinput.val.rois if x is not None]
+                    img.rois += [modifyROISize(x, img) for x in roiinput.val.rois if x is not None]
                 elif roiinput.tp == Datum.ROI:
                     # otherwise if it's an ROI, append the ROI to ours.
                     if roiinput.val is not None:
-                        img.rois.append(roiinput.val)
+                        img.rois.append(modifyROISize(roiinput.val, img))
                     else:
                         raise XFormException('DATA', 'ROI input is None')
                 else:

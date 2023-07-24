@@ -50,6 +50,7 @@ class XformPoly(XFormROIType):
         node.roi.deserialise(d)
 
     def setProps(self, node, img):
+        node.roi.setContainingImageDimensions(img.w, img.h)
         node.roi.setImageSize(img.w, img.h)
         if node.drawMode == 0:
             drawPoints = True

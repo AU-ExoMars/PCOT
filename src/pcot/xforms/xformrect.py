@@ -42,6 +42,7 @@ class XformRect(XFormROIType):
         node.roi.deserialise(d)
 
     def setProps(self, node, img):
+        node.roi.setContainingImageDimensions(img.w, img.h)
         node.roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.thickness, node.drawbg)
 
     def getMyROIs(self, node):

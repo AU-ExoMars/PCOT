@@ -1422,11 +1422,10 @@ class XFormROIType(XFormType):
             tmp = MultiBandSource([node.roi.sources for _ in img.sources.sourceSets])
             # then we create a bandwise union between this and the image's source sets.
             sources = MultiBandSource.createBandwiseUnion([tmp, img.sources])
-            # TODO ROI Source combination with objects not dealt with - need to be combined into images
-            # (Yeah, I have no idea what this comment means either).
             self.setProps(node, img)
             # copy image and append ROI to it
             img = img.copy()
+            node.roi.setContainingImageDimensions(img.w, img.h)
             img.rois.append(node.roi)
             # set mapping from node
             img.setMapping(node.mapping)

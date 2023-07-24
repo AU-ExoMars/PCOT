@@ -91,7 +91,7 @@ class TableModel(QAbstractTableModel):
     # custom signal used when we change data
     changed = Signal()
 
-    def __init__(self, tab, dataClass: Any, _data: List, columnItems):
+    def __init__(self, tab, dataClass: Any, _data: List, columnItems: bool):
         """Takes the containing a tab, a dataclass, a list of whatever the item dataclass is, and whether items
         are columns and rows are fields (as in pixtest)"""
         QAbstractTableModel.__init__(self)

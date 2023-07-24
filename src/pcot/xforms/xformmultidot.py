@@ -80,6 +80,7 @@ class XFormMultiDot(XFormType):
             # we now add any selection as an extra annotation
             if node.selected:
                 r = ROICircle(node.selected.x, node.selected.y, node.selected.r*1.3)
+                r.setContainingImageDimensions(img.w, img.h)
                 r.colour = node.selected.colour
                 img.annotations = [r]
             # set mapping from node

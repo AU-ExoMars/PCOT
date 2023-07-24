@@ -53,6 +53,7 @@ class XFormPainted(XFormROIType):
     def setProps(self, node, img):
         # set the properties of the ROI
         node.roi.setImageSize(img.w, img.h)
+        node.roi.setContainingImageDimensions(img.w, img.h)
         if node.drawMode == 0:
             drawEdge = True
             drawBox = True

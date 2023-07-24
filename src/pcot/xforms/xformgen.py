@@ -138,7 +138,7 @@ class GenModel(TableModel):
     """This is the model which acts between the list of ChannelData items and the table view."""
 
     def __init__(self, tab, _data: List[ChannelData]):
-        super().__init__(tab, ChannelData, _data)
+        super().__init__(tab, ChannelData, _data, True)
 
     def setData(self, index: QModelIndex, value: Any, role: int) -> bool:
         """Here we modify data in the underlying model in response to the tableview or any item delegates"""
@@ -167,7 +167,7 @@ class GenModel(TableModel):
                 # and tell any other things too (such as the tab!)
                 self.changed.emit()
             except ValueError:
-                ui.log("Bad value type")
+                ui.log("Bad value type when setting data in GenModel")
             return True
         return False
 
