@@ -605,9 +605,9 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         """return a good position for a new item placed with no hint to where it should go"""
         if len(self.graph.nodes) > 0:
             xs = [n.xy[0] for n in self.graph.nodes]
-            ys = [n.xy[1] for n in self.graph.nodes]
+            ys = [n.xy[1] + n.h for n in self.graph.nodes]
             x = sum(xs) / len(xs)
-            y = max(ys) + max([n.h for n in self.graph.nodes])
+            y = max(ys) + 10
             return x, y
         else:
             return 0, 0

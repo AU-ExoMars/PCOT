@@ -715,7 +715,10 @@ class ImageCube(SourcesObtainable):
     ## crop an image down to its regions of interest.
     def cropROI(self):
         subimg = self.subimage()
-        img = ImageCube(subimg.img, rgbMapping=self.mapping, defaultMapping=self.defaultMapping, sources=self.sources)
+        img = ImageCube(subimg.img,
+                        uncertainty=subimg.uncertainty,
+                        dq=subimg.dq,
+                        rgbMapping=self.mapping, defaultMapping=self.defaultMapping, sources=self.sources)
         img.rois = [roi.rebase(subimg.bb.x, subimg.bb.y) for roi in self.rois]
         #        img.rois = [ROIPainted(subimg.mask, "crop")]
         return img

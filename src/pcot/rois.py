@@ -568,12 +568,8 @@ class ROIPainted(ROI):
             if mask is None:
                 self.bbrect = None
                 self.map = None
-                self.imgw = None
-                self.imgh = None
             else:
                 h, w = mask.shape[:2]
-                self.imgw = w
-                self.imgh = h
                 self.bbrect = Rect(0, 0, w, h)
                 self.map = np.zeros((h, w), dtype=np.uint8)
                 self.map[mask] = 255
@@ -584,25 +580,10 @@ class ROIPainted(ROI):
             self.drawEdge = sourceROI.drawEdge
             self.map = sourceROI.map  # NOTE: not a copy!
             self.bbrect = Rect.copy(sourceROI.bbrect)
-            self.imgw = sourceROI.imgw
-            self.imgh = sourceROI.imgh
 
     def clear(self):
         self.map = None
         self.bbrect = None
-
-    def setImageSize(self, imgw, imgh):
-        """Set size of the image of which this is a part. Used so
-        we can use getRadiusFromSlider to get a suitable brush size,
-        and so that if the image size changes we can delete the ROI.
-        Duplicates the image dimensions used by roiexpr and set in
-        setContainingImageDimensions and I should probably refactor"""
-        if self.imgw is not None:
-            if self.imgw != imgw or self.imgh != imgh:
-                self.clear()
-
-        self.imgw = imgw
-        self.imgh = imgh
 
     def bb(self):
         return self.bbrect
@@ -632,7 +613,8 @@ class ROIPainted(ROI):
         the ROI as part of the process."""
 
         # create full size map
-        fullsize = np.zeros((self.imgh, self.imgw), dtype=np.uint8)
+        imgw, imgh = self.containingImageDimensions
+        fullsize = np.zeros((imgw, imgh), dtype=np.uint8)
         # splice in existing data, if there is any!
         if self.bbrect is not None:
             bbx, bby, bbx2, bby2 = self.bbrect.corners()
@@ -656,21 +638,19 @@ class ROIPainted(ROI):
             self.bbrect = None
             self.map = None
 
-    @staticmethod
-    def drawBrush(fullsize, x, y, brushSize, slf, delete):
+    def drawBrush(self, fullsize, x, y, brushSize, delete):
         """called from inside cropDown as an optional step to draw an extra circle"""
-        r = int(getRadiusFromSlider(brushSize, slf.imgw, slf.imgh))
+        imgw, imgh = self.containingImageDimensions
+        r = int(getRadiusFromSlider(brushSize, imgw, imgh))
         cv.circle(fullsize, (x, y), r, 0 if delete else 255, -1)
 
     def setCircle(self, x, y, brushSize, delete=False):
         """fill a circle in the ROI, or clear it (if delete is true)"""
-        if self.imgw is not None:
-            self.cropDownWithDraw(draw=lambda fullsize: ROIPainted.drawBrush(fullsize, x, y, brushSize, self, delete))
+        if self.containingImageDimensions is not None:
+            self.cropDownWithDraw(draw=lambda fullsize: self.drawBrush(fullsize, x, y, brushSize, delete))
 
     def rebase(self, x, y):
         r = ROIPainted(sourceROI=self)
-        r.imgw -= x  # we're shrinking the containing image by this much
-        r.imgh -= y
         r.bbrect.x -= x
         r.bbrect.y -= y
         return r
@@ -695,14 +675,10 @@ class ROIPoly(ROI):
         super().__init__(sourceROI=sourceROI)
         self.selectedPoint = None  # don't set the selected point in copies
         if sourceROI is None:
-            self.imgw = None
-            self.imgh = None
             self.drawPoints = True
             self.drawBox = True
             self.points = []
         else:
-            self.imgw = sourceROI.imgw
-            self.imgh = sourceROI.imgh
             self.drawBox = sourceROI.drawBox
             self.drawPoints = sourceROI.drawPoints
             self.points = [(x, y) for x, y in sourceROI.points]  # deep copy
@@ -713,17 +689,6 @@ class ROIPoly(ROI):
 
     def hasPoly(self):
         return len(self.points) > 2
-
-    def setImageSize(self, imgw, imgh):
-        """Set size of the image of which this is a part. Used so
-        that if the image size changes we can delete the ROI (although
-        we should probably do something smarter)"""
-        if self.imgw is not None:
-            if self.imgw != imgw or self.imgh != imgh:
-                self.clear()
-
-        self.imgw = imgw
-        self.imgh = imgh
 
     def bb(self):
         if not self.hasPoly():
@@ -833,8 +798,6 @@ class ROIPoly(ROI):
 
     def rebase(self, x, y):
         r = ROIPoly(sourceROI=self)
-        r.imgw -= x  # we're shrinking the containing image by this much
-        r.imgh -= y
         r.points = [(xx - x, yy - y) for xx, yy in self.points]
         return r
 

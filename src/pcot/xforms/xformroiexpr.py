@@ -23,14 +23,37 @@ def getROIName(i):
 
 @xformtype
 class XFormROIExpr(XFormType):
+    """
+    This node allows a region of interest to be composed from several regions of interest using an expression and
+    imposed on an image. Several ROIs can be created within the node itself by using the "Add ROI" button.
+    These will be assigned to the variables a,b,c.. within the expression, and can be edited by:
+
+    * clicking on their label in the left-most column of the table (to select the entire row) and then clicking and dragging on the canvas,
+    * double clicking on the description text in the table to open a numerical editor (not for poly or painted).
+
+    Additional ROIs can be connected to the p, q, r inputs; these will be assigned to those variables within the expression.
+    The input image is available as the variable 'img', so it is possible
+    to access the image's original region of interest (or the union of all ROIs if it has more than one) by using roi(img).
+
+    Other properties of the image are available and other calculations may be made, but the result of the expression must be an ROI.
+
+    Examples:
+
+        * **a+b** : the union of ROIs 'a' and 'b' from the node's ROI list
+        * **a*b** : the intersection of ROIs 'a' and 'b'
+        * **a-b** : ROI 'a' with ROI 'b' removed
+        * **-a** :   the negative of ROI 'a' (i.e. the entire image area as an ROI but with a hole in it)
+        * **roi(img) - p**  : any ROIs on the image already, but with the ROI on input 'p' cut out
+
+    """
     def __init__(self):
         super().__init__("roiexpr", "regions", "0.0.0")
-        self.addInputConnector("", Datum.IMG)
-        self.addInputConnector("p", Datum.ROI)
-        self.addInputConnector("q", Datum.ROI)
-        self.addInputConnector("r", Datum.ROI)
-        self.addOutputConnector("", Datum.IMG)
-        self.addOutputConnector("", Datum.ROI)
+        self.addInputConnector("", Datum.IMG, "Image input")
+        self.addInputConnector("p", Datum.ROI, "ROI which appears as 'p' in expression")
+        self.addInputConnector("q", Datum.ROI, "ROI which appears as 'q' in expression")
+        self.addInputConnector("r", Datum.ROI, "ROI which appears as 'r' in expression")
+        self.addOutputConnector("", Datum.IMG, "Output image with ROI from expression result imposed")
+        self.addOutputConnector("", Datum.ROI, "The ROI generated from the expression")
         self.autoserialise += ('expr',)
 
     def createTab(self, n, w):
@@ -72,16 +95,13 @@ class XFormROIExpr(XFormType):
 
         # must be an image, and must be an expression
         if img is not None:
-            # and painted ROIs  need to know the image size too
-            for r in node.rois:
-                if isinstance(r, pcot.rois.ROIPainted):
-                    r.setImageSize(img.w, img.h)
             img = img.copy()
             node.previewRadius = pcot.rois.getRadiusFromSlider(node.brushSize, img.w, img.h)
             if len(node.expr.strip()) > 0:
                 # we create a new parser here, because we want it to be empty of ROIs etc.
                 parser = ExpressionEvaluator()
                 for i, r in enumerate(node.rois):
+                    r.drawBox = False
                     # register the ROIs into the parser (or rather lambdas that return datums)
                     roiname = getROIName(i)
                     # patch image size into the ROI so we can do negation
@@ -115,6 +135,7 @@ class XFormROIExpr(XFormType):
                 # now execute the expression and get it back as an ROI
                 res = parser.run(node.expr)
                 node.roi = res.get(Datum.ROI)
+                node.roi.drawBox = False
                 # set its colour
                 if node.roi is not None:
                     node.roi.drawBox = False

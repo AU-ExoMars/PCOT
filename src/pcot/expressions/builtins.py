@@ -162,19 +162,6 @@ def funcRGBImage(args, _):
     return Datum(Datum.IMG, img)
 
 
-def funcTestImg(args, _):
-    ct = args[0].get(Datum.NUMBER).n
-    imgs = []
-    uncs = []
-    for i in range(0, int(ct)):
-        imgs.append(np.full((20, 20), i, dtype=np.float32))
-        uncs.append(np.full((20, 20), i * 0.1, dtype=np.float32))
-    imgs = np.dstack(imgs)
-    uncs = np.dstack(uncs)
-    img = ImageCube(imgs, uncertainty=uncs)
-    return Datum(Datum.IMG, img)
-
-
 def funcV(args, optargs):
     # create a new nominal,uncertainty value - image or number - from the nominal values of two inputs.
     # So if you pass:
@@ -489,14 +476,6 @@ def registerBuiltinFunctions(p):
                       Datum.NUMBER, deflt=0),
         ],
         funcV
-    )
-
-    p.registerFunc(
-        "testimg",
-        "create a test image consisting of N channels of data (1,2,3,..,n) and uncertainty (0.1,0.2,0.3,..,n)",
-        [
-            Parameter("count", "number of channels", Datum.NUMBER)
-        ], [], funcTestImg
     )
 
     p.registerFunc(

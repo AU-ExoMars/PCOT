@@ -5,22 +5,23 @@ from typing import Any, List
 
 import numpy as np
 from PySide2 import QtCore
-from PySide2.QtCore import QAbstractItemModel, QAbstractTableModel, QModelIndex, Signal, Qt
-from PySide2.QtGui import QKeyEvent
-from PySide2.QtWidgets import QSpinBox, QStyledItemDelegate, QComboBox, QTableView, QMessageBox
+from PySide2.QtCore import QModelIndex
+from PySide2.QtWidgets import QMessageBox
 
+import cv2 as cv
+
+import pcot.ui.tabs
 from pcot import ui
 from pcot.datum import Datum
-import pcot.ui.tabs
 from pcot.filters import Filter
 from pcot.imagecube import ImageCube
-from pcot.sources import MultiBandSource, nullSource, InputSource, NullSource, FilterOnlySource
+from pcot.sources import MultiBandSource, FilterOnlySource
 from pcot.ui.tablemodel import TableModel, ComboBoxDelegate
 from pcot.utils import SignalBlocker
-from pcot.xform import xformtype, XFormType
+from pcot.xform import xformtype, XFormType, XFormException
 
 DEFAULTSIZE = 256
-MODES = ['flat', 'ripple-n', 'ripple-u', 'ripple-un', 'half']
+MODES = ['flat', 'ripple-n', 'ripple-u', 'ripple-un', 'half', 'checkx', 'checky']
 DEFAULTMODE = 'flat'
 
 logger = logging.getLogger(__name__)
@@ -34,16 +35,26 @@ class ChannelData:
     cwl: int = 100  # centre wavelength
     mode: str = 'flat'  # mode - see node description
 
+    # text info
+
+    text: str = ''
+    textx: int = 0
+    texty: int = 0
+    textsize: float = 1       # some factor of img size
+
     @staticmethod
     def getHeader():
-        return ['N', 'U', 'CWL', 'mode']  # headers
+        return ['N', 'U', 'CWL', 'mode', 'text', 'textx', 'texty', 'textsize']  # headers
 
     def serialise(self):
-        return dataclasses.astuple(self)
+        return dataclasses.asdict(self)
 
     @staticmethod
     def deserialise(t):
-        return ChannelData(*t)
+        if isinstance(t, dict):
+            return ChannelData(**t)
+        else:
+            return ChannelData(*t)
 
 
 @xformtype
@@ -60,6 +71,24 @@ class XFormGen(XFormType):
     while N is generated as in 'flat'
     * ripple-un: both values are ripple multipliers.
     * half: nominal is N on the left, U on the right. Uncertainty is 0.1. (Test value)
+    * checkx: nominal is a checquered pattern with each square of size N, offset by U in the x-axis. uncertainty=nominal.
+    * checky: nominal is a checquered pattern with each square of size N, offset by U in the y-axis. uncertainty=nominal.
+
+    A useful pattern might be something like this:
+
+        *   Chan 0:         checkx, N=8, U=0
+        *   Chan 1:         checkx, N=8, U=4
+        *   Chan 2:         checky, N=8, U=4
+
+    To get variation in uncertainty, create a similar pattern but with a longer period using another gen node:
+
+        *   Chan 0:         checkx, N=16, U=0
+        *   Chan 1:         checkx, N=16, U=8
+        *   Chan 2:         checky, N=16, U=8
+
+    and merge the two together, using the first gen to create nominal values and the second to create uncertainty values,
+    with an expr node using the expression **v(a,b)**.
+
 
     """
 
@@ -87,31 +116,59 @@ class XFormGen(XFormType):
         cx = node.imgwidth / 2.0
         cy = node.imgheight / 2.0
 
+        listOfCwls = [x.cwl for x in node.imgchannels]
+        if len(listOfCwls) != len(set(listOfCwls)):
+            node.setError(XFormException('GEN', "DUPLICATE CWLS"))
+
         for chan in node.imgchannels:
             if chan.mode == 'flat':
                 # flat mode is easy
-                ns.append(np.full((node.imgheight, node.imgwidth), chan.n))
-                us.append(np.full((node.imgheight, node.imgwidth), chan.u))
+                n = np.full((node.imgheight, node.imgwidth), chan.n)
+                u = np.full((node.imgheight, node.imgwidth), chan.u)
             elif chan.mode == 'ripple-n':
                 # we build an expression based on position to get a ripple pattern in n
-                d = np.sqrt((x - cx) ** 2 + (y - cy) ** 2) * chan.n
-                ns.append(np.sin(d) * 0.5 + 0.5)
+                n = np.sqrt((x - cx) ** 2 + (y - cy) ** 2) * chan.n
+                n = np.sin(n) * 0.5 + 0.5
                 # but u remains flat
-                us.append(np.full((node.imgheight, node.imgwidth), chan.u))
+                u = np.full((node.imgheight, node.imgwidth), chan.u)
             elif chan.mode == 'ripple-u':
                 # as above, but the other way around
-                ns.append(np.full((node.imgheight, node.imgwidth), chan.n))
-                d = np.sqrt((x - cx) ** 2 + (y - cy) ** 2) * chan.u
-                us.append(np.sin(d) * 0.5 + 0.5)
+                n = np.full((node.imgheight, node.imgwidth), chan.n)
+                u = np.sqrt((x - cx) ** 2 + (y - cy) ** 2) * chan.u
+                u = np.sin(u) * 0.5 + 0.5
             elif chan.mode == 'ripple-un':
                 # two ripples
-                d = np.sqrt((x - cx) ** 2 + (y - cy) ** 2) * chan.n
-                ns.append(np.sin(d) * 0.5 + 0.5)
-                d = np.sqrt((x - cx) ** 2 + (y - cy) ** 2) * chan.u
-                us.append(np.sin(d) * 0.5 + 0.5)
+                n = np.sqrt((x - cx) ** 2 + (y - cy) ** 2) * chan.n
+                n = np.sin(n) * 0.5 + 0.5
+                u = np.sqrt((x - cx) ** 2 + (y - cy) ** 2) * chan.u
+                u = np.sin(u) * 0.5 + 0.5
             elif chan.mode == 'half':
-                ns.append(np.where(x<node.imgwidth/2, chan.n, chan.u))
-                us.append(np.full((node.imgheight, node.imgwidth), 0.1))
+                n = np.where(x<node.imgwidth/2, chan.n, chan.u)
+                u = np.full((node.imgheight, node.imgwidth), 0.1)
+            elif chan.mode == 'checkx':
+                y, x = np.indices((node.imgheight, node.imgwidth))
+                n = ((np.array((y, x+chan.u))//chan.n).sum(axis=0) % 2).astype(np.float32)
+                u = n
+            elif chan.mode == 'checky':
+                y, x = np.indices((node.imgheight, node.imgwidth))
+                n = ((np.array((y+chan.u, x))//chan.n).sum(axis=0) % 2).astype(np.float32)
+                u = n
+            else:
+                raise XFormException('INTR', "bad mode in gen")
+
+            # write text
+            if chan.text != '':
+                fontsize = node.imgheight * chan.textsize * 0.007
+                thickness = int(fontsize*3)
+                (w, h), baseline = cv.getTextSize(chan.text, cv.FONT_HERSHEY_SIMPLEX,
+                                                  fontScale=fontsize, thickness=thickness)
+
+                cv.putText(n, chan.text, (chan.textx, chan.texty+h), cv.FONT_HERSHEY_SIMPLEX,
+                           color=1,
+                           fontScale=fontsize, lineType=1, thickness=thickness)
+
+            ns.append(n)
+            us.append(u)
 
         # build the image arrays
         if len(ns) > 0:
@@ -126,6 +183,7 @@ class XFormGen(XFormType):
         else:
             node.img = None
             node.setOutput(0, Datum.null)
+
 
     def serialise(self, node):
         return {'chans': [x.serialise() for x in node.imgchannels]}
@@ -161,6 +219,14 @@ class GenModel(TableModel):
                         return False
                 elif field == 3:
                     d.mode = value
+                elif field == 4:
+                    d.text = value
+                elif field == 5:
+                    d.textx = int(value)
+                elif field == 6:
+                    d.texty = int(value)
+                elif field == 7:
+                    d.textsize = float(value)
 
                 # tell the view we changed
                 self.dataChanged.emit(index, index, (QtCore.Qt.DisplayRole,))

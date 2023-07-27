@@ -40,6 +40,8 @@ NONE = np.uint16(0)
 
 TEST = reg('test', 15)
 
+MAX = 65535
+
 
 # Pixels with these bits are considered bad and are not to be used in aggregate calculations
 # like mean, std.

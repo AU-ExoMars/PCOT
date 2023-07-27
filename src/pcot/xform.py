@@ -1008,7 +1008,8 @@ class XFormGraph:
 
     def create(self, typename, displayName=None):
         """create a new node, passing in a type name. We look in both the 'global' dictionary,
-        allTypes,  but also the macros for this document. We can pass in an optional display name."""
+        allTypes,  but also the macros for this document. We can pass in an optional display name.
+        Will also set a new position."""
 
         # note that we don't mark here - this is called in deserialisation so that would be bad. We do the mark
         # before the UI calls this.
@@ -1027,8 +1028,13 @@ class XFormGraph:
         if tp.cycleCheck(self):
             raise XFormException('TYPE', "Cannot create a macro which contains itself")
 
+        # first we need to get a position if we have a scene, otherwise 0,0.
+        # We need to do this before the node is added to the graph because
+        # getNewPosition iterates the graph.
+        xy = (0, 0) if self.scene is None else self.scene.getNewPosition()
         # display name is just the type name to start with.
         xform = XForm(tp, tp.name)
+        xform.xy = xy   # now we can set the position
         self.nodes.append(xform)
         self.doc.nodeAdded(xform)
         xform.graph = self

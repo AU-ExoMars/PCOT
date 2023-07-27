@@ -276,7 +276,7 @@ def test_painted_change_masked_red_to_cyan(allblack):
     assert oldsum == allblack.w * allblack.h
 
     roi = ROIPainted()
-    roi.setImageSize(allblack.w, allblack.h)  # must be called before any call to setCircle.
+    roi.setContainingImageDimensions(allblack.w, allblack.h)  # must be called before any call to setCircle.
     roi.setCircle(4, 4, 75)     # the last value should give a brush radius of 3 via getRadiusFromSlider
     allblack.rois.append(roi)
     subimg = allblack.subimage()

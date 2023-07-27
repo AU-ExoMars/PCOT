@@ -143,7 +143,7 @@ class XformPCT(XFormType):
 
             for r in node.rois:  # we need to tell the ROI how big the contained image is
                 if r is not None:
-                    r.setImageSize(img.w, img.h)
+                    r.setContainingImageDimensions(img.w, img.h)
 
             # get the RGB image we are going to draw the ROIs onto. Will only draw if there are ROIs!
 

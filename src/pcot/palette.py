@@ -92,7 +92,6 @@ class PaletteButton(QtWidgets.QPushButton):
             scene = self.view.scene()
             scene.mark()
             node = scene.graph.create(self.name)
-            node.xy = scene.getNewPosition()
             # rebuild the scene
             scene.rebuild()
             # and perform the node to get initial data

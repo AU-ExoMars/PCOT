@@ -1330,8 +1330,9 @@ class Canvas(QtWidgets.QWidget):
             if 0 <= x < self.previmg.w and 0 <= y < self.previmg.h:
                 val = self.previmg.img[y, x]
                 unc = self.previmg.uncertainty[y, x]
-                dq = pcot.dq.names(self.previmg.dq[y, x])
-                self.spectrumWidget.set(None, f"Single channel - {val:.3} +/- {unc:.3}. DQ:{dq}")
+                dqval = self.previmg.dq[y, x]
+                dq = pcot.dq.names(dqval)
+                self.spectrumWidget.set(None, f"Single channel - {val:.3} +/- {unc:.3}. DQ:{dq} ({dqval})")
             return
 
         # within the coords, and multichannel image present
@@ -1348,7 +1349,7 @@ class Canvas(QtWidgets.QWidget):
                 p = pixel[i]
                 u = pixuncs[i]
                 d = pixdqs[i]
-                text += f"{i}) {ss.brief()} = {p:.3} +/- {u:.3} : {pcot.dq.names(d)}\n"
+                text += f"{i}) {ss.brief()} = {p:.3} +/- {u:.3} : {pcot.dq.names(d)} ({d})\n"
 
 
             # get the channels which have a single wavelength
