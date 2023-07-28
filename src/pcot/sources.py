@@ -104,7 +104,7 @@ class FilterOnlySource(Source):
                 return False
         if filterNameOrCWL:
             if isinstance(filterNameOrCWL, str):
-                if self.filter.name != filterNameOrCWL and self.filter.pos != filterNameOrCWL:
+                if self.filter.name != filterNameOrCWL and self.filter.position != filterNameOrCWL:
                     return False
             elif isinstance(filterNameOrCWL, SupportsFloat):  # this is OK, SupportsFloat is a runtime chkable protocol
                 if not math.isclose(filterNameOrCWL, self.filter.cwl):
