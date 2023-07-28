@@ -29,7 +29,6 @@ from pcot.ui.tabs import Tab
 from pcot.utils import archive, deb
 
 if TYPE_CHECKING:
-    import PyQt5.QtWidgets
     from macros import XFormMacro, MacroInstance
 
 from pcot.imagecube import ChannelMapping
