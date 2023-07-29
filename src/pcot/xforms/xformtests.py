@@ -307,7 +307,11 @@ class XFormScalarTest(XFormType):
                 out = f"Uncertainty fail: actual {v.dq} {node.dqTest} expected {node.dq}"
         else:
             out = "NO VALUE"
-        out = [] if out is None else [out]
+        if out is None:
+            out = []
+        else:
+            ui.log(out)
+            out = [out]
 
         if len(out) == 0:
             node.setRectText("ALL OK")
@@ -344,8 +348,8 @@ class TabScalarTest(pcot.ui.tabs.Tab):
 
         if not self.dontSetText:
             self.w.nEdit.setText(str(self.node.n))
-            self.w.nEdit.setText(str(self.node.u))
-            self.w.nEdit.setText(str(self.node.dq))
+            self.w.uEdit.setText(str(self.node.u))
+            self.w.dqEdit.setText(str(self.node.dq))
 
     def nComboChanged(self, t):
         self.mark()
@@ -373,7 +377,7 @@ class TabScalarTest(pcot.ui.tabs.Tab):
     def uEditChanged(self, t):
         v = 0 if t == '' else float(t)
         self.mark()
-        self.node.n = v
+        self.node.u = v
         self.dontSetText = True
         self.changed()
         self.dontSetText = False
@@ -381,7 +385,7 @@ class TabScalarTest(pcot.ui.tabs.Tab):
     def dqEditChanged(self, t):
         v = 0 if t == '' else int(t)
         self.mark()
-        self.node.n = v
+        self.node.dq = v
         self.dontSetText = True
         self.changed()
         self.dontSetText = False

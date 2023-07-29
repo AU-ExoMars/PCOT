@@ -37,7 +37,7 @@ class XformBandDepth(XFormType):
     def init(self, node):
         node.bandidx = -1
         node.img = None
-        node.cwls = []  # tuple of (cwl, description) generated in perform
+        node.cwls = []  # tuple of (cwl, index, description) generated in perform
 
     def perform(self, node):
         img = node.getInput(0, Datum.IMG)
@@ -50,30 +50,24 @@ class XformBandDepth(XFormType):
                     raise XFormException('DATA', "Cannot get wavelength for all bands in this image")
                 else:
                     node.cwls.append(
-                        (cwl, img.sources.sourceSets[x].brief(node.graph.doc.settings.captionType))
+                        (cwl, x, img.sources.sourceSets[x].brief(node.graph.doc.settings.captionType))
                     )
-            node.cwls.sort(key=lambda t: t[0])  # sort by wavelen
+
+            # this will be a list of (wavelength, index, desc) tuples
+            node.cwls.sort(key=lambda tt: tt[0])  # sort by wavelen
+
             if node.bandidx != -1:
                 if node.bandidx == 0 or node.bandidx == len(node.cwls) - 1:
                     raise XFormException('DATA', "cannot find band depth of first or last band")
                 else:
-                    sidx = node.bandidx - 1  # shorter wavelength
-                    lidx = node.bandidx + 1  # longer wavelength
-                    sources = MultiBandSource([
-                        img.sources[sidx],
-                        img.sources[node.bandidx],
-                        img.sources[lidx]
-                    ])
+                    lC, cidx, _ = node.cwls[node.bandidx]   # center wavelength
+                    lS, sidx, _ = node.cwls[node.bandidx-1]  # shorter wavelength
+                    lL, lidx, _ = node.cwls[node.bandidx+1]  # longer wavelength
 
                     # sidx, bandidx and lidx are the three bands we are working with - get the reflectances
                     rS = img.img[:, :, sidx]
-                    rC = img.img[:, :, node.bandidx]
+                    rC = img.img[:, :, cidx]
                     rL = img.img[:, :, lidx]
-
-                    # get wavelengths
-                    lS = node.cwls[sidx][0]
-                    lC = node.cwls[node.bandidx][0]
-                    lL = node.cwls[lidx][0]
 
                     # the parameter t is the weight - it's 0 if Lo=Me, 1 if Hi=Me, and 0.5 if we're halfway.
                     t = (lC - lS) / (lL - lS)
@@ -84,6 +78,12 @@ class XformBandDepth(XFormType):
                     depth = 1 - (rC / rCStar)
 
                     dq = np.bitwise_or.reduce(img.dq, axis=2)
+
+                    sources = MultiBandSource([
+                        img.sources[sidx],
+                        img.sources[cidx],
+                        img.sources[lidx]
+                    ])
 
                     out = ImageCube(
                         depth,
@@ -123,7 +123,7 @@ class TabBandDepth(pcot.ui.tabs.Tab):
         self.w.bandCombo.blockSignals(False)
 
         with SignalBlocker(self.w.bandCombo):
-            for (_, s) in self.node.cwls:
+            for (_, _, s) in self.node.cwls:
                 self.w.bandCombo.addItem(s)
             if self.node.bandidx >= 0:
                 self.w.bandCombo.setCurrentIndex(self.node.bandidx)

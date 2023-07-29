@@ -12,8 +12,9 @@ from pcot import rois
 from pcot.config import parserhook
 from pcot.datum import Datum
 from pcot.expressions import Parameter
+from pcot.filters import Filter
 from pcot.imagecube import ImageCube
-from pcot.sources import SourceSet, MultiBandSource
+from pcot.sources import SourceSet, MultiBandSource, FilterOnlySource
 from pcot.utils import image
 from pcot.expressions.ops import combineImageWithNumberSources
 from pcot.value import Value, add_sub_unc_list
@@ -283,6 +284,20 @@ def funcMarkSat(args: List[Datum], _):
     return Datum(Datum.IMG, img)
 
 
+def funcSetCWL(args: List[Datum], _):
+    img = args[0].get(Datum.IMG)
+    cwl = args[1].get(Datum.NUMBER).n
+
+    if img is None:
+        return None
+
+    if img.channels != 1:
+        raise XFormException('EXPR', 'setcwl must take a single channel image')
+    img = img.copy()
+    img.sources = MultiBandSource([FilterOnlySource(Filter(float(cwl), 30, 1.0, idx=0))])
+    return Datum(Datum.IMG, img)
+
+
 def statsWrapper(fn, fnu, d: List[Optional[Datum]], *args):
     """similar to funcWrapper, but can take lots of image and number arguments which it aggregates to do stats on.
     The result of fn must be a number. Works by flattening any images and concatenating them with any numbers,
@@ -371,6 +386,10 @@ def registerBuiltinFunctions(p):
                    [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
                    lambda args, optargs: funcWrapper(np.sqrt, args[0]))
+    p.registerFunc("abs", "find absolute value",
+                   [Parameter("val", "input value", (Datum.NUMBER, Datum.IMG))],
+                   [],
+                   lambda args, optargs: funcWrapper(np.abs, args[0]))
 
     p.registerFunc("min",
                    "find the minimum value of the nominal values in a set of images and/or values. "
@@ -486,6 +505,16 @@ def registerBuiltinFunctions(p):
             Parameter("min", "the minimum value below which pixels are ERROR", Datum.NUMBER),
             Parameter("max", "the maximum value above which pixels are SAT", Datum.NUMBER)
         ], [], funcMarkSat
+    )
+
+    p.registerFunc(
+        "setcwl",
+        "Given an 1-band image, 'fake' a filter of a given CWL and assign it. The image itself is unchanged. This is "
+        "used in testing only.",
+        [
+            Parameter("image", "the input image", Datum.IMG),
+            Parameter("cwl", "the fake filter CWL", Datum.NUMBER),
+        ], [], funcSetCWL
     )
 
 

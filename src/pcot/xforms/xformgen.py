@@ -21,7 +21,7 @@ from pcot.utils import SignalBlocker
 from pcot.xform import xformtype, XFormType, XFormException
 
 DEFAULTSIZE = 256
-MODES = ['flat', 'ripple-n', 'ripple-u', 'ripple-un', 'half', 'checkx', 'checky']
+MODES = ['flat', 'ripple-n', 'ripple-u', 'ripple-un', 'half', 'checkx', 'checky', 'rand']
 DEFAULTMODE = 'flat'
 
 logger = logging.getLogger(__name__)
@@ -73,6 +73,7 @@ class XFormGen(XFormType):
     * half: nominal is N on the left, U on the right. Uncertainty is 0.1. (Test value)
     * checkx: nominal is a checquered pattern with each square of size N, offset by U in the x-axis. uncertainty=nominal.
     * checky: nominal is a checquered pattern with each square of size N, offset by U in the y-axis. uncertainty=nominal.
+    * rand: both nom. and unc. are filled with non-negative pseudorandom noise multiplied by N and U respectively
 
     A useful pattern might be something like this:
 
@@ -153,6 +154,11 @@ class XFormGen(XFormType):
                 y, x = np.indices((node.imgheight, node.imgwidth))
                 n = ((np.array((y+chan.u, x))//chan.n).sum(axis=0) % 2).astype(np.float32)
                 u = n
+            elif chan.mode == 'rand':
+                rngN = np.random.default_rng(seed=int(chan.n*10000))
+                rngU = np.random.default_rng(seed=int(chan.u*10000))
+                n = rngN.random((node.imgheight, node.imgwidth), np.float32)
+                u = rngN.random((node.imgheight, node.imgwidth), np.float32)
             else:
                 raise XFormException('INTR', "bad mode in gen")
 
@@ -183,7 +189,6 @@ class XFormGen(XFormType):
         else:
             node.img = None
             node.setOutput(0, Datum.null)
-
 
     def serialise(self, node):
         return {'chans': [x.serialise() for x in node.imgchannels]}
@@ -248,6 +253,8 @@ class TabGen(pcot.ui.tabs.Tab):
         self.w.addButton.clicked.connect(self.addClicked)
         self.w.deleteButton.clicked.connect(self.deleteClicked)
         self.w.tableView.delete.connect(self.deleteClicked)
+
+        self.w.splitter.setSizes([1000, 2000])   # 1:2 ratio between table and canvas
 
         self.model = GenModel(self, node.imgchannels)
         self.w.tableView.setModel(self.model)
