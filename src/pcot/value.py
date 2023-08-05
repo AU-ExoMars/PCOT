@@ -143,16 +143,12 @@ class Value:
     """Wraps a value with uncertainty and data quality. This can be either an array or a scalar, but they
     have to match."""
 
-    def __init__(self, n, u, d=dq.NONE):
+    def __init__(self, n, u=None, d=dq.NONE):
         """Initialise a value - either array of float32 or scalar.
         n = nominal value
         u = uncertainty (SD)
         d = data quality bits (see DQ; these are error bits).
         This has to make sure that n, u and d are all the same dimensionality."""
-
-        self.n = n  # nominal, either float or ndarray
-        self.u = u  # uncertainty, either float or ndarray
-        self.dq = d  # if a result, the DQ bits. May be zero, shouldn't be None.
 
         # python doesn't do common subexpression elimination, apparently..
         usc = np.isscalar(u)
@@ -168,6 +164,11 @@ class Value:
             raise Exception("Value nominal, uncertainty, and DQ bits must be either all scalar or all array")
         elif n.shape != u.shape or n.shape != d.shape:
             raise Exception("Value nominal, uncertainty, and DQ bits must be the same shape")
+
+        self.n = n  # nominal, either float or ndarray
+        self.u = u  # uncertainty, either float or ndarray
+        self.dq = d  # if a result, the DQ bits. May be zero, shouldn't be None.
+
 
     def copy(self):
         return Value(self.n, self.u, self.dq)

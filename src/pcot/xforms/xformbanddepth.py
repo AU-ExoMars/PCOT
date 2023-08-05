@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 from PySide2.QtCore import QSignalBlocker
 
@@ -7,6 +9,7 @@ import pcot.ui.tabs
 from pcot.imagecube import ImageCube
 from pcot.sources import MultiBandSource
 from pcot.utils import SignalBlocker
+from pcot.value import Value
 from pcot.xform import xformtype, XFormType, XFormException
 
 
@@ -40,7 +43,7 @@ class XformBandDepth(XFormType):
         node.cwls = []  # tuple of (cwl, index, description) generated in perform
 
     def perform(self, node):
-        img = node.getInput(0, Datum.IMG)
+        img: Optional[ImageCube] = node.getInput(0, Datum.IMG)
         if img is not None:
             node.cwls = []
             for x in range(0, img.channels):
@@ -60,24 +63,24 @@ class XformBandDepth(XFormType):
                 if node.bandidx == 0 or node.bandidx == len(node.cwls) - 1:
                     raise XFormException('DATA', "cannot find band depth of first or last band")
                 else:
-                    lC, cidx, _ = node.cwls[node.bandidx]   # center wavelength
-                    lS, sidx, _ = node.cwls[node.bandidx-1]  # shorter wavelength
-                    lL, lidx, _ = node.cwls[node.bandidx+1]  # longer wavelength
+                    lC, cidx, _ = node.cwls[node.bandidx]  # center wavelength
+                    lS, sidx, _ = node.cwls[node.bandidx - 1]  # shorter wavelength
+                    lL, lidx, _ = node.cwls[node.bandidx + 1]  # longer wavelength
 
-                    # sidx, bandidx and lidx are the three bands we are working with - get the reflectances
-                    rS = img.img[:, :, sidx]
-                    rC = img.img[:, :, cidx]
-                    rL = img.img[:, :, lidx]
-
-                    # the parameter t is the weight - it's 0 if Lo=Me, 1 if Hi=Me, and 0.5 if we're halfway.
+                    # the parameter t is the interpolation weight - it's 0 if C=S, 1 if C=L, and 0.5 if we're halfway.
                     t = (lC - lS) / (lL - lS)
 
-                    # get weighted mean, the predicted value.
-                    rCStar = (rL * t) + (rS * (1 - t))
-                    # and find the depth!
-                    depth = 1 - (rC / rCStar)
+                    # sidx, cidx and lidx are the three bands we are working with - get the reflectances
+                    # and their uncertainties/DQs
 
-                    dq = np.bitwise_or.reduce(img.dq, axis=2)
+                    rS = Value(img.img[:, :, sidx], img.uncertainty[:, :, sidx], img.dq[:, :, sidx])
+                    rC = Value(img.img[:, :, cidx], img.uncertainty[:, :, cidx], img.dq[:, :, cidx])
+                    rL = Value(img.img[:, :, lidx], img.uncertainty[:, :, lidx], img.dq[:, :, lidx])
+
+                    # get weighted mean, the predicted value.
+                    rCStar: Value = (rL * t) + (rS * (Value(1.0) - t))
+                    # and find the depth!
+                    depth: Value = Value(1.0) - (rC / rCStar)
 
                     sources = MultiBandSource([
                         img.sources[sidx],
@@ -86,12 +89,12 @@ class XformBandDepth(XFormType):
                     ])
 
                     out = ImageCube(
-                        depth,
+                        depth.n,
                         sources=sources,
                         rois=img.rois.copy(),
                         defaultMapping=None,
-                        uncertainty=None,  # TODO (or not).
-                        dq=dq
+                        uncertainty=depth.u,  # TODO (or not).
+                        dq=depth.dq
                     )
                     node.img = out
                     node.setOutput(0, Datum(Datum.IMG, out))
