@@ -78,7 +78,7 @@ class XformBandDepth(XFormType):
                     rL = Value(img.img[:, :, lidx], img.uncertainty[:, :, lidx], img.dq[:, :, lidx])
 
                     # get weighted mean, the predicted value.
-                    rCStar: Value = (rL * t) + (rS * (Value(1.0) - t))
+                    rCStar: Value = (rL * Value(t)) + (rS * Value(1.0 - t))
                     # and find the depth!
                     depth: Value = Value(1.0) - (rC / rCStar)
 

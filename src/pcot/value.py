@@ -1,3 +1,5 @@
+from typing import Any
+
 import numpy as np
 
 from pcot import dq
@@ -17,7 +19,7 @@ def mul_unc(a, ua, b, ub):
     """Multiplication - this is derived from the standard answer
     (thanks, Wolfram!) assuming the values are real"""
     # This is the "standard answer" - you can confirm it's the same when all values are positive
-#    return np.abs(a*b) * np.sqrt((ua/a)**2 + (ub/b)**2)
+    #    return np.abs(a*b) * np.sqrt((ua/a)**2 + (ub/b)**2)
 
     # this is the simplification
     return np.sqrt((a * ub) ** 2 + (b * ua) ** 2)
@@ -29,7 +31,7 @@ def div_unc(a, ua, b, ub):
     #   standard answer - throws exceptions with either a or b is 0.
     # return np.abs(a/b) * np.sqrt((ua/a)**2 + (ub/b)**2)
 
-#   is equivalent to this when all values are positive
+    #   is equivalent to this when all values are positive
     return np.sqrt(((a * ub) ** 2 + (b * ua) ** 2)) / (b ** 2)
 
 
@@ -143,34 +145,40 @@ class Value:
     """Wraps a value with uncertainty and data quality. This can be either an array or a scalar, but they
     have to match."""
 
-    def __init__(self, n, u=None, d=dq.NONE):
+    def __init__(self, n, u: Any = 0.0, d=dq.NONE):
         """Initialise a value - either array of float32 or scalar.
         n = nominal value
         u = uncertainty (SD)
         d = data quality bits (see DQ; these are error bits).
         This has to make sure that n, u and d are all the same dimensionality."""
 
-        # python doesn't do common subexpression elimination, apparently..
-        usc = np.isscalar(u)
-        dsc = np.isscalar(d)
+        n = np.float32(n)       # convert to correct types (will also convert arrays)
+        u = np.float32(u)
+        d = np.uint16(d)
 
         if np.isscalar(n):
-            if not usc or not dsc:
-                raise Exception("Value nominal, uncertainty, and DQ bits must be either all scalar or all array")
-        elif dsc:
-            # data is not scalar, but no reasonable DQ is provided - make one.
-            d = np.full(n.shape, d)
-        elif usc or dsc:
-            raise Exception("Value nominal, uncertainty, and DQ bits must be either all scalar or all array")
-        elif n.shape != u.shape or n.shape != d.shape:
-            raise Exception("Value nominal, uncertainty, and DQ bits must be the same shape")
+            # if N is scalar, U and D must be scalar.
+            if not np.isscalar(u) or not np.isscalar(d):
+                raise ValueError("Value nominal, uncertainty, and DQ bits must be either all scalar or all array")
+        else:
+            # N is an array. If U or DQ are scalar, convert to arrays of the same shape
+            if np.isscalar(u):
+                u = np.full(n.shape, u, dtype=np.float32)
+            if np.isscalar(d):
+                d = np.full(n.shape, d, dtype=np.uint16)
+
+            # check all arrays are same shape
+            if n.shape != u.shape or n.shape != d.shape:
+                raise ValueError("Value nominal, uncertainty, and DQ bits must be the same shape")
 
         self.n = n  # nominal, either float or ndarray
         self.u = u  # uncertainty, either float or ndarray
         self.dq = d  # if a result, the DQ bits. May be zero, shouldn't be None.
 
-
-    def copy(self):
+    def copy(self, deep=True):
+        """Produce a deep copy if "deep" is true (and it's an array), otherwise the copy will be shallow"""
+        if deep and not np.isscalar(self.n):
+            return Value(np.copy(self.n), np.copy(self.u), np.copy(self.dq))
         return Value(self.n, self.u, self.dq)
 
     def serialise(self):

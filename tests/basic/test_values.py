@@ -13,7 +13,6 @@ More complex tests are done at the node level in uncertainty/test_ops.py,
 but if those tests fail and these pass then there is a likely to be a
 problem in the nodes or expression parser."""
 
-
 import math
 
 import numpy as np
@@ -21,6 +20,82 @@ import pytest
 
 from pcot import dq
 from pcot.value import Value
+
+
+def test_expansion_scalar_float():
+    """Test expansion of scalar values and optional arguments"""
+
+    # expand a scalar float
+    a = Value(0.0)
+    assert a.n == 0.0
+    assert a.u == 0.0
+    assert a.dq == dq.NONE
+
+
+def test_expansion_scalar_int():
+    """expand a scalar int, converting to float"""
+    a = Value(0)
+    assert isinstance(a.n, np.float32)
+    assert a.n == 0.0
+    assert a.u == 0.0
+    assert a.dq == dq.NONE
+
+
+def test_expansion_noUorDQ():
+    """expand a nominal array with no uncertainty nor DQ"""
+    arr = np.full((4, 4), 1.0, dtype=np.float32)
+    a = Value(arr)
+    assert a.n.shape == (4, 4)
+    assert a.u.shape == (4, 4)
+    assert a.dq.shape == (4, 4)
+    assert np.allclose(a.n, 1.0)
+    assert np.allclose(a.u, 0.0)
+    assert np.all(a.dq == dq.NONE)
+
+
+def test_expansion_noDQ():
+    """expand a nominal array with a scalar uncertainty"""
+    arr = np.full((4, 4), 1.0, dtype=np.float32)
+    a = Value(arr, 0.2)
+    assert a.n.shape == (4, 4)
+    assert a.u.shape == (4, 4)
+    assert a.dq.shape == (4, 4)
+    assert np.allclose(a.n, 1.0)
+    assert np.allclose(a.u, 0.2)
+    assert np.all(a.dq == dq.NONE)
+
+
+def test_expansion_noU():
+    """expand a nominal array with a scalar DQ"""
+    arr = np.full((4, 4), 1.0, dtype=np.float32)
+    a = Value(arr, d=dq.NONE)
+    assert a.n.shape == (4, 4)
+    assert a.u.shape == (4, 4)
+    assert a.dq.shape == (4, 4)
+    assert np.allclose(a.n, 1.0)
+    assert np.allclose(a.u, 0.0)
+    assert np.all(a.dq == dq.NONE)
+
+
+def test_expansion_scalarUandDQ():
+    """expand a nominal array with a scalar uncertainty and DQ"""
+    arr = np.full((4, 4), 1.0, dtype=np.float32)
+    a = Value(arr, 0.2, dq.UNDEF)
+    assert a.n.shape == (4, 4)
+    assert a.u.shape == (4, 4)
+    assert a.dq.shape == (4, 4)
+    assert np.allclose(a.n, 1.0)
+    assert np.allclose(a.u, 0.2)
+    assert np.all(a.dq == dq.UNDEF)
+
+
+def test_expansion_invalid():
+    """try expanding a scalar N with array U or DQ"""
+    with pytest.raises(ValueError):
+        Value(0.1, np.full((2, 2), 1.0, dtype=np.float32))
+
+    with pytest.raises(ValueError):
+        Value(0.1, d=np.full((2, 2), dq.NONE))
 
 
 def genArray(n, u, d=dq.NONE):
@@ -68,9 +143,9 @@ def test_equality():
     assert Value(0, 0) != genArray(0, 0)
 
 
-
 def test_addition():
     """Test addition - see notes for this module"""
+
     def core(a, b, r):
         assert a(2, 0) + b(3, 0) == r(5, 0)
         assert a(3, 0) + b(3, 0) != r(5, 0)
@@ -85,6 +160,7 @@ def test_addition():
 
 def test_subtraction():
     """Test subtraction - see notes for this module"""
+
     def core(a, b, r):
         assert a(2, 0) - b(3, 0) == r(-1, 0)
         assert a(3, 0) - b(2, 0) == r(1, 0)
@@ -99,6 +175,7 @@ def test_subtraction():
 
 def test_multiplication():
     """Test multiplication - see notes for this module"""
+
     def core(a, b, r):
         assert a(2, 0) * b(3, 0) == r(6, 0)
         assert a(3, 0) * b(2, 0) == r(6, 0)
@@ -115,6 +192,7 @@ def test_multiplication():
 
 def test_division():
     """Test division - see notes for this module"""
+
     def core(a, b, r):
         assert a(6, 0) / b(2, 0) == r(3, 0)
         assert a(2, 0) / b(4, 0) == r(0.5, 0)
@@ -122,7 +200,7 @@ def test_division():
 
         assert a(6, 0) / b(0, 0) != r(0, 0)  # division by zero!
         assert a(6, 0) / b(0, 0) == r(0, 0, dq.DIVZERO)
-        assert a(0, 0) / b(0, 0) == r(0, 0, dq.UNDEF|dq.DIVZERO)
+        assert a(0, 0) / b(0, 0) == r(0, 0, dq.UNDEF | dq.DIVZERO)
 
         assert (a(6, 1) / b(2, 0.1)).approxeq(r(3, 0.522015325445528))
 
@@ -134,6 +212,7 @@ def test_division():
 
 def test_power():
     """Test exponentiation - see notes for this module"""
+
     def core(a, b, r):
         assert a(6, 0) ** b(2, 0) == r(36, 0)
         assert a(2, 0) ** b(1, 0) == r(2, 0)
@@ -170,12 +249,14 @@ def test_power():
 
 
 def test_minmax():
-    """Test min and max - see notes for this module"""
+    """Test min and max - see notes for this module at the top of this file"""
+
     def core(a, b, r):
         assert a(2, 0) | b(3, 0) == r(3, 0)
         assert a(2, 0) & b(3, 0) == r(2, 0)
         assert a(2, 5) | b(3, 6) == r(3, 6)
         assert a(2, 5) & b(3, 6) == r(2, 5)
+
     core(Value, Value, Value)
     core(genArray, genArray, genArray)
     core(Value, genArray, genArray)
@@ -184,6 +265,7 @@ def test_minmax():
 
 def test_propagation():
     """Test DQ propagation - see notes for this module"""
+
     def core(a, b, r):
         assert a(2, 0) | b(3, 0, dq.UNDEF) == r(3, 0, dq.UNDEF)
         assert a(2, 0) & b(3, 0, dq.UNDEF) == r(2, 0)
@@ -192,6 +274,7 @@ def test_propagation():
         assert a(0, 0) ** b(-1, 0, dq.NOUNCERTAINTY) == r(0, 0, dq.UNDEF | dq.NOUNCERTAINTY)
         assert a(2, 0, dq.NOUNCERTAINTY) + b(3, 0) == r(5, 0, dq.NOUNCERTAINTY)
         assert a(2, 0) + b(3, 0, dq.NOUNCERTAINTY) == r(5, 0, dq.NOUNCERTAINTY)
+
     core(Value, Value, Value)
     core(genArray, genArray, genArray)
     core(Value, genArray, genArray)
@@ -200,9 +283,11 @@ def test_propagation():
 
 def test_negate_invert():
     """Test unary operations"""
+
     def core(a):
         assert -a(2, 2) == a(-2, 2)
         assert -a(-2, 1) == a(2, 1)
         assert ~a(0.25, 2) == a(0.75, 2)
+
     core(Value)
     core(genArray)
