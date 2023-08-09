@@ -151,7 +151,7 @@ def addExprFuncHook(x):
     """Call this function with another function. This function is called with a Parser argument, and can add
     new functions, operators and properties. Consider using the @parserhook decorator instead - it does the
     same thing."""
-    print(f"Adding parser hook {x}")
+    logger.info(f"Adding parser hook {x}")
     exprFuncHooks.append(x)
 
 
