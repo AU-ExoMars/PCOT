@@ -1,5 +1,6 @@
 import numpy as np
 
+from pcot import dq
 from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.imagecube import ImageCube
@@ -34,8 +35,10 @@ class XFormOffset(XFormType):
         elif not node.enabled:
             out = img
         else:
-            # make new image the size of the old one
+            # make new image, new unc and new DQ
             newimg = np.zeros(img.img.shape, dtype=np.float32)
+            newunc = np.zeros(img.img.shape, dtype=np.float32)
+            newdq = np.full(img.img.shape, dq.NOUNCERTAINTY | dq.NODATA, dtype=np.uint16)
             xs = -min(node.x, 0)  # offset into source image
             ys = -min(node.y, 0)  # offset into source image
             xd = max(node.x, 0)  # offset into dest
@@ -44,10 +47,11 @@ class XFormOffset(XFormType):
             w = img.w - max(abs(xd), abs(xs))
             h = img.h - max(abs(yd), abs(ys))
 
-            s = img.img[ys:ys + h, xs:xs + w]
-            newimg[yd:yd + h, xd:xd + w] = s
-            # remember to copy ROI            
-            out = ImageCube(newimg, node.mapping, img.sources)
+            newimg[yd:yd + h, xd:xd + w] = img.img[ys:ys + h, xs:xs + w]
+            newunc[yd:yd + h, xd:xd + w] = img.uncertainty[ys:ys + h, xs:xs + w]
+            newdq[yd:yd + h, xd:xd + w] = img.dq[ys:ys + h, xs:xs + w]
+            # remember to copy ROI
+            out = ImageCube(newimg, node.mapping, img.sources, dq=newdq, uncertainty=newunc)
 
         node.img = Datum(Datum.IMG, out)
         node.setOutput(0, node.img)

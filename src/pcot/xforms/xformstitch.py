@@ -6,6 +6,7 @@ from PySide2.QtCore import Qt, QItemSelection, QItemSelectionModel
 import cv2 as cv
 from PySide2.QtGui import QKeyEvent
 
+from pcot import dq
 from pcot.datum import Datum
 from pcot.imagecube import ImageCube
 from pcot.sources import MultiBandSource, nullSource
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 """
 Notes during dev.
 
-Each input image requires 2 parameters - offset and ordering. We need some kind of list on the right showing
+Each input image requires 2 parameters - offset and ordering. There is a list on the right showing
 the input images for reference, so we can see what's coming in and perhaps easily select. With an image selected,
 we need to be able to 
 1) move it by dragging in the image
@@ -62,7 +63,6 @@ class XFormStitch(XFormType):
         # output image
         node.img = None
         node.showImage = True
-        node.transparency = 1.0
 
     def perform(self, node):
         inputs = [node.getInput(i, Datum.IMG) for i in range(NUMINPUTS)]
@@ -90,6 +90,8 @@ class XFormStitch(XFormType):
         # create an image of that size to compose the images into
         chans = activeInputImages[0].channels
         img = np.zeros((maxy - miny, maxx - minx, chans), dtype=np.float32)
+        unc = np.zeros((maxy - miny, maxx - minx, chans), dtype=np.float32)
+        dqs = np.full((maxy - miny, maxx - minx, chans), dq.NODATA | dq.NOUNCERTAINTY, dtype=np.uint16)
 
         # compose the sources - this is a channel-wise union of all the sources
         # in all the images.
@@ -107,12 +109,9 @@ class XFormStitch(XFormType):
                 # paste in
                 srcimg = inputs[i]
                 try:
-                    trans = node.transparency
-                    if drawOrder == 0:
-                        img[y:y + srcimg.h, x:x + srcimg.w] = srcimg.img
-                    else:
-                        under = img[y:y + srcimg.h, x:x + srcimg.w]
-                        img[y:y + srcimg.h, x:x + srcimg.w] = under * (1 - trans) + srcimg.img * trans
+                    img[y:y + srcimg.h, x:x + srcimg.w] = srcimg.img
+                    unc[y:y + srcimg.h, x:x + srcimg.w] = srcimg.uncertainty
+                    dqs[y:y + srcimg.h, x:x + srcimg.w] = srcimg.dq
                 except ValueError as e:
                     logger.error(
                         "stored offset:{},{} min:{},{} xy:{},{}".format(node.offsets[i][0], node.offsets[i][1], minx,
@@ -123,7 +122,7 @@ class XFormStitch(XFormType):
                     raise e
 
         # generate the output
-        node.img = ImageCube(img, node.mapping, sources)
+        node.img = ImageCube(img, node.mapping, sources, uncertainty=unc, dq=dqs)
         node.setOutput(0, Datum(Datum.IMG, node.img))
 
         # now draw the selected inputs
@@ -199,13 +198,8 @@ class TabStitch(Tab):
         self.w.up.pressed.connect(self.upPressed)
         self.w.down.pressed.connect(self.downPressed)
         self.w.table.selectionModel().selectionChanged.connect(self.selChanged)
-        self.w.transparency.valueChanged.connect(self.transChanged)
         self.w.showimage.toggled.connect(self.showImageToggled)
         self.nodeChanged()
-
-    def transChanged(self, v):
-        self.node.transparency = v / self.w.transparency.maximum()
-        self.changed(uiOnly=True)
 
     def showImageToggled(self):
         self.node.showImage = self.w.showimage.isChecked()
@@ -245,7 +239,6 @@ class TabStitch(Tab):
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)
         self.w.showimage.setChecked(self.node.showImage)
-        self.w.transparency.setSliderPosition(round(self.node.transparency * 100))
         if self.node.img is not None:  # premapped rgb
             self.w.canvas.display(self.node.rgbImage, self.node.img, self.node)
         self.w.table.viewport().update()  # force table redraw

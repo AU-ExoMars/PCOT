@@ -4,6 +4,7 @@ import matplotlib
 import numpy as np
 from PySide2 import QtWidgets, QtCore
 from PySide2.QtWidgets import QDialog
+from collections import namedtuple
 
 import pcot
 import pcot.ui as ui
@@ -22,15 +23,15 @@ def getSpectrum(chanImg, chanUnc, chanDQ, mask, ignorePixSD=False):
     if mask is None:
         mask = np.full(chanImg.shape, True)  # no bits masked out
     else:
-        mask = np.copy(mask)    # need a copy or we'll change the mask in the subimage.
+        mask = np.copy(mask)  # need a copy or we'll change the mask in the subimage.
     # we also have to mask out the bad bits. This will give us a mask which is True
     # for the bits we want to hide.
     badmask = (chanDQ & pcot.dq.BAD).astype(bool)
     mask &= ~badmask  # REMOVE those pixels
 
     a = np.ma.masked_array(data=chanImg, mask=~mask)
-    mean = a.mean()     # get the mean of the nominal values
-    std = a.std()       # get the SD of the nominal values
+    mean = a.mean()  # get the mean of the nominal values
+    std = a.std()  # get the SD of the nominal values
 
     if not ignorePixSD:
         # we're going to try to take account of the uncertainties of each pixel:
@@ -39,6 +40,9 @@ def getSpectrum(chanImg, chanUnc, chanDQ, mask, ignorePixSD=False):
         # So we'll add the mean of the variances (stddevs).
         std += np.mean(np.ma.masked_array(data=chanUnc, mask=~mask))
     return mean, std
+
+
+DataPoint = namedtuple('DataPoint', ['chan', 'cwl', 'mean', 'sd', 'label', 'pixcount'])
 
 
 def processData(table, legend, data, pxct, wavelengths, spectrum, chans, chanlabels):
@@ -86,7 +90,7 @@ def processData(table, legend, data, pxct, wavelengths, spectrum, chans, chanlab
 
     # data for each region is [ (chan,wave,mean,sd,chanlabel,pixcount), (chan,wave,mean,sd,chanlabel,pixcount)..]
     # This means pixcount get dupped a lot but it's not a problem
-    data[legend] += list(zip(chans, wavelengths, means, sds, chanlabels, pixcts))
+    data[legend] += [DataPoint(*x) for x in zip(chans, wavelengths, means, sds, chanlabels, pixcts)]
 
     # add to table
     table.newRow(legend)
@@ -223,7 +227,7 @@ class XFormSpectrum(XFormType):
 
         # now, for each list in the dict, build a new dict of the lists sorted
         # by wavelength
-        node.data = {legend: sorted(lst, key=lambda x: x[1]) for legend, lst in data.items()}
+        node.data = {legend: sorted(lst, key=lambda x: x.cwl) for legend, lst in data.items()}
         node.colsByLegend = cols  # we use this if we're using the ROI colours
         fixSortList(node)
 
@@ -336,11 +340,22 @@ class TabSpectrum(ui.tabs.Tab):
 
         stackpos = 0
         for legend in self.node.sortlist:
-            x = self.node.data[legend]
+            unfiltered = self.node.data[legend]
+
+            # filter out any "masked" means - those are from regions which are entirely DQ BAD in a channel.
+            x = [a for a in unfiltered if a.mean is not np.ma.masked]
+
+            if len(x) == 0:
+                ui.error(f"No points have good data for point {legend}")
+                continue
+            if len(x) != len(unfiltered):
+                ui.error(f"Some points have bad data for point {legend}")
+
             try:
                 [_, wavelengths, means, sds, _, pixcounts] = list(zip(*x))  # "unzip" idiom
             except ValueError:
                 raise XFormException("DATA", "cannot get spectrum - problem with ROIs?")
+
             if self.node.colourmode == COLOUR_FROMROIS:
                 col = self.node.colsByLegend[legend]
             else:

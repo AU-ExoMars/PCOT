@@ -490,7 +490,6 @@ class ROICircle(ROI):
         self.isSet = (x >= 0)
 
     def annotate(self, p: QPainter, img):
-        """Simpler version of annotate for rects; doesn't draw the mask"""
         if (bb := self.bb()) is not None:
             self.annotateBB(p)
             self.annotateText(p)

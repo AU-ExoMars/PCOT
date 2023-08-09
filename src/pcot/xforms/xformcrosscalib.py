@@ -6,6 +6,7 @@ from PySide2.QtCore import Qt
 from PySide2.QtGui import QKeyEvent, QPainter, QPen
 from PySide2.QtWidgets import QMessageBox
 
+from pcot import ui
 from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.imagecube import ImageCube
@@ -40,12 +41,34 @@ def findInList(lst, x, y):
     return pt
 
 
+class CrossCalibPointAnnotation(Annotation):
+    def __init__(self, x, y, r, col):
+        self.x = x
+        self.y = y
+        self.r = r
+        self.col = col
+
+    def annotate(self, p: QPainter, img):
+        p.setBrush(Qt.NoBrush)
+        pen = QPen(Qt.yellow)
+        pen.setWidth(0)
+        p.setPen(pen)
+
+        p.drawEllipse(self.x - self.r, self.y - self.r, self.r*2, self.r*2)
+
+
 @xformtype
 class XFormCrossCalib(XFormType):
     """
     "Cross-calibrate" two images: given points S in a source image and corresponding points D in a
     destination image, find a vector of factors v for the bands such that S=vD, and transform S accordingly.
     Essentially, and crudely speaking, make the colours in S match those in D by sampling the same points in each.
+    Bad pixels in the parent image will be ignored for getting the colours, and the new image will have the
+    DQ bits from S.
+
+    Uncertainty is not propagated through this node.
+
+    DQ is propagated from the source image.
     """
 
     def __init__(self):
@@ -53,7 +76,7 @@ class XFormCrossCalib(XFormType):
         self.addInputConnector("source", Datum.IMG)
         self.addInputConnector("dest", Datum.IMG)
         self.addOutputConnector("out", Datum.IMG)
-        self.autoserialise = ('showSrc', 'showDest', 'src', 'dest')
+        self.autoserialise = ('showSrc', 'showDest', 'src', 'dest', ('r', 10))
 
     def init(self, node):
         node.img = None
@@ -86,7 +109,7 @@ class XFormCrossCalib(XFormType):
                 # actually do the work.
                 outimg = self.apply(node, sourceImg, destImg)
                 if outimg is not None:
-                    node.img = ImageCube(outimg, sourceImg.mapping, sourceImg.sources)
+                    node.img = ImageCube(outimg, sourceImg.mapping, sourceImg.sources, dq=sourceImg.dq)
 
             # which image are we viewing
             if node.imagemode == IMAGEMODE_DEST:
@@ -104,11 +127,11 @@ class XFormCrossCalib(XFormType):
                 if node.showSrc:
                     issel = node.selIdx if not node.selIsDest else None
                     for i, (x, y) in enumerate(node.src):
-                        node.canvimg.annotations.append(IndexedPointAnnotation(i, x, y, issel, Qt.yellow))
+                        node.canvimg.annotations.append(IndexedPointAnnotation(i, x, y, node.r, issel, Qt.yellow))
                 if node.showDest:
                     issel = node.selIdx if node.selIsDest else None
                     for i, (x, y) in enumerate(node.dest):
-                        node.canvimg.annotations.append(IndexedPointAnnotation(i, x, y, issel, Qt.cyan))
+                        node.canvimg.annotations.append(IndexedPointAnnotation(i, x, y, node.r, issel, Qt.cyan))
             else:
                 node.canvimg = None
 
@@ -167,11 +190,21 @@ class XFormCrossCalib(XFormType):
 
         factors = []
         for (sx, sy), (dx, dy) in zip(n.src, n.dest):
-            s = srcImg.subimage(roi=ROICircle(sx, sy, 100))
-            d = destImg.subimage(roi=ROICircle(dx, dy, 100))
-            # each of these will be an array of means, one for each channel
-            smeans = s.masked().mean(axis=(0, 1))
-            dmeans = d.masked().mean(axis=(0, 1))
+            s = srcImg.subimage(roi=ROICircle(sx, sy, n.r))
+            d = destImg.subimage(roi=ROICircle(dx, dy, n.r))
+
+            # each of these will be an array of means, one for each channel, ignoring bad pixels.
+
+            ss = s.masked(True)
+            smeans = s.masked(True).mean(axis=(0, 1))
+            dmeans = d.masked(True).mean(axis=(0, 1))
+
+            if np.ma.any(smeans.mask):   # if any member of the mask is True (i.e. masked)
+                raise XFormException('DATA', "Some source channels are completely masked by bad values - cannot calculate a mean")
+            if np.ma.any(dmeans.mask):
+                raise XFormException('DATA', "Some dest channels are completely masked by bad values - cannot calculate a mean")
+
+            ui.log(str(smeans))
 
             # we add to the factors list the ratios of the means, band-wise, for each point. So
             # if the mean for band 0 in the source is s0 and the mean for band 0 in the dest is d0,
