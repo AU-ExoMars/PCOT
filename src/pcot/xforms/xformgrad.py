@@ -340,8 +340,8 @@ class XformGradient(XFormType):
         if not node.enabled:
             return
 
-        node.minval = 0
-        node.maxval = 1
+        node.minval = 0.0
+        node.maxval = 1.0
         if mono is None and rgb is None:
             node.img = None
         elif mono is None:

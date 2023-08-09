@@ -36,6 +36,9 @@ class XformStripROI(XFormType):
             # all is well - make a copy of the ImageCube we got, but
             # set its list of regions to empty.
             out = out.copy()
+            # We have to tell the image to use the node's mapping, or the canvas
+            # will not respond to mapping changes
+            out.mapping = node.mapping
             out.rois = []
         # build a new Datum to hold the output and store it in "out"
         # so the tab can read it

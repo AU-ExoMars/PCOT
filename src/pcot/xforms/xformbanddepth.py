@@ -7,7 +7,7 @@ from pcot.datum import Datum
 import pcot.operations as operations
 import pcot.ui.tabs
 from pcot.imagecube import ImageCube
-from pcot.sources import MultiBandSource
+from pcot.sources import MultiBandSource, SourceSet
 from pcot.utils import SignalBlocker
 from pcot.value import Value
 from pcot.xform import xformtype, XFormType, XFormException
@@ -82,19 +82,19 @@ class XformBandDepth(XFormType):
                     # and find the depth!
                     depth: Value = Value(1.0) - (rC / rCStar)
 
-                    sources = MultiBandSource([
+                    sources = MultiBandSource([SourceSet([
                         img.sources[sidx],
                         img.sources[cidx],
                         img.sources[lidx]
-                    ])
+                    ])])
 
                     out = ImageCube(
                         depth.n,
+                        uncertainty=depth.u,
+                        dq=depth.dq,
                         sources=sources,
                         rois=img.rois.copy(),
-                        defaultMapping=None,
-                        uncertainty=depth.u,  # TODO (or not).
-                        dq=depth.dq
+                        defaultMapping=None
                     )
                     node.img = out
                     node.setOutput(0, Datum(Datum.IMG, out))

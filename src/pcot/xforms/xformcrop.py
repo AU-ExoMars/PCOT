@@ -25,7 +25,11 @@ class XformCropROI(XFormType):
         if img is not None:
             # create a new image, set it to use this node's mapping
             img = img.cropROI()
+            # tell it to use the node's mapping so that the canvas
+            # will work correctly
             img.mapping = node.mapping
+            # and strip the ROIs
+            img.rois = []
 
         node.out = Datum(Datum.IMG, img)
         node.setOutput(0, node.out)
