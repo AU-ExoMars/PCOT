@@ -42,7 +42,7 @@ class XformCirc(XFormROIType):
         node.captiontop = False
         node.fontsize = 10
         node.drawbg = True
-        node.thickness = 2
+        node.thickness = 0
         node.colour = (1, 1, 0)
         node.roi = ROICircle()
         node.roi.drawEdge = True

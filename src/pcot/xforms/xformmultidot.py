@@ -34,7 +34,7 @@ class XFormMultiDot(XFormType):
         self.autoserialise = (
             ('dotSize', 10),
             ('fontsize', 10),
-            ('thickness', 2),
+            ('thickness', 0),
             ('colour', (1, 1, 0)),
             ('drawbg', True)
         )
@@ -46,7 +46,7 @@ class XFormMultiDot(XFormType):
     def init(self, node):
         node.img = None
         node.fontsize = 10
-        node.thickness = 2
+        node.thickness = 0
         node.colour = (1, 1, 0)
         node.drawbg = True
         node.prefix = ''  # the name we're going to set by default, it will be followed by an int

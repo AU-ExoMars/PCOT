@@ -33,7 +33,7 @@ class XformPoly(XFormROIType):
         node.caption = ''
         node.captiontop = False
         node.fontsize = 10
-        node.thickness = 2
+        node.thickness = 0
         node.drawbg = True
         node.colour = (1, 1, 0)
         node.drawMode = 0

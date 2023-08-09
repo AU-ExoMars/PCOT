@@ -614,7 +614,7 @@ class ROIPainted(ROI):
 
         # create full size map
         imgw, imgh = self.containingImageDimensions
-        fullsize = np.zeros((imgw, imgh), dtype=np.uint8)
+        fullsize = np.zeros((imgh, imgw), dtype=np.uint8)
         # splice in existing data, if there is any!
         if self.bbrect is not None:
             bbx, bby, bbx2, bby2 = self.bbrect.corners()

@@ -33,7 +33,7 @@ class XFormPainted(XFormROIType):
         node.captiontop = False
         node.fontsize = 10
         node.drawbg = True
-        node.thickness = 2
+        node.thickness = 0
         node.colour = (1, 1, 0)
         node.brushSize = 20  # scale of 0-99 i.e. a slider value. Converted to pixel radius in getRadiusFromSlider()
         node.previewRadius = None  # previewing needs the image, but that's awkward - so we stash this data in perform()
