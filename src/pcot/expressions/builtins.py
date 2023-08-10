@@ -82,7 +82,9 @@ def funcMerge(args: List[Datum], optargs):
 # TODOUNCERTAINTY TEST
 def funcGrey(args, optargs):
     """Greyscale conversion. If the optional second argument is nonzero, and the image has 3 channels, we'll use CV's
-    conversion equation rather than just the mean. However, this loses uncertainty information. Otherwise uncertainty
+    conversion equation rather than just the mean. **However, this loses uncertainty information.**
+
+    Otherwise uncertainty
     is calculated by adding together the channels in quadrature and then dividing the number of channels."""
 
     img = args[0].get(Datum.IMG)
