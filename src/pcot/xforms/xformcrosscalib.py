@@ -93,6 +93,9 @@ class XFormCrossCalib(XFormType):
         # is the selected point (if any) in the dest list (or the source list)?
         node.selIsDest = False
 
+        # default size of each 'point'
+        node.r = 10
+
     def uichange(self, node):
         node.timesPerformed += 1
         self.perform(node, False)

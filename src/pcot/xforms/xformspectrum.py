@@ -130,7 +130,11 @@ class XFormSpectrum(XFormType):
     """
     Show the mean intensities for each frequency band in each input. Each input has a separate line in
     the resulting plot, labelled with either a generated label or the annotation of the last ROI on that
-    input. If two inputs have the same ROI label, they are merged into a single line."""
+    input. If two inputs have the same ROI label, they are merged into a single line.
+
+    If a point has data with BAD DQ bits in a band, those pixels are ignored in that band. If there
+    are no good points, the point is not plotted for that band.
+    """
 
     def __init__(self):
         super().__init__("spectrum", "data", "0.0.0")

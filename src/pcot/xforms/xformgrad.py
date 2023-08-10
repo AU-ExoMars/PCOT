@@ -287,21 +287,22 @@ class XformGradient(XFormType):
 
     The gradient widget has the following behaviour:
 
-        * click and drag to move a colour point
-        * doubleclick to delete an existing colour point
-        * doubleclick to add a new colour point
-        * right click to edit an existing colour point
+    * click and drag to move a colour point
+    * doubleclick to delete an existing colour point
+    * doubleclick to add a new colour point
+    * right click to edit an existing colour point
 
     Node parameters:
-        * gradient: utils.Gradient object containing gradient info
-        * colour: (r,g,b) [0:1] colour of text and border for in-image legend
-        * legendrect: (x,y,w,h) rectangle for in-image legend
-        * vertical: true if vertical legend
-        * fontscale: size of font
-        * thickness: border thickness
-        * legendPos: string describing position:
-            'In image', 'Top margin', 'Bottom margin', 'Left margin', 'Right margin', 'None'
-            These are also defined as constants LEFT_MARGIN... IN_IMAGE (and None)
+
+    * gradient: utils.Gradient object containing gradient info
+    * colour: (r,g,b) [0:1] colour of text and border for in-image legend
+    * legendrect: (x,y,w,h) rectangle for in-image legend
+    * vertical: true if vertical legend
+    * fontscale: size of font
+    * thickness: border thickness
+    * legendPos: string describing position:
+        * 'In image', 'Top margin', 'Bottom margin', 'Left margin', 'Right margin', 'None'
+        These are also defined as constants LEFT_MARGIN... IN_IMAGE (and None)
     """
 
     def __init__(self):
