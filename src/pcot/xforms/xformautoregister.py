@@ -20,7 +20,8 @@ class XFormAutoRegister(XFormType):
     Use the TV-L1 solver to find an optical flow field for transforming one image into another. Not generally advised, and very slow.
     The node will output a version of the 'moving' image, distorted to map onto the 'fixed' image.
 
-    Propagates uncertainty of the moving image, and DQs too by nearest neighbour."""
+    Propagates uncertainty of the moving image by distorting that of the source image, and propagates
+    DQs using nearest neighbour."""
 
     def __init__(self):
         super().__init__("tvl1 autoreg", "processing", "0.0.0")

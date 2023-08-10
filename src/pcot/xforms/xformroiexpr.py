@@ -40,11 +40,11 @@ class XFormROIExpr(XFormType):
 
     Examples:
 
-        * **a+b** : the union of ROIs 'a' and 'b' from the node's ROI list
-        * **a*b** : the intersection of ROIs 'a' and 'b'
-        * **a-b** : ROI 'a' with ROI 'b' removed
-        * **-a** :   the negative of ROI 'a' (i.e. the entire image area as an ROI but with a hole in it)
-        * **roi(img) - p**  : any ROIs on the image already, but with the ROI on input 'p' cut out
+    * **a+b** : the union of ROIs 'a' and 'b' from the node's ROI list
+    * **a*b** : the intersection of ROIs 'a' and 'b'
+    * **a-b** : ROI 'a' with ROI 'b' removed
+    * **-a** :   the negative of ROI 'a' (i.e. the entire image area as an ROI but with a hole in it)
+    * **roi(img) - p**  : any ROIs on the image already, but with the ROI on input 'p' cut out
 
     """
     def __init__(self):

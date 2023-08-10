@@ -9,7 +9,8 @@ from pcot.xforms.tabdata import TabData
 
 @xformtype
 class XformSink(XFormType):
-    """Simply view an image."""
+    """This provides a simple way to view any kind of data - images will be shown on a canvas, other data will
+    be converted to text."""
 
     def __init__(self):
         # call superconstructor with the type name and version code

@@ -59,7 +59,8 @@ class ChannelData:
 
 @xformtype
 class XFormGen(XFormType):
-    """Generate an image with given channel values. Can also generate patterns. Each band is given a nominal value
+    """
+    Generate an image with given channel values. Can also generate patterns. Each band is given a nominal value
     and uncertainty, along with a centre frequency and a mode (for patterns).
 
     Modes are:
@@ -77,20 +78,18 @@ class XFormGen(XFormType):
 
     A useful pattern might be something like this:
 
-        *   Chan 0:         checkx, N=8, U=0
-        *   Chan 1:         checkx, N=8, U=4
-        *   Chan 2:         checky, N=8, U=4
+    *   Chan 0:         checkx, N=8, U=0
+    *   Chan 1:         checkx, N=8, U=4
+    *   Chan 2:         checky, N=8, U=4
 
     To get variation in uncertainty, create a similar pattern but with a longer period using another gen node:
 
-        *   Chan 0:         checkx, N=16, U=0
-        *   Chan 1:         checkx, N=16, U=8
-        *   Chan 2:         checky, N=16, U=8
+    *   Chan 0:         checkx, N=16, U=0
+    *   Chan 1:         checkx, N=16, U=8
+    *   Chan 2:         checky, N=16, U=8
 
     and merge the two together, using the first gen to create nominal values and the second to create uncertainty values,
     with an expr node using the expression **v(a,b)**.
-
-
     """
 
     def __init__(self):
