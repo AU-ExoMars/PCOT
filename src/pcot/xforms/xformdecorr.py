@@ -12,7 +12,13 @@ from functools import reduce
 
 @xformtype
 class XformDecorr(XFormType):
-    """Perform a decorrelation stretch on an RGB image"""
+    """
+
+    Perform a decorrelation stretch on an RGB image
+
+    **Ignores DQ and uncertainty**
+
+    """
 
     def __init__(self):
         super().__init__("decorr stretch", "processing", "0.0.0")

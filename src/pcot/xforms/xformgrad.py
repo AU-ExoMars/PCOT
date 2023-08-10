@@ -285,6 +285,9 @@ class XformGradient(XFormType):
     image AND there is a valid ROI in the mono image, the image will be inset into the RGB of the insetinto image.
     NOTE: if you change the "insetinto" image's RGB mapping you may need to "run all" to see the the change reflected.
 
+    **Ignores DQ and uncertainty**
+
+
     The gradient widget has the following behaviour:
 
     * click and drag to move a colour point

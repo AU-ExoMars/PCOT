@@ -9,7 +9,11 @@ from pcot.xform import xformtype, XFormType
 class XformCurve(XFormType):
     """
     Maps the image channel intensities to a logistic sigmoid curve, y=1/(1+e^-(ax+b)), where a is "mul" and b is "add".
-    Honours regions of interest."""
+    Honours regions of interest.
+
+    **Ignores DQ and uncertainty**
+
+    """
 
     def __init__(self):
         super().__init__("curve", "processing", "0.0.0")
