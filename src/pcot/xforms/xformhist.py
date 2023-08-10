@@ -10,14 +10,21 @@ from matplotlib import cm
 
 
 def gethistogram(chan, weights, bincount):
-    return np.histogram(chan, bincount, range=(0, 1), weights=weights)
+    r = np.histogram(chan, bincount, range=(0, 1), weights=weights)
+    return r    # split out for debugging
 
 
 @xformtype
 class XFormHistogram(XFormType):
     """
     Produce a histogram of intensities for each channel in the data -
-    will be very messy if used on a multispectral image."""
+    will be very messy if used on a multispectral image.
+
+    Will only be performed on ROIs if there are active ROIs. BAD pixels
+    in bands will be discounted.
+
+    **Uncertainty is ignored.**
+    """
 
     def __init__(self):
         super().__init__("histogram", "data", "0.0.0")
@@ -37,20 +44,20 @@ class XFormHistogram(XFormType):
         img = node.getInput(0, Datum.IMG)
         if img is not None:
             subimg = img.subimage()
-            mask = ~subimg.mask
-            weights = subimg.mask.astype(np.ubyte)
-            # OK, brace yourself..
-
+            # we get a mask - this has a layer for each channel. Each True value will be considered a weight of 1,
+            # each False is a weight of 0. That means that areas outside the ROI and BAD pixels in channels will
+            # not be counted.
+            weights = subimg.fullmask(True).astype(float)  # ignore BAD pixels and convert to 0 or 1
             # generate a list of labels, one for each channel
             labels = [s.brief(node.graph.doc.settings.captionType) for s in img.sources.sourceSets]
-
-            # generate a (weights,bins) tuple for each channel
-            hists = [gethistogram(chan, weights, node.bincount) for chan in image.imgsplit(subimg.img)]
+            # generate a (data,bins) tuple for each channel taking account of the weight for that channel.
+            hists = [gethistogram(chan, weights[:, :, i], node.bincount) for i, chan in
+                     enumerate(image.imgsplit(subimg.img))]
             # they must be the same size
             assert (len(labels) == len(hists))
-            # unzips the (weights,bins) tuple list into two lists of weights and bins
+            # unzips the (data,bins) tuple list into two lists of data and bins
             unzipped = list(zip(*hists))
-            # zips the labels, weights and bins together into a list of (label,weights,bins) for each channel!
+            # zips the labels, data and bins together into a list of (label,data,bins) for each channel!
             node.hists = list(zip(labels, *unzipped))
 
 

@@ -95,7 +95,11 @@ def createPatchROI(n, x, y, radius):
 
 @xformtype
 class XformPCT(XFormType):
-    """Locates the PCT and generates calibration coefficients"""
+    """Locates the PCT and generates calibration coefficients
+
+    **Very incomplete at the moment**
+
+    """
 
     def __init__(self):
         super().__init__("pct", "calibration", "0.0.0")
