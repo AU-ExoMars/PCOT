@@ -31,14 +31,18 @@ def getSpectrum(chanImg, chanUnc, chanDQ, mask, ignorePixSD=False):
 
     a = np.ma.masked_array(data=chanImg, mask=~mask)
     mean = a.mean()  # get the mean of the nominal values
-    std = a.std()  # get the SD of the nominal values
 
     if not ignorePixSD:
         # we're going to try to take account of the uncertainties of each pixel:
         # "Thus the variance of the pooled set is the mean of the variances plus the variance of the means."
         # by https://arxiv.org/ftp/arxiv/papers/1007/1007.1012.pdf
-        # So we'll add the mean of the variances (stddevs).
-        std += np.mean(np.ma.masked_array(data=chanUnc, mask=~mask))
+        # So we'll calculate the variance of the means added to the mean of the variances.
+        # And then we'll need to root that variance to get back to SD.
+
+        std = np.sqrt(a.var() + np.mean(np.ma.masked_array(data=chanUnc, mask=~mask)**2))
+    else:
+        std = a.std()  # otherwise get the SD of the nominal values
+
     return mean, std
 
 
