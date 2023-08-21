@@ -8,11 +8,13 @@ from pcot.imagecube import ChannelMapping
 from pcot.xform import XFormType, xformtype, XFormException, XForm
 
 
-def getvar(v):
-    """check that a variable is not ANY (unwired)"""
-    if v.tp == Datum.ANY:
+def getvar(d):
+    """check that a variable is not ANY (unwired). Also, if it's an image, make a shallow copy (see Issue #56, #65)"""
+    if d.tp == Datum.ANY:
         raise XFormException("DATA", "variable's input is not connected")
-    return v
+    elif d.tp == Datum.IMG:
+        d = Datum(Datum.IMG, d.val.shallowCopy())
+    return d
 
 @xformtype
 class XFormExpr(XFormType):

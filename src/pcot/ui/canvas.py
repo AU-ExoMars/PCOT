@@ -834,7 +834,6 @@ class Canvas(QtWidgets.QWidget):
             row['source'] = sourcecb
 
             datacb = QtWidgets.QComboBox()
-            print("Creating new DQ widget")
             for name, val in CanvasDQSpec.getDataItems():
                 # note - these are integers, although they might be uint16 at source. When we do
                 # findData later we look for them as ints.
@@ -1009,7 +1008,6 @@ class Canvas(QtWidgets.QWidget):
 
             # as does the colour field (from 'text' this time)
             d.col = w['col'].currentText()
-            print(i, str(d))
 
             # the sliders etc.
             d.trans = float(w['trans'].value()) / 99.0
@@ -1230,7 +1228,7 @@ class Canvas(QtWidgets.QWidget):
         # updatetabs -> onNodeChanged -> display -> redisplay -> updatetabs...
         # This is the simplest way to avoid it.
 
-        print(f"REDISPLAY of {self.previmg}")
+        print(f"REDISPLAY of {self.previmg} with mapping {self.mapping}")
         if not self.recursing:
             self.recursing = True
             n = self.nodeToUIChange

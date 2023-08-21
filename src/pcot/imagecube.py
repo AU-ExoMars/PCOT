@@ -174,7 +174,6 @@ class SubImageCubeROI:
             roi = roi.clipToImage(img)
             self.bb = roi.bb()
             self.mask = roi.mask()
-            print(self.mask.sum())
 
         x, y, w, h = self.bb  # this works even though self.bb is Rect
         self.img = img.img[y:y + h, x:x + w]
@@ -380,6 +379,7 @@ class ImageCube(SourcesObtainable):
         # Has to be done after the sources are set.
         if rgbMapping is None:
             rgbMapping = ChannelMapping().ensureValid(self)
+
         self.setMapping(rgbMapping)
 
         # bits we are going to set on every pixel's DQ data
@@ -410,7 +410,6 @@ class ImageCube(SourcesObtainable):
 
     def setMapping(self, mapping: ChannelMapping):
         """Set the RGB mapping for this image, and create default channel mappings if necessary."""
-        #        print("{} changing mapping to {}".format(self, self.mapping))
         self.mapping = mapping
         if mapping is not None:
             mapping.ensureValid(self)
