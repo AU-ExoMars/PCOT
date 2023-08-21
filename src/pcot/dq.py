@@ -31,18 +31,20 @@ def reg(name, bit, char, desc):
 
 def names(bits, shownone=False):
     """given a DQ bit field, return the names of the set flags"""
+    if shownone and bits == 0:
+        return "none"
     out = []
     for i in range(0, NUMBITS):
         b = 1 << i
         if (b & bits) != 0:
             out.append(defs[b].name if b in defs else f"??{b}??")
-    if shownone and len(out) == 0:
-        return "none"
     return "|".join(out)
 
 
-def chars(bits):
+def chars(bits, shownone=False):
     """given a DQ bit field, return the character string for those bits (i.e. very terse description)"""
+    if shownone and bits == 0:
+        return "none"
     out = ""
     for i in range(0, NUMBITS):
         b = 1 << i

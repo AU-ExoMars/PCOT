@@ -14,7 +14,7 @@ import pcot
 from pcot import ui, dq
 from pcot.datum import Datum
 from pcot.sources import nullSourceSet
-from pcot.ui.tablemodel import TableModel, ComboBoxDelegate, DQDelegate
+from pcot.ui.tablemodel import TableModel, ComboBoxDelegate, DQDelegate, DQDialog
 from pcot.utils.annotations import IndexedPointAnnotation
 from pcot.value import Value
 from pcot.xform import XFormType, xformtype, XFormException
@@ -347,24 +347,24 @@ class TabScalarTest(pcot.ui.tabs.Tab):
 
         self.w.nEdit.setValidator(QDoubleValidator(-math.inf, math.inf, -1, w))
         self.w.uEdit.setValidator(QDoubleValidator(0.0, 1000.0, -1, w))
-        self.w.dqEdit.setValidator(QIntValidator(0, 65535, w))
 
         self.w.nEdit.textChanged.connect(self.nEditChanged)
         self.w.uEdit.textChanged.connect(self.uEditChanged)
-        self.w.dqEdit.textChanged.connect(self.dqEditChanged)
+        self.w.dqEditButton.clicked.connect(self.dqButtonClicked)
 
         self.dontSetText = False
+        self.dialog = None
         self.nodeChanged()
 
     def onNodeChanged(self):
         self.w.nCombo.setCurrentText(self.node.nTest)
         self.w.uCombo.setCurrentText(self.node.uTest)
         self.w.dqCombo.setCurrentText(self.node.dqTest)
+        self.w.dqEditButton.setText(dq.chars(self.node.dq, shownone=True))
 
         if not self.dontSetText:
             self.w.nEdit.setText(str(self.node.n))
             self.w.uEdit.setText(str(self.node.u))
-            self.w.dqEdit.setText(str(self.node.dq))
 
     def nComboChanged(self, t):
         self.mark()
@@ -396,6 +396,16 @@ class TabScalarTest(pcot.ui.tabs.Tab):
         self.dontSetText = True
         self.changed()
         self.dontSetText = False
+
+    def dqButtonClicked(self):
+        def done():
+            self.mark()
+            self.node.dq = self.dialog.get()
+            self.changed()
+
+        self.dialog = DQDialog(self.node.dq, self)
+        self.dialog.accepted.connect(done)
+        self.dialog.open()
 
     def dqEditChanged(self, t):
         v = 0 if t == '' else int(t)
