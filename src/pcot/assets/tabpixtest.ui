@@ -119,7 +119,7 @@
        <item>
         <widget class="QLabel" name="label_3">
          <property name="text">
-          <string>Double click to edit a cell. For moving, deleting, duplicating columns select a column by clicking on its header.</string>
+          <string>Double click to edit a cell. For moving, deleting, duplicating columns select a column by clicking on its header. Move a point by shift-click on the canvas with a column selected.</string>
          </property>
          <property name="wordWrap">
           <bool>true</bool>

@@ -5,7 +5,9 @@ import PySide2
 from PySide2 import QtCore
 from PySide2.QtCore import QAbstractTableModel, Signal, QModelIndex, Qt
 from PySide2.QtGui import QKeyEvent, QBrush, QColor
-from PySide2.QtWidgets import QTableView, QStyledItemDelegate, QComboBox
+from PySide2.QtWidgets import QTableView, QStyledItemDelegate, QComboBox, QDialog, QGridLayout, QPushButton
+
+from pcot.ui.dqwidget import DQWidget
 
 
 class ComboBoxDelegate(QStyledItemDelegate):
@@ -13,8 +15,8 @@ class ComboBoxDelegate(QStyledItemDelegate):
        being edited. Could be used for anything, actually.
     """
 
-    def __init__(self, model, itemlist=None):
-        super().__init__(model)
+    def __init__(self, parent, model, itemlist=None):
+        super().__init__(parent)
         self.model = model
         self.itemlist = itemlist
 
@@ -41,6 +43,56 @@ class ComboBoxDelegate(QStyledItemDelegate):
         """Set the table's model's data when finished editing."""
         value = editor.currentText()
         model.setData(index, value, QtCore.Qt.EditRole)
+
+
+class DQDialog(QDialog):
+    """Dialog for DQ delegate"""
+
+    def __init__(self, initial_bits, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Select DQ")
+        layout = QGridLayout()
+        self.setLayout(layout)
+
+        self.dqWidget = DQWidget(self, bits=initial_bits)
+        layout.addWidget(self.dqWidget, 0, 0, 1, 2)
+
+        button = QPushButton("OK")
+        button.clicked.connect(self.clicked)
+        layout.addWidget(button, 1, 0)
+        button = QPushButton("Cancel")
+        button.clicked.connect(lambda: self.reject())
+        layout.addWidget(button, 1, 1)
+        self.bits = initial_bits
+
+    def get(self):
+        return self.bits
+
+    def clicked(self):
+        self.bits = self.dqWidget.bits
+        self.accept()
+
+
+class DQDelegate(QStyledItemDelegate):
+    """Delegate for editing DQ bits - pops up an editing dialog"""
+
+    def __init__(self, parent, model):
+        super().__init__(parent)
+        self.model = model
+
+    def createEditor(self, parent, option, index):
+        i = index.column()
+        dialog = DQDialog(self.model.d[i].dq, parent)
+        dialog.open()
+        return dialog
+
+    def setModelData(self, editor, model, index):
+        if editor is None or editor.result() == QDialog.Rejected:
+            print("Rejected")
+        else:
+            i = index.column()
+            model.d[i].dq = editor.get()
+            model.changed.emit()
 
 
 class TableView(QTableView):

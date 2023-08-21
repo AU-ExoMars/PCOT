@@ -1,7 +1,7 @@
 from PySide2.QtGui import QTextCursor
 from PySide2.QtWidgets import QPlainTextEdit, QTextEdit
 
-from pcot import ui
+from pcot import ui, dq
 from pcot.ui.help import markdownWrapper
 from pcot.xform import allTypes
 
@@ -15,6 +15,7 @@ def handleMenuEvent(self, ev):
 
     lfact = menu.addAction("List all functions")
     lpact = menu.addAction("List all properties")
+    dqact = menu.addAction("List DQ bits")
 
     fhact = "dummy"
     if len(funcname) > 0:
@@ -26,20 +27,25 @@ def handleMenuEvent(self, ev):
     parser = allTypes['expr'].parser  # the eval node type owns the parser, which knows about funcs.
 
     a = menu.exec_(ev.globalPos())
+    txt = None
     if a == fhact:
         txt = "<h1>Help on {}</h1>".format(funcname)
         txt += markdownWrapper(parser.helpOnWord(funcname))
-        ui.log(txt, toStdout=False)
     elif a == lfact:
         txt = "<h1>List of all functions in eval node</h1>"
         txt += markdownWrapper(parser.listFuncs())
-        ui.log(txt, toStdout=False)
     elif a == lpact:
         txt = "<h1>List of all 'x.y' properties in eval node</h1>"
         txt += markdownWrapper(parser.listProps())
-        ui.log(txt, toStdout=False)
+    elif a == dqact:
+        txt = "<h1>List of Data Quality (DQ) bits</h1>"
+        txt += markdownWrapper(dq.listBits())
     else:
         menu.exec_(ev.globalPos())
+        return
+
+    if txt is not None:
+        ui.log(txt, toStdout=False)
 
 
 class PlainTextEditWithHelp(QPlainTextEdit):

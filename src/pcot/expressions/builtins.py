@@ -92,28 +92,31 @@ def funcGrey(args, optargs):
     ss = SourceSet([img.sources, optargs[0].getSources()])
     sources = MultiBandSource([ss])
 
-    if optargs[0].get(Datum.NUMBER).n != 0:
-        if img.channels != 3:
-            raise XFormException('DATA', "Image must be RGB for OpenCV greyscale conversion")
-        img = ImageCube(cv.cvtColor(img.img, cv.COLOR_RGB2GRAY), img.mapping, sources)
-    elif img.channels == 1:
+    if img.channels == 1:
         img = img.copy()  # 1 channel in the input, just copy it
     else:
-        # create a transformation matrix specifying that the output is a single channel which
-        # is the mean of all the channels in the source. Any uncertainy data will also be combined.
-        mat = np.array([1 / img.channels] * img.channels).reshape((1, img.channels))
-        out = cv.transform(img.img, mat)
-        # uncertainty is messier - add the squared uncertainties, divide by N, and root.
         # DQs are dealt with by ORing all the bits together from each channel
-        outu = np.zeros(img.uncertainty.shape[:2], dtype=np.float32)
         dq = np.zeros(img.dq.shape[:2], dtype=np.uint16)
         for i in range(0, img.channels):
-            c = img.uncertainty[:, :, i]
-            outu += c * c
             dq |= img.dq[:, :, i]
-        # divide by the count and root
-        outu = np.sqrt(outu / img.channels)
-        img = ImageCube(out, img.mapping, sources, uncertainty=outu, dq=dq)
+
+        if optargs[0].get(Datum.NUMBER).n != 0: # if the opt arg is nonzero, use opencv - but no unc!
+            if img.channels != 3:
+                raise XFormException('DATA', "Image must be RGB for OpenCV greyscale conversion")
+            img = ImageCube(cv.cvtColor(img.img, cv.COLOR_RGB2GRAY), img.mapping, sources, dq=dq, rois=img.rois)
+        else:
+            # create a transformation matrix specifying that the output is a single channel which
+            # is the mean of all the channels in the source. Any uncertainy data will also be combined.
+            mat = np.array([1 / img.channels] * img.channels).reshape((1, img.channels))
+            out = cv.transform(img.img, mat)
+            # uncertainty is messier - add the squared uncertainties, divide by N, and root.
+            outu = np.zeros(img.uncertainty.shape[:2], dtype=np.float32)
+            for i in range(0, img.channels):
+                c = img.uncertainty[:, :, i]
+                outu += c * c
+            # divide by the count and root
+            outu = np.sqrt(outu) / img.channels
+            img = ImageCube(out, img.mapping, sources, uncertainty=outu, dq=dq, rois=img.rois)
     return Datum(Datum.IMG, img)
 
 

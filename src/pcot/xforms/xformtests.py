@@ -6,15 +6,15 @@ from typing import List, Any
 
 import numpy as np
 from PySide2 import QtCore
-from PySide2.QtCore import QModelIndex, Signal
+from PySide2.QtCore import QModelIndex, Signal, Qt
 from PySide2.QtGui import QColor, QIntValidator, QDoubleValidator
 from PySide2.QtWidgets import QMessageBox
 
 import pcot
-from pcot import ui
+from pcot import ui, dq
 from pcot.datum import Datum
 from pcot.sources import nullSourceSet
-from pcot.ui.tablemodel import TableModel, ComboBoxDelegate
+from pcot.ui.tablemodel import TableModel, ComboBoxDelegate, DQDelegate
 from pcot.utils.annotations import IndexedPointAnnotation
 from pcot.value import Value
 from pcot.xform import XFormType, xformtype, XFormException
@@ -58,6 +58,16 @@ class Model(TableModel):
         super().__init__(tab, PixTest, _data, True)
         self.failed = set()
 
+    def data(self, index, role):
+        if role == Qt.DisplayRole:
+            r = index.row()
+            c = index.column()
+            if r == PixTest.getHeader().index('DQ'):
+                dqv = self.d[c].dq
+                return dq.chars(dqv)
+
+        return super().data(index, role)
+
     def setData(self, index: QModelIndex, value: Any, role: int) -> bool:
         """Here we modify data in the underlying model in response to the tableview or any item delegates"""
         if index.isValid():
@@ -65,7 +75,10 @@ class Model(TableModel):
             item, field = self.getItemAndField(index)
             d = self.d[item]
 
-            def convposint(v, prev):
+            def conv_to_non_negative_int(v, prev):
+                """convert to non-negative integer:
+                Convert a value to integer - if it is negative return the default value (the previous value in the
+                node) otherwise return the new value."""
                 v = int(v)
                 if v >= 0:
                     return v
@@ -74,17 +87,17 @@ class Model(TableModel):
 
             try:
                 if field == 0:
-                    d.x = convposint(value, d.x)
+                    d.x = conv_to_non_negative_int(value, d.x)
                 elif field == 1:
-                    d.y = convposint(value, d.y)
+                    d.y = conv_to_non_negative_int(value, d.y)
                 elif field == 2:
-                    d.band = convposint(value, d.band)
+                    d.band = conv_to_non_negative_int(value, d.band)
                 elif field == 3:
                     d.n = float(value)
                 elif field == 4:
                     d.u = float(value)
                 elif field == 5:
-                    d.dq = convposint(value, d.dq)
+                    d.dq = conv_to_non_negative_int(value, d.dq)
                 elif field == 6:
                     d.col = value
 
@@ -186,8 +199,10 @@ class TabPixTest(pcot.ui.tabs.Tab):
         self.w.tableView.setModel(self.model)
         self.model.changed.connect(self.testsChanged)
         self.w.canvas.mouseHook = self
+        self.w.tableView.setItemDelegateForRow(PixTest.getHeader().index('DQ'),
+                                               DQDelegate(self.w.tableView, self.model))
         self.w.tableView.setItemDelegateForRow(PixTest.getHeader().index('col'),
-                                               ComboBoxDelegate(self.model,
+                                               ComboBoxDelegate(self.w.tableView, self.model,
                                                                 ['white', 'black', 'blue', 'green', 'red', 'yellow',
                                                                  'cyan', 'magenta', 'brown']))
 

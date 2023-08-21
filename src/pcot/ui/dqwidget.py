@@ -12,7 +12,7 @@ class DQWidget(QWidget):
 
     changed = Signal()
 
-    def __init__(self, parent):
+    def __init__(self, parent, bits=0):
         super().__init__(parent)
         layout = QGridLayout()
         self.name2widget = dict()
@@ -27,7 +27,8 @@ class DQWidget(QWidget):
         layout.addWidget(but, 1, i)
         i += 1
         for name, mask in dq.DQs.items():
-            label = QLabel(name,self)
+            d = dq.defs[mask]
+            label = QLabel(f"{d.name}({d.char})", self)
             label.setAlignment(Qt.AlignCenter)
             layout.addWidget(label, 0, i, Qt.AlignCenter)
             check = QCheckBox('', self)
@@ -37,7 +38,7 @@ class DQWidget(QWidget):
             i += 1
 
         self.setLayout(layout)
-        self.bits = 0
+        self.bits = bits
         self.setChecksToBits()
 
     def setChecksToBits(self):
