@@ -72,11 +72,11 @@ class IndexedPointAnnotation(Annotation):
     """An annotation of a single point with an index and colour, which may or may
     not be selected. These do have a radius, because the crosscalib node has a radius over which
     it collects values."""
-    def __init__(self, idx, x, y, r, issel, col):
+    def __init__(self, idx, x, y, issel, col, radius=5):
         self.col = col
         self.x = x
         self.y = y
-        self.r = r
+        self.r = radius
         self.issel = issel
         self.idx = idx
 

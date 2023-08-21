@@ -130,11 +130,13 @@ class XFormCrossCalib(XFormType):
                 if node.showSrc:
                     issel = node.selIdx if not node.selIsDest else None
                     for i, (x, y) in enumerate(node.src):
-                        node.canvimg.annotations.append(IndexedPointAnnotation(i, x, y, node.r, issel, Qt.yellow))
+                        node.canvimg.annotations.append(IndexedPointAnnotation(i, x, y, issel, Qt.yellow,
+                                                                               radius=node.r))
                 if node.showDest:
                     issel = node.selIdx if node.selIsDest else None
                     for i, (x, y) in enumerate(node.dest):
-                        node.canvimg.annotations.append(IndexedPointAnnotation(i, x, y, node.r, issel, Qt.cyan))
+                        node.canvimg.annotations.append(IndexedPointAnnotation(i, x, y, issel, Qt.cyan,
+                                                                               radius=node.r))
             else:
                 node.canvimg = None
 

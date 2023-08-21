@@ -155,7 +155,7 @@ class XFormPixTest(XFormType):
                     node.failed.add(i)
 
                 node.img.annotations.append(IndexedPointAnnotation(
-                    i, t.x, t.y, i==node.selected, QColor(t.col)))
+                    i, t.x, t.y, i == node.selected, QColor(t.col)))
                 ui.log("\n".join(out))
                 if len(out) == 0:
                     node.setRectText("ALL OK")

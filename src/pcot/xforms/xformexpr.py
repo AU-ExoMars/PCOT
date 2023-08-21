@@ -13,8 +13,10 @@ def getvar(d):
     if d.tp == Datum.ANY:
         raise XFormException("DATA", "variable's input is not connected")
     elif d.tp == Datum.IMG:
-        d = Datum(Datum.IMG, d.val.shallowCopy())
+        if d.val is not None:
+            d = Datum(Datum.IMG, d.val.shallowCopy())
     return d
+
 
 @xformtype
 class XFormExpr(XFormType):
