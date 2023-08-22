@@ -9,7 +9,7 @@ from skimage.transform import warp
 from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.imagecube import ImageCube
-from pcot.utils import text
+from pcot.utils import text, image
 from pcot.xform import XFormType, xformtype, XFormException
 
 IMAGEMODE_SOURCE = 0
@@ -152,7 +152,7 @@ class XFormManualRegister(XFormType):
 
             if img is not None:
                 # create a new image for the canvas; we'll draw on it.
-                canvimg = cv.merge([img, img, img])
+                canvimg = image.imgmerge([img, img, img])
 
                 # now draw the points
 

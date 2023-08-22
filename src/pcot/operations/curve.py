@@ -1,13 +1,11 @@
 from typing import Tuple, Optional, Union
 
 import numpy as np
-import cv2 as cv
 
 from pcot import dq
 from pcot.imagecube import SubImageCubeROI
 
 # number of points in lookup table
-from pcot.utils import image
 from pcot.value import Value
 
 NUMPOINTS = 1000

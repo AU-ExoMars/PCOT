@@ -426,7 +426,7 @@ class ImageCube(SourcesObtainable):
         if img is None:
             raise Exception(f'Cannot read file {fname}')
         if len(img.shape) == 2:  # expand to RGB. Annoyingly we cut it down later sometimes.
-            img = cv.merge((img, img, img))
+            img = image.imgmerge((img, img, img))
         # get the scaling factor
         if img.dtype == np.uint8:
             scale = 255.0
@@ -451,7 +451,7 @@ class ImageCube(SourcesObtainable):
         if self.channels == 1:
             # single channel images are a special case, rather than
             # [chans,w,h] they are just [w,h]
-            return cv.merge([self.img, self.img, self.img])
+            return image.imgmerge([self.img, self.img, self.img])
         else:
             if mapping is None:
                 mapping = self.mapping
@@ -460,7 +460,7 @@ class ImageCube(SourcesObtainable):
             red = self.img[:, :, mapping.red]
             green = self.img[:, :, mapping.green]
             blue = self.img[:, :, mapping.blue]
-        img = cv.merge([red, green, blue])
+        img = image.imgmerge([red, green, blue])
         return img
 
     def rgbImage(self, mapping: Optional[ChannelMapping] = None) -> 'ImageCube':
@@ -471,7 +471,7 @@ class ImageCube(SourcesObtainable):
         if self.channels == 1:
             unc = np.dstack([self.uncertainty, self.uncertainty, self.uncertainty])
             dq = np.dstack([self.dq, self.dq, self.dq])
-            img = cv.merge([self.img, self.img, self.img])
+            img = np.dstack([self.img, self.img, self.img])
         else:
             if mapping is None:
                 mapping = self.mapping

@@ -258,7 +258,7 @@ class TabGen(pcot.ui.tabs.Tab):
         self.model = GenModel(self, node.imgchannels)
         self.w.tableView.setModel(self.model)
         self.model.changed.connect(self.chansChanged)
-        self.w.tableView.setItemDelegateForRow(3, ComboBoxDelegate(self.model, MODES))
+        self.w.tableView.setItemDelegateForRow(3, ComboBoxDelegate(self.w.tableView, self.model, MODES))
         self.nodeChanged()
 
     def _getselcol(self):
