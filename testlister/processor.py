@@ -3,6 +3,7 @@ import sys
 import re
 
 from io import StringIO
+from reflection import getdocstring
 import logging
 
 logger = logging.getLogger(__name__)
@@ -13,6 +14,8 @@ class Processor():
     def module(self,name,docstring):
         pass
     def function(self,name,docstring):
+        pass
+    def graph(self,name,docstring):
         pass
 
     def unit_test_case(self,name,docstring):
@@ -51,7 +54,13 @@ class Processor():
         elif tp == "Module":
             self.add(self.module(name,docstring))
         elif tp == "Function":
-            self.add(self.function(name,docstring))
+            if "test_graph_files" in name:
+                filename = name[17:][:-1]
+                docstring = getdocstring(filename)
+                name = filename.split('/')[-1]
+                self.add(self.graph(name,docstring))
+            else:
+                self.add(self.function(name,docstring))
         elif tp == "UnitTestCase":
             self.add(self.unit_test_case(name,docstring))
         elif tp == "TestCaseFunction":
@@ -70,7 +79,7 @@ class Processor():
             if not s.startswith("====="):
                 if s.startswith("<"):
                     self.process_previous_text(tp,name,docstring.strip())
-                    tp,name = s.translate(table).split()
+                    tp,name = s.translate(table).split(maxsplit=1)
                     docstring = ""
                 else:
                     docstring += s+"\n"

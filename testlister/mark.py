@@ -51,6 +51,13 @@ class MarkdownProcessor(Processor):
         out+=docstring+"\n\n"
         return out
         
+    def graph(self,name,docstring):
+        out = ""
+        name = proc(name)
+        docstring = proc(docstring)
+        out+=f"### Graph {name}\n\n"
+        out+=docstring+"\n\n"
+        return out
 
     def unit_test_case(self,name,docstring):
         out = ""

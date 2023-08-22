@@ -95,7 +95,6 @@ class Document:
 
     def __init__(self, fileName=None):
         """Create a new document, and (optionally) load a file into it"""
-        print(f"++++{self}")
         self.graph = XFormGraph(self, False)  # false - is not a macro
         self.inputMgr = InputManager(self)
         self.macros = {}

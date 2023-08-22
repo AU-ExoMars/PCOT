@@ -444,9 +444,9 @@ class DQPropTest:
         """Annoyingly the output console can't handle unicode, so I can't use the ± here. Using | instead.
         Used to generate test names."""
         return f"{'scal' if self.a_scalar else 'img'}|{'scal' if self.b_scalar else 'img'} " + \
-            f"{self.e}: a={self.a}|{self.ua}|{self.dqa}" + \
-            f"b={self.b}|{self.ub}|{self.dqb}" + \
-            f"exp={self.expected_val}|{self.expected_unc}{dq.names(self.expected_dq,True)}"
+            f"{self.e}: a={self.a}|{self.ua}|{self.dqa}, " + \
+            f"b={self.b}|{self.ub}|{self.dqb}, " + \
+            f"exp={self.expected_val}|{self.expected_unc}|{dq.names(self.expected_dq,True)}"
 
 
 dq_prop_tests = []

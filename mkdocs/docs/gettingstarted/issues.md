@@ -27,3 +27,12 @@ If that's the case, install the missing package:
 sudo apt install libxcb-xinerama0
 ```
 That might help. Otherwise, send a message to us with the output from the ```QT_DEBUG_PLUGINS``` run and we will investigate.
+
+## Conda fails on Windows
+
+I have once seen an error involving OpenSSH not being correctly installed
+on Windows when the `conda create...` command was run. This happened toward the end of
+the installation.
+
+To fix it, I just ran the command again - it installed OpenSSH correctly
+and I was able to proceed.

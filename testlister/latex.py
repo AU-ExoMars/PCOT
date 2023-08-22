@@ -59,6 +59,15 @@ class LatexProcessor(Processor):
         out+=r"\end{adjustwidth}"+"\n"
         return out
         
+    def graph(self,name,docstring):
+        out = ""
+        name = proc(name)
+        docstring = proc(docstring)
+        out+=f"\\paragraph{{Graph {name}}}"
+        out+=r"\begin{adjustwidth}{1cm}{}"
+        out+=docstring
+        out+=r"\end{adjustwidth}"+"\n"
+        return out
 
     def unit_test_case(self,name,docstring):
         out = ""
