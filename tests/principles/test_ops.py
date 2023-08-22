@@ -193,6 +193,8 @@ def test_image_stats():
     runop(img, "sum(a)", 6, 0.31622776601683794)
 
 
+@pytest.mark.filterwarnings("ignore:divide by zero")
+@pytest.mark.filterwarnings("ignore:invalid value")
 def test_scalar_div_zero():
     """Test scalar division by zero"""
     pcot.setup()
@@ -221,6 +223,8 @@ def test_image_division_by_scalar_zero():
                        Value(0, 0, dq.DIVZERO | dq.NOUNCERTAINTY | dq.UNDEF))
 
 
+@pytest.mark.filterwarnings("ignore:divide by zero")
+@pytest.mark.filterwarnings("ignore:invalid value")
 def test_scalar_divide_by_zero_image():
     """Dividing by zero. We're trying to reciprocate an image where two of the bands are zero, which should
     lead to errors in those bands."""

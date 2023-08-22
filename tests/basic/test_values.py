@@ -190,6 +190,8 @@ def test_multiplication():
     core(genArray, Value, genArray)
 
 
+@pytest.mark.filterwarnings("ignore:divide by zero")
+@pytest.mark.filterwarnings("ignore:invalid value")
 def test_division():
     """Test division - see notes for this module"""
 
@@ -210,6 +212,8 @@ def test_division():
     core(genArray, Value, genArray)
 
 
+@pytest.mark.filterwarnings("ignore:divide by zero")
+@pytest.mark.filterwarnings("ignore:invalid value")
 def test_power():
     """Test exponentiation - see notes for this module"""
 
@@ -263,6 +267,7 @@ def test_minmax():
     core(genArray, Value, genArray)
 
 
+@pytest.mark.filterwarnings("ignore:divide by zero")
 def test_propagation():
     """Test DQ propagation - see notes for this module"""
 

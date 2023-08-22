@@ -249,6 +249,8 @@ binop_tests = [
 ]
 
 
+@pytest.mark.filterwarnings("ignore:invalid value")
+@pytest.mark.filterwarnings("ignore:divide by zero")
 @pytest.mark.parametrize("t", binop_tests, ids=lambda x: x.__str__())
 def test_number_number_binops(t):
     """Test that binary operations in expr nodes on numbers with uncertainty work."""
@@ -272,6 +274,8 @@ def test_number_number_binops(t):
     assert n.dq == t.expected_dq
 
 
+@pytest.mark.filterwarnings("ignore:invalid value")
+@pytest.mark.filterwarnings("ignore:divide by zero")
 @pytest.mark.parametrize("t", binop_tests, ids=lambda x: x.__str__())
 def test_number_image_binops(t):
     """Test than binops in expr nodes on numbers and images work, with the image on the RHS. We want to
