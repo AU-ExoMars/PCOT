@@ -17,7 +17,7 @@ import pcot
 from pcot import dq
 from pcot.documentsettings import DocumentSettings
 from pcot.rois import ROI, ROIPainted, ROIBoundsException
-from pcot.sources import MultiBandSource, SourcesObtainable
+from pcot.sources import MultiBandSource, SourcesObtainable, FilterOnlySource
 from pcot.utils import annotations
 from pcot.utils.annotations import annotFont
 from pcot.utils import image
@@ -440,6 +440,11 @@ class ImageCube(SourcesObtainable):
         img = img.astype(np.float32)
         # scale to 0..1 
         img /= scale
+        # create sources if none given
+        if sources is None:
+            sources = MultiBandSource([FilterOnlySource('R'),
+                                       FilterOnlySource('G'),
+                                       FilterOnlySource('B')])
         # and construct the image
         return cls(img, mapping, sources)
 

@@ -33,6 +33,7 @@ def test_direct(globaldatadir):
 
     # check the sources.
     assert len(img.sources) == 3
-    for sourceSet in img.sources:
-        #  Each sourceset is empty
-        assert len(sourceSet) == 0
+
+    assert img.sources[0].brief() == 'R'
+    assert img.sources[1].brief() == 'G'
+    assert img.sources[2].brief() == 'B'

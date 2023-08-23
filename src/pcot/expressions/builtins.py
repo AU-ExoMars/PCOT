@@ -1,7 +1,7 @@
 """
 Builtin functions and properties. Needs to be explicitly imported so the decorators run!
 """
-
+import pathlib
 from typing import List, SupportsFloat, Optional
 
 import numpy as np
@@ -9,7 +9,7 @@ import numpy as np
 import pcot
 import pcot.dq
 from pcot import rois
-from pcot.config import parserhook
+from pcot.config import parserhook, getAssetPath
 from pcot.datum import Datum
 from pcot.expressions import Parameter
 from pcot.filters import Filter
@@ -100,7 +100,7 @@ def funcGrey(args, optargs):
         for i in range(0, img.channels):
             dq |= img.dq[:, :, i]
 
-        if optargs[0].get(Datum.NUMBER).n != 0: # if the opt arg is nonzero, use opencv - but no unc!
+        if optargs[0].get(Datum.NUMBER).n != 0:  # if the opt arg is nonzero, use opencv - but no unc!
             if img.channels != 3:
                 raise XFormException('DATA', "Image must be RGB for OpenCV greyscale conversion")
             img = ImageCube(cv.cvtColor(img.img, cv.COLOR_RGB2GRAY), img.mapping, sources, dq=dq, rois=img.rois)
@@ -368,6 +368,30 @@ def statsWrapper(fn, fnu, d: List[Optional[Datum]], *args):
     return Datum(Datum.NUMBER, Value(val, u), SourceSet(sources))
 
 
+testImageCache = {}
+
+
+def funcTestImg(args: List[Datum], _):
+    fileList = ("test1.png",)
+    n = int(args[0].get(Datum.NUMBER).n)
+    if n < 0:
+        raise XFormException('DATA', 'negative test file index')
+    n %= len(fileList)
+
+    global testImageCache
+    if n in testImageCache:
+        img = testImageCache[n]
+    else:
+        try:
+            p = getAssetPath(fileList[n])
+        except FileNotFoundError as e:
+            raise XFormException('DATA', f"cannot find test image{fileList[n]}")
+        img = ImageCube.load(p, None, None)
+        testImageCache[n] = img
+
+    return Datum(Datum.IMG, img)
+
+
 @parserhook
 def registerBuiltinFunctions(p):
     p.registerFunc("merge",
@@ -520,6 +544,13 @@ def registerBuiltinFunctions(p):
             Parameter("image", "the input image", Datum.IMG),
             Parameter("cwl", "the fake filter CWL", Datum.NUMBER),
         ], [], funcSetCWL
+    )
+
+    p.registerFunc(
+        'testimg', 'Load test image',
+        [
+            Parameter('imageidx', 'image index', Datum.NUMBER)
+        ], [], funcTestImg
     )
 
 

@@ -94,16 +94,19 @@ class IndexedPointAnnotation(Annotation):
         pen.setWidth(0)  # "cosmetic" pen with width 0
         p.setPen(pen)
 
+        x = self.x + 0.5
+        y = self.y + 0.5
+
         r = self.r
         if r is None:
             r = pixels2painter(5, p)
 
-        p.drawEllipse(QPointF(self.x, self.y), r, r)
+        p.drawEllipse(QPointF(x, y), r, r)
         if self.issel:
             # we draw the selected point with an extra circle INSIDE.
-            p.drawEllipse(QPointF(self.x, self.y), 0.7*r, 0.7*r)
+            p.drawEllipse(QPointF(x, y), 0.7*r, 0.7*r)
 
         fontsize = 15   # font size in on-screen pixels
         annotFont.setPixelSize(pixels2painter(fontsize, p))
         p.setFont(annotFont)
-        p.drawText(self.x+r*2, self.y+r*2, f"{self.idx}")
+        p.drawText(x+r*2, y+r*2, f"{self.idx}")
