@@ -85,6 +85,7 @@ def createPatchROI(n, x, y, radius):
         # third step - crop down to a mask and BB, generate a ROIPainted and return.
         # can use the cropdown method in the ROI for this.
         roi = ROIPainted(mask=ff.mask)
+        roi.setContainingImageDimensions(n.img.w, n.img.h)
         roi.cropDownWithDraw()
 
         # TEST - draw into image
