@@ -10,6 +10,12 @@
     <height>825</height>
    </rect>
   </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
@@ -41,15 +47,28 @@
         <height>1000</height>
        </size>
       </property>
-      <layout class="QVBoxLayout" name="verticalLayout_4">
+      <layout class="QGridLayout" name="gridLayout_2">
        <property name="sizeConstraint">
         <enum>QLayout::SetDefaultConstraint</enum>
        </property>
-       <item>
+       <item row="3" column="0">
+        <widget class="QPushButton" name="leftButton">
+         <property name="text">
+          <string>&lt;--- Move</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="2">
         <widget class="QLabel" name="label_4">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="maximumSize">
           <size>
-           <width>50</width>
+           <width>16777215</width>
            <height>16777215</height>
           </size>
          </property>
@@ -58,7 +77,7 @@
          </property>
         </widget>
        </item>
-       <item>
+       <item row="2" column="0" colspan="2">
         <widget class="TableView" name="tableView">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
@@ -77,54 +96,72 @@
          </attribute>
         </widget>
        </item>
-       <item>
-        <layout class="QGridLayout" name="gridLayout">
-         <item row="0" column="0">
-          <widget class="QPushButton" name="leftButton">
-           <property name="text">
-            <string>&lt;--- Move</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QPushButton" name="rightButton">
-           <property name="text">
-            <string>Move --&gt;</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <widget class="QPushButton" name="addButton">
-         <property name="text">
-          <string>Add Test</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="dupButton">
-         <property name="text">
-          <string>Duplicate Test</string>
-         </property>
-        </widget>
-       </item>
-       <item>
+       <item row="7" column="0" colspan="2">
         <widget class="QPushButton" name="deleteButton">
          <property name="text">
           <string>Delete Test</string>
          </property>
         </widget>
        </item>
-       <item>
-        <widget class="QLabel" name="label_3">
+       <item row="5" column="0" colspan="2">
+        <widget class="QPushButton" name="addButton">
          <property name="text">
-          <string>Double click to edit a cell. For moving, deleting, duplicating columns select a column by clicking on its header. Move a point by shift-click on the canvas with a column selected.</string>
-         </property>
-         <property name="wordWrap">
-          <bool>true</bool>
+          <string>Add Test</string>
          </property>
         </widget>
+       </item>
+       <item row="6" column="0" colspan="2">
+        <widget class="QPushButton" name="dupButton">
+         <property name="text">
+          <string>Duplicate Test</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QPushButton" name="rightButton">
+         <property name="text">
+          <string>Move --&gt;</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="0" colspan="2">
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <property name="sizeConstraint">
+          <enum>QLayout::SetDefaultConstraint</enum>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="label_3">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Double click to edit a cell. For moving, deleting, duplicating columns select a column by clicking on its header. Move a point by shift-click on the canvas with a column selected.</string>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="setFromPixelsButton">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Maximum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Set Test From Pixels</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
       </layout>
      </widget>

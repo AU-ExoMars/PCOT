@@ -2,7 +2,7 @@ import dataclasses
 import logging
 import math
 from dataclasses import dataclass
-from typing import List, Any
+from typing import List, Any, Tuple
 
 import numpy as np
 from PySide2 import QtCore
@@ -183,6 +183,20 @@ class XFormPixTest(XFormType):
         node.out = Datum(Datum.TESTRESULT, out, sources=nullSourceSet)
         node.setOutput(0, node.out)
 
+    def setFromPixels(self, node):
+        """Forces all tests to pass by reading the image and setting the N, U and DQ values to the values
+        stored in those pixels"""
+        img = node.img
+        for i, t in enumerate(node.tests):
+            if 0 <= t.x < img.w and 0 <= t.y < img.h and 0 <= t.band < img.channels:
+                val = img[t.x, t.y] if img.channels == 1 else img[t.x, t.y][t.band]
+                # modify the test, converting to serializable types
+                t.n = float(val.n)
+                t.u = float(val.u)
+                t.dq = int(val.dq)
+            else:
+                ui.log(f"cannot set test {i}, coords out of range")
+
 
 class TabPixTest(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
@@ -191,6 +205,7 @@ class TabPixTest(pcot.ui.tabs.Tab):
         self.w.rightButton.clicked.connect(self.rightClicked)
         self.w.addButton.clicked.connect(self.addClicked)
         self.w.dupButton.clicked.connect(self.dupClicked)
+        self.w.setFromPixelsButton.clicked.connect(self.setFromPixelsClicked)
         self.w.deleteButton.clicked.connect(self.deleteClicked)
         self.w.tableView.delete.connect(self.deleteClicked)
         self.w.tableView.selChanged.connect(self.selectionChanged)
@@ -211,6 +226,22 @@ class TabPixTest(pcot.ui.tabs.Tab):
     def selectionChanged(self, idx):
         self.node.selected = idx
         self.changed()
+
+    def setFromPixelsClicked(self):
+        if QMessageBox.question(self.parent(), "Set test from pixels",
+                                "This will overwrite all test data to force the tests to pass. Are you sure?",
+                                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+            if self.node.img is None:
+                ui.error("No image to read data from")
+            else:
+                self.mark()
+                # yes, there are times when I wonder about the wisdom of the node/typesingleton model.
+                self.node.type.setFromPixels(self.node)
+                # and we need to tell the table about the test changes; the best(?) way to do this
+                # is to just make a new model.
+#                self.model = Model(self, self.node.tests)
+#                self.w.tableView.setModel(self.model)
+                self.changed()
 
     def leftClicked(self):
         """move left and then reselect the column we just moved"""
@@ -240,6 +271,7 @@ class TabPixTest(pcot.ui.tabs.Tab):
                 self.model.delete_item(col)
 
     def testsChanged(self):
+        """Tests have been changed in the UI, not programatically"""
         self.changed()
 
     def onNodeChanged(self):

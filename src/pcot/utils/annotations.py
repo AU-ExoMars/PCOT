@@ -10,15 +10,24 @@ annotFont = QFont()
 annotFont.setFamily('Sans Serif')
 
 
+def pixels2painter(v, p: QPainter):
+    """Given a size value in pixels, get what the painter size should be (i.e. take account of scaling)"""
+    sc = p.worldTransform().m11()
+    return v/sc
+
+
 def annotDrawText(p: QPainter,
                   x, y, s,
                   col: Tuple[float] = (1, 1, 0),
                   basetop: bool = False,  # is the y-coord the top of the text?
                   bgcol: Optional[Tuple] = None,
-                  fontsize=20):
+                  fontsize=15):
     """Draw text for annotation. Coords must be in painter space."""
-    p.setPen(rgb2qcol(col))
-    annotFont.setPixelSize(fontsize)
+    pen = QPen(rgb2qcol(col))
+    pen.setWidth(0)
+    p.setPen(pen)
+
+    annotFont.setPixelSize(pixels2painter(fontsize*2, p))
     p.setFont(annotFont)
     metrics = QFontMetrics(annotFont)
     vmargin = metrics.height() * 0.1  # top-bottom margin as factor of height
@@ -70,9 +79,9 @@ class Annotation:
 
 class IndexedPointAnnotation(Annotation):
     """An annotation of a single point with an index and colour, which may or may
-    not be selected. These do have a radius, because the crosscalib node has a radius over which
-    it collects values."""
-    def __init__(self, idx, x, y, issel, col, radius=5):
+    not be selected. These may a radius, because the crosscalib node has a radius over which
+    it collects values. If not they always show as the same radius."""
+    def __init__(self, idx, x, y, issel, col, radius=None):
         self.col = col
         self.x = x
         self.y = y
@@ -81,21 +90,20 @@ class IndexedPointAnnotation(Annotation):
         self.idx = idx
 
     def annotate(self, p: QPainter, img):
-        # we want to scale the font and line thickness with the image size here,
-        # to make it easier to view on large images. Calculate the biggest dimension of the image.
-        maxsize = max(img.w, img.h)
-        # Work out a scaling factor
-        scale = maxsize / 300
         pen = QPen(self.col)
         pen.setWidth(0)  # "cosmetic" pen with width 0
         p.setPen(pen)
 
-        p.drawEllipse(QPointF(self.x, self.y), self.r, self.r)
+        r = self.r
+        if r is None:
+            r = pixels2painter(5, p)
+
+        p.drawEllipse(QPointF(self.x, self.y), r, r)
         if self.issel:
             # we draw the selected point with an extra circle INSIDE.
-            p.drawEllipse(QPointF(self.x, self.y), 0.7*self.r, 0.7*self.r)
+            p.drawEllipse(QPointF(self.x, self.y), 0.7*r, 0.7*r)
 
-        fontsize = 12*scale   # scale the font
-        annotFont.setPixelSize(fontsize)
+        fontsize = 15   # font size in on-screen pixels
+        annotFont.setPixelSize(pixels2painter(fontsize, p))
         p.setFont(annotFont)
-        p.drawText(self.x+12*scale, self.y+4*scale, f"{self.idx}")
+        p.drawText(self.x+r*2, self.y+r*2, f"{self.idx}")

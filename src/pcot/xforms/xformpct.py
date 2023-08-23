@@ -10,6 +10,7 @@ from PySide2.QtGui import QColor, QPainter, QPolygon, QFont
 from PySide2.QtWidgets import QMessageBox
 from pcot.calib import pct
 from pcot.rois import getRadiusFromSlider, ROIPainted
+from pcot.utils.annotations import pixels2painter
 from pcot.xform import xformtype, XFormType
 
 # scale of editing brush
@@ -326,7 +327,8 @@ class TabPCT(pcot.ui.tabs.Tab):
             p.setBrush(Qt.black)
             p.drawRect(0, 0, 300, 180)
             font = QFont("Consolas")
-            font.setPixelSize(FONTSIZE)
+            fontsize = pixels2painter(FONTSIZE, p)
+            font.setPixelSize(fontsize)
             p.setFont(font)
             p.setPen(Qt.white)
             for idx, roi in enumerate(self.node.rois):
@@ -339,7 +341,7 @@ class TabPCT(pcot.ui.tabs.Tab):
                         s = "{}\t\t{:.3f}".format(patch.name, std)
                 else:
                     s = "{}\t\t---".format(patch.name)
-                p.drawText(0, (idx + 1) * FONTSIZE, s)
+                p.drawText(0, (idx + 1) * fontsize, s)
 
             p.setFont(prevfont)
 
