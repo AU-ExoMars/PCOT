@@ -22,11 +22,11 @@ import pcot.macros
 import pcot.ui as ui
 from pcot import datum
 from pcot.datum import Datum, Type
-from pcot.sources import nullSourceSet, SourceSet, MultiBandSource
+from pcot.sources import nullSourceSet, MultiBandSource
 from pcot.ui import graphscene
 from pcot.ui.canvas import Canvas
 from pcot.ui.tabs import Tab
-from pcot.utils import archive, deb
+from pcot.utils import archive
 
 if TYPE_CHECKING:
     from macros import XFormMacro, MacroInstance

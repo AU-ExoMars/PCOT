@@ -8,6 +8,7 @@ from pcot.datum import Datum
 from pcot.document import Document
 from pcot.sources import SourceSet, InputSource
 from pcot.value import Value
+from pcot.xform import XFormException
 
 
 @pytest.fixture
@@ -129,6 +130,32 @@ def test_extract_sources(envi_image_1):
     assert len(sourceset) == 1
     source = sourceset.getOnlyItem()
     assert source.getFilter().cwl == 640
+
+
+def test_extract_by_band():
+    """Test that we can extract by band, and that out-of-range bands give an error. Testing of the DQ
+    and uncertainty is done in a graph setting by graphs/extractbyband.pcot"""
+
+    pcot.setup()
+    doc = Document()
+    img = genrgb(50, 50, 0.1, 0.2, 0.3, doc=doc, inpidx=0)
+    assert doc.setInputDirect(0, img) is None
+    inp = doc.graph.create("input 0")
+    expr = doc.graph.create("expr")
+    expr.expr = "a$_0"
+    expr.connect(0,inp,0)
+    doc.changed()
+
+    img = expr.getOutput(0, Datum.IMG)
+    assert img is not None
+    assert np.allclose(img.img[0][0], 0.1)
+
+    expr.expr = "a$_4"
+    doc.changed()
+    img = expr.getOutput(0, Datum.IMG)
+    assert img is None
+    assert isinstance(expr.error, XFormException)
+    assert expr.error.message == "unable to get this wavelength from an image: [DATUM-ident, value _4]"
 
 
 def test_binop_2images(envi_image_1, envi_image_2):

@@ -439,6 +439,19 @@ class MultiBandSource(SourcesObtainable):
             single : there must only be a single source in the set
         """
         out = []
+
+        # here we process things like "$_5" to get band 5 explicitly.
+        if isinstance(filterNameOrCWL, str) and filterNameOrCWL.startswith('_'):
+            band = filterNameOrCWL[1:]
+            try:
+                band = int(band)
+            except ValueError:
+                return []
+            if band >= len(self.sourceSets):
+                return []
+            return [band]
+
+        # otherwise we do the search as usual
         for i, s in enumerate(self.sourceSets):
             if s.matches(inp, filterNameOrCWL, single, hasFilter):
                 out.append(i)

@@ -44,7 +44,8 @@ class XFormExpr(XFormType):
     | ^ | exponentiate \[r\] | 30
     |-A            |element-wise -A|50
     |A.B           |property B of entity A (e.g. a.h is height of image a)|80
-    |A$546         |extract single channel image of wavelength 546|100
+    |A$546         |extract single band image of wavelength 546|100
+    |A$_2          |extract single band image from band 2 explicitly
     |A&B           |element-wise minimum of A and B (Zadeh's AND operator)|20
     |A\|B          |element-wise maximum of A and B (Zadeh's OR operator)|20
     |!A            |element-wise 1-A (Zadeh's NOT operator)|50
@@ -90,13 +91,15 @@ class XFormExpr(XFormType):
     ### Band extraction
 
     The notation **$name** or **$wavelength** takes an image on the left-hand
-    side and extracts a single band, generating a new monochrome image. 
-    The right-hand side is either a filter name, a filter position or a
-    wavelength. Depending on the camera, all these could be valid: 
+    side and extracts a single band, generating a new monochrome image.
+
+    The right-hand side is either a filter name, a filter position, a
+    wavelength or a band index preceded by "_". Depending on the camera, all these could be valid:
 
     | expression | meaning |
     |------------|---------|
     | **a$780**  | the 780nm band in image *a* |
+    | **a$_2**  | band 2 in the image *a* |
     | **(a+b)$G0** | the band named G0 in the image formed by adding images *a* and *b* |
     | **((a+b)/2)$780** | the average of the 780nm bands of images *a* and *b* |
     

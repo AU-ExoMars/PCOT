@@ -75,13 +75,14 @@ class XFormConstant(XFormType):
         self.autoserialise = ('val',)
 
     ## build the text element of the graph scene object for the node. By default, this
-    # will just create static text, but can be overridden.
+    # will just create static text, but can be overridden. I've made it store the value
+    # in the node because otherwise the underlying C++ object gets freed.
     @staticmethod
     def buildText(n):
         x, y = n.xy
-        text = GNumberText(n.rect, n)
-        text.setPos(x + ui.graphscene.XTEXTOFFSET, y + ui.graphscene.YTEXTOFFSET + ui.graphscene.CONNECTORHEIGHT)
-        return text
+        n.text = GNumberText(n.rect, n)
+        n.text.setPos(x + ui.graphscene.XTEXTOFFSET, y + ui.graphscene.YTEXTOFFSET + ui.graphscene.CONNECTORHEIGHT)
+        return n.text
 
     def createTab(self, n, w):
         return None
