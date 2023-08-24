@@ -13,7 +13,7 @@ import pcot.ui as ui
 view = None
 
 # The groups into which the buttons are sorted - it's a constant.
-groups = ["source", "macros", "maths", "processing", "calibration", "data", "regions", "ROI edit", "utility"]
+groups = ["source", "macros", "maths", "processing", "calibration", "data", "regions", "ROI edit", "utility", "testing"]
 
 
 class PaletteButton(QtWidgets.QPushButton):

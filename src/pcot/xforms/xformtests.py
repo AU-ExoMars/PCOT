@@ -128,7 +128,7 @@ class XFormPixTest(XFormType):
     any errors. The output is numeric, and is the number of failing tests."""
 
     def __init__(self):
-        super().__init__("pixtest", "utility", "0.0.0")
+        super().__init__("pixtest", "testing", "0.0.0")
         self.addInputConnector("", Datum.IMG)
         self.addOutputConnector("results", Datum.TESTRESULT)
 
@@ -325,7 +325,7 @@ class XFormScalarTest(XFormType):
     """Test a scalar against a value"""
 
     def __init__(self):
-        super().__init__("scalartest", "utility", "0.0.0")
+        super().__init__("scalartest", "testing", "0.0.0")
         self.addInputConnector("", Datum.NUMBER)
         self.addOutputConnector("results", Datum.TESTRESULT)
         self.autoserialise = ('n', 'u', 'dq', 'nTest', 'uTest', 'dqTest')
@@ -361,7 +361,7 @@ class XFormScalarTest(XFormType):
             out = [out]
 
         if len(out) == 0:
-            node.setRectText("ALL OK")
+            node.setRectText("OK")
         else:
             node.setError(XFormException('TEST', f"{len(out)} FAILED"))
 
@@ -454,7 +454,7 @@ class XFormMergeTests(XFormType):
     failures, this simply concatenates those lists."""
 
     def __init__(self):
-        super().__init__("mergetests", "utility", "0.0.0")
+        super().__init__("mergetests", "testing", "0.0.0")
         for i in range(0, 8):
             self.addInputConnector("", Datum.TESTRESULT)
         self.addOutputConnector("results", Datum.TESTRESULT)
@@ -485,3 +485,63 @@ class XFormMergeTests(XFormType):
                 node.setError(XFormException('TEST', f"{len(out)} FAILED"))
         node.graph.rebuildTabsAfterPerform = True
         node.setOutput(0, node.out)
+
+
+@xformtype
+class XFormStringTest(XFormType):
+    """Convert the output of a node into string. Assert that this matches a given string. Both
+    strings are stripped of whitespace and CRLF is converted to LF."""
+
+    def __init__(self):
+        super().__init__("stringtest", "testing", "0.0.0")
+        self.addInputConnector("", Datum.ANY)
+        self.addOutputConnector("", Datum.TESTRESULT)
+        self.autoserialise = ('string',)
+
+    def init(self, node):
+        node.string = ""
+
+    def createTab(self, xform, window):
+        return TabStringTest(xform, window)
+
+    def perform(self, node):
+        out = None
+        inp = node.getInput(0)
+        if inp is not None:
+            inp = str(inp.val).strip().replace('\r\n', '\n')
+            if inp != node.string.strip():
+                out = "Mismatch!"
+        else:
+            out = "No input"
+
+        if out is None:
+            node.setRectText("ALL OK")
+            out = []
+        else:
+            node.setError(XFormException('TEST', out))
+            ui.log(out)
+            out = [out]
+
+        node.graph.rebuildTabsAfterPerform = True
+        node.out = Datum(Datum.TESTRESULT, out, nullSourceSet)
+        node.setOutput(0, node.out)
+
+
+class TabStringTest(pcot.ui.tabs.Tab):
+    def __init__(self, node, w):
+        super().__init__(w, node, 'tabstringtest.ui')
+        self.w.finishedButton.clicked.connect(self.editFinished)
+        self.w.expected.textChanged.connect(self.textChanged)
+        self.nodeChanged()
+
+    def textChanged(self):
+        self.w.finishedButton.setStyleSheet("background-color:rgb(255,100,100)")
+
+    def onNodeChanged(self):
+        self.w.expected.setPlainText(self.node.string)
+        self.w.finishedButton.setStyleSheet("")
+
+    def editFinished(self, t):
+        self.mark()
+        self.node.string = self.w.expected.toPlainText()
+        self.changed()
