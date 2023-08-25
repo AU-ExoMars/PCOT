@@ -39,7 +39,7 @@ def getSpectrum(chanImg, chanUnc, chanDQ, mask, ignorePixSD=False):
         # So we'll calculate the variance of the means added to the mean of the variances.
         # And then we'll need to root that variance to get back to SD.
 
-        std = np.sqrt(a.var() + np.mean(np.ma.masked_array(data=chanUnc, mask=~mask)**2))
+        std = np.sqrt(a.var() + np.mean(np.ma.masked_array(data=chanUnc, mask=~mask) ** 2))
     else:
         std = a.std()  # otherwise get the SD of the nominal values
 
@@ -148,7 +148,7 @@ class XFormSpectrum(XFormType):
                               )
         for i in range(NUMINPUTS):
             self.addInputConnector(str(i), Datum.IMG, "a single line in the plot")
-        self.addOutputConnector("data", Datum.DATA, "a CSV output (use 'dump' to read it)")
+        self.addOutputConnector("data", Datum.DATA, "a CSV output (use 'dump' or 'sink' to read it)")
 
     def createTab(self, n, w):
         pcot.ui.msg("creating a tab with a plot widget takes time...")
@@ -207,11 +207,18 @@ class XFormSpectrum(XFormType):
 
                     # this is unfolded from a list comprehension for easier breakpoint debugging!
                     spec = []
-                    for cc in chans:
-                        ss = getSpectrum(_subimg.img[:, :, cc], _subimg.uncertainty[:, :, cc], _subimg.dq[:, :, cc],
+                    if len(chans) == 1:
+                        # single channel images are stored as 2D arrays.
+                        ss = getSpectrum(_subimg.img[:, :], _subimg.uncertainty[:, :], _subimg.dq[:, :],
                                          _subimg.mask,
                                          ignorePixSD=node.ignorePixSD)
                         spec.append(ss)
+                    else:
+                        for cc in chans:
+                            ss = getSpectrum(_subimg.img[:, :, cc], _subimg.uncertainty[:, :, cc], _subimg.dq[:, :, cc],
+                                             _subimg.mask,
+                                             ignorePixSD=node.ignorePixSD)
+                            spec.append(ss)
 
                     processData(table, _legend, data, subimg.pixelCount(),
                                 wavelengths, spec, chans, chanlabels)

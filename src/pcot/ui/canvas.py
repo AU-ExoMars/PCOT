@@ -409,10 +409,11 @@ class InnerCanvas(QtWidgets.QWidget):
                     # extract the relevant bit(s). This should work with BAD too, which would
                     # give a selection of bits. Remember that 'data' is a slice; we musn't
                     # modify it!
-                    data  = np.bitwise_and(data, d.data)
+                    data = np.bitwise_and(data, d.data)
+                    mask = data > 0  # which pixels have the bit set
                     t.mark("and")
                     # now convert that to float, setting nonzero to 1 and zero to 0.
-                    data = (data > 0).astype(np.float32)
+                    data = mask.astype(np.float32)
                     t.mark("tofloat")
                 # expand the data to RGB, but in different ways depending on the colour!
                 r, g, b, flash = canvasdq.colours[d.col]
@@ -422,26 +423,30 @@ class InnerCanvas(QtWidgets.QWidget):
 
                 if not flash or self.flashCycle:
                     zeroes = np.zeros(data.shape, dtype=float)
+                    # here we 'tint' the data
                     r = data if r > 0.5 else zeroes
                     g = data if g > 0.5 else zeroes
                     b = data if b > 0.5 else zeroes
-                    data = np.dstack((r, g, b))
+                    data = np.dstack((r, g, b))  # data is now RGB
                     # combine with image, avoiding copies.
                     t.mark("stack")
-                    np.power(data, 2 * d.contrast,
-                             out=data)  # data should be normalised, so this acts as a gamma
+                    data = data ** 2*d.contrast
                     t.mark("contrast")
-                    # add to the image
-                    np.multiply(data, 1.0 - d.trans, out=data)
+                    # set the data opacity
+                    data *= 1 - d.trans
                     t.mark("mult")
                     # additive or "normal" blending
                     if d.additive:
                         np.add(data, img, out=data)
                         t.mark("add")
                     else:
-                        img2 = np.multiply(img, d.trans)  # TODO can we avoid a copy here?
-                        np.add(data, img2, out=data)
-                        t.mark("multadd")
+                        mask = np.dstack([mask, mask, mask]).astype(np.bool)
+                        # img is the original image. Mask so only the bits we want to set get changed.
+                        img = np.ma.masked_array(img, ~mask)
+                        img *= d.trans
+                        img += data
+                        data = img.data  # remove mask
+                        t.mark("blend")
                     # clip the data (mainly because of additive, but just in case other
                     # stuff has happened)
                     np.clip(data, 0, 1, out=data)
@@ -1349,7 +1354,6 @@ class Canvas(QtWidgets.QWidget):
                 d = pixdqs[i]
                 text += f"{i}) {ss.brief()} = {p:.3} +/- {u:.3} : {pcot.dq.names(d)} ({d})\n"
 
-
             # get the channels which have a single wavelength
             # what do we do if they don't? I don't think you can display a spectrum!
 
@@ -1369,6 +1373,6 @@ class Canvas(QtWidgets.QWidget):
             else:
                 # but if there aren't enough data with wavelengths,
                 # just show the values as text.
-                text = "Cannot plot: no frequency data in channel sources\n"+text
+                text = "Cannot plot: no frequency data in channel sources\n" + text
                 data = None
             self.spectrumWidget.set(data, text)

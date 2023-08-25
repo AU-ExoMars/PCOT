@@ -69,6 +69,13 @@ def test_node_output_none():
                     assert out[0] == 'NO TESTS', f"Mergetests should 'NO TESTS' in list when not connected"
                 except BadTypeException:
                     pytest.fail("Mergetests should return a list")
+            elif x == 'stringtest':
+                try:
+                    out = node.getOutput(0, Datum.TESTRESULT)
+                    assert len(out) == 1, f"Stringtest should 'NO TESTS' in list when not connected"
+                    assert out[0] == 'NO INPUT', f"Stringtest should 'NO TESTS' in list when not connected"
+                except BadTypeException:
+                    pytest.fail("Stringtests should return a list")
             else:
                 assert out is None, f"XForm {x} should output None when not connected"
 

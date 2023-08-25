@@ -2,8 +2,10 @@ import numpy as np
 
 from pcot import ui
 from pcot.datum import Datum
+from pcot.sources import SourceSet
 from pcot.ui.tabs import Tab
 from pcot.utils import image
+from pcot.utils.table import Table
 from pcot.xform import xformtype, XFormType
 
 from matplotlib import cm
@@ -11,7 +13,7 @@ from matplotlib import cm
 
 def gethistogram(chan, weights, bincount):
     r = np.histogram(chan, bincount, range=(0, 1), weights=weights)
-    return r    # split out for debugging
+    return r  # split out for debugging
 
 
 @xformtype
@@ -23,6 +25,8 @@ class XFormHistogram(XFormType):
     Will only be performed on ROIs if there are active ROIs. BAD pixels
     in bands will be discounted.
 
+    The output carries a table - columns are frequencies, rows are bands.
+
     **Uncertainty is ignored.**
     """
 
@@ -30,6 +34,7 @@ class XFormHistogram(XFormType):
         super().__init__("histogram", "data", "0.0.0")
         self.autoserialise = ('bincount',)
         self.addInputConnector("", Datum.IMG)
+        self.addOutputConnector("data", Datum.DATA, "a CSV output (use 'dump' or 'sink' to read it)")
 
     def createTab(self, n, w):
         ui.msg("creating a tab with a plot widget takes time...")
@@ -59,6 +64,18 @@ class XFormHistogram(XFormType):
             unzipped = list(zip(*hists))
             # zips the labels, data and bins together into a list of (label,data,bins) for each channel!
             node.hists = list(zip(labels, *unzipped))
+
+            # generate a table for output
+            t = Table()
+            for lab, dat, bins in node.hists:
+                t.newRow(lab)
+                t.add('band', lab)
+                for k, v in zip(bins, dat):
+                    t.add(k, v)
+
+            node.setOutput(0, Datum(Datum.DATA, t, sources=SourceSet(img.sources.getSources())))
+        else:
+            node.setOutput(0, None)
 
 
 class TabHistogram(Tab):
@@ -101,3 +118,4 @@ class TabHistogram(Tab):
         # this is done in replot - the user replots this node manually because it takes
         # a while to run. But we do make the replot button red!
         self.w.replot.setStyleSheet("background-color:rgb(255,100,100)")
+        self.w.bins.setValue(self.node.bincount)

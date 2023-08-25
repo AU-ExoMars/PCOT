@@ -507,12 +507,12 @@ class XFormStringTest(XFormType):
     def perform(self, node):
         out = None
         inp = node.getInput(0)
-        if inp is not None:
+        if inp.val is not None:
             inp = str(inp.val).strip().replace('\r\n', '\n')
             if inp != node.string.strip():
                 out = "Mismatch!"
         else:
-            out = "No input"
+            out = "NO INPUT"
 
         if out is None:
             node.setRectText("ALL OK")

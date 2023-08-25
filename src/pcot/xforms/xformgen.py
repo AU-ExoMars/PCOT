@@ -18,10 +18,12 @@ from pcot.imagecube import ImageCube
 from pcot.sources import MultiBandSource, FilterOnlySource
 from pcot.ui.tablemodel import TableModel, ComboBoxDelegate
 from pcot.utils import SignalBlocker
+from pcot.utils.image import generate_gradient
 from pcot.xform import xformtype, XFormType, XFormException
 
 DEFAULTSIZE = 256
-MODES = ['flat', 'ripple-n', 'ripple-u', 'ripple-un', 'half', 'checkx', 'checky', 'rand']
+MODES = ['flat', 'ripple-n', 'ripple-u', 'ripple-un', 'half', 'checkx', 'checky', 'rand', 'gaussian',
+         'gradient-x', 'gradient-y']
 DEFAULTMODE = 'flat'
 
 logger = logging.getLogger(__name__)
@@ -74,7 +76,11 @@ class XFormGen(XFormType):
     * half: nominal is N on the left, U on the right. Uncertainty is 0.1. (Test value)
     * checkx: nominal is a checquered pattern with each square of size N, offset by U in the x-axis. uncertainty=nominal.
     * checky: nominal is a checquered pattern with each square of size N, offset by U in the y-axis. uncertainty=nominal.
-    * rand: both nom. and unc. are filled with non-negative pseudorandom noise multiplied by N and U respectively
+    * rand: both nom. and unc. are filled with non-negative pseudorandom uniform noise multiplied by N and U respectively
+    * gaussian: nom. is filled with gaussian noise centered around N with a std. dev. of U. U is zero. The RNG is seeded
+        from the CWL.
+    * gradient-x: nom. is filled with a gradient from 0-1, U is zero.
+    * gradient-y: nom. is filled with a gradient from 0-1, U is zero.
 
     A useful pattern might be something like this:
 
@@ -158,6 +164,17 @@ class XFormGen(XFormType):
                 rngU = np.random.default_rng(seed=int(chan.u*10000))
                 n = rngN.random((node.imgheight, node.imgwidth), np.float32)
                 u = rngN.random((node.imgheight, node.imgwidth), np.float32)
+            elif chan.mode == 'gaussian':
+                rng = np.random.default_rng(seed=chan.cwl)
+                n = rng.normal(chan.n, chan.u, (node.imgheight, node.imgwidth))
+                u = np.zeros((node.imgheight, node.imgwidth))
+            elif chan.mode == 'gradient-x':
+                n = generate_gradient(node.imgwidth, node.imgheight, True)
+                u = np.zeros((node.imgheight, node.imgwidth))
+            elif chan.mode == 'gradient-y':
+                n = generate_gradient(node.imgwidth, node.imgheight, False)
+                u = np.zeros((node.imgheight, node.imgwidth))
+
             else:
                 raise XFormException('INTR', "bad mode in gen")
 
