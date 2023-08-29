@@ -20,7 +20,7 @@ def getvar(d):
 
 @xformtype
 class XFormExpr(XFormType):
-    """
+    r"""
     Expression evaluator. The node box will show the text of the expression. The "run" button must be clicked to
     set the node to the new expression and perform it. Additionally, the output type must be set - the system cannot
     determine the output type from the input types.
@@ -45,7 +45,7 @@ class XFormExpr(XFormType):
     |-A            |element-wise -A|50
     |A.B           |property B of entity A (e.g. a.h is height of image a)|80
     |A$546         |extract single band image of wavelength 546|100
-    |A$_2          |extract single band image from band 2 explicitly
+    |A$_2          |extract single band image from band 2 explicitly|100
     |A&B           |element-wise minimum of A and B (Zadeh's AND operator)|20
     |A\|B          |element-wise maximum of A and B (Zadeh's OR operator)|20
     |!A            |element-wise 1-A (Zadeh's NOT operator)|50

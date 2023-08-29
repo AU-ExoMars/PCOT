@@ -395,7 +395,8 @@ def funcTestImg(args: List[Datum], _):
 @parserhook
 def registerBuiltinFunctions(p):
     p.registerFunc("merge",
-                   "merge a number of images into a single image - if the image has multiple channels they will all be merged in.",
+                   "merge a number of images into a single image - if the image has multiple channels they will all "
+                   "be merged in.",
                    [Parameter("image", "an image of any depth", (Datum.NUMBER, Datum.IMG))],
                    [],
                    funcMerge, varargs=True)
