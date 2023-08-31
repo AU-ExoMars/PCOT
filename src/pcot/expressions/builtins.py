@@ -2,7 +2,7 @@
 Builtin functions and properties. Needs to be explicitly imported so the decorators run!
 """
 import pathlib
-from typing import List, SupportsFloat, Optional
+from typing import List, SupportsFloat, Optional, Callable
 
 import numpy as np
 
@@ -241,7 +241,53 @@ def funcUncertainty(args: List[Datum], _):
         return Datum(Datum.NUMBER, Value(n.u, 0), sources=args[0].sources)
 
 
-def funcWrapper(fn, d, *args):
+def funcWrapper(fn: Callable[[Value], Value], d: Datum) -> Datum:
+    """Takes a function which takes and returns Value, and a datum. This is a utility for dealing with
+    functions. For images, it strips out the relevant pixels (subject to ROIs) and creates a masked array. However, BAD
+    pixels are included. It then performs the operation and creates a new image which is a copy of the
+    input with the new data spliced in."""
+
+    if d is None:
+        return None
+    elif d.tp == Datum.NUMBER:  # deal with numeric argument (always returns a numeric result)
+        # get sources for all arguments
+        ss = d.getSources()
+        rv = fn(d.val)
+        return Datum(Datum.NUMBER, rv, SourceSet(ss))
+    elif d.isImage():
+        img = d.val()
+        ss = d.sources
+        subimage = d.subimage()
+        mask = subimage.fullmask()
+
+        # make copies of the source data into which we will splice the results
+        imgcopy = subimage.img.copy()
+        unccopy = subimage.uncertainty.copy()
+        dqcopy = subimage.dq.copy()
+
+        # create masked versions of that data
+        masked_n = np.ma_masked_array(imgcopy, mask=~mask)
+        masked_u = np.ma_masked_array(unccopy, mask=~mask)
+        masked_d = np.ma_masked_array(dqcopy, mask=~mask)
+
+        # perform the operation on that data
+        v = Value(masked_n, masked_u, masked_d)
+        rv = fn(v)
+        # depending on the result type..
+        if rv.isscalar():
+            # ...either use it as a number datum
+            return Datum(Datum.NUMBER, rv, ss)
+        else:
+            # ...or splice it back into the image
+            img = img.modifyWithSub(subimage, v.n, uncertainty=v.u, dq=v.dq)
+            return Datum(Datum.IMG, img)
+
+
+
+
+
+
+def funcWrapperOld(fn, d, *args):
     """Wrapper around a evaluator function that deals with ROIs etc.
     compare this with exprWrapper in operations, which only handles images and delegates
     processing ROI stuff to the function."""
@@ -256,7 +302,7 @@ def funcWrapper(fn, d, *args):
         newdata = fn(masked, *args)  # the result of this could be *anything*
         # so now we look at the result and build an appropriate Datum
         if isinstance(newdata, np.ndarray):
-            np.putmask(cp, mask, newdata)
+            #  np.putmask(cp, mask, newdata)      # I think this isn't needed!!
             img = img.modifyWithSub(subimage, newdata)
             return Datum(Datum.IMG, img)
         elif isinstance(newdata, SupportsFloat):
@@ -400,26 +446,27 @@ def registerBuiltinFunctions(p):
                    [Parameter("image", "an image of any depth", (Datum.NUMBER, Datum.IMG))],
                    [],
                    funcMerge, varargs=True)
+
     p.registerFunc("sin", "calculate sine of angle in radians",
                    [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: funcWrapper(np.sin, args[0]))
+                   lambda args, optargs: funcWrapperOld(np.sin, args[0]))
     p.registerFunc("cos", "calculate cosine of angle in radians",
                    [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: funcWrapper(np.cos, args[0]))
+                   lambda args, optargs: funcWrapperOld(np.cos, args[0]))
     p.registerFunc("tan", "calculate tangent of angle in radians",
                    [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: funcWrapper(np.tan, args[0]))
+                   lambda args, optargs: funcWrapperOld(np.tan, args[0]))
     p.registerFunc("sqrt", "calculate the square root (note - uncertainty is cleared. Use ^0.5 instead).",
                    [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: funcWrapper(np.sqrt, args[0]))
+                   lambda args, optargs: funcWrapperOld(np.sqrt, args[0]))
     p.registerFunc("abs", "find absolute value",
                    [Parameter("val", "input value", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: funcWrapper(np.abs, args[0]))
+                   lambda args, optargs: funcWrapperOld(np.abs, args[0]))
 
     p.registerFunc("min",
                    "find the minimum value of the nominal values in a set of images and/or values. "

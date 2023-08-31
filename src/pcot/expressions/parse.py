@@ -14,6 +14,7 @@ from typing import List, Any, Optional, Callable, Dict, Tuple, Union
 
 from pcot import datum
 from pcot.datum import Datum
+from pcot.datumtypes import Type
 from pcot.sources import nullSourceSet
 from pcot.utils.table import Table
 from pcot.value import Value
@@ -58,11 +59,11 @@ class Parameter:
     def __init__(self,
                  name: str,  # name
                  desc: str,  # description
-                 types: Union[datum.Type, Tuple[datum.Type, ...]],  # tuple of valid types, or just one
+                 types: Union[Type, Tuple[Type, ...]],  # tuple of valid types, or just one
                  deflt: Optional[numbers.Number] = None  # default value for optional parameters, must be numeric
                  ):
         self.name = name
-        if isinstance(types, datum.Type):
+        if isinstance(types, Type):
             types = (types,)  # convert single type to tuple
         self.types = set(types)  # convert tuple to set
         self.desc = desc
@@ -423,9 +424,9 @@ class Parser:
     # property dict - keys are (name,type), values are (desc,func) where the func
     # takes Datum and gives Datum
 
-    properties: Dict[Tuple[str, datum.Type], Tuple[str, Callable[[Datum], Datum]]]
+    properties: Dict[Tuple[str, Type], Tuple[str, Callable[[Datum], Datum]]]
 
-    def registerProperty(self, name: str, tp: datum.Type, desc: str, func: Callable[[Datum], Datum]):
+    def registerProperty(self, name: str, tp: Type, desc: str, func: Callable[[Datum], Datum]):
         """add a property (e.g. the 'w' in 'a.w'), given name, input type, description and function"""
         self.properties[(name, tp)] = (desc, func)
 

@@ -139,7 +139,7 @@ def test_extract_by_band():
     pcot.setup()
     doc = Document()
     img = genrgb(50, 50, 0.1, 0.2, 0.3, doc=doc, inpidx=0)
-    assert doc.setInputDirect(0, img) is None
+    assert doc.setInputDirectImage(0, img) is None
     inp = doc.graph.create("input 0")
     expr = doc.graph.create("expr")
     expr.expr = "a$_0"

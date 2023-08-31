@@ -209,7 +209,11 @@ class Document:
         (e.g. could be mono images of the same resolution)"""
         return self.setInputData(inputidx, inputs.Input.PDS4, lambda method: method.setProducts(products))
 
-    def setInputDirect(self, inputidx, imageCube):
+    def setInputDirect(self, inputidx, datum):
+        """Set graph's input directly to a datum"""
+        return self.setInputData(inputidx, inputs.Input.DIRECT, lambda method: method.setDatum(datum))
+
+    def setInputDirectImage(self, inputidx, imageCube):
         """Set graph's input directly to an imagecube (used in scripting)"""
         return self.setInputData(inputidx, inputs.Input.DIRECT, lambda method: method.setImageCube(imageCube))
 

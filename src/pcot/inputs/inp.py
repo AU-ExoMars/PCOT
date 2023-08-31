@@ -199,6 +199,10 @@ class InputManager:
         """return the data for a given input."""
         return self.inputs[idx].get()
 
+    def getInput(self, idx):
+        """return the actual Input object, which contains the input methods"""
+        return self.inputs[idx]
+
     def invalidate(self):
         """invalidate all inputs"""
         for x in self.inputs:

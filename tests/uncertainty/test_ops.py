@@ -167,7 +167,7 @@ def test_image_unops(t):
     # just to check that DQ bits get OR-ed in (or rather passed through), we set some (more) DQ in the image.
     img.dq[2, 2, 1] |= dq.COMPLEX
     img.dq[8, 8, 1] |= dq.UNDEF
-    doc.setInputDirect(0, img)
+    doc.setInputDirectImage(0, img)
     nodeA = doc.graph.create("input 0")
     # which feeds into a rect ROI
     rect = doc.graph.create("rect")
@@ -287,7 +287,7 @@ def test_number_image_binops(t):
     # node B is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
     origimg = gen_2b_unc(2, 0.1, t.b, t.ub)
 
-    doc.setInputDirect(0, origimg)
+    doc.setInputDirectImage(0, origimg)
     nodeB = doc.graph.create("input 0")
     # which feeds into a rect ROI
     rect = doc.graph.create("rect")
@@ -313,7 +313,7 @@ def test_image_number_binops(t):
     doc = Document()
     # node A is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
     origimg = gen_2b_unc(2, 0.1, t.a, t.ua)
-    doc.setInputDirect(0, origimg)
+    doc.setInputDirectImage(0, origimg)
     nodeA = doc.graph.create("input 0")
     # which feeds into a rect ROI
     rect = doc.graph.create("rect")
@@ -341,7 +341,7 @@ def test_image_image_binops(t):
     doc = Document()
     # node A is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
     imgA = gen_2b_unc(2, 0.1, t.a, t.ua)
-    doc.setInputDirect(0, imgA)
+    doc.setInputDirectImage(0, imgA)
     nodeA = doc.graph.create("input 0")
     # which feeds into a rect ROI
     rect = doc.graph.create("rect")
@@ -350,7 +350,7 @@ def test_image_image_binops(t):
 
     # node B is a 20x20 2-band image with 3±0.2 in band 0 and the given values in band 1.
     imgB = gen_2b_unc(3, 0.2, t.b, t.ub)
-    doc.setInputDirect(1, imgB)
+    doc.setInputDirectImage(1, imgB)
     nodeB = doc.graph.create("input 1")
     # and connect an expression node to rect and nodeB.
     expr = doc.graph.create("expr")
@@ -370,12 +370,12 @@ def test_image_image_binops_noroi(t):
     doc = Document()
     # node A is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
     imgA = gen_2b_unc(2, 0.1, t.a, t.ua)
-    doc.setInputDirect(0, imgA)
+    doc.setInputDirectImage(0, imgA)
     nodeA = doc.graph.create("input 0")
 
     # node B is a 20x20 2-band image with 3±0.2 in band 0 and the given values in band 1.
     imgB = gen_2b_unc(3, 0.2, t.b, t.ub)
-    doc.setInputDirect(1, imgB)
+    doc.setInputDirectImage(1, imgB)
     nodeB = doc.graph.create("input 1")
 
     # just to check that DQ bits get OR-ed in, we set some DQ in the image.
@@ -490,7 +490,7 @@ def test_dq_propagation_images(t):
     else:
         # node A is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
         imgA = gen_2b_unc(2, 0.1, t.a, t.ua, dq0=0, dq1=t.dqa)
-        doc.setInputDirect(0, imgA)
+        doc.setInputDirectImage(0, imgA)
         nodeA = doc.graph.create("input 0")
 
     if t.b_scalar:
@@ -499,7 +499,7 @@ def test_dq_propagation_images(t):
     else:
         # node B is a 20x20 2-band image with 3±0.2 in band 0 and the given values in band 1.
         imgB = gen_2b_unc(3, 0.2, t.b, t.ub, dq0=0, dq1=t.dqb)
-        doc.setInputDirect(1, imgB)
+        doc.setInputDirectImage(1, imgB)
         nodeB = doc.graph.create("input 1")
 
     # and connect an expression node to rect and nodeB.

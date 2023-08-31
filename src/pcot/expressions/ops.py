@@ -4,7 +4,8 @@ from typing import Any, Callable, Optional, Dict, Tuple
 
 import numpy as np
 
-from pcot.datum import Datum, Type
+from pcot.datum import Datum
+from pcot.datumtypes import Type
 from pcot.imagecube import ImageCube
 from pcot.rois import BadOpException, ROI
 from pcot.sources import MultiBandSource, SourceSet

@@ -181,6 +181,9 @@ class Value:
             return Value(np.copy(self.n), np.copy(self.u), np.copy(self.dq))
         return Value(self.n, self.u, self.dq)
 
+    def isscalar(self):
+        return np.isscalar(self.n)
+
     def serialise(self):
         return self.n, self.u, self.dq
 

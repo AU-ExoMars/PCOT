@@ -9,7 +9,7 @@ from PySide2 import QtWidgets, QtGui
 from PySide2.QtCore import Qt, QPointF
 from PySide2.QtGui import QColor, QFont, QTransform, QPen, QBrush
 
-from pcot.datum import Datum, isCompatibleConnection
+import pcot.datum as datum
 import pcot.ui as ui
 import pcot.ui.namedialog
 import pcot.utils.deb
@@ -275,7 +275,7 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
 
     def isVariant(self):
         tp = self.node.getInputType(self.index) if self.isInput else self.node.getOutputType(self.index)
-        return tp == Datum.VARIANT
+        return tp == datum.Datum.VARIANT
 
     def __init__(self, parent, x1, y1, x2, y2, node, isInput, index):
         """construct, giving parent object (GMainRect), rectangle data, node data, input/output and index."""
@@ -637,7 +637,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     x1 = x1 + outsize * (output + 0.5)
                     x2 = x2 + insize * (inputIdx + 0.5)
                     y1 += n1.h
-                    compat = isCompatibleConnection(outtype, intype)
+                    compat = datum.isCompatibleConnection(outtype, intype)
 
 #                    if not compat:
 #                        ui.log(f"incompatible: {n1} -> {n2} / {outtype} -> {intype}")

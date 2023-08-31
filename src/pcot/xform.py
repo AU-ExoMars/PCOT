@@ -21,7 +21,8 @@ import pyperclip
 import pcot.macros
 import pcot.ui as ui
 from pcot import datum
-from pcot.datum import Datum, Type
+from pcot.datum import Datum
+
 from pcot.sources import nullSourceSet, MultiBandSource
 from pcot.ui import graphscene
 from pcot.ui.canvas import Canvas
@@ -138,8 +139,8 @@ class XFormType:
     hasEnable: bool
     # an open help window, or None
     helpwin: Optional['PyQt5.QtWidgets.QMainWindow']
-    inputConnectors: List[Tuple[str, Type, str]]  # the inputs (name,connection type,description)
-    outputConnectors: List[Tuple[str, Type, str]]  # the outputs (name,connection type,description)
+    inputConnectors: List[Tuple[str, 'Type', str]]  # the inputs (name,connection type,description)
+    outputConnectors: List[Tuple[str, 'Type', str]]  # the outputs (name,connection type,description)
     # tuple of autoserialisable attributes in each node of this type
     # These are either strings or tuples, in which case the first element is the name and the second
     # is a default value used when legacy files are loaded which doesn't have that value.
@@ -355,6 +356,8 @@ class BadTypeException(Exception):
         super().__init__("incorrect output type requested, index {}".format(i))
 
 
+performDepth = 0
+
 class XForm:
     """an actual instance of a transformation, often called a "node"."""
 
@@ -382,8 +385,7 @@ class XForm:
     outputs: List[Optional[Datum]]
 
     ## @var outputTypes
-    # the "overriding" output type (since an "img" output (say) may become
-    # an "imgrgb") when the perform happens
+    # the "overriding" output type (a node may change its type when it performs)
     outputTypes: List[Optional[str]]
 
     ## @var inputTypes
@@ -631,7 +633,7 @@ class XForm:
         # run the additional deserialisation method
         self.type.deserialise(self, d)
 
-    def getOutputType(self, i) -> Optional[datum.Type]:
+    def getOutputType(self, i) -> Optional['pcot.datumtypes.Type']:
         """return the actual type of an output, taking account of overrides (node outputTypes).
         Note that this returns the *connection* type, not the *datum* type stored in that connection.
         Returns None if there is no connection, not Datum.NONE.
@@ -841,6 +843,7 @@ class XForm:
     # Also tells any tab open on a node that its node has changed.
     # DO NOT CALL DIRECTLY - called either from itself or from performNodes.
     def perform(self):
+        global performDepth
         # used to stop perform being called out of context; it should
         # only be called inside the graph's perform.
         if not self.graph.performingGraph:
@@ -855,7 +858,7 @@ class XForm:
             elif not self.canRun():
                 logging.info(f"----Skipping {self.debugName()}, it can't run (unset inputs)")
             else:
-                logging.info(f"--------------------------------------Performing {self.debugName()}")
+                logging.info(f"---------------------------------{'-'*performDepth}Performing {self.debugName()}")
                 # first clear all outputs
                 self.clearOutputs()
                 # now run the node, catching any XFormException
@@ -870,9 +873,16 @@ class XForm:
                 self.hasRun = True
                 # tell the tab that this node has changed
                 self.updateTabs()
+
+                # this is a hack to let us guarantee the order children are processed,
+                # by sorting them by display name. Used in testing.
+                sorted_children = sorted(self.children.keys(), key=lambda xx: xx.displayName)
+
                 # run each child (could turn off child processing?)
-                for n in self.children:
+                performDepth += 1
+                for n in sorted_children:
                     n.perform()
+                performDepth -= 1
         except Exception as e:
             traceback.print_exc()
             ui.logXFormException(self, e)
