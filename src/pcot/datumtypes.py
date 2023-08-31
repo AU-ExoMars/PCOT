@@ -1,6 +1,8 @@
 
 
 # lookup by name for serialisation
+from copy import copy
+
 import pcot.rois
 import pcot.datumexceptions
 import pcot.imagecube
@@ -45,6 +47,10 @@ class Type:
     def deserialise(self, d, document: 'Document') -> 'Datum':
         raise pcot.datumexceptions.CannotSerialiseDatumType(self.name)
 
+    def copy(self, d):
+        """create a copy of the Datum which is an independent piece of data and can be modified independently."""
+        raise pcot.datumexceptions.NoDatumCopy(self.name)
+
 
 # Built-in datum types
 
@@ -58,6 +64,9 @@ class AnyType(Type):
             return "none"
         else:
             return "any"
+
+    def copy(self, d):
+        return d    # this type is immutable
 
 
 class ImgType(Type):
@@ -79,6 +88,9 @@ class ImgType(Type):
         img = pcot.imagecube.ImageCube.deserialise(d, document)
         return pcot.datum.Datum(self, img)
 
+    def copy(self, d):
+        return pcot.datum.Datum(pcot.datum.Datum.IMG, d.val.copy())
+
 
 class RoiType(Type):
     def __init__(self):
@@ -95,6 +107,10 @@ class RoiType(Type):
         s = pcot.sources.SourceSet.deserialise(s, document)
         r = pcot.rois.deserialise(self.name, roidata)
         return pcot.datum.Datum(self, r, s)
+
+    def copy(self, d):
+        r = copy(d.val)  # deep copy with __copy__
+        return pcot.datum.Datum(pcot.datum.Datum.ROI, r)
 
 
 class NumberType(Type):
@@ -115,15 +131,24 @@ class NumberType(Type):
         s = pcot.sources.SourceSet.deserialise(s, document)
         return pcot.datum.Datum(self, n, s)
 
+    def copy(self, d):
+        return d    # this type is immutable
+
 
 class VariantType(Type):
     def __init__(self):
         super().__init__('variant', valid=None)
 
+    def copy(self, d):
+        return d    # this type is immutable
+
 
 class GenericDataType(Type):
     def __init__(self):
         super().__init__('data', valid=None)
+
+    def copy(self, d):
+        return d    # this type is immutable
 
 
 class TestResultType(Type):
@@ -137,15 +162,24 @@ class TestResultType(Type):
         else:
             return "TESTS OK"
 
+    def copy(self, d):
+        return d    # this type is immutable
+
 
 class IdentType(Type):
     def __init__(self):
         super().__init__('ident', internal=True, valid=[str])
 
+    def copy(self, d):
+        return d    # this type is immutable
+
 
 class FuncType(Type):
     def __init__(self):
         super().__init__('func', internal=True, valid=None)
+
+    def copy(self, d):
+        return d    # this type is immutable
 
 
 class NoneType(Type):
@@ -159,4 +193,6 @@ class NoneType(Type):
         from pcot.datum import Datum
         return Datum.null
 
+    def copy(self, d):
+        return d    # this type is immutable
 

@@ -9,7 +9,7 @@ class XFormInput(XFormType):
     """Bring an input into the graph."""
     def __init__(self, idx):
         super().__init__("input " + str(idx), "source", "0.0.0")
-        self.addOutputConnector("img", Datum.IMG, "image")
+        self.addOutputConnector("", Datum.NONE)   # this changes type dynamically
         self.idx = idx
 
     def createTab(self, n, w):
@@ -27,11 +27,12 @@ class XFormInput(XFormType):
             # if the input is None, and it's not the Null input, set an error state (but not an exception)
             if inp.activeMethod != pcot.inputs.Input.NULL:
                 node.setError(XFormException('DATA', 'input node could not read data - {}'.format(inp.exception)))
-        elif out.isImage():
-            cop = out.val.copy()
-            out = Datum(Datum.IMG, cop)
-            out.val.setMapping(node.mapping)
-        # other node types should just work
+        else:
+            out = out.copy()   # make a copy of the input (usually doesn't actually copy)
+            if out.isImage():
+                out.val.setMapping(node.mapping)
+
+        node.changeOutputType(0, out.tp)
 
         node.out = out
         node.setOutput(0, node.out)

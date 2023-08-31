@@ -114,6 +114,10 @@ class Datum(SourcesObtainable):
         """Serialise for saving to a file, usually (always?) as the cached value of an input"""
         return self.tp.serialise(self)
 
+    def copy(self):
+        """Make a deep copy if the datum is mutable - uses a method in the type to do this"""
+        return self.tp.copy(self)
+
     @classmethod
     def deserialise(cls, data, document):
         """inverse of serialise for serialised data 'd' - requires document so that sources can be

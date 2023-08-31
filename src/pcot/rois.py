@@ -536,6 +536,10 @@ class ROICircle(ROI):
         else:
             self.x, self.y, self.r, self.isSet, self.drawBox, self.drawEdge = d['croi']
 
+    def __copy__(self):
+        r = ROICircle(sourceROI=self)
+        return r
+
     def rebase(self, x, y):
         r = ROICircle(sourceROI=self)
         r.x -= x
@@ -652,6 +656,10 @@ class ROIPainted(ROI):
         r = ROIPainted(sourceROI=self)
         r.bbrect.x -= x
         r.bbrect.y -= y
+        return r
+
+    def __copy__(self):
+        r = ROIPainted(sourceROI=self)
         return r
 
     def createEditor(self, tab):
@@ -798,6 +806,10 @@ class ROIPoly(ROI):
     def rebase(self, x, y):
         r = ROIPoly(sourceROI=self)
         r.points = [(xx - x, yy - y) for xx, yy in self.points]
+        return r
+
+    def __copy__(self):
+        r = ROIPoly(sourceROI=self)
         return r
 
     def createEditor(self, tab):

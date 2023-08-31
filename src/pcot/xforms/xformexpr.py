@@ -178,6 +178,9 @@ class XFormExpr(XFormType):
                             node.img.setMapping(node.mapping)
                     node.resultStr = res.tp.getDisplayString(res)
                     node.setRectText(node.resultStr)
+                else:
+                    # no output, so reset the output type
+                    node.changeOutputType(0, Datum.NONE)
 
         except Exception as e:
             traceback.print_exc()

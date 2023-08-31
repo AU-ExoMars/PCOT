@@ -33,3 +33,8 @@ class DatumWithNoSourcesException(DatumException):
     """Datum constructor should be supplied with explicit source set if not an image or None"""
     def __init__(self):
         super().__init__("Datum objects which are not images must have an explicit source set")
+
+
+class NoDatumCopy(DatumException):
+    def __init__(self, typename):
+        super().__init__(f"Datum type {typename} has no copy operation")
