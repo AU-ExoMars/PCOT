@@ -238,6 +238,9 @@ class Value:
     def __pow__(self, power, modulo=None):
         # zero cannot be raised to -ve power so invalid, but we use zero as a dummy.
         try:
+            # It seems that when you perform an operation on a masked array that results in a nan.
+            # it puts the fill value for the array into the data and masks it! Therefore we have to make
+            # sure any masked arrays which feed into here are masked appropriately.
             n = np.where((self.n == 0.0) & (power.n < 0), 0, self.n ** power.n)
             u = np.where((self.n == 0.0) & (power.n < 0), 0, pow_unc(self.n, self.u, power.n, power.u))
             d = combineDQs(self, power, np.where((self.n == 0.0) & (power.n < 0), dq.UNDEF, dq.NONE))

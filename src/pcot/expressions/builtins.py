@@ -265,13 +265,10 @@ def funcWrapper(fn: Callable[[Value], Value], d: Datum) -> Datum:
         unccopy = subimage.uncertainty.copy()
         dqcopy = subimage.dq.copy()
 
-        # create masked versions of that data
-        masked_n = np.ma.masked_array(imgcopy, mask=~mask)
-        masked_u = np.ma.masked_array(unccopy, mask=~mask)
-        masked_d = np.ma.masked_array(dqcopy, mask=~mask)
+        # Perform the calculation on the entire subimage rectangle, but only the results covered by ROI
+        # will be spliced back into the image (modifyWithSub does this).
+        v = Value(imgcopy, unccopy, dqcopy)
 
-        # perform the operation on that data
-        v = Value(masked_n, masked_u, masked_d)
         rv = fn(v)
         # depending on the result type..
         if rv.isscalar():

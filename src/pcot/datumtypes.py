@@ -10,6 +10,7 @@ import pcot.sources
 import pcot.value
 import pcot.datum
 import pcot.sources
+from pcot import dq
 
 typesByName = dict()
 
@@ -119,7 +120,7 @@ class NumberType(Type):
         super().__init__('number', valid=[pcot.value.Value])
 
     def getDisplayString(self, d: 'Datum'):
-        return f"{d.val.n:.5g}±{d.val.u:.5g}"
+        return f"{d.val.n:.5g}±{d.val.u:.5g}{dq.chars(d.val.dq)}"
 
     def serialise(self, d):
         return self.name, (d.val.serialise(),
