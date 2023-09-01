@@ -255,9 +255,9 @@ def funcWrapper(fn: Callable[[Value], Value], d: Datum) -> Datum:
         rv = fn(d.val)
         return Datum(Datum.NUMBER, rv, SourceSet(ss))
     elif d.isImage():
-        img = d.val()
+        img = d.val
         ss = d.sources
-        subimage = d.subimage()
+        subimage = img.subimage()
         mask = subimage.fullmask()
 
         # make copies of the source data into which we will splice the results
@@ -266,9 +266,9 @@ def funcWrapper(fn: Callable[[Value], Value], d: Datum) -> Datum:
         dqcopy = subimage.dq.copy()
 
         # create masked versions of that data
-        masked_n = np.ma_masked_array(imgcopy, mask=~mask)
-        masked_u = np.ma_masked_array(unccopy, mask=~mask)
-        masked_d = np.ma_masked_array(dqcopy, mask=~mask)
+        masked_n = np.ma.masked_array(imgcopy, mask=~mask)
+        masked_u = np.ma.masked_array(unccopy, mask=~mask)
+        masked_d = np.ma.masked_array(dqcopy, mask=~mask)
 
         # perform the operation on that data
         v = Value(masked_n, masked_u, masked_d)
@@ -279,7 +279,7 @@ def funcWrapper(fn: Callable[[Value], Value], d: Datum) -> Datum:
             return Datum(Datum.NUMBER, rv, ss)
         else:
             # ...or splice it back into the image
-            img = img.modifyWithSub(subimage, v.n, uncertainty=v.u, dq=v.dq)
+            img = img.modifyWithSub(subimage, rv.n, uncertainty=rv.u, dqv=rv.dq)
             return Datum(Datum.IMG, img)
 
 
@@ -459,10 +459,10 @@ def registerBuiltinFunctions(p):
                    [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
                    lambda args, optargs: funcWrapperOld(np.tan, args[0]))
-    p.registerFunc("sqrt", "calculate the square root (note - uncertainty is cleared. Use ^0.5 instead).",
+    p.registerFunc("sqrt", "calculate the square root",
                    [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: funcWrapperOld(np.sqrt, args[0]))
+                   lambda args, optargs: funcWrapper(lambda x: x.sqrt(), args[0]))
     p.registerFunc("abs", "find absolute value",
                    [Parameter("val", "input value", (Datum.NUMBER, Datum.IMG))],
                    [],

@@ -1,3 +1,4 @@
+import math
 from typing import Any
 
 import numpy as np
@@ -271,6 +272,24 @@ class Value:
         u = np.where(self.n < other.n, other.u, self.u)
         d = np.where(self.n < other.n, other.dq, self.dq)
         return Value(n, u, d)
+
+    def sqrt(self):
+        """This is probably simpler but might be slightly slower"""
+        return self ** Value(0.5, 0, dq.NONE)
+
+    def sin(self):
+        return Value(math.sin(self.n),
+                     math.cos(self.n) * self.u,
+                     self.dq)
+
+    def cos(self):
+        return Value(math.cos(self.n),
+                     math.sin(self.n) * self.u,
+                     self.dq)
+
+    def tan(self):
+        """Doing it this way might be a little slower, but will cover weird cases."""
+        return self.sin() / self.cos()
 
     def __neg__(self):
         return Value(-self.n, self.u, self.dq)
