@@ -309,3 +309,10 @@ class Value:
 
     def __repr__(self):
         return self.__str__()
+
+    def brief(self):
+        """Very brief ASCII-safe representation used in e.g. test names"""
+        if self.dq!=0:
+            return f"{self.n}|{self.u}|{dq.names(self.dq,True)}"
+        else:
+            return f"{self.n}|{self.u}"

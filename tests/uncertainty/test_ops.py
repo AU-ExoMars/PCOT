@@ -117,7 +117,7 @@ class UnopTest:
     def __str__(self):
         """Annoyingly the output console can't handle unicode, so I can't use the ± here. Using | instead.
         Used to generate test names."""
-        return f"{self.e}: a={self.n}|{self.u}, exp={self.expected_val}|{self.expected_unc}|{dq.names(self.expected_dq,True)}"
+        return f"{self.e}: a={self.n}|{self.u}|{dq.names(self.dq,True)},exp={self.expected_val}|{self.expected_unc}|{dq.names(self.expected_dq,True)}"
 
 
 unop_tests = [
