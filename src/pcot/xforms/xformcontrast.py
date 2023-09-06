@@ -48,7 +48,7 @@ def contrast1(img, tol, mask, dqToSet):
 class XformContrast(XFormType):
     """
     Perform a simple contrast stretch separately on each channel. The stretch is linear around the midpoint
-    and excessive values are clamped. The knob controls the amount of stretch applied."""
+    and excessive values are clamped. The knob controls the amount of stretch applied. Uncertainty is discarded."""
 
     # type constructor run once at startup
     def __init__(self):
@@ -97,7 +97,8 @@ class XformContrast(XFormType):
                 imgs = image.imgsplit(subimage.img)
                 dqs = image.imgsplit(dqv)
                 newsubimg = image.imgmerge([contrast1(x, node.tol, subimage.mask, y) for x, y in zip(imgs, dqs)])
-            # having got a modified subimage, we need to splice it in
+            # having got a modified subimage, we need to splice it in. No uncertainty is passed in, so the
+            # uncertainty is discarded and the NOUNC bit set.
             node.img = img.modifyWithSub(subimage, newsubimg, dqv=dqv)
         # Now we have generated the internally stored image, output it to output 0. This will
         # cause all nodes "downstream" to perform their actions.

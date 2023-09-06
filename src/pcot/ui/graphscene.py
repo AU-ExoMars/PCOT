@@ -681,6 +681,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         if self.checkSelChange:
             items = self.selectedItems()
             self.selection = []
+            logger.info("selChanged")
             for n in self.graph.nodes:
                 if n.rect in items:
                     self.selection.append(n)
@@ -798,12 +799,13 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             x, y = n.xy
             n.xy = (x + PASTEOFFSET, y + PASTEOFFSET)
         self.rebuild()  # rebuild all nodes
-        self.selection = newnodes  # set the selection to the new nodes
-        for n in newnodes:
-            n.rect.setSelected(True)
+        logger.info("paste")
         # colour selected nodes
         self.setColourToState()
         self.graph.changed()
+        self.selection = newnodes  # set the selection to the new nodes
+        for n in newnodes:
+            n.rect.setSelected(True)
 
     def cut(self):
         """cut operation, serialises items to system clipboard and deletes them"""
@@ -811,6 +813,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         self.graph.copy(self.selection)
         for n in self.selection:
             self.graph.remove(n)
+        logger.info("cut")
         self.selection = []
         self.rebuild()
 

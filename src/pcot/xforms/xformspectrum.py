@@ -38,6 +38,7 @@ def getSpectrum(chanImg, chanUnc, chanDQ, mask, ignorePixSD=False):
         # by https://arxiv.org/ftp/arxiv/papers/1007/1007.1012.pdf
         # So we'll calculate the variance of the means added to the mean of the variances.
         # And then we'll need to root that variance to get back to SD.
+        # There is a similar calculation called pooled_sd() in builtins!
 
         std = np.sqrt(a.var() + np.mean(np.ma.masked_array(data=chanUnc, mask=~mask) ** 2))
     else:

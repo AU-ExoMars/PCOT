@@ -153,7 +153,7 @@ class Value:
         d = data quality bits (see DQ; these are error bits).
         This has to make sure that n, u and d are all the same dimensionality."""
 
-        n = np.float32(n)       # convert to correct types (will also convert arrays)
+        n = np.float32(n)  # convert to correct types (will also convert arrays)
         u = np.float32(u)
         d = np.uint16(d)
 
@@ -281,18 +281,44 @@ class Value:
         return self ** Value(0.5, 0, dq.NONE)
 
     def sin(self):
-        return Value(math.sin(self.n),
-                     math.cos(self.n) * self.u,
+        return Value(np.sin(self.n),
+                     np.sqrt((np.cos(self.n) * self.u) ** 2),
                      self.dq)
 
     def cos(self):
-        return Value(math.cos(self.n),
-                     math.sin(self.n) * self.u,
+        return Value(np.cos(self.n),
+                     np.sqrt((np.sin(self.n) * self.u) ** 2),
                      self.dq)
 
     def tan(self):
-        """Doing it this way might be a little slower, but will cover weird cases."""
-        return self.sin() / self.cos()
+        # Now you might think this would work:
+        #   return self.sin()/self.cos()
+        # but it doesn't because they clearly aren't independent. Instead
+        # we calculate from the secant (although that gets Fun when zeroes are involved)
+
+        # we avoid division by zero and we do the same calc differently
+        # for scalar and array. It's really unlikely that the zero case will
+        # come up, but still.
+
+        extra = dq.NONE   # bits to OR into the DQ of the result
+        if self.isscalar():
+            cos = np.cos(self.n)
+            if cos == 0:
+                cos = 1e6
+                extra = dq.DIVZERO
+            sec = 1.0 / cos
+            u = np.sqrt((sec**2 * self.u)**2)
+        else:
+            cos = np.cos(self.n)
+            cos = np.where(cos == 0, 1e6, cos)   # turn infs into large
+            extra = np.where(cos == 0, dq.DIVZERO, dq.NONE)
+            sec = 1.0 / cos
+            u = np.sqrt((sec**2 * self.u)**2)
+
+        return Value(np.tan(self.n), u, self.dq | extra)
+
+    def __abs__(self):
+        return Value(np.abs(self.n), self.u, self.dq)
 
     def __neg__(self):
         return Value(-self.n, self.u, self.dq)
@@ -312,7 +338,7 @@ class Value:
 
     def brief(self):
         """Very brief ASCII-safe representation used in e.g. test names"""
-        if self.dq!=0:
-            return f"{self.n}|{self.u}|{dq.names(self.dq,True)}"
+        if self.dq != 0:
+            return f"{self.n}|{self.u}|{dq.names(self.dq, True)}"
         else:
             return f"{self.n}|{self.u}"

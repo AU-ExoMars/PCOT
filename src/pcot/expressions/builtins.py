@@ -8,7 +8,7 @@ import numpy as np
 
 import pcot
 import pcot.dq
-from pcot import rois
+from pcot import rois, dq
 from pcot.config import parserhook, getAssetPath
 from pcot.datum import Datum
 from pcot.expressions import Parameter
@@ -258,7 +258,6 @@ def funcWrapper(fn: Callable[[Value], Value], d: Datum) -> Datum:
         img = d.val
         ss = d.sources
         subimage = img.subimage()
-        mask = subimage.fullmask()
 
         # make copies of the source data into which we will splice the results
         imgcopy = subimage.img.copy()
@@ -278,42 +277,6 @@ def funcWrapper(fn: Callable[[Value], Value], d: Datum) -> Datum:
             # ...or splice it back into the image
             img = img.modifyWithSub(subimage, rv.n, uncertainty=rv.u, dqv=rv.dq)
             return Datum(Datum.IMG, img)
-
-
-
-
-
-
-def funcWrapperOld(fn, d, *args):
-    """Wrapper around a evaluator function that deals with ROIs etc.
-    compare this with exprWrapper in operations, which only handles images and delegates
-    processing ROI stuff to the function."""
-    if d is None:
-        return None
-    elif d.isImage():  # deal with image argument
-        img = d.val
-        subimage = img.subimage()
-        mask = subimage.fullmask()
-        cp = subimage.img.copy()
-        masked = np.ma.masked_array(cp, mask=~mask)
-        newdata = fn(masked, *args)  # the result of this could be *anything*
-        # so now we look at the result and build an appropriate Datum
-        if isinstance(newdata, np.ndarray):
-            #  np.putmask(cp, mask, newdata)      # I think this isn't needed!!
-            img = img.modifyWithSub(subimage, newdata)
-            return Datum(Datum.IMG, img)
-        elif isinstance(newdata, SupportsFloat):
-            # 'img' is SourcesObtainable. Note that we set zero uncertainty here! TODO UNCERTAINTY!
-            val = Value(float(newdata), 0.0)
-            return Datum(Datum.NUMBER, val, img)
-        else:
-            raise XFormException('EXPR', 'internal: fn returns bad type in funcWrapper')
-    elif d.tp == Datum.NUMBER:  # deal with numeric argument (always returns a numeric result)
-        # get sources for all arguments
-        ss = [a.getSources() for a in args]
-        ss.append(d.getSources())
-        val = Value(fn(d.val.n, *args), 0.0)  # TODO UNCERTAINTY!
-        return Datum(Datum.NUMBER, val, SourceSet(ss))
 
 
 def funcMarkSat(args: List[Datum], _):
@@ -346,13 +309,13 @@ def funcSetCWL(args: List[Datum], _):
     return Datum(Datum.IMG, img)
 
 
-def statsWrapper(fn, fnu, d: List[Optional[Datum]], *args):
+def statsWrapper(fn, d: List[Optional[Datum]], *args) -> Datum:
     """similar to funcWrapper, but can take lots of image and number arguments which it aggregates to do stats on.
     The result of fn must be a number. Works by flattening any images and concatenating them with any numbers,
     and doing the operation on the resulting data.
 
-    fn generates the nominal value and takes the nominal values,
-    fnu generates the uncertainty and takes nominal values and uncertainty."""
+    fn takes a tuple of nominal and uncertainty values compressed into a 1D array, and returns a Value.
+    """
 
     intermediate = None
     uncintermediate = None
@@ -404,11 +367,9 @@ def statsWrapper(fn, fnu, d: List[Optional[Datum]], *args):
             intermediate = np.concatenate((intermediate, newdata))
             uncintermediate = np.concatenate((uncintermediate, uncnewdata))
 
-    # then we perform the function on the collated array
-    # TODO UNCERTAINTY! It's ignored by this func TODOUNCERTAINTY
-    val = fn(intermediate, *args)
-    u = fnu(intermediate, uncintermediate, *args)
-    return Datum(Datum.NUMBER, Value(val, u), SourceSet(sources))
+    # then we perform the function on the collated arrays
+    val = fn(intermediate, uncintermediate, *args)
+    return Datum(Datum.NUMBER, val, SourceSet(sources))
 
 
 testImageCache = {}
@@ -447,15 +408,15 @@ def registerBuiltinFunctions(p):
     p.registerFunc("sin", "calculate sine of angle in radians",
                    [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: funcWrapperOld(np.sin, args[0]))
+                   lambda args, optargs: funcWrapper(lambda x: x.sin(), args[0]))
     p.registerFunc("cos", "calculate cosine of angle in radians",
                    [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: funcWrapperOld(np.cos, args[0]))
+                   lambda args, optargs: funcWrapper(lambda x: x.cos(), args[0]))
     p.registerFunc("tan", "calculate tangent of angle in radians",
                    [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: funcWrapperOld(np.tan, args[0]))
+                   lambda args, optargs: funcWrapper(lambda x: x.tan(), args[0]))
     p.registerFunc("sqrt", "calculate the square root",
                    [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
@@ -463,7 +424,7 @@ def registerBuiltinFunctions(p):
     p.registerFunc("abs", "find absolute value",
                    [Parameter("val", "input value", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: funcWrapperOld(np.abs, args[0]))
+                   lambda args, optargs: funcWrapper(lambda x: abs(x), args[0]))
 
     p.registerFunc("min",
                    "find the minimum value of the nominal values in a set of images and/or values. "
@@ -471,21 +432,16 @@ def registerBuiltinFunctions(p):
                    "so the result for multiband images may not be what you expect.",
                    [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: statsWrapper(np.min, lambda n, u: 0, args), varargs=True)
+                   lambda args, optargs: statsWrapper(lambda n, u: Value(np.min(n), 0.0, dq.NOUNCERTAINTY), args),
+                   varargs=True)
     p.registerFunc("max",
                    "find the minimum value of the nominal values in a set of images and/or values. "
                    "Images will be flattened into a list of values, "
                    "so the result for multiband images may not be what you expect.",
                    [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: statsWrapper(np.max, lambda n, u: 0, args), varargs=True)
-    p.registerFunc("sd",
-                   "find the standard deviation of the nominal values in a set of images and/or values. "
-                   "Images will be flattened into a list of values, "
-                   "so the result for multiband images may not be what you expect.",
-                   [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
-                   [],
-                   lambda args, optargs: statsWrapper(np.std, lambda n, u: 0, args), varargs=True)
+                   lambda args, optargs: statsWrapper(lambda n, u: Value(np.max(n), 0.0, dq.NOUNCERTAINTY), args),
+                   varargs=True)
     p.registerFunc("sum",
                    "find the sum of the nominal in a set of images and/or values. "
                    "Images will be flattened into a list of values, "
@@ -493,14 +449,35 @@ def registerBuiltinFunctions(p):
                    "The SD of the result is the SD of the sum, not the individual values.",
                    [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: statsWrapper(np.sum, lambda n, u: add_sub_unc_list(u), args), varargs=True)
+                   lambda args, optargs: statsWrapper(lambda n, u: Value(np.sum(n), add_sub_unc_list(u), dq.NONE),
+                                                      args), varargs=True)
+
+    def pooled_sd(n, u):
+        """Returns pooled standard deviation for an array of nominal values and an array of stddevs."""
+        # "Thus the variance of the pooled set is the mean of the variances plus the variance of the means."
+        # by https://arxiv.org/ftp/arxiv/papers/1007/1007.1012.pdf
+        # the variance of the means is n.var()
+        # the mean of the variances is np.mean(u**2) (since u is stddev, and stddev**2 is variance)
+        # so the sum of those is pooled variance. Root that to get the pooled stddev.
+        # There is a similar calculation in xformspectrum!
+        return np.sqrt(n.var() + np.mean(u ** 2))
+
     p.registerFunc("mean",
-                   "find the mean±sd of the nominal values of a set of images and/or values. "
-                   "Images will be flattened into a list of values, "
+                   "find the mean±sd of the values of a set of images and/or scalars. "
+                   "Uncertainties in the data will be pooled. Images will be flattened into a list of values, "
                    "so the result for multiband images may not be what you expect.",
                    [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: statsWrapper(np.mean, lambda n, u: np.std(n), args), varargs=True)
+                   lambda args, optargs: statsWrapper(lambda n, u: Value(np.mean(n), pooled_sd(n, u), dq.NONE),
+                                                      args), varargs=True)
+    p.registerFunc("sd",
+                   "find the standard deviation of the nominal values in a set of images and/or scalars. "
+                   "Uncertainties in the data will be pooled. Images will be flattened into a list of values, "
+                   "so the result for multiband images may not be what you expect.",
+                   [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
+                   [],
+                   lambda args, optargs: statsWrapper(lambda n, u: Value(pooled_sd(n, u), 0, dq.NOUNCERTAINTY),
+                                                      args), varargs=True)
 
     p.registerFunc("grey", "convert an image to greyscale",
                    [Parameter("image", "an image to process", Datum.IMG)],

@@ -198,7 +198,8 @@ class XFormGen(XFormType):
             us = np.dstack(us).astype(np.float32)
 
             # construct Filter only sources - these don't have input data but do have a filter.
-            sources = [FilterOnlySource(Filter(chan.cwl, 30, 1.0, idx=i)) for i, chan in enumerate(node.imgchannels)]
+            sources = [FilterOnlySource(Filter(chan.cwl, 30, 1.0, idx=i),
+                                        extraName=node.displayName) for i, chan in enumerate(node.imgchannels)]
             # make and output the image
             node.img = ImageCube(ns, node.mapping, uncertainty=us, sources=MultiBandSource(sources))
             node.setOutput(0, Datum(Datum.IMG, node.img))

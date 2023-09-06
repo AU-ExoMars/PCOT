@@ -80,6 +80,7 @@ class XFormExpr(XFormType):
 
 
     ### Operators on ROIs themselves (as opposed to images with ROIs)
+
     |operator    |description|
     |----------|--------------|
     |a+b |          union|
@@ -123,6 +124,14 @@ class XFormExpr(XFormType):
     and selecting "List all functions." Help on an individual function can be found by hovering over
     the name of a function, right-clicking and selecting "Get help on 'somefunction'".
     Similar actions are supported for properties.
+
+    ## Uncertainties are assumed to be independent in all binary operations
+
+    While uncertainty is propagated through operations (as standard deviation) all quantities are assumed
+    to be independent (calculating covariances is beyond the scope of this system). Be very careful here.
+    For example, the uncertainty for the expression **tan(a)** will be calculated correctly, but if you try
+    to use **sin(a)/cos(a)** the uncertainty will be incorrect because the nominator and denominator are
+    not independent.
 
 
     """

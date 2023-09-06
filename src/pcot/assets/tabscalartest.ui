@@ -141,6 +141,14 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>nCombo</tabstop>
+  <tabstop>nEdit</tabstop>
+  <tabstop>uCombo</tabstop>
+  <tabstop>uEdit</tabstop>
+  <tabstop>dqCombo</tabstop>
+  <tabstop>dqEditButton</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

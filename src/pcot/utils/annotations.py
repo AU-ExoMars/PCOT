@@ -104,6 +104,8 @@ class IndexedPointAnnotation(Annotation):
         p.drawEllipse(QPointF(x, y), r, r)
         if self.issel:
             # we draw the selected point with an extra circle INSIDE.
+            p.drawLine(QPointF(-100, y), QPointF(x+100, y))
+            p.drawLine(QPointF(x, y-100), QPointF(x, y+100))
             p.drawEllipse(QPointF(x, y), 0.7*r, 0.7*r)
 
         fontsize = 15   # font size in on-screen pixels
