@@ -340,7 +340,7 @@ class XFormType:
 
 def serialiseConn(c, connSet):
     """serialise a connection (xform,i) into (xformName,i).
-    Will only serialise connections into the set passed in. If None is passed
+    Will only serialise connections within the set passed in. If None is passed
     in all connections are OK."""
     if c:
         x, i = c
@@ -575,17 +575,15 @@ class XForm:
         self.graph.scene.selChanged()
         self.graph.changed(self)
 
-    def serialise(self, selection=None):
-        """build a serialisable python dict of this node's values
-        including only connections to/from the nodes in the selection (which may
-        be None if you want to serialize the whole set)
-        """
+    def serialise(self):
+        """build a serialisable python dict of this node's values - including any connections from nodes
+        not in the set. """
         d = {'xy': self.xy,
              'w': self.w,
              'h': self.h,
              'type': self.type.name,
              'displayName': self.displayName,
-             'ins': [serialiseConn(c, selection) for c in self.inputs],
+             'ins': [serialiseConn(c, None) for c in self.inputs],
              'comment': self.comment,
              'outputTypes': [None if x is None else x.name for x in self.outputTypes],
              'inputTypes': [None if x is None else x.name for x in self.inputTypes],
@@ -1257,7 +1255,7 @@ class XFormGraph:
         if items is None:
             items = self.nodes
         for n in items:
-            d[n.name] = n.serialise(items)
+            d[n.name] = n.serialise()
 
         return d
 
@@ -1285,7 +1283,7 @@ class XFormGraph:
             """
 
         if deleteExistingNodes:
-            self.clearAllNodes(closetabs=True)
+            self.clearAllNodes(closetabs=closetabs)
 
         # disambiguate nodes in the dict, to make sure they don't
         # have the same nodes as ones already in the graph
@@ -1311,8 +1309,10 @@ class XFormGraph:
             for i in range(0, len(conns)):
                 if conns[i] is not None:
                     oname, output = conns[i]  # tuples of name,index: see serialiseConn()
-                    other = self.nodeDict[oname]
-                    n.connect(i, other, output, False)  # don't automatically perform
+                    if oname in self.nodeDict:
+                        # only do the connection if the node we're connecting from is found
+                        other = self.nodeDict[oname]
+                        n.connect(i, other, output, False)  # don't automatically perform
         # and finally match output types
         for n in newnodes:
             n.type.generateOutputTypes(n)

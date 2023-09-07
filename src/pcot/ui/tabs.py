@@ -6,6 +6,8 @@ from PySide2 import QtWidgets, QtCore
 from PySide2.QtCore import Qt
 import collections
 
+from PySide2.QtWidgets import QMenu, QAction
+
 import pcot
 
 ## the main UI window class. Your application window should inherit from
@@ -30,6 +32,9 @@ class DockableTabWindow(QtWidgets.QMainWindow):
         self.tabWidget.tabBar().tabCloseRequested.connect(self.closeTabByIndex)
         # and when we switch tab
         self.tabWidget.currentChanged.connect(self.currentChanged)
+        # set up a context menu
+        self.tabWidget.tabBar().setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tabWidget.tabBar().customContextMenuRequested.connect(self.showMenu)
 
         # store the tabs in an ordered dict, so we can iterate them in create order
         # when we reorder tabs in redocking.                
@@ -39,6 +44,25 @@ class DockableTabWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()  # Call the inherited classes __init__ method
         self.tabs = None
+
+    def showMenu(self, p):
+        if p is None:
+            return
+        idx = self.tabWidget.tabBar().tabAt(p)
+        menu = QMenu(self)
+        closeAct = QAction("Close all other tabs")
+        menu.addAction(closeAct)
+
+        act = menu.exec_(self.mapToGlobal(p))
+        if act == closeAct:
+            self.closeAllTabsExcept(idx)
+
+    def closeAllTabsExcept(self, index):
+        for i in range(0, self.tabWidget.count()):
+            if i < index:
+                self.closeTabByIndex(0)
+            elif i > index:
+                self.closeTabByIndex(1)
 
     ## close a tab
     def closeTabByIndex(self, index):
