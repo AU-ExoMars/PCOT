@@ -98,7 +98,7 @@ class FilterOnlySource(Source):
             return f"{pre}band {self.filterOrName}"
 
     def brief(self, captionType=DocumentSettings.CAP_DEFAULT) -> Optional[str]:
-        pre = None if self.extraName is None else f"{self.extraName}: "
+        pre = "" if self.extraName is None else f"{self.extraName}:"
         if isinstance(self.filterOrName, Filter):
             return f"{pre}{getFiltStr(self.filterOrName, captionType)}"
         else:
