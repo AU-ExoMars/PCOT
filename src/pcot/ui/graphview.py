@@ -83,8 +83,7 @@ class GraphView(QtWidgets.QGraphicsView):
         # now we need to make one of those and add it to the graph!
         self.scene().mark()
         x = self.scene().graph.create(name)
-        # we have to fudge up a position for this; normally grandalf
-        # creates these. No need to set width and height.
+        # we have to fudge up a position for this, it will have been given a default position.
         pos = self.mapToScene(e.pos())
         x.xy = (pos.x(), pos.y())
         # and build the scene with the new objects

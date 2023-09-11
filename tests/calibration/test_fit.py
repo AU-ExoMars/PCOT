@@ -1,3 +1,5 @@
+"""Tests of the basic calibration line-fitting technique"""
+
 from pcot.calib import fit
 
 import numpy as np
@@ -26,6 +28,8 @@ def generate_test_data(m, c):
 
 
 def test_fit():
+    """Perform some basic tests - we generate some data around a known slope and intercept, and check
+    we recover that slope and intercept correctly"""
     for m in [1, 2, 3, 4, 5]:               # test at different slopes
         for c in range(-10, 10):                 # and different intensities
             rho, signal = generate_test_data(m, c)     # generate test data for that slope and intensity

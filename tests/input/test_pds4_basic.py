@@ -13,6 +13,9 @@ import pytest
 
 
 def test_pds4_load():
+    """Load some PDS4 data, check the channel count in the result, the LIDs, the filter properties
+    but NOT the image pixels (we need a small test image for that)"""
+    
     pcot.setup()
     doc = Document()
 
@@ -83,4 +86,4 @@ def test_pds4_load():
         assert s.getPDS4() is not None
         assert s.getPDS4().lid == lid
         assert s.brief() == f'0:{cwl}'
-        assert s.long() == f"PDS4-0: wavelength {cwl} {s.getPDS4().lid}"
+        assert s.long() == f"PDS4-0: wavelength {cwl}, fwhm {fwhm} {s.getPDS4().lid}"

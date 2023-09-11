@@ -9,7 +9,7 @@ from PySide2 import QtWidgets, QtGui
 from PySide2.QtCore import Qt, QPointF
 from PySide2.QtGui import QColor, QFont, QTransform, QPen, QBrush
 
-from pcot.datum import Datum, isCompatibleConnection
+import pcot.datum as datum
 import pcot.ui as ui
 import pcot.ui.namedialog
 import pcot.utils.deb
@@ -275,7 +275,7 @@ class GConnectRect(QtWidgets.QGraphicsRectItem):
 
     def isVariant(self):
         tp = self.node.getInputType(self.index) if self.isInput else self.node.getOutputType(self.index)
-        return tp == Datum.VARIANT
+        return tp == datum.Datum.VARIANT
 
     def __init__(self, parent, x1, y1, x2, y2, node, isInput, index):
         """construct, giving parent object (GMainRect), rectangle data, node data, input/output and index."""
@@ -605,9 +605,9 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         """return a good position for a new item placed with no hint to where it should go"""
         if len(self.graph.nodes) > 0:
             xs = [n.xy[0] for n in self.graph.nodes]
-            ys = [n.xy[1] for n in self.graph.nodes]
+            ys = [n.xy[1] + n.h for n in self.graph.nodes]
             x = sum(xs) / len(xs)
-            y = max(ys) + max([n.h for n in self.graph.nodes])
+            y = max(ys) + 10
             return x, y
         else:
             return 0, 0
@@ -637,7 +637,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     x1 = x1 + outsize * (output + 0.5)
                     x2 = x2 + insize * (inputIdx + 0.5)
                     y1 += n1.h
-                    compat = isCompatibleConnection(outtype, intype)
+                    compat = datum.isCompatibleConnection(outtype, intype)
 
 #                    if not compat:
 #                        ui.log(f"incompatible: {n1} -> {n2} / {outtype} -> {intype}")
@@ -681,6 +681,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         if self.checkSelChange:
             items = self.selectedItems()
             self.selection = []
+            logger.info("selChanged")
             for n in self.graph.nodes:
                 if n.rect in items:
                     self.selection.append(n)
@@ -784,7 +785,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
     def copy(self):
         """copy operation, serialises the items to the system clipboard"""
         self.graph.copy(self.selection)
-        pcot.utils.deb.show(self)
+        # pcot.utils.deb.show(self)
 
     def paste(self):
         """paste operation, deserialises items from the system clipboard"""
@@ -798,11 +799,13 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             x, y = n.xy
             n.xy = (x + PASTEOFFSET, y + PASTEOFFSET)
         self.rebuild()  # rebuild all nodes
+        logger.info("paste")
+        # colour selected nodes
+        self.setColourToState()
+        self.graph.changed()
         self.selection = newnodes  # set the selection to the new nodes
         for n in newnodes:
             n.rect.setSelected(True)
-        # colour selected nodes
-        self.setColourToState()
 
     def cut(self):
         """cut operation, serialises items to system clipboard and deletes them"""
@@ -810,6 +813,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         self.graph.copy(self.selection)
         for n in self.selection:
             self.graph.remove(n)
+        logger.info("cut")
         self.selection = []
         self.rebuild()
 

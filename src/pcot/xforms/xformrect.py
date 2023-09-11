@@ -4,6 +4,7 @@ import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
 from pcot.rois import ROIRect
+from pcot.ui.roiedit import RectEditor
 from pcot.xform import xformtype, XFormROIType
 
 
@@ -30,7 +31,7 @@ class XformRect(XFormROIType):
         node.captiontop = False
         node.fontsize = 10
         node.drawbg = True
-        node.thickness = 2
+        node.thickness = 0
         node.colour = (1, 1, 0)
         node.roi = ROIRect()
 
@@ -41,6 +42,7 @@ class XformRect(XFormROIType):
         node.roi.deserialise(d)
 
     def setProps(self, node, img):
+        node.roi.setContainingImageDimensions(img.w, img.h)
         node.roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.thickness, node.drawbg)
 
     def getMyROIs(self, node):
@@ -50,6 +52,7 @@ class XformRect(XFormROIType):
 class TabRect(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabrect.ui')
+        self.editor = RectEditor(self, self.node.roi)
         self.w.canvas.mouseHook = self
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
         self.w.drawbg.stateChanged.connect(self.drawbgChanged)
@@ -174,7 +177,7 @@ class TabRect(pcot.ui.tabs.Tab):
         self.w.captionTop.setChecked(self.node.captiontop)
         self.w.drawbg.setChecked(self.node.drawbg)
         r, g, b = [x * 255 for x in self.node.colour]
-        self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
+        self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b))
         bb = self.node.roi.bb()
         if bb is not None:
             x, y, w, h = [str(x) for x in (bb.x, bb.y, bb.w, bb.h)]
@@ -183,34 +186,11 @@ class TabRect(pcot.ui.tabs.Tab):
             self.w.widthEdit.setText(w)
             self.w.heightEdit.setText(h)
 
-    # extra drawing!
-    def canvasPaintHook(self, p):
-        pass
-
-    def canvasMouseMoveEvent(self, x2, y2, e):
-        if self.mouseDown:
-            bb = self.node.roi.bb()
-            if bb is None:
-                x, y, w, h = 0, 0, 0, 0
-            else:
-                x, y, w, h = bb
-            w = x2 - x
-            h = y2 - y
-            if w < 10:
-                w = 10
-            if h < 10:
-                h = 10
-            # we don't do a mark here to avoid multiple marks - one is done on mousedown.
-            self.node.roi.set(x, y, w, h)
-            self.changed()
-        self.w.canvas.update()
+    def canvasMouseMoveEvent(self, x, y, e):
+        self.editor.canvasMouseMoveEvent(x, y, e)
 
     def canvasMousePressEvent(self, x, y, e):
-        self.mouseDown = True
-        self.mark()
-        self.node.roi.set(x, y, 5, 5)
-        self.changed()
-        self.w.canvas.update()
+        self.editor.canvasMousePressEvent(x, y, e)
 
     def canvasMouseReleaseEvent(self, x, y, e):
-        self.mouseDown = False
+        self.editor.canvasMouseReleaseEvent(x, y, e)

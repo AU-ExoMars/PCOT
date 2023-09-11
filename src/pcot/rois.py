@@ -6,6 +6,7 @@ from numpy import ndarray
 from scipy import ndimage
 
 from pcot.sources import SourcesObtainable, nullSourceSet
+from pcot.ui.roiedit import RectEditor, CircleEditor, PaintedEditor, PolyEditor
 from pcot.utils import serialiseFields, deserialiseFields
 from pcot.utils.annotations import Annotation, annotDrawText
 from pcot.utils.colour import rgb2qcol
@@ -17,6 +18,13 @@ class BadOpException(Exception):
         super().__init__("op not valid")
 
 
+class BadNegException(Exception):
+    """This gets thrown when you're trying to negate an ROI that has lost its dimensions, which can happen when
+    ROIs from different images are combined or they've simply not been added by an operation."""
+    def __init__(self):
+        super().__init__("Can only negate ROIs with image dimensions")
+
+
 class ROIBoundsException(Exception):
     def __init__(self):
         super().__init__(
@@ -25,23 +33,33 @@ class ROIBoundsException(Exception):
 
 ROISERIALISEFIELDS = (
     ('label', 'unknown!'),
-    ('colour', (1,1,0)),
+    ('colour', (1, 1, 0)),
     ('thickness', 2),
     ('fontsize', 10),
     ('drawbg', True)
 )
 
+
 class ROI(SourcesObtainable, Annotation):
     """definition of base type for regions of interest - this is useful in itself
     because it defines an ROI consisting of a predefined BB and mask."""
 
-    def __init__(self, tpname, bbrect: Rect = None, maskimg: np.array = None, sourceROI=None):
+    tpname = None
+
+    def __init__(self, bbrect: Rect = None, maskimg: np.array = None,
+                 sourceROI=None, isTemp=False,
+                 containingImageDimensions=None):
         """Constructor. Takes an ROI type name, optional rect and mask (for 'base' ROIs consisting of just these)
         and an optional sourceROI from which some data is copied, for copy operations"""
+
+        Annotation.__init__(self)
+        SourcesObtainable.__init__(self)
+
         self.bbrect = bbrect
         self.bbrect = bbrect
         self.maskimg = maskimg
-        self.tpname = tpname  # subtype name (e.g. 'rect', 'poly')
+
+        self.isTemp = isTemp  # for temporary ROIs created by expressions
 
         self.label = None if sourceROI is None else sourceROI.label
         self.labeltop = False if sourceROI is None else sourceROI.labeltop  # draw the label at the top?
@@ -50,9 +68,18 @@ class ROI(SourcesObtainable, Annotation):
         self.fontsize = 10 if sourceROI is None else sourceROI.fontsize  # annotation font size
         self.drawbg = True if sourceROI is None else sourceROI.drawbg
         self.drawEdge = True if sourceROI is None else sourceROI.drawEdge  # draw the edge only?
+        self.drawBox = True if sourceROI is None else sourceROI.drawBox  # draw the box?
         # by default, the source of an ROI is null.
         # The only time this might not be true is if the ROI is derived somehow from an actual data source.
         self.sources = nullSourceSet if sourceROI is None else sourceROI.sources
+        # Usually None, but set when we are creating ROIs in a roiexpr node - or
+        # propagating them down in operations (see Intersection and Union ops below)
+        self.containingImageDimensions = containingImageDimensions
+
+    def setContainingImageDimensions(self, w, h):
+        """This is used when in a roiexpr node - we set the size of the containing image so that we can subtract
+        from a rect of that size when negating. Note that we do this in Painted too - that has its own copy."""
+        self.containingImageDimensions = (w, h)
 
     def setDrawProps(self, labeltop, colour, fontsize, thickness, drawbg):
         """set the common draw properties for all ROIs"""
@@ -119,14 +146,14 @@ class ROI(SourcesObtainable, Annotation):
                 sx = ndimage.sobel(mask, axis=0, mode='constant')
                 sy = ndimage.sobel(mask, axis=1, mode='constant')
                 mask = np.hypot(sx, sy)
-            mask = mask.clip(max=1.0).astype(np.float)
+            mask = mask.clip(max=1.0).astype(np.float32)
             # mask = skimage.morphology.erosion(mask)
             ww = int(bb.w)
             hh = int(bb.h)
             mask = cv.resize(mask, dsize=(ww, hh), interpolation=cv.INTER_AREA)
             # now prepare the actual image, which is just a coloured fill rectangle - we
             # will add the mask as an alpha
-            img = np.full((hh, ww, 3), self.colour, dtype=np.float)  # the second arg is the colour
+            img = np.full((hh, ww, 3), self.colour, dtype=np.float32)  # the second arg is the colour
             # add the mask as the alpha channel
             x = np.dstack((img, mask))
             # to byte
@@ -160,7 +187,7 @@ class ROI(SourcesObtainable, Annotation):
         self.annotateMask(p)
 
     def serialise(self):
-        if self.tpname == 'tmp':
+        if self.isTemp:
             raise Exception("attempt to serialise a temporary ROI")
         return serialiseFields(self, ROISERIALISEFIELDS)
 
@@ -171,6 +198,10 @@ class ROI(SourcesObtainable, Annotation):
     def roiUnion(rois):
         bbs = [r.bb() for r in rois]  # get bbs
         bbs = [b for b in bbs if b is not None]
+        # we set the image dimensions to the last one we got - if they aren't
+        # all the same we probably have bigger problems.
+        dims = None
+        dimsOK = True  # flag to indicate that containing dimensions agree. Attach to result.
         if len(bbs) > 0:
             x1 = min([b.x for b in bbs])
             y1 = min([b.y for b in bbs])
@@ -182,6 +213,14 @@ class ROI(SourcesObtainable, Annotation):
             # and OR the ROIs into it
             for r in rois:
                 if (bb2 := r.bb()) is not None:  # ignore undefined ROIs
+                    # here we make sure that the containing image dimensions agree and are propagated
+                    # to the result. If they don't agree we zero them.
+                    if r.containingImageDimensions is not None:
+                        if dims is None:
+                            dims = r.containingImageDimensions
+                        elif dims != r.containingImageDimensions:
+                            dimsOK = False
+
                     rx, ry, rw, rh = bb2
                     # calculate ROI's position inside subimage
                     x = rx - x1
@@ -190,7 +229,8 @@ class ROI(SourcesObtainable, Annotation):
                     roimask = r.mask()
                     # add it at that position
                     mask[y:y + rh, x:x + rw] |= roimask
-            return ROI('tmp', bb, mask)  # should not be saved
+            # should not be saved
+            return ROI(bb, mask, isTemp=True, containingImageDimensions=dims if dimsOK else None)
         else:
             # return a null ROI
             return None
@@ -206,8 +246,19 @@ class ROI(SourcesObtainable, Annotation):
         bb = Rect(x1, y1, x2 - x1, y2 - y1)
         # now construct the mask, initially all True
         mask = np.full((y2 - y1, x2 - x1), True)
+        # we set the image dimensions to the last one we got - if they aren't
+        # all the same we probably have bigger problems.
+        dims = None
+        dimsOK = True
         # and AND the ROIs into it
         for r in rois:
+            # here we make sure that the containing image dimensions agree and are propagated
+            # to the result. If they don't agree we zero them.
+            if r.containingImageDimensions is not None:
+                if dims is None:
+                    dims = r.containingImageDimensions
+                elif dims != r.containingImageDimensions:
+                    dimsOK = False
             rx, ry, rw, rh = r.bb()
             # calculate ROI's position inside subimage
             x = rx - x1
@@ -221,7 +272,7 @@ class ROI(SourcesObtainable, Annotation):
             workMask[y:y + rh, x:x + rw] = roimask
             # and AND the mask by the work mask.
             mask &= workMask
-        return ROI('tmp', bb, mask)
+        return ROI(bb, mask, isTemp=True, containingImageDimensions=dims if dimsOK else None)
 
     def clipToImage(self, img: ndarray):
         # clip the ROI to the image. If it doesn't require clipping, just returns the ROI. If it does,
@@ -242,7 +293,10 @@ class ROI(SourcesObtainable, Annotation):
             # and make the new mask
             mask = self.mask()[maskY:maskY + intersect.h, maskX:maskX + intersect.w]
             # construct the ROI.
-            return ROI('tmp', intersect, mask)  # should never be saved
+            r = ROI(intersect, mask, isTemp=True)  # should never be saved
+            # and we can set these, because we know the size of the image
+            r.setContainingImageDimensions(w, h)
+            return r
         else:
             return None
 
@@ -280,7 +334,27 @@ class ROI(SourcesObtainable, Annotation):
         workMask[y:y + rh, x:x + rw] = roimask
         mask &= ~workMask
 
-        return ROI('tmp', bb, mask)
+        # containing dimensions - either one or the other is OK, if both are present they
+        # must match.
+
+        if self.containingImageDimensions is None or other.containingImageDimensions is None:
+            dims = other.containingImageDimensions if self.containingImageDimensions is None else self.containingImageDimensions
+        else:
+            dims = self.containingImageDimensions if self.containingImageDimensions == other.containingImageDimensions else None
+
+        return ROI(bb, mask, isTemp=True, containingImageDimensions=dims)
+
+    def __neg__(self):
+        """We can negate an ROI by subtracting it from an ROI set to the entire image - but only
+        if we know how big it is!"""
+        if self.containingImageDimensions is None:
+            raise BadNegException()
+        else:
+            w, h = self.containingImageDimensions
+            r = ROIRect()
+            r.set(0, 0, w, h)
+
+            return r - self
 
     def __mul__(self, other):
         return self.roiIntersection([self, other])
@@ -296,7 +370,7 @@ class ROI(SourcesObtainable, Annotation):
             return "ROI-BASE (no data)"
         else:
             x, y, w, h = self.bb()
-            return "ROI-BASE {} {} {}x{}".format(x, y, w, h)
+            return f"ROI-BASE:{self.label} {x} {y} {w}x{h}"
 
     def getSources(self):
         return self.sources
@@ -305,12 +379,18 @@ class ROI(SourcesObtainable, Annotation):
         """move the ROI by -x, -y: effectively moving it from an image into a subset of that image starting at (x,y)"""
         pass
 
+    def createEditor(self, tab):
+        """Create an editor for the ROI"""
+        pass
+
 
 ## a rectangle ROI
 
 class ROIRect(ROI):
+    tpname = "rect"
+
     def __init__(self, sourceROI=None):
-        super().__init__('rect', sourceROI=sourceROI)
+        super().__init__(sourceROI=sourceROI)
         if sourceROI is None:
             self.x = 0
             self.y = 0
@@ -376,11 +456,15 @@ class ROIRect(ROI):
         return r
 
     def __str__(self):
-        return "ROI-RECT {} {} {}x{}".format(self.x, self.y, self.w, self.h)
+        return f"ROI-RECT:{self.label} {self.x} {self.y} {self.w}x{self.h}"
+
+    def createEditor(self, tab):
+        return RectEditor(tab, self)
 
 
 class ROICircle(ROI):
     """A simple circular ROI designed for use with multidot regions"""
+    tpname = "circle"
 
     x: int
     y: int
@@ -406,7 +490,6 @@ class ROICircle(ROI):
         self.isSet = (x >= 0)
 
     def annotate(self, p: QPainter, img):
-        """Simpler version of annotate for rects; doesn't draw the mask"""
         if (bb := self.bb()) is not None:
             self.annotateBB(p)
             self.annotateText(p)
@@ -453,14 +536,21 @@ class ROICircle(ROI):
         else:
             self.x, self.y, self.r, self.isSet, self.drawBox, self.drawEdge = d['croi']
 
+    def __copy__(self):
+        r = ROICircle(sourceROI=self)
+        return r
+
     def rebase(self, x, y):
         r = ROICircle(sourceROI=self)
         r.x -= x
         r.y -= y
         return r
 
+    def createEditor(self, tab):
+        return CircleEditor(tab, self)
+
     def __str__(self):
-        return "ROI-CIRCLE {} {} {}".format(self.x, self.y, self.r)
+        return f"ROI-CIRCLE:{self.label} {self.x} {self.y} {self.r}"
 
 
 # used in ROIpainted to convert a 0-99 value into a brush size for painting
@@ -471,21 +561,18 @@ def getRadiusFromSlider(sliderVal, imgw, imgh, scale=1.0):
 
 class ROIPainted(ROI):
     """A painted ROI, which is essentially just a mask"""
+    tpname = "painted"
 
     # we can create this ab initio or from a subimage mask of an image.
     def __init__(self, mask=None, label=None, sourceROI=None):
-        super().__init__('painted', sourceROI=sourceROI)
+        super().__init__(sourceROI=sourceROI)
         if sourceROI is None:
             self.label = label
             if mask is None:
                 self.bbrect = None
                 self.map = None
-                self.imgw = None
-                self.imgh = None
             else:
                 h, w = mask.shape[:2]
-                self.imgw = w
-                self.imgh = h
                 self.bbrect = Rect(0, 0, w, h)
                 self.map = np.zeros((h, w), dtype=np.uint8)
                 self.map[mask] = 255
@@ -496,23 +583,10 @@ class ROIPainted(ROI):
             self.drawEdge = sourceROI.drawEdge
             self.map = sourceROI.map  # NOTE: not a copy!
             self.bbrect = Rect.copy(sourceROI.bbrect)
-            self.imgw = sourceROI.imgw
-            self.imgh = sourceROI.imgh
 
     def clear(self):
         self.map = None
         self.bbrect = None
-
-    def setImageSize(self, imgw, imgh):
-        """Set size of the image of which this is a part. Used so
-        we can use getRadiusFromSlider to get a suitable brush size,
-        and so that if the image size changes we can delete the ROI"""
-        if self.imgw is not None:
-            if self.imgw != imgw or self.imgh != imgh:
-                self.clear()
-
-        self.imgw = imgw
-        self.imgh = imgh
 
     def bb(self):
         return self.bbrect
@@ -525,12 +599,12 @@ class ROIPainted(ROI):
     def serialise(self):
         d = super().serialise()
         d['bbrect'] = self.bbrect.astuple() if self.bbrect else None
-        return serialiseFields(self, ['map'], d=d)
+        return serialiseFields(self, [('map', None)], d=d)
 
     def deserialise(self, d):
         super().deserialise(d)
         self.bbrect = Rect.fromtuple(d['bbrect'])
-        deserialiseFields(self, d, ['map'])
+        deserialiseFields(self, d, [('map', None)])
 
     def mask(self):
         """return a boolean array, same size as BB"""
@@ -542,7 +616,8 @@ class ROIPainted(ROI):
         the ROI as part of the process."""
 
         # create full size map
-        fullsize = np.zeros((self.imgh, self.imgw), dtype=np.uint8)
+        imgw, imgh = self.containingImageDimensions
+        fullsize = np.zeros((imgh, imgw), dtype=np.uint8)
         # splice in existing data, if there is any!
         if self.bbrect is not None:
             bbx, bby, bbx2, bby2 = self.bbrect.corners()
@@ -566,48 +641,51 @@ class ROIPainted(ROI):
             self.bbrect = None
             self.map = None
 
-    @staticmethod
-    def drawBrush(fullsize, x, y, brushSize, slf, delete):
+    def drawBrush(self, fullsize, x, y, brushSize, delete):
         """called from inside cropDown as an optional step to draw an extra circle"""
-        r = int(getRadiusFromSlider(brushSize, slf.imgw, slf.imgh))
+        imgw, imgh = self.containingImageDimensions
+        r = int(getRadiusFromSlider(brushSize, imgw, imgh))
         cv.circle(fullsize, (x, y), r, 0 if delete else 255, -1)
 
     def setCircle(self, x, y, brushSize, delete=False):
         """fill a circle in the ROI, or clear it (if delete is true)"""
-        if self.imgw is not None:
-            self.cropDownWithDraw(draw=lambda fullsize: ROIPainted.drawBrush(fullsize, x, y, brushSize, self, delete))
+        if self.containingImageDimensions is not None:
+            self.cropDownWithDraw(draw=lambda fullsize: self.drawBrush(fullsize, x, y, brushSize, delete))
 
     def rebase(self, x, y):
         r = ROIPainted(sourceROI=self)
-        r.imgw -= x  # we're shrinking the containing image by this much
-        r.imgh -= y
         r.bbrect.x -= x
         r.bbrect.y -= y
         return r
 
+    def __copy__(self):
+        r = ROIPainted(sourceROI=self)
+        return r
+
+    def createEditor(self, tab):
+        return PaintedEditor(tab, self)
+
     def __str__(self):
         if not self.bbrect:
-            return "ROI-PAINTED (no points)"
+            return f"ROI-PAINTED:{self.label}"
         else:
             x, y, w, h = self.bb()
-            return "ROI-PAINTED {} {} {}x{}".format(x, y, w, h)
+            return f"ROI-PAINTED:{self.label} {x} {y} {w}x{h}"
 
 
 ## a polygon ROI
 
 class ROIPoly(ROI):
+    tpname = "poly"
+
     def __init__(self, sourceROI=None):
-        super().__init__('poly', sourceROI=sourceROI)
+        super().__init__(sourceROI=sourceROI)
         self.selectedPoint = None  # don't set the selected point in copies
         if sourceROI is None:
-            self.imgw = None
-            self.imgh = None
             self.drawPoints = True
             self.drawBox = True
             self.points = []
         else:
-            self.imgw = sourceROI.imgw
-            self.imgh = sourceROI.imgh
             self.drawBox = sourceROI.drawBox
             self.drawPoints = sourceROI.drawPoints
             self.points = [(x, y) for x, y in sourceROI.points]  # deep copy
@@ -618,17 +696,6 @@ class ROIPoly(ROI):
 
     def hasPoly(self):
         return len(self.points) > 2
-
-    def setImageSize(self, imgw, imgh):
-        """Set size of the image of which this is a part. Used so
-        that if the image size changes we can delete the ROI (although
-        we should probably do something smarter)"""
-        if self.imgw is not None:
-            if self.imgw != imgw or self.imgh != imgh:
-                self.clear()
-
-        self.imgw = imgw
-        self.imgh = imgh
 
     def bb(self):
         if not self.hasPoly():
@@ -643,7 +710,9 @@ class ROIPoly(ROI):
 
     def serialise(self):
         d = super().serialise()
-        return serialiseFields(self, ['points'], d=d)
+        return serialiseFields(self,
+                               [('points', 0)],
+                               d=d)
 
     def deserialise(self, d):
         super().deserialise(d)
@@ -736,22 +805,25 @@ class ROIPoly(ROI):
 
     def rebase(self, x, y):
         r = ROIPoly(sourceROI=self)
-        r.imgw -= x  # we're shrinking the containing image by this much
-        r.imgh -= y
-        r.points = [(xx-x, yy-y) for xx,yy in self.points]
+        r.points = [(xx - x, yy - y) for xx, yy in self.points]
         return r
+
+    def __copy__(self):
+        r = ROIPoly(sourceROI=self)
+        return r
+
+    def createEditor(self, tab):
+        return PolyEditor(tab, self)
 
     def __str__(self):
         if not self.hasPoly():
-            return "ROI-POLY (no points)"
+            return f"ROI-POLY:{self.label} (no points)"
         x, y, w, h = self.bb()
-        return "ROI-POLY {} {} {}x{}".format(x, y, w, h)
+        return f"ROI-POLY:{self.label} {x} {y} {w}x{h}"
 
 
 def deserialise(tp, d):
-    """Not to be confused with ROI.deserialise(). This deserialises an serialised ROI **datum** given its type. This
-    likely only happens when serialising an input whose value is an ROI, which is unlikely!"""
-
+    """Not to be confused with ROI.deserialise(). This deserialises an serialised ROI **object** given its type."""
     # first create the ROI
     if tp == 'rect':
         r = ROIRect()

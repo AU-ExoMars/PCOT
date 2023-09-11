@@ -9,7 +9,7 @@ from skimage.transform import warp
 from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.imagecube import ImageCube
-from pcot.utils import text
+from pcot.utils import text, image
 from pcot.xform import XFormType, xformtype, XFormException
 
 IMAGEMODE_SOURCE = 0
@@ -83,11 +83,16 @@ class XFormManualRegister(XFormType):
     Points are added to the source (moving) image by clicking with shift.
     Points are adding to the dest (fixed) image by clicking with ctrl.
 
+    **Note that this node does not currently display DQ or uncertainty data in its canvas**
+
     If only the source or dest points are shown, either shift- or ctrl-clicking will add to the appropriate
     point set. The selected point can be deleted with the Delete key (but this will modify the numbering!)
 
     A point can be selected and dragged by clicking on it. This may be slow because the warping operation will
     take place every update; disabling 'auto-run on change' is a good idea!
+
+    Uncertainty is warped along with the original image, as is DQ using nearest-neighbour (**which may not be
+    sufficient**).
 
     """
 
@@ -147,7 +152,7 @@ class XFormManualRegister(XFormType):
 
             if img is not None:
                 # create a new image for the canvas; we'll draw on it.
-                canvimg = cv.merge([img, img, img])
+                canvimg = image.imgmerge([img, img, img])
 
                 # now draw the points
 
@@ -230,8 +235,11 @@ class XFormManualRegister(XFormType):
             tform.estimate(np.array(n.dest), np.array(n.src))
 
         if n.movingImg is not None:
-            img = warp(n.movingImg.img, tform)
-            n.img = ImageCube(img, n.movingImg.mapping, n.movingImg.sources)
+            img = warp(n.movingImg.img, tform, preserve_range=True).astype(np.float32)
+            unc = warp(n.movingImg.img, tform, preserve_range=True).astype(np.float32)
+            # DQ warp is nearest neighbour (order=0)
+            dq = warp(n.movingImg.dq, tform, order=0, preserve_range=True).astype(np.uint16)
+            n.img = ImageCube(img, n.movingImg.mapping, n.movingImg.sources, uncertainty=unc, dq=dq)
 
     def createTab(self, n, w):
         return TabManualReg(n, w)

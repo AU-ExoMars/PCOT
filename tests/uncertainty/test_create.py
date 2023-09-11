@@ -9,6 +9,7 @@ from unc_fixtures import gen_2b_unc
 
 
 def test_create_unmatched_unc_shape():
+    """Test that imagecube ctor throws when unc data is not the same shape as image"""
     data = np.full((20, 20), 0, np.float32)
     uncd = np.full((20, 21), 0, np.float32)
     with pytest.raises(Exception) as info:
@@ -17,15 +18,16 @@ def test_create_unmatched_unc_shape():
 
 
 def test_create_wrong_unc_type():
-    """Test that an incorrect type passed as uncertainty is converted."""
+    """Test that an incorrect type passed as uncertainty is not accepted."""
     data = np.full((20, 20), 0, np.float32)
-    uncd = np.full((20, 20), 0.5, np.float)
+    uncd = np.full((20, 20), 0.5, float)
     with pytest.raises(Exception) as info:
         img = ImageCube(data, uncertainty=uncd)
     assert "uncertainty data must be 32-bit floating point" == str(info.value)
 
 
 def test_create_unmatched_dq_shape():
+    """Test that imagecube ctor throws when DQ data is not the same shape as image"""
     data = np.full((20, 20), 0, np.float32)
     dqd = np.full((20, 21), 0, np.uint16)
     with pytest.raises(Exception) as info:
@@ -33,27 +35,43 @@ def test_create_unmatched_dq_shape():
     assert "DQ data is not same shape as image data" == str(info.value)
 
 
-def test_create_wrong_dq_type():
-    """Test that an incorrect type passed as uncertainty is converted."""
+def test_create_wrong_dq_type_float():
+    """Test that a float array passed as DQ is not accepted in imagecube ctor."""
     data = np.full((20, 20), 0, np.float32)
-    dqd = np.full((20, 20), 0.5, np.float)
+    dqd = np.full((20, 20), 0.5, np.float32)
     with pytest.raises(Exception) as info:
         img = ImageCube(data, dq=dqd)
     assert "DQ data is not 16-bit unsigned integers" == str(info.value)
 
+def test_create_wrong_dq_type_int():
+    """Test that a int array passed as DQ is not accepted in imagecube ctor."""
+    data = np.full((20, 20), 0, np.float32)
+    dqd = np.full((20, 20), 0.5, int)
+    with pytest.raises(Exception) as info:
+        img = ImageCube(data, dq=dqd)
+    assert "DQ data is not 16-bit unsigned integers" == str(info.value)
+
+def test_create_wrong_dq_type_scalar():
+    """Test that a scalar passed as DQ is not accepted in imagecube ctor"""
+    data = np.full((20, 20), 0, np.float32)
+    dqd = np.uint16(5)
+    with pytest.raises(Exception) as info:
+        img = ImageCube(data, dq=dqd)
+    print(info.value)
+    assert "DQ data is not same shape as image data" == str(info.value)
 
 def test_create_unc_2b_ok():
     """Basic test of creating a 2-band image with uncertainty"""
-    img = gen_2b_unc(1, 2, 3, 4)
+    img = gen_2b_unc(1, 3, 2, 4)
     u = img.uncertainty[10, 10]
     d = img.img[10, 10]
-    assert np.array_equal(u, np.array((3, 4), np.float32))
     assert np.array_equal(d, np.array((1, 2), np.float32))
+    assert np.array_equal(u, np.array((3, 4), np.float32))
 
 
 def test_default_dq():
     """Test that creating an image with uncertainty creates zero DQ (assuming no other problems)"""
-    img = gen_2b_unc(1, 2, 3, 4)
+    img = gen_2b_unc(1, 3, 2, 4)
     assert np.array_equal(np.zeros(img.shape, dtype=np.uint16), img.dq)
 
 

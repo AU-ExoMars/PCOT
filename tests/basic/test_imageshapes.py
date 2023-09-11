@@ -1,5 +1,7 @@
+"""Test that images have the correct numpy array shapes (i.e. a single band image is (h,w) and a multiband
+image is (h,w,d)."""
+
 import numpy as np
-import pcot
 from pcot.imagecube import ImageCube
 import pytest
 

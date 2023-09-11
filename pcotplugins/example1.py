@@ -11,7 +11,8 @@ from pcot.sources import SourceSet
 from pcot.xform import XFormType, xformtype
 from pcot.xforms.tabdata import TabData
 from pcot.imagecube import ImageCube
-from pcot.datum import Datum, Type
+from pcot.datum import Datum
+from pcot.datumtypes import Type
 from PySide2.QtGui import QColor
 
 import pcot.config
@@ -27,7 +28,11 @@ class XFormEdgeDetect(XFormType):
     fixed thresholds. It does not take account of ROIs, since this would be pointless when we're converting
     from a potentially multispectral image to greyscale (well, boolean).
     Exercise for the reader - add variable thresholds, either as numeric inputs or as
-    numeric parameters settable from the node tab."""
+    numeric parameters settable from the node tab.
+
+    DQ bits of the bands in the source are combined together for the single
+    band of the result. Uncertainty is discarded.
+    """
 
     def __init__(self):
         # this node should appear in the maths group.
@@ -58,8 +63,10 @@ class XFormEdgeDetect(XFormType):
             out = cv.Canny(img8, 100, 200)
             # Convert back to 32-bit float
             out = (out / 255).astype('float32')
-            # create the imagecube and set node.out for the canvas in the tab
-            img = ImageCube(out, None, img.sources)
+            # we build the new DQ by OR-ing all the bands' bits together
+            dq = np.bitwise_or.reduce(img.dq, axis=2)
+            # create the imagecube and set node.out for the canvas in the tab.
+            img = ImageCube(out, None, img.sources, dq=dq)
             node.out = Datum(Datum.IMG, img)
         else:
             # no image on the input, set node.out to None

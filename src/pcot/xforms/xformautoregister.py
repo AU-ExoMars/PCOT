@@ -18,7 +18,10 @@ class XFormAutoRegister(XFormType):
 
     """
     Use the TV-L1 solver to find an optical flow field for transforming one image into another. Not generally advised, and very slow.
-    The node will output a version of the 'moving' image, distorted to map onto the 'fixed' image."""
+    The node will output a version of the 'moving' image, distorted to map onto the 'fixed' image.
+
+    Propagates uncertainty of the moving image by distorting that of the source image, and propagates
+    DQs using nearest neighbour."""
 
     def __init__(self):
         super().__init__("tvl1 autoreg", "processing", "0.0.0")
@@ -50,14 +53,20 @@ class XFormAutoRegister(XFormType):
             row_coords, col_coords = np.meshgrid(np.arange(nr), np.arange(nc), indexing='ij')
 
             warpdata = np.array([row_coords + v, col_coords + u])
-            if movingImg.channels == 1:
-                out = warp(movingImg.img, warpdata, mode='edge')
-            else:
-                chans = image.imgsplit(movingImg)
-                outs = [warp(x, warpdata, mode='edge') for x in chans]
-                out = image.imgmerge(outs)
 
-            out = ImageCube(out, node.mapping, movingImg.sources)
+            if movingImg.channels == 1:
+                out = warp(movingImg.img, warpdata, mode='edge').astype(np.float32)
+                unc = warp(movingImg.uncertainty, warpdata, mode='edge').astype(np.float32)
+                dqs = warp(movingImg.dq, warpdata, mode='edge', order=0).astype(np.uint16)
+            else:
+                chans = image.imgsplit(movingImg.img)
+                out = image.imgmerge([warp(x, warpdata, mode='edge').astype(np.float32) for x in chans])
+                chans = image.imgsplit(movingImg.uncertainty)
+                unc = image.imgmerge([warp(x, warpdata, mode='edge').astype(np.float32) for x in chans])
+                chans = image.imgsplit(movingImg.dq)
+                dqs = image.imgmerge([warp(x, warpdata, mode='edge', order=0, preserve_range=True).astype(np.uint16) for x in chans])
+
+            out = ImageCube(out, node.mapping, movingImg.sources, uncertainty=unc, dq=dqs)
 
         node.out = Datum(Datum.IMG, out)
         node.setOutput(0, node.out)

@@ -1,3 +1,5 @@
+"""Tests of the ENVI input method"""
+
 import pytest
 
 import pcot
@@ -8,6 +10,7 @@ from pcot.filters import Filter
 
 
 def test_envi_load(envi_image_1):
+    """Check we can load an ENVI - check the image values and filter names"""
     pcot.setup()
     doc = Document()
     # having created a document, set an input. Try one that doesn't exist first.

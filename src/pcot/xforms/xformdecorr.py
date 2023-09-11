@@ -1,7 +1,9 @@
 import numpy as np
 
+import pcot.dq
 from pcot.datum import Datum
 from pcot.sources import MultiBandSource, SourceSet
+from pcot.utils import image
 from pcot.xform import xformtype, XFormType, XFormException
 from pcot.xforms.tabdata import TabData
 
@@ -10,7 +12,13 @@ from functools import reduce
 
 @xformtype
 class XformDecorr(XFormType):
-    """Perform a decorrelation stretch on an RGB image"""
+    """
+
+    Perform a decorrelation stretch on an RGB image
+
+    **Ignores DQ and uncertainty**
+
+    """
 
     def __init__(self):
         super().__init__("decorr stretch", "processing", "0.0.0")
@@ -37,7 +45,14 @@ class XformDecorr(XFormType):
             newimg = decorrstretch(subimage.img, subimage.mask)
             # in this case, all channels just come from the union of the sources
             sources = SourceSet(img.sources.getSources())
-            out = img.modifyWithSub(subimage, newimg, sources=MultiBandSource([sources, sources, sources]))
+
+            # we build the new DQ by OR-ing all the bands' bits together
+            dq = np.bitwise_or.reduce(subimage.dq, axis=2)
+            # and then using that for all new channels
+            dq = image.imgmerge((dq, dq, dq))
+            dq |= pcot.dq.NOUNCERTAINTY     # and we've lost all uncertainty data
+
+            out = img.modifyWithSub(subimage, newimg, sources=MultiBandSource([sources, sources, sources]), dqv=dq)
 
         if out is not None:
             out.setMapping(node.mapping)
@@ -48,7 +63,8 @@ class XformDecorr(XFormType):
 
 def decorrstretch(A, mask):
     """
-    Apply decorrelation stretch to image
+    Apply decorrelation stretch to image. Modified from here: https://github.com/lbrabec/decorrstretch
+    and heaven knows where they got it from.
 
     Arguments:
     A   -- image in cv2/numpy.array format

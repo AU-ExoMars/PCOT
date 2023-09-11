@@ -8,205 +8,20 @@ These types are also used by the expression evaluator.
 """
 import logging
 from typing import Any, Optional
-
-from pcot import rois
-from pcot.imagecube import ImageCube
-from pcot.sources import SourcesObtainable, nullSource, SourceSet
+import pcot.datumtypes
+from pcot.datumexceptions import *
+from pcot.sources import SourcesObtainable, nullSource
 
 logger = logging.getLogger(__name__)
 
 ## complete list of all types, which also assigns them to values (kind of like an enum)
-
-# lookup by name for serialisation
-_typesByName = dict()
-
-
-class DatumException(Exception):
-    """Exception class for Datum exceptions. Not (at the moment) a subclass XFormException,
-    so gets handled slightly differently when run in a perform()."""
-    def __init__(self, message):
-        super().__init__(message)
-
-
-class CannotSerialiseDatumType(DatumException):
-    """thrown when we try to serialise/deserialise a datum type which can't be."""
-    def __init__(self, typename):
-        super().__init__(f"Datum type {typename} is not yet serialisable")
-
-
-class UnknownDatumTypeException(DatumException):
-    """thrown when we try to process an unknown datum type by name."""
-    def __init__(self, typename):
-        super().__init__(f"Datum type {typename} is unknown")
-
-
-class BadDatumCtorCallException(DatumException):
-    """Thrown when we try to init a datum with the wrong arguments."""
-    def __init__(self):
-        super().__init__("bad call to datum ctor: should be Datum(Type,Value)")
-
-
-class DatumWithNoSourcesException(DatumException):
-    """Datum constructor should be supplied with explicit source set if not an image or None"""
-    def __init__(self):
-        super().__init__("Datum objects which are not images must have an explicit source set")
-
-
-class Type:
-    """The type of a Datum passed between nodes and inside the expression evaluator.
-    Must be a singleton but I'm not going to enforce it - I did for a while, but it made things
-    rather more complicated. Particularly for custom types. Just be careful.
-    """
-
-    def __init__(self, name, image=False, internal=False):
-        """Parameters:
-            name: the name of the type
-            image: is the type for an image (i.e. is it a 'subtype' of Type("img")?)
-            internal: is it an internal type used in the expression evaluator, not for connectors?
-        """
-        self.name = name
-        self.image = image
-        self.internal = internal
-        _typesByName[name] = self  # register by name
-
-    def __str__(self):
-        return self.name
-
-    def getDisplayString(self, d: 'Datum'):
-        """Return the datum as a SHORT string - small enough to fit in a graph box; default
-        is just to return the name"""
-        return self.name
-
-    def serialise(self, d: 'Datum'):
-        raise CannotSerialiseDatumType(self.name)
-
-    def deserialise(self, d, document: 'Document') -> 'Datum':
-        raise CannotSerialiseDatumType(self.name)
-
-
-# Built-in datum types
-
-class AnyType(Type):
-    def __init__(self):
-        super().__init__('any')
-
-    def getDisplayString(self, d: 'Datum'):
-        """Might seem a bit weird, but an unconnected input actually gives "any" as its type."""
-        if d.val is None:
-            return "none"
-        else:
-            return "any"
-
-
-class ImgType(Type):
-    def __init__(self):
-        super().__init__('img', image=True)
-
-    def getDisplayString(self, d: 'Datum'):
-        if d.val is None:
-            return "IMG(NONE)"
-        else:
-            return f"IMG[{d.val.channels}]"
-
-    def serialise(self, d):
-        return self.name, d.val.serialise()
-
-    def deserialise(self, d, document):
-        img = ImageCube.deserialise(d, document)
-        return Datum(self, img)
-
-
-class ImgRGBType(Type):
-    def __init__(self):
-        super().__init__('imgrgb', image=True)
-
-    def serialise(self, d):
-        return self.name, d.val.serialise()
-
-    def getDisplayString(self, d: 'Datum'):
-        if d.val is None:
-            return "IMG(NONE)"
-        else:
-            return "IMG[RGB]"
-
-    def deserialise(self, d, document):
-        img = ImageCube.deserialise(d, document)
-        return Datum(self, img)
-
-
-class EllipseType(Type):
-    def __init__(self):
-        super().__init__('ellipse')
-
-
-class RoiType(Type):
-    def __init__(self):
-        super().__init__('roi')
-
-    def serialise(self, d):
-        v = d.val
-        return self.name, (v.tpname, v.serialise(),
-                           v.getSources().serialise())
-
-    def deserialise(self, d, document):
-        roitype, roidata, s = d
-        s = SourceSet.deserialise(s, document)
-        r = rois.deserialise(self.name, roidata)
-        return Datum(self, r, s)
-
-
-class NumberType(Type):
-    def __init__(self):
-        super().__init__('number')
-
-    def getDisplayString(self, d: 'Datum'):
-        return f"{d.val:.5g}"
-
-    def serialise(self, d):
-        return self.name, (d.val, d.getSources().serialise())
-
-    def deserialise(self, d, document):
-        n, s = d
-        s = SourceSet.deserialise(s, document)
-        return Datum(self, n, s)
-
-
-class VariantType(Type):
-    def __init__(self):
-        super().__init__('variant')
-
-
-class GenericDataType(Type):
-    def __init__(self):
-        super().__init__('data')
-
-
-class IdentType(Type):
-    def __init__(self):
-        super().__init__('ident', internal=True)
-
-
-class FuncType(Type):
-    def __init__(self):
-        super().__init__('func', internal=True)
-
-
-class NoneType(Type):
-    def __init__(self):
-        super().__init__('none', internal=True)
-
-    def serialise(self, d):
-        return self.name, None
-
-    def deserialise(self, document, d):
-        return Datum.null
 
 
 class Datum(SourcesObtainable):
     """a piece of data sitting in a node's output or on the expression evaluation stack."""
     ## @var tp
     # the data type
-    tp: Type
+    tp: pcot.datumtypes.Type
     ## @var val
     # the data value
     val: Any
@@ -216,44 +31,48 @@ class Datum(SourcesObtainable):
 
     # register built-in types; extras can be registered with registerType
     types = [
-        ANY := AnyType(),
+        ANY := pcot.datumtypes.AnyType(),
         # image types, which all contain 'img' in their string (yes, ugly).
-        IMG := ImgType(),
-        IMGRGB := ImgRGBType(),
-        ELLIPSE := EllipseType(),
-        ROI := RoiType(),
-        NUMBER := NumberType(),
+        IMG := pcot.datumtypes.ImgType(),
+        ROI := pcot.datumtypes.RoiType(),
+        NUMBER := pcot.datumtypes.NumberType(),
         # this special type means the node must have its output/input type specified
         # by the user. They don't appear on the graph until this has happened.
-        VARIANT := VariantType(),
+        VARIANT := pcot.datumtypes.VariantType(),
         # generic data
-        DATA := GenericDataType(),
+        DATA := pcot.datumtypes.GenericDataType(),
+        # test results - this is a list of failing tests, or an empty list for all passed.
+        TESTRESULT := pcot.datumtypes.TestResultType(),
 
         # these types are not generally used for connections, but for values on the expression evaluation stack
-        IDENT := IdentType(),
-        FUNC := FuncType(),
-        NONE := NoneType()  # for neither connections nor the stack - a null value
+        IDENT := pcot.datumtypes.IdentType(),
+        FUNC := pcot.datumtypes.FuncType(),
+        NONE := pcot.datumtypes.NoneType()  # for neither connections nor the stack - a null value
     ]
 
     @classmethod
     def registerType(cls, t):
         """Register a custom type, which must be a singleton datum.Type object. You can then use it where you
-        would use Datum.IMG, etc.
+        would use Datum.IMG, etc. ONLY USE FOR TYPES IN PLUGINS!
         Remember to also register a connector brush with connbrushes.register()."""
         cls.types.append(t)
 
     null = None  # gets filled in later with a null datum (i.e. type is NONE) that we can use
 
-    def __init__(self, t: Type, v: Any, sources: Optional[SourcesObtainable] = None):
+    def __init__(self, t: pcot.datumtypes.Type, v: Any, sources: Optional[SourcesObtainable] = None):
         """create a datum given the type and value. No type checking is done!
         The source should be a SourcesObtainable object, but can be omitted from images (it will be
         the one stored in the image)."""
-        from pcot.xform import XFormException
-        if not isinstance(t, Type):
+        if not isinstance(t, pcot.datumtypes.Type):
             raise BadDatumCtorCallException()
 
         self.tp = t
         self.val = v
+
+        # type check
+        if t.validTypes is not None:
+            if not any([isinstance(v, x) for x in t.validTypes]):
+                raise InvalidTypeForDatum(f"{str(type(v))} is not a valid type for Datum {t.name}")
 
         if sources is None:
             if self.isNone():
@@ -261,7 +80,10 @@ class Datum(SourcesObtainable):
             elif not self.isImage():
                 raise DatumWithNoSourcesException()
             elif self.val is not None:
-                sources = self.val.sources
+                if hasattr(self.val, 'sources'):
+                    sources = self.val.sources
+                else:
+                    raise DatumWithNoSourcesException()
             else:
                 sources = nullSource
         self.sources = sources
@@ -292,6 +114,10 @@ class Datum(SourcesObtainable):
         """Serialise for saving to a file, usually (always?) as the cached value of an input"""
         return self.tp.serialise(self)
 
+    def copy(self):
+        """Make a deep copy if the datum is mutable - uses a method in the type to do this"""
+        return self.tp.copy(self)
+
     @classmethod
     def deserialise(cls, data, document):
         """inverse of serialise for serialised data 'd' - requires document so that sources can be
@@ -300,7 +126,7 @@ class Datum(SourcesObtainable):
         tp, d = data  # unpack the tuple
         # get the type object
         try:
-            t = _typesByName[tp]
+            t = pcot.datumtypes.typesByName[tp]
         except KeyError:
             raise UnknownDatumTypeException(tp)
 
@@ -316,7 +142,7 @@ def deserialise(tp):
     """Given a type name, return the type object; used in deserialising
     macro connectors"""
     try:
-        return _typesByName[tp]
+        return pcot.datumtypes.typesByName[tp]
     except KeyError:
         raise UnknownDatumTypeException(tp)
 

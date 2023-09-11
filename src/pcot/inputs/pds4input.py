@@ -58,8 +58,8 @@ def getDQBits(data, uncertainty, dq):
     """Converts DQ data in the PDS4 QUALITY array into our DQ bits, and adds others
     depending on the other data too."""
     out = np.where(dq == 1, 0, pcot.dq.NODATA)  # where DQ is 1, output 0. Else output NODATA.
-    out |= np.where(data >= 0.9999999, pcot.dq.SAT,  0)
-    out |= np.where(data >= 0.2, pcot.dq.TEST, 0)
+    out |= np.where(data > 0.9999999, pcot.dq.SAT,  0) # where data is greater than or equal to 1 add the SAT bit
+    out |= np.where(uncertainty == 0.0, pcot.dq.NOUNCERTAINTY, 0)  # set NOUNC bit if zero uncertainty data
     return out.astype(np.uint16)
 
 

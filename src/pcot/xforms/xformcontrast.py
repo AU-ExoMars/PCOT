@@ -1,5 +1,6 @@
 import numpy as np
 
+from pcot import dq
 from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.utils import image
@@ -7,9 +8,9 @@ from pcot.xform import xformtype, XFormType
 
 
 # performs contrast stretching on a single channel. The image is a (h,w) numpy array.
-# There is also a (h,w) array mask.
+# There is also a (h,w) array mask. We also set DQ saturation bits in the DQ array passed in.
 
-def contrast1(img, tol, mask):
+def contrast1(img, tol, mask, dqToSet):
     # get the masked data to calculate the percentiles
     # need to compress it, because percentile ignores masks. 
     # Note the negation of the mask; numpy is weird- True means masked.
@@ -20,8 +21,15 @@ def contrast1(img, tol, mask):
     # find lower and upper limit for contrast stretching, and set those in the
     # masked image
     low, high = np.percentile(comp, 100 * tol), np.percentile(comp, 100 - 100 * tol)
-    masked[masked < low] = low
-    masked[masked > high] = high
+
+    satlow = masked < low
+    sathigh = masked > high
+
+    masked[satlow] = low
+    masked[sathigh] = high
+
+    dqToSet[satlow] |= dq.SAT
+    dqToSet[sathigh] |= dq.SAT
 
     # ...rescale the color values in the masked image to 0..1
     masked = (masked - masked.min()) / (masked.max() - masked.min())
@@ -40,7 +48,7 @@ def contrast1(img, tol, mask):
 class XformContrast(XFormType):
     """
     Perform a simple contrast stretch separately on each channel. The stretch is linear around the midpoint
-    and excessive values are clamped. The knob controls the amount of stretch applied."""
+    and excessive values are clamped. The knob controls the amount of stretch applied. Uncertainty is discarded."""
 
     # type constructor run once at startup
     def __init__(self):
@@ -82,12 +90,16 @@ class XformContrast(XFormType):
             # single channel, so use contrast1(). First, though, we need to extract the subimage
             # selected by the ROI (if any)
             subimage = img.subimage()
+            dqv = subimage.maskedDQ().copy()
             if img.channels == 1:
-                newsubimg = contrast1(subimage.img, node.tol, subimage.mask)
+                newsubimg = contrast1(subimage.img, node.tol, subimage.mask, dqv)
             else:
-                newsubimg = image.imgmerge([contrast1(x, node.tol, subimage.mask) for x in image.imgsplit(subimage.img)])
-            # having got a modified subimage, we need to splice it in
-            node.img = img.modifyWithSub(subimage, newsubimg)
+                imgs = image.imgsplit(subimage.img)
+                dqs = image.imgsplit(dqv)
+                newsubimg = image.imgmerge([contrast1(x, node.tol, subimage.mask, y) for x, y in zip(imgs, dqs)])
+            # having got a modified subimage, we need to splice it in. No uncertainty is passed in, so the
+            # uncertainty is discarded and the NOUNC bit set.
+            node.img = img.modifyWithSub(subimage, newsubimg, dqv=dqv)
         # Now we have generated the internally stored image, output it to output 0. This will
         # cause all nodes "downstream" to perform their actions.
         if node.img is not None:

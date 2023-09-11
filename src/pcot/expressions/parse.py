@@ -14,8 +14,10 @@ from typing import List, Any, Optional, Callable, Dict, Tuple, Union
 
 from pcot import datum
 from pcot.datum import Datum
+from pcot.datumtypes import Type
 from pcot.sources import nullSourceSet
 from pcot.utils.table import Table
+from pcot.value import Value
 
 Stack = List[Any]
 
@@ -57,11 +59,11 @@ class Parameter:
     def __init__(self,
                  name: str,  # name
                  desc: str,  # description
-                 types: Union[datum.Type, Tuple[datum.Type, ...]],  # tuple of valid types, or just one
+                 types: Union[Type, Tuple[Type, ...]],  # tuple of valid types, or just one
                  deflt: Optional[numbers.Number] = None  # default value for optional parameters, must be numeric
                  ):
         self.name = name
-        if isinstance(types, datum.Type):
+        if isinstance(types, Type):
             types = (types,)  # convert single type to tuple
         self.types = set(types)  # convert tuple to set
         self.desc = desc
@@ -179,7 +181,7 @@ class Function:
 
             for t in self.optParams:
                 if len(args) == 0:
-                    optArgs.append(Datum(Datum.NUMBER, t.getDefault(), nullSourceSet))
+                    optArgs.append(Datum(Datum.NUMBER, Value(t.getDefault(), 0.0), nullSourceSet))
                 else:
                     x = args.pop(0)
                     if x is None:
@@ -209,15 +211,14 @@ class Instruction:
 
 
 class InstNumber(Instruction):
-    """A VM instruction for stacking a number"""
+    """A VM instruction for stacking a number without uncertainty"""
     val: float
 
     def __init__(self, v: float):
         self.val = v
 
     def exec(self, stack: Stack):
-        # can't import NUMBER, it clashes with the one in tokenizer.
-        stack.append(Datum(Datum.NUMBER, self.val, nullSourceSet))
+        stack.append(Datum(Datum.NUMBER, Value(self.val, 0.0), nullSourceSet))
 
     def __str__(self):
         return "NUM {}".format(self.val)
@@ -417,15 +418,15 @@ class Parser:
                      ):
         """register a function - the callable should take a list of args, a list of optional args and return a value.
         Also takes a description and two lists of argument types: mandatory and optional."""
-        print(f"Registered func {name}")
+        # print(f"Registered func {name}")
         self.funcRegistry[name] = Function(name, fn, description, mandatoryParams, optParams, varargs)
 
     # property dict - keys are (name,type), values are (desc,func) where the func
     # takes Datum and gives Datum
 
-    properties: Dict[Tuple[str, datum.Type], Tuple[str, Callable[[Datum], Datum]]]
+    properties: Dict[Tuple[str, Type], Tuple[str, Callable[[Datum], Datum]]]
 
-    def registerProperty(self, name: str, tp: datum.Type, desc: str, func: Callable[[Datum], Datum]):
+    def registerProperty(self, name: str, tp: Type, desc: str, func: Callable[[Datum], Datum]):
         """add a property (e.g. the 'w' in 'a.w'), given name, input type, description and function"""
         self.properties[(name, tp)] = (desc, func)
 

@@ -1,22 +1,28 @@
 """
 Builtin functions and properties. Needs to be explicitly imported so the decorators run!
 """
-
-from typing import List, SupportsFloat, Optional
+import pathlib
+from typing import List, SupportsFloat, Optional, Callable
 
 import numpy as np
 
-from pcot import rois
-from pcot.config import parserhook
+import pcot
+import pcot.dq
+from pcot import rois, dq
+from pcot.config import parserhook, getAssetPath
 from pcot.datum import Datum
 from pcot.expressions import Parameter
+from pcot.filters import Filter
 from pcot.imagecube import ImageCube
-from pcot.sources import SourceSet, MultiBandSource
+from pcot.sources import SourceSet, MultiBandSource, FilterOnlySource
 from pcot.utils import image
+from pcot.expressions.ops import combineImageWithNumberSources
+from pcot.value import Value, add_sub_unc_list
 from pcot.xform import XFormException
 import cv2 as cv
 
 
+# TODOUNCERTAINTY TEST
 def funcMerge(args: List[Datum], optargs):
     """Function for merging a number of images. Crops all images to same size as smallest image."""
     if any([x is None for x in args]):
@@ -39,58 +45,93 @@ def funcMerge(args: List[Datum], optargs):
         if x.isImage():
             imglist.append(x.val)
         elif x.tp == Datum.NUMBER:
-            dat = np.full((h, w), x.val, dtype=np.float32)
-            imglist.append(ImageCube(dat, None, None))
+            dat = np.full((h, w), x.val.n, dtype=np.float32)
+            if x.val.u > 0.0:
+                unc = np.full((h, w), x.val.u, dtype=np.float32)
+            else:
+                unc = None
+            imglist.append(ImageCube(dat, None, None, uncertainty=unc))
         else:
             raise XFormException('EXPR', 'arguments to merge must be images or numbers')
 
     # and merge
     bands = []
+    banduncs = []
+    banddqs = []
+
     sources = []
     for x in imglist:
         if x.channels == 1:
             bands.append(x.img[:h, :w])
+            banduncs.append(x.uncertainty[:h, :w])
+            banddqs.append(x.dq[:h, :w])
         else:
             bands = bands + image.imgsplit(x.img)
+            banduncs = banduncs + image.imgsplit(x.uncertainty)
+            banddqs = banddqs + image.imgsplit(x.dq)
         sources = sources + x.sources.sourceSets
 
     img = image.imgmerge(bands)
-    img = ImageCube(img, None, MultiBandSource(sources))
+    unc = image.imgmerge(banduncs)
+    dqs = image.imgmerge(banddqs)
+    img = ImageCube(img, None, MultiBandSource(sources), uncertainty=unc, dq=dqs)
 
     return Datum(Datum.IMG, img)
 
 
+# TODOUNCERTAINTY TEST
 def funcGrey(args, optargs):
     """Greyscale conversion. If the optional second argument is nonzero, and the image has 3 channels, we'll use CV's
-    conversion equation rather than just the mean."""
+    conversion equation rather than just the mean. **However, this loses uncertainty information.**
+
+    Otherwise uncertainty
+    is calculated by adding together the channels in quadrature and then dividing the number of channels."""
 
     img = args[0].get(Datum.IMG)
 
     ss = SourceSet([img.sources, optargs[0].getSources()])
     sources = MultiBandSource([ss])
 
-    if optargs[0].get(Datum.NUMBER) != 0:
-        if img.channels != 3:
-            raise XFormException('DATA', "Image must be RGB for OpenCV greyscale conversion")
-        img = ImageCube(cv.cvtColor(img.img, cv.COLOR_RGB2GRAY), img.mapping, sources)
+    if img.channels == 1:
+        img = img.copy()  # 1 channel in the input, just copy it
     else:
-        # create a transformation matrix specifying that the output is a single channel which
-        # is the mean of all the channels in the source
-        mat = np.array([1 / img.channels] * img.channels).reshape((1, img.channels))
-        out = cv.transform(img.img, mat)
-        img = ImageCube(out, img.mapping, sources)
+        # DQs are dealt with by ORing all the bits together from each channel
+        dq = np.zeros(img.dq.shape[:2], dtype=np.uint16)
+        for i in range(0, img.channels):
+            dq |= img.dq[:, :, i]
+
+        if optargs[0].get(Datum.NUMBER).n != 0:  # if the opt arg is nonzero, use opencv - but no unc!
+            if img.channels != 3:
+                raise XFormException('DATA', "Image must be RGB for OpenCV greyscale conversion")
+            img = ImageCube(cv.cvtColor(img.img, cv.COLOR_RGB2GRAY), img.mapping, sources, dq=dq, rois=img.rois)
+        else:
+            # create a transformation matrix specifying that the output is a single channel which
+            # is the mean of all the channels in the source. Any uncertainy data will also be combined.
+            mat = np.array([1 / img.channels] * img.channels).reshape((1, img.channels))
+            out = cv.transform(img.img, mat)
+            # uncertainty is messier - add the squared uncertainties, divide by N, and root.
+            outu = np.zeros(img.uncertainty.shape[:2], dtype=np.float32)
+            for i in range(0, img.channels):
+                c = img.uncertainty[:, :, i]
+                outu += c * c
+            # divide by the count and root
+            outu = np.sqrt(outu) / img.channels
+            img = ImageCube(out, img.mapping, sources, uncertainty=outu, dq=dq, rois=img.rois)
     return Datum(Datum.IMG, img)
 
 
+# TODOUNCERTAINTY TEST
 def funcCrop(args, _):
     img = args[0].get(Datum.IMG)
-    x, y, w, h = [int(x.get(Datum.NUMBER)) for x in args[1:]]
+    x, y, w, h = [int(x.get(Datum.NUMBER).n) for x in args[1:]]
     out = img.img[y:y + h, x:x + w]
-    img = ImageCube(out, img.mapping, img.sources)
+    dq = img.dq[y:y + h, x:x + w]
+    unc = img.uncertainty[y:y + h, x:x + w]
+    img = ImageCube(out, img.mapping, img.sources, dq=dq, uncertainty=unc)
     return Datum(Datum.IMG, img)
 
 
-def funcROI(args, _):
+def funcROI(args: List[Datum], _):
     """Get ROI from image"""
     img = args[0].get(Datum.IMG)
     if len(img.rois) == 0:
@@ -119,14 +160,6 @@ def funcAddROI(args, _):
         return None
 
 
-def funcUncertaintyImage(args, _):
-    img = args[0].get(Datum.IMG)
-    if img is not None:
-        img = ImageCube(img.uncertainty, None, img.sources, rois=img.rois)
-
-    return Datum(Datum.IMG, img)
-
-
 def funcRGBImage(args, _):
     img = args[0].get(Datum.IMG)
     if img is not None:
@@ -135,48 +168,158 @@ def funcRGBImage(args, _):
     return Datum(Datum.IMG, img)
 
 
-def funcV(args, _):
-    v = args[0].get(Datum.NUMBER)
-    u = args[1].get(Datum.NUMBER)
-    raise Exception("Damn, no numbers with uncertainty yet")
-    return Datum(Datum.NUMBER, (v, u))
+def funcV(args, optargs):
+    # create a new nominal,uncertainty value - image or number - from the nominal values of two inputs.
+    # So if you pass:
+    #  image, image - one image with uncertainty taken from the nominal values of second image
+    #  image, number - image with constant uncertainty
+    #  number, image - constant grey image with uncertainty taken from the nominal values of second image (a bit weird)
+    #  number, number - most common case, a number with uncertainty
+    #
+    # Any optional DQ is ORed into the DQ of the result - only works on numbers, though!
+
+    t0 = args[0].tp
+    t1 = args[1].tp
+    v0 = args[0].get(t0)
+    v1 = args[1].get(t1)
+    s0 = args[0].sources
+    s1 = args[1].sources
+
+    dq = optargs[0].get(Datum.NUMBER)
+    if dq is None:
+        dq = pcot.dq.NONE
+    else:
+        dq = np.uint16(dq.n)
+
+    if t0 == Datum.NUMBER:
+        if t1 == Datum.NUMBER:
+            # number, number
+            return Datum(Datum.NUMBER, Value(v0.n, v1.n, dq), SourceSet([s0, s1]))
+        else:
+            # here, we're creating a number,uncimage pair
+            i = np.full(v1.img.shape, v0.n, dtype=np.float32)
+            s = combineImageWithNumberSources(v1, s0)
+            # or in the new DQ but remove no uncertainty, unless it's in the data.
+            dqimg = (v1.dq | dq) & ~pcot.dq.NOUNCERTAINTY
+
+            img = ImageCube(i, uncertainty=v1.img, dq=dqimg, sources=s)
+            return Datum(Datum.IMG, img)
+    else:
+        if t1 == Datum.NUMBER:
+            # image, number
+            i = np.full(v0.img.shape, v1.n, dtype=np.float32)
+            s = combineImageWithNumberSources(v0, s1)
+            dqimg = (v0.dq | dq) & ~pcot.dq.NOUNCERTAINTY
+            img = ImageCube(v0.img, uncertainty=i, dq=dqimg, sources=s)
+            return Datum(Datum.IMG, img)
+        else:
+            dqimg = (v0.dq | v1.dq | dq) & ~pcot.dq.NOUNCERTAINTY
+            img = ImageCube(v0.img, uncertainty=v1.img, dq=dqimg,
+                            sources=MultiBandSource.createBandwiseUnion([s0, s1]))
+            return Datum(Datum.IMG, img)
 
 
-def funcWrapper(fn, d, *args):
-    """Wrapper around a evaluator function that deals with ROIs etc.
-    compare this with exprWrapper in operations, which only handles images and delegates
-    processing ROI stuff to the function."""
+def funcNominal(args: List[Datum], _):
+    if args[0].tp == Datum.IMG:
+        img = args[0].get(Datum.IMG)
+        if img is not None:
+            img = ImageCube(img.img, None, img.sources, rois=img.rois)
+        return Datum(Datum.IMG, img)
+    else:  # type is constrained to either image or number, so it's fine to do this
+        n = args[0].get(Datum.NUMBER)
+        return Datum(Datum.NUMBER, Value(n.n, 0), sources=args[0].sources)
+
+
+def funcUncertainty(args: List[Datum], _):
+    if args[0].tp == Datum.IMG:
+        img = args[0].get(Datum.IMG)
+        if img is not None:
+            img = ImageCube(img.uncertainty, None, img.sources, rois=img.rois)
+        return Datum(Datum.IMG, img)
+    else:  # type is constrained to either image or number, so it's fine to do this
+        n = args[0].get(Datum.NUMBER)
+        return Datum(Datum.NUMBER, Value(n.u, 0), sources=args[0].sources)
+
+
+def funcWrapper(fn: Callable[[Value], Value], d: Datum) -> Datum:
+    """Takes a function which takes and returns Value, and a datum. This is a utility for dealing with
+    functions. For images, it strips out the relevant pixels (subject to ROIs) and creates a masked array. However, BAD
+    pixels are included. It then performs the operation and creates a new image which is a copy of the
+    input with the new data spliced in."""
+
     if d is None:
         return None
-    elif d.isImage():  # deal with image argument
-        img = d.val
-        subimage = img.subimage()
-        mask = subimage.fullmask()
-        cp = subimage.img.copy()
-        masked = np.ma.masked_array(cp, mask=~mask)
-        newdata = fn(masked, *args)  # the result of this could be *anything*
-        # so now we look at the result and build an appropriate Datum
-        if isinstance(newdata, np.ndarray):
-            np.putmask(cp, mask, newdata)
-            img = img.modifyWithSub(subimage, newdata)
-            return Datum(Datum.IMG, img)
-        elif isinstance(newdata, SupportsFloat):
-            # 'img' is SourcesObtainable.
-            return Datum(Datum.NUMBER, float(newdata), img)
-        else:
-            raise XFormException('EXPR', 'internal: fn returns bad type in funcWrapper')
     elif d.tp == Datum.NUMBER:  # deal with numeric argument (always returns a numeric result)
         # get sources for all arguments
-        ss = [a.getSources() for a in args]
-        ss.append(d.getSources())
-        return Datum(Datum.NUMBER, fn(d.val, *args), SourceSet(ss))
+        ss = d.getSources()
+        rv = fn(d.val)
+        return Datum(Datum.NUMBER, rv, SourceSet(ss))
+    elif d.isImage():
+        img = d.val
+        ss = d.sources
+        subimage = img.subimage()
+
+        # make copies of the source data into which we will splice the results
+        imgcopy = subimage.img.copy()
+        unccopy = subimage.uncertainty.copy()
+        dqcopy = subimage.dq.copy()
+
+        # Perform the calculation on the entire subimage rectangle, but only the results covered by ROI
+        # will be spliced back into the image (modifyWithSub does this).
+        v = Value(imgcopy, unccopy, dqcopy)
+
+        rv = fn(v)
+        # depending on the result type..
+        if rv.isscalar():
+            # ...either use it as a number datum
+            return Datum(Datum.NUMBER, rv, ss)
+        else:
+            # ...or splice it back into the image
+            img = img.modifyWithSub(subimage, rv.n, uncertainty=rv.u, dqv=rv.dq)
+            return Datum(Datum.IMG, img)
 
 
-def statsWrapper(fn, d: List[Optional[Datum]], *args):
+def funcMarkSat(args: List[Datum], _):
+    img = args[0].get(Datum.IMG)
+    mn = args[1].get(Datum.NUMBER).n
+    mx = args[2].get(Datum.NUMBER).n
+    if img is None:
+        return None
+
+    subimage = img.subimage()
+    data = subimage.masked(maskBadPixels=True)
+    dq = np.where(data <= mn, pcot.dq.ERROR, 0).astype(np.uint16)
+    dq |= np.where(data >= mx, pcot.dq.SAT, 0).astype(np.uint16)
+
+    img = img.modifyWithSub(subimage, None, dqOR=dq, uncertainty=subimage.uncertainty)
+    return Datum(Datum.IMG, img)
+
+
+def funcSetCWL(args: List[Datum], _):
+    img = args[0].get(Datum.IMG)
+    cwl = args[1].get(Datum.NUMBER).n
+
+    if img is None:
+        return None
+
+    if img.channels != 1:
+        raise XFormException('EXPR', 'setcwl must take a single channel image')
+    img = img.copy()
+    img.sources = MultiBandSource([FilterOnlySource(Filter(float(cwl), 30, 1.0, idx=0))])
+    return Datum(Datum.IMG, img)
+
+
+def statsWrapper(fn, d: List[Optional[Datum]], *args) -> Datum:
     """similar to funcWrapper, but can take lots of image and number arguments which it aggregates to do stats on.
     The result of fn must be a number. Works by flattening any images and concatenating them with any numbers,
-    and doing the operation on the resulting data."""
+    and doing the operation on the resulting data.
+
+    fn takes a tuple of nominal and uncertainty values compressed into a 1D array, and returns a Value.
+    """
+
     intermediate = None
+    uncintermediate = None
+
     sources = []
     for x in d:
         # get each datum, which is either numeric or an image.
@@ -185,20 +328,33 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
         elif x.isImage():
             # if an image, convert to a 1D array
             subimage = x.val.subimage()
-            mask = subimage.fullmask()
+            # we ignore "bad" pixels in the data
+            mask = subimage.fullmask(maskBadPixels=True)
             cp = subimage.img.copy()
+            cpu = subimage.uncertainty.copy()
+
             sources.append(x.sources)
             masked = np.ma.masked_array(cp, mask=~mask)
+            uncmasked = np.ma.masked_array(cpu, mask=~mask)
+
             # we convert the data into a flat numpy array if it isn't one already
             if isinstance(masked, np.ma.masked_array):
                 newdata = masked.compressed()  # convert to 1d and remove masked elements
             elif isinstance(masked, np.ndarray):
                 newdata = masked.flatten()  # convert to 1d
             else:
-                raise XFormException('EXPR', 'internal: fn returns bad type in statsWrapper')
+                raise XFormException('EXPR', 'internal: data in masked array is wrong type in statsWrapper')
+            if isinstance(uncmasked, np.ma.masked_array):
+                uncnewdata = uncmasked.compressed()  # convert to 1d and remove masked elements
+            elif isinstance(uncmasked, np.ndarray):
+                uncnewdata = uncmasked.flatten()  # convert to 1d
+            else:
+                raise XFormException('EXPR', 'internal: data in uncmasked array is wrong type in statsWrapper')
+
         elif x.tp == Datum.NUMBER:
             # if a number, convert to a single-value array
-            newdata = np.array([x.val], np.float32)
+            newdata = np.array([x.val.n], np.float32)
+            uncnewdata = np.array([x.val.u], np.float32)
             sources.append(x.sources)
         else:
             raise XFormException('EXPR', 'internal: bad type passed to statsWrapper')
@@ -206,57 +362,122 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args):
         # and concat it to the intermediate array
         if intermediate is None:
             intermediate = newdata
+            uncintermediate = uncnewdata
         else:
             intermediate = np.concatenate((intermediate, newdata))
+            uncintermediate = np.concatenate((uncintermediate, uncnewdata))
 
-    # then we perform the function on the collated array
-    return Datum(Datum.NUMBER, fn(intermediate, *args), SourceSet(sources))
+    # then we perform the function on the collated arrays
+    val = fn(intermediate, uncintermediate, *args)
+    return Datum(Datum.NUMBER, val, SourceSet(sources))
+
+
+testImageCache = {}
+
+
+def funcTestImg(args: List[Datum], _):
+    fileList = ("test1.png",)
+    n = int(args[0].get(Datum.NUMBER).n)
+    if n < 0:
+        raise XFormException('DATA', 'negative test file index')
+    n %= len(fileList)
+
+    global testImageCache
+    if n in testImageCache:
+        img = testImageCache[n]
+    else:
+        try:
+            p = getAssetPath(fileList[n])
+        except FileNotFoundError as e:
+            raise XFormException('DATA', f"cannot find test image{fileList[n]}")
+        img = ImageCube.load(p, None, None)
+        testImageCache[n] = img
+
+    return Datum(Datum.IMG, img)
 
 
 @parserhook
 def registerBuiltinFunctions(p):
     p.registerFunc("merge",
-                   "merge a number of images into a single image - if the image has multiple channels they will all be merged in.",
+                   "merge a number of images into a single image - if the image has multiple channels they will all "
+                   "be merged in.",
                    [Parameter("image", "an image of any depth", (Datum.NUMBER, Datum.IMG))],
                    [],
                    funcMerge, varargs=True)
+
     p.registerFunc("sin", "calculate sine of angle in radians",
                    [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: funcWrapper(np.sin, args[0]))
+                   lambda args, optargs: funcWrapper(lambda x: x.sin(), args[0]))
     p.registerFunc("cos", "calculate cosine of angle in radians",
                    [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: funcWrapper(np.cos, args[0]))
+                   lambda args, optargs: funcWrapper(lambda x: x.cos(), args[0]))
     p.registerFunc("tan", "calculate tangent of angle in radians",
                    [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: funcWrapper(np.tan, args[0]))
+                   lambda args, optargs: funcWrapper(lambda x: x.tan(), args[0]))
     p.registerFunc("sqrt", "calculate the square root",
                    [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: funcWrapper(np.sqrt, args[0]))
+                   lambda args, optargs: funcWrapper(lambda x: x.sqrt(), args[0]))
+    p.registerFunc("abs", "find absolute value",
+                   [Parameter("val", "input value", (Datum.NUMBER, Datum.IMG))],
+                   [],
+                   lambda args, optargs: funcWrapper(lambda x: abs(x), args[0]))
 
-    p.registerFunc("min", "find the minimum value of pixels in a list of ROIs, images or values",
+    p.registerFunc("min",
+                   "find the minimum value of the nominal values in a set of images and/or values. "
+                   "Images will be flattened into a list of values, "
+                   "so the result for multiband images may not be what you expect.",
                    [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: statsWrapper(np.min, args), varargs=True)
-    p.registerFunc("max", "find the maximum value of pixels in a list of ROIs, images or values",
+                   lambda args, optargs: statsWrapper(lambda n, u: Value(np.min(n), 0.0, dq.NOUNCERTAINTY), args),
+                   varargs=True)
+    p.registerFunc("max",
+                   "find the minimum value of the nominal values in a set of images and/or values. "
+                   "Images will be flattened into a list of values, "
+                   "so the result for multiband images may not be what you expect.",
                    [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: statsWrapper(np.max, args), varargs=True)
-    p.registerFunc("sd", "find the standard deviation of pixels in a list of ROIs, images or values",
+                   lambda args, optargs: statsWrapper(lambda n, u: Value(np.max(n), 0.0, dq.NOUNCERTAINTY), args),
+                   varargs=True)
+    p.registerFunc("sum",
+                   "find the sum of the nominal in a set of images and/or values. "
+                   "Images will be flattened into a list of values, "
+                   "so the result for multiband images may not be what you expect. "
+                   "The SD of the result is the SD of the sum, not the individual values.",
                    [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: statsWrapper(np.std, args), varargs=True)
-    p.registerFunc("mean", "find the mean of pixels in a list of ROIs, images or values",
+                   lambda args, optargs: statsWrapper(lambda n, u: Value(np.sum(n), add_sub_unc_list(u), dq.NONE),
+                                                      args), varargs=True)
+
+    def pooled_sd(n, u):
+        """Returns pooled standard deviation for an array of nominal values and an array of stddevs."""
+        # "Thus the variance of the pooled set is the mean of the variances plus the variance of the means."
+        # by https://arxiv.org/ftp/arxiv/papers/1007/1007.1012.pdf
+        # the variance of the means is n.var()
+        # the mean of the variances is np.mean(u**2) (since u is stddev, and stddev**2 is variance)
+        # so the sum of those is pooled variance. Root that to get the pooled stddev.
+        # There is a similar calculation in xformspectrum!
+        return np.sqrt(n.var() + np.mean(u ** 2))
+
+    p.registerFunc("mean",
+                   "find the mean±sd of the values of a set of images and/or scalars. "
+                   "Uncertainties in the data will be pooled. Images will be flattened into a list of values, "
+                   "so the result for multiband images may not be what you expect.",
                    [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: statsWrapper(np.mean, args), varargs=True)
-    p.registerFunc("sum", "find the sum of pixels in a list of ROIs, images or values",
+                   lambda args, optargs: statsWrapper(lambda n, u: Value(np.mean(n), pooled_sd(n, u), dq.NONE),
+                                                      args), varargs=True)
+    p.registerFunc("sd",
+                   "find the standard deviation of the nominal values in a set of images and/or scalars. "
+                   "Uncertainties in the data will be pooled. Images will be flattened into a list of values, "
+                   "so the result for multiband images may not be what you expect.",
                    [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
-                   lambda args, optargs: statsWrapper(np.sum, args), varargs=True)
+                   lambda args, optargs: statsWrapper(lambda n, u: Value(pooled_sd(n, u), 0, dq.NOUNCERTAINTY),
+                                                      args), varargs=True)
 
     p.registerFunc("grey", "convert an image to greyscale",
                    [Parameter("image", "an image to process", Datum.IMG)],
@@ -288,10 +509,20 @@ def registerBuiltinFunctions(p):
 
     p.registerFunc(
         "uncertainty",
-        "create an image made up of uncertainty data for all channels (or a zero channel if none)",
-        [Parameter("image", "the image to process", Datum.IMG)],
+        "If input is an image, create an image made up of uncertainty data for all channels; if input is numeric,"
+        " output the uncertainty. Ignores ROIs.",
+        [Parameter("image", "the image to process", (Datum.IMG, Datum.NUMBER))],
         [],
-        funcUncertaintyImage
+        funcUncertainty
+    )
+
+    p.registerFunc(
+        "nominal",
+        "If input is an image, create an image made up of nominal data for all channels; if input is numeric,"
+        " output the uncertainty. In other words, just remove the uncertainty. Ignores ROIs.",
+        [Parameter("image", "the image to process", (Datum.IMG, Datum.NUMBER))],
+        [],
+        funcNominal
     )
 
     p.registerFunc(
@@ -304,12 +535,44 @@ def registerBuiltinFunctions(p):
 
     p.registerFunc(
         "v",
-        "create a scalar value with uncertainty",
+        "create a new value with uncertainty by combining two nominal values. These can be either numbers or images. "
+        "Ignores and discards ROIs.",
         [
-            Parameter("value", "the nominal value", Datum.NUMBER),
-            Parameter("uncertainty","the uncertainty",Datum.NUMBER)
-        ], [],
+            Parameter("value", "the nominal value", (Datum.NUMBER, Datum.IMG)),
+            Parameter("uncertainty", "the uncertainty", (Datum.NUMBER, Datum.IMG))
+        ], [
+            Parameter("dq",
+                      "if present, a DQ bit field (e.g. 36 for COMPLEX|SAT) (only works on numeric args)",
+                      Datum.NUMBER, deflt=0),
+        ],
         funcV
+    )
+
+    p.registerFunc(
+        "marksat",
+        "mark pixels outside a certain range as SAT or ERROR (i.e BAD)",
+        [
+            Parameter("image", "the input image", Datum.IMG),
+            Parameter("min", "the minimum value below which pixels are ERROR", Datum.NUMBER),
+            Parameter("max", "the maximum value above which pixels are SAT", Datum.NUMBER)
+        ], [], funcMarkSat
+    )
+
+    p.registerFunc(
+        "setcwl",
+        "Given an 1-band image, 'fake' a filter of a given CWL and assign it. The image itself is unchanged. This is "
+        "used in testing only.",
+        [
+            Parameter("image", "the input image", Datum.IMG),
+            Parameter("cwl", "the fake filter CWL", Datum.NUMBER),
+        ], [], funcSetCWL
+    )
+
+    p.registerFunc(
+        'testimg', 'Load test image',
+        [
+            Parameter('imageidx', 'image index', Datum.NUMBER)
+        ], [], funcTestImg
     )
 
 
@@ -317,19 +580,17 @@ def registerBuiltinFunctions(p):
 def registerBuiltinProperties(p):
     p.registerProperty('w', Datum.IMG,
                        "give the width of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",
-                       lambda q: Datum(Datum.NUMBER, q.subimage().bb.w, SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Value(q.subimage().bb.w, 0.0), SourceSet(q.getSources())))
     p.registerProperty('w', Datum.ROI, "give the width of an ROI in pixels",
-                       lambda q: Datum(Datum.NUMBER, q.bb().w, SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Value(q.bb().w, 0.0), SourceSet(q.getSources())))
     p.registerProperty('h', Datum.IMG,
                        "give the height of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",
-                       lambda q: Datum(Datum.NUMBER, q.subimage().bb.h, SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Value(q.subimage().bb.h, 0.0), SourceSet(q.getSources())))
     p.registerProperty('h', Datum.ROI, "give the width of an ROI in pixels",
-                       lambda q: Datum(Datum.NUMBER, q.bb().h, SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Value(q.bb().h, 0.0), SourceSet(q.getSources())))
 
     p.registerProperty('n', Datum.IMG,
                        "give the area of an image in pixels (if there are ROIs, give the number of pixels in the ROI union)",
-                       lambda q: Datum(Datum.NUMBER, q.subimage().mask.sum(), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Value(q.subimage().mask.sum(), 0.0), SourceSet(q.getSources())))
     p.registerProperty('n', Datum.ROI, "give the number of pixels in an ROI",
-                       lambda q: Datum(Datum.NUMBER, q.pixels(), SourceSet(q.getSources())))
-
-
+                       lambda q: Datum(Datum.NUMBER, Value(q.pixels(), 0.0), SourceSet(q.getSources())))

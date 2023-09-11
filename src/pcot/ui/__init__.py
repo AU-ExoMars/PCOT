@@ -34,7 +34,7 @@ def msg(t):
             x.statusBar.showMessage(t)
             x.statusBar.repaint()  # make sure the message appears!
     else:
-        logger.info(f"LOG MSG {t}")
+        logger.info(f"LOG msg {t}")
 
 
 ## show a message in all window logs
@@ -43,7 +43,7 @@ def log(s, toStdout=True):
         for x in mainwindow.MainUI.windows:
             x.logText.append(s)
     if toStdout:
-        logger.info(f"LOG MSG {s}")
+        logger.info(f"LOG log {s}")
 
 
 ## show error on status bar, and log in red; will dump traceback to stdout if requested.

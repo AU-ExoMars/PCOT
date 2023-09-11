@@ -9,7 +9,11 @@ from pcot.xform import xformtype, XFormType
 class XformCurve(XFormType):
     """
     Maps the image channel intensities to a logistic sigmoid curve, y=1/(1+e^-(ax+b)), where a is "mul" and b is "add".
-    Honours regions of interest."""
+    Honours regions of interest.
+
+    **Ignores DQ and uncertainty**
+
+    """
 
     def __init__(self):
         super().__init__("curve", "processing", "0.0.0")
@@ -34,8 +38,8 @@ class XformCurve(XFormType):
 class TabCurve(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabcurve.ui')
-        self.w.addDial.valueChanged.connect(self.setAdd)
-        self.w.mulDial.valueChanged.connect(self.setMul)
+        self.w.addSpin.valueChanged.connect(self.setAdd)
+        self.w.mulSpin.valueChanged.connect(self.setMul)
 
         self.plot = None  # the matplotlib plot which we update
         # sync tab with node
@@ -43,12 +47,12 @@ class TabCurve(pcot.ui.tabs.Tab):
 
     def setAdd(self, v):
         # when a control changes, update node and perform
-        self.node.add = (v - 50) * 0.1
+        self.node.add = v
         self.changed()
 
     def setMul(self, v):
         # when a control changes, update node and perform
-        self.node.mul = v / 10
+        self.node.mul = v
         self.changed()
 
     # causes the tab to update itself from the node
@@ -58,8 +62,8 @@ class TabCurve(pcot.ui.tabs.Tab):
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)
 
-        self.w.addDial.setValue(self.node.add * 10 + 50)
-        self.w.mulDial.setValue(self.node.mul * 10)
+        self.w.addSpin.setValue(self.node.add)
+        self.w.mulSpin.setValue(self.node.mul)
         lut = genLut(self.node.mul, self.node.add)
         if self.plot is None:
             # set up the initial plot

@@ -43,7 +43,7 @@
          </item>
          <item>
           <property name="text">
-           <string>Clip</string>
+           <string>Clamp</string>
           </property>
          </item>
         </widget>

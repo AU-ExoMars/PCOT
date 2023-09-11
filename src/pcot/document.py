@@ -91,17 +91,17 @@ class Document:
     nodeInstances: Dict[XFormType, List[XForm]]
 
     def __del__(self):
-        print(f"----{self}")
+        pass
 
     def __init__(self, fileName=None):
         """Create a new document, and (optionally) load a file into it"""
-        print(f"++++{self}")
         self.graph = XFormGraph(self, False)  # false - is not a macro
         self.inputMgr = InputManager(self)
         self.macros = {}
         self.settings = DocumentSettings()
         self.undoRedoStore = UndoRedoStore()
         self.nodeInstances = {}
+        self.fileName = None
 
         if fileName is not None:
             self.load(fileName)
@@ -162,6 +162,7 @@ class Document:
             dd = arc.readJson("JSON")
             self.deserialise(dd)
             pcot.config.addRecent(fname)
+            self.fileName = fname
 
     ## generates a new unique name for a macro.
     def getUniqueUntitledMacroName(self):
@@ -208,7 +209,11 @@ class Document:
         (e.g. could be mono images of the same resolution)"""
         return self.setInputData(inputidx, inputs.Input.PDS4, lambda method: method.setProducts(products))
 
-    def setInputDirect(self, inputidx, imageCube):
+    def setInputDirect(self, inputidx, datum):
+        """Set graph's input directly to a datum"""
+        return self.setInputData(inputidx, inputs.Input.DIRECT, lambda method: method.setDatum(datum))
+
+    def setInputDirectImage(self, inputidx, imageCube):
         """Set graph's input directly to an imagecube (used in scripting)"""
         return self.setInputData(inputidx, inputs.Input.DIRECT, lambda method: method.setImageCube(imageCube))
 

@@ -518,7 +518,6 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.doc.mark()
         # create the node inside the prototype
         n = self.graph.create(tp)
-        n.xy = self.graph.scene.getNewPosition()
         assert (self.isMacro())
         assert (self.macroPrototype is not None)
         n.proto = self.macroPrototype

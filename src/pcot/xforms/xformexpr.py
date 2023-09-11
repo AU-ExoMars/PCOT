@@ -8,15 +8,19 @@ from pcot.imagecube import ChannelMapping
 from pcot.xform import XFormType, xformtype, XFormException, XForm
 
 
-def getvar(v):
-    """check that a variable is not ANY (unwired)"""
-    if v.tp == Datum.ANY:
+def getvar(d):
+    """check that a variable is not ANY (unwired). Also, if it's an image, make a shallow copy (see Issue #56, #65)"""
+    if d.tp == Datum.ANY:
         raise XFormException("DATA", "variable's input is not connected")
-    return v
+    elif d.tp == Datum.IMG:
+        if d.val is not None:
+            d = Datum(Datum.IMG, d.val.shallowCopy())
+    return d
+
 
 @xformtype
 class XFormExpr(XFormType):
-    """
+    r"""
     Expression evaluator. The node box will show the text of the expression. The "run" button must be clicked to
     set the node to the new expression and perform it. Additionally, the output type must be set - the system cannot
     determine the output type from the input types.
@@ -40,7 +44,8 @@ class XFormExpr(XFormType):
     | ^ | exponentiate \[r\] | 30
     |-A            |element-wise -A|50
     |A.B           |property B of entity A (e.g. a.h is height of image a)|80
-    |A$546         |extract single channel image of wavelength 546|100
+    |A$546         |extract single band image of wavelength 546|100
+    |A$_2          |extract single band image from band 2 explicitly|100
     |A&B           |element-wise minimum of A and B (Zadeh's AND operator)|20
     |A\|B          |element-wise maximum of A and B (Zadeh's OR operator)|20
     |!A            |element-wise 1-A (Zadeh's NOT operator)|50
@@ -75,6 +80,7 @@ class XFormExpr(XFormType):
 
 
     ### Operators on ROIs themselves (as opposed to images with ROIs)
+
     |operator    |description|
     |----------|--------------|
     |a+b |          union|
@@ -86,13 +92,15 @@ class XFormExpr(XFormType):
     ### Band extraction
 
     The notation **$name** or **$wavelength** takes an image on the left-hand
-    side and extracts a single band, generating a new monochrome image. 
-    The right-hand side is either a filter name, a filter position or a
-    wavelength. Depending on the camera, all these could be valid: 
+    side and extracts a single band, generating a new monochrome image.
+
+    The right-hand side is either a filter name, a filter position, a
+    wavelength or a band index preceded by "_". Depending on the camera, all these could be valid:
 
     | expression | meaning |
     |------------|---------|
     | **a$780**  | the 780nm band in image *a* |
+    | **a$_2**  | band 2 in the image *a* |
     | **(a+b)$G0** | the band named G0 in the image formed by adding images *a* and *b* |
     | **((a+b)/2)$780** | the average of the 780nm bands of images *a* and *b* |
     
@@ -116,6 +124,14 @@ class XFormExpr(XFormType):
     and selecting "List all functions." Help on an individual function can be found by hovering over
     the name of a function, right-clicking and selecting "Get help on 'somefunction'".
     Similar actions are supported for properties.
+
+    ## Uncertainties are assumed to be independent in all binary operations
+
+    While uncertainty is propagated through operations (as standard deviation) all quantities are assumed
+    to be independent (calculating covariances is beyond the scope of this system). Be very careful here.
+    For example, the uncertainty for the expression **tan(a)** will be calculated correctly, but if you try
+    to use **sin(a)/cos(a)** the uncertainty will be incorrect because the nominator and denominator are
+    not independent.
 
 
     """
@@ -171,6 +187,9 @@ class XFormExpr(XFormType):
                             node.img.setMapping(node.mapping)
                     node.resultStr = res.tp.getDisplayString(res)
                     node.setRectText(node.resultStr)
+                else:
+                    # no output, so reset the output type
+                    node.changeOutputType(0, Datum.NONE)
 
         except Exception as e:
             traceback.print_exc()

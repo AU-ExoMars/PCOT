@@ -1,6 +1,8 @@
-"""It's quite difficult to test ROIs, but we'll try to at least do rect and poly"""
+"""It's quite difficult to test ROIs, but we'll try to at least do rect, circle and poly.
+Some tests here mainly work by performing a change to part of an image selected by an ROI
+and checking the results are correct. Does not test DQ or uncertainty!"""
 from fixtures import *
-from pcot.rois import ROIRect, ROIBoundsException, ROICircle, ROIPoly, ROIPainted
+from pcot.rois import ROIRect, ROIBoundsException, ROICircle, ROIPoly, ROIPainted, ROI
 from pcot.utils.geom import Rect
 
 
@@ -16,7 +18,7 @@ def test_nonintersecting_roi(allblack):
 
 
 def test_nonintersecting_negative_roi(allblack):
-    """As above, but the ROI starts at negative coords"""
+    """As test_nonintersecting_rois, but the ROI starts at negative coords - this should raise an ROIBoundsException"""
     roi = ROIRect()
     roi.set(-20, -20, 10, 10)
     allblack.rois.append(roi)
@@ -274,7 +276,7 @@ def test_painted_change_masked_red_to_cyan(allblack):
     assert oldsum == allblack.w * allblack.h
 
     roi = ROIPainted()
-    roi.setImageSize(allblack.w, allblack.h)  # must be called before any call to setCircle.
+    roi.setContainingImageDimensions(allblack.w, allblack.h)  # must be called before any call to setCircle.
     roi.setCircle(4, 4, 75)     # the last value should give a brush radius of 3 via getRadiusFromSlider
     allblack.rois.append(roi)
     subimg = allblack.subimage()
@@ -306,3 +308,11 @@ def test_painted_change_masked_red_to_cyan_imagesize_not_set(allblack):
     img = allblack.modifyWithSub(subimg, out)
     # all pixels will have changed
     assert np.sum(img.img) == oldsum*2
+
+
+def test_roi_tpnames_and_default_ctor():
+    """All ROI subclasses must have a meaningful TPname and default ctor"""
+    for x in ROI.__subclasses__():
+        assert x.tpname is not None
+        inst = x()
+        assert inst.tpname is not None

@@ -47,3 +47,18 @@ class singleton:
 
     def __call__(self):
         raise SingletonException()
+
+
+class SignalBlocker:
+    """Handy class for blocking signals on several widgets at once"""
+
+    def __init__(self, *args):
+        self.objects = args
+
+    def __enter__(self):
+        for o in self.objects:
+            o.blockSignals(True)
+
+    def __exit__(self, exctype, excval, tb):
+        for o in self.objects:
+            o.blockSignals(False)

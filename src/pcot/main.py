@@ -103,6 +103,7 @@ def main():
     # Create an instance of a main window on that document
     # Autolayout not done by default - the user might have arranged things how they like.
     window = pcot.ui.mainwindow.MainUI(doc, doAutoLayout=False)
+    window.saveFileName = doc.fileName
 
     # run the application until exit
     app.exec_()

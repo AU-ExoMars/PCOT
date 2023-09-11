@@ -27,7 +27,7 @@ class XformNormImage(XFormType):
     def perform(self, node):
         # this uses the performOp function to wrap the "norm" operation function so that
         # it works in a node.
-        operations.performOp(node, operations.norm.norm, clip=node.mode)
+        operations.performOp(node, operations.norm.norm, clamp=node.mode)
 
 
 class TabNorm(pcot.ui.tabs.Tab):

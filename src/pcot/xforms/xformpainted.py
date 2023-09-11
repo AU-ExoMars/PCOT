@@ -7,6 +7,7 @@ import pcot.utils.colour
 import pcot.utils.text
 from pcot import ui
 from pcot.rois import ROIPainted, getRadiusFromSlider
+from pcot.ui.roiedit import PaintedEditor
 from pcot.xform import xformtype, XFormROIType
 
 
@@ -32,7 +33,7 @@ class XFormPainted(XFormROIType):
         node.captiontop = False
         node.fontsize = 10
         node.drawbg = True
-        node.thickness = 2
+        node.thickness = 0
         node.colour = (1, 1, 0)
         node.brushSize = 20  # scale of 0-99 i.e. a slider value. Converted to pixel radius in getRadiusFromSlider()
         node.previewRadius = None  # previewing needs the image, but that's awkward - so we stash this data in perform()
@@ -51,7 +52,7 @@ class XFormPainted(XFormROIType):
 
     def setProps(self, node, img):
         # set the properties of the ROI
-        node.roi.setImageSize(img.w, img.h)
+        node.roi.setContainingImageDimensions(img.w, img.h)
         if node.drawMode == 0:
             drawEdge = True
             drawBox = True
@@ -78,6 +79,7 @@ class XFormPainted(XFormROIType):
 class TabPainted(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabpainted.ui')
+        self.editor = PaintedEditor(self, node.roi)
         # set the paint hook in the canvas so we can draw on the image
         self.w.canvas.paintHook = self
         self.w.canvas.mouseHook = self
@@ -91,7 +93,6 @@ class TabPainted(pcot.ui.tabs.Tab):
         self.w.drawMode.currentIndexChanged.connect(self.drawModeChanged)
         self.w.brushSize.valueChanged.connect(self.brushSizeChanged)
         self.w.canvas.canvas.setMouseTracking(True)
-        self.mousePos = None
         self.mouseDown = False
         self.dontSetText = False
         # sync tab with node
@@ -175,33 +176,13 @@ class TabPainted(pcot.ui.tabs.Tab):
 
     # extra drawing! Preview of brush
     def canvasPaintHook(self, p: QPainter):
-        c = self.w.canvas
-        if self.mousePos is not None and self.node.previewRadius is not None:
-            p.setBrush(Qt.NoBrush)
-            p.setPen(QColor(*[v * 255 for v in self.node.colour]))
-            r = self.node.previewRadius / (self.w.canvas.canvas.getScale())
-            p.drawEllipse(self.mousePos, r, r)
-
-    def doSet(self, x, y, e):
-        if e.modifiers() & Qt.ShiftModifier:
-            self.node.roi.setCircle(x, y, self.node.brushSize, True)  # delete
-        else:
-            self.node.roi.setCircle(x, y, self.node.brushSize, False)
+        self.editor.canvasPaintHook(p)
 
     def canvasMouseMoveEvent(self, x, y, e):
-        self.mousePos = e.pos()
-        if self.mouseDown:
-            self.doSet(x, y, e)
-            self.changed()
-        self.w.canvas.update()
+        self.editor.canvasMouseMoveEvent(x, y, e)
 
     def canvasMousePressEvent(self, x, y, e):
-        self.mark()
-        self.mouseDown = True
-        self.doSet(x, y, e)
-        self.changed()
-        self.w.canvas.update()
+        self.editor.canvasMousePressEvent(x, y, e)
 
     def canvasMouseReleaseEvent(self, x, y, e):
-        self.mark()
-        self.mouseDown = False
+        self.editor.canvasMouseReleaseEvent(x, y, e)

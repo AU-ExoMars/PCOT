@@ -1,9 +1,12 @@
+"""Basic tests on nodes in a document graph"""
+
 import pytest
 
 import pcot
 from pcot.datum import Datum
 from pcot.document import Document
 from pcot.sources import nullSourceSet
+from pcot.value import Value
 from pcot.xform import XFormType, BadTypeException, xformtype
 
 
@@ -32,7 +35,7 @@ def test_node_output_none():
             # most nodes, when unconnected, should output None. There are a few exceptions.
             if x == 'constant':
                 try:
-                    assert node.getOutput(0, Datum.NUMBER) == 0, f"Constant should output zero by default"
+                    assert node.getOutput(0, Datum.NUMBER).n == 0, f"Constant should output zero by default"
                 except BadTypeException:
                     raise AssertionError("Constant should output a Datum.NUMBER even when not connected")
             elif x == 'spectrum':
@@ -40,6 +43,39 @@ def test_node_output_none():
                     assert node.getOutput(0, Datum.DATA) is not None, f"Spectrum should return something always"
                 except BadTypeException:
                     pytest.fail("Spectrum should output Datum.DATA even when not connected")
+            elif x == 'gen':
+                try:
+                    assert node.getOutput(0, Datum.IMG) is not None, f"Gen should return an image with default args"
+                except BadTypeException:
+                    pytest.fail("Gen should return an image")
+            elif x == 'pixtest':
+                try:
+                    out = node.getOutput(0, Datum.TESTRESULT)
+                    assert len(out) == 1, f"Pixtest should 'NO IMAGE' in list when not connected"
+                    assert out[0] == 'NO IMAGE', f"Pixtest should 'NO IMAGE' in list when not connected"
+                except BadTypeException:
+                    pytest.fail("Pixtest should return a list")
+            elif x == 'scalartest':
+                try:
+                    out = node.getOutput(0, Datum.TESTRESULT)
+                    assert len(out) == 1, f"Scalartest should 'NO VALUE' in list when not connected"
+                    assert out[0] == 'NO VALUE', f"Scalartest should 'NO VALUE' in list when not connected"
+                except BadTypeException:
+                    pytest.fail("Scalartest should return a list")
+            elif x == 'mergetests':
+                try:
+                    out = node.getOutput(0, Datum.TESTRESULT)
+                    assert len(out) == 1, f"Mergetests should 'NO TESTS' in list when not connected"
+                    assert out[0] == 'NO TESTS', f"Mergetests should 'NO TESTS' in list when not connected"
+                except BadTypeException:
+                    pytest.fail("Mergetests should return a list")
+            elif x == 'stringtest':
+                try:
+                    out = node.getOutput(0, Datum.TESTRESULT)
+                    assert len(out) == 1, f"Stringtest should 'NO TESTS' in list when not connected"
+                    assert out[0] == 'NO INPUT', f"Stringtest should 'NO TESTS' in list when not connected"
+                except BadTypeException:
+                    pytest.fail("Stringtests should return a list")
             else:
                 assert out is None, f"XForm {x} should output None when not connected"
 
@@ -83,8 +119,8 @@ class XFormTest(XFormType):
         in0 = node.getInput(0, Datum.NUMBER)
         in1 = node.getInput(1, Datum.NUMBER)
         if in0 is not None and in1 is not None:
-            node.setOutput(0, Datum(Datum.NUMBER, in0*node.testval + in1*1000, nullSourceSet))
-            node.setOutput(1, Datum(Datum.NUMBER, in1*node.testval + in0*1000, nullSourceSet))
+            node.setOutput(0, Datum(Datum.NUMBER, Value(in0.n * node.testval + in1.n * 1000, 0.0), nullSourceSet))
+            node.setOutput(1, Datum(Datum.NUMBER, Value(in1.n * node.testval + in0.n * 1000, 0.0), nullSourceSet))
         else:
             node.setOutput(0, None)
             node.setOutput(1, None)
@@ -114,7 +150,7 @@ def test_simple_node():
     doc.graph.performNodes()
 
     # get the outputs and check they are correct.
-    out0 = node.getOutput(0, Datum.NUMBER)
-    out1 = node.getOutput(1, Datum.NUMBER)
+    out0 = node.getOutput(0, Datum.NUMBER).n
+    out1 = node.getOutput(1, Datum.NUMBER).n
     assert out0 == 1*100+30*1000
     assert out1 == 30*100+1*1000

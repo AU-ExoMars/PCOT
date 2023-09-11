@@ -41,7 +41,7 @@ image *a*.
 
 """
 
-pcot.xform.createXFormTypeInstances()
+pcot.setup()
 
 parser = pcot.xform.allTypes['expr'].parser
 

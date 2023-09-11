@@ -1,0 +1,4 @@
+#!/bin/bash
+python latex.py > list.tex
+pdflatex main.tex
+pdflatex main.tex

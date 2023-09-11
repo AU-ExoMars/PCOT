@@ -1,0 +1,61 @@
+% arara: pdflatex
+% arara: biber
+% arara: pdflatex
+
+\documentclass[a4paper]{article}
+\usepackage[lighttt]{lmodern}
+\ttfamily
+
+% this is to fix a bug in the lmodern
+\DeclareFontShape{OT1}{lmtt}{m}{it}
+     {<->sub*lmtt/m/sl}{}
+     
+\usepackage[toc,page]{appendix}
+%\usepackage{wrapfig}
+\usepackage[pdftex]{graphicx}
+%\usepackage[version=3]{mhchem}
+\usepackage{fancyvrb}
+%\usepackage{multirow}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\author{Jim Finnis}
+
+%\usepackage[hmargin=2.5cm,vmargin=3.5cm]{geometry}
+\usepackage[hmargin=3cm,
+    vmargin=5cm,
+    marginparwidth=2.0cm,
+    ]{geometry}
+\usepackage{multicol}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{boldline}
+\usepackage{multirow}
+\usepackage{changepage}
+\usepackage{pdflscape}
+\usepackage{afterpage}
+\usepackage{amsmath}
+\usepackage[all]{xy}
+\usepackage{letltxmacro}
+% uncomment this to enable internal automatic hyperlinks
+\usepackage{hyperref}
+\hypersetup{colorlinks}
+\usepackage{listings}
+\usepackage[usenames,dvipsnames]{color}
+
+\usepackage[font=small,labelfont=bf,margin=3em]{caption}
+
+
+
+\title{PCOT tests}
+\author{James Finnis (jcf12@aber.ac.uk)}
+
+\begin{document}
+\maketitle
+
+\input{list}
+
+\end{document}
+

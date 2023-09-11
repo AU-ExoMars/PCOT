@@ -11,7 +11,7 @@ import pcot.ui.tabs
 from pcot.imagecube import ImageCube
 from pcot.rois import ROI
 from pcot.sources import MultiBandSource
-from pcot.utils.annotations import Annotation, annotFont
+from pcot.utils.annotations import Annotation, annotFont, pixels2painter
 from pcot.utils.colour import colDialog, rgb2qcol
 from pcot.utils.gradient import Gradient
 from pcot.xform import xformtype, XFormType, XFormException
@@ -244,7 +244,7 @@ class GradientLegend(Annotation):
         p.setPen(pen)
         p.drawRect(int(x), int(y), int(w), int(h))
 
-        annotFont.setPixelSize(fontscale)
+        annotFont.setPixelSize(pixels2painter(fontscale, p))
         p.setFont(annotFont)
         metrics = QFontMetrics(annotFont)
 
@@ -285,23 +285,27 @@ class XformGradient(XFormType):
     image AND there is a valid ROI in the mono image, the image will be inset into the RGB of the insetinto image.
     NOTE: if you change the "insetinto" image's RGB mapping you may need to "run all" to see the the change reflected.
 
+    **Ignores DQ and uncertainty**
+
+
     The gradient widget has the following behaviour:
 
-        * click and drag to move a colour point
-        * doubleclick to delete an existing colour point
-        * doubleclick to add a new colour point
-        * right click to edit an existing colour point
+    * click and drag to move a colour point
+    * doubleclick to delete an existing colour point
+    * doubleclick to add a new colour point
+    * right click to edit an existing colour point
 
     Node parameters:
-        * gradient: utils.Gradient object containing gradient info
-        * colour: (r,g,b) [0:1] colour of text and border for in-image legend
-        * legendrect: (x,y,w,h) rectangle for in-image legend
-        * vertical: true if vertical legend
-        * fontscale: size of font
-        * thickness: border thickness
-        * legendPos: string describing position:
-            'In image', 'Top margin', 'Bottom margin', 'Left margin', 'Right margin', 'None'
-            These are also defined as constants LEFT_MARGIN... IN_IMAGE (and None)
+
+    * gradient: utils.Gradient object containing gradient info
+    * colour: (r,g,b) [0:1] colour of text and border for in-image legend
+    * legendrect: (x,y,w,h) rectangle for in-image legend
+    * vertical: true if vertical legend
+    * fontscale: size of font
+    * thickness: border thickness
+    * legendPos: string describing position:
+        * 'In image', 'Top margin', 'Bottom margin', 'Left margin', 'Right margin', 'None'
+        These are also defined as constants LEFT_MARGIN... IN_IMAGE (and None)
     """
 
     def __init__(self):
@@ -340,8 +344,8 @@ class XformGradient(XFormType):
         if not node.enabled:
             return
 
-        node.minval = 0
-        node.maxval = 1
+        node.minval = 0.0
+        node.maxval = 1.0
         if mono is None and rgb is None:
             node.img = None
         elif mono is None:

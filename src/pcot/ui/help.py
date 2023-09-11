@@ -40,8 +40,12 @@ def getHelpMarkdown(xt, errorState: XFormException = None, inApp=False):
     else:
         h = xt.__doc__  # help doc comes from docstring
 
-    # docstrings have whitespace at starts of lines.
-    h = "\n".join([x.strip() for x in h.split('\n')])
+    # docstrings have whitespace at starts of lines, but we don't want to strip all of it - just
+    # the space common to all lines.
+    lines = h.split('\n')
+    headerspacelen = min([len(x) - len(x.strip()) for x in lines if len(x.strip()) > 0])
+
+    h = "\n".join([x[headerspacelen:] for x in lines])
 
     h = markdownWrapper(h)
     s = f"# {xt.name}\n\n## Description\n\n{h}\n\n*****\n\n## Connections\n\n"
@@ -74,6 +78,7 @@ def getHelpMarkdown(xt, errorState: XFormException = None, inApp=False):
 
     if errorState is not None:
         s += f"# ERROR: [{errorState.code}] {errorState.message}"
+
     return s
 
 

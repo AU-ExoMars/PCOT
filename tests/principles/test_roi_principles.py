@@ -1,7 +1,12 @@
+"""Tests on basic ROI operations. Note that these mostly work by using the ROI control
+modification of an image and then testing pixels in the result. Only nominal data is
+checked, not uncertainty or DQ."""
+
 import pcot
 from pcot.datum import Datum
 from pcot.document import Document
 from fixtures import *
+
 
 def test_roi_single_image(allblack):
     """Test that a single 'standard operation' - one which uses modifyWithSub - works
@@ -11,7 +16,7 @@ def test_roi_single_image(allblack):
     pcot.setup()
     doc = Document()
 
-    assert doc.setInputDirect(0, allblack) is None
+    assert doc.setInputDirectImage(0, allblack) is None
     inputNode = doc.graph.create("input 0")
 
     roiNode = doc.graph.create("rect")
@@ -21,7 +26,7 @@ def test_roi_single_image(allblack):
     roiNode.connect(0, inputNode, 0)
 
     exprNode = doc.graph.create("expr")
-    exprNode.expr = "clip(a+4)"  # will add 4 to the value and clip to 1.
+    exprNode.expr = "clamp(a+4)"  # will add 4 to the value and clip to 1.
     exprNode.connect(0, roiNode, 0)
 
     doc.changed()
@@ -29,12 +34,13 @@ def test_roi_single_image(allblack):
     assert np.sum(img.img) == 12 * 3  # right number of pixels changed for a 3 channel image
     checkexpr(exprNode)
 
+
 def test_roi_intersection(allblack):
     """Test using expr to intersect two ROIs"""
     pcot.setup()
     doc = Document()
 
-    assert doc.setInputDirect(0, allblack) is None
+    assert doc.setInputDirectImage(0, allblack) is None
     inputNode = doc.graph.create("input 0")
 
     # create a rectangular 3x3 ROI for the image - we don't add it, we ignore the ROI's image output
@@ -62,7 +68,7 @@ def test_roi_intersection(allblack):
     # now take that image with the intersected ROI and set it to white (by adding a large
     # number and clipping). The resulting image should have had 4 pixels set to white.
     setWhiteNode = doc.graph.create("expr")
-    setWhiteNode.expr = "clip(a+4)"
+    setWhiteNode.expr = "clamp(a+4)"
     setWhiteNode.connect(0, importNode, 0)
 
     doc.changed()
@@ -77,7 +83,7 @@ def test_roi_union_expr(allblack):
     pcot.setup()
     doc = Document()
 
-    assert doc.setInputDirect(0, allblack) is None
+    assert doc.setInputDirectImage(0, allblack) is None
     inputNode = doc.graph.create("input 0")
 
     # create a rectangular 3x3 ROI for the image - we don't add it, we ignore the ROI's image output
@@ -105,7 +111,7 @@ def test_roi_union_expr(allblack):
     # now take that image with the union ROI and set it to white (by adding a large
     # number and clipping). The resulting image should have had 14 pixels set to white.
     setWhiteNode = doc.graph.create("expr")
-    setWhiteNode.expr = "clip(a+4)"
+    setWhiteNode.expr = "clamp(a+4)"
     setWhiteNode.connect(0, importNode, 0)
 
     doc.changed()
@@ -120,7 +126,7 @@ def test_roi_union(allblack):
     pcot.setup()
     doc = Document()
 
-    assert doc.setInputDirect(0, allblack) is None
+    assert doc.setInputDirectImage(0, allblack) is None
     inputNode = doc.graph.create("input 0")
 
     # apply a rectangular 3x3 ROI to the image
@@ -136,7 +142,7 @@ def test_roi_union(allblack):
     # now take that image with the union ROI and set it to white (by adding a large
     # number and clipping). The resulting image should have had 14 pixels set to white.
     setWhiteNode = doc.graph.create("expr")
-    setWhiteNode.expr = "clip(a+4)"
+    setWhiteNode.expr = "clamp(a+4)"
     setWhiteNode.connect(0, roiNode2, 0)
 
     doc.changed()
@@ -156,11 +162,11 @@ def test_roi_binop_image_lhs():
     doc = Document()
 
     redimg = genrgb(50, 50, 1, 0, 0, doc=doc, inpidx=0)
-    assert doc.setInputDirect(0, redimg) is None
+    assert doc.setInputDirectImage(0, redimg) is None
     red = doc.graph.create("input 0", displayName="RED input")
 
     greenimg = genrgb(50, 50, 0, 1, 0, doc=doc, inpidx=1)
-    assert doc.setInputDirect(1, greenimg) is None
+    assert doc.setInputDirectImage(1, greenimg) is None
     green = doc.graph.create("input 1", displayName="GREEN input")
 
     # add ROI to image on LHS (red)
@@ -197,11 +203,11 @@ def test_roi_binop_image_rhs():
     doc = Document()
 
     greenimg = genrgb(50, 50, 0, 1, 0, doc=doc, inpidx=0)
-    assert doc.setInputDirect(0, greenimg) is None
+    assert doc.setInputDirectImage(0, greenimg) is None
     green = doc.graph.create("input 0", displayName="GREEN input")
 
     blueimg = genrgb(50, 50, 0, 0, 1, doc=doc, inpidx=1)
-    assert doc.setInputDirect(1, blueimg) is None
+    assert doc.setInputDirectImage(1, blueimg) is None
     blue = doc.graph.create("input 1", displayName="Blue input")
 
     # add ROI to image on RHS (blue)
@@ -244,8 +250,8 @@ def test_rois_on_both_sides_of_binop():
     redimg = genrgb(50, 50, 1, 0, 0, doc=doc, inpidx=0)  # red 50x50
     blueimg = genrgb(50, 50, 0, 0, 1, doc=doc, inpidx=1)  # blue 50x50
 
-    assert doc.setInputDirect(0, redimg) is None
-    assert doc.setInputDirect(1, blueimg) is None
+    assert doc.setInputDirectImage(0, redimg) is None
+    assert doc.setInputDirectImage(1, blueimg) is None
     red = doc.graph.create("input 0")
     blue = doc.graph.create("input 1")
 
@@ -289,7 +295,7 @@ def test_rois_same_on_both_sides():
     # make 2 images, one red and one blue. Make sure the input indices are correct
     # for the sources!
     greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # dark green
-    assert doc.setInputDirect(0, greenimg) is None
+    assert doc.setInputDirectImage(0, greenimg) is None
     green = doc.graph.create("input 0", displayName="GREEN input")
 
     roi = doc.graph.create("rect")
@@ -312,7 +318,7 @@ def _testinternal_image_and_scalar(exprString):
     doc = Document()
 
     greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # dark green
-    assert doc.setInputDirect(0, greenimg) is None
+    assert doc.setInputDirectImage(0, greenimg) is None
     green = doc.graph.create("input 0", displayName="GREEN input")
 
     roi = doc.graph.create("rect")
@@ -353,7 +359,7 @@ def perform_roi_op(exprString) -> ImageCube:
     doc = Document()
 
     redimg = genrgb(50, 50, 1, 0, 0, doc=doc, inpidx=0)  # red 50x50
-    assert doc.setInputDirect(0, redimg) is None
+    assert doc.setInputDirectImage(0, redimg) is None
     red = doc.graph.create("input 0")
 
     roi1 = doc.graph.create("rect")
@@ -436,14 +442,14 @@ def test_roi_diff_exp2():
             assert np.array_equal(pix, expected), f"pixel {x}, {y} should be {expected}, is {pix}"
 
 
-def test_roi_neg_expr_unimplemented():
-    """Unary negate is not implemented (yet?)"""
+def test_roi_neg_expr():
+    """Unary negate """
 
     pcot.setup()
     doc = Document()
 
     redimg = genrgb(50, 50, 1, 0, 0, doc=doc, inpidx=0)  # red 50x50
-    assert doc.setInputDirect(0, redimg) is None
+    assert doc.setInputDirectImage(0, redimg) is None
     red = doc.graph.create("input 0")
 
     roi1 = doc.graph.create("rect")
@@ -451,11 +457,25 @@ def test_roi_neg_expr_unimplemented():
     roi1.connect(0, red, 0)
 
     expr = doc.graph.create("expr")
-    expr.connect(0, roi1, 1)  # use the ROI output
     expr.expr = "-a"
+    expr.connect(0, roi1, 1)  # use the ROI output
+
+    imp = doc.graph.create("importroi")
+    imp.connect(0, red, 0)
+    imp.connect(1, expr, 0)
+
+    mod = doc.graph.create("expr")
+    mod.expr = "a*0"
+    mod.connect(0, imp, 0)
 
     doc.changed()
 
-    if expr.error is not None and expr.error.message == "incompatible type for operator NEG: roi":
-        pytest.fail("negation not implemented for ROIs")
-    checkexpr(expr)
+    img = mod.getOutput(0, Datum.IMG)
+    assert img is not None
+
+    for x in range(0, 50):
+        for y in range(0, 50):
+            inroi = not (10 <= x < 40 and 10 <= y < 40)
+            pix = img.img[y, x]
+            expected = (0, 0, 0) if inroi else (1, 0, 0)
+            assert np.array_equal(pix, expected), f"pixel {x}, {y} should be {expected}, is {pix}"

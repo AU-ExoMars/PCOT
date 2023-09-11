@@ -7,6 +7,7 @@ import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
 from pcot.rois import ROICircle
+from pcot.ui.roiedit import CircleEditor
 from pcot.xform import xformtype, XFormROIType
 
 
@@ -41,7 +42,7 @@ class XformCirc(XFormROIType):
         node.captiontop = False
         node.fontsize = 10
         node.drawbg = True
-        node.thickness = 2
+        node.thickness = 0
         node.colour = (1, 1, 0)
         node.roi = ROICircle()
         node.roi.drawEdge = True
@@ -53,6 +54,7 @@ class XformCirc(XFormROIType):
         node.roi.deserialise(d)
 
     def setProps(self, node, img):
+        node.roi.setContainingImageDimensions(img.w, img.h)
         node.roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.thickness, node.drawbg)
 
     def getMyROIs(self, node):
@@ -63,6 +65,7 @@ class XformCirc(XFormROIType):
 class TabCirc(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabcirc.ui')
+        self.editor = CircleEditor(self, self.node.roi)
         self.w.canvas.mouseHook = self
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
         self.w.drawbg.stateChanged.connect(self.drawbgChanged)
@@ -167,37 +170,11 @@ class TabCirc(pcot.ui.tabs.Tab):
             self.w.YEdit.setText(y)
             self.w.radiusEdit.setText(r)
 
-    def setRadius(self, x2, y2):
-        c = self.node.roi.get()
-        x, y, r = c if c is not None else (0, 0, 0)
-        dx = x - x2
-        dy = y - y2
-        r = math.sqrt(dx * dx + dy * dy)
-        if r < 1:
-            r = 1
-        # we don't do a mark here to avoid multiple marks - one is done on mousedown.
-        self.node.roi.set(x, y, r)
-        self.changed()
-        self.w.canvas.update()
+    def canvasMouseMoveEvent(self, x, y, e):
+        self.editor.canvasMouseMoveEvent(x, y, e)
 
-    def canvasMouseMoveEvent(self, x2, y2, e):
-        if self.mouseDown:
-            self.setRadius(x2, y2)
-
-    def canvasMousePressEvent(self, x, y, e: QMouseEvent):
-        self.mouseDown = True
-        self.mark()
-        if e.button() == Qt.RightButton and self.node.roi.get() is not None:
-            self.setRadius(x, y)
-        else:
-            if e.modifiers() & Qt.ShiftModifier and self.node.roi.get() is not None:
-                _, _, r = self.node.roi.get()
-            else:
-                r = 10
-            self.node.roi.set(x, y, r)
-            self.changed()
-            self.w.canvas.update()
+    def canvasMousePressEvent(self, x, y, e):
+        self.editor.canvasMousePressEvent(x, y, e)
 
     def canvasMouseReleaseEvent(self, x, y, e):
-        self.mouseDown = False
-
+        self.editor.canvasMouseReleaseEvent(x, y, e)

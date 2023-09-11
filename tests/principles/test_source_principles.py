@@ -1,9 +1,14 @@
+"""Test the basic principles behind how sources are propagated
+through the graph"""
+
 import pcot
 from basic.test_sources import SimpleTestSource
 from fixtures import *
 from pcot.datum import Datum
 from pcot.document import Document
 from pcot.sources import SourceSet, InputSource
+from pcot.value import Value
+from pcot.xform import XFormException
 
 
 @pytest.fixture
@@ -43,7 +48,7 @@ def test_greyscale_sources(envi_img: ImageCube):
     nsource = SimpleTestSource("numbersource")  # numbers need explicit sources, so I'll fake one up
 
     from pcot.expressions.builtins import funcGrey
-    d = funcGrey([Datum(Datum.IMG, envi_img)], [Datum(Datum.NUMBER, 0, nsource)])
+    d = funcGrey([Datum(Datum.IMG, envi_img)], [Datum(Datum.NUMBER, Value(0, 0), nsource)])
     img = d.get(Datum.IMG)
     assert img.channels == 1  # single channel
     assert len(img.sources) == 1  # and therefore a single sourceset
@@ -86,16 +91,19 @@ def test_greyscale_sources_expr(envi_image_1):
     assert len(img.sources) == 1  # and therefore a single sourceset
 
     sources = img.sources[0]
-    assert len(sources) == 5  # four channels plus the number determining type
+    # four channels - the number determining the type of greyscaling will be
+    # a null source that gets filtered out.
+    assert len(sources) == 4
 
     # separate into sources which have filters (those from images) and others
     filts = [x for x in sources if x.getFilter() is not None]
     nonfilts = [x for x in sources if x.getFilter() is None]
-    assert len(nonfilts) == 1
     assert len(filts) == 4
 
-    # make sure that the number source is the null source
-    assert nonfilts[0] == nullSource
+    assert len(nonfilts) == 0   # might seem an odd test, is a historical artifact (null sources now filtered out)
+    # make sure that the number source is the null source (commented out, see previous line)
+    # assert nonfilts[0] == nullSource
+
     # and get the filter freqs to make sure they are correct
     freqs = set(x.getFilter().cwl for x in sources if x.getFilter() is not None)
     assert {800, 640, 550, 440} == freqs
@@ -122,6 +130,32 @@ def test_extract_sources(envi_image_1):
     assert len(sourceset) == 1
     source = sourceset.getOnlyItem()
     assert source.getFilter().cwl == 640
+
+
+def test_extract_by_band():
+    """Test that we can extract by band, and that out-of-range bands give an error. Testing of the DQ
+    and uncertainty is done in a graph setting by graphs/extractbyband.pcot"""
+
+    pcot.setup()
+    doc = Document()
+    img = genrgb(50, 50, 0.1, 0.2, 0.3, doc=doc, inpidx=0)
+    assert doc.setInputDirectImage(0, img) is None
+    inp = doc.graph.create("input 0")
+    expr = doc.graph.create("expr")
+    expr.expr = "a$_0"
+    expr.connect(0,inp,0)
+    doc.changed()
+
+    img = expr.getOutput(0, Datum.IMG)
+    assert img is not None
+    assert np.allclose(img.img[0][0], 0.1)
+
+    expr.expr = "a$_4"
+    doc.changed()
+    img = expr.getOutput(0, Datum.IMG)
+    assert img is None
+    assert isinstance(expr.error, XFormException)
+    assert expr.error.message == "unable to get this wavelength from an image: [DATUM-ident, value _4]"
 
 
 def test_binop_2images(envi_image_1, envi_image_2):
@@ -274,16 +308,18 @@ def test_binop_image_and_number_literal(envi_image_1, envi_image_2):
     assert len(img.sources) == 4  # 4 bands in the output
 
     for freq, channelSourceSet in zip((800, 640, 550, 440), img.sources):
-        # each channel's sources should be the relevant channel of A and the null source
-        assert len(channelSourceSet) == 2
+        # each channel's sources should be the relevant channel of A and the null source,
+        # but the null source gets filtered out
+        assert len(channelSourceSet) == 1
         fromImage = [x for x in channelSourceSet if isinstance(x, InputSource)]
         fromConst = [x for x in channelSourceSet if x == nullSource]
         assert len(fromImage) == 1
-        assert len(fromConst) == 1
+        assert len(fromConst) == 0
         assert fromImage[0].getFilter().cwl == freq
 
 
 def test_unop_image(envi_image_1):
+    """Test that sources are propagated correctly through a unary op"""
     pcot.setup()
     doc = Document()
     assert doc.setInputENVI(0, envi_image_1) is None

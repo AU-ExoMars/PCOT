@@ -4,7 +4,8 @@ import logging
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QColor, QBrush, QLinearGradient
 
-from pcot.datum import Datum, Type
+from pcot.datum import Datum
+from pcot.datumtypes import Type
 
 brushDict = {}
 
@@ -33,11 +34,10 @@ def quickGrad(c1: QColor, c2: QColor, c3: QColor, finalC: QColor) -> QBrush:
 # register builtin types
 
 register(Datum.ANY, Qt.red)
-register(Datum.IMGRGB, quickGrad(Qt.red, Qt.green, Qt.blue, QColor(50, 50, 50)))
 register(Datum.IMG, Qt.blue)
-register(Datum.ELLIPSE, Qt.cyan)
 register(Datum.ROI, Qt.cyan)
 register(Datum.DATA, Qt.darkMagenta)
+register(Datum.TESTRESULT, Qt.darkYellow)
 register(Datum.NUMBER, Qt.darkGreen)
 register(Datum.VARIANT, QBrush(Qt.black, Qt.DiagCrossPattern))
 register(Datum.NONE, QBrush(Qt.red, Qt.BDiagPattern))

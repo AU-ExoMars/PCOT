@@ -1,4 +1,5 @@
 from gen_envi import gen_envi
+from pcot import dq
 from pcot.imagecube import ImageCube, ChannelMapping
 
 import os
@@ -14,11 +15,11 @@ from pcot.sources import MultiBandSource, nullSource, InputSource
 Assorted test fixtures, mainly for generating input data (typically images)
 """
 
+
 def checkexpr(expr):
     """Check an expression node for errors"""
     if expr.error is not None:
         pytest.fail(f"Error in expression: {expr.error}")
-
 
 
 @pytest.fixture
@@ -72,9 +73,29 @@ def rectimage(globaldatadir):
     return ImageCube.load(str(path), None, None)
 
 
-def genrgb(w, h, r, g, b, doc=None, inpidx=None):
+def genmono(w,h,v,u,dq,doc=None,inpidx=None):
+    if doc is not None and inpidx is not None:
+        sources = MultiBandSource([InputSource(doc,inpidx,'M')])
+    else:
+        sources = MultiBandSource([nullSource])
+
+    band = np.full((h,w),v).astype(np.float32)
+    u = np.full((h,w),u).astype(np.float32)
+    dq = np.full((h,w),dq).astype(np.uint16)
+
+    imgc = ImageCube(band, ChannelMapping(), sources, defaultMapping=None, uncertainty=u, dq=dq)
+    assert imgc.w == w
+    assert imgc.h == h
+    return imgc
+
+
+def genrgb(w, h, r, g, b, u=None, d=None, doc=None, inpidx=None):
     """Generate an RGB image. If document and input index are given, we create an InputSource, otherwise
-    it has to be a nullSource."""
+    it has to be a nullSource.
+    If u is provided, it is an (r,g,b) uncertainty tuple.
+    If d is provided, it is an (r,g,b) dq bits tuple
+
+    """
     if doc is not None and inpidx is not None:
         sources = MultiBandSource([InputSource(doc, inpidx, 'R'),
                                    InputSource(doc, inpidx, 'G'),
@@ -85,7 +106,47 @@ def genrgb(w, h, r, g, b, doc=None, inpidx=None):
     bands = [np.full((h, w), x) for x in (r, g, b)]
     bands = np.dstack(bands).astype(np.float32)
     assert bands.shape == (h, w, 3)
-    imgc = ImageCube(bands, ChannelMapping(), sources, defaultMapping=None)
+
+    if u is not None:
+        u = [np.full((h, w), x) for x in u]
+        u = np.dstack(u).astype(np.float32)
+    else:
+        u = None
+
+    if d is not None:
+        d = [np.full((h, w), x) for x in d]
+        d = np.dstack(d).astype(np.uint16)
+    else:
+        d = None
+
+    imgc = ImageCube(bands, ChannelMapping(), sources, defaultMapping=None, uncertainty=u, dq=d)
+    assert imgc.w == w
+    assert imgc.h == h
+    return imgc
+
+
+def gen_two_halves(w, h, v1, u1, v2, u2, doc=None, inpidx=None):
+    """Generate an image of two halves. The top half is value v1 and uncertainty u1, the bottom half is v2,u2.
+    Each of the values must be a tuple.
+    """
+
+    if doc is not None and inpidx is not None:
+        # generate source names of the form r,g,b,c3,c4..
+        sourceNames = ["r", "g", "b"] + [f"c{i}" for i in range(3, len(v1))]
+        sources = MultiBandSource([InputSource(doc, inpidx, sourceNames[i]) for i in range(0, len(v1))])
+    else:
+        sources = MultiBandSource([nullSource] * len(v1))
+
+    h2 = int(h/2)
+    bands1 = np.dstack([np.full((h2, w), x) for x in v1]).astype(np.float32)
+    bands2 = np.dstack([np.full((h2, w), x) for x in v2]).astype(np.float32)
+    bands = np.vstack((bands1, bands2))
+    unc1 = np.dstack([np.full((h2, w), x) for x in u1]).astype(np.float32)
+    unc2 = np.dstack([np.full((h2, w), x) for x in u2]).astype(np.float32)
+    uncs = np.vstack([unc1, unc2])
+
+    assert bands.shape == (h, w, len(v1))
+    imgc = ImageCube(bands, ChannelMapping(), sources, defaultMapping=None, uncertainty=uncs)
     assert imgc.w == w
     assert imgc.h == h
     return imgc

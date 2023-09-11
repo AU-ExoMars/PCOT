@@ -10,6 +10,7 @@ from PySide2.QtGui import QColor, QPainter, QPolygon, QFont
 from PySide2.QtWidgets import QMessageBox
 from pcot.calib import pct
 from pcot.rois import getRadiusFromSlider, ROIPainted
+from pcot.utils.annotations import pixels2painter
 from pcot.xform import xformtype, XFormType
 
 # scale of editing brush
@@ -84,6 +85,7 @@ def createPatchROI(n, x, y, radius):
         # third step - crop down to a mask and BB, generate a ROIPainted and return.
         # can use the cropdown method in the ROI for this.
         roi = ROIPainted(mask=ff.mask)
+        roi.setContainingImageDimensions(n.img.w, n.img.h)
         roi.cropDownWithDraw()
 
         # TEST - draw into image
@@ -95,7 +97,11 @@ def createPatchROI(n, x, y, radius):
 
 @xformtype
 class XformPCT(XFormType):
-    """Locates the PCT and generates calibration coefficients"""
+    """Locates the PCT and generates calibration coefficients
+
+    **Very incomplete at the moment**
+
+    """
 
     def __init__(self):
         super().__init__("pct", "calibration", "0.0.0")
@@ -143,7 +149,7 @@ class XformPCT(XFormType):
 
             for r in node.rois:  # we need to tell the ROI how big the contained image is
                 if r is not None:
-                    r.setImageSize(img.w, img.h)
+                    r.setContainingImageDimensions(img.w, img.h)
 
             # get the RGB image we are going to draw the ROIs onto. Will only draw if there are ROIs!
 
@@ -322,7 +328,8 @@ class TabPCT(pcot.ui.tabs.Tab):
             p.setBrush(Qt.black)
             p.drawRect(0, 0, 300, 180)
             font = QFont("Consolas")
-            font.setPixelSize(FONTSIZE)
+            fontsize = pixels2painter(FONTSIZE, p)
+            font.setPixelSize(fontsize)
             p.setFont(font)
             p.setPen(Qt.white)
             for idx, roi in enumerate(self.node.rois):
@@ -335,7 +342,7 @@ class TabPCT(pcot.ui.tabs.Tab):
                         s = "{}\t\t{:.3f}".format(patch.name, std)
                 else:
                     s = "{}\t\t---".format(patch.name)
-                p.drawText(0, (idx + 1) * FONTSIZE, s)
+                p.drawText(0, (idx + 1) * fontsize, s)
 
             p.setFont(prevfont)
 

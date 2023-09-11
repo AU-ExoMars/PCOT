@@ -13,7 +13,7 @@ import pcot.ui as ui
 view = None
 
 # The groups into which the buttons are sorted - it's a constant.
-groups = ["source", "macros", "maths", "processing", "calibration", "data", "regions", "ROI edit", "utility"]
+groups = ["source", "macros", "maths", "processing", "calibration", "data", "regions", "ROI edit", "utility", "testing"]
 
 
 class PaletteButton(QtWidgets.QPushButton):
@@ -92,7 +92,6 @@ class PaletteButton(QtWidgets.QPushButton):
             scene = self.view.scene()
             scene.mark()
             node = scene.graph.create(self.name)
-            node.xy = scene.getNewPosition()
             # rebuild the scene
             scene.rebuild()
             # and perform the node to get initial data

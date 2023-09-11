@@ -12,3 +12,10 @@ def imgsplit(img):
 def imgmerge(img):
     """Trivial, but goes with imgsplit"""
     return np.dstack(img)
+
+
+def generate_gradient(w, h, is_horizontal, start=0, stop=1):
+    if is_horizontal:
+        return np.tile(np.linspace(start, stop, w), (h, 1)).astype(np.float32)
+    else:
+        return np.tile(np.linspace(start, stop, h), (w, 1)).T.astype(np.float32)

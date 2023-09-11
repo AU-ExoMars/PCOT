@@ -6,14 +6,14 @@ Anything in here should be specific to PCOT itself, and all data should be as Da
 import pcot.config
 import pcot.operations as operations
 from pcot.config import parserhook
-from pcot.utils.ops import binop, unop, Operator
+from pcot.expressions.ops import binop, unop, Operator
 from .parse import Parser, execute
 
 # TODO: keep expression guide in help updated
 
 
 @parserhook
-def registerBuiltinOperators(p):
+def registerBuiltinOperatorSyntax(p):
     p.registerBinop('+', 10, lambda a, b: binop(Operator.ADD, a, b))
     p.registerBinop('-', 10, lambda a, b: binop(Operator.SUB, a, b))
     p.registerBinop('/', 20, lambda a, b: binop(Operator.DIV, a, b))
@@ -46,7 +46,7 @@ class ExpressionEvaluator(Parser):
         # generally used for user plugins.
         print("Registering function plugins")
         for x in pcot.config.exprFuncHooks:
-            print(f"Calling   {x}")
+            #  print(f"Calling   {x}")
             x(self)
 
     def run(self, s):

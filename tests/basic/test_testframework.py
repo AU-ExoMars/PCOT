@@ -1,17 +1,19 @@
-# This file is here to serve as a test for the testing framework itself, and a PCOT-independent
-# template for other tests.
+"""A test for the testing framework itself, and a PCOT-independent
+template for other tests."""
 
 # this is required, despite what PyCharm says.
 from fixtures import *
 
 
 def test_datadir(datadir):
-    """Check a file exists in the data directory """
+    """Check a file exists in the data directory with the same name as
+    the module but with _data added"""
     assert (datadir / 'tb.dat').is_file()
     assert not (datadir / 'tbisntthere.dat').exists()
 
 
 def test_datadircontents(datadir):
+    """Test that we can correctly read a file from the data directory"""
     t = (datadir / 'tb.dat').read_text(encoding='utf-8')
     assert t == "Dummy tb.dat file for testing."
 

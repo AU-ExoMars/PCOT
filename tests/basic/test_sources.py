@@ -55,6 +55,7 @@ sourcesetunion = SourceSet([sourceset1, sourceset2])
 
 
 def test_sourcesetctors():
+    """Make sure that the different valid forms of SourceSet constructor arguments work"""
     ss = SourceSet(s1)
     assert len(ss.sourceSet) == 1
     assert s1 in ss.sourceSet
@@ -94,6 +95,7 @@ def test_getonlyitem():
 def test_sourcesetdunder():
     """Test that for some purposes, a SourceSet can be interacted with directly as if one were interacting
     with the underlying set (the sourceSet member). SourceSet implements:
+
     * __iter__
     * __contains__
     * __len__
@@ -117,6 +119,7 @@ def test_sourcesetdunder():
 
 
 def test_sourcesetunion():
+    """Test that source set unions contain union of all subsidiary sets"""
     assert len(sourcesetunion.sourceSet) == 5
     assert s1 in sourcesetunion.sourceSet
     assert s2 in sourcesetunion.sourceSet
@@ -127,32 +130,36 @@ def test_sourcesetunion():
 
 
 def test_sourcesetbrief():
+    """Source set brief description test"""
     assert str(sourceset1withnulls.brief()) == 'one&three&two'
 
 
 def test_sourcesetlong():
+    """Source set long description test"""
     assert str(sourceset1withnulls.long()) == 'SET[\nonelong\nthreelong\ntwolong\n]\n'
 
 
 def test_sourcesetstr():
-    assert str(sourceset1withnulls) == '(none)&one&three&two'
+    """str(sourceset) should be the same as sourceset.brief()"""
+    assert str(sourceset1withnulls) == sourceset1withnulls.brief()
 
 
 def test_sourcesetmatches():
-    # "matches" checks to see if any source in a set matches some criterion. Our test source
-    # only has the name.
+    """" "matches" checks to see if any source in a set matches some criterion; in this case
+    we test that the name matches"""
     assert not sourceset1withnulls.matches(None, 'five')
     assert sourceset1withnulls.matches(None, 'one')
 
 
 def test_inputsourcenames():
+    """Test that input source brief() and long() are correct"""
     pcot.setup()
 
     doc = Document()
     source = InputSource(doc, inputIdx=1,
                          filterOrName=Filter(cwl=1000, fwhm=100, transmission=20, position="pos1", name="name1"))
 
-    assert source.long() == "nullmethod: wavelength 1000"
+    assert source.long() == "nullmethod: wavelength 1000, fwhm 100"
     assert source.brief() == "nullmethod:1000"  # default caption is wavelength
     assert source.brief(captionType=DocumentSettings.CAP_CWL) == "nullmethod:1000"
     assert source.brief(captionType=DocumentSettings.CAP_NAMES) == "nullmethod:name1"
@@ -160,6 +167,7 @@ def test_inputsourcenames():
 
 
 def test_multibandsourcenames():
+    """Test that multiband source brief() is correct"""
     pcot.setup()
     doc = Document()
     sources = [InputSource(doc, inputIdx=1,

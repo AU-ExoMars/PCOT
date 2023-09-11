@@ -19,7 +19,10 @@ class XformInset(XFormType):
     Inset an image inside another. Uses RGB versions of both images, as defined by the
     RGB mapping set in the previous nodes. Does not honour regions of interest. Note that
     there is no RGB mapping in the canvas for the tab - RGB mappings should be set in
-    the input nodes."""
+    the input nodes.
+
+    **Ignores DQ and uncertainty**
+    """
 
     def __init__(self):
         super().__init__("inset", "ROI edit", "0.0.0")
@@ -93,7 +96,7 @@ class XformInset(XFormType):
             if node.caption != '':
                 ty = y if node.captiontop else y + h
                 pcot.utils.text.write(out, node.caption, x, ty, node.captiontop, node.fontsize,
-                                 node.thickness, node.colour)
+                                      node.thickness, node.colour)
 
         # build output image
         if out is None:

@@ -1,102 +1,129 @@
-"""Test operations - a lot of operations are covered already by things in test_roi_principles, however"""
+"""Test operations - a lot of operations are covered already by things
+in test_roi_principles, however, and also uncertainty/test_ops.py!"""
+import math
+from dataclasses import dataclass
+from math import isclose
+
 import pytest
 
 import pcot
-from fixtures import genrgb
+from fixtures import genrgb, gen_two_halves
+from pcot import dq
 from pcot.datum import Datum
 from pcot.document import Document
 import numpy as np
 
+from pcot.imagecube import ImageCube
+from pcot.value import Value
 
-def test_scalar_ops():
-    def runop(e, expected):
-        doc = Document()
-        expr = doc.graph.create("expr")
-        expr.expr = e
-        doc.changed()
-        n = expr.getOutput(0, Datum.NUMBER)
-        assert n == expected
+tests = [
+    ("12-10", 2),
+    ("10", 10),
+    ("4+10+16", 30),
+    ("4*3+2", 14),
+    ("2+4*3", 14),
+    ("4*(3+2)", 20),
+    ("(3+2)*4", 20),
+    ("(3+2)/4", 1.25),
+    ("(3+2)/4-10", -8.75),
+    ("2^4", 16),
+    ("4^0.5", 2),
+    ("2&1", 1),
+    ("2&20", 2),
+    ("2|1", 2),
+    ("2|20", 20)
+]
+testids = [f"{x[0]}=={x[1]}" for x in tests]
 
+
+@pytest.mark.parametrize("e,expected", tests, ids=testids)
+def test_scalar_ops(e, expected):
+    """Basic scalar ops, testing precedence and brackets."""
     pcot.setup()
-
-    runop("12-10", 2)
-    runop("10", 10)
-    runop("4+10+16", 30)
-    runop("4*3+2", 14)
-    runop("2+4*3", 14)
-    runop("4*(3+2)", 20)
-    runop("(3+2)*4", 20)
-    runop("(3+2)/4", 1.25)
-    runop("(3+2)/4-10", -8.75)
-    runop("2^4",16)
-    runop("4^0.5",2)
-    runop("2&1",1)
-    runop("2&20",2)
-    runop("2|1",2)
-    runop("2|20",20)
+    doc = Document()
+    expr = doc.graph.create("expr")
+    expr.expr = e
+    doc.changed()
+    n = expr.getOutput(0, Datum.NUMBER).n
+    assert n == expected
 
 
-def test_image_scalar_ops():
+tests = [
+    # these are operations on an RGB image with pixels (0,0.5,0)
+    ("a^(2+1)", (0, 0.125, 0)),
+    ("a+4", (4, 4.5, 4)),
+    ("4+a", (4, 4.5, 4)),
+    ("a-0.5", (-0.5, 0, -0.5)),
+    ("(a+2)/2", (1, 1.25, 1)),
+    ("(a+2)/0", (0, 0, 0)),  # division by zero yields zero, but errors should be set. Tested elsewhere.
+    ("a*2+1", (1, 2, 1)),
+    ("a*(2+1)", (0, 1.5, 0))
+]
+testids = [f"{x[0]}=={x[1][0]},{x[1][1]},{x[1][2]}" for x in tests]
+
+
+@pytest.mark.parametrize("e,expected", tests, ids=testids)
+def test_image_scalar_ops(e, expected):
     """Smoke test for a basic image+scalar operation, no ROI"""
     pcot.setup()
 
-    def runop(e, expected):
-        doc = Document()
+    doc = Document()
 
-        greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # dark green
-        assert doc.setInputDirect(0, greenimg) is None
-        green = doc.graph.create("input 0", displayName="GREEN input")
+    greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # dark green
+    assert doc.setInputDirectImage(0, greenimg) is None
+    green = doc.graph.create("input 0", displayName="GREEN input")
 
-        expr = doc.graph.create("expr")
-        expr.expr = e
-        expr.connect(0, green, 0)
+    expr = doc.graph.create("expr")
+    expr.expr = e
+    expr.connect(0, green, 0, autoPerform=False)
 
-        doc.changed()
-        img = expr.getOutput(0, Datum.IMG)
-        assert img is not None
+    doc.changed()
+    img = expr.getOutput(0, Datum.IMG)
+    assert img is not None
 
-        for x, y in ((0, 0), (49, 0), (49, 49), (0, 49)):
-            assert np.array_equal(img.img[0, 0], expected), f"{e}, got {img.img[0][0]} at {x},{y}"
-
-    runop("a+4", (4, 4.5, 4))
-    runop("a-0.5", (-0.5, 0, -0.5))
-    runop("(a+2)/2", (1, 1.25, 1))
-    runop("a*2+1", (1, 2, 1))
-    runop("a*(2+1)", (0, 1.5, 0))
-    runop("4+a", (4, 4.5, 4))
+    for x, y in ((0, 0), (49, 0), (49, 49), (0, 49)):
+        assert np.array_equal(img.img[0, 0],
+                              expected), f"{e}, got {img.img[0][0]} at {x},{y}. Expected {expected}, a=(0, 0.5, 0)"
 
 
-def test_image_image_ops():
+# these are operations on an RGB image with pixels (0,0.5,0)
+tests = [
+    ("a+b", (2, 0.5, 0)),
+    ("b+a", (2, 0.5, 0)),
+    ("a-b", (-2, 0.5, 0)),
+    ("a*b", (0, 0, 0))
+]
+testids = [f"{x[0]}=={x[1][0]},{x[1][1]},{x[1][2]}" for x in tests]
+
+
+@pytest.mark.parametrize("e,expected", tests, ids=testids)
+def test_image_image_ops(e, expected):
+    """Very basic image ops"""
     pcot.setup()
+    doc = Document()
 
-    def runop(e, expected):
-        doc = Document()
+    greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # dark green
+    doc.setInputDirectImage(0, greenimg)
+    redimg = genrgb(50, 50, 2, 0, 0, doc=doc, inpidx=1)  # oversaturated red
+    doc.setInputDirectImage(1, redimg)
+    green = doc.graph.create("input 0")
+    red = doc.graph.create("input 1")
 
-        greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # dark green
-        doc.setInputDirect(0, greenimg)
-        redimg = genrgb(50, 50, 2, 0, 0, doc=doc, inpidx=1)  # oversaturated red
-        doc.setInputDirect(1, redimg)
-        green = doc.graph.create("input 0")
-        red = doc.graph.create("input 1")
+    expr = doc.graph.create("expr")
+    expr.expr = e
+    expr.connect(0, green, 0, autoPerform=False)
+    expr.connect(1, red, 0, autoPerform=False)
 
-        expr = doc.graph.create("expr")
-        expr.expr = e
-        expr.connect(0, green, 0)
-        expr.connect(1, red, 0)
+    doc.changed()
+    img = expr.getOutput(0, Datum.IMG)
+    assert img is not None
 
-        doc.changed()
-        img = expr.getOutput(0, Datum.IMG)
-        assert img is not None
-
-        for x, y in ((0, 0), (49, 0), (49, 49), (0, 49)):
-            assert np.array_equal(img.img[0, 0], expected), f"{e}, got {img.img[0][0]} at {x},{y}"
-
-    runop("a+b", (2, 0.5, 0))
-    runop("b+a", (2, 0.5, 0))
-    runop("a-b", (-2, 0.5, 0))
-    runop("a*b", (0, 0, 0))
+    for x, y in ((0, 0), (49, 0), (49, 49), (0, 49)):
+        assert np.array_equal(img.img[0, 0], expected), f"{e}, got {img.img[0][0]} at {x},{y}"
 
 
+@pytest.mark.filterwarnings("ignore:divide by zero")
+@pytest.mark.filterwarnings("ignore:invalid value")
 def test_scalar_div_zero():
     """Test scalar division by zero"""
     pcot.setup()
@@ -105,50 +132,142 @@ def test_scalar_div_zero():
     expr.expr = "1/0"
     doc.changed()
     d = expr.getOutputDatum(0)
-    assert d is None
-    assert expr.error.message == "float division by zero"
+    assert d.val == Value(0, 0, dq.DIVZERO)
 
 
-def test_image_division_by_zero():
-    """This test fails because dividing a masked array by zero produces another masked array
-    in which the divzero members are masked out!
-
-    What it should do is produce a result, but all the pixels should have an error bit set.
-    """
+def test_image_division_by_scalar_zero():
+    """Test of dividing an image by scalar zero. Also checks that 0/0 comes out as undefined and divzero."""
     pcot.setup()
     doc = Document()
     greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # dark green
-    assert doc.setInputDirect(0, greenimg) is None
+    assert doc.setInputDirectImage(0, greenimg) is None
     green = doc.graph.create("input 0")
     expr = doc.graph.create("expr")
     expr.expr = "a/0"
     expr.connect(0, green, 0)
     doc.changed()
-    d = expr.getOutputDatum(0)
-
-    pytest.fail("Error pixels not implemented")
-
-    assert d is None
-    assert expr.error.message == "float division by zero"
+    d = expr.getOutput(0, Datum.IMG)
+    assert d[0, 0] == (Value(0, 0, dq.DIVZERO | dq.NOUNCERTAINTY | dq.UNDEF),
+                       Value(0, 0, dq.DIVZERO | dq.NOUNCERTAINTY),
+                       Value(0, 0, dq.DIVZERO | dq.NOUNCERTAINTY | dq.UNDEF))
 
 
+@pytest.mark.filterwarnings("ignore:divide by zero")
+@pytest.mark.filterwarnings("ignore:invalid value")
 def test_scalar_divide_by_zero_image():
-    """Should also produce an error"""
+    """Dividing by zero. We're trying to reciprocate an image where two of the bands are zero, which should
+    lead to errors in those bands."""
     pcot.setup()
     doc = Document()
     greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # must have zeroes in it!
-    assert doc.setInputDirect(0, greenimg) is None
+    assert doc.setInputDirectImage(0, greenimg) is None
     green = doc.graph.create("input 0")
     expr = doc.graph.create("expr")
     expr.expr = "1/a"
     expr.connect(0, green, 0)
     doc.changed()
-    d = expr.getOutputDatum(0)
+    d = expr.getOutput(0, Datum.IMG)
 
-    pytest.fail("Error pixels not implemented")
+    assert d[0, 0] == (
+        Value(0.0, 0.0, dq.NOUNCERTAINTY | dq.DIVZERO),
+        Value(2.0, 0.0, dq.NOUNCERTAINTY),
+        Value(0.0, 0.0, dq.NOUNCERTAINTY | dq.DIVZERO)
+    )
 
-    assert d is None
-    assert expr.error.message == "float division by zero"
+    # now check 0/0
+
+    expr.expr = "0/a"
+    doc.changed()
+    d = expr.getOutput(0, Datum.IMG)
+
+    assert d[0, 0] == (
+        Value(0.0, 0.0, dq.NOUNCERTAINTY | dq.DIVZERO | dq.UNDEF),
+        Value(0.0, 0.0, dq.NOUNCERTAINTY),
+        Value(0.0, 0.0, dq.NOUNCERTAINTY | dq.DIVZERO | dq.UNDEF)
+    )
+
+
+def test_pixel_indexing_rgb():
+    """Check that we can index into a multichannel ImageCube"""
+    pcot.setup()
+    doc = Document()
+    inputimg = genrgb(50, 50,
+                      4, 5, 6,  # rgb
+                      u=(7, 8, 9),
+                      doc=doc, inpidx=0)  # must have zeroes in it!
+    inputimg.dq[0, 0, 0] = dq.SAT  # set 0,0 by hand
+
+    assert doc.setInputDirectImage(0, inputimg) is None
+    inpnode = doc.graph.create("input 0")
+    doc.changed()
+    x = inpnode.getOutput(0, Datum.IMG)
+    assert isinstance(x, ImageCube)
+    p = x[0, 1]  # first check 0,1
+    assert isinstance(p, tuple)
+    assert len(p) == 3
+    r, g, b = p
+
+    # these equality tests are checked in basics/test_values
+    assert r == Value(4, 7)
+    assert g == Value(5, 8)
+    assert b == Value(6, 9)
+
+    # now check the 0,0 we changed the DQ with
+    p = x[0, 0]
+    assert p == (
+        Value(4, 7, dq.SAT),
+        Value(5, 8),
+        Value(6, 9))
+    assert p[0] != Value(4, 7)
+
+
+def test_greyscale_simple():
+    """Check that we can index into a 1-channel ImageCube."""
+    pcot.setup()
+    doc = Document()
+    inputimg = genrgb(50, 50,
+                      4, 5, 6,  # rgb
+                      u=(7, 8, 9),
+                      doc=doc, inpidx=0)  # must have zeroes in it!
+    assert doc.setInputDirectImage(0, inputimg) is None
+    inpnode = doc.graph.create("input 0")
+    expr = doc.graph.create("expr")
+    expr.expr = "grey(a)"
+    expr.connect(0, inpnode, 0)
+    doc.changed()
+    x = expr.getOutput(0, Datum.IMG)
+    assert isinstance(x, ImageCube)
+    p = x[0, 0]
+    assert isinstance(p, Value)
+    assert p.approxeq(Value(5, 4.6427960923947))
+
+    # and with an explicit false argument
+    expr.expr = "grey(a,0)"
+    doc.changed()
+    x = expr.getOutput(0, Datum.IMG)
+    p = x[0, 0]
+    assert p.approxeq(Value(5, 4.6427960923947))
+
+
+def test_greyscale_human():
+    """now test that greyscaling with human perception of RGB works."""
+    pcot.setup()
+    doc = Document()
+    inputimg = genrgb(50, 50,
+                      4, 5, 6,  # rgb
+                      u=(7, 8, 9),
+                      doc=doc, inpidx=0)  # must have zeroes in it!
+    assert doc.setInputDirectImage(0, inputimg) is None
+    inpnode = doc.graph.create("input 0")
+    expr = doc.graph.create("expr")
+    expr.expr = "grey(a,1)"
+    expr.connect(0, inpnode, 0)
+    doc.changed()
+    x = expr.getOutput(0, Datum.IMG)
+    p = x[0, 0]
+    assert p.n == pytest.approx(4.815)
+    assert p.u == 0
+    assert p.dq == dq.NOUNCERTAINTY
 
 
 def test_all_expr_inputs():
@@ -165,7 +284,7 @@ def test_all_expr_inputs():
     # create four images, four input nodes, connect them to the expr node inputs A-D.
     for i, (r, g, b) in enumerate(cols):
         image = genrgb(50, 50, r, g, b, doc=doc, inpidx=i)
-        doc.setInputDirect(i, image)
+        doc.setInputDirectImage(i, image)
         inputnode = doc.graph.create(f"input {i}")
         expr.connect(i, inputnode, 0)
 
@@ -229,9 +348,9 @@ def test_null_image_input_binop():
         doc = Document()
 
         inpA = doc.graph.create("input 0")
-        doc.setInputDirect(0, None)  # inputs created and set to None images.
+        doc.setInputDirectImage(0, None)  # inputs created and set to None images.
         inpB = doc.graph.create("input 1")
-        doc.setInputDirect(1, None)
+        doc.setInputDirectImage(1, None)
 
         expr = doc.graph.create("expr")
         expr.expr = s

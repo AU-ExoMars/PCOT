@@ -2,8 +2,9 @@ import math
 
 import matplotlib
 import numpy as np
-from PySide2 import QtWidgets
+from PySide2 import QtWidgets, QtCore
 from PySide2.QtWidgets import QDialog
+from collections import namedtuple
 
 import pcot
 import pcot.ui as ui
@@ -17,13 +18,36 @@ from pcot.xform import XFormType, xformtype, XFormException
 
 
 # find the mean/sd of all the masked values. Note mask negation!
-def getSpectrum(chanImg, mask):
-    if mask is not None:
-        a = np.ma.masked_array(data=chanImg, mask=~mask)
+def getSpectrum(chanImg, chanUnc, chanDQ, mask, ignorePixSD=False):
+    # note that "mask" is a positive mask - values are True if we are using them.
+    if mask is None:
+        mask = np.full(chanImg.shape, True)  # no bits masked out
     else:
-        a = chanImg
+        mask = np.copy(mask)  # need a copy or we'll change the mask in the subimage.
+    # we also have to mask out the bad bits. This will give us a mask which is True
+    # for the bits we want to hide.
+    badmask = (chanDQ & pcot.dq.BAD).astype(bool)
+    mask &= ~badmask  # REMOVE those pixels
 
-    return a.mean(), a.std()
+    a = np.ma.masked_array(data=chanImg, mask=~mask)
+    mean = a.mean()  # get the mean of the nominal values
+
+    if not ignorePixSD:
+        # we're going to try to take account of the uncertainties of each pixel:
+        # "Thus the variance of the pooled set is the mean of the variances plus the variance of the means."
+        # by https://arxiv.org/ftp/arxiv/papers/1007/1007.1012.pdf
+        # So we'll calculate the variance of the means added to the mean of the variances.
+        # And then we'll need to root that variance to get back to SD.
+        # There is a similar calculation called pooled_sd() in builtins!
+
+        std = np.sqrt(a.var() + np.mean(np.ma.masked_array(data=chanUnc, mask=~mask) ** 2))
+    else:
+        std = a.std()  # otherwise get the SD of the nominal values
+
+    return mean, std
+
+
+DataPoint = namedtuple('DataPoint', ['chan', 'cwl', 'mean', 'sd', 'label', 'pixcount'])
 
 
 def processData(table, legend, data, pxct, wavelengths, spectrum, chans, chanlabels):
@@ -71,7 +95,7 @@ def processData(table, legend, data, pxct, wavelengths, spectrum, chans, chanlab
 
     # data for each region is [ (chan,wave,mean,sd,chanlabel,pixcount), (chan,wave,mean,sd,chanlabel,pixcount)..]
     # This means pixcount get dupped a lot but it's not a problem
-    data[legend] += list(zip(chans, wavelengths, means, sds, chanlabels, pixcts))
+    data[legend] += [DataPoint(*x) for x in zip(chans, wavelengths, means, sds, chanlabels, pixcts)]
 
     # add to table
     table.newRow(legend)
@@ -111,15 +135,21 @@ class XFormSpectrum(XFormType):
     """
     Show the mean intensities for each frequency band in each input. Each input has a separate line in
     the resulting plot, labelled with either a generated label or the annotation of the last ROI on that
-    input. If two inputs have the same ROI label, they are merged into a single line."""
+    input. If two inputs have the same ROI label, they are merged into a single line.
+
+    If a point has data with BAD DQ bits in a band, those pixels are ignored in that band. If there
+    are no good points, the point is not plotted for that band.
+    """
 
     def __init__(self):
         super().__init__("spectrum", "data", "0.0.0")
         self.autoserialise = ('sortlist', 'errorbarmode', 'legendFontSize', 'axisFontSize', 'stackSep', 'labelFontSize',
-                              'bottomSpace', 'colourmode', 'rightSpace')
+                              'bottomSpace', 'colourmode', 'rightSpace',
+                              ('ignorePixSD', False)  # this one has a default because it was developed later
+                              )
         for i in range(NUMINPUTS):
             self.addInputConnector(str(i), Datum.IMG, "a single line in the plot")
-        self.addOutputConnector("data", Datum.DATA, "a CSV output (use 'dump' to read it)")
+        self.addOutputConnector("data", Datum.DATA, "a CSV output (use 'dump' or 'sink' to read it)")
 
     def createTab(self, n, w):
         pcot.ui.msg("creating a tab with a plot widget takes time...")
@@ -134,6 +164,7 @@ class XFormSpectrum(XFormType):
         node.bottomSpace = 0
         node.rightSpace = 0
         node.stackSep = 0
+        node.ignorePixSD = self.getAutoserialiseDefault('ignorePixSD')
         node.sortlist = []  # list of legends (ROI names) - the order in which spectra should be stacked.
         node.colsByLegend = None  # this is a legend->col dictionary used if colourmode is COLOUR_FROMROIS
         node.data = None
@@ -167,33 +198,52 @@ class XFormSpectrum(XFormType):
                 # the data elements, but the unzip in replot() throws it away when we come to do the plot.
                 chanlabels = [img.sources.sourceSets[x].brief(node.graph.doc.settings.captionType) for x in chans]
 
+                def proc(_subimg, _legend):
+                    # this nested function is used both when there is no ROI and for each ROI in the image.
+                    # It gets the spectrum for that ROI (or entire image), processes the data and adds
+                    # it to the plot. It's given a subimage with BAD pixels masked out.
+
+                    # now we need to get the mean amplitude of the pixels in each channel in the ROI
+                    # this returns a tuple for each channel of (mean,sd)
+
+                    # this is unfolded from a list comprehension for easier breakpoint debugging!
+                    spec = []
+                    if len(chans) == 1:
+                        # single channel images are stored as 2D arrays.
+                        ss = getSpectrum(_subimg.img[:, :], _subimg.uncertainty[:, :], _subimg.dq[:, :],
+                                         _subimg.mask,
+                                         ignorePixSD=node.ignorePixSD)
+                        spec.append(ss)
+                    else:
+                        for cc in chans:
+                            ss = getSpectrum(_subimg.img[:, :, cc], _subimg.uncertainty[:, :, cc], _subimg.dq[:, :, cc],
+                                             _subimg.mask,
+                                             ignorePixSD=node.ignorePixSD)
+                            spec.append(ss)
+
+                    processData(table, _legend, data, subimg.pixelCount(),
+                                wavelengths, spec, chans, chanlabels)
+
                 if len(img.rois) == 0:
                     # no ROIs, do the whole image
                     legend = "node input {}".format(i)
-                    subimg = img.img
-                    # this returns a tuple for each channel of (mean,sd)
-                    spectrum = [getSpectrum(subimg[:, :, i], None) for i in chans]
-                    processData(table, legend, data, img.w * img.h,
-                                wavelengths, spectrum, chans, chanlabels)
                     cols[legend] = (0, 0, 0)  # what colour??
-
-                for roi in img.rois:
-                    # only include valid ROIs
-                    if roi.bb() is None:
-                        continue
-                    legend = roi.label  # get the name for this ROI, which will appear as a thingy.
-                    # get the ROI bounded image
-                    subimg = img.subimage(roi=roi)
-                    # now we need to get the mean amplitude of the pixels in each channel in the ROI
-                    # this returns a tuple for each channel of (mean,sd)
-                    spectrum = [getSpectrum(subimg.img[:, :, i], subimg.mask) for i in chans]
-                    processData(table, legend, data, subimg.pixelCount(),
-                                wavelengths, spectrum, chans, chanlabels)
-                    cols[legend] = roi.colour
+                    subimg = img.subimage()
+                    proc(subimg, legend)
+                else:
+                    for roi in img.rois:
+                        # only include valid ROIs
+                        if roi.bb() is None:
+                            continue
+                        legend = roi.label  # get the name for this ROI, which will appear as a thingy.
+                        cols[legend] = roi.colour
+                        # get the ROI bounded image
+                        subimg = img.subimage(roi=roi)
+                        proc(subimg, legend)
 
         # now, for each list in the dict, build a new dict of the lists sorted
         # by wavelength
-        node.data = {legend: sorted(lst, key=lambda x: x[1]) for legend, lst in data.items()}
+        node.data = {legend: sorted(lst, key=lambda x: x.cwl) for legend, lst in data.items()}
         node.colsByLegend = cols  # we use this if we're using the ROI colours
         fixSortList(node)
 
@@ -273,6 +323,7 @@ class TabSpectrum(ui.tabs.Tab):
         self.w.bottomSpaceSpin.valueChanged.connect(self.bottomSpaceChanged)
         self.w.rightSpaceSpin.valueChanged.connect(self.rightSpaceChanged)
         self.w.hideButton.clicked.connect(self.hideClicked)
+        self.w.ignorePixSD.stateChanged.connect(self.ignorePixSDChanged)
         self.nodeChanged()
 
     def replot(self):
@@ -305,11 +356,22 @@ class TabSpectrum(ui.tabs.Tab):
 
         stackpos = 0
         for legend in self.node.sortlist:
-            x = self.node.data[legend]
+            unfiltered = self.node.data[legend]
+
+            # filter out any "masked" means - those are from regions which are entirely DQ BAD in a channel.
+            x = [a for a in unfiltered if a.mean is not np.ma.masked]
+
+            if len(x) == 0:
+                ui.error(f"No points have good data for point {legend}")
+                continue
+            if len(x) != len(unfiltered):
+                ui.error(f"Some points have bad data for point {legend}")
+
             try:
                 [_, wavelengths, means, sds, _, pixcounts] = list(zip(*x))  # "unzip" idiom
             except ValueError:
                 raise XFormException("DATA", "cannot get spectrum - problem with ROIs?")
+
             if self.node.colourmode == COLOUR_FROMROIS:
                 col = self.node.colsByLegend[legend]
             else:
@@ -351,6 +413,11 @@ class TabSpectrum(ui.tabs.Tab):
         self.w.hideButton.setText(
             "Hide controls" if self.w.controls.isVisible() else "Show controls"
         )
+
+    def ignorePixSDChanged(self, state):
+        self.mark()
+        self.node.ignorePixSD = state == QtCore.Qt.Checked
+        self.changed()
 
     def errorbarmodeChanged(self, mode):
         self.mark()

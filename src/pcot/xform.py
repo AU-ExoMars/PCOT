@@ -21,15 +21,15 @@ import pyperclip
 import pcot.macros
 import pcot.ui as ui
 from pcot import datum
-from pcot.datum import Datum, Type
-from pcot.sources import nullSourceSet, SourceSet
+from pcot.datum import Datum
+
+from pcot.sources import nullSourceSet, MultiBandSource
 from pcot.ui import graphscene
 from pcot.ui.canvas import Canvas
 from pcot.ui.tabs import Tab
-from pcot.utils import archive, deb
+from pcot.utils import archive
 
 if TYPE_CHECKING:
-    import PyQt5.QtWidgets
     from macros import XFormMacro, MacroInstance
 
 from pcot.imagecube import ChannelMapping
@@ -139,8 +139,8 @@ class XFormType:
     hasEnable: bool
     # an open help window, or None
     helpwin: Optional['PyQt5.QtWidgets.QMainWindow']
-    inputConnectors: List[Tuple[str, Type, str]]  # the inputs (name,connection type,description)
-    outputConnectors: List[Tuple[str, Type, str]]  # the outputs (name,connection type,description)
+    inputConnectors: List[Tuple[str, 'Type', str]]  # the inputs (name,connection type,description)
+    outputConnectors: List[Tuple[str, 'Type', str]]  # the outputs (name,connection type,description)
     # tuple of autoserialisable attributes in each node of this type
     # These are either strings or tuples, in which case the first element is the name and the second
     # is a default value used when legacy files are loaded which doesn't have that value.
@@ -199,6 +199,15 @@ class XFormType:
             return {name: node.__dict__[name] for name in ser}
         except KeyError as e:
             raise Exception("autoserialise value not in node {}: {}".format(self.name, e.args[0]))
+
+    def getAutoserialiseDefault(self, name):
+        """Really ugly because of the way autoserialise was developed. This gets a default, if there is one!"""
+        for t in self.autoserialise:
+            if isinstance(t,tuple):
+                n, d = t
+                if name == n:
+                    return d
+        raise Exception(f"autoserialise value must have a default for getAutoSerialiseDefault: {name}")
 
     def doAutodeserialise(self, node, ent):
         """run autodeserialisation for a node"""
@@ -331,7 +340,7 @@ class XFormType:
 
 def serialiseConn(c, connSet):
     """serialise a connection (xform,i) into (xformName,i).
-    Will only serialise connections into the set passed in. If None is passed
+    Will only serialise connections within the set passed in. If None is passed
     in all connections are OK."""
     if c:
         x, i = c
@@ -346,6 +355,8 @@ class BadTypeException(Exception):
     def __init__(self, i):
         super().__init__("incorrect output type requested, index {}".format(i))
 
+
+performDepth = 0
 
 class XForm:
     """an actual instance of a transformation, often called a "node"."""
@@ -374,8 +385,7 @@ class XForm:
     outputs: List[Optional[Datum]]
 
     ## @var outputTypes
-    # the "overriding" output type (since an "img" output (say) may become
-    # an "imgrgb") when the perform happens
+    # the "overriding" output type (a node may change its type when it performs)
     outputTypes: List[Optional[str]]
 
     ## @var inputTypes
@@ -473,6 +483,7 @@ class XForm:
         self.rectText = None
         self.runTime = 0
         self.timesPerformed = 0  # used for debugging/optimising
+        self.rebuildTabsAfterPerform = False
 
         # UI-DEPENDENT DATA DOWN HERE
 
@@ -564,17 +575,15 @@ class XForm:
         self.graph.scene.selChanged()
         self.graph.changed(self)
 
-    def serialise(self, selection=None):
-        """build a serialisable python dict of this node's values
-        including only connections to/from the nodes in the selection (which may
-        be None if you want to serialize the whole set)
-        """
+    def serialise(self):
+        """build a serialisable python dict of this node's values - including any connections from nodes
+        not in the set. """
         d = {'xy': self.xy,
              'w': self.w,
              'h': self.h,
              'type': self.type.name,
              'displayName': self.displayName,
-             'ins': [serialiseConn(c, selection) for c in self.inputs],
+             'ins': [serialiseConn(c, None) for c in self.inputs],
              'comment': self.comment,
              'outputTypes': [None if x is None else x.name for x in self.outputTypes],
              'inputTypes': [None if x is None else x.name for x in self.inputTypes],
@@ -622,7 +631,7 @@ class XForm:
         # run the additional deserialisation method
         self.type.deserialise(self, d)
 
-    def getOutputType(self, i) -> Optional[datum.Type]:
+    def getOutputType(self, i) -> Optional['pcot.datumtypes.Type']:
         """return the actual type of an output, taking account of overrides (node outputTypes).
         Note that this returns the *connection* type, not the *datum* type stored in that connection.
         Returns None if there is no connection, not Datum.NONE.
@@ -832,6 +841,7 @@ class XForm:
     # Also tells any tab open on a node that its node has changed.
     # DO NOT CALL DIRECTLY - called either from itself or from performNodes.
     def perform(self):
+        global performDepth
         # used to stop perform being called out of context; it should
         # only be called inside the graph's perform.
         if not self.graph.performingGraph:
@@ -846,7 +856,7 @@ class XForm:
             elif not self.canRun():
                 logging.info(f"----Skipping {self.debugName()}, it can't run (unset inputs)")
             else:
-                logging.info(f"--------------------------------------Performing {self.debugName()}")
+                logging.info(f"---------------------------------{'-'*performDepth}Performing {self.debugName()}")
                 # first clear all outputs
                 self.clearOutputs()
                 # now run the node, catching any XFormException
@@ -861,14 +871,21 @@ class XForm:
                 self.hasRun = True
                 # tell the tab that this node has changed
                 self.updateTabs()
+
+                # this is a hack to let us guarantee the order children are processed,
+                # by sorting them by display name. Used in testing.
+                sorted_children = sorted(self.children.keys(), key=lambda xx: xx.displayName)
+
                 # run each child (could turn off child processing?)
-                for n in self.children:
+                performDepth += 1
+                for n in sorted_children:
                     n.perform()
+                performDepth -= 1
         except Exception as e:
             traceback.print_exc()
             ui.logXFormException(self, e)
 
-    def getInput(self, i: int, tp=None) -> Optional[Datum]:
+    def getInput(self, i: int, tp=None):
         """get the value of an input.
             Optional type; if passed in will check for that type and dereference the contents if
             matched, else returning null.
@@ -931,6 +948,12 @@ class XForm:
     def unmark(self):
         self.graph.doc.unmark()
 
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def __hash__(self):
+        return hash(self.name)
+
     def __str__(self):
         return "XForm-{}-{}-{}".format(id(self), self.displayName, self.type.name)
 
@@ -963,14 +986,17 @@ class XFormGraph:
     # XFormMacro, itself a subclass of XFormType)
     proto: Optional['XFormMacro']
 
-    ## @var autorun
-    # should graphs be autorun
-    autoRun: ClassVar[bool]
-    autoRun = True
+    # texts may have change in perform, need to rebuild tabs
+    rebuildTabsAfterPerform: bool
 
     ## @var doc
     # the document of which I am a part, whether as the top-level graph or a macro.
     doc: 'Document'
+
+    ## @var autorun
+    # should graphs be autorun
+    autoRun: ClassVar[bool]
+    autoRun = True
 
     def __init__(self, doc, isMacro):
         """constructor, takes whether the graph is a macro prototype or not"""
@@ -981,6 +1007,7 @@ class XFormGraph:
         self.scene = None  # the graph's scene is created by autoLayout
         self.isMacro = isMacro
         self.nodeDict = {}
+        self.rebuildTabsAfterPerform = False
 
     def constructScene(self, doAutoLayout):
         """construct a graphical representation for this graph"""
@@ -988,7 +1015,8 @@ class XFormGraph:
 
     def create(self, typename, displayName=None):
         """create a new node, passing in a type name. We look in both the 'global' dictionary,
-        allTypes,  but also the macros for this document. We can pass in an optional display name."""
+        allTypes,  but also the macros for this document. We can pass in an optional display name.
+        Will also set a new position."""
 
         # note that we don't mark here - this is called in deserialisation so that would be bad. We do the mark
         # before the UI calls this.
@@ -1007,8 +1035,13 @@ class XFormGraph:
         if tp.cycleCheck(self):
             raise XFormException('TYPE', "Cannot create a macro which contains itself")
 
+        # first we need to get a position if we have a scene, otherwise 0,0.
+        # We need to do this before the node is added to the graph because
+        # getNewPosition iterates the graph.
+        xy = (0, 0) if self.scene is None else self.scene.getNewPosition()
         # display name is just the type name to start with.
         xform = XForm(tp, tp.name)
+        xform.xy = xy   # now we can set the position
         self.nodes.append(xform)
         self.doc.nodeAdded(xform)
         xform.graph = self
@@ -1101,6 +1134,7 @@ class XFormGraph:
     ## we are about to perform some nodes due to a UI change, so reset errors, hasRun flag, and outputs
     # of the descendants of the node we are running (or all nodes if we are running the entire graph)
     def prePerform(self, root: Optional[XForm]):
+        self.rebuildTabsAfterPerform = False
         nodeset = set()
         if root is not None:
             self.visit(root, lambda x: nodeset.add(x))
@@ -1190,6 +1224,9 @@ class XFormGraph:
 
         # force a rebuild of the scene; error states may have changed.
         self.rebuildGraphics()
+        if self.rebuildTabsAfterPerform:
+            self.rebuildTabsAfterPerform = False
+            ui.mainwindow.MainUI.rebuildAll(scene=False)
         ui.msg("Perform complete")
 
     def showPerformance(self):
@@ -1218,7 +1255,7 @@ class XFormGraph:
         if items is None:
             items = self.nodes
         for n in items:
-            d[n.name] = n.serialise(items)
+            d[n.name] = n.serialise()
 
         return d
 
@@ -1246,7 +1283,7 @@ class XFormGraph:
             """
 
         if deleteExistingNodes:
-            self.clearAllNodes(closetabs=True)
+            self.clearAllNodes(closetabs=closetabs)
 
         # disambiguate nodes in the dict, to make sure they don't
         # have the same nodes as ones already in the graph
@@ -1272,21 +1309,32 @@ class XFormGraph:
             for i in range(0, len(conns)):
                 if conns[i] is not None:
                     oname, output = conns[i]  # tuples of name,index: see serialiseConn()
-                    other = self.nodeDict[oname]
-                    n.connect(i, other, output, False)  # don't automatically perform
+                    if oname in self.nodeDict:
+                        # only do the connection if the node we're connecting from is found
+                        other = self.nodeDict[oname]
+                        n.connect(i, other, output, False)  # don't automatically perform
         # and finally match output types
         for n in newnodes:
             n.type.generateOutputTypes(n)
         return newnodes
 
-    ## a really ugly thing for just scanning through and returning true if a node
-    # of a given name exists. The *correct* thing to do would be have a dict of
-    # nodes by name, of course. But this is plenty fast enough.
-    def nodeExists(self, name):
+    def get(self, name):
+        """Really ugly thing for getting a node by name. Node names are unique.
+        The *correct* thing to do would be have a dict of
+        nodes by name, of course. But this is plenty fast enough.
+        These nodes are not visible to the user. SEE ALSO: getByDisplayName()"""
         for n in self.nodes:
             if n.name == name:
-                return True
-        return False
+                return n
+        return None
+
+    def nodeExists(self, name):
+        """Does a node exist (node names are unique)?"""
+        return self.get(name) is not None
+
+    def getByDisplayName(self, name):
+        """Return a list of nodes which have this display name."""
+        return [x for x in self.nodes if x.displayName == name]
 
     ## change the names of nodes in the dict which have the same names as
     # nodes in the existing graph. Returns a new dict.
@@ -1383,13 +1431,16 @@ class XFormROIType(XFormType):
             outImgDatum = Datum(Datum.IMG, None, nullSourceSet)
             outROIDatum = Datum(Datum.ROI, None, nullSourceSet)
         else:
-            # sources are a combo of the image sources and that of the ROI
-            sources = SourceSet([img, node.roi.sources])
-            # TODO ROI Source combination with objects not dealt with - need to be combined into images
-            # (Yeah, I have no idea what this comment means either).
+            # new image's sources are a combo of the image sources and that of the ROI
+            # So first we build a list of copies of the ROI source set, 1 for each channel. We turn that into
+            # a multibandsource.
+            tmp = MultiBandSource([node.roi.sources for _ in img.sources.sourceSets])
+            # then we create a bandwise union between this and the image's source sets.
+            sources = MultiBandSource.createBandwiseUnion([tmp, img.sources])
             self.setProps(node, img)
             # copy image and append ROI to it
             img = img.copy()
+            node.roi.setContainingImageDimensions(img.w, img.h)
             img.rois.append(node.roi)
             # set mapping from node
             img.setMapping(node.mapping)

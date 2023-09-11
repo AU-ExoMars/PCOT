@@ -1,7 +1,8 @@
 ## This package manages "operation functions" : these are functions which take a subimage (i.e. bounding box around an
 # ROI and mask data) and some other optional data, and return an ImageCube. They can be used three ways:
 # as an XForm node, as a function in an eval node, and as a plain Python function.
-from typing import Callable, Dict, Any
+from typing import Callable, Dict, Any, Optional, Tuple
+
 
 import numpy as np
 
@@ -22,7 +23,20 @@ from pcot.datum import Datum
 # image is output on connection 0.
 # See norm.py, xformnorm.py for example.
 
-def performOp(node: XForm, fn: Callable[[SubImageCubeROI, XForm, Dict[str, Any]], np.ndarray], **kwargs):
+def performOp(node: XForm,
+              fn: Callable[[SubImageCubeROI, Dict[str, Any]],
+                Tuple[Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray]]],
+              **kwargs):
+    """
+    Arguments: node (this is always used as a node)
+    fn: the function we call to perform the op - its args are
+        the subimage we are operating on with ROI mask constructed
+        dict of kwargs passed into performOp
+        return value from this func is a (nominal, uncertainty, dq) triple. I could use Value, but None should
+         be permitted these are pasted back into the image to form a result.
+    kwargs: other args are passed as a dict into the fn
+    """
+
     # get input 0 (the image)
     img = node.getInput(0, Datum.IMG)
     # if it's None then the input isn't connected; just output None
@@ -36,14 +50,14 @@ def performOp(node: XForm, fn: Callable[[SubImageCubeROI, XForm, Dict[str, Any]]
         # a BB around the ROI, with a mask for which pixels are in the ROI.
         subimage = img.copy().subimage()  # make a copy (need to do this to avoid overwriting the source).
 
-        # perform our function, returning a numpy array which
-        # is a modified clipped image. We also pass the kwargs, expanding them first - optional
+        # perform our function, returning a Value which is a modified clipped image, uncertainty and dq.
+        # We also pass the kwargs, expanding them first - optional
         # data goes here (e.g. norm() has a "mode" setting).
-        newsubimg = fn(subimage, **kwargs)
+        result_nom, result_unc, result_dq = fn(subimage, **kwargs)
 
         # splice the returned clipped image into the main image, producing a new image, and
         # store it in the node
-        node.img = img.modifyWithSub(subimage, newsubimg)
+        node.img = img.modifyWithSub(subimage, result_nom, uncertainty=result_unc, dqv=result_dq)
 
     if node.img is not None:
         # if there's an image stored in the node, set the image's RGB mapping to be the node's
@@ -77,8 +91,8 @@ def exprWrapper(fn, img, *args):
     if img is None:
         return None
     subimage = img.subimage()
-    newsubimg = fn(subimage, *args)
-    img = img.modifyWithSub(subimage, newsubimg)
+    nom, unc, dq = fn(subimage, *args)
+    img = img.modifyWithSub(subimage, nom, uncertainty=unc, dqv=dq)
     return Datum(Datum.IMG, img)
 
 
@@ -101,12 +115,13 @@ def registerOpFunctionsAndProperties(p: 'Parser'):
         "normalize all channels of an image to 0-1, operating on all channels combined (the default) or separately",
         [Parameter("image", "the image to process", Datum.IMG)],
         [Parameter("splitchans", "if nonzero, process each channel separately", Datum.NUMBER, deflt=0)],
-        lambda args, optargs: exprWrapper(norm.norm, getDatum(args[0], Datum.IMG), 0, getDatum(optargs[0], Datum.NUMBER))
+        lambda args, optargs: exprWrapper(norm.norm, getDatum(args[0], Datum.IMG), 0,
+                                          getDatum(optargs[0], Datum.NUMBER).n)
     )
 
     p.registerFunc(
-        "clip",
-        "clip  all channels of an image to 0-1",
+        "clamp",
+        "clamp all channels of an image to 0-1",
         [Parameter("image", "the image to process", Datum.IMG)],
         [],
         lambda args, optargs: exprWrapper(norm.norm, getDatum(args[0], Datum.IMG), 1))

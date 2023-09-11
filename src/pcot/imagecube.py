@@ -14,14 +14,16 @@ import numpy as np
 from PySide2.QtGui import QPainter
 
 import pcot
+from pcot import dq
 from pcot.documentsettings import DocumentSettings
 from pcot.rois import ROI, ROIPainted, ROIBoundsException
-from pcot.sources import MultiBandSource, SourcesObtainable
+from pcot.sources import MultiBandSource, SourcesObtainable, FilterOnlySource
 from pcot.utils import annotations
 from pcot.utils.annotations import annotFont
 from pcot.utils import image
 from pcot.utils.geom import Rect
 import pcot.dq
+from pcot.value import Value
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +33,7 @@ class SubImageCubeROI:
     It consists of
     * the image cropped to the bounding box of the ROIs; this is a view into the original image.
     * the data for the BB (x,y,w,h)
+    * uncertainty and DQ too
     * a boolean mask the same size as the BB, True for pixels contained in the ROIs and which
       should be manipulated.
     """
@@ -90,31 +93,46 @@ class SubImageCubeROI:
             self.bb = Rect(0, 0, img.w, img.h)  # whole image
             self.mask = np.full((img.h, img.w), True)  # full mask
 
-    def fullmask(self):
+    def fullmask(self, maskBadPixels=False):
         """the main mask is just a single channel - this will generate a mask
         of the same number of channels, so an x,y image will make an x,y mask
          and an x,y,n image will make an x,y,n mask.
+         It will also optionally remove BAD bits from the mask, as indicated by the DQ array.
         """
+
+        # so at this point the mask is (x,y).
+
         if len(self.img.shape) == 2:
-            return self.mask  # the existing mask is fine
+            mask = self.mask  # the existing mask is fine
         else:
             h, w, chans = self.img.shape
             # flatten and repeat each element for each channel
             x = np.repeat(np.ravel(self.mask), chans)
             # put into a h,w,chans array
-            return np.reshape(x, (h, w, chans))
+            mask = np.reshape(x, (h, w, chans))
 
-    def masked(self):
+        # now the mask is (x,y) for a 2-chan image or (x,y,n) for an n-channel image. We can
+        # remove the bad bits if required
+
+        if maskBadPixels:
+            # make another mask out of the DQ bits, selecting any pixels with "bad" bits
+            badmask = (self.dq & pcot.dq.BAD).astype(bool)
+            # Negate that mask - it shows the bad pixels but we only want it to be
+            # true where the good pixels are - then AND it into the main mask
+            return mask & ~badmask
+        return mask
+
+    def masked(self, maskBadPixels=False):
         """get the masked image as a numpy masked array"""
-        return np.ma.masked_array(self.img, mask=~self.fullmask())
+        return np.ma.masked_array(self.img, mask=~self.fullmask(maskBadPixels=maskBadPixels))
 
-    def maskedDQ(self):
+    def maskedDQ(self, maskBadPixels=False):
         """get the masked DQ as a numpy masked array"""
-        return np.ma.masked_array(self.dq, mask=~self.fullmask())
+        return np.ma.masked_array(self.dq, mask=~self.fullmask(maskBadPixels=maskBadPixels))
 
-    def maskedUncertainty(self):
+    def maskedUncertainty(self, maskBadPixels=False):
         """get the masked uncertainty as a numpy masked array"""
-        return np.ma.masked_array(self.uncertainty, mask=~self.fullmask())
+        return np.ma.masked_array(self.uncertainty, mask=~self.fullmask(maskBadPixels=maskBadPixels))
 
     def cropother(self, img2):
         """use this ROI to crop the image in img2. Doesn't do masking, though.
@@ -156,7 +174,6 @@ class SubImageCubeROI:
             roi = roi.clipToImage(img)
             self.bb = roi.bb()
             self.mask = roi.mask()
-            print(self.mask.sum())
 
         x, y, w, h = self.bb  # this works even though self.bb is Rect
         self.img = img.img[y:y + h, x:x + w]
@@ -265,7 +282,7 @@ class ImageCube(SourcesObtainable):
     # the numpy arrays containing the image data, the uncertainty data and the data quality bit data
     img: np.ndarray  # H x W x Depth, float32
     uncertainty: np.ndarray  # H x W x Depth, float32
-    dq: np.ndarray  # H x W x Depth, int16
+    dq: np.ndarray  # H x W x Depth, uint16
 
     # the regions of interest - these are also annotations! They are in a separate list
     # so they can be passed through or removed separately.
@@ -312,11 +329,20 @@ class ImageCube(SourcesObtainable):
 
         """
 
+        def cvt1channel(x):
+            ## convert array of the form(x,y,1) to just (x,y)
+            if len(x.shape) == 3 and x.shape[-1] == 1:
+                return image.imgsplit(x)[0]
+            else:
+                return x
+
         if img is None:
             raise Exception("trying to initialise image from None")
+
         # first, check the dtype is valid
         if img.dtype != np.float32:
             raise Exception("Images must be 32-bit floating point")
+        img = cvt1channel(img)  # convert (h,w,1) to (h,w)
         if rois is None:
             self.rois = []  # no ROI
         else:
@@ -329,27 +355,31 @@ class ImageCube(SourcesObtainable):
             self.channels = 1
         elif len(img.shape) == 3:
             self.channels = img.shape[2]
-            if self.channels == 1:
-                # convert an (x,y,1) image to just (x,y)
-                img = image.imgsplit(img)[0]
         else:
             raise Exception("Images must be 3-dimensional arrays")
-            
+
         # image should now be correct, set it into the object.
-            
+
         self.img = img
         self.w = img.shape[1]
         self.h = img.shape[0]
 
         # an image may have a list of source data attached to it indexed by channel. Or if none is
         # provided, an empty one.
-        self.sources = sources if sources else MultiBandSource.createEmptySourceSets(self.channels)
+        if sources is not None:
+            if not isinstance(sources, MultiBandSource):
+                raise Exception("Image sources must be MultiBandSource")
+            self.sources = sources
+        else:
+            self.sources = MultiBandSource.createEmptySourceSets(self.channels)
+            
         self.defaultMapping = defaultMapping
 
         # get the mapping sorted, which may be None (in which case rgb() might not work).
         # Has to be done after the sources are set.
         if rgbMapping is None:
             rgbMapping = ChannelMapping().ensureValid(self)
+
         self.setMapping(rgbMapping)
 
         # bits we are going to set on every pixel's DQ data
@@ -359,6 +389,7 @@ class ImageCube(SourcesObtainable):
         if uncertainty is None:
             uncertainty = np.zeros(img.shape, dtype=np.float32)
             dqOnAllPixels |= pcot.dq.NOUNCERTAINTY
+        uncertainty = cvt1channel(uncertainty)
         if uncertainty.dtype != np.float32:
             raise Exception("uncertainty data must be 32-bit floating point")
         if uncertainty.shape != img.shape:
@@ -379,7 +410,6 @@ class ImageCube(SourcesObtainable):
 
     def setMapping(self, mapping: ChannelMapping):
         """Set the RGB mapping for this image, and create default channel mappings if necessary."""
-        #        print("{} changing mapping to {}".format(self, self.mapping))
         self.mapping = mapping
         if mapping is not None:
             mapping.ensureValid(self)
@@ -396,7 +426,7 @@ class ImageCube(SourcesObtainable):
         if img is None:
             raise Exception(f'Cannot read file {fname}')
         if len(img.shape) == 2:  # expand to RGB. Annoyingly we cut it down later sometimes.
-            img = cv.merge((img, img, img))
+            img = image.imgmerge((img, img, img))
         # get the scaling factor
         if img.dtype == np.uint8:
             scale = 255.0
@@ -410,6 +440,11 @@ class ImageCube(SourcesObtainable):
         img = img.astype(np.float32)
         # scale to 0..1 
         img /= scale
+        # create sources if none given
+        if sources is None:
+            sources = MultiBandSource([FilterOnlySource('R'),
+                                       FilterOnlySource('G'),
+                                       FilterOnlySource('B')])
         # and construct the image
         return cls(img, mapping, sources)
 
@@ -421,7 +456,7 @@ class ImageCube(SourcesObtainable):
         if self.channels == 1:
             # single channel images are a special case, rather than
             # [chans,w,h] they are just [w,h]
-            return cv.merge([self.img, self.img, self.img])
+            return image.imgmerge([self.img, self.img, self.img])
         else:
             if mapping is None:
                 mapping = self.mapping
@@ -430,15 +465,41 @@ class ImageCube(SourcesObtainable):
             red = self.img[:, :, mapping.red]
             green = self.img[:, :, mapping.green]
             blue = self.img[:, :, mapping.blue]
-        img = cv.merge([red, green, blue])
+        img = image.imgmerge([red, green, blue])
         return img
 
     def rgbImage(self, mapping: Optional[ChannelMapping] = None) -> 'ImageCube':
         """as rgb, but wraps in an ImageCube. Also works out the sources, which should be for
-        the channels in the result. A different mapping from the image mapping can be specified."""
+        the channels in the result. A different mapping from the image mapping can be specified.
+        Quite a bit of code duplication here from rgb() but it can't really be helped."""
 
+        if self.channels == 1:
+            unc = np.dstack([self.uncertainty, self.uncertainty, self.uncertainty])
+            dq = np.dstack([self.dq, self.dq, self.dq])
+            img = np.dstack([self.img, self.img, self.img])
+        else:
+            if mapping is None:
+                mapping = self.mapping
+            if mapping is None:
+                raise Exception("trying to get rgbImage of an imagecube with no mapping")
+            img = np.dstack([
+                self.img[:, :, mapping.red],
+                self.img[:, :, mapping.green],
+                self.img[:, :, mapping.blue]]
+            )
+            dq = np.dstack([
+                self.dq[:, :, mapping.red],
+                self.dq[:, :, mapping.green],
+                self.dq[:, :, mapping.blue]]
+            )
+            unc = np.dstack([
+                self.uncertainty[:, :, mapping.red],
+                self.uncertainty[:, :, mapping.green],
+                self.uncertainty[:, :, mapping.blue]]
+            )
         # The RGB mapping here should be just [0,1,2], since this output is the RGB representation.
-        return ImageCube(self.rgb(mapping=mapping), ChannelMapping(0, 1, 2), self.rgbSources(mapping),
+        return ImageCube(img, ChannelMapping(0, 1, 2), self.rgbSources(mapping),
+                         dq=dq, uncertainty=unc,
                          rois=self.rois)
 
     def rgbSources(self, mapping=None):
@@ -499,7 +560,7 @@ class ImageCube(SourcesObtainable):
         desc = " ".join(["[" + s + "]" for s in out])
         return desc
 
-    def shallowCopy(self):
+    def shallowCopy(self, copyAnnotations=True):
         """Create a shallow copy - this points to the same image data and same mapping data, but allows
         it to be changed later.
 
@@ -520,10 +581,11 @@ class ImageCube(SourcesObtainable):
                       uncertainty=self.uncertainty,
                       dq=self.dq)
         i.rois = self.rois.copy()
-        i.annotations = self.annotations.copy()
+        if copyAnnotations:
+            i.annotations = self.annotations.copy()
         return i
 
-    def copy(self, keepMapping=False):
+    def copy(self, keepMapping=False, copyAnnotations=True):
         """copy an image. If keepMapping is false, the image mapping will also be a copy. If true, the mapping
         is a reference to the same mapping as in the original image.
 
@@ -547,21 +609,59 @@ class ImageCube(SourcesObtainable):
                       uncertainty=self.uncertainty.copy(),
                       dq=self.dq.copy())
         i.rois = self.rois.copy()
-        i.annotations = self.annotations.copy()
+        if copyAnnotations:
+            i.annotations = self.annotations.copy()
         return i
 
     def hasROI(self):
         return len(self.rois) > 0
 
     def modifyWithSub(self, subimage: SubImageCubeROI, newimg: np.ndarray,
-                      sources=None, keepMapping=False) -> 'ImageCube':
-        """return a copy of the image, with the given image spliced in at the
-        subimage's coordinates and masked according to the subimage.
-        keppMapping will ensure that the new image has the same mapping as the old."""
+                      sources=None, keepMapping=False,
+                      dqv=None, dqOR=np.uint16(0), uncertainty=None
+                      ) -> 'ImageCube':
+        """return a copy of the image, with the given image spliced in at the subimage's coordinates and masked
+        according to the subimage. keepMapping will ensure that the new image has the same mapping as the old.
+
+        There are some ... complexities involving DQ and uncertainty.
+
+        If no uncertainty is provided, the uncertainty in the result will be zero and NOUNCERTAINTY will be set
+        in the DQ bits.
+
+        DQ can either be set by passing in dqv (value or array), or a value or array can be provided to OR in.
+        """
 
         i = self.copy(keepMapping)
         x, y, w, h = subimage.bb
-        i.img[y:y + h, x:x + w][subimage.mask] = newimg[subimage.mask]
+        # we only want to paste into the bits in the image that are covered
+        # by the mask - and we want the full mask
+        mask = subimage.fullmask()
+
+        # if the dq we're going to OR in isn't a scalar, make it fit the mask.
+        if not np.isscalar(dqOR):
+            dqOR = dqOR[mask]
+
+        if newimg is not None:
+            # copy the new image bits in
+            i.img[y:y + h, x:x + w][mask] = newimg[mask]
+        if uncertainty is not None:
+            # if uncertainty is provided copy that in
+            i.uncertainty[y:y + h, x:x + w][mask] = uncertainty[mask]
+        else:
+            # if no uncertainty data is provided, set the uncertainty to zero and also OR in a NOUNCERTAINTY flag
+            i.uncertainty[y:y + h, x:x + w][mask] = 0
+            dqOR |= dq.NOUNCERTAINTY
+
+        if dqv is not None:
+            # DQ data is provided - make sure it fits the mask and then combine with the dqOR bits
+            # to generate the new DQ data
+            if not np.isscalar(dqv):
+                dqv = dqv[mask]
+            i.dq[y:y + h, x:x + w][mask] = dqv | dqOR
+        else:
+            # No DQ data is provided, just OR in the dqOR bits
+            i.dq[y:y + h, x:x + w][mask] |= dqOR
+
         # can replace sources if required
         if sources is not None:
             i.sources = sources
@@ -619,9 +719,12 @@ class ImageCube(SourcesObtainable):
     ## crop an image down to its regions of interest.
     def cropROI(self):
         subimg = self.subimage()
-        img = ImageCube(subimg.img, rgbMapping=self.mapping, defaultMapping=self.defaultMapping, sources=self.sources)
+        img = ImageCube(subimg.img,
+                        uncertainty=subimg.uncertainty,
+                        dq=subimg.dq,
+                        rgbMapping=self.mapping, defaultMapping=self.defaultMapping, sources=self.sources)
         img.rois = [roi.rebase(subimg.bb.x, subimg.bb.y) for roi in self.rois]
-#        img.rois = [ROIPainted(subimg.mask, "crop")]
+        #        img.rois = [ROIPainted(subimg.mask, "crop")]
         return img
 
     ## perform a simple function on an image's ROI or the whole image if there is no ROI
@@ -739,8 +842,8 @@ class ImageCube(SourcesObtainable):
         if len(wavelengthAndFHWMByChan) > 0:
             # now sort that list by CWL distance and then negative FWHM (widest first)
             wavelengthAndFHWMByChan.sort(key=lambda v: (v[1], -v[2]))
-            closest = wavelengthAndFHWMByChan[0]   # we return "index", the first item in the first tuple
-#            closest = min(wavelengthAndFHWMByChan, key=lambda v: (v[1], -v[2]))
+            closest = wavelengthAndFHWMByChan[0]  # we return "index", the first item in the first tuple
+            #            closest = min(wavelengthAndFHWMByChan, key=lambda v: (v[1], -v[2]))
             return closest[0]
         else:
             # No wavelengths found ,return -1
@@ -784,3 +887,23 @@ class ImageCube(SourcesObtainable):
                 ann.annotate(p, self)
 
         p.setFont(oldFont)
+
+    def __getitem__(self, pixTuple):
+        """get a Value (or tuple of Values for a multiband image) containing a pixel. Takes x,y."""
+        x, y = pixTuple
+        ns = self.img[y, x]
+        us = self.uncertainty[y, x]
+        ds = self.dq[y, x]
+
+        if self.channels == 1:
+            return Value(ns, us, ds)
+        else:
+            return tuple([Value(n, u, d) for (n, u, d) in zip(ns, us, ds)])
+
+    def countBadPixels(self):
+        if self.channels == 1:
+            d = self.dq
+        else:
+            d = np.bitwise_or.reduce(self.dq, axis=2)
+        return np.count_nonzero(d & dq.BAD)
+
