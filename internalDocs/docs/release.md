@@ -35,6 +35,7 @@ To make a new release, follow this checklist.
    below.
 1. Upload to the release repo (see below).
 1. Upload the docs to the documentation site.
+1. Commit with "version bump for release (VERSION NAME)" in the text
 1. Make sure the dev branch is merged into the master branch.
 1. Make a release tag in the repository.
 

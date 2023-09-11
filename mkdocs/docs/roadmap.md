@@ -2,13 +2,32 @@
 
 This is a rough guide, and things may change!
 
-## Next release: DRIFT STONES
+## Important features of this release: 0.6.0 DRIFT STONES
 
 * uncertainty and error bit propagation in *expr* and all nodes 
 * Testing quality and propagation rules (see [Principles](/userguide/principles))
+* Test graphs for nodes and other high-level functionality
+* Test nodes for those graphs
+* Tabular output on spectrum and histogram nodes
+* Gen node for test patterns
+* Refactoring of Datum
+* Utility nodes - e.g. *roidq* for generating an ROI from DQ bits
+* Output enhancements
+    * Gradient node can export to PDF
+    * Annotations (e.g. text labels) are now drawn on the painter at 
+    high res, and have been refactored hugely
+    * Annotations use thickness zero by default (the Qt "cosmetic" thickness)
+* PCT detector node    
+* ROI negation and refactoring of operators
+* *roiexpr* node for composing ROIs using expressions
+* Crude band depth node (needs work)
+* A lot of bug fixes and regression fixes
 
-## Future releases
 
+## Next major release: 0.7.0 EAST PENTIRE
+
+* Reorganise the node palette
+* Obtain user stories and feedback
 * Documentation
     * User guide
         * Page each on the main elements of the UI
@@ -16,15 +35,9 @@ This is a rough guide, and things may change!
         * documentation for properties of nodes for library use (e.g. *expr* nodes have ".expr")
         * How-to for common tasks
         
-* Output enhancements
-    * Gradient node 
-        * should also be able to output image to a matplotlib PDF with a legend
-        * How would this work where the gradient is inset?
-    * showing text labels on low res images?
-        * canvas should display ROIs etc, and not draw onto the RGB of the image as it currently does.
-        It should work how the source descriptor works.
-        This would avoid the resolution problem. We could do away with "ann" outputs?
-        * This could imply a whole new way of adding stuff to images.
+## Future releases
+
+* Calibration: the PCT detection node is fine, but does nothing!
 
 * Obtain user stories for analysis of HK data (which could potentially
 get messy, as these are likely to be time series)
@@ -37,7 +50,6 @@ get messy, as these are likely to be time series)
     could produce a mean vector of [1,0,0,0]. We would then perform a max()
     on this vector to get a single value.
     
-
 * Preparing for filter aberration and de-hardwiring cameras:
     * Actual values removed from filters.py and put into a config file
     * PANCAM/AUPE camera types no longer hardwired but got from that config
