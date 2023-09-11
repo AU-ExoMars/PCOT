@@ -7,8 +7,9 @@ holding the patch identities and their coordinates for all detected patches.
 
 """
 # pcot library functionality to integrate with PCOT
+from pcot.datumtypes import Type
 from pcot.xform import xformtype, XFormType
-from pcot.datum import Datum, Type
+from pcot.datum import Datum
 from pcot.ui.tabs import Tab
 from pcot.sources import SourceSet, nullSource
 import pcot.config

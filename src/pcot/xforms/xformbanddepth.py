@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 from PySide2.QtCore import QSignalBlocker
 
@@ -124,7 +126,7 @@ class TabBandDepth(pcot.ui.tabs.Tab):
 
         with SignalBlocker(self.w.bandCombo):
             for (_, _, s) in self.node.cwls:
-            self.w.bandCombo.addItem(s)
+                self.w.bandCombo.addItem(s)
 
         if self.node.bandidx >= 0:
             self.w.bandCombo.setCurrentIndex(self.node.bandidx)
