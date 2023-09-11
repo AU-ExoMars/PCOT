@@ -313,10 +313,6 @@ that to the *insetinto* input of the gradient:
 
 ![!R671_438 inset into source image RGB representation|R671_438e](R671_438e.png)
 
-@@@alert
-Note that the positioning of the legend text is slightly off; we'll fix that.
-@@@
-
 If you ==switch to the Legend part of the *gradient* node== and
 ==select *Left margin* for the **Legend** item==, when you ==export the image==
 with the canvas' Export Image button the legend will be in the margin:

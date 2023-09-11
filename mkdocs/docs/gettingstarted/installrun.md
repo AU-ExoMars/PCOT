@@ -52,7 +52,7 @@ PCOT as above:
 
 * Open a bash shell
 * **cd** to the PCOT directory (which contains this file).
-* Run the command **conda create -n pcot python=3.8 poetry=1.1.6**.
+* Run the command **conda create -n pcot python=3.8 poetry**.
 This will create an environment called **pcot** which uses Python 3.8 and
 the Poetry dependency and packaging manager. It may take some time.
 * Activate the environment with **conda activate pcot**.
@@ -89,13 +89,10 @@ opening an Anaconda shell and entering the following commands:
 conda activate pcot
 pcot
 ```
-If you have installed the binary version you don't need to activate a conda environment,
-just navigate to the directory containing the execuable and run it.
 
 ## Running PCOT inside Pycharm
-These instructions apply to source installations, and can be useful if you
-are debugging extensions or library code or debugging PCOT itself.
-
+These instructions may be useful if you want to run PCOT inside a debugger - for example, if you 
+are testing a custom node.
 * First set up the Conda environment and interpreter:
     * Open PyCharm and open the PCOT directory as an existing project.
     * Open **File/Settings..** (Ctrl+Alt+S)

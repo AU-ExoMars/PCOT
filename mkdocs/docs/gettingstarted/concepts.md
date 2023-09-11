@@ -93,6 +93,47 @@ to be stored - you can send the document to someone and it will still work
 even if they don't have the sources.
 @@@
 
+
+## Quantities
+All numerical quantities in PCOT - whether scalar values or pixels in images -
+consist of three values: nominal value, uncertainty and data quality (DQ) bits.
+Uncertainty and DQ bitss can be viewed as overlays in the canvas (PCOT's image viewer
+component).
+
+### Uncertainty 
+The uncertainty is expressed as standard deviation, and is propagated through
+most operations. Be careful here, however - all values are assumed to be independent.
+This can lead to grossly incorrect results. For example, we could set up a graph
+consisting of a node with the value $0\pm1$, feed it into a mathematical expression (*expr*) node
+as variable *a), and set the node's expression to $a-a$:
+
+![!Incorrect uncertainty calculation](badunc.png)
+
+The result, $0\pm\sqrt{2}$, is a consequence of the subtraction assuming that all quantities are
+independent even when they are clearly the same quantity.
+
+### Data quality bits
+Each pixel in an image has a set of bits describing its quality in the source data,
+which are propagated through all operations. Additionally, other DQ bits may be added
+as the data moves through the graph - for example, division by zero may occur, or an operation
+whose result is undefined for those values. While DQ bits are flexible, the following
+are probably stable:
+
+|Bit|Meaning|
+|----|----|
+|NODATA|no data present (typically for a particular pixel)|
+|NOUNCERTAINTY|Pixel has no uncertainty (again typically for pixels)|
+|SAT|Data is saturated|
+|DIVZERO|A division by zero has occurred|
+|UNDEF|Result of operation is undefined|
+|COMPLEX|Data is real part of complex result|
+|ERROR|Unspecified error|
+
+There may also be user-defined or "test" bits for use in development.
+
+
+
+
 Move on to [a First Tutorial](../tutorial)
 
 [^1]: 

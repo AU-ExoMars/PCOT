@@ -8,6 +8,6 @@ reference information.
 * Introduction to core [PCOT concepts](concepts)
 * A first [tutorial](tutorial)
 
-## Video guide
-There is a [video guide](https://www.youtube.com/watch?v=vo5KrOAtMQ8).
-
+## Video introduction
+There is a brief [video introduction](https://www.youtube.com/watch?v=FWEU3nOlqWg)
+to PCOT.
