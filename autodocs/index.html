@@ -16,16 +16,13 @@
         <link href="../css/bootstrap.min.css" rel="stylesheet">
         <link href="../css/font-awesome.min.css" rel="stylesheet">
         <link href="../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
     <link rel="stylesheet" href="../css/lightbox.min.css">
     <link rel="stylesheet" href="../css/site.css">
 
     
-
-        <script src="../js/jquery-1.10.2.min.js" defer></script>
-        <script src="../js/bootstrap.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script>
     <script src="../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
@@ -181,6 +178,8 @@ script in the mkdocs directory.</p>
 <p>Nodes are the entities which make up a PCOT document's graph, taking
 inputs from various sources and manipulating them in various ways.</p>
 <ul>
+<li><a href="PCT_Patch_Detection">PCT Patch Detection</a></li>
+<li><a href="banddepth">banddepth</a></li>
 <li><a href="circle">circle</a></li>
 <li><a href="comment">comment</a></li>
 <li><a href="constant">constant</a></li>
@@ -189,9 +188,11 @@ inputs from various sources and manipulating them in various ways.</p>
 <li><a href="crosscalib">crosscalib</a></li>
 <li><a href="curve">curve</a></li>
 <li><a href="decorr_stretch">decorr stretch</a></li>
+<li><a href="dqmod">dqmod</a></li>
 <li><a href="dummy">dummy</a></li>
 <li><a href="dump">dump</a></li>
 <li><a href="expr">expr</a></li>
+<li><a href="gen">gen</a></li>
 <li><a href="gradient">gradient</a></li>
 <li><a href="histequal">histequal</a></li>
 <li><a href="histogram">histogram</a></li>
@@ -203,18 +204,23 @@ inputs from various sources and manipulating them in various ways.</p>
 <li><a href="input_3">input 3</a></li>
 <li><a href="inset">inset</a></li>
 <li><a href="manual_register">manual register</a></li>
+<li><a href="mergetests">mergetests</a></li>
 <li><a href="multidot">multidot</a></li>
 <li><a href="normimage">normimage</a></li>
 <li><a href="offset">offset</a></li>
 <li><a href="out">out</a></li>
 <li><a href="painted">painted</a></li>
 <li><a href="pct">pct</a></li>
+<li><a href="pixtest">pixtest</a></li>
 <li><a href="poly">poly</a></li>
 <li><a href="rect">rect</a></li>
-<li><a href="show_number">show number</a></li>
+<li><a href="roidq">roidq</a></li>
+<li><a href="roiexpr">roiexpr</a></li>
+<li><a href="scalartest">scalartest</a></li>
 <li><a href="sink">sink</a></li>
 <li><a href="spectrum">spectrum</a></li>
 <li><a href="stitch">stitch</a></li>
+<li><a href="stringtest">stringtest</a></li>
 <li><a href="striproi">striproi</a></li>
 <li><a href="tvl1_autoreg">tvl1 autoreg</a></li>
 </ul>
@@ -232,10 +238,34 @@ node, <a href="expr">expr</a>.</p>
 </thead>
 <tbody>
 <tr>
-<td>clip</td>
+<td>abs</td>
+<td>val</td>
+<td></td>
+<td>find absolute value</td>
+</tr>
+<tr>
+<td>addroi</td>
+<td>image,roi</td>
+<td></td>
+<td>add ROI to image</td>
+</tr>
+<tr>
+<td>clamp</td>
 <td>image</td>
 <td></td>
-<td>clip  all channels of an image to 0-1</td>
+<td>clamp all channels of an image to 0-1</td>
+</tr>
+<tr>
+<td>cos</td>
+<td>angle</td>
+<td></td>
+<td>calculate cosine of angle in radians</td>
+</tr>
+<tr>
+<td>crop</td>
+<td>image,x,y,w,h</td>
+<td></td>
+<td>crop an image to a rectangle</td>
 </tr>
 <tr>
 <td>curve</td>
@@ -244,10 +274,118 @@ node, <a href="expr">expr</a>.</p>
 <td>impose a sigmoid curve on an image, y=1/(1+e^-(mx+a))) where m and a are parameters</td>
 </tr>
 <tr>
+<td>grey</td>
+<td>image</td>
+<td>useCV</td>
+<td>convert an image to greyscale</td>
+</tr>
+<tr>
+<td>marksat</td>
+<td>image,min,max</td>
+<td></td>
+<td>mark pixels outside a certain range as SAT or ERROR (i.e BAD)</td>
+</tr>
+<tr>
+<td>max</td>
+<td>val...</td>
+<td></td>
+<td>find the minimum value of the nominal values in a set of images and/or values. Images will be flattened into a list of values, so the result for multiband images may not be what you expect.</td>
+</tr>
+<tr>
+<td>mean</td>
+<td>val...</td>
+<td></td>
+<td>find the mean±sd of the values of a set of images and/or scalars. Uncertainties in the data will be pooled. Images will be flattened into a list of values, so the result for multiband images may not be what you expect.</td>
+</tr>
+<tr>
+<td>merge</td>
+<td>image...</td>
+<td></td>
+<td>merge a number of images into a single image - if the image has multiple channels they will all be merged in.</td>
+</tr>
+<tr>
+<td>min</td>
+<td>val...</td>
+<td></td>
+<td>find the minimum value of the nominal values in a set of images and/or values. Images will be flattened into a list of values, so the result for multiband images may not be what you expect.</td>
+</tr>
+<tr>
+<td>nominal</td>
+<td>image</td>
+<td></td>
+<td>If input is an image, create an image made up of nominal data for all channels; if input is numeric, output the uncertainty. In other words, just remove the uncertainty. Ignores ROIs.</td>
+</tr>
+<tr>
 <td>norm</td>
 <td>image</td>
 <td>splitchans</td>
 <td>normalize all channels of an image to 0-1, operating on all channels combined (the default) or separately</td>
+</tr>
+<tr>
+<td>rgb</td>
+<td>image</td>
+<td></td>
+<td>create a 3-channel image consisting of the current RGB mapping of the input image</td>
+</tr>
+<tr>
+<td>roi</td>
+<td>image</td>
+<td></td>
+<td>extract ROI from image (returns rect ROI on entire image if none is present</td>
+</tr>
+<tr>
+<td>sd</td>
+<td>val...</td>
+<td></td>
+<td>find the standard deviation of the nominal values in a set of images and/or scalars. Uncertainties in the data will be pooled. Images will be flattened into a list of values, so the result for multiband images may not be what you expect.</td>
+</tr>
+<tr>
+<td>setcwl</td>
+<td>image,cwl</td>
+<td></td>
+<td>Given an 1-band image, 'fake' a filter of a given CWL and assign it. The image itself is unchanged. This is used in testing only.</td>
+</tr>
+<tr>
+<td>sin</td>
+<td>angle</td>
+<td></td>
+<td>calculate sine of angle in radians</td>
+</tr>
+<tr>
+<td>sqrt</td>
+<td>angle</td>
+<td></td>
+<td>calculate the square root</td>
+</tr>
+<tr>
+<td>sum</td>
+<td>val...</td>
+<td></td>
+<td>find the sum of the nominal in a set of images and/or values. Images will be flattened into a list of values, so the result for multiband images may not be what you expect. The SD of the result is the SD of the sum, not the individual values.</td>
+</tr>
+<tr>
+<td>tan</td>
+<td>angle</td>
+<td></td>
+<td>calculate tangent of angle in radians</td>
+</tr>
+<tr>
+<td>testimg</td>
+<td>imageidx</td>
+<td></td>
+<td>Load test image</td>
+</tr>
+<tr>
+<td>uncertainty</td>
+<td>image</td>
+<td></td>
+<td>If input is an image, create an image made up of uncertainty data for all channels; if input is numeric, output the uncertainty. Ignores ROIs.</td>
+</tr>
+<tr>
+<td>v</td>
+<td>value,uncertainty</td>
+<td>dq</td>
+<td>create a new value with uncertainty by combining two nominal values. These can be either numbers or images. Ignores and discards ROIs.</td>
 </tr>
 </tbody>
 </table>
@@ -257,7 +395,47 @@ node, <a href="autodocs/expr">expr</a>.
 Properties are names which can be used as identifiers on the
 right hand side of a "." operator, such as <em>a.w</em> to get the width of an
 image <em>a</em>.</p>
-<p>None</p></div>
+<table>
+<thead>
+<tr>
+<th>name</th>
+<th>type of x</th>
+<th>desc</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>x.w</td>
+<td>img</td>
+<td>give the width of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)</td>
+</tr>
+<tr>
+<td>x.w</td>
+<td>roi</td>
+<td>give the width of an ROI in pixels</td>
+</tr>
+<tr>
+<td>x.h</td>
+<td>img</td>
+<td>give the height of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)</td>
+</tr>
+<tr>
+<td>x.h</td>
+<td>roi</td>
+<td>give the width of an ROI in pixels</td>
+</tr>
+<tr>
+<td>x.n</td>
+<td>img</td>
+<td>give the area of an image in pixels (if there are ROIs, give the number of pixels in the ROI union)</td>
+</tr>
+<tr>
+<td>x.n</td>
+<td>roi</td>
+<td>give the number of pixels in an ROI</td>
+</tr>
+</tbody>
+</table></div>
             </div>
         </div>
 
@@ -265,13 +443,15 @@ image <em>a</em>.</p>
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
+        <script src="../js/jquery-3.6.0.min.js"></script>
+        <script src="../js/bootstrap.min.js"></script>
         <script>
             var base_url = "..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../js/base.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
-        <script src="../search/main.js" defer></script>
+        <script src="../js/base.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+        <script src="../search/main.js"></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">

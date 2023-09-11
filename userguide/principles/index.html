@@ -16,16 +16,13 @@
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/font-awesome.min.css" rel="stylesheet">
         <link href="../../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
     <link rel="stylesheet" href="../../css/lightbox.min.css">
     <link rel="stylesheet" href="../../css/site.css">
 
     
-
-        <script src="../../js/jquery-1.10.2.min.js" defer></script>
-        <script src="../../js/bootstrap.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script>
     <script src="../../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
@@ -162,7 +159,7 @@
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-level="2"><a href="#image-quality-data-unimplemented" class="nav-link">Image quality data UNIMPLEMENTED</a>
+            <li class="nav-item" data-level="2"><a href="#quality-data" class="nav-link">Quality data</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -301,32 +298,41 @@ their image they have probably made a mistake. However, it's quite possible
 for the same ROIs to be on both sides of an expression if they were derived from the same
 image.</p>
 </div>
-<h2 id="image-quality-data-unimplemented">Image quality data <font color="red">UNIMPLEMENTED</font></h2>
-<div class="alert alert-danger" role="alert">
-<p>This is a set of preliminary notes on features which have yet to be implemented.</p>
-</div>
+<h2 id="quality-data">Quality data</h2>
+<p>All values in PCOT - scalar and image - can have an uncertainty value and data quality (DQ) bits.
+In imagecubes, this applies to every pixel of every band. The uncertainty values are expressed
+as standard deviations. Operations need to combine these data in a sensible way.</p>
+<p>This is currently implemented using the <strong>Value</strong> class.</p>
 <p>Consists of:</p>
 <ul>
 <li>image uncertainty map (float per band)</li>
-<li>image quality/info bits (byte per band)</li>
+<li>image quality/info bits (uint16 per band)</li>
 </ul>
-<h3 id="uncertainty-unimplemented">Uncertainty <font color="red">UNIMPLEMENTED</font></h3>
-<p>Each pixel each band of an imagecube usually contains an uncertainty value,
-which is a root mean squared error. Operations need to combine this data in a
-sensible way. For example, denoting the RMS error in <span class="arithmatex"><span class="MathJax_Preview">a</span><script type="math/tex">a</script></span> as <span class="arithmatex"><span class="MathJax_Preview">\Delta a</span><script type="math/tex">\Delta a</script></span>, binary
-operations work like this:</p>
+<h3 id="uncertainty">Uncertainty</h3>
+<p>Uncertainty values are propagated through calculations in the <em>expr</em> node and elsewhere according to
+these rules:</p>
 <div class="arithmatex">
 <div class="MathJax_Preview">\begin{align}
-\Delta (a+b), \quad \Delta (a+b) &amp;= \sqrt{(\Delta a)^2 + (\Delta b)^2}\\
-\Delta (ab),\quad \Delta (a/b) &amp;= \sqrt{\left(\frac{\Delta a}{a}\right)^2 + \left(\frac{\Delta b}{b}\right)^2}\\
-\Delta (a \&amp; b) &amp;= \min (\Delta{a}, \Delta{b})\\
-\Delta (a | b) &amp;= \max (\Delta{a}, \Delta{b})
+\sigma(a+b), \quad \sigma(a-b) &amp;= \sqrt{\sigma^2 a + \sigma^2 b}\\
+\sigma(ab) &amp;= |ab| \sqrt{\left(\frac{\sigma a}{a}\right)^2+\left(\frac{\sigma b}{b}\right)^2} \\
+&amp;= \sqrt{a^2 \sigma^2 b + b^2 \sigma^2 a}\quad \text{when all values positive}\\
+\sigma(a/b) &amp;= \left|\frac{a}{b}\right| \sqrt{\left(\frac{\sigma a}{a}\right)^2+\left(\frac{\sigma b}{b}\right)^2} \\
+&amp;= \frac{\sqrt{a^2 \sigma^2 b + b^2 \sigma^2 a}}{b^2}\quad \text{when all values positive}\\
+\sigma(a^b) &amp;= \sqrt{ (a^{b-1} b \sigma a)^2 + (a^b \log a \sigma b)^2} \\
+&amp;= \sqrt{a^{2b-2} ((a \sigma b \log a)^2 + (b \sigma a)^2)}\\
+\sigma (a \&amp; b) &amp;= \min (\sigma a, \sigma b)\\
+\sigma (a | b) &amp;= \max (\sigma a, \sigma b)
 \end{align}</div>
 <script type="math/tex; mode=display">\begin{align}
-\Delta (a+b), \quad \Delta (a+b) &= \sqrt{(\Delta a)^2 + (\Delta b)^2}\\
-\Delta (ab),\quad \Delta (a/b) &= \sqrt{\left(\frac{\Delta a}{a}\right)^2 + \left(\frac{\Delta b}{b}\right)^2}\\
-\Delta (a \& b) &= \min (\Delta{a}, \Delta{b})\\
-\Delta (a | b) &= \max (\Delta{a}, \Delta{b})
+\sigma(a+b), \quad \sigma(a-b) &= \sqrt{\sigma^2 a + \sigma^2 b}\\
+\sigma(ab) &= |ab| \sqrt{\left(\frac{\sigma a}{a}\right)^2+\left(\frac{\sigma b}{b}\right)^2} \\
+&= \sqrt{a^2 \sigma^2 b + b^2 \sigma^2 a}\quad \text{when all values positive}\\
+\sigma(a/b) &= \left|\frac{a}{b}\right| \sqrt{\left(\frac{\sigma a}{a}\right)^2+\left(\frac{\sigma b}{b}\right)^2} \\
+&= \frac{\sqrt{a^2 \sigma^2 b + b^2 \sigma^2 a}}{b^2}\quad \text{when all values positive}\\
+\sigma(a^b) &= \sqrt{ (a^{b-1} b \sigma a)^2 + (a^b \log a \sigma b)^2} \\
+&= \sqrt{a^{2b-2} ((a \sigma b \log a)^2 + (b \sigma a)^2)}\\
+\sigma (a \& b) &= \min (\sigma a, \sigma b)\\
+\sigma (a | b) &= \max (\sigma a, \sigma b)
 \end{align}</script>
 </div>
 <div class="alert alert-warning" role="alert">
@@ -336,45 +342,67 @@ is always a covariance between them.</p>
 <p><strong>Not all images contain uncertainty data</strong> - it may be that the input
 image doesn't have this data, or that a function has been performed on the
 image which does not permit uncertainty data to be carried through
-(consider a decorrelation stretch, for example). In this case, <strong>this
-should be clearly visible in the canvas</strong>.</p>
-<h3 id="pixel-information-bits-unimplemented">Pixel information bits <font color="red">UNIMPLEMENTED</font></h3>
-<p>Each pixel in each band has an associated set of bits which indicate error states, etc. </p>
-<p>Bits are (<font color="red">this list is incomplete</font>):</p>
+(consider a decorrelation stretch, for example). <strong>This
+can be viewed</strong> by selecting the <strong>nounc</strong> (no uncertainty) bit for viewing in the <a href="../canvas/">canvas</a>.</p>
+<h3 id="dq-bits">DQ bits</h3>
+<p>Each scalar, or band value for each pixel, has an associated set of bits which indicate error states, etc. </p>
+<p>Bits are currently:</p>
 <table>
 <thead>
 <tr>
 <th>Bit name</th>
 <th>Meaning</th>
-<th>Effect on calculations</th>
+<th>Effect on calculations (see notes below)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>ERROR</td>
-<td>Pixel is an error in this band</td>
-<td>should not be used in any calculation (see below).</td>
+<td><strong>NODATA</strong></td>
+<td>There is no data here</td>
+<td>BAD</td>
 </tr>
 <tr>
-<td>SATHIGH</td>
+<td><strong>SAT</strong></td>
 <td>Pixel is saturated high in this band</td>
-<td><strong>???</strong></td>
+<td>BAD</td>
 </tr>
 <tr>
-<td>SATLOW</td>
-<td>Pixel is saturated low in this band (i.e. zero or less)</td>
-<td><strong>???</strong></td>
+<td><strong>DIVZERO</strong></td>
+<td>The data is the result of a division by zero</td>
+<td>BAD</td>
+</tr>
+<tr>
+<td><strong>UNDEF</strong></td>
+<td>The data is the result of an undefined operation</td>
+<td>BAD</td>
+</tr>
+<tr>
+<td><strong>COMPLEX</strong></td>
+<td>The data is a complex number likely to be undefined (or just the real part)</td>
+<td>BAD</td>
+</tr>
+<tr>
+<td><strong>ERROR</strong></td>
+<td>There is an unspecified error in this data</td>
+<td>BAD</td>
+</tr>
+<tr>
+<td>NOUNCERTAINTY</td>
+<td>There is no uncertainty data</td>
+<td></td>
 </tr>
 </tbody>
 </table>
+<p>All bits are propagated into the data generated from the data they are attached to. 
+<strong>BAD</strong> means that the data in these pixels should not be
+considered. While calculations will still be done on BAD data, the BAD bits will be propagated. In the case
+of nodes which generate a scalar from images, such as finding the mean or SD of a set of pixels (or similar operations in the 
+<em>spectrum</em> node) the pixels marked BAD should be ignored.</p>
 <ul>
-<li>
-<p>When a pixel is not used in a particular band, the value is set to zero for that band and the ERROR bit is passed through. </p>
-</li>
 <li>
 <p>It should be possible to set bits based on per-pixel conditions with the <em>bits</em> node. For example, convert all uncertainties
 greater than a given value into errors. In fact, <strong>this should be done
-by default for a certain global value</strong> if possible.</p>
+by default for a certain global value</strong> if possible. <font color="red">BITS NODE NOT YET IMPLEMENTED</font></p>
 </li>
 <li>
 <p>In general, when multiple image bands
@@ -387,16 +415,14 @@ added, and the bits for channel <span class="arithmatex"><span class="MathJax_Pr
 B_i(a+b) = B_i(a) \vee B_i(b)\quad \text{for all channels } i
 \]</p>
 <ul>
-<li>
-<p>However, some operations have a more complex flow of information. For example, a decorrelation stretch results in information from all
+<li>However, some operations have a more complex flow of information. For example, a decorrelation stretch results in information from all
 bands being used in each band. In cases like this, the resulting bands are all ORed toether:
 \[
 B_i(\text{decorr}(a)) = \bigvee_i B_i(a)
-\]</p>
-</li>
-<li>
-<p>Nodes which produce a scalar should ignore error pixels (e.g. finding the mean value)</p>
-</li>
+\]</li>
+</ul>
+<h3 id="unimplemented-bit-operations"><font color="red">UNIMPLEMENTED BIT OPERATIONS</font></h3>
+<ul>
 <li>Nodes which perform a convolution operation or similar should propagate the error pixel to all affected pixels, leading to a blob of pixels in the output.
 I realise <strong>This isn't ideal</strong>; another possibility could be to just zero the mask? But then we lose the error data. At the moment I don't believe we have any
 "non-local" behaviour where pixels affect regions of pixels in the output, so the point could be moot.</li>
@@ -417,8 +443,6 @@ the aberration value which could be used in calculations</li>
 <h2 id="canvas-information-unimplemented">Canvas information <font color="red">UNIMPLEMENTED</font></h2>
 <p>The following should be visible in the canvas as optional overlays:</p>
 <ul>
-<li>Pixel information bits as colour overlays (default ON)</li>
-<li>Uncertainty data (default OFF)</li>
 <li>Filter aberration as a heat map (default OFF)</li>
 </ul></div>
             </div>
@@ -428,13 +452,15 @@ the aberration value which could be used in calculations</li>
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
+        <script src="../../js/jquery-3.6.0.min.js"></script>
+        <script src="../../js/bootstrap.min.js"></script>
         <script>
             var base_url = "../..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../../js/base.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
-        <script src="../../search/main.js" defer></script>
+        <script src="../../js/base.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+        <script src="../../search/main.js"></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">

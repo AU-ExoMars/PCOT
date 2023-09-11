@@ -16,16 +16,13 @@
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/font-awesome.min.css" rel="stylesheet">
         <link href="../../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
     <link rel="stylesheet" href="../../css/lightbox.min.css">
     <link rel="stylesheet" href="../../css/site.css">
 
     
-
-        <script src="../../js/jquery-1.10.2.min.js" defer></script>
-        <script src="../../js/bootstrap.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script>
     <script src="../../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
@@ -231,7 +228,7 @@ PCOT as above:</p>
 <ul>
 <li>Open a bash shell</li>
 <li><strong>cd</strong> to the PCOT directory (which contains this file).</li>
-<li>Run the command <strong>conda create -n pcot python=3.8 poetry=1.1.6</strong>.
+<li>Run the command <strong>conda create -n pcot python=3.8 poetry</strong>.
 This will create an environment called <strong>pcot</strong> which uses Python 3.8 and
 the Poetry dependency and packaging manager. It may take some time.</li>
 <li>Activate the environment with <strong>conda activate pcot</strong>.</li>
@@ -268,35 +265,25 @@ opening an Anaconda shell and entering the following commands:</p>
 <pre><code class="language-shell">conda activate pcot
 pcot
 </code></pre>
-<p>If you have installed the binary version you don't need to activate a conda environment,
-just navigate to the directory containing the execuable and run it.</p>
 <h2 id="running-pcot-inside-pycharm">Running PCOT inside Pycharm</h2>
-<p>These instructions apply to source installations, and can be useful if you
-are debugging extensions or library code or debugging PCOT itself.</p>
-<ul>
-<li>First set up the Conda environment and interpreter:<ul>
-<li>Open PyCharm and open the PCOT directory as an existing project.</li>
-<li>Open <strong>File/Settings..</strong> (Ctrl+Alt+S)</li>
-<li>Select <strong>Project:PCOT / Python Interpreter</strong></li>
-<li>If the Python Interpreter is not already Python 3.8 with something like <strong>anaconda3/envs/pcot/bin/python</strong><ul>
-<li>Select the cogwheel to the right of the Python Interpreter dropdown and then select  <strong>Add</strong>.</li>
-<li>Select <strong>Conda Environment</strong>.</li>
-<li>Select <strong>Existing Environment</strong>.</li>
-<li>Select the environment: it should be something like <strong>anaconda3/envs/pcot/bin/python</strong>.</li>
-<li>Select <strong>OK</strong>.</li>
-</ul>
-</li>
-</ul>
-</li>
-<li>Now set up the run configuration:<ul>
-<li>Select <strong>Edit Configurations...</strong> (or it might be <strong>Add Configuration...</strong>) from the configurations drop down in the menu bar</li>
-<li>Add a new configuration (the + symbol) and select <strong>Python</strong></li>
-<li>Set <strong>Script Path</strong> to <strong>PCOT/src/pcot/__main__.py</strong></li>
-<li>Make sure the interpreter is something like <strong>Project Default (Python 3.8 (pcot))</strong>, i.e. the Python interpreter of the pcot environment.</li>
-</ul>
-</li>
-<li>You should now be able to run and debug PCOT.</li>
-</ul>
+<p>These instructions may be useful if you want to run PCOT inside a debugger - for example, if you 
+are testing a custom node.
+* First set up the Conda environment and interpreter:
+    * Open PyCharm and open the PCOT directory as an existing project.
+    * Open <strong>File/Settings..</strong> (Ctrl+Alt+S)
+    * Select <strong>Project:PCOT / Python Interpreter</strong>
+    * If the Python Interpreter is not already Python 3.8 with something like <strong>anaconda3/envs/pcot/bin/python</strong>
+        * Select the cogwheel to the right of the Python Interpreter dropdown and then select  <strong>Add</strong>.
+        * Select <strong>Conda Environment</strong>.
+        * Select <strong>Existing Environment</strong>.
+        * Select the environment: it should be something like <strong>anaconda3/envs/pcot/bin/python</strong>.
+        * Select <strong>OK</strong>.
+* Now set up the run configuration:
+    * Select <strong>Edit Configurations...</strong> (or it might be <strong>Add Configuration...</strong>) from the configurations drop down in the menu bar
+    * Add a new configuration (the + symbol) and select <strong>Python</strong>
+    * Set <strong>Script Path</strong> to <strong>PCOT/src/pcot/__main__.py</strong>
+    * Make sure the interpreter is something like <strong>Project Default (Python 3.8 (pcot))</strong>, i.e. the Python interpreter of the pcot environment.
+* You should now be able to run and debug PCOT.</p>
 <h2 id="environment-variables">Environment variables</h2>
 <p>It's a good idea, but not mandatory, to set the environment variable
 <strong>PCOT_USER</strong> to a string of the form <code>name &lt;email&gt;</code>. For example,
@@ -315,13 +302,15 @@ is not set, the username returned by Python's getpass module is used
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
+        <script src="../../js/jquery-3.6.0.min.js"></script>
+        <script src="../../js/bootstrap.min.js"></script>
         <script>
             var base_url = "../..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../../js/base.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
-        <script src="../../search/main.js" defer></script>
+        <script src="../../js/base.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+        <script src="../../search/main.js"></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">

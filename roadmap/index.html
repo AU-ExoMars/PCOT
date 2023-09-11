@@ -16,16 +16,13 @@
         <link href="../css/bootstrap.min.css" rel="stylesheet">
         <link href="../css/font-awesome.min.css" rel="stylesheet">
         <link href="../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
     <link rel="stylesheet" href="../css/lightbox.min.css">
     <link rel="stylesheet" href="../css/site.css">
 
     
-
-        <script src="../js/jquery-1.10.2.min.js" defer></script>
-        <script src="../js/bootstrap.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script>
     <script src="../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
@@ -154,7 +151,11 @@
             
             <li class="nav-item" data-level="1"><a href="#development-roadmap" class="nav-link">Development roadmap</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-level="2"><a href="#next-release-drift-stones" class="nav-link">Next release: DRIFT STONES</a>
+            <li class="nav-item" data-level="2"><a href="#important-features-of-this-release-060-drift-stones" class="nav-link">Important features of this release: 0.6.0 DRIFT STONES</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#next-major-release-070-east-pentire" class="nav-link">Next major release: 0.7.0 EAST PENTIRE</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -171,16 +172,34 @@
 
 <h1 id="development-roadmap">Development roadmap</h1>
 <p>This is a rough guide, and things may change!</p>
-<h2 id="next-release-drift-stones">Next release: DRIFT STONES</h2>
+<h2 id="important-features-of-this-release-060-drift-stones">Important features of this release: 0.6.0 DRIFT STONES</h2>
 <ul>
 <li>uncertainty and error bit propagation in <em>expr</em> and all nodes </li>
 <li>Testing quality and propagation rules (see <a href="/userguide/principles">Principles</a>)</li>
+<li>Test graphs for nodes and other high-level functionality</li>
+<li>Test nodes for those graphs</li>
+<li>Tabular output on spectrum and histogram nodes</li>
+<li>Gen node for test patterns</li>
+<li>Refactoring of Datum</li>
+<li>Utility nodes - e.g. <em>roidq</em> for generating an ROI from DQ bits</li>
+<li>Output enhancements<ul>
+<li>Gradient node can export to PDF</li>
+<li>Annotations (e.g. text labels) are now drawn on the painter at 
+high res, and have been refactored hugely</li>
+<li>Annotations use thickness zero by default (the Qt "cosmetic" thickness)</li>
 </ul>
-<h2 id="future-releases">Future releases</h2>
+</li>
+<li>PCT detector node    </li>
+<li>ROI negation and refactoring of operators</li>
+<li><em>roiexpr</em> node for composing ROIs using expressions</li>
+<li>Crude band depth node (needs work)</li>
+<li>A lot of bug fixes and regression fixes</li>
+</ul>
+<h2 id="next-major-release-070-east-pentire">Next major release: 0.7.0 EAST PENTIRE</h2>
 <ul>
-<li>
-<p>Documentation</p>
-<ul>
+<li>Reorganise the node palette</li>
+<li>Obtain user stories and feedback</li>
+<li>Documentation<ul>
 <li>User guide<ul>
 <li>Page each on the main elements of the UI</li>
 <li>Page on <em>expr</em> nodes</li>
@@ -190,22 +209,11 @@
 </li>
 </ul>
 </li>
-<li>
-<p>Output enhancements</p>
+</ul>
+<h2 id="future-releases">Future releases</h2>
 <ul>
-<li>Gradient node <ul>
-<li>should also be able to output image to a matplotlib PDF with a legend</li>
-<li>How would this work where the gradient is inset?</li>
-</ul>
-</li>
-<li>showing text labels on low res images?<ul>
-<li>canvas should display ROIs etc, and not draw onto the RGB of the image as it currently does.
-It should work how the source descriptor works.
-This would avoid the resolution problem. We could do away with "ann" outputs?</li>
-<li>This could imply a whole new way of adding stuff to images.</li>
-</ul>
-</li>
-</ul>
+<li>
+<p>Calibration: the PCT detection node is fine, but does nothing!</p>
 </li>
 <li>
 <p>Obtain user stories for analysis of HK data (which could potentially
@@ -246,13 +254,15 @@ on this vector to get a single value.</li>
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
+        <script src="../js/jquery-3.6.0.min.js"></script>
+        <script src="../js/bootstrap.min.js"></script>
         <script>
             var base_url = "..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../js/base.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
-        <script src="../search/main.js" defer></script>
+        <script src="../js/base.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+        <script src="../search/main.js"></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">

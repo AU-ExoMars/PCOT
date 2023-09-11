@@ -16,16 +16,13 @@
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/font-awesome.min.css" rel="stylesheet">
         <link href="../../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
     <link rel="stylesheet" href="../../css/lightbox.min.css">
     <link rel="stylesheet" href="../../css/site.css">
 
     
-
-        <script src="../../js/jquery-1.10.2.min.js" defer></script>
-        <script src="../../js/bootstrap.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script>
     <script src="../../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
@@ -162,6 +159,10 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-level="2"><a href="#quantities" class="nav-link">Quantities</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -251,6 +252,65 @@ and loaded with the document, so the original source data does not need
 to be stored - you can send the document to someone and it will still work
 even if they don't have the sources.</p>
 </div>
+<h2 id="quantities">Quantities</h2>
+<p>All numerical quantities in PCOT - whether scalar values or pixels in images -
+consist of three values: nominal value, uncertainty and data quality (DQ) bits.
+Uncertainty and DQ bitss can be viewed as overlays in the canvas (PCOT's image viewer
+component).</p>
+<h3 id="uncertainty">Uncertainty</h3>
+<p>The uncertainty is expressed as standard deviation, and is propagated through
+most operations. Be careful here, however - all values are assumed to be independent.
+This can lead to grossly incorrect results. For example, we could set up a graph
+consisting of a node with the value <span class="arithmatex"><span class="MathJax_Preview">0\pm1</span><script type="math/tex">0\pm1</script></span>, feed it into a mathematical expression (<em>expr</em>) node
+as variable *a), and set the node's expression to <span class="arithmatex"><span class="MathJax_Preview">a-a</span><script type="math/tex">a-a</script></span>:</p>
+<p><figure class="text-center"><a data-lightbox="badunc.png" href="../badunc.png"><img alt="Incorrect uncertainty calculation" src="../badunc.png" /></a><figcaption class="figure-caption text-center">Figure: Incorrect uncertainty calculation. Click on image to expand.</figcaption></figure></p>
+<p>The result, <span class="arithmatex"><span class="MathJax_Preview">0\pm\sqrt{2}</span><script type="math/tex">0\pm\sqrt{2}</script></span>, is a consequence of the subtraction assuming that all quantities are
+independent even when they are clearly the same quantity.</p>
+<h3 id="data-quality-bits">Data quality bits</h3>
+<p>Each pixel in an image has a set of bits describing its quality in the source data,
+which are propagated through all operations. Additionally, other DQ bits may be added
+as the data moves through the graph - for example, division by zero may occur, or an operation
+whose result is undefined for those values. While DQ bits are flexible, the following
+are probably stable:</p>
+<table>
+<thead>
+<tr>
+<th>Bit</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NODATA</td>
+<td>no data present (typically for a particular pixel)</td>
+</tr>
+<tr>
+<td>NOUNCERTAINTY</td>
+<td>Pixel has no uncertainty (again typically for pixels)</td>
+</tr>
+<tr>
+<td>SAT</td>
+<td>Data is saturated</td>
+</tr>
+<tr>
+<td>DIVZERO</td>
+<td>A division by zero has occurred</td>
+</tr>
+<tr>
+<td>UNDEF</td>
+<td>Result of operation is undefined</td>
+</tr>
+<tr>
+<td>COMPLEX</td>
+<td>Data is real part of complex result</td>
+</tr>
+<tr>
+<td>ERROR</td>
+<td>Unspecified error</td>
+</tr>
+</tbody>
+</table>
+<p>There may also be user-defined or "test" bits for use in development.</p>
 <p>Move on to <a href="../tutorial">a First Tutorial</a></p>
 <div class="footnote">
 <hr />
@@ -272,13 +332,15 @@ In
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
+        <script src="../../js/jquery-3.6.0.min.js"></script>
+        <script src="../../js/bootstrap.min.js"></script>
         <script>
             var base_url = "../..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../../js/base.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
-        <script src="../../search/main.js" defer></script>
+        <script src="../../js/base.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+        <script src="../../search/main.js"></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
