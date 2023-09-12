@@ -186,7 +186,8 @@ class XFormType:
         self.showPerformedCount = True
         self.setRectParams = None
         # nodes with this flag ALWAYS run, but they always run after all other nodes (unless they have children,
-        # which run after them).
+        # which run after them). It also never skips due to unset inputs, because these might be because the
+        # parent node threw an exception.
         self.alwaysRunAfter = False
 
     def md5(self):
@@ -723,7 +724,8 @@ class XForm:
 
     def debugName(self):
         """return a debugging "name"""
-        return "{}/{}/{}".format(self.type.name, self.name, self.displayName)
+        alw = "-ALWAYS" if self.type.alwaysRunAfter else ""
+        return f"{self.type.name}/{self.name}/{self.displayName}{alw}"
 
     ## debugging dump
     def dump(self):
@@ -826,6 +828,8 @@ class XForm:
 
     ## can this node run - are its inputs all set?
     def canRun(self):
+        if self.type.alwaysRunAfter:
+            return True
         for inp in self.inputs:
             if inp is not None:
                 out, index = inp
