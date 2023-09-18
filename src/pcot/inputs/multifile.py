@@ -174,7 +174,7 @@ class MultifileInputMethod(InputMethod):
 # Then the UI class..
 
 
-IMAGETYPERE = re.compile(r".*\.(?i:jpg|png|ppm|tga|tif)")
+IMAGETYPERE = re.compile(r".*\.(?i:jpg|bmp|png|ppm|tga|tif)")
 
 
 class MultifileMethodWidget(MethodWidget):
