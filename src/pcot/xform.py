@@ -185,6 +185,10 @@ class XFormType:
         self.resizable = False
         self.showPerformedCount = True
         self.setRectParams = None
+        # nodes with this flag ALWAYS run, but they always run after all other nodes (unless they have children,
+        # which run after them). It also never skips due to unset inputs, because these might be because the
+        # parent node threw an exception.
+        self.alwaysRunAfter = False
 
     def md5(self):
         """returns a checksum of the sourcecode for the module defining the type, MD5 hash, used to check versions"""
@@ -720,7 +724,8 @@ class XForm:
 
     def debugName(self):
         """return a debugging "name"""
-        return "{}/{}/{}".format(self.type.name, self.name, self.displayName)
+        alw = "-ALWAYS" if self.type.alwaysRunAfter else ""
+        return f"{self.type.name}/{self.name}/{self.displayName}{alw}"
 
     ## debugging dump
     def dump(self):
@@ -823,6 +828,8 @@ class XForm:
 
     ## can this node run - are its inputs all set?
     def canRun(self):
+        if self.type.alwaysRunAfter:
+            return True
         for inp in self.inputs:
             if inp is not None:
                 out, index = inp
@@ -840,8 +847,13 @@ class XForm:
     ## perform the transformation; delegated to the type object - recurses down the children.
     # Also tells any tab open on a node that its node has changed.
     # DO NOT CALL DIRECTLY - called either from itself or from performNodes.
-    def perform(self):
+    def perform(self, isAlwaysRunAfter=False):
         global performDepth
+
+        # don't run "always run after" special nodes unless we're allowed.
+        if self.type.alwaysRunAfter and not isAlwaysRunAfter:
+            return
+
         # used to stop perform being called out of context; it should
         # only be called inside the graph's perform.
         if not self.graph.performingGraph:
@@ -1213,10 +1225,16 @@ class XFormGraph:
         self.performingGraph = True
         if node is None:
             for n in self.nodes:
-                # identify root nodes (no connected inputs).
-                if all(i is None for i in n.inputs):
+                # identify root nodes (no connected inputs) which are NOT alwaysRun.
+                if all(i is None for i in n.inputs) and not n.type.alwaysRunAfter:
                     n.perform()
+            # having run the root nodes, run those nodes which have the 'alwaysRunAfter' flag
+            # in their type. These are used in testing.
+            for n in self.nodes:
+                if n.type.alwaysRunAfter:
+                    n.perform(isAlwaysRunAfter=True)
         else:
+            # we're running an explicit node
             node.perform()
         self.performingGraph = False
 

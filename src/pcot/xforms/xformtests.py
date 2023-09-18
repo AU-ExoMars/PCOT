@@ -545,3 +545,45 @@ class TabStringTest(pcot.ui.tabs.Tab):
         self.mark()
         self.node.string = self.w.expected.toPlainText()
         self.changed()
+
+
+@xformtype
+class XFormErrorTest(XFormType):
+    """Check that a node produces an error. This node will run after all other nodes, but before its children.
+    It checks that the string is the error code (e.g. 'DATA') """
+    def __init__(self):
+        super().__init__("errortest", "testing", "0.0.0")
+        self.addInputConnector("", Datum.ANY)
+        self.addOutputConnector("", Datum.TESTRESULT)
+        self.autoserialise = ('string',)
+        self.alwaysRunAfter = True
+
+    def init(self, node):
+        node.string = ""
+
+    def createTab(self, xform, window):
+        return TabStringTest(xform, window)
+
+    def perform(self, node):
+        out = None
+        if node.inputs[0] is not None:
+            # Hacky. Get the NODE connected to the input.
+            n, _ = node.inputs[0]
+            if n.error is None:
+                out = "NO ERROR"
+            elif n.error.code != node.string.strip():
+                out = f"{n.error.code}!={node.string.strip()}"
+        else:
+            out = "NO INPUT"
+
+        if out is None:
+            node.setRectText("ALL OK")
+            out = []
+        else:
+            node.setError(XFormException('TEST', out))
+            ui.log(out)
+            out = [out]
+
+        node.graph.rebuildTabsAfterPerform = True
+        node.out = Datum(Datum.TESTRESULT, out, nullSourceSet)
+        node.setOutput(0, node.out)

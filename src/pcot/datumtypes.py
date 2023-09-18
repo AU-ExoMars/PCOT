@@ -96,7 +96,7 @@ class ImgType(Type):
 class RoiType(Type):
     def __init__(self):
         from pcot.rois import ROI
-        super().__init__('roi', valid={ROI})
+        super().__init__('roi', valid={ROI, type(None)})
 
     def serialise(self, d):
         v = d.val
