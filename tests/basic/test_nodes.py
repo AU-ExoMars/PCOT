@@ -72,8 +72,15 @@ def test_node_output_none():
             elif x == 'stringtest':
                 try:
                     out = node.getOutput(0, Datum.TESTRESULT)
-                    assert len(out) == 1, f"Stringtest should 'NO TESTS' in list when not connected"
-                    assert out[0] == 'NO INPUT', f"Stringtest should 'NO TESTS' in list when not connected"
+                    assert len(out) == 1, f"Stringtest should 'NO INPUT' in list when not connected"
+                    assert out[0] == 'NO INPUT', f"Stringtest should 'NO INPUT' in list when not connected"
+                except BadTypeException:
+                    pytest.fail("Stringtests should return a list")
+            elif x == 'errortest':
+                try:
+                    out = node.getOutput(0, Datum.TESTRESULT)
+                    assert len(out) == 1, f"Errortest should 'NO INPUT' in list when not connected"
+                    assert out[0] == 'NO INPUT', f"Errortest should 'NO INPUT' in list when not connected"
                 except BadTypeException:
                     pytest.fail("Stringtests should return a list")
             else:
