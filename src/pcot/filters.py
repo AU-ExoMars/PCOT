@@ -20,17 +20,14 @@ class Filter:
     position: str
     # name of filter (e.g. G01 for "geology 1") (if not given, will be str(cwl))
     name: str
-    # index in array, used for certain visualisations (e.g. PDS4 timeline)
-    idx: int
 
-    def __init__(self, cwl, fwhm, transmission, position=None, name=None, idx=0):
+    def __init__(self, cwl, fwhm, transmission=1.0, position=None, name=None, idx=0):
         """constructor"""
         self.cwl = cwl
         self.fwhm = fwhm
         self.transmission = transmission
         self.name = name if name is not None else str(cwl)
         self.position = position
-        self.idx = idx
 
     def serialise(self):
         return self.cwl, self.fwhm, self.transmission, self.position, \
@@ -42,13 +39,13 @@ class Filter:
             ui.error("Oops - old style file contains filter name, not filter data. Using dummy, please reload input.")
             return Filter(2000, 1.0, 1.0, "dummypos", "dummyname", 0)
         try:
-            cwl, fwhm, trans, pos, name, idx = d
+            cwl, fwhm, trans, pos, name = d
         except ValueError:
             ui.error("Oops - old style file wrong number of filter data. Using dummy, please reload input.")
             return Filter(2000, 1.0, 1.0, "dummypos", "dummyname", 0)
 
-        cwl, fwhm, trans, pos, name, idx = d
-        return Filter(cwl, fwhm, trans, pos, name, idx)
+        cwl, fwhm, trans, pos, name = d
+        return Filter(cwl, fwhm, trans, pos, name)
 
     @staticmethod
     def _gaussian(x, mu, fwhm):
@@ -143,9 +140,6 @@ PANCAM_FILTERS = [
     Filter(670, 5, 0.000000922, "R11", "S04")
 ]
 
-for i, x in enumerate(PANCAM_FILTERS):
-    x.idx = i
-
 ## Array of AUPE filters - I've added the lower-case letters myself;
 # they were all G0 or G1
 AUPE_FILTERS = [
@@ -175,9 +169,6 @@ AUPE_FILTERS = [
 
     Filter(525, 50, 1, "R10", "GUESS"),  # THIS IS A GUESS
 ]
-
-for i, x in enumerate(AUPE_FILTERS):
-    x.idx = i
 
 ## dummy filter for when we have trouble finding the value
 DUMMY_FILTER = Filter(0, 0, 0, "??", "??")

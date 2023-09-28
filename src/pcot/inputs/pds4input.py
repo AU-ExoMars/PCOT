@@ -15,6 +15,7 @@ from pcot import filters
 from pcot.dataformats import pds4
 from pcot.dataformats.pds4 import PDS4ImageProduct, PDS4Product
 from pcot.datum import Datum
+from pcot.filters import Filter
 from pcot.ui import uiloader
 from pcot.ui.help import HelpWindow
 import proctools
@@ -37,7 +38,6 @@ helpText = """# PDS4 Input
 
 * Select a directory which contains PDS4 products by clicking on the "Browse" button.
 * Set 'recursive directory scan' appropriately. Be careful - you could end up reading a huge number of products!
-* Set the camera type to PANCAM or AUPE.
 * Click "Scan Directory" to read in the products - the table and timeline will now be populated.
 * Select those products who data you wish to use, in either the table or timeline. If more than one
 product is selected, they must all be images.
@@ -58,9 +58,22 @@ def getDQBits(data, uncertainty, dq):
     """Converts DQ data in the PDS4 QUALITY array into our DQ bits, and adds others
     depending on the other data too."""
     out = np.where(dq == 1, 0, pcot.dq.NODATA)  # where DQ is 1, output 0. Else output NODATA.
-    out |= np.where(data > 0.9999999, pcot.dq.SAT,  0) # where data is greater than or equal to 1 add the SAT bit
+    out |= np.where(data > 0.9999999, pcot.dq.SAT, 0)  # where data is greater than or equal to 1 add the SAT bit
     out |= np.where(uncertainty == 0.0, pcot.dq.NOUNCERTAINTY, 0)  # set NOUNC bit if zero uncertainty data
     return out.astype(np.uint16)
+
+
+def show_meta(m):
+    """Collect property values and print them but also keep in a dict for debug breakpointing"""
+    attrs = m._attrs
+    props = {}
+    for k in attrs:
+        try:
+            props[k] = getattr(m, k)
+        except AttributeError:
+            pass
+    for k, v in props.items():
+        print(k, v)
 
 
 class PDS4InputMethod(InputMethod):
@@ -78,7 +91,6 @@ class PDS4InputMethod(InputMethod):
     dir: Optional[str]  # the directory we have got the data from; just used to set up the widget
     mapping: ChannelMapping  # the mapping for the canvas
     recurse: bool  # when scanning directories, should we do it recursively?
-    camera: str  # type of camera - 'PANCAM' or 'AUPE'
     multValue: float  # multiplication to apply post-load
 
     def __init__(self, inp):
@@ -90,7 +102,6 @@ class PDS4InputMethod(InputMethod):
         self.dir = None
         self.mapping = ChannelMapping()
         self.recurse = False
-        self.camera = 'PANCAM'
         self.multValue = 1.0
 
     def _getProducts(self, products: List[DataProduct]):
@@ -118,23 +129,30 @@ class PDS4InputMethod(InputMethod):
             sol = int(m.sol_id)
             seq = int(m.seq_num)
             ptu = float(m.rmc_ptu)
+            # use the index for the given sol, adding one to it.
 
-            # try to work out what filter we are. This is a complete pig - we might
-            # be AUPE, we might be PANCAM.
+            # show_meta(m)
 
-            filt = filters.findFilter(self.camera, m.filter_id)
-            if filt.cwl != cwl:
-                raise Exception(
-                    f"Filter CWL does not match for filter {m.filter_id}: file says {cwl}, should be {filt.cwl}")
-            # breaking these out for debugging ease!
-            _lid = m.lid
-            _cam = m.camera  # this is the name of the camera - WACL, WACR, HRC etc.
-            prod = PDS4ImageProduct(_lid, sol, seq, filt, _cam, ptu, start)
+            # construct a filter from that data
+            filt = Filter(cwl, fwhm, transmission=1.0, name=id, position=id)
+
+            # we fudge up the index after this loop, post sort.
+            prod = PDS4ImageProduct(m.lid, 0, start, sol, seq, filt, m.camera, ptu)
             self.products.append(prod)
-
             self.lidToLabel[m.lid] = dat
 
-        self.products.sort(key=lambda p: (p.start, p.filt.cwl))
+        # we sort by camera, then freq, then bandwidth, then start
+        self.products.sort(key=lambda p: (p.camera, p.filt.cwl, p.filt.fwhm, p.start))
+
+        # products with the same sol should have different indices
+        # for positioning
+        solcounts = {}
+        for p in self.products:
+            idx = solcounts.get(p.sol_id, 0) + 1
+            solcounts[p.sol_id] = idx
+            p.idx = idx
+
+
 
     def loadLabelsFromDirectory(self, clear=False):
         """This will actually load data from the directory into the linear widget, either ab initio
@@ -160,6 +178,7 @@ class PDS4InputMethod(InputMethod):
             products = depot.retrieve("spec-rad")
             self._getProducts(products)  # convert from DataProduct to my PDS4Product and subclasses
             pcot.config.setDefaultDir('images', self.dir)
+            pcot.config.save()
 
     def setProducts(self, products):
         """Used from the document's setInputPDS4() method when we're using PCOT as a library and loaded
@@ -260,7 +279,6 @@ class PDS4InputMethod(InputMethod):
              'selected': self.selected,
              'products': [x.serialise() for x in self.products],
              'dir': self.dir,
-             'camera': self.camera,
              'mapping': self.mapping.serialise()}
         if internal:
             x['lid2label'] = self.lidToLabel
@@ -273,7 +291,6 @@ class PDS4InputMethod(InputMethod):
             self.multValue = data.get('mult', 1)
             self.recurse = data['recurse']
             self.selected = data['selected']
-            self.camera = data['camera']
             self.products = [pds4.deserialise(x) for x in data['products']]
             self.dir = data['dir']
             self.mapping = ChannelMapping.deserialise(data['mapping'])
@@ -358,7 +375,6 @@ class PDS4ImageMethodWidget(MethodWidget):
         self.browse.clicked.connect(self.browseClicked)
         self.scanDirButton.clicked.connect(self.scanDirClicked)
         self.readButton.clicked.connect(self.readClicked)
-        self.camCombo.currentIndexChanged.connect(self.cameraChanged)
         self.table.itemSelectionChanged.connect(self.tableSelectionChanged)
         self.timeline.selChanged.connect(self.timelineSelectionChanged)
         self.multCombo.currentIndexChanged.connect(self.multChanged)
@@ -431,15 +447,15 @@ class PDS4ImageMethodWidget(MethodWidget):
         items = []
         xspacing = dict()  # this is used so that points with filter and sol the same have different X (slightly)
         for p in products:
-            key = (p.filt.idx, p.sol_id)
+            key = (p.idx, p.sol_id)
             if key in xspacing:
-                xspac = xspacing[key]+0.1
+                xspac = xspacing[key] + 0.1
             else:
                 xspac = 0
-            xspacing[key]=xspac
+            xspacing[key] = xspac
 
-            yOffset = p.filt.idx * 12
-            items.append(ImageLinearSetEntity(p.sol_id+xspac, yOffset, f"{p.filt.cwl} ({p.filt.name})", p))
+            yOffset = p.idx * 12
+            items.append(ImageLinearSetEntity(p.sol_id + xspac, yOffset, f"{p.filt.cwl} ({p.filt.name})", p))
         self.timeline.setItems(items)
         self.timeline.rescale()
         self.timeline.rebuild()
@@ -558,7 +574,6 @@ class PDS4ImageMethodWidget(MethodWidget):
         # ensure image is also using my mapping.
         if self.method.out and isinstance(self.method.out, ImageCube) is not None:
             self.method.out.setMapping(self.method.mapping)
-        self.camCombo.setCurrentIndex(1 if self.method.camera == 'AUPE' else 0)
 
         idx = self.multCombo.findData(self.method.multValue)
         if idx >= 0:

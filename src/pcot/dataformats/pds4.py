@@ -14,8 +14,10 @@ class PDS4Product:
     Does not store the actual data! Just label information and metadata."""
 
     def __init__(self):
-        self.lid = None     # there's always a LID.
-        pass
+        self.lid = ""     # there's always a LID.
+        self.idx = 0        # and there should be an index which is used for vertical position on timeline
+        self.sol_id = 0     # and a sol ID
+        self.start = 0      # and a datetime
 
     def serialise(self) -> Dict:
         """Serialise the product info into a dictionary"""
@@ -30,12 +32,14 @@ class PDS4Product:
 @dataclasses.dataclass()
 class PDS4ImageProduct(PDS4Product):
     lid: str
+    idx: int
+    start: datetime
     sol_id: int
+
     seq_num: int
     filt: Filter
     camera: str      # note - this is whether the camera is L or R, not PANCAM/AUPE.
     rmc_ptu: float
-    start: datetime
 
     def serialise(self) -> Dict:
         """Serialise the product into a dictionary"""
