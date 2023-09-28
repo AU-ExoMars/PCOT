@@ -75,9 +75,8 @@ def test_pds4_load():
         assert len(sourceSet) == 1
         s = sourceSet.getOnlyItem()
         f = s.filterOrName
-        # and the filter data should be correct, from a PANCAM and sorted by capture time which happens to be
+        # and the filter data should be correct, and sorted by capture time which happens to be
         # filter position.
-        assert f.camera == 'PANCAM'
         assert f.cwl == cwl
         assert f.fwhm == fwhm
         assert f.name == name

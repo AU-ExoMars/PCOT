@@ -41,19 +41,23 @@ class PDS4ImageProduct(PDS4Product):
         """Serialise the product into a dictionary"""
         d = dataclasses.asdict(self)            # convert into a dict..
         d['start'] = self.start.isoformat()     # fixup the date into a string
-        d['filt'] = self.filt.name              # and the filter with the camtype (so we can look it up)
-        d['cameratype'] = self.filt.camera      # PANCAM or AUPE?
+        d['filt'] = self.filt.serialise()
         d['prodtype'] = 'image'   # add type label
         return d
 
     @classmethod
     def deserialise(cls, d: Dict):
         """deserialise the product from a dictionary; static method creating new product"""
-        # turn camera/filtername strings into a Filter (may throw)
-        d['filt'] = filters.findFilter(d['cameratype'], d['filt'])
-        del d['cameratype']
+        # turn filter element back into a real filter
+        d['filt'] = filt = Filter.deserialise(d['filt'])
         # turn date string back into datetime
         d['start'] = parser.isoparse(d['start'])
+
+        # eliminate fields whose names aren't attributes of this class. We do this
+        # because of weird version problems.
+        attrs = [x.name for x in dataclasses.fields(cls)]
+        d = {k: d[k] for k in attrs}
+
         # call constructor
         return cls(**d)
 

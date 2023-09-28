@@ -3,7 +3,9 @@ from typing import Tuple
 
 import numpy as np
 
-"""This file deals with the physical multispectral filters for the PANCAM and AUPE cameras"""
+from pcot import ui
+
+"""This file deals with the physical multispectral filters"""
 
 
 class Filter:
@@ -14,35 +16,39 @@ class Filter:
     fwhm: float
     # transmission ratio
     transmission: float
-    # position of filter in camera (L/R+number)
+    # position of filter in camera (L/R+number for WAC)
     position: str
-    # name of filter (e.g. G01 for "geology 1")
+    # name of filter (e.g. G01 for "geology 1") (if not given, will be str(cwl))
     name: str
-    # camera type (PANCAM or AUPE)
-    camera: str
     # index in array, used for certain visualisations (e.g. PDS4 timeline)
     idx: int
 
-    def __init__(self, cwl, fwhm, transmission, position=None, name=None, camera=None, idx=0):
+    def __init__(self, cwl, fwhm, transmission, position=None, name=None, idx=0):
         """constructor"""
         self.cwl = cwl
         self.fwhm = fwhm
         self.transmission = transmission
         self.name = name if name is not None else str(cwl)
         self.position = position
-        # typically set later
-        self.camera = camera
         self.idx = idx
 
     def serialise(self):
-        """serialise for when sources are saved as part of saving an input in a file"""
         return self.cwl, self.fwhm, self.transmission, self.position, \
-               self.name, self.camera, self.idx
+               self.name, self.idx
 
     @classmethod
-    def deserialise(self, d):
-        cwl, fwhm, trans, pos, name, cam, idx = d
-        return Filter(cwl, fwhm, trans, pos, name, cam, idx)
+    def deserialise(cls, d):
+        if isinstance(d,str):   # snark
+            ui.error("Oops - old style file contains filter name, not filter data. Using dummy, please reload input.")
+            return Filter(2000, 1.0, 1.0, "dummypos", "dummyname", 0)
+        try:
+            cwl, fwhm, trans, pos, name, idx = d
+        except ValueError:
+            ui.error("Oops - old style file wrong number of filter data. Using dummy, please reload input.")
+            return Filter(2000, 1.0, 1.0, "dummypos", "dummyname", 0)
+
+        cwl, fwhm, trans, pos, name, idx = d
+        return Filter(cwl, fwhm, trans, pos, name, idx)
 
     @staticmethod
     def _gaussian(x, mu, fwhm):
@@ -138,7 +144,6 @@ PANCAM_FILTERS = [
 ]
 
 for i, x in enumerate(PANCAM_FILTERS):
-    x.camera = 'PANCAM'
     x.idx = i
 
 ## Array of AUPE filters - I've added the lower-case letters myself;
@@ -172,11 +177,10 @@ AUPE_FILTERS = [
 ]
 
 for i, x in enumerate(AUPE_FILTERS):
-    x.camera = 'AUPE'
     x.idx = i
 
 ## dummy filter for when we have trouble finding the value
-DUMMY_FILTER = Filter(0, 0, 0, "??", "??", camera='PANCAM')
+DUMMY_FILTER = Filter(0, 0, 0, "??", "??")
 
 ## dictionary of AUPE filters by position (L/R+number)
 AUPEfiltersByPosition = {x.position: x for x in AUPE_FILTERS}

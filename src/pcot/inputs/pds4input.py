@@ -113,17 +113,23 @@ class PDS4InputMethod(InputMethod):
             logger.debug(f"Creating new product {m.lid}")
             # only generate a new product object if we don't have it already
             cwl = int(m.filter_cwl)
+            fwhm = int(m.filter_bw)
+            id = m.filter_id
             sol = int(m.sol_id)
             seq = int(m.seq_num)
             ptu = float(m.rmc_ptu)
 
             # try to work out what filter we are. This is a complete pig - we might
-            # be AUPE, we might be PANCAM. We have to rely on document settings.
+            # be AUPE, we might be PANCAM.
+
             filt = filters.findFilter(self.camera, m.filter_id)
             if filt.cwl != cwl:
                 raise Exception(
                     f"Filter CWL does not match for filter {m.filter_id}: file says {cwl}, should be {filt.cwl}")
-            prod = PDS4ImageProduct(m.lid, sol, seq, filt, m.camera, ptu, start)
+            # breaking these out for debugging ease!
+            _lid = m.lid
+            _cam = m.camera  # this is the name of the camera - WACL, WACR, HRC etc.
+            prod = PDS4ImageProduct(_lid, sol, seq, filt, _cam, ptu, start)
             self.products.append(prod)
 
             self.lidToLabel[m.lid] = dat

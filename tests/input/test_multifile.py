@@ -125,7 +125,6 @@ def test_multifile_load_with_good_pattern(globaldatadir):
         s = sourceSet.getOnlyItem()
         f = s.filterOrName
         # again, the filters will be "I have no idea"
-        assert f.camera == 'PANCAM'
         assert f.cwl == cwl
         assert f.fwhm == fwhm
         assert f.name == name
