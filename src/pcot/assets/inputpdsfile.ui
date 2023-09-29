@@ -194,20 +194,6 @@
       </widget>
      </item>
      <item>
-      <widget class="QComboBox" name="camCombo">
-       <item>
-        <property name="text">
-         <string>PANCAM</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>AUPE</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-     <item>
       <widget class="QComboBox" name="multCombo">
        <item>
         <property name="text">
