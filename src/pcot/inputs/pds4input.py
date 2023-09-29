@@ -152,8 +152,6 @@ class PDS4InputMethod(InputMethod):
             solcounts[p.sol_id] = idx
             p.idx = idx
 
-
-
     def loadLabelsFromDirectory(self, clear=False):
         """This will actually load data from the directory into the linear widget, either ab initio
         or associating that data with existing PDS4Product info.
@@ -429,8 +427,9 @@ class PDS4ImageMethodWidget(MethodWidget):
         self.table.clearContents()  # this will just make all the data empty strings (or null widgets)
         self.table.setRowCount(0)  # and this will remove the rows
 
-        # sort by start time
-        products = sorted(self.method.products, key=lambda x: x.start)
+        # sort by start time. Actually, no - they've already been sorted
+        # in _getProducts() in the method.
+        products = self.method.products
 
         for p in products:
             strs = [
