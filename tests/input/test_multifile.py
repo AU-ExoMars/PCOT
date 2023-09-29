@@ -134,3 +134,50 @@ def test_multifile_load_with_good_pattern(globaldatadir):
         # the long string here is a bit weird, in that it has the filenames for all the filters in always,
         # but that's because we're using the long string for the multifile input as a whole.
         assert s.long() == f"MULTI: path={path} {filenames}]: wavelength {cwl}, fwhm {fwhm}"
+
+
+def test_multifile_load_with_cwl(globaldatadir):
+    pcot.setup()
+    doc = Document()
+
+    # This looks for a wavelength
+    filenames = ["F440.png", "F540.png", "F640.png"]
+    assert doc.setInputMulti(0, str(globaldatadir / "multi"),
+                             filenames,
+                             filterpat=r'.*F(?P<cwl>[0-9]+).*') is None
+
+    node = doc.graph.create("input 0")
+    doc.changed()
+    img = node.getOutput(0, Datum.IMG)
+
+    # check the image
+    assert img.channels == 3
+    assert img.w == 80
+    assert img.h == 30
+    assert np.allclose(img.img[0][0], (0, 1, 32768 / 65535))
+
+    path = str(globaldatadir / "multi")
+    filenames = ", ".join([f"{i}: {s}" for i, s in enumerate(filenames)])
+
+    for sourceSet, pos, name, cwl, fwhm, trans, fn in zip(img.sources,
+                                                        ('L06', 'L08', 'L07'),
+                                                        ('G01', 'C02L', 'C01L'),
+                                                        (440, 540, 640),
+                                                        (25, 80, 100),
+                                                        (0.987, 0.988, 0.993),
+                                                        filenames,
+                                                      ):
+        #  First, make sure each band has a source set of a single source
+        assert len(sourceSet) == 1
+        s = sourceSet.getOnlyItem()
+        f = s.filterOrName
+        # again, the filters will be "I have no idea"
+        assert f.cwl == cwl
+        assert f.fwhm == fwhm
+        assert f.name == name
+        assert f.position == pos
+        assert f.transmission == trans
+        qq = s.long()
+        # the long string here is a bit weird, in that it has the filenames for all the filters in always,
+        # but that's because we're using the long string for the multifile input as a whole.
+        assert s.long() == f"MULTI: path={path} {filenames}]: wavelength {cwl}, fwhm {fwhm}"

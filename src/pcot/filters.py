@@ -1,5 +1,7 @@
+import csv
 import math
-from typing import Tuple
+from pathlib import Path
+from typing import List
 
 import numpy as np
 
@@ -35,7 +37,7 @@ class Filter:
 
     @classmethod
     def deserialise(cls, d):
-        if isinstance(d,str):   # snark
+        if isinstance(d, str):  # snark
             ui.error("Oops - old style file contains filter name, not filter data. Using dummy, please reload input.")
             return Filter(2000, 1.0, 1.0, "dummypos", "dummyname", 0)
         try:
@@ -112,102 +114,69 @@ def wav2RGB(wavelength, scale=1.0):
 
     return [(SSS * R), (SSS * G), (SSS * B)]
 
+_filterSets = {}
 
-## Array of Pancam filters - data from Coates, A. J., et al. "The PanCam instrument for the ExoMars rover." Astrobiology 17.6-7 (2017): 511-541
-PANCAM_FILTERS = [
-    Filter(570, 12, .989, "L01", "G04"),
-    Filter(530, 15, .957, "L02", "G03"),
-    Filter(610, 10, .956, "L03", "G05"),
-    Filter(500, 20, .966, "L04", "G02"),
-    Filter(670, 12, .962, "L05", "G06"),
-    Filter(440, 25, .987, "L06", "G01"),
-    Filter(640, 100, .993, "L07", "C01L"),
-    Filter(540, 80, .988, "L08", "C02L"),
-    Filter(440, 120, .983, "L09", "C03L"),
-    Filter(925, 5, 0.000000552, "L10", "S01"),
-    Filter(935, 5, 0.000000854, "L11", "S02"),
+def loadFilterSet(name: str, path: Path):
+    """Load a filter set from a file and store in the internal dict"""
 
-    Filter(840, 25, .989, "R01", "G09"),
-    Filter(780, 20, .981, "R02", "G08"),
-    Filter(740, 15, .983, "R03", "G07"),
-    Filter(900, 30, .983, "R04", "G10"),
-    Filter(950, 50, .994, "R05", "G11"),
-    Filter(1000, 50, .996, "R06", "G12"),
-    Filter(640, 100, .993, "R07", "C01R"),
-    Filter(540, 80, .988, "R08", "C02R"),
-    Filter(440, 120, .983, "R09", "C03R"),
-    Filter(450, 5, 0.000001356, "R10", "S03"),
-    Filter(670, 5, 0.000000922, "R11", "S04")
-]
+    def decomment(csvfile):  # comments are like those in Python
+        for row in csvfile:
+            raw = row.split('#')[0].strip()
+            if raw:
+                yield raw
 
-## Array of AUPE filters - I've added the lower-case letters myself;
-# they were all G0 or G1
-AUPE_FILTERS = [
-    Filter(440, 120, 1, "L01", "C03L"),
-    Filter(540, 80, 1, "L02", "C02L"),
-    Filter(640, 100, 1, "L03", "C01L"),
+    # build a list of filters
+    filters = []
+    with open(path) as file:
+        for r in csv.DictReader(decomment(file)):
+            f = Filter(int(r['cwl']),
+                       int(r['fwhm']),
+                       float(r['transmission']),
+                       r['position'],
+                       r['name'])
+            filters.append(f)
+    # and store that in a dictionary of filter set name -> filter list
+    _filterSets[name] = filters
 
-    Filter(438, 24, 1, "L04", "G0a"),
-    Filter(500, 24, 1, "L05", "G0b"),
-    Filter(532, 10, 1, "L06", "G0c"),
-    Filter(568, 10, 1, "L07", "G0d"),
-    Filter(610, 10, 1, "L08", "G0e"),
-    Filter(671, 10, 1, "L09", "G0f"),
-    Filter(425, 25, 1, "L10", "G0g"),
-    Filter(400, 50, 1, "L11", "G0h"),
 
-    Filter(440, 120, 1, "R01", "C03R"),
-    Filter(540, 80, 1, "R02", "C02R"),
-    Filter(640, 100, 1, "R03", "C01R"),
+def saveFilters(path: str, filters: List[Filter]):
+    """save a filter set - used in debugging and development"""
+    fields = ('cwl', 'fwhm', 'transmission', 'position', 'name')
+    with open(path, "w", newline='') as file:
+        w = csv.DictWriter(file, fields)
+        w.writeheader()
+        for f in filters:
+            # extract the fields from the filter objects
+            d = {k: getattr(f, k) for k in fields}
+            # get a bit more precision on the floats
+            d = {k: format(v, ".6g") if isinstance(v, float) else v for k, v in d.items()}
+            w.writerow(d)
 
-    Filter(740, 13, 1, "R04", "G1a"),
-    Filter(780, 37, 1, "R05", "G1b"),
-    Filter(832, 10, 1, "R06", "G1c"),
-    Filter(900, 50, 1, "R07", "G1d"),
-    Filter(950, 50, 1, "R08", "G1e"),
-    Filter(1000, 50, 1, "R09", "G1f"),
 
-    Filter(525, 50, 1, "R10", "GUESS"),  # THIS IS A GUESS
-]
+def getFilter(filterset, target, search='name'):
+    if filterset not in _filterSets:
+        raise Exception(f"cannot find filter set {filterset}")
+
+    # a simple linear search is plenty fast enough here. We can search on name, pos or cwl.
+    if search == 'name':
+        for x in _filterSets[filterset]:
+            if x.name == target:
+                return x
+    elif search == 'pos':
+        for x in _filterSets[filterset]:
+            if x.position == target:
+                return x
+    elif search == 'cwl':
+        for x in _filterSets[filterset]:
+            if x.cwl == target:
+                return x
+    return DUMMY_FILTER
+
+
+def getFilterSetNames():
+    """return the names of all the filter sets we know about"""
+    return _filterSets.keys()
+
 
 ## dummy filter for when we have trouble finding the value
 DUMMY_FILTER = Filter(0, 0, 0, "??", "??")
-
-## dictionary of AUPE filters by position (L/R+number)
-AUPEfiltersByPosition = {x.position: x for x in AUPE_FILTERS}
-
-## dictionary of AUPE filters by name - e.g. G01 (geology 1),
-# C01L (colour 1 left)
-AUPEfiltersByName = {x.name: x for x in AUPE_FILTERS}
-
-## dictionary of PANCAM filters by position (L/R+number)
-PANCAMfiltersByPosition = {x.position: x for x in PANCAM_FILTERS}
-
-## dictionary of PANCAM filters by name - e.g. G01 (geology 1),
-# C01L (colour 1 left)
-PANCAMfiltersByName = {x.name: x for x in PANCAM_FILTERS}
-
-
-def getFilterByPos(fpos, aupe=False):
-    """Return a filter given its position string, used in multifile sources"""
-    if aupe:
-        d = AUPEfiltersByPosition
-    else:
-        d = PANCAMfiltersByPosition
-    return d[fpos] if fpos in d else DUMMY_FILTER
-
-
-def findFilter(cameraType: str, name: str) -> Filter:
-    """Given a filter's ID, try to find it in either AUPE or PANCAM."""
-    if cameraType == 'PANCAM':
-        if name in PANCAMfiltersByName:
-            f = PANCAMfiltersByName[name]
-            return f
-    elif cameraType == 'AUPE':
-        if name in AUPEfiltersByName:  # yeah, duplication. So sue me.
-            f = AUPEfiltersByName[name]
-            return f
-    else:
-        raise Exception(f"unknown camera type {cameraType}")
-
-    raise Exception(f"Unable to find filter {name} for {cameraType}")

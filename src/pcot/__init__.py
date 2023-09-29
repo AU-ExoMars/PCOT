@@ -36,6 +36,9 @@ def setup():
     # allowing *them* to register functions etc.
     xform.createXFormTypeInstances()
 
+    # load filter data from both built in files (PANCAM and AUPE) and others.
+    config.loadFilters()
+
     # If we run without a GUI, we still need an application. This will provide that.
     from pcot.main import checkApp
     checkApp()

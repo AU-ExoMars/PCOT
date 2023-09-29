@@ -3,6 +3,7 @@
 import logging
 import os
 import re
+from typing import Tuple
 
 import PySide2
 from PySide2 import QtWidgets, QtGui
@@ -15,7 +16,7 @@ from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
 from .. import ui
 from ..datum import Datum
-from ..filters import getFilterByPos
+from ..filters import getFilterSetNames, getFilter
 from ..sources import InputSource, SourceSet, MultiBandSource
 from ..ui import uiloader
 from ..utils import image
@@ -24,6 +25,23 @@ logger = logging.getLogger(__name__)
 
 
 class MultifileInputMethod(InputMethod):
+    """
+    This turns a set of files into a single image. It pulls data out of the filename which it uses to lookup
+    into a set of filter objects.
+
+    How this works:
+
+        * filterset determines the name of the filter set to use (typically PANCAM or AUPE but more can be added)
+        * filterpat determines how the name is used to look up a filter in the set. It's a
+          regex (regular expression).
+            * If the filterpat contains ?P<lens> and ?P<n>, then lens+n is used to look up the filter by position.
+              For example lens=L and n=01 would look up L01 in the filter position
+            * Otherwise if the filterpat contains ?<name>, then name is used to look up the filter by name.
+            * Otherwise if the filterpat contains ?<cwl>, then cwl is used to look up the filter's wavelength.
+
+        If none of this works a dummy filter is returned.
+
+    """
     def __init__(self, inp):
         super().__init__(inp)
         # list of filter strings - strings which must be in any filenames
@@ -36,7 +54,7 @@ class MultifileInputMethod(InputMethod):
         self.files = []
         # all data in all channels is multiplied by this (used for, say, 10 bit images)
         self.mult = 1
-        self.camera = "PANCAM"
+        self.filterset = "PANCAM"
         self.defaultLens = "L"
         self.filterpat = r'.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*'
         self.filterre = None
@@ -49,17 +67,26 @@ class MultifileInputMethod(InputMethod):
         lst = [f"{i}: {f}" for i, f in enumerate(self.files)]
         return f"MULTI: path={self.dir} {', '.join(lst)}]"
 
-    def getFilterName(self, path):
+    def getFilterSearchParam(self, path) -> Tuple[str,str]:
+        """Returns the thing to search for to match a filter to a path and the type of the search"""
         if self.filterre is None:
-            return None
+            return None, None
         else:
             m = self.filterre.match(path)
             if m is None:
-                return None
+                return None, None
             m = m.groupdict()
-            lens = m['lens'] if 'lens' in m else self.defaultLens
-            n = m['n'] if 'n' in m else ''
-            return lens + n
+            if '<lens>' in self.filterpat:
+                if '<n>' not in self.filterpat:
+                    raise Exception(f"A filter with <lens> must also have <n>")
+                # lens is either left or right
+                lens = m.get('lens', '')
+                n = m.get('n', '')
+                return lens + n, 'pos'
+            elif '<name>' in self.filterpat:
+                return m.get('name', ''), 'name'
+            elif '<cwl>' in self.filterpat:
+                return int(m.get('cwl', '0')), 'cwl'
 
     def compileRegex(self):
         # compile the regexp that gets the filter ID out.
@@ -91,11 +118,9 @@ class MultifileInputMethod(InputMethod):
                 except ValueError:
                     path = os.path.abspath(os.path.join(self.dir, self.files[i]))
 
-                # build sources data : filename and filter name
-                filtpos = self.getFilterName(path)  # says name, but usually is the position.
-                filt = getFilterByPos(filtpos, self.camera == 'AUPE')
-                source = InputSource(doc, inpidx, filt)
-
+                # Now read the file - we do this before building source data because any exceptions raised
+                # here are more important.
+                #
                 # is it in the cache?
                 if path in self.cachedFiles:
                     logger.debug("IMAGE IN MULTIFILE CACHE: NOT PERFORMING FILE READ")
@@ -109,6 +134,12 @@ class MultifileInputMethod(InputMethod):
                     if img.channels != 1:
                         c = image.imgsplit(img.img)[0]  # just use channel 0
                         img = ImageCube(c, None, None)
+
+                # build sources data - this will use the filter, which we'll extract from the filename.
+                filtpos, searchtype = self.getFilterSearchParam(path)
+                filt = getFilter(self.filterset, filtpos, searchtype)
+                source = InputSource(doc, inpidx, filt)
+
                 # store in cache
                 newCachedFiles[path] = img
                 imgs.append(img.img)  # store numpy image
@@ -131,10 +162,10 @@ class MultifileInputMethod(InputMethod):
         return "Multifile"
 
     # used from external code. Filterpat == none means leave unchanged.
-    def setFileNames(self, directory, fnames, filterpat=None, camname="PANCAM"):
+    def setFileNames(self, directory, fnames, filterpat=None, filterset="PANCAM"):
         self.dir = directory
         self.files = fnames
-        self.camera = camname
+        self.filterset = filterset
         if filterpat is not None:
             self.filterpat = filterpat
         self.mapping = ChannelMapping()
@@ -148,7 +179,7 @@ class MultifileInputMethod(InputMethod):
              'files': self.files,
              'mult': self.mult,
              'filterpat': self.filterpat,
-             'camera': self.camera,
+             'filterset': self.filterset,
              'defaultlens': self.defaultLens
              }
         if internal:
@@ -163,7 +194,13 @@ class MultifileInputMethod(InputMethod):
         self.files = data['files']
         self.mult = data['mult']
         self.filterpat = data['filterpat']
-        self.camera = data['camera']
+
+        # deal with legacy files where "filterset" is called "camera"
+        if 'filterset' in data:
+            self.filterset = data['filterset']
+        else:
+            self.filterset = data['camera']
+
         self.defaultLens = data.get('defaultlens', 'L')
         if internal:
             self.cachedFiles = data['cache']
@@ -180,15 +217,21 @@ IMAGETYPERE = re.compile(r".*\.(?i:jpg|bmp|png|ppm|tga|tif)")
 class MultifileMethodWidget(MethodWidget):
     def __init__(self, m):
         super().__init__(m)
-        self.model = None
         uiloader.loadUi('inputmultifile.ui', self)
+        self.model = None
+        # all the files in the current directory (which match the filters)
+        self.allFiles = []
+        # these record the image last clicked on - we need to do that so we can
+        # regenerate it with new sources if the filter set is changed
+        self.activatedImagePath = None
+        self.activatedImage = None
         self.getinitial.clicked.connect(self.getInitial)
         self.filters.textChanged.connect(self.filtersChanged)
         self.filelist.activated.connect(self.itemActivated)
         self.filterpat.editingFinished.connect(self.patChanged)
         self.defaultLens.currentTextChanged.connect(self.defaultLensChanged)
         self.mult.currentTextChanged.connect(self.multChanged)
-        self.camCombo.currentIndexChanged.connect(self.cameraChanged)
+        self.filtSetCombo.currentIndexChanged.connect(self.filterSetChanged)
         self.canvas.setMapping(m.mapping)
         # self.canvas.hideMapping()  # because we're showing greyscale for each image
         self.canvas.setGraph(self.method.input.mgr.doc.graph)
@@ -197,18 +240,14 @@ class MultifileMethodWidget(MethodWidget):
         self.filelist.setMinimumWidth(300)
         self.setMinimumSize(1000, 500)
 
-        # these record the image last clicked on - we need to do that so we can
-        # regenerate it with new sources if the camera setting is change.d
-        self.activatedImagePath = None
-        self.activatedImage = None
-        # all the files in the current directory (which match the filters)
-        self.allFiles = []
+        self.filtSetCombo.addItems(getFilterSetNames())
+
         if self.method.dir is None or len(self.method.dir)==0:
             self.method.dir = pcot.config.getDefaultDir('images')
         self.onInputChanged()
 
-    def cameraChanged(self, i):
-        self.method.camera = "PANCAM" if i == 0 else "AUPE"
+    def filterSetChanged(self, i):
+        self.method.filterset = self.filtSetCombo.currentText()
         self.onInputChanged()
 
     def onInputChanged(self):
@@ -226,7 +265,8 @@ class MultifileMethodWidget(MethodWidget):
         self.filterpat.setText(self.method.filterpat)
         i = self.defaultLens.findText(self.method.defaultLens, Qt.MatchFlag.MatchStartsWith)
         self.defaultLens.setCurrentIndex(i)
-        self.camCombo.setCurrentIndex(1 if self.method.camera == 'AUPE' else 0)
+        # this won't work if the filter set isn't in the combobox.
+        self.filtSetCombo.setCurrentText(self.method.filterset)
         self.displayActivatedImage()
         self.invalidate()  # input has changed, invalidate so the cache is dirtied
         # we don't do this when the window is opening, otherwise it happens a lot!
