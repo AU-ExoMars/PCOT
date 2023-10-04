@@ -7,12 +7,21 @@ This is a rough guide, and things may change!
 * uncertainty and error bit propagation in *expr* and all nodes 
 * Testing quality and propagation rules (see [Principles](/userguide/principles))
 * Test graphs for nodes and other high-level functionality
+* Test nodes for those graphs
+* Tabular output on spectrum and histogram nodes
+* Gen node for test patterns
+* Refactoring of Datum
+* Utility nodes - e.g. *roidq* for generating an ROI from DQ bits
 * Output enhancements
     * Gradient node can export to PDF
     * Annotations (e.g. text labels) are now drawn on the painter at 
     high res, and have been refactored hugely
+    * Annotations use thickness zero by default (the Qt "cosmetic" thickness)
 * PCT detector node    
+* ROI negation and refactoring of operators
+* *roiexpr* node for composing ROIs using expressions
 * Crude band depth node (needs work)
+* A lot of bug fixes and regression fixes
 
 
 ## Next major release: 0.7.0 EAST PENTIRE
