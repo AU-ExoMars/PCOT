@@ -8,6 +8,38 @@ None
 
 ## Alpha releases
 
+### 0.6.1-alpha 2023-03-08 DYNAS COVE (minor release)
+
+* Multifile input can accept BMP files
+* Better multifile documentation
+* Filter specifications are no longer hardwired and are loaded from CSVs
+* PANCAM and AUPE filters are default filter sets loaded in
+* Others can be specified in a config file (and can override PANCAM and AUPE)
+* Filter set no longer required by PDS4 input
+
+
+### 0.6.0-alpha 2023-03-08 DRIFT STONES
+
+* uncertainty and error bit propagation in *expr* and all nodes 
+* Testing quality and propagation rules (see [Principles](/userguide/principles))
+* Test graphs for nodes and other high-level functionality
+* Test nodes for those graphs
+* Tabular output on spectrum and histogram nodes
+* Gen node for test patterns
+* Refactoring of Datum
+* Utility nodes - e.g. *roidq* for generating an ROI from DQ bits
+* Output enhancements
+    * Gradient node can export to PDF
+    * Annotations (e.g. text labels) are now drawn on the painter at 
+    high res, and have been refactored hugely
+    * Annotations use thickness zero by default (the Qt "cosmetic" thickness)
+* PCT detector node    
+* ROI negation and refactoring of operators
+* *roiexpr* node for composing ROIs using expressions
+* Crude band depth node (needs work)
+* A lot of bug fixes and regression fixes
+
+
 ### 0.5.0-alpha 2023-03-08 CARLENNO ROUND
 
 * Data quality and bit viewing on canvas
