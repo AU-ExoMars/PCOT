@@ -34,7 +34,7 @@ class ROIBoundsException(Exception):
 ROISERIALISEFIELDS = (
     ('label', 'unknown!'),
     ('colour', (1, 1, 0)),
-    ('thickness', 2),
+    ('thickness', 0),
     ('fontsize', 10),
     ('drawbg', True)
 )
@@ -64,7 +64,7 @@ class ROI(SourcesObtainable, Annotation):
         self.label = None if sourceROI is None else sourceROI.label
         self.labeltop = False if sourceROI is None else sourceROI.labeltop  # draw the label at the top?
         self.colour = (1, 1, 0) if sourceROI is None else sourceROI.colour  # annotation colour
-        self.thickness = 2 if sourceROI is None else sourceROI.thickness  # thickness of lines
+        self.thickness = 0 if sourceROI is None else sourceROI.thickness  # thickness of lines
         self.fontsize = 10 if sourceROI is None else sourceROI.fontsize  # annotation font size
         self.drawbg = True if sourceROI is None else sourceROI.drawbg
         self.drawEdge = True if sourceROI is None else sourceROI.drawEdge  # draw the edge only?
@@ -366,11 +366,12 @@ class ROI(SourcesObtainable, Annotation):
         raise BadOpException()
 
     def __str__(self):
+        lab = "(no label)" if self.label is None else self.label
         if not self.bb():
-            return "ROI-BASE (no data)"
+            return f"ROI-BASE {lab} (no data)"
         else:
             x, y, w, h = self.bb()
-            return f"ROI-BASE:{self.label} {x} {y} {w}x{h}"
+            return f"ROI-BASE:{lab} {x} {y} {w}x{h}"
 
     def getSources(self):
         return self.sources
@@ -383,10 +384,14 @@ class ROI(SourcesObtainable, Annotation):
         """Create an editor for the ROI"""
         pass
 
+    def changed(self):
+        """Notify the ROI that its values have been set. This may not actually do anything, but for ROIs like
+        Rect and Circle it's necessary. Other ROIs have different ways of knowing if they have a valid value."""
+        pass
 
-## a rectangle ROI
 
 class ROIRect(ROI):
+    """Rectangular ROI"""
     tpname = "rect"
 
     def __init__(self, sourceROI=None):
@@ -399,17 +404,17 @@ class ROIRect(ROI):
             self.isSet = False
         else:
             self.x, self.y, self.w, self.h = sourceROI.x, sourceROI.y, sourceROI.w, sourceROI.h
-            self.isSet = sourceROI.isSet
+            self.isSet = True
 
     def bb(self):
-        if self.isSet:
+        if self.w > 0:
             return Rect(self.x, self.y, self.w, self.h)
         else:
             return None
 
     def details(self):
         """Information string on this ROI."""
-        if self.x is None:
+        if self.w < 0:
             return "No ROI"
         else:
             return "{} pixels\n{},{}\n{}x{}".format(self.pixels(),
@@ -425,16 +430,18 @@ class ROIRect(ROI):
         return np.full((self.h, self.w), True)
 
     def set(self, x, y, w, h):
-        self.isSet = True
         self.x = x
         self.y = y
         self.w = w
         self.h = h
+        self.isSet = True
+
+    def changed(self):
+        self.isSet = True
 
     def serialise(self):
         d = super().serialise()
         d.update({'bb': (self.x, self.y, self.w, self.h)})
-        d['isset'] = self.isSet
         return d
 
     def deserialise(self, d):
@@ -456,7 +463,8 @@ class ROIRect(ROI):
         return r
 
     def __str__(self):
-        return f"ROI-RECT:{self.label} {self.x} {self.y} {self.w}x{self.h}"
+        lab = "(no label)" if self.label is None else self.label
+        return f"ROI-RECT:{lab} {self.x} {self.y} {self.w}x{self.h}"
 
     def createEditor(self, tab):
         return RectEditor(tab, self)
@@ -488,6 +496,9 @@ class ROICircle(ROI):
         self.y = int(y)
         self.r = int(r)
         self.isSet = (x >= 0)
+
+    def changed(self):
+        self.isSet = True
 
     def annotate(self, p: QPainter, img):
         if (bb := self.bb()) is not None:
@@ -550,7 +561,8 @@ class ROICircle(ROI):
         return CircleEditor(tab, self)
 
     def __str__(self):
-        return f"ROI-CIRCLE:{self.label} {self.x} {self.y} {self.r}"
+        lab = "(no label)" if self.label is None else self.label
+        return f"ROI-CIRCLE:{lab} {self.x} {self.y} {self.r}"
 
 
 # used in ROIpainted to convert a 0-99 value into a brush size for painting
@@ -666,11 +678,12 @@ class ROIPainted(ROI):
         return PaintedEditor(tab, self)
 
     def __str__(self):
+        lab = "(no label)" if self.label is None else self.label
         if not self.bbrect:
-            return f"ROI-PAINTED:{self.label}"
+            return f"ROI-PAINTED:{lab} (not set)"
         else:
             x, y, w, h = self.bb()
-            return f"ROI-PAINTED:{self.label} {x} {y} {w}x{h}"
+            return f"ROI-PAINTED:{lab} {x} {y} {w}x{h}"
 
 
 ## a polygon ROI
@@ -816,10 +829,11 @@ class ROIPoly(ROI):
         return PolyEditor(tab, self)
 
     def __str__(self):
+        lab = "(no label)" if self.label is None else self.label
         if not self.hasPoly():
-            return f"ROI-POLY:{self.label} (no points)"
+            return f"ROI-POLY:{lab} (no points)"
         x, y, w, h = self.bb()
-        return f"ROI-POLY:{self.label} {x} {y} {w}x{h}"
+        return f"ROI-POLY:{lab} {x} {y} {w}x{h}"
 
 
 def deserialise(tp, d):

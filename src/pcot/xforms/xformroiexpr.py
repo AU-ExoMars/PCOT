@@ -129,9 +129,14 @@ class XFormROIExpr(XFormType):
                         rr.setContainingImageDimensions(img.w, img.h)
                         return Datum(Datum.ROI, rr, sources=d.sources)
 
-                parser.registerVar("p", "ROI input p", lambda: getROIInput(1))
-                parser.registerVar("q", "ROI input q", lambda: getROIInput(1))
-                parser.registerVar("r", "ROI input r", lambda: getROIInput(1))
+                inROIp = getROIInput(1)
+                inROIq = getROIInput(2)
+                inROIr = getROIInput(3)
+                inROIlist = [x for x in [inROIp, inROIq, inROIr] if x is not None]
+
+                parser.registerVar("p", "ROI input p", lambda: inROIp)
+                parser.registerVar("q", "ROI input q", lambda: inROIq)
+                parser.registerVar("r", "ROI input r", lambda: inROIr)
 
                 # now execute the expression and get it back as an ROI
                 res = parser.run(node.expr)
@@ -144,11 +149,15 @@ class XFormROIExpr(XFormType):
                     # impose that ROI on the image - REMOVING existing ROIs
                     img.rois = [node.roi]
                     outROIDatum = Datum(Datum.ROI, node.roi, node.roi.sources)
+            else:
+                inROIlist = []
             # impose the individual ROIs as annotations
             if not node.hideROIs:
                 for i, r in enumerate(node.rois):
                     r.colour = node.selColour if i == node.selected else node.unselColour
-                img.annotations = node.rois
+                # we want to see the input ROIs as well, so add them.
+                inROIlist = [x.get(Datum.ROI) for x in inROIlist]
+                img.annotations = node.rois + [x for x in inROIlist if x is not None]
             # set mapping from node
             img.setMapping(node.mapping)
             # 'img' so far is the image we are going to display.

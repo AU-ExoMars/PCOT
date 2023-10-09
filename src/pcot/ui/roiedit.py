@@ -47,6 +47,7 @@ class ROIEditDialog(QDialog):
         if accepted:
             for name, spin in self.spins.items():
                 setattr(self.roi, name, spin.value())
+                self.roi.changed()
         self.close()
 
 
