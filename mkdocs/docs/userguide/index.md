@@ -13,3 +13,4 @@ to install and run PCOT and give you a tutorial covering the basics.
 expression properties.
 * [Global controls](globalcontrols) on the PCOT UI.
 * [The canvas and its optional views](canvas)
+* [Using the multifile input to read multispectral data from BMP, PNG etc.](multifile)
