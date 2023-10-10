@@ -48,8 +48,13 @@ class XFormDQMod(XFormType):
                 # we're working on just one band, so slice into the arrays to get only the relevant data.
                 # We need to keep hold of that fulldq array because that's what we use to replace the old
                 # data in modifyWithSub
-                dq = fulldq[:, :, node.band]
-                d = d[:, :, node.band]
+                if len(d.shape) == 2:
+                    # if it's a single band image the shape will be (h,w), so we don't need to get the band out.
+                    dq = fulldq
+                else:
+                    # but we do need to if the shape has 3 elements.
+                    dq = fulldq[:, :, node.band]
+                    d = d[:, :, node.band]
             else:
                 dq = fulldq
 
@@ -102,6 +107,11 @@ class TabDQMod(ui.tabs.Tab):
             else:
                 self.w.bandCombo.setCurrentText("All")
 
+        self.w.canvas.setMapping(self.node.mapping)
+        self.w.canvas.setGraph(self.node.graph)
+        self.w.canvas.setPersister(self.node)
+        self.w.canvas.display(self.node.img)
+
         if not self.dontSetText:
             self.w.dataCombo.setCurrentText(self.node.data)
             self.w.testCombo.setCurrentText(self.node.test)
@@ -113,24 +123,28 @@ class TabDQMod(ui.tabs.Tab):
     def DQChanged(self):
         self.mark()
         self.node.dq = self.w.dqbits.bits
+        self.changed()
 
     def modChanged(self, s):
         self.mark()
         self.dontSetText = True
         self.node.mod = s
         self.dontSetText = False
+        self.changed()
 
     def testChanged(self, s):
         self.mark()
         self.dontSetText = True
         self.node.test = s
         self.dontSetText = False
+        self.changed()
 
     def dataChanged(self, s):
         self.mark()
         self.dontSetText = True
         self.node.data = s
         self.dontSetText = False
+        self.changed()
 
     def bandChanged(self, s):
         self.mark()
@@ -140,6 +154,7 @@ class TabDQMod(ui.tabs.Tab):
         else:
             self.node.band = int(s)
         self.dontSetText = False
+        self.changed()
 
     def testEditChanged(self, t):
         v = 0 if t == '' else float(t)

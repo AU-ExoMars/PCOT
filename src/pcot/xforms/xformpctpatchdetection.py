@@ -201,8 +201,13 @@ class XformPCTPatchDetection(XFormType):
         """
         Perform OpenCV's HoughCircle detection to detect pct patches in images
         """
-        # create 1 channel image with averaged values from each image channel to achieve greyscale effect
-        workingImg = np.mean(node.inputImg.img, axis=(2))
+        # create 1 channel image with averaged values from each image channel to achieve greyscale effect.
+        # We don't need to do that if it's a single channel image already - they are stored as 2D.
+
+        if node.inputImg.channels > 1:
+            workingImg = np.mean(node.inputImg.img, axis=(2))
+        else:
+            workingImg = node.inputImg.img
 
         # convert working image to uint8 type required by HoughCircles method
         workingImg = cv.normalize(workingImg, None, 0, 255, cv.NORM_MINMAX, cv.CV_8U)

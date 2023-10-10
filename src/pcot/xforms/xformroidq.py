@@ -65,15 +65,20 @@ class XFormROIDQ(XFormType):
             dqs = subimg.maskedDQ()
 
             # now we have that data, we need to convert into a single band.
-            if node.chan == -2:  # ANY bands, so we OR them all together
-                dqs = np.bitwise_or.reduce(dqs, axis=2)
+
+            if img.channels > 1:
+                if node.chan == -2:  # ANY bands, so we OR them all together
+                    dqs = np.bitwise_or.reduce(dqs, axis=2)
+                    sources = img.sources.getSources()  # source for ROI is all bands
+                elif node.chan == -1:  # ALL bands, so we AND them together
+                    dqs = np.bitwise_and.reduce(dqs, axis=2)
+                    sources = img.sources.getSources()  # source for ROI is all bands
+                else:  # otherwise it's just some band
+                    dqs = dqs[:, :, node.chan]
+                    sources = img.sources.sourceSets[node.chan]  # source for ROI is just one band
+            else:
+                # leave dqs as it is for a 1-channel image
                 sources = img.sources.getSources()  # source for ROI is all bands
-            elif node.chan == -1:  # ALL bands, so we AND them together
-                dqs = np.bitwise_and.reduce(dqs, axis=2)
-                sources = img.sources.getSources()  # source for ROI is all bands
-            else:  # otherwise it's just some band
-                dqs = dqs[:, :, node.chan]
-                sources = img.sources.sourceSets[node.chan]  # source for ROI is just one band
 
             # now we perform the actual action
             if node.condition == 0:  # when all bits present
