@@ -33,7 +33,7 @@ class Filter:
 
     def serialise(self):
         return self.cwl, self.fwhm, self.transmission, self.position, \
-               self.name, self.idx
+               self.name
 
     @classmethod
     def deserialise(cls, d):

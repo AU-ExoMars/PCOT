@@ -311,10 +311,11 @@ class XformGradient(XFormType):
     def __init__(self):
         super().__init__("gradient", "data", "0.0.0")
         self.addInputConnector("mono", Datum.IMG)
-        self.addInputConnector("insetinto", Datum.IMG)
+        self.addInputConnector("background", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
         self.hasEnable = True
         self.autoserialise = ('colour', 'legendrect', 'vertical', 'thickness', 'fontscale', 'legendPos',
+                              ('normbackground', False),
                               ('sigfigs', 6))
 
     def serialise(self, node):
@@ -336,6 +337,7 @@ class XformGradient(XFormType):
         node.sigfigs = 6
         node.thickness = 1
         node.legendPos = IN_IMAGE
+        node.normbackground = False
 
     def perform(self, node):
         mono = node.getInput(0, Datum.IMG)
@@ -371,8 +373,15 @@ class XformGradient(XFormType):
             node.minval, node.maxval, subimage.img = _normAndGetRange(subimage)
             newsubimg = node.gradient.apply(subimage.img, subimage.mask)
             source = mono.sources.getSources()
-            # this time we get the RGB from the rgb input
-            outimg = ImageCube(rgb.rgb(), node.mapping, sources=MultiBandSource([source, source, source]))
+            # this time we get the RGB from the background input
+            # and we need to normalise the rgb first
+            rgb = rgb.rgb()
+            if node.normbackground:
+                mx = np.max(rgb)
+                mn = np.min(rgb)
+                rgb = (rgb - mn) / (mx - mn)
+
+            outimg = ImageCube(rgb, node.mapping, sources=MultiBandSource([source, source, source]))
             outimg.rois = monoROIs  # copy ROIs in so they are visible if desired
             # we keep the same RGB mapping and this time we're modifying an image at the original size,
             # so we splice the old ROIs back in. This is pretty horrific; I hope it makes sense. Remember
@@ -416,6 +425,7 @@ class TabGradient(pcot.ui.tabs.Tab):
         self.w.sigFigs.valueChanged.connect(self.sigFigsChanged)
         self.w.orientCombo.currentTextChanged.connect(self.orientChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
+        self.w.normCheck.toggled.connect(self.normChanged)
 
         self.pageButtons = [
             self.w.gradPageButton,
@@ -441,6 +451,11 @@ class TabGradient(pcot.ui.tabs.Tab):
     def legendPosChanged(self, string):
         self.mark()
         self.node.legendPos = string
+        self.changed()
+
+    def normChanged(self, val):
+        self.mark()
+        self.node.normbackground = val
         self.changed()
 
     def fontChanged(self, val):
