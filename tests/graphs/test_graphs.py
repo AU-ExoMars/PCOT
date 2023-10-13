@@ -50,6 +50,17 @@ def test_graph_files(graphname):
     pcot.setup()
     doc = Document(graphname)
     doc.changed()
+
+    commentFound = False
+
+    comments = doc.graph.getByDisplayName("comment")
+    for n in comments:
+        if n.string.startswith("DOC"):
+            commentFound = True
+
+    if not commentFound:
+        pytest.fail("Graph tests require a comment that starts with DOC for documentation")
+
     ns = doc.graph.getByDisplayName("sink")
     if len(ns) == 0:
         pytest.fail("cannot find sink")

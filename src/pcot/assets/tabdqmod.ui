@@ -98,13 +98,6 @@
            </widget>
           </item>
           <item>
-           <widget class="QLineEdit" name="testEdit">
-            <property name="text">
-             <string>0</string>
-            </property>
-           </widget>
-          </item>
-          <item>
            <widget class="QComboBox" name="testCombo">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -122,6 +115,13 @@
               <string>Greater than or equal to</string>
              </property>
             </item>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="testEdit">
+            <property name="text">
+             <string>0</string>
+            </property>
            </widget>
           </item>
          </layout>
