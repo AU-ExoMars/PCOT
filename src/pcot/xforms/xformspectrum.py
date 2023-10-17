@@ -52,15 +52,20 @@ DataPoint = namedtuple('DataPoint', ['chan', 'cwl', 'mean', 'sd', 'label', 'pixc
 
 def processData(table, legend, data, pxct, wavelengths, spectrum, chans, chanlabels):
     """
+    Process the data from a single ROI/image into the data dictionary.
+
     table: Table object for dump output
-    legend: name of ROI/image
+    legend: name of ROI/image to be added
     data: data dictionary
         part of processData's responsibility is to set the entries in here
             - key is ROI/image name (legend), value is a list of data.
-            - value is a list of tuples (chanidx, cwl, mean, sd, labels, pixct)
-    Then a list for each channel, giving
-        wavelengths:    cwl of channel
-        spectrum        (mean,sd) of intensity across ROI/image for this channel
+            - value is a list of tuples - see below - (chanidx, cwl, mean, sd, label, pixct)
+
+    Then a number of lists with one entry per channel:
+        wavelengths:    cwls of channels
+        spectrum:       (mean,sd) of intensity across ROI/image for these channels
+        chans:          channel indices
+        chanlabels:     channel labels (typically in the form "inputidx:cwl")
 
     Consider two images. Image 0 has an ROI with 3132 pixels in it, image 1 has an ROI
     with only 484 pixels in it. However, the two ROIs both have the same name, and are fed
