@@ -808,23 +808,29 @@ class ImageCube(SourcesObtainable):
         return cls(data, rgbMapping=mapping, sources=sources, defaultMapping=defmapping,
                    uncertainty=uncertainty, dq=dq)
 
-    def wavelengthAndFWHM(self, channelNumber):
-        """get cwl and mean fwhm for a channel if all sources are of the same wavelength, else -1. Compare with
-        wavelength() below."""
+    def filter(self, channelNumber):
+        """Get the filter for a channel if all sources have the same filter, else None. Compare with
+        wavelength() and wavelengthAndFWHM() below."""
         # get the SourceSet
         sources = self.sources.sourceSets[channelNumber]
         # all sources in this channel should have a filter
         sources = [s for s in sources.sourceSet if s.getFilter()]
-        # all the sources in this channel should have the same cwl
-        wavelengthsAndFWHMs = set([(s.getFilter().cwl, s.getFilter().fwhm) for s in sources])
-        # extract the wavelengths and make sure there's only one
-        wavelengths = set([t[0] for t in wavelengthsAndFWHMs])
-        if len(wavelengths) != 1:
-            return -1, -1  # too many wavelengths
-        # looks weird, but just unpacks that single-item wavelength set
-        [cwl] = wavelengths
-        # and find the mean of the fwhms
-        return cwl, np.mean([t[1] for t in wavelengthsAndFWHMs])
+        # all the sources in this channel should have the same filter
+        filters = set([s.getFilter() for s in sources])
+        if len(filters) != 1:
+            return None
+        # return the only item in that set
+        [f] = filters
+        return f
+
+    def wavelengthAndFWHM(self, channelNumber):
+        """get cwl and mean fwhm for a channel if all sources have the same filter, else -1. Compare with
+        wavelength() below."""
+        f = self.filter(channelNumber)
+        if f is None:
+            return -1, -1
+        else:
+            return f.cwl, f.fwhm
 
     def wavelength(self, channelNumber):
         """return wavelength if all sources in channel are of the same wavelength, else -1."""

@@ -9,6 +9,7 @@ from collections import namedtuple
 import pcot
 import pcot.ui as ui
 from pcot.datum import Datum
+from pcot.dq import BAD
 from pcot.filters import wav2RGB
 from pcot.sources import SourceSet
 from pcot.ui import uiloader
@@ -26,7 +27,7 @@ def getSpectrum(chanImg, chanUnc, chanDQ, mask, ignorePixSD=False):
         mask = np.copy(mask)  # need a copy or we'll change the mask in the subimage.
     # we also have to mask out the bad bits. This will give us a mask which is True
     # for the bits we want to hide.
-    badmask = (chanDQ & pcot.dq.BAD).astype(bool)
+    badmask = (chanDQ & BAD).astype(bool)
     mask &= ~badmask  # REMOVE those pixels
 
     a = np.ma.masked_array(data=chanImg, mask=~mask)
@@ -47,10 +48,10 @@ def getSpectrum(chanImg, chanUnc, chanDQ, mask, ignorePixSD=False):
     return mean, std
 
 
-DataPoint = namedtuple('DataPoint', ['chan', 'cwl', 'mean', 'sd', 'label', 'pixcount'])
+DataPoint = namedtuple('DataPoint', ['chan', 'filter', 'mean', 'sd', 'label', 'pixcount'])
 
 
-def processData(table, legend, data, pxct, wavelengths, spectrum, chans, chanlabels):
+def processData(table, legend, data, pxct, filters, spectrum, chans, chanlabels):
     """
     Process the data from a single ROI/image into the data dictionary.
 
@@ -59,10 +60,10 @@ def processData(table, legend, data, pxct, wavelengths, spectrum, chans, chanlab
     data: data dictionary
         part of processData's responsibility is to set the entries in here
             - key is ROI/image name (legend), value is a list of data.
-            - value is a list of tuples - see below - (chanidx, cwl, mean, sd, label, pixct)
+            - value is a list of tuples - see below - (chanidx, filter, mean, sd, label, pixct)
 
     Then a number of lists with one entry per channel:
-        wavelengths:    cwls of channels
+        filters:        filters of channels
         spectrum:       (mean,sd) of intensity across ROI/image for these channels
         chans:          channel indices
         chanlabels:     channel labels (typically in the form "inputidx:cwl")
@@ -72,19 +73,21 @@ def processData(table, legend, data, pxct, wavelengths, spectrum, chans, chanlab
     into a spectrum. They will be combined into a single data list looking like this:
     [
         # channel index, cwl, mean intensity, sd of intensity, channel label, pixel count
-       (0, 438.0, 0.09718827482688777, 0.033184560153696856, 'L4_438', 3132),
-        (1, 500.0, 0.12427511008154235, 0.04296475099012811, 'L5_500', 3132),
-        (2, 532.0, 0.15049515647449713, 0.04899176061731549, 'L6_532', 3132),
-        (3, 568.0, 0.18620748507717713, 0.05834286572257662, 'L7_568', 3132),
-        (4, 610.0, 0.23161822595511056, 0.07227542372780232, 'L8_610', 3132),
-        (5, 671.0, 0.2626209478268678, 0.08226790002558386, 'L9_671', 3132),
-        (0, 740.0, 0.3917202910115896, 0.08213716515845079, 'R4_740', 484),
-        (1, 780.0, 0.41594551023372933, 0.08695280835403581, 'R5_780', 484),
-        (2, 832.0, 0.39478648792613635, 0.08164454531723438, 'R6_832', 484),
-        (3, 900.0, 0.37751833072378616, 0.07634822775362438, 'R7_900', 484),
-        (4, 950.0, 0.3726376304941729, 0.07310612483354316, 'R8_950', 484),
-        (5, 1000.0, 0.4105814784026343, 0.08091608212909969, 'R9_1000', 484)]
+       (0, filter for 438.0, 0.09718827482688777, 0.033184560153696856, 'L4_438', 3132),
+        (1, filter for 500.0, 0.12427511008154235, 0.04296475099012811, 'L5_500', 3132),
+        (2, filter for 532.0, 0.15049515647449713, 0.04899176061731549, 'L6_532', 3132),
+        (3, filter for 568.0, 0.18620748507717713, 0.05834286572257662, 'L7_568', 3132),
+        (4, filter for 610.0, 0.23161822595511056, 0.07227542372780232, 'L8_610', 3132),
+        (5, filter for 671.0, 0.2626209478268678, 0.08226790002558386, 'L9_671', 3132),
+        (0, filter for 740.0, 0.3917202910115896, 0.08213716515845079, 'R4_740', 484),
+        (1, filter for 780.0, 0.41594551023372933, 0.08695280835403581, 'R5_780', 484),
+        (2, filter for 832.0, 0.39478648792613635, 0.08164454531723438, 'R6_832', 484),
+        (3, filter for 900.0, 0.37751833072378616, 0.07634822775362438, 'R7_900', 484),
+        (4, filter for 950.0, 0.3726376304941729, 0.07310612483354316, 'R8_950', 484),
+        (5, filter for 1000.0, 0.4105814784026343, 0.08091608212909969, 'R9_1000', 484)]
     ]
+    The "filter for xxx" field is a reference to a Filter object, which contains rather more
+    than just the center wavelength.
 
     This should mean that the standard error will be calculated correctly for both of the ROI.
     """
@@ -98,17 +101,18 @@ def processData(table, legend, data, pxct, wavelengths, spectrum, chans, chanlab
     # spectrum is [(mean,sd), (mean,sd)...] but we also build a pixcount array
     means, sds, pixcts = [x[0] for x in spectrum], [x[1] for x in spectrum], [pxct for _ in spectrum]
 
-    # data for each region is [ (chan,wave,mean,sd,chanlabel,pixcount), (chan,wave,mean,sd,chanlabel,pixcount)..]
+    # data for each region is [ (chan,filter,mean,sd,chanlabel,pixcount), (chan,filter,mean,sd,chanlabel,pixcount)..]
     # This means pixcount get dupped a lot but it's not a problem
-    data[legend] += [DataPoint(*x) for x in zip(chans, wavelengths, means, sds, chanlabels, pixcts)]
+    data[legend] += [DataPoint(*x) for x in zip(chans, filters, means, sds, chanlabels, pixcts)]
 
     # add to table
     table.newRow(legend)
     table.add("name", legend)
     table.add("pixels", pxct)
-    for w, s in zip(wavelengths, spectrum):
+    for w, s in zip(filters, spectrum):
         m, sd = s
-        w = int(w)  # Convert wavelength to integer for better table form. Let's hope this doesn't cause problems.
+        # Convert filter wavelength to integer for better table form. Let's hope this doesn't cause problems.
+        w = int(w.cwl)
         table.add("{}mean".format(w), m)
         table.add("{}sd".format(w), sd)
 
@@ -156,9 +160,9 @@ class XFormSpectrum(XFormType):
             self.addInputConnector(str(i), Datum.IMG, "a single line in the plot")
         self.addOutputConnector("data", Datum.DATA, "a CSV output (use 'dump' or 'sink' to read it)")
 
-    def createTab(self, n, w):
+    def createTab(self, n, window):
         pcot.ui.msg("creating a tab with a plot widget takes time...")
-        return TabSpectrum(n, w)
+        return TabSpectrum(n, window)
 
     def init(self, node):
         node.errorbarmode = ERRORBARMODE_STDDEV
@@ -185,17 +189,16 @@ class XFormSpectrum(XFormType):
         for i in range(NUMINPUTS):
             img = node.getInput(i, Datum.IMG)
             if img is not None:
-                # first, generate a list of indices of channels with a single source which has a wavelength,
-                # and a list of those wavelengths
-                wavelengths = [img.wavelength(x) for x in range(img.channels)]
-                # wavelengths = [x for x in wavelengths if x > 0]     removed; given the filter on the next line it does nowt
-                chans = [x for x in range(img.channels) if wavelengths[x] > 0]
+                # first, generate a list of indices of channels with a single source which has a filter,
+                # and a list of those filters.
+                filters = [img.filter(x) for x in range(img.channels)]
+                chans = [x for x in range(img.channels) if filters[x] is not None]
 
                 # add the channels we found to a set of sources
                 for x in chans:
                     sources |= img.sources.sourceSets[x].sourceSet
 
-                if len(wavelengths) == 0:
+                if len(filters) == 0:
                     raise XFormException("DATA", "no single-wavelength channels in image")
 
                 # generate a list of labels, one for each channel
@@ -227,7 +230,7 @@ class XFormSpectrum(XFormType):
                             spec.append(ss)
 
                     processData(table, _legend, data, subimg.pixelCount(),
-                                wavelengths, spec, chans, chanlabels)
+                                filters, spec, chans, chanlabels)
 
                 if len(img.rois) == 0:
                     # no ROIs, do the whole image
@@ -248,7 +251,7 @@ class XFormSpectrum(XFormType):
 
         # now, for each list in the dict, build a new dict of the lists sorted
         # by wavelength
-        node.data = {legend: sorted(lst, key=lambda x: x.cwl) for legend, lst in data.items()}
+        node.data = {legend: sorted(lst, key=lambda x: x.filter.cwl) for legend, lst in data.items()}
         node.colsByLegend = cols  # we use this if we're using the ROI colours
         fixSortList(node)
 
@@ -373,7 +376,7 @@ class TabSpectrum(ui.tabs.Tab):
                 ui.error(f"Some points have bad data for point {legend}")
 
             try:
-                [_, wavelengths, means, sds, _, pixcounts] = list(zip(*x))  # "unzip" idiom
+                [_, filters, means, sds, _, pixcounts] = list(zip(*x))  # "unzip" idiom
             except ValueError:
                 raise XFormException("DATA", "cannot get spectrum - problem with ROIs?")
 
@@ -382,6 +385,9 @@ class TabSpectrum(ui.tabs.Tab):
             else:
                 col = cols[colidx % len(cols)]
             means = [x + stackSep * stackpos for x in means]
+
+            wavelengths = [x.cwl for x in filters]
+
             ax.plot(wavelengths, means, c=col, label=legend)
             ax.scatter(wavelengths, means, c=[wav2RGB(x) for x in wavelengths], s=0)
 
@@ -390,6 +396,7 @@ class TabSpectrum(ui.tabs.Tab):
                 stderrs = [std / math.sqrt(pixels) for std, pixels in zip(sds, pixcounts)]
                 ax.errorbar(wavelengths, means,
                             stderrs if self.node.errorbarmode == ERRORBARMODE_STDERROR else sds,
+                            xerr=[x.fwhm / 2 for x in filters],
                             ls="None", capsize=4, c=col)
             colidx += 1
             # subtraction to make the plots stack the same way as the legend!
