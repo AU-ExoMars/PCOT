@@ -127,6 +127,10 @@ COLOUR_FROMROIS = 0
 COLOUR_SCHEME1 = 1
 COLOUR_SCHEME2 = 2
 
+BANDWIDTHMODE_NONE = 0
+BANDWIDTHMODE_ERRORBAR = 1
+BANDWIDTHMODE_VERTBAR = 2
+
 
 def fixSortList(node):
     """fix the sortlist, making sure that only legends for data we have are present,
@@ -154,7 +158,9 @@ class XFormSpectrum(XFormType):
         super().__init__("spectrum", "data", "0.0.0")
         self.autoserialise = ('sortlist', 'errorbarmode', 'legendFontSize', 'axisFontSize', 'stackSep', 'labelFontSize',
                               'bottomSpace', 'colourmode', 'rightSpace',
-                              ('ignorePixSD', False)  # this one has a default because it was developed later
+                              # these have defaults because they were developed later.
+                              ('ignorePixSD', False),
+                              ('bandwidthmode', BANDWIDTHMODE_NONE),
                               )
         for i in range(NUMINPUTS):
             self.addInputConnector(str(i), Datum.IMG, "a single line in the plot")
@@ -167,6 +173,7 @@ class XFormSpectrum(XFormType):
     def init(self, node):
         node.errorbarmode = ERRORBARMODE_STDDEV
         node.colourmode = COLOUR_FROMROIS
+        node.bandwidthmode = BANDWIDTHMODE_NONE
         node.legendFontSize = 8
         node.axisFontSize = 8
         node.labelFontSize = 12
@@ -320,6 +327,7 @@ class TabSpectrum(ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabspectrum.ui')
         self.w.errorbarmode.currentIndexChanged.connect(self.errorbarmodeChanged)
+        self.w.bandwidthmode.currentIndexChanged.connect(self.bandwidthmodeChanged)
         self.w.colourmode.currentIndexChanged.connect(self.colourmodeChanged)
         self.w.replot.clicked.connect(self.replot)
         self.w.save.clicked.connect(self.save)
@@ -396,11 +404,17 @@ class TabSpectrum(ui.tabs.Tab):
                 stderrs = [std / math.sqrt(pixels) for std, pixels in zip(sds, pixcounts)]
                 ax.errorbar(wavelengths, means,
                             stderrs if self.node.errorbarmode == ERRORBARMODE_STDERROR else sds,
-                            xerr=[x.fwhm / 2 for x in filters],
+                            # only show the x error bar if we are in the correct bandwidth mode
+                            xerr=[x.fwhm / 2 for x in filters] if self.node.bandwidthmode == BANDWIDTHMODE_ERRORBAR else None,
                             ls="None", capsize=4, c=col)
             colidx += 1
             # subtraction to make the plots stack the same way as the legend!
             stackpos -= self.node.stackSep
+
+            # now show the bandwidth as a vertical span if we are in the correct mode
+            if self.node.bandwidthmode == BANDWIDTHMODE_VERTBAR:
+                for f in filters:
+                    ax.axvspan(f.cwl - f.fwhm / 2, f.cwl + f.fwhm / 2, color=col, alpha=0.1)
 
         ax.legend(fontsize=self.node.legendFontSize)
         ymin, ymax = ax.get_ylim()
@@ -434,6 +448,11 @@ class TabSpectrum(ui.tabs.Tab):
     def errorbarmodeChanged(self, mode):
         self.mark()
         self.node.errorbarmode = mode
+        self.changed()
+
+    def bandwidthmodeChanged(self, mode):
+        self.mark()
+        self.node.bandwidthmode = mode
         self.changed()
 
     def colourmodeChanged(self, mode):
@@ -487,6 +506,7 @@ class TabSpectrum(ui.tabs.Tab):
         self.markReplotReady()
         # these will each cause the widget's changed slot to get called and lots of calls to mark()
         self.w.errorbarmode.setCurrentIndex(self.node.errorbarmode)
+        self.w.bandwidthmode.setCurrentIndex(self.node.bandwidthmode)
         self.w.colourmode.setCurrentIndex(self.node.colourmode)
         self.w.stackSepSpin.setValue(self.node.stackSep)
         self.w.bottomSpaceSpin.setValue(self.node.bottomSpace)
