@@ -254,7 +254,7 @@ class InnerCanvas(QtWidgets.QWidget):
         widgw = self.size().width()  # widget dimensions
         widgh = self.size().height()
         # here self.img is a numpy image
-        tt = Timer("paint", False)
+        tt = Timer("paint", enabled=False)
         if self.rgb is not None:
             imgh, imgw = self.rgb.shape[0], self.rgb.shape[1]
 
@@ -360,7 +360,7 @@ class InnerCanvas(QtWidgets.QWidget):
         if self.canv.isDQHidden:  # are DQs temporarily disabled?
             return img, txt
 
-        t = Timer("DQ", False)
+        t = Timer("DQ", enabled=False)
         for d in self.canv.canvaspersist.dqs:
             if d.isActive():
                 if d.data == canvasdq.DTypeUnc or d.data == canvasdq.DTypeUncGtThresh or \

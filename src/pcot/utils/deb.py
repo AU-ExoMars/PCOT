@@ -3,18 +3,24 @@ import os
 import time
 import traceback
 
-# Various utilities
 
-def show(x):
+# Various utilities
+from logging import Logger
+
+from pcot import ui
+
+
+def showAttributes(x):
     """Shows attribs of a object. Used for generating type hints!"""
     print("Attributes of", x)
     for k, v in x.__dict__.items():
         print(k, type(v))
     print("End of attributes")
 
-def shortTrace(str, line=True, multiLines=True):
+
+def shortTrace(desc, line=True, multiLines=True):
     """Print a very brief traceback. If "line" is true will print the line's text (without comments)"""
-    s = traceback.extract_stack()[:-1]      # remove last item
+    s = traceback.extract_stack()[:-1]  # remove last item
     # find "main""
     start = 0
     for i, x in enumerate(s):
@@ -35,11 +41,11 @@ def shortTrace(str, line=True, multiLines=True):
 
     s = [f"{os.path.basename(x.filename)}:{delComm(x.line)}[{x.lineno}]" for x in s]
     if multiLines:
-        print(f"{str}::----------------------------------------------------")
+        print(f"{desc}::----------------------------------------------------")
         for x in s:
             print(f"    {x}")
     else:
-        print(f"{str}:: "+" -> ".join(s))
+        print(f"{desc}:: " + " -> ".join(s))
 
 
 def simpleExceptFormat(e: Exception):
@@ -53,11 +59,18 @@ def simpleExceptFormat(e: Exception):
 
 
 class Timer:
-    def __init__(self, desc, enabled=True):
+    STDOUT = 0
+    UILOG = 1
+    STDLOG = 2
+
+    def __init__(self, desc, show=STDLOG, enabled=True):
+        """show can be STDOUT or UILOG, in which case it will use the standard output or the UI log; or a reference
+        to a logger object (which must have a "info" method). If it is STDLOG, it will use the standard logger"""
         self.desc = desc
         self.prevTime = None
         self.startTime = None
         self.enabled = enabled
+        self.show = show
         self.start()
 
     def __enter__(self):
@@ -68,12 +81,22 @@ class Timer:
 
     def start(self):
         if self.enabled:
-            print(f"Timer {self.desc} ------------------------------")
             self.startTime = time.perf_counter()
             self.prevTime = self.startTime
 
     def mark(self, txt):
         if self.enabled:
             now = time.perf_counter()
-            print(f"Timer {self.desc} {txt}: {now-self.prevTime:.4f}, cum {now - self.startTime:.4f}")
+            d = now - self.prevTime
+            if self.show == Timer.STDOUT:
+                print(f"Timer {self.desc} {txt}: {d:.4f}, cum {now - self.startTime:.4f}")
+            elif self.show == Timer.STDLOG:
+                Logger.info(f"Timer {self.desc} {txt}: {d:.4f}, cum {now - self.startTime:.4f}")
+            elif self.show == Timer.UILOG:
+                ui.log(f"Timer {self.desc} {txt}: {d:.4f}, cum {now - self.startTime:.4f}")
+            elif isinstance(self.show, Logger):
+                self.show.info(f"Timer {self.desc} {txt}: {d:.4f}, cum {now - self.startTime:.4f}")
+
             self.prevTime = now
+            return d
+        return -1

@@ -17,6 +17,8 @@ from pcot.imagecube import ImageCube
 from pcot.sources import SourceSet, MultiBandSource, FilterOnlySource
 from pcot.utils import image
 from pcot.expressions.ops import combineImageWithNumberSources
+from pcot.utils.deb import Timer
+from pcot.utils.flood import MeanFloodFiller, FloodFillParams
 from pcot.value import Value, add_sub_unc_list
 from pcot.xform import XFormException
 import cv2 as cv
@@ -396,6 +398,29 @@ def funcTestImg(args: List[Datum], _):
     return Datum(Datum.IMG, img)
 
 
+def funcFloodTest(args: List[Datum], _):
+    # we'll operate on the entire image
+    img: ImageCube = args[0].get(Datum.IMG)
+    if img is None:
+        return None
+    x = int(args[1].get(Datum.NUMBER).n)
+    y = int(args[2].get(Datum.NUMBER).n)
+    thresh = args[3].get(Datum.NUMBER).n
+
+    f = MeanFloodFiller(img, FloodFillParams(10, img.w * img.h / 2, thresh))
+    with Timer("flood", show=Timer.UILOG):
+        roi = f.fillToPaintedRegion(x, y)
+
+    # we need to copy the image to add the ROI
+    img = img.shallowCopy()
+    if roi is not None:
+        img.rois.append(roi)
+    else:
+        raise XFormException('DATA', 'flood fill failed (too few or too many pixels')
+
+    return Datum(Datum.IMG, img)
+
+
 @parserhook
 def registerBuiltinFunctions(p):
     p.registerFunc("merge",
@@ -573,6 +598,16 @@ def registerBuiltinFunctions(p):
         [
             Parameter('imageidx', 'image index', Datum.NUMBER)
         ], [], funcTestImg
+    )
+
+    p.registerFunc(
+        'floodtest', 'Flood fill test',
+        [
+            Parameter('image', 'image to flood', Datum.IMG),
+            Parameter('x', 'x coordinate of seed point', Datum.NUMBER),
+            Parameter('y', 'y coordinate of seed point', Datum.NUMBER),
+            Parameter('thresh', 'threshold', Datum.NUMBER),
+        ], [], funcFloodTest
     )
 
 

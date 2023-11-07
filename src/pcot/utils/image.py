@@ -15,6 +15,8 @@ def imgmerge(img):
 
 
 def generate_gradient(w, h, is_horizontal, start=0, stop=1):
+    """Generates a gradient image of size (w, h) with values ranging from start to stop. If is_horizontal is True,
+    the gradient will be horizontal, otherwise vertical."""
     if is_horizontal:
         return np.tile(np.linspace(start, stop, w), (h, 1)).astype(np.float32)
     else:

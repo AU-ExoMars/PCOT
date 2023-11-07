@@ -11,58 +11,12 @@ from PySide2.QtWidgets import QMessageBox
 from pcot.calib import pct
 from pcot.rois import getRadiusFromSlider, ROIPainted
 from pcot.utils.annotations import pixels2painter
+from pcot.utils.deb import Timer
+from pcot.utils.flood import MeanFloodFiller, FloodFillParams
 from pcot.xform import xformtype, XFormType
 
 # scale of editing brush
 BRUSHSCALE = 0.1
-
-
-class FloodFiller:
-    def __init__(self, img):
-        self.means = np.repeat(0, img.channels).astype(np.float64)
-        self.img = img.img
-        self.h, self.w = self.img.shape[:2]
-        self.mask = np.zeros(self.img.shape[:2], dtype=np.bool)
-        self.n = 0
-
-    def _set(self, x, y):
-        """set pixel and update cumulative moving means"""
-        if not self.mask[y, x]:
-            self.mask[y, x] = True
-            self.means = (self.img[y, x] + self.n * self.means) / (self.n + 1)
-            self.n += 1
-
-    def fill(self, x, y, minpix=0, maxpix=10000):
-        """Perform the fill, returning true if the number of pixels found
-        was within an acceptable range (will exit early if too many)"""
-        stack = [(x, y)]
-        while stack:
-            x, y = stack.pop()
-            if self._inside(x, y):
-                if self.n > maxpix:
-                    return False
-                self._set(x, y)
-                stack.append((x - 1, y))
-                stack.append((x + 1, y))
-                stack.append((x, y - 1))
-                stack.append((x, y + 1))
-        if self.n < minpix:
-            return False
-        else:
-            return True
-
-    def _inside(self, x, y):
-        if x < 0 or y < 0 or x >= self.w or y >= self.h:
-            return False
-        if self.mask[y, x]:
-            return False
-        # get the point we're talking about in the image
-        # and see how far it is from the running mean
-        if self.n > 0:
-            dsq = np.sum((self.img[y, x] - self.means) ** 2)
-            if dsq > 0.005:
-                return False
-        return True
 
 
 def createPatchROI(n, x, y, radius):
@@ -76,22 +30,14 @@ def createPatchROI(n, x, y, radius):
     # as a reference. Fill should stop when the point about to be filled is
     # very far from the mean of the points so far.
 
-    ff = FloodFiller(n.img)
     # get minimum and maximum pixel sizes (empirically determined from radius of patch)
     maxPix = radius ** 2 * 4
     minPix = 0  # probably best to not have a min pixel count
+    ff = MeanFloodFiller(n.img, FloodFillParams(minPix, maxPix, threshold=0.005))
 
-    if ff.fill(int(x), int(y), minpix=minPix, maxpix=maxPix):
-        # third step - crop down to a mask and BB, generate a ROIPainted and return.
-        # can use the cropdown method in the ROI for this.
-        roi = ROIPainted(mask=ff.mask)
-        roi.setContainingImageDimensions(n.img.w, n.img.h)
-        roi.cropDownWithDraw()
-
-        # TEST - draw into image
-        # n.img.img[ff.mask] = np.repeat(1, n.img.channels)
-    else:
-        roi = None
+    # perform a flood fill and get a region out. This may return None if the
+    # number of pixels is too low or too high.
+    roi = ff.fillToPaintedRegion(int(x), int(y))
     return roi
 
 
@@ -121,7 +67,8 @@ class XformPCT(XFormType):
         if 'rois' in d:
             for ent in d['rois']:
                 r = ROIPainted()
-                r.deserialise(ent)
+                if ent is not None:
+                    r.deserialise(ent)
                 n.rois.append(r)
 
     def init(self, node):
@@ -198,12 +145,15 @@ class XformPCT(XFormType):
 
         n.rois = []
         # ROIs must be indexed the same as patches in pct.patches
+
+        timer = Timer("flood")
         for p in pct.patches:
             # get patch centre, convert to image space, get xy coords.
             pp = np.float32([[[p.x, p.y]]])
             x, y = cv.transform(pp, M).ravel().tolist()
             roi = createPatchROI(n, x, y, p.r * maxScale)
             n.rois.append(roi)
+        timer.mark("done")
 
 
 def transformPoints(points, matrix):
