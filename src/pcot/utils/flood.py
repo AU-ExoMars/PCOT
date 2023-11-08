@@ -23,9 +23,19 @@ class FloodFillerBase:
     It's pretty ugly, because it would be better done functionally (using closures) but that gets messy."""
 
     def __init__(self, img, params=FloodFillParams()):
-        self.img = img.img
-        self.h, self.w = self.img.shape[:2]
-        self.mask = np.zeros(self.img.shape[:2], dtype=np.bool)
+        # the first thing we need to do is to convert the image to a 2D array; that will speed things
+        # up a lot. How we do this will depend on what channels we are interested in, but for now
+        # we'll just take the mean of all channels.
+
+        # find the mean of all channels in img.img
+        if img.channels == 1:
+            self.img = img.img
+        else:
+            self.img = np.mean(img.img, axis=2)
+
+        self.h, self.w = self.img.shape
+        self.mask = np.zeros(self.img.shape, dtype=np.bool)
+
         self.n = 0
         self.params = params
         # break this out for speed
@@ -80,7 +90,7 @@ class MeanFloodFiller(FloodFillerBase):
     """Flood filler that uses a running mean to determine whether a pixel should be filled"""
     def __init__(self, img, params=FloodFillParams()):
         super().__init__(img, params)
-        self.means = np.repeat(0, img.channels).astype(np.float64)
+        self.means = 0
 
     def update(self, x, y):
         self.means = (self.img[y, x] + self.n * self.means) / (self.n + 1)
@@ -95,7 +105,7 @@ class MeanFloodFiller(FloodFillerBase):
         # get the point we're talking about in the image
         # and see how far it is from the running mean
         if self.n > 0:
-            dsq = np.sum((self.img[y, x] - self.means) ** 2)
+            dsq = (self.img[y, x] - self.means) ** 2
             if dsq > self.threshold:
                 return False
         return True

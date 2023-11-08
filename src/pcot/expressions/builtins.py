@@ -107,10 +107,9 @@ def funcGrey(args, optargs):
                 raise XFormException('DATA', "Image must be RGB for OpenCV greyscale conversion")
             img = ImageCube(cv.cvtColor(img.img, cv.COLOR_RGB2GRAY), img.mapping, sources, dq=dq, rois=img.rois)
         else:
-            # create a transformation matrix specifying that the output is a single channel which
-            # is the mean of all the channels in the source. Any uncertainy data will also be combined.
-            mat = np.array([1 / img.channels] * img.channels).reshape((1, img.channels))
-            out = cv.transform(img.img, mat)
+            # 'out' will be the greyscale image found by calculating the mean of all channels in img.img
+            out = np.mean(img.img, axis=2).astype(np.float32)
+
             # uncertainty is messier - add the squared uncertainties, divide by N, and root.
             outu = np.zeros(img.uncertainty.shape[:2], dtype=np.float32)
             for i in range(0, img.channels):
@@ -407,7 +406,7 @@ def funcFloodTest(args: List[Datum], _):
     y = int(args[2].get(Datum.NUMBER).n)
     thresh = args[3].get(Datum.NUMBER).n
 
-    f = MeanFloodFiller(img, FloodFillParams(10, img.w * img.h / 2, thresh))
+    f = MeanFloodFiller(img, FloodFillParams(10, img.w * img.h, thresh))
     with Timer("flood", show=Timer.UILOG):
         roi = f.fillToPaintedRegion(x, y)
 
@@ -416,7 +415,7 @@ def funcFloodTest(args: List[Datum], _):
     if roi is not None:
         img.rois.append(roi)
     else:
-        raise XFormException('DATA', 'flood fill failed (too few or too many pixels')
+        raise XFormException('DATA', 'flood fill failed (too few or too many pixels)')
 
     return Datum(Datum.IMG, img)
 
