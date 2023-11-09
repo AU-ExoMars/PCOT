@@ -34,36 +34,28 @@ class FloodFillerBase:
             self.img = np.mean(img.img, axis=2)
 
         self.h, self.w = self.img.shape
-        self.mask = np.zeros(self.img.shape, dtype=np.bool)
+
+        # build a 1D view of the image
+        self.img = self.img.ravel()
+        self.size = self.h * self.w       # the size of the one-dimensional view of the array
+
+        # build a 1D mask for the image
+        self.mask = np.zeros(self.size, dtype=np.bool)
 
         self.n = 0
         self.params = params
         # break this out for speed
         self.threshold = params.threshold
 
-    def fill(self, x, y):
+    def unravel(self):
+        """Convert the mask to a 2D array"""
+        return self.mask.reshape(self.h, self.w)
+
+    def fill(self, x, y) -> np.ndarray:
         """Perform the fill, returning true if the number of pixels found
         was within an acceptable range (will exit early if too many). Returns a mask or None
         if the filled pixels were too few or too many"""
-        stack = [(x, y)]
-        maxpix = self.params.maxpix
-        while stack:
-            x, y = stack.pop()
-            if self.inside(x, y):
-                if self.n > maxpix:
-                    return None
-                if not self.mask[y, x]:
-                    self.mask[y, x] = True
-                    self.update(x, y)
-                    self.n += 1
-                stack.append((x - 1, y))
-                stack.append((x + 1, y))
-                stack.append((x, y - 1))
-                stack.append((x, y + 1))
-        if self.n < self.params.minpix:
-            return None
-        else:
-            return self.mask
+        pass
 
     def fillToPaintedRegion(self, x, y):
         """As fill(), but returns an ROIPainted object instead of a mask"""
@@ -77,14 +69,6 @@ class FloodFillerBase:
         roi.cropDownWithDraw()
         return roi
 
-    def update(self, x, y):
-        """Update the running mean or variance/SD, must be implemented by subclasses"""
-        pass
-
-    def inside(self, x, y):
-        """Return true if the pixel at (x, y) should be filled, must be implemented by subclasses"""
-        pass
-
 
 class MeanFloodFiller(FloodFillerBase):
     """Flood filler that uses a running mean to determine whether a pixel should be filled"""
@@ -92,20 +76,36 @@ class MeanFloodFiller(FloodFillerBase):
         super().__init__(img, params)
         self.means = 0
 
-    def update(self, x, y):
-        self.means = (self.img[y, x] + self.n * self.means) / (self.n + 1)
-
-    def inside(self, x, y):
-        if x < 0 or y < 0 or x >= self.w or y >= self.h:
-            # outside image, must be outside the fill
-            return False
-        if self.mask[y, x]:
-            # already filled
-            return False
-        # get the point we're talking about in the image
-        # and see how far it is from the running mean
-        if self.n > 0:
-            dsq = (self.img[y, x] - self.means) ** 2
-            if dsq > self.threshold:
-                return False
-        return True
+    def fill(self, x, y):
+        # get the address of the pixel we're starting from in the 1D array, assuming it's in column-major order
+        # (which it is)
+        stack = [x + y * self.w]
+        maxpix = self.params.maxpix
+        while stack:
+            addr = stack.pop()
+            if addr < 0 or addr >= self.size:
+                # outside image, must be outside the fill
+                continue
+            if self.mask[addr]:
+                # already filled
+                continue
+            # get the point we're talking about in the image
+            # and see how far it is from the running mean
+            if self.n > 0:
+                dsq = (self.img[addr] - self.means) ** 2
+                if dsq > self.threshold:
+                    continue
+                if self.n > maxpix:
+                    return None
+            if not self.mask[addr]:
+                self.mask[addr] = True
+                self.means = (self.img[addr] + self.n * self.means) / (self.n + 1)
+                self.n += 1
+                stack.append(addr - 1)
+                stack.append(addr + 1)
+                stack.append(addr - self.w)
+                stack.append(addr + self.w)
+        if self.n < self.params.minpix:
+            return None
+        else:
+            return self.unravel()
