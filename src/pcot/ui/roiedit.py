@@ -5,6 +5,8 @@ from PySide2.QtCore import Qt
 from PySide2.QtGui import QKeyEvent, QColor, QPainter
 from PySide2.QtWidgets import QDialog, QGridLayout, QLabel, QDialogButtonBox, QSpinBox
 
+from pcot.utils.flood import FloodFillParams
+
 
 class ROIEditDialog(QDialog):
     def __init__(self, parent, roi, w, h, roiFields):
@@ -218,7 +220,11 @@ class PaintedEditor(ROIEditor):
             p.drawEllipse(self.mousePos, r, r)
 
     def doSet(self, x, y, e):
-        if e.modifiers() & Qt.ShiftModifier:
+        if e.modifiers() & Qt.ControlModifier:
+            # we need to use the image stored in the node, which should be a copy of the original,
+            # as the reference image for the flood fill.
+            self.roi.fill(self.node.img, x, y, FloodFillParams(threshold=0.03))      # flood fill
+        elif e.modifiers() & Qt.ShiftModifier:
             self.roi.setCircle(x, y, self.node.brushSize, True)  # delete
         else:
             self.roi.setCircle(x, y, self.node.brushSize, False)

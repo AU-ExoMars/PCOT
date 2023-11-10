@@ -1,8 +1,7 @@
+from collections import deque
 from dataclasses import dataclass
 
 import numpy as np
-
-from pcot.rois import ROIPainted
 
 
 @dataclass
@@ -32,24 +31,8 @@ class FloodFillerBase:
             self.img = img.img
         else:
             self.img = np.mean(img.img, axis=2)
-
         self.h, self.w = self.img.shape
-
-        # build a 1D view of the image
-        self.img = self.img.ravel()
-        self.size = self.h * self.w       # the size of the one-dimensional view of the array
-
-        # build a 1D mask for the image
-        self.mask = np.zeros(self.size, dtype=np.bool)
-
-        self.n = 0
         self.params = params
-        # break this out for speed
-        self.threshold = params.threshold
-
-    def unravel(self):
-        """Convert the mask to a 2D array"""
-        return self.mask.reshape(self.h, self.w)
 
     def fill(self, x, y) -> np.ndarray:
         """Perform the fill, returning true if the number of pixels found
@@ -59,6 +42,8 @@ class FloodFillerBase:
 
     def fillToPaintedRegion(self, x, y):
         """As fill(), but returns an ROIPainted object instead of a mask"""
+        from pcot.rois import ROIPainted
+
         mask = self.fill(x, y)
         if mask is None:
             return None
@@ -74,38 +59,62 @@ class MeanFloodFiller(FloodFillerBase):
     """Flood filler that uses a running mean to determine whether a pixel should be filled"""
     def __init__(self, img, params=FloodFillParams()):
         super().__init__(img, params)
-        self.means = 0
 
     def fill(self, x, y):
         # get the address of the pixel we're starting from in the 1D array, assuming it's in column-major order
         # (which it is)
-        stack = [x + y * self.w]
+
+        # build a 1D view of the image
+        img = self.img.ravel()
+        means = 0
+        n = 0
+        w = self.w  # python doesn't do CSE
+        size = self.h * w
         maxpix = self.params.maxpix
-        while stack:
-            addr = stack.pop()
-            if addr < 0 or addr >= self.size:
+        threshold = self.params.threshold
+        # build a 1D mask for the image - this will be the output
+        mask = np.zeros(size, dtype=np.bool)
+
+        queue = deque([x + y * w])
+        while queue:
+            addr = queue.popleft()
+            if addr < 0 or addr >= size:
                 # outside image, must be outside the fill
                 continue
-            if self.mask[addr]:
+            if mask[addr]:
                 # already filled
                 continue
             # get the point we're talking about in the image
             # and see how far it is from the running mean
-            if self.n > 0:
-                dsq = (self.img[addr] - self.means) ** 2
-                if dsq > self.threshold:
+            if n > 0:
+                dsq = (img[addr] - means) ** 2
+                if dsq > threshold:
                     continue
-                if self.n > maxpix:
+                if n > maxpix:
                     return None
-            if not self.mask[addr]:
-                self.mask[addr] = True
-                self.means = (self.img[addr] + self.n * self.means) / (self.n + 1)
-                self.n += 1
-                stack.append(addr - 1)
-                stack.append(addr + 1)
-                stack.append(addr - self.w)
-                stack.append(addr + self.w)
-        if self.n < self.params.minpix:
+            if not mask[addr]:
+                mask[addr] = True
+                means = (img[addr] + n * means) / (n + 1)
+                n += 1
+                queue.append(addr - 1)
+                queue.append(addr + 1)
+                queue.append(addr - w)
+                queue.append(addr + w)
+
+        # main loop is done, now check the number of pixels filled
+        if n < self.params.minpix:
             return None
         else:
-            return self.unravel()
+            return mask.reshape((self.h, self.w))
+
+
+class FastFloodFiller(FloodFillerBase):
+    """This flood filler just uses the scikit-image flood fill algorithm. It's fast, but it doesn't
+    do any checks on the number of pixels filled."""
+    def __init__(self, img, params=FloodFillParams()):
+        super().__init__(img, params)
+
+    def fill(self, x, y):
+        from skimage.segmentation import flood
+        mask = flood(self.img, (y, x), tolerance=self.params.threshold)
+        return mask

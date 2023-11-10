@@ -18,7 +18,7 @@ from pcot.sources import SourceSet, MultiBandSource, FilterOnlySource
 from pcot.utils import image
 from pcot.expressions.ops import combineImageWithNumberSources
 from pcot.utils.deb import Timer
-from pcot.utils.flood import MeanFloodFiller, FloodFillParams
+from pcot.utils.flood import MeanFloodFiller, FloodFillParams, FastFloodFiller
 from pcot.value import Value, add_sub_unc_list
 from pcot.xform import XFormException
 import cv2 as cv
@@ -406,7 +406,7 @@ def funcFloodTest(args: List[Datum], _):
     y = int(args[2].get(Datum.NUMBER).n)
     thresh = args[3].get(Datum.NUMBER).n
 
-    f = MeanFloodFiller(img, FloodFillParams(10, img.w * img.h, thresh))
+    f = FastFloodFiller(img, FloodFillParams(10, img.w * img.h, thresh))
     with Timer("flood", show=Timer.UILOG):
         roi = f.fillToPaintedRegion(x, y)
 

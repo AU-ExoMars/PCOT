@@ -10,6 +10,7 @@ from pcot.ui.roiedit import RectEditor, CircleEditor, PaintedEditor, PolyEditor
 from pcot.utils import serialiseFields, deserialiseFields
 from pcot.utils.annotations import Annotation, annotDrawText
 from pcot.utils.colour import rgb2qcol
+from pcot.utils.flood import FastFloodFiller, FloodFillParams
 from pcot.utils.geom import Rect
 
 
@@ -622,18 +623,22 @@ class ROIPainted(ROI):
         """return a boolean array, same size as BB"""
         return self.map > 0
 
-    def cropDownWithDraw(self, draw=None):
-        """crop ROI mask down to smallest possible size and reset BB. If draw is
-        set, this will be a function taking the full size image used to draw on
-        the ROI as part of the process."""
-
-        # create full size map
+    def fullsize(self):
+        """return the full size mask"""
         imgw, imgh = self.containingImageDimensions
+        # create full size map of zeroes
         fullsize = np.zeros((imgh, imgw), dtype=np.uint8)
         # splice in existing data, if there is any!
         if self.bbrect is not None:
             bbx, bby, bbx2, bby2 = self.bbrect.corners()
             fullsize[bby:bby2, bbx:bbx2] = self.map
+        return fullsize
+
+    def cropDownWithDraw(self, draw=None):
+        """crop ROI mask down to smallest possible size and reset BB. If draw is
+        set, this will be a function taking the full size image used to draw on
+        the ROI as part of the process."""
+        fullsize = self.fullsize()
         if draw is not None:
             # do extra drawing
             draw(fullsize)
@@ -663,6 +668,16 @@ class ROIPainted(ROI):
         """fill a circle in the ROI, or clear it (if delete is true)"""
         if self.containingImageDimensions is not None:
             self.cropDownWithDraw(draw=lambda fullsize: self.drawBrush(fullsize, x, y, brushSize, delete))
+
+    def fill(self, img, x, y, fillparams=FloodFillParams(), fillerclass=FastFloodFiller):
+        """fill the ROI using a flood fill"""
+        if self.containingImageDimensions is not None:
+            # create filler object
+            filler = fillerclass(img, fillparams)
+            # create a filled mask
+            mask = filler.fill(x, y)
+            # combine this with the full size existing mask
+            self.cropDownWithDraw(draw=lambda fullsize: np.bitwise_or(fullsize, mask, out=fullsize))
 
     def rebase(self, x, y):
         r = ROIPainted(sourceROI=self)
