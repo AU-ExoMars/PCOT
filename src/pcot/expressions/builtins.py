@@ -397,6 +397,35 @@ def funcTestImg(args: List[Datum], _):
     return Datum(Datum.IMG, img)
 
 
+def funcRotate(args: List[Datum], _):
+    img: ImageCube = args[0].get(Datum.IMG)
+    if img is None:
+        return None
+    angle = args[1].get(Datum.NUMBER).n
+    # only permit multiples of 90 degrees, giving an error otherwise
+    if angle % 90 != 0:
+        raise XFormException('DATA', 'rotation angle must be a multiple of 90 degrees')
+
+    img = img.rotate(angle)
+    return Datum(Datum.IMG, img)
+
+
+def funcFlipV(args: List[Datum], _):
+    img: ImageCube = args[0].get(Datum.IMG)
+    if img is None:
+        return None
+    img = img.flip(vertical=True)
+    return Datum(Datum.IMG, img)
+
+
+def funcFlipH(args: List[Datum], _):
+    img: ImageCube = args[0].get(Datum.IMG)
+    if img is None:
+        return None
+    img = img.flip(vertical=False)
+    return Datum(Datum.IMG, img)
+
+
 def funcFloodTest(args: List[Datum], _):
     # we'll operate on the entire image
     img: ImageCube = args[0].get(Datum.IMG)
@@ -593,6 +622,28 @@ def registerBuiltinFunctions(p):
     )
 
     p.registerFunc(
+        "rotate", "rotate an image by a multiple of 90 degrees clockwise",
+        [
+            Parameter("image", "the image to rotate", Datum.IMG),
+            Parameter("angle", "the angle to rotate by (degrees)", Datum.NUMBER),
+        ], [], funcRotate
+    )
+
+    p.registerFunc(
+        "flipv", "flip an image vertically",
+        [
+            Parameter("image", "the image to flip", Datum.IMG),
+        ], [], funcFlipV
+    )
+
+    p.registerFunc(
+        "fliph", "flip an image horizontally",
+        [
+            Parameter("image", "the image to flip", Datum.IMG),
+        ], [], funcFlipH
+    )
+
+    p.registerFunc(
         'testimg', 'Load test image',
         [
             Parameter('imageidx', 'image index', Datum.NUMBER)
@@ -608,6 +659,7 @@ def registerBuiltinFunctions(p):
             Parameter('thresh', 'threshold', Datum.NUMBER),
         ], [], funcFloodTest
     )
+
 
 
 @parserhook

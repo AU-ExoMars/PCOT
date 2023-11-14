@@ -913,3 +913,42 @@ class ImageCube(SourcesObtainable):
             d = np.bitwise_or.reduce(self.dq, axis=2)
         return np.count_nonzero(d & dq.BAD)
 
+    def rotate(self, angleDegrees):
+        """Rotate the image by the given angle (in degrees), returning a new image or None if the angle is not valid.
+        Will return a copy of the image with the annotations and ROIs removed."""
+        # first, make sure angleDegrees is positive and in range 0-360
+        angleDegrees = angleDegrees % 360
+        if angleDegrees % 90 != 0:
+            return None
+        # work out how many times we need to rotate 90 degrees
+        n = int(angleDegrees / 90)
+        # make a copy of the image and rotate its arrays in-place that many times
+        img = self.copy()
+        img.img = np.rot90(img.img, n)
+        img.uncertainty = np.rot90(img.uncertainty, n)
+        img.dq = np.rot90(img.dq, n)
+        # remove all annotations and ROIs
+        img.annotations = []
+        img.rois = []
+        # switch the w and h fields
+        img.w, img.h = img.h, img.w
+
+        return img
+
+    def flip(self, vertical=True):
+        """Flip an image horizontally or vertically. Returns a new image with annotations and ROIs removed."""
+        img = self.copy()
+        if vertical:
+            img.img = np.flipud(img.img)
+            img.uncertainty = np.flipud(img.uncertainty)
+            img.dq = np.flipud(img.dq)
+        else:
+            img.img = np.fliplr(img.img)
+            img.uncertainty = np.fliplr(img.uncertainty)
+            img.dq = np.fliplr(img.dq)
+        # remove all annotations and ROIs
+        img.annotations = []
+        img.rois = []
+        return img
+
+
