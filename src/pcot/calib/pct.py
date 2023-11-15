@@ -27,7 +27,7 @@ class Patch(NamedTuple):
 patches = [
     Patch(12.50, 11, 9.5, "NG4/dkgrey", (0.4, 0.4, 0.4)),
     Patch(33.50, 11, 9.5, "RG610/red", (1, 0, 0)),
-    Patch(54.50, 11, 9.5, "NG3/blue", (0, 0, 1)),
+    Patch(54.50, 11, 9.5, "BG3/blue", (0, 0, 1)),
     Patch(12.50, 32, 9.5, "NG11/ltgrey", (0.7, 0.7, 0.7)),
     Patch(33.50, 32, 9.5, "OG515/yellow", (1, 1, 0)),
     Patch(54.50, 32, 9.5, "BG18/cyan", (0, 1, 1)),

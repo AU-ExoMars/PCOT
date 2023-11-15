@@ -353,10 +353,10 @@ class XformPCTPatchDetection(XFormType):
 
         # write all patch identities that were derived in their respective circles
         # create arrays to allow doing this in a loop
-        patchIdentities = [node.detections.NG4, node.detections.RG610, node.detections.NG3,
+        patchIdentities = [node.detections.NG4, node.detections.RG610, node.detections.BG3,
                            node.detections.NG11, node.detections.OG515, node.detections.BG18,
                            node.detections.Pyroceram, node.detections.WCT2065]
-        patchNames = ["NG4", "RG610", "NG3", "NG11", "OG515", "BG18", "Pyroceram", "WCT2065"]
+        patchNames = ["NG4", "RG610", "BG3", "NG11", "OG515", "BG18", "Pyroceram", "WCT2065"]
         namePostionAdjustments = [[-10, +4], [-18, +4], [-10, +4], [-13, +4], [-18, +4], [-13, +4], [-30, +4],
                                   [-24, +4]]
 
@@ -415,7 +415,7 @@ class XformPCTPatchDetection(XFormType):
         # create a data structure to represent the identity possibilities of each patch
         # First dimension represents detections (i.e. patchIdentityPossibilities[0][] is the first detection in the array)
         # Second dimension represents identity possibilities (i.e. patchIdentityPossibilities[][0] is the first identity possibility)
-        # Identities are indexed as: NG4, RG610, NG3, NG11, OG515, BG18, Pyroceram, WCT2065
+        # Identities are indexed as: NG4, RG610, BG3, NG11, OG515, BG18, Pyroceram, WCT2065
         # Identities are handled as True/1 = Possible Identity and False/0 = Impossible Identity
         patchIdentityPossibilities = np.ones((len(detections), 8), np.int8)
 
@@ -448,7 +448,7 @@ class XformPCTPatchDetection(XFormType):
         patchSignatures = {
             'NG4': [1, 0, 0, 0, 0, 0, 0, 0],
             'RG610': [0, 1, 0, 0, 0, 0, 0, 0],
-            'NG3': [0, 0, 1, 0, 0, 0, 0, 0],
+            'BG3': [0, 0, 1, 0, 0, 0, 0, 0],
             'NG11': [0, 0, 0, 1, 0, 0, 0, 0],
             'OG515': [0, 0, 0, 0, 1, 0, 0, 0],
             'BG18': [0, 0, 0, 0, 0, 1, 0, 0],
@@ -473,7 +473,7 @@ class XformPCTPatchDetection(XFormType):
 
         # create a PCT patch identity datumn to become the node output, inserting in the coordinates or 'None' values 
         patchIdentities = PCTPatchData(patches_found.get('NG4'), patches_found.get('RG610'),
-                                       patches_found.get('NG3'), patches_found.get('NG11'),
+                                       patches_found.get('BG3'), patches_found.get('NG11'),
                                        patches_found.get('OG515'), patches_found.get('BG18'),
                                        patches_found.get('Pyroceram'), patches_found.get('WCT2065'))
 
@@ -551,7 +551,7 @@ class XformPCTPatchDetection(XFormType):
                                         detection[1] = 0
                                         detection[4] = 0
 
-                # Rule 6: If a detection is a distance away from Pyroceram or WCT-2065 larger than the average distance of a small patch to a big patch it must be NG4, RG610, or NG3
+                # Rule 6: If a detection is a distance away from Pyroceram or WCT-2065 larger than the average distance of a small patch to a big patch it must be NG4, RG610, or BG3
                 if patchIdentityPossibilities[0:2].sum() == 2 and recursionDepth > 1:
                     if np.mean([node.detectionDistances[currentDetectionIndex][0],
                                 node.detectionDistances[currentDetectionIndex][1]]) > node.averageDistanceToLargePatch:
@@ -578,7 +578,7 @@ class XformPCTPatchDetection(XFormType):
                                     patchIdentityPossibilities[possibleMidPairIndex] = [0, 0, 0, 1, 0, 0, 0, 0]
                                     patchIdentityPossibilities[currentDetectionIndex] = [0, 0, 0, 0, 0, 1, 0, 0]
 
-                # Rule 9: If a detection is either NG4 or NG3 and NG11 or BG18 are known, NG4 is closest to NG11 etc.
+                # Rule 9: If a detection is either NG4 or BG3 and NG11 or BG18 are known, NG4 is closest to NG11 etc.
                 if not np.array_equal(np.where((patchIdentityPossibilities == [0, 0, 0, 1, 0, 0, 0, 0]).all(axis=1))[0],
                                       []) and recursionDepth > 1:
                     if np.array_equal(patchIdentityPossibilities[currentDetectionIndex], [1, 0, 1, 0, 0, 0, 0, 0]):
@@ -622,8 +622,8 @@ class XformPCTPatchDetection(XFormType):
 
         ##### NG4 #####
         if node.detections.NG4 is None:
-            # NG4 Rule 1: If RG610 & NG3 identified, NG4 = 2 x NG3 > RG610 translation
-            node.detections.NG4, existingDetections = self.interpolationTranslation(node.detections.NG3,
+            # NG4 Rule 1: If RG610 & BG3 identified, NG4 = 2 x BG3 > RG610 translation
+            node.detections.NG4, existingDetections = self.interpolationTranslation(node.detections.BG3,
                                                                                     node.detections.RG610, 1,
                                                                                     existingDetections)
 
@@ -634,8 +634,8 @@ class XformPCTPatchDetection(XFormType):
 
         ##### RG610 #####
         if node.detections.RG610 is None:
-            # RG610 Rule 1: If NG4 & NG3 identified, RG610 = mean of NG4 & NG3
-            node.detections.RG610, existingDetections = self.interpolationMean(node.detections.NG4, node.detections.NG3,
+            # RG610 Rule 1: If NG4 & BG3 identified, RG610 = mean of NG4 & BG3
+            node.detections.RG610, existingDetections = self.interpolationMean(node.detections.NG4, node.detections.BG3,
                                                                                existingDetections)
 
             if node.detections.RG610 is None:
@@ -646,16 +646,16 @@ class XformPCTPatchDetection(XFormType):
                                                                                           node.detections.OG515, 0.8,
                                                                                           existingDetections)
 
-        ##### NG3 #####
-        if node.detections.NG3 is None:
-            # NG3 Rule 1: If RG610 & NG4 identified, NG3 = 2 x NG4 > RG610 translation
-            node.detections.NG3, existingDetections = self.interpolationTranslation(node.detections.NG4,
+        ##### BG3 #####
+        if node.detections.BG3 is None:
+            # BG3 Rule 1: If RG610 & NG4 identified, BG3 = 2 x NG4 > RG610 translation
+            node.detections.BG3, existingDetections = self.interpolationTranslation(node.detections.NG4,
                                                                                     node.detections.RG610, 1,
                                                                                     existingDetections)
 
-            if node.detections.NG3 is None:
-                # NG3 Rule 2: If RG610, BG18, & OG515 identified, NG4 = 4th corner of parallelogram
-                node.detections.NG3, existingDetections = self.interpolationMissingParallelogramCorner(
+            if node.detections.BG3 is None:
+                # BG3 Rule 2: If RG610, BG18, & OG515 identified, NG4 = 4th corner of parallelogram
+                node.detections.BG3, existingDetections = self.interpolationMissingParallelogramCorner(
                     node.detections.RG610, node.detections.OG515, node.detections.BG18, existingDetections)
 
         ##### NG11 #####
@@ -692,9 +692,9 @@ class XformPCTPatchDetection(XFormType):
                                                                                      existingDetections)
 
             if node.detections.BG18 is None:
-                # BG18 Rule 2: If RG610, NG3, & OG515 identified, BG18 = 4th corner of parallelogram
+                # BG18 Rule 2: If RG610, BG3, & OG515 identified, BG18 = 4th corner of parallelogram
                 node.detections.BG18, existingDetections = self.interpolationMissingParallelogramCorner(
-                    node.detections.NG3, node.detections.RG610, node.detections.OG515, existingDetections)
+                    node.detections.BG3, node.detections.RG610, node.detections.OG515, existingDetections)
 
         # check and update pct datum for completeness
         node.detections.updateCompleteness()
@@ -807,7 +807,7 @@ class XformPCTPatchDetection(XFormType):
         angleNG11 = getAngle(centroid, node.detections.NG11)
         angleNG4 = getAngle(centroid, node.detections.NG4)
         angleRG610 = getAngle(centroid, node.detections.RG610)
-        angleNG3 = getAngle(centroid, node.detections.NG3)
+        angleNG3 = getAngle(centroid, node.detections.BG3)
         angleBG18 = getAngle(centroid, node.detections.BG18)
 
         # now go around the edge of the image in order, checking that each patch is clockwise from the
@@ -1111,7 +1111,7 @@ class PCTPatchData:
     # The variable names within this object reference the names for the glass patches on the PCT
     # These are of the form:
     #
-    #                 NG4 | RG610 | NG3
+    #                 NG4 | RG610 | BG3
     #                -----+-------+-----
     #                NG11 | OG515 | BG18
     #                -----+---+---+-----
@@ -1122,14 +1122,14 @@ class PCTPatchData:
     # A view of the PCT is available at https://exomars.wales/projects/hardware/
     # Each of the patch variables should take the form [x,y] or None
 
-    def __init__(self, NG4, RG610, NG3, NG11, OG515, BG18, Pyroceram, WCT2065):
+    def __init__(self, NG4, RG610, BG3, NG11, OG515, BG18, Pyroceram, WCT2065):
         """
         Initialise a PCTPatchData datum from a set of patch centre coordinates or null values
         """
         # construct the Datum variables, setting them to none if no detection was matched to that patch
         self.NG4 = [NG4[0], NG4[1]] if NG4 is not None else None
         self.RG610 = [RG610[0], RG610[1]] if RG610 is not None else None
-        self.NG3 = [NG3[0], NG3[1]] if NG3 is not None else None
+        self.BG3 = [BG3[0], BG3[1]] if BG3 is not None else None
         self.NG11 = [NG11[0], NG11[1]] if NG11 is not None else None
         self.OG515 = [OG515[0], OG515[1]] if OG515 is not None else None
         self.BG18 = [BG18[0], BG18[1]] if BG18 is not None else None
@@ -1138,7 +1138,7 @@ class PCTPatchData:
 
         # if None isn't present in any inputs, the data is complete, and the datum can be marked so
         # this makes life easier down the processing line not having to do this same check many times
-        if None not in (NG4, RG610, NG3, NG11, OG515, BG18, Pyroceram, WCT2065):
+        if None not in (NG4, RG610, BG3, NG11, OG515, BG18, Pyroceram, WCT2065):
             self.complete = True
         else:
             self.complete = False
@@ -1148,7 +1148,7 @@ class PCTPatchData:
         been detected, return None. The edge patches are all patches excluding OG515 and RG610"""
 
         # create a list of the patches excluding OG515 and RG610
-        patches = [self.NG4, self.NG3, self.NG11, self.BG18, self.Pyroceram, self.WCT2065]
+        patches = [self.NG4, self.BG3, self.NG11, self.BG18, self.Pyroceram, self.WCT2065]
 
         # create a list of the patches which have been detected
         detectedPatches = [patch for patch in patches if patch is not None]
@@ -1172,16 +1172,16 @@ class PCTPatchData:
         """Flip the detections around the vertical axis"""
         self.Pyroceram, self.WCT2065 = self.WCT2065, self.Pyroceram
         self.BG18, self.NG11 = self.NG11, self.BG18
-        self.NG3, self.NG4 = self.NG4, self.NG3
+        self.BG3, self.NG4 = self.NG4, self.BG3
 
     def __str__(self):
         """
         This method is used whenever the object is cast to a string, for example in the node text output box
         """
         # set up arrays to allow appending string in a loop
-        patchIdentities = [self.NG4, self.RG610, self.NG3, self.NG11, self.OG515, self.BG18, self.Pyroceram,
+        patchIdentities = [self.NG4, self.RG610, self.BG3, self.NG11, self.OG515, self.BG18, self.Pyroceram,
                            self.WCT2065]
-        patchNames = ["NG4", "RG610", "NG3", "NG11", "OG515", "BG18", "Pyroceram", "WCT2065"]
+        patchNames = ["NG4", "RG610", "BG3", "NG11", "OG515", "BG18", "Pyroceram", "WCT2065"]
         # create blank string to append detections to
         stringBuilder = ""
 
@@ -1203,7 +1203,7 @@ class PCTPatchData:
         Method to be called to check if the datum holds all patch detections, and update the datum variable if so
         """
         # if all variables are populated the datum is complete
-        if None not in (self.NG4, self.RG610, self.NG3,
+        if None not in (self.NG4, self.RG610, self.BG3,
                         self.NG11, self.OG515, self.BG18,
                         self.Pyroceram, self.WCT2065):
             self.complete = True
@@ -1229,7 +1229,7 @@ class _PCTDataType(Type):
         # data to be saved and the serialised source information.
 
         # convert data object to something we can serialise
-        serialisedObject = (d.val.NG4, d.val.RG610, d.val.NG3,
+        serialisedObject = (d.val.NG4, d.val.RG610, d.val.BG3,
                             d.val.NG11, d.val.OG515, d.val.BG18,
                             d.val.Pyroceram, d.val.WCT2065, d.val.complete)
         # and create the serialised datum of the name and contents
