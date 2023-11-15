@@ -176,6 +176,9 @@ class XformPCTPatchDetection(XFormType):
                     if not node.detections.complete:
                         self.solvePatchDetections(node, finalCirclesList)
 
+                # now try to detect flippage and modify the detections if required
+                self.detectFlippage(node)
+
                 # create image showing patch detections and identities to the user
                 self.plotDetections(node, finalCirclesList, workingImg)
 
@@ -534,8 +537,8 @@ class XformPCTPatchDetection(XFormType):
                                 # if a pair with the same signature is found, check which is closer to large patches and assign signatures appropriately
                                 if np.mean([node.detectionDistances[currentDetectionIndex][0],
                                             node.detectionDistances[currentDetectionIndex][1]]) < np.mean(
-                                        [node.detectionDistances[possiblePairIndex][0],
-                                         node.detectionDistances[possiblePairIndex][1]]):
+                                    [node.detectionDistances[possiblePairIndex][0],
+                                     node.detectionDistances[possiblePairIndex][1]]):
                                     patchIdentityPossibilities[currentDetectionIndex] = [0, 0, 0, 0, 1, 0, 0, 0]
                                     patchIdentityPossibilities[possiblePairIndex] = [0, 1, 0, 0, 0, 0, 0, 0]
                                 else:
@@ -562,7 +565,7 @@ class XformPCTPatchDetection(XFormType):
                     if np.array_equal(patchIdentityPossibilities[currentDetectionIndex], [0, 0, 0, 1, 0, 1, 0, 0]):
                         # get the index of pyroceram to be able to get the distance to that detection
                         pyroceramIndex = \
-                        np.where((patchIdentityPossibilities == [0, 0, 0, 0, 0, 0, 1, 0]).all(axis=1))[0][0]
+                            np.where((patchIdentityPossibilities == [0, 0, 0, 0, 0, 0, 1, 0]).all(axis=1))[0][0]
                         for possibleMidPairIndex in range(0, len(detections)):
                             if np.array_equal(patchIdentityPossibilities[possibleMidPairIndex], [0, 0, 0, 1, 0, 1, 0,
                                                                                                  0]) and possibleMidPairIndex is not currentDetectionIndex:
@@ -778,6 +781,59 @@ class XformPCTPatchDetection(XFormType):
             return [predictedXY[0], predictedXY[1]], existingDetections
         # if the translation components were null, return nothing for the patch and the detections array
         return None, existingDetections
+
+    def detectFlippage(self, node):
+        """Detect whether the set of detections is flipped around the PCT's vertical axis. In the correct
+        orientation, the Pyroceram patch should always be clockwise from the WCT2065 patch. If the Pyroceram
+        patch is anticlockwise, the image is flipped and the detections need to be flipped back."""
+
+        # first find the centroid of all the patches around the edge of the image (i.e. not OG515 or
+        # RG610)
+        centroid = node.detections.findEdgeCentroid()
+        if centroid is None:
+            # not enough patches were detected, return without doing anything
+            return
+
+        def getAngle(cc, p):
+            """Find the angle between the centroid and a patch"""
+            if cc is None:
+                return None
+            cx, cy = cc
+            px, py = p
+            return math.atan2(py - cy, px - cx)
+
+        angleWCT2065 = getAngle(centroid, node.detections.WCT2065)
+        anglePyroceram = getAngle(centroid, node.detections.Pyroceram)
+        angleNG11 = getAngle(centroid, node.detections.NG11)
+        angleNG4 = getAngle(centroid, node.detections.NG4)
+        angleRG610 = getAngle(centroid, node.detections.RG610)
+        angleNG3 = getAngle(centroid, node.detections.NG3)
+        angleBG18 = getAngle(centroid, node.detections.BG18)
+
+        # now go around the edge of the image in order, checking that each patch is clockwise from the
+        # previous one, and incrementing or decrementing a count depending on whether it is or not
+
+        ct = 0
+
+        def checkAngle(a1, a2):
+            """Ensuring that both angles are not None (and therefore both patches have been detected),
+            increment or decrement the count depending on whether the first angle is less than the second"""
+            nonlocal ct
+            if a1 is not None and a2 is not None:
+                ct += 1 if a1 < a2 else -1
+
+        checkAngle(angleWCT2065, anglePyroceram)
+        checkAngle(anglePyroceram, angleNG11)
+        checkAngle(angleNG11, angleNG4)
+        checkAngle(angleNG4, angleRG610)
+        checkAngle(angleRG610, angleNG3)
+        checkAngle(angleNG3, angleBG18)
+        checkAngle(angleBG18, angleWCT2065)
+
+        # if the count is negative, the image is flipped
+        if ct < 0:
+            # here we flip the detections around the vertical axis
+            node.detections.flip()
 
 
 ####################################################################################################
@@ -1086,6 +1142,37 @@ class PCTPatchData:
             self.complete = True
         else:
             self.complete = False
+
+    def findEdgeCentroid(self):
+        """Find the centroid of the edge patches of the PCT which have been detected. If less than 2 edge patches have
+        been detected, return None. The edge patches are all patches excluding OG515 and RG610"""
+
+        # create a list of the patches excluding OG515 and RG610
+        patches = [self.NG4, self.NG3, self.NG11, self.BG18, self.Pyroceram, self.WCT2065]
+
+        # create a list of the patches which have been detected
+        detectedPatches = [patch for patch in patches if patch is not None]
+
+        # if less than 2 patches have been detected, return None
+        if len(detectedPatches) < 2:
+            return None
+
+        # find the centroid of the detected patches
+        x = 0
+        y = 0
+        for patch in detectedPatches:
+            x += patch[0]
+            y += patch[1]
+        x /= len(detectedPatches)
+        y /= len(detectedPatches)
+
+        return x, y
+
+    def flip(self):
+        """Flip the detections around the vertical axis"""
+        self.Pyroceram, self.WCT2065 = self.WCT2065, self.Pyroceram
+        self.BG18, self.NG11 = self.NG11, self.BG18
+        self.NG3, self.NG4 = self.NG4, self.NG3
 
     def __str__(self):
         """
