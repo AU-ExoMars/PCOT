@@ -1,4 +1,5 @@
 import random
+from functools import partial
 
 import matplotlib
 from PySide2.QtCore import Qt
@@ -130,12 +131,29 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.clearButton.pressed.connect(self.clearPressed)
         self.w.recolour.pressed.connect(self.recolourPressed)
         self.w.dotSize.editingFinished.connect(self.dotSizeChanged)
+
+        self.pageButtons = [
+            self.w.radioCircles,
+            self.w.radioPainted
+        ]
+        for x in self.pageButtons:
+            # this avoids the lambda binding the wrong value of x
+            # https://stackoverflow.com/questions/2295290/what-do-lambda-function-closures-capture
+            # late binding: the value of x is looked up when the code in the closure is executed,
+            # not when it is defined. So we need to bind it to a local variable.
+            x.clicked.connect(partial(lambda xx: self.pageButtonClicked(xx), x))
+
         self.w.canvas.canvas.setMouseTracking(True)
         self.mousePos = None
         self.dragging = False
         self.dontSetText = False
+        self.setPage(0)
         # sync tab with node
         self.nodeChanged()
+
+    def pageButtonClicked(self, x):
+        i = self.pageButtons.index(x)
+        self.setPage(i)
 
     def drawbgChanged(self, val):
         self.mark()
@@ -196,6 +214,12 @@ class TabMultiDot(pcot.ui.tabs.Tab):
             if self.node.selected is not None:
                 self.node.selected.colour = col
             self.changed()
+
+    def setPage(self, i):
+        """Set the page to the given index"""
+        self.w.stackedWidget.setCurrentIndex(i)
+        for idx,x in enumerate(self.pageButtons):
+            x.setChecked(idx == i)
 
     # call this when the selected state changes; changes the enabled state of contropls which
     # allow the selected node to be edited.
