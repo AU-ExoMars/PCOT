@@ -1,3 +1,4 @@
+import logging
 import sys
 import os
 import time
@@ -5,7 +6,8 @@ import traceback
 
 
 # Various utilities
-from logging import Logger
+
+logger = logging.getLogger(__name__)
 
 from pcot import ui
 
@@ -91,10 +93,10 @@ class Timer:
             if self.show == Timer.STDOUT:
                 print(f"Timer {self.desc} {txt}: {d:.4f}, cum {now - self.startTime:.4f}")
             elif self.show == Timer.STDLOG:
-                Logger.info(f"Timer {self.desc} {txt}: {d:.4f}, cum {now - self.startTime:.4f}")
+                logger.info(f"Timer {self.desc} {txt}: {d:.4f}, cum {now - self.startTime:.4f}")
             elif self.show == Timer.UILOG:
                 ui.log(f"Timer {self.desc} {txt}: {d:.4f}, cum {now - self.startTime:.4f}")
-            elif isinstance(self.show, Logger):
+            elif isinstance(self.show, logging.Logger):
                 self.show.info(f"Timer {self.desc} {txt}: {d:.4f}, cum {now - self.startTime:.4f}")
 
             self.prevTime = now

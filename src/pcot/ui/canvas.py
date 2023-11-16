@@ -254,7 +254,7 @@ class InnerCanvas(QtWidgets.QWidget):
         widgw = self.size().width()  # widget dimensions
         widgh = self.size().height()
         # here self.img is a numpy image
-        tt = Timer("paint", enabled=False)
+        tt = Timer("paint", enabled=True)
         if self.rgb is not None:
             imgh, imgw = self.rgb.shape[0], self.rgb.shape[1]
 
@@ -360,7 +360,7 @@ class InnerCanvas(QtWidgets.QWidget):
         if self.canv.isDQHidden:  # are DQs temporarily disabled?
             return img, txt
 
-        t = Timer("DQ", enabled=False)
+        t = Timer("DQ", enabled=True)
         for d in self.canv.canvaspersist.dqs:
             if d.isActive():
                 if d.data == canvasdq.DTypeUnc or d.data == canvasdq.DTypeUncGtThresh or \
@@ -423,6 +423,11 @@ class InnerCanvas(QtWidgets.QWidget):
 
                 if not flash or self.flashCycle:
                     zeroes = np.zeros(data.shape, dtype=float)
+                    data = data ** 2*d.contrast
+                    t.mark("contrast")
+                    # set the data opacity
+                    data *= 1 - d.trans
+                    t.mark("mult")
                     # here we 'tint' the data
                     r = data if r > 0.5 else zeroes
                     g = data if g > 0.5 else zeroes
@@ -430,11 +435,6 @@ class InnerCanvas(QtWidgets.QWidget):
                     data = np.dstack((r, g, b))  # data is now RGB
                     # combine with image, avoiding copies.
                     t.mark("stack")
-                    data = data ** 2*d.contrast
-                    t.mark("contrast")
-                    # set the data opacity
-                    data *= 1 - d.trans
-                    t.mark("mult")
                     # additive or "normal" blending
                     if d.additive:
                         np.add(data, img, out=data)
@@ -449,7 +449,9 @@ class InnerCanvas(QtWidgets.QWidget):
                         t.mark("blend")
                     # clip the data (mainly because of additive, but just in case other
                     # stuff has happened)
-                    np.clip(data, 0, 1, out=data)
+                    # The line below is faster than the standard np.clip(data, 0, 1, out=data)
+                    # https://janhendrikewers.uk/exploring_faster_np_clip.html
+                    np.core.umath.maximum(np.core.umath.minimum(data, 1), 0, out=data)
                     t.mark("clip")
                     img = data
         return img, txt

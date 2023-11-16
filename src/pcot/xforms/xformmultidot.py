@@ -39,7 +39,6 @@ class XFormMultiDot(XFormType):
             ('drawbg', True)
         )
 
-
     def createTab(self, n, w):
         return TabMultiDot(n, w)
 
@@ -114,7 +113,6 @@ class XFormMultiDot(XFormType):
 
     def getMyROIs(self, node):
         return node.rois
-
 
 
 class TabMultiDot(pcot.ui.tabs.Tab):
