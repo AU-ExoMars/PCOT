@@ -9,8 +9,9 @@ from PySide2.QtWidgets import QMessageBox, QSpinBox
 import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
+from pcot import ui
 from pcot.datum import Datum
-from pcot.rois import ROICircle
+from pcot.rois import ROICircle, ROIPainted
 from pcot.xform import xformtype, XFormType
 
 
@@ -55,9 +56,9 @@ class XFormMultiDot(XFormType):
         node.selected = None  # selected ROICircle
         node.rois = []  # this will be a list of ROICircle
 
-#    def uichange(self, n):
-#        n.timesPerformed += 1
-#        self.perform(n)
+    #    def uichange(self, n):
+    #        n.timesPerformed += 1
+    #        self.perform(n)
 
     def perform(self, node):
         img = node.getInput(self.IN_IMG, Datum.IMG)
@@ -79,7 +80,8 @@ class XFormMultiDot(XFormType):
             img.rois += node.rois
             # we now add any selection as an extra annotation
             if node.selected:
-                r = ROICircle(node.selected.x, node.selected.y, node.selected.r*1.3)
+                # todo this doesn't work on painted ROIs
+                r = ROICircle(node.selected.x, node.selected.y, node.selected.r * 1.3)
                 r.setContainingImageDimensions(img.w, img.h)
                 r.colour = node.selected.colour
                 img.annotations = [r]
@@ -117,6 +119,10 @@ class XFormMultiDot(XFormType):
 
 
 class TabMultiDot(pcot.ui.tabs.Tab):
+    # modes for creating ROIs, determined by the order of the pages in the stack widget
+    CIRCLE = 0
+    PAINTED = 1
+
     def __init__(self, node, w):
         super().__init__(w, node, 'tabmultidot.ui')
         # set the paint hook in the canvas so we can draw on the image
@@ -147,7 +153,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.mousePos = None
         self.dragging = False
         self.dontSetText = False
-        self.setPage(0)
+        self.setPage(self.CIRCLE)
         # sync tab with node
         self.nodeChanged()
 
@@ -183,7 +189,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         cols = matplotlib.cm.get_cmap('Dark2').colors
         base = random.randint(0, 1000)
         for idx, r in enumerate(self.node.rois):
-            xx = idx+base
+            xx = idx + base
             r.colour = cols[xx % len(cols)]
         self.changed()
 
@@ -218,8 +224,12 @@ class TabMultiDot(pcot.ui.tabs.Tab):
     def setPage(self, i):
         """Set the page to the given index"""
         self.w.stackedWidget.setCurrentIndex(i)
-        for idx,x in enumerate(self.pageButtons):
+        for idx, x in enumerate(self.pageButtons):
             x.setChecked(idx == i)
+
+    def getPage(self):
+        """Get the index of the current page"""
+        return self.w.stackedWidget.currentIndex()
 
     # call this when the selected state changes; changes the enabled state of contropls which
     # allow the selected node to be edited.
@@ -262,52 +272,102 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         r, g, b = [x * 255 for x in self.node.colour]
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
 
-    # extra drawing! Preview of brush
     def canvasPaintHook(self, p: QPainter):
-        c = self.w.canvas
+        """Called after the canvas has painted the image, but before it has painted the ROIs. We use
+        this to preview the circular brush we are using"""
         if self.mousePos is not None and self.node.previewRadius is not None:
             p.setBrush(Qt.NoBrush)
             p.setPen(QColor(*[v * 255 for v in self.node.colour]))
             r = self.node.previewRadius / (self.w.canvas.canvas.getScale())
             p.drawEllipse(self.mousePos, r, r)
 
-    def canvasMouseMoveEvent(self, x, y, e):
-        self.mousePos = e.pos()
+    def mouseDragCircleMode(self, x, y):
+        """We are moving the mouse with the button down in circle mode. This changes the centre of the circle."""
         node = self.node
-        if self.dragging and node.selected is not None:
+        if node.selected is not None:
             node.selected.x = x
             node.selected.y = y
             self.changed()
 
+    def mouseDragPaintMode(self, x, y):
+        """We are moving the mouse with the button down in paint mode. This paints a circle."""
+        node = self.node
+        if node.selected is not None:
+            # todo - handle paint mode drag
+            ui.log("Not implemented")
+
+    def canvasMouseMoveEvent(self, x, y, e):
+        """Mouse move handler. We use this differently depending on whether we are in circle or painted mode.
+        In circle mode, we change the centre of the circle. In painted mode, we paint."""
+        self.mousePos = e.pos()
+        if self.dragging:
+            if self.getPage() == self.CIRCLE:
+                self.mouseDragCircleMode(x, y)
+            else:
+                self.mouseDragPaintMode(x, y)
         self.w.canvas.update()
 
-    def canvasMousePressEvent(self, x, y, e):
-        self.mark()
-        node = self.node
-        if e.modifiers() & Qt.ShiftModifier:
-            idx = 0
-            while True:
-                # look for ROI with label "prefix idx"
-                xx = [x for x in node.rois if x.label == node.prefix + str(idx)]
-                if len(xx) == 0:  # none found, exit loop
-                    break
-                idx = idx + 1  # increment and keep looking
-            # create ROI at correct radius, label etc. and add to list.
-            r = ROICircle(x, y, self.node.dotSize)
-            r.label = node.prefix + str(idx)
-            r.colour = node.colour
-            node.rois.append(r)
-        else:
-            mindist = None
-            node.selected = None  # have to do this, otherwise we can never unselect
-            self.dragging = True
-            for r in node.rois:
-                d = (x - r.x) ** 2 + (y - r.y) ** 2
-                if d < 100 and (mindist is None or d < mindist):
-                    node.selected = r
-                    mindist = d
+    def getFreeLabel(self):
+        """Return a free label for a new ROI"""
+        idx = 0
+        while True:
+            # look for ROI with label "prefix idx"
+            xx = [x for x in self.node.rois if x.label == self.node.prefix + str(idx)]
+            if len(xx) == 0:
+                # none found, return this label
+                return self.node.prefix + str(idx)
+            idx = idx + 1  # increment and keep looking
 
-        self.updateSelected()
+    def canvasMousePressEvent(self, x, y, e):
+        """Mouse button has gone down"""
+        node = self.node
+
+        if e.modifiers() & Qt.ShiftModifier:
+            # circle mode - we're creating a new ROI at the current mouse position.
+            # First we need to find a free label for that ROI, which we do by looking for the
+            # first unused label of the form "prefix idx"
+            self.mark()
+            if self.getPage() == self.CIRCLE:
+                idx = self.getFreeLabel()
+                # create ROI at correct radius, label etc. and add to list.
+                r = ROICircle(x, y, self.node.dotSize)
+                r.label = node.prefix + str(idx)
+                r.colour = node.colour
+                node.rois.append(r)
+            else:
+                # paint mode - we paint with the current brush. If there is an ROI selected, we add to that.
+                # Otherwise we create a new ROI.
+                if node.selected is None:
+                    r = ROIPainted(containingImageDimensions=(self.node.img.w, self.node.img.h))
+                    idx = self.getFreeLabel()
+                    r.label = node.prefix + str(idx)
+                    r.colour = node.colour
+                    node.rois.append(r)
+                else:
+                    r = node.selected
+                r.setCircle(x, y, self.node.dotSize)
+        else:
+            if self.getPage() == self.CIRCLE:
+                # circle mode - we're selecting an existing ROI. Ideally this code should select an ROI
+                # in either painted or circle mode.
+                mindist = None
+                node.selected = None  # have to do this, otherwise we can never unselect
+                self.dragging = True
+                # find the closest ROI to the mouse position provided it is within 10 pixels
+                for r in node.rois:
+                    d = (x - r.x) ** 2 + (y - r.y) ** 2
+                    if d < 100 and (mindist is None or d < mindist):
+                        node.selected = r
+                        mindist = d
+            else:
+                # paint mode - we'll just check to see if the point is within any ROI
+                node.selected = None
+                for r in node.rois:
+                    if (x, y) in r:
+                        node.selected = r
+                        break
+
+        self.updateSelected()  # doesn't matter if this gets called even when we haven't changed selection
         self.changed()
         self.w.canvas.update()
 

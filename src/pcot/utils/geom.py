@@ -14,6 +14,10 @@ class Rect:
         self.w = w
         self.h = h
 
+    def __contains__(self, xyTuple):
+        x, y = xyTuple
+        return self.x <= x < self.x + self.w and self.y <= y < self.y + self.h
+
     def copy(self):
         return Rect(self.x, self.y, self.w, self.h)
 

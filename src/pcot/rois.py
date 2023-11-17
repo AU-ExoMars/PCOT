@@ -345,6 +345,21 @@ class ROI(SourcesObtainable, Annotation):
 
         return ROI(bb, mask, isTemp=True, containingImageDimensions=dims)
 
+    def __contains__(self, xyTuple):
+        """Is a point inside the ROI?"""
+        x, y = xyTuple
+        if self.bb() is None:
+            return False
+        else:
+            # first check the bounding box
+            if xyTuple not in self.bb():
+                return False
+            # now check the mask
+            rx, ry, rw, rh = self.bb()
+            x -= rx
+            y -= ry
+            return self.mask()[y, x]
+
     def __neg__(self):
         """We can negate an ROI by subtracting it from an ROI set to the entire image - but only
         if we know how big it is!"""
@@ -577,8 +592,8 @@ class ROIPainted(ROI):
     tpname = "painted"
 
     # we can create this ab initio or from a subimage mask of an image.
-    def __init__(self, mask=None, label=None, sourceROI=None):
-        super().__init__(sourceROI=sourceROI)
+    def __init__(self, mask=None, label=None, sourceROI=None, containingImageDimensions=None):
+        super().__init__(sourceROI=sourceROI, containingImageDimensions=containingImageDimensions)
         if sourceROI is None:
             self.label = label
             if mask is None:
