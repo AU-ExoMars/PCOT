@@ -22,6 +22,7 @@ class BadOpException(Exception):
 class BadNegException(Exception):
     """This gets thrown when you're trying to negate an ROI that has lost its dimensions, which can happen when
     ROIs from different images are combined or they've simply not been added by an operation."""
+
     def __init__(self):
         super().__init__("Can only negate ROIs with image dimensions")
 
@@ -37,7 +38,8 @@ ROISERIALISEFIELDS = (
     ('colour', (1, 1, 0)),
     ('thickness', 0),
     ('fontsize', 10),
-    ('drawbg', True)
+    ('containingImageDimensions', 'missing'),
+    ('drawbg', True),
 )
 
 
@@ -46,6 +48,12 @@ class ROI(SourcesObtainable, Annotation):
     because it defines an ROI consisting of a predefined BB and mask."""
 
     tpname = None
+    roiTypes = {}
+
+    def __init_subclass__(cls, **kwargs):
+        """This is called when a subclass is created. It's used to associate the type name with the class"""
+        super().__init_subclass__(**kwargs)
+        ROI.roiTypes[cls.tpname] = cls
 
     def __init__(self, bbrect: Rect = None, maskimg: np.array = None,
                  sourceROI=None, isTemp=False,
@@ -56,7 +64,6 @@ class ROI(SourcesObtainable, Annotation):
         Annotation.__init__(self)
         SourcesObtainable.__init__(self)
 
-        self.bbrect = bbrect
         self.bbrect = bbrect
         self.maskimg = maskimg
 
@@ -188,12 +195,31 @@ class ROI(SourcesObtainable, Annotation):
         self.annotateMask(p)
 
     def serialise(self):
+        """Serialises the ROI to a dict. This is used for saving to file or memory"""
         if self.isTemp:
             raise Exception("attempt to serialise a temporary ROI")
-        return serialiseFields(self, ROISERIALISEFIELDS)
+        d = serialiseFields(self, ROISERIALISEFIELDS)
+        # we also need to add the type
+        d['type'] = self.__class__.tpname
+        return d
 
     def deserialise(self, d):
+        """Deserialises the ROI from a dict. This is used for loading from file or memory and acts
+        on an existing ROI."""
         deserialiseFields(self, d, ROISERIALISEFIELDS)
+
+    @staticmethod
+    def fromSerialised(d):
+        """Creates a new ROI from a dict. This is used for loading from file or memory and creates
+        a new ROI. It inspects the dict to find the type of ROI to create."""
+        if 'type' not in d:
+            raise Exception("ROI deserialise: no type field")
+        # get the constructor for the ROI type and construct an instance
+        constructor = ROI.roiTypes[d['type']]
+        r = constructor()
+        # deserialise the fields
+        r.deserialise(d)
+        return r
 
     @staticmethod
     def roiUnion(rois):
@@ -371,6 +397,17 @@ class ROI(SourcesObtainable, Annotation):
             r.set(0, 0, w, h)
 
             return r - self
+
+    def equals(self, other, sameType=False):
+        """Check for equality of two ROIs. I'm not using the dunder method because I want to have an extra
+        argument to check if the types are the same."""
+        if not isinstance(other, ROI):
+            return False
+        elif self is other:
+            return True
+        elif sameType and type(self) != type(other):
+            return False
+        return self.bb() == other.bb() and np.array_equal(self.mask(), other.mask())
 
     def __mul__(self, other):
         return self.roiIntersection([self, other])
@@ -611,6 +648,7 @@ class ROIPainted(ROI):
             self.drawEdge = sourceROI.drawEdge
             self.map = sourceROI.map  # NOTE: not a copy!
             self.bbrect = Rect.copy(sourceROI.bbrect)
+        self.r = 10  # default "circle size" for painting; used in multidot editor
 
     def clear(self):
         self.map = None
@@ -627,11 +665,13 @@ class ROIPainted(ROI):
     def serialise(self):
         d = super().serialise()
         d['bbrect'] = self.bbrect.astuple() if self.bbrect else None
+        d['r'] = self.r
         return serialiseFields(self, [('map', None)], d=d)
 
     def deserialise(self, d):
         super().deserialise(d)
         self.bbrect = Rect.fromtuple(d['bbrect'])
+        self.r = d.get('r', 10)
         deserialiseFields(self, d, [('map', None)])
 
     def mask(self):
@@ -670,19 +710,23 @@ class ROIPainted(ROI):
             # construct the new BB
             self.bbrect = Rect(int(xmin), int(ymin), int(xmax - xmin), int(ymax - ymin))
         else:
+            # We've deleted the whole thing! Just mark it as an unset ROI.
             self.bbrect = None
             self.map = None
 
-    def drawBrush(self, fullsize, x, y, brushSize, delete):
-        """called from inside cropDown as an optional step to draw an extra circle"""
-        imgw, imgh = self.containingImageDimensions
-        r = int(getRadiusFromSlider(brushSize, imgw, imgh))
-        cv.circle(fullsize, (x, y), r, 0 if delete else 255, -1)
+    def setCircle(self, x, y, brushSize, delete=False, relativeSize=True):
+        """fill a circle in the ROI, or clear it (if delete is true). If relativeSize is true, the
+        brush size is relative to the image size, otherwise it is absolute in pixels"""
 
-    def setCircle(self, x, y, brushSize, delete=False):
-        """fill a circle in the ROI, or clear it (if delete is true)"""
         if self.containingImageDimensions is not None:
-            self.cropDownWithDraw(draw=lambda fullsize: self.drawBrush(fullsize, x, y, brushSize, delete))
+            imgw, imgh = self.containingImageDimensions
+            if relativeSize:
+                r = int(getRadiusFromSlider(brushSize, imgw, imgh))
+            else:
+                r = int(brushSize)
+            self.cropDownWithDraw(draw=lambda fullsize: cv.circle(fullsize, (x, y), r, 0 if delete else 255, -1))
+        # store this so that when we select an ROI in the multidot editor we can set the brush size
+        self.r = brushSize
 
     def fill(self, img, x, y, fillparams=FloodFillParams(), fillerclass=FastFloodFiller):
         """fill the ROI using a flood fill"""
@@ -699,6 +743,25 @@ class ROIPainted(ROI):
         r.bbrect.x -= x
         r.bbrect.y -= y
         return r
+
+    def dilated(self, n=1):
+        """return a new ROI with the mask dilated by N pixels"""
+        if self.map is not None:
+            # get full size image because we need to dilate the whole thing
+            fullsize = self.fullsize()
+            # dilate
+            m = cv.dilate(fullsize, None, iterations=n)
+            # construct a new ROI from that. This is ugly because
+            # ROIPainted(mask=m) doesn't work quite how we want it to,
+            # it appears.
+            r = ROIPainted()
+            r.map = m
+            r.bbrect = Rect(0, 0, m.shape[1], m.shape[0])
+            r.setContainingImageDimensions(fullsize.shape[1], fullsize.shape[0])
+            # crop it down
+            r.cropDownWithDraw()
+            # r.map.fill(255)
+            return r
 
     def __copy__(self):
         r = ROIPainted(sourceROI=self)

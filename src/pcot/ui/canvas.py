@@ -254,12 +254,12 @@ class InnerCanvas(QtWidgets.QWidget):
         widgw = self.size().width()  # widget dimensions
         widgh = self.size().height()
         # here self.img is a numpy image
-        tt = Timer("paint", enabled=True)
+        tt = Timer("paint", enabled=False)
         if self.rgb is not None:
             imgh, imgw = self.rgb.shape[0], self.rgb.shape[1]
 
             # work out the "base scale" so that a zoomscale of 1 fits the entire
-            # image            
+            # image
             aspect = imgw / imgh
             if widgh * aspect > widgw:
                 self.scale = imgw / widgw
@@ -360,7 +360,7 @@ class InnerCanvas(QtWidgets.QWidget):
         if self.canv.isDQHidden:  # are DQs temporarily disabled?
             return img, txt
 
-        t = Timer("DQ", enabled=True)
+        t = Timer("DQ", enabled=False)
         for d in self.canv.canvaspersist.dqs:
             if d.isActive():
                 if d.data == canvasdq.DTypeUnc or d.data == canvasdq.DTypeUncGtThresh or \

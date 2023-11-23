@@ -1,6 +1,8 @@
 """It's quite difficult to test ROIs, but we'll try to at least do rect, circle and poly.
 Some tests here mainly work by performing a change to part of an image selected by an ROI
 and checking the results are correct. Does not test DQ or uncertainty!"""
+import json
+
 from fixtures import *
 from pcot.rois import ROIRect, ROIBoundsException, ROICircle, ROIPoly, ROIPainted, ROI
 from pcot.utils.geom import Rect
@@ -316,3 +318,86 @@ def test_roi_tpnames_and_default_ctor():
         assert x.tpname is not None
         inst = x()
         assert inst.tpname is not None
+
+
+def test_roi_serialisation_rect():
+    """Test that we can serialise and deserialise a rect ROI"""
+    roi = ROIRect()
+    roi.set(20, 20, 50, 50)
+    x = roi.serialise()
+    assert isinstance(json.dumps(x), str)
+    # now deserialise into a rect
+    roi2 = ROIRect()
+    roi2.deserialise(x)
+    # and check it's the same
+    assert roi.equals(roi2, sameType=True)
+    # now do a deserialisation using the static method
+    roi3 = ROI.fromSerialised(x)
+    assert roi3.equals(roi, sameType=True)
+
+
+def test_roi_serialisation_poly():
+    """Test that we can serialise and deserialise a poly ROI"""
+    roi = ROIPoly()
+    roi.addPoint(20, 20)
+    roi.addPoint(50, 20)
+    roi.addPoint(50, 50)
+    x = roi.serialise()
+    assert isinstance(json.dumps(x), str)
+    # now deserialise into another poly
+    roi2 = ROIPoly()
+    roi2.deserialise(x)
+    # and check it's the same
+    assert roi.equals(roi2, sameType=True)
+    # now do a deserialisation using the static method
+    roi3 = ROI.fromSerialised(x)
+    assert roi3.equals(roi, sameType=True)
+
+
+def test_roi_serialisation_painted():
+    """Test that we can serialise and deserialise a painted ROI"""
+    roi = ROIPainted()
+    roi.setContainingImageDimensions(100, 100)
+    roi.setCircle(20, 20, 50)
+    x = roi.serialise()
+    # we don't try to assert this is a JSONable dict, because it won't be -
+    # there will be an array involved.
+
+    # now deserialise into another painted
+    roi2 = ROIPainted()
+    roi2.deserialise(x)
+    # and check it's the same
+    assert roi.equals(roi2, sameType=True)
+    # now do a deserialisation using the static method
+    roi3 = ROI.fromSerialised(x)
+    assert roi3.equals(roi, sameType=True)
+
+
+def test_roi_serialisation_circle():
+    """Test that we can serialise and deserialise a circle ROI"""
+    roi = ROICircle()
+    roi.set(20, 20, 50)
+    x = roi.serialise()
+    assert isinstance(json.dumps(x), str)
+    # now deserialise into another circle
+    roi2 = ROICircle()
+    roi2.deserialise(x)
+    # and check it's the same
+    assert roi.equals(roi2, sameType=True)
+    # now do a deserialisation using the static method
+    roi3 = ROI.fromSerialised(x)
+    assert roi3.equals(roi, sameType=True)
+
+
+def test_roi_serialisation_base():
+    """Test that we cannot serialise a base (temporary) ROI"""
+    # first generate a base ROI by intersecting two circles
+    roi1 = ROICircle()
+    roi1.set(20, 20, 50)
+    roi2 = ROICircle()
+    roi2.set(50, 50, 50)
+    roi = roi1 * roi2
+    # now try to serialise it
+    with pytest.raises(Exception):
+        x = roi.serialise()
+

@@ -1,3 +1,4 @@
+import copy
 import random
 from functools import partial
 
@@ -11,7 +12,7 @@ import pcot.utils.colour
 import pcot.utils.text
 from pcot import ui
 from pcot.datum import Datum
-from pcot.rois import ROICircle, ROIPainted
+from pcot.rois import ROICircle, ROIPainted, ROI
 from pcot.xform import xformtype, XFormType
 
 
@@ -60,6 +61,23 @@ class XFormMultiDot(XFormType):
     #        n.timesPerformed += 1
     #        self.perform(n)
 
+    @staticmethod
+    def selectionHighlight(r, img):
+        """Add some kind of highlighting to image for the the selected ROI. This is done by
+        adding an annotation to the image, which is then drawn by the image viewer"""
+        if r:
+            if isinstance(r, ROICircle):
+                # here we add a circle around the selected ROI as an annotation
+                r = ROICircle(r.x, r.y, r.r * 1.3)
+                r.setContainingImageDimensions(img.w, img.h)
+            elif isinstance(r, ROIPainted):
+                # not sure what to do here - reproduce the painted ROI, dilate it and add it as an annotation?
+                # It will do for now
+                r = r.dilated(5)
+            if r is not None:
+                r.colour = r.colour
+                img.annotations = [r]
+
     def perform(self, node):
         img = node.getInput(self.IN_IMG, Datum.IMG)
 
@@ -78,13 +96,10 @@ class XFormMultiDot(XFormType):
             # copy image and append ROIs to it
             img = img.copy()
             img.rois += node.rois
-            # we now add any selection as an extra annotation
-            if node.selected:
-                # todo this doesn't work on painted ROIs
-                r = ROICircle(node.selected.x, node.selected.y, node.selected.r * 1.3)
-                r.setContainingImageDimensions(img.w, img.h)
-                r.colour = node.selected.colour
-                img.annotations = [r]
+
+            if node.selected is not None:
+                self.selectionHighlight(node.selected, img)
+
             # set mapping from node
             img.setMapping(node.mapping)
             node.img = img
@@ -92,19 +107,18 @@ class XFormMultiDot(XFormType):
         node.setOutput(self.OUT_IMG, Datum(Datum.IMG, node.img))  # output image and ROI
 
     def serialise(self, node):
-        return {
-            'rois': [n.serialise() for n in node.rois]
-        }
+        """We serialise the ROIs - this will store their type too"""
+        return {'rois': [r.serialise() for r in node.rois]}
 
     def deserialise(self, node, d):
-        node.rois = []
-        if 'rois' in d:
-            for r in d['rois']:
-                if r is not None:
-                    roi = ROICircle()
-                    roi.deserialise(r)
-                    node.rois.append(roi)
-        node.rois = [r for r in node.rois if r.r > 0]
+        # run through the ROIs, deserialising them
+        for r in d['rois']:
+            if 'type' not in r:
+                # add the missing type field for old files
+                r['type'] = 'circle'
+        rs = [ROI.fromSerialised(x) for x in d['rois']]
+        # filter out any zero-radius circles
+        node.rois = [r for r in rs if isinstance(r, ROIPainted) or r.r > 0]
 
     def setProps(self, node, img):
         node.previewRadius = node.dotSize
@@ -198,6 +212,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
                                 QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
             self.mark()
             self.node.rois = []
+            self.node.selected = None
             self.changed()
 
     def textChanged(self):
@@ -254,9 +269,14 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.canvas.display(self.node.img)
 
         if self.node.selected:
+            # If an ROI is selected, we copy the ROI's label and dot size to the controls
+
+            # this is either the radius of the circle ROI, or the size of the last brush that was used
+            # for a painted ROI
             ds = self.node.selected.r
             s = self.node.selected.label
         else:
+            # otherwise we use the default values from the node
             ds = self.node.dotSize
             s = self.node.prefix
 
@@ -318,62 +338,116 @@ class TabMultiDot(pcot.ui.tabs.Tab):
                 return self.node.prefix + str(idx)
             idx = idx + 1  # increment and keep looking
 
+    def handleClickNoSelection(self, node, x, y, modifiers):
+        """The button has been pressed, no ROI is selected"""
+
+        if modifiers & Qt.ShiftModifier:
+            # shift key is down, so create a new ROI and select it.
+            idx = self.getFreeLabel()
+            r = None
+            # either circle or painted, depending on which "page"
+            # the UI is showing.
+            if self.getPage() == self.CIRCLE:
+                r = ROICircle(x, y, self.node.dotSize)
+            elif self.getPage() == self.PAINTED:
+                r = ROIPainted(containingImageDimensions=
+                               (self.node.img.w, self.node.img.h))
+                # if the control key is also down, we do a flood fill. Otherwise
+                # we do a circle.
+                if modifiers & Qt.ControlModifier:
+                    r.fill(node.img, x, y)
+                else:
+                    r.setCircle(x, y, self.node.dotSize)
+            if r is not None:
+                r.label = node.prefix + str(idx)
+                r.colour = node.colour
+                node.rois.append(r)
+                node.selected = r
+                self.changed()
+        else:
+            # shift key is not down, so we are just selecting an existing ROI
+            node.selected = None  # deselect any existing selection
+            r = self.findROI(x, y)
+            if r is not None:
+                node.selected = r
+                # if we selected a circle, set the dragging flag
+                if isinstance(r, ROICircle):
+                    self.dragging = True
+                self.changed()
+
+    def handleClickWithSelection(self, node, x, y, modifiers):
+        """We are clicking, but this time we have a selection. What happens
+        depends on what is selected."""
+        r = node.selected
+
+        # if control and shift are down, and we have a painted selected,
+        # we do a flood fill.
+        if modifiers & Qt.ControlModifier and modifiers & Qt.ShiftModifier and isinstance(r, ROIPainted):
+            r.fill(node.img, x, y)
+            self.changed()
+            return
+
+        # if the shift key is down, we just add an ROI as if there was no
+        # selection. The same applies when a circle is selected - we just
+        # deselect it and add a new ROI by calling the other click handler.
+        if isinstance(r, ROICircle) or (modifiers & Qt.ShiftModifier):
+            # we have a circle selected - that doesn't mean anything, we just
+            # deselect it and try to select something else calling the other
+            # click handler.
+            node.selected = None
+            self.handleClickNoSelection(node, x, y, modifiers)
+        elif isinstance(r, ROIPainted):
+            # we have a painted ROI selected. What happens depends on the
+            # modifier keys.
+
+            # If the control key is down, we add a circle to the ROI
+            if modifiers & Qt.ControlModifier:
+                r.setCircle(x, y, node.dotSize, relativeSize=False)
+                self.changed()
+            # If the alt key is down, we remove a circle from the ROI
+            elif modifiers & Qt.AltModifier:
+                r.setCircle(x, y, node.dotSize, delete=True, relativeSize=False)
+                # we may have deleted the last circle, in which case we delete the ROI
+                if r.bb() is None:
+                    node.rois.remove(r)
+                    node.selected = None
+                self.changed()
+            # no modifier keys, so we just act as if there was no selection
+            else:
+                self.handleClickNoSelection(node, x, y, modifiers)
+
+    def findROI(self, x, y):
+        """Find an ROI at the given point, or return None"""
+        for r in self.node.rois:
+            if (x, y) in r:
+                return r
+        return None
+
     def canvasMousePressEvent(self, x, y, e):
         """Mouse button has gone down"""
         node = self.node
 
-        if e.modifiers() & Qt.ShiftModifier:
-            # circle mode - we're creating a new ROI at the current mouse position.
-            # First we need to find a free label for that ROI, which we do by looking for the
-            # first unused label of the form "prefix idx"
-            self.mark()
-            if self.getPage() == self.CIRCLE:
-                idx = self.getFreeLabel()
-                # create ROI at correct radius, label etc. and add to list.
-                r = ROICircle(x, y, self.node.dotSize)
-                r.label = node.prefix + str(idx)
-                r.colour = node.colour
-                node.rois.append(r)
-            else:
-                # paint mode - we paint with the current brush. If there is an ROI selected, we add to that.
-                # Otherwise we create a new ROI.
-                if node.selected is None:
-                    r = ROIPainted(containingImageDimensions=(self.node.img.w, self.node.img.h))
-                    idx = self.getFreeLabel()
-                    r.label = node.prefix + str(idx)
-                    r.colour = node.colour
-                    node.rois.append(r)
-                else:
-                    r = node.selected
-                r.setCircle(x, y, self.node.dotSize)
+        # Mouse button behaviour is complex.
+        # If an ROI is selected, we are in the edit mode for that ROI.
+        #   If the ROI is a circle, we can drag it and change its parameters (size etc).
+        #   If the ROI is painted, we can't do that - we can only change the label. But we can
+        #   add to the ROI by ctrl-clicking and remove by alt-clicking.
+        # If an ROI is not selected, we are in create mode.
+        #   If the current page is circle, shift-click will create and select a new circle ROI
+        #   If the current page is painted, shift-click will create and select a new painted ROI
+
+        if node.selected is None:
+            self.handleClickNoSelection(node, x, y, e.modifiers())
         else:
-            if self.getPage() == self.CIRCLE:
-                # circle mode - we're selecting an existing ROI. Ideally this code should select an ROI
-                # in either painted or circle mode.
-                mindist = None
-                node.selected = None  # have to do this, otherwise we can never unselect
-                self.dragging = True
-                # find the closest ROI to the mouse position provided it is within 10 pixels
-                for r in node.rois:
-                    d = (x - r.x) ** 2 + (y - r.y) ** 2
-                    if d < 100 and (mindist is None or d < mindist):
-                        node.selected = r
-                        mindist = d
-            else:
-                # paint mode - we'll just check to see if the point is within any ROI
-                node.selected = None
-                for r in node.rois:
-                    if (x, y) in r:
-                        node.selected = r
-                        break
+            self.handleClickWithSelection(node, x, y, e.modifiers())
 
         self.updateSelected()  # doesn't matter if this gets called even when we haven't changed selection
-        self.changed()
         self.w.canvas.update()
 
     def canvasKeyPressEvent(self, e: QKeyEvent):
         k = e.key()
         if k == Qt.Key_Delete:
+            # delete key - delete the selected ROI
             n = self.node
             if n.selected is not None and n.selected in n.rois:
                 self.mark()
