@@ -127,51 +127,51 @@ class XFormGen(XFormType):
             node.setError(XFormException('GEN', "DUPLICATE CWLS"))
 
         for chan in node.imgchannels:
-            if chan.mode == 'flat':
+            if chan.paintMode == 'flat':
                 # flat mode is easy
                 n = np.full((node.imgheight, node.imgwidth), chan.n)
                 u = np.full((node.imgheight, node.imgwidth), chan.u)
-            elif chan.mode == 'ripple-n':
+            elif chan.paintMode == 'ripple-n':
                 # we build an expression based on position to get a ripple pattern in n
                 n = np.sqrt((x - cx) ** 2 + (y - cy) ** 2) * chan.n
                 n = np.sin(n) * 0.5 + 0.5
                 # but u remains flat
                 u = np.full((node.imgheight, node.imgwidth), chan.u)
-            elif chan.mode == 'ripple-u':
+            elif chan.paintMode == 'ripple-u':
                 # as above, but the other way around
                 n = np.full((node.imgheight, node.imgwidth), chan.n)
                 u = np.sqrt((x - cx) ** 2 + (y - cy) ** 2) * chan.u
                 u = np.sin(u) * 0.5 + 0.5
-            elif chan.mode == 'ripple-un':
+            elif chan.paintMode == 'ripple-un':
                 # two ripples
                 n = np.sqrt((x - cx) ** 2 + (y - cy) ** 2) * chan.n
                 n = np.sin(n) * 0.5 + 0.5
                 u = np.sqrt((x - cx) ** 2 + (y - cy) ** 2) * chan.u
                 u = np.sin(u) * 0.5 + 0.5
-            elif chan.mode == 'half':
+            elif chan.paintMode == 'half':
                 n = np.where(x<node.imgwidth/2, chan.n, chan.u)
                 u = np.full((node.imgheight, node.imgwidth), 0.1)
-            elif chan.mode == 'checkx':
+            elif chan.paintMode == 'checkx':
                 y, x = np.indices((node.imgheight, node.imgwidth))
                 n = ((np.array((y, x+chan.u))//chan.n).sum(axis=0) % 2).astype(np.float32)
                 u = n
-            elif chan.mode == 'checky':
+            elif chan.paintMode == 'checky':
                 y, x = np.indices((node.imgheight, node.imgwidth))
                 n = ((np.array((y+chan.u, x))//chan.n).sum(axis=0) % 2).astype(np.float32)
                 u = n
-            elif chan.mode == 'rand':
+            elif chan.paintMode == 'rand':
                 rngN = np.random.default_rng(seed=int(chan.n*10000))
                 rngU = np.random.default_rng(seed=int(chan.u*10000))
                 n = rngN.random((node.imgheight, node.imgwidth), np.float32)
                 u = rngN.random((node.imgheight, node.imgwidth), np.float32)
-            elif chan.mode == 'gaussian':
+            elif chan.paintMode == 'gaussian':
                 rng = np.random.default_rng(seed=chan.cwl)
                 n = rng.normal(chan.n, chan.u, (node.imgheight, node.imgwidth))
                 u = np.zeros((node.imgheight, node.imgwidth))
-            elif chan.mode == 'gradient-x':
+            elif chan.paintMode == 'gradient-x':
                 n = generate_gradient(node.imgwidth, node.imgheight, True)
                 u = np.zeros((node.imgheight, node.imgwidth))
-            elif chan.mode == 'gradient-y':
+            elif chan.paintMode == 'gradient-y':
                 n = generate_gradient(node.imgwidth, node.imgheight, False)
                 u = np.zeros((node.imgheight, node.imgwidth))
 

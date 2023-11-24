@@ -11,7 +11,9 @@ class FloodFillParams:
     minpix: int = 0
     maxpix: int = 10000
     # threshold is the threshold for the fill. What it actually means depends on the fill update method,
-    # which typically involves a running mean or a running variance/SD.
+    # which typically involves a distance metric. For example, the FastFloodFill method uses a distance
+    # from the seed point, and the threshold is the maximum distance to fill. The default value is 0.005,
+    # which is very low.
     threshold: float = 0.005
 
 

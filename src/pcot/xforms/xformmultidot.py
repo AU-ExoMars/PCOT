@@ -14,11 +14,12 @@ from pcot import ui
 from pcot.datum import Datum
 from pcot.rois import ROICircle, ROIPainted, ROI
 from pcot.ui.variantwidget import VariantWidget
+from pcot.utils.flood import FloodFillParams
 from pcot.xform import xformtype, XFormType
 
 # modes for the tab
-MODE_CIRCLE = 0
-MODE_FILL = 1
+PAINT_MODE_CIRCLE = 0
+PAINT_MODE_FILL = 1
 
 
 @xformtype
@@ -57,7 +58,7 @@ class XFormMultiDot(XFormType):
         node.thickness = 0
         node.colour = (1, 1, 0)
         node.tolerance = 3
-        node.mode = MODE_CIRCLE   # not serialised
+        node.paintMode = PAINT_MODE_CIRCLE   # not serialised
         node.drawbg = True
         node.prefix = ''  # the name we're going to set by default, it will be followed by an int
         node.dotSize = 10  # dot radius in pixels
@@ -167,7 +168,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.recolour.pressed.connect(self.recolourPressed)
         self.w.dotSize.editingFinished.connect(self.dotSizeChanged)
         self.w.tolerance.valueChanged.connect(self.toleranceChanged)
-        self.w.mode.changed.connect(self.modeChanged)
+        self.w.paintMode.changed.connect(self.modeChanged)
 
         self.pageButtons = [
             self.w.radioCircles,
@@ -198,7 +199,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.changed()
 
     def modeChanged(self, i):
-        self.node.mode = i
+        self.node.paintMode = i
 
     def dotSizeChanged(self):
         val = self.w.dotSize.value()
@@ -314,7 +315,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.thickness.setValue(self.node.thickness)
         self.w.drawbg.setChecked(self.node.drawbg)
         self.w.tolerance.setValue(self.node.tolerance)
-        self.w.mode.set(self.node.mode)
+        self.w.paintMode.set(self.node.paintMode)
 
         r, g, b = [x * 255 for x in self.node.colour]
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
@@ -450,14 +451,75 @@ class TabMultiDot(pcot.ui.tabs.Tab):
                 return r
         return None
 
+    def addNewROI(self, r):
+        """Add a new ROI to the list, select it, and give it a label"""
+        node = self.node
+        r.label = self.getFreeLabel()
+        r.colour = node.colour
+        node.rois.append(r)
+        node.selected = r
+
+    def fill(self, node, x, y):
+        """Fill the selected ROI if it is a painted ROI"""
+        params = FloodFillParams()
+        params.threshold = node.tolerance
+        node.selected.fill(node.img, x, y, params=params)
+        ui.log(f"filling at {x}, {y} with tolerance {node.tolerance}")
+
     def canvasMousePressEvent(self, x, y, e):
         """Mouse button has gone down"""
         node = self.node
+        alt = e.modifiers() & Qt.AltModifier
+        ctrl = e.modifiers() & Qt.ControlModifier
+        shift = e.modifiers() & Qt.ShiftModifier
 
-        if node.selected is None:
-            self.handleClickNoSelection(node, x, y, e.modifiers())
+        if shift:
+            # shift key is down, so we are going to create a new ROI. What kind of ROI depends on
+            # which "page" we are on.
+            self.mark()
+            if self.getPage() == self.CIRCLE:
+                # circle page, so create a circle
+                r = ROICircle(x, y, node.dotSize)
+            else:
+                # painted page, so create a painted ROI using either a circle or a flood fill
+                # depending on which paint mode is selected in the node.
+                r = ROIPainted(containingImageDimensions=
+                               (node.img.w, node.img.h))
+                if node.paintMode == PAINT_MODE_CIRCLE:
+                    r.setCircle(x, y, node.dotSize)
+                else:
+                    self.fill(node, x, y)
+            self.addNewROI(r)       # add and select the new ROI
+            self.changed()
+        elif ctrl:
+            # control key down - we add to the selected ROI, but it has to be the right kind of ROI
+            # and we have to be on the painted page.
+            if self.getPage() == self.PAINTED and isinstance(node.selected, ROIPainted):
+                r = node.selected
+                if node.paintMode == PAINT_MODE_CIRCLE:
+                    r.setCircle(x, y, node.dotSize)
+                else:
+                    self.fill(node, x, y)
+                self.changed()
+        elif alt:
+            # alt key down - we remove from the selected ROI, but it has to be the right kind of ROI
+            # and we have to be on the painted page.
+            if self.getPage() == self.PAINTED and isinstance(node.selected, ROIPainted):
+                r = node.selected
+                if node.paintMode == PAINT_MODE_CIRCLE:
+                    r.setCircle(x, y, node.dotSize, delete=True)
+                self.changed()
         else:
-            self.handleClickWithSelection(node, x, y, e.modifiers())
+            # no modifier down. Select and ROI and if it is a circle, start dragging it.
+            r = self.findROI(x, y)
+            if r is not None:
+                node.selected = r
+                # if we selected a circle, set the dragging flag and go into the circle page
+                if isinstance(r, ROICircle):
+                    self.dragging = True
+                    self.setPage(self.CIRCLE)
+                else:
+                    self.setPage(self.PAINTED)  # otherwise go into the painted page
 
         self.updateSelected()  # doesn't matter if this gets called even when we haven't changed selection
         self.w.canvas.update()

@@ -121,7 +121,7 @@
         <widget class="QDoubleSpinBox" name="tolerance"/>
        </item>
        <item row="0" column="2" rowspan="2">
-        <widget class="ModeWidget" name="mode" native="true"/>
+        <widget class="ModeWidget" name="paintMode" native="true"/>
        </item>
       </layout>
      </widget>
