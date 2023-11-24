@@ -12,5 +12,3 @@ class MouseReleaseSpinBox(QtWidgets.QSpinBox):
     def mouseReleaseEvent(self, e):
         super().mouseReleaseEvent(e)
         self.editingFinished.emit()
-
-

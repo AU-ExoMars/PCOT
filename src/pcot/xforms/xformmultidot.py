@@ -13,7 +13,12 @@ import pcot.utils.text
 from pcot import ui
 from pcot.datum import Datum
 from pcot.rois import ROICircle, ROIPainted, ROI
+from pcot.ui.variantwidget import VariantWidget
 from pcot.xform import xformtype, XFormType
+
+# modes for the tab
+MODE_CIRCLE = 0
+MODE_FILL = 1
 
 
 @xformtype
@@ -39,6 +44,7 @@ class XFormMultiDot(XFormType):
             ('fontsize', 10),
             ('thickness', 0),
             ('colour', (1, 1, 0)),
+            ('tolerance', 3),
             ('drawbg', True)
         )
 
@@ -50,6 +56,8 @@ class XFormMultiDot(XFormType):
         node.fontsize = 10
         node.thickness = 0
         node.colour = (1, 1, 0)
+        node.tolerance = 3
+        node.mode = MODE_CIRCLE   # not serialised
         node.drawbg = True
         node.prefix = ''  # the name we're going to set by default, it will be followed by an int
         node.dotSize = 10  # dot radius in pixels
@@ -132,6 +140,13 @@ class XFormMultiDot(XFormType):
         return node.rois
 
 
+class ModeWidget(VariantWidget):
+    """Widget for selecting the paint mode for painting ROIs"""
+    def __init__(self, w):
+        # the modes for this tab, must be in the same order as the MODE_ constants
+        super().__init__("Paint mode", ['Circle', 'Fill'], w)
+
+
 class TabMultiDot(pcot.ui.tabs.Tab):
     # modes for creating ROIs, determined by the order of the pages in the stack widget
     CIRCLE = 0
@@ -151,6 +166,8 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.clearButton.pressed.connect(self.clearPressed)
         self.w.recolour.pressed.connect(self.recolourPressed)
         self.w.dotSize.editingFinished.connect(self.dotSizeChanged)
+        self.w.tolerance.valueChanged.connect(self.toleranceChanged)
+        self.w.mode.changed.connect(self.modeChanged)
 
         self.pageButtons = [
             self.w.radioCircles,
@@ -180,6 +197,9 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.node.drawbg = (val != 0)
         self.changed()
 
+    def modeChanged(self, i):
+        self.node.mode = i
+
     def dotSizeChanged(self):
         val = self.w.dotSize.value()
         self.node.dotSize = val
@@ -195,6 +215,11 @@ class TabMultiDot(pcot.ui.tabs.Tab):
     def fontSizeChanged(self, i):
         self.mark()
         self.node.fontsize = i
+        self.changed()
+
+    def toleranceChanged(self, i):
+        self.mark()
+        self.node.tolerance = i
         self.changed()
 
     def recolourPressed(self):
@@ -288,6 +313,8 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.fontsize.setValue(self.node.fontsize)
         self.w.thickness.setValue(self.node.thickness)
         self.w.drawbg.setChecked(self.node.drawbg)
+        self.w.tolerance.setValue(self.node.tolerance)
+        self.w.mode.set(self.node.mode)
 
         r, g, b = [x * 255 for x in self.node.colour]
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
@@ -426,15 +453,6 @@ class TabMultiDot(pcot.ui.tabs.Tab):
     def canvasMousePressEvent(self, x, y, e):
         """Mouse button has gone down"""
         node = self.node
-
-        # Mouse button behaviour is complex.
-        # If an ROI is selected, we are in the edit mode for that ROI.
-        #   If the ROI is a circle, we can drag it and change its parameters (size etc).
-        #   If the ROI is painted, we can't do that - we can only change the label. But we can
-        #   add to the ROI by ctrl-clicking and remove by alt-clicking.
-        # If an ROI is not selected, we are in create mode.
-        #   If the current page is circle, shift-click will create and select a new circle ROI
-        #   If the current page is painted, shift-click will create and select a new painted ROI
 
         if node.selected is None:
             self.handleClickNoSelection(node, x, y, e.modifiers())
