@@ -463,7 +463,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         """Fill the selected ROI if it is a painted ROI"""
         params = FloodFillParams()
         params.threshold = node.tolerance
-        node.selected.fill(node.img, x, y, params=params)
+        node.selected.fill(node.img, x, y, fillparams=params)
         ui.log(f"filling at {x}, {y} with tolerance {node.tolerance}")
 
     def canvasMousePressEvent(self, x, y, e):
@@ -480,16 +480,17 @@ class TabMultiDot(pcot.ui.tabs.Tab):
             if self.getPage() == self.CIRCLE:
                 # circle page, so create a circle
                 r = ROICircle(x, y, node.dotSize)
+                self.addNewROI(r)  # add and select the new ROI
             else:
                 # painted page, so create a painted ROI using either a circle or a flood fill
                 # depending on which paint mode is selected in the node.
                 r = ROIPainted(containingImageDimensions=
                                (node.img.w, node.img.h))
+                self.addNewROI(r)  # add and select the new ROI
                 if node.paintMode == PAINT_MODE_CIRCLE:
                     r.setCircle(x, y, node.dotSize)
                 else:
                     self.fill(node, x, y)
-            self.addNewROI(r)       # add and select the new ROI
             self.changed()
         elif ctrl:
             # control key down - we add to the selected ROI, but it has to be the right kind of ROI
