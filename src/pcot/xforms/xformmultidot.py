@@ -25,11 +25,38 @@ PAINT_MODE_FILL = 1
 @xformtype
 class XFormMultiDot(XFormType):
     """
-    Add multiple small circle ROIs. Most subsequent operations will only
-    be performed on the union of all regions of interest.
+    Add multiple small ROIs which are either circular or painted.
+    Most subsequent operations will only be performed on the union of all regions of interest.
     Also outputs an RGB image annotated with the ROIs on the 'ann' RGB input,
     or the input image converted to RGB if that input is not connected.
-    Note that this type doesn't inherit from XFormROI.
+
+    General controls:
+
+    - **Circles or Painted** selects the mode for new ROIs
+    - **click inside an ROI** (or very near a circle) to show its properties and switch to circle  or painted mode.
+    - **Dot size** is the size of the circle used for both creating circle ROIs and for circular painting in Painted mode.
+    - **Scale** is the font size for all annotations created by this node
+    - **Thickness** is the border size for (currently) all circles only
+    - **Colour** is the colour of the current ROI's annotation
+    - **Recolour all** will select random colours for all ROIs
+    - **Name** is the name of the current ROI
+    - **Background** is whether a background rectangle is used to make the name clearer for all ROIs
+
+
+    Circle mode:
+
+    - **shift-click** to add a new ROI
+    - **drag** to move centre of circle
+
+    Painted mode:
+
+    - **tolerance** is the colour difference between the current pixel and surrounding pixels required to stop flood filling. PICK CAREFULLY - it may need to be very small.
+    - **Paint Mode** is whether we are creating circles or painted regions
+    - **shift-click** to add a new painted ROI. Will use a circle if "Paint Mode" is circle, or a flood fill with the given tolerance if the mode is "Fill".
+    - **ctrl-click** to add a circle or flood fill to a selected painted ROI, provided we are in the same mode as the selected ROI. Circle or fill depends on Paint Mode.
+    - **alt-click** to "unpaint" a circle from a selected painted ROI
+
+    (Internal: Note that this type doesn't inherit from XFormROI.)
     """
 
     # constants enumerating the outputs
@@ -365,84 +392,6 @@ class TabMultiDot(pcot.ui.tabs.Tab):
                 # none found, return this label
                 return self.node.prefix + str(idx)
             idx = idx + 1  # increment and keep looking
-
-    def handleClickNoSelection(self, node, x, y, modifiers):
-        """The button has been pressed, no ROI is selected"""
-
-        if modifiers & Qt.ShiftModifier:
-            # shift key is down, so create a new ROI and select it.
-            idx = self.getFreeLabel()
-            r = None
-            # either circle or painted, depending on which "page"
-            # the UI is showing.
-            if self.getPage() == self.CIRCLE:
-                r = ROICircle(x, y, self.node.dotSize)
-            elif self.getPage() == self.PAINTED:
-                r = ROIPainted(containingImageDimensions=
-                               (self.node.img.w, self.node.img.h))
-                # if the control key is also down, we do a flood fill. Otherwise
-                # we do a circle.
-                if modifiers & Qt.ControlModifier:
-                    r.fill(node.img, x, y)
-                else:
-                    r.setCircle(x, y, self.node.dotSize)
-            if r is not None:
-                r.label = node.prefix + str(idx)
-                r.colour = node.colour
-                node.rois.append(r)
-                node.selected = r
-                self.changed()
-        else:
-            # shift key is not down, so we are just selecting an existing ROI
-            node.selected = None  # deselect any existing selection
-            r = self.findROI(x, y)
-            if r is not None:
-                node.selected = r
-                # if we selected a circle, set the dragging flag
-                if isinstance(r, ROICircle):
-                    self.dragging = True
-                self.changed()
-
-    def handleClickWithSelection(self, node, x, y, modifiers):
-        """We are clicking, but this time we have a selection. What happens
-        depends on what is selected."""
-        r = node.selected
-
-        # if control and shift are down, and we have a painted selected,
-        # we do a flood fill.
-        if modifiers & Qt.ControlModifier and modifiers & Qt.ShiftModifier and isinstance(r, ROIPainted):
-            r.fill(node.img, x, y)
-            self.changed()
-            return
-
-        # if the shift key is down, we just add an ROI as if there was no
-        # selection. The same applies when a circle is selected - we just
-        # deselect it and add a new ROI by calling the other click handler.
-        if isinstance(r, ROICircle) or (modifiers & Qt.ShiftModifier):
-            # we have a circle selected - that doesn't mean anything, we just
-            # deselect it and try to select something else calling the other
-            # click handler.
-            node.selected = None
-            self.handleClickNoSelection(node, x, y, modifiers)
-        elif isinstance(r, ROIPainted):
-            # we have a painted ROI selected. What happens depends on the
-            # modifier keys.
-
-            # If the control key is down, we add a circle to the ROI
-            if modifiers & Qt.ControlModifier:
-                r.setCircle(x, y, node.dotSize, relativeSize=False)
-                self.changed()
-            # If the alt key is down, we remove a circle from the ROI
-            elif modifiers & Qt.AltModifier:
-                r.setCircle(x, y, node.dotSize, delete=True, relativeSize=False)
-                # we may have deleted the last circle, in which case we delete the ROI
-                if r.bb() is None:
-                    node.rois.remove(r)
-                    node.selected = None
-                self.changed()
-            # no modifier keys, so we just act as if there was no selection
-            else:
-                self.handleClickNoSelection(node, x, y, modifiers)
 
     def findROI(self, x, y):
         """Find an ROI at the given point, or return None"""
