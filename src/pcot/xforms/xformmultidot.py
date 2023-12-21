@@ -29,7 +29,7 @@ class XFormMultiDot(XFormType):
     be performed on the union of all regions of interest.
     Also outputs an RGB image annotated with the ROIs on the 'ann' RGB input,
     or the input image converted to RGB if that input is not connected.
-    Note that this type doesn't inherit from XFormROI
+    Note that this type doesn't inherit from XFormROI.
     """
 
     # constants enumerating the outputs
