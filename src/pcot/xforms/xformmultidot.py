@@ -4,8 +4,8 @@ from functools import partial
 
 import matplotlib
 from PySide2.QtCore import Qt
-from PySide2.QtGui import QPainter, QColor, QKeyEvent
-from PySide2.QtWidgets import QMessageBox, QSpinBox
+from PySide2.QtGui import QPainter, QColor, QKeyEvent, QDoubleValidator
+from PySide2.QtWidgets import QMessageBox
 
 import pcot.ui.tabs
 import pcot.utils.colour
@@ -16,10 +16,6 @@ from pcot.rois import ROICircle, ROIPainted, ROI
 from pcot.ui.variantwidget import VariantWidget
 from pcot.utils.flood import FloodFillParams
 from pcot.xform import xformtype, XFormType
-
-# modes for the tab
-PAINT_MODE_CIRCLE = 0
-PAINT_MODE_FILL = 1
 
 
 @xformtype
@@ -51,7 +47,7 @@ class XFormMultiDot(XFormType):
     Painted mode:
 
     - **tolerance** is the colour difference between the current pixel and surrounding pixels required to stop flood filling. PICK CAREFULLY - it may need to be very small.
-    - **Paint Mode** is whether we are creating circles or painted regions
+    - **New ROIs created with** is whether we are new ROIs are created with circles or flood fill
     - **shift-click** to add a new painted ROI. Will use a circle if "Paint Mode" is circle, or a flood fill with the given tolerance if the mode is "Fill".
     - **ctrl-click** to add a circle or flood fill to a selected painted ROI, provided we are in the same mode as the selected ROI. Circle or fill depends on Paint Mode.
     - **alt-click** to "unpaint" a circle from a selected painted ROI
@@ -73,7 +69,8 @@ class XFormMultiDot(XFormType):
             ('thickness', 0),
             ('colour', (1, 1, 0)),
             ('tolerance', 3),
-            ('drawbg', True)
+            ('drawbg', True),
+            ('createMode', ModeWidget.CIRCLE),
         )
 
     def createTab(self, n, w):
@@ -85,7 +82,7 @@ class XFormMultiDot(XFormType):
         node.thickness = 0
         node.colour = (1, 1, 0)
         node.tolerance = 3
-        node.paintMode = PAINT_MODE_CIRCLE   # not serialised
+        node.createMode = ModeWidget.CIRCLE
         node.drawbg = True
         node.prefix = ''  # the name we're going to set by default, it will be followed by an int
         node.dotSize = 10  # dot radius in pixels
@@ -169,10 +166,12 @@ class XFormMultiDot(XFormType):
 
 
 class ModeWidget(VariantWidget):
+    CIRCLE = 0
+    FILL = 1
     """Widget for selecting the paint mode for painting ROIs"""
     def __init__(self, w):
         # the modes for this tab, must be in the same order as the MODE_ constants
-        super().__init__("Paint mode", ['Circle', 'Fill'], w)
+        super().__init__("New ROIs created with", ['Circle', 'Fill'], w)
 
 
 class TabMultiDot(pcot.ui.tabs.Tab):
@@ -194,8 +193,8 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.clearButton.pressed.connect(self.clearPressed)
         self.w.recolour.pressed.connect(self.recolourPressed)
         self.w.dotSize.editingFinished.connect(self.dotSizeChanged)
-        self.w.tolerance.valueChanged.connect(self.toleranceChanged)
-        self.w.paintMode.changed.connect(self.modeChanged)
+        self.w.tolerance.editingFinished.connect(self.toleranceChanged)
+        self.w.createMode.changed.connect(self.modeChanged)
 
         self.pageButtons = [
             self.w.radioCircles,
@@ -226,7 +225,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.changed()
 
     def modeChanged(self, i):
-        self.node.paintMode = i
+        self.node.createMode = i
 
     def dotSizeChanged(self):
         val = self.w.dotSize.value()
@@ -245,9 +244,9 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.node.fontsize = i
         self.changed()
 
-    def toleranceChanged(self, i):
+    def toleranceChanged(self):
         self.mark()
-        self.node.tolerance = i
+        self.node.tolerance = float(self.w.tolerance.text())
         self.changed()
 
     def recolourPressed(self):
@@ -341,8 +340,10 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.fontsize.setValue(self.node.fontsize)
         self.w.thickness.setValue(self.node.thickness)
         self.w.drawbg.setChecked(self.node.drawbg)
-        self.w.tolerance.setValue(self.node.tolerance)
-        self.w.paintMode.set(self.node.paintMode)
+        self.w.tolerance.setText(str(self.node.tolerance))
+        self.w.createMode.set(self.node.createMode)
+
+        self.w.tolerance.setValidator(QDoubleValidator(0, 1000, 4, self.w.tolerance))
 
         r, g, b = [x * 255 for x in self.node.colour]
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
@@ -436,7 +437,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
                 r = ROIPainted(containingImageDimensions=
                                (node.img.w, node.img.h))
                 self.addNewROI(r)  # add and select the new ROI
-                if node.paintMode == PAINT_MODE_CIRCLE:
+                if node.createMode == ModeWidget.CIRCLE:
                     r.setCircle(x, y, node.dotSize)
                 else:
                     self.fill(node, x, y)
@@ -446,7 +447,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
             # and we have to be on the painted page.
             if self.getPage() == self.PAINTED and isinstance(node.selected, ROIPainted):
                 r = node.selected
-                if node.paintMode == PAINT_MODE_CIRCLE:
+                if node.createMode == ModeWidget.CIRCLE:
                     r.setCircle(x, y, node.dotSize)
                 else:
                     self.fill(node, x, y)
@@ -456,8 +457,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
             # and we have to be on the painted page.
             if self.getPage() == self.PAINTED and isinstance(node.selected, ROIPainted):
                 r = node.selected
-                if node.paintMode == PAINT_MODE_CIRCLE:
-                    r.setCircle(x, y, node.dotSize, delete=True)
+                r.setCircle(x, y, node.dotSize, delete=True)
                 self.changed()
         else:
             # no modifier down. Select and ROI and if it is a circle, start dragging it.
