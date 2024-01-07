@@ -466,7 +466,7 @@ class XformPCTPatchDetection(XFormType):
                 # convert the match into an index in the patchIdentityPossibilities array of that matching signature
                 patch_index = np.where((patchIdentityPossibilities == patch_signature).all(axis=1))[0][0]
                 # use the index in the detections array to fetch the matching x and y coordinates
-                patches_found[patch_name] = [detections[patch_index][0], detections[patch_index][1]]
+                patches_found[patch_name] = detections[patch_index].copy()
             except:
                 # if no matching signature is found, the detection that matched the patch wasnt identified, so put in a null value instead of coordinates
                 patches_found[patch_name] = None
@@ -799,7 +799,7 @@ class XformPCTPatchDetection(XFormType):
             if cc is None:
                 return None
             cx, cy = cc
-            px, py = p
+            px, py, _ = p
             return math.atan2(py - cy, px - cx)
 
         angleWCT2065 = getAngle(centroid, node.detections.WCT2065)
@@ -1124,17 +1124,18 @@ class PCTPatchData:
 
     def __init__(self, NG4, RG610, BG3, NG11, OG515, BG18, Pyroceram, WCT2065):
         """
-        Initialise a PCTPatchData datum from a set of patch centre coordinates or null values
+        Initialise a PCTPatchData datum from a set of patch centre detections or nulls. Contains centre coords
+        and radii.
         """
         # construct the Datum variables, setting them to none if no detection was matched to that patch
-        self.NG4 = [NG4[0], NG4[1]] if NG4 is not None else None
-        self.RG610 = [RG610[0], RG610[1]] if RG610 is not None else None
-        self.BG3 = [BG3[0], BG3[1]] if BG3 is not None else None
-        self.NG11 = [NG11[0], NG11[1]] if NG11 is not None else None
-        self.OG515 = [OG515[0], OG515[1]] if OG515 is not None else None
-        self.BG18 = [BG18[0], BG18[1]] if BG18 is not None else None
-        self.Pyroceram = [Pyroceram[0], Pyroceram[1]] if Pyroceram is not None else None
-        self.WCT2065 = [WCT2065[0], WCT2065[1]] if WCT2065 is not None else None
+        self.NG4 = NG4
+        self.RG610 = RG610
+        self.BG3 = BG3
+        self.NG11 = NG11
+        self.OG515 = OG515
+        self.BG18 = BG18
+        self.Pyroceram = Pyroceram
+        self.WCT2065 = WCT2065
 
         # if None isn't present in any inputs, the data is complete, and the datum can be marked so
         # this makes life easier down the processing line not having to do this same check many times
@@ -1189,7 +1190,8 @@ class PCTPatchData:
         for patchCoordinatePair in range(0, 8):
             stringBuilder += (patchNames[patchCoordinatePair] + ": ")
             if patchIdentities[patchCoordinatePair] is not None:
-                stringBuilder += f"{patchIdentities[patchCoordinatePair][0]}x, {patchIdentities[patchCoordinatePair][1]}y\n"
+                x,y,r = patchIdentities[patchCoordinatePair]
+                stringBuilder += f"{x}x, {y}y, {r}r\n"
             else:
                 stringBuilder += "Unidentified\n"
 
