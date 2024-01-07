@@ -8,6 +8,7 @@ holding the patch identities and their coordinates for all detected patches.
 """
 # pcot library functionality to integrate with PCOT
 from pcot.datumtypes import Type
+from pcot.rois import ROICircle
 from pcot.xform import xformtype, XFormType
 from pcot.datum import Datum
 from pcot.ui.tabs import Tab
@@ -183,7 +184,8 @@ class XformPCTPatchDetection(XFormType):
                 self.plotDetections(node, finalCirclesList, workingImg)
 
                 # set node outputs to the detections if any detections were made:
-                node.setOutput(0, Datum(PCTDataType, node.detections, node.inputImg.sources))
+                out = Datum(PCTDataType, node.detections, node.inputImg.sources)
+                node.setOutput(0, out)
 
             # if no circles found
             else:
@@ -362,10 +364,11 @@ class XformPCTPatchDetection(XFormType):
 
         # loop through the identities, writing the name if the detection isnt null
         for patchIdentity in range(0, 8):
-            if patchIdentities[patchIdentity] is not None:
+            p = patchIdentities[patchIdentity]
+            if p is not None:
                 cv.putText(plotCanvas, patchNames[patchIdentity],
-                           (patchIdentities[patchIdentity][0] + namePostionAdjustments[patchIdentity][0],
-                            patchIdentities[patchIdentity][1] + namePostionAdjustments[patchIdentity][1]),
+                           (p.x + namePostionAdjustments[patchIdentity][0],
+                            p.y + namePostionAdjustments[patchIdentity][1]),
                            cv.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 255), 1, 2)
 
         # add a pixel scale to the bottom corner of the image
@@ -799,8 +802,7 @@ class XformPCTPatchDetection(XFormType):
             if cc is None:
                 return None
             cx, cy = cc
-            px, py, _ = p
-            return math.atan2(py - cy, px - cx)
+            return math.atan2(p.y - cy, p.x - cx)
 
         angleWCT2065 = getAngle(centroid, node.detections.WCT2065)
         anglePyroceram = getAngle(centroid, node.detections.Pyroceram)
@@ -1103,9 +1105,9 @@ More information can be found under the HoughCircles() method documentation <a h
 # This class is the definition of a Datum for the outputting of PCT patch centre coordinate data
 class PCTPatchData:
     """
-    Class defining the data structure for PCT data, consisting of 8 pairs of coordinates for the
-    centres of patches in the recieved image, or 'None' values where patch identities couldn't be
-    detected, and one extra variable to mark if the PCT data is complete (8 patches) or not
+    Class defining the data structure for PCT data, consisting of 8 circular ROIs in the recieved image,
+    or 'None' values where patch identities couldn't be detected, and one extra variable to mark if the
+    PCT data is complete (8 patches) or not
     """
 
     # The variable names within this object reference the names for the glass patches on the PCT
@@ -1127,15 +1129,19 @@ class PCTPatchData:
         Initialise a PCTPatchData datum from a set of patch centre detections or nulls. Contains centre coords
         and radii.
         """
+
         # construct the Datum variables, setting them to none if no detection was matched to that patch
-        self.NG4 = NG4
-        self.RG610 = RG610
-        self.BG3 = BG3
-        self.NG11 = NG11
-        self.OG515 = OG515
-        self.BG18 = BG18
-        self.Pyroceram = Pyroceram
-        self.WCT2065 = WCT2065
+        def patch2circ(patch):
+            return ROICircle(patch[0], patch[1], patch[2]) if patch is not None else None
+
+        self.NG4 = patch2circ(NG4)
+        self.RG610 = patch2circ(RG610)
+        self.BG3 = patch2circ(BG3)
+        self.NG11 = patch2circ(NG11)
+        self.OG515 = patch2circ(OG515)
+        self.BG18 = patch2circ(BG18)
+        self.Pyroceram = patch2circ(Pyroceram)
+        self.WCT2065 = patch2circ(WCT2065)
 
         # if None isn't present in any inputs, the data is complete, and the datum can be marked so
         # this makes life easier down the processing line not having to do this same check many times
@@ -1162,8 +1168,8 @@ class PCTPatchData:
         x = 0
         y = 0
         for patch in detectedPatches:
-            x += patch[0]
-            y += patch[1]
+            x += patch.x
+            y += patch.y
         x /= len(detectedPatches)
         y /= len(detectedPatches)
 
@@ -1189,9 +1195,9 @@ class PCTPatchData:
         # for each patch identity either write in it's coordinates or that it wasn't identified
         for patchCoordinatePair in range(0, 8):
             stringBuilder += (patchNames[patchCoordinatePair] + ": ")
-            if patchIdentities[patchCoordinatePair] is not None:
-                x,y,r = patchIdentities[patchCoordinatePair]
-                stringBuilder += f"{x}x, {y}y, {r}r\n"
+            pi = patchIdentities[patchCoordinatePair]
+            if pi is not None:
+                stringBuilder += f"{pi.x}x, {pi.y}y, {pi.r}r\n"
             else:
                 stringBuilder += "Unidentified\n"
 
@@ -1230,21 +1236,34 @@ class _PCTDataType(Type):
         # The contents must be JSON-serialisable, and must contain both the
         # data to be saved and the serialised source information.
 
-        # convert data object to something we can serialise
-        serialisedObject = (d.val.NG4, d.val.RG610, d.val.BG3,
-                            d.val.NG11, d.val.OG515, d.val.BG18,
-                            d.val.Pyroceram, d.val.WCT2065, d.val.complete)
+        # serialise each of the patch ROIs or None. We don't do a full serialise on the ROICircle objects
+        # because it would be wasteful.
+        def ser(p: ROICircle):
+            return (p.x, p.y, p.r) if p is not None else None
+
+        # we also don't store completeness; that's inferred from the data
+        serialised = (ser(d.val.NG4), ser(d.val.RG610), ser(d.val.BG3),
+                      ser(d.val.NG11), ser(d.val.OG515), ser(d.val.BG18),
+                      ser(d.val.Pyroceram), ser(d.val.WCT2065))
+
         # and create the serialised datum of the name and contents
-        return self.name, (serialisedObject, d.getSources().serialise())
+        return self.name, (serialised, d.getSources().serialise())
 
     def deserialise(self, d, document):
         # given a serialised tuple generated by serialise(), produce a Datum
         # of this type.
-        serialisedObject, serialisedSources = d  # first generate the contents
+        serialised, serialisedSources = d  # first generate the contents
+
+        # recreate the ROIs
+        def des(p):
+            return ROICircle(*p) if p is not None else None
+
+        deserialised = [des(p) for p in serialised]
+
         # deserialise the serialised sources data
         sources = SourceSet.deserialise(serialisedSources, document)
         # then pass to the datum constructor along with the type singleton.
-        return Datum(self, serialisedObject, sources)
+        return Datum(self, deserialised, sources)
 
     ####################################################################################################
 
