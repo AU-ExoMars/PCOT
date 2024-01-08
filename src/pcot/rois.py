@@ -56,8 +56,8 @@ class ROI(SourcesObtainable, Annotation):
         ROI.roiTypes[cls.tpname] = cls
 
     def __init__(self, bbrect: Rect = None, maskimg: np.array = None,
-                 sourceROI=None, isTemp=False,
-                 containingImageDimensions=None):
+                 sourceROI=None, isTemp=False, containingImageDimensions=None,
+                 label=None):
         """Constructor. Takes an ROI type name, optional rect and mask (for 'base' ROIs consisting of just these)
         and an optional sourceROI from which some data is copied, for copy operations"""
 
@@ -69,7 +69,10 @@ class ROI(SourcesObtainable, Annotation):
 
         self.isTemp = isTemp  # for temporary ROIs created by expressions
 
-        self.label = None if sourceROI is None else sourceROI.label
+        if label is None:
+            self.label = None if sourceROI is None else sourceROI.label
+        else:
+            self.label = label
         self.labeltop = False if sourceROI is None else sourceROI.labeltop  # draw the label at the top?
         self.colour = (1, 1, 0) if sourceROI is None else sourceROI.colour  # annotation colour
         self.thickness = 0 if sourceROI is None else sourceROI.thickness  # thickness of lines
@@ -447,8 +450,8 @@ class ROIRect(ROI):
     """Rectangular ROI"""
     tpname = "rect"
 
-    def __init__(self, sourceROI=None):
-        super().__init__(sourceROI=sourceROI)
+    def __init__(self, sourceROI=None, label=None):
+        super().__init__(sourceROI=sourceROI, label=label)
         if sourceROI is None:
             self.x = 0
             self.y = 0
@@ -532,8 +535,8 @@ class ROICircle(ROI):
     r: int
     isSet: bool
 
-    def __init__(self, x=-1, y=0, r=0, sourceROI=None):
-        super().__init__('circle', sourceROI=sourceROI)
+    def __init__(self, x=-1, y=0, r=0, sourceROI=None, label=None):
+        super().__init__(sourceROI=sourceROI, label=label)
         if sourceROI is None:
             self.set(x, y, r)
             self.drawBox = False
@@ -630,9 +633,9 @@ class ROIPainted(ROI):
 
     # we can create this ab initio or from a subimage mask of an image.
     def __init__(self, mask=None, label=None, sourceROI=None, containingImageDimensions=None):
-        super().__init__(sourceROI=sourceROI, containingImageDimensions=containingImageDimensions)
+        super().__init__(sourceROI=sourceROI, label=label,
+                         containingImageDimensions=containingImageDimensions)
         if sourceROI is None:
-            self.label = label
             if mask is None:
                 self.bbrect = None
                 self.map = None
@@ -784,8 +787,8 @@ class ROIPainted(ROI):
 class ROIPoly(ROI):
     tpname = "poly"
 
-    def __init__(self, sourceROI=None):
-        super().__init__(sourceROI=sourceROI)
+    def __init__(self, sourceROI=None, label=None):
+        super().__init__(sourceROI=sourceROI, label=label)
         self.selectedPoint = None  # don't set the selected point in copies
         if sourceROI is None:
             self.drawPoints = True

@@ -372,7 +372,7 @@ class ImageCube(SourcesObtainable):
             self.sources = sources
         else:
             self.sources = MultiBandSource.createEmptySourceSets(self.channels)
-            
+
         self.defaultMapping = defaultMapping
 
         # get the mapping sorted, which may be None (in which case rgb() might not work).
@@ -530,19 +530,29 @@ class ImageCube(SourcesObtainable):
     def subimage(self, imgToUse=None, roi=None):
         return SubImageCubeROI(self, imgToUse, roi)
 
-    def __str__(self):
+    def __repr__(self):
+        """simple string representation - should probably have no newlines in it. I've deliberately made it look a bit
+        line an HTML tag, for no very good reason."""
+
         s = "<Image-{} {}x{} array:{} channels:{}, {} bytes, ".format(id(self), self.w, self.h,
                                                                       str(self.img.shape), self.channels,
                                                                       self.img.nbytes)
-        # caption type 0 is filter positions only
-        xx = self.sources.brief()
 
-        s += "src: [{}]".format(xx)
-        xx = [r.bb() for r in self.rois]
-        xx = [x for x in xx if x]  # filter out None
-        xx = [", ROI {},{},{}x{}".format(x, y, w, h) for x, y, w, h in xx if xx]
-        s += "/".join(xx) + ">"
+        s += "src: [{}]".format(self.sources.brief())
+        rois = ";".join([str(r) for r in self.rois])
+        s += rois + ">"
         return s
+
+    def __str__(self):
+        """Prettier string representation - but (importantly) doesn't have a unique ID so we can use it
+        in string tests."""
+        s = "Image {}x{} array:{} channels:{}, {} bytes".format(self.w, self.h,
+                                                                str(self.img.shape), self.channels,
+                                                                self.img.nbytes)
+
+        s += "\nsrc: [{}]\n".format(self.sources.brief())
+        rois = "\n".join([str(r) for r in self.rois])
+        return s+rois
 
     ## the descriptor is a string which can vary depending on main window settings.
     # If channel assignments are provided (e.g. [0,1,2]) select those channels and
@@ -950,5 +960,3 @@ class ImageCube(SourcesObtainable):
         img.annotations = []
         img.rois = []
         return img
-
-

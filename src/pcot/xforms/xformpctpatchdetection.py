@@ -6,26 +6,21 @@ of the PCT on the ExoMars rover. It will take an image as an input and output a 
 holding the patch identities and their coordinates for all detected patches.
 
 """
-# pcot library functionality to integrate with PCOT
-from pcot.datumtypes import Type
-from pcot.rois import ROICircle
-from pcot.xform import xformtype, XFormType
-from pcot.datum import Datum
-from pcot.ui.tabs import Tab
-from pcot.sources import SourceSet, nullSource
-import pcot.config
-
-# QT imports for interfacing with the front-end
-from PySide2.QtCore import Qt, QSize
-from PySide2.QtGui import QColor
-from PySide2.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QMessageBox
-from PySide2.QtGui import QImage, QPixmap
+import math
+from os import path
 
 # assorted functional imports
 import cv2 as cv
 import numpy as np
-import math
-from os import path
+# QT imports for interfacing with the front-end
+from PySide2.QtCore import Qt, QSize
+from PySide2.QtGui import QImage, QPixmap
+from PySide2.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QMessageBox
+
+from pcot.datum import Datum
+from pcot.rois import ROICircle
+from pcot.ui.tabs import Tab
+from pcot.xform import xformtype, XFormType
 
 # Set the default values for object detection parameters
 # definitions of these parameters found in parameter description button on node
@@ -35,6 +30,15 @@ CANNYHIGHPARAM = 55
 CANNYLOWPARAM = 24
 MINRADIUS = 8
 MAXRADIUS = 24
+
+
+def createInterpolatedROI(x, y, r, label):
+    """
+    Create a new ROI object with the given coordinates and label
+    """
+    r = ROICircle(x, y, r, label=label)
+    r.colour = (0, 1, 1)
+    return r
 
 
 # This class defines the back-end functionality of the node
@@ -54,10 +58,7 @@ class XformPCTPatchDetection(XFormType):
         super().__init__("PCT Patch Detection", "calibration", "1.0.0")
         # creates input to node of an image datum
         self.addInputConnector("img", Datum.IMG)
-        # seek index of PCTDataType in Datum types array by looking for object of that type
-        PCTDataTypeIndex = next(
-            datumIndex for datumIndex, datumType in enumerate(Datum.types) if isinstance(datumType, _PCTDataType))
-        self.addOutputConnector("patch centres", Datum.types[PCTDataTypeIndex])
+        self.addOutputConnector("img+rois", Datum.IMG)
         # set following node variables to be serialised when required, which is needed for saving and the undo stack
         self.autoserialise = ("dp", "minDist", "cannyHighParam",
                               "cannyLowParam", "minRadius", "maxRadius",
@@ -182,18 +183,18 @@ class XformPCTPatchDetection(XFormType):
 
                 # create image showing patch detections and identities to the user
                 self.plotDetections(node, finalCirclesList, workingImg)
-
-                # set node outputs to the detections if any detections were made:
-                out = Datum(PCTDataType, node.detections, node.inputImg.sources)
-                node.setOutput(0, out)
-
-            # if no circles found
+                # set the ROIs on the input image (which is a copy of the actual input) - this
+                # replaces any ROIs already there!
+                node.inputImg.rois = [x for x in node.detections.toROIList() if x is not None]
+                # and that will be the output image
+                node.setOutput(0, Datum(Datum.IMG, node.inputImg, node.inputImg.sources))
             else:
+                # if no circles found
                 node.detections = "No detections made, try altering detection parameters."
                 node.detectionsImage = None
 
                 # set node output to None:
-                node.setOutput(0, Datum(Datum.ANY, None, node.inputImg.sources))
+                node.setOutput(0, Datum.null)
 
         # if no image inputted:
         else:
@@ -615,6 +616,18 @@ class XformPCTPatchDetection(XFormType):
         else:
             return self.identitySolve(node, detections, patchIdentityPossibilities, recursionDepth + 1)
 
+    @staticmethod
+    def getMeanSmallPatchSize(d):
+        """Guess patch size. It's calculated from existing detections and used to fill in
+        the radii of interpolated patches. We don't actually use the big patch size, since those two patches
+        must be detected."""
+        smallPatchRadii = [x.r for x in (d.RG610, d.OG515, d.BG18, d.BG3, d.NG4, d.NG11) if x is not None]
+        # we shrink these down, because we're using them to calculate the size of the small patches.
+        # 18/30 is the ratio of the small patch size to the big patch size
+        bigPatchRadii = [x.r * (18.0 / 30.0) for x in (d.Pyroceram, d.WCT2065) if x is not None]
+        patchRadii = smallPatchRadii + bigPatchRadii
+        return np.mean(patchRadii)
+
     def interpolateMissingDetections(self, node, existingDetections, recursionsLeft):
         """
         Set of rules that is recursively applied if not all PCT patches were initially identified to predict missing patch locations
@@ -623,87 +636,95 @@ class XformPCTPatchDetection(XFormType):
         # No interpolation is attempted for Pyroceram or WCT-2065 - these are essential for the detection solver and without 
         # them detected no other patches can be predicted, and parameter adjustment will yield better results
 
-        ##### NG4 #####
-        if node.detections.NG4 is None:
-            # NG4 Rule 1: If RG610 & BG3 identified, NG4 = 2 x BG3 > RG610 translation
-            node.detections.NG4, existingDetections = self.interpolationTranslation(node.detections.BG3,
-                                                                                    node.detections.RG610, 1,
-                                                                                    existingDetections)
+        # first, calculate the mean sizes of big and small patches; we'll need those to create the ROIs.
+        d = node.detections
+        node.meanSmallPatchRadius = self.getMeanSmallPatchSize(d)
 
-            if node.detections.NG4 is None:
+        ##### NG4 #####
+        if d.NG4 is None:
+            # NG4 Rule 1: If RG610 & BG3 identified, NG4 = 2 x BG3 > RG610 translation
+            d.NG4, existingDetections = self.interpolationTranslation(node, "NG4", d.BG3,
+                                                                      d.RG610, 1,
+                                                                      existingDetections)
+            if d.NG4 is None:
                 # NG4 Rule 2: If RG610, NG11, & OG515 identified, NG4 = 4th corner of parallelogram
-                node.detections.NG4, existingDetections = self.interpolationMissingParallelogramCorner(
-                    node.detections.RG610, node.detections.OG515, node.detections.NG11, existingDetections)
+                d.NG4, existingDetections = self.interpolationMissingParallelogramCorner(node, "NG4",
+                                                                                         d.RG610, d.OG515, d.NG11,
+                                                                                         existingDetections)
 
         ##### RG610 #####
-        if node.detections.RG610 is None:
+        if d.RG610 is None:
             # RG610 Rule 1: If NG4 & BG3 identified, RG610 = mean of NG4 & BG3
-            node.detections.RG610, existingDetections = self.interpolationMean(node.detections.NG4, node.detections.BG3,
-                                                                               existingDetections)
+            d.RG610, existingDetections = self.interpolationMean(node, "RG610", d.NG4, d.BG3,
+                                                                 existingDetections)
 
-            if node.detections.RG610 is None:
+            if d.RG610 is None:
                 # RG610 Rule 2: If OG515 identified, RG610 = 1.8 x mean(Pyroceram, WCT-2065) > OG515 translation
-                meanLargePatchCoordinates = [int((node.detections.Pyroceram[0] + node.detections.WCT2065[0]) / 2),
-                                             int((node.detections.Pyroceram[1] + node.detections.WCT2065[1]) / 2)]
-                node.detections.RG610, existingDetections = self.interpolationTranslation(meanLargePatchCoordinates,
-                                                                                          node.detections.OG515, 0.8,
-                                                                                          existingDetections)
+                meanLargePatchCoordinates = [int((d.Pyroceram[0] + d.WCT2065[0]) / 2),
+                                             int((d.Pyroceram[1] + d.WCT2065[1]) / 2)]
+                d.RG610, existingDetections = self.interpolationTranslation(node, "RG610", meanLargePatchCoordinates,
+                                                                            d.OG515, 0.8,
+                                                                            existingDetections)
 
         ##### BG3 #####
-        if node.detections.BG3 is None:
+        if d.BG3 is None:
             # BG3 Rule 1: If RG610 & NG4 identified, BG3 = 2 x NG4 > RG610 translation
-            node.detections.BG3, existingDetections = self.interpolationTranslation(node.detections.NG4,
-                                                                                    node.detections.RG610, 1,
-                                                                                    existingDetections)
+            d.BG3, existingDetections = self.interpolationTranslation(node, "BG3", d.NG4,
+                                                                      d.RG610, 1,
+                                                                      existingDetections)
 
-            if node.detections.BG3 is None:
+            if d.BG3 is None:
                 # BG3 Rule 2: If RG610, BG18, & OG515 identified, NG4 = 4th corner of parallelogram
-                node.detections.BG3, existingDetections = self.interpolationMissingParallelogramCorner(
-                    node.detections.RG610, node.detections.OG515, node.detections.BG18, existingDetections)
+                d.BG3, existingDetections = self.interpolationMissingParallelogramCorner(node, "BG3",
+                                                                                         d.RG610, d.OG515, d.BG18,
+                                                                                         existingDetections)
 
         ##### NG11 #####
-        if node.detections.NG11 is None:
+        if d.NG11 is None:
             # NG11 Rule 1: If OG515 & BG18 identified, NG11 = 2 x BG18 > OG515 translation
-            node.detections.NG11, existingDetections = self.interpolationTranslation(node.detections.BG18,
-                                                                                     node.detections.OG515, 1,
-                                                                                     existingDetections)
+            d.NG11, existingDetections = self.interpolationTranslation(node, "NG11", d.BG18,
+                                                                       d.OG515, 1,
+                                                                       existingDetections)
 
-            if node.detections.NG11 is None:
+            if d.NG11 is None:
                 # NG11 Rule 2: If RG610, NG4, & OG515 identified, NG11 = 4th corner of parallelogram
-                node.detections.NG11, existingDetections = self.interpolationMissingParallelogramCorner(
-                    node.detections.OG515, node.detections.RG610, node.detections.BG18, existingDetections)
-
-        ##### OG515 #####
-        if node.detections.OG515 is None:
-            # OG515 Rule 1: If NG11 & BG18 identified, OG515 = mean of NG11 & BG18
-            node.detections.OG515, existingDetections = self.interpolationMean(node.detections.NG11,
-                                                                               node.detections.BG18, existingDetections)
-
-            if node.detections.OG515 is None:
-                # OG515 Rule 2: If RG610 identified, OG515 = 0.56 x mean(Pyroceram, WCT-2065) > RG610 translation
-                meanLargePatchCoordinates = [int((node.detections.Pyroceram[0] + node.detections.WCT2065[0]) / 2),
-                                             int((node.detections.Pyroceram[1] + node.detections.WCT2065[1]) / 2)]
-                node.detections.OG515, existingDetections = self.interpolationTranslation(meanLargePatchCoordinates,
-                                                                                          node.detections.RG610, -0.44,
+                d.NG11, existingDetections = self.interpolationMissingParallelogramCorner(node, "NG11",
+                                                                                          d.OG515, d.RG610, d.BG18,
                                                                                           existingDetections)
 
-        ##### BG18 #####
-        if node.detections.BG18 is None:
-            # BG18 Rule 1: If OG515 & NG11 identified, BG18 = 2 x NG11 > OG515 translation
-            node.detections.BG18, existingDetections = self.interpolationTranslation(node.detections.NG11,
-                                                                                     node.detections.OG515, 1,
-                                                                                     existingDetections)
+        ##### OG515 #####
+        if d.OG515 is None:
+            # OG515 Rule 1: If NG11 & BG18 identified, OG515 = mean of NG11 & BG18
+            d.OG515, existingDetections = self.interpolationMean(node, "OG515",
+                                                                 d.NG11,
+                                                                 d.BG18, existingDetections)
 
-            if node.detections.BG18 is None:
+            if d.OG515 is None:
+                # OG515 Rule 2: If RG610 identified, OG515 = 0.56 x mean(Pyroceram, WCT-2065) > RG610 translation
+                meanLargePatchCoordinates = [int((d.Pyroceram[0] + d.WCT2065[0]) / 2),
+                                             int((d.Pyroceram[1] + d.WCT2065[1]) / 2)]
+                d.OG515, existingDetections = self.interpolationTranslation(node, "OG515",
+                                                                            d.RG610, -0.44,
+                                                                            existingDetections)
+
+        ##### BG18 #####
+        if d.BG18 is None:
+            # BG18 Rule 1: If OG515 & NG11 identified, BG18 = 2 x NG11 > OG515 translation
+            d.BG18, existingDetections = self.interpolationTranslation(node, "BG18",
+                                                                       d.NG11,
+                                                                       d.OG515, 1,
+                                                                       existingDetections)
+
+            if d.BG18 is None:
                 # BG18 Rule 2: If RG610, BG3, & OG515 identified, BG18 = 4th corner of parallelogram
-                node.detections.BG18, existingDetections = self.interpolationMissingParallelogramCorner(
-                    node.detections.BG3, node.detections.RG610, node.detections.OG515, existingDetections)
+                d.BG18, existingDetections = self.interpolationMissingParallelogramCorner(
+                    node, "BG18", d.BG3, d.RG610, d.OG515, existingDetections)
 
         # check and update pct datum for completeness
-        node.detections.updateCompleteness()
+        d.updateCompleteness()
 
         # if the datum is complete or max recursions was reached return the updated detections list now
-        if node.detections.complete or recursionsLeft <= 0:
+        if d.complete or recursionsLeft <= 0:
             return existingDetections
         # if not, loop the interpolation rules again to take advantage of identities detected this time
         else:
@@ -726,7 +747,7 @@ class XformPCTPatchDetection(XFormType):
 
         return predictedXY, coordinatesReplaced
 
-    def interpolationMean(self, patchOne, patchTwo, existingDetections):
+    def interpolationMean(self, node, label, patchOne, patchTwo, existingDetections):
         """
         Predict a target patch as the mean of two other patches
         """
@@ -738,13 +759,14 @@ class XformPCTPatchDetection(XFormType):
             predictedXY, replaced = self.checkExistingDetections(predictedXY, existingDetections)
             # if the predicted coordinates were a new detection, add to the detections array with a tag that it was a interpolated detection
             if not replaced:
-                existingDetections.append([predictedXY[0], predictedXY[1], 14, False])
+                existingDetections.append([predictedXY[0], predictedXY[1], node.meanSmallPatchRadius, False])
             # return the coordinates for the patch to the datum and the detections array
-            return [predictedXY[0], predictedXY[1]], existingDetections
+            return createInterpolatedROI(predictedXY[0], predictedXY[1], node.meanSmallPatchRadius,
+                                         label), existingDetections
         # if the translation components were null, return nothing for the patch and the detections array
         return None, existingDetections
 
-    def interpolationTranslation(self, translationSource, translationDestination, translationMagnitude,
+    def interpolationTranslation(self, node, label, translationSource, translationDestination, translationMagnitude,
                                  existingDetections):
         """
         Predict a target patch relative to a translation between two other patches - a translation magnitude of 1 
@@ -752,36 +774,39 @@ class XformPCTPatchDetection(XFormType):
         """
         # check the translation components are not null
         if None not in (translationSource, translationDestination):
-            predictedXY = [translationDestination[0] + int(
-                translationMagnitude * (translationDestination[0] - translationSource[0])),
-                           translationDestination[1] + int(
-                               translationMagnitude * (translationDestination[1] - translationSource[1]))]
+            predictedXY = [translationDestination.x + int(
+                translationMagnitude * (translationDestination.x - translationSource.x)),
+                           translationDestination.y + int(
+                               translationMagnitude * (translationDestination.y - translationSource.y))]
             # check if any exiting detections closely match the coordinates and use those instead if so
             predictedXY, replaced = self.checkExistingDetections(predictedXY, existingDetections)
             # if the predicted coordinates were a new detection, add to the detections array with a tag that it was a interpolated detection
             if not replaced:
-                existingDetections.append([predictedXY[0], predictedXY[1], 14, False])
+                existingDetections.append([predictedXY[0], predictedXY[1], node.meanSmallPatchRadius, False])
             # return the coordinates for the patch to the datum and the detections array
-            return [predictedXY[0], predictedXY[1]], existingDetections
+            return createInterpolatedROI(predictedXY[0], predictedXY[1], node.meanSmallPatchRadius,
+                                         label), existingDetections
         # if the translation components were null, return nothing for the patch and the detections array
         return None, existingDetections
 
-    def interpolationMissingParallelogramCorner(self, leftCorner, oppositeCorner, rightCorner, existingDetections):
+    def interpolationMissingParallelogramCorner(self, node, label, leftCorner, oppositeCorner, rightCorner,
+                                                existingDetections):
         """
         Predict a target patch as the 4th corner of a parallelogram where 3 other patches are the known corners
         """
         # check the parallelogram corners are not null
         if None not in (leftCorner, oppositeCorner, rightCorner):
-            predictedX = leftCorner[0] + (rightCorner[0] - oppositeCorner[0])
-            predictedY = leftCorner[1] + (rightCorner[1] - oppositeCorner[1])
+            predictedX = leftCorner.x + (rightCorner.x - oppositeCorner.x)
+            predictedY = leftCorner.y + (rightCorner.y - oppositeCorner.y)
             predictedXY = [predictedX, predictedY]
             # check if any exiting detections closely match the coordinates and use those instead if so
             predictedXY, replaced = self.checkExistingDetections(predictedXY, existingDetections)
             # if the predicted coordinates were a new detection, add to the detections array with a tag that it was a interpolated detection
             if not replaced:
-                existingDetections.append([predictedXY[0], predictedXY[1], 14, False])
+                existingDetections.append([predictedXY[0], predictedXY[1], node.meanSmallPatchRadius, False])
             # return the coordinates for the patch to the datum and the detections array
-            return [predictedXY[0], predictedXY[1]], existingDetections
+            return createInterpolatedROI(predictedXY[0], predictedXY[1], node.meanSmallPatchRadius,
+                                         label), existingDetections
         # if the translation components were null, return nothing for the patch and the detections array
         return None, existingDetections
 
@@ -1102,12 +1127,12 @@ More information can be found under the HoughCircles() method documentation <a h
 
 ####################################################################################################
 
-# This class is the definition of a Datum for the outputting of PCT patch centre coordinate data
 class PCTPatchData:
     """
     Class defining the data structure for PCT data, consisting of 8 circular ROIs in the recieved image,
     or 'None' values where patch identities couldn't be detected, and one extra variable to mark if the
-    PCT data is complete (8 patches) or not
+    PCT data is complete (8 patches) or not. It used to be the output type of the PCTPatchDetector node,
+    but now we use ROIs on the image for that.
     """
 
     # The variable names within this object reference the names for the glass patches on the PCT
@@ -1124,28 +1149,35 @@ class PCTPatchData:
     # A view of the PCT is available at https://exomars.wales/projects/hardware/
     # Each of the patch variables should take the form [x,y] or None
 
+    PATCHNAMES = ["NG4", "RG610", "BG3", "NG11", "OG515", "BG18", "Pyroceram", "WCT2065"]
+
     def __init__(self, NG4, RG610, BG3, NG11, OG515, BG18, Pyroceram, WCT2065):
         """
         Initialise a PCTPatchData datum from a set of patch centre detections or nulls. Contains centre coords
         and radii.
         """
 
-        # construct the Datum variables, setting them to none if no detection was matched to that patch
-        def patch2circ(patch):
-            return ROICircle(patch[0], patch[1], patch[2]) if patch is not None else None
+        def patch2circ(patch, label):
+            # generates an ROI from a patch, giving it a label and setting the font size
+            if patch is None:
+                return None
+            r = ROICircle(patch[0], patch[1], patch[2], label=label)
+            r.fontsize = 6
+            return r
 
-        self.NG4 = patch2circ(NG4)
-        self.RG610 = patch2circ(RG610)
-        self.BG3 = patch2circ(BG3)
-        self.NG11 = patch2circ(NG11)
-        self.OG515 = patch2circ(OG515)
-        self.BG18 = patch2circ(BG18)
-        self.Pyroceram = patch2circ(Pyroceram)
-        self.WCT2065 = patch2circ(WCT2065)
+        # build the ROIs from the patches
+        self.NG4 = patch2circ(NG4, "NG4")
+        self.RG610 = patch2circ(RG610, "RG610")
+        self.BG3 = patch2circ(BG3, "BG3")
+        self.NG11 = patch2circ(NG11, "NG11")
+        self.OG515 = patch2circ(OG515, "OG515")
+        self.BG18 = patch2circ(BG18, "BG18")
+        self.Pyroceram = patch2circ(Pyroceram, "Pyroceram")
+        self.WCT2065 = patch2circ(WCT2065, "WCT2065")
 
         # if None isn't present in any inputs, the data is complete, and the datum can be marked so
         # this makes life easier down the processing line not having to do this same check many times
-        if None not in (NG4, RG610, BG3, NG11, OG515, BG18, Pyroceram, WCT2065):
+        if None not in self.toROIList():
             self.complete = True
         else:
             self.complete = False
@@ -1182,96 +1214,29 @@ class PCTPatchData:
         self.BG3, self.NG4 = self.NG4, self.BG3
 
     def __str__(self):
-        """
-        This method is used whenever the object is cast to a string, for example in the node text output box
-        """
-        # set up arrays to allow appending string in a loop
-        patchIdentities = [self.NG4, self.RG610, self.BG3, self.NG11, self.OG515, self.BG18, self.Pyroceram,
-                           self.WCT2065]
-        patchNames = ["NG4", "RG610", "BG3", "NG11", "OG515", "BG18", "Pyroceram", "WCT2065"]
-        # create blank string to append detections to
-        stringBuilder = ""
+        """Return a string representation of the PCTPatchData"""
 
-        # for each patch identity either write in it's coordinates or that it wasn't identified
-        for patchCoordinatePair in range(0, 8):
-            stringBuilder += (patchNames[patchCoordinatePair] + ": ")
-            pi = patchIdentities[patchCoordinatePair]
-            if pi is not None:
-                stringBuilder += f"{pi.x}x, {pi.y}y, {pi.r}r\n"
-            else:
-                stringBuilder += "Unidentified\n"
+        def patch2str(patch):
+            return f"{patch.x}, {patch.y}, {patch.r}" if patch is not None else "None"
 
-        # add a line on to quickly confirm that the detections are complete/incomplete
-        stringBuilder += f"Complete Detections: {self.complete}"
-
-        return stringBuilder
+        lst = [f"{name}: {patch2str(patch)}" for name, patch in zip(self.PATCHNAMES, self.toROIList())]
+        return "\n".join(lst)
 
     def updateCompleteness(self):
         """
         Method to be called to check if the datum holds all patch detections, and update the datum variable if so
         """
         # if all variables are populated the datum is complete
-        if None not in (self.NG4, self.RG610, self.BG3,
-                        self.NG11, self.OG515, self.BG18,
-                        self.Pyroceram, self.WCT2065):
+        if None not in self.toROIList():
             self.complete = True
         else:
             self.complete = False
 
-
-# This class defines the serialisation and deserialisation properties of the PCTPatchData class
-# named with an underscore to avoid clashing with it's singleton object of the same name
-class _PCTDataType(Type):
-    """
-    Singleton class defining the serialisation/deserialisation for PCT data
-    """
-
-    def __init__(self):
-        super().__init__('PCTDataType')
-
-    # Datums need to be able to be serialisable and deserialisable into JSON-readable format
-    def serialise(self, d):
-        # how to serialise data of this type: serialise() methods must return
-        # a tuple of typename and contents.
-        # The contents must be JSON-serialisable, and must contain both the
-        # data to be saved and the serialised source information.
-
-        # serialise each of the patch ROIs or None. We don't do a full serialise on the ROICircle objects
-        # because it would be wasteful.
-        def ser(p: ROICircle):
-            return (p.x, p.y, p.r) if p is not None else None
-
-        # we also don't store completeness; that's inferred from the data
-        serialised = (ser(d.val.NG4), ser(d.val.RG610), ser(d.val.BG3),
-                      ser(d.val.NG11), ser(d.val.OG515), ser(d.val.BG18),
-                      ser(d.val.Pyroceram), ser(d.val.WCT2065))
-
-        # and create the serialised datum of the name and contents
-        return self.name, (serialised, d.getSources().serialise())
-
-    def deserialise(self, d, document):
-        # given a serialised tuple generated by serialise(), produce a Datum
-        # of this type.
-        serialised, serialisedSources = d  # first generate the contents
-
-        # recreate the ROIs
-        def des(p):
-            return ROICircle(*p) if p is not None else None
-
-        deserialised = [des(p) for p in serialised]
-
-        # deserialise the serialised sources data
-        sources = SourceSet.deserialise(serialisedSources, document)
-        # then pass to the datum constructor along with the type singleton.
-        return Datum(self, deserialised, sources)
-
-    ####################################################################################################
-
-
-# create the singleton and register it as a Datum - as it is a singleton this specific object
-# will be used each time an object of the class is needed
-PCTDataType = _PCTDataType()
-Datum.registerType(PCTDataType)
-
-# add a colour brush for the connections of the PCTDataType type in the graph
-pcot.connbrushes.register(PCTDataType, QColor("darkCyan"))
+    def toROIList(self):
+        """return a list of the patches in the order of the patch names"""
+        lst = [getattr(self, name) for name in self.PATCHNAMES]
+        # just make sure the names are correct
+        for name, patch in zip(self.PATCHNAMES, lst):
+            if patch is not None and patch.label != name:
+                raise ValueError(f"Patch name {name} does not match label {patch.label}")
+        return lst
