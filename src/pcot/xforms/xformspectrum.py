@@ -146,9 +146,15 @@ def fixSortList(node):
 @xformtype
 class XFormSpectrum(XFormType):
     """
-    Show the mean intensities for each frequency band in each input. Each input has a separate line in
-    the resulting plot, labelled with either a generated label or the annotation of the last ROI on that
-    input. If two inputs have the same ROI label, they are merged into a single line.
+    Show the mean intensities for each frequency band in each region of interest (ROI) in each input.
+    If an input has no ROI, the intensities of all the pixels in the input are used.
+
+    Each region (or input) has a separate line in
+    the resulting plot, labelled with the annotation for the ROI (or "inputN" for an input with no ROI).
+    Multiple ROIs of the same name are considered to be a single ROI.
+
+    Each pixel has its own variance, so the shown variance is the pooled variance of all the pixels in
+    the region. This is calculated as the variance of the means, plus the mean of the variances.
 
     If a point has data with BAD DQ bits in a band, those pixels are ignored in that band. If there
     are no good points, the point is not plotted for that band.
@@ -241,7 +247,7 @@ class XFormSpectrum(XFormType):
 
                 if len(img.rois) == 0:
                     # no ROIs, do the whole image
-                    legend = "node input {}".format(i)
+                    legend = "input{}".format(i)
                     cols[legend] = (0, 0, 0)  # what colour??
                     subimg = img.subimage()
                     proc(subimg, legend)
