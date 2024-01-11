@@ -708,24 +708,6 @@ class ImageCube(SourcesObtainable):
         # and a new imagecube
         return ImageCube(img, sources=MultiBandSource(sources), uncertainty=uncertainties, dq=dqs)
 
-    ## annoyingly similar to the two methods above, this is used to get a channel _index_.
-    def getChannelIdx(self, nameOrCwl):
-        for i in range(len(self.sources.sourceSets)):  # iterate so we have the index
-            x = self.sources[i]
-            if len(x) == 1:
-                # there must be only one source in the set; get it.
-                item = next(iter(x))
-                # match either the filter name or position, case-dependent
-                iname = item.getFilterName()
-                ipos = item.getFilterPos()
-                if iname == nameOrCwl or ipos == nameOrCwl:
-                    return i
-                if isinstance(nameOrCwl, numbers.Number):
-                    f = item.getFilter()
-                    if f is not None and math.isclose(nameOrCwl, f.cwl):
-                        return i
-        return None
-
     ## crop an image down to its regions of interest.
     def cropROI(self):
         subimg = self.subimage()

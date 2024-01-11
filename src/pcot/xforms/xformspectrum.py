@@ -149,9 +149,11 @@ class XFormSpectrum(XFormType):
     Show the mean intensities for each frequency band in each region of interest (ROI) in each input.
     If an input has no ROI, the intensities of all the pixels in the input are used.
 
+    It's quite possible for the different inputs to be different images, to permit comparison.
+
     Each region (or input) has a separate line in
     the resulting plot, labelled with the annotation for the ROI (or "inputN" for an input with no ROI).
-    Multiple ROIs of the same name are considered to be a single ROI.
+    Multiple ROIs of the same name are considered to be a single ROI *if they are in the same image*
 
     Each pixel has its own variance, so the shown variance is the pooled variance of all the pixels in
     the region. This is calculated as the variance of the means, plus the mean of the variances.

@@ -79,8 +79,8 @@ class XFormGen(XFormType):
     * rand: both nom. and unc. are filled with non-negative pseudorandom uniform noise multiplied by N and U respectively
     * gaussian: nom. is filled with gaussian noise centered around N with a std. dev. of U. U is zero. The RNG is seeded
         from the CWL.
-    * gradient-x: nom. is filled with a gradient from 0-1, U is zero.
-    * gradient-y: nom. is filled with a gradient from 0-1, U is zero.
+    * gradient-x: nom. is filled with a gradient from 0-1, U is zero. Number of steps is N (zero means smooth).
+    * gradient-y: nom. is filled with a gradient from 0-1, U is zero. Number of steps is N (zero means smooth).
 
     A useful pattern might be something like this:
 
@@ -169,10 +169,10 @@ class XFormGen(XFormType):
                 n = rng.normal(chan.n, chan.u, (node.imgheight, node.imgwidth))
                 u = np.zeros((node.imgheight, node.imgwidth))
             elif chan.mode == 'gradient-x':
-                n = generate_gradient(node.imgwidth, node.imgheight, True)
+                n = generate_gradient(node.imgwidth, node.imgheight, True, chan.n)
                 u = np.zeros((node.imgheight, node.imgwidth))
             elif chan.mode == 'gradient-y':
-                n = generate_gradient(node.imgwidth, node.imgheight, False)
+                n = generate_gradient(node.imgwidth, node.imgheight, False, chan.n)
                 u = np.zeros((node.imgheight, node.imgwidth))
 
             else:
