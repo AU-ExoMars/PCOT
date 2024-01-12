@@ -550,9 +550,10 @@ class ImageCube(SourcesObtainable):
                                                                 str(self.img.shape), self.channels,
                                                                 self.img.nbytes)
 
-        s += "\nsrc: [{}]\n".format(self.sources.brief())
-        rois = "\n".join([str(r) for r in self.rois])
-        return s+rois
+        s += "\nsrc: [{}]".format(self.sources.brief())
+        if len(self.rois)>0:
+            s += "\n".join([str(r) for r in self.rois])
+        return s
 
     ## the descriptor is a string which can vary depending on main window settings.
     # If channel assignments are provided (e.g. [0,1,2]) select those channels and

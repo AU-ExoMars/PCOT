@@ -42,8 +42,7 @@ def test_direct_image(globaldatadir):
     # check the input descriptions
     assert doc.inputMgr.getInput(0).brief() == 'direct: 32x32x3'
     ii = doc.inputMgr.getInput(0).long()  # this one has a UUID in the middle, so we have to just look at the ends
-    assert ii.startswith('direct: <Image-')
-    assert ii.endswith(' 32x32 array:(32, 32, 3) channels:3, 12288 bytes, src: [R|G|B]>')
+    assert ii == 'direct: Image 32x32 array:(32, 32, 3) channels:3, 12288 bytes\nsrc: [R|G|B]'
 
 
 def test_direct_scalar():

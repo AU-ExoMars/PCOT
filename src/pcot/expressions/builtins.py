@@ -449,6 +449,33 @@ def funcFloodTest(args: List[Datum], _):
     return Datum(Datum.IMG, img)
 
 
+def funcAssignFilters(args: List[Datum], _):
+    img1: ImageCube = args[0].get(Datum.IMG)
+    img2: ImageCube = args[1].get(Datum.IMG)
+    if img1 is None or img2 is None:
+        return None
+    # make sure they have the same number of channels
+    if img1.channels != img2.channels:
+        raise XFormException('DATA', 'images in assignfilters must have the same number of channels')
+    # run through the image sources and make sure each image has only one source, and unify them
+    sources = []
+    for i in range(img1.channels):
+        f1 = img1.filter(i)
+        f2 = img2.filter(i)
+        if f1 is None:
+            raise XFormException('DATA', 'image 1 in assignfilters must have a single source for each channel')
+        if f2 is None:
+            raise XFormException('DATA', 'image 2 in assignfilters must have a single source for each channel')
+        if f1.cwl != f2.cwl or f1.fwhm != f2.fwhm:
+            raise XFormException('DATA', 'filters in assignfilters must have the same cwl and fwhm')
+        sources.append(FilterOnlySource(f1, f"unified-{f1.name}"))
+
+    # now we can create the new image - it's image2 with the sources replaced with those of image1
+    out = img2.copy()
+    out.sources = MultiBandSource(sources)
+    return Datum(Datum.IMG, out)
+
+
 @parserhook
 def registerBuiltinFunctions(p):
     p.registerFunc("merge",
@@ -619,6 +646,17 @@ def registerBuiltinFunctions(p):
             Parameter("image", "the input image", Datum.IMG),
             Parameter("cwl", "the fake filter CWL", Datum.NUMBER),
         ], [], funcSetCWL
+    ),
+
+    p.registerFunc(
+        "assignfilters",
+        "Given a pair of images with different sources which nevertheless have the same filters (cwl and fwhm) on"
+        "corresponding bands, create a new image with data from the second but sources from the first."
+        "Should probably be used in testing only.",
+        [
+            Parameter("src", "source of filter data", Datum.IMG),
+            Parameter("dest", "image to receive filter data", Datum.IMG),
+        ], [], funcAssignFilters
     )
 
     p.registerFunc(
