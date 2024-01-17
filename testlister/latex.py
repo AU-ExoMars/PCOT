@@ -23,6 +23,7 @@ def proc(s,latex=True):
         s = s.replace("SNARKDUNDER","__")
     s = s.replace("_","\_")
     s = s.replace("$","\$")
+    s = s.replace("^","\^")
     return s
     
 
