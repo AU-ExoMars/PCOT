@@ -1,7 +1,7 @@
 """
 Extract spectra from ImageCube objects
 """
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple, List
 
 import numpy as np
 
@@ -18,7 +18,11 @@ def getMeanValue(chanImg, chanUnc, chanDQ, mask, ignorePixSD=False):
     """find the mean/sd of all the masked values in a single channel for a subimage
     (ie. part of an image cut out by an ROI). If ignorePixSD is true, the SD of the
     result is the SD of the nominal values. Otherwise the SD is pooled (mean of the variances
-    of the pixels plus the variance of the means of the pixels)."""
+    of the pixels plus the variance of the means of the pixels).
+
+    If all the pixels are masked out, return None for both mean and SD, and a third value (normally zero)
+    which is the OR of all the bad bits in the DQ.
+    """
 
     # if the size is bad, throw an exception
     if mask.size == 0:
@@ -37,7 +41,8 @@ def getMeanValue(chanImg, chanUnc, chanDQ, mask, ignorePixSD=False):
     # if ALL the values are bad, return None for both mean and SD, and a third
     # value which is all the bad pixels' bits ORed together.
     if not np.any(mask):
-        return None, None, np.bitwise_or.reduce(badmask)
+        badBits = np.bitwise_or.reduce(chanDQ, axis=None) & BAD  # OR all the bad bits together
+        return None, None, badBits
 
     # otherwise we can proceed
     a = np.ma.masked_array(data=chanImg, mask=~mask)
@@ -68,23 +73,33 @@ class Spectrum:
 
     # the spectrum as a dictionary of filter:value  (typically reflectance)
     data: Dict[Filter, Value]
+    # list of filters ordered by channel number
+    filters: List[Filter]
     # the sources from which the spectrum was extracted
     sources: SourceSet
     # the source image
     cube: ImageCube
     # the ROI from which the spectrum was extracted (if any; None if the whole image)
     roi: Optional[ROI]
+    # the number of pixels each band in the ROI (or image if none). Usually they're all the same,
+    # but if the ROI has some bad pixels in one channel they might not be.
+    pixels: Dict[Filter, int]
+    # number channels in the spectrum - should be the same as cube.channels
+    # but later we might separate imagecubes from spectra.
+    channels: int
 
     def __init__(self, cube: ImageCube, roi: Optional[ROI] = None, ignorePixSD=False):
         self.cube = cube
         self.roi = roi
         self.data = {}
+        self.pixels = {}
+        self.channels = cube.channels
 
         # first, generate a list of indices of channels with a single source which has a filter,
         # and a list of those filters.
-        filters = [cube.filter(x) for x in range(cube.channels)]
-        chans = [x for x in range(cube.channels) if filters[x] is not None]
-        if len(filters) == 0:
+        self.filters = [cube.filter(x) for x in range(cube.channels)]
+        chans = [x for x in range(cube.channels) if self.filters[x] is not None]
+        if len(self.filters) == 0:
             raise XFormException("DATA", "no single-wavelength channels in image")
 
         # create a set of sources
@@ -94,33 +109,57 @@ class Spectrum:
         self.sources = SourceSet(sources)
 
         subimg = cube.subimage(roi=roi)
+
+        # todo refactor this - there's a lot of duplication
         if len(chans) == 1:
             # single channel images are stored as 2D arrays.
-            mean, sd, dq = getMeanValue(subimg.img[:, :], subimg.uncertainty[:, :], subimg.dq[:, :],
-                                        subimg.mask,
-                                        ignorePixSD=ignorePixSD)
+            mean, sd, allBitsDQ = getMeanValue(subimg.img[:, :], subimg.uncertainty[:, :], subimg.dq[:, :],
+                                               subimg.mask,
+                                               ignorePixSD=ignorePixSD)
             # we don't add "bad" data
-            if dq != 0:
+            if allBitsDQ != 0:
                 # the channel number will be chans[0] (there is only one)
                 # the filter will be filters[chans[0]]
-                self.data[filters[chans[0]]] = Value(mean, sd, dq)
+                f = self.filters[chans[0]]
+                # subtract bad pixels from the pixel count
+                dq = subimg.maskedDQ()
+                # this will compress the array (give a 1D array of all the unmasked pixels) and then
+                # count. It's how you count non-zero values in a masked array.
+                self.pixels[f] = subimg.pixelCount() - np.count_nonzero(dq.compressed())
+                dq = np.bitwise_or.reduce(dq, axis=None) & BAD  # OR all the bad bits together
+                self.data[f] = Value(mean, sd, dq)
         else:
             for cc in chans:
-                mean, sd, dq = getMeanValue(subimg.img[:, :, cc], subimg.uncertainty[:, :, cc], subimg.dq[:, :, cc],
-                                            subimg.mask,
-                                            ignorePixSD=ignorePixSD)
+                mean, sd, allBitsDQ = getMeanValue(subimg.img[:, :, cc], subimg.uncertainty[:, :, cc],
+                                                   subimg.dq[:, :, cc],
+                                                   subimg.mask,
+                                                   ignorePixSD=ignorePixSD)
                 # we don't add "bad" data
-                if dq == 0:
+                if allBitsDQ == 0:
                     # the channel number will be cc
                     # the filter will be filters[cc]
-                    self.data[filters[cc]] = Value(mean, sd, dq)
+                    f = self.filters[cc]
+                    # subtract bad pixels from the pixel count
+                    dq = subimg.maskedDQ()[:, :, cc]  # get the masked DQ, extract one channel
+                    # this will compress the array (give a 1D array of all the unmasked pixels) and then
+                    # count. It's how you count non-zero values in a masked array.
+                    self.pixels[f] = subimg.pixelCount() - np.count_nonzero(dq.compressed())
+                    dq = np.bitwise_or.reduce(dq, axis=None) & BAD  # OR all the bad bits together
+                    self.data[f] = Value(mean, sd, dq)
 
-    def get(self, cwlOrName):
-        """get the value for a particular channel wavelength or filter name"""
+    def getByFilter(self, cwlOrName) -> Optional[Tuple[Value, int]]:
+        """get the value and pixel count for a particular channel wavelength or filter name"""
         for f, v in self.data.items():
             if f.cwl == cwlOrName or f.name == cwlOrName:
-                return v
+                return v, self.pixels[f]
         return None
+
+    def getByChannel(self, channel):
+        """get the value for a particular channel number"""
+        if channel < 0 or channel >= len(self.filters):
+            return None
+        f = self.filters[channel]
+        return (self.data[f], self.pixels[f]) if f in self.data else (None, 0)
 
     def __repr__(self):
         return "Spectrum: " + "; ".join([f"{f}:{v}" for f, v in self.data.items()])

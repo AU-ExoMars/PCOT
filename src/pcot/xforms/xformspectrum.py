@@ -1,120 +1,76 @@
+import dataclasses
 import math
 
 import matplotlib
 import numpy as np
 from PySide2 import QtWidgets, QtCore
 from PySide2.QtWidgets import QDialog
-from collections import namedtuple
 
 import pcot
 import pcot.ui as ui
 from pcot.datum import Datum
-from pcot.dq import BAD
-from pcot.filters import wav2RGB
+from pcot.filters import wav2RGB, Filter
 from pcot.sources import SourceSet
 from pcot.ui import uiloader
 from pcot.ui.tabs import Tab
+from pcot.utils.spectrum import Spectrum
 from pcot.utils.table import Table
+from pcot.value import Value
 from pcot.xform import XFormType, xformtype, XFormException
 
 
-# find the mean/sd of all the masked values. Note mask negation!
-def getSpectrum(chanImg, chanUnc, chanDQ, mask, ignorePixSD=False):
-    # note that "mask" is a positive mask - values are True if we are using them.
-    if mask is None:
-        mask = np.full(chanImg.shape, True)  # no bits masked out
-    else:
-        mask = np.copy(mask)  # need a copy or we'll change the mask in the subimage.
-    # we also have to mask out the bad bits. This will give us a mask which is True
-    # for the bits we want to hide.
-    badmask = (chanDQ & BAD).astype(bool)
-    mask &= ~badmask  # REMOVE those pixels
-
-    a = np.ma.masked_array(data=chanImg, mask=~mask)
-    mean = a.mean()  # get the mean of the nominal values
-
-    if not ignorePixSD:
-        # we're going to try to take account of the uncertainties of each pixel:
-        # "Thus the variance of the pooled set is the mean of the variances plus the variance of the means."
-        # by https://arxiv.org/ftp/arxiv/papers/1007/1007.1012.pdf
-        # So we'll calculate the variance of the means added to the mean of the variances.
-        # And then we'll need to root that variance to get back to SD.
-        # There is a similar calculation called pooled_sd() in builtins!
-
-        std = np.sqrt(a.var() + np.mean(np.ma.masked_array(data=chanUnc, mask=~mask) ** 2))
-    else:
-        std = a.std()  # otherwise get the SD of the nominal values
-
-    return mean, std
+@dataclasses.dataclass
+class DataPoint:
+    chan: int
+    filter: Filter
+    value: Value
+    pixcount: int
 
 
-DataPoint = namedtuple('DataPoint', ['chan', 'filter', 'mean', 'sd', 'label', 'pixcount'])
-
-
-def processData(table, legend, data, pxct, filters, spectrum, chans, chanlabels):
+def processData(table, legend, data, spec):
     """
-    Process the data from a single ROI/image into the data dictionary.
+    Process the data from a single ROI/image into the data dictionary, which contains
 
     table: Table object for dump output
-    legend: name of ROI/image to be added
+    legend: name of ROI/image to be added.
     data: data dictionary
-        part of processData's responsibility is to set the entries in here
+        processData's responsibility is to add to the entries in here
             - key is ROI/image name (legend), value is a list of data.
             - value is a list of tuples - see below - (chanidx, filter, mean, sd, label, pixct)
-
-    Then a number of lists with one entry per channel:
-        filters:        filters of channels
-        spectrum:       (mean,sd) of intensity across ROI/image for these channels
-        chans:          channel indices
-        chanlabels:     channel labels (typically in the form "inputidx:cwl")
-
-    Consider two images. Image 0 has an ROI with 3132 pixels in it, image 1 has an ROI
-    with only 484 pixels in it. However, the two ROIs both have the same name, and are fed
-    into a spectrum. They will be combined into a single data list looking like this:
-    [
-        # channel index, cwl, mean intensity, sd of intensity, channel label, pixel count
-       (0, filter for 438.0, 0.09718827482688777, 0.033184560153696856, 'L4_438', 3132),
-        (1, filter for 500.0, 0.12427511008154235, 0.04296475099012811, 'L5_500', 3132),
-        (2, filter for 532.0, 0.15049515647449713, 0.04899176061731549, 'L6_532', 3132),
-        (3, filter for 568.0, 0.18620748507717713, 0.05834286572257662, 'L7_568', 3132),
-        (4, filter for 610.0, 0.23161822595511056, 0.07227542372780232, 'L8_610', 3132),
-        (5, filter for 671.0, 0.2626209478268678, 0.08226790002558386, 'L9_671', 3132),
-        (0, filter for 740.0, 0.3917202910115896, 0.08213716515845079, 'R4_740', 484),
-        (1, filter for 780.0, 0.41594551023372933, 0.08695280835403581, 'R5_780', 484),
-        (2, filter for 832.0, 0.39478648792613635, 0.08164454531723438, 'R6_832', 484),
-        (3, filter for 900.0, 0.37751833072378616, 0.07634822775362438, 'R7_900', 484),
-        (4, filter for 950.0, 0.3726376304941729, 0.07310612483354316, 'R8_950', 484),
-        (5, filter for 1000.0, 0.4105814784026343, 0.08091608212909969, 'R9_1000', 484)]
-    ]
-    The "filter for xxx" field is a reference to a Filter object, which contains rather more
-    than just the center wavelength.
-
-    This should mean that the standard error will be calculated correctly for both of the ROI.
+    spec: a Spectrum object describing the spectrum for this ROI/image
     """
 
-    # zip them all together and append to the list for that legend (creating a new list
-    # if there isn't one)
+    # build the data points
+    dp = []
+    for i in range(spec.channels):
+        val, pix = spec.getByChannel(i)
+        p = DataPoint(i, spec.filters[i], val, pix)
+        dp.append(p)
 
+    # add them to the data set, which is indexed by legend (ROI or image name).
     if legend not in data:
-        data[legend] = []
+        data[legend] = []   # make a new list if there isn't one
+    data[legend] += dp
 
-    # spectrum is [(mean,sd), (mean,sd)...] but we also build a pixcount array
-    means, sds, pixcts = [x[0] for x in spectrum], [x[1] for x in spectrum], [pxct for _ in spectrum]
+    # you end up with a dict of ROI/image data e.g.
+    #   "ROI/image" -> [value @ frequency, value @ frequency...]
+    # where each entry in the dict should be a line in the result.
 
-    # data for each region is [ (chan,filter,mean,sd,chanlabel,pixcount), (chan,filter,mean,sd,chanlabel,pixcount)..]
-    # This means pixcount get dupped a lot but it's not a problem
-    data[legend] += [DataPoint(*x) for x in zip(chans, filters, means, sds, chanlabels, pixcts)]
 
-    # add to table
+def addToTable(table, legend, spec):
     table.newRow(legend)
     table.add("name", legend)
-    table.add("pixels", pxct)
-    for w, s in zip(filters, spectrum):
-        m, sd = s
-        # Convert filter wavelength to integer for better table form. Let's hope this doesn't cause problems.
-        w = int(w.cwl)
-        table.add("{}mean".format(w), m)
-        table.add("{}sd".format(w), sd)
+    for i in range(spec.channels):
+        f = spec.filters[i]
+        w = int(f.cwl)
+        v, pix = spec.getByChannel(i)
+        table.add("{}pixels".format(w), pix)
+        if v is None:
+            table.add("{}mean".format(w), "NA")
+            table.add("{}sd".format(w), "NA")
+        else:
+            table.add("{}mean".format(w), v.n)
+            table.add("{}sd".format(w), v.u)
 
 
 NUMINPUTS = 8
@@ -143,6 +99,56 @@ def fixSortList(node):
         node.sortlist.append(x)
 
 
+class NameResolver:
+    """It's possible that the inputs will have different ROIs with the same name.
+    In that case, we need to disambiguate them. This class does that.
+    It contains a dictionary of (input, ROIname) -> name. Normally this will be the same
+    as ROIname, but if the name appears multiple times, it will be "inN:roiName".
+    This does not get used for inputs which are entire images, only for ROIs.
+
+    Note that we could have used actual images rather than the input ID, but that
+    introduces the problem of identifying the images in a way which makes sense
+    to the user. The input index is much clearer.
+
+    We also go to some lengths to make sure an ROI with a blank label is given a name "none"
+    """
+
+    @staticmethod
+    def getLabel(rr):
+        return rr.label if rr.label != "" else "none"
+
+    def __init__(self, node):
+        # dictionary of (image, ROIname) -> name
+        self.nameDict = {}
+        # dictionary of ROIname -> count
+        self.countDict = {}
+
+        # pass 1 - count how many times each ROI name appears
+        for i in range(NUMINPUTS):
+            img = node.getInput(i, Datum.IMG)
+            if img is not None:
+                for r in img.rois:
+                    label = self.getLabel(r)
+                    if label not in self.countDict:
+                        self.countDict[label] = 0
+                    self.countDict[label] += 1
+
+        # pass 2 - build the dictionary
+        for i in range(NUMINPUTS):
+            img = node.getInput(i, Datum.IMG)
+            if img is not None:
+                for r in img.rois:
+                    label = self.getLabel(r)
+                    if self.countDict[label] > 1:
+                        self.nameDict[(i, label)] = "in{}:{}".format(i, label)
+                    else:
+                        self.nameDict[(i, label)] = label
+
+    def getName(self, inputIdx, roi):
+        """Get the name for the given image and ROI"""
+        return self.nameDict[(inputIdx, self.getLabel(roi))]
+
+
 @xformtype
 class XFormSpectrum(XFormType):
     """
@@ -153,13 +159,24 @@ class XFormSpectrum(XFormType):
 
     Each region (or input) has a separate line in
     the resulting plot, labelled with the annotation for the ROI (or "inputN" for an input with no ROI).
-    Multiple ROIs of the same name are considered to be a single ROI *if they are in the same image*
+    If ROIs in different inputs have the same annotation, they are labelled as "inN:annotation" where N is
+    the input number.
 
     Each pixel has its own variance, so the shown variance is the pooled variance of all the pixels in
     the region. This is calculated as the variance of the means, plus the mean of the variances.
 
     If a point has data with BAD DQ bits in a band, those pixels are ignored in that band. If there
     are no good points, the point is not plotted for that band.
+
+    A table of the values is also produced, and this output as CSV text. The table has one row per
+    ROI or input, and the columns
+
+    * name - the name of the ROI or input
+    * pixels - the number of pixels in the ROI or input
+    * *wavelength*mean - the mean intensity for the given wavelength band
+    * *wavelength*sd - the standard deviation of the mean intensity for the given wavelength band
+
+    The last two columns are repeated for each wavelength band.
     """
 
     def __init__(self):
@@ -197,10 +214,16 @@ class XFormSpectrum(XFormType):
         table = Table()
         # dict of output spectra, key is ROI or image name (several inputs might go into one entry if names are same, and one input might
         # have several ROIs each with a different value)
-        # For each ROI/image there is a lists of tuples, one for each channel : (chanidx, wavelength, mean, sd, name)
         data = dict()
         cols = dict()  # colour dictionary for ROIs/images
         sources = set()  # sources
+
+        # there may be multiple inputs with different images on them which have ROIs with the same name.
+        # This object will resolve those names to be unique if necessary. It should only be used when
+        # there is an ROI present.
+
+        nameResolver = NameResolver(node)
+
         for i in range(NUMINPUTS):
             img = node.getInput(i, Datum.IMG)
             if img is not None:
@@ -216,53 +239,23 @@ class XFormSpectrum(XFormType):
                 if len(filters) == 0:
                     raise XFormException("DATA", "no single-wavelength channels in image")
 
-                # generate a list of labels, one for each channel
-                # NOTE THAT this currently gets ignored, we don't use the chanlabel right now. It gets packed into
-                # the data elements, but the unzip in replot() throws it away when we come to do the plot.
-                chanlabels = [img.sources.sourceSets[x].brief(node.graph.doc.settings.captionType) for x in chans]
-
-                def proc(_subimg, _legend):
-                    # this nested function is used both when there is no ROI and for each ROI in the image.
-                    # It gets the spectrum for that ROI (or entire image), processes the data and adds
-                    # it to the plot. It's given a subimage with BAD pixels masked out.
-
-                    # now we need to get the mean amplitude of the pixels in each channel in the ROI
-                    # this returns a tuple for each channel of (mean,sd)
-
-                    # this is unfolded from a list comprehension for easier breakpoint debugging!
-                    spec = []
-                    if len(chans) == 1:
-                        # single channel images are stored as 2D arrays.
-                        ss = getSpectrum(_subimg.img[:, :], _subimg.uncertainty[:, :], _subimg.dq[:, :],
-                                         _subimg.mask,
-                                         ignorePixSD=node.ignorePixSD)
-                        spec.append(ss)
-                    else:
-                        for cc in chans:
-                            ss = getSpectrum(_subimg.img[:, :, cc], _subimg.uncertainty[:, :, cc], _subimg.dq[:, :, cc],
-                                             _subimg.mask,
-                                             ignorePixSD=node.ignorePixSD)
-                            spec.append(ss)
-
-                    processData(table, _legend, data, subimg.pixelCount(),
-                                filters, spec, chans, chanlabels)
-
                 if len(img.rois) == 0:
-                    # no ROIs, do the whole image
                     legend = "input{}".format(i)
-                    cols[legend] = (0, 0, 0)  # what colour??
-                    subimg = img.subimage()
-                    proc(subimg, legend)
+                    # I have no real way of specifying a colour at the moment, so I'll just use black.
+                    cols[legend] = (0, 0, 0)
+                    spec = Spectrum(img)
+                    processData(table, legend, data, spec)
+                    addToTable(table, legend, spec)
                 else:
-                    for roi in img.rois:
-                        # only include valid ROIs
-                        if roi.bb() is None:
+                    for r in img.rois:
+                        if r.bb() is None:
                             continue
-                        legend = roi.label  # get the name for this ROI, which will appear as a thingy.
-                        cols[legend] = roi.colour
-                        # get the ROI bounded image
-                        subimg = img.subimage(roi=roi)
-                        proc(subimg, legend)
+                        # get the name for this ROI in this image
+                        legend = nameResolver.getName(i, r)
+                        cols[legend] = r.colour
+                        spec = Spectrum(img, roi=r)
+                        processData(table, legend, data, spec)
+                        addToTable(table, legend, spec)
 
         # now, for each list in the dict, build a new dict of the lists sorted
         # by wavelength
@@ -383,7 +376,7 @@ class TabSpectrum(ui.tabs.Tab):
             unfiltered = self.node.data[legend]
 
             # filter out any "masked" means - those are from regions which are entirely DQ BAD in a channel.
-            x = [a for a in unfiltered if a.mean is not np.ma.masked]
+            x = [a for a in unfiltered if a.value.n is not np.ma.masked]
 
             if len(x) == 0:
                 ui.error(f"No points have good data for point {legend}")
@@ -391,10 +384,11 @@ class TabSpectrum(ui.tabs.Tab):
             if len(x) != len(unfiltered):
                 ui.error(f"Some points have bad data for point {legend}")
 
-            try:
-                [_, filters, means, sds, _, pixcounts] = list(zip(*x))  # "unzip" idiom
-            except ValueError:
-                raise XFormException("DATA", "cannot get spectrum - problem with ROIs?")
+            # extract data from the DataPoint objects
+            filters = [a.filter for a in x]
+            means = [a.value.n for a in x]
+            sds = [a.value.u for a in x]
+            pixcounts = [a.pixcount for a in x]
 
             if self.node.colourmode == COLOUR_FROMROIS:
                 col = self.node.colsByLegend[legend]

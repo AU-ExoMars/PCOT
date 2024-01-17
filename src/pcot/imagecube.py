@@ -149,7 +149,8 @@ class SubImageCubeROI:
         return self.bb == other.bb and self.mask == other.mask
 
     def pixelCount(self):
-        """How many pixels in the masked subimage?"""
+        """How many pixels in the masked subimage? This does not take BAD bits into account,
+        because different bands may have different bad bits."""
         return self.mask.sum()
 
     def setROI(self, img, roi):
@@ -551,7 +552,7 @@ class ImageCube(SourcesObtainable):
                                                                 self.img.nbytes)
 
         s += "\nsrc: [{}]".format(self.sources.brief())
-        if len(self.rois)>0:
+        if len(self.rois) > 0:
             s += "\n".join([str(r) for r in self.rois])
         return s
 
