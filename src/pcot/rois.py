@@ -10,6 +10,7 @@ from pcot.ui.roiedit import RectEditor, CircleEditor, PaintedEditor, PolyEditor
 from pcot.utils import serialiseFields, deserialiseFields
 from pcot.utils.annotations import Annotation, annotDrawText
 from pcot.utils.colour import rgb2qcol
+from pcot.utils.flood import FastFloodFiller, FloodFillParams
 from pcot.utils.geom import Rect
 
 
@@ -21,6 +22,7 @@ class BadOpException(Exception):
 class BadNegException(Exception):
     """This gets thrown when you're trying to negate an ROI that has lost its dimensions, which can happen when
     ROIs from different images are combined or they've simply not been added by an operation."""
+
     def __init__(self):
         super().__init__("Can only negate ROIs with image dimensions")
 
@@ -36,7 +38,8 @@ ROISERIALISEFIELDS = (
     ('colour', (1, 1, 0)),
     ('thickness', 0),
     ('fontsize', 10),
-    ('drawbg', True)
+    ('containingImageDimensions', 'missing'),
+    ('drawbg', True),
 )
 
 
@@ -45,10 +48,16 @@ class ROI(SourcesObtainable, Annotation):
     because it defines an ROI consisting of a predefined BB and mask."""
 
     tpname = None
+    roiTypes = {}
+
+    def __init_subclass__(cls, **kwargs):
+        """This is called when a subclass is created. It's used to associate the type name with the class"""
+        super().__init_subclass__(**kwargs)
+        ROI.roiTypes[cls.tpname] = cls
 
     def __init__(self, bbrect: Rect = None, maskimg: np.array = None,
-                 sourceROI=None, isTemp=False,
-                 containingImageDimensions=None):
+                 sourceROI=None, isTemp=False, containingImageDimensions=None,
+                 label=None):
         """Constructor. Takes an ROI type name, optional rect and mask (for 'base' ROIs consisting of just these)
         and an optional sourceROI from which some data is copied, for copy operations"""
 
@@ -56,12 +65,14 @@ class ROI(SourcesObtainable, Annotation):
         SourcesObtainable.__init__(self)
 
         self.bbrect = bbrect
-        self.bbrect = bbrect
         self.maskimg = maskimg
 
         self.isTemp = isTemp  # for temporary ROIs created by expressions
 
-        self.label = None if sourceROI is None else sourceROI.label
+        if label is None:
+            self.label = None if sourceROI is None else sourceROI.label
+        else:
+            self.label = label
         self.labeltop = False if sourceROI is None else sourceROI.labeltop  # draw the label at the top?
         self.colour = (1, 1, 0) if sourceROI is None else sourceROI.colour  # annotation colour
         self.thickness = 0 if sourceROI is None else sourceROI.thickness  # thickness of lines
@@ -187,12 +198,31 @@ class ROI(SourcesObtainable, Annotation):
         self.annotateMask(p)
 
     def serialise(self):
+        """Serialises the ROI to a dict. This is used for saving to file or memory"""
         if self.isTemp:
             raise Exception("attempt to serialise a temporary ROI")
-        return serialiseFields(self, ROISERIALISEFIELDS)
+        d = serialiseFields(self, ROISERIALISEFIELDS)
+        # we also need to add the type
+        d['type'] = self.__class__.tpname
+        return d
 
     def deserialise(self, d):
+        """Deserialises the ROI from a dict. This is used for loading from file or memory and acts
+        on an existing ROI."""
         deserialiseFields(self, d, ROISERIALISEFIELDS)
+
+    @staticmethod
+    def fromSerialised(d):
+        """Creates a new ROI from a dict. This is used for loading from file or memory and creates
+        a new ROI. It inspects the dict to find the type of ROI to create."""
+        if 'type' not in d:
+            raise Exception("ROI deserialise: no type field")
+        # get the constructor for the ROI type and construct an instance
+        constructor = ROI.roiTypes[d['type']]
+        r = constructor()
+        # deserialise the fields
+        r.deserialise(d)
+        return r
 
     @staticmethod
     def roiUnion(rois):
@@ -344,6 +374,21 @@ class ROI(SourcesObtainable, Annotation):
 
         return ROI(bb, mask, isTemp=True, containingImageDimensions=dims)
 
+    def __contains__(self, xyTuple):
+        """Is a point inside the ROI?"""
+        x, y = xyTuple
+        if self.bb() is None:
+            return False
+        else:
+            # first check the bounding box
+            if xyTuple not in self.bb():
+                return False
+            # now check the mask
+            rx, ry, rw, rh = self.bb()
+            x -= rx
+            y -= ry
+            return self.mask()[y, x]
+
     def __neg__(self):
         """We can negate an ROI by subtracting it from an ROI set to the entire image - but only
         if we know how big it is!"""
@@ -355,6 +400,17 @@ class ROI(SourcesObtainable, Annotation):
             r.set(0, 0, w, h)
 
             return r - self
+
+    def equals(self, other, sameType=False):
+        """Check for equality of two ROIs. I'm not using the dunder method because I want to have an extra
+        argument to check if the types are the same."""
+        if not isinstance(other, ROI):
+            return False
+        elif self is other:
+            return True
+        elif sameType and type(self) != type(other):
+            return False
+        return self.bb() == other.bb() and np.array_equal(self.mask(), other.mask())
 
     def __mul__(self, other):
         return self.roiIntersection([self, other])
@@ -394,8 +450,8 @@ class ROIRect(ROI):
     """Rectangular ROI"""
     tpname = "rect"
 
-    def __init__(self, sourceROI=None):
-        super().__init__(sourceROI=sourceROI)
+    def __init__(self, sourceROI=None, label=None):
+        super().__init__(sourceROI=sourceROI, label=label)
         if sourceROI is None:
             self.x = 0
             self.y = 0
@@ -479,8 +535,8 @@ class ROICircle(ROI):
     r: int
     isSet: bool
 
-    def __init__(self, x=-1, y=0, r=0, sourceROI=None):
-        super().__init__('circle', sourceROI=sourceROI)
+    def __init__(self, x=-1, y=0, r=0, sourceROI=None, label=None):
+        super().__init__(sourceROI=sourceROI, label=label)
         if sourceROI is None:
             self.set(x, y, r)
             self.drawBox = False
@@ -576,10 +632,10 @@ class ROIPainted(ROI):
     tpname = "painted"
 
     # we can create this ab initio or from a subimage mask of an image.
-    def __init__(self, mask=None, label=None, sourceROI=None):
-        super().__init__(sourceROI=sourceROI)
+    def __init__(self, mask=None, label=None, sourceROI=None, containingImageDimensions=None):
+        super().__init__(sourceROI=sourceROI, label=label,
+                         containingImageDimensions=containingImageDimensions)
         if sourceROI is None:
-            self.label = label
             if mask is None:
                 self.bbrect = None
                 self.map = None
@@ -595,6 +651,7 @@ class ROIPainted(ROI):
             self.drawEdge = sourceROI.drawEdge
             self.map = sourceROI.map  # NOTE: not a copy!
             self.bbrect = Rect.copy(sourceROI.bbrect)
+        self.r = 10  # default "circle size" for painting; used in multidot editor
 
     def clear(self):
         self.map = None
@@ -611,29 +668,35 @@ class ROIPainted(ROI):
     def serialise(self):
         d = super().serialise()
         d['bbrect'] = self.bbrect.astuple() if self.bbrect else None
+        d['r'] = self.r
         return serialiseFields(self, [('map', None)], d=d)
 
     def deserialise(self, d):
         super().deserialise(d)
         self.bbrect = Rect.fromtuple(d['bbrect'])
+        self.r = d.get('r', 10)
         deserialiseFields(self, d, [('map', None)])
 
     def mask(self):
         """return a boolean array, same size as BB"""
         return self.map > 0
 
-    def cropDownWithDraw(self, draw=None):
-        """crop ROI mask down to smallest possible size and reset BB. If draw is
-        set, this will be a function taking the full size image used to draw on
-        the ROI as part of the process."""
-
-        # create full size map
+    def fullsize(self):
+        """return the full size mask"""
         imgw, imgh = self.containingImageDimensions
+        # create full size map of zeroes
         fullsize = np.zeros((imgh, imgw), dtype=np.uint8)
         # splice in existing data, if there is any!
         if self.bbrect is not None:
             bbx, bby, bbx2, bby2 = self.bbrect.corners()
             fullsize[bby:bby2, bbx:bbx2] = self.map
+        return fullsize
+
+    def cropDownWithDraw(self, draw=None):
+        """crop ROI mask down to smallest possible size and reset BB. If draw is
+        set, this will be a function taking the full size image used to draw on
+        the ROI as part of the process."""
+        fullsize = self.fullsize()
         if draw is not None:
             # do extra drawing
             draw(fullsize)
@@ -650,25 +713,58 @@ class ROIPainted(ROI):
             # construct the new BB
             self.bbrect = Rect(int(xmin), int(ymin), int(xmax - xmin), int(ymax - ymin))
         else:
+            # We've deleted the whole thing! Just mark it as an unset ROI.
             self.bbrect = None
             self.map = None
 
-    def drawBrush(self, fullsize, x, y, brushSize, delete):
-        """called from inside cropDown as an optional step to draw an extra circle"""
-        imgw, imgh = self.containingImageDimensions
-        r = int(getRadiusFromSlider(brushSize, imgw, imgh))
-        cv.circle(fullsize, (x, y), r, 0 if delete else 255, -1)
+    def setCircle(self, x, y, brushSize, delete=False, relativeSize=True):
+        """fill a circle in the ROI, or clear it (if delete is true). If relativeSize is true, the
+        brush size is relative to the image size, otherwise it is absolute in pixels"""
 
-    def setCircle(self, x, y, brushSize, delete=False):
-        """fill a circle in the ROI, or clear it (if delete is true)"""
         if self.containingImageDimensions is not None:
-            self.cropDownWithDraw(draw=lambda fullsize: self.drawBrush(fullsize, x, y, brushSize, delete))
+            imgw, imgh = self.containingImageDimensions
+            if relativeSize:
+                r = int(getRadiusFromSlider(brushSize, imgw, imgh))
+            else:
+                r = int(brushSize)
+            self.cropDownWithDraw(draw=lambda fullsize: cv.circle(fullsize, (x, y), r, 0 if delete else 255, -1))
+        # store this so that when we select an ROI in the multidot editor we can set the brush size
+        self.r = brushSize
+
+    def fill(self, img, x, y, fillparams=FloodFillParams(), fillerclass=FastFloodFiller):
+        """fill the ROI using a flood fill"""
+        if self.containingImageDimensions is not None:
+            # create filler object
+            filler = fillerclass(img, fillparams)
+            # create a filled mask
+            mask = filler.fill(x, y)
+            # combine this with the full size existing mask
+            self.cropDownWithDraw(draw=lambda fullsize: np.bitwise_or(fullsize, mask, out=fullsize))
 
     def rebase(self, x, y):
         r = ROIPainted(sourceROI=self)
         r.bbrect.x -= x
         r.bbrect.y -= y
         return r
+
+    def dilated(self, n=1):
+        """return a new ROI with the mask dilated by N pixels"""
+        if self.map is not None:
+            # get full size image because we need to dilate the whole thing
+            fullsize = self.fullsize()
+            # dilate
+            m = cv.dilate(fullsize, None, iterations=n)
+            # construct a new ROI from that. This is ugly because
+            # ROIPainted(mask=m) doesn't work quite how we want it to,
+            # it appears.
+            r = ROIPainted()
+            r.map = m
+            r.bbrect = Rect(0, 0, m.shape[1], m.shape[0])
+            r.setContainingImageDimensions(fullsize.shape[1], fullsize.shape[0])
+            # crop it down
+            r.cropDownWithDraw()
+            # r.map.fill(255)
+            return r
 
     def __copy__(self):
         r = ROIPainted(sourceROI=self)
@@ -691,8 +787,8 @@ class ROIPainted(ROI):
 class ROIPoly(ROI):
     tpname = "poly"
 
-    def __init__(self, sourceROI=None):
-        super().__init__(sourceROI=sourceROI)
+    def __init__(self, sourceROI=None, label=None):
+        super().__init__(sourceROI=sourceROI, label=label)
         self.selectedPoint = None  # don't set the selected point in copies
         if sourceROI is None:
             self.drawPoints = True

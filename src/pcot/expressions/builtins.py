@@ -17,6 +17,8 @@ from pcot.imagecube import ImageCube
 from pcot.sources import SourceSet, MultiBandSource, FilterOnlySource
 from pcot.utils import image
 from pcot.expressions.ops import combineImageWithNumberSources
+from pcot.utils.deb import Timer
+from pcot.utils.flood import MeanFloodFiller, FloodFillParams, FastFloodFiller
 from pcot.value import Value, add_sub_unc_list
 from pcot.xform import XFormException
 import cv2 as cv
@@ -105,10 +107,9 @@ def funcGrey(args, optargs):
                 raise XFormException('DATA', "Image must be RGB for OpenCV greyscale conversion")
             img = ImageCube(cv.cvtColor(img.img, cv.COLOR_RGB2GRAY), img.mapping, sources, dq=dq, rois=img.rois)
         else:
-            # create a transformation matrix specifying that the output is a single channel which
-            # is the mean of all the channels in the source. Any uncertainy data will also be combined.
-            mat = np.array([1 / img.channels] * img.channels).reshape((1, img.channels))
-            out = cv.transform(img.img, mat)
+            # 'out' will be the greyscale image found by calculating the mean of all channels in img.img
+            out = np.mean(img.img, axis=2).astype(np.float32)
+
             # uncertainty is messier - add the squared uncertainties, divide by N, and root.
             outu = np.zeros(img.uncertainty.shape[:2], dtype=np.float32)
             for i in range(0, img.channels):
@@ -396,6 +397,85 @@ def funcTestImg(args: List[Datum], _):
     return Datum(Datum.IMG, img)
 
 
+def funcRotate(args: List[Datum], _):
+    img: ImageCube = args[0].get(Datum.IMG)
+    if img is None:
+        return None
+    angle = args[1].get(Datum.NUMBER).n
+    # only permit multiples of 90 degrees, giving an error otherwise
+    if angle % 90 != 0:
+        raise XFormException('DATA', 'rotation angle must be a multiple of 90 degrees')
+
+    img = img.rotate(angle)
+    return Datum(Datum.IMG, img)
+
+
+def funcFlipV(args: List[Datum], _):
+    img: ImageCube = args[0].get(Datum.IMG)
+    if img is None:
+        return None
+    img = img.flip(vertical=True)
+    return Datum(Datum.IMG, img)
+
+
+def funcFlipH(args: List[Datum], _):
+    img: ImageCube = args[0].get(Datum.IMG)
+    if img is None:
+        return None
+    img = img.flip(vertical=False)
+    return Datum(Datum.IMG, img)
+
+
+def funcFloodTest(args: List[Datum], _):
+    # we'll operate on the entire image
+    img: ImageCube = args[0].get(Datum.IMG)
+    if img is None:
+        return None
+    x = int(args[1].get(Datum.NUMBER).n)
+    y = int(args[2].get(Datum.NUMBER).n)
+    thresh = args[3].get(Datum.NUMBER).n
+
+    f = FastFloodFiller(img, FloodFillParams(10, img.w * img.h, thresh))
+    with Timer("flood", show=Timer.UILOG):
+        roi = f.fillToPaintedRegion(x, y)
+
+    # we need to copy the image to add the ROI
+    img = img.shallowCopy()
+    if roi is not None:
+        img.rois.append(roi)
+    else:
+        raise XFormException('DATA', 'flood fill failed (too few or too many pixels)')
+
+    return Datum(Datum.IMG, img)
+
+
+def funcAssignSources(args: List[Datum], _):
+    img1: ImageCube = args[0].get(Datum.IMG)
+    img2: ImageCube = args[1].get(Datum.IMG)
+    if img1 is None or img2 is None:
+        return None
+    # make sure they have the same number of channels
+    if img1.channels != img2.channels:
+        raise XFormException('DATA', 'images in assignsources must have the same number of channels')
+    # run through the image sources and make sure each image has only one source, and unify them
+    sources = []
+    for i in range(img1.channels):
+        f1 = img1.filter(i)
+        f2 = img2.filter(i)
+        if f1 is None:
+            raise XFormException('DATA', 'image 1 in assignsources must have a single source for each channel')
+        if f2 is None:
+            raise XFormException('DATA', 'image 2 in assignfilters must have a single source for each channel')
+        if f1.cwl != f2.cwl or f1.fwhm != f2.fwhm:
+            raise XFormException('DATA', 'filters in assignfilters must have the same cwl and fwhm')
+        sources.append(FilterOnlySource(f1, f"unified-{f1.name}"))
+
+    # now we can create the new image - it's image2 with the sources replaced with those of image1
+    out = img2.copy()
+    out.sources = MultiBandSource(sources)
+    return Datum(Datum.IMG, out)
+
+
 @parserhook
 def registerBuiltinFunctions(p):
     p.registerFunc("merge",
@@ -566,6 +646,39 @@ def registerBuiltinFunctions(p):
             Parameter("image", "the input image", Datum.IMG),
             Parameter("cwl", "the fake filter CWL", Datum.NUMBER),
         ], [], funcSetCWL
+    ),
+
+    p.registerFunc(
+        "assignsources",
+        "Given a pair of images with different sources which nevertheless have the same filters (cwl and fwhm) on"
+        "corresponding bands, create a new image with data from the second but sources from the first."
+        "Should probably be used in testing only.",
+        [
+            Parameter("src", "source of filter data", Datum.IMG),
+            Parameter("dest", "image to receive filter data", Datum.IMG),
+        ], [], funcAssignSources
+    )
+
+    p.registerFunc(
+        "rotate", "rotate an image by a multiple of 90 degrees clockwise",
+        [
+            Parameter("image", "the image to rotate", Datum.IMG),
+            Parameter("angle", "the angle to rotate by (degrees)", Datum.NUMBER),
+        ], [], funcRotate
+    )
+
+    p.registerFunc(
+        "flipv", "flip an image vertically",
+        [
+            Parameter("image", "the image to flip", Datum.IMG),
+        ], [], funcFlipV
+    )
+
+    p.registerFunc(
+        "fliph", "flip an image horizontally",
+        [
+            Parameter("image", "the image to flip", Datum.IMG),
+        ], [], funcFlipH
     )
 
     p.registerFunc(
@@ -574,6 +687,17 @@ def registerBuiltinFunctions(p):
             Parameter('imageidx', 'image index', Datum.NUMBER)
         ], [], funcTestImg
     )
+
+    p.registerFunc(
+        'floodtest', 'Flood fill test',
+        [
+            Parameter('image', 'image to flood', Datum.IMG),
+            Parameter('x', 'x coordinate of seed point', Datum.NUMBER),
+            Parameter('y', 'y coordinate of seed point', Datum.NUMBER),
+            Parameter('thresh', 'threshold', Datum.NUMBER),
+        ], [], funcFloodTest
+    )
+
 
 
 @parserhook

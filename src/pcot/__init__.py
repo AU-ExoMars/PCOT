@@ -48,6 +48,10 @@ logging.basicConfig(format='%(levelname)s %(asctime)s %(name)s: %(message)s', fo
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+# matplotlib spews a lot of debugging data - turn it off
+logging.getLogger('matplotlib.font_manager').disabled = True
+
+
 logger.info("Starting PCOT")
 
 # get version data, which consists of something like

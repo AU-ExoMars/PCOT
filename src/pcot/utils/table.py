@@ -1,6 +1,9 @@
 import csv
 import io
 from collections import OrderedDict
+
+import numpy as np
+
 from pcot.utils.html import HTML, Col
 
 
@@ -23,7 +26,7 @@ class TableIter:
 class Table:
     """Provides a way to construct tabular data on the fly, for output as a CSV.
     Create a new row with newRow(label) - if the label has already been used, an old row
-    is selected to add more data. Then add data with add(k,v).
+    is selected to add more data or replace old data. Then add data with add(k,v).
     Once done, a table iterator will iterate over the rows fetching a list of entries. If
     one of the fields is not present for a row, the "NA item" will be used instead; by default
     it's a string 'NA'.
@@ -74,7 +77,8 @@ class Table:
         w = csv.writer(s)
         w.writerow(self._keys)  # headers
         for r in self:
-            r = [round(v, self.sigfigs) if isinstance(v, float) else str(v).strip() for v in r]
+            r = [round(v, self.sigfigs) if isinstance(v, float) or isinstance(v, np.float32) else
+                 str(v).strip() for v in r]
             w.writerow(r)  # each row
         return s.getvalue()
 

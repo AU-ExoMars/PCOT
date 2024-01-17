@@ -149,7 +149,8 @@ class SubImageCubeROI:
         return self.bb == other.bb and self.mask == other.mask
 
     def pixelCount(self):
-        """How many pixels in the masked subimage?"""
+        """How many pixels in the masked subimage? This does not take BAD bits into account,
+        because different bands may have different bad bits."""
         return self.mask.sum()
 
     def setROI(self, img, roi):
@@ -372,7 +373,7 @@ class ImageCube(SourcesObtainable):
             self.sources = sources
         else:
             self.sources = MultiBandSource.createEmptySourceSets(self.channels)
-            
+
         self.defaultMapping = defaultMapping
 
         # get the mapping sorted, which may be None (in which case rgb() might not work).
@@ -530,18 +531,29 @@ class ImageCube(SourcesObtainable):
     def subimage(self, imgToUse=None, roi=None):
         return SubImageCubeROI(self, imgToUse, roi)
 
-    def __str__(self):
+    def __repr__(self):
+        """simple string representation - should probably have no newlines in it. I've deliberately made it look a bit
+        line an HTML tag, for no very good reason."""
+
         s = "<Image-{} {}x{} array:{} channels:{}, {} bytes, ".format(id(self), self.w, self.h,
                                                                       str(self.img.shape), self.channels,
                                                                       self.img.nbytes)
-        # caption type 0 is filter positions only
-        xx = self.sources.brief()
 
-        s += "src: [{}]".format(xx)
-        xx = [r.bb() for r in self.rois]
-        xx = [x for x in xx if x]  # filter out None
-        xx = [", ROI {},{},{}x{}".format(x, y, w, h) for x, y, w, h in xx if xx]
-        s += "/".join(xx) + ">"
+        s += "src: [{}]".format(self.sources.brief())
+        rois = ";".join([str(r) for r in self.rois])
+        s += rois + ">"
+        return s
+
+    def __str__(self):
+        """Prettier string representation - but (importantly) doesn't have a unique ID so we can use it
+        in string tests."""
+        s = "Image {}x{} array:{} channels:{}, {} bytes".format(self.w, self.h,
+                                                                str(self.img.shape), self.channels,
+                                                                self.img.nbytes)
+
+        s += "\nsrc: [{}]".format(self.sources.brief())
+        if len(self.rois) > 0:
+            s += "\n".join([str(r) for r in self.rois])
         return s
 
     ## the descriptor is a string which can vary depending on main window settings.
@@ -698,24 +710,6 @@ class ImageCube(SourcesObtainable):
         # and a new imagecube
         return ImageCube(img, sources=MultiBandSource(sources), uncertainty=uncertainties, dq=dqs)
 
-    ## annoyingly similar to the two methods above, this is used to get a channel _index_.
-    def getChannelIdx(self, nameOrCwl):
-        for i in range(len(self.sources.sourceSets)):  # iterate so we have the index
-            x = self.sources[i]
-            if len(x) == 1:
-                # there must be only one source in the set; get it.
-                item = next(iter(x))
-                # match either the filter name or position, case-dependent
-                iname = item.getFilterName()
-                ipos = item.getFilterPos()
-                if iname == nameOrCwl or ipos == nameOrCwl:
-                    return i
-                if isinstance(nameOrCwl, numbers.Number):
-                    f = item.getFilter()
-                    if f is not None and math.isclose(nameOrCwl, f.cwl):
-                        return i
-        return None
-
     ## crop an image down to its regions of interest.
     def cropROI(self):
         subimg = self.subimage()
@@ -808,23 +802,29 @@ class ImageCube(SourcesObtainable):
         return cls(data, rgbMapping=mapping, sources=sources, defaultMapping=defmapping,
                    uncertainty=uncertainty, dq=dq)
 
-    def wavelengthAndFWHM(self, channelNumber):
-        """get cwl and mean fwhm for a channel if all sources are of the same wavelength, else -1. Compare with
-        wavelength() below."""
+    def filter(self, channelNumber):
+        """Get the filter for a channel if all sources have the same filter, else None. Compare with
+        wavelength() and wavelengthAndFWHM() below."""
         # get the SourceSet
         sources = self.sources.sourceSets[channelNumber]
         # all sources in this channel should have a filter
         sources = [s for s in sources.sourceSet if s.getFilter()]
-        # all the sources in this channel should have the same cwl
-        wavelengthsAndFWHMs = set([(s.getFilter().cwl, s.getFilter().fwhm) for s in sources])
-        # extract the wavelengths and make sure there's only one
-        wavelengths = set([t[0] for t in wavelengthsAndFWHMs])
-        if len(wavelengths) != 1:
-            return -1, -1  # too many wavelengths
-        # looks weird, but just unpacks that single-item wavelength set
-        [cwl] = wavelengths
-        # and find the mean of the fwhms
-        return cwl, np.mean([t[1] for t in wavelengthsAndFWHMs])
+        # all the sources in this channel should have the same filter
+        filters = set([s.getFilter() for s in sources])
+        if len(filters) != 1:
+            return None
+        # return the only item in that set
+        [f] = filters
+        return f
+
+    def wavelengthAndFWHM(self, channelNumber):
+        """get cwl and mean fwhm for a channel if all sources have the same filter, else -1. Compare with
+        wavelength() below."""
+        f = self.filter(channelNumber)
+        if f is None:
+            return -1, -1
+        else:
+            return f.cwl, f.fwhm
 
     def wavelength(self, channelNumber):
         """return wavelength if all sources in channel are of the same wavelength, else -1."""
@@ -907,3 +907,40 @@ class ImageCube(SourcesObtainable):
             d = np.bitwise_or.reduce(self.dq, axis=2)
         return np.count_nonzero(d & dq.BAD)
 
+    def rotate(self, angleDegrees):
+        """Rotate the image by the given angle (in degrees), returning a new image or None if the angle is not valid.
+        Will return a copy of the image with the annotations and ROIs removed."""
+        # first, make sure angleDegrees is positive and in range 0-360
+        angleDegrees = angleDegrees % 360
+        if angleDegrees % 90 != 0:
+            return None
+        # work out how many times we need to rotate 90 degrees
+        n = int(angleDegrees / 90)
+        # make a copy of the image and rotate its arrays in-place that many times
+        img = self.copy()
+        img.img = np.rot90(img.img, n)
+        img.uncertainty = np.rot90(img.uncertainty, n)
+        img.dq = np.rot90(img.dq, n)
+        # remove all annotations and ROIs
+        img.annotations = []
+        img.rois = []
+        # switch the w and h fields
+        img.w, img.h = img.h, img.w
+
+        return img
+
+    def flip(self, vertical=True):
+        """Flip an image horizontally or vertically. Returns a new image with annotations and ROIs removed."""
+        img = self.copy()
+        if vertical:
+            img.img = np.flipud(img.img)
+            img.uncertainty = np.flipud(img.uncertainty)
+            img.dq = np.flipud(img.dq)
+        else:
+            img.img = np.fliplr(img.img)
+            img.uncertainty = np.fliplr(img.uncertainty)
+            img.dq = np.fliplr(img.dq)
+        # remove all annotations and ROIs
+        img.annotations = []
+        img.rois = []
+        return img

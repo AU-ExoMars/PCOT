@@ -31,6 +31,11 @@ class Filter:
         self.name = name if name is not None else str(cwl)
         self.position = position
 
+    def __hash__(self):
+        """The hash of a filter is its name. This is here because we want to be able to
+        use a filter as a key in a dictionary."""
+        return hash(self.name)
+
     def serialise(self):
         return self.cwl, self.fwhm, self.transmission, self.position, \
                self.name
@@ -62,6 +67,9 @@ class Filter:
     def response_over(self, x: np.ndarray):
         """generate a response curve from an input array of frequencies (I think)"""
         return self._gaussian(x, self.cwl, self.fwhm)
+
+    def __repr__(self):
+        return f"Filter({self.name},{self.cwl}@{self.fwhm}, {self.position}, t={self.transmission})"
 
 
 def wav2RGB(wavelength, scale=1.0):

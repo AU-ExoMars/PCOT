@@ -785,7 +785,6 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
     def copy(self):
         """copy operation, serialises the items to the system clipboard"""
         self.graph.copy(self.selection)
-        # pcot.utils.deb.show(self)
 
     def paste(self):
         """paste operation, deserialises items from the system clipboard"""

@@ -84,7 +84,7 @@
       </sizepolicy>
      </property>
      <property name="text">
-      <string>Click to paint, Shift-Click to erase</string>
+      <string>Click to paint, Shift-Click to erase, Ctrl-Click to fill</string>
      </property>
     </widget>
    </item>
