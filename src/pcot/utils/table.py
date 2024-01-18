@@ -71,14 +71,20 @@ class Table:
     def __iter__(self):
         return TableIter(self)
 
+    def _printable(self, v):
+        """Convert a value to a printable string. If it's a float, round it to the sigfigs"""
+        if isinstance(v, float) or isinstance(v, np.float32):
+            return round(v, self.sigfigs)
+        else:
+            return str(v).strip()
+
     def __str__(self):
         """Convert entire table to a string"""
         s = io.StringIO()
         w = csv.writer(s)
         w.writerow(self._keys)  # headers
         for r in self:
-            r = [round(v, self.sigfigs) if isinstance(v, float) or isinstance(v, np.float32) else
-                 str(v).strip() for v in r]
+            r = [self._printable(v) for v in r]
             w.writerow(r)  # each row
         return s.getvalue()
 
@@ -89,7 +95,7 @@ class Table:
         # now the rows
         rows = []
         for r in self:
-            r = [round(v, self.sigfigs) if isinstance(v, float) else str(v).strip() for v in r]
+            r = [self._printable(v) for v in r]
             rows.append(HTML("tr", [HTML("td", x) for x in r]))
         return HTML("table", headerRow, rows)
 
@@ -102,6 +108,6 @@ class Table:
         out = "|" + ("|".join(self._keys)) + "|\n"
         out += "|" + ("|".join(["-----" for _ in self._keys])) + "|\n"
         for r in self:
-            r = [round(v, self.sigfigs) if isinstance(v, float) else str(v).strip() for v in r]
+            r = [self._printable(v) for v in r]
             out += "|" + ("|".join(x for x in r)) + "|\n"
         return out

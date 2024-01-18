@@ -64,13 +64,15 @@ def addToTable(table, legend, spec):
         f = spec.filters[i]
         w = int(f.cwl)
         v, pix = spec.getByChannel(i)
-        table.add("{}pixels".format(w), pix)
         if v is None:
-            table.add("{}mean".format(w), "NA")
-            table.add("{}sd".format(w), "NA")
+            m = "NA"
+            s = "NA"
         else:
-            table.add("{}mean".format(w), v.n)
-            table.add("{}sd".format(w), v.u)
+            m = v.n
+            s = v.u
+        table.add("m{}".format(w), m)
+        table.add("s{}".format(w), s)
+        table.add("p{}".format(w), pix)
 
 
 NUMINPUTS = 8
@@ -172,9 +174,10 @@ class XFormSpectrum(XFormType):
     ROI or input, and the columns
 
     * name - the name of the ROI or input
-    * pixels - the number of pixels in the ROI or input
-    * *wavelength*mean - the mean intensity for the given wavelength band
-    * *wavelength*sd - the standard deviation of the mean intensity for the given wavelength band
+    * m*wavelength* - the mean intensity for the given wavelength band
+    * s*wavelength* - the standard deviation of the mean intensity for the given wavelength band
+    * p*wavelength* - the number of pixels in the given wavelength band (usually the same as the number of pixels in
+    the ROI, but may be fewer if the ROI has "bad" pixels in that band)
 
     The last two columns are repeated for each wavelength band.
     """
