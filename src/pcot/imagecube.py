@@ -553,7 +553,7 @@ class ImageCube(SourcesObtainable):
 
         s += "\nsrc: [{}]".format(self.sources.brief())
         if len(self.rois) > 0:
-            s += "\n".join([str(r) for r in self.rois])
+            s += "\n"+"\n".join([str(r) for r in self.rois])
         return s
 
     ## the descriptor is a string which can vary depending on main window settings.
