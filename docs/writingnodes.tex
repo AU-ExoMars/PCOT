@@ -171,7 +171,7 @@ check to see if the node has been disabled (this node has an Enabled button):
             if node.enabled:
 \end{lstlisting}
 Assuming these are both true, we use the \texttt{ImageCube.subimage()} method to fetch
-a \texttt{SubImageCubeROI} object containing information about which parts of the image are
+a \texttt{SubImageCube} object containing information about which parts of the image are
 in the current region of interest: the rectangle of pixels bounding the region and the mask
 describing which pixels within that bounding box are in the region. We can then pass these two numpy
 arrays into the normalization function we wrote earlier, obtaining another numpy array: the 

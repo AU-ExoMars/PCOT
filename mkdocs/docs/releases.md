@@ -8,7 +8,7 @@ None
 
 ## Alpha releases
 
-### 0.6.1-alpha 2023-03-08 DYNAS COVE (minor release)
+### 0.6.1-alpha 2023-10-04 DYNAS COVE (minor release)
 
 * Multifile input can accept BMP files
 * Better multifile documentation
@@ -18,7 +18,7 @@ None
 * Filter set no longer required by PDS4 input
 
 
-### 0.6.0-alpha 2023-03-08 DRIFT STONES
+### 0.6.0-alpha 2023-09-11 DRIFT STONES
 
 * uncertainty and error bit propagation in *expr* and all nodes 
 * Testing quality and propagation rules (see [Principles](/userguide/principles))
