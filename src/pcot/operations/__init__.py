@@ -46,7 +46,7 @@ def performOp(node: XForm,
         # if the node isn't enabled,  just output the input image
         node.img = img
     else:
-        # otherwise the SubImageCubeROI object from the image - this is the image clipped to
+        # otherwise the SubImageCube object from the image - this is the image clipped to
         # a BB around the ROI, with a mask for which pixels are in the ROI.
         subimage = img.copy().subimage()  # make a copy (need to do this to avoid overwriting the source).
 
