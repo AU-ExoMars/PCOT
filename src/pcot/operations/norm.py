@@ -7,7 +7,7 @@ import numpy as np
 
 import pcot.dq
 import pcot.utils.image as image
-from pcot.imagecube import SubImageCubeROI
+from pcot.imagecube import SubImageCube
 from pcot.xform import XFormException
 
 
@@ -25,7 +25,7 @@ def _norm(masked: np.ma.masked_array) -> Tuple[np.array, float]:
     return res, scale
 
 
-def norm(subimg: SubImageCubeROI, clamp: int, splitchans=False) -> Tuple[np.array, np.array, np.array]:
+def norm(subimg: SubImageCube, clamp: int, splitchans=False) -> Tuple[np.array, np.array, np.array]:
     """Does both normalisation and clamping depending on the clamp value (integer boolean because it's used in expr nodes)"""
     mask = subimg.fullmask()  # get mask with same shape as below image
     img = subimg.img  # get imagecube bounded by ROIs as np array

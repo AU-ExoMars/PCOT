@@ -28,7 +28,7 @@ from pcot.value import Value
 logger = logging.getLogger(__name__)
 
 
-class SubImageCubeROI:
+class SubImageCube:
     """This is a class representing the parts of an imagecube which are covered by ROIs or an ROI.
     It consists of
     * the image cropped to the bounding box of the ROIs; this is a view into the original image.
@@ -529,7 +529,7 @@ class ImageCube(SourcesObtainable):
     # in which case you get this image cropped to the other image's ROIs!
     # You can also limit to a single ROI or use all of them (the default)
     def subimage(self, imgToUse=None, roi=None):
-        return SubImageCubeROI(self, imgToUse, roi)
+        return SubImageCube(self, imgToUse, roi)
 
     def __repr__(self):
         """simple string representation - should probably have no newlines in it. I've deliberately made it look a bit
@@ -628,7 +628,7 @@ class ImageCube(SourcesObtainable):
     def hasROI(self):
         return len(self.rois) > 0
 
-    def modifyWithSub(self, subimage: SubImageCubeROI, newimg: np.ndarray,
+    def modifyWithSub(self, subimage: SubImageCube, newimg: np.ndarray,
                       sources=None, keepMapping=False,
                       dqv=None, dqOR=np.uint16(0), uncertainty=None
                       ) -> 'ImageCube':

@@ -9,7 +9,7 @@ import numpy as np
 import pcot.operations.norm
 import pcot.operations.curve
 from pcot.expressions import Parameter
-from pcot.imagecube import SubImageCubeROI
+from pcot.imagecube import SubImageCube
 from pcot.xform import XForm
 from pcot.datum import Datum
 
@@ -24,7 +24,7 @@ from pcot.datum import Datum
 # See norm.py, xformnorm.py for example.
 
 def performOp(node: XForm,
-              fn: Callable[[SubImageCubeROI, Dict[str, Any]],
+              fn: Callable[[SubImageCube, Dict[str, Any]],
                 Tuple[Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray]]],
               **kwargs):
     """
