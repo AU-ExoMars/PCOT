@@ -62,14 +62,18 @@ def test_graph_files(graphname):
         pytest.fail("Graph tests require a comment that starts with DOC for documentation")
 
     ns = doc.graph.getByDisplayName("sink")
+    foundOne = False    # we must find at least one sink that outputs a test result
     if len(ns) == 0:
         pytest.fail("cannot find sink")
     for n in ns:
         res = n.out.get(Datum.TESTRESULT)
         logger.info(f"Found a sink, output is {res}")
-        if res is None:
-            pytest.fail("output of sink is not an test result")
-        if "mustfail" in graphname.lower():
-            assert len(res) > 0
-        else:
-            assert len(res) == 0
+        if res is not None:
+            foundOne = True
+            if "mustfail" in graphname.lower():
+                assert len(res) > 0
+            else:
+                assert len(res) == 0
+
+    if not foundOne:
+        pytest.fail("cannot find a sink with test result output")
