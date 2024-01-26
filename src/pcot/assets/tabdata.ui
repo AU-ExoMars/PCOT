@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>711</width>
-    <height>512</height>
+    <width>797</width>
+    <height>625</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -22,9 +22,46 @@
   <property name="styleSheet">
    <string notr="true"/>
   </property>
-  <layout class="QHBoxLayout" name="horizontalLayout">
+  <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QTextEdit" name="textEdit">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Type</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="type"/>
+     </item>
+     <item>
+      <widget class="QComboBox" name="dispTypeBox">
+       <item>
+        <property name="text">
+         <string>Data</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Sources</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="Canvas" name="canvas" native="true"/>
+   </item>
+   <item>
+    <widget class="QTextEdit" name="text">
      <property name="sizePolicy">
       <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
        <horstretch>0</horstretch>
@@ -32,9 +69,6 @@
       </sizepolicy>
      </property>
     </widget>
-   </item>
-   <item>
-    <widget class="Canvas" name="canvas" native="true"/>
    </item>
   </layout>
  </widget>
