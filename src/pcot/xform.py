@@ -770,9 +770,13 @@ class XForm:
         if output < 0:
             raise XFormException('DATA', 'cannot connect to negative output')
         if inputIdx >= len(self.inputs):
-            raise XFormException('DATA', 'input index out of range')
+            ui.error(f"Input index out of range when connecting {other.debugName()}:{output} to {self.debugName()}:{inputIdx}", False)
+            return
+            # raise XFormException('DATA', 'input index out of range')
         if output >= len(other.type.outputConnectors):
-            raise XFormException('DATA', 'output index out of range')
+            ui.error(f"Output  index out of range when connecting {other.debugName()}:{output} to {self.debugName()}:{inputIdx}", False)
+            return
+            # raise XFormException('DATA', 'output index out of range')
 
         if not self.cycle(other):  # this is a double check, the UI checks too.
             self.inputs[inputIdx] = (other, output)

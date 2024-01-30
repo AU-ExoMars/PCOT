@@ -1,6 +1,7 @@
 """
 Extract spectra from ImageCube objects
 """
+from abc import ABC
 from typing import Dict, Optional, Tuple, List
 
 import numpy as np
@@ -9,7 +10,7 @@ from pcot.dq import BAD
 from pcot.filters import Filter
 from pcot.imagecube import ImageCube
 from pcot.rois import ROI
-from pcot.sources import SourceSet
+from pcot.sources import SourceSet, SourcesObtainable
 from pcot.value import Value
 from pcot.xform import XFormException
 
@@ -163,3 +164,76 @@ class Spectrum:
 
     def __repr__(self):
         return "Spectrum: " + "; ".join([f"{f}:{v}" for f, v in self.data.items()])
+
+
+class SpectrumSet(SourcesObtainable):
+    """A set of Spectrum objects obtained from ImageCube objects. Each Spectrum is associated with an ImageCube
+    or a subset of an ImageCube (ROI). Multiple ROIs of the same name within the same ImageCube will be combined
+    into a single Spectrum."""
+
+    # the problem here is that each spectrum can be associated with an imagecube, an ROI within an image, or a
+    # set of ROIs within an image all with the same name.
+
+    def __init__(self, images: Dict[str, ImageCube]):
+        """create a set of spectra from a dictionary of ImageCube objects and the ROIs they contain.
+        The keys are the names of the ImageCubes and the values are the ImageCube objects. The names
+        are used to to disambiguate regions of interest (ROIs) within the image cubes.
+
+        A spectrum is created for every ROI in every image cube. If there are multiple ROIs with the same
+        name in the same image cube, they are combined into a single spectrum. If there are multiple ROIs
+        with the same name in different image cubes, they are kept separate and the name associated with the
+        spectrum is the image cube name followed by a colon and the ROI name.
+        """
+
+        # First step - we need to combine ROIs with the same name in the same image cube. We iterate over
+        # the image cubes. If a cube contains multiple ROIs with the same name, we combine them into a single
+        # ROI and delete the others, replacing the image cube with a new one containing only the combined ROI (as
+        # a shallow copy).
+
+        for name, cube in images.items():
+            rois = []           # list of ROIs in this cube
+            replace = False     # should we replace the cube with a new one containing only the combined ROI?
+            for r in cube.rois:
+                # look for another cube with the same name in the list we are building
+                if r.label in [x.label for x in rois]:
+                    # we have a duplicate. Combine them.
+                    replace = True
+                    # find the other ROI
+                    other = [x for x in rois if x.label == r.label][0]
+                    # combine them
+                    new = r+other
+                    # remove the other ROI from the list
+                    rois.remove(other)
+                    # add the new one to the list
+                    rois.append(new)
+                else:
+                    # no duplicate. Just add it to the list.
+                    rois.append(r)
+            if replace:
+                # replace the cube with a new one containing only the combined ROI
+                images[name] = cube.shallowCopy()
+                images[name].rois = rois
+
+        # now we can create the spectra
+
+        data = dict()
+        cols = dict()
+        sources = set()
+
+        for name, cube in images.items():
+            # first, generate a list of indices of channels with a single source which has a filter,
+            # and a list of those filters.
+            filters = [cube.filter(x) for x in range(cube.channels)]
+            if len(filters) == 0:
+                raise XFormException("DATA", "no single-wavelength channels in image")
+            chans = [x for x in range(cube.channels) if filters[x] is not None]
+            # and use that to generate a list of sources
+            for x in chans:
+                sources |= cube.sources.sourceSets[x].sourceSet
+            # now we can create the spectrum for each ROI
+
+            # todo
+
+    def getSources(self) -> SourceSet:
+        pass
+

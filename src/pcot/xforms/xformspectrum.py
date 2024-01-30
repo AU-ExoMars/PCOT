@@ -385,13 +385,14 @@ class TabSpectrum(ui.tabs.Tab):
             unfiltered = self.node.data[legend]
 
             # filter out any "masked" means - those are from regions which are entirely DQ BAD in a channel.
-            x = [a for a in unfiltered if a.value.n is not np.ma.masked]
+            # These also seem to show up as None sometimes, so we have to check for that too.
+            x = [a for a in unfiltered if a.value is not None and a.value.n is not np.ma.masked]
 
             if len(x) == 0:
-                ui.error(f"No points have good data for point {legend}")
+                ui.error(f"No points have good data for point {legend}", False)
                 continue
             if len(x) != len(unfiltered):
-                ui.error(f"Some points have bad data for point {legend}")
+                ui.error(f"Some points have bad data for point {legend}", False)
 
             # extract data from the DataPoint objects
             filters = [a.filter for a in x]
