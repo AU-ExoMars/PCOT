@@ -19,19 +19,13 @@ from pcot.value import Value
 from pcot.xform import XFormType, xformtype, XFormException
 
 
-@dataclasses.dataclass
-class DataPoint:
-    chan: int
-    filter: Filter
-    value: Value
-    pixcount: int
 
 
-def processData(table, legend, data, spec):
+
+def processData(legend, data, spec):
     """
     Process the data from a single ROI/image into the data dictionary, which contains
 
-    table: Table object for dump output
     legend: name of ROI/image to be added.
     data: data dictionary
         processData's responsibility is to add to the entries in here
@@ -40,12 +34,23 @@ def processData(table, legend, data, spec):
     spec: a Spectrum object describing the spectrum for this ROI/image
     """
 
+    @dataclasses.dataclass
+    class DataPoint:
+        # this is our data point object.
+        chan: int
+        filter: Filter
+        value: Value
+        pixcount: int
+
     # build the data points
     dp = []
     for i in range(spec.channels):
-        val, pix = spec.getByChannel(i)
-        p = DataPoint(i, spec.filters[i], val, pix)
-        dp.append(p)
+        p = spec.getByChannel(i)
+        if p is not None:
+            p = DataPoint(i, spec.filters[i], p.v, p.pixels)
+            dp.append(p)
+
+    # now we have a list of data points - channel, filter, value, pixcount.
 
     # add them to the data set, which is indexed by legend (ROI or image name).
     if legend not in data:
@@ -63,16 +68,18 @@ def addToTable(table, legend, spec):
     for i in range(spec.channels):
         f = spec.filters[i]
         w = int(f.cwl)
-        v, pix = spec.getByChannel(i)
-        if v is None:
+        p = spec.getByChannel(i)
+        if p is None:
             m = "NA"
             s = "NA"
+            pct = 0
         else:
-            m = v.n
-            s = v.u
+            m = p.v.n
+            s = p.v.u
+            pct = p.pixels
         table.add("m{}".format(w), m)
         table.add("s{}".format(w), s)
-        table.add("p{}".format(w), pix)
+        table.add("p{}".format(w), pct)
 
 
 NUMINPUTS = 8
@@ -253,7 +260,7 @@ class XFormSpectrum(XFormType):
                     # I have no real way of specifying a colour at the moment, so I'll just use black.
                     cols[legend] = (0, 0, 0)
                     spec = Spectrum(img)
-                    processData(table, legend, data, spec)
+                    processData(legend, data, spec)
                     addToTable(table, legend, spec)
                 else:
                     for r in img.rois:
@@ -263,7 +270,7 @@ class XFormSpectrum(XFormType):
                         legend = nameResolver.getName(i, r)
                         cols[legend] = r.colour
                         spec = Spectrum(img, roi=r)
-                        processData(table, legend, data, spec)
+                        processData(legend, data, spec)
                         addToTable(table, legend, spec)
 
         # now, for each list in the dict, build a new dict of the lists sorted

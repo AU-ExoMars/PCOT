@@ -5,8 +5,8 @@ want to look at tests for the spectrum XForm, check the graphs directory.
 import pcot
 from pcot.datum import Datum
 from pcot.document import Document
-from pcot.rois import ROICircle
-from pcot.utils.spectrum import Spectrum
+from pcot.rois import ROICircle, ROIRect, ROI
+from pcot.utils.spectrum import Spectrum, SpectrumSet
 from pcot.value import Value
 from pcot.xforms.xformgen import ChannelData
 
@@ -45,6 +45,88 @@ def get_dot(img, x, y, r=3):
     return Spectrum(img, roi)
 
 
+def test_coalesce():
+    """Test that ROIs with the same name are combined into one ROI, but not across images"""
+
+    # Create two images, both 256x256. We use the gen node for this.
+    img1 = create_test_image1()
+    img2 = create_test_image1()
+    # add some ROIs to each image.
+    # For img1 we'll add two rects with the same name and a circle.
+    img1.rois.append(ROIRect(rect=(10, 10, 20, 20), label="1"))
+    img1.rois.append(ROIRect(rect=(30, 30, 40, 40), label="1"))
+    img1.rois.append(ROICircle(50, 50, 10, label="2"))
+    # For img2 we'll do the same, but with three rects and two circles.
+    img2.rois.append(ROIRect(rect=(0, 0, 30, 50), label="1"))
+    img2.rois.append(ROIRect(rect=(100, 100, 20, 20), label="1"))
+    img2.rois.append(ROIRect(rect=(100, 60, 20, 20), label="1"))
+    img2.rois.append(ROICircle(128, 50, 20, label="2"))
+
+    # now we'll build the dict that coalence (and SpectrumSet) works on
+    d = {
+        'img1': img1,
+        'img2': img2
+    }
+    # and coalesce
+    SpectrumSet._coalesceROIs(d)
+    # extract the images from the dict
+    img1 = d['img1']
+    img2 = d['img2']
+
+    # now we check to see what ROIs are in the images. There should be two ROIs, where one is a union
+    # of the two rects and the other is the circle.
+    assert len(img1.rois) == 2
+    assert len(img2.rois) == 2
+
+    # check that we have 1 ROI which is a union of the two rects
+    x = [r for r in img1.rois if r.label == "1"]
+    assert len(x) == 1
+    x = x[0]  # extract the ROI from the list
+    assert type(x) == ROI  # assert it's an ROI and not a subclass of ROI
+    # check that the union ROI has the right bounds
+    bb = x.bb()
+    assert bb[0] == 10
+    assert bb[1] == 10
+    assert bb[2] == 60
+    assert bb[3] == 60
+    # and just check the corners
+    assert (10, 10) in x
+    assert (10, 69) not in x
+    assert (69, 10) not in x
+    assert (69, 69) in x
+    assert (70, 70) not in x
+    assert (9, 9) not in x
+    # check the circle
+    x = [r for r in img1.rois if r.label == "2"]
+    assert len(x) == 1
+    x = x[0]
+    assert type(x) == ROICircle
+    assert x.x == 50
+    assert x.y == 50
+    assert x.r == 10
+
+    # do some basic checks on image 2
+    x = [r for r in img2.rois if r.label == "1"]
+    assert len(x) == 1
+    x = x[0]
+    assert type(x) == ROI
+    bb = x.bb()
+    assert bb[0] == 0
+    assert bb[1] == 0
+    assert bb[2] == 120
+    assert bb[3] == 120
+    assert (0, 0) in x
+    assert (29, 49) in x
+    assert (0, 49) in x
+    assert (29, 0) in x
+    assert (30, 50) not in x
+    assert (100, 100) in x
+    assert (119, 119) in x
+    assert (120, 120) not in x
+    assert (100, 60) in x
+    assert (120, 80) not in x
+
+
 def test_spectrum():
     img = create_test_image1()
     assert img.channels == 3
@@ -52,9 +134,9 @@ def test_spectrum():
     s = get_dot(img, 187, 211)
     # check we can get filters and values
     # by wavelength
-    assert s.get(100) == Value(1, 0, 0)
-    assert s.get(200) == Value(1, 0, 0)
-    assert s.get(300) == Value(1, 1, 0)
+    assert s.get(100).v == Value(1, 0, 0)
+    assert s.get(200).v == Value(1, 0, 0)
+    assert s.get(300).v == Value(1, 1, 0)
 
     # just check non-existent filters return None
     assert s.get("fish") is None
@@ -62,9 +144,13 @@ def test_spectrum():
 
     # try another dot with a straightforward variance
     s = get_dot(img, 62, 110)
-    assert s.get(100) == Value(0, 0, 0)
-    assert s.get(200) == Value(0.5, 0, 0)
-    assert s.get(300) == Value(0, 0, 0)
+    assert s.get(100).v == Value(0, 0, 0)
+    assert s.get(200).v == Value(0.5, 0, 0)
+    assert s.get(300).v == Value(0, 0, 0)
+    # test pixel counts work
+    assert s.get(100).pixels == 29
+    assert s.get(200).pixels == 29
+    assert s.get(300).pixels == 29
 
     # and now one that straddes a boundary between regions
     # in a filter, but with there is zero variance within the pixels
@@ -78,9 +164,15 @@ def test_spectrum():
     # so the mean will be 0.15384615384615385
     # and the stddev will be 0.23076923076923078
     s = get_dot(img, 62, 84, 2)  # radius of 2
-    assert s.get(100) == Value(0, 0, 0)
-    assert s.get(200) == Value(0.15384615384615385, 0.23076923076923078, 0)
-    assert s.get(300) == Value(1, 1, 0)
+    assert s.get(100).v == Value(0, 0, 0)
+    assert s.get(200).v == Value(0.15384615384615385, 0.23076923076923078, 0)
+    assert s.get(300).v == Value(1, 1, 0)
+    assert s.get(100).pixels == 13  # test the pixel count works!
+
+    # check we can get by index
+    assert s.getByChannel(0).v == Value(0, 0, 0)
+    assert s.getByChannel(1).v == Value(0.15384615384615385, 0.23076923076923078, 0)
+    assert s.getByChannel(2).v == Value(1, 1, 0)
 
 
 def create_test_image2():
@@ -150,7 +242,7 @@ def test_spectrum_pooling():
     # which gives a stddev of 0.2964284441230415
 
     s = get_dot(img, 128, 128, 2)
-    assert s.get(100) == Value(0.6461538461538463, 0.2964284441230415, 0)
+    assert s.get(100).v == Value(0.6461538461538463, 0.2964284441230415, 0)
 
     # Channel 1 (wavelength 200):
     # Nominal values:
@@ -173,9 +265,4 @@ def test_spectrum_pooling():
     #
     # Having to use approx equality here because of floating point errors!
 
-    assert s.get(200).approxeq(Value(0.4730769230769231, 0.18040060614705503, 0))
-
-
-
-
-
+    assert s.get(200).v.approxeq(Value(0.4730769230769231, 0.18040060614705503, 0))

@@ -1,7 +1,9 @@
 """
 Extract spectra from ImageCube objects
 """
+import dataclasses
 from abc import ABC
+from dataclasses import dataclass
 from typing import Dict, Optional, Tuple, List
 
 import numpy as np
@@ -63,6 +65,17 @@ def getMeanValue(chanImg, chanUnc, chanDQ, mask, ignorePixSD=False):
 
     # return the mean, SD, and a zero value for the DQ (because there were good pixels)
     return mean, std, 0
+
+
+@dataclass
+class SpectrumValue:
+    """The output of the get methods in Spectrum - a single value and the number of pixels from which
+    it was obtained."""
+    v: Value
+    pixels: int
+
+    def as_tuple(self):
+        return dataclasses.astuple(self)
 
 
 class Spectrum:
@@ -148,19 +161,19 @@ class Spectrum:
                     dq = np.bitwise_or.reduce(dq, axis=None) & BAD  # OR all the bad bits together
                     self.data[f] = Value(mean, sd, dq)
 
-    def getByFilter(self, cwlOrName) -> Optional[Tuple[Value, int]]:
+    def get(self, cwlOrName) -> Optional[SpectrumValue]:
         """get the value and pixel count for a particular channel wavelength or filter name"""
         for f, v in self.data.items():
             if f.cwl == cwlOrName or f.name == cwlOrName:
-                return v, self.pixels[f]
+                return SpectrumValue(v, self.pixels[f])
         return None
 
-    def getByChannel(self, channel):
+    def getByChannel(self, channel) -> Optional[SpectrumValue]:
         """get the value for a particular channel number"""
         if channel < 0 or channel >= len(self.filters):
             return None
         f = self.filters[channel]
-        return (self.data[f], self.pixels[f]) if f in self.data else (None, 0)
+        return SpectrumValue(self.data[f], self.pixels[f]) if f in self.data else None
 
     def __repr__(self):
         return "Spectrum: " + "; ".join([f"{f}:{v}" for f, v in self.data.items()])
@@ -189,30 +202,7 @@ class SpectrumSet(SourcesObtainable):
         # the image cubes. If a cube contains multiple ROIs with the same name, we combine them into a single
         # ROI and delete the others, replacing the image cube with a new one containing only the combined ROI (as
         # a shallow copy).
-
-        for name, cube in images.items():
-            rois = []           # list of ROIs in this cube
-            replace = False     # should we replace the cube with a new one containing only the combined ROI?
-            for r in cube.rois:
-                # look for another cube with the same name in the list we are building
-                if r.label in [x.label for x in rois]:
-                    # we have a duplicate. Combine them.
-                    replace = True
-                    # find the other ROI
-                    other = [x for x in rois if x.label == r.label][0]
-                    # combine them
-                    new = r+other
-                    # remove the other ROI from the list
-                    rois.remove(other)
-                    # add the new one to the list
-                    rois.append(new)
-                else:
-                    # no duplicate. Just add it to the list.
-                    rois.append(r)
-            if replace:
-                # replace the cube with a new one containing only the combined ROI
-                images[name] = cube.shallowCopy()
-                images[name].rois = rois
+        SpectrumSet._coalesceROIs(images)
 
         # now we can create the spectra
 
@@ -233,6 +223,39 @@ class SpectrumSet(SourcesObtainable):
             # now we can create the spectrum for each ROI
 
             # todo
+
+    @staticmethod
+    def _coalesceROIs(images: Dict[str, ImageCube]):
+        """coalesce ROIs with the same name in the same image cube. Modifies the
+        dictionary which is passed in, replacing the image cubes with new ones
+        if they contain multiple ROIs with the same name. The new image cubes
+        contain those ROIs merged into single ROIs."""
+
+        for name, cube in images.items():
+            rois = []           # list of ROIs in this cube
+            replace = False     # should we replace the cube with a new one containing only the combined ROI?
+            for r in cube.rois:
+                # look for another cube with the same name in the list we are building
+                if r.label in [x.label for x in rois]:
+                    # we have a duplicate. Combine them.
+                    replace = True
+                    # find the other ROI
+                    other = [x for x in rois if x.label == r.label][0]
+                    # combine them and copy the label from one (they'll be the same)
+                    new = r+other
+                    new.label = r.label
+                    # remove the other ROI from the list
+                    rois.remove(other)
+                    # add the new one to the list
+                    rois.append(new)
+                else:
+                    # no duplicate. Just add it to the list.
+                    rois.append(r)
+            if replace:
+                # replace the cube with a new one containing only the combined ROI
+                images[name] = cube.shallowCopy()
+                images[name].rois = rois
+
 
     def getSources(self) -> SourceSet:
         pass

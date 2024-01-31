@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import cv2 as cv
 import numpy as np
 from PySide2.QtCore import Qt, QPointF
@@ -49,6 +51,7 @@ class ROI(SourcesObtainable, Annotation):
 
     tpname = None
     roiTypes = {}
+    count = 0
 
     def __init_subclass__(cls, **kwargs):
         """This is called when a subclass is created. It's used to associate the type name with the class"""
@@ -66,6 +69,8 @@ class ROI(SourcesObtainable, Annotation):
 
         self.bbrect = bbrect
         self.maskimg = maskimg
+        self.internalIdx = ROI.count    # debugging
+        ROI.count += 1
 
         self.isTemp = isTemp  # for temporary ROIs created by expressions
 
@@ -424,10 +429,10 @@ class ROI(SourcesObtainable, Annotation):
     def __str__(self):
         lab = "(no label)" if self.label is None else self.label
         if not self.bb():
-            return f"ROI-BASE {lab} (no data)"
+            return f"ROI-BASE{self.internalIdx} {lab} (no data)"
         else:
             x, y, w, h = self.bb()
-            return f"ROI-BASE:{lab} {x} {y} {w}x{h}"
+            return f"ROI-BASE{self.internalIdx}:{lab} {x} {y} {w}x{h}"
 
     def getSources(self):
         return self.sources
@@ -450,15 +455,25 @@ class ROIRect(ROI):
     """Rectangular ROI"""
     tpname = "rect"
 
-    def __init__(self, sourceROI=None, label=None):
+    def __init__(self, sourceROI=None, label=None, rect: Tuple[float, float, float, float] = None):
+        """Takes the following forms:
+        ROIRect() - empty ROI
+        ROIRect(rect=(x,y,w,h)) - ROI with given bounding box
+        ROIRect(sourceROI=roi) - copy of ROI
+        Can also specify a label with label="""
         super().__init__(sourceROI=sourceROI, label=label)
         if sourceROI is None:
-            self.x = 0
-            self.y = 0
-            self.w = 0
-            self.h = 0
+            if rect is None:
+                self.x = 0
+                self.y = 0
+                self.w = 0
+                self.h = 0
+            else:
+                self.x, self.y, self.w, self.h = rect
             self.isSet = False
         else:
+            if rect is not None:
+                raise ValueError("Can't specify both sourceROI and rect")
             self.x, self.y, self.w, self.h = sourceROI.x, sourceROI.y, sourceROI.w, sourceROI.h
             self.isSet = True
 
@@ -520,7 +535,7 @@ class ROIRect(ROI):
 
     def __str__(self):
         lab = "(no label)" if self.label is None else self.label
-        return f"ROI-RECT:{lab} {self.x} {self.y} {self.w}x{self.h}"
+        return f"ROI-RECT{self.internalIdx}:{lab} {self.x} {self.y} {self.w}x{self.h}"
 
     def createEditor(self, tab):
         return RectEditor(tab, self)
@@ -618,7 +633,7 @@ class ROICircle(ROI):
 
     def __str__(self):
         lab = "(no label)" if self.label is None else self.label
-        return f"ROI-CIRCLE:{lab} {self.x} {self.y} {self.r}"
+        return f"ROI-CIRCLE{self.internalIdx}:{lab} {self.x} {self.y} {self.r}"
 
 
 # used in ROIpainted to convert a 0-99 value into a brush size for painting
@@ -776,10 +791,10 @@ class ROIPainted(ROI):
     def __str__(self):
         lab = "(no label)" if self.label is None else self.label
         if not self.bbrect:
-            return f"ROI-PAINTED:{lab} (not set)"
+            return f"ROI-PAINTED{self.internalIdx}:{lab} (not set)"
         else:
             x, y, w, h = self.bb()
-            return f"ROI-PAINTED:{lab} {x} {y} {w}x{h}"
+            return f"ROI-PAINTED{self.internalIdx}:{lab} {x} {y} {w}x{h}"
 
 
 ## a polygon ROI
@@ -927,9 +942,9 @@ class ROIPoly(ROI):
     def __str__(self):
         lab = "(no label)" if self.label is None else self.label
         if not self.hasPoly():
-            return f"ROI-POLY:{lab} (no points)"
+            return f"ROI-POLY{self.internalIdx}:{lab} (no points)"
         x, y, w, h = self.bb()
-        return f"ROI-POLY:{lab} {x} {y} {w}x{h}"
+        return f"ROI-POLY{self.internalIdx}:{lab} {x} {y} {w}x{h}"
 
 
 def deserialise(tp, d):
