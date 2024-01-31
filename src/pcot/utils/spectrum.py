@@ -179,6 +179,38 @@ class Spectrum:
         return "Spectrum: " + "; ".join([f"{f}:{v}" for f, v in self.data.items()])
 
 
+class NameResolver:
+    @staticmethod
+    def getLabel(rr: ROI) -> str:
+        return rr.label if rr.label != "" else "none"
+
+    def __init__(self, d: Dict[str, ImageCube]):
+        self.nameDict = {}
+        self.countDict = {}
+        # pass 1 - count each time a name appears for an ROI
+        for name, cube in d.items():
+            for r in cube.rois:
+                label = NameResolver.getLabel(r)
+                # increment the count for this label, setting it to 1
+                # if it's not there
+                self.countDict[label] = self.countDict.get(label, 0) + 1
+        # pass 2 - create the name dictionary
+        for name, cube in d.items():
+            for r in cube.rois:
+                label = NameResolver.getLabel(r)
+                if self.countDict[label] > 1:
+                    # this label appears in more than one image cube
+                    # so we need to prefix the label with the name of the
+                    # image cube
+                    self.nameDict[(name, label)] = name + ":" + label
+                else:
+                    # this label appears only once
+                    self.nameDict[(name, label)] = label
+
+    def resolve(self, name, roi):
+        return self.nameDict[(name, NameResolver.getLabel(roi))]
+
+
 class SpectrumSet(SourcesObtainable):
     """A set of Spectrum objects obtained from ImageCube objects. Each Spectrum is associated with an ImageCube
     or a subset of an ImageCube (ROI). Multiple ROIs of the same name within the same ImageCube will be combined
@@ -222,7 +254,21 @@ class SpectrumSet(SourcesObtainable):
                 sources |= cube.sources.sourceSets[x].sourceSet
             # now we can create the spectrum for each ROI
 
-            # todo
+            if len(filters) == 0:
+                # here we are going to put a None field in the data dictionary
+                # to indicate an error
+                data[name] = None
+                cols[name] = None
+            elif len(cube.rois) == 0:
+                # there are no ROIs in this image cube. We'll create a single spectrum
+                # for the whole image cube.
+                data[name] = Spectrum(cube)
+                cols[name] = (0, 0, 0)  # no ROI, so no colour to be assigned
+            else:
+                # there are multiple ROIs in this image cube. We may need to prefix
+                # the ROI name with the image cube name to disambiguate them if
+                # there are multiple ROIs with the same name in different image cubes.
+                name = nameResolver
 
     @staticmethod
     def _coalesceROIs(images: Dict[str, ImageCube]):
@@ -232,8 +278,8 @@ class SpectrumSet(SourcesObtainable):
         contain those ROIs merged into single ROIs."""
 
         for name, cube in images.items():
-            rois = []           # list of ROIs in this cube
-            replace = False     # should we replace the cube with a new one containing only the combined ROI?
+            rois = []  # list of ROIs in this cube
+            replace = False  # should we replace the cube with a new one containing only the combined ROI?
             for r in cube.rois:
                 # look for another cube with the same name in the list we are building
                 if r.label in [x.label for x in rois]:
@@ -242,7 +288,7 @@ class SpectrumSet(SourcesObtainable):
                     # find the other ROI
                     other = [x for x in rois if x.label == r.label][0]
                     # combine them and copy the label from one (they'll be the same)
-                    new = r+other
+                    new = r + other
                     new.label = r.label
                     # remove the other ROI from the list
                     rois.remove(other)
@@ -256,7 +302,5 @@ class SpectrumSet(SourcesObtainable):
                 images[name] = cube.shallowCopy()
                 images[name].rois = rois
 
-
     def getSources(self) -> SourceSet:
         pass
-
