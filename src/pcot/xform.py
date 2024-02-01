@@ -1354,9 +1354,17 @@ class XFormGraph:
         """Does a node exist (node names are unique)?"""
         return self.get(name) is not None
 
-    def getByDisplayName(self, name):
-        """Return a list of nodes which have this display name."""
-        return [x for x in self.nodes if x.displayName == name]
+    def getByDisplayName(self, name, single=False):
+        """Return a list of nodes which have this display name. if single is True, return
+        the first one only and ensure there is only one item."""
+        x = [x for x in self.nodes if x.displayName == name]
+        if single:
+            if len(x) == 1:
+                return x[0]
+            else:
+                raise ValueError("Expected one node with display name {}, found {}".format(name, len(x)))
+        else:
+            return x
 
     ## change the names of nodes in the dict which have the same names as
     # nodes in the existing graph. Returns a new dict.

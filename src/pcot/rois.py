@@ -426,13 +426,20 @@ class ROI(SourcesObtainable, Annotation):
     def __pow__(self, power, modulo=None):
         raise BadOpException()
 
-    def __str__(self):
+    def _str(self, use_id):
         lab = "(no label)" if self.label is None else self.label
+        s = f"ROI-BASE{self.internalIdx}" if use_id else "ROI-BASE"
         if not self.bb():
-            return f"ROI-BASE{self.internalIdx} {lab} (no data)"
+            return f"{s}:{lab} (no data)"
         else:
             x, y, w, h = self.bb()
-            return f"ROI-BASE{self.internalIdx}:{lab} {x} {y} {w}x{h}"
+            return f"{s}:{lab} {x} {y} {w}x{h}"
+
+    def __str__(self):
+        return self._str(False)
+
+    def __repr__(self):
+        return self._str(True)
 
     def getSources(self):
         return self.sources
@@ -533,9 +540,16 @@ class ROIRect(ROI):
         r.y -= y
         return r
 
-    def __str__(self):
+    def _str(self, use_id):
         lab = "(no label)" if self.label is None else self.label
-        return f"ROI-RECT{self.internalIdx}:{lab} {self.x} {self.y} {self.w}x{self.h}"
+        s = f"ROI-RECT{self.internalIdx}" if use_id else "ROI-RECT"
+        return f"{s}:{lab} {self.x} {self.y} {self.w}x{self.h}"
+
+    def __str__(self):
+        return self._str(False)
+
+    def __repr__(self):
+        return self._str(True)
 
     def createEditor(self, tab):
         return RectEditor(tab, self)
@@ -632,6 +646,10 @@ class ROICircle(ROI):
         return CircleEditor(tab, self)
 
     def __str__(self):
+        lab = "(no label)" if self.label is None else self.label
+        return f"ROI-CIRCLE:{lab} {self.x} {self.y} {self.r}"
+
+    def __repr__(self):
         lab = "(no label)" if self.label is None else self.label
         return f"ROI-CIRCLE{self.internalIdx}:{lab} {self.x} {self.y} {self.r}"
 
@@ -788,13 +806,21 @@ class ROIPainted(ROI):
     def createEditor(self, tab):
         return PaintedEditor(tab, self)
 
-    def __str__(self):
+    def _str(self, use_id):
         lab = "(no label)" if self.label is None else self.label
-        if not self.bbrect:
-            return f"ROI-PAINTED{self.internalIdx}:{lab} (not set)"
-        else:
+        s = f"ROI-PAINTED{self.internalIdx}" if use_id else f"ROI-PAINTED:{lab}"
+        if self.bbrect:
             x, y, w, h = self.bb()
-            return f"ROI-PAINTED{self.internalIdx}:{lab} {x} {y} {w}x{h}"
+            s += f" {x} {y} {w}x{h}"
+        else:
+            s += " (not set)"
+        return s
+
+    def __str__(self):
+        return self._str(use_id=False)
+
+    def __repr__(self):
+        return self._str(use_id=True)
 
 
 ## a polygon ROI
@@ -939,12 +965,19 @@ class ROIPoly(ROI):
     def createEditor(self, tab):
         return PolyEditor(tab, self)
 
-    def __str__(self):
+    def _str(self, use_id):
         lab = "(no label)" if self.label is None else self.label
+        s = f"ROI-POLY{self.internalIdx}:{lab}" if use_id else f"ROI-POLY:{lab}"
         if not self.hasPoly():
-            return f"ROI-POLY{self.internalIdx}:{lab} (no points)"
+            return s + " (no points)"
         x, y, w, h = self.bb()
-        return f"ROI-POLY{self.internalIdx}:{lab} {x} {y} {w}x{h}"
+        return s + f" {x} {y} {w}x{h}"
+
+    def __str__(self):
+        return self._str(use_id=True)
+
+    def __repr__(self):
+        return self._str(use_id=False)
 
 
 def deserialise(tp, d):

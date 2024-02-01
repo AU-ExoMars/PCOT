@@ -2,11 +2,13 @@
 This file tests the fundamental functionality of the spectrum system. If you
 want to look at tests for the spectrum XForm, check the graphs directory.
 """
+import os
+
 import pcot
 from pcot.datum import Datum
 from pcot.document import Document
 from pcot.rois import ROICircle, ROIRect, ROI
-from pcot.utils.spectrum import Spectrum, SpectrumSet
+from pcot.utils.spectrum import Spectrum, SpectrumSet, NameResolver
 from pcot.value import Value
 from pcot.xforms.xformgen import ChannelData
 
@@ -60,7 +62,8 @@ def test_coalesce():
     img2.rois.append(ROIRect(rect=(0, 0, 30, 50), label="1"))
     img2.rois.append(ROIRect(rect=(100, 100, 20, 20), label="1"))
     img2.rois.append(ROIRect(rect=(100, 60, 20, 20), label="1"))
-    img2.rois.append(ROICircle(128, 50, 20, label="2"))
+    img2.rois.append(ROICircle(60, 60, 20, label="2"))
+    img2.rois.append(ROICircle(80, 80, 20, label="2"))
 
     # now we'll build the dict that coalence (and SpectrumSet) works on
     d = {
@@ -111,6 +114,7 @@ def test_coalesce():
     x = x[0]
     assert type(x) == ROI
     bb = x.bb()
+    # check dimensions and some points
     assert bb[0] == 0
     assert bb[1] == 0
     assert bb[2] == 120
@@ -125,6 +129,67 @@ def test_coalesce():
     assert (120, 120) not in x
     assert (100, 60) in x
     assert (120, 80) not in x
+    # get the circles
+    x = [r for r in img2.rois if r.label == "2"]
+    assert len(x) == 1  # which should have been coalesced
+    x = x[0]
+    assert type(x) == ROI
+    # and check the dimensions and some points
+    bb = x.bb()
+    assert bb[0] == 40
+    assert bb[1] == 40
+    assert bb[2] == 61
+    assert bb[3] == 61
+    assert (40, 40) not in x
+    assert (40, 60) in x
+    assert (100, 80) in x
+    assert (80, 100) in x
+    assert (98, 98) not in x
+
+
+def test_name_resolution():
+    """Multiple ROIs with the same name in different images should be disambiguated"""
+    # Create two images, both 256x256. We use the gen node for this.
+    img1 = create_test_image1()
+    img2 = create_test_image1()
+    # add some ROIs to each image.
+    r1_1a = ROIRect(rect=(10, 10, 20, 20), label="1")
+    r1_1b = ROIRect(rect=(30, 30, 40, 40), label="1")
+    r1_2 = ROICircle(50, 50, 10, label="2")
+    img1.rois = [r1_1a, r1_1b, r1_2]
+
+    r2_1a = ROIRect(rect=(0, 0, 30, 50), label="1")
+    r2_1b = ROICircle(60, 60, 20, label="1")
+    r2_2a = ROIRect(rect=(100, 60, 20, 20), label="2")
+    r2_2b = ROIRect(rect=(120, 80, 20, 20), label="2")
+    r2_3 = ROIRect(rect=(140, 100, 20, 20), label="3")
+    img2.rois = [r2_1a, r2_1b, r2_2a, r2_2b, r2_3]
+
+    # build the dict and coalesce
+    d = {'img1': img1, 'img2': img2}
+    SpectrumSet._coalesceROIs(d)
+    # extract the images from the dict
+    img1 = d['img1']
+    img2 = d['img2']
+
+    # do basic checks
+    assert len(img1.rois) == 2
+    assert len(img2.rois) == 3
+
+    # get the "new" ROIs (some will be coalesced)
+    r1_1 = [r for r in img1.rois if r.label == "1"][0]
+    r1_2 = [r for r in img1.rois if r.label == "2"][0]
+    r2_1 = [r for r in img2.rois if r.label == "1"][0]
+    r2_2 = [r for r in img2.rois if r.label == "2"][0]
+    r2_3 = [r for r in img2.rois if r.label == "3"][0]
+
+    # now do test the resolution
+    resolver = NameResolver(d)
+    assert "img1:1" == resolver.resolve("img1", r1_1)
+    assert "img1:2" == resolver.resolve("img1", r1_2)  # will be coalesced, it exists in img2
+    assert "img2:1" == resolver.resolve("img2", r2_1)
+    assert "img2:2" == resolver.resolve("img2", r2_2)
+    assert "3" == resolver.resolve("img2", r2_3)  # will not be coalesced, it does not exist in img1
 
 
 def test_spectrum():
@@ -266,3 +331,49 @@ def test_spectrum_pooling():
     # Having to use approx equality here because of floating point errors!
 
     assert s.get(200).v.approxeq(Value(0.4730769230769231, 0.18040060614705503, 0))
+
+
+def test_spectrum_table():
+    """This test uses the graph for spectrum.pcot. It collects images with ROIs from the graph,
+    constructs SpectrumSets directly, and compares the results (when converted to strings) with
+    the expected results from the graph."""
+
+    pcot.setup()
+
+    # we are reusing the graph here to generate the images and ROIs
+    doc = Document("graphs/spectrum.pcot")
+    doc.changed()  # force the graph to run
+
+    # get the gen and multidot node outputs
+    gen1img = doc.graph.getByDisplayName("gen 1", single=True).getOutput(0, Datum.IMG)
+    gen2img = doc.graph.getByDisplayName("gen 2", single=True).getOutput(0, Datum.IMG)
+    md1img = doc.graph.getByDisplayName("multidot 1", single=True).getOutput(0, Datum.IMG)
+    md2img = doc.graph.getByDisplayName("multidot 2", single=True).getOutput(0, Datum.IMG)
+    md3img = doc.graph.getByDisplayName("multidot 3", single=True).getOutput(0, Datum.IMG)
+
+    # get desired results; strip and convert crlf to lf. This deals with platform differences.
+    res1 = doc.graph.getByDisplayName("stringtest 1", single=True).string.strip().replace('\r\n', '\n')
+
+    # create the spectrum sets and tables for the gen1/md1 set (look at the graph, you can see that
+    # gen1 and md1 connect to inputs 0 and 4 on the spectrum node).
+    ss1 = SpectrumSet({"in0": gen1img, "in4": md1img})
+    t = str(ss1.table()).strip().replace('\r\n', '\n')
+    assert t == res1
+
+    # same with md2
+    res2 = doc.graph.getByDisplayName("stringtest 2", single=True).string.strip().replace('\r\n', '\n')
+    ss2 = SpectrumSet({"in0": md2img})
+    t = str(ss2.table()).strip().replace('\r\n', '\n')
+    assert t == res2
+
+    # and finally the complex test with md3
+    res3 = doc.graph.getByDisplayName("stringtest 3", single=True).string.strip().replace('\r\n', '\n')
+    ss3 = SpectrumSet({
+        "in0": gen1img,
+        "in1": md1img,
+        "in2": md2img,
+        "in3": gen2img,
+        "in4": md3img
+    })
+    t = str(ss3.table()).strip().replace('\r\n', '\n')
+    assert t == res3

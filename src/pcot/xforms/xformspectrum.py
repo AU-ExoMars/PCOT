@@ -13,13 +13,10 @@ from pcot.filters import wav2RGB, Filter
 from pcot.sources import SourceSet
 from pcot.ui import uiloader
 from pcot.ui.tabs import Tab
-from pcot.utils.spectrum import Spectrum
+from pcot.utils.spectrum import Spectrum, SpectrumSet
 from pcot.utils.table import Table
 from pcot.value import Value
 from pcot.xform import XFormType, xformtype, XFormException
-
-
-
 
 
 def processData(legend, data, spec):
@@ -62,100 +59,34 @@ def processData(legend, data, spec):
     # where each entry in the dict should be a line in the result.
 
 
-def addToTable(table, legend, spec):
-    table.newRow(legend)
-    table.add("name", legend)
-    for i in range(spec.channels):
-        f = spec.filters[i]
-        w = int(f.cwl)
-        p = spec.getByChannel(i)
-        if p is None:
-            m = "NA"
-            s = "NA"
-            pct = 0
-        else:
-            m = p.v.n
-            s = p.v.u
-            pct = p.pixels
-        table.add("m{}".format(w), m)
-        table.add("s{}".format(w), s)
-        table.add("p{}".format(w), pct)
-
-
+# number of inputs on the node
 NUMINPUTS = 8
 
+# enums for error bar modes used in the dialog
 ERRORBARMODE_NONE = 0
 ERRORBARMODE_STDERROR = 1
 ERRORBARMODE_STDDEV = 2
 
+# enums for colour modes used in the dialog
 COLOUR_FROMROIS = 0
 COLOUR_SCHEME1 = 1
 COLOUR_SCHEME2 = 2
 
+# enums for bandwidth modes used in the dialog
 BANDWIDTHMODE_NONE = 0
 BANDWIDTHMODE_ERRORBAR = 1
 BANDWIDTHMODE_VERTBAR = 2
 
 
 def fixSortList(node):
-    """fix the sortlist, making sure that only legends for data we have are present,
-    and that all of them are present"""
-    # now remove any data from the sort list which are not present in the data
+    # fix the sort list, making sure that only legends for the data we have are present,
+    # and that all of them are present. This list is used to "stack" items in the plot,
+    # and nowhere else (it doesn't order items in the tabular output, for example).
     legends = node.data.keys()
+    # filter out items that aren't in the data
     node.sortlist = [x for x in node.sortlist if x in legends]
-    # and add any new items
-    for x in [x for x in legends if x not in node.sortlist]:
-        node.sortlist.append(x)
-
-
-class NameResolver:
-    """It's possible that the inputs will have different ROIs with the same name.
-    In that case, we need to disambiguate them. This class does that.
-    It contains a dictionary of (input, ROIname) -> name. Normally this will be the same
-    as ROIname, but if the name appears multiple times, it will be "inN:roiName".
-    This does not get used for inputs which are entire images, only for ROIs.
-
-    Note that we could have used actual images rather than the input ID, but that
-    introduces the problem of identifying the images in a way which makes sense
-    to the user. The input index is much clearer.
-
-    We also go to some lengths to make sure an ROI with a blank label is given a name "none"
-    """
-
-    @staticmethod
-    def getLabel(rr):
-        return rr.label if rr.label != "" else "none"
-
-    def __init__(self, node):
-        # dictionary of (image, ROIname) -> name
-        self.nameDict = {}
-        # dictionary of ROIname -> count
-        self.countDict = {}
-
-        # pass 1 - count how many times each ROI name appears
-        for i in range(NUMINPUTS):
-            img = node.getInput(i, Datum.IMG)
-            if img is not None:
-                for r in img.rois:
-                    label = self.getLabel(r)
-                    if label not in self.countDict:
-                        self.countDict[label] = 0
-                    self.countDict[label] += 1
-
-        # pass 2 - build the dictionary
-        for i in range(NUMINPUTS):
-            img = node.getInput(i, Datum.IMG)
-            if img is not None:
-                for r in img.rois:
-                    label = self.getLabel(r)
-                    if self.countDict[label] > 1:
-                        self.nameDict[(i, label)] = "in{}:{}".format(i, label)
-                    else:
-                        self.nameDict[(i, label)] = label
-
-    def getName(self, inputIdx, roi):
-        """Get the name for the given image and ROI"""
-        return self.nameDict[(inputIdx, self.getLabel(roi))]
+    # add new items
+    node.sortlist.extend([x for x in legends if x not in node.sortlist])
 
 
 @xformtype
@@ -217,69 +148,19 @@ class XFormSpectrum(XFormType):
         node.stackSep = 0
         node.ignorePixSD = self.getAutoserialiseDefault('ignorePixSD')
         node.sortlist = []  # list of legends (ROI names) - the order in which spectra should be stacked.
-        node.colsByLegend = None  # this is a legend->col dictionary used if colourmode is COLOUR_FROMROIS
         node.data = None
 
     def perform(self, node):
-        table = Table()
-
-        # dict of output spectra. The keys are the names of the ROIs and/or the inputs. Examples of keys:
-        #  "roi2" (for an ROI called "roi2" which is present on only one input)
-        #  "in1:roi2" (for an ROI called "roi2" which is present on input 1 and at least one other input)
-        #  "in1" (for an input with no ROI)
-        # The keys for ROIs (either unique or not) are generated by the NameResolver object.
-
-        data = dict()
-        cols = dict()  # colour dictionary for ROIs/images - keys are the same as for data
-
-        sources = set()  # sources for the entire set of data.
-
-        # there may be multiple inputs with different images on them which have ROIs with the same name.
-        # This object will resolve those names to be unique if necessary. It should only be used when
-        # there is an ROI present.
-
-        nameResolver = NameResolver(node)
-
-        for i in range(NUMINPUTS):
-            img = node.getInput(i, Datum.IMG)
-            if img is not None:
-                # first, generate a list of indices of channels with a single source which has a filter,
-                # and a list of those filters.
-                filters = [img.filter(x) for x in range(img.channels)]
-                chans = [x for x in range(img.channels) if filters[x] is not None]
-
-                # add the channels we found to a set of sources
-                for x in chans:
-                    sources |= img.sources.sourceSets[x].sourceSet
-
-                if len(filters) == 0:
-                    raise XFormException("DATA", "no single-wavelength channels in image")
-
-                if len(img.rois) == 0:
-                    legend = "in{}".format(i)
-                    # I have no real way of specifying a colour at the moment, so I'll just use black.
-                    cols[legend] = (0, 0, 0)
-                    spec = Spectrum(img)
-                    processData(legend, data, spec)
-                    addToTable(table, legend, spec)
-                else:
-                    for r in img.rois:
-                        if r.bb() is None:
-                            continue
-                        # get the name for this ROI in this image
-                        legend = nameResolver.getName(i, r)
-                        cols[legend] = r.colour
-                        spec = Spectrum(img, roi=r)
-                        processData(legend, data, spec)
-                        addToTable(table, legend, spec)
-
-        # now, for each list in the dict, build a new dict of the lists sorted
-        # by wavelength
-        node.data = {legend: sorted(lst, key=lambda x: x.filter.cwl) for legend, lst in data.items()}
-        node.colsByLegend = cols  # we use this if we're using the ROI colours
+        # first we need to create a SpectrumSet from the inputs
+        inputDict = {
+            f"in{i}": node.getInput(i, Datum.IMG) for i in range(NUMINPUTS)
+        }
+        # filter out null inputs
+        inputDict = {k: v for k, v in inputDict.items() if v is not None}
+        # and construct the SpectrumSet
+        node.data = SpectrumSet(inputDict, ignorePixSD=node.ignorePixSD)
         fixSortList(node)
-
-        node.setOutput(0, Datum(Datum.DATA, table, sources=SourceSet(sources)))
+        node.setOutput(0, Datum(Datum.DATA, node.data.table(), sources=node.data.getSources()))
 
 
 class ReorderDialog(QDialog):
@@ -393,22 +274,24 @@ class TabSpectrum(ui.tabs.Tab):
 
             # filter out any "masked" means - those are from regions which are entirely DQ BAD in a channel.
             # These also seem to show up as None sometimes, so we have to check for that too.
-            x = [a for a in unfiltered if a.value is not None and a.value.n is not np.ma.masked]
+
+            x = {filt: spec for filt, spec in unfiltered.data.items() if spec.v is not None and spec.v.n is not np.ma.masked}
 
             if len(x) == 0:
                 ui.error(f"No points have good data for point {legend}", False)
                 continue
-            if len(x) != len(unfiltered):
+            if len(x) != len(unfiltered.data):
                 ui.error(f"Some points have bad data for point {legend}", False)
 
-            # extract data from the DataPoint objects
-            filters = [a.filter for a in x]
-            means = [a.value.n for a in x]
-            sds = [a.value.u for a in x]
-            pixcounts = [a.pixcount for a in x]
+            # extract data from the dictionary
+            filters = x.keys()
+            values = x.values()
+            means = [a.v.n for a in values]
+            sds = [a.v.u for a in values]
+            pixcounts = [a.pixels for a in values]
 
             if self.node.colourmode == COLOUR_FROMROIS:
-                col = self.node.colsByLegend[legend]
+                col = self.node.data.getColour(legend)
             else:
                 col = cols[colidx % len(cols)]
             means = [x + stackSep * stackpos for x in means]

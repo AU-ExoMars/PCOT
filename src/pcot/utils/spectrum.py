@@ -13,6 +13,7 @@ from pcot.filters import Filter
 from pcot.imagecube import ImageCube
 from pcot.rois import ROI
 from pcot.sources import SourceSet, SourcesObtainable
+from pcot.utils.table import Table
 from pcot.value import Value
 from pcot.xform import XFormException
 
@@ -72,7 +73,7 @@ class SpectrumValue:
     """The output of the get methods in Spectrum - a single value and the number of pixels from which
     it was obtained."""
     v: Value
-    pixels: int
+    pixels: int  # the number of pixels from which the value was obtained
 
     def as_tuple(self):
         return dataclasses.astuple(self)
@@ -83,46 +84,47 @@ class Spectrum:
     channels which have a single filter are used. Could conceivably have a single value
     if only a single valid channel is present, but if no valid channels are present
     an exception is raised. If all pixels in a channel are "bad" (DQ != 0) then the
-    channel is ignored."""
+    channel is ignored.
+
+    If ignorePixSD is true, the SD of the result is the SD of the nominal values. Otherwise
+    the SD is pooled (mean of the variances of the pixels plus the variance of the means
+    of the pixels).
+    """
 
     # the spectrum as a dictionary of filter:value  (typically reflectance)
-    data: Dict[Filter, Value]
+    data: Dict[Filter, SpectrumValue]
     # list of filters ordered by channel number
     filters: List[Filter]
     # the sources from which the spectrum was extracted
     sources: SourceSet
     # the source image
-    cube: ImageCube
+    img: ImageCube
     # the ROI from which the spectrum was extracted (if any; None if the whole image)
     roi: Optional[ROI]
-    # the number of pixels each band in the ROI (or image if none). Usually they're all the same,
-    # but if the ROI has some bad pixels in one channel they might not be.
-    pixels: Dict[Filter, int]
-    # number channels in the spectrum - should be the same as cube.channels
+    # number channels in the spectrum - should be the same as img.channels
     # but later we might separate imagecubes from spectra.
     channels: int
 
-    def __init__(self, cube: ImageCube, roi: Optional[ROI] = None, ignorePixSD=False):
-        self.cube = cube
+    def __init__(self, img: ImageCube, roi: Optional[ROI] = None, ignorePixSD=False):
+        self.img = img
         self.roi = roi
         self.data = {}
-        self.pixels = {}
-        self.channels = cube.channels
+        self.channels = img.channels
 
         # first, generate a list of indices of channels with a single source which has a filter,
         # and a list of those filters.
-        self.filters = [cube.filter(x) for x in range(cube.channels)]
-        chans = [x for x in range(cube.channels) if self.filters[x] is not None]
+        self.filters = [img.filter(x) for x in range(img.channels)]
+        chans = [x for x in range(img.channels) if self.filters[x] is not None]
         if len(self.filters) == 0:
             raise XFormException("DATA", "no single-wavelength channels in image")
 
         # create a set of sources
         sources = set()
         for x in chans:
-            sources |= cube.sources.sourceSets[x].sourceSet
+            sources |= img.sources.sourceSets[x].sourceSet
         self.sources = SourceSet(sources)
 
-        subimg = cube.subimage(roi=roi)
+        subimg = img.subimage(roi=roi)
 
         # todo refactor this - there's a lot of duplication
         if len(chans) == 1:
@@ -139,9 +141,9 @@ class Spectrum:
                 dq = subimg.maskedDQ()
                 # this will compress the array (give a 1D array of all the unmasked pixels) and then
                 # count. It's how you count non-zero values in a masked array.
-                self.pixels[f] = subimg.pixelCount() - np.count_nonzero(dq.compressed())
+                pixct = subimg.pixelCount() - np.count_nonzero(dq.compressed())
                 dq = np.bitwise_or.reduce(dq, axis=None) & BAD  # OR all the bad bits together
-                self.data[f] = Value(mean, sd, dq)
+                self.data[f] = SpectrumValue(Value(mean, sd, dq), pixct)
         else:
             for cc in chans:
                 mean, sd, allBitsDQ = getMeanValue(subimg.img[:, :, cc], subimg.uncertainty[:, :, cc],
@@ -157,15 +159,15 @@ class Spectrum:
                     dq = subimg.maskedDQ()[:, :, cc]  # get the masked DQ, extract one channel
                     # this will compress the array (give a 1D array of all the unmasked pixels) and then
                     # count. It's how you count non-zero values in a masked array.
-                    self.pixels[f] = subimg.pixelCount() - np.count_nonzero(dq.compressed())
+                    pixct = subimg.pixelCount() - np.count_nonzero(dq.compressed())
                     dq = np.bitwise_or.reduce(dq, axis=None) & BAD  # OR all the bad bits together
-                    self.data[f] = Value(mean, sd, dq)
+                    self.data[f] = SpectrumValue(Value(mean, sd, dq), pixct)
 
     def get(self, cwlOrName) -> Optional[SpectrumValue]:
         """get the value and pixel count for a particular channel wavelength or filter name"""
         for f, v in self.data.items():
             if f.cwl == cwlOrName or f.name == cwlOrName:
-                return SpectrumValue(v, self.pixels[f])
+                return v
         return None
 
     def getByChannel(self, channel) -> Optional[SpectrumValue]:
@@ -173,30 +175,38 @@ class Spectrum:
         if channel < 0 or channel >= len(self.filters):
             return None
         f = self.filters[channel]
-        return SpectrumValue(self.data[f], self.pixels[f]) if f in self.data else None
+        return self.data[f] if f in self.data else None
 
     def __repr__(self):
         return "Spectrum: " + "; ".join([f"{f}:{v}" for f, v in self.data.items()])
 
 
 class NameResolver:
+    """It's possible that images will have different ROIs with the same name.
+    In that case, we need to disambiguate them. This class does that.
+    It contains a dictionary of (imagename, ROIname) -> name. Normally this will be the same
+    as ROIname, but if the name appears multiple times, it will be "imagename:roiName".
+    This is only used when images have ROIs - if they don't, this object isn't used.
+
+    We also go to some lengths to make sure an ROI with a blank label is given a name.
+    """
     @staticmethod
     def getLabel(rr: ROI) -> str:
-        return rr.label if rr.label != "" else "none"
+        return rr.label if rr.label != "" else "no label"
 
     def __init__(self, d: Dict[str, ImageCube]):
         self.nameDict = {}
         self.countDict = {}
         # pass 1 - count each time a name appears for an ROI
-        for name, cube in d.items():
-            for r in cube.rois:
+        for name, img in d.items():
+            for r in img.rois:
                 label = NameResolver.getLabel(r)
                 # increment the count for this label, setting it to 1
                 # if it's not there
                 self.countDict[label] = self.countDict.get(label, 0) + 1
         # pass 2 - create the name dictionary
-        for name, cube in d.items():
-            for r in cube.rois:
+        for name, img in d.items():
+            for r in img.rois:
                 label = NameResolver.getLabel(r)
                 if self.countDict[label] > 1:
                     # this label appears in more than one image cube
@@ -207,19 +217,30 @@ class NameResolver:
                     # this label appears only once
                     self.nameDict[(name, label)] = label
 
-    def resolve(self, name, roi):
-        return self.nameDict[(name, NameResolver.getLabel(roi))]
+    def resolve(self, imgname, roi):
+        return self.nameDict[(imgname, NameResolver.getLabel(roi))]
 
 
-class SpectrumSet(SourcesObtainable):
+class SpectrumSet(dict, SourcesObtainable):
     """A set of Spectrum objects obtained from ImageCube objects. Each Spectrum is associated with an ImageCube
     or a subset of an ImageCube (ROI). Multiple ROIs of the same name within the same ImageCube will be combined
-    into a single Spectrum."""
+    into a single Spectrum.
+    If there are multiple ROIs with the same name in different ImageCubes, the key will be the name of the
+    ImageCube followed by a colon and the name of the ROI.
+
+    This acts as a dict with the keys being the names of the ROIs and the values being the Spectrum objects.
+    Multiple ROIs with the same name in the same ImageCube will be combined into a single Spectrum. Other methods are
+    available to retrieve annotation colour data and a tabular representation.
+
+    If ignorePixSD is true, the SD of the result is the SD of the nominal values. Otherwise
+    the SD is pooled (mean of the variances of the pixels plus the variance of the means
+    of the pixels).
+    """
 
     # the problem here is that each spectrum can be associated with an imagecube, an ROI within an image, or a
     # set of ROIs within an image all with the same name.
 
-    def __init__(self, images: Dict[str, ImageCube]):
+    def __init__(self, images: Dict[str, ImageCube], ignorePixSD=False):
         """create a set of spectra from a dictionary of ImageCube objects and the ROIs they contain.
         The keys are the names of the ImageCubes and the values are the ImageCube objects. The names
         are used to to disambiguate regions of interest (ROIs) within the image cubes.
@@ -235,23 +256,30 @@ class SpectrumSet(SourcesObtainable):
         # ROI and delete the others, replacing the image cube with a new one containing only the combined ROI (as
         # a shallow copy).
         SpectrumSet._coalesceROIs(images)
+        # we need to create a name resolver to disambiguate ROIs with the same name
+        # in different image cubes - we do this after the coalesce because we don't want
+        # to disambiguate ROIs in the same image cube (they should be merged).
+        resolver = NameResolver(images)
 
         # now we can create the spectra
 
         data = dict()
         cols = dict()
         sources = set()
+        self.sources = SourceSet()  # empty source set initially
 
-        for name, cube in images.items():
+        for name, img in images.items():
             # first, generate a list of indices of channels with a single source which has a filter,
             # and a list of those filters.
-            filters = [cube.filter(x) for x in range(cube.channels)]
+            filters = [img.filter(x) for x in range(img.channels)]
             if len(filters) == 0:
                 raise XFormException("DATA", "no single-wavelength channels in image")
-            chans = [x for x in range(cube.channels) if filters[x] is not None]
-            # and use that to generate a list of sources
+            chans = [x for x in range(img.channels) if filters[x] is not None]
+            # and use that to generate a set of sources
             for x in chans:
-                sources |= cube.sources.sourceSets[x].sourceSet
+                sources |= img.sources.sourceSets[x].sourceSet
+            self.sources = SourceSet(sources)
+
             # now we can create the spectrum for each ROI
 
             if len(filters) == 0:
@@ -259,16 +287,60 @@ class SpectrumSet(SourcesObtainable):
                 # to indicate an error
                 data[name] = None
                 cols[name] = None
-            elif len(cube.rois) == 0:
+            elif len(img.rois) == 0:
                 # there are no ROIs in this image cube. We'll create a single spectrum
                 # for the whole image cube.
-                data[name] = Spectrum(cube)
+                data[name] = Spectrum(img, ignorePixSD=ignorePixSD)
                 cols[name] = (0, 0, 0)  # no ROI, so no colour to be assigned
             else:
                 # there are multiple ROIs in this image cube. We may need to prefix
                 # the ROI name with the image cube name to disambiguate them if
                 # there are multiple ROIs with the same name in different image cubes.
-                name = nameResolver
+                for r in img.rois:
+                    if r.bb() is None:
+                        # this is an invalid ROI; we'll skip it.
+                        continue
+                    legend = resolver.resolve(name, r)
+                    data[legend] = Spectrum(img, roi=r, ignorePixSD=ignorePixSD)
+                    cols[legend] = r.colour
+
+        # we now have a dictionary of spectra, keyed by name, and similarly
+        # a dictionary of colours.
+        # We initialise the dict with the data dictionary
+        super().__init__(data)
+        # and set the colours
+        self.colours = cols
+
+    def getColour(self, name: str) -> Tuple[float, float, float]:
+        """return the colour associated with a spectrum"""
+        return self.colours[name]
+
+    def getSources(self) -> SourceSet:
+        """return a set of all the sources in the spectra"""
+        return self.sources
+
+    def table(self):
+        """Return a Table representation"""
+        table = Table()
+        for legend, spec in self.items():
+            table.newRow(legend)
+            table.add("name", legend)
+            for i in range(spec.channels):
+                f = spec.filters[i]
+                w = int(f.cwl)
+                p = spec.getByChannel(i)
+                if p is None:
+                    m = "NA"
+                    s = "NA"
+                    pct = 0
+                else:
+                    m = p.v.n
+                    s = p.v.u
+                    pct = p.pixels
+                table.add("m{}".format(w), m)
+                table.add("s{}".format(w), s)
+                table.add("p{}".format(w), pct)
+        return table
 
     @staticmethod
     def _coalesceROIs(images: Dict[str, ImageCube]):
@@ -277,10 +349,10 @@ class SpectrumSet(SourcesObtainable):
         if they contain multiple ROIs with the same name. The new image cubes
         contain those ROIs merged into single ROIs."""
 
-        for name, cube in images.items():
+        for name, img in images.items():
             rois = []  # list of ROIs in this cube
             replace = False  # should we replace the cube with a new one containing only the combined ROI?
-            for r in cube.rois:
+            for r in img.rois:
                 # look for another cube with the same name in the list we are building
                 if r.label in [x.label for x in rois]:
                     # we have a duplicate. Combine them.
@@ -299,8 +371,6 @@ class SpectrumSet(SourcesObtainable):
                     rois.append(r)
             if replace:
                 # replace the cube with a new one containing only the combined ROI
-                images[name] = cube.shallowCopy()
+                images[name] = img.shallowCopy()
                 images[name].rois = rois
 
-    def getSources(self) -> SourceSet:
-        pass

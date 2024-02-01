@@ -100,8 +100,8 @@ def test_roi_union_expr(allblack):
     # outputs (not the images)
     exprNode = doc.graph.create("expr")
     exprNode.expr = "a+b"  # add = union for ROIs
-    exprNode.connect(0, roiNode1, 2)
-    exprNode.connect(1, roiNode2, 2)
+    exprNode.connect(0, roiNode1, 1)
+    exprNode.connect(1, roiNode2, 1)
 
     # take that intersected ROI and apply it to the image
     importNode = doc.graph.create("importroi")
@@ -113,6 +113,8 @@ def test_roi_union_expr(allblack):
     setWhiteNode = doc.graph.create("expr")
     setWhiteNode.expr = "clamp(a+4)"
     setWhiteNode.connect(0, importNode, 0)
+
+    doc.save("c:/users/jim/foo.pcot")
 
     doc.changed()
 
@@ -347,7 +349,7 @@ def test_roi_image_plus_scalar():
     _testinternal_image_and_scalar("a+0.2")
 
 
-def test_roi_image_plus_scalar():
+def test_roi_scalar_plus_image():
     """Test that a imageWithROI+scalar uses the ROI"""
     _testinternal_image_and_scalar("0.2+a")
 
@@ -403,7 +405,7 @@ def test_roi_intersection_expr():
             assert np.array_equal(pix, expected)
 
 
-def test_roi_union_expr():
+def test_roi_union_expr_import():
     """Test that we can union two ROIs correctly with expr and importroi"""
     img = perform_roi_op("a+b")
 
