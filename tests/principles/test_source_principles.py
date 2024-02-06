@@ -210,8 +210,8 @@ def test_binop_number_and_number(envi_image_1, envi_image_2):
     assert len(datum.sources) == 8  # 2 images with 4 bands
 
     # split into sources which came from each input - each should have 4 members
-    fromImage1 = [x for x in datum.sources if x.inputIdx == 0]
-    fromImage2 = [x for x in datum.sources if x.inputIdx == 1]
+    fromImage1 = [x for x in datum.sources if x.method.input.idx == 0]
+    fromImage2 = [x for x in datum.sources if x.method.input.idx == 1]
 
     # and check the sets have the right frequencies
     assert set([x.getFilter().cwl for x in fromImage1]) == {800, 640, 550, 440}
@@ -245,8 +245,8 @@ def test_binop_image_and_number(envi_image_1, envi_image_2):
         # each channel's sources should be the relevant channel of A plus all the channels of B.
         assert len(channelSourceSet) == 5
         # split into sources which came from each input - each should have 4 members
-        fromImage1 = [x for x in channelSourceSet if x.inputIdx == 0]
-        fromImage2 = [x for x in channelSourceSet if x.inputIdx == 1]
+        fromImage1 = [x for x in channelSourceSet if x.method.input.idx == 0]
+        fromImage2 = [x for x in channelSourceSet if x.method.input.idx == 1]
         assert len(fromImage1) == 1
         assert len(fromImage2) == 4
         assert fromImage1[0].getFilter().cwl == freq
@@ -279,8 +279,8 @@ def test_binop_image_and_number2(envi_image_1, envi_image_2):
         # each channel's sources should be the relevant channel of A plus all the channels of B.
         assert len(channelSourceSet) == 5
         # split into sources which came from each input - each should have 4 members
-        fromImage1 = [x for x in channelSourceSet if x.inputIdx == 0]
-        fromImage2 = [x for x in channelSourceSet if x.inputIdx == 1]
+        fromImage1 = [x for x in channelSourceSet if x.method.input.idx == 0]
+        fromImage2 = [x for x in channelSourceSet if x.method.input.idx == 1]
         assert len(fromImage1) == 4
         assert len(fromImage2) == 1
         assert fromImage2[0].getFilter().cwl == freq

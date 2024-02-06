@@ -138,7 +138,7 @@ class MultifileInputMethod(InputMethod):
                 # build sources data - this will use the filter, which we'll extract from the filename.
                 filtpos, searchtype = self.getFilterSearchParam(path)
                 filt = getFilter(self.filterset, filtpos, searchtype)
-                source = InputSource(doc, inpidx, filt)
+                source = InputSource(self, filt)
 
                 # store in cache
                 newCachedFiles[path] = img
@@ -162,13 +162,19 @@ class MultifileInputMethod(InputMethod):
         return "Multifile"
 
     # used from external code. Filterpat == none means leave unchanged.
-    def setFileNames(self, directory, fnames, filterpat=None, filterset="PANCAM"):
+    def setFileNames(self, directory, fnames, filterpat=None, filterset="PANCAM") -> InputMethod:
+        """This is used in scripts to set the input method to a read a set of files. It also
+        takes a filter set name (e.g. PANCAM) and a filter pattern. The filter pattern is a regular
+        expression that is used to extract the filter name from the filename. See the class documentation
+        for more information."""
+
         self.dir = directory
         self.files = fnames
         self.filterset = filterset
         if filterpat is not None:
             self.filterpat = filterpat
         self.mapping = ChannelMapping()
+        return self
 
     def createWidget(self):
         return MultifileMethodWidget(self)

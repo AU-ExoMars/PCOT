@@ -158,8 +158,9 @@ class Spectrum:
                     # subtract bad pixels from the pixel count
                     dq = subimg.maskedDQ()[:, :, cc]  # get the masked DQ, extract one channel
                     # this will compress the array (give a 1D array of all the unmasked pixels) and then
-                    # count. It's how you count non-zero values in a masked array.
-                    pixct = subimg.pixelCount() - np.count_nonzero(dq.compressed())
+                    # count. It's how you count non-zero values in a masked array. We only worry about
+                    # the BAD pixels.
+                    pixct = subimg.pixelCount() - np.count_nonzero(dq.compressed() & BAD)
                     dq = np.bitwise_or.reduce(dq, axis=None) & BAD  # OR all the bad bits together
                     self.data[f] = SpectrumValue(Value(mean, sd, dq), pixct)
 

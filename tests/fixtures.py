@@ -75,7 +75,7 @@ def rectimage(globaldatadir):
 
 def genmono(w,h,v,u,dq,doc=None,inpidx=None):
     if doc is not None and inpidx is not None:
-        sources = MultiBandSource([InputSource(doc,inpidx,'M')])
+        sources = MultiBandSource([InputSource(None, 'M')])
     else:
         sources = MultiBandSource([nullSource])
 
@@ -97,9 +97,10 @@ def genrgb(w, h, r, g, b, u=None, d=None, doc=None, inpidx=None):
 
     """
     if doc is not None and inpidx is not None:
-        sources = MultiBandSource([InputSource(doc, inpidx, 'R'),
-                                   InputSource(doc, inpidx, 'G'),
-                                   InputSource(doc, inpidx, 'B')])
+        # generated as "orphan" sources that come from no input
+        sources = MultiBandSource([InputSource(None, 'R'),
+                                   InputSource(None, 'G'),
+                                   InputSource(None, 'B')])
     else:
         sources = MultiBandSource([nullSource, nullSource, nullSource])
 
@@ -133,7 +134,7 @@ def gen_two_halves(w, h, v1, u1, v2, u2, doc=None, inpidx=None):
     if doc is not None and inpidx is not None:
         # generate source names of the form r,g,b,c3,c4..
         sourceNames = ["r", "g", "b"] + [f"c{i}" for i in range(3, len(v1))]
-        sources = MultiBandSource([InputSource(doc, inpidx, sourceNames[i]) for i in range(0, len(v1))])
+        sources = MultiBandSource([InputSource(None, sourceNames[i]) for i in range(0, len(v1))])
     else:
         sources = MultiBandSource([nullSource] * len(v1))
 

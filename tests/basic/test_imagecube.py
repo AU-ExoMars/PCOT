@@ -24,7 +24,7 @@ def multispecimage():
     # fake document
     doc = Document()
     # first let's fake some sources. I don't want the filter bands in linear order, though.
-    sources = [InputSource(doc, inputIdx=1,
+    sources = [InputSource(None,
                            filterOrName=Filter(cwl=100 + MS_CHANS[i] * 100, fwhm=10 + i,
                                                transmission=20 + i * 5,
                                                position=f"pos{i}",
@@ -113,8 +113,8 @@ def test_msimage(multispecimage):
 
 
 def makesource(doc, pos, cwl, fwhm):
-    return InputSource(doc, inputIdx=-1, filterOrName=Filter(cwl, fwhm=fwhm, transmission=20 + pos * 5,
-                                                             position=f"pos{pos}", name=f"name{pos}"))
+    return InputSource(None, filterOrName=Filter(cwl, fwhm=fwhm, transmission=20 + pos * 5,
+                                                 position=f"pos{pos}", name=f"name{pos}"))
 
 
 def test_wavelength():

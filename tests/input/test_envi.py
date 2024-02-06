@@ -7,6 +7,7 @@ from pcot.datum import Datum
 from pcot.document import Document
 from fixtures import *
 from pcot.filters import Filter
+from pcot.inputs.envimethod import ENVIInputMethod
 
 
 def test_envi_load(envi_image_1):
@@ -34,8 +35,12 @@ def test_envi_load(envi_image_1):
         #  First, make sure each band has a source set of a single source
         assert len(sourceSet) == 1
         s = img.sources.sourceSets[0].getOnlyItem()
+        # assert we're using an ENVI input method
+        assert s.method is not None and isinstance(s.method, ENVIInputMethod)
+        # that it's not an orphan
+        assert s.method.input is not None
         # and that it's from input 0, and that it's attached to a Filter
-        assert s.inputIdx == 0
+        assert s.method.input.idx == 0
         assert isinstance(s.filterOrName, Filter)
     # now check the filter frequencies and names
     for ss, cwl, idx in zip(img.sources, (800, 640, 550, 440), (1, 2, 3)):

@@ -182,7 +182,7 @@ def _load(fn):
     return h, img
 
 
-def load(fn, doc, inpidx, mapping: ChannelMapping = None) -> ImageCube:
+def load(fn, inpmethod: 'InputMethod', mapping: ChannelMapping = None) -> ImageCube:
     """Load a file as an ENVI. The filename is the header filename (.hdr).
     Requires a Document and an input index, so don't call this directly - Document.setInputENVI()."""
 
@@ -190,7 +190,7 @@ def load(fn, doc, inpidx, mapping: ChannelMapping = None) -> ImageCube:
     h, img = _load(fn)
 
     # construct the source data
-    sources = MultiBandSource([InputSource(doc, inpidx, f) for f in h.filters])
+    sources = MultiBandSource([InputSource(inpmethod, f) for f in h.filters])
 
     if mapping is None:
         mapping = ChannelMapping()
@@ -199,7 +199,6 @@ def load(fn, doc, inpidx, mapping: ChannelMapping = None) -> ImageCube:
         return ImageCube(img, mapping, sources, defaultMapping=mapping.copy())
     else:
         return ImageCube(img, mapping, sources)
-
 
 
 def _genheader(f, w: int, h: int, freqs: List[float],camname="LWAC"):

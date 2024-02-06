@@ -33,9 +33,9 @@ class RGBInputMethod(InputMethod):
         inpidx = self.input.idx
 
         # might seem a bit wasteful having three of them, but seems more logical to me.
-        sources = MultiBandSource([InputSource(doc, inpidx, 'R'),
-                                   InputSource(doc, inpidx, 'G'),
-                                   InputSource(doc, inpidx, 'B')])
+        sources = MultiBandSource([InputSource(self, 'R'),
+                                   InputSource(self, 'G'),
+                                   InputSource(self, 'B')])
 
         img = ImageCube.load(self.fname, self.mapping, sources)
         ui.log("Image {} loaded: {}".format(self.fname, img))
@@ -53,6 +53,7 @@ class RGBInputMethod(InputMethod):
     def setFileName(self, fname):
         self.fname = fname
         self.mapping = ChannelMapping()
+        return self
 
     def createWidget(self):
         return RGBMethodWidget(self)

@@ -1,7 +1,6 @@
-# Very simple HTML formatting class, because I want to be able to turn it off sometimes.
-
-
 class HTML:
+    """This is a simple HTML formatting class. I could probably use ElementTree for this, to be honest,
+    but this has some nice features such as the visit method."""
     def __init__(self, tag, *args, attrs=None):
         self.model = []
         self.tag = tag

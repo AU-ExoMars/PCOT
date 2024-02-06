@@ -27,9 +27,7 @@ class ENVIInputMethod(InputMethod):
 
     def loadImg(self):
         logger.info("PERFORMING FILE READ")
-        doc = self.input.mgr.doc
-        inpidx = self.input.idx
-        img = envi.load(self.fname, doc, inpidx, self.mapping)
+        img = envi.load(self.fname, self, self.mapping)
         logger.info(f"Image {self.fname} loaded: {img}, mapping is {self.mapping}")
         self.img = img
 
@@ -42,9 +40,10 @@ class ENVIInputMethod(InputMethod):
         return "ENVI"
 
     # used from external code
-    def setFileName(self, fname):
+    def setFileName(self, fname) -> InputMethod:
         self.fname = fname
         self.mapping = ChannelMapping()
+        return self
 
     def createWidget(self):
         return ENVIMethodWidget(self)

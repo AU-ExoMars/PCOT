@@ -19,9 +19,10 @@ class DirectInputMethod(InputMethod):
         """Use this to set the input"""
         self.datum = d
 
-    def setImageCube(self, img: ImageCube):
+    def setImageCube(self, img: ImageCube) -> InputMethod:
         """Use this to set the input to an imagecube"""
         self.setDatum(Datum(Datum.IMG, img))
+        return self
 
     def readData(self):
         """returns the datum"""

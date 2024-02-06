@@ -11,14 +11,16 @@ logger = logging.getLogger(__name__)
 
 
 class InputMethod(ABC):
-    input: 'Input'
+    """Defines a way of inputting data (image data, usually). Each input has several
+    of this which are all always present, but only one is active (determined by
+    its index in the Input).
+    """
+
+    input: 'Input'  # this may be None for an "orphan" input method which isn't connected to the document
     name: str
     data: Any
     showROIs: bool
 
-    """Defines a way of inputting data (image data, usually). Each input has several
-    of this which are all always present, but only one is active (determined by
-    its index in the Input)."""
     def __init__(self, inp):
         self.input = inp
         self.name = ''
@@ -38,36 +40,49 @@ class InputMethod(ABC):
 
     def mark(self):
         """About to perform a change, so mark an undo point"""
-        return self.input.mgr.doc.mark()
+        if self.input is not None:
+            return self.input.mgr.doc.mark()
 
     def unmark(self):
         """remove most recently placed undo mark but do not transfer to redo stack (it was abandoned)"""
-        return self.input.mgr.doc.unmark()
+        if self.input is not None:
+            return self.input.mgr.doc.unmark()
 
     def undo(self):
         """undo the entire document - widget has responsibility for updating UI"""
-        self.input.mgr.doc.undo()
+        if self.input is not None:
+            self.input.mgr.doc.undo()
 
     def redo(self):
         """redo the entire document - widget has responsibility for updating UI"""
-        self.input.mgr.doc.redo()
+        if self.input is not None:
+            self.input.mgr.doc.redo()
 
     def canUndo(self):
+        if self.input is None:
+            return False
         return self.input.mgr.doc.canUndo()
 
     def canRedo(self):
+        if self.input is None:
+            return False
         return self.input.mgr.doc.cando()
 
     def invalidate(self):
         """invalidates the method's cached data"""
         self.data = Datum.null
 
+    def setInputException(self, e: Optional[str]):
+        """Sets the input exception for this method"""
+        if self.input is not None:
+            self.input.exception = e
+
     def get(self) -> Datum:
         """returns cached data - if that's None, attempts to read data and cache it."""
         if self.data is None:
             raise Exception("input methods should not return None from readData(), ever.")
         if self.data.isNone():   # data is none, try to read it and cache it
-            self.input.exception = None
+            self.setInputException(None)
             try:
                 self.data = self.readData()  # this is a method in each subclass
                 if self.data.isNone():  # it's still not there
@@ -76,11 +91,11 @@ class InputMethod(ABC):
                     logger.info("CACHE WAS INVALID, DATA HAS BEEN READ")
             except FileNotFoundError as e:
                 # this one usually doesn't happen except in a library
-                self.input.exception = f"Cannot read file {e.filename}"
+                self.setInputException(f"Cannot read file {e.filename}")
                 ui.error(self.input.exception)
             except Exception as e:
                 # this one does.
-                self.input.exception = str(e)
+                self.setInputException(str(e))
                 ui.error(self.input.exception)
         return self.data
 
@@ -90,6 +105,8 @@ class InputMethod(ABC):
 
     def brief(self):
         """Give a brief name for use in captions. Anything apart from the input number is too long!"""
+        if self.input is None:
+            return "orphan"
         return f"{self.input.idx}"
 
     @abstractmethod

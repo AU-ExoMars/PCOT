@@ -167,26 +167,28 @@ class NullSource(Source):
 
 class InputSource(Source):
     """A basic source for a single band of an image or a non-image value.
-    This is for things which actually come from an Input. Designed so that two Source objects
-    with the same document, filter and input index are the same."""
+    This is for things which actually come from an Input, and should handle equality and hashing
+    so that two sources which come from the data are equal.
+    """
 
     # if this is an filtered image band, reference to the filter; else a string for the band name
     filterOrName: Union[Filter, str]
-    doc: 'Document'  # which document I'm associated with
-    inputIdx: int  # the index of the input within the document
+    method: 'InputMethod'  # the "input method" object that produced this source
     input: 'Input'  # the actual input object
     pds4: PDS4Product  # any PDS4 data
 
-    def __init__(self, doc, inputIdx, filterOrName, pds4: PDS4Product = None):
-        """This takes a document, inputIdx, and either a filter or a name"""
+    def __init__(self, method: Optional['InputMethod'], filterOrName: Union[str, Filter], pds4: PDS4Product = None):
+        """This takes an input method, and either a filter or a name. If no input method is provided, an
+        nullmethod is generated."""
         self.filterOrName = filterOrName
-        self.doc = doc
-        self.inputIdx = inputIdx
-        self.input = doc.inputMgr.inputs[inputIdx]
+        if method is None:
+            from pcot.inputs.nullinput import NullInputMethod
+            method = NullInputMethod(None)
+        self.method = method
         self.pds4 = pds4
         # this is used for hashing and equality - should be the same for two identical sources
         filtID = self.filterOrName.cwl if isinstance(self.filterOrName, Filter) else self.filterOrName
-        self._uniqid = f"{id(self.doc)}/{self.inputIdx}/{filtID}"
+        self._uniqid = f"{id(method)}/{filtID}"
 
     def getFilter(self):
         """return the filter if there really is one, else none"""
@@ -197,7 +199,7 @@ class InputSource(Source):
         return self.pds4
 
     def copy(self):
-        return InputSource(self.doc, self.inputIdx, self.filterOrName, pds4=self.pds4)
+        return InputSource(self.method, self.filterOrName, pds4=self.pds4)
 
     def __eq__(self, other: Source):
         if isinstance(other, InputSource):
@@ -214,7 +216,7 @@ class InputSource(Source):
 
     def brief(self, captionType=DocumentSettings.CAP_DEFAULT) -> Optional[str]:
         """return a brief string representation, used in image captions"""
-        inptxt = self.input.brief()
+        inptxt = self.method.brief()
         if isinstance(self.filterOrName, Filter):
             cap = getFiltStr(self.filterOrName, captionType)
             return f"{inptxt}:{cap}"
@@ -222,7 +224,7 @@ class InputSource(Source):
             return f"{inptxt}:{self.filterOrName}"
 
     def long(self):
-        inptxt = self.input.long()
+        inptxt = self.method.long()
         if isinstance(self.filterOrName, Filter):
             s = f"{inptxt}: wavelength {int(self.filterOrName.cwl)}, fwhm {int(self.filterOrName.fwhm)}"
         else:
@@ -231,9 +233,23 @@ class InputSource(Source):
             s += f" {self.getPDS4().lid}"
         return s
 
+    def getInputIdx(self):
+        """try to work out the input index from the input - there may not be one attached to the method,
+        in which case we return None"""
+        if self.method.input is None:
+            return None
+        else:
+            return self.method.input.idx
+
     def matches(self, inp, filterNameOrCWL, hasFilter):
-        """return true if the source matches ALL the non-None criteria"""
-        if inp and inp != self.inputIdx:
+        """return true if the source matches ALL the non-None criteria
+        inp: the input index to match, or None
+        filterNameOrCWL: the filter name or CWL to match, or None
+        hasFilter: True if the source must have a filter, False if it must not, or None if it doesn't matter"""
+
+        # if there is no input on the attached method, then we can't match an input - getInputIdx will return None
+        # and we will return False
+        if inp is not None and inp != self.getInputIdx():
             return False
         if hasFilter is not None:
             if hasFilter and not self.getFilter():
@@ -253,7 +269,10 @@ class InputSource(Source):
         return True
 
     def serialise(self):
-        # deserialisation is done in SourceSet
+        """Serialise the source. This can't serialise the InputMethod directly, so we have to rely on their
+        being a document and input index to reconstruct it. That means it can't work on "orphan" input methods
+        which aren't connected to a document, Input and InputManager.
+        Deserialisation is done in SourceSet."""
 
         if isinstance(self.filterOrName, Filter):
             filtorname = ('filter', self.filterOrName.serialise())
@@ -262,9 +281,12 @@ class InputSource(Source):
         else:
             raise Exception(f"cannot serialise a {type(self.filterOrName)} as a filter")
 
+        if self.getInputIdx() is None:
+            raise Exception("cannot serialise a source without an input index")
+
         d = {
             'filtorname': filtorname,
-            'inputidx': self.inputIdx,
+            'inputidx': self.getInputIdx(),
             'pds4': None if self.pds4 is None else self.pds4.serialise()
         }
         return 'inputsource', d
@@ -380,9 +402,11 @@ class SourceSet(SourcesObtainable):
                     filt = Filter.deserialise(filtdata)
                 else:
                     filt = filtdata
-
-                v = InputSource(document,
-                                d['inputidx'],
+                inidx = d['inputidx']
+                # hopefully we will have loaded which methods are "active" in the inputs by now.
+                inp = document.inputMgr.inputs[inidx]
+                method = inp.getActive()
+                v = InputSource(method,
                                 filt,
                                 pds4)
             elif tp == 'filtersource':

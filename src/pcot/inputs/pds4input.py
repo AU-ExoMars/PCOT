@@ -178,12 +178,13 @@ class PDS4InputMethod(InputMethod):
             pcot.config.setDefaultDir('images', self.dir)
             pcot.config.save()
 
-    def setProducts(self, products):
+    def setProducts(self, products) -> InputMethod:
         """Used from the document's setInputPDS4() method when we're using PCOT as a library and loaded
         a bunch of DataProducts from code"""
         self.lidToLabel = {}
         self.selected = [i for i, _ in enumerate(products)]
         self._getProducts(products)  # convert from DataProduct to my PDS4Product and subclasses
+        return self
 
     def loadData(self):
         """Actually load the data; or rather load the actual data from my PDS4.. objects and the proctools DataProduct
@@ -247,7 +248,7 @@ class PDS4InputMethod(InputMethod):
         except ValueError as e:
             ui.error("Error in combining image products - are they all the same size?")
             return None
-        sources = MultiBandSource([InputSource(self.input.mgr.doc, self.input.idx, p.filt, pds4=p) for p in selProds])
+        sources = MultiBandSource([InputSource(self, p.filt, pds4=p) for p in selProds])
 
         return ImageCube(imgdata, rgbMapping=self.mapping, sources=sources, uncertainty=uncertainty, dq=dq)
 

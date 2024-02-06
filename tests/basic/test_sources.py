@@ -156,7 +156,7 @@ def test_inputsourcenames():
     pcot.setup()
 
     doc = Document()
-    source = InputSource(doc, inputIdx=1,
+    source = InputSource(None,
                          filterOrName=Filter(cwl=1000, fwhm=100, transmission=20, position="pos1", name="name1"))
 
     assert source.long() == "nullmethod: wavelength 1000, fwhm 100"
@@ -170,7 +170,7 @@ def test_multibandsourcenames():
     """Test that multiband source brief() is correct"""
     pcot.setup()
     doc = Document()
-    sources = [InputSource(doc, inputIdx=1,
+    sources = [InputSource(None,
                            filterOrName=Filter(cwl=(i + 1) * 1000, fwhm=100, transmission=20,
                                                position=f"pos{i}", name=f"name{i}")) for i in range(3)]
 
@@ -184,7 +184,7 @@ def test_multibandsourcedunder():
 
     pcot.setup()
     doc = Document()
-    sources = [InputSource(doc, inputIdx=1,
+    sources = [InputSource(None,
                            filterOrName=Filter(cwl=(i + 1) * 1000, fwhm=100, transmission=20,
                                                position=f"pos{i}", name=f"name{i}")) for i in range(3)]
 

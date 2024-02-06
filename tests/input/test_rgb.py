@@ -3,6 +3,7 @@ import pcot
 from pcot.datum import Datum
 from pcot.document import Document
 from fixtures import *
+from pcot.inputs.rgb import RGBInputMethod
 
 
 def test_rgb_load(globaldatadir):
@@ -30,7 +31,9 @@ def test_rgb_load(globaldatadir):
         #  First, make sure each band has a source set of a single source
         assert len(sourceSet) == 1
         s = sourceSet.getOnlyItem()
+        # assert we're using an RGB input method
+        assert s.method is not None and isinstance(s.method, RGBInputMethod)
         # and that it's from input 0, and that it's attached to a name, not a filter
-        assert s.inputIdx == 0
+        assert s.method.input.idx == 0
         assert isinstance(s.filterOrName, str)
         assert s.filterOrName == colname

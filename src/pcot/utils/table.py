@@ -101,7 +101,7 @@ class Table:
 
     def html(self):
         """convert to html string"""
-        return self.htmlObj().run()
+        return self.htmlObj().string()
 
     def markdown(self):
         """convert to Markdown"""
