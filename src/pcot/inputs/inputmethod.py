@@ -76,6 +76,8 @@ class InputMethod(ABC):
         """Sets the input exception for this method"""
         if self.input is not None:
             self.input.exception = e
+        if e is not None:
+            ui.error(e)
 
     def get(self) -> Datum:
         """returns cached data - if that's None, attempts to read data and cache it."""
@@ -92,27 +94,17 @@ class InputMethod(ABC):
             except FileNotFoundError as e:
                 # this one usually doesn't happen except in a library
                 self.setInputException(f"Cannot read file {e.filename}")
-                ui.error(self.input.exception)
             except Exception as e:
-                # this one does.
+                # this one does. It's annoying that we trap this exception; it's a bit of a catch-all and
+                # when stuff fails further down the line, it's hard to know what went wrong. But we can
+                # at least log a traceback here.
+                logger.exception(e)
                 self.setInputException(str(e))
-                ui.error(self.input.exception)
         return self.data
 
     def getName(self):
         """to override - returns the name for display purposes"""
         return 'override-getName!'
-
-    def brief(self):
-        """Give a brief name for use in captions. Anything apart from the input number is too long!"""
-        if self.input is None:
-            return "orphan"
-        return f"{self.input.idx}"
-
-    @abstractmethod
-    def long(self):
-        """Give a longer text description"""
-        pass
 
     @abstractmethod
     def createWidget(self):

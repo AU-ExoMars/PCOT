@@ -46,21 +46,3 @@ class DirectInputMethod(InputMethod):
             self.datum = Datum.deserialise(data['d'], self.input.mgr.doc)
         else:
             self.datum = Datum.null  # could happen in legacy files
-
-    def brief(self):
-        if self.datum.isNone():
-            return "direct:none"
-        elif self.datum.isImage():
-            i = self.datum.get(Datum.IMG)
-            return f"direct: {i.w}x{i.h}x{i.channels}"
-        else:
-            return f"direct: {str(self.datum)}"
-
-    def long(self):
-        if self.datum.isNone():
-            return "direct:none"
-        elif self.datum.isImage():
-            i = self.datum.get(Datum.IMG)
-            return f"direct: {str(i)}"
-        else:
-            return f"direct: {str(self.datum)}"

@@ -13,7 +13,7 @@ from proctools.products import ProductDepot, DataProduct
 
 from pcot import filters
 from pcot.dataformats import pds4
-from pcot.dataformats.pds4 import PDS4ImageProduct, PDS4Product
+from pcot.dataformats.pds4 import PDS4ImageProduct, PDS4Product, PDS4External
 from pcot.datum import Datum
 from pcot.filters import Filter
 from pcot.ui import uiloader
@@ -22,7 +22,7 @@ import proctools
 
 import pcot
 import pcot.ui as ui
-from pcot.sources import InputSource, MultiBandSource
+from pcot.sources import Source, MultiBandSource
 from pcot.inputs.inputmethod import InputMethod
 from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
@@ -248,7 +248,11 @@ class PDS4InputMethod(InputMethod):
         except ValueError as e:
             ui.error("Error in combining image products - are they all the same size?")
             return None
-        sources = MultiBandSource([InputSource(self, p.filt, pds4=p) for p in selProds])
+        sources = MultiBandSource([Source()
+                                  .setBand(p.filt)
+                                  .setExternal(PDS4External(p))
+                                  .setInputIdx(self.input.idx)
+                                   for p in selProds])
 
         return ImageCube(imgdata, rgbMapping=self.mapping, sources=sources, uncertainty=uncertainty, dq=dq)
 
@@ -302,10 +306,6 @@ class PDS4InputMethod(InputMethod):
             Canvas.deserialise(self, data)
         except KeyError as e:
             ui.error(f"can't read '{e}' from serialised PDS4 input data")
-
-    def long(self):
-        # might look basic, but will have CWL and LID appended to it downstream
-        return f"PDS4-{self.input.idx}"
 
 
 class ImageMarkerItem(QtWidgets.QGraphicsRectItem):

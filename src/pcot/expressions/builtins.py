@@ -14,7 +14,7 @@ from pcot.datum import Datum
 from pcot.expressions import Parameter
 from pcot.filters import Filter
 from pcot.imagecube import ImageCube
-from pcot.sources import SourceSet, MultiBandSource, FilterOnlySource
+from pcot.sources import SourceSet, MultiBandSource, Source, StringExternal
 from pcot.utils import image
 from pcot.expressions.ops import combineImageWithNumberSources
 from pcot.utils.deb import Timer
@@ -306,7 +306,7 @@ def funcSetCWL(args: List[Datum], _):
     if img.channels != 1:
         raise XFormException('EXPR', 'setcwl must take a single channel image')
     img = img.copy()
-    img.sources = MultiBandSource([FilterOnlySource(Filter(float(cwl), 30, 1.0, idx=0))])
+    img.sources = MultiBandSource([Source().setBand(Filter(float(cwl), 30, 1.0, idx=0))])
     return Datum(Datum.IMG, img)
 
 
@@ -468,7 +468,7 @@ def funcAssignSources(args: List[Datum], _):
             raise XFormException('DATA', 'image 2 in assignfilters must have a single source for each channel')
         if f1.cwl != f2.cwl or f1.fwhm != f2.fwhm:
             raise XFormException('DATA', 'filters in assignfilters must have the same cwl and fwhm')
-        sources.append(FilterOnlySource(f1, f"unified-{f1.name}"))
+        sources.append(Source().setBand(f1).setExternal(StringExternal("assignsources", f"unified-{f1.name}")))
 
     # now we can create the new image - it's image2 with the sources replaced with those of image1
     out = img2.copy()

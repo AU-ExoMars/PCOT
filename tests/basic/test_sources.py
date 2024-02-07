@@ -11,41 +11,16 @@ import pcot
 from pcot.document import Document
 from pcot.documentsettings import DocumentSettings
 from pcot.filters import Filter
-from pcot.sources import SourceSet, Source, nullSource, InputSource, MultiBandSource
-
-
-class SimpleTestSource(Source):
-    """Only used in this test suite"""
-
-    def __init__(self, name):
-        self.name = name
-
-    def brief(self, captionType=None) -> Optional[str]:
-        return self.name
-
-    def long(self) -> Optional[str]:
-        return self.name + 'long'
-
-    def copy(self):
-        """not actually a copy, but this is immutable anyway"""
-        return self
-
-    def matches(self, inp, bandNameOrCWL, hasBand):
-        # very crude check here, we're ignoring inputIdx.
-        return bandNameOrCWL == self.name
-
-    def serialise(self):
-        return 'testsource', self.name
-
+from pcot.sources import SourceSet, Source, nullSource, MultiBandSource, StringExternal
 
 # define some sources; these are immutable so it should be OK to keep them for multiple tests
-s1 = SimpleTestSource("one")
-s2 = SimpleTestSource("two")
-s3 = SimpleTestSource("three")
-s4 = SimpleTestSource("four")
-s5 = SimpleTestSource("five")
-s6 = SimpleTestSource("six")
+s1 = Source().setExternal(StringExternal("one", "one")).setInputIdx(0)
+s2 = Source().setExternal(StringExternal("two", "two")).setInputIdx(1)
+s3 = Source().setExternal(StringExternal("three", "three")).setInputIdx(2)
+s4 = Source().setExternal(StringExternal("four", "four")).setInputIdx(3)
+s5 = Source().setExternal(StringExternal("five", "five")).setInputIdx(4)
 
+# should give three results
 sourceset1 = SourceSet([s1, s2, s3])
 # this should produce FIVE results when unioned with the above; note the overlap with s1
 sourceset2 = SourceSet([s4, s5, s1])
@@ -59,25 +34,25 @@ def test_sourcesetctors():
     ss = SourceSet(s1)
     assert len(ss.sourceSet) == 1
     assert s1 in ss.sourceSet
-    assert ss.brief() == "one"
+    assert ss.brief() == "0:one"
 
     ss = SourceSet([s1])
     assert len(ss.sourceSet) == 1
     assert s1 in ss.sourceSet
-    assert ss.brief() == "one"
+    assert ss.brief() == "0:one"
 
     ss = SourceSet([s1, s2])
     assert len(ss.sourceSet) == 2
     assert s1 in ss.sourceSet
     assert s2 in ss.sourceSet
-    assert ss.brief() == "one&two"
+    assert ss.brief() == "0:one&1:two"
 
     ss = SourceSet([s1, SourceSet(s2)])
     assert len(ss.sourceSet) == 2
     assert s1 in ss.sourceSet
     assert s2 in ss.sourceSet
     assert s3 not in ss.sourceSet
-    assert ss.brief() == "one&two"
+    assert ss.brief() == "0:one&1:two"
 
 
 def test_getonlyitem():
@@ -120,23 +95,40 @@ def test_sourcesetdunder():
 
 def test_sourcesetunion():
     """Test that source set unions contain union of all subsidiary sets"""
+
+    # make sure the union is Ok
     assert len(sourcesetunion.sourceSet) == 5
     assert s1 in sourcesetunion.sourceSet
     assert s2 in sourcesetunion.sourceSet
     assert s3 in sourcesetunion.sourceSet
     assert s4 in sourcesetunion.sourceSet
     assert s5 in sourcesetunion.sourceSet
-    assert sourcesetunion.brief() == "five&four&one&three&two"  # alphabetical
+
+    # just for fun, we'll remove the indices from the sources in the union
+    scopy = sourcesetunion.copy()
+    for s in scopy.sourceSet:
+        s.setInputIdx(None)
+
+    assert len(scopy.sourceSet) == 5
+    assert scopy.brief() == "five&four&one&three&two"  # alphabetical
+
+    # make sure the copy worked; that we're not working with the original sources
+    assert s1 in sourcesetunion.sourceSet
+    assert s2 in sourcesetunion.sourceSet
+    assert s3 in sourcesetunion.sourceSet
+    assert s4 in sourcesetunion.sourceSet
+    assert s5 in sourcesetunion.sourceSet
+    assert sourcesetunion.brief() == "0:one&1:two&2:three&3:four&4:five"
 
 
 def test_sourcesetbrief():
     """Source set brief description test"""
-    assert str(sourceset1withnulls.brief()) == 'one&three&two'
+    assert sourceset1withnulls.brief() == '0:one&1:two&2:three'
 
 
 def test_sourcesetlong():
     """Source set long description test"""
-    assert str(sourceset1withnulls.long()) == 'SET[\nonelong\nthreelong\ntwolong\n]\n'
+    assert sourceset1withnulls.long() == 'SET[\n0: one\n1: two\n2: three\n]'
 
 
 def test_sourcesetstr():
@@ -146,47 +138,86 @@ def test_sourcesetstr():
 
 def test_sourcesetmatches():
     """" "matches" checks to see if any source in a set matches some criterion; in this case
-    we test that the name matches"""
-    assert not sourceset1withnulls.matches(None, 'five')
-    assert sourceset1withnulls.matches(None, 'one')
+    we test that the index matches"""
+
+    assert not sourceset1withnulls.matches(inp=10)
+    assert sourceset1withnulls.matches(inp=1)
 
 
 def test_inputsourcenames():
     """Test that input source brief() and long() are correct"""
     pcot.setup()
 
-    doc = Document()
-    source = InputSource(None,
-                         filterOrName=Filter(cwl=1000, fwhm=100, transmission=20, position="pos1", name="name1"))
+    source = Source().setBand(
+        Filter(cwl=1000, fwhm=100, transmission=20, position="pos1", name="name1"))
 
-    assert source.long() == "nullmethod: wavelength 1000, fwhm 100"
-    assert source.brief() == "nullmethod:1000"  # default caption is wavelength
-    assert source.brief(captionType=DocumentSettings.CAP_CWL) == "nullmethod:1000"
-    assert source.brief(captionType=DocumentSettings.CAP_NAMES) == "nullmethod:name1"
-    assert source.brief(captionType=DocumentSettings.CAP_POSITIONS) == "nullmethod:pos1"
+    assert source.long() == "none: wavelength 1000, fwhm 100"
+    assert source.brief() == "1000"  # default caption is wavelength
+    assert source.brief(captionType=DocumentSettings.CAP_CWL) == "1000"
+    assert source.brief(captionType=DocumentSettings.CAP_NAMES) == "name1"
+    assert source.brief(captionType=DocumentSettings.CAP_POSITIONS) == "pos1"
 
 
 def test_multibandsourcenames():
     """Test that multiband source brief() is correct"""
     pcot.setup()
-    doc = Document()
-    sources = [InputSource(None,
-                           filterOrName=Filter(cwl=(i + 1) * 1000, fwhm=100, transmission=20,
-                                               position=f"pos{i}", name=f"name{i}")) for i in range(3)]
+    sources = [Source().setBand(
+        Filter(cwl=(i + 1) * 1000, fwhm=100, transmission=20,
+               position=f"pos{i}", name=f"name{i}")) for i in range(3)]
 
     # check this kind of ctor works
     ms = MultiBandSource(sources)
-    assert ms.brief() == "nullmethod:1000|nullmethod:2000|nullmethod:3000"
+    assert ms.brief() == "1000|2000|3000"
 
+
+def test_multibandsourcenameswithidx():
+    """Test that multiband source brief() is correct when the index is set """
+    pcot.setup()
+    sources = [Source().setBand(
+        Filter(cwl=(i + 1) * 1000, fwhm=100, transmission=20,
+               position=f"pos{i}", name=f"name{i}")).setInputIdx(i + 10) for i in range(3)]
+
+    # check this kind of ctor works
+    ms = MultiBandSource(sources)
+    assert ms.brief() == "10:1000|11:2000|12:3000"
+
+
+def test_multibandsourcenameswithidxandext():
+    """Test that multiband source brief() is correct when the index and ext is set """
+    pcot.setup()
+    sources = [Source().setBand(
+        Filter(cwl=(i + 1) * 1000, fwhm=100, transmission=20,
+               position=f"pos{i}", name=f"name{i}"))
+                   .setInputIdx(i + 10)
+                   .setExternal(StringExternal("ext" + str(i + 21),"extlong" + str(i + 21)))
+               for i in range(3)]
+
+    # check this kind of ctor works
+    ms = MultiBandSource(sources)
+    assert ms.brief() == "10:ext21:1000|11:ext22:2000|12:ext23:3000"
+
+
+def test_multibandsourcenameswithidxandextandlong():
+    """Test that multiband source long() is correct when the index and ext is set """
+    pcot.setup()
+    sources = [Source().setBand(
+        Filter(cwl=(i + 1) * 1000, fwhm=100, transmission=20,
+               position=f"pos{i}", name=f"name{i}"))
+                   .setInputIdx(i + 10)
+                   .setExternal(StringExternal("ext" + str(i + 21), "extlong" + str(i + 21)))
+               for i in range(3)]
+
+    # check this kind of ctor works
+    ms = MultiBandSource(sources)
+    assert ms.long() == '{\n0: SET[\n10: wavelength 1000, fwhm 100 extlong21\n]\n1: SET[\n11: wavelength 2000, fwhm 100 extlong22\n]\n2: SET[\n12: wavelength 3000, fwhm 100 extlong23\n]\n}\n'
 
 def test_multibandsourcedunder():
     """Test that multibands act as an array of SourceSets"""
 
     pcot.setup()
-    doc = Document()
-    sources = [InputSource(None,
-                           filterOrName=Filter(cwl=(i + 1) * 1000, fwhm=100, transmission=20,
-                                               position=f"pos{i}", name=f"name{i}")) for i in range(3)]
+    sources = [Source().setBand(
+        Filter(cwl=(i + 1) * 1000, fwhm=100, transmission=20,
+               position=f"pos{i}", name=f"name{i}")) for i in range(3)]
 
     ms = MultiBandSource(sources)
     # check we can get the length

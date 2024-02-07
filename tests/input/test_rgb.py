@@ -31,9 +31,6 @@ def test_rgb_load(globaldatadir):
         #  First, make sure each band has a source set of a single source
         assert len(sourceSet) == 1
         s = sourceSet.getOnlyItem()
-        # assert we're using an RGB input method
-        assert s.method is not None and isinstance(s.method, RGBInputMethod)
-        # and that it's from input 0, and that it's attached to a name, not a filter
-        assert s.method.input.idx == 0
-        assert isinstance(s.filterOrName, str)
-        assert s.filterOrName == colname
+        assert isinstance(s.band, str)      # not a filter, just a named band
+        assert s.inputIdx == 0
+        print(s.external)

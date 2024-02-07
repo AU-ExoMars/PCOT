@@ -16,8 +16,8 @@ from PySide2.QtGui import QPainter
 import pcot
 from pcot import dq
 from pcot.documentsettings import DocumentSettings
-from pcot.rois import ROI, ROIPainted, ROIBoundsException
-from pcot.sources import MultiBandSource, SourcesObtainable, FilterOnlySource
+from pcot.rois import ROI, ROIBoundsException
+from pcot.sources import MultiBandSource, SourcesObtainable, Source
 from pcot.utils import annotations
 from pcot.utils.annotations import annotFont
 from pcot.utils import image
@@ -443,9 +443,9 @@ class ImageCube(SourcesObtainable):
         img /= scale
         # create sources if none given
         if sources is None:
-            sources = MultiBandSource([FilterOnlySource('R'),
-                                       FilterOnlySource('G'),
-                                       FilterOnlySource('B')])
+            sources = MultiBandSource([Source().setBand('R'),
+                                       Source().setBand('G'),
+                                       Source().setBand('B')])
         # and construct the image
         return cls(img, mapping, sources)
 

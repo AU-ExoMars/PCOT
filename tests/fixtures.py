@@ -9,7 +9,7 @@ import pytest
 from distutils import dir_util
 import numpy as np
 
-from pcot.sources import MultiBandSource, nullSource, InputSource
+from pcot.sources import MultiBandSource, nullSource, Source
 
 """
 Assorted test fixtures, mainly for generating input data (typically images)
@@ -75,7 +75,8 @@ def rectimage(globaldatadir):
 
 def genmono(w,h,v,u,dq,doc=None,inpidx=None):
     if doc is not None and inpidx is not None:
-        sources = MultiBandSource([InputSource(None, 'M')])
+        s = Source().setBand('M')
+        sources = MultiBandSource([s])
     else:
         sources = MultiBandSource([nullSource])
 
@@ -90,19 +91,15 @@ def genmono(w,h,v,u,dq,doc=None,inpidx=None):
 
 
 def genrgb(w, h, r, g, b, u=None, d=None, doc=None, inpidx=None):
-    """Generate an RGB image. If document and input index are given, we create an InputSource, otherwise
-    it has to be a nullSource.
+    """Generate an RGB image. If the input index is provided, use it.
     If u is provided, it is an (r,g,b) uncertainty tuple.
     If d is provided, it is an (r,g,b) dq bits tuple
 
     """
-    if doc is not None and inpidx is not None:
-        # generated as "orphan" sources that come from no input
-        sources = MultiBandSource([InputSource(None, 'R'),
-                                   InputSource(None, 'G'),
-                                   InputSource(None, 'B')])
-    else:
-        sources = MultiBandSource([nullSource, nullSource, nullSource])
+    # generated as "orphan" sources that come from no input
+    sources = MultiBandSource([Source().setBand('R').setInputIdx(inpidx),
+                               Source().setBand('G').setInputIdx(inpidx),
+                               Source().setBand('B').setInputIdx(inpidx)])
 
     bands = [np.full((h, w), x) for x in (r, g, b)]
     bands = np.dstack(bands).astype(np.float32)
@@ -134,7 +131,7 @@ def gen_two_halves(w, h, v1, u1, v2, u2, doc=None, inpidx=None):
     if doc is not None and inpidx is not None:
         # generate source names of the form r,g,b,c3,c4..
         sourceNames = ["r", "g", "b"] + [f"c{i}" for i in range(3, len(v1))]
-        sources = MultiBandSource([InputSource(None, sourceNames[i]) for i in range(0, len(v1))])
+        sources = MultiBandSource([Source().setBand(sourceNames[i]) for i in range(0, len(v1))])
     else:
         sources = MultiBandSource([nullSource] * len(v1))
 

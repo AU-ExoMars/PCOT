@@ -2,11 +2,10 @@
 through the graph"""
 
 import pcot
-from basic.test_sources import SimpleTestSource
 from fixtures import *
 from pcot.datum import Datum
 from pcot.document import Document
-from pcot.sources import SourceSet, InputSource
+from pcot.sources import SourceSet, Source, StringExternal
 from pcot.value import Value
 from pcot.xform import XFormException
 
@@ -45,7 +44,7 @@ def test_greyscale_sources(envi_img: ImageCube):
     # Note that we have to specify a source for the numeric value (it's ignored by the function, which
     # might seem odd given the Rules, but it only determines a mode and almost never comes from outside).
     # Since this is a slightly edge behaviour I'll test for it.
-    nsource = SimpleTestSource("numbersource")  # numbers need explicit sources, so I'll fake one up
+    nsource = Source().setExternal(StringExternal("numbersource", "numbersource"))  # numbers need explicit sources, so I'll fake one up
 
     from pcot.expressions.builtins import funcGrey
     d = funcGrey([Datum(Datum.IMG, envi_img)], [Datum(Datum.NUMBER, Value(0, 0), nsource)])
@@ -210,8 +209,8 @@ def test_binop_number_and_number(envi_image_1, envi_image_2):
     assert len(datum.sources) == 8  # 2 images with 4 bands
 
     # split into sources which came from each input - each should have 4 members
-    fromImage1 = [x for x in datum.sources if x.method.input.idx == 0]
-    fromImage2 = [x for x in datum.sources if x.method.input.idx == 1]
+    fromImage1 = [x for x in datum.sources if x.inputIdx == 0]
+    fromImage2 = [x for x in datum.sources if x.inputIdx == 1]
 
     # and check the sets have the right frequencies
     assert set([x.getFilter().cwl for x in fromImage1]) == {800, 640, 550, 440}
@@ -245,8 +244,8 @@ def test_binop_image_and_number(envi_image_1, envi_image_2):
         # each channel's sources should be the relevant channel of A plus all the channels of B.
         assert len(channelSourceSet) == 5
         # split into sources which came from each input - each should have 4 members
-        fromImage1 = [x for x in channelSourceSet if x.method.input.idx == 0]
-        fromImage2 = [x for x in channelSourceSet if x.method.input.idx == 1]
+        fromImage1 = [x for x in channelSourceSet if x.inputIdx == 0]
+        fromImage2 = [x for x in channelSourceSet if x.inputIdx == 1]
         assert len(fromImage1) == 1
         assert len(fromImage2) == 4
         assert fromImage1[0].getFilter().cwl == freq
@@ -279,8 +278,8 @@ def test_binop_image_and_number2(envi_image_1, envi_image_2):
         # each channel's sources should be the relevant channel of A plus all the channels of B.
         assert len(channelSourceSet) == 5
         # split into sources which came from each input - each should have 4 members
-        fromImage1 = [x for x in channelSourceSet if x.method.input.idx == 0]
-        fromImage2 = [x for x in channelSourceSet if x.method.input.idx == 1]
+        fromImage1 = [x for x in channelSourceSet if x.inputIdx == 0]
+        fromImage2 = [x for x in channelSourceSet if x.inputIdx == 1]
         assert len(fromImage1) == 4
         assert len(fromImage2) == 1
         assert fromImage2[0].getFilter().cwl == freq
@@ -311,7 +310,7 @@ def test_binop_image_and_number_literal(envi_image_1, envi_image_2):
         # each channel's sources should be the relevant channel of A and the null source,
         # but the null source gets filtered out
         assert len(channelSourceSet) == 1
-        fromImage = [x for x in channelSourceSet if isinstance(x, InputSource)]
+        fromImage = [x for x in channelSourceSet if isinstance(x, Source)]
         fromConst = [x for x in channelSourceSet if x == nullSource]
         assert len(fromImage) == 1
         assert len(fromConst) == 0

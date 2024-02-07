@@ -1,15 +1,14 @@
 ## the RGB file input method
 import logging
-import os
 from typing import Optional
 
 import pcot.ui as ui
-from .inputmethod import InputMethod
 from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import TreeMethodWidget
+from .inputmethod import InputMethod
 from ..datum import Datum
-from ..sources import MultiBandSource, InputSource
+from ..sources import MultiBandSource, Source, StringExternal
 
 logger = logging.getLogger(__name__)
 
@@ -29,13 +28,13 @@ class RGBInputMethod(InputMethod):
         # will throw exception if load failed
         logger.info("RGB PERFORMING FILE READ")
 
-        doc = self.input.mgr.doc
-        inpidx = self.input.idx
-
         # might seem a bit wasteful having three of them, but seems more logical to me.
-        sources = MultiBandSource([InputSource(self, 'R'),
-                                   InputSource(self, 'G'),
-                                   InputSource(self, 'B')])
+        e = StringExternal("RGBFile", self.fname)
+        sources = MultiBandSource([
+            Source().setBand("R").setExternal(e).setInputIdx(self.input.idx),
+            Source().setBand("G").setExternal(e).setInputIdx(self.input.idx),
+            Source().setBand("B").setExternal(e).setInputIdx(self.input.idx),
+        ])
 
         img = ImageCube.load(self.fname, self.mapping, sources)
         ui.log("Image {} loaded: {}".format(self.fname, img))
@@ -73,8 +72,6 @@ class RGBInputMethod(InputMethod):
             self.img = None   # ensure image is reloaded
         Canvas.deserialise(self, data)
 
-    def long(self):
-        return f"RGB:{self.fname}"
 
 
 class RGBMethodWidget(TreeMethodWidget):

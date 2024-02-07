@@ -4,8 +4,8 @@ from typing import Dict
 
 from dateutil import parser
 
-from pcot import filters
 from pcot.filters import Filter
+from pcot.sources import External
 
 
 class PDS4Product:
@@ -14,19 +14,48 @@ class PDS4Product:
     Does not store the actual data! Just label information and metadata."""
 
     def __init__(self):
+        super().__init__()
         self.lid = ""     # there's always a LID.
         self.idx = 0        # and there should be an index which is used for vertical position on timeline
         self.sol_id = 0     # and a sol ID
         self.start = 0      # and a datetime
 
     def serialise(self) -> Dict:
-        """Serialise the product info into a dictionary"""
+        """Serialise the product info into a dictionary which must contain prodtype"""
         pass
 
     @classmethod
     def deserialise(cls, d: Dict):
         """deserialise the product from a dictionary; static method creating new product"""
         pass
+
+    def long(self):
+        return f"PDS4:{self.lid}\n Date {self.start} Index {self.idx} Sol {self.sol_id}"
+
+
+class PDS4External(External):
+    """A wrapper around PDS4 product info when used in a source."""
+    def __init__(self, prod: PDS4Product):
+        super().__init__()
+        self.product = prod
+
+    def long(self):
+        return self.product.long()
+
+    def brief(self):
+        return "PDS4"
+
+    def serialise(self):
+        return 'pds4', self.product.serialise()
+
+    @staticmethod
+    def deserialise(data: Dict):
+        """Deserialise the external product"""
+        tp = data['prodtype']
+        if tp == 'image':
+            return PDS4External(PDS4ImageProduct.deserialise(data))
+        else:
+            raise ValueError(f"Unknown PDS4 product type {tp} in deserialisation")
 
 
 @dataclasses.dataclass()

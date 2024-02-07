@@ -6,6 +6,7 @@ from pathlib import Path
 from proctools.products import ProductDepot
 
 import pcot
+from pcot.dataformats.pds4 import PDS4External
 
 from pcot.datum import Datum
 from pcot.document import Document
@@ -85,7 +86,7 @@ def test_pds4_load():
         #  First, make sure each band has a source set of a single source
         assert len(sourceSet) == 1
         s = sourceSet.getOnlyItem()
-        f = s.filterOrName
+        f = s.getFilter()
         # and the filter data should be correct, and sorted by capture time which happens to be
         # filter position.
         assert f.cwl == cwl
@@ -101,7 +102,8 @@ def test_pds4_load():
         assert f.transmission == 1.0
         assert f.position == name
 
-        assert s.getPDS4() is not None
-        assert s.getPDS4().lid == lid
-        assert s.brief() == f'0:{cwl}'
-        assert s.long() == f"PDS4-0: wavelength {cwl}, fwhm {fwhm} {s.getPDS4().lid}"
+        assert isinstance(s.external, PDS4External)
+        p = s.external.product
+        assert p.lid == lid
+        assert s.brief() == f'0:PDS4:{cwl}'
+        # I'm not testing the long form of the descriptor, because it's too long probably subject to change.

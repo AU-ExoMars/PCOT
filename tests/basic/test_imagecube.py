@@ -2,7 +2,7 @@
 import pcot
 from pcot.document import Document
 from pcot.filters import Filter
-from pcot.sources import InputSource, MultiBandSource, SourceSet
+from pcot.sources import Source, SourceSet, MultiBandSource
 import pcot.utils.image as image
 
 from fixtures import *
@@ -24,11 +24,11 @@ def multispecimage():
     # fake document
     doc = Document()
     # first let's fake some sources. I don't want the filter bands in linear order, though.
-    sources = [InputSource(None,
-                           filterOrName=Filter(cwl=100 + MS_CHANS[i] * 100, fwhm=10 + i,
-                                               transmission=20 + i * 5,
-                                               position=f"pos{i}",
-                                               name=f"name{i}")) for i in range(MS_NUMCHANS)]
+    sources = [Source().setBand(
+        Filter(cwl=100 + MS_CHANS[i] * 100, fwhm=10 + i,
+               transmission=20 + i * 5,
+               position=f"pos{i}",
+               name=f"name{i}")) for i in range(MS_NUMCHANS)]
     sources = MultiBandSource(sources)
     # and some image data, which is the channel index * 0.1 (if there are 10 channels).
     bands = np.stack([np.full((MS_HEIGHT, MS_WIDTH), i / MS_NUMCHANS) for i in range(MS_NUMCHANS)], axis=-1).astype(
@@ -113,8 +113,8 @@ def test_msimage(multispecimage):
 
 
 def makesource(doc, pos, cwl, fwhm):
-    return InputSource(None, filterOrName=Filter(cwl, fwhm=fwhm, transmission=20 + pos * 5,
-                                                 position=f"pos{pos}", name=f"name{pos}"))
+    return Source().setBand(Filter(cwl, fwhm=fwhm, transmission=20 + pos * 5,
+                                   position=f"pos{pos}", name=f"name{pos}"))
 
 
 def test_wavelength():

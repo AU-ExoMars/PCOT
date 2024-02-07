@@ -27,7 +27,12 @@ class ENVIInputMethod(InputMethod):
 
     def loadImg(self):
         logger.info("PERFORMING FILE READ")
-        img = envi.load(self.fname, self, self.mapping)
+        img = envi.load(self.fname, self.mapping)
+        # set the input index for all the sources - this relies on the SourceSet returned
+        # from getSources() not copying the originals.
+        if self.input is not None:
+            for s in img.getSources():
+                s.setInputIdx(self.input.idx)
         logger.info(f"Image {self.fname} loaded: {img}, mapping is {self.mapping}")
         self.img = img
 
@@ -62,9 +67,6 @@ class ENVIInputMethod(InputMethod):
         else:
             self.img = None   # ensure image is reloaded
         Canvas.deserialise(self, data)
-
-    def long(self):
-        return f"ENVI:{self.fname}"
 
 
 class ENVIMethodWidget(TreeMethodWidget):

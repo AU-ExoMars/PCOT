@@ -17,7 +17,7 @@ from pcot.ui.inputs import MethodWidget
 from .. import ui
 from ..datum import Datum
 from ..filters import getFilterSetNames, getFilter
-from ..sources import InputSource, SourceSet, MultiBandSource
+from ..sources import Source, MultiBandSource, StringExternal
 from ..ui import uiloader
 from ..utils import image
 
@@ -62,10 +62,6 @@ class MultifileInputMethod(InputMethod):
         self.cachedFiles = {}
 
         self.mapping = ChannelMapping()
-
-    def long(self):
-        lst = [f"{i}: {f}" for i, f in enumerate(self.files)]
-        return f"MULTI: path={self.dir} {', '.join(lst)}]"
 
     def getFilterSearchParam(self, path) -> Tuple[str,str]:
         """Returns the thing to search for to match a filter to a path and the type of the search"""
@@ -138,7 +134,8 @@ class MultifileInputMethod(InputMethod):
                 # build sources data - this will use the filter, which we'll extract from the filename.
                 filtpos, searchtype = self.getFilterSearchParam(path)
                 filt = getFilter(self.filterset, filtpos, searchtype)
-                source = InputSource(self, filt)
+                ext = StringExternal("Multi", os.path.abspath(path))
+                source = Source().setBand(filt).setInputIdx(inpidx).setExternal(ext)
 
                 # store in cache
                 newCachedFiles[path] = img
@@ -375,7 +372,7 @@ class MultifileMethodWidget(MethodWidget):
 
     def displayActivatedImage(self):
         if self.activatedImage:
-            # we're creating a temporary greyscale image here. We could use an InputSource
+            # we're creating a temporary greyscale image here. We could use an Source
             # as usual, but that won't work because it assumes the input is already set up.
             # There's really not much point in using a source at all, though, so we'll just
             # use null sources here - and those will already be loaded by .load().

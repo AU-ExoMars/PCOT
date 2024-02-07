@@ -29,7 +29,7 @@ import numpy as np
 import pcot.ui as ui
 from pcot.filters import Filter
 from pcot.imagecube import ChannelMapping, ImageCube
-from pcot.sources import InputSource, MultiBandSource
+from pcot.sources import MultiBandSource, Source, External, StringExternal
 
 
 def parseHeader(lines):
@@ -182,7 +182,7 @@ def _load(fn):
     return h, img
 
 
-def load(fn, inpmethod: 'InputMethod', mapping: ChannelMapping = None) -> ImageCube:
+def load(fn, mapping: ChannelMapping = None) -> ImageCube:
     """Load a file as an ENVI. The filename is the header filename (.hdr).
     Requires a Document and an input index, so don't call this directly - Document.setInputENVI()."""
 
@@ -190,8 +190,10 @@ def load(fn, inpmethod: 'InputMethod', mapping: ChannelMapping = None) -> ImageC
     h, img = _load(fn)
 
     # construct the source data
-    sources = MultiBandSource([InputSource(inpmethod, f) for f in h.filters])
-
+    e = StringExternal("ENVI", f"ENVI:{fn}")
+    sources = [Source().setBand(f).setExternal(e) for f in h.filters]
+    # don't set the input index - that gets set by the input method. It's NOT the band index.
+    sources = MultiBandSource(sources)
     if mapping is None:
         mapping = ChannelMapping()
     if h.defaultBands is not None:

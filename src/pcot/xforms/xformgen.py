@@ -15,7 +15,7 @@ from pcot import ui
 from pcot.datum import Datum
 from pcot.filters import Filter
 from pcot.imagecube import ImageCube
-from pcot.sources import MultiBandSource, FilterOnlySource
+from pcot.sources import MultiBandSource, Source, StringExternal
 from pcot.ui.tablemodel import TableModel, ComboBoxDelegate
 from pcot.utils import SignalBlocker
 from pcot.utils.image import generate_gradient
@@ -42,7 +42,7 @@ class ChannelData:
     text: str = ''
     textx: int = 0
     texty: int = 0
-    textsize: float = 1       # some factor of img size
+    textsize: float = 1  # some factor of img size
 
     @staticmethod
     def getHeader():
@@ -149,19 +149,19 @@ class XFormGen(XFormType):
                 u = np.sqrt((x - cx) ** 2 + (y - cy) ** 2) * chan.u
                 u = np.sin(u) * 0.5 + 0.5
             elif chan.mode == 'half':
-                n = np.where(x<node.imgwidth/2, chan.n, chan.u)
+                n = np.where(x < node.imgwidth / 2, chan.n, chan.u)
                 u = np.full((node.imgheight, node.imgwidth), 0.1)
             elif chan.mode == 'checkx':
                 y, x = np.indices((node.imgheight, node.imgwidth))
-                n = ((np.array((y, x+chan.u))//chan.n).sum(axis=0) % 2).astype(np.float32)
+                n = ((np.array((y, x + chan.u)) // chan.n).sum(axis=0) % 2).astype(np.float32)
                 u = n
             elif chan.mode == 'checky':
                 y, x = np.indices((node.imgheight, node.imgwidth))
-                n = ((np.array((y+chan.u, x))//chan.n).sum(axis=0) % 2).astype(np.float32)
+                n = ((np.array((y + chan.u, x)) // chan.n).sum(axis=0) % 2).astype(np.float32)
                 u = n
             elif chan.mode == 'rand':
-                rngN = np.random.default_rng(seed=int(chan.n*10000))
-                rngU = np.random.default_rng(seed=int(chan.u*10000))
+                rngN = np.random.default_rng(seed=int(chan.n * 10000))
+                rngU = np.random.default_rng(seed=int(chan.u * 10000))
                 n = rngN.random((node.imgheight, node.imgwidth), np.float32)
                 u = rngN.random((node.imgheight, node.imgwidth), np.float32)
             elif chan.mode == 'gaussian':
@@ -181,11 +181,11 @@ class XFormGen(XFormType):
             # write text
             if chan.text != '':
                 fontsize = node.imgheight * chan.textsize * 0.007
-                thickness = int(fontsize*3)
+                thickness = int(fontsize * 3)
                 (w, h), baseline = cv.getTextSize(chan.text, cv.FONT_HERSHEY_SIMPLEX,
                                                   fontScale=fontsize, thickness=thickness)
 
-                cv.putText(n, chan.text, (chan.textx, chan.texty+h), cv.FONT_HERSHEY_SIMPLEX,
+                cv.putText(n, chan.text, (chan.textx, chan.texty + h), cv.FONT_HERSHEY_SIMPLEX,
                            color=1,
                            fontScale=fontsize, lineType=1, thickness=thickness)
 
@@ -198,8 +198,9 @@ class XFormGen(XFormType):
             us = np.dstack(us).astype(np.float32)
 
             # construct Filter only sources - these don't have input data but do have a filter.
-            sources = [FilterOnlySource(Filter(chan.cwl, 30, 1.0, idx=i),
-                                        extraName=node.displayName) for i, chan in enumerate(node.imgchannels)]
+            sources = [Source().setBand(Filter(chan.cwl, 30, 1.0, idx=i))
+                            .setExternal(StringExternal("gen", node.displayName))
+                       for i, chan in enumerate(node.imgchannels)]
             # make and output the image
             node.img = ImageCube(ns, node.mapping, uncertainty=us, sources=MultiBandSource(sources))
             node.setOutput(0, Datum(Datum.IMG, node.img))
@@ -271,7 +272,7 @@ class TabGen(pcot.ui.tabs.Tab):
         self.w.deleteButton.clicked.connect(self.deleteClicked)
         self.w.tableView.delete.connect(self.deleteClicked)
 
-        self.w.splitter.setSizes([1000, 2000])   # 1:2 ratio between table and canvas
+        self.w.splitter.setSizes([1000, 2000])  # 1:2 ratio between table and canvas
 
         self.model = GenModel(self, node.imgchannels)
         self.w.tableView.setModel(self.model)

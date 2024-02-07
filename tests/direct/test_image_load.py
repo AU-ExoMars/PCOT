@@ -16,6 +16,11 @@ def test_direct_input(envi_image_1):
     # get the image from the datum
     img = datum.get(Datum.IMG)
 
+    print(datum.getSources().long())
+
+    # note that the briefs don't have input indices because we loaded the image directly
+    assert(datum.getSources().brief() == "ENVI:440&ENVI:550&ENVI:640&ENVI:800")
+
     # add a couple of circular ROIs to the image
     img.rois.append(ROICircle(50, 40, 4, label="a"))
     img.rois.append(ROICircle(8, 8, 4, label="b"))

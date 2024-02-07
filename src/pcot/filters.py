@@ -6,6 +6,7 @@ from typing import List
 import numpy as np
 
 from pcot import ui
+from pcot.documentsettings import DocumentSettings
 
 """This file deals with the physical multispectral filters"""
 
@@ -67,6 +68,18 @@ class Filter:
     def response_over(self, x: np.ndarray):
         """generate a response curve from an input array of frequencies (I think)"""
         return self._gaussian(x, self.cwl, self.fwhm)
+
+    def getCaption(self, captionType=DocumentSettings.CAP_DEFAULT):
+        """Format according to caption type"""
+        if captionType == DocumentSettings.CAP_POSITIONS:  # 0=Position
+            cap = self.position
+        elif captionType == DocumentSettings.CAP_NAMES:  # 1=Name
+            cap = self.name
+        elif captionType == DocumentSettings.CAP_CWL:  # 2=Wavelength
+            cap = str(int(self.cwl))
+        else:
+            cap = f"CAPBUG-{captionType}"  # if this appears captionType is out of range.
+        return cap
 
     def __repr__(self):
         return f"Filter({self.name},{self.cwl}@{self.fwhm}, {self.position}, t={self.transmission})"
