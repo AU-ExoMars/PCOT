@@ -396,10 +396,6 @@ class XForm:
     # the "overriding" input types (used in macros)
     inputTypes: List[Optional[str]]
 
-    ## @var comment
-    # a helpful comment
-    comment: str
-
     ## @var name
     # the unique name of the node within the graph, which is internal only.
     # Note that in macros, corresponding nodes in the prototype graph
@@ -470,7 +466,6 @@ class XForm:
         # we keep a dict of those nodes which get inputs from us, and how many. We can't
         # keep the actual output connections easily, because they are one->many.
         self.children = {}
-        self.comment = ""  # nodes can have comments
         # set the unique ID - unique to this graph, that is. This is rather
         # overkill, since it only needs to be unique within the graph and
         # indeed sometimes should be duplicated in other graphs (nodes in
@@ -588,7 +583,6 @@ class XForm:
              'type': self.type.name,
              'displayName': self.displayName,
              'ins': [serialiseConn(c, None) for c in self.inputs],
-             'comment': self.comment,
              'outputTypes': [None if x is None else x.name for x in self.outputTypes],
              'inputTypes': [None if x is None else x.name for x in self.inputTypes],
              'md5': self.type.md5(),
@@ -613,7 +607,6 @@ class XForm:
         self.xy = d['xy']
         self.w = d.get('w', self.type.defaultWidth)  # use 'get' to still be able to load early data
         self.h = d.get('h', self.type.defaultHeight)
-        self.comment = d['comment']
         # these are the overriding types - if the value is None, use the xformtype's value, else use the one here.
         self.outputTypes = [None if x is None else datum.deserialise(x) for x in d['outputTypes']]
         self.inputTypes = [None if x is None else datum.deserialise(x) for x in d['inputTypes']]

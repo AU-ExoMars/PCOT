@@ -174,10 +174,6 @@ class Tab(QtWidgets.QWidget):
 
     updatingTabs = False  # we are updating after a perform, don't take too much notice of calls to changed()
 
-    def commentChanged(self):
-        """the comment field changed, set the data in the node."""
-        self.node.comment = self.comment.toPlainText().strip()
-
     def __init__(self, window, node, uifile):
         """constructor, which should be called by the subclass ctor"""
         super(Tab, self).__init__()
@@ -187,49 +183,41 @@ class Tab(QtWidgets.QWidget):
         # store a ref to the main UI window which created the tab
         self.window = window
 
-        # set the entire tab to be a vertical layout (just there to contain
-        # everything, could be any layout)
+        # create the layout
         lay = QtWidgets.QVBoxLayout()
         self.setLayout(lay)
-
-        # create a splitter inside the tab and add both the main widget
-        # and the comment field to it
-        splitter = QtWidgets.QSplitter()
-        splitter.setOrientation(Qt.Vertical)
-        lay.addWidget(splitter)
         self.w = QtWidgets.QWidget()
-        splitter.addWidget(self.w)
-        self.comment = QtWidgets.QTextEdit()
-        self.comment.setPlaceholderText("add a comment on this node here")
-        self.comment.setMinimumHeight(30)
-        self.comment.setMaximumHeight(150)
-        widlower = QtWidgets.QWidget()
-        splitter.addWidget(widlower)
-        laylower = QtWidgets.QVBoxLayout()
-        widlower.setLayout(laylower)
-        laylower.setContentsMargins(1, 1, 1, 1)
+        lay.addWidget(self.w)
 
-        widCommentAndEnable = QtWidgets.QWidget()
-        layCommentAndEnable = QtWidgets.QHBoxLayout()
-        layCommentAndEnable.setContentsMargins(1, 1, 1, 1)
-        widCommentAndEnable.setLayout(layCommentAndEnable)
-        laylower.addWidget(widCommentAndEnable)
-
-        layCommentAndEnable.addWidget(self.comment)
-        self.comment.textChanged.connect(self.commentChanged)
+        # lower element for error message
+        self.lower = QtWidgets.QWidget()
+        lowerLay = QtWidgets.QHBoxLayout()
+        self.lower.setLayout(lowerLay)
+        lay.addWidget(self.lower)
+        self.lower.setStyleSheet("background-color: rgb(240, 240, 240);")
 
         # default invisible error
         self.errorText = QtWidgets.QLabel("")
-        self.errorText.setVisible(False)
         self.errorText.setFont(tabErrorFont)
         self.errorText.setStyleSheet("QLabel{color: rgb(200, 0, 0);}")
+        lowerLay.addWidget(self.errorText)
+        self.errorText.setVisible(False)
+        # much of this is pointless, because the error message controls set the visibility.
+        # Ideally, I'd like to have the widget have a zero height when it has no children, but
+        # I can't figure out how to do that right now. Indeed, it may not be possible.
+        self.lower.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
+                                                  QtWidgets.QSizePolicy.Fixed))
+        self.lower.setMinimumHeight(0)
 
-        laylower.addWidget(self.errorText)
+        # There used to be a "comment" field, but it was never used and was removed.
+        # However, the widget that contains its represetation is still there, and is
+        # used to contain the "enabled" widget if the node has one. But we only
+        # create it if the node has an enabled widget.
+        # Most nodes don't have one.
 
-        # most nodes don't have an enabled widget.
         if node.type.hasEnable:
             self.enable = QtWidgets.QRadioButton("enabled")
-            layCommentAndEnable.addWidget(self.enable)
+            lowerLay.addWidget(self.enable)
             self.enable.setChecked(node.enabled)
             self.enable.toggled.connect(self.enableChanged)
         else:
@@ -247,12 +235,7 @@ class Tab(QtWidgets.QWidget):
         # have to show the widgets first - sizes() returns
         # zero for invisible widgets
         self.w.show()
-        self.comment.show()
-        splitter.show()
         self.show()
-        total = sum(splitter.sizes())
-
-        splitter.setSizes([total * 0.9, total * 0.1])
 
     def changed(self, uiOnly=False):
         """The tab's widgets have changed the data, we need
@@ -299,12 +282,14 @@ class Tab(QtWidgets.QWidget):
         return self.title
 
     def updateError(self):
-        """Update the error field"""
+        """Update the error field and set the lower widget visible if there is an error. The widget is always
+        visible if the node has an enable widget."""
         if self.node.error is not None:
+            self.lower.setVisible(True)
             self.errorText.setText("Error " + self.node.error.code + ": " + self.node.error.message)
             self.errorText.setVisible(True)
         else:
-            self.errorText.setVisible(False)
+            self.lower.setVisible(self.enable is not None)
 
     def onNodeChanged(self):
         """should update the tab when the node's data has changed"""

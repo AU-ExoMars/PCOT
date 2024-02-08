@@ -243,7 +243,7 @@ class TabSpectrum(ui.tabs.Tab):
     def replot(self):
         ax = self.w.mpl.ax
         # set up the plot
-        self.w.mpl.fig.suptitle(self.node.comment)
+        self.w.mpl.fig.suptitle("TODO")  # TODO replace comment with this
         ax.cla()  # clear any previous plot
 
         # make sure the legend list is correct
