@@ -53,10 +53,7 @@ def error(s, tb=True):
         for x in mainwindow.MainUI.windows:
             x.logText.append(m)
         application.beep()
-    logger.critical(f"ERROR {s}")
-    if tb:
-        traceback.print_stack()
-
+    logger.critical(f"ERROR {s}", exc_info=True, stack_info=True)
     msg("ERROR: {}".format(s))
 
 
@@ -74,7 +71,6 @@ def logXFormException(node, e):
     error(f"Exception in {node.name}-{node.type.name}: {e}")
     if app() is not None:
         log(f'<font color="red">Exception in <b>{node.name}:{node.type.name}</b>: </font> {e}')
-        print(traceback.format_exc())
 
 
 # called when a graph saved with a different version of a node is loaded

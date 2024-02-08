@@ -50,7 +50,7 @@ class External:
         """Deserialise from a tuple"""
         t, data = tup
 
-        if t == 'str':
+        if t == 'external':  # this is a string external, really two strings.
             e = StringExternal(data[0], data[1])
         elif t == 'pds4':
             from pcot.dataformats.pds4 import PDS4External
@@ -219,28 +219,13 @@ class Source(SourcesObtainable):
     @staticmethod
     def deserialise(d: Dict[str, Any]):
         """Deserialise from a dictionary"""
+        import pcot.ui as ui
         if isinstance(d, List):
             # legacy format
-            s = Source()
-            if d[0] == 'inputsource':
-                d = d[1]
-                filtorname = d['filtorname']
-                if filtorname[0] == 'filter':
-                    s.setBand(Filter.deserialise(filtorname[1]))
-                elif filtorname[0] == 'name':
-                    s.setBand(filtorname[1])
-                s.setInputIdx(d['inputidx'])
-                if 'pds4' in d:
-                    from pcot.dataformats.pds4 import PDS4Product, PDS4External
-                    e = PDS4External(PDS4Product.deserialise(d['pds4']))
-                else:
-                    e = StringExternal('unknown', 'unknown')
-            elif d[0] == 'filtersource':
-                s.setBand(Filter.deserialise(d[1]))
-            elif d[1] != 'nullsource':
-                raise Exception('Unknown source type in legacy format')
-            return s
-        b = Filter.deserialise(d['band']) if isinstance(d['band'], dict) else d['band']
+            ui.log("Legacy format for sources not supported - please Run All to regenerate")
+            return Source().setExternal(StringExternal("ERROR", "Legacy format for sources not supported"))
+
+        b = Filter.deserialise(d['band']) if isinstance(d['band'], list) else d['band']
         e = External.deserialise(d['external']) if d['external'] else None
         i = d['inputIdx']
         return Source().setBand(b).setExternal(e).setInputIdx(i)

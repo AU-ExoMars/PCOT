@@ -29,7 +29,7 @@ class RGBInputMethod(InputMethod):
         logger.info("RGB PERFORMING FILE READ")
 
         # might seem a bit wasteful having three of them, but seems more logical to me.
-        e = StringExternal("RGBFile", self.fname)
+        e = StringExternal("RGB", self.fname)
         sources = MultiBandSource([
             Source().setBand("R").setExternal(e).setInputIdx(self.input.idx),
             Source().setBand("G").setExternal(e).setInputIdx(self.input.idx),

@@ -44,12 +44,12 @@ class Filter:
     @classmethod
     def deserialise(cls, d):
         if isinstance(d, str):  # snark
-            ui.error("Oops - old style file contains filter name, not filter data. Using dummy, please reload input.")
+            ui.error("Oops - old style file contains filter name, not filter data. Using dummy, please 'Run All'.")
             return Filter(2000, 1.0, 1.0, "dummypos", "dummyname", 0)
         try:
             cwl, fwhm, trans, pos, name = d
         except ValueError:
-            ui.error("Oops - old style file wrong number of filter data. Using dummy, please reload input.")
+            ui.error("Oops - old style file wrong number of filter data. Using dummy, please 'Run All'.")
             return Filter(2000, 1.0, 1.0, "dummypos", "dummyname", 0)
 
         cwl, fwhm, trans, pos, name = d
