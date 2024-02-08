@@ -26,14 +26,14 @@ class ENVIInputMethod(InputMethod):
         self.mapping = ChannelMapping()
 
     def loadImg(self):
-        logger.info("PERFORMING FILE READ")
+        logger.debug("PERFORMING FILE READ")
         img = envi.load(self.fname, self.mapping)
         # set the input index for all the sources - this relies on the SourceSet returned
         # from getSources() not copying the originals.
         if self.input is not None:
             for s in img.getSources():
                 s.setInputIdx(self.input.idx)
-        logger.info(f"Image {self.fname} loaded: {img}, mapping is {self.mapping}")
+        logger.debug(f"Image {self.fname} loaded: {img}, mapping is {self.mapping}")
         self.img = img
 
     def readData(self):

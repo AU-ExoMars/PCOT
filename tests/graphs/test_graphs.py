@@ -6,7 +6,6 @@ contains MUSTFAIL then there must be at least one failure (this is to test the t
 import inspect
 import logging
 import os
-from os import getcwd
 
 import pytest
 

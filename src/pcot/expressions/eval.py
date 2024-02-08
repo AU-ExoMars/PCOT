@@ -2,6 +2,7 @@
 
 Anything in here should be specific to PCOT itself, and all data should be as Datum objects.
 """
+import logging
 
 import pcot.config
 import pcot.operations as operations
@@ -11,6 +12,7 @@ from .parse import Parser, execute
 
 # TODO: keep expression guide in help updated
 
+logger = logging.getLogger(__name__)
 
 @parserhook
 def registerBuiltinOperatorSyntax(p):
@@ -44,7 +46,7 @@ class ExpressionEvaluator(Parser):
         operations.registerOpFunctionsAndProperties(self)
 
         # generally used for user plugins.
-        print("Registering function plugins")
+        logger.debug("Registering function plugins")
         for x in pcot.config.exprFuncHooks:
             #  print(f"Calling   {x}")
             x(self)
