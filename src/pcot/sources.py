@@ -37,6 +37,10 @@ class External:
         """Get a longer description of where the data comes from"""
         pass
 
+    def debug(self):
+        """Get a debug string, for testing"""
+        pass
+
     def serialise(self):
         """Serialise to a tuple including the type"""
         pass
@@ -72,6 +76,10 @@ class StringExternal(External):
 
     def long(self):
         return self._long
+
+    def debug(self):
+        """Get a debug string, for testing - it's OK for this to just be the brief string"""
+        return self._brief
 
     def serialise(self):
         return 'external', (self._brief, self._long)
@@ -157,6 +165,18 @@ class Source(SourcesObtainable):
     def getFilter(self):
         """check that a the source is an image with a filter, and return the filter if so. Otherwise return None"""
         return self.band if isinstance(self.band, Filter) else None
+
+    def debug(self):
+        """Return a string for debugging and tests - we don't use brief() here, because it's possible that brief()
+        could change a lot and we don't want to have to update all tests when it does."""
+
+        inpidx = str(self.inputIdx) if self.inputIdx is not None else "NI"
+        ext = self.external.debug() if self.external else "NE"
+        band = self.band.getCaption(DocumentSettings.CAP_CWL) if isinstance(self.band, Filter) else self.band
+        if band is None:
+            band = "NB"
+
+        return ",".join([inpidx, ext, band])
 
     def brief(self, captionType=DocumentSettings.CAP_DEFAULT) -> Optional[str]:
         """Return a brief string to be used in captions, etc. If null, is filtered out"""
@@ -281,6 +301,11 @@ class SourceSet(SourcesObtainable):
         """external (user-facing) text description, skips null sources"""
         x = [x.brief(captionType) for x in self.sourceSet]
         return "&".join(sorted([s for s in x if s]))
+
+    def debug(self):
+        """debugging text description"""
+        x = [x.debug() for x in self.sourceSet]
+        return " & ".join(sorted([s for s in x if s]))
 
     def long(self):
         x = [x.long() for x in self.sourceSet]
@@ -409,6 +434,11 @@ class MultiBandSource(SourcesObtainable):
         """Brief text description - note, may not be used for captions."""
         out = [s.brief() for s in self.sourceSets]
         return "|".join(out)
+
+    def debug(self):
+        """Debug text description"""
+        out = [s.debug() for s in self.sourceSets]
+        return " | ".join(out)
 
     def long(self):
         txts = [f"{i}: {s.long()}" for i, s in enumerate(self.sourceSets)]

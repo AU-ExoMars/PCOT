@@ -29,30 +29,36 @@ sourceset1withnulls = SourceSet([s1, s2, s3, nullSource])
 sourcesetunion = SourceSet([sourceset1, sourceset2])
 
 
-def test_sourcesetctors():
-    """Make sure that the different valid forms of SourceSet constructor arguments work"""
+def test_sourcesetctor():
+    """Construct source set from single item"""
     ss = SourceSet(s1)
     assert len(ss.sourceSet) == 1
     assert s1 in ss.sourceSet
-    assert ss.brief() == "0:one"
+    assert ss.debug() == "0,one,NB"
 
-    ss = SourceSet([s1])
+
+def test_sourcesetctorfromsingletonlist():
+    """Construct source set from list with single item"""
+    ss = SourceSet([s2])
     assert len(ss.sourceSet) == 1
-    assert s1 in ss.sourceSet
-    assert ss.brief() == "0:one"
+    assert s2 in ss.sourceSet
+    assert ss.debug() == "1,two,NB"
 
+
+def test_sourcesetctorfromlist():
+    """Construct source set from list with two items"""
     ss = SourceSet([s1, s2])
     assert len(ss.sourceSet) == 2
     assert s1 in ss.sourceSet
     assert s2 in ss.sourceSet
-    assert ss.brief() == "0:one&1:two"
+    assert ss.debug() == "0,one,NB & 1,two,NB"
 
     ss = SourceSet([s1, SourceSet(s2)])
     assert len(ss.sourceSet) == 2
     assert s1 in ss.sourceSet
     assert s2 in ss.sourceSet
     assert s3 not in ss.sourceSet
-    assert ss.brief() == "0:one&1:two"
+    assert ss.debug() == "0,one,NB & 1,two,NB"
 
 
 def test_getonlyitem():
@@ -110,7 +116,7 @@ def test_sourcesetunion():
         s.setInputIdx(None)
 
     assert len(scopy.sourceSet) == 5
-    assert scopy.brief() == "five&four&one&three&two"  # alphabetical
+    assert scopy.debug() == "NI,five,NB & NI,four,NB & NI,one,NB & NI,three,NB & NI,two,NB"  # alphabetical
 
     # make sure the copy worked; that we're not working with the original sources
     assert s1 in sourcesetunion.sourceSet
@@ -118,7 +124,8 @@ def test_sourcesetunion():
     assert s3 in sourcesetunion.sourceSet
     assert s4 in sourcesetunion.sourceSet
     assert s5 in sourcesetunion.sourceSet
-    assert sourcesetunion.brief() == "0:one&1:two&2:three&3:four&4:five"
+    # ordered better now because numeric indices are there
+    assert sourcesetunion.debug() == "0,one,NB & 1,two,NB & 2,three,NB & 3,four,NB & 4,five,NB"
 
 
 def test_sourcesetbrief():

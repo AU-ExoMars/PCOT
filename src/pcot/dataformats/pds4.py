@@ -45,6 +45,10 @@ class PDS4External(External):
     def brief(self):
         return "PDS4"
 
+    def debug(self):
+        """Return a string for debugging - just an abbreviated LID"""
+        return f"pds4({self.product.lid[:20]})"
+
     def serialise(self):
         return 'pds4', self.product.serialise()
 

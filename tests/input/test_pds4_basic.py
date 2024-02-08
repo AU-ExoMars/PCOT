@@ -105,5 +105,5 @@ def test_pds4_load():
         assert isinstance(s.external, PDS4External)
         p = s.external.product
         assert p.lid == lid
-        assert s.brief() == f'0:PDS4:{cwl}'
+        assert s.debug() == f'0,pds4({lid[:20]}),{cwl}'
         # I'm not testing the long form of the descriptor, because it's too long probably subject to change.
