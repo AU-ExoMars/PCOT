@@ -2,8 +2,7 @@
 import logging
 from typing import Optional
 
-import pcot.dataformats.envi as envi
-import pcot.ui as ui
+from pcot.dataformats import load
 from pcot.datum import Datum
 from pcot.inputs.inputmethod import InputMethod
 from pcot.imagecube import ImageCube, ChannelMapping
@@ -15,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class ENVIInputMethod(InputMethod):
-    img: Optional[ImageCube]
+    img: Optional[Datum]
     fname: Optional[str]
     mapping: ChannelMapping
 
@@ -27,19 +26,13 @@ class ENVIInputMethod(InputMethod):
 
     def loadImg(self):
         logger.debug("PERFORMING FILE READ")
-        img = envi.load(self.fname, self.mapping)
-        # set the input index for all the sources - this relies on the SourceSet returned
-        # from getSources() not copying the originals.
-        if self.input is not None:
-            for s in img.getSources():
-                s.setInputIdx(self.input.idx)
-        logger.debug(f"Image {self.fname} loaded: {img}, mapping is {self.mapping}")
-        self.img = img
+        self.img = load.envi(self.fname, self.input.idx if self.input else None, self.mapping)
+        logger.debug(f"Image {self.fname} loaded: {self.img}, mapping is {self.mapping}")
 
     def readData(self):
         if self.img is None and self.fname is not None:
             self.loadImg()
-        return Datum(Datum.IMG, self.img)
+        return self.img
 
     def getName(self):
         return "ENVI"
@@ -56,14 +49,14 @@ class ENVIInputMethod(InputMethod):
     def serialise(self, internal):
         x = {'fname': self.fname}
         if internal:
-            x['image'] = self.img
+            x['image'] = self.img.get(Datum.IMG) if self.img is not None else None
         Canvas.serialise(self, x)
         return x
 
     def deserialise(self, data, internal):
         self.fname = data['fname']
         if internal:
-            self.img = data['image']
+            self.img = ImageCube(data['image']) if data['image'] is not None else None
         else:
             self.img = None   # ensure image is reloaded
         Canvas.deserialise(self, data)

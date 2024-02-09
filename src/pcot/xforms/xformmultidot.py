@@ -90,27 +90,6 @@ class XFormMultiDot(XFormType):
         node.selected = None  # selected ROICircle
         node.rois = []  # this will be a list of ROICircle
 
-    #    def uichange(self, n):
-    #        n.timesPerformed += 1
-    #        self.perform(n)
-
-    @staticmethod
-    def selectionHighlight(r, img):
-        """Add some kind of highlighting to image for the the selected ROI. This is done by
-        adding an annotation to the image, which is then drawn by the image viewer"""
-        if r:
-            if isinstance(r, ROICircle):
-                # here we add a circle around the selected ROI as an annotation
-                r = ROICircle(r.x, r.y, r.r * 1.3)
-                r.setContainingImageDimensions(img.w, img.h)
-            elif isinstance(r, ROIPainted):
-                # not sure what to do here - reproduce the painted ROI, dilate it and add it as an annotation?
-                # It will do for now
-                r = r.dilated(5)
-            if r is not None:
-                r.colour = r.colour
-                img.annotations = [r]
-
     def perform(self, node):
         img = node.getInput(self.IN_IMG, Datum.IMG)
 
@@ -129,9 +108,6 @@ class XFormMultiDot(XFormType):
             # copy image and append ROIs to it
             img = img.copy()
             img.rois += node.rois
-
-            if node.selected is not None:
-                self.selectionHighlight(node.selected, img)
 
             # set mapping from node
             img.setMapping(node.mapping)
@@ -174,6 +150,23 @@ class ModeWidget(VariantWidget):
         super().__init__("New ROIs created with", ['Circle', 'Fill'], w)
 
 
+def selectionHighlight(r, img):
+    """Add some kind of highlighting to image for the the selected ROI. This is done by
+    adding an annotation to the image, which is then drawn by the image viewer"""
+    if r:
+        if isinstance(r, ROICircle):
+            # here we add a circle around the selected ROI as an annotation
+            r = ROICircle(r.x, r.y, r.r * 1.3)
+            r.setContainingImageDimensions(img.w, img.h)
+        elif isinstance(r, ROIPainted):
+            # not sure what to do here - reproduce the painted ROI, dilate it and add it as an annotation?
+            # It will do for now
+            r = r.dilated(5)
+        if r is not None:
+            r.colour = r.colour
+            img.annotations = [r]
+
+
 class TabMultiDot(pcot.ui.tabs.Tab):
     # modes for creating ROIs, determined by the order of the pages in the stack widget
     CIRCLE = 0
@@ -212,6 +205,8 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.dragging = False
         self.dontSetText = False
         self.setPage(self.CIRCLE)
+        self.dragMouseOffset = None
+        self.ctrl = 0   # control key is not pressed; we store it for dragging
         # sync tab with node
         self.nodeChanged()
 
@@ -318,6 +313,10 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)
         self.w.canvas.setROINode(self.node)
+
+        if self.node.selected is not None:
+            selectionHighlight(self.node.selected, self.node.img)
+
         self.w.canvas.display(self.node.img)
 
         if self.node.selected:
@@ -363,14 +362,18 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         if node.selected is not None:
             node.selected.x = x
             node.selected.y = y
-            self.changed()
+            self.changed(uiOnly=True)
 
     def mouseDragPaintMode(self, x, y):
         """We are moving the mouse with the button down in paint mode. This paints a circle."""
         node = self.node
-        if node.selected is not None:
-            # todo - handle paint mode drag
-            ui.log("Not implemented")
+        if node.selected is not None and isinstance(node.selected, ROIPainted):
+            if self.ctrl:
+                node.selected.setCircle(x, y, node.dotSize)
+            else:
+                offsetX, offsetY = self.dragMouseOffset
+                node.selected.moveBBTo(x - offsetX, y - offsetY)
+            self.changed(uiOnly=True)
 
     def canvasMouseMoveEvent(self, x, y, e):
         """Mouse move handler. We use this differently depending on whether we are in circle or painted mode.
@@ -420,8 +423,10 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         """Mouse button has gone down"""
         node = self.node
         alt = e.modifiers() & Qt.AltModifier
-        ctrl = e.modifiers() & Qt.ControlModifier
         shift = e.modifiers() & Qt.ShiftModifier
+
+        # we store the state of the control key so we can use it in dragging
+        self.ctrl = e.modifiers() & Qt.ControlModifier
 
         if shift:
             # shift key is down, so we are going to create a new ROI. What kind of ROI depends on
@@ -442,12 +447,14 @@ class TabMultiDot(pcot.ui.tabs.Tab):
                 else:
                     self.fill(node, x, y)
             self.changed()
-        elif ctrl:
+        elif self.ctrl:
             # control key down - we add to the selected ROI, but it has to be the right kind of ROI
             # and we have to be on the painted page.
             if self.getPage() == self.PAINTED and isinstance(node.selected, ROIPainted):
                 r = node.selected
                 if node.createMode == ModeWidget.CIRCLE:
+                    # If we've ctrl-clicked and we're in circle mode for painted ROI, we start dragging
+                    self.dragging = True
                     r.setCircle(x, y, node.dotSize)
                 else:
                     self.fill(node, x, y)
@@ -464,14 +471,19 @@ class TabMultiDot(pcot.ui.tabs.Tab):
             r = self.findROI(x, y)
             if r is not None:
                 node.selected = r
-                # if we selected a circle, set the dragging flag and go into the circle page
+                self.dragging = True
+                # change the page depending on the type of ROI we have selected
                 if isinstance(r, ROICircle):
-                    self.dragging = True
                     self.setPage(self.CIRCLE)
                 else:
                     self.setPage(self.PAINTED)  # otherwise go into the painted page
 
         self.updateSelected()  # doesn't matter if this gets called even when we haven't changed selection
+
+        if node.selected is not None and isinstance(node.selected, ROIPainted):
+            # if we have a painted ROI selected, we store the coordinates of the mouse relative to the ROI
+            self.dragMouseOffset = x - node.selected.bb().x, y - node.selected.bb().y
+
         self.w.canvas.update()
 
     def canvasKeyPressEvent(self, e: QKeyEvent):
@@ -489,4 +501,5 @@ class TabMultiDot(pcot.ui.tabs.Tab):
 
     def canvasMouseReleaseEvent(self, x, y, e):
         self.dragging = False
+        self.ctrl = False
         self.changed()

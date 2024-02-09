@@ -69,7 +69,7 @@ class ROI(SourcesObtainable, Annotation):
 
         self.bbrect = bbrect
         self.maskimg = maskimg
-        self.internalIdx = ROI.count    # debugging
+        self.internalIdx = ROI.count  # debugging
         ROI.count += 1
 
         self.isTemp = isTemp  # for temporary ROIs created by expressions
@@ -684,6 +684,7 @@ class ROIPainted(ROI):
             self.drawEdge = sourceROI.drawEdge
             self.map = sourceROI.map  # NOTE: not a copy!
             self.bbrect = Rect.copy(sourceROI.bbrect)
+            self.containingImageDimensions = sourceROI.containingImageDimensions
         self.r = 10  # default "circle size" for painting; used in multidot editor
 
     def clear(self):
@@ -779,6 +780,16 @@ class ROIPainted(ROI):
         r.bbrect.x -= x
         r.bbrect.y -= y
         return r
+
+    def moveBBTo(self, x, y):
+        """move the bounding box to a new position, returning True if the move was OK"""
+        imgw, imgh = self.containingImageDimensions
+        if x >= 0 and y >= 0 and x+self.bbrect.w < imgw and y+self.bbrect.w < imgh:
+            self.bbrect.x = x
+            self.bbrect.y = y
+            return True
+        else:
+            return False
 
     def dilated(self, n=1):
         """return a new ROI with the mask dilated by N pixels"""

@@ -330,7 +330,7 @@ class MultifileMethodWidget(MethodWidget):
             ll = s.split()
             if len(ll) > 0:
                 self.method.mult = float(ll[0])
-                self.onInputChanged()  # TODO was self.changed
+                self.onInputChanged()
         except (ValueError, OverflowError):
             raise Exception("CTRL", "Bad mult string in 'multifile': " + s)
 
@@ -386,4 +386,4 @@ class MultifileMethodWidget(MethodWidget):
             item = self.model.item(i)
             if item.checkState() == Qt.Checked:
                 self.method.files.append(item.text())
-        self.onInputChanged()  # TODO was self.changed
+        self.onInputChanged()

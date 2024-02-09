@@ -53,7 +53,7 @@ class XformPCT(XFormType):
         super().__init__("pct", "calibration", "0.0.0")
         self.addInputConnector("img", Datum.IMG)
         self.autoserialise = ('brushSize', 'pctPoints', 'drawMode')
-        # TODO output!
+        # No output as yet.
 
     def createTab(self, n, w):
         pcot.ui.msg("creating a tab with a plot widget takes time...")

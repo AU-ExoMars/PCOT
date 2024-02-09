@@ -90,7 +90,7 @@ class TabHistogram(Tab):
         # set up the plot
         self.w.bins.setValue(self.node.bincount)
         if self.node.hists is not None:
-            self.w.mpl.fig.suptitle("TODO")     # TODO replace comment with this
+            # self.w.mpl.fig.suptitle("TODO")  # TODO? Do we need a title?
             self.w.mpl.ax.cla()  # clear any previous plot
             cols = cm.get_cmap('Dark2').colors
             colct = 0
