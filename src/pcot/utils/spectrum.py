@@ -115,7 +115,7 @@ class Spectrum:
         # and a list of those filters.
         self.filters = [img.filter(x) for x in range(img.channels)]
         chans = [x for x in range(img.channels) if self.filters[x] is not None]
-        if len(self.filters) == 0:
+        if len(chans) == 0:
             raise XFormException("DATA", "no single-wavelength channels in image")
 
         # create a set of sources

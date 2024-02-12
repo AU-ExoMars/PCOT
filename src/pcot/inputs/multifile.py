@@ -3,9 +3,10 @@
 import logging
 import os
 import re
-from typing import Tuple
+from typing import Tuple, Optional, Union
 
 import PySide2
+import numpy as np
 from PySide2 import QtWidgets, QtGui
 from PySide2.QtCore import Qt
 
@@ -15,6 +16,7 @@ from pcot.imagecube import ChannelMapping, ImageCube
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
 from .. import ui
+from ..dataformats import load
 from ..datum import Datum
 from ..filters import getFilterSetNames, getFilter
 from ..sources import Source, MultiBandSource, StringExternal
@@ -29,19 +31,11 @@ class MultifileInputMethod(InputMethod):
     This turns a set of files into a single image. It pulls data out of the filename which it uses to lookup
     into a set of filter objects.
 
-    How this works:
-
-        * filterset determines the name of the filter set to use (typically PANCAM or AUPE but more can be added)
-        * filterpat determines how the name is used to look up a filter in the set. It's a
-          regex (regular expression).
-            * If the filterpat contains ?P<lens> and ?P<n>, then lens+n is used to look up the filter by position.
-              For example lens=L and n=01 would look up L01 in the filter position
-            * Otherwise if the filterpat contains ?<name>, then name is used to look up the filter by name.
-            * Otherwise if the filterpat contains ?<cwl>, then cwl is used to look up the filter's wavelength.
-
-        If none of this works a dummy filter is returned.
+    For details of how this works, see the documentation for the
+    pcot.dataformats.load.multifile function.
 
     """
+
     def __init__(self, inp):
         super().__init__(inp)
         # list of filter strings - strings which must be in any filenames
@@ -58,31 +52,12 @@ class MultifileInputMethod(InputMethod):
         self.defaultLens = "L"
         self.filterpat = r'.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*'
         self.filterre = None
-        # dict of files we currently have, fullpath -> imagecube
+
+        # this is a cache used by the loader to avoid reloading files. It's a dictionary of filename
+        # to data and file date.
         self.cachedFiles = {}
 
         self.mapping = ChannelMapping()
-
-    def getFilterSearchParam(self, path) -> Tuple[str,str]:
-        """Returns the thing to search for to match a filter to a path and the type of the search"""
-        if self.filterre is None:
-            return None, None
-        else:
-            m = self.filterre.match(path)
-            if m is None:
-                return None, None
-            m = m.groupdict()
-            if '<lens>' in self.filterpat:
-                if '<n>' not in self.filterpat:
-                    raise Exception(f"A filter with <lens> must also have <n>")
-                # lens is either left or right
-                lens = m.get('lens', '')
-                n = m.get('n', '')
-                return lens + n, 'pos'
-            elif '<name>' in self.filterpat:
-                return m.get('name', ''), 'name'
-            elif '<cwl>' in self.filterpat:
-                return int(m.get('cwl', '0')), 'cwl'
 
     def compileRegex(self):
         # compile the regexp that gets the filter ID out.
@@ -94,66 +69,15 @@ class MultifileInputMethod(InputMethod):
             logger.error("Cannot compile RE!!!!")
 
     def readData(self):
-        self.compileRegex()
+        # we force the mapping to have to be "reguessed"
+        self.mapping.red = -1
 
-        doc = self.input.mgr.doc
-        inpidx = self.input.idx
-
-        sources = []  # array of source sets for each image
-        imgs = []  # array of actual images (greyscale, numpy)
-        newCachedFiles = {}  # will replace the old cache data
-        # perform takes all the images in the outputs and bundles them into a single image.
-        # They all have to be the same size, and they're all converted to greyscale.
-        for i in range(len(self.files)):
-            if self.files[i] is not None:
-                # we use the relative path here, it's more right that using the absolute path
-                # most of the time.
-                # CORRECTION: but it doesn't work if no relative paths exists (e.g. different drives)
-                try:
-                    path = os.path.relpath(os.path.join(self.dir, self.files[i]))
-                except ValueError:
-                    path = os.path.abspath(os.path.join(self.dir, self.files[i]))
-
-                # Now read the file - we do this before building source data because any exceptions raised
-                # here are more important.
-                #
-                # is it in the cache?
-                if path in self.cachedFiles:
-                    logger.debug("IMAGE IN MULTIFILE CACHE: NOT PERFORMING FILE READ")
-                    img = self.cachedFiles[path]
-                else:
-                    logger.debug("IMAGE NOT IN MULTIFILE CACHE: PERFORMING FILE READ")
-                    # use image cube loader even though we're just going to use the numpy image - just easier.
-                    img = ImageCube.load(path, None, None)  # always RGB at this point
-                    # aaaand this pretty much always happens, because load always
-                    # loads as BGR.
-                    if img.channels != 1:
-                        c = image.imgsplit(img.img)[0]  # just use channel 0
-                        img = ImageCube(c, None, None)
-
-                # build sources data - this will use the filter, which we'll extract from the filename.
-                filtpos, searchtype = self.getFilterSearchParam(path)
-                filt = getFilter(self.filterset, filtpos, searchtype)
-                ext = StringExternal("Multi", os.path.abspath(path))
-                source = Source().setBand(filt).setInputIdx(inpidx).setExternal(ext)
-
-                # store in cache
-                newCachedFiles[path] = img
-                imgs.append(img.img)  # store numpy image
-                sources.append(source)
-
-        # replace the old cache dict with the new one we have built
-        self.cachedFiles = newCachedFiles
-        # assemble the images
-        if len(imgs) > 0:
-            if len(set([x.shape for x in imgs])) != 1:
-                raise Exception("all images must be the same size in a multifile")
-            img = image.imgmerge(imgs)
-            self.mapping.red = -1  # force repeat of "guessing" of RGB mapping
-            img = ImageCube(img * self.mult, self.mapping, MultiBandSource(sources))
-        else:
-            img = None
-        return Datum(Datum.IMG, img)
+        return load.multifile(self.dir, self.files, self.filterpat,
+                              mult=np.float32(self.mult),
+                              inpidx=self.input.idx,
+                              mapping=self.mapping,
+                              cache=self.cachedFiles,
+                              filterset=self.filterset)
 
     def getName(self):
         return "Multifile"
@@ -245,7 +169,7 @@ class MultifileMethodWidget(MethodWidget):
 
         self.filtSetCombo.addItems(getFilterSetNames())
 
-        if self.method.dir is None or len(self.method.dir)==0:
+        if self.method.dir is None or len(self.method.dir) == 0:
             self.method.dir = pcot.config.getDefaultDir('images')
         self.onInputChanged()
 
@@ -335,7 +259,7 @@ class MultifileMethodWidget(MethodWidget):
             raise Exception("CTRL", "Bad mult string in 'multifile': " + s)
 
     def defaultLensChanged(self, s):
-        self.method.defaultLens = s[0] # just first character
+        self.method.defaultLens = s[0]  # just first character
 
     def buildModel(self):
         # build the model that the list view uses

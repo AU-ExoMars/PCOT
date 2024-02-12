@@ -272,6 +272,33 @@ class ChannelMapping:
         return "ChannelMapping-{} r{} g{} b{}".format(id(self), self.red, self.green, self.blue)
 
 
+def load_rgb_image(fname) -> np.ndarray:
+    """This is used by ImageCube to load its image data. It's a function because it's
+    also used by the multifile loader."""
+    fname = str(fname)  # fname could potentially be some kind of Path object.
+    # imread with this argument will load any depth, any
+    # number of channels
+    img = cv.imread(fname, -1)
+    if img is None:
+        raise Exception(f'Cannot read file {fname}')
+    if len(img.shape) == 2:  # expand to RGB. Annoyingly we cut it down later sometimes.
+        img = image.imgmerge((img, img, img))
+    # get the scaling factor
+    if img.dtype == np.uint8:
+        scale = 255.0
+    elif img.dtype == np.uint16:
+        scale = 65535.0
+    else:
+        scale = 1.0
+    # convert from BGR to RGB (OpenCV is weird)
+    img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+    # convert to floats (32 bit)
+    img = img.astype(np.float32)
+    # scale to 0..1
+    img /= scale
+    return img
+
+
 class ImageCube(SourcesObtainable):
     """
     an image - just a numpy array (the image) and a list of ROI objects. The array
@@ -419,28 +446,8 @@ class ImageCube(SourcesObtainable):
     # Always builds an RGB image. Sources must be provided.
     @classmethod
     def load(cls, fname, mapping, sources):
-        fname = str(fname)  # fname could potentially be some kind of Path object.
         logger.info(f"ImageCube load: {fname}")
-        # imread with this argument will load any depth, any
-        # number of channels
-        img = cv.imread(fname, -1)
-        if img is None:
-            raise Exception(f'Cannot read file {fname}')
-        if len(img.shape) == 2:  # expand to RGB. Annoyingly we cut it down later sometimes.
-            img = image.imgmerge((img, img, img))
-        # get the scaling factor
-        if img.dtype == np.uint8:
-            scale = 255.0
-        elif img.dtype == np.uint16:
-            scale = 65535.0
-        else:
-            scale = 1.0
-        # convert from BGR to RGB (OpenCV is weird)
-        img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-        # convert to floats (32 bit)
-        img = img.astype(np.float32)
-        # scale to 0..1 
-        img /= scale
+        img = load_rgb_image(fname)
         # create sources if none given
         if sources is None:
             sources = MultiBandSource([Source().setBand('R'),

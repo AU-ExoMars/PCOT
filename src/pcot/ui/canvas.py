@@ -742,6 +742,7 @@ class Canvas(QtWidgets.QWidget):
         self.resetMapButton.clicked.connect(self.resetMapButtonClicked)
 
         self.hideablebuttons.setLayout(hideable)  # add layout to widget
+        self.blueChanCombo.setMinimumWidth(100)
         hideableLayout = QtWidgets.QVBoxLayout()  # make a single-widget layout
         hideableLayout.setContentsMargins(0, 0, 0, 0)
         hideableLayout.addWidget(self.hideablebuttons)  # add the widget to it

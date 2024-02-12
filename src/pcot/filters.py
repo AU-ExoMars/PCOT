@@ -7,8 +7,12 @@ import numpy as np
 
 from pcot import ui
 from pcot.documentsettings import DocumentSettings
+import logging
 
 """This file deals with the physical multispectral filters"""
+
+
+logger = logging.getLogger(__name__)
 
 
 class Filter:
@@ -135,7 +139,10 @@ def wav2RGB(wavelength, scale=1.0):
 
     return [(SSS * R), (SSS * G), (SSS * B)]
 
+
 _filterSets = {}
+logger.critical(f"Filters cleared")
+
 
 def loadFilterSet(name: str, path: Path):
     """Load a filter set from a file and store in the internal dict"""
@@ -158,6 +165,7 @@ def loadFilterSet(name: str, path: Path):
             filters.append(f)
     # and store that in a dictionary of filter set name -> filter list
     _filterSets[name] = filters
+    logger.critical(f"Loaded filter set {name} from {path}")
 
 
 def saveFilters(path: str, filters: List[Filter]):
