@@ -56,7 +56,7 @@ def globaldatadir(tmp_path, request):
         if parents[i].name == 'tests' and (parents[i] / 'data').exists():
             xx = parents[i] / 'data'
             return xx
-    raise FileNotFoundError(f"cannot find tests/data in parents of test directory {path}")
+    raise Exception(f"cannot find tests/data in parents of test directory {path}")
 
 
 @pytest.fixture

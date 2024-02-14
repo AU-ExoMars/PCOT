@@ -113,10 +113,6 @@ class PDS4InputMethod(InputMethod):
         self.products = []
         self.lidToLabel = {}  # clear the lid->label, we're about to reload all labels (or try to)
 
-        # remove all label data from existing products
-        for p in self.products:
-            p.label = None
-
         for dat in products:
             m = dat.meta
             start = parser.isoparse(m.start)

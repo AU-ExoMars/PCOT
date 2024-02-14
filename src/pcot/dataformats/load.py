@@ -1,15 +1,22 @@
+import errno
 import os
 from typing import List, Tuple, Optional, Union, Dict
 
 import numpy as np
+import logging
+from dateutil import parser
+from proctools.products import DataProduct
 
 from pcot import ui
+from pcot.dataformats.pds4 import PDS4Product, PDS4ImageProduct
 from pcot.datum import Datum
-from pcot.filters import getFilter
+from pcot.filters import getFilter, Filter
 from pcot.imagecube import ChannelMapping, ImageCube, load_rgb_image
 from pcot.sources import StringExternal, MultiBandSource, Source
 
 from pcot.utils import image
+
+logger = logging.getLogger(__name__)
 
 
 def rgb(fname: str, inpidx: int = None, mapping: ChannelMapping = None) -> Datum:
@@ -131,11 +138,11 @@ def multifile(directory: str, fnames: List[str],
     try:
         filterre = re.compile(filterpat)
     except re.error as e:
-        raise Exception(f"Bad regular expression {filterpat}: {e}")
+        logger.error(f"Error in filter pattern: {e}")
+        filterre = None
 
     sources = []  # array of source sets for each image
     imgs = []  # array of actual images (greyscale, numpy)
-    newCachedFiles = {}  # will replace the old cache data
 
     # load each image - they must all be the same size and will be converted
     # to greyscale
@@ -152,7 +159,7 @@ def multifile(directory: str, fnames: List[str],
                 path = os.path.abspath(os.path.join(directory, fname))
 
             if not os.path.exists(path):
-                raise FileNotFoundError(f"File not found: {path}")
+                raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
 
             if cache is None:
                 img = load_rgb_image(path)
@@ -195,3 +202,55 @@ def multifile(directory: str, fnames: List[str],
         img = None
 
     return Datum(Datum.IMG, img)
+
+
+def pds4(inputlist: List[DataProduct]):
+    """Load a set of PDS4 data products. If they are all images, they will be combined into an image cube.
+    They must be the same size. Other data products are not yet supported."""
+
+    products: List[PDS4Product] = []
+
+    tp = None       # type of the objects found so far.
+    for dat in inputlist:
+        if type is None:
+            tp = dat.meta.type
+        elif tp != dat.meta.type:
+            raise Exception("All PDS4 data products must be of the same type")
+
+    # this stuff needs to be extracted into a factory function.
+
+    for dat in inputlist:
+        m = dat.meta
+        start = parser.isoparse(m.start)
+
+        logger.debug(f"Creating new product {m.lid}")
+        # only generate a new product object if we don't have it already
+        cwl = int(m.filter_cwl)
+        fwhm = int(m.filter_bw)
+        id = m.filter_id
+        sol = int(m.sol_id)
+        seq = int(m.seq_num)
+        ptu = float(m.rmc_ptu)
+        # use the index for the given sol, adding one to it.
+
+        # show_meta(m)
+
+        # construct a filter from that data
+        filt = Filter(cwl, fwhm, transmission=1.0, name=id, position=id)
+
+        # we fudge up the index after this loop, post sort.
+        prod = PDS4ImageProduct(m.lid, 0, start, sol, seq, filt, m.camera, ptu)
+        products.append(prod)
+
+    # we sort by camera, then freq, then bandwidth, then start
+    products.sort(key=lambda p: (p.camera, p.filt.cwl, p.filt.fwhm, p.start))
+
+    # products with the same sol should have different indices
+    # for positioning
+    solcounts = {}
+    for p in products:
+        idx = solcounts.get(p.sol_id, 0) + 1
+        solcounts[p.sol_id] = idx
+        p.idx = idx
+
+    # TODO convert to imagecube

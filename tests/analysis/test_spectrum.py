@@ -11,6 +11,7 @@ from pcot.rois import ROICircle, ROIRect, ROI
 from pcot.utils.spectrum import Spectrum, SpectrumSet, NameResolver
 from pcot.value import Value
 from pcot.xforms.xformgen import ChannelData
+from fixtures import globaldatadir
 
 
 def create_test_image1():
@@ -333,7 +334,7 @@ def test_spectrum_pooling():
     assert s.get(200).v.approxeq(Value(0.4730769230769231, 0.18040060614705503, 0))
 
 
-def test_spectrum_table():
+def test_spectrum_table(globaldatadir):
     """This test uses the graph for spectrum.pcot. It collects images with ROIs from the graph,
     constructs SpectrumSets directly, and compares the results (when converted to strings) with
     the expected results from the graph."""
@@ -341,7 +342,7 @@ def test_spectrum_table():
     pcot.setup()
 
     # we are reusing the graph here to generate the images and ROIs
-    doc = Document("graphs/spectrum.pcot")
+    doc = Document(globaldatadir / "../graphs/spectrum.pcot")
     doc.changed()  # force the graph to run
 
     # get the gen and multidot node outputs
