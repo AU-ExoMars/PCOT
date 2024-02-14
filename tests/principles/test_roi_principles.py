@@ -114,8 +114,6 @@ def test_roi_union_expr(allblack):
     setWhiteNode.expr = "clamp(a+4)"
     setWhiteNode.connect(0, importNode, 0)
 
-    doc.save("c:/users/jim/foo.pcot")
-
     doc.changed()
 
     img = setWhiteNode.getOutput(0, Datum.IMG)
