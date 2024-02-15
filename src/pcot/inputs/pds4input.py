@@ -4,31 +4,29 @@ from pathlib import Path
 from typing import Optional, List, Dict
 
 import numpy as np
-from PySide2.QtGui import QPen
-from dateutil import parser
+import proctools
 from PySide2 import QtWidgets
 from PySide2.QtCore import Qt
+from PySide2.QtGui import QPen
 from PySide2.QtWidgets import QMessageBox, QTableWidgetItem
+from dateutil import parser
 from proctools.products import ProductDepot, DataProduct
 
-from pcot import filters
+import pcot
+import pcot.dq
+import pcot.ui as ui
 from pcot.dataformats import pds4
 from pcot.dataformats.pds4 import PDS4ImageProduct, PDS4Product, PDS4External
 from pcot.datum import Datum
 from pcot.filters import Filter
-from pcot.ui import uiloader
-from pcot.ui.help import HelpWindow
-import proctools
-
-import pcot
-import pcot.ui as ui
-from pcot.sources import Source, MultiBandSource
-from pcot.inputs.inputmethod import InputMethod
 from pcot.imagecube import ImageCube, ChannelMapping
+from pcot.inputs.inputmethod import InputMethod
+from pcot.sources import Source, MultiBandSource
+from pcot.ui import uiloader
 from pcot.ui.canvas import Canvas
+from pcot.ui.help import HelpWindow
 from pcot.ui.inputs import MethodWidget
 from pcot.ui.linear import LinearSetEntity, entityMarkerInitSetup, entityMarkerPaintSetup, TickRenderer
-import pcot.dq
 
 logger = logging.getLogger(__name__)
 
