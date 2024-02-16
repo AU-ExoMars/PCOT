@@ -54,7 +54,7 @@ class External:
             e = StringExternal(data[0], data[1])
         elif t == 'pds4':
             from pcot.dataformats.pds4 import PDS4External
-            e = PDS4External(data)
+            e = PDS4External.deserialise(data)
         else:
             raise ValueError(f"Unknown external source type {t} in Source External deserialise")
         return e

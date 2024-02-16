@@ -233,8 +233,6 @@ def pds4(inputlist: List[DataProduct]):
         ptu = float(m.rmc_ptu)
         # use the index for the given sol, adding one to it.
 
-        # show_meta(m)
-
         # construct a filter from that data
         filt = Filter(cwl, fwhm, transmission=1.0, name=id, position=id)
 

@@ -430,6 +430,7 @@ class ImageCube(SourcesObtainable):
             dq = np.zeros(img.shape, dtype=np.uint16)
         if dq.dtype != np.uint16:
             raise Exception("DQ data is not 16-bit unsigned integers")
+        dq = cvt1channel(dq)
         if dq.shape != img.shape:
             raise Exception("DQ data is not same shape as image data")
 

@@ -1,7 +1,7 @@
 import dataclasses
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 from dateutil import parser
@@ -10,11 +10,24 @@ from proctools.products import DataProduct
 import pcot
 import pcot.dq
 
-from pcot import ui
 from pcot.datum import Datum
 from pcot.filters import Filter
 from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.sources import External, MultiBandSource, Source
+
+
+def show_meta_debug(m):
+    """Collect property values and print them but also keep in a dict for debug breakpointing"""
+    attrs = m._attrs
+    props = {}
+    for k in attrs:
+        try:
+            props[k] = getattr(m, k)
+        except AttributeError:
+            pass
+    for k, v in props.items():
+        print(k, v)
+
 
 
 class PDS4Product:
@@ -49,7 +62,7 @@ class PDS4Product:
             self.start = parser.isoparse(p.meta.start)
             self.p = p  # and store the original data product
             # record the full file path
-            self.path = p.path
+            self.path = str(p.path)
         else:
             self.lid = None
             self.sol_id = None
@@ -124,6 +137,7 @@ class PDS4External(External):
 
 
 class PDS4ImageProduct(PDS4Product):
+    """This is a PDS4 product which is an image. It has a few extra fields for the image data"""
     seq_num: Optional[int]
     camera: Optional[str]  # note - this is whether the camera is L or R, not PANCAM/AUPE.
     rmc_ptu: Optional[float]
@@ -183,76 +197,96 @@ def deserialiseProduct(d: Dict) -> PDS4Product:
         raise Exception(f"unknown product type: {tp}")
 
 
-class ProductList(list):
-    """A list of PDS4Products which can be converted into a Datum object. They must all have the same type."""
+class ProductList:
+    """A list of PDS4Products which can be converted into a Datum object. They must all have the same type. It can be
+    created from a list of DataProducts, in which case it will convert them into PDS4Products."""
 
-    def __init__(self, *args):
-        super().__init__(*args)
+    lst: List[PDS4Product]
+
+    def __init__(self, lst: List[Union[PDS4Product, DataProduct]]):
+        if len(lst) > 0:
+            tp0 = type(lst[0])
+            if not all([isinstance(x, tp0) for x in lst]):
+                raise ValueError("All items in ProductList must be of the same type (DataProduct or PDS4Product)")
+            if isinstance(lst[0], DataProduct):
+                lst = self._createPDS4ProductList(lst)
+            elif not isinstance(lst[0], PDS4Product):
+                raise ValueError(f"ProductList must be created from DataProducts or PDS4Products, not {type(lst[0])}")
+
+        # products with the same sol should have different indices
+        # for positioning
+        solcounts = {}
+        for p in lst:
+            idx = solcounts.get(p.sol_id, 0) + 1
+            solcounts[p.sol_id] = idx
+            p.idx = idx
+
+        self.lst = lst
+
+    @classmethod
+    def _createPDS4ProductList(cls, data: List[DataProduct]):
+        """Convert DataProducts into PDS4Products"""
+        out = []
+        for d in data:
+            if d.type == "spec-rad":
+                out.append(PDS4ImageProduct(d))
+            else:
+                raise ValueError(f"Can't create ProductList from DataProducts of type {d.type}")
+        # we sort by camera, then freq, then bandwidth, then start
+        out.sort(key=lambda p: (p.camera, p.filt.cwl, p.filt.fwhm, p.start))
+        return out
 
     def serialise(self) -> List:
         """Serialise the product list into a list"""
-        return [x.serialise() for x in self]
+        return [x.serialise() for x in self.lst]
 
-    @staticmethod
-    def deserialise(data: List) -> 'ProductList':
-        lst = ProductList()
-        for d in data:
-            lst.append(deserialiseProduct(d))
-        return lst
-
-    def append(self, item):
-        """Append an item to the list, ensuring the type is consistent."""
-        if len(self) > 0 and not isinstance(item, type(self[0])):
-            raise ValueError(f"Can't append {item} to list of {type(self[0])}")
-        super().append(item)
-
-    def insert(self, index, item):
-        """Insert an item into the list, ensuring the type is consistent."""
-        if len(self) > 0 and not isinstance(item, type(self[0])):
-            raise ValueError(f"Can't insert {item} into list of {type(self[0])}")
-        super().insert(index, item)
-
-    def extend(self, iterable):
-        """Extend the list with an iterable, ensuring the type is consistent."""
-        for item in iterable:
-            if len(self) > 0 and not isinstance(item, type(self[0])):
-                raise ValueError(f"Can't extend list of {type(self[0])} with {item}")
-        super().extend(iterable)
-
-    def __setitem__(self, key, value):
-        """Set an item in the list, ensuring the type is consistent."""
-        if len(self) > 0 and not isinstance(value, type(self[0])):
-            raise ValueError(f"Can't set list of {type(self[0])} with {value}")
-        super().__setitem__(key, value)
+    @classmethod
+    def deserialise(cls, data: List) -> 'ProductList':
+        lst = [deserialiseProduct(d) for d in data]
+        return cls(lst)
 
     def clear(self):
         """Remove all the loaded products"""
-        for p in self:
+        for p in self.lst:
             p.clear()  # clear the product
             p.load()  # reload the product, but the actual data won't be reloaded until it is accessed
 
     def toDatum(self,
-                mulValue: Optional[float] = 1,
+                multValue: Optional[float] = 1,
                 mapping: Optional[ChannelMapping] = None,
+                selection: Optional[List[int]] = None,
                 inpidx: Optional[int] = None
                 ) -> Datum:
-        """Convert the product list into a Datum object. The optional arguments control how this is done,
-        and depend on the type of the products."""
+        """Convert the product list into a Datum object. The selection argument is a list of indices into the product
+        list, which will be used to select only those products if present.
+        The other optional arguments control how this is done,
+        and depend on the type of the products.
+        """
 
-        if len(self) == 0:
-            raise ValueError("Can't convert empty product list to Datum")
+        selected = self.lst if selection is None else [self.lst[i] for i in selection]
+
+        if len(selected) == 0:
+            return Datum.null
+
         # force load of all underlying DataProducts (but not their data)
-        for p in self:
+        for p in selected:
             p.load()
-        # and do different things depending on the type of the products
-        tp = type(self[0])  # which will be all the same
+
+        # and do different things depending on the type of the selected products
+        # which should be all the same
+        tp = type(selected[0])
+        # check that they are all the same type
+        if not all([isinstance(x, tp) for x in selected]):
+            raise ValueError("All products in the selection must be of the same type")
+
         if tp == PDS4ImageProduct:
-            return self._toImageDatum(mulValue, mapping, inpidx)
+            return ProductList._toImageDatum(selected, multValue, mapping, inpidx)
         else:
             raise ValueError(f"Can't convert product list of type {tp} to Datum (yet)- TODO")
 
-    def _toImageDatum(self, mulValue, mapping, inpidx) -> Datum:
-        """Convert the product list into an image datum. Must be all image products,
+    @staticmethod
+    def _toImageDatum(selected: List[PDS4Product], multValue, mapping, inpidx) -> Datum:
+        """Convert the selected list into an image datum. Must be all image products,
         and the same size."""
 
         def getDQBits(data, uncertainty, dq):
@@ -265,11 +299,17 @@ class ProductList(list):
             return out.astype(np.uint16)
 
         # get the data from each product and combine it
-
         try:
-            imgdata = np.dstack([x.p.data for x in self]) * mulValue
-            uncertainty = np.dstack([x.p.err for x in self])
-            dq = np.dstack([getDQBits(x.p.data * mulValue, x.err, x.dq) for x in self])
+            # I'm converting to float32 here because I'm occasionally seeing errors in the ImageCube
+            # constructor when the data is '>f4', which apparently is a different type to float32.
+            def chk_float32(x):
+                if x.dtype == '>f4':
+                    return x.astype(np.float32)
+                return x
+
+            imgdata = chk_float32(np.dstack([x.p.data for x in selected]) * multValue)
+            uncertainty = chk_float32(np.dstack([x.p.err for x in selected]))
+            dq = np.dstack([getDQBits(x.p.data * multValue, x.p.err, x.p.dq) for x in selected])
         except ValueError as e:
             raise ValueError("Error in combining image products - are they all the same size?")
 
@@ -278,7 +318,7 @@ class ProductList(list):
                                   .setBand(p.filt)
                                   .setExternal(PDS4External(p))
                                   .setInputIdx(inpidx)
-                                   for p in self])
+                                   for p in selected])
 
         img = ImageCube(imgdata, rgbMapping=mapping, sources=sources,
                         uncertainty=uncertainty, dq=dq)
