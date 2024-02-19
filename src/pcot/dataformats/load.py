@@ -8,7 +8,7 @@ from dateutil import parser
 from proctools.products import DataProduct
 
 from pcot import ui
-from pcot.dataformats.pds4 import PDS4Product, PDS4ImageProduct
+from pcot.dataformats.pds4 import PDS4Product, PDS4ImageProduct, ProductList
 from pcot.datum import Datum
 from pcot.filters import getFilter, Filter
 from pcot.imagecube import ChannelMapping, ImageCube, load_rgb_image
@@ -204,51 +204,45 @@ def multifile(directory: str, fnames: List[str],
     return Datum(Datum.IMG, img)
 
 
-def pds4(inputlist: List[DataProduct]):
-    """Load a set of PDS4 data products. If they are all images, they will be combined into an image cube.
-    They must be the same size. Other data products are not yet supported."""
+def pds4(inputlist: Union[ProductList, List[Union[DataProduct, str]]],
+         multValue: Optional[float] = 1,
+         mapping: Optional[ChannelMapping] = None,
+         selection: Optional[List[int]] = None,
+         inpidx: Optional[int] = None
+         ) -> Datum:
+    """Load a set of PDS4 data products from
 
-    products: List[PDS4Product] = []
+    - a ProductList, or
+    - a list of DataProducts from proctools, or
+    - a list of strings which are the filenames of the PDS4 data product labels
 
-    tp = None       # type of the objects found so far.
-    for dat in inputlist:
-        if type is None:
-            tp = dat.meta.type
-        elif tp != dat.meta.type:
-            raise Exception("All PDS4 data products must be of the same type")
+    If they are all images, they will be combined into an image cube and returned as a Datum
+    They must be the same size.
 
-    # this stuff needs to be extracted into a factory function.
+    Other data products are not yet supported, but it is envisioned that they will also be combined into
+    a single Datum.
 
-    for dat in inputlist:
-        m = dat.meta
-        start = parser.isoparse(m.start)
+    Arguments:
 
-        logger.debug(f"Creating new product {m.lid}")
-        # only generate a new product object if we don't have it already
-        cwl = int(m.filter_cwl)
-        fwhm = int(m.filter_bw)
-        id = m.filter_id
-        sol = int(m.sol_id)
-        seq = int(m.seq_num)
-        ptu = float(m.rmc_ptu)
-        # use the index for the given sol, adding one to it.
+        - inputlist: The list of data products to load (either a ProductList or a list of DataProducts)
+        - multValue: The value to multiply the nominal and uncertainty data by (1 by default)
+        - mapping: The mapping to use for the image cube (none by default - the cube will create one)
+        - selection: Indices of items which should actually be used (all by default)
+        - inpidx: The input index to use for the data products (none by default)
+    """
 
-        # construct a filter from that data
-        filt = Filter(cwl, fwhm, transmission=1.0, name=id, position=id)
+    # NOTE:
+    # This is the only load method which isn't used by the corresponding InputMethod. As such, it's
+    # intended for use in scripts.
 
-        # we fudge up the index after this loop, post sort.
-        prod = PDS4ImageProduct(m.lid, 0, start, sol, seq, filt, m.camera, ptu)
-        products.append(prod)
+    # Determine the input type and convert it to a ProductList
+    if isinstance(inputlist, list):
+        if all([isinstance(x, DataProduct) for x in inputlist]):
+            inputlist = ProductList(inputlist)
+        elif all([isinstance(x, str) for x in inputlist]):
+            plist = [DataProduct.from_file(x) for x in inputlist]
+            inputlist = ProductList(plist)
+        else:
+            raise ValueError("All elements of the list must be DataProducts or strings")
 
-    # we sort by camera, then freq, then bandwidth, then start
-    products.sort(key=lambda p: (p.camera, p.filt.cwl, p.filt.fwhm, p.start))
-
-    # products with the same sol should have different indices
-    # for positioning
-    solcounts = {}
-    for p in products:
-        idx = solcounts.get(p.sol_id, 0) + 1
-        solcounts[p.sol_id] = idx
-        p.idx = idx
-
-    # TODO convert to imagecube
+    return inputlist.toDatum(multValue=multValue, mapping=mapping, selection=selection, inpidx=inpidx)

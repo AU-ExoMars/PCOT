@@ -54,9 +54,7 @@ MULTVALUES = [1, 1024, 2048]
 
 class PDS4InputMethod(InputMethod):
     """PDS4 inputs are unusual in that they can come from several PDS4 products, not a single file.
-    This object tries to keep track of PDS4Products between runs, reloading an object's label (from which
-    we can get the data) when we call the loadLabelsFromDirectory() method. These get stored in the non-persisted
-    lidToLabel dict."""
+    We load them into a ProductList object."""
 
     # Here is the data model. This all gets persisted.
 
@@ -73,7 +71,6 @@ class PDS4InputMethod(InputMethod):
         self.out = None
         self.products = None
         self.selected = []
-        self.lidToLabel = {}
         self.dir = None
         self.mapping = ChannelMapping()
         self.recurse = False
@@ -90,6 +87,10 @@ class PDS4InputMethod(InputMethod):
             depot = ProductDepot()
             # this is actually loading 'labels' in *my* terminology
             logger.debug("Loading products...")
+
+            for x in Path(self.dir).expanduser().rglob("*.xml"):
+                print(x)
+
             depot.load(Path(self.dir), recursive=self.recurse)
             logger.debug("...products loaded")
             # Retrieve labels for all loaded PAN-PP-220/spec-rad products as instances of
@@ -115,7 +116,6 @@ class PDS4InputMethod(InputMethod):
     def setProducts(self, products: List[DataProduct]) -> InputMethod:
         """Used from the document's setInputPDS4() method when we're using PCOT as a library and loaded
         a bunch of DataProducts from code"""
-        self.lidToLabel = {}
         self.selected = [i for i, _ in enumerate(products)]
         self.products = ProductList(products)
         return self
@@ -143,11 +143,6 @@ class PDS4InputMethod(InputMethod):
     def getName(self):
         return "PDS4"
 
-    def set(self, *args):
-        """used from external code"""
-        self.mapping = ChannelMapping()
-        raise NotImplementedError  # TODO
-
     def createWidget(self):
         return PDS4ImageMethodWidget(self)
 
@@ -160,7 +155,6 @@ class PDS4InputMethod(InputMethod):
              'dir': self.dir,
              'mapping': self.mapping.serialise()}
         if internal:
-            x['lid2label'] = self.lidToLabel
             x['out'] = self.out
         Canvas.serialise(self, x)
         return x
@@ -175,10 +169,8 @@ class PDS4InputMethod(InputMethod):
             self.mapping = ChannelMapping.deserialise(data['mapping'])
             if internal:
                 self.out = data['out']
-                self.lidToLabel = data['lid2label']
             else:
                 self.out = None  # ensure image is reloaded
-                self.lidToLabel = {}
             Canvas.deserialise(self, data)
         except KeyError as e:
             ui.error(f"can't read '{e}' from serialised PDS4 input data")
