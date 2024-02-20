@@ -68,12 +68,14 @@ class ENVIMethodWidget(TreeMethodWidget):
 
     def onInputChanged(self):
         # ensure image is also using my mapping.
+        img = None
         if self.method.img is not None:
-            self.method.img.setMapping(self.method.mapping)
+            img = self.method.img.get(Datum.IMG)
+            img.setMapping(self.method.mapping)
         logger.debug(f"Displaying image {self.method.img}, mapping {self.method.mapping}")
         self.invalidate()  # input has changed, invalidate so the cache is dirtied
         # we don't do this when the window is opening, otherwise it happens a lot!
         if not self.method.openingWindow:
             self.method.input.performGraph()
-        self.canvas.display(self.method.img)
+        self.canvas.display(img)
 
