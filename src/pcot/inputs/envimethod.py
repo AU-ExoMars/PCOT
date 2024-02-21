@@ -20,18 +20,24 @@ class ENVIInputMethod(InputMethod):
 
     def __init__(self, inp):
         super().__init__(inp)
-        self.img = None
+        self.img = None     # this is the datum of the loaded image, or None.
         self.fname = None
         self.mapping = ChannelMapping()
 
     def loadImg(self):
         logger.debug("PERFORMING FILE READ")
+        # try to load the image.
         self.img = load.envi(self.fname, self.input.idx if self.input else None, self.mapping)
         logger.debug(f"Image {self.fname} loaded: {self.img}, mapping is {self.mapping}")
 
     def readData(self):
+        # if the image is not loaded and the filename is set, then load it
         if self.img is None and self.fname is not None:
             self.loadImg()
+        # if the image didn't load or there was no filename, return null
+        if self.img is None:
+            return Datum.null
+        # otherwise, return the image
         return self.img
 
     def getName(self):
@@ -67,15 +73,18 @@ class ENVIMethodWidget(TreeMethodWidget):
         super().__init__(m, 'inputfiletree.ui', ["*.hdr"])
 
     def onInputChanged(self):
-        # ensure image is also using my mapping.
-        img = None
-        if self.method.img is not None:
-            img = self.method.img.get(Datum.IMG)
+        # ensure image is also using my mapping, if it's an image
+        d = self.method.get()
+        if d is None or d.isNone():   # if we can't get a datum, or the datum is null, return
+            return
+
+        img = d.get(Datum.IMG)
+        if img is not None:
             img.setMapping(self.method.mapping)
-        logger.debug(f"Displaying image {self.method.img}, mapping {self.method.mapping}")
+            logger.debug(f"Displaying image {img}, mapping {self.method.mapping}")
         self.invalidate()  # input has changed, invalidate so the cache is dirtied
         # we don't do this when the window is opening, otherwise it happens a lot!
         if not self.method.openingWindow:
             self.method.input.performGraph()
-        self.canvas.display(img)
+        self.canvas.display(d)
 
