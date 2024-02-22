@@ -177,6 +177,7 @@ class TreeMethodWidget(MethodWidget):
         root = os.path.expanduser(pcot.config.getDefaultDir('images'))
         if not os.path.isdir(root):
             root = os.path.expanduser("~")
+        self.selDirButton.clicked.connect(self.selectDir)
         self.fileEdit.setText(root)
         self.dirModel.setRootPath(root)
         self.dirModel.setNameFilters(filterList)
@@ -233,6 +234,15 @@ class TreeMethodWidget(MethodWidget):
         if os.path.exists(fname):
             self.goto(fname)
 
+    def selectDir(self):
+        dirname = QtWidgets.QFileDialog.getExistingDirectory(None, 'Select directory',
+                                                             self.fileEdit.text(),
+                                                             options=pcot.config.getFileDialogOptions())
+
+        if dirname:
+            self.fileEdit.setText(dirname)
+            self.lineToTree()
+
     def fileClickedAction(self, idx):
         name = os.path.realpath(self.dirModel.filePath(idx))
         self.fileEdit.setText(name)
@@ -255,4 +265,3 @@ class NullMethodWidget(MethodWidget):
         layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
         layout.addWidget(QtWidgets.QLabel("No input method is in use."))
-
