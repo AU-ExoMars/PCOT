@@ -8,7 +8,6 @@ This is a rough guide, and things may change!
 * Obtain user stories and feedback
 * Documentation
     * User guide
-        * Page each on the main elements of the UI
         * Page on *expr* nodes
         * documentation for properties of nodes for library use (e.g. *expr* nodes have ".expr")
         * How-to for common tasks

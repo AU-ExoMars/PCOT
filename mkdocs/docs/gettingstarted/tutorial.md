@@ -13,8 +13,9 @@ an instruction to follow.
 
 
 @@@ danger
-Be aware that this is very much an early version and there are 
-no doubt a lot of serious problems!
+Be aware that this is an early version and there are 
+no doubt a lot of serious problems! Also, the software is changing 
+very quickly, so it may not look exactly as it does in these pages.
 @@@
 
 ## Preparation
@@ -71,8 +72,8 @@ the bottom. To illustrate this, consider the following graph you've seen before:
 Looking at a pair of nodes in the graph:
 ![!A pair of nodes|node](node.svg)
 
-* The inputs and outputs are coloured by type: blue is perhaps the most common and indicates an image. A black band with a tiny
-"rainbow" indicates an RGB image. Red means any kind of data can be connected here, and generally only appears
+* The inputs and outputs are coloured by type: blue is perhaps the most common and indicates an image.
+Red means any kind of data can be connected here, and generally only appears
 on inputs.
 * Inputs and outputs can also have names (but don't always).
 * Each node has a help box - double-clicking on this pops up help for the node.
@@ -167,12 +168,19 @@ a small ENVI image we uncompressed earlier. ==Click on ENVI==, and
 the window will show that input's ENVI method settings and select the ENVI
 method as being active (see below). 
 
-==Using the directory tree widget, navigate to and double-click the *1.hdr*==
-file extracted earlier.
+In the ENVI input window,
+
+* ==Click on Select Directory== to open a dialog
+* ==Choose the directory== where you stored the `1.hdr` and `1.dat` files
+you extracted earlier
+* ==Double-click on the `1.hdr` file==
+
 You should see something like this:
 
 ![!An open ENVI input|inputenvi](inputenvi.png)
 
+
+### The Canvas
 
 The right-hand side is a common component in PCOT known as a
 **canvas** which will show the image selected. The canvas
@@ -182,20 +190,33 @@ example, the red channel is coming from band 2, which is from input 0, and has
 a wavelength of 640nm. If the RGB method is used to load an ordinary RGB image
 (e.g. from a PNG), the wavelength will not be shown.
 
-The canvas is quite complicated because it does a lot of things, such as
-displaying spectra for each pixel,
-normalisation settings, and displaying data quality bits. More information
-can be found [here](/userguide/canvas).
-
 At the bottom of the image itself are three **source indicators**: these
 show what bands within which inputs were used to generate the canvas
 image. They should show something like
 
     [0:640][0:540][0:480]
     
-indicating that the red, green and blue channels come from the 640nm, 540nm and 480nm
-bands in input 0's image. The source indicator may get quite complex - it shows all inputs that
-have had an effect on each channel of the image.
+indicating that the red, green and blue channels come from the 640nm, 540nm
+and 480nm bands in input 0's image. The source indicator may get quite complex
+- it shows all inputs that have had an effect on each channel of the image.
+
+@@@note
+The indicators may be different because the source display is currently
+under development.
+@@@
+
+The canvas is quite complicated because it does a lot of things, such as
+displaying spectra for each pixel,
+normalisation settings, and displaying data quality bits. More information
+can be found [here](/userguide/canvas), but for now:
+
+* ==Click the **spectrum** button== to open a spectrum view, and move
+the cursor over the image to show the spectrum at different pixels. You may
+need to resize the window, or drag the "double bar" which separates the
+image from the spectrum.
+
+
+
 
 
 ## Manipulating an image: obtaining a spectral parameter map
@@ -260,6 +281,7 @@ Error in expression: variable's input is not connected
 ```
 This is because there is no longer an image feeding into the *expr* node's input for variable *a*.
 Now ==reconnect the input node to the *expr* node== to fix the error.
+
 
 ### Adding a region of interest
 

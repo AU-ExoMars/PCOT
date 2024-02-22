@@ -22,8 +22,8 @@ def getvar(d):
 class XFormExpr(XFormType):
     r"""
     Expression evaluator. The node box will show the text of the expression. The "run" button must be clicked to
-    set the node to the new expression and perform it. Additionally, the output type must be set - the system cannot
-    determine the output type from the input types.
+    set the node to the new expression and perform it. The input can accept any type of data
+    and the output type is determined when the node is run.
 
     The four inputs are assigned to the variables a, b, c, and d. They are typically (but not necessarily) images
     or scalar values.
