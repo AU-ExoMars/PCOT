@@ -86,6 +86,18 @@
 </li>
                                     
 <li>
+    <a href="../../userguide/globalcontrols/" class="dropdown-item">Global Controls</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/multifile/" class="dropdown-item">Reading images from multiple files</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/expr/" class="dropdown-item">The "expr" node for mathematical expressions</a>
+</li>
+                                    
+<li>
     <a href="../../autodocs/" class="dropdown-item">Autodocs</a>
 </li>
                                 </ul>
@@ -151,6 +163,10 @@
             
             <li class="nav-item" data-level="1"><a href="#loading-different-image-formats" class="nav-link">Loading different image formats</a>
               <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#loading-an-envi-image" class="nav-link">Loading an ENVI image</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-level="2"><a href="#loading-an-rgb-image" class="nav-link">Loading an RGB image</a>
               <ul class="nav flex-column">
               </ul>
@@ -178,20 +194,40 @@ other image formats are available:</p>
 <li>"multiband" images (multiple monochrome PNG images, one per band)</li>
 <li>PDS4 products (work in progress)</li>
 </ul>
+<h2 id="loading-an-envi-image">Loading an ENVI image</h2>
+<p>To reiterate, this is how to load an image from an ENVI file:</p>
+<ul>
+<li>Click an input button to open an input, and select ENVI.</li>
+<li>Click on "Select Directory" and choose a directory with ENVI files.</li>
+<li>Double click on <code>.hdr</code> files in the main file view.
+This will load the file into the input.</li>
+</ul>
+<p>Note
+that ENVI is a "two-file" format - the <code>.dat</code> files contain the data, while
+<code>.hdr</code> files of the same name in the same directory contain information
+about the data. We only show the <code>.hdr</code> file in the file view, but the 
+corresponding <code>.dat</code>
+file must be present too.</p>
+<p>ENVI files are a useful multispectral format, and we can provide scripts to
+convert raw image sets into ENVI if required. We currently only support
+images which are 32-bit floating point in the 
+<a href="https://www.nv5geospatialsoftware.com/docs/ENVIImageFiles.html">BSQ (band-sequential)</a> format.</p>
 <h2 id="loading-an-rgb-image">Loading an RGB image</h2>
 <p>To load RGB, open an input
 and click the RGB button. A dialog will appear which is very similar to the
 <a href="#inputenvi">ENVI file dialog above</a>, 
-butshowing ENVI header files instead of image files. Double-click on such a
+but showing ENVI header files instead of image files. Double-click on such a
 file to load its associated data,
 which is assumed to be in the same directory with the same name. RGB images don't
 have filters, so there is no wavelength information - instead, the channels are named
 R, G and B and these names can be used in <em>expr</em> nodes (e.g. <code>a$R</code>).</p>
 <h2 id="loading-a-multiband-image">Loading a "multiband" image</h2>
-<p>Sometimes data is provided as a set of monochrome PNG files, although this is clearly far from ideal.
-In this case we need to tell PCOT how to work out which filter is being used for each file. Again, we open
-the dialog by clicking on an input button and clicking the appropriate method - "Multifile" in this case. This
-will open the ENVI dialog, which is rather more complex than the RGB or ENVI dialogs:</p>
+<p>Sometimes data is provided as a set of monochrome PNG files, although this is
+clearly far from ideal. In this case we need to tell PCOT how to work out
+which filter is being used for each file. Again, we open the dialog by
+clicking on an input button and clicking the appropriate method - "Multifile"
+in this case. This will open the ENVI dialog, which is rather more complex
+than the RGB or ENVI dialogs:</p>
 <p><figure class="text-center"><a data-lightbox="inputmulti.png" href="../inputmulti.png" name="inputmulti"><img alt="An open Multiband input" src="../inputmulti.png" /></a><figcaption class="figure-caption text-center">Figure: An open Multiband input. Click on image to expand.</figcaption></figure></p>
 <p>The procedure here is roughly this:</p>
 <ul>
@@ -205,20 +241,24 @@ format and it's too difficult to rename them, you'll have to write
 an RE yourself or find a handy IT person to help.</li>
 <li>Get the files into a single directory and open the input dialog as shown
 above.</li>
-<li>Determine which camera configuration - PANCAM or AUPE - produced the
-images and set the Camera option accordingly. These two setups use
+<li>Determine which camera configuration produced the images
+(PANCAM or AUPE are supported
+but more can be added) 
+and set the Camera option accordingly. Different setups use
 different filter sets, and will translate filter positions into different
 filter wavelengths and names.</li>
 <li>Click the "Get Directory" button.</li>
-<li>In the new dialog, select a directory containing the ENVI .hdr files and
-their accompanying .dat files, and click "Select Folder".</li>
+<li>In the new dialog, select a directory containing the image files and
+and click "Choose."</li>
 <li>A lot of files will appear in the Files box.</li>
 <li>Double-click images to preview them as a single channel.
 If they are dark, select an appropriate multiplier and double-click again.</li>
-<li>Click in image checkboxes to select them; selected images will be combined into a single multispectral mage.</li>
+<li>Click in image checkboxes to select them; selected images will be combined into a single multispectral image.</li>
 </ul>
 <p>Close the dialog when you have the selected images you want. It might be a good idea to create an <em>input</em> node
 to examine the resulting multispectral image.</p>
+<p>There is more detail on the regular expression syntax 
+<a href="/userguide/multifile">here</a>.</p>
 <h2 id="pds4-products">PDS4 products</h2>
 <p>This is very much work in progress - please contact the developers if you need
 this functionality soon.</p></div>

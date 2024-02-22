@@ -86,6 +86,18 @@
 </li>
                                     
 <li>
+    <a href="../../userguide/globalcontrols/" class="dropdown-item">Global Controls</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/multifile/" class="dropdown-item">Reading images from multiple files</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/expr/" class="dropdown-item">The "expr" node for mathematical expressions</a>
+</li>
+                                    
+<li>
     <a href="../" class="dropdown-item">Autodocs</a>
 </li>
                                 </ul>
@@ -174,8 +186,8 @@ while N is generated as in 'flat'</li>
 <li>rand: both nom. and unc. are filled with non-negative pseudorandom uniform noise multiplied by N and U respectively</li>
 <li>gaussian: nom. is filled with gaussian noise centered around N with a std. dev. of U. U is zero. The RNG is seeded
     from the CWL.</li>
-<li>gradient-x: nom. is filled with a gradient from 0-1, U is zero.</li>
-<li>gradient-y: nom. is filled with a gradient from 0-1, U is zero.</li>
+<li>gradient-x: nom. is filled with a gradient from 0-1, U is zero. Number of steps is N (zero means smooth).</li>
+<li>gradient-y: nom. is filled with a gradient from 0-1, U is zero. Number of steps is N (zero means smooth).</li>
 </ul>
 <p>A useful pattern might be something like this:</p>
 <ul>

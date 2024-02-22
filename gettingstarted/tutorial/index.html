@@ -86,6 +86,18 @@
 </li>
                                     
 <li>
+    <a href="../../userguide/globalcontrols/" class="dropdown-item">Global Controls</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/multifile/" class="dropdown-item">Reading images from multiple files</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/expr/" class="dropdown-item">The "expr" node for mathematical expressions</a>
+</li>
+                                    
+<li>
     <a href="../../autodocs/" class="dropdown-item">Autodocs</a>
 </li>
                                 </ul>
@@ -188,8 +200,9 @@ quickly but the basics will be the same.</p>
 <p>In this document, text written <mark>with a highlight like this</mark> is
 an instruction to follow.</p>
 <div class="alert alert-danger" role="alert">
-<p>Be aware that this is very much an early version and there are 
-no doubt a lot of serious problems!</p>
+<p>Be aware that this is an early version and there are 
+no doubt a lot of serious problems! Also, the software is changing 
+very quickly, so it may not look exactly as it does in these pages.</p>
 </div>
 <h2 id="preparation">Preparation</h2>
 <p>PCOT is primarily designed to work with multispectral images. For this tutorial
@@ -234,8 +247,8 @@ the bottom. To illustrate this, consider the following graph you've seen before:
 <p>Looking at a pair of nodes in the graph:
 <figure class="text-center"><a data-lightbox="node.svg" href="../node.svg" name="node"><img alt="A pair of nodes" src="../node.svg" /></a><figcaption class="figure-caption text-center">Figure: A pair of nodes. Click on image to expand.</figcaption></figure></p>
 <ul>
-<li>The inputs and outputs are coloured by type: blue is perhaps the most common and indicates an image. A black band with a tiny
-"rainbow" indicates an RGB image. Red means any kind of data can be connected here, and generally only appears
+<li>The inputs and outputs are coloured by type: blue is perhaps the most common and indicates an image.
+Red means any kind of data can be connected here, and generally only appears
 on inputs.</li>
 <li>Inputs and outputs can also have names (but don't always).</li>
 <li>Each node has a help box - double-clicking on this pops up help for the node.</li>
@@ -316,10 +329,16 @@ default, the method is <em>null</em>, meaning that no data is loaded into that i
 a small ENVI image we uncompressed earlier. <mark>Click on ENVI</mark>, and
 the window will show that input's ENVI method settings and select the ENVI
 method as being active (see below). </p>
-<p><mark>Using the directory tree widget, navigate to and double-click the <em>1.hdr</em></mark>
-file extracted earlier.
-You should see something like this:</p>
+<p>In the ENVI input window,</p>
+<ul>
+<li><mark>Click on Select Directory</mark> to open a dialog</li>
+<li><mark>Choose the directory</mark> where you stored the <code>1.hdr</code> and <code>1.dat</code> files
+you extracted earlier</li>
+<li><mark>Double-click on the <code>1.hdr</code> file</mark></li>
+</ul>
+<p>You should see something like this:</p>
 <p><figure class="text-center"><a data-lightbox="inputenvi.png" href="../inputenvi.png" name="inputenvi"><img alt="An open ENVI input" src="../inputenvi.png" /></a><figcaption class="figure-caption text-center">Figure: An open ENVI input. Click on image to expand.</figcaption></figure></p>
+<h3 id="the-canvas">The Canvas</h3>
 <p>The right-hand side is a common component in PCOT known as a
 <strong>canvas</strong> which will show the image selected. The canvas
 lets you modify how the RGB channels are mapped using the three combo boxes.
@@ -327,18 +346,28 @@ Each box gives the band number, the input number and the wavelength. For
 example, the red channel is coming from band 2, which is from input 0, and has
 a wavelength of 640nm. If the RGB method is used to load an ordinary RGB image
 (e.g. from a PNG), the wavelength will not be shown.</p>
-<p>The canvas is quite complicated because it does a lot of things, such as
-displaying spectra for each pixel,
-normalisation settings, and displaying data quality bits. More information
-can be found <a href="/userguide/canvas">here</a>.</p>
 <p>At the bottom of the image itself are three <strong>source indicators</strong>: these
 show what bands within which inputs were used to generate the canvas
 image. They should show something like</p>
 <pre><code>[0:640][0:540][0:480]
 </code></pre>
-<p>indicating that the red, green and blue channels come from the 640nm, 540nm and 480nm
-bands in input 0's image. The source indicator may get quite complex - it shows all inputs that
-have had an effect on each channel of the image.</p>
+<p>indicating that the red, green and blue channels come from the 640nm, 540nm
+and 480nm bands in input 0's image. The source indicator may get quite complex
+- it shows all inputs that have had an effect on each channel of the image.</p>
+<div class="alert alert-danger" role="alert">
+<p>The indicators may be different because the source display is currently
+under development.</p>
+</div>
+<p>The canvas is quite complicated because it does a lot of things, such as
+displaying spectra for each pixel,
+normalisation settings, and displaying data quality bits. More information
+can be found <a href="/userguide/canvas">here</a>, but for now:</p>
+<ul>
+<li><mark>Click the <strong>spectrum</strong> button</mark> to open a spectrum view, and move
+the cursor over the image to show the spectrum at different pixels. You may
+need to resize the window, or drag the "double bar" which separates the
+image from the spectrum.</li>
+</ul>
 <h2 id="manipulating-an-image-obtaining-a-spectral-parameter-map">Manipulating an image: obtaining a spectral parameter map</h2>
 <p>Let's perform a simple manipulation on an image. Here we will generate
 a spectral parameter map from two of the image bands. This parameter is

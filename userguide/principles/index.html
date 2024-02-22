@@ -86,6 +86,18 @@
 </li>
                                     
 <li>
+    <a href="../globalcontrols/" class="dropdown-item">Global Controls</a>
+</li>
+                                    
+<li>
+    <a href="../multifile/" class="dropdown-item">Reading images from multiple files</a>
+</li>
+                                    
+<li>
+    <a href="../expr/" class="dropdown-item">The "expr" node for mathematical expressions</a>
+</li>
+                                    
+<li>
     <a href="../../autodocs/" class="dropdown-item">Autodocs</a>
 </li>
                                 </ul>
@@ -198,10 +210,16 @@ source set for some operations (since the union of the band sets is available).<
 <li>If a datum, or band in a multi-band image, is constructed from data from more than once source set, the resulting datum or band
 consists of the union of the sets.</li>
 </ul>
-<p>As an example, consider the rather contrived example below.</p>
-<p><figure class="text-center"><a data-lightbox="SourcesExample.svg" href="../SourcesExample.svg"><img alt="An example graph with each datum marked as a black circle. Image inputs are in yellow,
-scalar inputs are in blue." src="../SourcesExample.svg" /></a><figcaption class="figure-caption text-center">Figure: An example graph with each datum marked as a black circle. Image inputs are in yellow,
-scalar inputs are in blue.. Click on image to expand.</figcaption></figure></p>
+<p>As an example, consider the rather contrived example below. Here,</p>
+<ul>
+<li>each datum is marked as a black circle below which is a description of the the sources - there's more explanation of this below.</li>
+<li>image inputs are in yellow</li>
+<li>scalar inputs are in blue</li>
+<li>nodes are white rectangles</li>
+<li><em>expr</em> nodes (which calculate mathematical expressions) are marked as
+such with the expression being the main text</li>
+</ul>
+<p><figure class="text-center"><a data-lightbox="SourcesExample.svg" href="../SourcesExample.svg"><img alt="An example graph." src="../SourcesExample.svg" /></a><figcaption class="figure-caption text-center">Figure: An example graph.. Click on image to expand.</figcaption></figure></p>
 <p>We have three inputs into the graph:</p>
 <ul>
 <li>Input 0 has an image with three bands centered on 640nm, 540nm and 440nm.</li>
@@ -216,9 +234,9 @@ scalar inputs are in blue.. Click on image to expand.</figcaption></figure></p>
 <p>What do the sources look like for each datum?</p>
 <ul>
 <li>
-<p>Datum A is an image, and as such it has one source set per band. 
-Each source set consists of a single "image source" giving details of input and
-filter wavelength. So here, the sources for A could be written as</p>
+<p>Datum A is an image, and as such it has one source set per band. Each source
+set consists of a single source, with details of input and filter
+wavelength. So here, the sources for A could be written as</p>
 <pre><code>[ {0:640}, {0:540}, {0:440} ]
 </code></pre>
 <p>That is, a list of three sets, each of which contains a single source which I've written
@@ -336,8 +354,8 @@ these rules:</p>
 \end{align}</script>
 </div>
 <div class="alert alert-warning" role="alert">
-<p>Remember that this only applies if the bands are independent. In reality there
-is always a covariance between them.</p>
+<p>Remember that generally these rules only apply if the bands are independent. In reality there
+is always a covariance between them, but we have to ignore that.</p>
 </div>
 <p><strong>Not all images contain uncertainty data</strong> - it may be that the input
 image doesn't have this data, or that a function has been performed on the
@@ -400,9 +418,12 @@ of nodes which generate a scalar from images, such as finding the mean or SD of 
 <em>spectrum</em> node) the pixels marked BAD should be ignored.</p>
 <ul>
 <li>
-<p>It should be possible to set bits based on per-pixel conditions with the <em>bits</em> node. For example, convert all uncertainties
-greater than a given value into errors. In fact, <strong>this should be done
-by default for a certain global value</strong> if possible. <font color="red">BITS NODE NOT YET IMPLEMENTED</font></p>
+<p>It is possible to set bits based on per-pixel conditions with the <em>dqmod</em> node. For example, convert all uncertainties
+greater than a given value into errors. </p>
+</li>
+<li>
+<p>It is possible to convert DQ bits into regions of interest using the <em>roidq</em> node, with the region being made up of
+pixels for which certain bits are absent or present. This can be done looking at all bands or just one.</p>
 </li>
 <li>
 <p>In general, when multiple image bands
@@ -427,9 +448,6 @@ B_i(\text{decorr}(a)) = \bigvee_i B_i(a)
 I realise <strong>This isn't ideal</strong>; another possibility could be to just zero the mask? But then we lose the error data. At the moment I don't believe we have any
 "non-local" behaviour where pixels affect regions of pixels in the output, so the point could be moot.</li>
 </ul>
-<h3 id="error-rois-unimplemented">Error ROIs <font color="red">UNIMPLEMENTED</font></h3>
-<p>It should
-be possible to construct an ROI of error or non-error pixels in an image (i.e. pixels which have an error on any band).</p>
 <h2 id="filter-aberration-unimplemented">Filter aberration <font color="red">UNIMPLEMENTED</font></h2>
 <p>The filter wavelengths are only accurate for pixels in the centre of the image, due to the difference in the light path through the filter
 at different angles of incidence. Therefore:</p>

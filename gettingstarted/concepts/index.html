@@ -86,6 +86,18 @@
 </li>
                                     
 <li>
+    <a href="../../userguide/globalcontrols/" class="dropdown-item">Global Controls</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/multifile/" class="dropdown-item">Reading images from multiple files</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/expr/" class="dropdown-item">The "expr" node for mathematical expressions</a>
+</li>
+                                    
+<li>
     <a href="../../autodocs/" class="dropdown-item">Autodocs</a>
 </li>
                                 </ul>
@@ -259,8 +271,8 @@ Uncertainty and DQ bitss can be viewed as overlays in the canvas (PCOT's image v
 component).</p>
 <h3 id="uncertainty">Uncertainty</h3>
 <p>The uncertainty is expressed as standard deviation, and is propagated through
-most operations. Be careful here, however - all values are assumed to be independent.
-This can lead to grossly incorrect results. For example, we could set up a graph
+most operations. Be careful here, however - <strong>all values are assumed to be independent.
+This can lead to grossly incorrect results</strong>. For example, we could set up a graph
 consisting of a node with the value <span class="arithmatex"><span class="MathJax_Preview">0\pm1</span><script type="math/tex">0\pm1</script></span>, feed it into a mathematical expression (<em>expr</em>) node
 as variable *a), and set the node's expression to <span class="arithmatex"><span class="MathJax_Preview">a-a</span><script type="math/tex">a-a</script></span>:</p>
 <p><figure class="text-center"><a data-lightbox="badunc.png" href="../badunc.png"><img alt="Incorrect uncertainty calculation" src="../badunc.png" /></a><figcaption class="figure-caption text-center">Figure: Incorrect uncertainty calculation. Click on image to expand.</figcaption></figure></p>

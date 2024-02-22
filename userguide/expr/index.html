@@ -11,7 +11,7 @@
         <link rel="shortcut icon" href="../../img/favicon.ico">
     <meta name="robots" content="noindex,nofollow">
 
-        <title>expr - PCOT Documentation</title>
+        <title>The "expr" node for mathematical expressions - PCOT Documentation</title>
     
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/font-awesome.min.css" rel="stylesheet">
@@ -69,36 +69,36 @@
 </li>
                                 </ul>
                             </li>
-                            <li class="dropdown">
+                            <li class="dropdown active">
                                 <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
                                 <ul class="dropdown-menu">
                                     
 <li>
-    <a href="../../userguide/" class="dropdown-item">Overview</a>
+    <a href="../" class="dropdown-item">Overview</a>
 </li>
                                     
 <li>
-    <a href="../../userguide/principles/" class="dropdown-item">Operating principles</a>
+    <a href="../principles/" class="dropdown-item">Operating principles</a>
 </li>
                                     
 <li>
-    <a href="../../userguide/canvas/" class="dropdown-item">The Canvas</a>
+    <a href="../canvas/" class="dropdown-item">The Canvas</a>
 </li>
                                     
 <li>
-    <a href="../../userguide/globalcontrols/" class="dropdown-item">Global Controls</a>
+    <a href="../globalcontrols/" class="dropdown-item">Global Controls</a>
 </li>
                                     
 <li>
-    <a href="../../userguide/multifile/" class="dropdown-item">Reading images from multiple files</a>
+    <a href="../multifile/" class="dropdown-item">Reading images from multiple files</a>
 </li>
                                     
 <li>
-    <a href="../../userguide/expr/" class="dropdown-item">The "expr" node for mathematical expressions</a>
+    <a href="./" class="dropdown-item active">The "expr" node for mathematical expressions</a>
 </li>
                                     
 <li>
-    <a href="../" class="dropdown-item">Autodocs</a>
+    <a href="../../autodocs/" class="dropdown-item">Autodocs</a>
 </li>
                                 </ul>
                             </li>
@@ -133,6 +133,16 @@
                                 <i class="fa fa-search"></i> Search
                             </a>
                         </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../multifile/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../../autodocs/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
                     </ul>
                 </div>
             </div>
@@ -151,6 +161,23 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
         <ul class="nav flex-column">
             
+            <li class="nav-item" data-level="1"><a href="#the-expr-node" class="nav-link">The expr node</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#functions" class="nav-link">Functions</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#properties" class="nav-link">Properties</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#autodocs" class="nav-link">Autodocs</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            
             <li class="nav-item" data-level="1"><a href="#expr" class="nav-link">expr</a>
               <ul class="nav flex-column">
             <li class="nav-item" data-level="2"><a href="#description" class="nav-link">Description</a>
@@ -168,6 +195,36 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
+<h1 id="the-expr-node">The <em>expr</em> node</h1>
+<p>The <em>expr</em> "expression" node performs mathematical operations on its four inputs, which
+(currently) must be images or scalar values. Constant scalars can also be used.</p>
+<p>The node can be found in the "maths" section of the palette. It has four inputs and one output,
+and these can be of any type - the output type will be determined when the expression runs.</p>
+<p>The <em>expr</em> node is unusual in that the node's box in the graph
+will show the expression being calculated:</p>
+<p><figure class="text-center"><a data-lightbox="exprexample.png" href="../exprexample.png"><img alt="An example of a graph showing an expr node which is running a merge function,
+combining the channels of two images into a single image." src="../exprexample.png" /></a><figcaption class="figure-caption text-center">Figure: An example of a graph showing an expr node which is running a merge function,
+combining the channels of two images into a single image.. Click on image to expand.</figcaption></figure></p>
+<p>In this example, two images showing slightly different views of the same scene
+with different bands (one visible light, one infra-red) 
+are registered using the <em>manual register</em> node. They are then merged together using the
+<code>merge</code> function. The box shows this function, and also <code>IMG[12]</code> indicating that the
+result is a 12-band image.</p>
+<h2 id="functions">Functions</h2>
+<p>Merge is one of a large number of functions that <em>expr</em> supports, and more can be added
+using the (plug-in mechanism)[/devguide/plugins/]. Full details of built-in functions 
+can be found <a href="/autodocs/#expr-functions">in the autodocs</a></p>
+<h2 id="properties">Properties</h2>
+<p>Certain types of value have "properties" which can be extracted with the dot operator.
+For example, <code>a.w</code> will extract the width of the image in variable <span class="arithmatex"><span class="MathJax_Preview">a</span><script type="math/tex">a</script></span>, and 
+<code>(a+b).n</code> will return the number of pixels in the image which results from adding images
+<span class="arithmatex"><span class="MathJax_Preview">a</span><script type="math/tex">a</script></span> and <span class="arithmatex"><span class="MathJax_Preview">b</span><script type="math/tex">b</script></span>. There aren't many properties, but those that exist are listed
+<a href="/autodocs/#expr-properties">in the autodocs</a>.</p>
+<h2 id="autodocs">Autodocs</h2>
+<div class="alert alert-info" role="alert">
+<p>The text below is drawn from the <a href="/autodocs/">automatically generated documentation</a> for
+the node, and is the authoritative documentation.</p>
+</div>
 <h1 id="expr">expr</h1>
 <h2 id="description">Description</h2>
 <p>Expression evaluator. The node box will show the text of the expression. The "run" button must be clicked to

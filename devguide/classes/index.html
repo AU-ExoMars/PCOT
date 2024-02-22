@@ -11,7 +11,7 @@
         <link rel="shortcut icon" href="../../img/favicon.ico">
     <meta name="robots" content="noindex,nofollow">
 
-        <title>dump - PCOT Documentation</title>
+        <title>Important classes - PCOT Documentation</title>
     
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/font-awesome.min.css" rel="stylesheet">
@@ -86,7 +86,19 @@
 </li>
                                     
 <li>
-    <a href="../" class="dropdown-item">Autodocs</a>
+    <a href="../../userguide/globalcontrols/" class="dropdown-item">Global Controls</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/multifile/" class="dropdown-item">Reading images from multiple files</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/expr/" class="dropdown-item">The "expr" node for mathematical expressions</a>
+</li>
+                                    
+<li>
+    <a href="../../autodocs/" class="dropdown-item">Autodocs</a>
 </li>
                                 </ul>
                             </li>
@@ -95,15 +107,15 @@
                                 <ul class="dropdown-menu">
                                     
 <li>
-    <a href="../../devguide/" class="dropdown-item">Overview</a>
+    <a href="../" class="dropdown-item">Overview</a>
 </li>
                                     
 <li>
-    <a href="../../devguide/library/" class="dropdown-item">Using PCOT as a library</a>
+    <a href="../library/" class="dropdown-item">Using PCOT as a library</a>
 </li>
                                     
 <li>
-    <a href="../../devguide/plugins/" class="dropdown-item">Writing PCOT plugins</a>
+    <a href="../plugins/" class="dropdown-item">Writing PCOT plugins</a>
 </li>
                                 </ul>
                             </li>
@@ -139,13 +151,37 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-level="1"><a href="#dump" class="nav-link">dump</a>
+            <li class="nav-item" data-level="1"><a href="#important-classes" class="nav-link">Important classes</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-level="2"><a href="#description" class="nav-link">Description</a>
+            <li class="nav-item" data-level="2"><a href="#pcotdocumentdocument-and-an-overview" class="nav-link">pcot.document.Document, and an overview</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-level="2"><a href="#connections" class="nav-link">Connections</a>
+            <li class="nav-item" data-level="2"><a href="#pcotxformxformgraph" class="nav-link">pcot.xform.XFormGraph</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#pcotxformxform" class="nav-link">pcot.xform.XForm</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#pcotdatumdatum" class="nav-link">pcot.datum.Datum</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#pcotdatumtypestype" class="nav-link">pcot.datumtypes.Type</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#pcotimagecubeimagecube" class="nav-link">pcot.imagecube.ImageCube</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#pcotimagecubesubimagecube" class="nav-link">pcot.imagecube.SubImageCube</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#pcotvaluevalue" class="nav-link">pcot.value.Value</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -156,31 +192,132 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="dump">dump</h1>
-<h2 id="description">Description</h2>
-<p>Simple data dump: prints a string of its output into its window. Useful for outputting spectra as CSV.</p>
-
-<hr />
-<h2 id="connections">Connections</h2>
-<h3 id="inputs">Inputs</h3>
-<table>
-<thead>
-<tr>
-<th>Index</th>
-<th>Name</th>
-<th>Type</th>
-<th>Desc</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>0</td>
-<td>any</td>
-<td>any</td>
-<td>(none)</td>
-</tr>
-</tbody>
-</table></div>
+<h1 id="important-classes">Important classes</h1>
+<h2 id="pcotdocumentdocument-and-an-overview">pcot.document.Document, and an overview</h2>
+<ul>
+<li>PCOT keeps all its user data in a <strong>pcot.document.Document</strong>:
+This contains:<ul>
+<li>a <strong>pcot.documentsettings.DocumentSettings</strong> object</li>
+<li>a <strong>pcot.inputs.inp.InputManager</strong> object handling the inputs</li>
+<li>a <strong>pcot.document.UndoRedoStore</strong> which uses the serialisation/deserialisation
+system to handle an undo stack</li>
+<li>A dictionary of <strong>pcot.macros.XFormMacro</strong> objects - the user macros</li>
+<li>most importantly a <strong>pcot.xform.XFormGraph</strong> - a set of 
+nodes of type <strong>pcot.xform.XForm</strong> connected together
+to do things.</li>
+</ul>
+</li>
+<li>Each XForm points to a <strong>pcot.xform.XFormType</strong> singleton which
+controls its behaviour.</li>
+<li>Nodes (XForms) communicate by passing <strong>pcot.datum.Datum</strong> objects.</li>
+<li>Each Datum points to a <strong>pcot.datumtype.Type</strong> subclass singleton
+providing serialisation, copy, and display facilities.</li>
+<li>They also point have values - two common value classes are
+<strong>pcot.imagecube.ImageCube</strong> for images, and <strong>pcot.value.Value</strong>
+objects for other arrays and scalars.</li>
+<li>ImageCubes can generate <strong>SubImageCube</strong> objects which are subsets of
+the image covered by ROIs and with bad pixels masked out ("bad" according
+to the data quality bits).</li>
+</ul>
+<h2 id="pcotxformxformgraph">pcot.xform.XFormGraph</h2>
+<p>This represents the graph of nodes which take data from inputs and perform
+operations on them. There is one inside the document, and instances of
+macros also contain their own graphs (and the macro itself contains a "template"
+graph from which these are created).</p>
+<p>A graph contains:</p>
+<ul>
+<li>A set of <strong>pcot.xform.XForm</strong> objects (usually called <strong>nodes</strong>)
+connected together by their <code>inputs</code> fields, which are tuples of 
+(source node, index of output).</li>
+<li>A graph runs by finding those nodes which have no inputs and performing them;
+the entire graph will be recursively traversed.</li>
+<li>Nodes are only run if their inputs have data (if their parent nodes have run).</li>
+</ul>
+<h2 id="pcotxformxform">pcot.xform.XForm</h2>
+<ul>
+<li>All nodes are of the same type. Polymorphism - different nodes behaving
+differently - is accomplished through each node having a reference to
+a <strong>pcot.xform.XFormType</strong> object in its <code>type</code> member
+that controls its behaviour.</li>
+<li>Nodes communicate by passing <strong>pcot.datum.Datum</strong> objects.</li>
+<li>When a node runs its <code>perform</code> method<ul>
+<li>It reads the inputs by deferencing the <code>inputs</code> fields and
+getting the input node and index of the output of that node,
+and reading the Datum stored in that output.</li>
+<li>It processes the data and stores the results in its <code>outputs</code> field
+as Datum objects.</li>
+<li>It then performs its "child" nodes.</li>
+</ul>
+</li>
+</ul>
+<h2 id="pcotdatumdatum">pcot.datum.Datum</h2>
+<p>This is the fundamental data type, used both for communicating between
+nodes and handling values in the <em>expr</em> node. A Datum has</p>
+<ul>
+<li>a <strong>type</strong>, which is a <strong>pcot.datumtypes.Type</strong> object</li>
+<li>a <strong>value</strong>, whose type depends on the type field</li>
+<li>a <strong>source</strong> indicating where the data came from</li>
+</ul>
+<p>If the value is <code>None</code>, the Datum is null. There is a constant
+<code>Datum.null</code> for null data.</p>
+<h2 id="pcotdatumtypestype">pcot.datumtypes.Type</h2>
+<p>The DatumType object provides methods for serialisation, copying,
+and display. Each is a singleton. It's easy to create custom DatumTypes.
+The most commonly used builtins are:</p>
+<ul>
+<li><strong>Datum.IMG</strong>:  contains an <strong>ImageCube</strong></li>
+<li><strong>Datum.NUMBER</strong>: contains a <strong>Value</strong></li>
+</ul>
+<p>(these names are for the singleton objects, not their types - for example,
+<code>Datum.IMG</code> has the type <code>pcot.datumtypes.ImgType</code>.)</p>
+<h2 id="pcotimagecubeimagecube">pcot.imagecube.ImageCube</h2>
+<p>This is the fundamental image type, consisting of</p>
+<ul>
+<li><strong>image data</strong> - 2D (H x W) if there is only one band (channel), 
+3D otherwise (H x W x D). Type is float32.</li>
+<li><strong>uncertainty data</strong>, same shape and type as image data. This is the
+standard deviation of each pixel.</li>
+<li><strong>DQ data</strong>. This a 16-bit bitfield for each pixel. Some
+of these are considered errors - these are called "bad" DQ bits
+(e.g. no uncertainty, saturated, results from a division by zero).</li>
+<li><strong>regions of interest</strong></li>
+<li><strong>annotations</strong> that have been added to the image</li>
+<li><strong>mapping</strong> used to render the image as RGB</li>
+<li><strong>sources</strong> for each band</li>
+</ul>
+<h2 id="pcotimagecubesubimagecube">pcot.imagecube.SubImageCube</h2>
+<p>These objects can be generated by calling the <strong>subimg()</strong> method on an
+ImageCube. They are the subset of an image covered by the regions of 
+interest it has, along with a mask for those regions. Additionally,
+"bad" parts of the image (which can be different in different bands)
+can be masked out. </p>
+<p>Operations on images are typically done on these
+subimages, and then <strong>modifyWithSub</strong> is called on the imagecube to
+return a copy of that imagecube with the modified subimage spliced
+in. Useful subimage methods include:</p>
+<ul>
+<li><strong>masked()</strong>: return the masked nominal image data</li>
+<li><strong>maskedUncertainty()</strong>: return the masked uncertainty data</li>
+<li><strong>maskedDQ()</strong>: return the masked DQ bits</li>
+</ul>
+<p>All these return numpy masked arrays.</p>
+<h2 id="pcotvaluevalue">pcot.value.Value</h2>
+<p>This is the fundamental numeric type, consisting of</p>
+<ul>
+<li>nominal value</li>
+<li>uncertainty value (standard deviation)</li>
+<li>DQ bits</li>
+</ul>
+<p>It's usually used for scalars but can also hold array data. If it
+does hold array data, the three elements must be the same shape.</p>
+<p>This type supports mathematical operations which propagate uncertainty
+and DQ.</p>
+<div class="alert alert-info" role="alert">
+<p><strong>Note</strong>: You may wonder why ImageCube and SubImageCube don't use
+Value internally. The answer is simply historical reasons: they
+were created a very long time before Value, and refactoring now
+could cause huge problems.</p>
+</div></div>
             </div>
         </div>
 
