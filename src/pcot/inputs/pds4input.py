@@ -447,7 +447,6 @@ class PDS4ImageMethodWidget(MethodWidget):
             img = self.method.out.get(Datum.IMG)
             self.canvas.display(img)
 
-
     def onInputChanged(self):
         # ensure image is also using my mapping.
         if self.method.out is not None and self.method.out.tp == Datum.IMG:

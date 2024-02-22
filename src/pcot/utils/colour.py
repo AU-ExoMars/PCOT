@@ -23,9 +23,10 @@ def qcol2rgb(qcol):
     return (r, g, b)
 
 
-def rgb2qcol(rgb):
+def rgb2qcol(rgb, alpha=1.0):
     r, g, b = rgb
+    a = np.clip(alpha*256, 0, 255)
     r = np.clip(r*256, 0, 255)
     g = np.clip(g*256, 0, 255)
     b = np.clip(b*256, 0, 255)
-    return QColor(int(r), int(g), int(b))
+    return QColor(int(r), int(g), int(b), int(a))

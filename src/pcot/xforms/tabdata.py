@@ -1,5 +1,3 @@
-from PySide2.QtCore import QSignalBlocker
-
 import pcot.ui.tabs
 
 # combo box values

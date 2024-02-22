@@ -878,7 +878,8 @@ class ImageCube(SourcesObtainable):
 
     def drawAnnotationsAndROIs(self, p: QPainter,
                                onlyROI: Union[ROI, Sequence] = None,
-                               inPDF: bool = False):
+                               inPDF: bool = False,
+                               alpha: float = 1.0):
         """Draw annotations and ROIs onto a painter (either in a canvas or an output device).
         Will save and restore font because we might be doing font resizing"""
 
@@ -892,7 +893,7 @@ class ImageCube(SourcesObtainable):
                 ann.annotatePDF(p, self)
         else:
             for ann in self.annotations + rois:
-                ann.annotate(p, self)
+                ann.annotate(p, self, alpha=alpha)
 
         p.setFont(oldFont)
 

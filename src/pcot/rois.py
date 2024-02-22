@@ -137,20 +137,20 @@ class ROI(SourcesObtainable, Annotation):
         else:
             return "No ROI"
 
-    def setPen(self, p: QPainter):
-        pen = QPen(rgb2qcol(self.colour))
+    def setPen(self, p: QPainter, alpha):
+        pen = QPen(rgb2qcol(self.colour, alpha=alpha))
         pen.setWidth(self.thickness)
         p.setPen(pen)
 
-    def annotateBB(self, p: QPainter):
+    def annotateBB(self, p: QPainter, alpha):
         """Draw the BB onto a QPainter"""
         if (bb := self.bb()) is not None:
             x, y, w, h = bb.astuple()
             p.setBrush(Qt.NoBrush)
-            self.setPen(p)
+            self.setPen(p, alpha)
             p.drawRect(x, y, w, h)
 
-    def annotateMask(self, p: QPainter):
+    def annotateMask(self, p: QPainter, alpha):
         """This is the 'default' annotate, which draws the ROI onto the painter by
         using its actual mask. It takes the mask, edge detects (if drawEdge), converts into
         an image."""
@@ -172,8 +172,8 @@ class ROI(SourcesObtainable, Annotation):
             img = np.full((hh, ww, 3), self.colour, dtype=np.float32)  # the second arg is the colour
             # add the mask as the alpha channel
             x = np.dstack((img, mask))
-            # to byte
-            x = (x * 255).astype(np.ubyte)
+            # to byte, taking into account the alpha
+            x = (x * 255 * alpha).astype(np.ubyte)
             # resize to canvas/painter scale
             # to qimage, stashing the data into a field to avoid the problem
             # discussed in canvas.img2qimage where memory is freed by accident in Qt
@@ -183,24 +183,24 @@ class ROI(SourcesObtainable, Annotation):
             # now we have a QImage we can draw it onto the painter.
             p.drawImage(bb.x, bb.y, q)
 
-    def annotateText(self, p: QPainter):
+    def annotateText(self, p: QPainter, alpha):
         """Draw the text for the ROI onto the painter"""
         if (bb := self.bb()) is not None and self.fontsize > 0 and self.label is not None and self.label != '':
             x, y, x2, y2 = bb.corners()
             ty = y if self.labeltop else y2
 
-            annotDrawText(p, x, ty, self.label, self.colour,
+            annotDrawText(p, x, ty, self.label, self.colour, alpha,
                           basetop=self.labeltop,
                           bgcol=(0, 0, 0) if self.drawbg else None,
                           fontsize=self.fontsize)
 
-    def annotate(self, p: QPainter, img):
+    def annotate(self, p: QPainter, img, alpha):
         """This is the default annotation method drawing the ROI onto a QPainter as part of the annotations system.
         It should be replaced with a more specialised method if possible."""
         if self.drawBox:
-            self.annotateBB(p)
-        self.annotateText(p)
-        self.annotateMask(p)
+            self.annotateBB(p, alpha)
+        self.annotateText(p, alpha)
+        self.annotateMask(p, alpha)
 
     def serialise(self):
         """Serialises the ROI to a dict. This is used for saving to file or memory"""
@@ -498,10 +498,10 @@ class ROIRect(ROI):
             return "{} pixels\n{},{}\n{}x{}".format(self.pixels(),
                                                     self.x, self.y, self.w, self.h)
 
-    def annotate(self, p: QPainter, img):
+    def annotate(self, p: QPainter, img, alpha):
         """Simpler version of annotate for rects; doesn't draw the mask"""
-        self.annotateBB(p)
-        self.annotateText(p)
+        self.annotateBB(p, alpha)
+        self.annotateText(p, alpha)
 
     def mask(self):
         # return a boolean array of True, same size as BB
@@ -585,13 +585,13 @@ class ROICircle(ROI):
     def changed(self):
         self.isSet = True
 
-    def annotate(self, p: QPainter, img):
+    def annotate(self, p: QPainter, img, alpha):
         if (bb := self.bb()) is not None:
-            self.annotateBB(p)
-            self.annotateText(p)
+            self.annotateBB(p, alpha)
+            self.annotateText(p, alpha)
             x, y, w, h = bb.astuple()
             p.setBrush(Qt.NoBrush)
-            self.setPen(p)
+            self.setPen(p, alpha)
             p.drawEllipse(x, y, w, h)
 
     def get(self):
@@ -682,8 +682,8 @@ class ROIPainted(ROI):
         else:
             self.drawBox = sourceROI.drawBox
             self.drawEdge = sourceROI.drawEdge
-            self.map = sourceROI.map  # NOTE: not a copy!
-            self.bbrect = Rect.copy(sourceROI.bbrect)
+            self.map = sourceROI.mask()  # not a copy?
+            self.bbrect = Rect.copy(sourceROI.bb())
             self.containingImageDimensions = sourceROI.containingImageDimensions
         self.r = 10  # default "circle size" for painting; used in multidot editor
 
@@ -791,24 +791,33 @@ class ROIPainted(ROI):
         else:
             return False
 
-    def dilated(self, n=1):
-        """return a new ROI with the mask dilated by N pixels"""
+    def morph(self, op, iterations=1):
+        """Perform a morphological operation on the ROI. The function op should take a
+        a binary mask, and return a binary mask. The additional iterations parameter specifies
+        how many times to apply the operation."""
         if self.map is not None:
-            # get full size image because we need to dilate the whole thing
+            # get full size image because we need to work on the whole thing
             fullsize = self.fullsize()
-            # dilate
-            m = cv.dilate(fullsize, None, iterations=n)
-            # construct a new ROI from that. This is ugly because
-            # ROIPainted(mask=m) doesn't work quite how we want it to,
-            # it appears.
-            r = ROIPainted()
-            r.map = m
-            r.bbrect = Rect(0, 0, m.shape[1], m.shape[0])
-            r.setContainingImageDimensions(fullsize.shape[1], fullsize.shape[0])
+            # perform the op
+            m = op(fullsize, iterations)
+            self.map = m
+            self.bbrect = Rect(0, 0, m.shape[1], m.shape[0])
+            self.setContainingImageDimensions(fullsize.shape[1], fullsize.shape[0])
             # crop it down
-            r.cropDownWithDraw()
-            # r.map.fill(255)
-            return r
+            self.cropDownWithDraw()
+        else:
+            return None
+
+    def dilated(self, n=1):
+        r = ROIPainted(sourceROI=self)
+        r.dilate(n)
+        return r
+
+    def dilate(self, n=1):
+        self.morph(lambda mask, iters: cv.dilate(mask, None, iterations=iters), n)
+
+    def erode(self, n=1):
+        self.morph(lambda mask, iters: cv.erode(mask, None, iterations=iters), n)
 
     def __copy__(self):
         r = ROIPainted(sourceROI=self)
@@ -902,12 +911,12 @@ class ROIPoly(ROI):
         # convert to boolean
         return polyimg > 0
 
-    def annotatePoly(self, p: QPainter):
+    def annotatePoly(self, p: QPainter, alpha):
         """draw the polygon as annotation onto a painter"""
 
         if len(self.points) > 0:
             p.setBrush(Qt.NoBrush)
-            self.setPen(p)
+            self.setPen(p, alpha=alpha)
 
             # first draw the points as little circles
             points = self.points.copy()  # we make a copy because we append a temporary later...
@@ -928,11 +937,11 @@ class ROIPoly(ROI):
             points.append(points[0])  # close the loop
             p.drawPolyline([QPointF(x, y) for (x, y) in points])
 
-    def annotate(self, p: QPainter, img):
-        self.annotatePoly(p)
+    def annotate(self, p: QPainter, img, alpha):
+        self.annotatePoly(p, alpha)
         if self.drawBox:
-            self.annotateBB(p)
-        self.annotateText(p)
+            self.annotateBB(p, alpha)
+        self.annotateText(p, alpha)
 
     def addPoint(self, x, y):
         self.points.append((x, y))

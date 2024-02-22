@@ -323,7 +323,8 @@ class InnerCanvas(QtWidgets.QWidget):
             p.save()
             p.scale(1 / self.getScale(), 1 / self.getScale())
             p.translate(-self.x, -self.y)
-            self.imgCube.drawAnnotationsAndROIs(p, onlyROI=rois)
+            # slightly mad chain of indirections to get the document alpha setting
+            self.imgCube.drawAnnotationsAndROIs(p, onlyROI=rois, alpha=self.canv.graph.doc.settings.alpha / 100.0)
             p.restore()
 
             tt.mark("annotations")

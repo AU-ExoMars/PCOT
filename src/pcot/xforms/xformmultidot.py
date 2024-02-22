@@ -1,4 +1,5 @@
 import copy
+import logging
 import random
 from functools import partial
 
@@ -17,6 +18,7 @@ from pcot.ui.variantwidget import VariantWidget
 from pcot.utils.flood import FloodFillParams
 from pcot.xform import xformtype, XFormType
 
+logger = logging.getLogger(__name__)
 
 @xformtype
 class XFormMultiDot(XFormType):
@@ -25,6 +27,11 @@ class XFormMultiDot(XFormType):
     Most subsequent operations will only be performed on the union of all regions of interest.
     Also outputs an RGB image annotated with the ROIs on the 'ann' RGB input,
     or the input image converted to RGB if that input is not connected.
+
+    This can also "capture" ROIs from the incoming image, so that they can be edited. This copies the
+    ROIs from the image into the node, and suppresses the image's original ROIs.
+
+    In addition to this, the "convert circles" button will convert all circular ROIs in the node into painted ROIs.
 
     General controls:
 
@@ -37,6 +44,8 @@ class XFormMultiDot(XFormType):
     - **Recolour all** will select random colours for all ROIs
     - **Name** is the name of the current ROI
     - **Background** is whether a background rectangle is used to make the name clearer for all ROIs
+    - **Capture** captures the ROIs from the incoming image, and suppresses the image's original ROIs
+    - **Convert circles** will convert all circular ROIs in the node into painted ROIs.
 
 
     Circle mode:
@@ -69,6 +78,7 @@ class XFormMultiDot(XFormType):
             ('thickness', 0),
             ('colour', (1, 1, 0)),
             ('tolerance', 3),
+            ('captured', False),
             ('drawbg', True),
             ('createMode', ModeWidget.CIRCLE),
         )
@@ -88,7 +98,34 @@ class XFormMultiDot(XFormType):
         node.dotSize = 10  # dot radius in pixels
         node.previewRadius = None  # previewing needs the image, but that's awkward - so we stash this data in perform()
         node.selected = None  # selected ROICircle
+        node.captured = False  # whether we've captured the ROIs from the image (if so, we remove the old ones)
         node.rois = []  # this will be a list of ROICircle
+
+    def capture(self, node):
+        """Capture the ROIs from the image"""
+        if node.img is None:
+            return
+        node.captured = True
+        # deep copy hack
+        ser = [r.serialise() for r in node.img.rois if isinstance(r, ROICircle) or isinstance(r, ROIPainted)]
+        node.rois = [ROI.fromSerialised(x) for x in ser]
+        for x in node.rois:
+            x.setContainingImageDimensions(node.img.w, node.img.h)
+        node.selected = None
+
+    def convertCircles(self, node):
+        """convert circle ROIs to painted ROIs"""
+        def conv(r):
+            if isinstance(r, ROICircle):
+                return ROIPainted(sourceROI=r)
+            else:
+                return r
+        node.rois = [conv(r) for r in node.rois]
+        node.selected = None
+
+        for x in node.rois:
+            if x.containingImageDimensions is None:
+                logger.critical("ROI has no containing image dimensions")
 
     def perform(self, node):
         img = node.getInput(self.IN_IMG, Datum.IMG)
@@ -107,7 +144,10 @@ class XFormMultiDot(XFormType):
                 r.drawbg = node.drawbg
             # copy image and append ROIs to it
             img = img.copy()
-            img.rois += node.rois
+            if node.captured:
+                img.rois = node.rois
+            else:
+                img.rois += node.rois
 
             # set mapping from node
             img.setMapping(node.mapping)
@@ -164,6 +204,10 @@ def selectionHighlight(r, img):
             r = r.dilated(5)
         if r is not None:
             r.colour = r.colour
+            r.label = ''
+            r.drawEdge = True
+            r.drawBox = False
+
             img.annotations = [r]
 
 
@@ -188,6 +232,10 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.dotSize.editingFinished.connect(self.dotSizeChanged)
         self.w.tolerance.editingFinished.connect(self.toleranceChanged)
         self.w.createMode.changed.connect(self.modeChanged)
+        self.w.captureButton.pressed.connect(self.capturePressed)
+        self.w.convertButton.pressed.connect(self.convertPressed)
+        self.w.erodeButton.pressed.connect(self.erodePressed)
+        self.w.dilateButton.pressed.connect(self.dilatePressed)
 
         self.pageButtons = [
             self.w.radioCircles,
@@ -209,6 +257,28 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.ctrl = 0   # control key is not pressed; we store it for dragging
         # sync tab with node
         self.nodeChanged()
+
+    def capturePressed(self):
+        self.mark()
+        self.node.type.capture(self.node)
+        self.changed()
+
+    def convertPressed(self):
+        self.mark()
+        self.node.type.convertCircles(self.node)
+        self.changed()
+
+    def erodePressed(self):
+        self.morph(lambda r: r.erode())
+
+    def dilatePressed(self):
+        self.morph(lambda r: r.dilate())
+
+    def morph(self, op):
+        if self.node.selected is not None and isinstance(self.node.selected, ROIPainted):
+            self.mark()
+            op(self.node.selected)
+            self.changed()
 
     def pageButtonClicked(self, x):
         i = self.pageButtons.index(x)
@@ -260,6 +330,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
             self.mark()
             self.node.rois = []
             self.node.selected = None
+            self.node.captured = False
             self.changed()
 
     def textChanged(self):
@@ -443,7 +514,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
                                (node.img.w, node.img.h))
                 self.addNewROI(r)  # add and select the new ROI
                 if node.createMode == ModeWidget.CIRCLE:
-                    r.setCircle(x, y, node.dotSize)
+                    r.setCircle(x, y, node.dotSize, relativeSize=False)
                 else:
                     self.fill(node, x, y)
             self.changed()
@@ -455,7 +526,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
                 if node.createMode == ModeWidget.CIRCLE:
                     # If we've ctrl-clicked and we're in circle mode for painted ROI, we start dragging
                     self.dragging = True
-                    r.setCircle(x, y, node.dotSize)
+                    r.setCircle(x, y, node.dotSize, relativeSize=False)
                 else:
                     self.fill(node, x, y)
                 self.changed()
@@ -464,7 +535,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
             # and we have to be on the painted page.
             if self.getPage() == self.PAINTED and isinstance(node.selected, ROIPainted):
                 r = node.selected
-                r.setCircle(x, y, node.dotSize, delete=True)
+                r.setCircle(x, y, node.dotSize, delete=True, relativeSize=False)
                 self.changed()
         else:
             # no modifier down. Select and ROI and if it is a circle, start dragging it.

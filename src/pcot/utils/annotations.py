@@ -1,5 +1,5 @@
 from PySide2.QtCore import Qt, QRect, QPoint, QPointF
-from PySide2.QtGui import QPainter, QFont, QFontMetrics, QPen
+from PySide2.QtGui import QPainter, QFont, QFontMetrics, QPen, QColor
 from typing import Callable, Tuple, Optional
 
 # use this font for annotations
@@ -19,11 +19,12 @@ def pixels2painter(v, p: QPainter):
 def annotDrawText(p: QPainter,
                   x, y, s,
                   col: Tuple[float] = (1, 1, 0),
+                  alpha: float = 1.0,
                   basetop: bool = False,  # is the y-coord the top of the text?
                   bgcol: Optional[Tuple] = None,
                   fontsize=15):
     """Draw text for annotation. Coords must be in painter space."""
-    pen = QPen(rgb2qcol(col))
+    pen = QPen(rgb2qcol(col, alpha=alpha))
     pen.setWidth(0)
     p.setPen(pen)
 
@@ -58,7 +59,7 @@ class Annotation:
         a tuple (top, right, bottom, left) of minimum margin sizes in inches."""
         return 0, 0, 0, 0
 
-    def annotate(self, p: QPainter, img):
+    def annotate(self, p: QPainter, img, alpha):
         """
         Draw the annotation
         Parameters:
@@ -81,7 +82,9 @@ class IndexedPointAnnotation(Annotation):
     """An annotation of a single point with an index and colour, which may or may
     not be selected. These may a radius, because the crosscalib node has a radius over which
     it collects values. If not they always show as the same radius."""
+
     def __init__(self, idx, x, y, issel, col, radius=None):
+        super().__init__()
         self.col = col
         self.x = x
         self.y = y
@@ -89,7 +92,10 @@ class IndexedPointAnnotation(Annotation):
         self.issel = issel
         self.idx = idx
 
-    def annotate(self, p: QPainter, img):
+    def annotate(self, p: QPainter, img, alpha):
+        # modify the qcol by the alpha
+        col = QColor(self.col)
+        col.setAlpha(alpha*255)
         pen = QPen(self.col)
         pen.setWidth(0)  # "cosmetic" pen with width 0
         p.setPen(pen)
