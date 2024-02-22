@@ -4,7 +4,7 @@ PCOT is a Python program and library which allows users to manipulate
 multispectral images and other data from the ExoMars *Rosalind Franklin* rover.
 
 @@@ warning
-This is an early alpha version with serious limitations.
+This is an alpha version with serious limitations.
 
 * There is no calibration code of any kind (although the preliminaries are in place)
 * PDS4 import capabilities are poor - we only support spec-rad products
@@ -13,7 +13,6 @@ from the ExoMars PANCAM instrument - but we also support
     * RGB PNGs
     * multispectral images made of multiple monochrome PNGs
     * and adding new PDS4 formats should be relatively straightforward
-* Data quality and uncertainty data are not yet handled in any way
 * There are probably a *lot* of useful operations missing
 * There are certainly a *lot* of bugs.
 @@@

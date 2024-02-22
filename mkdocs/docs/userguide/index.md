@@ -9,8 +9,13 @@ to install and run PCOT and give you a tutorial covering the basics.
 
 ## Contents
 * [Operating principles](principles)
-* [Automatically generated documentation](autodocs) for nodes, expression functions and
-expression properties.
 * [Global controls](globalcontrols) on the PCOT UI.
 * [The canvas and its optional views](canvas)
+
+### Special topics
 * [Using the multifile input to read multispectral data from BMP, PNG etc.](multifile)
+* [Using the *expr* node to perform mathematical operations](expr.md)
+
+### Autodocs
+* [Automatically generated documentation](autodocs) for nodes, expression functions and
+expression properties.

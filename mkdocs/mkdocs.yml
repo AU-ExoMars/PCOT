@@ -27,6 +27,9 @@ nav:
         - Overview: userguide/index.md
         - Operating principles: userguide/principles.md
         - The Canvas: userguide/canvas.md
+        - Global Controls: userguide/globalcontrols.md
+        - Reading images from multiple files: userguide/multifile.md
+        - The "expr" node for mathematical expressions: userguide/expr.md
         - Autodocs: autodocs/index.md
     - Developer's Guide:
         - Overview: devguide/index.md
