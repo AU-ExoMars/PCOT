@@ -37,12 +37,12 @@ class XFormExpr(XFormType):
     ### Image/numeric operators:
     |operator    |description| precedence (higher binds tighter)
     |-------|-----------|----------------
-    | + | add \[r\] | 10
-    | - | subtract \[r\] | 10
-    | / | divide \[r\] | 20
-    | * | multiply \[r\] | 20
-    | ^ | exponentiate \[r\] | 30
-    |-A            |element-wise -A|50
+    |A + B| add A to B (can act on ROIs)| 10
+    |A - B| subtract A from B (can act on ROIs)| 10
+    |A / B| divide A by B (can act on ROIs)| 20
+    |A * B| multiply A by B (can act on ROIs)| 20
+    |A ^ B| exponentiate A to the power B (can act on ROIs)| 30
+    |-A            |element-wise negation of A (can act on ROIs)|50
     |A.B           |property B of entity A (e.g. a.h is height of image a)|80
     |A$546         |extract single band image of wavelength 546|100
     |A$_2          |extract single band image from band 2 explicitly|100
@@ -53,7 +53,8 @@ class XFormExpr(XFormType):
     All operators can act on images and scalars (numeric values),
     with the exception of **.** and **$** which have images on the left-hand side and identifiers
     or integers on the right-hand side.
-    Those operators marked with \[r\] can also act on pairs of ROIs (regions of interest, see below).
+
+    Those operators marked with **(can act on ROIs)** can also act on pairs of ROIs (regions of interest, see below).
     
     ### Binary operations on image pairs
     These act by performing the binary operation on the two underlying Numpy arrays. This means you may need to be
