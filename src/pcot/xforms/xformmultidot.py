@@ -193,7 +193,7 @@ class ModeWidget(VariantWidget):
 def selectionHighlight(r, img):
     """Add some kind of highlighting to image for the the selected ROI. This is done by
     adding an annotation to the image, which is then drawn by the image viewer"""
-    if r:
+    if r is not None:
         if isinstance(r, ROICircle):
             # here we add a circle around the selected ROI as an annotation
             r = ROICircle(r.x, r.y, r.r * 1.3)
@@ -451,6 +451,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         In circle mode, we change the centre of the circle. In painted mode, we paint."""
         self.mousePos = e.pos()
         if self.dragging:
+            self.mark()
             if self.getPage() == self.CIRCLE:
                 self.mouseDragCircleMode(x, y)
             else:
@@ -502,14 +503,15 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         if shift:
             # shift key is down, so we are going to create a new ROI. What kind of ROI depends on
             # which "page" we are on.
-            self.mark()
             if self.getPage() == self.CIRCLE:
                 # circle page, so create a circle
+                self.mark()
                 r = ROICircle(x, y, node.dotSize)
                 self.addNewROI(r)  # add and select the new ROI
             else:
                 # painted page, so create a painted ROI using either a circle or a flood fill
                 # depending on which paint mode is selected in the node.
+                self.mark()
                 r = ROIPainted(containingImageDimensions=
                                (node.img.w, node.img.h))
                 self.addNewROI(r)  # add and select the new ROI
@@ -522,6 +524,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
             # control key down - we add to the selected ROI, but it has to be the right kind of ROI
             # and we have to be on the painted page.
             if self.getPage() == self.PAINTED and isinstance(node.selected, ROIPainted):
+                self.mark()
                 r = node.selected
                 if node.createMode == ModeWidget.CIRCLE:
                     # If we've ctrl-clicked and we're in circle mode for painted ROI, we start dragging
@@ -534,6 +537,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
             # alt key down - we remove from the selected ROI, but it has to be the right kind of ROI
             # and we have to be on the painted page.
             if self.getPage() == self.PAINTED and isinstance(node.selected, ROIPainted):
+                self.mark()
                 r = node.selected
                 r.setCircle(x, y, node.dotSize, delete=True, relativeSize=False)
                 self.changed()
@@ -541,6 +545,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
             # no modifier down. Select and ROI and if it is a circle, start dragging it.
             r = self.findROI(x, y)
             if r is not None:
+                self.mark()
                 node.selected = r
                 self.dragging = True
                 # change the page depending on the type of ROI we have selected

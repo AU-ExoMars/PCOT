@@ -42,6 +42,8 @@ ROISERIALISEFIELDS = (
     ('fontsize', 10),
     ('containingImageDimensions', 'missing'),
     ('drawbg', True),
+    ('drawBox', True),
+    ('drawEdge', True),
 )
 
 
@@ -881,7 +883,7 @@ class ROIPoly(ROI):
     def serialise(self):
         d = super().serialise()
         return serialiseFields(self,
-                               [('points', 0)],
+                               [('points', 0), ('drawPoints', True)],
                                d=d)
 
     def deserialise(self, d):
