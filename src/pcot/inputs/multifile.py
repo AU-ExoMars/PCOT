@@ -3,7 +3,6 @@
 import logging
 import os
 import re
-from typing import Tuple, Optional, Union
 
 import PySide2
 import numpy as np
@@ -11,17 +10,15 @@ from PySide2 import QtWidgets, QtGui
 from PySide2.QtCore import Qt
 
 import pcot
-from .inputmethod import InputMethod
 from pcot.imagecube import ChannelMapping, ImageCube
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
+from .inputmethod import InputMethod
 from .. import ui
 from ..dataformats import load
-from ..datum import Datum
-from ..filters import getFilterSetNames, getFilter
-from ..sources import Source, MultiBandSource, StringExternal
+from ..dataformats.raw import RawLoader
+from ..filters import getFilterSetNames
 from ..ui import uiloader
-from ..utils import image
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +49,7 @@ class MultifileInputMethod(InputMethod):
         self.defaultLens = "L"
         self.filterpat = r'.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*'
         self.filterre = None
+        self.rawLoader = RawLoader(headersize=48, bigendian=True)
 
         # this is a cache used by the loader to avoid reloading files. It's a dictionary of filename
         # to data and file date.
@@ -77,6 +75,7 @@ class MultifileInputMethod(InputMethod):
                               inpidx=self.input.idx,
                               mapping=self.mapping,
                               cache=self.cachedFiles,
+                              rawloader=self.rawLoader,
                               filterset=self.filterset)
 
     def getName(self):
@@ -107,7 +106,8 @@ class MultifileInputMethod(InputMethod):
              'mult': self.mult,
              'filterpat': self.filterpat,
              'filterset': self.filterset,
-             'defaultlens': self.defaultLens
+             'defaultlens': self.defaultLens,
+             'rawloader': self.rawLoader.serialise(),
              }
         if internal:
             x['cache'] = self.cachedFiles
@@ -121,6 +121,8 @@ class MultifileInputMethod(InputMethod):
         self.files = data['files']
         self.mult = data['mult']
         self.filterpat = data['filterpat']
+        if 'rawloader' in data:
+            self.rawLoader.deserialise(data['rawloader'])
 
         # deal with legacy files where "filterset" is called "camera"
         if 'filterset' in data:
@@ -138,7 +140,7 @@ class MultifileInputMethod(InputMethod):
 # Then the UI class..
 
 
-IMAGETYPERE = re.compile(r".*\.(?i:jpg|bmp|png|ppm|tga|tif)")
+IMAGETYPERE = re.compile(r".*\.(?i:jpg|bmp|png|ppm|tga|tif|raw|bin)")
 
 
 class MultifileMethodWidget(MethodWidget):
@@ -288,7 +290,13 @@ class MultifileMethodWidget(MethodWidget):
         item = self.model.itemFromIndex(idx)
         path = os.path.join(self.method.dir, item.text())
         self.method.compileRegex()
-        img = ImageCube.load(path, self.method.mapping, None)  # RGB image, null sources
+        if RawLoader.is_raw_file(path):
+            # if it's a raw file, load it with the raw loader and create an ImageCube
+            arr = self.method.rawLoader.load(path)
+            img = ImageCube(arr, self.method.mapping)
+        else:
+            # otherwise load it with the ImageCube RGB loader
+            img = ImageCube.load(path, self.method.mapping, None)  # RGB image, null sources
         img.img *= self.method.mult
         self.activatedImagePath = path
         self.activatedImage = img

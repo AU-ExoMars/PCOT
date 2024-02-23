@@ -9,6 +9,7 @@ from proctools.products import DataProduct
 
 from pcot import ui
 from pcot.dataformats.pds4 import PDS4Product, PDS4ImageProduct, ProductList
+from pcot.dataformats.raw import RawLoader
 from pcot.datum import Datum
 from pcot.filters import getFilter, Filter
 from pcot.imagecube import ChannelMapping, ImageCube, load_rgb_image
@@ -72,6 +73,7 @@ def multifile(directory: str, fnames: List[str],
               mult: np.float32 = 1.0,
               inpidx: int = None, mapping: ChannelMapping = None,
               filterset: str = 'PANCAM',
+              rawloader: Optional[RawLoader] = None,
               cache: Dict[str, Tuple[np.ndarray, float]] = None) -> Datum:
     """Load an imagecube from multiple files (e.g. a directory of .png files),
     where each file is a monochrome image of a different band. The names of
@@ -86,6 +88,7 @@ def multifile(directory: str, fnames: List[str],
     - inpidx: the input index to use or None if not connected to a graph input
     - mapping: the channel mapping to use or None if the default
     - filterset: the name of the filter set to use for filter name lookup
+    - rawloader: a RawLoader object to use for loading raw files (unused if we're not loading raw files)
     - cache: a dictionary of cached data to avoid loading the same file multiple times.
       The key is the filename and the value is a tuple of the image data and the time it was loaded.
 
@@ -161,8 +164,14 @@ def multifile(directory: str, fnames: List[str],
             if not os.path.exists(path):
                 raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
 
+            def load(path: str) -> np.ndarray:
+                if rawloader is not None and rawloader.is_raw_file(path):
+                    return rawloader.load(path)
+                else:
+                    return load_rgb_image(path)
+
             if cache is None:
-                img = load_rgb_image(path)
+                img = load(path)
             else:
                 date = os.path.getmtime(path)
                 # if the file is in the cache and the date is the same, use the cached data
@@ -173,7 +182,7 @@ def multifile(directory: str, fnames: List[str],
                 else:
                     # update the cache
                     ui.log(f"Loading image for {path} into cache")
-                    img = load_rgb_image(path)
+                    img = load(path)
                     cache[path] = (img, date)
 
             # convert to greyscale if required. But we don't use the
