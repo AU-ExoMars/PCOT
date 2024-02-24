@@ -19,8 +19,12 @@ from ..dataformats import load
 from ..dataformats.raw import RawLoader
 from ..filters import getFilterSetNames
 from ..ui import uiloader
+from ..ui.presetmgr import PresetModel, PresetDialog
 
 logger = logging.getLogger(__name__)
+
+# this persistently stores the presets for the multifile input method
+model = PresetModel(None, "MFpresets")
 
 
 class MultifileInputMethod(InputMethod):
@@ -49,7 +53,7 @@ class MultifileInputMethod(InputMethod):
         self.defaultLens = "L"
         self.filterpat = r'.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*'
         self.filterre = None
-        self.rawLoader = RawLoader(headersize=48, bigendian=True)
+        self.rawLoader = RawLoader(offset=0, bigendian=False)
 
         # this is a cache used by the loader to avoid reloading files. It's a dictionary of filename
         # to data and file date.
@@ -161,7 +165,10 @@ class MultifileMethodWidget(MethodWidget):
         self.defaultLens.currentTextChanged.connect(self.defaultLensChanged)
         self.mult.currentTextChanged.connect(self.multChanged)
         self.filtSetCombo.currentIndexChanged.connect(self.filterSetChanged)
+        self.loaderSettingsButton.clicked.connect(self.loaderSettings)
+        self.loaderSettingsText.setText(str(self.method.rawLoader))
         self.canvas.setMapping(m.mapping)
+        self.presetButton.pressed.connect(self.presetPressed)
         # self.canvas.hideMapping()  # because we're showing greyscale for each image
         self.canvas.setGraph(self.method.input.mgr.doc.graph)
         self.canvas.setPersister(m)
@@ -175,13 +182,40 @@ class MultifileMethodWidget(MethodWidget):
             self.method.dir = pcot.config.getDefaultDir('images')
         self.onInputChanged()
 
+    def applyPreset(self, preset):
+        # see comments in presetPressed for why this is here and not in the input method
+        self.method.filterset = preset['camera']
+        self.method.rawLoader.deserialise(preset['rawloader'])
+        self.method.filterpat = preset['filterpat']
+        self.onInputChanged()
+
+    def fetchPreset(self):
+        # see comments in presetPressed for why this is here and not in the input method
+        return {
+            "camera": self.method.filterset,
+            "rawloader": self.method.rawLoader.serialise(),
+            "filterpat": self.method.filterpat
+        }
+
     def filterSetChanged(self, i):
         self.method.filterset = self.filtSetCombo.currentText()
         self.onInputChanged()
 
+    def presetPressed(self):
+        # here, the "owner" of the preset dialog is actually this dialog - not the input itself - because
+        # we need to update the dialog when the preset is applied.
+        w = PresetDialog(self, "Multifile presets", model, self)
+        w.exec_()
+        self.onInputChanged()
+
+    def loaderSettings(self):
+        self.method.rawLoader.edit(self)
+        self.loaderSettingsText.setText(str(self.method.rawLoader))
+
     def onInputChanged(self):
         # the method has changed - set the filters text widget and reselect the dir.
         # This will only clear the selected files if we changed the dir.
+        self.loaderSettingsText.setText(str(self.method.rawLoader))
         self.filters.setText(",".join(self.method.namefilters))
         self.selectDir(self.method.dir)
         s = ""
@@ -201,6 +235,7 @@ class MultifileMethodWidget(MethodWidget):
         # we don't do this when the window is opening, otherwise it happens a lot!
         if not self.method.openingWindow:
             self.method.input.performGraph()
+        self.method.compileRegex()
         self.canvas.display(self.method.get())
 
     def fileClickedAction(self, idx):

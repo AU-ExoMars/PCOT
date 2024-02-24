@@ -3,6 +3,10 @@ import numpy as np
 import os
 import logging
 
+from PySide2.QtWidgets import QDialog
+
+from pcot.ui import uiloader
+
 logger = logging.getLogger(__name__)
 
 class RawLoader:
@@ -12,6 +16,7 @@ class RawLoader:
     FLOAT32 = 0
     UINT16 = 1
     UINT8 = 2
+    FORMAT_NAMES = ['f32', 'u16', 'u8']
 
     # we currently assume that the image is a single channel, but this could be extended to multiple channels.
     # We'd have to add depth and interleaving parameters to the constructor.
@@ -20,22 +25,22 @@ class RawLoader:
     width: int  # width of the image
     height: int  # height of the image
     bigendian: bool  # whether the data is big-endian
-    headersize: int  # size of the header in bytes (this is skipped)
+    offset: int  # size of the header in bytes (this is skipped)
 
     SERIALISE = (
         ('format', UINT16),
         ('width', 1024),
         ('height', 1024),
         ('bigendian', False),
-        ('headersize', 0)
+        ('offset', 0)
     )
 
-    def __init__(self, format=UINT16, width=1024, height=1024, bigendian=False, headersize=0):
+    def __init__(self, format=UINT16, width=1024, height=1024, bigendian=False, offset=0):
         self.format = format
         self.width = width
         self.height = height
         self.bigendian = bigendian
-        self.headersize = headersize
+        self.offset = offset
 
     def serialise(self) -> dict:
         return {k: getattr(self, k) for k, _ in self.SERIALISE}
@@ -57,7 +62,7 @@ class RawLoader:
             scale = 1.0 / 255.0
         else:
             raise ValueError(f"Unknown format {self.format}")
-        data = np.fromfile(filename, dtype=dtype, offset=self.headersize)
+        data = np.fromfile(filename, dtype=dtype, offset=self.offset)
         if self.bigendian:
             data.byteswap(True)
         data = data.reshape(self.height, self.width)
@@ -72,12 +77,39 @@ class RawLoader:
 
     @staticmethod
     def is_raw_file(path):
-        # get extension using os.path.splitext()
+        """Is this a raw file? Used to determine whether to use this loader
+        or the standard RGB loader in ImageCube"""
         ext = os.path.splitext(path)[1].lower()
         return ext in ('.raw', '.bin')
+    
+    def __str__(self):
+        """Produce a string representation of the loader."""
+        formatname = self.FORMAT_NAMES[self.format]
+        bigendian = 'BE' if self.bigendian else 'LE'
+        return f"{formatname} {self.width}x{self.height}+{self.offset} {bigendian}"
+
+    def edit(self, parent):
+        """Opens a dialog to edit the parameters of the loader."""
+        dlg = RawLoaderDialog(parent, self)
+        if dlg.exec():
+            dlg.setLoader(self)
 
 
+class RawLoaderDialog(QDialog):
+    """Dialog to set the parameters for the raw loader."""
+    def __init__(self, parent, loader):
+        super().__init__(parent)
+        uiloader.loadUi('rawloader.ui', self)
 
+        self.formatCombo.setCurrentIndex(loader.format)
+        self.widthSpin.setValue(loader.width)
+        self.heightSpin.setValue(loader.height)
+        self.bigendianCheck.setChecked(loader.bigendian)
+        self.headerSpin.setValue(loader.offset)
 
-
-
+    def setLoader(self, loader):
+        loader.format = self.formatCombo.currentIndex()
+        loader.width = self.widthSpin.value()
+        loader.height = self.heightSpin.value()
+        loader.bigendian = self.bigendianCheck.isChecked()
+        loader.offset = self.headerSpin.value()
