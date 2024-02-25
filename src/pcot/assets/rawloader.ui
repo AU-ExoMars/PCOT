@@ -7,24 +7,41 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>211</height>
+    <height>213</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="1" column="0">
-    <widget class="QLabel" name="label_2">
+   <item row="1" column="3">
+    <widget class="QLabel" name="label_7">
      <property name="text">
-      <string>Width</string>
+      <string>pixels</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="3">
-    <widget class="QLabel" name="label_6">
+   <item row="7" column="2">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="3">
+    <widget class="QLabel" name="label_9">
      <property name="text">
-      <string>pixels</string>
+      <string>degs CCW</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="2">
+    <widget class="QSpinBox" name="widthSpin">
+     <property name="maximum">
+      <number>16384</number>
      </property>
     </widget>
    </item>
@@ -35,27 +52,51 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="3">
-    <widget class="QLabel" name="label_5">
+   <item row="3" column="2">
+    <widget class="QSpinBox" name="headerSpin"/>
+   </item>
+   <item row="2" column="3">
+    <widget class="QLabel" name="label_6">
      <property name="text">
-      <string>bytes</string>
+      <string>pixels</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Format</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="label_2">
+     <property name="text">
+      <string>Width</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QLabel" name="label_8">
+     <property name="text">
+      <string>Rotate</string>
      </property>
     </widget>
    </item>
    <item row="4" column="2">
-    <widget class="QCheckBox" name="bigendianCheck">
-     <property name="text">
-      <string>Big endian data</string>
+    <widget class="QSpinBox" name="rotSpin">
+     <property name="maximum">
+      <number>270</number>
+     </property>
+     <property name="singleStep">
+      <number>90</number>
      </property>
     </widget>
    </item>
-   <item row="3" column="2">
-    <widget class="QSpinBox" name="headerSpin"/>
-   </item>
-   <item row="1" column="3">
-    <widget class="QLabel" name="label_7">
+   <item row="3" column="0">
+    <widget class="QLabel" name="label_4">
      <property name="text">
-      <string>pixels</string>
+      <string>Offset</string>
      </property>
     </widget>
    </item>
@@ -81,17 +122,10 @@
      </item>
     </widget>
    </item>
-   <item row="0" column="0">
-    <widget class="QLabel" name="label">
+   <item row="3" column="3">
+    <widget class="QLabel" name="label_5">
      <property name="text">
-      <string>Format</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="2">
-    <widget class="QSpinBox" name="widthSpin">
-     <property name="maximum">
-      <number>16384</number>
+      <string>bytes</string>
      </property>
     </widget>
    </item>
@@ -102,22 +136,30 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="0">
-    <widget class="QLabel" name="label_4">
-     <property name="text">
-      <string>Offset</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="2">
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-     </property>
-    </widget>
+   <item row="5" column="0" colspan="4">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QCheckBox" name="vertCheck">
+       <property name="text">
+        <string>Vert flip</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="horzCheck">
+       <property name="text">
+        <string>Horz flip</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="bigendianCheck">
+       <property name="text">
+        <string>Big endian data</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>
@@ -126,7 +168,6 @@
   <tabstop>widthSpin</tabstop>
   <tabstop>heightSpin</tabstop>
   <tabstop>headerSpin</tabstop>
-  <tabstop>bigendianCheck</tabstop>
  </tabstops>
  <resources/>
  <connections>

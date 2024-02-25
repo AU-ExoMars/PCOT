@@ -178,6 +178,7 @@ class MultifileMethodWidget(MethodWidget):
         self.method.filterset = preset['camera']
         self.method.rawLoader.deserialise(preset['rawloader'])
         self.method.filterpat = preset['filterpat']
+        self.method.mult = preset['mult']
         self.onInputChanged()
 
     def fetchPreset(self):
@@ -185,7 +186,8 @@ class MultifileMethodWidget(MethodWidget):
         return {
             "camera": self.method.filterset,
             "rawloader": self.method.rawLoader.serialise(),
-            "filterpat": self.method.filterpat
+            "filterpat": self.method.filterpat,
+            "mult": self.method.mult
         }
 
     def filterSetChanged(self, i):
