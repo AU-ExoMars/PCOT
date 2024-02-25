@@ -39,8 +39,6 @@ class MultifileInputMethod(InputMethod):
 
     def __init__(self, inp):
         super().__init__(inp)
-        # list of filter strings - strings which must be in any filenames
-        self.namefilters = []
         # directory we're looking at
         self.dir = pcot.config.getDefaultDir('images')
         if not os.path.isdir(self.dir):
@@ -50,7 +48,6 @@ class MultifileInputMethod(InputMethod):
         # all data in all channels is multiplied by this (used for, say, 10 bit images)
         self.mult = 1
         self.filterset = "PANCAM"
-        self.defaultLens = "L"
         self.filterpat = r'.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*'
         self.filterre = None
         self.rawLoader = RawLoader(offset=0, bigendian=False)
@@ -104,13 +101,12 @@ class MultifileInputMethod(InputMethod):
         return MultifileMethodWidget(self)
 
     def serialise(self, internal):
-        x = {'namefilters': self.namefilters,
+        x = {
              'dir': self.dir,
              'files': self.files,
              'mult': self.mult,
              'filterpat': self.filterpat,
              'filterset': self.filterset,
-             'defaultlens': self.defaultLens,
              'rawloader': self.rawLoader.serialise(),
              }
         if internal:
@@ -120,7 +116,6 @@ class MultifileInputMethod(InputMethod):
         return x
 
     def deserialise(self, data, internal):
-        self.namefilters = data['namefilters']
         self.dir = data['dir']
         self.files = data['files']
         self.mult = data['mult']
@@ -133,8 +128,6 @@ class MultifileInputMethod(InputMethod):
             self.filterset = data['filterset']
         else:
             self.filterset = data['camera']
-
-        self.defaultLens = data.get('defaultlens', 'L')
         if internal:
             self.cachedFiles = data['cache']
 
@@ -159,10 +152,8 @@ class MultifileMethodWidget(MethodWidget):
         self.activatedImagePath = None
         self.activatedImage = None
         self.getinitial.clicked.connect(self.getInitial)
-        self.filters.textChanged.connect(self.filtersChanged)
         self.filelist.activated.connect(self.itemActivated)
         self.filterpat.editingFinished.connect(self.patChanged)
-        self.defaultLens.currentTextChanged.connect(self.defaultLensChanged)
         self.mult.currentTextChanged.connect(self.multChanged)
         self.filtSetCombo.currentIndexChanged.connect(self.filterSetChanged)
         self.loaderSettingsButton.clicked.connect(self.loaderSettings)
@@ -216,7 +207,6 @@ class MultifileMethodWidget(MethodWidget):
         # the method has changed - set the filters text widget and reselect the dir.
         # This will only clear the selected files if we changed the dir.
         self.loaderSettingsText.setText(str(self.method.rawLoader))
-        self.filters.setText(",".join(self.method.namefilters))
         self.selectDir(self.method.dir)
         s = ""
         for i in range(len(self.method.files)):
@@ -226,8 +216,6 @@ class MultifileMethodWidget(MethodWidget):
         i = self.mult.findText(str(int(self.method.mult)) + ' ', Qt.MatchFlag.MatchStartsWith)
         self.mult.setCurrentIndex(i)
         self.filterpat.setText(self.method.filterpat)
-        i = self.defaultLens.findText(self.method.defaultLens, Qt.MatchFlag.MatchStartsWith)
-        self.defaultLens.setCurrentIndex(i)
         # this won't work if the filter set isn't in the combobox.
         self.filtSetCombo.setCurrentText(self.method.filterset)
         self.displayActivatedImage()
@@ -280,11 +268,6 @@ class MultifileMethodWidget(MethodWidget):
         self.method.filterpat = self.filterpat.text()
         self.onInputChanged()
 
-    def filtersChanged(self, t):
-        # rebuild the filter list from the comma-sep string and rebuild the model
-        self.method.namefilters = t.split(",")
-        self.buildModel()
-
     def multChanged(self, s):
         try:
             # strings in the combobox are typically "64 (6 bit shift)"
@@ -295,26 +278,17 @@ class MultifileMethodWidget(MethodWidget):
         except (ValueError, OverflowError):
             raise Exception("CTRL", "Bad mult string in 'multifile': " + s)
 
-    def defaultLensChanged(self, s):
-        self.method.defaultLens = s[0]  # just first character
-
     def buildModel(self):
         # build the model that the list view uses
         self.model = QtGui.QStandardItemModel(self.filelist)
         for x in self.allFiles:
-            add = True
-            for f in self.method.namefilters:
-                if f not in x:
-                    add = False  # only add a file if all the filters are present
-                    break
-            if add:
-                # create a checkable item for each file, and check the checkbox
-                # if it is in the files list
-                item = QtGui.QStandardItem(x)
-                item.setCheckable(True)
-                if x in self.method.files:
-                    item.setCheckState(PySide2.QtCore.Qt.Checked)
-                self.model.appendRow(item)
+            # create a checkable item for each file, and check the checkbox
+            # if it is in the files list
+            item = QtGui.QStandardItem(x)
+            item.setCheckable(True)
+            if x in self.method.files:
+                item.setCheckState(PySide2.QtCore.Qt.Checked)
+            self.model.appendRow(item)
 
         self.filelist.setModel(self.model)
         self.model.dataChanged.connect(self.checkedChanged)
