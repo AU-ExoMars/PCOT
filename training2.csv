@@ -1,0 +1,12 @@
+# Filter values for the training filter set, wheel 2 (rgb etc.)
+
+cwl,fwhm,transmission,position,name
+
+640,100,0.993,R01,C01R
+540,80,0.988,R02,C02R
+440,120,0.983,R03,C03L
+450,5,1.356e-06,R04,S03
+670,5,9.22e-07,R05,S04
+925,5,5.52e-07,R06,S01
+935,5,8.54e-07,R07,S02
+500,20,0.966,R08,G02
