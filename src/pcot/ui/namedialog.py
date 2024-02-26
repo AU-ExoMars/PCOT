@@ -6,14 +6,14 @@ from PySide2.QtWidgets import QDialog, QDialogButtonBox
 
 class NameDialog(QDialog):
     ## constructor, takes the old name
-    def __init__(self, name):
+    def __init__(self, name, title, newNameLabel):
         super().__init__(None)
-        self.setWindowTitle('Rename')
+        self.setWindowTitle(title)
         layout = QtWidgets.QVBoxLayout()
         textwidget = QtWidgets.QWidget()
         textlayout = QtWidgets.QHBoxLayout()
         textwidget.setLayout(textlayout)
-        label = QtWidgets.QLabel('New Name:')
+        label = QtWidgets.QLabel(newNameLabel)
         self.edit = QtWidgets.QLineEdit()
         self.edit.setText(name)
         textlayout.addWidget(label)
@@ -34,8 +34,8 @@ class NameDialog(QDialog):
 # of (False,name) or (True,name) - the boolean indicates whether the
 # dialog was OKed or Cancelled.
 
-def do(name):
-    d = NameDialog(name)
+def do(name, title='Rename', newNameLabel='New Name:'):
+    d = NameDialog(name, title, newNameLabel)
     if d.exec_():
         return True, d.name()
     else:

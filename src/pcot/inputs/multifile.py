@@ -20,11 +20,12 @@ from ..dataformats.raw import RawLoader
 from ..filters import getFilterSetNames
 from ..ui import uiloader
 from ..ui.presetmgr import PresetModel, PresetDialog
+from ..utils import SignalBlocker
 
 logger = logging.getLogger(__name__)
 
 # this persistently stores the presets for the multifile input method
-model = PresetModel(None, "MFpresets")
+presetModel = PresetModel(None, "MFpresets")
 
 
 class MultifileInputMethod(InputMethod):
@@ -71,7 +72,8 @@ class MultifileInputMethod(InputMethod):
         # we force the mapping to have to be "reguessed"
         self.mapping.red = -1
 
-        return load.multifile(self.dir, self.files, self.filterpat,
+        return load.multifile(self.dir, self.files,
+                              filterpat=self.filterpat,
                               mult=np.float32(self.mult),
                               inpidx=self.input.idx,
                               mapping=self.mapping,
@@ -167,7 +169,8 @@ class MultifileMethodWidget(MethodWidget):
         self.filelist.setMinimumWidth(300)
         self.setMinimumSize(1000, 500)
 
-        self.filtSetCombo.addItems(getFilterSetNames())
+        with SignalBlocker(self.filtSetCombo):
+            self.filtSetCombo.addItems(getFilterSetNames())
 
         if self.method.dir is None or len(self.method.dir) == 0:
             self.method.dir = pcot.config.getDefaultDir('images')
@@ -175,7 +178,7 @@ class MultifileMethodWidget(MethodWidget):
 
     def applyPreset(self, preset):
         # see comments in presetPressed for why this is here and not in the input method
-        self.method.filterset = preset['camera']
+        self.method.filterset = preset['filterset']
         self.method.rawLoader.deserialise(preset['rawloader'])
         self.method.filterpat = preset['filterpat']
         self.method.mult = preset['mult']
@@ -184,7 +187,7 @@ class MultifileMethodWidget(MethodWidget):
     def fetchPreset(self):
         # see comments in presetPressed for why this is here and not in the input method
         return {
-            "camera": self.method.filterset,
+            "filterset": self.method.filterset,
             "rawloader": self.method.rawLoader.serialise(),
             "filterpat": self.method.filterpat,
             "mult": self.method.mult
@@ -197,7 +200,7 @@ class MultifileMethodWidget(MethodWidget):
     def presetPressed(self):
         # here, the "owner" of the preset dialog is actually this dialog - not the input itself - because
         # we need to update the dialog when the preset is applied.
-        w = PresetDialog(self, "Multifile presets", model, self)
+        w = PresetDialog(self, "Multifile presets", presetModel, self)
         w.exec_()
         self.onInputChanged()
 

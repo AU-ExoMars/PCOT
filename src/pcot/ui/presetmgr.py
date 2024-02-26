@@ -85,26 +85,51 @@ class PresetModel(QAbstractListModel):
         with open(self.filename, 'w') as f:
             json.dump((self.presets, self.presetList), f, indent=2)
 
+    def loadPresetByName(self, owner, preset: str):
+        """Load a preset by name"""
+        if preset not in self.presets:
+            raise KeyError(f"Preset {preset} not found")
+        owner.applyPreset(self.presets[preset])
+
     def loadPreset(self, owner, row):
         """Load the preset at the given row. This is called from the dialog - it then
         applies the preset to the owner."""
         preset = self.presetList[row]
-        owner.applyPreset(self.presets[preset])
+        self.loadPresetByName(owner, preset)
 
-    def savePreset(self, owner):
+    def savePreset(self, owner, selectedName=None):
         """Save the current settings as a new preset. It fetches the settings from the owner
         and adds them to the list and dict of presets under a generated name. It then saves
-        the presets to the file."""
-        i = 1
-        while (key := f"preset{i}") in self.presets:
-            i += 1
-        end = len(self.presets)
-        data = owner.fetchPreset()
+        the presets to the file. If a name is given, it uses that as the name. If the name
+        is already in use, it asks for confirmation to overwrite."""
 
-        self.beginInsertRows(QModelIndex(), end, end)
-        self.presets[key] = data
-        self.presetList.append(key)
-        self.endInsertRows()
+        # if a preset is selected, use that as the name
+        name = selectedName
+
+        # if not, generate a new name
+        if name is None:
+            i = 1
+            while (name := f"preset{i}") in self.presets:
+                i += 1
+
+        data = owner.fetchPreset()
+        # ask for a name (or for modification of the suggested name)
+        ok, name = namedialog.do(name, "Save Preset", "Preset name:")
+        if not ok:
+            return False
+
+        # if the name is already in use, ask for confirmation
+        if name in self.presets:
+            if QMessageBox.question(owner, "Overwrite preset", f"Preset {name} already exists. Overwrite?",
+                                    QMessageBox.Yes | QMessageBox.No) != QMessageBox.Yes:
+                return False
+            self.presets[name] = data
+        else:
+            end = len(self.presets)
+            self.beginInsertRows(QModelIndex(), end, end)
+            self.presets[name] = data
+            self.presetList.append(name)
+            self.endInsertRows()
         self.savePresetsToFile()
         return True
 
@@ -157,6 +182,7 @@ class PresetDialog(QDialog):
         self.deleteButton.pressed.connect(self.deletePreset)
         self.renameButton.pressed.connect(self.renamePreset)
         self.helpButton.pressed.connect(lambda: showHelpDialog(self, "Presets", HELPTEXT))
+        self.listView.doubleClicked.connect(self.loadPreset)
 
         self.owner = owner
         self.model = model
@@ -169,7 +195,14 @@ class PresetDialog(QDialog):
             self.model.loadPreset(self.owner, idx.row())
 
     def savePreset(self):
-        self.model.savePreset(self.owner)
+        # get the selected name for if we're doing an overwrite
+        idxs = self.listView.selectedIndexes()
+        if len(idxs) > 0:
+            idx = idxs[0]
+            name = self.model.presetList[idx.row()]
+        else:
+            name = None
+        self.model.savePreset(self.owner, name)
 
     def deletePreset(self):
         if QMessageBox.question(self, "Delete preset", "Are you sure you want to delete the selected preset?",

@@ -1,6 +1,6 @@
 import errno
 import os
-from typing import List, Tuple, Optional, Union, Dict
+from typing import List, Tuple, Optional, Union, Dict, Any
 
 import numpy as np
 import logging
@@ -13,7 +13,9 @@ from pcot.dataformats.raw import RawLoader
 from pcot.datum import Datum
 from pcot.filters import getFilter, Filter
 from pcot.imagecube import ChannelMapping, ImageCube, load_rgb_image
+from pcot.inputs.multifile import presetModel
 from pcot.sources import StringExternal, MultiBandSource, Source
+from pcot.ui.presetmgr import PresetOwner
 
 from pcot.utils import image
 
@@ -68,12 +70,15 @@ def envi(fname: str, inpidx: int = None, mapping: ChannelMapping = None) -> Datu
     return Datum(Datum.IMG, img)
 
 
-def multifile(directory: str, fnames: List[str],
-              filterpat: str = r'.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*',
-              mult: np.float32 = 1.0,
-              inpidx: int = None, mapping: ChannelMapping = None,
-              filterset: str = 'PANCAM',
+def multifile(directory: str,
+              fnames: List[str],
+              preset: Optional[str] = None,
+              filterpat: str = None,
+              mult: np.float32 = None,
+              filterset: str = None,
               rawloader: Optional[RawLoader] = None,
+              inpidx: int = None,
+              mapping: ChannelMapping = None,
               cache: Dict[str, Tuple[np.ndarray, float]] = None) -> Datum:
     """Load an imagecube from multiple files (e.g. a directory of .png files),
     where each file is a monochrome image of a different band. The names of
@@ -81,8 +86,14 @@ def multifile(directory: str, fnames: List[str],
     regular expression pattern. The filter set specifies which table is used
     to look up the filter names.
 
+    Many of the settings can be left as None, in which case defaults are used, but if a preset
+    is used, then the settings in the preset will override the defaults.
+
     - directory: the directory containing the files
     - fnames: the list of filenames
+    - preset - the name of the preset to use or None if not using a preset. Presets are created using
+      the multifile input method in the UI and are stored in a file in the user's home directory.
+      Other settings passed into this function will override the settings in the preset.
     - filterpat: a regular expression pattern that extracts the filter name from the filename
     - mult: a multiplier to apply to the image data (which is often a very low intensity)
     - inpidx: the input index to use or None if not connected to a graph input
@@ -112,6 +123,37 @@ def multifile(directory: str, fnames: List[str],
         So for a filename like "Set18_LWAC01.png", the filter position would be "L01".
 
     """
+
+    # we need to get the settings out of the preset file,
+    # which means we need an PresetOwner object to apply them to
+    class PresetReader(PresetOwner):
+        def __init__(self):
+            # initialise with the settings passed into the containing function
+            self.filterset = filterset
+            self.filterpat = filterpat
+            self.mult = mult
+            self.rawloader = rawloader
+
+        def applyPreset(self, d: Dict[str, Any]):
+            # override the values with the ones from the preset file, but
+            # only if they haven't been set already
+            self.filterset = self.filterset or d['filterset']
+            self.filterpat = self.filterpat or d['filterpat']
+            self.mult = self.mult or d['mult']
+            if self.rawloader is None:
+                self.rawloader = RawLoader()
+                self.rawloader.deserialise(d['rawloader'])
+
+    # create the reader object, which will initialise its values with those
+    # passed into the function and then fill missing values with those from the preset
+    r = PresetReader()
+    if preset is not None:
+        r.applyPreset(presetModel.loadPresetByName(r, preset))
+    # now we can use the settings in r
+    filterpat = r.filterpat or r'.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*'
+    filterset = r.filterset or 'PANCAM'
+    mult = r.mult or 1.0
+    rawloader = r.rawloader
 
     def getFilterSearchParam(p) -> Tuple[Optional[Union[str, int]], Optional[str]]:
         """Returns the thing to search for to match a filter to a path and the type of the search"""
@@ -195,6 +237,8 @@ def multifile(directory: str, fnames: List[str],
             # build source data for this image
             filtpos, searchtype = getFilterSearchParam(path)
             filt = getFilter(filterset, filtpos, searchtype)
+            # img /= filt.transmission
+
             ext = StringExternal("Multi", os.path.abspath(path))
             source = Source().setBand(filt).setInputIdx(inpidx).setExternal(ext)
 

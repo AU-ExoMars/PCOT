@@ -1,5 +1,6 @@
 import csv
 import math
+import os.path
 from pathlib import Path
 from typing import List
 
@@ -155,7 +156,7 @@ def loadFilterSet(name: str, path: Path):
 
     # build a list of filters
     filters = []
-    with open(path) as file:
+    with open(os.path.expanduser(path)) as file:
         for r in csv.DictReader(decomment(file)):
             f = Filter(int(r['cwl']),
                        int(r['fwhm']),
@@ -208,4 +209,4 @@ def getFilterSetNames():
 
 
 ## dummy filter for when we have trouble finding the value
-DUMMY_FILTER = Filter(0, 0, 0, "??", "??")
+DUMMY_FILTER = Filter(0, 0, 1.0, "??", "??")

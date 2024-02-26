@@ -275,7 +275,8 @@ class TabSpectrum(ui.tabs.Tab):
             # filter out any "masked" means - those are from regions which are entirely DQ BAD in a channel.
             # These also seem to show up as None sometimes, so we have to check for that too.
 
-            x = {filt: spec for filt, spec in unfiltered.data.items() if spec.v is not None and spec.v.n is not np.ma.masked}
+            x = {filt: spec for filt, spec in unfiltered.data.items() if spec.v is not None and
+                 spec.v.n is not np.ma.masked}
 
             if len(x) == 0:
                 ui.error(f"No points have good data for point {legend}", False)
@@ -283,9 +284,11 @@ class TabSpectrum(ui.tabs.Tab):
             if len(x) != len(unfiltered.data):
                 ui.error(f"Some points have bad data for point {legend}", False)
 
+            # get a list of the filters (the dict keys) sorted by filter cwl
+            filters = sorted(x.keys(), key=lambda ff: ff.cwl)
+
             # extract data from the dictionary
-            filters = x.keys()
-            values = x.values()
+            values = [x[filt] for filt in filters]
             means = [a.v.n for a in values]
             sds = [a.v.u for a in values]
             pixcounts = [a.pixels for a in values]
@@ -320,7 +323,11 @@ class TabSpectrum(ui.tabs.Tab):
 
         ax.legend(fontsize=self.node.legendFontSize)
         ymin, ymax = ax.get_ylim()
-        ax.set_ylim(ymin - self.node.bottomSpace / 10, ymax)
+        ymin = ymin - self.node.bottomSpace / 10
+        if ymax-ymin < 0.01:  # if the y range is too small, expand it
+            ymin -= 0.01
+            ymax += 0.01
+        ax.set_ylim(ymin, ymax)
         xmin, xmax = ax.get_xlim()
         ax.set_xlim(xmin, xmax + self.node.rightSpace * 100)
 
