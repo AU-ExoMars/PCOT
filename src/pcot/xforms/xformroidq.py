@@ -20,6 +20,13 @@ conditions = ["When all present",  # 0
 class XFormROIDQ(XFormType):
     """
     Automatically generate an ROI from DQ bits in a band or in all bands.
+
+    <blockquote style="background-color: #ffd0d0;">
+    **WARNING**: the ROI will be generated from DQ data from any bands in this image.
+    It can then be applied to any other image or band - but this information is not
+    tracked by the source mechanism. This means that some source tracking information
+    can be lost. (Issue #68)
+    </blockquote>
     """
 
     def __init__(self):
@@ -101,12 +108,16 @@ class XFormROIDQ(XFormType):
             roi = ROIPainted(mask=res)
             roi.setContainingImageDimensions(img.w, img.h)
             roi.cropDownWithDraw()
-            # here we set the origin of the ROI to the origin of the subimage, because
-            # that's what we were working on.
+
+            # here we add the origin of the ROI to the origin of the subimage, because
+            # that's what we were working on. What's going on here is that the new ROI
+            # is inside the subimage and relative to it, so we need to get the coordinates
+            # relative to the whole image.
             if roi.bbrect is not None:
                 # the BB rect is None if the ROI has no pixels in it!
-                roi.bbrect.x = subimg.bb.x
-                roi.bbrect.y = subimg.bb.y
+                roi.bbrect.x += subimg.bb.x
+                roi.bbrect.y += subimg.bb.y
+
             roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.thickness, node.drawbg)
 
             img = img.copy()
