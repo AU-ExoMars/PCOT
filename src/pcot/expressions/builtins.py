@@ -426,6 +426,15 @@ def funcFlipH(args: List[Datum], _):
     return Datum(Datum.IMG, img)
 
 
+def funcStripROI(args: List[Datum], _):
+    img: ImageCube = args[0].get(Datum.IMG)
+    if img is None:
+        return None
+    img = img.shallowCopy()
+    img.rois = []
+    return Datum(Datum.IMG, img)
+
+
 def funcFloodTest(args: List[Datum], _):
     # we'll operate on the entire image
     img: ImageCube = args[0].get(Datum.IMG)
@@ -679,6 +688,13 @@ def registerBuiltinFunctions(p):
         [
             Parameter("image", "the image to flip", Datum.IMG),
         ], [], funcFlipH
+    )
+
+    p.registerFunc(
+        "striproi", "strip all ROIs from an image",
+        [
+            Parameter("image", "the image to strip ROIs from", Datum.IMG),
+        ], [], funcStripROI
     )
 
     p.registerFunc(

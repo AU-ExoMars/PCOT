@@ -146,6 +146,10 @@ class Value:
     """Wraps a value with uncertainty and data quality. This can be either an array or a scalar, but they
     have to match."""
 
+    n: np.float32
+    u: np.float32
+    dq: np.uint16
+
     def __init__(self, n, u: Any = 0.0, d=dq.NONE):
         """Initialise a value - either array of float32 or scalar.
         n = nominal value

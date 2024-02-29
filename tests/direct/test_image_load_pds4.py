@@ -2,15 +2,23 @@
 Test direct PDS4 image loading. This is a separate file from the other load tests
 because it requires a data set which may not be present (it's very large).
 """
+import logging
 import os
 from pathlib import Path
 
+import numpy as np
 import pytest
 import pcot
 from pcot.dataformats import load
 from pcot.dataformats.pds4 import PDS4External, ProductList
 from pcot.datum import Datum
 from proctools.products import ProductDepot
+
+from pcot.expressions import ExpressionEvaluator
+from pcot.imagecube import ChannelMapping
+from pcot.rois import ROICircle
+from pcot.sources import nullSource
+from pcot.value import Value
 
 testdatadir = None
 try:
@@ -56,11 +64,11 @@ def check_data(img, inpidx=None):
     ]
 
     # combine those two sets (lids and filters)
-    testSet = [(x,)+y for x, y in zip(_lids, testSet)]
+    testSet = [(x,) + y for x, y in zip(_lids, testSet)]
     # now sort that by cwl and fwhm (which is what the input method will do)
     testSet.sort(key=lambda x: (x[1], x[2]))
     # and prepend the image sources which is what we're testing against
-    testSet = [(x,)+y for x, y in zip(img.sources, testSet)]
+    testSet = [(x,) + y for x, y in zip(img.sources, testSet)]
 
     for sourceSet, lid, cwl, fwhm, tr, pos, name in testSet:
         #  First, make sure each band has a source set of a single source
@@ -85,7 +93,7 @@ def check_data(img, inpidx=None):
         assert isinstance(s.external, PDS4External)
         p = s.external.product
         assert p.lid == lid
-        inpname = str(inpidx) if inpidx is not None else "NI"        # "NI" = no input
+        inpname = str(inpidx) if inpidx is not None else "NI"  # "NI" = no input
         assert s.debug() == f'{inpname},pds4({lid[:20]}),{cwl}'
         # I'm not testing the long form of the descriptor, because it's too long probably subject to change.
 
@@ -109,7 +117,7 @@ def test_pds4_load_from_productlist():
     specrads = [x for x in depot.retrieve("spec-rad") if x.meta.camera == 'WACL']
     assert len(specrads) == 9  # 9 left hand camera images
 
-    p = ProductList(specrads)   # pass a list of DataProducts to ProductList ctor
+    p = ProductList(specrads)  # pass a list of DataProducts to ProductList ctor
 
     d = load.pds4(p)  # passing a list of data products
     img = d.get(Datum.IMG)
@@ -126,3 +134,22 @@ def test_pds4_load_from_stringlist():
     d = load.pds4(filenames)  # passing a list of data products
     img = d.get(Datum.IMG)
     check_data(img)
+
+
+def test_foo():
+    filenames = [str(x) for x in Path(testdatadir).glob("*l0*.xml")]
+    d = load.pds4(filenames)  # pass a list of XML label files
+
+    # set up an expression evaluator, tell it the variable "a" is the image Datum
+    # we just loaded, and run the expression "norm(a$670/a$540)". This will divide
+    # the 670nm band by the 540nm band, normalise the result to [0,1], and apply
+    # gamma correction by raising the result to the power 0.3.
+    # Finally extract the image from the resulting Datum.
+    res = ExpressionEvaluator().run("norm(a$670/a$540)^0.3", {
+                                      'a': d,
+                                  }).get(Datum.IMG)
+
+
+    # write the resulting single-band image as a monochrome RGB.
+
+    res.rgbWrite("c:/users/jim/testout.png")
