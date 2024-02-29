@@ -47,7 +47,7 @@ def test_multifile_load_with_default_pattern(globaldatadir):
         assert f.fwhm == 0
         assert f.name == '??'
         assert f.position == '??'
-        assert f.transmission == 0
+        assert f.transmission == 1
         path = str(globaldatadir / "multi" / names[i])
         # starts with zero because this is for input 0
         assert s.long() == f"0: wavelength 0, fwhm 0 {path}"
@@ -82,7 +82,7 @@ def test_multifile_load_with_bad_pattern(globaldatadir):
         assert f.fwhm == 0
         assert f.name == '??'
         assert f.position == '??'
-        assert f.transmission == 0
+        assert f.transmission == 1
 
 
 def test_multifile_load_with_good_pattern(globaldatadir):
