@@ -140,6 +140,7 @@ class XFormExpr(XFormType):
     def __init__(self):
         super().__init__("expr", "maths", "0.0.0")
         self.parser = ExpressionEvaluator()
+
         self.addInputConnector("a", Datum.ANY)
         self.addInputConnector("b", Datum.ANY)
         self.addInputConnector("c", Datum.ANY)

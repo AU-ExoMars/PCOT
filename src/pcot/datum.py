@@ -9,17 +9,15 @@ These types are also used by the expression evaluator.
 import logging
 from typing import Any, Optional
 import pcot.datumtypes
+
 from pcot.datumexceptions import *
 from pcot.sources import SourcesObtainable, nullSource
 
 logger = logging.getLogger(__name__)
 
-## complete list of all types, which also assigns them to values (kind of like an enum)
-
 
 class Datum(SourcesObtainable):
     """a piece of data sitting in a node's output or on the expression evaluation stack."""
-    ## @var tp
     # the data type
     tp: pcot.datumtypes.Type
     ## @var val
@@ -132,6 +130,83 @@ class Datum(SourcesObtainable):
 
         # and run the deserialisation
         return t.deserialise(d, document)
+
+    #
+    # This block of code maps operations on Datum objects to the binary operations registered in the "ops" system
+    # by the initOps function (and any other functions that may be run in plugins to register additional types).
+    #
+    # I'm having to put the ops import inside the methods to avoid a cyclic dependency - basically, Datum really
+    # does need to know about ops, and ops really does need to know about Datum.
+    #
+
+    def __add__(self, other):
+        from pcot.expressions import ops
+        return ops.binop(ops.Operator.ADD, self, other)
+
+    def __sub__(self, other):
+        from pcot.expressions import ops
+        return ops.binop(ops.Operator.SUB, self, other)
+
+    def __mul__(self, other):
+        from pcot.expressions import ops
+        return ops.binop(ops.Operator.MUL, self, other)
+
+    def __truediv__(self, other):
+        from pcot.expressions import ops
+        return ops.binop(ops.Operator.DIV, self, other)
+
+    def __pow__(self, other):
+        from pcot.expressions import ops
+        return ops.binop(ops.Operator.POW, self, other)
+
+    def __and__(self, other):
+        from pcot.expressions import ops
+        return ops.binop(ops.Operator.AND, self, other)
+
+    def __or__(self, other):
+        from pcot.expressions import ops
+        return ops.binop(ops.Operator.OR, self, other)
+
+    def __neg__(self):
+        from pcot.expressions import ops
+        return ops.unop(ops.Operator.NEG, self)
+
+    def __invert__(self):
+        from pcot.expressions import ops
+        return ops.unop(ops.Operator.NOT, self)
+
+    def __rmul__(self, other):
+        from pcot.expressions import ops
+        return ops.binop(ops.Operator.MUL, other, self)
+
+    def __radd__(self, other):
+        from pcot.expressions import ops
+        return ops.binop(ops.Operator.ADD, other, self)
+
+    def __rsub__(self, other):
+        from pcot.expressions import ops
+        return ops.binop(ops.Operator.SUB, other, self)
+
+    def __rtruediv__(self, other):
+        from pcot.expressions import ops
+        return ops.binop(ops.Operator.DIV, other, self)
+
+    def __rpow__(self, other):
+        from pcot.expressions import ops
+        return ops.binop(ops.Operator.POW, other, self)
+
+    def __rand__(self, other):
+        from pcot.expressions import ops
+        return ops.binop(ops.Operator.AND, other, self)
+
+    def __ror__(self, other):
+        from pcot.expressions import ops
+        return ops.binop(ops.Operator.OR, other, self)
+
+    def __mod__(self, other):
+        # we use % instead of $ here.
+        from pcot.expressions import ops
+        return ops.binop(ops.Operator.DOLLAR, self, other)
 
 
 # a handy null datum object

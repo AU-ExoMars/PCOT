@@ -6,6 +6,7 @@ from typing import Callable, Dict, Any, Optional, Tuple
 
 import numpy as np
 
+from pcot.config import parserhook
 import pcot.operations.norm
 import pcot.operations.curve
 from pcot.expressions import Parameter
@@ -99,6 +100,7 @@ def exprWrapper(fn, img, *args):
 ## Register additional functions and properties into a Parser.
 
 
+@parserhook
 def registerOpFunctionsAndProperties(p: 'Parser'):
     p.registerFunc(
         "curve",

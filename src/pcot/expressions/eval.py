@@ -45,12 +45,7 @@ class ExpressionEvaluator(Parser):
         Caller may add other things (e.g. variables)"""
         super().__init__(True)  # naked identifiers permitted
 
-        # additional functions and properties - this is in the __init__.py in the operations package.
-        # These are "operations" which take a subimage and perform an operation on that subimage to
-        # return another subimage.
-        operations.registerOpFunctionsAndProperties(self)
-
-        # generally used for user plugins.
+        # now register things that have been marked with the @parserhook decorator.
         logger.debug("Registering function plugins")
         for x in pcot.config.exprFuncHooks:
             #  print(f"Calling   {x}")

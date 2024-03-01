@@ -1,14 +1,15 @@
 """binary and unary operations which work on many kinds of data sensibly."""
 from enum import Enum, auto
-from typing import Any, Callable, Optional, Dict, Tuple
+from typing import Any, Callable, Optional, Dict, Tuple, Union
 
 import numpy as np
 
 from pcot.datum import Datum
+
 from pcot.datumtypes import Type
 from pcot.imagecube import ImageCube
 from pcot.rois import BadOpException, ROI
-from pcot.sources import MultiBandSource, SourceSet
+from pcot.sources import MultiBandSource, SourceSet, nullSourceSet
 from pcot.value import Value
 
 
@@ -61,9 +62,17 @@ def registerUnopSemantics(op: Operator, tp: Type, f: Callable[[Datum], Datum], f
     unops[t] = f
 
 
-def binop(op: Operator, lhs: Datum, rhs: Datum):
+def binop(op: Operator, lhs: Union[Datum,float], rhs: Union[Datum,float]):
     """Perform a binary operator"""
+    from numbers import Number
     try:
+        if isinstance(lhs, Number):
+            lhs = Datum(Datum.NUMBER, Value(lhs, 0), nullSourceSet)
+        if isinstance(rhs, Number):
+            rhs = Datum(Datum.NUMBER, Value(rhs, 0), nullSourceSet)
+        if isinstance(rhs, str):        # used when we do band extraction
+            rhs = Datum(Datum.IDENT, rhs, nullSourceSet)
+
         # if either input is None, the output will be None
         if lhs is None or lhs is None:
             return None
