@@ -8,10 +8,12 @@ These types are also used by the expression evaluator.
 """
 import logging
 from typing import Any, Optional
+
+from pcot.rois import ROI
+from pcot.sources import SourcesObtainable, nullSource, nullSourceSet
 import pcot.datumtypes
 
 from pcot.datumexceptions import *
-from pcot.sources import SourcesObtainable, nullSource
 
 logger = logging.getLogger(__name__)
 
@@ -242,3 +244,26 @@ def isCompatibleConnection(outtype, intype):
     else:
         # otherwise has to match exactly
         return outtype == intype
+
+
+def convert2datum(x):
+    """When built-in functions are called from plain Python, rather than the expression evaluator,
+    they are passed plain Python types. This function converts them to Datum objects."""
+    from pcot.imagecube import ImageCube
+    from numbers import Number
+    from pcot.value import Value
+
+    # we could also use the validType field of the Type object to check the type of x
+    # in each Type and then generate a datum from that, but this factory function gives
+    # more flexibility.
+
+    if isinstance(x, ImageCube):
+        return Datum(Datum.IMG, x)
+    elif isinstance(x, Number):
+        return Datum(Datum.NUMBER, Value(x, 0.0), nullSourceSet)
+    elif isinstance(x, ROI):
+        return Datum(Datum.ROI, x, nullSourceSet)
+    elif isinstance(x, str):
+        return Datum(Datum.IDENT, x, nullSourceSet)
+    else:
+        raise ValueError(f"Cannot convert {x} to a Datum automatically")

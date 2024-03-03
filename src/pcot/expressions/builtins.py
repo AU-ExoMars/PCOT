@@ -1,9 +1,9 @@
 """
 Builtin functions and properties. Needs to be explicitly imported so the decorators run!
 """
-import pathlib
-from typing import List, SupportsFloat, Optional, Callable
+from typing import List, Optional, Callable
 
+import cv2 as cv
 import numpy as np
 
 import pcot
@@ -12,16 +12,16 @@ from pcot import rois, dq
 from pcot.config import parserhook, getAssetPath
 from pcot.datum import Datum
 from pcot.expressions import Parameter
+from pcot.expressions.datumfuncs import datumfunc
+from pcot.expressions.ops import combineImageWithNumberSources
 from pcot.filters import Filter
 from pcot.imagecube import ImageCube
 from pcot.sources import SourceSet, MultiBandSource, Source, StringExternal
 from pcot.utils import image
-from pcot.expressions.ops import combineImageWithNumberSources
 from pcot.utils.deb import Timer
-from pcot.utils.flood import MeanFloodFiller, FloodFillParams, FastFloodFiller
+from pcot.utils.flood import FloodFillParams, FastFloodFiller
 from pcot.value import Value, add_sub_unc_list
 from pcot.xform import XFormException
-import cv2 as cv
 
 
 # TODOUNCERTAINTY TEST
@@ -376,7 +376,9 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args) -> Datum:
 testImageCache = {}
 
 
-def funcTestImg(args: List[Datum], _):
+@datumfunc("load test image", [
+    Parameter('imageidx', 'image index', Datum.NUMBER)])
+def testimg(args: List[Datum], _):
     fileList = ("test1.png",)
     n = int(args[0].get(Datum.NUMBER).n)
     if n < 0:
@@ -697,12 +699,12 @@ def registerBuiltinFunctions(p):
         ], [], funcStripROI
     )
 
-    p.registerFunc(
-        'testimg', 'Load test image',
-        [
-            Parameter('imageidx', 'image index', Datum.NUMBER)
-        ], [], funcTestImg
-    )
+#    p.registerFunc(
+#        'testimg', 'Load test image',
+#        [
+#            Parameter('imageidx', 'image index', Datum.NUMBER)
+#        ], [], funcTestImg
+#    )
 
     p.registerFunc(
         'floodtest', 'Flood fill test',
@@ -713,6 +715,12 @@ def registerBuiltinFunctions(p):
             Parameter('thresh', 'threshold', Datum.NUMBER),
         ], [], funcFloodTest
     )
+
+    # register the built-in functions that have been registered through the datumfunc mechanism.
+    for _, f in datumfunc.registry.items():
+        p.registerFunc(f.name, f.description, f.mandatoryParams, f.optParams, f.func, varargs=f.varargs)
+
+
 
 
 
