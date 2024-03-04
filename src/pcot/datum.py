@@ -210,6 +210,52 @@ class Datum(SourcesObtainable):
         from pcot.expressions import ops
         return ops.binop(ops.Operator.DOLLAR, self, other)
 
+    @classmethod
+    def getTypeFromPythonType(cls, annotation):
+        """Given a python type, work out what Datum type it should be. This is used by the
+        @datumfunc2 decorator to work out what datum type the function parameters should be.
+        and also the return type."""
+        from pcot.imagecube import ImageCube
+        from pcot.value import Value
+        if annotation == int:
+            return Datum.NUMBER
+        elif annotation == float:
+            return Datum.NUMBER
+        elif annotation == str:
+            return Datum.IDENT
+        elif issubclass(annotation, ROI):
+            return Datum.ROI
+        elif annotation == ImageCube:
+            return Datum.IMG
+        elif annotation == Value:   # this rather assumes that the data is scalar.
+            return Datum.NUMBER
+        else:
+            raise ValueError(f"Type {annotation} is not a valid type for a Datum")
+
+    @staticmethod
+    def convert2datum(x):
+        """When built-in functions are called from plain Python, rather than the expression evaluator,
+        they are passed plain Python types. This function converts them to Datum objects."""
+        from pcot.imagecube import ImageCube
+        from numbers import Number
+        from pcot.value import Value
+
+        # we could also use the validType field of the Type object to check the type of x
+        # in each Type and then generate a datum from that, but this factory function gives
+        # more flexibility.
+
+        if isinstance(x, ImageCube):
+            return Datum(Datum.IMG, x)
+        elif isinstance(x, Value):
+            return Datum(Datum.NUMBER, x, nullSourceSet)
+        elif isinstance(x, Number):
+            return Datum(Datum.NUMBER, Value(x, 0.0), nullSourceSet)
+        elif isinstance(x, ROI):
+            return Datum(Datum.ROI, x, nullSourceSet)
+        elif isinstance(x, str):
+            return Datum(Datum.IDENT, x, nullSourceSet)
+        else:
+            raise ValueError(f"Cannot convert {x} to a Datum automatically")
 
 # a handy null datum object
 Datum.null = Datum(Datum.NONE, None)
@@ -244,26 +290,3 @@ def isCompatibleConnection(outtype, intype):
     else:
         # otherwise has to match exactly
         return outtype == intype
-
-
-def convert2datum(x):
-    """When built-in functions are called from plain Python, rather than the expression evaluator,
-    they are passed plain Python types. This function converts them to Datum objects."""
-    from pcot.imagecube import ImageCube
-    from numbers import Number
-    from pcot.value import Value
-
-    # we could also use the validType field of the Type object to check the type of x
-    # in each Type and then generate a datum from that, but this factory function gives
-    # more flexibility.
-
-    if isinstance(x, ImageCube):
-        return Datum(Datum.IMG, x)
-    elif isinstance(x, Number):
-        return Datum(Datum.NUMBER, Value(x, 0.0), nullSourceSet)
-    elif isinstance(x, ROI):
-        return Datum(Datum.ROI, x, nullSourceSet)
-    elif isinstance(x, str):
-        return Datum(Datum.IDENT, x, nullSourceSet)
-    else:
-        raise ValueError(f"Cannot convert {x} to a Datum automatically")

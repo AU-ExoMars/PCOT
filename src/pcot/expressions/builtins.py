@@ -12,7 +12,7 @@ from pcot import rois, dq
 from pcot.config import parserhook, getAssetPath
 from pcot.datum import Datum
 from pcot.expressions import Parameter
-from pcot.expressions.datumfuncs import datumfunc
+from pcot.expressions.datumfuncs import datumfunc, datumfunc2
 from pcot.expressions.ops import combineImageWithNumberSources
 from pcot.filters import Filter
 from pcot.imagecube import ImageCube
@@ -296,18 +296,36 @@ def funcMarkSat(args: List[Datum], _):
     return Datum(Datum.IMG, img)
 
 
-def funcSetCWL(args: List[Datum], _):
-    img = args[0].get(Datum.IMG)
-    cwl = args[1].get(Datum.NUMBER).n
+# def funcSetCWL(args: List[Datum], _):
+#     img = args[0].get(Datum.IMG)
+#     cwl = args[1].get(Datum.NUMBER).n
+#
+#     if img is None:
+#         return None
+#
+#     if img.channels != 1:
+#         raise XFormException('EXPR', 'setcwl must take a single channel image')
+#     img = img.copy()
+#     img.sources = MultiBandSource([Source().setBand(Filter(float(cwl), 30, 1.0, idx=0))])
+#     return Datum(Datum.IMG, img)
 
+@datumfunc2
+def setcwl(img: ImageCube, cwl: Value) -> ImageCube:
+    """
+    Given an 1-band image, 'fake' a filter of a given CWL and assign it. The image itself is unchanged. This is
+    used in testing only.
+
+    @param img the input image
+    @param cwl the fake CWL to assign
+    """
     if img is None:
         return None
 
     if img.channels != 1:
         raise XFormException('EXPR', 'setcwl must take a single channel image')
     img = img.copy()
-    img.sources = MultiBandSource([Source().setBand(Filter(float(cwl), 30, 1.0, idx=0))])
-    return Datum(Datum.IMG, img)
+    img.sources = MultiBandSource([Source().setBand(Filter(float(cwl.n), 30, 1.0, idx=0))])
+    return img
 
 
 def statsWrapper(fn, d: List[Optional[Datum]], *args) -> Datum:
@@ -649,15 +667,15 @@ def registerBuiltinFunctions(p):
         ], [], funcMarkSat
     )
 
-    p.registerFunc(
-        "setcwl",
-        "Given an 1-band image, 'fake' a filter of a given CWL and assign it. The image itself is unchanged. This is "
-        "used in testing only.",
-        [
-            Parameter("image", "the input image", Datum.IMG),
-            Parameter("cwl", "the fake filter CWL", Datum.NUMBER),
-        ], [], funcSetCWL
-    ),
+    # p.registerFunc(
+    #     "setcwl",
+    #     "Given an 1-band image, 'fake' a filter of a given CWL and assign it. The image itself is unchanged. This is "
+    #     "used in testing only.",
+    #     [
+    #         Parameter("image", "the input image", Datum.IMG),
+    #         Parameter("cwl", "the fake filter CWL", Datum.NUMBER),
+    #     ], [], funcSetCWL
+    # ),
 
     p.registerFunc(
         "assignsources",
@@ -719,6 +737,8 @@ def registerBuiltinFunctions(p):
     # register the built-in functions that have been registered through the datumfunc mechanism.
     for _, f in datumfunc.registry.items():
         p.registerFunc(f.name, f.description, f.mandatoryParams, f.optParams, f.func, varargs=f.varargs)
+    for _, f in datumfunc2.registry.items():
+        p.registerFunc(f.name, f.description, f.mandatoryParams, f.optParams, f.exprfunc, varargs=f.varargs)
 
 
 
