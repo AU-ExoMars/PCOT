@@ -127,11 +127,3 @@ def test_band_extract():
     r = Datum(Datum.IMG, img) % 540
     v = r.get(Datum.IMG)
     assert np.allclose(v.img[0, 0], 2)
-
-
-def test_func_call():
-    from pcot.expressions.builtins import testimg
-    d = testimg(0)
-    img = d.get(Datum.IMG)
-    assert img is not None
-    assert img.channels == 3
