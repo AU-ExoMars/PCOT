@@ -9,6 +9,7 @@ These types are also used by the expression evaluator.
 import logging
 from typing import Any, Optional
 
+from pcot.dq import NOUNCERTAINTY
 from pcot.rois import ROI
 from pcot.sources import SourcesObtainable, nullSource, nullSourceSet
 import pcot.datumtypes
@@ -87,6 +88,15 @@ class Datum(SourcesObtainable):
             else:
                 sources = nullSource
         self.sources = sources
+
+    @classmethod
+    def k(cls, n, u=0.0, dq=0):
+        """Shortcut method to create a Value object and wrap it in a Datum. Will have null sources, so
+        don't use it to create data from observations! That's why it's called "K" for constant."""
+        from pcot.value import Value
+        if u == 0.0:
+            dq |= NOUNCERTAINTY
+        return cls(cls.NUMBER, Value(n, u, dq), nullSourceSet)
 
     def isImage(self):
         """Is this an image of some type?"""

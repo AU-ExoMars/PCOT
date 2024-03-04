@@ -327,6 +327,11 @@ class SourceSet(SourcesObtainable):
     def __contains__(self, item):
         return self.sourceSet.__contains__(item)
 
+    def __eq__(self, other):
+        if not isinstance(other, SourceSet):
+            return False
+        return self.sourceSet == other.sourceSet
+
     def getOnlyItem(self):
         """return singleton item"""
         assert len(self.sourceSet) == 1

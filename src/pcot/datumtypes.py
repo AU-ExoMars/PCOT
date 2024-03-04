@@ -21,6 +21,8 @@ class Type:
     rather more complicated. Particularly for custom types. Just be careful.
     """
 
+    instance = None     # the singleton instance of this type
+
     def __init__(self, name, image=False, internal=False, valid=None):
         """Parameters:
             name: the name of the type
@@ -32,6 +34,10 @@ class Type:
         self.image = image
         self.internal = internal
         self.validTypes = valid
+        # check the singleton
+        if self.__class__.instance is not None:
+            raise Exception(f"Type {self.name} is a singleton and already has an instance")
+        self.__class__.instance = self
         typesByName[name] = self  # register by name
 
     def __str__(self):
