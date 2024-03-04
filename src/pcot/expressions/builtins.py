@@ -376,7 +376,7 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args) -> Datum:
 testImageCache = {}
 
 
-@datumfunc3
+@datumfunc
 def testimg(index):
     """
     Load a test image

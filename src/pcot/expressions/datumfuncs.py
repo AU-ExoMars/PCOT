@@ -12,7 +12,10 @@ class datumfunc:
     where "types" is a comma-separated list of Datum type names indicating which Datum types the function will
     accept. The most common are "img" and "number" but there are others.
 
-    If a function's signature is "(*args)", then it is a varargs function and the @param lines are ignored.
+    If a function's signature contains *args, it will be treated as a varargs function. The args argument will
+    consume all remaining arguments, which must have the same type as the first parameter. This cannot be the
+    first parameter.
+
 
     Keyword arguments are accepted, but must be numeric.
 
@@ -82,15 +85,15 @@ class datumfunc:
 
         self.mandatoryParams = []
         self.optParams = []
-        if len(sig.parameters) == 1 and list(sig.parameters.values())[0].kind == inspect.Parameter.VAR_POSITIONAL:
-            self.varargs = True
-            self.paramTypes = None
+        self.varargs = False
+        if len(sig.parameters) > 0 and list(sig.parameters.values())[0].kind == inspect.Parameter.VAR_POSITIONAL:
+            raise ValueError(f"Function {self.name} is varargs but must have at least one fixed parameter")
         else:
-            self.varargs = False
             for k, v in sig.parameters.items():
                 if v.kind == inspect.Parameter.VAR_POSITIONAL:
-                    raise ValueError(f"Function {self.name} has *args (or *something) in the wrong place")
-
+                    # if we get a varargs parameter, we just set the varargs flag and break out of the loop
+                    self.varargs = True
+                    break
                 # check the description is present
                 if k not in paramdescs:
                     raise ValueError(f"Function {self.name} has a parameter {k} with no description")

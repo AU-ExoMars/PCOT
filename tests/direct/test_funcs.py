@@ -30,16 +30,18 @@ def testfunc1(a, b, c=1.0):
 
 
 @datumfunc
-def testfunc2(*args):
+def testfunc2(first, *args):
     """
     function that takes any number of arguments and adds them together, but the first
     must be an image.
+
+    @param first: img: the first image
+
     """
 
-    assert len(args) > 0
-    assert args[0].tp == Datum.IMG
-    d = args[0].copy()
-    for a in args[1:]:
+    assert first.tp == Datum.IMG
+    d = first.copy()
+    for a in args:
         d += a
         # make sure the original is unchanged
         assert d.get(Datum.IMG)[0, 0] != args[0].get(Datum.IMG)[0, 0]
