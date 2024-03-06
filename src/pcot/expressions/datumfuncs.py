@@ -154,6 +154,11 @@ class datumfunc:
 
             kwargs = {k: Datum.k(v) if isinstance(v, Number) else v for k, v in kwargs.items()}
             vals = [Datum.k(x) if isinstance(x, (int, Number)) else x for x in args]
+
+            for x in vals+list(kwargs.values()):
+                if not isinstance(x, Datum):
+                    raise ValueError(f"Function {self.name} has a non-Datum argument")
+
             # in the ExpressionEvaluator, Function knows how to check arguments for validity.
             # We're not using that mechanism, so we have to do it here. We don't do this at all
             # for varargs.

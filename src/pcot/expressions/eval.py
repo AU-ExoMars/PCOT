@@ -7,7 +7,6 @@ from functools import partial
 from typing import Dict, Callable, Union
 
 import pcot.config
-import pcot.operations as operations
 from pcot.config import parserhook
 from pcot.expressions.ops import binop, unop, Operator
 from .parse import Parser, execute

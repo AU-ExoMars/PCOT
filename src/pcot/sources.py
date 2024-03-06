@@ -266,13 +266,16 @@ class SourceSet(SourcesObtainable):
         self.stripNullSources()
 
     def stripNullSources(self):
-        """Removes null sources from the set"""
+        """Removes null sources from the set and return self"""
         self.sourceSet = {x for x in self.sourceSet if x is not None and not x.isNull()}
+        return self
 
     def add(self, other: 'SourceSet'):
-        """add a source set to this one (i.e. this source set will become a union of irself and the other)"""
+        """add a source set to this one (i.e. this source set will become a
+        union of irself and the other). Returns self"""
         self.sourceSet |= other.sourceSet
         self.stripNullSources()
+        return self
 
     def copy(self):
         return SourceSet([x.copy() for x in self.sourceSet])

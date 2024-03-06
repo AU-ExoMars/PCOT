@@ -5,7 +5,7 @@ import pcot
 from pcot.datum import Datum
 from pcot.dq import NOUNCERTAINTY, ERROR
 from pcot.expressions import ExpressionEvaluator
-from pcot.expressions.builtins import testimg
+from pcot.expressions.funcs import testimg
 from pcot.expressions.datumfuncs import datumfunc
 from pcot.expressions.parse import ArgsException
 from pcot.sources import nullSourceSet
@@ -73,7 +73,7 @@ def test_k():
 
 
 def test_func_call():
-    from pcot.expressions.builtins import testimg
+    from pcot.expressions.funcs import testimg
     d = testimg(Datum.k(0))  # k is used to generate constants
     img = d.get(Datum.IMG)
     assert img is not None

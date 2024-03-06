@@ -111,6 +111,7 @@ class XFormGen(XFormType):
         node.imgheight = DEFAULTSIZE
         # set the default data.
         node.imgchannels = [ChannelData()]
+        node.img = None
 
     def perform(self, node):
         # we'll fill these lists with data for the image bands nominal and uncertainty values

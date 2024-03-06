@@ -3,276 +3,22 @@ Builtin functions and properties. Needs to be explicitly imported so the decorat
 """
 from typing import List, Optional, Callable
 
-import cv2 as cv
 import numpy as np
 
 import pcot
 import pcot.dq
-from pcot import rois, dq
-from pcot.config import parserhook, getAssetPath
+from pcot import dq
+from pcot.config import parserhook
 from pcot.datum import Datum
 from pcot.expressions import Parameter
 from pcot.expressions.datumfuncs import datumfunc
-from pcot.expressions.ops import combineImageWithNumberSources
 from pcot.filters import Filter
 from pcot.imagecube import ImageCube
 from pcot.sources import SourceSet, MultiBandSource, Source, StringExternal
-from pcot.utils import image
 from pcot.utils.deb import Timer
 from pcot.utils.flood import FloodFillParams, FastFloodFiller
 from pcot.value import Value, add_sub_unc_list
 from pcot.xform import XFormException
-
-
-@datumfunc  # NOUNCERTAINTYTEST
-def merge(img1, *remainingargs):
-    """merge a number of images into multiple bands of a single image. If the image has multiple bands
-    they will all become bands in the new image.
-    @param img1:   img : first image
-    """
-
-    args = [img1] + list(remainingargs)
-    if any([x is None for x in args]):
-        raise XFormException('EXPR', 'argument is None for merge')
-
-    if not any([x.isImage() for x in args]):
-        raise XFormException('EXPR', 'merge must take at least one image')
-
-    # check sizes of all images are the same
-    imgargs = [x.get(Datum.IMG) for x in args if x.isImage()]
-    if len(set([(i.w, i.h) for i in imgargs])) != 1:
-        raise XFormException('EXPR', 'all images in merge must be the same size')
-    # get image size
-    w = imgargs[0].w
-    h = imgargs[0].h
-
-    # convert numeric values to 1-channel images of that size
-    imglist = []
-    for x in args:
-        if x.isImage():
-            imglist.append(x.val)
-        elif x.tp == Datum.NUMBER:
-            dat = np.full((h, w), x.val.n, dtype=np.float32)
-            if x.val.u > 0.0:
-                unc = np.full((h, w), x.val.u, dtype=np.float32)
-            else:
-                unc = None
-            imglist.append(ImageCube(dat, None, None, uncertainty=unc))
-        else:
-            raise XFormException('EXPR', 'arguments to merge must be images or numbers')
-
-    # and merge
-    bands = []
-    banduncs = []
-    banddqs = []
-
-    sources = []
-    for x in imglist:
-        if x.channels == 1:
-            bands.append(x.img[:h, :w])
-            banduncs.append(x.uncertainty[:h, :w])
-            banddqs.append(x.dq[:h, :w])
-        else:
-            bands = bands + image.imgsplit(x.img)
-            banduncs = banduncs + image.imgsplit(x.uncertainty)
-            banddqs = banddqs + image.imgsplit(x.dq)
-        sources = sources + x.sources.sourceSets
-
-    img = image.imgmerge(bands)
-    unc = image.imgmerge(banduncs)
-    dqs = image.imgmerge(banddqs)
-    img = ImageCube(img, None, MultiBandSource(sources), uncertainty=unc, dq=dqs)
-
-    return Datum(Datum.IMG, img)
-
-
-# TODOUNCERTAINTY TEST
-@datumfunc  # NOUNCERTAINTYTEST
-def grey(img, opencv=0):
-    """
-    Greyscale conversion. If the optional second argument is nonzero, and the image has 3 channels, we'll use CV's
-    conversion equation rather than just the mean. **However, this loses uncertainty information.**
-    Otherwise uncertainty
-    is calculated by adding together the channels in quadrature and then dividing the number of channels.
-
-    @param img:img:image to convert
-    @param opencv:number:if nonzero, use opencv greyscale conversion (default is 0)
-    """
-
-    ss = SourceSet(img.sources)
-    # not ever actually an int!
-    sources = MultiBandSource([ss, opencv.getSources()])
-
-    img = img.get(Datum.IMG)
-    if img.channels == 1:
-        img = img.copy()  # 1 channel in the input, just copy it
-    else:
-        # DQs are dealt with by ORing all the bits together from each channel
-        dq = np.zeros(img.dq.shape[:2], dtype=np.uint16)
-        for i in range(0, img.channels):
-            dq |= img.dq[:, :, i]
-
-        if opencv.get(Datum.NUMBER).n != 0:  # if the opt arg is nonzero, use opencv - but no unc!
-            if img.channels != 3:
-                raise XFormException('DATA', "Image must be RGB for OpenCV greyscale conversion")
-            img = ImageCube(cv.cvtColor(img.img, cv.COLOR_RGB2GRAY), img.mapping, sources, dq=dq, rois=img.rois)
-        else:
-            # 'out' will be the greyscale image found by calculating the mean of all channels in img.img
-            out = np.mean(img.img, axis=2).astype(np.float32)
-
-            # uncertainty is messier - add the squared uncertainties, divide by N, and root.
-            outu = np.zeros(img.uncertainty.shape[:2], dtype=np.float32)
-            for i in range(0, img.channels):
-                c = img.uncertainty[:, :, i]
-                outu += c * c
-            # divide by the count and root
-            outu = np.sqrt(outu) / img.channels
-            img = ImageCube(out, img.mapping, sources, uncertainty=outu, dq=dq, rois=img.rois)
-    return Datum(Datum.IMG, img)
-
-
-@datumfunc  # NOUNCERTAINTYTEST
-def crop(img, x, y, w, h):
-    """
-    Crop an image to a rectangle
-    @param img:img:the image to crop
-    @param x:number:x coordinate of top left corner
-    @param y:number:y coordinate of top left corner
-    @param w:number:width of rectangle
-    @param h:number:height of rectangle
-    """
-    # add the sources of the numbers (pretty much always null) to the
-    # sources of the cropped image
-    numericSources = SourceSet([a.getSources() for a in [x, y, w, h]])
-    img = img.get(Datum.IMG)
-    sources = img.sources.copy().addSetToAllBands(numericSources)
-
-    x = int(x.get(Datum.NUMBER).n)
-    y = int(y.get(Datum.NUMBER).n)
-    w = int(w.get(Datum.NUMBER).n)
-    h = int(h.get(Datum.NUMBER).n)
-
-    if x < 0 or y < 0:
-        raise XFormException('DATA', 'crop rectangle must have non-negative origin')
-
-    if w <= 0 or h <= 0:
-        raise XFormException('DATA', 'crop rectangle must have positive width and height')
-
-    out = img.img[y:y + h, x:x + w]
-    dq = img.dq[y:y + h, x:x + w]
-    unc = img.uncertainty[y:y + h, x:x + w]
-    img = ImageCube(out, img.mapping, sources, dq=dq, uncertainty=unc)
-    return Datum(Datum.IMG, img)
-
-
-def funcROI(args: List[Datum], _):
-    """Get ROI from image"""
-    img = args[0].get(Datum.IMG)
-    if len(img.rois) == 0:
-        # No ROIs at all? Make one out of the image.
-        roi = rois.ROIRect()
-        roi.set(0, 0, img.w, img.h)
-    elif len(img.rois) == 1:
-        # One ROI only? Use that (not a copy).
-        roi = img.rois[0]
-    else:
-        # Some ROIs? Make a new union ROI out of them all
-        roi = rois.ROI.roiUnion(img.rois)
-    return Datum(Datum.ROI, roi, sources=roi.getSources())
-
-
-def funcAddROI(args, _):
-    """Add ROI to image ROI set"""
-    img = args[0].get(Datum.IMG)
-    if img is not None:
-        roi = args[1].get(Datum.ROI)
-        if roi is not None:
-            img = img.copy()
-            img.rois.append(roi)
-        return Datum(Datum.IMG, img)
-    else:
-        return None
-
-
-def funcRGBImage(args, _):
-    img = args[0].get(Datum.IMG)
-    if img is not None:
-        img = img.rgbImage()
-
-    return Datum(Datum.IMG, img)
-
-
-def funcV(args, optargs):
-    # create a new nominal,uncertainty value - image or number - from the nominal values of two inputs.
-    # So if you pass:
-    #  image, image - one image with uncertainty taken from the nominal values of second image
-    #  image, number - image with constant uncertainty
-    #  number, image - constant grey image with uncertainty taken from the nominal values of second image (a bit weird)
-    #  number, number - most common case, a number with uncertainty
-    #
-    # Any optional DQ is ORed into the DQ of the result - only works on numbers, though!
-
-    t0 = args[0].tp
-    t1 = args[1].tp
-    v0 = args[0].get(t0)
-    v1 = args[1].get(t1)
-    s0 = args[0].sources
-    s1 = args[1].sources
-
-    dq = optargs[0].get(Datum.NUMBER)
-    if dq is None:
-        dq = pcot.dq.NONE
-    else:
-        dq = np.uint16(dq.n)
-
-    if t0 == Datum.NUMBER:
-        if t1 == Datum.NUMBER:
-            # number, number
-            return Datum(Datum.NUMBER, Value(v0.n, v1.n, dq), SourceSet([s0, s1]))
-        else:
-            # here, we're creating a number,uncimage pair
-            i = np.full(v1.img.shape, v0.n, dtype=np.float32)
-            s = combineImageWithNumberSources(v1, s0)
-            # or in the new DQ but remove no uncertainty, unless it's in the data.
-            dqimg = (v1.dq | dq) & ~pcot.dq.NOUNCERTAINTY
-
-            img = ImageCube(i, uncertainty=v1.img, dq=dqimg, sources=s)
-            return Datum(Datum.IMG, img)
-    else:
-        if t1 == Datum.NUMBER:
-            # image, number
-            i = np.full(v0.img.shape, v1.n, dtype=np.float32)
-            s = combineImageWithNumberSources(v0, s1)
-            dqimg = (v0.dq | dq) & ~pcot.dq.NOUNCERTAINTY
-            img = ImageCube(v0.img, uncertainty=i, dq=dqimg, sources=s)
-            return Datum(Datum.IMG, img)
-        else:
-            dqimg = (v0.dq | v1.dq | dq) & ~pcot.dq.NOUNCERTAINTY
-            img = ImageCube(v0.img, uncertainty=v1.img, dq=dqimg,
-                            sources=MultiBandSource.createBandwiseUnion([s0, s1]))
-            return Datum(Datum.IMG, img)
-
-
-def funcNominal(args: List[Datum], _):
-    if args[0].tp == Datum.IMG:
-        img = args[0].get(Datum.IMG)
-        if img is not None:
-            img = ImageCube(img.img, None, img.sources, rois=img.rois)
-        return Datum(Datum.IMG, img)
-    else:  # type is constrained to either image or number, so it's fine to do this
-        n = args[0].get(Datum.NUMBER)
-        return Datum(Datum.NUMBER, Value(n.n, 0), sources=args[0].sources)
-
-
-def funcUncertainty(args: List[Datum], _):
-    if args[0].tp == Datum.IMG:
-        img = args[0].get(Datum.IMG)
-        if img is not None:
-            img = ImageCube(img.uncertainty, None, img.sources, rois=img.rois)
-        return Datum(Datum.IMG, img)
-    else:  # type is constrained to either image or number, so it's fine to do this
-        n = args[0].get(Datum.NUMBER)
-        return Datum(Datum.NUMBER, Value(n.u, 0), sources=args[0].sources)
 
 
 def funcWrapper(fn: Callable[[Value], Value], d: Datum) -> Datum:
@@ -311,6 +57,9 @@ def funcWrapper(fn: Callable[[Value], Value], d: Datum) -> Datum:
             # ...or splice it back into the image
             img = img.modifyWithSub(subimage, rv.n, uncertainty=rv.u, dqv=rv.dq)
             return Datum(Datum.IMG, img)
+
+
+
 
 
 def funcMarkSat(args: List[Datum], _):
@@ -406,35 +155,6 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args) -> Datum:
     return Datum(Datum.NUMBER, val, SourceSet(sources))
 
 
-testImageCache = {}
-
-
-@datumfunc
-def testimg(index):
-    """
-    Load a test image
-    @param index : number : the index of the image to load
-    """
-    fileList = ("test1.png",)
-    n = int(index.get(Datum.NUMBER).n)
-    if n < 0:
-        raise XFormException('DATA', 'negative test file index')
-    n %= len(fileList)
-
-    global testImageCache
-    if n in testImageCache:
-        img = testImageCache[n]
-    else:
-        try:
-            p = getAssetPath(fileList[n])
-        except FileNotFoundError as e:
-            raise XFormException('DATA', f"cannot find test image{fileList[n]}")
-        img = ImageCube.load(p, None, None)
-        testImageCache[n] = img
-
-    return Datum(Datum.IMG, img)
-
-
 def funcRotate(args: List[Datum], _):
     img: ImageCube = args[0].get(Datum.IMG)
     if img is None:
@@ -525,27 +245,6 @@ def funcAssignSources(args: List[Datum], _):
 
 @parserhook
 def registerBuiltinFunctions(p):
-    p.registerFunc("sin", "calculate sine of angle in radians",
-                   [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
-                   [],
-                   lambda args, optargs: funcWrapper(lambda x: x.sin(), args[0]))
-    p.registerFunc("cos", "calculate cosine of angle in radians",
-                   [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
-                   [],
-                   lambda args, optargs: funcWrapper(lambda x: x.cos(), args[0]))
-    p.registerFunc("tan", "calculate tangent of angle in radians",
-                   [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
-                   [],
-                   lambda args, optargs: funcWrapper(lambda x: x.tan(), args[0]))
-    p.registerFunc("sqrt", "calculate the square root",
-                   [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
-                   [],
-                   lambda args, optargs: funcWrapper(lambda x: x.sqrt(), args[0]))
-    p.registerFunc("abs", "find absolute value",
-                   [Parameter("val", "input value", (Datum.NUMBER, Datum.IMG))],
-                   [],
-                   lambda args, optargs: funcWrapper(lambda x: abs(x), args[0]))
-
     p.registerFunc("min",
                    "find the minimum value of the nominal values in a set of images and/or values. "
                    "Images will be flattened into a list of values, "
@@ -598,59 +297,6 @@ def registerBuiltinFunctions(p):
                    [],
                    lambda args, optargs: statsWrapper(lambda n, u: Value(pooled_sd(n, u), 0, dq.NOUNCERTAINTY),
                                                       args), varargs=True)
-
-    p.registerFunc("roi", "extract ROI from image (returns rect ROI on entire image if none is present",
-                   [Parameter("image", "image to extract ROI from", Datum.IMG)],
-                   [],
-                   funcROI)
-
-    p.registerFunc("addroi", "add ROI to image",
-                   [Parameter("image", "image to add ROI to", Datum.IMG),
-                    Parameter("roi", "ROI", Datum.ROI)
-                    ],
-                   [],
-                   funcAddROI)
-
-    p.registerFunc(
-        "uncertainty",
-        "If input is an image, create an image made up of uncertainty data for all channels; if input is numeric,"
-        " output the uncertainty. Ignores ROIs.",
-        [Parameter("image", "the image to process", (Datum.IMG, Datum.NUMBER))],
-        [],
-        funcUncertainty
-    )
-
-    p.registerFunc(
-        "nominal",
-        "If input is an image, create an image made up of nominal data for all channels; if input is numeric,"
-        " output the uncertainty. In other words, just remove the uncertainty. Ignores ROIs.",
-        [Parameter("image", "the image to process", (Datum.IMG, Datum.NUMBER))],
-        [],
-        funcNominal
-    )
-
-    p.registerFunc(
-        "rgb",
-        "create a 3-channel image consisting of the current RGB mapping of the input image",
-        [Parameter("image", "the image to process", Datum.IMG)],
-        [],
-        funcRGBImage
-    )
-
-    p.registerFunc(
-        "v",
-        "create a new value with uncertainty by combining two nominal values. These can be either numbers or images. "
-        "Ignores and discards ROIs.",
-        [
-            Parameter("value", "the nominal value", (Datum.NUMBER, Datum.IMG)),
-            Parameter("uncertainty", "the uncertainty", (Datum.NUMBER, Datum.IMG))
-        ], [
-            Parameter("dq",
-                      "if present, a DQ bit field (e.g. 36 for COMPLEX|SAT) (only works on numeric args)",
-                      Datum.NUMBER, deflt=0),
-        ],
-        funcV
-    )
 
     p.registerFunc(
         "marksat",

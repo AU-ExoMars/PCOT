@@ -1,3 +1,6 @@
+import importlib
+import os
+import sys
 import traceback
 
 try:
@@ -23,6 +26,35 @@ import faulthandler
 
 faulthandler.enable()
 
+plugins_loaded = False
+
+def load_plugins():
+    """plugin dirs are semicolon separated, stored in Locations/plugins"""
+
+    # make sure this only happens once - we can call pcot.setup() lots
+    # of times during tests.
+
+    global plugins_loaded
+    if plugins_loaded:
+        return
+    plugins_loaded = True
+
+    pluginDirs = [os.path.expanduser(x) for x in pcot.config.getDefaultDir('pluginpath').split(';')]
+    logger.info(f"Plugin directories {','.join(pluginDirs)}")
+    # Load any plugins by recursively walking the plugin directories and importing .py files.
+
+    for d in pluginDirs:
+        for root, dirs, files in os.walk(d):
+            for filename in files:
+                base, ext = os.path.splitext(filename)
+                if ext == '.py':
+                    path = os.path.join(root, filename)
+                    logger.info(f"Loading plugin : {path}")
+                    spec = importlib.util.spec_from_file_location(base, path)
+                    module = importlib.util.module_from_spec(spec)
+                    sys.modules[base] = module
+                    spec.loader.exec_module(module)
+
 
 def setup():
     """Call this to initialise PCOT. We could just call it here, but other things would break then.
@@ -30,6 +62,10 @@ def setup():
 
     # forces the file to be parsed, which uses decorators to register functions etc.
     import pcot.expressions.builtins
+    # force import of builtin functions!
+    import pcot.expressions.funcs
+
+    load_plugins()
 
     # creates xform type singletons, which also causes the expression evaluator to be
     # created as part of XFormExpr, running the functions registered above and thus

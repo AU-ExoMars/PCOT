@@ -46,8 +46,8 @@ def test_greyscale_sources(envi_img: ImageCube):
     # Since this is a slightly edge behaviour I'll test for it.
     nsource = Source().setExternal(StringExternal("numbersource", "numbersource"))  # numbers need explicit sources, so I'll fake one up
 
-    from pcot.expressions.builtins import funcGrey
-    d = funcGrey([Datum(Datum.IMG, envi_img)], [Datum(Datum.NUMBER, Value(0, 0), nsource)])
+    from pcot.expressions.funcs import grey
+    d = grey(Datum(Datum.IMG, envi_img), Datum(Datum.NUMBER, Value(0), sources=nsource))
     img = d.get(Datum.IMG)
     assert img.channels == 1  # single channel
     assert len(img.sources) == 1  # and therefore a single sourceset
