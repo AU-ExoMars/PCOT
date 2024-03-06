@@ -387,8 +387,15 @@ class MultiBandSource(SourcesObtainable):
         return cls(sets)
 
     def add(self, s):
-        """add a band's sources to this one"""
+        """add a band's sources to this one. Returns self."""
         self.sourceSets.append(s)
+        return self
+
+    def addSetToAllBands(self, s: SourceSet):
+        """Given a SourceSet, add that set as a source to all bands. Returns self"""
+        for ss in self.sourceSets:
+            ss.add(s)
+        return self
 
     def copy(self):
         """Make a fairly deep copy of the source sets"""

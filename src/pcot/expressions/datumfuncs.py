@@ -40,10 +40,6 @@ class datumfunc:
         from pcot.expressions import Parameter
         from pcot.datum import Datum
 
-        # get the signature of the function
-        self.name = func.__name__
-        sig = inspect.signature(func)
-
         # get the docstring; we'll get the function and parameter descriptions from this
         docstring = func.__doc__
         if docstring is None:
@@ -55,8 +51,9 @@ class datumfunc:
         # up to the first @param line.
         if "@param" in docstring:
             descs = docstring.split("@param")
-            # remove leading and trailing whitespace from lines in the description
-            self.description = "\n".join([x.strip() for x in descs[0]])
+            # remove leading and trailing whitespace from lines in the description, and then remove
+            # all line breaks (because this will be turned into a Markdown table cell)
+            self.description = " ".join([x.strip() for x in descs[0].split('\n')])
             # now we can parse the parameter descriptions
             for d in descs[1:]:
                 # split the parameter description into three parts - the parameter name,
@@ -79,6 +76,10 @@ class datumfunc:
             # if there are no @param lines, then the whole docstring is the function description
             self.description = docstring
 
+        # now get the signature of the function
+        self.name = func.__name__
+        sig = inspect.signature(func)
+
         # construct the two lists of Parameters - mandatory and optional. Firstly, if the only
         # parameter is *args, that's a 'varargs' function and we ignore anything else (we later
         # check for *args type parameters elsewhere in the list; they aren't valid).
@@ -87,7 +88,7 @@ class datumfunc:
         self.optParams = []
         self.varargs = False
         if len(sig.parameters) > 0 and list(sig.parameters.values())[0].kind == inspect.Parameter.VAR_POSITIONAL:
-            raise ValueError(f"Function {self.name} is varargs but must have at least one fixed parameter")
+            raise ValueError(f"Function {self.name} is varargs but must have at least one non-varargs parameter")
         else:
             for k, v in sig.parameters.items():
                 if v.kind == inspect.Parameter.VAR_POSITIONAL:
@@ -135,18 +136,35 @@ class datumfunc:
 
         # and another wrapper which just runs through the arguments and converts any numeric types to Datum
         # objects, then calls the original function.
-        def pywrapper(*args):
+        def pywrapper(*args, **kwargs):
+            # First, we need to deal with the case where the function is called with missing optional
+            # arguments. These are specified unwrapped in the signature, so we need to add them to the
+            # actual arguments as wrapped Datums.
+
+            # first thing - how many need to be provided? This will be the total number of arguments
+            # (mandatory and optional) minus the number of arguments provided by the caller.
+
+            totArgsRequired = len(self.mandatoryParams) + len(self.optParams)
+            totArgsProvided = len(args) + len(kwargs)       # we'll assume that all the kwargs are correct..
+            # the difference will be the number of arguments we need to provide to args, so defaults aren't used.
+            numMissing = totArgsRequired - totArgsProvided
+            # now we need to add the missing arguments to the args list.
+            for i in range(numMissing):
+                args += (Datum.k(self.optParams[i].deflt),)   # assume it's numeric.
+
+            kwargs = {k: Datum.k(v) if isinstance(v, Number) else v for k, v in kwargs.items()}
             vals = [Datum.k(x) if isinstance(x, (int, Number)) else x for x in args]
             # in the ExpressionEvaluator, Function knows how to check arguments for validity.
-            # We're not using that mechanism so we have to do it here. We don't do this at all
+            # We're not using that mechanism, so we have to do it here. We don't do this at all
             # for varargs.
             if not self.varargs:
                 for i, x in enumerate(zip(vals, self.paramTypes)):
+                    # is the type of the argument in the list of acceptable types?
                     if x[0].tp not in x[1]:
                         from pcot.expressions.parse import ArgsException
                         raise ArgsException(f"Function {self.name} parameter {i} is of the wrong type")
 
-            return func(*vals)
+            return func(*vals, **kwargs)
 
         # store the funcs and register the function
         self.exprfunc = exprwrapper
@@ -154,5 +172,5 @@ class datumfunc:
         self.registry[self.name] = self
 
     def __call__(self, *args, **kwargs):
-        return self.pyfunc(*args, *kwargs)
+        return self.pyfunc(*args, **kwargs)
 

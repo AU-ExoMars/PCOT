@@ -24,9 +24,14 @@ from pcot.value import Value, add_sub_unc_list
 from pcot.xform import XFormException
 
 
-# TODOUNCERTAINTY TEST
-def funcMerge(args: List[Datum], optargs):
-    """Function for merging a number of images. Crops all images to same size as smallest image."""
+@datumfunc  # NOUNCERTAINTYTEST
+def merge(img1, *remainingargs):
+    """merge a number of images into multiple bands of a single image. If the image has multiple bands
+    they will all become bands in the new image.
+    @param img1:   img : first image
+    """
+
+    args = [img1] + list(remainingargs)
     if any([x is None for x in args]):
         raise XFormException('EXPR', 'argument is None for merge')
 
@@ -82,18 +87,23 @@ def funcMerge(args: List[Datum], optargs):
 
 
 # TODOUNCERTAINTY TEST
-def funcGrey(args, optargs):
-    """Greyscale conversion. If the optional second argument is nonzero, and the image has 3 channels, we'll use CV's
+@datumfunc  # NOUNCERTAINTYTEST
+def grey(img, opencv=0):
+    """
+    Greyscale conversion. If the optional second argument is nonzero, and the image has 3 channels, we'll use CV's
     conversion equation rather than just the mean. **However, this loses uncertainty information.**
-
     Otherwise uncertainty
-    is calculated by adding together the channels in quadrature and then dividing the number of channels."""
+    is calculated by adding together the channels in quadrature and then dividing the number of channels.
 
-    img = args[0].get(Datum.IMG)
+    @param img:img:image to convert
+    @param opencv:number:if nonzero, use opencv greyscale conversion (default is 0)
+    """
 
-    ss = SourceSet([img.sources, optargs[0].getSources()])
-    sources = MultiBandSource([ss])
+    ss = SourceSet(img.sources)
+    # not ever actually an int!
+    sources = MultiBandSource([ss, opencv.getSources()])
 
+    img = img.get(Datum.IMG)
     if img.channels == 1:
         img = img.copy()  # 1 channel in the input, just copy it
     else:
@@ -102,7 +112,7 @@ def funcGrey(args, optargs):
         for i in range(0, img.channels):
             dq |= img.dq[:, :, i]
 
-        if optargs[0].get(Datum.NUMBER).n != 0:  # if the opt arg is nonzero, use opencv - but no unc!
+        if opencv.get(Datum.NUMBER).n != 0:  # if the opt arg is nonzero, use opencv - but no unc!
             if img.channels != 3:
                 raise XFormException('DATA', "Image must be RGB for OpenCV greyscale conversion")
             img = ImageCube(cv.cvtColor(img.img, cv.COLOR_RGB2GRAY), img.mapping, sources, dq=dq, rois=img.rois)
@@ -121,14 +131,37 @@ def funcGrey(args, optargs):
     return Datum(Datum.IMG, img)
 
 
-# TODOUNCERTAINTY TEST
-def funcCrop(args, _):
-    img = args[0].get(Datum.IMG)
-    x, y, w, h = [int(x.get(Datum.NUMBER).n) for x in args[1:]]
+@datumfunc  # NOUNCERTAINTYTEST
+def crop(img, x, y, w, h):
+    """
+    Crop an image to a rectangle
+    @param img:img:the image to crop
+    @param x:number:x coordinate of top left corner
+    @param y:number:y coordinate of top left corner
+    @param w:number:width of rectangle
+    @param h:number:height of rectangle
+    """
+    # add the sources of the numbers (pretty much always null) to the
+    # sources of the cropped image
+    numericSources = SourceSet([a.getSources() for a in [x, y, w, h]])
+    img = img.get(Datum.IMG)
+    sources = img.sources.copy().addSetToAllBands(numericSources)
+
+    x = int(x.get(Datum.NUMBER).n)
+    y = int(y.get(Datum.NUMBER).n)
+    w = int(w.get(Datum.NUMBER).n)
+    h = int(h.get(Datum.NUMBER).n)
+
+    if x < 0 or y < 0:
+        raise XFormException('DATA', 'crop rectangle must have non-negative origin')
+
+    if w <= 0 or h <= 0:
+        raise XFormException('DATA', 'crop rectangle must have positive width and height')
+
     out = img.img[y:y + h, x:x + w]
     dq = img.dq[y:y + h, x:x + w]
     unc = img.uncertainty[y:y + h, x:x + w]
-    img = ImageCube(out, img.mapping, img.sources, dq=dq, uncertainty=unc)
+    img = ImageCube(out, img.mapping, sources, dq=dq, uncertainty=unc)
     return Datum(Datum.IMG, img)
 
 
@@ -492,13 +525,6 @@ def funcAssignSources(args: List[Datum], _):
 
 @parserhook
 def registerBuiltinFunctions(p):
-    p.registerFunc("merge",
-                   "merge a number of images into a single image - if the image has multiple channels they will all "
-                   "be merged in.",
-                   [Parameter("image", "an image of any depth", (Datum.NUMBER, Datum.IMG))],
-                   [],
-                   funcMerge, varargs=True)
-
     p.registerFunc("sin", "calculate sine of angle in radians",
                    [Parameter("angle", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
                    [],
@@ -572,22 +598,6 @@ def registerBuiltinFunctions(p):
                    [],
                    lambda args, optargs: statsWrapper(lambda n, u: Value(pooled_sd(n, u), 0, dq.NOUNCERTAINTY),
                                                       args), varargs=True)
-
-    p.registerFunc("grey", "convert an image to greyscale",
-                   [Parameter("image", "an image to process", Datum.IMG)],
-                   [Parameter("useCV",
-                              "if non-zero, use openCV greyscale conversion (RGB input only): 0.299*R + 0.587*G + 0.114*B",
-                              Datum.NUMBER, deflt=0)],
-                   funcGrey)
-
-    p.registerFunc("crop", "crop an image to a rectangle",
-                   [Parameter("image", "an image to process", Datum.IMG),
-                    Parameter("x", "x coordinate of top-left corner", Datum.NUMBER),
-                    Parameter("y", "y coordinate of top-left corner", Datum.NUMBER),
-                    Parameter("w", "width of rectangle", Datum.NUMBER),
-                    Parameter("h", "height of rectangle", Datum.NUMBER)],
-                   [],
-                   funcCrop)
 
     p.registerFunc("roi", "extract ROI from image (returns rect ROI on entire image if none is present",
                    [Parameter("image", "image to extract ROI from", Datum.IMG)],
@@ -702,12 +712,12 @@ def registerBuiltinFunctions(p):
         ], [], funcStripROI
     )
 
-#    p.registerFunc(
-#        'testimg', 'Load test image',
-#        [
-#            Parameter('imageidx', 'image index', Datum.NUMBER)
-#        ], [], funcTestImg
-#    )
+    #    p.registerFunc(
+    #        'testimg', 'Load test image',
+    #        [
+    #            Parameter('imageidx', 'image index', Datum.NUMBER)
+    #        ], [], funcTestImg
+    #    )
 
     p.registerFunc(
         'floodtest', 'Flood fill test',
@@ -722,9 +732,6 @@ def registerBuiltinFunctions(p):
     # register the built-in functions that have been registered through the datumfunc mechanism.
     for _, f in datumfunc.registry.items():
         p.registerFunc(f.name, f.description, f.mandatoryParams, f.optParams, f.exprfunc, varargs=f.varargs)
-
-
-
 
 
 @parserhook
