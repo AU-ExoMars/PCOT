@@ -5,14 +5,11 @@ from typing import List, Optional, Callable
 
 import numpy as np
 
-import pcot
-import pcot.dq
 from pcot import dq
 from pcot.config import parserhook
 from pcot.datum import Datum
 from pcot.expressions import Parameter
 from pcot.expressions.datumfuncs import datumfunc
-from pcot.filters import Filter
 from pcot.imagecube import ImageCube
 from pcot.sources import SourceSet, MultiBandSource, Source, StringExternal
 from pcot.utils.deb import Timer
@@ -57,39 +54,6 @@ def funcWrapper(fn: Callable[[Value], Value], d: Datum) -> Datum:
             # ...or splice it back into the image
             img = img.modifyWithSub(subimage, rv.n, uncertainty=rv.u, dqv=rv.dq)
             return Datum(Datum.IMG, img)
-
-
-
-
-
-def funcMarkSat(args: List[Datum], _):
-    img = args[0].get(Datum.IMG)
-    mn = args[1].get(Datum.NUMBER).n
-    mx = args[2].get(Datum.NUMBER).n
-    if img is None:
-        return None
-
-    subimage = img.subimage()
-    data = subimage.masked(maskBadPixels=True)
-    dq = np.where(data <= mn, pcot.dq.ERROR, 0).astype(np.uint16)
-    dq |= np.where(data >= mx, pcot.dq.SAT, 0).astype(np.uint16)
-
-    img = img.modifyWithSub(subimage, None, dqOR=dq, uncertainty=subimage.uncertainty)
-    return Datum(Datum.IMG, img)
-
-
-def funcSetCWL(args: List[Datum], _):
-    img = args[0].get(Datum.IMG)
-    cwl = args[1].get(Datum.NUMBER).n
-
-    if img is None:
-        return None
-
-    if img.channels != 1:
-        raise XFormException('EXPR', 'setcwl must take a single channel image')
-    img = img.copy()
-    img.sources = MultiBandSource([Source().setBand(Filter(float(cwl), 30, 1.0, idx=0))])
-    return Datum(Datum.IMG, img)
 
 
 def statsWrapper(fn, d: List[Optional[Datum]], *args) -> Datum:
@@ -245,79 +209,6 @@ def funcAssignSources(args: List[Datum], _):
 
 @parserhook
 def registerBuiltinFunctions(p):
-    p.registerFunc("min",
-                   "find the minimum value of the nominal values in a set of images and/or values. "
-                   "Images will be flattened into a list of values, "
-                   "so the result for multiband images may not be what you expect.",
-                   [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
-                   [],
-                   lambda args, optargs: statsWrapper(lambda n, u: Value(np.min(n), 0.0, dq.NOUNCERTAINTY), args),
-                   varargs=True)
-    p.registerFunc("max",
-                   "find the minimum value of the nominal values in a set of images and/or values. "
-                   "Images will be flattened into a list of values, "
-                   "so the result for multiband images may not be what you expect.",
-                   [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
-                   [],
-                   lambda args, optargs: statsWrapper(lambda n, u: Value(np.max(n), 0.0, dq.NOUNCERTAINTY), args),
-                   varargs=True)
-    p.registerFunc("sum",
-                   "find the sum of the nominal in a set of images and/or values. "
-                   "Images will be flattened into a list of values, "
-                   "so the result for multiband images may not be what you expect. "
-                   "The SD of the result is the SD of the sum, not the individual values.",
-                   [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
-                   [],
-                   lambda args, optargs: statsWrapper(lambda n, u: Value(np.sum(n), add_sub_unc_list(u), dq.NONE),
-                                                      args), varargs=True)
-
-    def pooled_sd(n, u):
-        """Returns pooled standard deviation for an array of nominal values and an array of stddevs."""
-        # "Thus the variance of the pooled set is the mean of the variances plus the variance of the means."
-        # by https://arxiv.org/ftp/arxiv/papers/1007/1007.1012.pdf
-        # the variance of the means is n.var()
-        # the mean of the variances is np.mean(u**2) (since u is stddev, and stddev**2 is variance)
-        # so the sum of those is pooled variance. Root that to get the pooled stddev.
-        # There is a similar calculation in xformspectrum!
-        return np.sqrt(n.var() + np.mean(u ** 2))
-
-    p.registerFunc("mean",
-                   "find the mean±sd of the values of a set of images and/or scalars. "
-                   "Uncertainties in the data will be pooled. Images will be flattened into a list of values, "
-                   "so the result for multiband images may not be what you expect.",
-                   [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
-                   [],
-                   lambda args, optargs: statsWrapper(lambda n, u: Value(np.mean(n), pooled_sd(n, u), dq.NONE),
-                                                      args), varargs=True)
-    p.registerFunc("sd",
-                   "find the standard deviation of the nominal values in a set of images and/or scalars. "
-                   "Uncertainties in the data will be pooled. Images will be flattened into a list of values, "
-                   "so the result for multiband images may not be what you expect.",
-                   [Parameter("val", "value(s) to input", (Datum.NUMBER, Datum.IMG))],
-                   [],
-                   lambda args, optargs: statsWrapper(lambda n, u: Value(pooled_sd(n, u), 0, dq.NOUNCERTAINTY),
-                                                      args), varargs=True)
-
-    p.registerFunc(
-        "marksat",
-        "mark pixels outside a certain range as SAT or ERROR (i.e BAD)",
-        [
-            Parameter("image", "the input image", Datum.IMG),
-            Parameter("min", "the minimum value below which pixels are ERROR", Datum.NUMBER),
-            Parameter("max", "the maximum value above which pixels are SAT", Datum.NUMBER)
-        ], [], funcMarkSat
-    )
-
-    p.registerFunc(
-        "setcwl",
-        "Given an 1-band image, 'fake' a filter of a given CWL and assign it. The image itself is unchanged. This is "
-        "used in testing only.",
-        [
-            Parameter("image", "the input image", Datum.IMG),
-            Parameter("cwl", "the fake filter CWL", Datum.NUMBER),
-        ], [], funcSetCWL
-    ),
-
     p.registerFunc(
         "assignsources",
         "Given a pair of images with different sources which nevertheless have the same filters (cwl and fwhm) on"

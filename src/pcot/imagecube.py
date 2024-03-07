@@ -638,7 +638,8 @@ class ImageCube(SourcesObtainable):
 
     def modifyWithSub(self, subimage: SubImageCube, newimg: np.ndarray,
                       sources=None, keepMapping=False,
-                      dqv=None, dqOR=np.uint16(0), uncertainty=None
+                      dqv=None, dqOR=np.uint16(0), uncertainty=None,
+                      dontWriteBadPixels=False
                       ) -> 'ImageCube':
         """return a copy of the image, with the given image spliced in at the subimage's coordinates and masked
         according to the subimage. keepMapping will ensure that the new image has the same mapping as the old.
@@ -655,7 +656,7 @@ class ImageCube(SourcesObtainable):
         x, y, w, h = subimage.bb
         # we only want to paste into the bits in the image that are covered
         # by the mask - and we want the full mask
-        mask = subimage.fullmask()
+        mask = subimage.fullmask(maskBadPixels=dontWriteBadPixels)
 
         # if the dq we're going to OR in isn't a scalar, make it fit the mask.
         if not np.isscalar(dqOR):

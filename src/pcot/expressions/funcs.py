@@ -5,13 +5,14 @@ from pcot import rois
 import pcot.dq
 from pcot.config import getAssetPath
 from pcot.datum import Datum
-from pcot.expressions.builtins import funcWrapper
+from pcot.expressions.builtins import funcWrapper, statsWrapper
 from pcot.expressions.datumfuncs import datumfunc
 from pcot.expressions.ops import combineImageWithNumberSources
+from pcot.filters import Filter
 from pcot.imagecube import ImageCube
-from pcot.sources import MultiBandSource, SourceSet
+from pcot.sources import MultiBandSource, SourceSet, Source
 from pcot.utils import image
-from pcot.value import Value
+from pcot.value import Value, add_sub_unc_list
 from pcot.xform import XFormException
 import cv2 as cv
 
@@ -338,8 +339,8 @@ def abs(a):     # careful now, we're shadowing the builtin "abs" here.
     Calculate absolute value
     @param a:img,number:values (image or number)
     """
-    # this is really ugly, but it avoids the damn thing recursing
-    # and lets us still call it abs.
+    # We don't want to inadvertently recurse, so call the builtin
+    # abs function.
     return funcWrapper(lambda xx: builtins.abs(xx), a)
 
 
@@ -352,7 +353,7 @@ def testimg(index):
     Load a test image
     @param index : number : the index of the image to load
     """
-    fileList = ("test1.png",)
+    fileList = ("marsRGB.png", "gradRGB.png")
     n = int(index.get(Datum.NUMBER).n)
     if n < 0:
         raise XFormException('DATA', 'negative test file index')
@@ -372,3 +373,129 @@ def testimg(index):
     return Datum(Datum.IMG, img)
 
 
+@datumfunc
+def marksat(img, mn=0, mx=1.0):
+    """
+    mark pixels outside a certain range as SAT or ERROR in the DQ bits.
+    Pixels outside any ROI will be ignored, as will any pixels already
+    marked as BAD.
+
+    @param img:img:image to mark
+    @param mn:number:minimum value - pixels below or equal to this will be marked as ERROR
+    @param mx:number:maximum value - pixels above or equal to this will be marked as SAT
+    """
+    img = img.get(Datum.IMG)
+    mn = mn.get(Datum.NUMBER).n
+    mx = mx.get(Datum.NUMBER).n
+    if img is None:
+        return None
+
+    subimage = img.subimage()
+    data = subimage.masked()
+    dq = np.where(data <= mn, pcot.dq.ERROR, 0).astype(np.uint16)
+    dq |= np.where(data >= mx, pcot.dq.SAT, 0).astype(np.uint16)
+
+    img = img.modifyWithSub(subimage, None,
+                            dqOR=dq, uncertainty=subimage.uncertainty,
+                            dontWriteBadPixels=True)
+    return Datum(Datum.IMG, img)
+
+
+@datumfunc
+def setcwl(img, cwl):
+    """
+    Given a 1-band image, create a 'fake' filter with a given centre wavelength and assign it.
+    The transmission of the filter is 1.0, and the fwhm is 30. The image itself is unchanged. This is used in testing only.
+    @param img:img:image to set
+    @param cwl:number:the fake filter CWL
+    """
+
+    img = img.get(Datum.IMG)
+    cwl = cwl.get(Datum.NUMBER).n
+
+    if img is None:
+        return None
+
+    if img.channels != 1:
+        raise XFormException('EXPR', 'setcwl must take a single channel image')
+    img = img.copy()
+    img.sources = MultiBandSource([Source().setBand(Filter(float(cwl), 30, 1.0, idx=0))])
+    return Datum(Datum.IMG, img)
+
+
+def pooled_sd(n, u):
+    """Returns pooled standard deviation for an array of nominal values and an array of stddevs."""
+    # "Thus the variance of the pooled set is the mean of the variances plus the variance of the means."
+    # by https://arxiv.org/ftp/arxiv/papers/1007/1007.1012.pdf
+    # the variance of the means is n.var()
+    # the mean of the variances is np.mean(u**2) (since u is stddev, and stddev**2 is variance)
+    # so the sum of those is pooled variance. Root that to get the pooled stddev.
+    # There is a similar calculation in xformspectrum!
+    varianceOfMeans = n.var()
+    meanOfVariances = np.mean(u ** 2)
+    return np.sqrt(varianceOfMeans + meanOfVariances)
+
+
+@datumfunc
+def mean(val, *args):
+    """
+    find the mean±sd of the values of a set of images and/or scalars.
+    Uncertainties in the data will be pooled. Images will be flattened into a list of values,
+    so the result for multiband images may not be what you expect.
+
+    @param val:img,number:value(s) to input
+    """
+    v = (val,) + args
+    return statsWrapper(lambda n, u: Value(np.mean(n), pooled_sd(n, u), pcot.dq.NONE), v)
+
+
+@datumfunc
+def sd(val, *args):
+    """
+    find the standard deviation of the values of a set of images and/or scalars.
+    Uncertainties in the data will be pooled. Images will be flattened into a list of values,
+    so the result for multiband images may not be what you expect.
+
+    @param val:img,number:value(s) to input
+    """
+    v = (val,) + args
+    return statsWrapper(lambda n, u: Value(pooled_sd(n, u), 0, pcot.dq.NOUNCERTAINTY), v)
+
+
+@datumfunc
+def min(val, *args):
+    """
+    find the minimum of the nominal values of a set of images and/or scalars.
+    Images will be flattened into a list of values,
+    so the result for multiband images may not be what you expect.
+
+    @param val:img,number:value(s) to input
+    """
+    v = (val,) + args
+    return statsWrapper(lambda n, u: Value(np.min(n), 0, pcot.dq.NOUNCERTAINTY), v)
+
+
+@datumfunc
+def max(val, *args):
+    """
+    find the maximum of the nominal values of a set of images and/or scalars.
+    Images will be flattened into a list of values,
+    so the result for multiband images may not be what you expect.
+
+    @param val:img,number:value(s) to input
+    """
+    v = (val,) + args
+    return statsWrapper(lambda n, u: Value(np.max(n), 0, pcot.dq.NOUNCERTAINTY), v)
+
+
+@datumfunc
+def sum(val, *args):
+    """
+    find the sum of the values of a set of images and/or scalars.
+    Images will be flattened into a list of values,
+    so the result for multiband images may not be what you expect.
+
+    @param val:img,number:value(s) to input
+    """
+    v = (val,) + args
+    return statsWrapper(lambda n, u: Value(np.sum(n), add_sub_unc_list(u), pcot.dq.NONE), v)

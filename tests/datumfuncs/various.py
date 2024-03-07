@@ -1,7 +1,11 @@
+import pcot
 from pcot.datum import Datum
+from pcot.document import Document
 from pcot.expressions import ExpressionEvaluator
 import pcot.expressions.funcs as df
 from fixtures import *
+from pcot.rois import ROICircle
+from pcot.sources import nullSourceSet
 from pcot.xform import XFormException
 
 
@@ -222,3 +226,156 @@ def test_nominal_and_uncertainty():
     assert np.all(u.get(Datum.IMG).dq == np.array([
         dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY],
         dtype=np.uint16))
+
+
+def test_marksat():
+    r = df.testimg(1)
+    assert r.get(Datum.IMG).countBadPixels() == 0
+
+    r = df.marksat(r)
+    img = r.get(Datum.IMG)
+    assert img.channels == 3
+    assert img.shape == (256, 256, 3)
+    assert img.countBadPixels() == 65536  # all pixels will be bad!
+
+    # top left corner is all zeroes, so error.
+    assert np.all(img.dq[0, 0] == [dq.ERROR | dq.NOUNCERTAINTY] * 3)
+
+    # bottom left corner (0,1,1)
+    dqs = [x.dq for x in img[0, 255]]
+    assert dqs == [dq.ERROR | dq.NOUNCERTAINTY,
+                   dq.SAT | dq.NOUNCERTAINTY,
+                   dq.SAT | dq.NOUNCERTAINTY]
+
+    # bottom right corner (1,1,0)
+    dqs = [x.dq for x in img[255, 255]]
+    assert dqs == [dq.SAT | dq.NOUNCERTAINTY,
+                   dq.SAT | dq.NOUNCERTAINTY,
+                   dq.ERROR | dq.NOUNCERTAINTY]
+
+    dqs = [x.dq for x in img[130, 130]]
+    assert dqs == [dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY | dq.ERROR]
+
+    dqs = [x.dq for x in img[130, 126]]
+    assert dqs == [dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY | dq.SAT]
+
+    # now mask off an area with an ROI
+    rect = Datum(Datum.ROI, ROICircle(128, 128, 10), sources=nullSourceSet)
+    r = df.addroi(df.testimg(1), rect)
+    img = df.marksat(r).get(Datum.IMG)
+
+    # edges should be unchanged (outside the ROI)
+    dqs = [x.dq for x in img[255, 255]]
+    assert dqs == [dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY]
+
+    # but changed inside the ROI
+    dqs = [x.dq for x in img[130, 130]]
+    assert dqs == [dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY | dq.ERROR]
+
+    dqs = [x.dq for x in img[130, 126]]
+    assert dqs == [dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY | dq.SAT]
+
+
+def test_marksat_masked():
+    """Test that marksat doesn't set pixels with BAD already on them."""
+
+    # here we need to use a dqmod, so we'll create a graph
+    pcot.setup()
+    doc = Document()
+
+    # create a node which brings in that same image
+    node1 = doc.graph.create("expr")
+    node1.expr = "testimg(1)"
+
+    # create a node which marksat's the image as a quick check
+    node2 = doc.graph.create("expr")
+    node2.expr = "marksat(a)"
+    node2.connect(0, node1, 0)
+
+    doc.changed()
+
+    # get the output of node2 and check it has the same new DQs as in the
+    # previous test
+    img = node2.getOutput(0, Datum.IMG)
+    dqs = [x.dq for x in img[130, 130]]
+    assert dqs == [dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY | dq.ERROR]
+
+    dqs = [x.dq for x in img[130, 126]]
+    assert dqs == [dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY | dq.SAT]
+
+    # now connect a node to expr2 which masks off an area with an ROI
+
+    node3 = doc.graph.create("circle")
+    node3.connect(0, node1, 0)
+    node3.roi.set(128, 128, 16)     #  small circle in centre
+
+    # and connect a node to that which will do the dqmod
+
+    node4 = doc.graph.create("dqmod")
+    node4.connect(0, node3, 0)
+    # we're going to set DQ in band zero if the nominal value is >= -1
+    node4.band = None      # All bands
+    node4.mod = "Set"   # set DQ bits
+    node4.data = "Nominal"
+    node4.test = "Greater than or equal to"
+    node4.value = -1
+    node4.dq = dq.DIVZERO       # an arbitrary "BAD" bit to set
+
+    # pass that into a node to strip the ROIs
+    node5 = doc.graph.create("striproi")
+    node5.connect(0, node4, 0)
+
+    # run it, and pull out the result datum.
+    doc.changed()
+
+    r = node5.getOutputDatum(0)
+
+    assert r.get(Datum.IMG).rois == []
+
+    # and run marksat on it!
+    r = df.marksat(r)
+
+    # make sure the DQs are as expected in the centre (i.e. not changed)
+    img = r.get(Datum.IMG)
+    dqs = [x.dq for x in img[130, 130]]
+    assert dqs == [dq.DIVZERO|dq.NOUNCERTAINTY] * 3
+    dqs = [x.dq for x in img[130, 126]]
+    assert dqs == [dq.DIVZERO|dq.NOUNCERTAINTY] * 3
+
+    # but have been set outside the region whose DQs we set to bad.
+    dqs = [x.dq for x in img[255, 255]]
+    assert dqs == [dq.SAT | dq.NOUNCERTAINTY,
+                   dq.SAT | dq.NOUNCERTAINTY,
+                   dq.ERROR | dq.NOUNCERTAINTY]
+
+
+def test_marksat_args():
+    r = df.testimg(1)
+
+    # so this time, everything below 0.5 is ERROR and everything
+    # greater than 0.8 is SAT.
+    r = df.marksat(r, 0.5, 0.8)
+
+    img = r.get(Datum.IMG)
+    # top left corner is all zeroes, so error.
+    assert [x.dq for x in img[0, 0]] == [dq.ERROR | dq.NOUNCERTAINTY] * 3
+    assert [x.dq for x in img[20, 0]] == [dq.ERROR | dq.NOUNCERTAINTY] * 3
+    assert [x.dq for x in img[127, 0]] == [dq.ERROR | dq.NOUNCERTAINTY] * 3
+    assert [x.dq for x in img[128, 0]] == [dq.NOUNCERTAINTY,  dq.ERROR | dq.NOUNCERTAINTY, dq.SAT | dq.NOUNCERTAINTY]
+    assert [x.dq for x in img[200, 0]] == [dq.NOUNCERTAINTY,  dq.ERROR | dq.NOUNCERTAINTY, dq.SAT | dq.NOUNCERTAINTY]
+    assert [x.dq for x in img[205, 0]] == [dq.SAT | dq.NOUNCERTAINTY,  dq.ERROR | dq.NOUNCERTAINTY, dq.SAT | dq.NOUNCERTAINTY]
+    assert [x.dq for x in img[255, 0]] == [dq.SAT | dq.NOUNCERTAINTY,  dq.ERROR | dq.NOUNCERTAINTY, dq.SAT | dq.NOUNCERTAINTY]
+
+
+def test_setcwl():
+    r = df.testimg(1)
+    r = df.grey(r)
+    r = df.setcwl(r, 340)
+
+    img = r.get(Datum.IMG)
+    assert img.channels == 1
+    assert img.shape == (256, 256)
+
+    cwl, fwhm = img.wavelengthAndFWHM(0)
+    assert cwl == 340
+    assert fwhm == 30
