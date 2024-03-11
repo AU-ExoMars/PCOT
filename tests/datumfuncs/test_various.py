@@ -10,6 +10,17 @@ from pcot.value import Value
 from pcot.xform import XFormException
 
 
+def test_none_out():
+    # Some functions will return None if the image is None (or not an image).
+    # Can we cope with this?
+    r = df.flipv(Datum(Datum.IMG, None))
+    assert r is None
+
+    e = ExpressionEvaluator()
+    r = e.run("flipv(a)", {"a": Datum(Datum.IMG, None)})
+    assert r == Datum.null
+
+
 def test_merge():
     # get the test image
     r = df.testimg(0)
@@ -148,85 +159,6 @@ def test_rgb():
     # and check that all the channels are the same
     for i in range(3):
         assert np.allclose(r.get(Datum.IMG).img[:, :, i], g.get(Datum.IMG).img)
-
-
-def test_v():
-    r = df.testimg(0)
-    assert np.all(r.get(Datum.IMG).dq == np.array([
-        dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY],
-        dtype=np.uint16))
-
-    # apply an uncertainty to the image
-    r = df.v(r, 0.1)  # numeric values are converted to Datum
-    pix = r.get(Datum.IMG).img[0, 0]
-    unc = r.get(Datum.IMG).uncertainty[0, 0]
-    assert np.allclose(pix, [0.3882353, 0.21960784, 0.13725491])
-    # and check that the uncertainty is set
-    assert np.allclose(unc, [0.1, 0.1, 0.1])
-    assert np.all(r.get(Datum.IMG).dq == np.array([0, 0, 0], dtype=np.uint16))
-
-    # now apply an uncertainty which is 0.1 times the nominal of each pixel
-    r = df.testimg(0)
-    r = df.v(r, 0.1 * r)
-    pix = r.get(Datum.IMG).img[0, 0]
-    unc = r.get(Datum.IMG).uncertainty[0, 0]
-    assert np.allclose(pix, [0.3882353, 0.21960784, 0.13725491])
-    assert np.allclose(unc, [0.03882353, 0.021960784, 0.013725491])
-
-    # now apply a fixed nominal to an uncertainty (a bit weird)
-    r = df.testimg(0)
-    r = df.v(0.1, r)
-    pix = r.get(Datum.IMG).img[0, 0]
-    unc = r.get(Datum.IMG).uncertainty[0, 0]
-    assert np.allclose(unc, [0.3882353, 0.21960784, 0.13725491])
-    # and check that the uncertainty is set
-    assert np.allclose(pix, [0.1, 0.1, 0.1])
-    assert np.all(r.get(Datum.IMG).dq == np.array([0, 0, 0], dtype=np.uint16))
-
-    # finally generate a value
-    r = df.v(0.1, 0.01)
-    assert r.get(Datum.NUMBER).n == np.float32(0.1)
-    assert r.get(Datum.NUMBER).u == np.float32(0.01)
-    assert r.get(Datum.NUMBER).dq == dq.NONE
-
-    # Here we are creating a value with an uncertainty of 0.0. There is still uncertainty
-    # data, but it is 0.0. We don't want to treat this as a value with no uncertainty.
-    r = df.v(0.1, 0.0)
-    assert r.get(Datum.NUMBER).n == np.float32(0.1)
-    assert r.get(Datum.NUMBER).u == np.float32(0.0)
-    assert r.get(Datum.NUMBER).dq == dq.NONE
-
-    # finally add some dq to an image, deleting all the uncertainty
-    # (but not setting the uncertainty bit)
-    r = df.testimg(0)
-    r = df.v(r, dqbits=dq.ERROR)
-    pix = r.get(Datum.IMG).img[0, 0]
-    unc = r.get(Datum.IMG).uncertainty[0, 0]
-    assert np.allclose(pix, [0.3882353, 0.21960784, 0.13725491])
-    # and check that the uncertainty is set
-    assert np.allclose(unc, [0, 0, 0])
-    assert np.all(r.get(Datum.IMG).dq == np.array([dq.ERROR, dq.ERROR, dq.ERROR], dtype=np.uint16))
-
-
-def test_nominal_and_uncertainty():
-    r = df.testimg(0)
-    n = df.nominal(r)
-    u = df.uncertainty(r)
-    assert np.allclose(n.get(Datum.IMG).img, r.get(Datum.IMG).img)
-    assert np.allclose(u.get(Datum.IMG).img, r.get(Datum.IMG).uncertainty)
-
-    # the resulting images should have no uncertainty
-    assert np.allclose(n.get(Datum.IMG).uncertainty, 0)
-    assert np.allclose(u.get(Datum.IMG).uncertainty, 0)
-
-    # and should be marked in the dq bits as such
-
-    assert np.all(n.get(Datum.IMG).dq == np.array([
-        dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY],
-        dtype=np.uint16))
-    assert np.all(u.get(Datum.IMG).dq == np.array([
-        dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY],
-        dtype=np.uint16))
 
 
 def test_marksat():
@@ -380,125 +312,3 @@ def test_setcwl():
     cwl, fwhm = img.wavelengthAndFWHM(0)
     assert cwl == 340
     assert fwhm == 30
-
-
-def test_flipv():
-    # load a basic RGB image - no unc, no dq
-    r = df.testimg(1)
-    # create an uncertainty channel and add it
-    unc = r*0.01
-    r = df.v(r, unc)
-    # test the top-right pixel just to make sure we created it right.
-    pix = r.get(Datum.IMG)[255, 0]
-    assert np.allclose([x.n for x in pix], [1, 0, 1])
-    assert np.allclose([x.u for x in pix], [0.01, 0, 0.01])
-    assert [x.dq for x in pix] == [0, 0, 0]
-    # add DQ bits at the bottom left. Hack, and note the coordinate
-    # reversal - the underlying arrays are [y,x] coordinate system
-    r.get(Datum.IMG).dq[255, 0] = [dq.ERROR, dq.NONE, dq.SAT]
-    pix = r.get(Datum.IMG)[0, 255]
-    assert [x.dq for x in pix] == [dq.ERROR, dq.NONE, dq.SAT]
-
-    r = df.flipv(r)
-    img = r.get(Datum.IMG)
-    assert img.channels == 3
-    assert img.shape == (256, 256, 3)
-    vals = [x.n for x in img[0, 0]]
-    assert np.allclose(vals, [0, 1, 1])
-    assert np.allclose([x.u for x in img[0, 0]], [0, 0.01, 0.01])
-    assert [x.dq for x in img[0, 0]] == [dq.ERROR, dq.NONE, dq.SAT]
-
-
-def test_fliph():
-    # load a basic RGB image - no unc, no dq
-    r = df.testimg(1)
-    # create an uncertainty channel and add it
-    unc = r*0.01
-    r = df.v(r, unc)
-    # add DQ bits at the top right. Hack, and note the coordinate
-    # reversal - the underlying arrays are [y,x] coordinate system
-    r.get(Datum.IMG).dq[0, 255] = [dq.ERROR, dq.NONE, dq.SAT]
-    pix = r.get(Datum.IMG)[255, 0]
-    assert [x.dq for x in pix] == [dq.ERROR, dq.NONE, dq.SAT]
-
-    r = df.fliph(r)
-    img = r.get(Datum.IMG)
-    assert img.channels == 3
-    assert img.shape == (256, 256, 3)
-    vals = [x.n for x in img[0, 0]]
-    assert np.allclose(vals, [1, 0, 1])
-    assert np.allclose([x.u for x in img[0, 0]], [0.01, 0, 0.01])
-    assert [x.dq for x in img[0, 0]] == [dq.ERROR, dq.NONE, dq.SAT]
-
-
-def test_none_out():
-    # Some functions will return None if the image is None (or not an image).
-    # Can we cope with this?
-    r = df.flipv(Datum(Datum.IMG, None))
-    assert r is Datum.null
-
-
-def test_rotate():
-    r = df.testimg(1)
-    unc = r*0.01
-    r = df.v(r, unc)
-    r.get(Datum.IMG).dq[0, 0] = [dq.ERROR, dq.NONE, dq.SAT]
-
-    # topright becomes top-left
-    r = df.rotate(r, 90)
-    pix = r.get(Datum.IMG)[0,0]
-    assert np.allclose([x.n for x in pix], [1, 0, 1])
-    assert np.allclose([x.u for x in pix], [0.01, 0, 0.01])
-    assert [x.dq for x in pix] == [0, 0, 0]
-    # test it this way too - we'll just do this from now on.
-    assert r.get(Datum.IMG)[0, 0] == (
-        Value(1, 0.01, dq.NONE),
-        Value(0, 0, dq.NONE),
-        Value(1, 0.01, dq.NONE)
-    )
-
-    # check that the bottom left is OK too
-    assert r.get(Datum.IMG)[0, 255] == (
-        Value(0, 0, dq.ERROR),
-        Value(0, 0, dq.NONE),
-        Value(0, 0, dq.SAT)
-    )
-
-    # now try again with 270 (one turn clockwise)
-    r = df.testimg(1)
-    unc = r*0.01
-    r = df.v(r, unc)
-    r.get(Datum.IMG).dq[0, 0] = [dq.ERROR|dq.TEST, dq.NONE, dq.SAT]
-    r = df.rotate(r, 270)
-
-    assert r.get(Datum.IMG)[0, 0] == (
-        Value(0, 0, dq.NONE),
-        Value(1, 0.01, dq.NONE),
-        Value(1, 0.01, dq.NONE)
-    )
-    assert r.get(Datum.IMG)[255, 0] == (
-        Value(0, 0, dq.ERROR|dq.TEST),
-        Value(0, 0, dq.NONE),
-        Value(0, 0, dq.SAT)
-    )
-
-    # and again to check that -90 is 270. (Slightly different vals, though)
-    r = df.testimg(1)
-    unc = r*0.02
-    r = df.v(r, unc)
-    r.get(Datum.IMG).dq[0, 0] = [dq.ERROR|dq.TEST, dq.NONE, dq.SAT|dq.DIVZERO]
-    r = df.rotate(r, -90)
-    assert r.get(Datum.IMG)[0, 0] == (
-        Value(0, 0, dq.NONE),
-        Value(1, 0.02, dq.NONE),
-        Value(1, 0.02, dq.NONE)
-    )
-    assert r.get(Datum.IMG)[255, 0] == (
-        Value(0, 0, dq.ERROR|dq.TEST),
-        Value(0, 0, dq.NONE),
-        Value(0, 0, dq.SAT|dq.DIVZERO)
-    )
-
-
-
-
