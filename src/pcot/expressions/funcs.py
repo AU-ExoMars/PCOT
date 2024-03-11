@@ -10,7 +10,7 @@ from pcot.expressions.datumfuncs import datumfunc
 from pcot.expressions.ops import combineImageWithNumberSources
 from pcot.filters import Filter
 from pcot.imagecube import ImageCube
-from pcot.sources import MultiBandSource, SourceSet, Source
+from pcot.sources import MultiBandSource, SourceSet, Source, StringExternal
 from pcot.utils import image
 from pcot.value import Value, add_sub_unc_list
 from pcot.xform import XFormException

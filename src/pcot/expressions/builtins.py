@@ -181,17 +181,6 @@ def funcAssignSources(args: List[Datum], _):
 @parserhook
 def registerBuiltinFunctions(p):
     p.registerFunc(
-        "assignsources",
-        "Given a pair of images with different sources which nevertheless have the same filters (cwl and fwhm) on"
-        "corresponding bands, create a new image with data from the second but sources from the first."
-        "Should probably be used in testing only.",
-        [
-            Parameter("src", "source of filter data", Datum.IMG),
-            Parameter("dest", "image to receive filter data", Datum.IMG),
-        ], [], funcAssignSources
-    )
-
-    p.registerFunc(
         "striproi", "strip all ROIs from an image",
         [
             Parameter("image", "the image to strip ROIs from", Datum.IMG),
