@@ -499,3 +499,33 @@ def sum(val, *args):
     """
     v = (val,) + args
     return statsWrapper(lambda n, u: Value(np.sum(n), add_sub_unc_list(u), pcot.dq.NONE), v)
+
+
+@datumfunc
+def flipv(img):
+    """
+    Flip an image vertically
+    @param img:img:image to flip
+    """
+    img = img.get(Datum.IMG)
+    if img is not None:
+        return Datum(Datum.IMG, img.flip(vertical=True))
+    else:
+        return None
+
+
+@datumfunc
+def fliph(img):
+    """
+    Flip an image horizontally
+    @param img:img:image to flip
+    """
+    img = img.get(Datum.IMG)
+    if img is not None:
+        return Datum(Datum.IMG, img.flip(vertical=False))
+    else:
+        return None
+
+
+def rotate(img, angle):
+    pass

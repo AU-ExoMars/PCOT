@@ -1,5 +1,5 @@
-from typing import Any, List, Callable, Optional
 from numbers import Number
+from typing import List, Callable
 
 
 class datumfunc:

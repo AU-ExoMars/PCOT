@@ -379,3 +379,59 @@ def test_setcwl():
     cwl, fwhm = img.wavelengthAndFWHM(0)
     assert cwl == 340
     assert fwhm == 30
+
+
+def test_flipv():
+    # load a basic RGB image - no unc, no dq
+    r = df.testimg(1)
+    # create an uncertainty channel and add it
+    unc = r*0.01
+    r = df.v(r, unc)
+    # test the top-right pixel just to make sure we created it right.
+    pix = r.get(Datum.IMG)[255, 0]
+    assert np.allclose([x.n for x in pix], [1, 0, 1])
+    assert np.allclose([x.u for x in pix], [0.01, 0, 0.01])
+    assert [x.dq for x in pix] == [0, 0, 0]
+    # add DQ bits at the bottom left. Hack, and note the coordinate
+    # reversal - the underlying arrays are [y,x] coordinate system
+    r.get(Datum.IMG).dq[255, 0] = [dq.ERROR, dq.NONE, dq.SAT]
+    pix = r.get(Datum.IMG)[0, 255]
+    assert [x.dq for x in pix] == [dq.ERROR, dq.NONE, dq.SAT]
+
+    r = df.flipv(r)
+    img = r.get(Datum.IMG)
+    assert img.channels == 3
+    assert img.shape == (256, 256, 3)
+    vals = [x.n for x in img[0, 0]]
+    assert np.allclose(vals, [0, 1, 1])
+    assert np.allclose([x.u for x in img[0, 0]], [0, 0.01, 0.01])
+    assert [x.dq for x in img[0, 0]] == [dq.ERROR, dq.NONE, dq.SAT]
+
+
+def test_fliph():
+    # load a basic RGB image - no unc, no dq
+    r = df.testimg(1)
+    # create an uncertainty channel and add it
+    unc = r*0.01
+    r = df.v(r, unc)
+    # add DQ bits at the top right. Hack, and note the coordinate
+    # reversal - the underlying arrays are [y,x] coordinate system
+    r.get(Datum.IMG).dq[0, 255] = [dq.ERROR, dq.NONE, dq.SAT]
+    pix = r.get(Datum.IMG)[255, 0]
+    assert [x.dq for x in pix] == [dq.ERROR, dq.NONE, dq.SAT]
+
+    r = df.fliph(r)
+    img = r.get(Datum.IMG)
+    assert img.channels == 3
+    assert img.shape == (256, 256, 3)
+    vals = [x.n for x in img[0, 0]]
+    assert np.allclose(vals, [1, 0, 1])
+    assert np.allclose([x.u for x in img[0, 0]], [0.01, 0, 0.01])
+    assert [x.dq for x in img[0, 0]] == [dq.ERROR, dq.NONE, dq.SAT]
+
+
+def test_none_out():
+    # Some functions will return None if the image is None (or not an image).
+    # Can we cope with this?
+    r = df.flipv(Datum(Datum.IMG, None))
+    assert r is Datum.null

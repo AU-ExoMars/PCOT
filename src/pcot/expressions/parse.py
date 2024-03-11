@@ -201,7 +201,9 @@ class Function:
         """do type checking for arguments, then call this function.
         Note that we pass mandatory and optional arguments"""
         args, optargs = self.chkargs(args)
-        return self.fn(args, optargs)
+        r = self.fn(args, optargs)
+        # return the result, or Datum.null if the returned value is None
+        return r if r is not None else Datum.null
 
 
 class Instruction:

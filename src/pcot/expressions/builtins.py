@@ -132,22 +132,6 @@ def funcRotate(args: List[Datum], _):
     return Datum(Datum.IMG, img)
 
 
-def funcFlipV(args: List[Datum], _):
-    img: ImageCube = args[0].get(Datum.IMG)
-    if img is None:
-        return None
-    img = img.flip(vertical=True)
-    return Datum(Datum.IMG, img)
-
-
-def funcFlipH(args: List[Datum], _):
-    img: ImageCube = args[0].get(Datum.IMG)
-    if img is None:
-        return None
-    img = img.flip(vertical=False)
-    return Datum(Datum.IMG, img)
-
-
 def funcStripROI(args: List[Datum], _):
     img: ImageCube = args[0].get(Datum.IMG)
     if img is None:
@@ -226,20 +210,6 @@ def registerBuiltinFunctions(p):
             Parameter("image", "the image to rotate", Datum.IMG),
             Parameter("angle", "the angle to rotate by (degrees)", Datum.NUMBER),
         ], [], funcRotate
-    )
-
-    p.registerFunc(
-        "flipv", "flip an image vertically",
-        [
-            Parameter("image", "the image to flip", Datum.IMG),
-        ], [], funcFlipV
-    )
-
-    p.registerFunc(
-        "fliph", "flip an image horizontally",
-        [
-            Parameter("image", "the image to flip", Datum.IMG),
-        ], [], funcFlipH
     )
 
     p.registerFunc(
