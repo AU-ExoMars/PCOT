@@ -6,6 +6,7 @@ import pcot.expressions.funcs as df
 from fixtures import *
 from pcot.rois import ROICircle
 from pcot.sources import nullSourceSet
+from pcot.value import Value
 from pcot.xform import XFormException
 
 
@@ -449,10 +450,55 @@ def test_rotate():
     assert np.allclose([x.n for x in pix], [1, 0, 1])
     assert np.allclose([x.u for x in pix], [0.01, 0, 0.01])
     assert [x.dq for x in pix] == [0, 0, 0]
+    # test it this way too - we'll just do this from now on.
+    assert r.get(Datum.IMG)[0, 0] == (
+        Value(1, 0.01, dq.NONE),
+        Value(0, 0, dq.NONE),
+        Value(1, 0.01, dq.NONE)
+    )
 
-    # check that the bottom left has the DQ bits set
-    pix = r.get(Datum.IMG)[0, 255]
-    assert [x.dq for x in pix] == [dq.ERROR, dq.NONE, dq.SAT]
+    # check that the bottom left is OK too
+    assert r.get(Datum.IMG)[0, 255] == (
+        Value(0, 0, dq.ERROR),
+        Value(0, 0, dq.NONE),
+        Value(0, 0, dq.SAT)
+    )
+
+    # now try again with 270 (one turn clockwise)
+    r = df.testimg(1)
+    unc = r*0.01
+    r = df.v(r, unc)
+    r.get(Datum.IMG).dq[0, 0] = [dq.ERROR|dq.TEST, dq.NONE, dq.SAT]
+    r = df.rotate(r, 270)
+
+    assert r.get(Datum.IMG)[0, 0] == (
+        Value(0, 0, dq.NONE),
+        Value(1, 0.01, dq.NONE),
+        Value(1, 0.01, dq.NONE)
+    )
+    assert r.get(Datum.IMG)[255, 0] == (
+        Value(0, 0, dq.ERROR|dq.TEST),
+        Value(0, 0, dq.NONE),
+        Value(0, 0, dq.SAT)
+    )
+
+    # and again to check that -90 is 270. (Slightly different vals, though)
+    r = df.testimg(1)
+    unc = r*0.02
+    r = df.v(r, unc)
+    r.get(Datum.IMG).dq[0, 0] = [dq.ERROR|dq.TEST, dq.NONE, dq.SAT|dq.DIVZERO]
+    r = df.rotate(r, -90)
+    assert r.get(Datum.IMG)[0, 0] == (
+        Value(0, 0, dq.NONE),
+        Value(1, 0.02, dq.NONE),
+        Value(1, 0.02, dq.NONE)
+    )
+    assert r.get(Datum.IMG)[255, 0] == (
+        Value(0, 0, dq.ERROR|dq.TEST),
+        Value(0, 0, dq.NONE),
+        Value(0, 0, dq.SAT|dq.DIVZERO)
+    )
+
 
 
 
