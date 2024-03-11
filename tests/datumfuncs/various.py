@@ -435,3 +435,24 @@ def test_none_out():
     # Can we cope with this?
     r = df.flipv(Datum(Datum.IMG, None))
     assert r is Datum.null
+
+
+def test_rotate():
+    r = df.testimg(1)
+    unc = r*0.01
+    r = df.v(r, unc)
+    r.get(Datum.IMG).dq[0, 0] = [dq.ERROR, dq.NONE, dq.SAT]
+
+    # topright becomes top-left
+    r = df.rotate(r, 90)
+    pix = r.get(Datum.IMG)[0,0]
+    assert np.allclose([x.n for x in pix], [1, 0, 1])
+    assert np.allclose([x.u for x in pix], [0.01, 0, 0.01])
+    assert [x.dq for x in pix] == [0, 0, 0]
+
+    # check that the bottom left has the DQ bits set
+    pix = r.get(Datum.IMG)[0, 255]
+    assert [x.dq for x in pix] == [dq.ERROR, dq.NONE, dq.SAT]
+
+
+

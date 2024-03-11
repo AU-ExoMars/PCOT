@@ -119,19 +119,6 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args) -> Datum:
     return Datum(Datum.NUMBER, val, SourceSet(sources))
 
 
-def funcRotate(args: List[Datum], _):
-    img: ImageCube = args[0].get(Datum.IMG)
-    if img is None:
-        return None
-    angle = args[1].get(Datum.NUMBER).n
-    # only permit multiples of 90 degrees, giving an error otherwise
-    if angle % 90 != 0:
-        raise XFormException('DATA', 'rotation angle must be a multiple of 90 degrees')
-
-    img = img.rotate(angle)
-    return Datum(Datum.IMG, img)
-
-
 def funcStripROI(args: List[Datum], _):
     img: ImageCube = args[0].get(Datum.IMG)
     if img is None:
@@ -202,14 +189,6 @@ def registerBuiltinFunctions(p):
             Parameter("src", "source of filter data", Datum.IMG),
             Parameter("dest", "image to receive filter data", Datum.IMG),
         ], [], funcAssignSources
-    )
-
-    p.registerFunc(
-        "rotate", "rotate an image by a multiple of 90 degrees clockwise",
-        [
-            Parameter("image", "the image to rotate", Datum.IMG),
-            Parameter("angle", "the angle to rotate by (degrees)", Datum.NUMBER),
-        ], [], funcRotate
     )
 
     p.registerFunc(

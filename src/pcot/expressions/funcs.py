@@ -527,5 +527,22 @@ def fliph(img):
         return None
 
 
+@datumfunc
 def rotate(img, angle):
-    pass
+    """
+    Rotate an image anti-clockwise by an angle in degrees. The angle must be
+    a multiple of 90 degrees.
+
+    @param img:img:image to rotate
+    @param angle:number:angle to rotate by
+    """
+    img = img.get(Datum.IMG)
+    if img is None:
+        return None
+    angle = angle.get(Datum.NUMBER).n
+    # only permit multiples of 90 degrees, giving an error otherwise
+    if angle % 90 != 0:
+        raise XFormException('DATA', 'rotation angle must be a multiple of 90 degrees')
+
+    img = img.rotate(angle)
+    return Datum(Datum.IMG, img)
