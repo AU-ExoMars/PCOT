@@ -45,7 +45,7 @@ func_tests = [
     FuncTest("tan(a)", Value(2, 0.1, dq.NONE), Value(-2.18503986326152, 0.577439920404191, dq.NONE)),
     FuncTest("tan(a)", Value(-2, 0.1, dq.NONE), Value(2.18503986326152, 0.577439920404191, dq.NONE)),
     # just illustrates that we don't get the tan(pi/2) case easily!
-    FuncTest("tan(a)", Value(np.pi / 2.0, 0.1, dq.NONE), Value(-22877332.0, 52337238343680.0, dq.NONE)),
+    FuncTest("tan(a)", Value(np.pi / 2.0, 0.1, dq.NONE), Value(-22877332.0, 9999999827968.0, dq.DIVZERO)),
 
     FuncTest("abs(a)", Value(0.2, 0, dq.NONE), Value(0.2, 0, dq.NONE)),
     FuncTest("abs(a)", Value(-0.2, 0, dq.NONE), Value(0.2, 0, dq.NONE)),

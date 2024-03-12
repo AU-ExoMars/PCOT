@@ -84,3 +84,44 @@ def test_nominal_and_uncertainty():
         dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY],
         dtype=np.uint16))
 
+
+def test_trig_funcs():
+    x = Datum.k(3.0, 0.1)
+    assert df.sin(x).get(Datum.NUMBER).approxeq(Value(
+        0.141120008059867,
+        0.0989992496600445,
+        dq.NONE))
+
+    assert df.cos(x).get(Datum.NUMBER).approxeq(Value(
+        -0.989992496600445,
+        0.0141120008059867,
+        dq.NONE))
+
+    assert df.tan(x).get(Datum.NUMBER).approxeq(Value(
+        -0.142546543074278,
+        0.102031951694242,
+        dq.NONE))
+
+    v = df.tan(Datum.k(-np.pi/2, 0.1)).get(Datum.NUMBER)
+    assert v.n > 1e6
+    assert v.u > 1e6
+    assert v.dq == dq.DIVZERO
+
+    v = df.tan(Datum.k(np.pi/2, 0.1)).get(Datum.NUMBER)
+    assert v.n < -1e6
+    assert v.u > 1e6
+    assert v.dq == dq.DIVZERO
+
+
+def test_abs():
+    assert df.abs(Datum.k(3, 0.1)).get(Datum.NUMBER).approxeq(Value(3, 0.1, dq.NONE))
+    assert df.abs(Datum.k(-3, 0.1)).get(Datum.NUMBER).approxeq(Value(3, 0.1, dq.NONE))
+
+
+def test_sqrt():
+    assert df.sqrt(Datum.k(4, 0.1)).get(Datum.NUMBER).approxeq(Value(2, 0.025, dq.NONE))
+    assert df.sqrt(Datum.k(2, 0.1)).get(Datum.NUMBER).approxeq(Value(1.4142135623730951, 0.0353553390593272, dq.NONE))
+    assert df.sqrt(Datum.k(0, 0.1)).get(Datum.NUMBER).approxeq(Value(0, 0, dq.NONE))
+    # it's weird that the uncertainty can be calculated and isn't complex while the nominal is complex, but it
+    # does make sense.
+    assert df.sqrt(Datum.k(-1, 0.1, dq.COMPLEX | dq.TEST)).get(Datum.NUMBER).approxeq(Value(0, 0.05, dq.COMPLEX | dq.TEST))

@@ -245,9 +245,10 @@ class Value:
             # It seems that when you perform an operation on a masked array that results in a nan.
             # it puts the fill value for the array into the data and masks it! Therefore we have to make
             # sure any masked arrays which feed into here are masked appropriately.
-            n = np.where((self.n == 0.0) & (power.n < 0), 0, self.n ** power.n)
-            u = np.where((self.n == 0.0) & (power.n < 0), 0, pow_unc(self.n, self.u, power.n, power.u))
-            d = combineDQs(self, power, np.where((self.n == 0.0) & (power.n < 0), dq.UNDEF, dq.NONE))
+            undefined = (self.n == 0.0) & (power.n < 0)
+            n = np.where(undefined, 0, self.n ** power.n)
+            u = np.where(undefined, 0, pow_unc(self.n, self.u, power.n, power.u))
+            d = combineDQs(self, power, np.where(undefined, dq.UNDEF, dq.NONE))
             # remove NaN in n and u, and replace with zero, marking the n NaNs in the DQ
             d |= np.where(np.isnan(n), dq.COMPLEX, dq.NONE)
             n[np.isnan(n)] = 0
@@ -304,18 +305,24 @@ class Value:
         # for scalar and array. It's really unlikely that the zero case will
         # come up, but still.
 
+        # values with a cosine of less than this amoung will be replaced with
+        # COSREPLACE and have the DIVZERO bit set in the result
+        COSTHRESH = 1e-7
+        COSREPLACE = 1e-7
+
         extra = dq.NONE   # bits to OR into the DQ of the result
         if self.isscalar():
             cos = np.cos(self.n)
-            if cos == 0:
-                cos = 1e6
+            if np.abs(cos) < COSTHRESH:
+                cos = COSREPLACE
                 extra = dq.DIVZERO
             sec = 1.0 / cos
             u = np.sqrt((sec**2 * self.u)**2)
         else:
             cos = np.cos(self.n)
-            cos = np.where(cos == 0, 1e6, cos)   # turn infs into large
-            extra = np.where(cos == 0, dq.DIVZERO, dq.NONE)
+            cossmall = np.abs(cos) < COSTHRESH
+            cos = np.where(cossmall, COSREPLACE, cos)   # turn infs into large
+            extra = np.where(cossmall, dq.DIVZERO, dq.NONE)
             sec = 1.0 / cos
             u = np.sqrt((sec**2 * self.u)**2)
 
