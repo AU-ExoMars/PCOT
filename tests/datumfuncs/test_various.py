@@ -6,6 +6,7 @@ import pcot.datumfuncs as df
 from fixtures import *
 from pcot.rois import ROICircle
 from pcot.sources import nullSourceSet
+from pcot.value import Value
 from pcot.xform import XFormException
 
 
@@ -239,19 +240,19 @@ def test_marksat_masked():
 
     node3 = doc.graph.create("circle")
     node3.connect(0, node1, 0)
-    node3.roi.set(128, 128, 16)     #  small circle in centre
+    node3.roi.set(128, 128, 16)  # small circle in centre
 
     # and connect a node to that which will do the dqmod
 
     node4 = doc.graph.create("dqmod")
     node4.connect(0, node3, 0)
     # we're going to set DQ in band zero if the nominal value is >= -1
-    node4.band = None      # All bands
-    node4.mod = "Set"   # set DQ bits
+    node4.band = None  # All bands
+    node4.mod = "Set"  # set DQ bits
     node4.data = "Nominal"
     node4.test = "Greater than or equal to"
     node4.value = -1
-    node4.dq = dq.DIVZERO       # an arbitrary "BAD" bit to set
+    node4.dq = dq.DIVZERO  # an arbitrary "BAD" bit to set
 
     # pass that into a node to strip the ROIs
     node5 = doc.graph.create("striproi")
@@ -270,9 +271,9 @@ def test_marksat_masked():
     # make sure the DQs are as expected in the centre (i.e. not changed)
     img = r.get(Datum.IMG)
     dqs = [x.dq for x in img[130, 130]]
-    assert dqs == [dq.DIVZERO|dq.NOUNCERTAINTY] * 3
+    assert dqs == [dq.DIVZERO | dq.NOUNCERTAINTY] * 3
     dqs = [x.dq for x in img[130, 126]]
-    assert dqs == [dq.DIVZERO|dq.NOUNCERTAINTY] * 3
+    assert dqs == [dq.DIVZERO | dq.NOUNCERTAINTY] * 3
 
     # but have been set outside the region whose DQs we set to bad.
     dqs = [x.dq for x in img[255, 255]]
@@ -293,10 +294,12 @@ def test_marksat_args():
     assert [x.dq for x in img[0, 0]] == [dq.ERROR | dq.NOUNCERTAINTY] * 3
     assert [x.dq for x in img[20, 0]] == [dq.ERROR | dq.NOUNCERTAINTY] * 3
     assert [x.dq for x in img[127, 0]] == [dq.ERROR | dq.NOUNCERTAINTY] * 3
-    assert [x.dq for x in img[128, 0]] == [dq.NOUNCERTAINTY,  dq.ERROR | dq.NOUNCERTAINTY, dq.SAT | dq.NOUNCERTAINTY]
-    assert [x.dq for x in img[200, 0]] == [dq.NOUNCERTAINTY,  dq.ERROR | dq.NOUNCERTAINTY, dq.SAT | dq.NOUNCERTAINTY]
-    assert [x.dq for x in img[205, 0]] == [dq.SAT | dq.NOUNCERTAINTY,  dq.ERROR | dq.NOUNCERTAINTY, dq.SAT | dq.NOUNCERTAINTY]
-    assert [x.dq for x in img[255, 0]] == [dq.SAT | dq.NOUNCERTAINTY,  dq.ERROR | dq.NOUNCERTAINTY, dq.SAT | dq.NOUNCERTAINTY]
+    assert [x.dq for x in img[128, 0]] == [dq.NOUNCERTAINTY, dq.ERROR | dq.NOUNCERTAINTY, dq.SAT | dq.NOUNCERTAINTY]
+    assert [x.dq for x in img[200, 0]] == [dq.NOUNCERTAINTY, dq.ERROR | dq.NOUNCERTAINTY, dq.SAT | dq.NOUNCERTAINTY]
+    assert [x.dq for x in img[205, 0]] == [dq.SAT | dq.NOUNCERTAINTY, dq.ERROR | dq.NOUNCERTAINTY,
+                                           dq.SAT | dq.NOUNCERTAINTY]
+    assert [x.dq for x in img[255, 0]] == [dq.SAT | dq.NOUNCERTAINTY, dq.ERROR | dq.NOUNCERTAINTY,
+                                           dq.SAT | dq.NOUNCERTAINTY]
 
 
 def test_setcwl():
@@ -328,3 +331,40 @@ def test_striproi():
     # make sure it's still there on the original
     assert len(withroi.get(Datum.IMG).rois) == 1
 
+
+def test_norm():
+    r = df.testimg(1)
+    unc = r * 0.01
+    r = df.v(r, unc)
+
+    # divide down
+    a = r * 0.1
+    # normalize
+    b = df.norm(a)
+    # should be the same as the original image
+    assert df.max(df.abs(b - r)).get(Datum.NUMBER).n < 1e-7
+
+    rpix = r.get(Datum.IMG)[255, 0]
+    bpix = b.get(Datum.IMG)[255, 0]
+    for x, y in zip(rpix, bpix):
+        assert np.abs(x.n - y.n) < 1e-7
+        assert np.abs(x.u - y.u) < 1e-7
+        assert x.dq == y.dq
+
+    # and test on subset
+    a = df.addroi(a, Datum(Datum.ROI, ROICircle(128, 128, 30), sources=nullSourceSet))
+    r = df.norm(a)
+    pix = a.get(Datum.IMG)[127, 157]
+    assert pix[0].approxeq(Value(0.049803923815488815, 0.0004980391822755337, dq.NONE))
+    assert pix[1].approxeq(Value(0.06156862899661064, 0.0006156862946227193, dq.NONE))
+    assert pix[2].approxeq(Value(0.10000000149011612, 0.0010000000149011612, dq.NONE))
+
+    cc = [x.n / x.u for x in pix]
+    print(cc)
+
+    pix = r.get(Datum.IMG)[127, 157]
+    cc = [x.n / x.u for x in pix]
+    print(cc)
+    assert pix[0].approxeq(Value(0.48333337903022766, 0.021166663616895676, dq.NONE))
+    assert pix[1].approxeq(Value(0.9833332896232605, 0.02616666443645954, dq.NONE))
+    assert pix[2].approxeq(Value(1.0, 0.010000000707805157, dq.NONE))

@@ -291,7 +291,10 @@ class datumfunc:
             numMissing = totArgsRequired - totArgsProvided
             # now we need to add the missing arguments to the args list.
             for i in range(numMissing):
-                args += (Datum.k(self.optParams[i].deflt),)   # assume it's numeric.
+                try:
+                    args += (Datum.k(self.optParams[i].deflt),)   # assume it's numeric.
+                except IndexError:
+                    raise ValueError(f"Function {self.name} is missing arguments")
 
             kwargs = {k: Datum.k(v) if isinstance(v, Number) else v for k, v in kwargs.items()}
             vals = [Datum.k(x) if isinstance(x, (int, Number)) else x for x in args]

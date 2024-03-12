@@ -4,7 +4,7 @@ import cv2 as cv
 import numpy as np
 
 import pcot.dq
-from pcot import rois
+from pcot import rois, operations
 from pcot.config import getAssetPath
 from pcot.datum import Datum
 from pcot.expressions.register import funcWrapper, statsWrapper, datumfunc
@@ -559,5 +559,22 @@ def striproi(img):
         return None
     img = img.shallowCopy()
     img.rois = []
+    return Datum(Datum.IMG, img)
+
+
+@datumfunc
+def norm(img, splitchans=0):
+    """
+    normalize all channels of an image to 0-1, operating on all channels combined (the default) or separately
+    @param img:img:the image to process
+    @param splitchans:number:if nonzero, process each channel separately
+    """
+    img = img.get(Datum.IMG)
+    if img is None:
+        return None
+    subimage = img.subimage()
+    # the middle argument is whether we're actually clamping. I know, sorry.
+    nom, unc, dq = operations.norm.norm(subimage, 0, splitchans)
+    img = img.modifyWithSub(subimage, nom, uncertainty=unc, dqv=dq)
     return Datum(Datum.IMG, img)
 
