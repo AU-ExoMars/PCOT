@@ -1,20 +1,20 @@
+import builtins
+
+import cv2 as cv
 import numpy as np
 
-import builtins
-from pcot import rois
 import pcot.dq
+from pcot import rois
 from pcot.config import getAssetPath
 from pcot.datum import Datum
-from pcot.expressions.builtins import funcWrapper, statsWrapper
-from pcot.expressions.datumfuncs import datumfunc
+from pcot.expressions.register import funcWrapper, statsWrapper, datumfunc
 from pcot.expressions.ops import combineImageWithNumberSources
 from pcot.filters import Filter
 from pcot.imagecube import ImageCube
-from pcot.sources import MultiBandSource, SourceSet, Source, StringExternal
+from pcot.sources import MultiBandSource, SourceSet, Source
 from pcot.utils import image
 from pcot.value import Value, add_sub_unc_list
 from pcot.xform import XFormException
-import cv2 as cv
 
 
 @datumfunc  # NOUNCERTAINTYTEST

@@ -2,7 +2,7 @@ import numpy as np
 
 from pcot import dq
 from pcot.datum import Datum
-import pcot.expressions.funcs as df
+import pcot.datumfuncs as df
 from pcot.value import Value
 
 

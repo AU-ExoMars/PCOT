@@ -1,6 +1,5 @@
 import importlib
 import os
-import sys
 import traceback
 
 try:
@@ -28,8 +27,11 @@ faulthandler.enable()
 
 plugins_loaded = False
 
+
 def load_plugins():
     """plugin dirs are semicolon separated, stored in Locations/plugins"""
+
+    import sys
 
     # make sure this only happens once - we can call pcot.setup() lots
     # of times during tests.
@@ -61,9 +63,9 @@ def setup():
     You'll see that main() calls it."""
 
     # forces the file to be parsed, which uses decorators to register functions etc.
-    import pcot.expressions.builtins
+    import pcot.expressions.register
     # force import of builtin functions!
-    import pcot.expressions.funcs
+    import pcot.datumfuncs
 
     load_plugins()
 

@@ -2,11 +2,10 @@ import pcot
 from pcot.datum import Datum
 from pcot.document import Document
 from pcot.expressions import ExpressionEvaluator
-import pcot.expressions.funcs as df
+import pcot.datumfuncs as df
 from fixtures import *
 from pcot.rois import ROICircle
 from pcot.sources import nullSourceSet
-from pcot.value import Value
 from pcot.xform import XFormException
 
 

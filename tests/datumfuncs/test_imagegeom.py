@@ -2,9 +2,8 @@ import numpy as np
 
 from pcot import dq
 from pcot.datum import Datum
-from pcot.expressions import ExpressionEvaluator
 from pcot.value import Value
-import pcot.expressions.funcs as df
+import pcot.datumfuncs as df
 
 def test_flipv():
     # load a basic RGB image - no unc, no dq

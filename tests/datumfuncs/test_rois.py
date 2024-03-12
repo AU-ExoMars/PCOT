@@ -5,7 +5,7 @@ import pcot
 from pcot.datum import Datum
 from pcot.document import Document
 from fixtures import *
-import pcot.expressions.funcs as df
+import pcot.datumfuncs as df
 from pcot.rois import ROIRect
 from pcot.sources import nullSourceSet
 from pcot.utils.geom import Rect

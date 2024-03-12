@@ -3,7 +3,7 @@ import numpy as np
 import pcot
 import pcot.dq
 from pcot.datum import Datum
-import pcot.expressions.funcs as df
+import pcot.datumfuncs as df
 
 def test_mean():
     seq = [x for x in range(100)]
