@@ -10,6 +10,7 @@ parser = argparse.ArgumentParser(description="Find node in .pcot files")
 parser.add_argument('node', metavar='nodename', type=str,
                     help='node to look for')
 parser.add_argument('-d', '--dir', help="Directory to look in", metavar="DIR", type=str, default=".")
+parser.add_argument('-f', '--func', help="Also look for a function used in an expr", action="store_true")
                     
 parser.add_argument
 args = parser.parse_args()
@@ -20,3 +21,9 @@ for x in pathlib.Path(args.dir).rglob("*.pcot"):
         nodeTypes = [x['type'] for x in graph.values()]
         if args.node in nodeTypes:
             print(x)
+        if args.func:
+            for y in graph.values():
+                if y['type'] == 'expr':
+                    expr = y['expr'].strip()
+                    if args.node in expr:
+                        print(f"Func in expr: {x} ({expr})")
