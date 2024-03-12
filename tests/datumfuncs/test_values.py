@@ -3,6 +3,8 @@ import numpy as np
 from pcot import dq
 from pcot.datum import Datum
 import pcot.expressions.funcs as df
+from pcot.value import Value
+
 
 def test_v():
     r = df.testimg(0)
@@ -81,3 +83,4 @@ def test_nominal_and_uncertainty():
     assert np.all(u.get(Datum.IMG).dq == np.array([
         dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY],
         dtype=np.uint16))
+

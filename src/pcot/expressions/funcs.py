@@ -546,3 +546,18 @@ def rotate(img, angle):
 
     img = img.rotate(angle)
     return Datum(Datum.IMG, img)
+
+
+@datumfunc
+def striproi(img):
+    """
+    Strip all regions of interest from an image
+    @param img:img:image to strip
+    """
+    img: ImageCube = img.get(Datum.IMG)
+    if img is None:
+        return None
+    img = img.shallowCopy()
+    img.rois = []
+    return Datum(Datum.IMG, img)
+

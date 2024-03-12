@@ -13,7 +13,6 @@ from pcot.expressions.datumfuncs import datumfunc
 from pcot.imagecube import ImageCube
 from pcot.sources import SourceSet, MultiBandSource, Source, StringExternal
 from pcot.utils.deb import Timer
-from pcot.utils.flood import FloodFillParams, FastFloodFiller
 from pcot.value import Value, add_sub_unc_list
 from pcot.xform import XFormException
 
@@ -119,91 +118,8 @@ def statsWrapper(fn, d: List[Optional[Datum]], *args) -> Datum:
     return Datum(Datum.NUMBER, val, SourceSet(sources))
 
 
-def funcStripROI(args: List[Datum], _):
-    img: ImageCube = args[0].get(Datum.IMG)
-    if img is None:
-        return None
-    img = img.shallowCopy()
-    img.rois = []
-    return Datum(Datum.IMG, img)
-
-
-def funcFloodTest(args: List[Datum], _):
-    # we'll operate on the entire image
-    img: ImageCube = args[0].get(Datum.IMG)
-    if img is None:
-        return None
-    x = int(args[1].get(Datum.NUMBER).n)
-    y = int(args[2].get(Datum.NUMBER).n)
-    thresh = args[3].get(Datum.NUMBER).n
-
-    f = FastFloodFiller(img, FloodFillParams(10, img.w * img.h, thresh))
-    with Timer("flood", show=Timer.UILOG):
-        roi = f.fillToPaintedRegion(x, y)
-
-    # we need to copy the image to add the ROI
-    img = img.shallowCopy()
-    if roi is not None:
-        img.rois.append(roi)
-    else:
-        raise XFormException('DATA', 'flood fill failed (too few or too many pixels)')
-
-    return Datum(Datum.IMG, img)
-
-
-def funcAssignSources(args: List[Datum], _):
-    img1: ImageCube = args[0].get(Datum.IMG)
-    img2: ImageCube = args[1].get(Datum.IMG)
-    if img1 is None or img2 is None:
-        return None
-    # make sure they have the same number of channels
-    if img1.channels != img2.channels:
-        raise XFormException('DATA', 'images in assignsources must have the same number of channels')
-    # run through the image sources and make sure each image has only one source, and unify them
-    sources = []
-    for i in range(img1.channels):
-        f1 = img1.filter(i)
-        f2 = img2.filter(i)
-        if f1 is None:
-            raise XFormException('DATA', 'image 1 in assignsources must have a single source for each channel')
-        if f2 is None:
-            raise XFormException('DATA', 'image 2 in assignfilters must have a single source for each channel')
-        if f1.cwl != f2.cwl or f1.fwhm != f2.fwhm:
-            raise XFormException('DATA', 'filters in assignfilters must have the same cwl and fwhm')
-        sources.append(Source().setBand(f1).setExternal(StringExternal("assignsources", f"unified-{f1.name}")))
-
-    # now we can create the new image - it's image2 with the sources replaced with those of image1
-    out = img2.copy()
-    out.sources = MultiBandSource(sources)
-    return Datum(Datum.IMG, out)
-
-
 @parserhook
 def registerBuiltinFunctions(p):
-    p.registerFunc(
-        "striproi", "strip all ROIs from an image",
-        [
-            Parameter("image", "the image to strip ROIs from", Datum.IMG),
-        ], [], funcStripROI
-    )
-
-    #    p.registerFunc(
-    #        'testimg', 'Load test image',
-    #        [
-    #            Parameter('imageidx', 'image index', Datum.NUMBER)
-    #        ], [], funcTestImg
-    #    )
-
-    p.registerFunc(
-        'floodtest', 'Flood fill test',
-        [
-            Parameter('image', 'image to flood', Datum.IMG),
-            Parameter('x', 'x coordinate of seed point', Datum.NUMBER),
-            Parameter('y', 'y coordinate of seed point', Datum.NUMBER),
-            Parameter('thresh', 'threshold', Datum.NUMBER),
-        ], [], funcFloodTest
-    )
-
     # register the built-in functions that have been registered through the datumfunc mechanism.
     for _, f in datumfunc.registry.items():
         p.registerFunc(f.name, f.description, f.mandatoryParams, f.optParams, f.exprfunc, varargs=f.varargs)

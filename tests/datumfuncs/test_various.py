@@ -312,3 +312,20 @@ def test_setcwl():
     cwl, fwhm = img.wavelengthAndFWHM(0)
     assert cwl == 340
     assert fwhm == 30
+
+
+def test_striproi():
+    r = df.testimg(1)
+
+    # add an ROI
+    rect = Datum(Datum.ROI, ROICircle(128, 128, 10), sources=nullSourceSet)
+    withroi = df.addroi(r, rect)
+
+    assert len(withroi.get(Datum.IMG).rois) == 1
+
+    # strip it off
+    r = df.striproi(withroi)
+    assert len(r.get(Datum.IMG).rois) == 0
+    # make sure it's still there on the original
+    assert len(withroi.get(Datum.IMG).rois) == 1
+
