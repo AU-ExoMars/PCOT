@@ -579,3 +579,36 @@ def norm(img, splitchans=0):
     img = img.modifyWithSub(subimage, nom, uncertainty=unc, dqv=dq)
     return Datum(Datum.IMG, img)
 
+
+@datumfunc
+def clamp(img):
+    """
+    clamp all channels of an image to 0-1
+    @param img:img:the image to process
+    """
+    img = img.get(Datum.IMG)
+    if img is None:
+        return None
+    subimage = img.subimage()
+    nom, unc, dq = operations.norm.norm(subimage, 1)
+    img = img.modifyWithSub(subimage, nom, uncertainty=unc, dqv=dq)
+    return Datum(Datum.IMG, img)
+
+
+@datumfunc
+def curve(img, mul=1, add=0):
+    """
+    impose a sigmoid curve on an image, y=1/(1+e^-(m(x-0.5)+a))) where m and a are parameters. Note
+    from that equation that x is biased, so that x=0.5 is the inflection point if c=0.
+
+    @param img:img:the image to process
+    @param mul:number:multiply each pixel by this before processing
+    @param add:number:add this to each pixel after multiplication
+    """
+    img = img.get(Datum.IMG)
+    if img is None:
+        return None
+    subimage = img.subimage()
+    nom, unc, dq = operations.curve.curve(subimage, mul.get(Datum.NUMBER).n, add.get(Datum.NUMBER).n)
+    img = img.modifyWithSub(subimage, nom, uncertainty=unc, dqv=dq)
+    return Datum(Datum.IMG, img)

@@ -371,3 +371,108 @@ def test_norm():
     assert pix1[0].approxeq(pix2[0])
     assert pix1[1].approxeq(pix2[1])
     assert pix1[2].approxeq(pix2[2])
+
+    # now test splitchans mode, where each channel is normalized separately. Again, there's an ROI
+    r = df.norm(a, splitchans=1)
+    pix = r.get(Datum.IMG)[127, 157]
+    assert pix[0].approxeq(Value(0.48333337903022766, 0.021166663616895676, dq.NONE))
+    assert pix[1].approxeq(Value(0.9833332896232605, 0.02616666443645954, dq.NONE))
+    assert pix[2].approxeq(Value(1.0, 0.01, dq.NONE))
+
+    # without ROI - because each channel has the same 0-1 range it will be the same as the first test.
+    a = df.striproi(a)
+    r = df.norm(a, splitchans=1)
+    pix = r.get(Datum.IMG)[127, 157]
+    assert pix[0].approxeq(Value(0.498039, 0.00498039, dq.NONE))
+    assert pix[1].approxeq(Value(0.615686, 0.00615686, dq.NONE))
+    assert pix[2].approxeq(Value(1.0, 0.01, dq.NONE))
+
+
+def test_clamp_multiply():
+    """test clamping of a multiplied value (i.e. clamping to 1), no roi"""
+    r = df.testimg(1)
+    unc = r * 0.01
+    r = df.v(r, unc)
+
+    # multiply up
+    a = r * 2
+    # clamp
+    b = df.clamp(a)
+    # and compare with the original image - at 50,50 the new image should be double the original.
+    pixb = b.get(Datum.IMG)[50, 50]
+    pixr = r.get(Datum.IMG)[50, 50]
+    rat = [x.n / y.n for x, y in zip(pixb, pixr)]
+    urat = [x.u / y.u for x, y in zip(pixb, pixr)]
+    # just look at RG because B will be zero and we'd get a divide by zero
+    assert np.allclose(rat[:2], [2, 2])
+    assert np.allclose(urat[:2], [2, 2])
+    assert np.isnan(rat[2]) and np.isnan(urat[2]) # check those divzeroes
+
+    # now check somewhere else in the image. R and B will be clamped
+    # so will be set to 1+-0 and nounc.
+    pixb = b.get(Datum.IMG)[192, 64]
+    pixr = r.get(Datum.IMG)[192, 64]
+    assert pixb[0].approxeq(Value(1.0, 0, dq.NOUNCERTAINTY))
+    assert pixb[2].approxeq(Value(1.0, 0, dq.NOUNCERTAINTY))
+
+    # G will still be in a 2:1 ratio to the original image
+    rat = pixb[1].n / pixr[1].n
+    urat = pixb[1].u / pixr[1].u
+    assert rat == 2
+
+
+def test_clamp_subtract():
+    """test clamping of a subtracted value (i.e. clamping to zero), no roi. We won't test ROI; we're using
+    the same framework as norm so it should be fine."""
+
+    r = df.testimg(1)
+    unc = r * 0.01
+    r = df.v(r, unc)
+
+    # subtract
+    a = r - 0.5
+    # clamp
+    b = df.clamp(a)
+
+    # in the top-left quadrant all channels will be clamped to zero
+    pix = b.get(Datum.IMG)[50, 50]
+    assert pix[0].approxeq(Value(0, 0, dq.NOUNCERTAINTY))
+    assert pix[1].approxeq(Value(0, 0, dq.NOUNCERTAINTY))
+    assert pix[2].approxeq(Value(0, 0, dq.NOUNCERTAINTY))
+    # at bottom right only the blue channel will be clamped
+    pix = b.get(Datum.IMG)[255, 255]
+    assert pix[0].approxeq(Value(0.5, 0.01, dq.NONE))
+    assert pix[1].approxeq(Value(0.5, 0.01, dq.NONE))
+    assert pix[2].approxeq(Value(0, 0, dq.NOUNCERTAINTY))
+
+
+def test_curve():
+    """The most cursory of tests for sigmoid curve"""
+
+    r = df.testimg(1)
+    unc = r * 0.01
+    r = df.v(r, unc)
+
+    # but we will add a roi
+
+    r = df.addroi(r, Datum(Datum.ROI, ROICircle(128, 128, 30), sources=nullSourceSet))
+
+    def sig(x, m, c):
+        x = x-0.5   # this is important!
+        return 1 / (1 + np.exp(-m * (x + c)))
+
+    # no args (m=1, c=0) and outside the ROI
+    out = df.curve(r)
+    pixout = out.get(Datum.IMG)[120, 157]
+    pixorig = r.get(Datum.IMG)[120, 157]
+    assert pixout[0].approxeq(pixorig[0])
+    assert pixout[1].approxeq(pixorig[1])
+    assert pixout[2].approxeq(pixorig[2])
+
+    # and inside should be under the influence
+    pixout = out.get(Datum.IMG)[130, 135]
+    pixorig = r.get(Datum.IMG)[130, 135]
+    assert np.allclose([x.n for x in pixout], [sig(x.n, 1, 0) for x in pixorig])
+
+
+
