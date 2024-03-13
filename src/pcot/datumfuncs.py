@@ -572,6 +572,7 @@ def norm(img, splitchans=0):
     img = img.get(Datum.IMG)
     if img is None:
         return None
+    splitchans = splitchans.get(Datum.NUMBER).n
     subimage = img.subimage()
     # the middle argument is whether we're actually clamping. I know, sorry.
     nom, unc, dq = operations.norm.norm(subimage, 0, splitchans)

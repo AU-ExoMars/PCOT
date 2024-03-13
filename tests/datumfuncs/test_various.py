@@ -354,17 +354,20 @@ def test_norm():
     # and test on subset
     a = df.addroi(a, Datum(Datum.ROI, ROICircle(128, 128, 30), sources=nullSourceSet))
     r = df.norm(a)
-    pix = a.get(Datum.IMG)[127, 157]
-    assert pix[0].approxeq(Value(0.049803923815488815, 0.0004980391822755337, dq.NONE))
-    assert pix[1].approxeq(Value(0.06156862899661064, 0.0006156862946227193, dq.NONE))
-    assert pix[2].approxeq(Value(0.10000000149011612, 0.0010000000149011612, dq.NONE))
+    pix = a.get(Datum.IMG)[127, 157]        # test original is still the same
+    assert pix[0].approxeq(Value(0.04980392, 0.0004980392, dq.NONE))
+    assert pix[1].approxeq(Value(0.06156862, 0.0006156863, dq.NONE))
+    assert pix[2].approxeq(Value(0.10000000, 0.001, dq.NONE))
 
-    cc = [x.n / x.u for x in pix]
-    print(cc)
+    pix = r.get(Datum.IMG)[127, 157]        # test normalised is correct
+    assert pix[0].approxeq(Value(0.498039, 0.00498039, dq.NONE))
+    assert pix[1].approxeq(Value(0.615686, 0.00615686, dq.NONE))
+    assert pix[2].approxeq(Value(1.0, 0.01, dq.NONE))
 
-    pix = r.get(Datum.IMG)[127, 157]
-    cc = [x.n / x.u for x in pix]
-    print(cc)
-    assert pix[0].approxeq(Value(0.48333337903022766, 0.021166663616895676, dq.NONE))
-    assert pix[1].approxeq(Value(0.9833332896232605, 0.02616666443645954, dq.NONE))
-    assert pix[2].approxeq(Value(1.0, 0.010000000707805157, dq.NONE))
+    # make sure that normalisation does not occur outside the ROI
+    pix1 = a.get(Datum.IMG)[50, 50]
+    pix2 = r.get(Datum.IMG)[50, 50]
+
+    assert pix1[0].approxeq(pix2[0])
+    assert pix1[1].approxeq(pix2[1])
+    assert pix1[2].approxeq(pix2[2])
