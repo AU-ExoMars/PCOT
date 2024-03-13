@@ -354,12 +354,12 @@ def test_norm():
     # and test on subset
     a = df.addroi(a, Datum(Datum.ROI, ROICircle(128, 128, 30), sources=nullSourceSet))
     r = df.norm(a)
-    pix = a.get(Datum.IMG)[127, 157]        # test original is still the same
+    pix = a.get(Datum.IMG)[127, 157]  # test original is still the same
     assert pix[0].approxeq(Value(0.04980392, 0.0004980392, dq.NONE))
     assert pix[1].approxeq(Value(0.06156862, 0.0006156863, dq.NONE))
     assert pix[2].approxeq(Value(0.10000000, 0.001, dq.NONE))
 
-    pix = r.get(Datum.IMG)[127, 157]        # test normalised is correct
+    pix = r.get(Datum.IMG)[127, 157]  # test normalised is correct
     assert pix[0].approxeq(Value(0.498039, 0.00498039, dq.NONE))
     assert pix[1].approxeq(Value(0.615686, 0.00615686, dq.NONE))
     assert pix[2].approxeq(Value(1.0, 0.01, dq.NONE))
@@ -393,6 +393,11 @@ def test_clamp_multiply():
     r = df.testimg(1)
     unc = r * 0.01
     r = df.v(r, unc)
+    # sanity check of test data
+    pix = r.get(Datum.IMG)[128, 128]
+    assert pix[0].approxeq(Value(0.501961, 0.00501961, dq.NONE))
+    assert pix[1].approxeq(Value(0.501961, 0.00501961, dq.NONE))
+    assert pix[2].approxeq(Value(0, 0, dq.NONE))
 
     # multiply up
     a = r * 2
@@ -406,7 +411,7 @@ def test_clamp_multiply():
     # just look at RG because B will be zero and we'd get a divide by zero
     assert np.allclose(rat[:2], [2, 2])
     assert np.allclose(urat[:2], [2, 2])
-    assert np.isnan(rat[2]) and np.isnan(urat[2]) # check those divzeroes
+    assert np.isnan(rat[2]) and np.isnan(urat[2])  # check those divzeroes
 
     # now check somewhere else in the image. R and B will be clamped
     # so will be set to 1+-0 and nounc.
@@ -453,12 +458,18 @@ def test_curve():
     unc = r * 0.01
     r = df.v(r, unc)
 
+    pix = r.get(Datum.IMG)[128, 128]
+    # sanity check of test data
+    assert pix[0].approxeq(Value(0.501961, 0.00501961, dq.NONE))
+    assert pix[1].approxeq(Value(0.501961, 0.00501961, dq.NONE))
+    assert pix[2].approxeq(Value(0, 0, dq.NONE))
+
     # but we will add a roi
 
     r = df.addroi(r, Datum(Datum.ROI, ROICircle(128, 128, 30), sources=nullSourceSet))
 
     def sig(x, m, c):
-        x = x-0.5   # this is important!
+        x = x - 0.5  # this is important!
         return 1 / (1 + np.exp(-m * (x + c)))
 
     # no args (m=1, c=0) and outside the ROI
@@ -474,5 +485,6 @@ def test_curve():
     pixorig = r.get(Datum.IMG)[130, 135]
     assert np.allclose([x.n for x in pixout], [sig(x.n, 1, 0) for x in pixorig])
 
-
-
+    # no uncertainty in the result data
+    assert [x.u == 0 for x in pixout]
+    assert [x.dq == dq.NOUNCERTAINTY for x in pixout]
