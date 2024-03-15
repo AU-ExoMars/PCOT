@@ -191,7 +191,7 @@ class GradientLegend(Annotation):
         else:
             return 0, 0, 0, 0
 
-    def _doAnnotate(self, p: QPainter, inPDF):
+    def _doAnnotate(self, p: QPainter, alpha, inPDF):
         """Core annotation method"""
         # if we're doing a margin annotation we override many of the values passed in
         i2u = self.inchesToUnits
@@ -229,17 +229,19 @@ class GradientLegend(Annotation):
                               (fontscale + textGap) * 2)  # -font size and a little bit
             else:
                 raise XFormException('DATA', 'Bad margin placement option')
+            col = rgb2qcol(colour)
         else:
             x, y, w, h = self.rect
             colour = self.colour
             vertical = self.vertical
             fontscale = self.fontscale
             borderThickness = self.thickness
+            col = rgb2qcol(colour, alpha)
             barThickness = w
 
         p.fillRect(QRectF(x, y, w, h), self.grad.getGradient(vertical=vertical))
         p.setBrush(Qt.NoBrush)
-        pen = QPen(rgb2qcol(colour))
+        pen = QPen(col)
         pen.setWidth(borderThickness)
         p.setPen(pen)
         p.drawRect(int(x), int(y), int(w), int(h))
@@ -264,9 +266,9 @@ class GradientLegend(Annotation):
         if self.legendpos != IN_IMAGE and self.legendpos != NONE and self.legendpos is not None:
             self._doAnnotate(p, True)
 
-    def annotate(self, p: QPainter, img):
+    def annotate(self, p: QPainter, img, alpha):
         if self.legendpos == IN_IMAGE:
-            self._doAnnotate(p, False)
+            self._doAnnotate(p, alpha, False)
 
 
 def _normAndGetRange(subimage):

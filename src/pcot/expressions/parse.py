@@ -487,7 +487,7 @@ class Parser:
             if f.varargs:
                 ps += "..."
             t.add("params", ps)
-            t.add("opt. params", ",".join([p.name for p in f.optParams]))
+            t.add("opt. params (default in brackets)", ",".join([f"{p.name} ({p.deflt})" for p in f.optParams]))
             t.add("description", f.desc)
         return t.markdown()
 

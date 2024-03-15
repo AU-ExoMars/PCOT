@@ -338,11 +338,15 @@ class Value:
         return Value(1 - self.n, self.u, self.dq)
 
     def __str__(self):
+        return self.sigfigs(5)
+
+    def sigfigs(self, figs):
+        """a string representation to a given number of significant figures"""
         if np.isscalar(self.n):
-            names = dq.names(self.dq)
-            return f"Value:{self.n}±{self.u}{names}"
+            return f"{self.n:.{figs}g}±{self.u:.{figs}g}"
         else:
             return f"Value:array{self.n.shape}"
+
 
     def __repr__(self):
         return self.__str__()

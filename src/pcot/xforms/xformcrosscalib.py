@@ -2,7 +2,7 @@ import logging
 
 import numpy as np
 from PySide2.QtCore import Qt
-from PySide2.QtGui import QKeyEvent, QPainter, QPen
+from PySide2.QtGui import QKeyEvent, QPainter, QPen, QColor
 from PySide2.QtWidgets import QMessageBox
 
 from pcot import ui
@@ -47,9 +47,11 @@ class CrossCalibPointAnnotation(Annotation):
         self.r = r
         self.col = col
 
-    def annotate(self, p: QPainter, img):
+    def annotate(self, p: QPainter, img, alpha):
         p.setBrush(Qt.NoBrush)
-        pen = QPen(Qt.yellow)
+        col = QColor(Qt.yellow)
+        col.setAlpha(alpha*255)
+        pen = QPen(col)
         pen.setWidth(0)
         p.setPen(pen)
 
