@@ -12,8 +12,10 @@ from pcot.xform import XFormType, xformtype
 from pcot.xforms.tabdata import TabData
 from pcot.imagecube import ImageCube
 from pcot.datum import Datum
+from pcot.value import Value
 from pcot.datumtypes import Type
 from PySide2.QtGui import QColor
+from pcot.expressions.register import datumfunc
 
 import pcot.config
 
@@ -82,18 +84,27 @@ class XFormEdgeDetect(XFormType):
 # The second part is a lot more complex, involving a custom Datum type.
 #
 # It adds a function "testf2" which takes a number a, an optional number b
-# which defaults to 2, and divides a by b. It outputs a custom data type object
-# called "testobject" consisting of dividend and remainder.
+# which defaults to 2, and calculates two functions of both, storing the result
+# in a custom object.
 
-def testfunc(args, optargs):
+@datumfunc
+def testf(arg1, arg2):
+    """
+    This "docstring" is mandatory in datumfuncs, because it contains the description
+    and argument types. 
+    
+    The function calculates a+2*b, correctly combining sources and propagating uncertainty.
+    @param arg1:number:argument 1
+    @param arg2:number:argument 2
+    """
     # the function itself, which takes a list of mandatory arguments and a
     # list of optional arguments (of which there are none)
-    a = args[0].get(Datum.NUMBER)   # get the first argument, which is numeric
-    b = args[1].get(Datum.NUMBER)   # and the second argument.
-    result = a + b * 2                  # calculate the result
+    a = arg1.get(Datum.NUMBER)   # get the first argument, which is numeric
+    b = arg2.get(Datum.NUMBER)   # and the second argument.
+    result = a + b * Value(2)    # perform the calculation (Value is a class from pcot.value)
 
     # get the source sets from the inputs and combine them.
-    sources = SourceSet([args[0].getSources(), args[1].getSources()])
+    sources = SourceSet([arg1.getSources(), arg2.getSources()])
     # convert the result into a numeric Datum and return it, attaching sources.
     return Datum(Datum.NUMBER, result, sources)
     
@@ -101,12 +112,12 @@ def testfunc(args, optargs):
 # Our data will be an object of class TestObject.
 
 class TestObject:
-    def __init__(self, div, rem):
-        self.div = div
-        self.rem = rem
+    def __init__(self, s, d):
+        self.sum = s
+        self.diff = d
         
     def __str__(self):
-        return f"({self.div}, {self.rem})"
+        return f"({self.sum}, {self.diff})"
     
 # now the type singleton, which controls how Datum objects which hold TestObjects
 # serialise and deserialise themselves (turn themselves into JSON-serialisable
@@ -120,7 +131,7 @@ class _TestObjectType(Type):
 
     def getDisplayString(self, d: 'Datum'):
         # how to turn this into a string for a graph box
-        return "TUPLE"
+        return str(d.val)
 
     # now we have to write code which converts Datums of this type into
     # stuff which can be converted to JSON and back again. Converting
@@ -134,7 +145,7 @@ class _TestObjectType(Type):
         # data to be saved and the serialised source information.
         
         # First convert TestObject to something we can serialise
-        serialisedObject = d.val.div, d.val.rem
+        serialisedObject = d.val.sum, d.val.diff
         # and create the serialised datum of the name and contents
         return self.name, (serialisedObject, d.getSources().serialise())
 
@@ -147,6 +158,7 @@ class _TestObjectType(Type):
         # then pass to the datum constructor along with the type singleton.
         return Datum(self, serialisedObject, sources) 
 
+
 # create the singleton and register it, but keep hold of the variable so
 # we can use it to create new Datum objects.
 TestObjectType = _TestObjectType()
@@ -157,53 +169,27 @@ pcot.connbrushes.register(TestObjectType, QColor("darkMagenta"))
 
 # and the function itself
 
-def testfunc2(args, optargs):
+@datumfunc
+def testf2(a, b=2):
+    """
+    Calculates a+b and a-b, creating a custom object to store that data.
+    @param a:number:sum
+    @param b:number:difference
+    """
     # get the mandatory "a" argument
-    a = args[0].get(Datum.NUMBER)
+    aa = a.get(Datum.NUMBER)
     # and the optional "b" argument
-    b = optargs[0].get(Datum.NUMBER)
-    # perform the divisions
-    div, rem = a/b, a%b
+    bb = b.get(Datum.NUMBER)
+    # perform the operations
+    p, q = aa+bb, aa-bb
     # create the result
-    res = TestObject(div,rem)
+    res = TestObject(p, q)
     # the sources are the union of the two incoming source sets - we can
     # pass a list of sourcesets into a sourceset constructor to get the union.
-    sources = SourceSet([args[0].getSources(), optargs[0].getSources()])
+    sources = SourceSet([a.getSources(), b.getSources()])
     # create and return the datum, providing the type object we created.
     return Datum(TestObjectType, res, SourceSet)
     
-    
-# Now we have our two function definitions and associated things we can register them.    
-
-def regfuncs(p):
-    # late import of Parameter to avoid cyclic import problems.
-    from pcot.expressions import Parameter
-    # register our function.
-    p.registerFunc("testf",                 # name
-                   "calculates a+2*b",      # description
-                   # a list defining our parameters by name, description and type
-                   [Parameter("a", "number 1", Datum.NUMBER),
-                    Parameter("b", "number 2", Datum.NUMBER)
-                    ],
-                   # the empty list of optional parameters
-                   [],
-                   # the function reference
-                   testfunc)
-
-    p.registerFunc("testf2",                            # name
-                   "calculates a/b and remainder",      # description
-                   # the sole mandatory parameter
-                   [Parameter("a", "number 1", Datum.NUMBER)],
-                   # the optional parameters in a new list with defaults
-                   [Parameter("b", "number 2", Datum.NUMBER, deflt=2)],
-                   # the function reference
-                   testfunc2)
-
-
-# this will add a hook to the system to register these functions when the expression parser
-# is created (which has to be done quite late).
-pcot.config.addExprFuncHook(regfuncs)
-
 
 ################################################################################
 # This part of the plugin allows users to output a graph as a graphviz file
