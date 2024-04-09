@@ -1,18 +1,10 @@
-import cv2 as cv
-import numpy as np
-
-from pcot.sources import SourceSet
-from pcot.xform import XFormType, xformtype
-from pcot.xforms.tabdata import TabData
 from pcot.imagecube import ImageCube
 from pcot.datum import Datum
 from pcot.datumtypes import Type
 from pcot.expressions.register import datumfunc
 
 from pcot.expressions.ops import combineImageWithNumberSources
-from PySide2.QtGui import QColor
 
-import pcot.config
 
 
 # The first part of the plugin creates a new type of node.

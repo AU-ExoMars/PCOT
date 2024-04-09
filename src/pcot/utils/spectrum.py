@@ -2,7 +2,6 @@
 Extract spectra from ImageCube objects
 """
 import dataclasses
-from abc import ABC
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple, List
 

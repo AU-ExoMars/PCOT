@@ -1,17 +1,19 @@
-import pcot
-from pcot.document import Document
-from pcot.imageexport import exportPDF, exportSVG, exportRaster
-from pcot.xforms.xformgrad import LEFT_MARGIN
+from pcot.datum import Datum
+from pcot.rois import ROICircle
+from pcot.utils.spectrum import SpectrumSet
+from pcot.dataformats import load
 
-pcot.setup()
-d = Document("c:/users/jim/pcot/mkdocs/docs/gettingstarted/671438grad.pcot")
-# then we tell it the graph has changed, and it will run.
-node = d.getNodeByName("gradient")
-node.legendPos = LEFT_MARGIN
-d.changed()
+# load an image
+datum = load.envi("/media/xfer/PCOTdata/RStar_AUPE/AUPE_LWAC_Caltarg_RStar.hdr")
 
-img = node.getOutput(0)
-# and write to a PDF
-exportRaster(img, "c:/users/jim/pictures/zz.png")
-exportPDF(img, "c:/users/jim/pictures/zz.pdf")
-exportSVG(img, "c:/users/jim/pictures/zz.svg")
+# get the image from the datum
+img = datum.get(Datum.IMG)
+
+# add a couple of circular ROIs to the image
+img.rois.append(ROICircle(50, 40, 4, label="a"))
+img.rois.append(ROICircle(8, 8, 4, label="b"))
+
+# generate a spectrum set and convert the results to a table
+ss = SpectrumSet({"in": img}).table().html()
+# print
+print(ss)

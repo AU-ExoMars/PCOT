@@ -1136,6 +1136,7 @@ class Canvas(QtWidgets.QWidget):
         if res[0] != '':
             path, filt = res
             (_, ext) = os.path.splitext(path)
+            pcot.config.setDefaultDir('savedimages', os.path.split(path)[0])
             ext = ext.lower()
             if ext == '':
                 QMessageBox.critical(self, 'Error', "Filename should have an extension.")
