@@ -11,8 +11,11 @@ from pcot.expressions.register import funcWrapper, statsWrapper, datumfunc
 from pcot.expressions.ops import combineImageWithNumberSources
 from pcot.filters import Filter
 from pcot.imagecube import ImageCube
+from pcot.rois import ROI
 from pcot.sources import MultiBandSource, SourceSet, Source
 from pcot.utils import image
+from pcot.utils.deb import Timer
+from pcot.utils.geom import Rect
 from pcot.value import Value, add_sub_unc_list
 from pcot.xform import XFormException
 
@@ -611,4 +614,80 @@ def curve(img, mul=1, add=0):
     subimage = img.subimage()
     nom, unc, dq = operations.curve.curve(subimage, mul.get(Datum.NUMBER).n, add.get(Datum.NUMBER).n)
     img = img.modifyWithSub(subimage, nom, uncertainty=unc, dqv=dq)
+    return Datum(Datum.IMG, img)
+
+
+@datumfunc
+def interp(img, factor, w=-1):
+    """
+    Using trilinear interpolation, generate an image by interpolating between the bands of an existing image.
+    If an ROI is attached, the image generated will be interpolated from the pixels in the ROI. The width of the image
+    will be either given in an optional parameter, or will be the same as the input image.
+
+    WARNING - IS VERY SLOW
+
+
+    @param img:img:the image to interpolate - the bands must be in ascending wavelength order
+    @param factor:number:the "wavelength" we want to generate an image for
+    @param w:number:optional width of the image to generate
+    """
+    img = img.get(Datum.IMG)
+    if img is None:
+        return None
+
+    width = int(w.get(Datum.NUMBER).n)
+    if width < 0:
+        width = img.w
+    # calculate height, keeping the aspect ratio the same
+    height = int(img.h * (width / img.w))
+
+    # get the ROI if present, otherwise the whole image
+    if img.rois is None or len(img.rois) == 0:
+        rect = Rect(0,0, img.w, img.h)
+    else:
+        r = ROI.roiUnion(img.rois)
+        if r is None:
+            rect = Rect(0,0, img.w, img.h)
+        else:
+            rect = r.bb()
+
+    # now get the wavelengths in the image
+    wavelengths = [img.wavelength(i) for i in range(img.channels)]
+    if len(wavelengths)<2:
+        raise XFormException('DATA', 'image must have at least two bands to interpolate')
+    # fail if any are -1
+    if any([x == -1 for x in wavelengths]):
+        raise XFormException('DATA', 'image must have wavelength data to interpolate')
+    # ensure they are monotonic
+    if not all([x < y for x, y in zip(wavelengths, wavelengths[1:])]):
+        raise XFormException('DATA', 'image wavelengths must be in ascending order')
+
+    # get the interpolation value, which will be a wavelength
+    factor = factor.get(Datum.NUMBER).n
+
+    # construct the volume - the x and y coordinates are those of the image, the z coordinate is the wavelength
+    x_volume = np.arange(img.w)
+    y_volume = np.arange(img.h)
+    z_volume = np.array(wavelengths)
+
+    # the volume is the image data
+    volume = img.img
+    # create the destination array
+    outimg = np.zeros((height, width), dtype=np.float32)
+
+    import pcot.utils.interp as ip
+
+    with Timer("interp"):
+        # perform the interpolation; an expensive operation!
+        xfactor = rect.w / width
+        yfactor = rect.h / height
+        for x in range(width):
+            for y in range(height):
+                xx = x*xfactor + rect.x
+                yy = y*yfactor + rect.y
+                outimg[y, x] = ip.trilinear_interpolation_fast(y_volume, x_volume, z_volume, volume, yy, xx, factor)
+            print(x)
+    # construct the new imagecube
+    img = ImageCube(outimg, None, img.sources, uncertainty=None, dq=None)
+
     return Datum(Datum.IMG, img)
