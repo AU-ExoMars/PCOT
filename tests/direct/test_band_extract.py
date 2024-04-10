@@ -54,7 +54,7 @@ def test_band_extract_badargs():
         Datum.k(10) % 10
 
     with pytest.raises(OperatorException):
-        r = Datum(Datum.ROI, ROIRect(rect=(10, 10, 20, 20), sources=nullSourceSet))
+        r = Datum(Datum.ROI, ROIRect(rect=(10, 10, 20, 20)), sources=nullSourceSet)
         r % 10
 
     with pytest.raises(OperatorException):

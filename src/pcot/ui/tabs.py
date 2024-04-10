@@ -274,8 +274,10 @@ class Tab(QtWidgets.QWidget):
         t = self.node.displayName
         if self.node.displayName != self.node.type.name:
             t += f" ({self.node.type.name})"
-        if self.node.error is not None:
-            t += f" [{self.node.error.message}]"
+        # removing the display of error states in the title because (a) they can be extremely long and (b) they
+        # are very difficult to update. The error state is displayed in the graph and the lower widget.
+        # if self.node.error is not None:
+        #     t += f" [{self.node.error.message}]"
         if self.node.rectText is not None:
             t += f" [{self.node.rectText}]"
         self.title = t
@@ -289,6 +291,7 @@ class Tab(QtWidgets.QWidget):
             self.errorText.setText("Error " + self.node.error.code + ": " + self.node.error.message)
             self.errorText.setVisible(True)
         else:
+            self.errorText.setVisible(False)
             self.lower.setVisible(self.enable is not None)
 
     def onNodeChanged(self):

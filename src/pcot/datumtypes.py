@@ -181,6 +181,14 @@ class IdentType(Type):
         return d    # this type is immutable
 
 
+class StringType(Type):
+    def __init__(self):
+        super().__init__('string', internal=True, valid=[str])
+
+    def copy(self, d):
+        return d    # this type is immutable
+
+
 class FuncType(Type):
     def __init__(self):
         super().__init__('func', internal=True, valid=None)

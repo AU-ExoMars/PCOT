@@ -10,7 +10,7 @@ import numpy as np
 from pcot.config import parserhook
 from pcot.datum import Datum
 from pcot.expressions import Parameter
-from pcot.sources import SourceSet
+from pcot.sources import SourceSet, nullSourceSet
 from pcot.value import Value
 from pcot.xform import XFormException
 
@@ -246,13 +246,21 @@ class datumfunc:
                     self.mandatoryParams.append(Parameter(k, paramdescs[k], paramtypes[k]))
                 else:
                     # this is an optional parameter with a default value -
-                    # first check the default's type is numeric and that the acceptable type tuple
-                    # has a numeric type in it
-                    from pcot.datumtypes import NumberType
-                    if NumberType.instance not in paramtypes[k]:
-                        raise ValueError(f"Function {self.name} parameter {k} cannot accept a numeric default")
-                    if not isinstance(v.default, Number):
-                        raise ValueError(f"Function {self.name} has a parameter {k} with a default which is not a number")
+                    # this must be either numeric or string.
+                    # first check the default's type is string/numeric and that the acceptable type tuple
+                    # has a string/numeric type in it
+                    from pcot.datumtypes import NumberType, StringType
+                    if NumberType.instance not in paramtypes[k] and StringType.instance not in paramtypes[k]:
+                        raise ValueError(f"Function {self.name} parameter {k} is not numeric or string, and so cannot accept a default")
+
+                    if isinstance(v.default, Number):
+                        if NumberType.instance not in paramtypes[k]:
+                            raise ValueError(f"Function {self.name} parameter {k} cannot have a numeric default")
+                    elif isinstance(v.default, str):
+                        if StringType.instance not in paramtypes[k]:
+                            raise ValueError(f"Function {self.name} parameter {k} cannot have a string default")
+                    else:
+                        raise ValueError(f"Function {self.name} has a parameter {k} with a default which is neither a number nor a string")
                     self.optParams.append(Parameter(k, paramdescs[k], paramtypes[k], v.default))
 
                 # make and store a list of types
@@ -275,7 +283,7 @@ class datumfunc:
             rv = func(*vals)
             return rv
 
-        # and another wrapper which just runs through the arguments and converts any numeric types to Datum
+        # and another wrapper which just runs through the arguments and converts any numeric and string types to Datum
         # objects, then calls the original function.
         def pywrapper(*args, **kwargs):
             # First, we need to deal with the case where the function is called with missing optional
@@ -296,8 +304,17 @@ class datumfunc:
                 except IndexError:
                     raise ValueError(f"Function {self.name} is missing arguments")
 
-            kwargs = {k: Datum.k(v) if isinstance(v, Number) else v for k, v in kwargs.items()}
-            vals = [Datum.k(x) if isinstance(x, (int, Number)) else x for x in args]
+            def convert_arg(v):
+                if isinstance(v, (Number, int)):
+                    return Datum.k(v)
+                elif isinstance(v, str):
+                    return Datum(Datum.STRING, v, nullSourceSet)
+                else:
+                    return v
+
+            kwargs = {kk: convert_arg(vv) for kk, vv in kwargs.items()}
+
+            vals = [convert_arg(vv) for vv in args]
 
             for x in vals+list(kwargs.values()):
                 if not isinstance(x, Datum):

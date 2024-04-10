@@ -618,6 +618,41 @@ def curve(img, mul=1, add=0):
 
 
 @datumfunc
+def resize(img, width, height, method="linear"):
+    """
+    Resize an image to a new size using OpenCV's resize function. The method is one of:
+    "nearest", "linear", "cubic", "area", "lanczos4"
+    mapping to the OpenCV constants
+    cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_AREA, cv2.INTER_LANCZOS
+
+    @param img:img:the image to resize
+    @param width:number:the new width
+    @param height:number:the new height
+    @param method:string:the interpolation method (nearest, linear, cubic, area, lanczos4)
+    """
+    img = img.get(Datum.IMG)
+    if img is None:
+        return None
+    width = int(width.get(Datum.NUMBER).n)
+    height = int(height.get(Datum.NUMBER).n)
+    method = method.get(Datum.STRING)
+
+    try:
+        method = {
+            "nearest": cv.INTER_NEAREST,
+            "linear": cv.INTER_LINEAR,
+            "cubic": cv.INTER_CUBIC,
+            "area": cv.INTER_AREA,
+            "lanczos4": cv.INTER_LANCZOS4
+        }[method]
+    except KeyError:
+        raise XFormException('DATA', 'invalid interpolation method')
+
+    img = img.resize(width, height, method)
+    return Datum(Datum.IMG, img)
+
+
+@datumfunc
 def interp(img, factor, w=-1):
     """
     Using trilinear interpolation, generate an image by interpolating between the bands of an existing image.

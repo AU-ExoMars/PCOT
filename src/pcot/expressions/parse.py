@@ -8,11 +8,10 @@ import numbers
 import logging
 
 from io import BytesIO
-from tokenize import tokenize, TokenInfo, NUMBER, NAME, OP, ENCODING, ENDMARKER, NEWLINE, ERRORTOKEN, PERCENT, DOT
+from tokenize import tokenize, TokenInfo, NUMBER, NAME, OP, ENCODING, ENDMARKER, NEWLINE, ERRORTOKEN, PERCENT, DOT, STRING
 
 from typing import List, Any, Optional, Callable, Dict, Tuple, Union
 
-from pcot import datum
 from pcot.datum import Datum
 from pcot.datumtypes import Type
 from pcot.sources import nullSourceSet
@@ -146,15 +145,18 @@ class Function:
         return s
 
     def chkargs(self, args: List[Optional[Datum]]):
-        """Process arguments, returning a pair of lists of Datum items: mandatory and optional args.
-        Takes two lists: one of tuples of permitted types of mandatory values (none of which can be None) and another of pairs of
-        type tuple, defaultvalue for optional args"""
+        """Process arguments, returning a pair of lists of Datum items: mandatory and optional args."""
         mandatArgs = []
         optArgs = []
         lastparam = None
+
+        if self.mandatoryParams is None:
+            return args  # no type checking, just pass all args straight through
+
         try:
-            if self.mandatoryParams is None:
-                return args  # no type checking, just pass all args straight through
+            # consume the mandatory arguments, popping them off the front of the list
+            # and checking that they are of the correct type. Each is then appended to
+            # the mandatArgs list.
             for t in self.mandatoryParams:
                 if len(args) == 0:
                     raise ArgsException('Not enough arguments in {}'.format(self.name))
@@ -168,6 +170,9 @@ class Function:
                         'Bad argument in {}, got {}, expected {}'.format(self.name, x.tp, t.validArgsString()))
                 lastparam = t
 
+            # if we have varargs, consume all remaining arguments, checking that they are of the same type as the last
+            # mandatory argument. This is a bit of a hack, but it's the best we can do.
+
             if self.varargs:
                 # varargs flag set - consume remaining args, using the last mandatory argument type
                 while len(args) > 0:
@@ -179,9 +184,21 @@ class Function:
                             'Bad argument in {}, got {}, expected {}'.format(self.name, x.tp,
                                                                              lastparam.validArgsString()))
 
+            # mandatory and varargs have now been processed - note that varargs and optional args are
+            # not compatible with each other; if we have varargs, we can't have optional args - all arguments
+            # will have been consumed by this point.
+
             for t in self.optParams:
+                # process the next optional argument
                 if len(args) == 0:
-                    optArgs.append(Datum(Datum.NUMBER, Value(t.getDefault(), 0.0), nullSourceSet))
+                    # there are no arguments left, so we need to use the default value
+                    deflt = t.getDefault()
+                    if isinstance(deflt, numbers.Number):
+                        optArgs.append(Datum(Datum.NUMBER, Value(deflt, 0.0), nullSourceSet))
+                    elif isinstance(deflt, str):
+                        optArgs.append(Datum(Datum.STRING, deflt, nullSourceSet))
+                    else:
+                        raise ArgsException("Internal error: parameter defaults should be numeric or string")
                 else:
                     x = args.pop(0)
                     if x is None:
@@ -235,6 +252,20 @@ class InstIdent(Instruction):
 
     def exec(self, stack: Stack):
         stack.append(Datum(Datum.IDENT, self.val, nullSourceSet))
+
+    def __str__(self):
+        return "IDENT {}".format(self.val)
+
+
+class InstString(Instruction):
+    """A VM instruction for stacking a string"""
+    val: str
+
+    def __init__(self, v: str):
+        self.val = v
+
+    def exec(self, stack: Stack):
+        stack.append(Datum(Datum.STRING, self.val, nullSourceSet))
 
     def __str__(self):
         return "STR {}".format(self.val)
@@ -367,6 +398,13 @@ def execute(seq: List[Instruction], stack: Stack) -> float:
 def isOp(t):
     """Return whether a token is an operator (since we've got some weird ones)"""
     return t.type in [OP, ERRORTOKEN, PERCENT, DOT]
+
+
+def dequote(s):
+    """Remove quotes from a string if it's quoted and the quotes match"""
+    if (len(s) >= 2 and s[0] == s[-1]) and s.startswith(("'", '"')):
+        return s[1:-1]
+    return s
 
 
 class Parser:
@@ -566,6 +604,10 @@ class Parser:
                 #     goto have_operand
                 elif t.type == NUMBER:
                     self.out(InstNumber(float(t.string)))
+                    wantOperand = False
+                elif t.type == STRING:
+
+                    self.out(InstString(dequote(t.string)))
                     wantOperand = False
                 elif t.type == NAME:
                     if t.string in self.varRegistry:

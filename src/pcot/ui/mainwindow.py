@@ -563,6 +563,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         if self.graph is not None:
             # pass in true, indicating we want to ignore autorun
             self.graph.changed(runAll=True)
+            self.retitleTabs()  # error states may have changed
 
     ## After an undo/redo, a whole new document may have been deserialised.
     # Set this new graph, and make sure the window's tabs point to nodes

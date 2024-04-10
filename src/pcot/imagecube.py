@@ -961,3 +961,31 @@ class ImageCube(SourcesObtainable):
         img.annotations = []
         img.rois = []
         return img
+
+    def resize(self, w, h, method):
+        """
+        Resize the image using one the OpenCV methods.
+        Note that we don't resize DQ. Instead, if any BAD bit is present in a channel it is propagated
+        to all the bits in the channel.
+        """
+        outimg = cv.resize(self.img, (w, h), interpolation=method)
+        outunc = cv.resize(self.uncertainty, (w, h),  interpolation=method)
+
+        dqs = []
+        if self.channels == 1:
+            # dammit. Two cases because two different image formats.
+            # OR together all the DQ bits in the channel
+            badbits = np.bitwise_or.reduce(self.dq, axis=None) & pcot.dq.BAD
+            outdq = np.full((h, w), badbits, dtype=np.uint16)
+        else:
+            dqs = []
+            for i in range(self.channels):
+                dqbits = self.dq[:, :, i]
+                # OR together all the DQ bits in the channel
+                badbits = np.bitwise_or.reduce(dqbits, axis=None) & pcot.dq.BAD
+                dqbits = np.full((h, w), badbits, dtype=np.uint16)
+                dqs.append(dqbits)
+            outdq = np.stack(dqs, axis=-1)
+
+        return ImageCube(outimg, self.mapping, self.sources, uncertainty=outunc, dq=outdq)
+

@@ -47,6 +47,7 @@ class Datum(SourcesObtainable):
 
         # these types are not generally used for connections, but for values on the expression evaluation stack
         IDENT := pcot.datumtypes.IdentType(),
+        STRING := pcot.datumtypes.StringType(),
         FUNC := pcot.datumtypes.FuncType(),
         NONE := pcot.datumtypes.NoneType()  # for neither connections nor the stack - a null value
     ]
