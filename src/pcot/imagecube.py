@@ -699,12 +699,19 @@ class ImageCube(SourcesObtainable):
         sources = []
         dqs = []
         uncertainties = []
+
         # now create a list of source sets and a list of single channel images
         for i in lstOfChannels:
             sources.append(self.sources.sourceSets[i])
-            chans.append(self.img[:, :, i])
-            dqs.append(self.dq[:, :, i])
-            uncertainties.append(self.uncertainty[:, :, i])
+            if self.channels == 1:
+                # sometimes I really regret not making single band images (h,w,1) shape. This is one of those times.
+                chans.append(self.img)
+                dqs.append(self.dq)
+                uncertainties.append(self.uncertainty)
+            else:
+                chans.append(self.img[:, :, i])
+                dqs.append(self.dq[:, :, i])
+                uncertainties.append(self.uncertainty[:, :, i])
 
         if len(lstOfChannels) == 1:
             # single channel case

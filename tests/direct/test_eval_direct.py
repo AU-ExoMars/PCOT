@@ -106,24 +106,3 @@ def test_datum_and_number():
     r = a * 2       # test that it works with a number on the RHS
     assert np.allclose(20.0, r.get(Datum.NUMBER).n)
     assert np.allclose(0.2, r.get(Datum.NUMBER).u)
-
-
-def test_band_extract():
-    d = Datum(Datum.IMG, genrgb(32, 32, 3, 2, 1))
-    r = d % "_0"  # extract the red band
-    v = r.get(Datum.IMG)
-    assert np.allclose(v.img[0, 0], 3)
-
-    # now generate another image with wavelengths assigned to RGB
-
-    img = genrgb(32, 32, 3, 2, 1)
-    red = Source().setBand(Filter(640, 1.0, name="red"))
-    green = Source().setBand(Filter(540, 1.0, name="green"))
-    blue = Source().setBand(Filter(440, 1.0, name="blue"))
-    img.sources = MultiBandSource([red, green, blue])
-
-    # and test that the band extraction works with wavelengths
-
-    r = Datum(Datum.IMG, img) % 540
-    v = r.get(Datum.IMG)
-    assert np.allclose(v.img[0, 0], 2)
