@@ -126,7 +126,7 @@ def multifile(directory: str,
 
     # we need to get the settings out of the preset file,
     # which means we need an PresetOwner object to apply them to
-    class PresetReader(PresetOwner):
+    class RawPresets(PresetOwner):
         def __init__(self):
             # initialise with the settings passed into the containing function
             self.filterset = filterset
@@ -144,16 +144,19 @@ def multifile(directory: str,
                 self.rawloader = RawLoader()
                 self.rawloader.deserialise(d['rawloader'])
 
-    # create the reader object, which will initialise its values with those
-    # passed into the function and then fill missing values with those from the preset
-    r = PresetReader()
-    if preset is not None:
-        r.applyPreset(presetModel.loadPresetByName(r, preset))
-    # now we can use the settings in r
-    filterpat = r.filterpat or r'.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*'
-    filterset = r.filterset or 'PANCAM'
-    mult = r.mult or 1.0
-    rawloader = r.rawloader
+    if rawloader is None:
+        # create the reader object, which will initialise its values with those
+        # passed into the function and then fill missing values with those from the preset
+        r = RawPresets()
+        if preset is not None:
+            r.applyPreset(presetModel.loadPresetByName(r, preset))
+        # now we can use the settings in r
+        filterpat = r.filterpat or r'.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*'
+        filterset = r.filterset or 'PANCAM'
+        mult = r.mult or 1.0
+        rawloader = r.rawloader
+
+    print(rawloader)
 
     def getFilterSearchParam(p) -> Tuple[Optional[Union[str, int]], Optional[str]]:
         """Returns the thing to search for to match a filter to a path and the type of the search"""
@@ -198,13 +201,17 @@ def multifile(directory: str,
             # most of the time.
             # CORRECTION: but it doesn't work if no relative paths exists (e.g. different drives
             # or network paths) so then we revert to the absolute path.
+            # I'm really not sure about this code.
             try:
                 path = os.path.relpath(os.path.join(directory, fname), os.getcwd())
             except ValueError:
                 path = os.path.abspath(os.path.join(directory, fname))
 
             if not os.path.exists(path):
-                raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
+                # well, we'll just try the basic path then. Dammit.
+                path = os.path.join(directory, fname)
+                if not os.path.exists(path):
+                        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
 
             def load(path: str) -> np.ndarray:
                 if rawloader is not None and rawloader.is_raw_file(path):
