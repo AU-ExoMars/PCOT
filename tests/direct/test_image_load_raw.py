@@ -437,7 +437,6 @@ def test_raw_byte_offset_rot90_vflip():
     This is a 90 degree rotate followed by a vertical flip - essentially a transpose.
     """
 
-
     pcot.setup()  # filterset can't be found without this
 
     with tempfile.TemporaryDirectory() as d:
@@ -465,3 +464,45 @@ def test_raw_byte_offset_rot90_vflip():
     assert img[31, 0][1].approxeq(Value(0, 0, dq.NOUNCERTAINTY))
     assert img[0, 15][0].approxeq(Value(0, 0, dq.NOUNCERTAINTY))
     assert img[0, 15][1].approxeq(Value(2/255, 0, dq.NOUNCERTAINTY))
+
+
+def test_preset_raw():
+    """
+    Here we test loading a raw file using a preset. Because presets are user-defined, this is tricky -
+    I add a preset to the preset system by hand, rather than having it loaded at startup.
+    """
+
+    from pcot.inputs.multifile import presetModel
+    pcot.setup()
+
+    # create a preset by hand
+    loader = RawLoader(format=RawLoader.UINT8, width=16, height=32, bigendian=False, offset=12, rot=90,
+                       vertflip=True)
+    # The preset is stored as a dict
+    preset = {
+        'rawloader': loader.serialise(),
+        'filterpat': '.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
+        'mult': 1,
+        'filterset': 'AUPE'
+    }
+    presetModel.addPreset("testpreset", preset)
+
+    with tempfile.TemporaryDirectory() as d:
+        create_dir_of_raw2(create_raw_uint8, d, 12, False)
+        img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"], preset='testpreset')
+
+    img = img.get(Datum.IMG)
+    assert img.w == 32
+    assert img.h == 16
+
+    # check the wavelengths are correct for AUPE positions 01 and 02.
+    assert img.sources[0].getOnlyItem().getFilter().cwl == 440
+    assert img.sources[1].getOnlyItem().getFilter().cwl == 540
+
+    assert img[0, 0][0].approxeq(Value(1/255, 0, dq.NOUNCERTAINTY))
+    assert img[0, 0][1].approxeq(Value(2/255, 0, dq.NOUNCERTAINTY))
+    assert img[31, 0][0].approxeq(Value(1, 0, dq.NOUNCERTAINTY))
+    assert img[31, 0][1].approxeq(Value(0, 0, dq.NOUNCERTAINTY))
+    assert img[0, 15][0].approxeq(Value(0, 0, dq.NOUNCERTAINTY))
+    assert img[0, 15][1].approxeq(Value(2/255, 0, dq.NOUNCERTAINTY))
+

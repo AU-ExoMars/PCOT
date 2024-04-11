@@ -124,29 +124,34 @@ def multifile(directory: str,
 
     """
 
-    # we need to get the settings out of the preset file,
-    # which means we need an PresetOwner object to apply them to
-    class RawPresets(PresetOwner):
-        def __init__(self):
-            # initialise with the settings passed into the containing function
-            self.filterset = filterset
-            self.filterpat = filterpat
-            self.mult = mult
-            self.rawloader = rawloader
-
-        def applyPreset(self, d: Dict[str, Any]):
-            # override the values with the ones from the preset file, but
-            # only if they haven't been set already
-            self.filterset = self.filterset or d['filterset']
-            self.filterpat = self.filterpat or d['filterpat']
-            self.mult = self.mult or d['mult']
-            if self.rawloader is None:
-                self.rawloader = RawLoader()
-                self.rawloader.deserialise(d['rawloader'])
-
     if rawloader is None:
+        class RawPresets(PresetOwner):
+            """
+            This class stores presets for the multifile input method. It is used to hold settings
+            for loading raw data. In normal multifile loading, the multifile widget is the preset owner
+            (because it's the thing which has presets).
+            """
+            def __init__(self):
+                # initialise with the settings passed into the containing function
+                self.filterset = filterset
+                self.filterpat = filterpat
+                self.mult = mult
+                self.rawloader = rawloader
+
+            def applyPreset(self, d: Dict[str, Any]):
+                # override the values with the ones from the preset file, but
+                # only if they haven't been set already
+                self.filterset = self.filterset or d['filterset']
+                self.filterpat = self.filterpat or d['filterpat']
+                self.mult = self.mult or d['mult']
+                if self.rawloader is None:
+                    self.rawloader = RawLoader()
+                    self.rawloader.deserialise(d['rawloader'])
+
         # create the reader object, which will initialise its values with those
-        # passed into the function and then fill missing values with those from the preset
+        # passed into the function and then fill missing values with those from the preset.
+        # This is a slight abuse of the normal system seen in the multifile input method, where
+        # the multifile input widget is a PresetOwner (i.e. a thing which has presets).
         r = RawPresets()
         if preset is not None:
             r.applyPreset(presetModel.loadPresetByName(r, preset))

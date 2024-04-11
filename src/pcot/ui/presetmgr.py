@@ -42,7 +42,8 @@ how raw images can be loaded. The buttons work as follows:
 
 
 class PresetOwner:
-    """Interface for the owner of the preset manager"""
+    """Interface for the owner of the preset manager - the thing which has presets. It is sometimes
+    used rather hackily, for example when a preset is passed as an argument to the direct multifile loader."""
 
     def fetchPreset(self) -> Any:
         """Fetch the current settings as something that can be serialised"""
@@ -54,7 +55,9 @@ class PresetOwner:
 
 
 class PresetModel(QAbstractListModel):
-    """Model for the list - it's a simple model around the list and dict"""
+    """Model for the list - it's a simple model around the list and dict.
+    Presets are just dicts.
+    """
 
     presetList: List[str]  # list of preset names
     presets: Dict[str, Any]  # dict of presets
@@ -79,6 +82,12 @@ class PresetModel(QAbstractListModel):
         else:
             self.presets = {}
             self.presetList = []
+
+    def addPreset(self, name, p: Dict):
+        """This is generally used only in testing to add presets after the fact in a crude way.
+        In most real cases, savePreset is used. We do NOT save the presets."""
+        self.presets[name] = p
+        self.presetList.append(name)
 
     def savePresetsToFile(self):
         """Write the preset model to the file"""

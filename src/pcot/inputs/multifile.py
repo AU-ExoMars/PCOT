@@ -19,7 +19,7 @@ from ..dataformats import load
 from ..dataformats.raw import RawLoader
 from ..filters import getFilterSetNames
 from ..ui import uiloader
-from ..ui.presetmgr import PresetModel, PresetDialog
+from ..ui.presetmgr import PresetModel, PresetDialog, PresetOwner
 from ..utils import SignalBlocker
 
 logger = logging.getLogger(__name__)
@@ -142,7 +142,7 @@ class MultifileInputMethod(InputMethod):
 IMAGETYPERE = re.compile(r".*\.(?i:jpg|bmp|png|ppm|tga|tif|raw|bin)")
 
 
-class MultifileMethodWidget(MethodWidget):
+class MultifileMethodWidget(MethodWidget, PresetOwner):
     def __init__(self, m):
         super().__init__(m)
         uiloader.loadUi('inputmultifile.ui', self)
