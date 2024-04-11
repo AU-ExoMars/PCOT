@@ -196,3 +196,4 @@ def envi_image_2(tmp_path):
 
     # return the filename (with a .hdr)
     return fn.with_suffix(".hdr")
+

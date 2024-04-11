@@ -1,12 +1,18 @@
+import struct
+import tempfile
+from typing import List
+
 import pytest
 
 import pcot
 from pcot.dataformats import load
+from pcot.dataformats.raw import RawLoader
 from pcot.datum import Datum
 
 from pcot.rois import ROICircle
 from pcot.utils.spectrum import SpectrumSet
 from fixtures import *
+from pcot.value import Value
 from pcot.xform import XFormException
 
 
@@ -102,7 +108,7 @@ def test_direct_load_multifile_nofilter(globaldatadir):
     assert img.h == 30
     assert img.channels == 3
     # and the data
-    assert np.allclose(img.img[0, 0], (0, 32768/65535, 1))
+    assert np.allclose(img.img[0, 0], (0, 32768 / 65535, 1))
 
 
 def test_direct_load_multifile(globaldatadir):
@@ -124,13 +130,13 @@ def test_direct_load_multifile(globaldatadir):
     assert np.allclose(img.img[0][0], (32768 / 65535, 0, 1))
 
     for sourceSet, pos, name, cwl, fwhm, trans, fn in zip(img.sources,
-                                                        ('L02', 'L01', 'R10'),
-                                                        ('G03', 'G04', 'S03'),
-                                                        (530, 570, 450),
-                                                        (15, 12, 5),
-                                                        (0.957, 0.989, 0.000001356),
-                                                        names,
-                                                      ):
+                                                          ('L02', 'L01', 'R10'),
+                                                          ('G03', 'G04', 'S03'),
+                                                          (530, 570, 450),
+                                                          (15, 12, 5),
+                                                          (0.957, 0.989, 0.000001356),
+                                                          names,
+                                                          ):
         #  First, make sure each band has a source set of a single source
         assert len(sourceSet) == 1
         s = sourceSet.getOnlyItem()
@@ -166,13 +172,13 @@ def test_direct_load_multifile_cwl(globaldatadir):
     assert np.allclose(img.img[0][0], (0, 1, 32768 / 65535))
 
     for sourceSet, pos, name, cwl, fwhm, trans, fn in zip(img.sources,
-                                                        ('L06', 'L08', 'L07'),
-                                                        ('G01', 'C02L', 'C01L'),
-                                                        (440, 540, 640),
-                                                        (25, 80, 100),
-                                                        (0.987, 0.988, 0.993),
-                                                        names,
-                                                      ):
+                                                          ('L06', 'L08', 'L07'),
+                                                          ('G01', 'C02L', 'C01L'),
+                                                          (440, 540, 640),
+                                                          (25, 80, 100),
+                                                          (0.987, 0.988, 0.993),
+                                                          names,
+                                                          ):
         #  First, make sure each band has a source set of a single source
         assert len(sourceSet) == 1
         s = sourceSet.getOnlyItem()
@@ -187,3 +193,5 @@ def test_direct_load_multifile_cwl(globaldatadir):
         # the long string here is a bit weird, in that it has the filenames for all the filters in always,
         # but that's because we're using the long string for the multifile input as a whole.
         assert s.long() == f"none: wavelength {cwl}, fwhm {fwhm} {path / fn}"
+
+

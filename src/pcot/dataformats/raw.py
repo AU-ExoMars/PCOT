@@ -65,7 +65,7 @@ class RawLoader:
             dtype = np.float32
             scale = 1.0
         elif self.format == RawLoader.UINT16:
-            dtype = np.int16
+            dtype = np.uint16
             scale = 1.0 / 65535.0
         elif self.format == RawLoader.UINT8:
             dtype = np.uint8
