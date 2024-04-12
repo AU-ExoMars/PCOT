@@ -488,3 +488,32 @@ def test_curve():
     # no uncertainty in the result data
     assert [x.u == 0 for x in pixout]
     assert [x.dq == dq.NOUNCERTAINTY for x in pixout]
+
+
+def test_resize():
+    """again, a fairly cursory test for resizing, and not testing all the modes."""
+
+    # make a mono image, and resize it down, then make sure the corners are still correct.
+    img = gen_two_halves(256, 256, (1,), (4.0,), (2,), (5.0,))
+    d = Datum(Datum.IMG, img)
+    result = df.resize(d, 32, 32).get(Datum.IMG)
+    assert result.shape == (32, 32)
+    assert result[0,0] == Value(1, 4.0, dq.NONE)
+    assert result[31,0] == Value(1, 4.0, dq.NONE)
+    assert result[0,31] == Value(2, 5.0, dq.NONE)
+    assert result[31,31] == Value(2, 5.0, dq.NONE)
+
+    # and let's do a 2-channel image and resize it up, using nearest neighbour
+    img = gen_two_halves(32, 32, (1,2), (4.0,3.0), (2,7), (5.0,6.0))
+    d = Datum(Datum.IMG, img)
+    result = df.resize(d, 256, 256, "nearest").get(Datum.IMG)
+    assert result.shape == (256, 256, 2)
+    assert result[0,0][0] == Value(1, 4.0, dq.NONE)
+    assert result[255,0][0] == Value(1, 4.0, dq.NONE)
+    assert result[0,0][1] == Value(2, 3.0, dq.NONE)
+    assert result[255,0][1] == Value(2, 3.0, dq.NONE)
+    assert result[0,255][0] == Value(2, 5.0, dq.NONE)
+    assert result[255,255][0] == Value(2, 5.0, dq.NONE)
+    assert result[0,255][1] == Value(7, 6.0, dq.NONE)
+    assert result[255,255][1] == Value(7, 6.0, dq.NONE)
+

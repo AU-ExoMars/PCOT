@@ -300,7 +300,14 @@ class datumfunc:
             # now we need to add the missing arguments to the args list.
             for i in range(numMissing):
                 try:
-                    args += (Datum.k(self.optParams[i].deflt),)   # assume it's numeric.
+                    # we're going to have to convert the default value to a Datum object. We know the default
+                    # is of a valid type for this parameter, we checked during __init__. So we can just use
+                    # instanceof here.
+                    if isinstance(self.optParams[i].deflt, str):
+                        arg = Datum(Datum.STRING, self.optParams[i].deflt, nullSourceSet)
+                    else:
+                        arg = (Datum.k(self.optParams[i].deflt),)   # assume it's numeric.
+                    args += (arg,)
                 except IndexError:
                     raise ValueError(f"Function {self.name} is missing arguments")
 
