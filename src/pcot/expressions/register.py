@@ -306,7 +306,7 @@ class datumfunc:
                     if isinstance(self.optParams[i].deflt, str):
                         arg = Datum(Datum.STRING, self.optParams[i].deflt, nullSourceSet)
                     else:
-                        arg = (Datum.k(self.optParams[i].deflt),)   # assume it's numeric.
+                        arg = Datum.k(self.optParams[i].deflt)   # assume it's numeric.
                     args += (arg,)
                 except IndexError:
                     raise ValueError(f"Function {self.name} is missing arguments")
