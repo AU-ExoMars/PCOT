@@ -114,9 +114,7 @@ class Function:
         self.mandatoryParams = mandatoryParams
         self.optParams = optParams
         self.varargs = varargs
-        if self.varargs and len(self.mandatoryParams) == 0:
-            raise ArgsException("cannot have a function with varargs but no mandatory arguments")
-        elif self.varargs and len(self.optParams) > 0:
+        if self.varargs and len(self.optParams) > 0:
             raise ArgsException("cannot have a function with varargs and optional arguments")
 
     def help(self):
@@ -170,19 +168,13 @@ class Function:
                         'Bad argument in {}, got {}, expected {}'.format(self.name, x.tp, t.validArgsString()))
                 lastparam = t
 
-            # if we have varargs, consume all remaining arguments, checking that they are of the same type as the last
-            # mandatory argument. This is a bit of a hack, but it's the best we can do.
+            # if we have varargs, consume all remaining arguments, no type checks(!)
 
             if self.varargs:
-                # varargs flag set - consume remaining args, using the last mandatory argument type
+                # varargs flag set - consume remaining args
                 while len(args) > 0:
                     x = args.pop(0)
-                    if lastparam.isValid(x):
-                        mandatArgs.append(x)
-                    else:
-                        raise ArgsException(
-                            'Bad argument in {}, got {}, expected {}'.format(self.name, x.tp,
-                                                                             lastparam.validArgsString()))
+                    mandatArgs.append(x)
 
             # mandatory and varargs have now been processed - note that varargs and optional args are
             # not compatible with each other; if we have varargs, we can't have optional args - all arguments

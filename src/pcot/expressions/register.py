@@ -228,43 +228,40 @@ class datumfunc:
         self.mandatoryParams = []
         self.optParams = []
         self.varargs = False
-        if len(sig.parameters) > 0 and list(sig.parameters.values())[0].kind == inspect.Parameter.VAR_POSITIONAL:
-            raise ValueError(f"Function {self.name} is varargs but must have at least one non-varargs parameter")
-        else:
-            for k, v in sig.parameters.items():
-                if v.kind == inspect.Parameter.VAR_POSITIONAL:
-                    # if we get a varargs parameter, we just set the varargs flag and break out of the loop
-                    self.varargs = True
-                    break
-                # check the description is present
-                if k not in paramdescs:
-                    raise ValueError(f"Function {self.name} has a parameter {k} with no description")
+        for k, v in sig.parameters.items():
+            if v.kind == inspect.Parameter.VAR_POSITIONAL:
+                # if we get a varargs parameter, we just set the varargs flag and break out of the loop
+                self.varargs = True
+                break
+            # check the description is present
+            if k not in paramdescs:
+                raise ValueError(f"Function {self.name} has a parameter {k} with no description")
 
-                if v.default == inspect.Parameter.empty:
-                    # we have a mandatory parameter, so we add it to the mandatory list along with
-                    # the type and description.
-                    self.mandatoryParams.append(Parameter(k, paramdescs[k], paramtypes[k]))
+            if v.default == inspect.Parameter.empty:
+                # we have a mandatory parameter, so we add it to the mandatory list along with
+                # the type and description.
+                self.mandatoryParams.append(Parameter(k, paramdescs[k], paramtypes[k]))
+            else:
+                # this is an optional parameter with a default value -
+                # this must be either numeric or string.
+                # first check the default's type is string/numeric and that the acceptable type tuple
+                # has a string/numeric type in it
+                from pcot.datumtypes import NumberType, StringType
+                if NumberType.instance not in paramtypes[k] and StringType.instance not in paramtypes[k]:
+                    raise ValueError(f"Function {self.name} parameter {k} is not numeric or string, and so cannot accept a default")
+
+                if isinstance(v.default, Number):
+                    if NumberType.instance not in paramtypes[k]:
+                        raise ValueError(f"Function {self.name} parameter {k} cannot have a numeric default")
+                elif isinstance(v.default, str):
+                    if StringType.instance not in paramtypes[k]:
+                        raise ValueError(f"Function {self.name} parameter {k} cannot have a string default")
                 else:
-                    # this is an optional parameter with a default value -
-                    # this must be either numeric or string.
-                    # first check the default's type is string/numeric and that the acceptable type tuple
-                    # has a string/numeric type in it
-                    from pcot.datumtypes import NumberType, StringType
-                    if NumberType.instance not in paramtypes[k] and StringType.instance not in paramtypes[k]:
-                        raise ValueError(f"Function {self.name} parameter {k} is not numeric or string, and so cannot accept a default")
+                    raise ValueError(f"Function {self.name} has a parameter {k} with a default which is neither a number nor a string")
+                self.optParams.append(Parameter(k, paramdescs[k], paramtypes[k], v.default))
 
-                    if isinstance(v.default, Number):
-                        if NumberType.instance not in paramtypes[k]:
-                            raise ValueError(f"Function {self.name} parameter {k} cannot have a numeric default")
-                    elif isinstance(v.default, str):
-                        if StringType.instance not in paramtypes[k]:
-                            raise ValueError(f"Function {self.name} parameter {k} cannot have a string default")
-                    else:
-                        raise ValueError(f"Function {self.name} has a parameter {k} with a default which is neither a number nor a string")
-                    self.optParams.append(Parameter(k, paramdescs[k], paramtypes[k], v.default))
-
-                # make and store a list of types
-                self.paramTypes = [x for x in paramtypes.values()]
+            # make and store a list of types
+            self.paramTypes = [x for x in paramtypes.values()]
 
         # now we need to create a wrapper function which will convert two lists (mandatory and optional args)
         # into a single list of Datum which the passed-in function expects.

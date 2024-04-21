@@ -48,7 +48,6 @@ def testfunc2(first, *args):
     return d
 
 
-
 def test_k():
     d = Datum.k(0)
     assert d.get(Datum.NUMBER).n == 0
@@ -227,3 +226,78 @@ def test_varargs():
     assert np.allclose(red.n, imgr * 3 + 3.0)
     assert np.allclose(green.n, imgg * 3 + 3.0)
     assert np.allclose(blue.n, imgb * 3 + 3.0)
+
+
+@datumfunc
+def example_func(a, b=2.0):
+    """
+    Example function that takes two numbers a,b and returns a+b*2
+    @param a: number: first number
+    @param b: number: second number
+    """
+    return a * b
+
+
+def test_example_func():
+    """Test a function that's used in the docs"""
+    r = example_func(Datum.k(2), Datum.k(2)).get(Datum.NUMBER)
+    assert r.n == 4
+    assert r.u == 0
+    assert r.dq == NOUNCERTAINTY
+    r = example_func(Datum.k(7)).get(Datum.NUMBER)
+    assert r.n == 14
+    assert r.u == 0
+    assert r.dq == NOUNCERTAINTY
+
+
+@datumfunc
+def varargs_nomand_differenttypes(*args):
+    """
+    Example function
+    """
+
+    assert args[0].tp == Datum.NUMBER
+    assert args[1].tp == Datum.NUMBER
+    assert args[2].tp == Datum.IMG
+
+
+def test_varargs_nomand_differenttypes():
+    """Test a varargs function with no mandatory args and different argument types"""
+    a = Datum.k(2)
+    b = Datum.k(3)
+    img = testimg(0)
+
+    varargs_nomand_differenttypes(a, b, img)
+
+
+@datumfunc
+def stringexample(a, b, op='add'):
+    """
+    String argument example
+    @param a: number: first number
+    @param b: number: second number
+    @param op: string: operation to perform
+    """
+    if op.get(Datum.STRING) == 'add':
+        return a + b
+    elif op.get(Datum.STRING) == 'sub':
+        return a - b
+    else:
+        raise ValueError("Unknown operation")
+
+
+def test_stringexample():
+    """Test an optional string argument"""
+    r = stringexample(2, 3, 'add').get(Datum.NUMBER)
+    assert r.n == 5
+    assert r.u == 0
+    assert r.dq == NOUNCERTAINTY
+
+    op = Datum(Datum.STRING, 'sub', sources=nullSourceSet)
+    r = stringexample(-2, 4, op).get(Datum.NUMBER)
+    assert r.n == -6
+    assert r.u == 0
+    assert r.dq == NOUNCERTAINTY
+
+    with pytest.raises(ValueError):
+        stringexample(1, 1, 'mul')
