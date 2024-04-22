@@ -171,7 +171,7 @@
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-level="2"><a href="#adding-new-expr-functions" class="nav-link">Adding new expr functions</a>
+            <li class="nav-item" data-level="2"><a href="#adding-new-datum-functions-for-use-in-expr-and-python-code" class="nav-link">Adding new Datum functions (for use in expr and Python code)</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -206,54 +206,100 @@ For example, use <code>~/blah/RIM Dewarping</code> and not
 <h2 id="adding-new-types">Adding new types</h2>
 <p>This is covered in <a href="../types/">a separate document</a>, as it's not often done
 and is a little involved.</p>
-<h2 id="adding-new-expr-functions">Adding new <em>expr</em> functions</h2>
-<p>Here is a snippet of code which will add a function to take two numbers a,b
-and calculate a+b*2. It works by adding a registration function, which will
-add our new function with its parameter types and help text. Note that as
+<h2 id="adding-new-datum-functions-for-use-in-expr-and-python-code">Adding new Datum functions (for use in <em>expr</em> and Python code)</h2>
+<p>The functions used in the <em>expr</em> expression node can also be used in
+Python programs which use PCOT as a library (this is 
+<a href="../library/">covered here</a>). These are called Datum functions because
+they both take and return Datum objects.</p>
+<p>To create a Datum function:</p>
+<ul>
+<li>use the <code>@datumfunc</code> decorator. This will
+register the function and wrap it in two separate wrappers: one for use
+in <em>expr</em>, the other for use in Python.</li>
+<li>write a docstring in the correct format, as illustrated below.</li>
+</ul>
+<p>Here's an example which declares a function to take two numbers
+a,b and calculate a+b*2. Note that as
 in all PCOT code we have to make sure the sources are handled correctly.</p>
-<pre><code class="language-python">import pcot.config
-from pcot.datum import Datum
-from pcot.sources import SourceSet
-
-# the function itself, which takes a list of mandatory arguments and a
-# list of optional arguments (of which there are none)
-def testfunc(args, optargs):
-    a = args[0].get(Datum.NUMBER)   # get the first argument, which is numeric
-    b = args[1].get(Datum.NUMBER)   # and the second argument.
-    result = a + b * 2              # calculate the result
-
-    # get the source sets from the inputs and combine them.
-    sources = SourceSet([args[0].getSources(), args[1].getSources()])
-
-    # convert the result into a numeric Datum and return it, attaching sources.
-    return Datum(Datum.NUMBER, result, sources)
-
-# This function will register new functions, of which we have only one.
-
-def regfuncs(p):
-    # late import of Parameter to avoid cyclic import problems.
-
-    from pcot.expressions import Parameter
-
-    # register our function.
-    p.registerFunc(&quot;testf&quot;,                 # name
-                   &quot;calculates a+2*b&quot;,      # description
-                   # a list defining our parameters by name, description and type
-                   [Parameter(&quot;a&quot;, &quot;number 1&quot;, Datum.NUMBER),
-                    Parameter(&quot;b&quot;, &quot;number 2&quot;, Datum.NUMBER)
-                    ],
-                   # the empty list of optional parameters
-                   [],
-                   # the function reference
-                   testfunc)
-
-
-# this will add a hook to the system to register these functions when the
-# expression parser is created (which has to be done quite late).
-pcot.config.addExprFuncHook(regfuncs)
+<pre><code class="language-python">@datumfunc
+def example_func(a, b):
+    &quot;&quot;&quot;
+    Example function that takes two numbers a,b and returns a+b*2
+    @param a: number: first number
+    @param b: number: second number
+    &quot;&quot;&quot;
+    return a + b * Datum.k(2)
 </code></pre>
-<p>For more examples of functions, look at the <code>ExpressionEvaluator</code> constructor
-in the <code>pcot.expressions.eval</code> module.</p>
+<p>This is a trivial example that relies on Datum objects having operator
+overloads, but note that we need to multiply b by a Datum, not a number.
+To do this we use <code>Datum.k</code> to create a scalar constant.</p>
+<h3 id="the-docstring">The docstring</h3>
+<p>This should consist of a number of lines describing the function followed
+by a number of <code>@param</code> lines, one for each parameter. These contain
+the following, separated by colons:</p>
+<ul>
+<li>The string `@param'</li>
+<li>A Datum type name - these can be found in the constructors of datum type
+objects in <code>datumtypes.py</code>, but the most common are <code>number</code>, <code>img</code>, <code>roi</code>,
+<code>string</code>.</li>
+<li>A description of the parameter</li>
+</ul>
+<h3 id="optional-numericstring-arguments">Optional numeric/string arguments</h3>
+<p>Optional arguments with defaults can be provided, but only if they
+are numeric or strings (because these are the only types which make
+sense for the default values). In this case the defaults will be
+converted to Datum objects if they are used.</p>
+<p>Here is an example of a function which
+multiplies an image by a constant, with the default being 2:</p>
+<pre><code>@datumfunc
+def example_func(img, k=2):
+    &quot;&quot;&quot;
+    Example function that takes two numbers a,b and returns a+b*2
+    @param img:img:the image
+    @param k:number:the multiplier
+    &quot;&quot;&quot;
+    # no need to construct a Datum with Datum.k(), because k is already
+    # a Datum.
+    return img * k
+</code></pre>
+<p>Here's another example which adds two numbers or multiplies them,
+depending on a string - and the default is to add:</p>
+<pre><code>@datumfunc
+def stringexample(a, b, op='add'):
+    &quot;&quot;&quot;
+    String argument example
+    @param a: number: first number
+    @param b: number: second number
+    @param op: string: operation to perform
+    &quot;&quot;&quot;
+    if op.get(Datum.STRING) == 'add':
+        return a + b
+    elif op.get(Datum.STRING) == 'sub':
+        return a - b
+    else:
+        raise ValueError(&quot;Unknown operation&quot;)
+</code></pre>
+<p>Note that you usually have to extract the actual value from the Datum
+objects, as we do with the <code>op</code> argument above. In previous examples,
+we take advantage of Datum's extensive operator overloading.</p>
+<h3 id="variadic-arguments">Variadic arguments</h3>
+<p>For a variable number of arguments, use the <code>*args</code> keyword. Here, you have
+to check the types by hand. For example, this function will sum numbers:</p>
+<pre><code>@datumfunc
+def sumall(*args):
+    &quot;&quot;&quot;
+    Sum all arguments
+    &quot;&quot;&quot;
+    s = sum([x.get(Datum.NUMBER).n for x in args])
+    return Datum(Datum.NUMBER, Value(s, 0, NOUNCERTAINTY), nullSourceSet)
+</code></pre>
+<p>Note the use of <code>Value</code> here to construct a scalar value with
+standard deviation (zero here) and DQ bits (indicating no uncertainty data).
+Also note the mandatory use of a source set - just the <code>nullSourceSet</code>
+here to indicate there is no source; this is just a test function. In a real
+function we would combine the input sources.</p>
+<p>For more examples of functions, look at the <code>ExpressionEvaluator</code>
+constructor in the <code>pcot.expressions.eval</code> module.</p>
 <h2 id="adding-new-menu-items">Adding new menu items</h2>
 <p>This is done by adding a function to a list of functions called when a
 a main window is opened. Writing code here will require some knowledge of Qt.

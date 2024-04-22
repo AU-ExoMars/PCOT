@@ -163,6 +163,18 @@
             
             <li class="nav-item" data-level="1"><a href="#using-pcot-as-a-library" class="nav-link">Using PCOT as a library</a>
               <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#loading-and-running-pcot-documents" class="nav-link">Loading and running PCOT documents</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#building-a-pcot-document" class="nav-link">Building a PCOT document</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#using-pcot-functions-and-data-types-without-a-graph" class="nav-link">Using PCOT functions and data types without a graph</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -172,7 +184,9 @@
 
 <h1 id="using-pcot-as-a-library">Using PCOT as a library</h1>
 <p>If you are using the source distribution of PCOT you can write Python
-scripts which use PCOT components. A typical example might be a script
+scripts which use PCOT components.</p>
+<h2 id="loading-and-running-pcot-documents">Loading and running PCOT documents</h2>
+<p>A typical example might be a script
 to read a PCOT document and run some data through that document's graph.
 You could do that like this:</p>
 <pre><code class="language-python"># This example opens a graph, process some ENVI files through that graph,
@@ -213,7 +227,20 @@ for file in (&quot;1&quot;,):
 
     # write to new ENVI, e.g. 1b.hdr
     write(file+&quot;b&quot;,img)
-</code></pre></div>
+</code></pre>
+<h2 id="building-a-pcot-document">Building a PCOT document</h2>
+<p>It's also possible to build a PCOT document by creating nodes:</p>
+<div class="alert alert-danger" role="alert">
+<p>TODO</p>
+<p>Examples can be found in <strong>tests/principles/test_ops.py</strong> and
+elsewhere in the tests - look for the string "doc.graph.create"</p>
+</div>
+<h2 id="using-pcot-functions-and-data-types-without-a-graph">Using PCOT functions and data types without a graph</h2>
+<div class="alert alert-danger" role="alert">
+<p>TODO</p>
+<p>Examples can be found in <strong>tests/direct/...</strong>, particularly <strong>test_funcs.py</strong>
+and the various <strong>test_image_load</strong> files.</p>
+</div></div>
             </div>
         </div>
 
