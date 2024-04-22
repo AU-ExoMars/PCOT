@@ -1,6 +1,11 @@
 # Using PCOT as a library
 If you are using the source distribution of PCOT you can write Python
-scripts which use PCOT components. A typical example might be a script
+scripts which use PCOT components.
+
+
+## Loading and running PCOT documents
+
+A typical example might be a script
 to read a PCOT document and run some data through that document's graph.
 You could do that like this:
 
@@ -44,4 +49,24 @@ for file in ("1",):
     # write to new ENVI, e.g. 1b.hdr
     write(file+"b",img)
 ```
+
+## Building a PCOT document
+
+It's also possible to build a PCOT document by creating nodes:
+
+@@@ danger
+TODO
+
+Examples can be found in **tests/principles/test_ops.py** and
+elsewhere in the tests - look for the string "doc.graph.create"
+@@@
+
+## Using PCOT functions and data types without a graph
+
+@@@ danger
+TODO
+
+Examples can be found in **tests/direct/...**, particularly **test_funcs.py**
+and the various **test_image_load** files.
+@@@
 
