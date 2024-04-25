@@ -9,6 +9,7 @@ from pcot.datumfuncs import testimg
 from pcot.expressions.register import datumfunc
 from pcot.expressions.parse import ArgsException
 from pcot.sources import nullSourceSet
+from pcot.value import Value
 
 """
 Test datum functions by defining a test function and using it both from the test code and from the expression evaluator.
@@ -301,3 +302,30 @@ def test_stringexample():
 
     with pytest.raises(ValueError):
         stringexample(1, 1, 'mul')
+
+
+def test_variadic_sum():
+    """Test a variadic function that sums all its arguments. Note that
+    sources are disregarded; this is just a test."""
+    @datumfunc
+    def sumall(*args):
+        """
+        Sum all arguments
+        """
+        s = sum([x.get(Datum.NUMBER).n for x in args])
+        return Datum(Datum.NUMBER, Value(s, 0, NOUNCERTAINTY), nullSourceSet)
+
+    r = sumall(Datum.k(1), Datum.k(2), Datum.k(3)).get(Datum.NUMBER)
+    assert r.n == 6
+    assert r.u == 0
+    assert r.dq == NOUNCERTAINTY
+
+    r = sumall(Datum.k(1)).get(Datum.NUMBER)
+    assert r.n == 1
+    assert r.u == 0
+    assert r.dq == NOUNCERTAINTY
+
+    r = sumall(Datum.k(1), Datum.k(2), Datum.k(3), Datum.k(4)).get(Datum.NUMBER)
+    assert r.n == 10
+    assert r.u == 0
+    assert r.dq == NOUNCERTAINTY
