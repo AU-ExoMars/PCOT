@@ -65,6 +65,7 @@ class XFormROIExpr(XFormType):
         node.editors = dict()
         node.expr = ""
         node.selected = None
+        node.canvimg = None
         node.selColour = (0, 1, 0)  # colour of selected ROI
         node.unselColour = (0, 1, 1)  # colour of unselected ROI
         node.outColour = (1, 1, 0)  # colour of output ROI
@@ -87,7 +88,6 @@ class XFormROIExpr(XFormType):
         # All this code assumes that there are no sources in the ROIs it uses.
         #
 
-        node.img = None
         node.roi = None
         outROIDatum = Datum.null
 
@@ -161,7 +161,7 @@ class XFormROIExpr(XFormType):
             # set mapping from node
             img.setMapping(node.mapping)
             # 'img' so far is the image we are going to display.
-            node.img = img
+            node.canvimg = img
             # but the image we are going to output is going to be different - it will have no annotations
             # because we don't want to see the sub-ROIs in the descendants.
             img = img.shallowCopy(copyAnnotations=False)
@@ -169,6 +169,9 @@ class XFormROIExpr(XFormType):
         outImgDatum = Datum(Datum.IMG, img)
         node.setOutput(0, outImgDatum)
         node.setOutput(1, outROIDatum)
+
+    def clearDisplayData(self, xform):
+        xform.canvimg = None
 
     def uichange(self, node):
         """This might seem a bit weird, calling perform when a changed(uiOnly=True) happens - but while this will
@@ -288,7 +291,7 @@ class TabROIExpr(Tab):
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)
         self.w.canvas.setROINode(self.node)
-        self.w.canvas.display(self.node.img)
+        self.w.canvas.display(self.node.canvimg)
         self.w.tableView.dataChanged(QModelIndex(), QModelIndex())
 
         self.w.exprEdit.setText(self.node.expr)
@@ -304,9 +307,9 @@ class TabROIExpr(Tab):
         # in the editor dialogs.
         w = 2000    # defaults
         h = 2000
-        if self.node.img is not None:
-            w = self.node.img.w
-            h = self.node.img.h
+        if self.node.canvimg is not None:
+            w = self.node.canvimg.w
+            h = self.node.canvimg.h
 
         if 0 <= item < len(self.node.rois):
             item = self.node.rois[item]

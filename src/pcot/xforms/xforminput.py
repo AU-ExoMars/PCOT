@@ -16,7 +16,7 @@ class XFormInput(XFormType):
         return TabData(n, w)
 
     def init(self, node):
-        node.out = None
+        pass
 
     def perform(self, node):
         # get hold of the document via the graph, get the input manager, and access
@@ -33,9 +33,7 @@ class XFormInput(XFormType):
                 out.val.setMapping(node.mapping)
 
         node.changeOutputType(0, out.tp)
-
-        node.out = out
-        node.setOutput(0, node.out)
+        node.setOutput(0, out)
 
 
 @xformtype

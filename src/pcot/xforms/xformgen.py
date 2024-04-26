@@ -203,10 +203,9 @@ class XFormGen(XFormType):
                             .setExternal(StringExternal("gen", node.displayName))
                        for i, chan in enumerate(node.imgchannels)]
             # make and output the image
-            node.img = ImageCube(ns, node.mapping, uncertainty=us, sources=MultiBandSource(sources))
-            node.setOutput(0, Datum(Datum.IMG, node.img))
+            img = ImageCube(ns, node.mapping, uncertainty=us, sources=MultiBandSource(sources))
+            node.setOutput(0, Datum(Datum.IMG, img))
         else:
-            node.img = None
             node.setOutput(0, Datum.null)
 
     def serialise(self, node):
@@ -333,4 +332,4 @@ class TabGen(pcot.ui.tabs.Tab):
             self.w.spinWidth.setValue(self.node.imgwidth)
             self.w.spinHeight.setValue(self.node.imgheight)
 
-        self.w.canvas.display(self.node.img)
+        self.w.canvas.display(self.node.getOutput(0))

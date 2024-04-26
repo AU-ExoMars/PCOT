@@ -65,7 +65,7 @@ def test_graph_files(graphname):
     if len(ns) == 0:
         pytest.fail("cannot find sink")
     for n in ns:
-        res = n.out.get(Datum.TESTRESULT)
+        res = n.data.get(Datum.TESTRESULT)
         logger.info(f"Found a sink, output is {res}")
         if res is not None:
             foundOne = True

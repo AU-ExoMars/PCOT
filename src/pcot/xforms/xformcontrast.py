@@ -61,7 +61,6 @@ class XformContrast(XFormType):
         self.addOutputConnector("", Datum.IMG)
         # There is one data item which should be saved - the "tol" (tolerance) control value.
         self.autoserialise = ('tol',)
-        self.hasEnable = True
 
     # this creates a tab when we want to control a node. See below for the class definition.
     def createTab(self, n, w):
@@ -71,7 +70,6 @@ class XformContrast(XFormType):
     # read the input yet) and the default tolerance is 0.2. Note this sets values in the node,
     # not in "self" which is the type singleton.
     def init(self, node):
-        node.img = None
         node.tol = 0.2
 
     # actually perform a node's action, which happens when any of the nodes "upstream" are changed
@@ -80,10 +78,8 @@ class XformContrast(XFormType):
         # get the input (index 0, our first and only input)
         img = node.getInput(0, Datum.IMG)
         if img is None:
-            # there is no image, so the stored image (and output) will be no image
-            node.img = None
-        elif not node.enabled:
-            node.img = img
+            # there is no image, so the output will be no image
+            out = None
         else:
             # otherwise, it depends on the image type. If it has three dimensions it must
             # be RGB, so generate the node's image using contrast(), otherwise it must be
@@ -99,12 +95,13 @@ class XformContrast(XFormType):
                 newsubimg = image.imgmerge([contrast1(x, node.tol, subimage.mask, y) for x, y in zip(imgs, dqs)])
             # having got a modified subimage, we need to splice it in. No uncertainty is passed in, so the
             # uncertainty is discarded and the NOUNC bit set.
-            node.img = img.modifyWithSub(subimage, newsubimg, dqv=dqv)
-        # Now we have generated the internally stored image, output it to output 0. This will
-        # cause all nodes "downstream" to perform their actions.
-        if node.img is not None:
-            node.img.setMapping(node.mapping)
-        node.setOutput(0, Datum(Datum.IMG, node.img))
+            out = img.modifyWithSub(subimage, newsubimg, dqv=dqv)
+            # set the RGB mapping for this image to be the one stored in the node
+            out.setMapping(node.mapping)
+            # and wrap in a Datum
+            out = Datum(Datum.IMG, out)
+        # now do the output
+        node.setOutput(0, out)
 
 
 # This is the user interface for the node type, which is created when we double click on a node.
@@ -141,4 +138,4 @@ class TabContrast(pcot.ui.tabs.Tab):
         self.w.canvas.setPersister(self.node)
 
         self.w.dial.setValue(self.node.tol * 200)
-        self.w.canvas.display(self.node.img)
+        self.w.canvas.display(self.node.getOutput(0))

@@ -43,7 +43,6 @@ class XFormStitch(XFormType):
         for i in range(NUMINPUTS):
             self.addInputConnector(str(i), Datum.IMG, desc="Input image {}".format(i))
         self.addOutputConnector("", Datum.IMG, desc="Output image")
-        self.hasEnable = True
         self.autoserialise = ('offsets', 'order', 'showImage')
 
     def createTab(self, n, w):
@@ -59,9 +58,7 @@ class XFormStitch(XFormType):
         # map of inputs which are connected
         node.present = [False for _ in range(NUMINPUTS)]
         # RGB image used on canvas
-        node.rgbImage = None
-        # output image
-        node.img = None
+        node.canvimage = None
         node.showImage = True
 
     def perform(self, node):
@@ -122,11 +119,11 @@ class XFormStitch(XFormType):
                     raise e
 
         # generate the output
-        node.img = ImageCube(img, node.mapping, sources, uncertainty=unc, dq=dqs)
-        node.setOutput(0, Datum(Datum.IMG, node.img))
+        outimg = ImageCube(img, node.mapping, sources, uncertainty=unc, dq=dqs)
+        node.setOutput(0, Datum(Datum.IMG, outimg))
 
         # now draw the selected inputs
-        node.rgbImage = node.img.rgbImage()
+        node.canvimage = outimg.rgbImage()
 
         if node.showImage:
             for i in range(NUMINPUTS):
@@ -135,11 +132,14 @@ class XFormStitch(XFormType):
                     off = node.offsets[node.order[i]]
                     x = off[0] - minx
                     y = off[1] - miny
-                    cv.rectangle(node.rgbImage.img, (x, y), (x + inp.w, y + inp.h), (1, 0, 0), 10)
+                    cv.rectangle(node.canvimage.img, (x, y), (x + inp.w, y + inp.h), (1, 0, 0), 10)
 
     def uichange(self, node):
         node.timesPerformed += 1
         self.perform(node)
+
+    def clearDisplayData(self, xform):
+        xform.canvimage = None
 
 
 COLNAMES = ["index", "offset X", "offset Y"]
@@ -239,8 +239,9 @@ class TabStitch(Tab):
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)
         self.w.showimage.setChecked(self.node.showImage)
-        if self.node.img is not None:  # premapped rgb
-            self.w.canvas.display(self.node.rgbImage, self.node.img, self.node)
+        img = self.node.getOutput(0, Datum.IMG)
+        if img is not None:  # draw the premapped rgb, not the actual stitched image
+            self.w.canvas.display(self.node.canvimage, img, self.node)
         self.w.table.viewport().update()  # force table redraw
 
     def moveSel(self, e: QKeyEvent, x, y):

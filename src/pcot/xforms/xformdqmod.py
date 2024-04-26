@@ -87,9 +87,7 @@ class XFormDQMod(XFormType):
         else:
             node.band = None
 
-        node.img = img
-        node.out = Datum(Datum.IMG, img)
-        node.setOutput(0, node.out)
+        node.setOutput(0, Datum(Datum.IMG, img))
 
 
 class TabDQMod(ui.tabs.Tab):
@@ -110,8 +108,9 @@ class TabDQMod(ui.tabs.Tab):
         with SignalBlocker(self.w.bandCombo):
             self.w.bandCombo.clear()
             self.w.bandCombo.addItem('All')
-            if self.node.img is not None:
-                self.w.bandCombo.addItems([str(x) for x in range(0, self.node.img.channels)])
+            img = self.node.getOutput(0, Datum.IMG)
+            if img is not None:
+                self.w.bandCombo.addItems([str(x) for x in range(0, img.channels)])
                 self.w.bandCombo.setCurrentText("All")
                 if self.node.band is None:
                     self.w.bandCombo.setCurrentText("All")
@@ -123,7 +122,7 @@ class TabDQMod(ui.tabs.Tab):
         self.w.canvas.setMapping(self.node.mapping)
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)
-        self.w.canvas.display(self.node.img)
+        self.w.canvas.display(self.node.getOutput(0))
 
         if not self.dontSetText:
             self.w.dataCombo.setCurrentText(self.node.data)

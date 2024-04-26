@@ -41,12 +41,7 @@ def performOp(node: XForm,
     # get input 0 (the image)
     img = node.getInput(0, Datum.IMG)
     # if it's None then the input isn't connected; just output None
-    if img is None:
-        node.img = None
-    elif not node.enabled:
-        # if the node isn't enabled,  just output the input image
-        node.img = img
-    else:
+    if img is not None:
         # otherwise the SubImageCube object from the image - this is the image clipped to
         # a BB around the ROI, with a mask for which pixels are in the ROI.
         subimage = img.copy().subimage()  # make a copy (need to do this to avoid overwriting the source).
@@ -58,15 +53,12 @@ def performOp(node: XForm,
 
         # splice the returned clipped image into the main image, producing a new image, and
         # store it in the node
-        node.img = img.modifyWithSub(subimage, result_nom, uncertainty=result_unc, dqv=result_dq)
-
-    if node.img is not None:
-        # if there's an image stored in the node, set the image's RGB mapping to be the node's
-        # primary mapping (the default one)
-        node.img.setMapping(node.mapping)
+        img = img.modifyWithSub(subimage, result_nom, uncertainty=result_unc, dqv=result_dq)
+        img.setMapping(node.mapping)
+        img = Datum(Datum.IMG, img)
 
     # output the current value of node.img
-    node.setOutput(0, Datum(Datum.IMG, node.img))
+    node.setOutput(0, img)
 
 
 

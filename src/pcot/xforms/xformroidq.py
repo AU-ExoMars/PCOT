@@ -51,7 +51,6 @@ class XFormROIDQ(XFormType):
         return TabROIDQ(n, w)
 
     def init(self, node):
-        node.img = None
         node.caption = ''
         node.captiontop = False
         node.fontsize = 10
@@ -123,12 +122,10 @@ class XFormROIDQ(XFormType):
             img = img.copy()
             img.rois = [roi]
 
-            node.img = img
             node.roi = roi
             outImgDatum = Datum(Datum.IMG, img)
             outROIDatum = Datum(Datum.ROI, roi, sources=sources)
         else:
-            node.img = None
             node.roi = None
             outImgDatum = Datum(Datum.IMG, None, nullSourceSet)
             outROIDatum = Datum(Datum.ROI, None, nullSourceSet)
@@ -141,7 +138,6 @@ class XFormROIDQ(XFormType):
 
     def getMyROIs(self, node):
         return [node.roi]
-
 
 
 class TabROIDQ(pcot.ui.tabs.Tab):
@@ -222,9 +218,10 @@ class TabROIDQ(pcot.ui.tabs.Tab):
             self.w.chanCombo.clear()
             self.w.chanCombo.addItem("Any bands", -1)
             self.w.chanCombo.addItem("All bands", -2)
-            if self.node.img is not None:
+            img = self.node.getOutput(0, Datum.IMG)
+            if img is not None:
                 chanNames = [s.brief(self.node.graph.doc.settings.captionType) for s in
-                             self.node.img.sources.sourceSets]
+                             img.sources.sourceSets]
                 for i, desc in enumerate(chanNames):
                     self.w.chanCombo.addItem(desc, i)
 
@@ -235,7 +232,7 @@ class TabROIDQ(pcot.ui.tabs.Tab):
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)
         self.w.canvas.setROINode(self.node)
-        self.w.canvas.display(self.node.img)
+        self.w.canvas.display(self.node.getOutput(0, Datum.IMG))
 
         if not self.dontSetText:
             self.w.caption.setText(self.node.caption)

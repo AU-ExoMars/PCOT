@@ -18,7 +18,7 @@ class XformCropROI(XFormType):
         return TabData(n, w)
 
     def init(self, node):
-        node.out = None
+        pass
 
     def perform(self, node):
         img = node.getInput(0, Datum.IMG)
@@ -30,6 +30,7 @@ class XformCropROI(XFormType):
             img.mapping = node.mapping
             # and strip the ROIs
             img.rois = []
-
-        node.out = Datum(Datum.IMG, img)
-        node.setOutput(0, node.out)
+            out = Datum(Datum.IMG, img)
+        else:
+            out = None
+        node.setOutput(0, out)

@@ -50,5 +50,4 @@ class XformImportROI(XFormType):
                 else:
                     raise XFormException('DATA', "bad type: must be ROI or image on 'roi' input")
 
-        node.out = Datum(Datum.IMG, img)
-        node.setOutput(0, node.out)
+        node.setOutput(0, Datum(Datum.IMG, img))

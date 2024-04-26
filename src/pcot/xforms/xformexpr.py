@@ -154,7 +154,8 @@ class XFormExpr(XFormType):
     def init(self, node):
         node.tmpexpr = ""
         node.expr = ""
-        # used when we have an image on the output
+        # used when we have an image on the output. We keep this unlike a lot of other nodes so
+        # we can see when the channel count changes.
         node.img = None
         # a string to display the image
         node.resultStr = ""
@@ -230,4 +231,8 @@ class TabExpr(pcot.ui.tabs.Tab):
         self.w.canvas.setPersister(self.node)
         self.w.expr.setPlainText(self.node.expr)
         self.w.result.setPlainText(self.node.resultStr)
-        self.w.canvas.display(self.node.img)
+        d = self.node.getOutputDatum(0)
+        if d is not None and d.tp == Datum.IMG:
+            self.w.canvas.display(d.val)
+        else:
+            self.w.canvas.display(None)

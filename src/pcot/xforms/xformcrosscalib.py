@@ -230,6 +230,9 @@ class XFormCrossCalib(XFormType):
     def createTab(self, n, w):
         return TabCrossCalib(n, w)
 
+    def clearDisplayData(self, n):
+        n.canvimg = None
+
 
 class TabCrossCalib(pcot.ui.tabs.Tab):
     def __init__(self, node, w):

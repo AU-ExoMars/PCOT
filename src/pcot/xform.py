@@ -157,14 +157,18 @@ class XFormType:
     # callable to set parameters for QGraphicsRectItem; may be null
     setRectParams: Optional[Callable[['QGraphicsRectItem'], None]]
 
-    def __init__(self, name, group, ver):
-        """constructor, takes name, groupname and version"""
+    def __init__(self, name, group, ver, hasEnable=False):
+        """
+        constructor, takes name, groupname and version.
+        Optionally:
+            hasEnable - the node has an "enabled" button, so it can be turned off. Useful if it's slow. Starts true,
+                but you could set "enabled" to false on the node in the init() method.
+        """
         self.group = group
         self.name = name
         self.ver = ver
         self.helpwin = None
-        # does this node have an "enabled" button? Change in subclass if reqd.
-        self.hasEnable = False
+        self.hasEnable = hasEnable
         # this contains tuples of (name, connector type (a datum Type), desc).
         self.inputConnectors = []
         # this has the same format, but here the output type
@@ -318,6 +322,14 @@ class XFormType:
             """
 
         return None
+
+    def clearDisplayData(self, xform):
+        """
+        Some nodes display data that isn't in an output, so clearOutputs won't clear it between runs.
+        These nodes can override this method.
+        """
+        pass
+
 
     @staticmethod
     def buildText(n):
@@ -530,9 +542,10 @@ class XForm:
         self.rectText = None
 
     def clearOutputs(self):
-        """clear all the node's outputs, required on all nodes before we run the graph
-            (it's how we check a node can run - are all its input nodes' outputs set?)
-            """
+        """
+        clear all the node's outputs, required on all nodes before we run the graph
+        (it's how we check a node can run - are all its input nodes' outputs set?)
+        """
         self.outputs = [None for _ in self.type.outputConnectors]
 
     def connCountChanged(self):
@@ -554,6 +567,8 @@ class XForm:
         # there is also a data output generated for each output by "perform", initially
         # these are None
         self.clearOutputs()
+        # other display data may need to be cleared for some nodes
+        self.type.clearDisplayData(self)
         # these are the overriding output types; none if we use the default
         # given by the type object (see the comment on outputConnectors
         # in XFormType)
@@ -568,9 +583,9 @@ class XForm:
 
     def setEnabled(self, b):
         """set or clear the enabled field"""
-        for x in self.tabs:
-            x.setNodeEnabled(b)
         self.enabled = b
+        for x in self.tabs:
+            x.setNodeEnabled()
         self.graph.scene.selChanged()
         self.graph.changed(self)
 
@@ -868,11 +883,20 @@ class XForm:
                 logger.debug(f"---------------------------------{'-'*performDepth}Performing {self.debugName()}")
                 # first clear all outputs
                 self.clearOutputs()
+                # other display data may need to be cleared for some nodes
+                self.type.clearDisplayData(self)
                 # now run the node, catching any XFormException
                 try:
                     st = time.perf_counter()
                     self.type.uichange(self)
-                    self.type.perform(self)
+                    # here we check that the node is enabled. If it is NOT, we set all the outputs to None.
+                    # Thus a disabled node will behave exactly as if it has an unconnected input
+                    # (as in test_node_output_none)
+                    if self.enabled:
+                        self.type.perform(self)
+                    else:
+                        self.clearOutputs()
+                        self.type.clearDisplayData(self)
                     self.runTime = time.perf_counter() - st
                 except XFormException as e:
                     # exception caught, set the error. Children will still run.
@@ -1152,6 +1176,8 @@ class XFormGraph:
         for n in nodeset:
             n.clearErrorAndRectText()
             n.clearOutputs()
+            # other display data may need to be cleared for some nodes
+            n.type.clearDisplayData(n)
             n.hasRun = False
         for n in self.nodes:
             n.runTime = None
@@ -1450,7 +1476,6 @@ class XFormROIType(XFormType):
 
         if img is None:
             # no image
-            node.img = None
             outImgDatum = Datum(Datum.IMG, None, nullSourceSet)
             outROIDatum = Datum(Datum.ROI, None, nullSourceSet)
         else:
@@ -1467,7 +1492,6 @@ class XFormROIType(XFormType):
             img.rois.append(node.roi)
             # set mapping from node
             img.setMapping(node.mapping)
-            node.img = img
 
             outImgDatum = Datum(Datum.IMG, img, sources)
             outROIDatum = Datum(Datum.ROI, node.roi, node.roi.sources)  # not a copy!

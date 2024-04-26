@@ -22,9 +22,8 @@ class XformStripROI(XFormType):
         return TabData(n, w)
 
     def init(self, node):
-        # The tab requires an "out" field which contains a Datum.
-        # This starts out as a "null datum" for an image.
-        node.out = Datum.null
+        # the node stores no state data - the output image will be accessed by the tab.
+        pass
 
     def perform(self, node):
         # when we run the node, we get the node's only input - an image.
@@ -40,8 +39,5 @@ class XformStripROI(XFormType):
             # will not respond to mapping changes
             out.mapping = node.mapping
             out.rois = []
-        # build a new Datum to hold the output and store it in "out"
-        # so the tab can read it
-        node.out = Datum(Datum.IMG, out)
-        # and also output it.
-        node.setOutput(0, node.out)
+        # build a new Datum to hold the output, and output it. The TabData will read this.
+        node.setOutput(0, Datum(Datum.IMG, out))

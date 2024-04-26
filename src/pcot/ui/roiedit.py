@@ -222,8 +222,11 @@ class PaintedEditor(ROIEditor):
     def doSet(self, x, y, e):
         if e.modifiers() & Qt.ControlModifier:
             # we need to use the image stored in the node, which should be a copy of the original,
-            # as the reference image for the flood fill.
-            self.roi.fill(self.node.img, x, y, FloodFillParams(threshold=0.03))      # flood fill
+            # as the reference image for the flood fill. We have to fetch it from the node output.
+            from pcot.xform import XFormROIType
+            img = self.node.getOutput(XFormROIType.OUT_IMG)
+            if img is not None:
+                self.roi.fill(img, x, y, FloodFillParams(threshold=0.03))      # flood fill
         elif e.modifiers() & Qt.ShiftModifier:
             self.roi.setCircle(x, y, self.node.brushSize, True)  # delete
         else:

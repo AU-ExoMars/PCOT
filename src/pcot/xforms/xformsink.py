@@ -22,7 +22,7 @@ class XformSink(XFormType):
     # this creates a tab when we want to control or view a node of this type. This uses
     # the built-in TabImage, which contains an OpenCV image viewer.
     def createTab(self, n, w):
-        return TabData(n, w)
+        return TabData(n, w, src=TabData.SRC_DATA)
 
     # actually perform a node's action, which happens when any of the nodes "upstream" are changed
     # and on loading.
@@ -32,6 +32,7 @@ class XformSink(XFormType):
         # and does the rest.
         out = node.getInput(0)
         if out is not None:
+            node.setRectText(out.tp.getDisplayString(out))
             # if it's an image we need to use a copy using this node's mapping
             if out.isImage():
                 if out.val is None:
@@ -42,8 +43,7 @@ class XformSink(XFormType):
                     outimg = out.val.copy()
                     outimg.mapping = node.mapping
                     out = Datum(Datum.IMG, outimg)
-        node.out = out
-        node.setRectText(out.tp.getDisplayString(out))
+        node.data = out
 
     def init(self, node):
         # initialise the node by setting its img to None.

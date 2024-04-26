@@ -14,7 +14,7 @@ import numpy as np
 from PySide2.QtGui import QPainter
 
 import pcot
-from pcot import dq
+from pcot import dq, ui
 from pcot.documentsettings import DocumentSettings
 from pcot.rois import ROI, ROIBoundsException
 from pcot.sources import MultiBandSource, SourcesObtainable, Source
@@ -442,6 +442,7 @@ class ImageCube(SourcesObtainable):
         self.mapping = mapping
         if mapping is not None:
             mapping.ensureValid(self)
+        return self
 
     ## class method for loading an image (using cv's imread)
     # Always builds an RGB image. Sources must be provided.
@@ -968,8 +969,12 @@ class ImageCube(SourcesObtainable):
         Note that we don't resize DQ. Instead, if any BAD bit is present in a channel it is propagated
         to all the bits in the channel.
         """
-        outimg = cv.resize(self.img, (w, h), interpolation=method)
-        outunc = cv.resize(self.uncertainty, (w, h),  interpolation=method)
+        try:
+            outimg = cv.resize(self.img, (w, h), interpolation=method)
+            outunc = cv.resize(self.uncertainty, (w, h), interpolation=method)
+        except Exception as e:
+            ui.log(str(e))
+            raise Exception(f"OpenCV error - could not resize image")
 
         dqs = []
         if self.channels == 1:

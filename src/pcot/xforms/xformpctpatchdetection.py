@@ -102,6 +102,9 @@ class XformPCTPatchDetection(XFormType):
         node.detectionDistances = None
         node.averageDistanceToLargePatch = None
 
+    def clearDisplayData(self, xform):
+        xform.inputImg = None
+
     def perform(self, node):
         """
         Run the main functionality of the PCT patch detection node upon any changes to the node. This will take

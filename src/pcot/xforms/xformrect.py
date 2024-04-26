@@ -25,7 +25,6 @@ class XformRect(XFormROIType):
         return TabRect(n, w)
 
     def init(self, node):
-        node.img = None
         node.croprect = None  # would be (x,y,w,h) tuple
         node.caption = ''
         node.captiontop = False
@@ -77,6 +76,7 @@ class TabRect(pcot.ui.tabs.Tab):
         # sync tab with node
         self.nodeChanged()
 
+
     def drawbgChanged(self, val):
         self.mark()
         self.node.drawbg = (val != 0)
@@ -120,46 +120,50 @@ class TabRect(pcot.ui.tabs.Tab):
 
     def leftEditChanged(self):
         bb = self.node.roi.bb()
+        img = self.node.getOutput(XFormROIType.OUT_IMG)
         x, y, w, h = bb if bb is not None else (0, 0, 0, 0)
         try:
             x = int(self.w.leftEdit.text())
         except ValueError:
             x = 0
-        if self.node.img and x >= self.node.img.w:
-            x = self.node.img.w - w
+        if img and x >= img.w:
+            x = img.w - w
         self.roiSet(x, y, w, h)
 
     def topEditChanged(self):
         bb = self.node.roi.bb()
+        img = self.node.getOutput(XFormROIType.OUT_IMG)
         x, y, w, h = bb if bb is not None else (0, 0, 0, 0)
         try:
             y = int(self.w.topEdit.text())
         except ValueError:
             y = 0
-        if self.node.img and y >= self.node.img.h:
-            y = self.node.img.h - h
+        if img and y >= img.h:
+            y = img.h - h
         self.roiSet(x, y, w, h)
 
     def widthEditChanged(self):
         bb = self.node.roi.bb()
+        img = self.node.getOutput(XFormROIType.OUT_IMG)
         x, y, w, h = bb if bb is not None else (0, 0, 0, 0)
         try:
             w = int(self.w.widthEdit.text())
         except ValueError:
             w = 1
-        if self.node.img and x + w >= self.node.img.w:
-            w = self.node.img.w - x
+        if img and x + w >= img.w:
+            w = img.w - x
         self.roiSet(x, y, w, h)
 
     def heightEditChanged(self):
         bb = self.node.roi.bb()
+        img = self.node.getOutput(XFormROIType.OUT_IMG)
         x, y, w, h = bb if bb is not None else (0, 0, 0, 0)
         try:
             h = int(self.w.heightEdit.text())
         except ValueError:
             h = 1
-        if self.node.img and y + h >= self.node.img.h:
-            h = self.node.img.h - y
+        if img and y + h >= img.h:
+            h = h - y
         self.roiSet(x, y, w, h)
 
     # causes the tab to update itself from the node
@@ -169,7 +173,7 @@ class TabRect(pcot.ui.tabs.Tab):
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)
         self.w.canvas.setROINode(self.node)
-        self.w.canvas.display(self.node.img)
+        self.w.canvas.display(self.node.getOutput(XFormROIType.OUT_IMG))
         if not self.dontSetText:
             self.w.caption.setText(self.node.caption)
         self.w.fontsize.setValue(self.node.fontsize)

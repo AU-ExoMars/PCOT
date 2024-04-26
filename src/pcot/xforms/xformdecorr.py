@@ -21,10 +21,9 @@ class XformDecorr(XFormType):
     """
 
     def __init__(self):
-        super().__init__("decorr stretch", "processing", "0.0.0")
+        super().__init__("decorr stretch", "processing", "0.0.0", hasEnable=True)
         self.addInputConnector("rgb", Datum.IMG)
         self.addOutputConnector("rgb", Datum.IMG)
-        self.hasEnable = True
 
     def createTab(self, n, w):
         return TabData(n, w)
@@ -36,8 +35,6 @@ class XformDecorr(XFormType):
         img = node.getInput(0, Datum.IMG)
         if img is None:
             out = None
-        elif not node.enabled:
-            out = img
         elif img.channels != 3:
             raise XFormException("DATA", "can only decorr stretch images with 3 channels")
         else:
@@ -52,13 +49,10 @@ class XformDecorr(XFormType):
             dq = image.imgmerge((dq, dq, dq))
             dq |= pcot.dq.NOUNCERTAINTY     # and we've lost all uncertainty data
 
-            out = img.modifyWithSub(subimage, newimg, sources=MultiBandSource([sources, sources, sources]), dqv=dq)
+            out = img.modifyWithSub(subimage, newimg, sources=MultiBandSource([sources, sources, sources]), dqv=dq).setMapping(node.mapping)
+            out = Datum(Datum.IMG, out)
 
-        if out is not None:
-            out.setMapping(node.mapping)
-
-        node.out = Datum(Datum.IMG, out)
-        node.setOutput(0, node.out)
+        node.setOutput(0, out)
 
 
 def decorrstretch(A, mask):

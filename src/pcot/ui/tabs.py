@@ -216,15 +216,20 @@ class Tab(QtWidgets.QWidget):
         # Most nodes don't have one.
 
         if node.type.hasEnable:
-            self.enable = QtWidgets.QRadioButton("enabled")
-            lowerLay.addWidget(self.enable)
-            self.enable.setChecked(node.enabled)
-            self.enable.toggled.connect(self.enableChanged)
+            self.enableRadioButton = QtWidgets.QRadioButton("enabled")
+            lowerLay.addWidget(self.enableRadioButton)
+            self.enableRadioButton.setChecked(node.enabled)
+            self.enableRadioButton.toggled.connect(self.enableChanged)
+
+            self.runButton = QtWidgets.QPushButton("Run")
+            lowerLay.addWidget(self.runButton)
+            self.runButton.clicked.connect(self.runClicked)
         else:
-            self.enable = None
+            self.enableRadioButton = None
 
         # load the UI file into the main widget
-        uiloader.loadUi(uifile, self.w)
+        if uifile is not None:
+            uiloader.loadUi(uifile, self.w)
         # add the containing widget (self) to the tabs,
         # keeping the index at which it was created
         self.idx = window.tabWidget.addTab(self, self.title)
@@ -236,6 +241,15 @@ class Tab(QtWidgets.QWidget):
         # zero for invisible widgets
         self.w.show()
         self.show()
+
+    def runClicked(self):
+        """The run button has been clicked on a tab with an enable widget."""
+        # We need to temporarily enable the node to run it. The button should be disabled if the node is enabled, because
+        # then it runs automatically.
+        old = self.node.enabled
+        self.node.enabled = True
+        self.node.graph.changed(self.node)
+        self.node.enabled = old
 
     def changed(self, uiOnly=False):
         """The tab's widgets have changed the data, we need
@@ -253,9 +267,14 @@ class Tab(QtWidgets.QWidget):
     def enableChanged(self, b):
         self.node.setEnabled(b)
 
-    def setNodeEnabled(self, b):
-        if self.enable is not None:
-            self.enable.setChecked(b)
+    def setNodeEnabled(self):
+        """The enabled state has been changed - update the tab widgets."""
+        if self.enableRadioButton is not None:
+            # only do stuff if there is an enable widget
+            self.enableRadioButton.setChecked(self.node.enabled)
+            # if the node is enabled, the run button is disabled because the node will run automatically.
+            self.runButton.setDisabled(self.node.enabled)
+            self.runButton.setStyleSheet("background-color: rgb(200, 100, 100);" if not self.node.enabled else "")
 
     def nodeDeleted(self):
         """node has been deleted, remove me from tabs"""
@@ -292,7 +311,7 @@ class Tab(QtWidgets.QWidget):
             self.errorText.setVisible(True)
         else:
             self.errorText.setVisible(False)
-            self.lower.setVisible(self.enable is not None)
+            self.lower.setVisible(self.enableRadioButton is not None)
 
     def onNodeChanged(self):
         """should update the tab when the node's data has changed"""
@@ -303,6 +322,7 @@ class Tab(QtWidgets.QWidget):
         tab widgets; this avoids the changes to those widgets triggering another changed and rerun."""
         Tab.updatingTabs = True
         self.onNodeChanged()
+        self.setNodeEnabled()
         Tab.updatingTabs = False
 
     def mark(self):
