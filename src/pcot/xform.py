@@ -892,7 +892,9 @@ class XForm:
                     # here we check that the node is enabled. If it is NOT, we set all the outputs to None.
                     # Thus a disabled node will behave exactly as if it has an unconnected input
                     # (as in test_node_output_none)
-                    if self.enabled:
+                    # We also check the forceRunDisabled flag in the graph - this is set when we want to
+                    # force all nodes - disabled or not - to run. Typically this is done from a script.
+                    if self.enabled or self.graph.forceRunDisabled:
                         self.type.perform(self)
                     else:
                         self.clearOutputs()
@@ -993,28 +995,22 @@ class XForm:
 
 class XFormGraph:
     """a graph of transformation nodes: this is the primary PCOT document type"""
-    ## @var nodes
     # all my nodes
     nodes: List[XForm]
 
-    ## @var scene
     # my graphical representation
     scene: Optional['graphscene.XFormGraphScene']
 
-    ## @var isMacro
     # true if this is a macro prototype, will be false for instances
     isMacro: bool
 
-    ## @var performingGraph
     # true when I'm recursively performing my nodes. Avoids parallel
     # attempts to run a graph in different threads.
     performingGraph: bool
 
-    ## @var nodeDict
     # dictionary of UUID to node, used to get instance nodes from prototypes
     nodeDict: Dict[str, XForm]
 
-    ## @var proto
     # If this is a macro, the type object for the macro prototype (a singleton of
     # XFormMacro, itself a subclass of XFormType)
     proto: Optional['XFormMacro']
@@ -1022,14 +1018,15 @@ class XFormGraph:
     # texts may have change in perform, need to rebuild tabs
     rebuildTabsAfterPerform: bool
 
-    ## @var doc
     # the document of which I am a part, whether as the top-level graph or a macro.
     doc: 'Document'
 
-    ## @var autorun
     # should graphs be autorun
     autoRun: ClassVar[bool]
     autoRun = True
+
+    # force all nodes to run, even if they are disabled
+    forceRunDisabled: bool
 
     def __init__(self, doc, isMacro):
         """constructor, takes whether the graph is a macro prototype or not"""
@@ -1041,6 +1038,7 @@ class XFormGraph:
         self.isMacro = isMacro
         self.nodeDict = {}
         self.rebuildTabsAfterPerform = False
+        self.forceRunDisabled = False
 
     def constructScene(self, doAutoLayout):
         """construct a graphical representation for this graph"""
@@ -1182,13 +1180,17 @@ class XFormGraph:
         for n in self.nodes:
             n.runTime = None
 
-    def changed(self, node=None, runAll=False, uiOnly=False):
+    def changed(self, node=None, runAll=False, uiOnly=False, forceRunDisabled=False):
         """Called when a control in a node has changed, and the node needs to rerun (as do all its children recursively).
         If called on a normal graph, will perform the graph or a single node within it,
         and all dependent nodes; called on a macro will do the same thing in instances, starting at the
         counterpart node for that in the macro prototype.
+
+        If forceRunDisabled is true, any disabled nodes will be temporarily activated.
+        This allows scripts with disabled nodes to run correctly.
         """
 
+        self.forceRunDisabled = forceRunDisabled
         if (not uiOnly) and (XFormGraph.autoRun or runAll):
             if runAll:
                 self.doc.inputMgr.invalidate()
@@ -1231,6 +1233,8 @@ class XFormGraph:
         for xx in ui.mainwindow.MainUI.windows:
             if xx.graph == self:
                 xx.setCaption(self.doc.settings.captionType)
+
+        self.forceRunDisabled = False
 
     def performNodes(self, node=None):
         """perform the entire graph, or all those nodes below a given node.
