@@ -34,7 +34,7 @@ def create_test_image1():
         ChannelData(3, 20, 200, "gradient-y"),
         ChannelData(25, 0, 300, "checkx")
     ]
-    doc.changed()
+    doc.run()
     img = node.getOutput(0, Datum.IMG)
     assert img.channels == 3  # just to be sure
     return img
@@ -270,7 +270,7 @@ def create_test_image2():
     expr.connect(0, mult200, 0)
     expr.connect(1, offset, 0)
 
-    doc.changed()
+    doc.run()
     img = expr.getOutput(0, Datum.IMG)
     assert img.channels == 2  # just to be sure
     return img
@@ -343,7 +343,7 @@ def test_spectrum_table(globaldatadir):
 
     # we are reusing the graph here to generate the images and ROIs
     doc = Document(globaldatadir / "../graphs/spectrum.pcot")
-    doc.changed()  # force the graph to run
+    doc.run()  # force the graph to run
 
     # get the gen and multidot node outputs
     gen1img = doc.graph.getByDisplayName("gen 1", single=True).getOutput(0, Datum.IMG)

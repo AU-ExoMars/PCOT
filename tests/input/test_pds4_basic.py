@@ -43,7 +43,7 @@ def test_pds4_load():
     doc.setInputPDS4(0, specrads)
 
     node = doc.graph.create("input 0")
-    doc.changed()
+    doc.run()
     img = node.getOutput(0, Datum.IMG)
 
     # for this test, we confirm that there are 9 channels in the image we just loaded, and that

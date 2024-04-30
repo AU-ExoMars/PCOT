@@ -68,7 +68,7 @@ def test_funcwrapper(t: FuncTest):
     e.expr = t.expr
     e.connect(0, i, 0)
 
-    doc.changed()
+    doc.run()
 
     res = e.getOutput(0, Datum.NUMBER)
     assert res is not None

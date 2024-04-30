@@ -30,7 +30,7 @@ def test_roi(allblack):
     exprNode.connect(0, roiNode, 0)
 
     # now we'll run the graph
-    doc.changed()
+    doc.run()
     r = exprNode.getOutput(0, Datum.ROI)
     assert r.bb() == Rect(2, 2, 3, 4)
 
@@ -42,7 +42,7 @@ def test_roi(allblack):
     # reconnect the expr node to the second ROI node
     exprNode.connect(0, roiNode2, 0)
 
-    doc.changed()
+    doc.run()
     r = exprNode.getOutput(0, Datum.ROI)
     # the result should be the union of the two ROIs
     assert r.bb() == Rect(2, 2, 4, 4)

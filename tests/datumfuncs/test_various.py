@@ -225,7 +225,7 @@ def test_marksat_masked():
     node2.expr = "marksat(a)"
     node2.connect(0, node1, 0)
 
-    doc.changed()
+    doc.run()
 
     # get the output of node2 and check it has the same new DQs as in the
     # previous test
@@ -259,7 +259,7 @@ def test_marksat_masked():
     node5.connect(0, node4, 0)
 
     # run it, and pull out the result datum.
-    doc.changed()
+    doc.run()
 
     r = node5.getOutputDatum(0)
 

@@ -176,9 +176,10 @@ class Document:
     def setCaption(self, i):
         self.settings.captionType = i
 
-    ## typically used in external code - just calls the graph changed()
-    def changed(self):
-        self.graph.changed()
+    def run(self):
+        """This forces the graph to run, including all nodes which have been disabled. It is typically called from
+        scripts and tests. It is not necessary to call this from the UI, as the graph will run automatically."""
+        self.graph.changed(forceRunDisabled=True)
 
     def setInputData(self, inputidx, inputType, fn):
         """helper for external code - set input to some input type and run code to set data."""

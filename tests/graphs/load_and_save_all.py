@@ -29,5 +29,5 @@ pcot.logger.setLevel(logging.ERROR)
 for graphname in graphs:
     logger.critical(f"Loading and saving graph {graphname}")
     doc = Document(graphname)
-    doc.changed()
+    doc.run()
     # doc.save(graphname)

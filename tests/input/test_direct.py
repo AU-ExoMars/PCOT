@@ -21,7 +21,7 @@ def test_direct_image(globaldatadir):
     # create a document with just an input node in it, to bring that input into the document's graph
     node = doc.graph.create("input 0")
     # notify the document changed
-    doc.changed()
+    doc.run()
     # and get the output of the node, which should be the image loaded from the ENVI
     img = node.getOutput(0, Datum.IMG)
     # check the basic stats
@@ -61,7 +61,7 @@ def test_direct_scalar():
     ee.connect(0, node, 0)
     ee.expr = "a+1"
 
-    doc.changed()
+    doc.run()
     out = ee.getOutputDatum(0)
     assert out.tp == Datum.NUMBER
     assert out.val.approxeq(Value(2, 2, dq.TEST))

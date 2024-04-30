@@ -43,7 +43,7 @@ def test_scalar_ops(e, expected):
     doc = Document()
     expr = doc.graph.create("expr")
     expr.expr = e
-    doc.changed()
+    doc.run()
     n = expr.getOutput(0, Datum.NUMBER).n
     assert n == expected
 
@@ -77,7 +77,7 @@ def test_image_scalar_ops(e, expected):
     expr.expr = e
     expr.connect(0, green, 0, autoPerform=False)
 
-    doc.changed()
+    doc.run()
     img = expr.getOutput(0, Datum.IMG)
     assert img is not None
 
@@ -114,7 +114,7 @@ def test_image_image_ops(e, expected):
     expr.connect(0, green, 0, autoPerform=False)
     expr.connect(1, red, 0, autoPerform=False)
 
-    doc.changed()
+    doc.run()
     img = expr.getOutput(0, Datum.IMG)
     assert img is not None
 
@@ -130,7 +130,7 @@ def test_scalar_div_zero():
     doc = Document()
     expr = doc.graph.create("expr")
     expr.expr = "1/0"
-    doc.changed()
+    doc.run()
     d = expr.getOutputDatum(0)
     assert d.val == Value(0, 0, dq.DIVZERO)
 
@@ -145,7 +145,7 @@ def test_image_division_by_scalar_zero():
     expr = doc.graph.create("expr")
     expr.expr = "a/0"
     expr.connect(0, green, 0)
-    doc.changed()
+    doc.run()
     d = expr.getOutput(0, Datum.IMG)
     assert d[0, 0] == (Value(0, 0, dq.DIVZERO | dq.NOUNCERTAINTY | dq.UNDEF),
                        Value(0, 0, dq.DIVZERO | dq.NOUNCERTAINTY),
@@ -165,7 +165,7 @@ def test_scalar_divide_by_zero_image():
     expr = doc.graph.create("expr")
     expr.expr = "1/a"
     expr.connect(0, green, 0)
-    doc.changed()
+    doc.run()
     d = expr.getOutput(0, Datum.IMG)
 
     assert d[0, 0] == (
@@ -177,7 +177,7 @@ def test_scalar_divide_by_zero_image():
     # now check 0/0
 
     expr.expr = "0/a"
-    doc.changed()
+    doc.run()
     d = expr.getOutput(0, Datum.IMG)
 
     assert d[0, 0] == (
@@ -199,7 +199,7 @@ def test_pixel_indexing_rgb():
 
     assert doc.setInputDirectImage(0, inputimg) is None
     inpnode = doc.graph.create("input 0")
-    doc.changed()
+    doc.run()
     x = inpnode.getOutput(0, Datum.IMG)
     assert isinstance(x, ImageCube)
     p = x[0, 1]  # first check 0,1
@@ -234,7 +234,7 @@ def test_greyscale_simple():
     expr = doc.graph.create("expr")
     expr.expr = "grey(a)"
     expr.connect(0, inpnode, 0)
-    doc.changed()
+    doc.run()
     x = expr.getOutput(0, Datum.IMG)
     assert isinstance(x, ImageCube)
     p = x[0, 0]
@@ -243,7 +243,7 @@ def test_greyscale_simple():
 
     # and with an explicit false argument
     expr.expr = "grey(a,0)"
-    doc.changed()
+    doc.run()
     x = expr.getOutput(0, Datum.IMG)
     p = x[0, 0]
     assert p.approxeq(Value(5, 4.6427960923947))
@@ -262,7 +262,7 @@ def test_greyscale_human():
     expr = doc.graph.create("expr")
     expr.expr = "grey(a,1)"
     expr.connect(0, inpnode, 0)
-    doc.changed()
+    doc.run()
     x = expr.getOutput(0, Datum.IMG)
     p = x[0, 0]
     assert p.n == pytest.approx(4.815)
@@ -292,7 +292,7 @@ def test_all_expr_inputs():
     # output image is the right colour for that input
     for i, var in zip(range(4), ("a", "b", "c", "d")):
         expr.expr = var
-        doc.changed()
+        doc.run()
         img = expr.getOutput(0, Datum.IMG)
         assert img is not None
         assert np.array_equal(img.img[0, 0], cols[i]), f"Image input {var} failed"
@@ -309,7 +309,7 @@ def test_unconnected_input_binop():
         expr = doc.graph.create("expr")  # unconnected input
         expr.expr = s
 
-        doc.changed()
+        doc.run()
         out = expr.getOutputDatum(0)
         assert out is None
         assert expr.error.message == "variable's input is not connected"
@@ -332,7 +332,7 @@ def test_null_datum_input_binop():
         expr.connect(0, inpA, 0)
         expr.connect(1, inpB, 0)
 
-        doc.changed()
+        doc.run()
         out = expr.getOutputDatum(0)
         assert out is None
         assert expr.error.message == f"incompatible types for operator ADD: {ts}"
@@ -357,7 +357,7 @@ def test_null_image_input_binop():
         expr.connect(0, inpA, 0)
         expr.connect(1, inpB, 0)
 
-        doc.changed()
+        doc.run()
         out = expr.getOutputDatum(0)
         assert out is None
         assert expr.error.message == "cannot perform binary operation on None image"

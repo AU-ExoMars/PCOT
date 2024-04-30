@@ -18,7 +18,7 @@ def envi_img(envi_image_1):
     assert doc.setInputENVI(0, envi_image_1) is None
 
     node = doc.graph.create("input 0")
-    doc.changed()
+    doc.run()
     img = node.getOutput(0, Datum.IMG)
     assert img is not None
     return img
@@ -82,7 +82,7 @@ def test_greyscale_sources_expr(envi_image_1):
     # connect input 0 on self to output 0 in the input node
     exprNode.connect(0, inputNode, 0)
 
-    doc.changed()
+    doc.run()
     img = exprNode.getOutput(0, Datum.IMG)
     assert img is not None
 
@@ -121,7 +121,7 @@ def test_extract_sources(envi_image_1):
     # connect input 0 on self to output 0 in the input node
     exprNode.connect(0, inputNode, 0)
 
-    doc.changed()
+    doc.run()
     img = exprNode.getOutput(0, Datum.IMG)
     assert img is not None
     assert len(img.sources) == 1
@@ -143,14 +143,14 @@ def test_extract_by_band():
     expr = doc.graph.create("expr")
     expr.expr = "a$_0"
     expr.connect(0,inp,0)
-    doc.changed()
+    doc.run()
 
     img = expr.getOutput(0, Datum.IMG)
     assert img is not None
     assert np.allclose(img.img[0][0], 0.1)
 
     expr.expr = "a$_4"
-    doc.changed()
+    doc.run()
     img = expr.getOutput(0, Datum.IMG)
     assert img is None
     assert isinstance(expr.error, XFormException)
@@ -171,7 +171,7 @@ def test_binop_2images(envi_image_1, envi_image_2):
     exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
     exprNode.connect(1, inputNode2, 0)  # expr:1 <- input2:0
 
-    doc.changed()
+    doc.run()
     img = exprNode.getOutput(0, Datum.IMG)
     assert img is not None
     assert isinstance(img.sources, MultiBandSource)
@@ -203,7 +203,7 @@ def test_binop_number_and_number(envi_image_1, envi_image_2):
     exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
     exprNode.connect(1, inputNode2, 0)  # expr:1 <- input2:0
 
-    doc.changed()
+    doc.run()
     datum = exprNode.getOutputDatum(0)  # don't actually care what the answer is - we just want to check the sources.
     assert isinstance(datum.sources, SourceSet)
     assert len(datum.sources) == 8  # 2 images with 4 bands
@@ -232,7 +232,7 @@ def test_binop_image_and_number(envi_image_1, envi_image_2):
     exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
     exprNode.connect(1, inputNode2, 0)  # expr:1 <- input2:0
 
-    doc.changed()
+    doc.run()
 
     img = exprNode.getOutput(0, Datum.IMG)
     assert img is not None
@@ -266,7 +266,7 @@ def test_binop_image_and_number2(envi_image_1, envi_image_2):
     exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
     exprNode.connect(1, inputNode2, 0)  # expr:1 <- input2:0
 
-    doc.changed()
+    doc.run()
 
     img = exprNode.getOutput(0, Datum.IMG)
     assert img is not None
@@ -298,7 +298,7 @@ def test_binop_image_and_number_literal(envi_image_1, envi_image_2):
     exprNode.expr = "a-20"  # subtract literal 20 from the mean of image A
     exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
 
-    doc.changed()
+    doc.run()
 
     img = exprNode.getOutput(0, Datum.IMG)
     assert img is not None
@@ -328,7 +328,7 @@ def test_unop_image(envi_image_1):
     exprNode.expr = "-a"  # negate image
     exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
 
-    doc.changed()
+    doc.run()
 
     img = exprNode.getOutput(0, Datum.IMG)
     assert img is not None
@@ -352,7 +352,7 @@ def test_unop_number_from_image(envi_image_1):
     exprNode.expr = "-mean(a)"  # negate image mean
     exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
 
-    doc.changed()
+    doc.run()
 
     datum = exprNode.getOutputDatum(0)  # don't actually care what the answer is - we just want to check the sources.
     assert isinstance(datum.sources, SourceSet)

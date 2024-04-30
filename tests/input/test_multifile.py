@@ -25,7 +25,7 @@ def test_multifile_load_with_default_pattern(globaldatadir):
     assert doc.setInputMulti(0, str(globaldatadir / "multi"), names) is None
 
     node = doc.graph.create("input 0")
-    doc.changed()
+    doc.run()
     img = node.getOutput(0, Datum.IMG)
 
     # check the image
@@ -63,7 +63,7 @@ def test_multifile_load_with_bad_pattern(globaldatadir):
                              filterpat='[') is None
 
     node = doc.graph.create("input 0")
-    doc.changed()
+    doc.run()
     img = node.getOutput(0, Datum.IMG)
 
     # check the image
@@ -98,7 +98,7 @@ def test_multifile_load_with_good_pattern(globaldatadir):
                              filterpat=r'.*Filter(?P<lens>L|R)(?P<n>[0-9][0-9]).*') is None
 
     node = doc.graph.create("input 0")
-    doc.changed()
+    doc.run()
     img = node.getOutput(0, Datum.IMG)
 
     # check the image
@@ -145,7 +145,7 @@ def test_multifile_load_with_cwl(globaldatadir):
                              filterpat=r'.*F(?P<cwl>[0-9]+).*') is None
 
     node = doc.graph.create("input 0")
-    doc.changed()
+    doc.run()
     img = node.getOutput(0, Datum.IMG)
 
     # check the image

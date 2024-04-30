@@ -48,7 +48,7 @@ def test_graph_files(graphname):
     logger.info(f"Running graph {graphname}")
     pcot.setup()
     doc = Document(graphname)
-    doc.changed()
+    doc.run()
 
     commentFound = False
 

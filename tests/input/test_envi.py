@@ -21,7 +21,7 @@ def test_envi_load(envi_image_1):
     # create a document with just an input node in it, to bring that input into the document's graph
     node = doc.graph.create("input 0")
     # notify the document changed
-    doc.changed()
+    doc.run()
     # and get the output of the node, which should be the image loaded from the ENVI
     img = node.getOutput(0, Datum.IMG)
     # check the basic stats
