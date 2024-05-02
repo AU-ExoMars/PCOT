@@ -203,7 +203,9 @@ def addroi(img, r):
 @datumfunc
 def rgb(img):
     """
-    create a 3-channel image consisting of the current RGB mapping of the input image
+    create a 3-channel image consisting of the current RGB mapping of the input image.
+    NOTE: changing the mapping on a node does NOT cause the downstream nodes to run - you
+    will have to click "Run All" to make an expr node with rgb() recalculate itself.
     @param img:img:the image to convert
     """
     img = img.get(Datum.IMG)

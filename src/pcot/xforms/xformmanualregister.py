@@ -244,7 +244,7 @@ class XFormManualRegister(XFormType):
     def createTab(self, n, w):
         return TabManualReg(n, w)
 
-    def clearDisplayData(self, xform):
+    def clearData(self, xform):
         xform.canvimg = None
 
 

@@ -114,7 +114,7 @@ class XformPCT(XFormType):
                         node.rgbImage.annotations.append(r)
         node.img = img
 
-    def clearDisplayData(self, xform):
+    def clearData(self, xform):
         xform.img = None
 
     def uichange(self, n):

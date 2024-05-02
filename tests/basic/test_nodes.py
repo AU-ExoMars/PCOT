@@ -155,7 +155,7 @@ def test_simple_node():
     node.connect(1, const1, 0)
 
     # run the graph
-    doc.graph.performNodes()
+    doc.run()
 
     # get the outputs and check they are correct.
     out0 = node.getOutput(0, Datum.NUMBER).n

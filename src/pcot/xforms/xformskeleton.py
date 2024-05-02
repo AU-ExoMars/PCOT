@@ -2,7 +2,7 @@
 This is a "skeleton" for an XFormType (node) class. It is a class that you can copy and modify
 to make your own nodes. It also has a tab with a single control - however, this tab creates
 the controls programmatically rather than loading them from a .ui file created in Designer. See
-other nodes for examples of how to do that.
+other nodes for examples of how to do that, but you'll have to add the .ui file to the assets directory.
 """
 import numpy as np
 from PySide2.QtWidgets import QWidget, QGridLayout, QLabel, QSlider, QDoubleSpinBox, QComboBox, QSizePolicy
@@ -27,15 +27,24 @@ class XFormSkeleton(XFormType):
 
     def __init__(self):
         """
-        Initialise the type singleton object.
+        Initialise the type singleton object. This doesn't create the *node*, but the single object that
+        all nodes of this type will point to. This constructor runs at startup automatically (actually as part
+        of importing PCOT).
         """
 
         # Call the superclass constructor with the name of the node type, the group it belongs to,
         # and the version number of the node type.
-        # The group is one that the palette doesn't construct a list for, so this type won't
-        # actually appear in the palette and so can't be used in the app.
+        # Because group is "hidden", we won't see it in the palette - it's just an example, not for actual use.
 
-        super().__init__("skeleton", "testing", "0.0.0")
+        # There are a couple of other parameters you can set here:
+        # hasEnable=True - this will add a checkbox to the node's properties panel that allows the user to
+        #                  disable the node temporarily. This is useful for nodes that are a bit slow.
+        # startEnabled=False - this will start the node disabled. This is useful for nodes that are very slow.
+
+        super().__init__("skeleton", "hidden", "0.0.0",
+                         #  hasEnable=True,
+                         #  startEnabled=False
+                         )
 
         # add input and output connectors. The first parameter is the name of the connector,
         # the second is the type of data that can be connected to it.
@@ -91,7 +100,7 @@ class XFormSkeleton(XFormType):
             # (we don't bother reading the uncertainty and DQ, we're not using them)
 
             # take the top left pixel's nominal value
-            pix = img.img[0][0]
+            pix = nom[0][0]
 
             # multiply it by the node's parameter
             pix = pix * node.parameter

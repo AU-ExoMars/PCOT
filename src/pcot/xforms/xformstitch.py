@@ -138,7 +138,7 @@ class XFormStitch(XFormType):
         node.timesPerformed += 1
         self.perform(node)
 
-    def clearDisplayData(self, xform):
+    def clearData(self, xform):
         xform.canvimage = None
 
 

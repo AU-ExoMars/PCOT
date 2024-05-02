@@ -170,7 +170,7 @@ class XFormROIExpr(XFormType):
         node.setOutput(0, outImgDatum)
         node.setOutput(1, outROIDatum)
 
-    def clearDisplayData(self, xform):
+    def clearData(self, xform):
         xform.canvimg = None
 
     def uichange(self, node):

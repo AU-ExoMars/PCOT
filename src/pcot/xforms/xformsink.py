@@ -47,4 +47,8 @@ class XformSink(XFormType):
 
     def init(self, node):
         # initialise the node by setting its img to None.
-        node.out = None
+        node.data = None
+
+    def clearData(self, node):
+        node.data = None
+        node.setRectText("")

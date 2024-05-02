@@ -102,7 +102,7 @@ class XformPCTPatchDetection(XFormType):
         node.detectionDistances = None
         node.averageDistanceToLargePatch = None
 
-    def clearDisplayData(self, xform):
+    def clearData(self, xform):
         xform.inputImg = None
 
     def perform(self, node):
@@ -112,7 +112,7 @@ class XformPCTPatchDetection(XFormType):
         """
 
         # clear any existing output from the node
-        node.clearOutputs()
+        node.clearOutputsAndTempData()      # not sure why Joseph is doing this, shouldn't be necessary.
         # get input from linked node if it exists - must be an image
         img = node.getInput(0, Datum.IMG)
 
