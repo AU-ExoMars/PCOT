@@ -48,8 +48,8 @@ for file in ("1",):
     if rv is not None:
         raise Exception(f"{rv}")
 
-    # run the graph by telling the document it has changed
-    doc.changed()
+    # run the document's graph 
+    doc.run()
 
     # get the "sink" node
     outNode = doc.getNodeByName("sink")
@@ -105,8 +105,8 @@ roinode.connect(0,innode,0)
 specnode = doc.graph.create("spectrum")
 specnode.connect(0,roinode,0)
 
-# notify the document has changed, forcing it to run
-doc.changed()
+# run the document
+doc.run()
 
 # get the output of the spectrum node, which will be a Datum,
 # and dereference the Datum, ensuring that the data is of the right type.
