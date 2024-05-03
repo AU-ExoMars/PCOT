@@ -1,5 +1,5 @@
 """
-This is a "skeleton" for an XFormType (node) class. It is a class that you can copy and modify
+This is an example XFormType (node) class. It is a class that you can copy and modify
 to make your own nodes. It also has a tab with a single control - however, this tab creates
 the controls programmatically rather than loading them from a .ui file created in Designer. See
 other nodes for examples of how to do that, but you'll have to add the .ui file to the assets directory.
@@ -16,7 +16,7 @@ from pcot.xform import XFormType, xformtype, XForm
 
 
 @xformtype
-class XFormSkeleton(XFormType):
+class XFormExample(XFormType):
     """
     This object is not a node, but the singleton that nodes of this type point to
     to control their behaviour.
@@ -41,7 +41,7 @@ class XFormSkeleton(XFormType):
         #                  disable the node temporarily. This is useful for nodes that are a bit slow.
         # startEnabled=False - this will start the node disabled. This is useful for nodes that are very slow.
 
-        super().__init__("skeleton", "hidden", "0.0.0",
+        super().__init__("example", "hidden", "0.0.0",
                          #  hasEnable=True,
                          #  startEnabled=False
                          )
@@ -132,10 +132,10 @@ class XFormSkeleton(XFormType):
         in the tab, and the window, which is the main window of the application.
         It just creates and returns a tab - the code for which can be found below.
         """
-        return TabSkeleton(node, window)
+        return TabExample(node, window)
 
 
-class TabSkeleton(pcot.ui.tabs.Tab):
+class TabExample(pcot.ui.tabs.Tab):
     """This is a tab - a QWidget that will be displayed in the properties panel of the UI
     for this particular node"""
 
