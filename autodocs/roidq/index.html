@@ -171,6 +171,12 @@
 <h1 id="roidq">roidq</h1>
 <h2 id="description">Description</h2>
 <p>Automatically generate an ROI from DQ bits in a band or in all bands.</p>
+<blockquote style="background-color: #ffd0d0;">
+**WARNING**: the ROI will be generated from DQ data from any bands in this image.
+It can then be applied to any other image or band - but this information is not
+tracked by the source mechanism. This means that some source tracking information
+can be lost. (Issue #68)
+</blockquote>
 
 <hr />
 <h2 id="connections">Connections</h2>

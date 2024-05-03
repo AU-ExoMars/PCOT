@@ -204,7 +204,9 @@ inputs from various sources and manipulating them in various ways.</p>
 <li><a href="decorr_stretch">decorr stretch</a></li>
 <li><a href="dqmod">dqmod</a></li>
 <li><a href="dummy">dummy</a></li>
+<li><a href="edge">edge</a></li>
 <li><a href="errortest">errortest</a></li>
+<li><a href="example">example</a></li>
 <li><a href="expr">expr</a></li>
 <li><a href="gen">gen</a></li>
 <li><a href="gradient">gradient</a></li>
@@ -246,88 +248,94 @@ node, <a href="expr">expr</a>.</p>
 <tr>
 <th>name</th>
 <th>params</th>
-<th>opt. params</th>
+<th>opt. params (default in brackets)</th>
 <th>description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>abs</td>
-<td>val</td>
+<td>a</td>
 <td></td>
-<td>find absolute value</td>
+<td>Calculate absolute value</td>
 </tr>
 <tr>
 <td>addroi</td>
-<td>image,roi</td>
+<td>img,r</td>
 <td></td>
-<td>add ROI to image</td>
-</tr>
-<tr>
-<td>assignsources</td>
-<td>src,dest</td>
-<td></td>
-<td>Given a pair of images with different sources which nevertheless have the same filters (cwl and fwhm) oncorresponding bands, create a new image with data from the second but sources from the first.Should probably be used in testing only.</td>
+<td>Add an ROI to an image's ROIs</td>
 </tr>
 <tr>
 <td>clamp</td>
-<td>image</td>
+<td>img</td>
 <td></td>
 <td>clamp all channels of an image to 0-1</td>
 </tr>
 <tr>
 <td>cos</td>
-<td>angle</td>
+<td>a</td>
 <td></td>
-<td>calculate cosine of angle in radians</td>
+<td>Calculate cosine of an angle in radians</td>
 </tr>
 <tr>
 <td>crop</td>
-<td>image,x,y,w,h</td>
+<td>img,x,y,w,h</td>
 <td></td>
-<td>crop an image to a rectangle</td>
+<td>Crop an image to a rectangle</td>
 </tr>
 <tr>
 <td>curve</td>
-<td>image,mul,add</td>
+<td>img</td>
+<td>mul (1),add (0)</td>
+<td>impose a sigmoid curve on an image, y=1/(1+e^-(m(x-0.5)+a))) where m and a are parameters. Note from that equation that x is biased, so that x=0.5 is the inflection point if c=0.</td>
+</tr>
+<tr>
+<td>dqset</td>
+<td>img,bits</td>
 <td></td>
-<td>impose a sigmoid curve on an image, y=1/(1+e^-(mx+a))) where m and a are parameters</td>
+<td>sets DQ bits</td>
 </tr>
 <tr>
 <td>fliph</td>
-<td>image</td>
+<td>img</td>
 <td></td>
-<td>flip an image horizontally</td>
+<td>Flip an image horizontally</td>
 </tr>
 <tr>
 <td>flipv</td>
-<td>image</td>
+<td>img</td>
 <td></td>
-<td>flip an image vertically</td>
-</tr>
-<tr>
-<td>floodtest</td>
-<td>image,x,y,thresh</td>
-<td></td>
-<td>Flood fill test</td>
+<td>Flip an image vertically</td>
 </tr>
 <tr>
 <td>grey</td>
-<td>image</td>
-<td>useCV</td>
-<td>convert an image to greyscale</td>
+<td>img</td>
+<td>opencv (0)</td>
+<td>Greyscale conversion. If the optional second argument is nonzero, and the image has 3 channels, we'll use CV's conversion equation rather than just the mean. <strong>However, this loses uncertainty information.</strong> Otherwise uncertainty is calculated by adding together the channels in quadrature and then dividing the number of channels.</td>
+</tr>
+<tr>
+<td>interp</td>
+<td>img,factor</td>
+<td>w (-1)</td>
+<td>Using trilinear interpolation, generate an image by interpolating between the bands of an existing image. If an ROI is attached, the image generated will be interpolated from the pixels in the ROI. The width of the image will be either given in an optional parameter, or will be the same as the input image.  WARNING - IS VERY SLOW</td>
+</tr>
+<tr>
+<td>makeunc</td>
+<td>v1,u1,v2,u2</td>
+<td></td>
+<td></td>
 </tr>
 <tr>
 <td>marksat</td>
-<td>image,min,max</td>
-<td></td>
-<td>mark pixels outside a certain range as SAT or ERROR (i.e BAD)</td>
+<td>img</td>
+<td>mn (0),mx (1.0)</td>
+<td>mark pixels outside a certain range as SAT or ERROR in the DQ bits. Pixels outside any ROI will be ignored, as will any pixels already marked as BAD.</td>
 </tr>
 <tr>
 <td>max</td>
 <td>val...</td>
 <td></td>
-<td>find the minimum value of the nominal values in a set of images and/or values. Images will be flattened into a list of values, so the result for multiband images may not be what you expect.</td>
+<td>find the maximum of the nominal values of a set of images and/or scalars. Images will be flattened into a list of values, so the result for multiband images may not be what you expect.</td>
 </tr>
 <tr>
 <td>mean</td>
@@ -337,99 +345,123 @@ node, <a href="expr">expr</a>.</p>
 </tr>
 <tr>
 <td>merge</td>
-<td>image...</td>
+<td>img1...</td>
 <td></td>
-<td>merge a number of images into a single image - if the image has multiple channels they will all be merged in.</td>
+<td>merge a number of images into multiple bands of a single image. If the image has multiple bands they will all become bands in the new image.</td>
 </tr>
 <tr>
 <td>min</td>
 <td>val...</td>
 <td></td>
-<td>find the minimum value of the nominal values in a set of images and/or values. Images will be flattened into a list of values, so the result for multiband images may not be what you expect.</td>
+<td>find the minimum of the nominal values of a set of images and/or scalars. Images will be flattened into a list of values, so the result for multiband images may not be what you expect.</td>
 </tr>
 <tr>
 <td>nominal</td>
-<td>image</td>
+<td>d</td>
 <td></td>
-<td>If input is an image, create an image made up of nominal data for all channels; if input is numeric, output the uncertainty. In other words, just remove the uncertainty. Ignores ROIs.</td>
+<td>If input is an image, create an image made up of the nominal (mean) pixel values for all bands - i.e. an image with no uncertainty; if input is numeric, output the nominal value. Ignores ROIs.</td>
 </tr>
 <tr>
 <td>norm</td>
-<td>image</td>
-<td>splitchans</td>
+<td>img</td>
+<td>splitchans (0)</td>
 <td>normalize all channels of an image to 0-1, operating on all channels combined (the default) or separately</td>
 </tr>
 <tr>
+<td>resize</td>
+<td>img,width,height</td>
+<td>method (linear)</td>
+<td>Resize an image to a new size using OpenCV's resize function. The method is one of: "nearest", "linear", "cubic", "area", "lanczos4" mapping to the OpenCV constants cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_AREA, cv2.INTER_LANCZOS</td>
+</tr>
+<tr>
 <td>rgb</td>
-<td>image</td>
+<td>img</td>
 <td></td>
-<td>create a 3-channel image consisting of the current RGB mapping of the input image</td>
+<td>create a 3-channel image consisting of the current RGB mapping of the input image. NOTE: changing the mapping on a node does NOT cause the downstream nodes to run - you will have to click "Run All" to make an expr node with rgb() recalculate itself.</td>
 </tr>
 <tr>
 <td>roi</td>
-<td>image</td>
+<td>img</td>
 <td></td>
-<td>extract ROI from image (returns rect ROI on entire image if none is present</td>
+<td>Extract a single combined ROI from all ROIs on the image. If no ROIs are present, will return a single rectangular ROI covering the entire image.</td>
 </tr>
 <tr>
 <td>rotate</td>
-<td>image,angle</td>
+<td>img,angle</td>
 <td></td>
-<td>rotate an image by a multiple of 90 degrees clockwise</td>
+<td>Rotate an image anti-clockwise by an angle in degrees. The angle must be a multiple of 90 degrees.</td>
 </tr>
 <tr>
 <td>sd</td>
 <td>val...</td>
 <td></td>
-<td>find the standard deviation of the nominal values in a set of images and/or scalars. Uncertainties in the data will be pooled. Images will be flattened into a list of values, so the result for multiband images may not be what you expect.</td>
+<td>find the standard deviation of the values of a set of images and/or scalars. Uncertainties in the data will be pooled. Images will be flattened into a list of values, so the result for multiband images may not be what you expect.</td>
 </tr>
 <tr>
 <td>setcwl</td>
-<td>image,cwl</td>
+<td>img,cwl</td>
 <td></td>
-<td>Given an 1-band image, 'fake' a filter of a given CWL and assign it. The image itself is unchanged. This is used in testing only.</td>
+<td>Given a 1-band image, create a 'fake' filter with a given centre wavelength and assign it. The transmission of the filter is 1.0, and the fwhm is 30. The image itself is unchanged. This is used in testing only.</td>
 </tr>
 <tr>
 <td>sin</td>
-<td>angle</td>
+<td>a</td>
 <td></td>
-<td>calculate sine of angle in radians</td>
+<td>Calculate sine of an angle in radians</td>
 </tr>
 <tr>
 <td>sqrt</td>
-<td>angle</td>
+<td>a</td>
 <td></td>
-<td>calculate the square root</td>
+<td>Calculate square root</td>
+</tr>
+<tr>
+<td>striproi</td>
+<td>img</td>
+<td></td>
+<td>Strip all regions of interest from an image</td>
 </tr>
 <tr>
 <td>sum</td>
 <td>val...</td>
 <td></td>
-<td>find the sum of the nominal in a set of images and/or values. Images will be flattened into a list of values, so the result for multiband images may not be what you expect. The SD of the result is the SD of the sum, not the individual values.</td>
+<td>find the sum of the values of a set of images and/or scalars. Images will be flattened into a list of values, so the result for multiband images may not be what you expect.</td>
 </tr>
 <tr>
 <td>tan</td>
-<td>angle</td>
+<td>a</td>
 <td></td>
-<td>calculate tangent of angle in radians</td>
+<td>Calculate tangent of an angle in radians</td>
+</tr>
+<tr>
+<td>testf</td>
+<td>arg1,arg2</td>
+<td></td>
+<td>This "docstring" is mandatory in datumfuncs, because it contains the description and argument types.  The function calculates a+2*b, correctly combining sources and propagating uncertainty.</td>
+</tr>
+<tr>
+<td>testf2</td>
+<td>a</td>
+<td>b (2)</td>
+<td>Calculates a+b and a-b, creating a custom object to store that data.</td>
 </tr>
 <tr>
 <td>testimg</td>
-<td>imageidx</td>
+<td>index</td>
 <td></td>
-<td>Load test image</td>
+<td>Load a test image</td>
 </tr>
 <tr>
 <td>uncertainty</td>
-<td>image</td>
+<td>d</td>
 <td></td>
-<td>If input is an image, create an image made up of uncertainty data for all channels; if input is numeric, output the uncertainty. Ignores ROIs.</td>
+<td>If input is an image, create an image made up of uncertainty data for all bands; if input is numeric, output the uncertainty. Ignores ROIs.</td>
 </tr>
 <tr>
 <td>v</td>
-<td>value,uncertainty</td>
-<td>dq</td>
-<td>create a new value with uncertainty by combining two nominal values. These can be either numbers or images. Ignores and discards ROIs.</td>
+<td>n,u</td>
+<td>dqbits (0)</td>
+<td>create a new value with uncertainty by combining two values. These can be either numbers or images. " Ignores and discards ROIs.</td>
 </tr>
 </tbody>
 </table>

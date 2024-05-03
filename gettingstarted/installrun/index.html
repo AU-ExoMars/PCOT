@@ -279,23 +279,31 @@ pcot
 </code></pre>
 <h2 id="running-pcot-inside-pycharm">Running PCOT inside Pycharm</h2>
 <p>These instructions may be useful if you want to run PCOT inside a debugger - for example, if you 
-are testing a custom node.
-* First set up the Conda environment and interpreter:
-    * Open PyCharm and open the PCOT directory as an existing project.
-    * Open <strong>File/Settings..</strong> (Ctrl+Alt+S)
-    * Select <strong>Project:PCOT / Python Interpreter</strong>
-    * If the Python Interpreter is not already Python 3.8 with something like <strong>anaconda3/envs/pcot/bin/python</strong>
-        * Select the cogwheel to the right of the Python Interpreter dropdown and then select  <strong>Add</strong>.
-        * Select <strong>Conda Environment</strong>.
-        * Select <strong>Existing Environment</strong>.
-        * Select the environment: it should be something like <strong>anaconda3/envs/pcot/bin/python</strong>.
-        * Select <strong>OK</strong>.
-* Now set up the run configuration:
-    * Select <strong>Edit Configurations...</strong> (or it might be <strong>Add Configuration...</strong>) from the configurations drop down in the menu bar
-    * Add a new configuration (the + symbol) and select <strong>Python</strong>
-    * Set <strong>Script Path</strong> to <strong>PCOT/src/pcot/__main__.py</strong>
-    * Make sure the interpreter is something like <strong>Project Default (Python 3.8 (pcot))</strong>, i.e. the Python interpreter of the pcot environment.
-* You should now be able to run and debug PCOT.</p>
+are testing a custom node.</p>
+<ul>
+<li>First set up the Conda environment and interpreter:<ul>
+<li>Open PyCharm and open the PCOT directory as an existing project.</li>
+<li>Open <strong>File/Settings..</strong> (Ctrl+Alt+S)</li>
+<li>Select <strong>Project:PCOT / Python Interpreter</strong></li>
+<li>If the Python Interpreter is not already Python 3.8 with something like <strong>anaconda3/envs/pcot/bin/python</strong><ul>
+<li>Select the cogwheel to the right of the Python Interpreter dropdown and then select  <strong>Add</strong>.</li>
+<li>Select <strong>Conda Environment</strong>.</li>
+<li>Select <strong>Existing Environment</strong>.</li>
+<li>Select the environment: it should be something like <strong>anaconda3/envs/pcot/bin/python</strong>.</li>
+<li>Select <strong>OK</strong>.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Now set up the run configuration:<ul>
+<li>Select <strong>Edit Configurations...</strong> (or it might be <strong>Add Configuration...</strong>) from the configurations drop down in the menu bar</li>
+<li>Add a new configuration (the + symbol) and select <strong>Python</strong></li>
+<li>Set <strong>Script Path</strong> to <strong>PCOT/src/pcot/__main__.py</strong></li>
+<li>Make sure the interpreter is something like <strong>Project Default (Python 3.8 (pcot))</strong>, i.e. the Python interpreter of the pcot environment.</li>
+</ul>
+</li>
+<li>You should now be able to run and debug PCOT.</li>
+</ul>
 <h2 id="environment-variables">Environment variables</h2>
 <p>It's a good idea, but not mandatory, to set the environment variable
 <strong>PCOT_USER</strong> to a string of the form <code>name &lt;email&gt;</code>. For example,
