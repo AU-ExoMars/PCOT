@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pcot"
-version = "0.6.1-alpha"
+version = "0.7.0-alpha"
 description = "PanCam Operations Toolkit"
 authors = ["Jim Finnis <jcf12@aber.ac.uk>"]
 license = "MIT"

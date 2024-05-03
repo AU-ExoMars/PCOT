@@ -2,7 +2,7 @@
 
 This is a rough guide, and things may change!
 
-## Next major release: 0.7.0 EAST PENTIRE
+## Next major release: 0.8.0
 
 * Reorganise the node palette
 * Obtain user stories and feedback
@@ -11,6 +11,8 @@ This is a rough guide, and things may change!
         * Page on *expr* nodes
         * documentation for properties of nodes for library use (e.g. *expr* nodes have ".expr")
         * How-to for common tasks
+
+(yes, still waiting for these)        
         
 ## Future releases
 

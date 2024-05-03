@@ -8,6 +8,34 @@ None
 
 ## Alpha releases
 
+### 0.7.0-alpha 2024-05-03 EAST PENTIRE
+
+* Very many more unit tests
+* Bug fixes
+* Complete rewrite of spectrum system, using the SpectrumSet object
+* Multidot now does painted regions and floodfill
+* Joseph's PCT detector outputs image with ROIs
+* Dump removed and sink enhanced
+* TabData shows sources
+* Inputs decoupled from Sources - Sources now use composition, not inheritance
+* Comment box for nodes removed (it was never used)
+* Direct multifile loading
+* Direct PDS4 loading - required refactoring of entire PDS4 layer
+* Direct ENVI loading
+* Raw file loading from mono images supporting lots of formats
+* Loader presets for multifile
+* Operator overloading on Datum objects 
+* The "datumfunc" system replacing hand-registration of functions
+* flip and rotate functions (datumfuncs)
+* String datum objects and strings usable in expr
+* Docs on library usage
+* Changes to nodes so that slow nodes can be disabled and very slow nodes start disabled. This
+functionality existed before, but was "ad-hoc"
+* Document.changed() is now Document.run() and forces disabled nodes to run
+* Most nodes now store data in their outputs rather than a "node.out" which is then written to
+an output
+* Changes to multidot - doc improvements, UX and bug fixes
+
 ### 0.6.1-alpha 2023-10-04 DYNAS COVE (minor release)
 
 * Multifile input can accept BMP files
