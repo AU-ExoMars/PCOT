@@ -12,16 +12,22 @@ from the ExoMars PANCAM instrument - but we also support
     * ENVI provided the images are 32-bit float BSQ
     * RGB PNGs
     * multispectral images made of multiple monochrome PNGs
+    * multispectral images made of monochrome raw files in various formats
     * and adding new PDS4 formats should be relatively straightforward
 * There are probably a *lot* of useful operations missing
 * There are certainly a *lot* of bugs.
 @@@
 
-<div class="text-center">
+<div class="pt-5 pb-5 text-center">
 <a href="gettingstarted/" class="btn btn-primary" role="button">Getting Started</a>
 <a href="userguide/" class="btn btn-primary" role="button">User Guide</a>
 <a href="roadmap" class="btn btn-primary" role="button">Dev Roadmap</a>
 </div>
+
+<div class="pb-5 text-center">
+<a href="autodocs/" class="btn btn-primary" role="button">Automatically generated node and function docs</a>
+</div>
+
 
 
 ## Reporting bugs

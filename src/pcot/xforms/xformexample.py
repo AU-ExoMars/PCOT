@@ -18,8 +18,7 @@ from pcot.xform import XFormType, xformtype, XForm
 @xformtype
 class XFormExample(XFormType):
     """
-    to control their behaviour.
-    This object is not a node, but the singleton to which nodes this type point to
+    This object is not a node, but the singleton to which nodes of this type point to
     determine their behaviour.
 
     This docstring will form the help text for the node in the UI. Markdown is permitted
