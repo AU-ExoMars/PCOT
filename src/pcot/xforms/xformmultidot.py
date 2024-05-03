@@ -20,10 +20,13 @@ from pcot.xform import xformtype, XFormType
 
 logger = logging.getLogger(__name__)
 
+
 @xformtype
 class XFormMultiDot(XFormType):
     """
-    Add multiple small ROIs which are either circular or painted.
+    Add multiple small ROIs which are either circular or painted. Painted modes can be created and edited with
+    a circular brush or a flood fill.
+
     Most subsequent operations will only be performed on the union of all regions of interest.
     Also outputs an RGB image annotated with the ROIs on the 'ann' RGB input,
     or the input image converted to RGB if that input is not connected.
@@ -33,10 +36,43 @@ class XFormMultiDot(XFormType):
 
     In addition to this, the "convert circles" button will convert all circular ROIs in the node into painted ROIs.
 
-    General controls:
+    ## Quick guide:
 
-    - **Circles or Painted** selects the mode for new ROIs
-    - **click inside an ROI** (or very near a circle) to show its properties and switch to circle  or painted mode.
+    To add and edit circular ROIs:
+
+    - select "Circles" on the left-hand side
+    - set the dot size to the desired radius
+    - shift-click to add and select a new ROI
+    - click to select an existing ROI (or deselect)
+    - drag to move the centre of the circle
+    - edit parameters like dot size, name, colour, etc. to change the current ROI or next created ROI
+
+    To add and edit painted ROIs:
+
+    - select "Painted" on the left-hand side
+    - set the dot size to the desired radius
+    - set add/create mode to Brush
+    - shift-click to add and select a new painted ROI
+    - click inside an ROI to select it
+    - ctrl-click to add a circle to a selected painted ROI
+    - alt-click to "unpaint" a circle from a selected painted ROI
+
+    To add and edit filled ROIs:
+
+    - select "Painted" on the left-hand side
+    - set add/create mode to Fill
+    - set tolerance to a low number (e.g. 0.1)
+    - shift-click to add and select a new filled ROI
+    - possibly undo (ctrl-Z) to remove the last fill, then change the tolerance!
+    - click inside an ROI to select it
+    - ctrl-click to add more flood fill to a selected ROI
+        - set add/create mode to "Brush" to paint circular brushstrokes on a ROI
+    - alt-click to "unpaint" a circle from a selected ROI
+
+    ## General controls:
+
+    - **Circles or Painted** selects the type of new ROIs
+    - **click inside an ROI** (or very near a circle) to show and edit its properties
     - **Dot size** is the size of the circle used for both creating circle ROIs and for circular painting in Painted mode.
     - **Scale** is the font size for all annotations created by this node
     - **Thickness** is the border size for (currently) all circles only
@@ -46,6 +82,8 @@ class XFormMultiDot(XFormType):
     - **Background** is whether a background rectangle is used to make the name clearer for all ROIs
     - **Capture** captures the ROIs from the incoming image, and suppresses the image's original ROIs
     - **Convert circles** will convert all circular ROIs in the node into painted ROIs.
+    - **tolerance** is the colour difference between the current pixel and surrounding pixels required to stop flood filling. PICK CAREFULLY - it may need to be very small.
+    - **add/create mode** is whether we are new ROIs are created with a circular brush or flood fill in Painted mode
 
 
     Circle mode:
@@ -55,11 +93,10 @@ class XFormMultiDot(XFormType):
 
     Painted mode:
 
-    - **tolerance** is the colour difference between the current pixel and surrounding pixels required to stop flood filling. PICK CAREFULLY - it may need to be very small.
-    - **New ROIs created with** is whether we are new ROIs are created with circles or flood fill
     - **shift-click** to add a new painted ROI. Will use a circle if "Paint Mode" is circle, or a flood fill with the given tolerance if the mode is "Fill".
     - **ctrl-click** to add a circle or flood fill to a selected painted ROI, provided we are in the same mode as the selected ROI. Circle or fill depends on Paint Mode.
     - **alt-click** to "unpaint" a circle from a selected painted ROI
+
 
     (Internal: Note that this type doesn't inherit from XFormROI.)
     """
@@ -80,7 +117,7 @@ class XFormMultiDot(XFormType):
             ('tolerance', 3),
             ('captured', False),
             ('drawbg', True),
-            ('createMode', ModeWidget.CIRCLE),
+            ('createMode', ModeWidget.BRUSH),
         )
 
     def createTab(self, n, w):
@@ -91,8 +128,8 @@ class XFormMultiDot(XFormType):
         node.fontsize = 10
         node.thickness = 0
         node.colour = (1, 1, 0)
-        node.tolerance = 3
-        node.createMode = ModeWidget.CIRCLE
+        node.tolerance = 0.1
+        node.createMode = ModeWidget.BRUSH
         node.drawbg = True
         node.prefix = ''  # the name we're going to set by default, it will be followed by an int
         node.dotSize = 10  # dot radius in pixels
@@ -115,11 +152,13 @@ class XFormMultiDot(XFormType):
 
     def convertCircles(self, node):
         """convert circle ROIs to painted ROIs"""
+
         def conv(r):
             if isinstance(r, ROICircle):
                 return ROIPainted(sourceROI=r)
             else:
                 return r
+
         node.rois = [conv(r) for r in node.rois]
         node.selected = None
 
@@ -153,7 +192,13 @@ class XFormMultiDot(XFormType):
             img.setMapping(node.mapping)
             node.img = img
 
-        node.setOutput(self.OUT_IMG, Datum(Datum.IMG, node.img))  # output image and ROI
+        # the image we output is a shallow copy of the image we're working on, without the annotations.
+        # This makes sure we don't pass annotations down.
+        if node.img is None:
+            outImg = None
+        else:
+            outImg = node.img.shallowCopy(copyAnnotations=False)
+        node.setOutput(self.OUT_IMG, Datum(Datum.IMG, outImg))  # output image and ROI
 
     def serialise(self, node):
         """We serialise the ROIs - this will store their type too"""
@@ -182,12 +227,13 @@ class XFormMultiDot(XFormType):
 
 
 class ModeWidget(VariantWidget):
-    CIRCLE = 0
+    BRUSH = 0
     FILL = 1
-    """Widget for selecting the paint mode for painting ROIs"""
+    """Widget for selecting the mode for painting ROIs"""
+
     def __init__(self, w):
         # the modes for this tab, must be in the same order as the MODE_ constants
-        super().__init__("New ROIs created with", ['Circle', 'Fill'], w)
+        super().__init__("Add/create mode", ['Brush', 'Fill'], w)
 
 
 def selectionHighlight(r, img):
@@ -236,6 +282,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.w.convertButton.pressed.connect(self.convertPressed)
         self.w.erodeButton.pressed.connect(self.erodePressed)
         self.w.dilateButton.pressed.connect(self.dilatePressed)
+        self.w.helpButton.pressed.connect(lambda: self.window.openHelp(self.node.type))
 
         self.pageButtons = [
             self.w.radioCircles,
@@ -254,7 +301,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         self.dontSetText = False
         self.setPage(self.CIRCLE)
         self.dragMouseOffset = None
-        self.ctrl = 0   # control key is not pressed; we store it for dragging
+        self.ctrl = 0  # control key is not pressed; we store it for dragging
         # sync tab with node
         self.nodeChanged()
 
@@ -424,8 +471,16 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         if self.mousePos is not None and self.node.previewRadius is not None:
             p.setBrush(Qt.NoBrush)
             p.setPen(QColor(*[v * 255 for v in self.node.colour]))
-            r = self.node.previewRadius / (self.w.canvas.canvas.getScale())
-            p.drawEllipse(self.mousePos, r, r)
+            if self.node.createMode == ModeWidget.FILL and self.getPage() == self.PAINTED:
+                # draw a diagonal cross if we're in painted mode and using fill.
+                crossSize = 10
+                x = self.mousePos.x()
+                y = self.mousePos.y()
+                p.drawLine(x - crossSize, y - crossSize, x + crossSize, y + crossSize)
+                p.drawLine(x - crossSize, y + crossSize, x + crossSize, y - crossSize)
+            else:
+                r = self.node.previewRadius / (self.w.canvas.canvas.getScale())
+                p.drawEllipse(self.mousePos, r, r)
 
     def mouseDragCircleMode(self, x, y):
         """We are moving the mouse with the button down in circle mode. This changes the centre of the circle."""
@@ -440,7 +495,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
         node = self.node
         if node.selected is not None and isinstance(node.selected, ROIPainted):
             if self.ctrl:
-                node.selected.setCircle(x, y, node.dotSize)
+                node.selected.setCircle(x, y, node.dotSize, relativeSize=False)
             else:
                 offsetX, offsetY = self.dragMouseOffset
                 node.selected.moveBBTo(x - offsetX, y - offsetY)
@@ -515,7 +570,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
                 r = ROIPainted(containingImageDimensions=
                                (node.img.w, node.img.h))
                 self.addNewROI(r)  # add and select the new ROI
-                if node.createMode == ModeWidget.CIRCLE:
+                if node.createMode == ModeWidget.BRUSH:
                     r.setCircle(x, y, node.dotSize, relativeSize=False)
                 else:
                     self.fill(node, x, y)
@@ -526,7 +581,7 @@ class TabMultiDot(pcot.ui.tabs.Tab):
             if self.getPage() == self.PAINTED and isinstance(node.selected, ROIPainted):
                 self.mark()
                 r = node.selected
-                if node.createMode == ModeWidget.CIRCLE:
+                if node.createMode == ModeWidget.BRUSH:
                     # If we've ctrl-clicked and we're in circle mode for painted ROI, we start dragging
                     self.dragging = True
                     r.setCircle(x, y, node.dotSize, relativeSize=False)
@@ -553,6 +608,10 @@ class TabMultiDot(pcot.ui.tabs.Tab):
                     self.setPage(self.CIRCLE)
                 else:
                     self.setPage(self.PAINTED)  # otherwise go into the painted page
+            else:
+                # nothing found, so deselect
+                self.mark()
+                node.selected = None
 
         self.updateSelected()  # doesn't matter if this gets called even when we haven't changed selection
 

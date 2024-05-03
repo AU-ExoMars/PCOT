@@ -14,34 +14,34 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0" colspan="11">
+   <item row="4" column="3">
+    <widget class="QCheckBox" name="drawbg">
+     <property name="layoutDirection">
+      <enum>Qt::RightToLeft</enum>
+     </property>
+     <property name="text">
+      <string>Background</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="4" colspan="2">
+    <widget class="QPushButton" name="clearButton">
+     <property name="text">
+      <string>Clear</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0" colspan="8">
     <widget class="Canvas" name="canvas" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
        <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
+       <verstretch>1</verstretch>
       </sizepolicy>
      </property>
     </widget>
    </item>
-   <item row="8" column="0" colspan="2">
-    <widget class="QLabel" name="caplabel">
-     <property name="text">
-      <string>Name</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="5">
-    <widget class="QLabel" name="label_2">
-     <property name="text">
-      <string>Scale</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0" colspan="2">
+   <item row="1" column="0" rowspan="3">
     <widget class="QWidget" name="widget" native="true">
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
@@ -81,7 +81,47 @@
      </layout>
     </widget>
    </item>
-   <item row="2" column="6">
+   <item row="3" column="6">
+    <widget class="QLabel" name="label_2">
+     <property name="text">
+      <string>Font size</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1" rowspan="3">
+    <widget class="QWidget" name="widget_2" native="true">
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <widget class="QPushButton" name="captureButton">
+        <property name="text">
+         <string>Capture ROIs from image</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="convertButton">
+        <property name="text">
+         <string>Convert circles to painted</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="helpButton">
+        <property name="styleSheet">
+         <string notr="true">background-color: rgb(255, 185, 185)</string>
+        </property>
+        <property name="text">
+         <string>Help!</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="3" column="7">
     <widget class="QSpinBox" name="fontsize">
      <property name="minimum">
       <number>2</number>
@@ -94,14 +134,44 @@
      </property>
     </widget>
    </item>
-   <item row="8" column="6" colspan="2">
-    <widget class="QPushButton" name="clearButton">
+   <item row="4" column="2">
+    <widget class="QLineEdit" name="caption"/>
+   </item>
+   <item row="4" column="6" colspan="2">
+    <widget class="QPushButton" name="recolour">
      <property name="text">
-      <string>Clear</string>
+      <string>Recolour all</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="4">
+   <item row="4" column="0" colspan="2">
+    <widget class="QLabel" name="caplabel">
+     <property name="text">
+      <string>Region name</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="7">
+    <widget class="QSpinBox" name="thickness">
+     <property name="minimum">
+      <number>0</number>
+     </property>
+     <property name="maximum">
+      <number>20</number>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="6">
+    <widget class="QLabel" name="label_3">
+     <property name="text">
+      <string>Thickness</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="2" rowspan="3" colspan="4">
     <widget class="QStackedWidget" name="stackedWidget">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
@@ -140,7 +210,7 @@
           </sizepolicy>
          </property>
          <property name="text">
-          <string>PAINTED mode: Click to select, Shift+Click for new painted ROI (mode widget determines type), Alt+Click for unpaint, Ctrl+Click for flood fill</string>
+          <string>PAINTED mode: Click to select, Shift+Click for create painted ROI, Alt+Click for unpaint, Ctrl+Click for add. Add/Create mode sets whether circle or flood is used.</string>
          </property>
          <property name="wordWrap">
           <bool>true</bool>
@@ -178,68 +248,11 @@
      </widget>
     </widget>
    </item>
-   <item row="8" column="5">
-    <widget class="QCheckBox" name="drawbg">
-     <property name="layoutDirection">
-      <enum>Qt::RightToLeft</enum>
-     </property>
-     <property name="text">
-      <string>Background</string>
-     </property>
-    </widget>
-   </item>
-   <item row="8" column="3" colspan="2">
-    <widget class="QLineEdit" name="caption"/>
-   </item>
-   <item row="2" column="10">
+   <item row="1" column="6" colspan="2">
     <widget class="QPushButton" name="colourButton">
      <property name="text">
-      <string>Colour</string>
+      <string>Region colour</string>
      </property>
-    </widget>
-   </item>
-   <item row="2" column="7">
-    <widget class="QLabel" name="label_3">
-     <property name="text">
-      <string>Thickness</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="9">
-    <widget class="QSpinBox" name="thickness">
-     <property name="minimum">
-      <number>0</number>
-     </property>
-     <property name="maximum">
-      <number>20</number>
-     </property>
-    </widget>
-   </item>
-   <item row="8" column="9" colspan="2">
-    <widget class="QPushButton" name="recolour">
-     <property name="text">
-      <string>Recolour all</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="2">
-    <widget class="QWidget" name="widget_2" native="true">
-     <layout class="QVBoxLayout" name="verticalLayout_2">
-      <item>
-       <widget class="QPushButton" name="captureButton">
-        <property name="text">
-         <string>Capture ROIs from image</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="convertButton">
-        <property name="text">
-         <string>Convert circles to painted</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
     </widget>
    </item>
   </layout>
