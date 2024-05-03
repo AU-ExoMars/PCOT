@@ -30,7 +30,6 @@ class XformBandDepth(XFormType):
         super().__init__("banddepth", "processing", "0.0.0")
         self.addInputConnector("", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
-        self.hasEnable = True
         self.autoserialise = ('bandidx',)
 
     def createTab(self, n, w):
@@ -38,7 +37,6 @@ class XformBandDepth(XFormType):
 
     def init(self, node):
         node.bandidx = -1
-        node.img = None
         node.cwls = []  # tuple of (cwl, index, description) generated in perform
 
     def perform(self, node):
@@ -95,10 +93,10 @@ class XformBandDepth(XFormType):
                         rois=img.rois.copy(),
                         defaultMapping=None
                     )
-                    node.img = out
-                    node.setOutput(0, Datum(Datum.IMG, out))
+                    out = Datum(Datum.IMG, out)
         else:
-            node.img = None
+            out = None
+        node.setOutput(0, out)
 
 
 class TabBandDepth(pcot.ui.tabs.Tab):

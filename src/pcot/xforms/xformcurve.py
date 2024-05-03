@@ -16,18 +16,16 @@ class XformCurve(XFormType):
     """
 
     def __init__(self):
-        super().__init__("curve", "processing", "0.0.0")
+        super().__init__("curve", "processing", "0.0.0", hasEnable=True)
         self.addInputConnector("", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
         self.autoserialise = ('add', 'mul')
-        self.hasEnable = True
 
     def createTab(self, n, w):
         pcot.ui.msg("creating a tab with a plot widget takes time...")
         return TabCurve(n, w)
 
     def init(self, node):
-        node.img = None
         node.add = 0
         node.mul = 1
 
@@ -78,4 +76,4 @@ class TabCurve(pcot.ui.tabs.Tab):
         self.w.mpl.canvas.draw()  # present drawing
 
         # display image        
-        self.w.canvas.display(self.node.img)
+        self.w.canvas.display(self.node.getOutput(0))

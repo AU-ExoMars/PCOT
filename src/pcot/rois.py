@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import cv2 as cv
 import numpy as np
 from PySide2.QtCore import Qt, QPointF
@@ -10,6 +12,7 @@ from pcot.ui.roiedit import RectEditor, CircleEditor, PaintedEditor, PolyEditor
 from pcot.utils import serialiseFields, deserialiseFields
 from pcot.utils.annotations import Annotation, annotDrawText
 from pcot.utils.colour import rgb2qcol
+from pcot.utils.flood import FastFloodFiller, FloodFillParams
 from pcot.utils.geom import Rect
 
 
@@ -21,6 +24,7 @@ class BadOpException(Exception):
 class BadNegException(Exception):
     """This gets thrown when you're trying to negate an ROI that has lost its dimensions, which can happen when
     ROIs from different images are combined or they've simply not been added by an operation."""
+
     def __init__(self):
         super().__init__("Can only negate ROIs with image dimensions")
 
@@ -34,9 +38,12 @@ class ROIBoundsException(Exception):
 ROISERIALISEFIELDS = (
     ('label', 'unknown!'),
     ('colour', (1, 1, 0)),
-    ('thickness', 2),
+    ('thickness', 0),
     ('fontsize', 10),
-    ('drawbg', True)
+    ('containingImageDimensions', 'missing'),
+    ('drawbg', True),
+    ('drawBox', True),
+    ('drawEdge', True),
 )
 
 
@@ -45,10 +52,17 @@ class ROI(SourcesObtainable, Annotation):
     because it defines an ROI consisting of a predefined BB and mask."""
 
     tpname = None
+    roiTypes = {}
+    count = 0
+
+    def __init_subclass__(cls, **kwargs):
+        """This is called when a subclass is created. It's used to associate the type name with the class"""
+        super().__init_subclass__(**kwargs)
+        ROI.roiTypes[cls.tpname] = cls
 
     def __init__(self, bbrect: Rect = None, maskimg: np.array = None,
-                 sourceROI=None, isTemp=False,
-                 containingImageDimensions=None):
+                 sourceROI=None, isTemp=False, containingImageDimensions=None,
+                 label=None):
         """Constructor. Takes an ROI type name, optional rect and mask (for 'base' ROIs consisting of just these)
         and an optional sourceROI from which some data is copied, for copy operations"""
 
@@ -56,15 +70,19 @@ class ROI(SourcesObtainable, Annotation):
         SourcesObtainable.__init__(self)
 
         self.bbrect = bbrect
-        self.bbrect = bbrect
         self.maskimg = maskimg
+        self.internalIdx = ROI.count  # debugging
+        ROI.count += 1
 
         self.isTemp = isTemp  # for temporary ROIs created by expressions
 
-        self.label = None if sourceROI is None else sourceROI.label
+        if label is None:
+            self.label = None if sourceROI is None else sourceROI.label
+        else:
+            self.label = label
         self.labeltop = False if sourceROI is None else sourceROI.labeltop  # draw the label at the top?
         self.colour = (1, 1, 0) if sourceROI is None else sourceROI.colour  # annotation colour
-        self.thickness = 2 if sourceROI is None else sourceROI.thickness  # thickness of lines
+        self.thickness = 0 if sourceROI is None else sourceROI.thickness  # thickness of lines
         self.fontsize = 10 if sourceROI is None else sourceROI.fontsize  # annotation font size
         self.drawbg = True if sourceROI is None else sourceROI.drawbg
         self.drawEdge = True if sourceROI is None else sourceROI.drawEdge  # draw the edge only?
@@ -121,20 +139,20 @@ class ROI(SourcesObtainable, Annotation):
         else:
             return "No ROI"
 
-    def setPen(self, p: QPainter):
-        pen = QPen(rgb2qcol(self.colour))
+    def setPen(self, p: QPainter, alpha):
+        pen = QPen(rgb2qcol(self.colour, alpha=alpha))
         pen.setWidth(self.thickness)
         p.setPen(pen)
 
-    def annotateBB(self, p: QPainter):
+    def annotateBB(self, p: QPainter, alpha):
         """Draw the BB onto a QPainter"""
         if (bb := self.bb()) is not None:
             x, y, w, h = bb.astuple()
             p.setBrush(Qt.NoBrush)
-            self.setPen(p)
+            self.setPen(p, alpha)
             p.drawRect(x, y, w, h)
 
-    def annotateMask(self, p: QPainter):
+    def annotateMask(self, p: QPainter, alpha):
         """This is the 'default' annotate, which draws the ROI onto the painter by
         using its actual mask. It takes the mask, edge detects (if drawEdge), converts into
         an image."""
@@ -156,8 +174,8 @@ class ROI(SourcesObtainable, Annotation):
             img = np.full((hh, ww, 3), self.colour, dtype=np.float32)  # the second arg is the colour
             # add the mask as the alpha channel
             x = np.dstack((img, mask))
-            # to byte
-            x = (x * 255).astype(np.ubyte)
+            # to byte, taking into account the alpha
+            x = (x * 255 * alpha).astype(np.ubyte)
             # resize to canvas/painter scale
             # to qimage, stashing the data into a field to avoid the problem
             # discussed in canvas.img2qimage where memory is freed by accident in Qt
@@ -167,32 +185,51 @@ class ROI(SourcesObtainable, Annotation):
             # now we have a QImage we can draw it onto the painter.
             p.drawImage(bb.x, bb.y, q)
 
-    def annotateText(self, p: QPainter):
+    def annotateText(self, p: QPainter, alpha):
         """Draw the text for the ROI onto the painter"""
         if (bb := self.bb()) is not None and self.fontsize > 0 and self.label is not None and self.label != '':
             x, y, x2, y2 = bb.corners()
             ty = y if self.labeltop else y2
 
-            annotDrawText(p, x, ty, self.label, self.colour,
+            annotDrawText(p, x, ty, self.label, self.colour, alpha,
                           basetop=self.labeltop,
                           bgcol=(0, 0, 0) if self.drawbg else None,
                           fontsize=self.fontsize)
 
-    def annotate(self, p: QPainter, img):
+    def annotate(self, p: QPainter, img, alpha):
         """This is the default annotation method drawing the ROI onto a QPainter as part of the annotations system.
         It should be replaced with a more specialised method if possible."""
         if self.drawBox:
-            self.annotateBB(p)
-        self.annotateText(p)
-        self.annotateMask(p)
+            self.annotateBB(p, alpha)
+        self.annotateText(p, alpha)
+        self.annotateMask(p, alpha)
 
     def serialise(self):
+        """Serialises the ROI to a dict. This is used for saving to file or memory"""
         if self.isTemp:
             raise Exception("attempt to serialise a temporary ROI")
-        return serialiseFields(self, ROISERIALISEFIELDS)
+        d = serialiseFields(self, ROISERIALISEFIELDS)
+        # we also need to add the type
+        d['type'] = self.__class__.tpname
+        return d
 
     def deserialise(self, d):
+        """Deserialises the ROI from a dict. This is used for loading from file or memory and acts
+        on an existing ROI."""
         deserialiseFields(self, d, ROISERIALISEFIELDS)
+
+    @staticmethod
+    def fromSerialised(d):
+        """Creates a new ROI from a dict. This is used for loading from file or memory and creates
+        a new ROI. It inspects the dict to find the type of ROI to create."""
+        if 'type' not in d:
+            raise Exception("ROI deserialise: no type field")
+        # get the constructor for the ROI type and construct an instance
+        constructor = ROI.roiTypes[d['type']]
+        r = constructor()
+        # deserialise the fields
+        r.deserialise(d)
+        return r
 
     @staticmethod
     def roiUnion(rois):
@@ -344,6 +381,21 @@ class ROI(SourcesObtainable, Annotation):
 
         return ROI(bb, mask, isTemp=True, containingImageDimensions=dims)
 
+    def __contains__(self, xyTuple):
+        """Is a point inside the ROI?"""
+        x, y = xyTuple
+        if self.bb() is None:
+            return False
+        else:
+            # first check the bounding box
+            if xyTuple not in self.bb():
+                return False
+            # now check the mask
+            rx, ry, rw, rh = self.bb()
+            x -= rx
+            y -= ry
+            return self.mask()[y, x]
+
     def __neg__(self):
         """We can negate an ROI by subtracting it from an ROI set to the entire image - but only
         if we know how big it is!"""
@@ -356,6 +408,17 @@ class ROI(SourcesObtainable, Annotation):
 
             return r - self
 
+    def equals(self, other, sameType=False):
+        """Check for equality of two ROIs. I'm not using the dunder method because I want to have an extra
+        argument to check if the types are the same."""
+        if not isinstance(other, ROI):
+            return False
+        elif self is other:
+            return True
+        elif sameType and type(self) != type(other):
+            return False
+        return self.bb() == other.bb() and np.array_equal(self.mask(), other.mask())
+
     def __mul__(self, other):
         return self.roiIntersection([self, other])
 
@@ -365,12 +428,20 @@ class ROI(SourcesObtainable, Annotation):
     def __pow__(self, power, modulo=None):
         raise BadOpException()
 
-    def __str__(self):
+    def _str(self, use_id):
+        lab = "(no label)" if self.label is None else self.label
+        s = f"ROI-BASE{self.internalIdx}" if use_id else "ROI-BASE"
         if not self.bb():
-            return "ROI-BASE (no data)"
+            return f"{s}:{lab} (no data)"
         else:
             x, y, w, h = self.bb()
-            return f"ROI-BASE:{self.label} {x} {y} {w}x{h}"
+            return f"{s}:{lab} {x} {y} {w}x{h}"
+
+    def __str__(self):
+        return self._str(False)
+
+    def __repr__(self):
+        return self._str(True)
 
     def getSources(self):
         return self.sources
@@ -383,58 +454,74 @@ class ROI(SourcesObtainable, Annotation):
         """Create an editor for the ROI"""
         pass
 
+    def changed(self):
+        """Notify the ROI that its values have been set. This may not actually do anything, but for ROIs like
+        Rect and Circle it's necessary. Other ROIs have different ways of knowing if they have a valid value."""
+        pass
 
-## a rectangle ROI
 
 class ROIRect(ROI):
+    """Rectangular ROI"""
     tpname = "rect"
 
-    def __init__(self, sourceROI=None):
-        super().__init__(sourceROI=sourceROI)
+    def __init__(self, sourceROI=None, label=None, rect: Tuple[float, float, float, float] = None):
+        """Takes the following forms:
+        ROIRect() - empty ROI
+        ROIRect(rect=(x,y,w,h)) - ROI with given bounding box
+        ROIRect(sourceROI=roi) - copy of ROI
+        Can also specify a label with label="""
+        super().__init__(sourceROI=sourceROI, label=label)
         if sourceROI is None:
-            self.x = 0
-            self.y = 0
-            self.w = 0
-            self.h = 0
+            if rect is None:
+                self.x = 0
+                self.y = 0
+                self.w = 0
+                self.h = 0
+            else:
+                self.x, self.y, self.w, self.h = rect
             self.isSet = False
         else:
+            if rect is not None:
+                raise ValueError("Can't specify both sourceROI and rect")
             self.x, self.y, self.w, self.h = sourceROI.x, sourceROI.y, sourceROI.w, sourceROI.h
-            self.isSet = sourceROI.isSet
+            self.isSet = True
 
     def bb(self):
-        if self.isSet:
+        if self.w > 0:
             return Rect(self.x, self.y, self.w, self.h)
         else:
             return None
 
     def details(self):
         """Information string on this ROI."""
-        if self.x is None:
+        if self.w < 0:
             return "No ROI"
         else:
             return "{} pixels\n{},{}\n{}x{}".format(self.pixels(),
                                                     self.x, self.y, self.w, self.h)
 
-    def annotate(self, p: QPainter, img):
+    def annotate(self, p: QPainter, img, alpha):
         """Simpler version of annotate for rects; doesn't draw the mask"""
-        self.annotateBB(p)
-        self.annotateText(p)
+        self.annotateBB(p, alpha)
+        self.annotateText(p, alpha)
 
     def mask(self):
         # return a boolean array of True, same size as BB
         return np.full((self.h, self.w), True)
 
     def set(self, x, y, w, h):
-        self.isSet = True
         self.x = x
         self.y = y
         self.w = w
         self.h = h
+        self.isSet = True
+
+    def changed(self):
+        self.isSet = True
 
     def serialise(self):
         d = super().serialise()
         d.update({'bb': (self.x, self.y, self.w, self.h)})
-        d['isset'] = self.isSet
         return d
 
     def deserialise(self, d):
@@ -455,8 +542,16 @@ class ROIRect(ROI):
         r.y -= y
         return r
 
+    def _str(self, use_id):
+        lab = "(no label)" if self.label is None else self.label
+        s = f"ROI-RECT{self.internalIdx}" if use_id else "ROI-RECT"
+        return f"{s}:{lab} {self.x} {self.y} {self.w}x{self.h}"
+
     def __str__(self):
-        return f"ROI-RECT:{self.label} {self.x} {self.y} {self.w}x{self.h}"
+        return self._str(False)
+
+    def __repr__(self):
+        return self._str(True)
 
     def createEditor(self, tab):
         return RectEditor(tab, self)
@@ -471,8 +566,8 @@ class ROICircle(ROI):
     r: int
     isSet: bool
 
-    def __init__(self, x=-1, y=0, r=0, sourceROI=None):
-        super().__init__('circle', sourceROI=sourceROI)
+    def __init__(self, x=-1, y=0, r=0, sourceROI=None, label=None):
+        super().__init__(sourceROI=sourceROI, label=label)
         if sourceROI is None:
             self.set(x, y, r)
             self.drawBox = False
@@ -489,13 +584,16 @@ class ROICircle(ROI):
         self.r = int(r)
         self.isSet = (x >= 0)
 
-    def annotate(self, p: QPainter, img):
+    def changed(self):
+        self.isSet = True
+
+    def annotate(self, p: QPainter, img, alpha):
         if (bb := self.bb()) is not None:
-            self.annotateBB(p)
-            self.annotateText(p)
+            self.annotateBB(p, alpha)
+            self.annotateText(p, alpha)
             x, y, w, h = bb.astuple()
             p.setBrush(Qt.NoBrush)
-            self.setPen(p)
+            self.setPen(p, alpha)
             p.drawEllipse(x, y, w, h)
 
     def get(self):
@@ -550,7 +648,12 @@ class ROICircle(ROI):
         return CircleEditor(tab, self)
 
     def __str__(self):
-        return f"ROI-CIRCLE:{self.label} {self.x} {self.y} {self.r}"
+        lab = "(no label)" if self.label is None else self.label
+        return f"ROI-CIRCLE:{lab} {self.x} {self.y} {self.r}"
+
+    def __repr__(self):
+        lab = "(no label)" if self.label is None else self.label
+        return f"ROI-CIRCLE{self.internalIdx}:{lab} {self.x} {self.y} {self.r}"
 
 
 # used in ROIpainted to convert a 0-99 value into a brush size for painting
@@ -564,10 +667,10 @@ class ROIPainted(ROI):
     tpname = "painted"
 
     # we can create this ab initio or from a subimage mask of an image.
-    def __init__(self, mask=None, label=None, sourceROI=None):
-        super().__init__(sourceROI=sourceROI)
+    def __init__(self, mask=None, label=None, sourceROI=None, containingImageDimensions=None):
+        super().__init__(sourceROI=sourceROI, label=label,
+                         containingImageDimensions=containingImageDimensions)
         if sourceROI is None:
-            self.label = label
             if mask is None:
                 self.bbrect = None
                 self.map = None
@@ -581,8 +684,10 @@ class ROIPainted(ROI):
         else:
             self.drawBox = sourceROI.drawBox
             self.drawEdge = sourceROI.drawEdge
-            self.map = sourceROI.map  # NOTE: not a copy!
-            self.bbrect = Rect.copy(sourceROI.bbrect)
+            self.map = sourceROI.mask()  # not a copy?
+            self.bbrect = Rect.copy(sourceROI.bb())
+            self.containingImageDimensions = sourceROI.containingImageDimensions
+        self.r = 10  # default "circle size" for painting; used in multidot editor
 
     def clear(self):
         self.map = None
@@ -599,29 +704,35 @@ class ROIPainted(ROI):
     def serialise(self):
         d = super().serialise()
         d['bbrect'] = self.bbrect.astuple() if self.bbrect else None
+        d['r'] = self.r
         return serialiseFields(self, [('map', None)], d=d)
 
     def deserialise(self, d):
         super().deserialise(d)
         self.bbrect = Rect.fromtuple(d['bbrect'])
+        self.r = d.get('r', 10)
         deserialiseFields(self, d, [('map', None)])
 
     def mask(self):
         """return a boolean array, same size as BB"""
         return self.map > 0
 
-    def cropDownWithDraw(self, draw=None):
-        """crop ROI mask down to smallest possible size and reset BB. If draw is
-        set, this will be a function taking the full size image used to draw on
-        the ROI as part of the process."""
-
-        # create full size map
+    def fullsize(self):
+        """return the full size mask"""
         imgw, imgh = self.containingImageDimensions
+        # create full size map of zeroes
         fullsize = np.zeros((imgh, imgw), dtype=np.uint8)
         # splice in existing data, if there is any!
         if self.bbrect is not None:
             bbx, bby, bbx2, bby2 = self.bbrect.corners()
             fullsize[bby:bby2, bbx:bbx2] = self.map
+        return fullsize
+
+    def cropDownWithDraw(self, draw=None):
+        """crop ROI mask down to smallest possible size and reset BB. If draw is
+        set, this will be a function taking the full size image used to draw on
+        the ROI as part of the process."""
+        fullsize = self.fullsize()
         if draw is not None:
             # do extra drawing
             draw(fullsize)
@@ -638,25 +749,77 @@ class ROIPainted(ROI):
             # construct the new BB
             self.bbrect = Rect(int(xmin), int(ymin), int(xmax - xmin), int(ymax - ymin))
         else:
+            # We've deleted the whole thing! Just mark it as an unset ROI.
             self.bbrect = None
             self.map = None
 
-    def drawBrush(self, fullsize, x, y, brushSize, delete):
-        """called from inside cropDown as an optional step to draw an extra circle"""
-        imgw, imgh = self.containingImageDimensions
-        r = int(getRadiusFromSlider(brushSize, imgw, imgh))
-        cv.circle(fullsize, (x, y), r, 0 if delete else 255, -1)
+    def setCircle(self, x, y, brushSize, delete=False, relativeSize=True):
+        """fill a circle in the ROI, or clear it (if delete is true). If relativeSize is true, the
+        brush size is relative to the image size, otherwise it is absolute in pixels"""
 
-    def setCircle(self, x, y, brushSize, delete=False):
-        """fill a circle in the ROI, or clear it (if delete is true)"""
         if self.containingImageDimensions is not None:
-            self.cropDownWithDraw(draw=lambda fullsize: self.drawBrush(fullsize, x, y, brushSize, delete))
+            imgw, imgh = self.containingImageDimensions
+            if relativeSize:
+                r = int(getRadiusFromSlider(brushSize, imgw, imgh))
+            else:
+                r = int(brushSize)
+            self.cropDownWithDraw(draw=lambda fullsize: cv.circle(fullsize, (x, y), r, 0 if delete else 255, -1))
+        # store this so that when we select an ROI in the multidot editor we can set the brush size
+        self.r = brushSize
+
+    def fill(self, img, x, y, fillparams=FloodFillParams(), fillerclass=FastFloodFiller):
+        """fill the ROI using a flood fill"""
+        if self.containingImageDimensions is not None:
+            # create filler object
+            filler = fillerclass(img, fillparams)
+            # create a filled mask
+            mask = filler.fill(x, y)
+            # combine this with the full size existing mask
+            self.cropDownWithDraw(draw=lambda fullsize: np.bitwise_or(fullsize, mask, out=fullsize))
 
     def rebase(self, x, y):
         r = ROIPainted(sourceROI=self)
         r.bbrect.x -= x
         r.bbrect.y -= y
         return r
+
+    def moveBBTo(self, x, y):
+        """move the bounding box to a new position, returning True if the move was OK"""
+        imgw, imgh = self.containingImageDimensions
+        if x >= 0 and y >= 0 and x+self.bbrect.w < imgw and y+self.bbrect.w < imgh:
+            self.bbrect.x = x
+            self.bbrect.y = y
+            return True
+        else:
+            return False
+
+    def morph(self, op, iterations=1):
+        """Perform a morphological operation on the ROI. The function op should take a
+        a binary mask, and return a binary mask. The additional iterations parameter specifies
+        how many times to apply the operation."""
+        if self.map is not None:
+            # get full size image because we need to work on the whole thing
+            fullsize = self.fullsize()
+            # perform the op
+            m = op(fullsize, iterations)
+            self.map = m
+            self.bbrect = Rect(0, 0, m.shape[1], m.shape[0])
+            self.setContainingImageDimensions(fullsize.shape[1], fullsize.shape[0])
+            # crop it down
+            self.cropDownWithDraw()
+        else:
+            return None
+
+    def dilated(self, n=1):
+        r = ROIPainted(sourceROI=self)
+        r.dilate(n)
+        return r
+
+    def dilate(self, n=1):
+        self.morph(lambda mask, iters: cv.dilate(mask, None, iterations=iters), n)
+
+    def erode(self, n=1):
+        self.morph(lambda mask, iters: cv.erode(mask, None, iterations=iters), n)
 
     def __copy__(self):
         r = ROIPainted(sourceROI=self)
@@ -665,12 +828,21 @@ class ROIPainted(ROI):
     def createEditor(self, tab):
         return PaintedEditor(tab, self)
 
-    def __str__(self):
-        if not self.bbrect:
-            return f"ROI-PAINTED:{self.label}"
-        else:
+    def _str(self, use_id):
+        lab = "(no label)" if self.label is None else self.label
+        s = f"ROI-PAINTED{self.internalIdx}" if use_id else f"ROI-PAINTED:{lab}"
+        if self.bbrect:
             x, y, w, h = self.bb()
-            return f"ROI-PAINTED:{self.label} {x} {y} {w}x{h}"
+            s += f" {x} {y} {w}x{h}"
+        else:
+            s += " (not set)"
+        return s
+
+    def __str__(self):
+        return self._str(use_id=False)
+
+    def __repr__(self):
+        return self._str(use_id=True)
 
 
 ## a polygon ROI
@@ -678,8 +850,8 @@ class ROIPainted(ROI):
 class ROIPoly(ROI):
     tpname = "poly"
 
-    def __init__(self, sourceROI=None):
-        super().__init__(sourceROI=sourceROI)
+    def __init__(self, sourceROI=None, label=None):
+        super().__init__(sourceROI=sourceROI, label=label)
         self.selectedPoint = None  # don't set the selected point in copies
         if sourceROI is None:
             self.drawPoints = True
@@ -711,7 +883,7 @@ class ROIPoly(ROI):
     def serialise(self):
         d = super().serialise()
         return serialiseFields(self,
-                               [('points', 0)],
+                               [('points', 0), ('drawPoints', True)],
                                d=d)
 
     def deserialise(self, d):
@@ -741,12 +913,12 @@ class ROIPoly(ROI):
         # convert to boolean
         return polyimg > 0
 
-    def annotatePoly(self, p: QPainter):
+    def annotatePoly(self, p: QPainter, alpha):
         """draw the polygon as annotation onto a painter"""
 
         if len(self.points) > 0:
             p.setBrush(Qt.NoBrush)
-            self.setPen(p)
+            self.setPen(p, alpha=alpha)
 
             # first draw the points as little circles
             points = self.points.copy()  # we make a copy because we append a temporary later...
@@ -767,11 +939,11 @@ class ROIPoly(ROI):
             points.append(points[0])  # close the loop
             p.drawPolyline([QPointF(x, y) for (x, y) in points])
 
-    def annotate(self, p: QPainter, img):
-        self.annotatePoly(p)
+    def annotate(self, p: QPainter, img, alpha):
+        self.annotatePoly(p, alpha)
         if self.drawBox:
-            self.annotateBB(p)
-        self.annotateText(p)
+            self.annotateBB(p, alpha)
+        self.annotateText(p, alpha)
 
     def addPoint(self, x, y):
         self.points.append((x, y))
@@ -815,11 +987,19 @@ class ROIPoly(ROI):
     def createEditor(self, tab):
         return PolyEditor(tab, self)
 
-    def __str__(self):
+    def _str(self, use_id):
+        lab = "(no label)" if self.label is None else self.label
+        s = f"ROI-POLY{self.internalIdx}:{lab}" if use_id else f"ROI-POLY:{lab}"
         if not self.hasPoly():
-            return f"ROI-POLY:{self.label} (no points)"
+            return s + " (no points)"
         x, y, w, h = self.bb()
-        return f"ROI-POLY:{self.label} {x} {y} {w}x{h}"
+        return s + f" {x} {y} {w}x{h}"
+
+    def __str__(self):
+        return self._str(use_id=True)
+
+    def __repr__(self):
+        return self._str(use_id=False)
 
 
 def deserialise(tp, d):

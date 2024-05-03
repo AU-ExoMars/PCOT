@@ -4,9 +4,8 @@ and each input will know how to generate useful information from that source.
 """
 import math
 from abc import ABC, abstractmethod
-from typing import Optional, List, Set, SupportsFloat, Union, Iterable, Any, Tuple
+from typing import Optional, List, Set, SupportsFloat, Union, Iterable, Any, Tuple, Dict
 
-from pcot.dataformats.pds4 import PDS4Product
 from pcot.documentsettings import DocumentSettings
 from pcot.filters import Filter
 
@@ -20,254 +19,224 @@ class SourcesObtainable(ABC):
         pass
 
 
-class Source(SourcesObtainable):
-    """The base class for sources, with the exception of MultiBandSource which is only used in images.
-    This is abstract - the absolute minimum functionality is in NullSource."""
+class External:
+    """An external source, such as a file or a PDS4 product, so we can
+    print information about it in the long descriptor. The most basic
+    subclass of this is StringExternal, which just has a string label.
+    """
 
-    @abstractmethod
+    def __init__(self):
+        """Initialise"""
+        pass
+
+    def brief(self):
+        """Get a brief description of where the data comes from. Very short indeed, like "PDS4" or "ENVI" """
+        pass
+
+    def long(self):
+        """Get a longer description of where the data comes from"""
+        pass
+
+    def debug(self):
+        """Get a debug string, for testing"""
+        pass
+
+    def serialise(self):
+        """Serialise to a tuple including the type"""
+        pass
+
+    @staticmethod
+    def deserialise(tup: Tuple[str, Any]):
+        """Deserialise from a tuple"""
+        t, data = tup
+
+        if t == 'external':  # this is a string external, really two strings.
+            e = StringExternal(data[0], data[1])
+        elif t == 'pds4':
+            from pcot.dataformats.pds4 import PDS4External
+            e = PDS4External.deserialise(data)
+        else:
+            raise ValueError(f"Unknown external source type {t} in Source External deserialise")
+        return e
+
+
+class StringExternal(External):
+    """The most basic external type - just a string label we can add to sources to give
+    more information"""
+    _brief: str
+    _long: str
+
+    def __init__(self, brief: str, long: str):
+        super().__init__()
+        self._brief = brief
+        self._long = long
+
+    def brief(self):
+        return self._brief
+
+    def long(self):
+        return self._long
+
+    def debug(self):
+        """Get a debug string, for testing - it's OK for this to just be the brief string"""
+        return self._brief
+
+    def serialise(self):
+        return 'external', (self._brief, self._long)
+
+
+class Source(SourcesObtainable):
+    """A source object describing where a piece of data comes from. These can get combined into source sets
+    if a datum comes from more than one source. What the source actually is depends on which members are
+    not None:
+
+    - band: if the source is an image, this is the Filter object or just a string if there is no filter (e.g.
+        "R" for red)
+    - external: if the source is from outside PCOT, this object has a getstr() method to describe it.
+    - inputIdx: if the source is an input, this is the index of the input.
+
+    If all of these are None, it's a "null source" often used for dummy data.
+    """
+
+    band: Union[Filter, None, str]  # if an image this could be either a filter or a band name (e.g. "R" for red)
+    external: Optional[External]  # an external source object (file or pds4 product) or None
+    inputIdx: Optional[int]  # the index of the input, if this is an input source
+
+    def __init__(self):
+        """Initialise to a null source"""
+        self.band = None
+        self.external = None
+        self.inputIdx = None
+
+    # fluent setters
+    def setBand(self, b: Union[Filter, str, None]):
+        """Set the band for sources which come from images. If None, it's either not an image or it's mono."""
+        self.band = b
+        return self
+
+    def setExternal(self, e: Optional[External]):
+        """Set the external source"""
+        self.external = e
+        return self
+
+    def setInputIdx(self, i: int):
+        """Set the input index"""
+        self.inputIdx = i
+        return self
+
     def copy(self):
         """Return a reasonably deep copy of the source"""
-        pass
+        return Source().setBand(self.band) \
+            .setExternal(self.external) \
+            .setInputIdx(self.inputIdx)
 
     def matches(self, inp, bandNameOrCWL, hasBand):
         """Returns true if the input index matches this source (if not None) and the band matches this source (if not none).
         None values are ignored, so passing "inp" of None will mean the input index is not checked.
-        Default implementation matches nothing."""
-        return False
+        """
+        if hasBand is not None:
+            if hasBand and not self.band:
+                return False
+            if not hasBand and self.band:
+                return False
+        if inp is not None:
+            if self.inputIdx != inp:
+                return False
+        if bandNameOrCWL:
+            if isinstance(bandNameOrCWL, str):
+                name = self.band.name if isinstance(self.band, Filter) else self.band
+                pos = self.band.position if isinstance(self.band, Filter) else None
+                if name != bandNameOrCWL and pos != bandNameOrCWL:
+                    return False
+            elif isinstance(bandNameOrCWL, SupportsFloat):  # this is OK, SupportsFloat is a runtime chkable protocol
+                if not isinstance(self.band, Filter) \
+                        or not math.isclose(bandNameOrCWL, self.band.cwl):
+                    return False
+        return True
 
-    def getFilter(self):
-        """return any filter"""
-        return None
+    def isNull(self):
+        """Returns true if this is a null source"""
+        return self.band is None and self.external is None and self.inputIdx is None
 
     def getSources(self):
         """return a set of all sources"""
         return SourceSet(self)
 
-    def getPDS4(self):
-        """If a PDS4 product, get its PDS4Product - this will have the LID"""
-        return None
+    def getFilter(self):
+        """check that a the source is an image with a filter, and return the filter if so. Otherwise return None"""
+        return self.band if isinstance(self.band, Filter) else None
 
-    @abstractmethod
+    def debug(self):
+        """Return a string for debugging and tests - we don't use brief() here, because it's possible that brief()
+        could change a lot and we don't want to have to update all tests when it does."""
+
+        inpidx = str(self.inputIdx) if self.inputIdx is not None else "NI"
+        ext = self.external.debug() if self.external else "NE"
+        band = self.band.getCaption(DocumentSettings.CAP_CWL) if isinstance(self.band, Filter) else self.band
+        if band is None:
+            band = "NB"
+
+        return ",".join([inpidx, ext, band])
+
     def brief(self, captionType=DocumentSettings.CAP_DEFAULT) -> Optional[str]:
         """Return a brief string to be used in captions, etc. If null, is filtered out"""
-        pass
 
-    @abstractmethod
+        # The brief consists of three elements separated by colons:
+        # - the input index, if not None
+        # - the external source, if not None
+        # - the band, if not None
+
+        lst = [self.inputIdx,
+               self.external.brief() if self.external else None,
+               self.band.getCaption(captionType) if isinstance(self.band, Filter) else self.band]
+
+        # filter out the Nones and convert to strings
+        lst = [str(x) for x in lst if x is not None]
+        # and return the elements joined by colons
+        return ":".join(lst)
+
     def long(self) -> Optional[str]:
         """Return a longer text, possibly with line breaks"""
-        pass
-
-    @abstractmethod
-    def serialise(self) -> Tuple[str, Any]:
-        """return type and serialisation data - deserialisation is done in SourceSet"""
-        pass
-
-
-def getFiltStr(filt, captionType=DocumentSettings.CAP_DEFAULT):
-    if captionType == DocumentSettings.CAP_POSITIONS:  # 0=Position
-        cap = filt.position
-    elif captionType == DocumentSettings.CAP_NAMES:  # 1=Name
-        cap = filt.name
-    elif captionType == DocumentSettings.CAP_CWL:  # 2=Wavelength
-        cap = str(int(filt.cwl))
-    else:
-        cap = f"CAPBUG-{captionType}"  # if this appears captionType is out of range.
-    return cap
-
-
-class FilterOnlySource(Source):
-    """This is for "sources" where there isn't a source, the data has come from inside the program
-    BUT there is some fictive (probably) filter data, such as sources generated by a 'gen' node."""
-
-    def __init__(self, filtOrName=None, extraName=None):
-        """Constructor takes an optional filter or name. The 'extraname' parameter is prepended to
-         the source, and helps disambiguate - in a gen node, for example, it comes from the node's
-         displayName."""
-        self.filterOrName = filtOrName
-        self.extraName = extraName
-
-    def getFilter(self):
-        return self.filterOrName if isinstance(self.filterOrName, Filter) else None
-
-    def long(self) -> Optional[str]:
-        """See above - None gets filtered out of text information"""
-        pre = None if self.extraName is None else f"{self.extraName}: "
-        if isinstance(self.filterOrName, Filter):
-            return f"{pre}wavelength {int(self.filterOrName.cwl)}, fwhm {int(self.filterOrName.fwhm)}"
+        inptxt = f"{self.inputIdx}" if self.inputIdx is not None else "none"
+        if self.band is None:
+            s = f"{inptxt}:"
+        elif isinstance(self.band, Filter):
+            s = f"{inptxt}: wavelength {int(self.band.cwl)}, fwhm {int(self.band.fwhm)}"
         else:
-            return f"{pre}band {self.filterOrName}"
-
-    def brief(self, captionType=DocumentSettings.CAP_DEFAULT) -> Optional[str]:
-        pre = "" if self.extraName is None else f"{self.extraName}:"
-        if isinstance(self.filterOrName, Filter):
-            return f"{pre}{getFiltStr(self.filterOrName, captionType)}"
-        else:
-            return f"{pre}{self.filterOrName}"
-
-    def copy(self):
-        """not actually a copy, but this is immutable anyway"""
-        return self
-
-    def matches(self, _, filterNameOrCWL, hasFilter):
-        """return true if the source matches ALL the non-None criteria"""
-        if hasFilter is not None:
-            if hasFilter and not self.getFilter():
-                return False
-            if not hasFilter and self.getFilter():
-                return False
-        if filterNameOrCWL:
-            if isinstance(filterNameOrCWL, str):
-                name = self.filterOrName.name if isinstance(self.filterOrName, Filter) else self.filterOrName
-                pos = self.filterOrName.position if isinstance(self.filterOrName, Filter) else None
-                if name != filterNameOrCWL and pos != filterNameOrCWL:
-                    return False
-            elif isinstance(filterNameOrCWL, SupportsFloat):  # this is OK, SupportsFloat is a runtime chkable protocol
-                if not isinstance(self.filterOrName, Filter) \
-                        or not math.isclose(filterNameOrCWL, self.filterOrName.cwl):
-                    return False
-        return True
-
-    def serialise(self):
-        # deserialisation is done in SourceSet
-
-        if isinstance(self.filterOrName, Filter):
-            filtorname = ('filter', self.filterOrName.serialise())
-        elif isinstance(self.filterOrName, str):
-            filtorname = ('name', self.filterOrName)
-        else:
-            raise Exception(f"cannot serialise a {type(self.filterOrName)} as a filter")
-
-        d = {
-            'filtorname': filtorname
-        }
-        return 'filtersource', d
-
-
-class NullSource(Source):
-    """This is for "sources" where there isn't a source, the data has come from inside the program AND
-    there is no filter data.
-    Typically this will get filtered out when we print the sources or perhaps earlier."""
-
-    def brief(self, captionType=DocumentSettings.CAP_DEFAULT) -> Optional[str]:
-        """return a brief string for use in captions - this will just return None, which will
-        be filtered out when used in such captions."""
-        return None
-
-    def long(self) -> Optional[str]:
-        """See above - None gets filtered out of text information"""
-        return None
-
-    def copy(self):
-        """not actually a copy, but this is immutable anyway"""
-        return self
-
-    def serialise(self):
-        return 'nullsource', None
-
-
-class InputSource(Source):
-    """A basic source for a single band of an image or a non-image value.
-    This is for things which actually come from an Input. Designed so that two Source objects
-    with the same document, filter and input index are the same."""
-
-    # if this is an filtered image band, reference to the filter; else a string for the band name
-    filterOrName: Union[Filter, str]
-    doc: 'Document'  # which document I'm associated with
-    inputIdx: int  # the index of the input within the document
-    input: 'Input'  # the actual input object
-    pds4: PDS4Product  # any PDS4 data
-
-    def __init__(self, doc, inputIdx, filterOrName, pds4: PDS4Product = None):
-        """This takes a document, inputIdx, and either a filter or a name"""
-        self.filterOrName = filterOrName
-        self.doc = doc
-        self.inputIdx = inputIdx
-        self.input = doc.inputMgr.inputs[inputIdx]
-        self.pds4 = pds4
-        # this is used for hashing and equality - should be the same for two identical sources
-        filtID = self.filterOrName.cwl if isinstance(self.filterOrName, Filter) else self.filterOrName
-        self._uniqid = f"{id(self.doc)}/{self.inputIdx}/{filtID}"
-
-    def getFilter(self):
-        """return the filter if there really is one, else none"""
-        return self.filterOrName if isinstance(self.filterOrName, Filter) else None
-
-    def getPDS4(self):
-        """return any associated PDS4 data"""
-        return self.pds4
-
-    def copy(self):
-        return InputSource(self.doc, self.inputIdx, self.filterOrName, pds4=self.pds4)
-
-    def __eq__(self, other: Source):
-        if isinstance(other, InputSource):
-            return self._uniqid == other._uniqid
-        else:
-            return False
-
-    def __hash__(self):
-        return hash(self._uniqid)
-
-    def __str__(self):
-        """Return a full internal string representation, used in debugging"""
-        return f"SOURCE-{self._uniqid}"
-
-    def brief(self, captionType=DocumentSettings.CAP_DEFAULT) -> Optional[str]:
-        """return a brief string representation, used in image captions"""
-        inptxt = self.input.brief()
-        if isinstance(self.filterOrName, Filter):
-            cap = getFiltStr(self.filterOrName, captionType)
-            return f"{inptxt}:{cap}"
-        else:
-            return f"{inptxt}:{self.filterOrName}"
-
-    def long(self):
-        inptxt = self.input.long()
-        if isinstance(self.filterOrName, Filter):
-            s = f"{inptxt}: wavelength {int(self.filterOrName.cwl)}, fwhm {int(self.filterOrName.fwhm)}"
-        else:
-            s = f"{inptxt}: band {self.filterOrName}"
-        if self.getPDS4():
-            s += f" {self.getPDS4().lid}"
+            s = f"{inptxt}: band {self.band}"
+        if self.external is not None:
+            s += f" {self.external.long()}"
         return s
 
-    def matches(self, inp, filterNameOrCWL, hasFilter):
-        """return true if the source matches ALL the non-None criteria"""
-        if inp and inp != self.inputIdx:
-            return False
-        if hasFilter is not None:
-            if hasFilter and not self.getFilter():
-                return False
-            if not hasFilter and self.getFilter():
-                return False
-        if filterNameOrCWL:
-            if isinstance(filterNameOrCWL, str):
-                name = self.filterOrName.name if isinstance(self.filterOrName, Filter) else self.filterOrName
-                pos = self.filterOrName.position if isinstance(self.filterOrName, Filter) else None
-                if name != filterNameOrCWL and pos != filterNameOrCWL:
-                    return False
-            elif isinstance(filterNameOrCWL, SupportsFloat):  # this is OK, SupportsFloat is a runtime chkable protocol
-                if not isinstance(self.filterOrName, Filter) \
-                        or not math.isclose(filterNameOrCWL, self.filterOrName.cwl):
-                    return False
-        return True
-
-    def serialise(self):
-        # deserialisation is done in SourceSet
-
-        if isinstance(self.filterOrName, Filter):
-            filtorname = ('filter', self.filterOrName.serialise())
-        elif isinstance(self.filterOrName, str):
-            filtorname = ('name', self.filterOrName)
-        else:
-            raise Exception(f"cannot serialise a {type(self.filterOrName)} as a filter")
-
-        d = {
-            'filtorname': filtorname,
-            'inputidx': self.inputIdx,
-            'pds4': None if self.pds4 is None else self.pds4.serialise()
+    def serialise(self) -> Dict[str, Any]:
+        """return type and serialisation data"""
+        return {
+            'band': self.band.serialise() if isinstance(self.band, Filter) else self.band,
+            'external': self.external.serialise() if self.external else None,
+            'inputIdx': self.inputIdx
         }
-        return 'inputsource', d
+
+    @staticmethod
+    def deserialise(d: Dict[str, Any]):
+        """Deserialise from a dictionary"""
+        import pcot.ui as ui
+        if isinstance(d, List):
+            # legacy format
+            ui.log("Legacy format for sources not supported - please Run All to regenerate")
+            return Source().setExternal(StringExternal("ERROR", "Legacy format for sources not supported"))
+
+        b = Filter.deserialise(d['band']) if isinstance(d['band'], list) else d['band']
+        e = External.deserialise(d['external']) if d['external'] else None
+        i = d['inputIdx']
+        return Source().setBand(b).setExternal(e).setInputIdx(i)
+
+    def __eq__(self, other):
+        if not isinstance(other, Source):
+            return False
+        return self.band == other.band and self.external == other.external and self.inputIdx == other.inputIdx
+
+    def __hash__(self):
+        return hash(self.long())
 
 
 class SourceSet(SourcesObtainable):
@@ -297,13 +266,16 @@ class SourceSet(SourcesObtainable):
         self.stripNullSources()
 
     def stripNullSources(self):
-        """Removes null sources from the set"""
-        self.sourceSet = {x for x in self.sourceSet if x is not None and not isinstance(x, NullSource)}
+        """Removes null sources from the set and return self"""
+        self.sourceSet = {x for x in self.sourceSet if x is not None and not x.isNull()}
+        return self
 
     def add(self, other: 'SourceSet'):
-        """add a source set to this one (i.e. this source set will become a union of irself and the other)"""
+        """add a source set to this one (i.e. this source set will become a
+        union of irself and the other). Returns self"""
         self.sourceSet |= other.sourceSet
         self.stripNullSources()
+        return self
 
     def copy(self):
         return SourceSet([x.copy() for x in self.sourceSet])
@@ -318,10 +290,15 @@ class SourceSet(SourcesObtainable):
         x = [x.brief(captionType) for x in self.sourceSet]
         return "&".join(sorted([s for s in x if s]))
 
+    def debug(self):
+        """debugging text description"""
+        x = [x.debug() for x in self.sourceSet]
+        return " & ".join(sorted([s for s in x if s]))
+
     def long(self):
         x = [x.long() for x in self.sourceSet]
         lst = "\n".join(sorted([s for s in x if s]))
-        return f"SET[\n{lst}\n]\n"
+        return f"SET[\n{lst}\n]"
 
     def matches(self, inp=None, filterNameOrCWL=None, single=False, hasFilter=None, all_match=False):
         """Returns true if ANY source in the set matches ALL the criteria; or if all_match is true if ALL
@@ -353,6 +330,11 @@ class SourceSet(SourcesObtainable):
     def __contains__(self, item):
         return self.sourceSet.__contains__(item)
 
+    def __eq__(self, other):
+        if not isinstance(other, SourceSet):
+            return False
+        return self.sourceSet == other.sourceSet
+
     def getOnlyItem(self):
         """return singleton item"""
         assert len(self.sourceSet) == 1
@@ -369,29 +351,8 @@ class SourceSet(SourcesObtainable):
 
     @classmethod
     def deserialise(cls, lst, document) -> 'SourceSet':
-        out = []
-        for tp, d in lst:
-            if tp == 'nullsource':
-                v = nullSource
-            elif tp == 'inputsource':
-                pds4 = None if d['pds4'] is None else PDS4Product.deserialise(d['pds4'])
-                forntype, filtdata = d['filtorname']
-                if forntype == 'filter':
-                    filt = Filter.deserialise(filtdata)
-                else:
-                    filt = filtdata
-
-                v = InputSource(document,
-                                d['inputidx'],
-                                filt,
-                                pds4)
-            elif tp == 'filtersource':
-                filt = Filter.deserialise(d['filtorname'])
-                v = FilterOnlySource(filt)
-            else:
-                raise Exception(f"Bad type in sourceset serialisation data: {tp}")
-            out.append(v)
-        return cls(out)
+        ss = [Source.deserialise(x) for x in lst]
+        return cls(ss)
 
 
 class MultiBandSource(SourcesObtainable):
@@ -429,8 +390,15 @@ class MultiBandSource(SourcesObtainable):
         return cls(sets)
 
     def add(self, s):
-        """add a band's sources to this one"""
+        """add a band's sources to this one. Returns self."""
         self.sourceSets.append(s)
+        return self
+
+    def addSetToAllBands(self, s: SourceSet):
+        """Given a SourceSet, add that set as a source to all bands. Returns self"""
+        for ss in self.sourceSets:
+            ss.add(s)
+        return self
 
     def copy(self):
         """Make a fairly deep copy of the source sets"""
@@ -467,6 +435,11 @@ class MultiBandSource(SourcesObtainable):
         out = [s.brief() for s in self.sourceSets]
         return "|".join(out)
 
+    def debug(self):
+        """Debug text description"""
+        out = [s.debug() for s in self.sourceSets]
+        return " | ".join(out)
+
     def long(self):
         txts = [f"{i}: {s.long()}" for i, s in enumerate(self.sourceSets)]
         s = "\n".join(txts)
@@ -501,5 +474,5 @@ class MultiBandSource(SourcesObtainable):
 # Standard null sources: use these to avoid the creation of lots of identical objects
 # when you just want a null source without filter.
 
-nullSource = NullSource()
+nullSource = Source()
 nullSourceSet = SourceSet(nullSource)

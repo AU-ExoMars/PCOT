@@ -20,6 +20,13 @@
       <widget class="QTreeView" name="treeView"/>
      </item>
      <item>
+      <widget class="QPushButton" name="selDirButton">
+       <property name="text">
+        <string>Select Directory</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QLineEdit" name="fileEdit"/>
      </item>
     </layout>

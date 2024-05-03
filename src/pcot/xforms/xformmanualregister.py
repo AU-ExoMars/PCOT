@@ -104,7 +104,7 @@ class XFormManualRegister(XFormType):
         self.autoserialise = ('showSrc', 'showDest', 'src', 'dest', 'translate')
 
     def init(self, node):
-        node.img = None
+        node.img = None     # this is one of the few nodes which does store .img in the node
         node.imagemode = IMAGEMODE_SOURCE
         node.showSrc = True
         node.showDest = True
@@ -243,6 +243,9 @@ class XFormManualRegister(XFormType):
 
     def createTab(self, n, w):
         return TabManualReg(n, w)
+
+    def clearData(self, xform):
+        xform.canvimg = None
 
 
 class TabManualReg(pcot.ui.tabs.Tab):

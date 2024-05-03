@@ -3,7 +3,7 @@ from typing import Tuple, Optional, Union
 import numpy as np
 
 from pcot import dq
-from pcot.imagecube import SubImageCubeROI
+from pcot.imagecube import SubImageCube
 
 # number of points in lookup table
 from pcot.value import Value
@@ -21,7 +21,7 @@ def genLut(m, c):
 
 
 # noinspection PyUnreachableCode
-def doCurve(m, c, subimage: SubImageCubeROI, lut):
+def doCurve(m, c, subimage: SubImageCube, lut):
     newimg = subimage.masked().copy()
     newimg = np.interp(newimg, lutxcoords, lut).astype(np.float32)
 
@@ -43,7 +43,7 @@ def doCurve(m, c, subimage: SubImageCubeROI, lut):
     return newimg, newunc, newdqs
 
 
-def curve(subimage: SubImageCubeROI, mul: Union[Value, float], add: Union[Value, float]) -> \
+def curve(subimage: SubImageCube, mul: Union[Value, float], add: Union[Value, float]) -> \
         Tuple[np.array, np.array, np.array]:
     # TODO UNCERTAINTY
     mul = mul.n if isinstance(mul, Value) else mul

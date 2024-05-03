@@ -1,21 +1,19 @@
 ## the RGB file input method
 import logging
-import os
 from typing import Optional
 
-import pcot.ui as ui
-from .inputmethod import InputMethod
-from pcot.imagecube import ImageCube, ChannelMapping
+from pcot.imagecube import ChannelMapping
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import TreeMethodWidget
+from .inputmethod import InputMethod
+from ..dataformats import load
 from ..datum import Datum
-from ..sources import MultiBandSource, InputSource
 
 logger = logging.getLogger(__name__)
 
 
 class RGBInputMethod(InputMethod):
-    img: Optional[ImageCube]
+    img: Optional[Datum]
     fname: Optional[str]
     mapping: ChannelMapping
 
@@ -28,23 +26,14 @@ class RGBInputMethod(InputMethod):
     def loadImg(self):
         # will throw exception if load failed
         logger.info("RGB PERFORMING FILE READ")
-
-        doc = self.input.mgr.doc
-        inpidx = self.input.idx
-
-        # might seem a bit wasteful having three of them, but seems more logical to me.
-        sources = MultiBandSource([InputSource(doc, inpidx, 'R'),
-                                   InputSource(doc, inpidx, 'G'),
-                                   InputSource(doc, inpidx, 'B')])
-
-        img = ImageCube.load(self.fname, self.mapping, sources)
-        ui.log("Image {} loaded: {}".format(self.fname, img))
-        self.img = img
+        self.img = load.rgb(self.fname,
+                            self.input.idx if self.input else None,
+                            self.mapping)
 
     def readData(self):
         if self.img is None and self.fname is not None:
             self.loadImg()
-        return Datum(Datum.IMG, self.img)
+        return self.img
 
     def getName(self):
         return "RGB"
@@ -53,27 +42,28 @@ class RGBInputMethod(InputMethod):
     def setFileName(self, fname):
         self.fname = fname
         self.mapping = ChannelMapping()
+        return self
 
     def createWidget(self):
         return RGBMethodWidget(self)
 
+    # We actually serialise and deserialise the imagecube, not the containing datum.
+
     def serialise(self, internal):
         x = {'fname': self.fname}
         if internal:
-            x['image'] = self.img
+            x['image'] = self.img.get(Datum.IMG) if self.img is not None else None
         Canvas.serialise(self, x)
         return x
 
     def deserialise(self, data, internal):
         self.fname = data['fname']
         if internal:
-            self.img = data['image']
+            x = data['image']
+            self.img = Datum(Datum.IMG, x) if x is not None else None
         else:
             self.img = None   # ensure image is reloaded
         Canvas.deserialise(self, data)
-
-    def long(self):
-        return f"RGB:{self.fname}"
 
 
 class RGBMethodWidget(TreeMethodWidget):

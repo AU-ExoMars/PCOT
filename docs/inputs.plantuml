@@ -20,11 +20,11 @@ InputManager *--o "4" Input : inputs
 
 Input *--o "0..*" InputMethod : methods
 
-InputMethod <|-- MultifileInput
-InputMethod <|-- RGBInput
-InputMethod <|-- NullInput
-InputMethod <|-- ENVIInput
-InputMethod <|-- PDS4Input
+InputMethod <|-- "XXXInputMethod"
+note left: Lots of these (well, five)
+
+InputMethod o-- Input : input
+InputMethod *-- Datum : data
 
 XFormGraph *-- "0..*" XForm: nodes
 XFormInput ..> Input: "reads from"

@@ -43,7 +43,7 @@ def test_make_unc():
     pcot.setup()
     doc = Document()
     node = numberWithUncNode(doc, 1, 3)
-    doc.changed()
+    doc.run()
     n = node.getOutput(0, Datum.NUMBER)
     assert n is not None
     assert n.n == 1
@@ -57,7 +57,7 @@ def check_op_test(doc, t, expr, origimg):
     different binops do it differently (e.g. max, min). There's another test for that.
     """
 
-    doc.changed()
+    doc.run()
     img = expr.getOutput(0, Datum.IMG)  # has to be an image!
     assert img is not None
 
@@ -148,7 +148,7 @@ def test_number_unops(t):
     expr = doc.graph.create("expr")
     expr.expr = t.e
     expr.connect(0, node, 0, autoPerform=False)
-    doc.changed()
+    doc.run()
     n = expr.getOutput(0, Datum.NUMBER)
     assert n is not None
     assert n.n == pytest.approx(t.expected_val)
@@ -266,7 +266,7 @@ def test_number_number_binops(t):
     expr.connect(1, nodeB, 0, autoPerform=False)
 
     logger.warning(f"Testing {t.e} : a={t.a}±{t.ua}, b={t.b}±{t.ub} ----------------------------------------------")
-    doc.changed()
+    doc.run()
     n = expr.getOutput(0, Datum.NUMBER)
     assert n is not None
     assert n.n == pytest.approx(t.expected_val)
@@ -391,7 +391,7 @@ def test_image_image_binops_noroi(t):
 
     logger.warning(f"Testing {t.e} : a={t.a}±{t.ua}, b={t.b}±{t.ub} ----------------------------------------------")
 
-    doc.changed()
+    doc.run()
     img = expr.getOutput(0, Datum.IMG)  # has to be an image!
     assert img is not None
 
@@ -512,7 +512,7 @@ def test_dq_propagation_images(t):
     expected_n = pytest.approx(t.expected_val)
     expected_u = pytest.approx(t.expected_unc)
 
-    doc.changed()
+    doc.run()
 
     if t.a_scalar and t.b_scalar:
         val = expr.getOutput(0, Datum.NUMBER)

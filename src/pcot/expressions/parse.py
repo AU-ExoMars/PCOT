@@ -8,11 +8,10 @@ import numbers
 import logging
 
 from io import BytesIO
-from tokenize import tokenize, TokenInfo, NUMBER, NAME, OP, ENCODING, ENDMARKER, NEWLINE, ERRORTOKEN, PERCENT, DOT
+from tokenize import tokenize, TokenInfo, NUMBER, NAME, OP, ENCODING, ENDMARKER, NEWLINE, ERRORTOKEN, PERCENT, DOT, STRING
 
 from typing import List, Any, Optional, Callable, Dict, Tuple, Union
 
-from pcot import datum
 from pcot.datum import Datum
 from pcot.datumtypes import Type
 from pcot.sources import nullSourceSet
@@ -115,9 +114,7 @@ class Function:
         self.mandatoryParams = mandatoryParams
         self.optParams = optParams
         self.varargs = varargs
-        if self.varargs and len(self.mandatoryParams) == 0:
-            raise ArgsException("cannot have a function with varargs but no mandatory arguments")
-        elif self.varargs and len(self.optParams) > 0:
+        if self.varargs and len(self.optParams) > 0:
             raise ArgsException("cannot have a function with varargs and optional arguments")
 
     def help(self):
@@ -146,15 +143,18 @@ class Function:
         return s
 
     def chkargs(self, args: List[Optional[Datum]]):
-        """Process arguments, returning a pair of lists of Datum items: mandatory and optional args.
-        Takes two lists: one of tuples of permitted types of mandatory values (none of which can be None) and another of pairs of
-        type tuple, defaultvalue for optional args"""
+        """Process arguments, returning a pair of lists of Datum items: mandatory and optional args."""
         mandatArgs = []
         optArgs = []
         lastparam = None
+
+        if self.mandatoryParams is None:
+            return args  # no type checking, just pass all args straight through
+
         try:
-            if self.mandatoryParams is None:
-                return args  # no type checking, just pass all args straight through
+            # consume the mandatory arguments, popping them off the front of the list
+            # and checking that they are of the correct type. Each is then appended to
+            # the mandatArgs list.
             for t in self.mandatoryParams:
                 if len(args) == 0:
                     raise ArgsException('Not enough arguments in {}'.format(self.name))
@@ -168,20 +168,29 @@ class Function:
                         'Bad argument in {}, got {}, expected {}'.format(self.name, x.tp, t.validArgsString()))
                 lastparam = t
 
+            # if we have varargs, consume all remaining arguments, no type checks(!)
+
             if self.varargs:
-                # varargs flag set - consume remaining args, using the last mandatory argument type
+                # varargs flag set - consume remaining args
                 while len(args) > 0:
                     x = args.pop(0)
-                    if lastparam.isValid(x):
-                        mandatArgs.append(x)
-                    else:
-                        raise ArgsException(
-                            'Bad argument in {}, got {}, expected {}'.format(self.name, x.tp,
-                                                                             lastparam.validArgsString()))
+                    mandatArgs.append(x)
+
+            # mandatory and varargs have now been processed - note that varargs and optional args are
+            # not compatible with each other; if we have varargs, we can't have optional args - all arguments
+            # will have been consumed by this point.
 
             for t in self.optParams:
+                # process the next optional argument
                 if len(args) == 0:
-                    optArgs.append(Datum(Datum.NUMBER, Value(t.getDefault(), 0.0), nullSourceSet))
+                    # there are no arguments left, so we need to use the default value
+                    deflt = t.getDefault()
+                    if isinstance(deflt, numbers.Number):
+                        optArgs.append(Datum(Datum.NUMBER, Value(deflt, 0.0), nullSourceSet))
+                    elif isinstance(deflt, str):
+                        optArgs.append(Datum(Datum.STRING, deflt, nullSourceSet))
+                    else:
+                        raise ArgsException("Internal error: parameter defaults should be numeric or string")
                 else:
                     x = args.pop(0)
                     if x is None:
@@ -201,7 +210,9 @@ class Function:
         """do type checking for arguments, then call this function.
         Note that we pass mandatory and optional arguments"""
         args, optargs = self.chkargs(args)
-        return self.fn(args, optargs)
+        r = self.fn(args, optargs)
+        # return the result, or Datum.null if the returned value is None
+        return r if r is not None else Datum.null
 
 
 class Instruction:
@@ -233,6 +244,20 @@ class InstIdent(Instruction):
 
     def exec(self, stack: Stack):
         stack.append(Datum(Datum.IDENT, self.val, nullSourceSet))
+
+    def __str__(self):
+        return "IDENT {}".format(self.val)
+
+
+class InstString(Instruction):
+    """A VM instruction for stacking a string"""
+    val: str
+
+    def __init__(self, v: str):
+        self.val = v
+
+    def exec(self, stack: Stack):
+        stack.append(Datum(Datum.STRING, self.val, nullSourceSet))
 
     def __str__(self):
         return "STR {}".format(self.val)
@@ -367,6 +392,13 @@ def isOp(t):
     return t.type in [OP, ERRORTOKEN, PERCENT, DOT]
 
 
+def dequote(s):
+    """Remove quotes from a string if it's quoted and the quotes match"""
+    if (len(s) >= 2 and s[0] == s[-1]) and s.startswith(("'", '"')):
+        return s[1:-1]
+    return s
+
+
 class Parser:
     """Expression parser using the shunting algorithm, also incorporating the virtual machine for evaluation"""
     list: List[TokenInfo]
@@ -485,7 +517,7 @@ class Parser:
             if f.varargs:
                 ps += "..."
             t.add("params", ps)
-            t.add("opt. params", ",".join([p.name for p in f.optParams]))
+            t.add("opt. params (default in brackets)", ",".join([f"{p.name} ({p.deflt})" for p in f.optParams]))
             t.add("description", f.desc)
         return t.markdown()
 
@@ -564,6 +596,10 @@ class Parser:
                 #     goto have_operand
                 elif t.type == NUMBER:
                     self.out(InstNumber(float(t.string)))
+                    wantOperand = False
+                elif t.type == STRING:
+
+                    self.out(InstString(dequote(t.string)))
                     wantOperand = False
                 elif t.type == NAME:
                     if t.string in self.varRegistry:

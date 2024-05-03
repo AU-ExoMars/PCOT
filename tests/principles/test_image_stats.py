@@ -16,7 +16,7 @@ def runop(doc, img, e, expectedn, expectedu):
     expr.expr = e
     expr.connect(0, green, 0, autoPerform=False)
 
-    doc.changed()
+    doc.run()
     out = expr.getOutput(0, Datum.NUMBER)
     assert isclose(out.n, expectedn, abs_tol=1e-6)
     assert isclose(out.u, expectedu, abs_tol=1e-6)

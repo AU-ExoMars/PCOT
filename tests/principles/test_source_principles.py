@@ -2,11 +2,10 @@
 through the graph"""
 
 import pcot
-from basic.test_sources import SimpleTestSource
 from fixtures import *
 from pcot.datum import Datum
 from pcot.document import Document
-from pcot.sources import SourceSet, InputSource
+from pcot.sources import SourceSet, Source, StringExternal
 from pcot.value import Value
 from pcot.xform import XFormException
 
@@ -19,7 +18,7 @@ def envi_img(envi_image_1):
     assert doc.setInputENVI(0, envi_image_1) is None
 
     node = doc.graph.create("input 0")
-    doc.changed()
+    doc.run()
     img = node.getOutput(0, Datum.IMG)
     assert img is not None
     return img
@@ -45,10 +44,10 @@ def test_greyscale_sources(envi_img: ImageCube):
     # Note that we have to specify a source for the numeric value (it's ignored by the function, which
     # might seem odd given the Rules, but it only determines a mode and almost never comes from outside).
     # Since this is a slightly edge behaviour I'll test for it.
-    nsource = SimpleTestSource("numbersource")  # numbers need explicit sources, so I'll fake one up
+    nsource = Source().setExternal(StringExternal("numbersource", "numbersource"))  # numbers need explicit sources, so I'll fake one up
 
-    from pcot.expressions.builtins import funcGrey
-    d = funcGrey([Datum(Datum.IMG, envi_img)], [Datum(Datum.NUMBER, Value(0, 0), nsource)])
+    from pcot.datumfuncs import grey
+    d = grey(Datum(Datum.IMG, envi_img), Datum(Datum.NUMBER, Value(0), sources=nsource))
     img = d.get(Datum.IMG)
     assert img.channels == 1  # single channel
     assert len(img.sources) == 1  # and therefore a single sourceset
@@ -83,7 +82,7 @@ def test_greyscale_sources_expr(envi_image_1):
     # connect input 0 on self to output 0 in the input node
     exprNode.connect(0, inputNode, 0)
 
-    doc.changed()
+    doc.run()
     img = exprNode.getOutput(0, Datum.IMG)
     assert img is not None
 
@@ -122,7 +121,7 @@ def test_extract_sources(envi_image_1):
     # connect input 0 on self to output 0 in the input node
     exprNode.connect(0, inputNode, 0)
 
-    doc.changed()
+    doc.run()
     img = exprNode.getOutput(0, Datum.IMG)
     assert img is not None
     assert len(img.sources) == 1
@@ -144,14 +143,14 @@ def test_extract_by_band():
     expr = doc.graph.create("expr")
     expr.expr = "a$_0"
     expr.connect(0,inp,0)
-    doc.changed()
+    doc.run()
 
     img = expr.getOutput(0, Datum.IMG)
     assert img is not None
     assert np.allclose(img.img[0][0], 0.1)
 
     expr.expr = "a$_4"
-    doc.changed()
+    doc.run()
     img = expr.getOutput(0, Datum.IMG)
     assert img is None
     assert isinstance(expr.error, XFormException)
@@ -172,7 +171,7 @@ def test_binop_2images(envi_image_1, envi_image_2):
     exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
     exprNode.connect(1, inputNode2, 0)  # expr:1 <- input2:0
 
-    doc.changed()
+    doc.run()
     img = exprNode.getOutput(0, Datum.IMG)
     assert img is not None
     assert isinstance(img.sources, MultiBandSource)
@@ -204,7 +203,7 @@ def test_binop_number_and_number(envi_image_1, envi_image_2):
     exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
     exprNode.connect(1, inputNode2, 0)  # expr:1 <- input2:0
 
-    doc.changed()
+    doc.run()
     datum = exprNode.getOutputDatum(0)  # don't actually care what the answer is - we just want to check the sources.
     assert isinstance(datum.sources, SourceSet)
     assert len(datum.sources) == 8  # 2 images with 4 bands
@@ -233,7 +232,7 @@ def test_binop_image_and_number(envi_image_1, envi_image_2):
     exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
     exprNode.connect(1, inputNode2, 0)  # expr:1 <- input2:0
 
-    doc.changed()
+    doc.run()
 
     img = exprNode.getOutput(0, Datum.IMG)
     assert img is not None
@@ -267,7 +266,7 @@ def test_binop_image_and_number2(envi_image_1, envi_image_2):
     exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
     exprNode.connect(1, inputNode2, 0)  # expr:1 <- input2:0
 
-    doc.changed()
+    doc.run()
 
     img = exprNode.getOutput(0, Datum.IMG)
     assert img is not None
@@ -299,7 +298,7 @@ def test_binop_image_and_number_literal(envi_image_1, envi_image_2):
     exprNode.expr = "a-20"  # subtract literal 20 from the mean of image A
     exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
 
-    doc.changed()
+    doc.run()
 
     img = exprNode.getOutput(0, Datum.IMG)
     assert img is not None
@@ -311,7 +310,7 @@ def test_binop_image_and_number_literal(envi_image_1, envi_image_2):
         # each channel's sources should be the relevant channel of A and the null source,
         # but the null source gets filtered out
         assert len(channelSourceSet) == 1
-        fromImage = [x for x in channelSourceSet if isinstance(x, InputSource)]
+        fromImage = [x for x in channelSourceSet if isinstance(x, Source)]
         fromConst = [x for x in channelSourceSet if x == nullSource]
         assert len(fromImage) == 1
         assert len(fromConst) == 0
@@ -329,7 +328,7 @@ def test_unop_image(envi_image_1):
     exprNode.expr = "-a"  # negate image
     exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
 
-    doc.changed()
+    doc.run()
 
     img = exprNode.getOutput(0, Datum.IMG)
     assert img is not None
@@ -353,7 +352,7 @@ def test_unop_number_from_image(envi_image_1):
     exprNode.expr = "-mean(a)"  # negate image mean
     exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
 
-    doc.changed()
+    doc.run()
 
     datum = exprNode.getOutputDatum(0)  # don't actually care what the answer is - we just want to check the sources.
     assert isinstance(datum.sources, SourceSet)

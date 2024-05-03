@@ -17,3 +17,7 @@ class XFormDummy(XFormType):
 
     def perform(self, n):
         pass
+
+    def deserialise(self, n, d):
+        # replace the node display name, so we know it's a dummy node but we also know what it was
+        n.displayName = "dummy ({})".format(d['displayName'])

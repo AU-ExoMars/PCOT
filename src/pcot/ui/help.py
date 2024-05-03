@@ -30,6 +30,26 @@ def markdownWrapper(s):
     return out
 
 
+def md2html(s):
+    """Convert a markdown string to HTML. This is used to convert the docstrings of XForms into
+    HTML for display in the app, but also in a few other places."""
+
+    # docstrings have whitespace at starts of lines, but we don't want to strip all of it - just
+    # the space common to all lines.
+    lines = s.split('\n')
+    headerspacelen = min([len(x) - len(x.strip()) for x in lines if len(x.strip()) > 0])
+    h = "\n".join([x[headerspacelen:] for x in lines])
+    h = markdownWrapper(h)
+    return h
+
+
+def showHelpDialog(parent, title, markdownText):
+    """Show markdown text in an Information box"""
+    txt = md2html(markdownText)
+    # show in a QMessageBox
+    QtWidgets.QMessageBox.information(parent, title, txt)
+
+
 def getHelpMarkdown(xt, errorState: XFormException = None, inApp=False):
     """generate Markdown help for both converting into in-app HTML display and
      generating external help files, given an XFormType and any error message. If inApp is true,
@@ -40,14 +60,8 @@ def getHelpMarkdown(xt, errorState: XFormException = None, inApp=False):
     else:
         h = xt.__doc__  # help doc comes from docstring
 
-    # docstrings have whitespace at starts of lines, but we don't want to strip all of it - just
-    # the space common to all lines.
-    lines = h.split('\n')
-    headerspacelen = min([len(x) - len(x.strip()) for x in lines if len(x.strip()) > 0])
+    h = md2html(h)
 
-    h = "\n".join([x[headerspacelen:] for x in lines])
-
-    h = markdownWrapper(h)
     s = f"# {xt.name}\n\n## Description\n\n{h}\n\n*****\n\n## Connections\n\n"
 
     # add connection data

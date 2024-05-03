@@ -2,7 +2,12 @@
 * conda activate pcot
 * poetry install
 
-Then you can just run it. Or if you want..
+Then you can just run it.
+
+NOTE: below this point is uncharted territory since a few releases ago. It MIGHT still work, it might not.
+It's best to use the above instructions.
+
+Or if you want to build a stand-alone executable:
 
 * pip3 install pyinstaller
 * cd pyInstaller

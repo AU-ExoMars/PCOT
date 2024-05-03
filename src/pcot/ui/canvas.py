@@ -254,12 +254,12 @@ class InnerCanvas(QtWidgets.QWidget):
         widgw = self.size().width()  # widget dimensions
         widgh = self.size().height()
         # here self.img is a numpy image
-        tt = Timer("paint", False)
+        tt = Timer("paint", enabled=False)
         if self.rgb is not None:
             imgh, imgw = self.rgb.shape[0], self.rgb.shape[1]
 
             # work out the "base scale" so that a zoomscale of 1 fits the entire
-            # image            
+            # image
             aspect = imgw / imgh
             if widgh * aspect > widgw:
                 self.scale = imgw / widgw
@@ -323,7 +323,8 @@ class InnerCanvas(QtWidgets.QWidget):
             p.save()
             p.scale(1 / self.getScale(), 1 / self.getScale())
             p.translate(-self.x, -self.y)
-            self.imgCube.drawAnnotationsAndROIs(p, onlyROI=rois)
+            # slightly mad chain of indirections to get the document alpha setting
+            self.imgCube.drawAnnotationsAndROIs(p, onlyROI=rois, alpha=self.canv.graph.doc.settings.alpha / 100.0)
             p.restore()
 
             tt.mark("annotations")
@@ -360,7 +361,7 @@ class InnerCanvas(QtWidgets.QWidget):
         if self.canv.isDQHidden:  # are DQs temporarily disabled?
             return img, txt
 
-        t = Timer("DQ", False)
+        t = Timer("DQ", enabled=False)
         for d in self.canv.canvaspersist.dqs:
             if d.isActive():
                 if d.data == canvasdq.DTypeUnc or d.data == canvasdq.DTypeUncGtThresh or \
@@ -423,6 +424,11 @@ class InnerCanvas(QtWidgets.QWidget):
 
                 if not flash or self.flashCycle:
                     zeroes = np.zeros(data.shape, dtype=float)
+                    data = data ** 2*d.contrast
+                    t.mark("contrast")
+                    # set the data opacity
+                    data *= 1 - d.trans
+                    t.mark("mult")
                     # here we 'tint' the data
                     r = data if r > 0.5 else zeroes
                     g = data if g > 0.5 else zeroes
@@ -430,11 +436,6 @@ class InnerCanvas(QtWidgets.QWidget):
                     data = np.dstack((r, g, b))  # data is now RGB
                     # combine with image, avoiding copies.
                     t.mark("stack")
-                    data = data ** 2*d.contrast
-                    t.mark("contrast")
-                    # set the data opacity
-                    data *= 1 - d.trans
-                    t.mark("mult")
                     # additive or "normal" blending
                     if d.additive:
                         np.add(data, img, out=data)
@@ -449,7 +450,9 @@ class InnerCanvas(QtWidgets.QWidget):
                         t.mark("blend")
                     # clip the data (mainly because of additive, but just in case other
                     # stuff has happened)
-                    np.clip(data, 0, 1, out=data)
+                    # The line below is faster than the standard np.clip(data, 0, 1, out=data)
+                    # https://janhendrikewers.uk/exploring_faster_np_clip.html
+                    np.core.umath.maximum(np.core.umath.minimum(data, 1), 0, out=data)
                     t.mark("clip")
                     img = data
         return img, txt
@@ -740,6 +743,7 @@ class Canvas(QtWidgets.QWidget):
         self.resetMapButton.clicked.connect(self.resetMapButtonClicked)
 
         self.hideablebuttons.setLayout(hideable)  # add layout to widget
+        self.blueChanCombo.setMinimumWidth(100)
         hideableLayout = QtWidgets.QVBoxLayout()  # make a single-widget layout
         hideableLayout.setContentsMargins(0, 0, 0, 0)
         hideableLayout.addWidget(self.hideablebuttons)  # add the widget to it
@@ -1132,6 +1136,7 @@ class Canvas(QtWidgets.QWidget):
         if res[0] != '':
             path, filt = res
             (_, ext) = os.path.splitext(path)
+            pcot.config.setDefaultDir('savedimages', os.path.split(path)[0])
             ext = ext.lower()
             if ext == '':
                 QMessageBox.critical(self, 'Error', "Filename should have an extension.")
@@ -1335,7 +1340,7 @@ class Canvas(QtWidgets.QWidget):
                 unc = self.previmg.uncertainty[y, x]
                 dqval = self.previmg.dq[y, x]
                 dq = pcot.dq.names(dqval)
-                self.spectrumWidget.set(None, f"Single channel - {val:.3} +/- {unc:.3}. DQ:{dq} ({dqval})")
+                self.spectrumWidget.set(None, f"Single channel:  {val:.3} +/- {unc:.3}. DQ:{dq} ({dqval})")
             return
 
         # within the coords, and multichannel image present

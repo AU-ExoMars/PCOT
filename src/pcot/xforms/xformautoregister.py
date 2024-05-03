@@ -24,13 +24,13 @@ class XFormAutoRegister(XFormType):
     DQs using nearest neighbour."""
 
     def __init__(self):
-        super().__init__("tvl1 autoreg", "processing", "0.0.0")
+        super().__init__("tvl1 autoreg", "processing", "0.0.0", hasEnable=True)
         self.addInputConnector("moving", Datum.IMG)
         self.addInputConnector("fixed", Datum.IMG)
         self.addOutputConnector("moved", Datum.IMG)
 
     def init(self, node):
-        node.out = None
+        pass
 
     def perform(self, node):
         # read images
@@ -67,9 +67,9 @@ class XFormAutoRegister(XFormType):
                 dqs = image.imgmerge([warp(x, warpdata, mode='edge', order=0, preserve_range=True).astype(np.uint16) for x in chans])
 
             out = ImageCube(out, node.mapping, movingImg.sources, uncertainty=unc, dq=dqs)
+            out = Datum(Datum.IMG, out)
 
-        node.out = Datum(Datum.IMG, out)
-        node.setOutput(0, node.out)
+        node.setOutput(0, out)
 
     def createTab(self, n, w):
         return TabData(n, w)

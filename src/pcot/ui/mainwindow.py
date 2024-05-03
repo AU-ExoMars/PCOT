@@ -12,7 +12,7 @@ from typing import List, Optional, OrderedDict, ClassVar, Dict
 import markdown
 from PySide2 import QtWidgets
 from PySide2.QtGui import QTextCursor
-from PySide2.QtWidgets import QAction, QMessageBox, QDialog, QMenuBar, QMenu
+from PySide2.QtWidgets import QAction, QMessageBox, QDialog, QMenu
 
 import pcot
 from pcot.ui import graphscene, graphview, uiloader
@@ -23,6 +23,7 @@ import pcot.ui.namedialog as namedialog
 import pcot.ui.tabs as tabs
 import pcot.xform as xform
 from pcot.ui.help import HelpWindow
+from pcot.utils import SignalBlocker
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +89,6 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     windows = []  # list of all main windows open
 
-
     def __init__(self,
                  doc=None,  # XFormMacro
                  macro=None,  # Document
@@ -100,6 +100,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.autolayoutButton.clicked.connect(self.autoLayoutButton)
         self.dumpButton.clicked.connect(lambda: self.graph.dump())
         self.capCombo.currentIndexChanged.connect(self.captionChanged)
+        self.annotalphaSlider.sliderReleased.connect(self.annotalphaChanged)
 
         self.action_New.triggered.connect(self.newAction)
         self.actionNew_Macro.triggered.connect(self.newMacroAction)
@@ -145,6 +146,9 @@ class MainUI(ui.tabs.DockableTabWindow):
 
         self.doc = doc
         self.capCombo.setCurrentIndex(self.doc.settings.captionType)
+
+        with SignalBlocker(self.annotalphaSlider):
+            self.annotalphaSlider.setValue(self.doc.settings.alpha)
 
         self.setWindowTitle(ui.app().applicationName() + ' ' + ui.app().applicationVersion())
         self.rebuildRecents()
@@ -483,6 +487,13 @@ class MainUI(ui.tabs.DockableTabWindow):
             self.graph.doc.setCaption(i)
             self.graph.performNodes()
 
+    def annotalphaChanged(self):
+        self.doc.mark()
+        v = self.annotalphaSlider.value()
+        self.doc.settings.alpha = v
+        if self.graph is not None:
+            self.graph.performNodes()
+
     ## set the caption type (for actual main windows, not macros)
     def setCaption(self, i):
         if self.graph is not None:
@@ -552,6 +563,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         if self.graph is not None:
             # pass in true, indicating we want to ignore autorun
             self.graph.changed(runAll=True)
+            self.retitleTabs()  # error states may have changed
 
     ## After an undo/redo, a whole new document may have been deserialised.
     # Set this new graph, and make sure the window's tabs point to nodes

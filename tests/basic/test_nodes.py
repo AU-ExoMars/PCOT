@@ -29,6 +29,7 @@ def test_node_output_none():
     for x in XFormType.all():
         doc = Document()            # create document
         node = doc.graph.create(x)  # create the node (there will also be an "input", ignore it).
+        node.enabled = True         # make sure the node is enabled
         doc.graph.performNodes()    # perform all nodes
         if node.getOutputType(0) is not None:   # if the type should have an output
             out = node.getOutput(0)     # get the value
@@ -154,7 +155,7 @@ def test_simple_node():
     node.connect(1, const1, 0)
 
     # run the graph
-    doc.graph.performNodes()
+    doc.run()
 
     # get the outputs and check they are correct.
     out0 = node.getOutput(0, Datum.NUMBER).n

@@ -34,7 +34,7 @@ def msg(t):
             x.statusBar.showMessage(t)
             x.statusBar.repaint()  # make sure the message appears!
     else:
-        logger.info(f"LOG msg {t}")
+        logger.debug(f"LOG ui.msg {t}")
 
 
 ## show a message in all window logs
@@ -43,16 +43,17 @@ def log(s, toStdout=True):
         for x in mainwindow.MainUI.windows:
             x.logText.append(s)
     if toStdout:
-        logger.info(f"LOG log {s}")
+        logger.info(f"LOG ui.log {s}")
 
 
 ## show error on status bar, and log in red; will dump traceback to stdout if requested.
 def error(s, tb=True):
-    if app() is not None:
+    if application is not None:
+        m = f'<font color="red">Error: </font> {s}'
+        for x in mainwindow.MainUI.windows:
+            x.logText.append(m)
         application.beep()
-        log('<font color="red">Error: </font> {}'.format(s))
-    if tb:
-        traceback.print_stack()
+    logger.critical(f"ERROR {s}", exc_info=True, stack_info=True)
     msg("ERROR: {}".format(s))
 
 
@@ -70,7 +71,6 @@ def logXFormException(node, e):
     error(f"Exception in {node.name}-{node.type.name}: {e}")
     if app() is not None:
         log(f'<font color="red">Exception in <b>{node.name}:{node.type.name}</b>: </font> {e}')
-        print(traceback.format_exc())
 
 
 # called when a graph saved with a different version of a node is loaded

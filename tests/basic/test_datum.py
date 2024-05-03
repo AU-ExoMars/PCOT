@@ -4,6 +4,7 @@ import numpy
 
 import pcot
 from pcot.datum import Datum
+from pcot.sources import SourceSet
 from pcot.value import Value
 
 from fixtures import *
@@ -34,7 +35,12 @@ def test_datum_can_create_and_serialise_img(bwimage):
     # It used to be 2,1,0 but that caused problems in inset.
     assert datadict['mapping'] == [0, 1, 2]
     assert datadict['defmapping'] is None
-    assert datadict['sources'] == [[], [], []]
+    expected_sources = [
+        [{'external': None, 'band': 'R', 'inputIdx': None}],
+        [{'external': None, 'band': 'G', 'inputIdx': None}],
+        [{'external': None, 'band': 'B', 'inputIdx': None}]
+    ]
+    assert datadict['sources'] == expected_sources
     assert type(datadict['data']) == numpy.ndarray
     arr = datadict['data']
     assert arr.shape == (32, 32, 3)

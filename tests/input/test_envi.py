@@ -7,6 +7,7 @@ from pcot.datum import Datum
 from pcot.document import Document
 from fixtures import *
 from pcot.filters import Filter
+from pcot.inputs.envimethod import ENVIInputMethod
 
 
 def test_envi_load(envi_image_1):
@@ -20,7 +21,7 @@ def test_envi_load(envi_image_1):
     # create a document with just an input node in it, to bring that input into the document's graph
     node = doc.graph.create("input 0")
     # notify the document changed
-    doc.changed()
+    doc.run()
     # and get the output of the node, which should be the image loaded from the ENVI
     img = node.getOutput(0, Datum.IMG)
     # check the basic stats
@@ -36,11 +37,11 @@ def test_envi_load(envi_image_1):
         s = img.sources.sourceSets[0].getOnlyItem()
         # and that it's from input 0, and that it's attached to a Filter
         assert s.inputIdx == 0
-        assert isinstance(s.filterOrName, Filter)
+        assert s.getFilter() is not None
     # now check the filter frequencies and names
     for ss, cwl, idx in zip(img.sources, (800, 640, 550, 440), (1, 2, 3)):
         s = ss.getOnlyItem()
-        f = s.filterOrName
+        f = s.getFilter()
         assert f.cwl == cwl
         assert f.name == f"L{idx}_{cwl}"        # gen_envi generates names in the form Ln_cwl, n starts at 1
         assert f.position == f"L{idx}_{cwl}"

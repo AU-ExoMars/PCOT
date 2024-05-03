@@ -1,13 +1,19 @@
 import csv
 import math
+import os.path
 from pathlib import Path
 from typing import List
 
 import numpy as np
 
 from pcot import ui
+from pcot.documentsettings import DocumentSettings
+import logging
 
 """This file deals with the physical multispectral filters"""
+
+
+logger = logging.getLogger(__name__)
 
 
 class Filter:
@@ -31,19 +37,24 @@ class Filter:
         self.name = name if name is not None else str(cwl)
         self.position = position
 
+    def __hash__(self):
+        """The hash of a filter is its name. This is here because we want to be able to
+        use a filter as a key in a dictionary."""
+        return hash(self.name)
+
     def serialise(self):
         return self.cwl, self.fwhm, self.transmission, self.position, \
-               self.name, self.idx
+               self.name
 
     @classmethod
     def deserialise(cls, d):
         if isinstance(d, str):  # snark
-            ui.error("Oops - old style file contains filter name, not filter data. Using dummy, please reload input.")
+            ui.error("Oops - old style file contains filter name, not filter data. Using dummy, please 'Run All'.")
             return Filter(2000, 1.0, 1.0, "dummypos", "dummyname", 0)
         try:
             cwl, fwhm, trans, pos, name = d
         except ValueError:
-            ui.error("Oops - old style file wrong number of filter data. Using dummy, please reload input.")
+            ui.error("Oops - old style file wrong number of filter data. Using dummy, please 'Run All'.")
             return Filter(2000, 1.0, 1.0, "dummypos", "dummyname", 0)
 
         cwl, fwhm, trans, pos, name = d
@@ -62,6 +73,21 @@ class Filter:
     def response_over(self, x: np.ndarray):
         """generate a response curve from an input array of frequencies (I think)"""
         return self._gaussian(x, self.cwl, self.fwhm)
+
+    def getCaption(self, captionType=DocumentSettings.CAP_DEFAULT):
+        """Format according to caption type"""
+        if captionType == DocumentSettings.CAP_POSITIONS:  # 0=Position
+            cap = self.position
+        elif captionType == DocumentSettings.CAP_NAMES:  # 1=Name
+            cap = self.name
+        elif captionType == DocumentSettings.CAP_CWL:  # 2=Wavelength
+            cap = str(int(self.cwl))
+        else:
+            cap = f"CAPBUG-{captionType}"  # if this appears captionType is out of range.
+        return cap
+
+    def __repr__(self):
+        return f"Filter({self.name},{self.cwl}@{self.fwhm}, {self.position}, t={self.transmission})"
 
 
 def wav2RGB(wavelength, scale=1.0):
@@ -114,7 +140,10 @@ def wav2RGB(wavelength, scale=1.0):
 
     return [(SSS * R), (SSS * G), (SSS * B)]
 
+
 _filterSets = {}
+logger.critical(f"Filters cleared")
+
 
 def loadFilterSet(name: str, path: Path):
     """Load a filter set from a file and store in the internal dict"""
@@ -127,7 +156,7 @@ def loadFilterSet(name: str, path: Path):
 
     # build a list of filters
     filters = []
-    with open(path) as file:
+    with open(os.path.expanduser(path)) as file:
         for r in csv.DictReader(decomment(file)):
             f = Filter(int(r['cwl']),
                        int(r['fwhm']),
@@ -137,6 +166,7 @@ def loadFilterSet(name: str, path: Path):
             filters.append(f)
     # and store that in a dictionary of filter set name -> filter list
     _filterSets[name] = filters
+    logger.critical(f"Loaded filter set {name} from {path}")
 
 
 def saveFilters(path: str, filters: List[Filter]):
@@ -179,4 +209,4 @@ def getFilterSetNames():
 
 
 ## dummy filter for when we have trouble finding the value
-DUMMY_FILTER = Filter(0, 0, 0, "??", "??")
+DUMMY_FILTER = Filter(0, 0, 1.0, "??", "??")

@@ -11,8 +11,21 @@ from pcot.xform import XFormType, xformtype, XFormException
 
 @xformtype
 class XFormDQMod(XFormType):
-    """Modify DQ bits based on conditions in the existing nominal or uncertainty for all bands
-    or just a single band."""
+    """
+    Modify DQ bits based on conditions in the existing nominal or uncertainty for all bands
+    or just a single band.
+
+    <blockquote style="background-color: #ffd0d0;">
+    **WARNING**: This may set "bad" bits which will be masked in any calculation. For some settings,
+    these bad bits can mask bands other than those from which they are derived. Calculations involving
+    pixels with these bits will be partially derived from the mask, but this information will not
+    be tracked by the source mechanism. This means that some source tracking information
+    can be lost. (Issue #69)
+    </blockquote>
+
+
+
+    """
 
     def __init__(self):
         super().__init__("dqmod", "utility", "0.0.0")
@@ -48,8 +61,13 @@ class XFormDQMod(XFormType):
                 # we're working on just one band, so slice into the arrays to get only the relevant data.
                 # We need to keep hold of that fulldq array because that's what we use to replace the old
                 # data in modifyWithSub
-                dq = fulldq[:, :, node.band]
-                d = d[:, :, node.band]
+                if len(d.shape) == 2:
+                    # if it's a single band image the shape will be (h,w), so we don't need to get the band out.
+                    dq = fulldq
+                else:
+                    # but we do need to if the shape has 3 elements.
+                    dq = fulldq[:, :, node.band]
+                    d = d[:, :, node.band]
             else:
                 dq = fulldq
 
@@ -69,9 +87,7 @@ class XFormDQMod(XFormType):
         else:
             node.band = None
 
-        node.img = img
-        node.out = Datum(Datum.IMG, img)
-        node.setOutput(0, node.out)
+        node.setOutput(0, Datum(Datum.IMG, img))
 
 
 class TabDQMod(ui.tabs.Tab):
@@ -92,8 +108,9 @@ class TabDQMod(ui.tabs.Tab):
         with SignalBlocker(self.w.bandCombo):
             self.w.bandCombo.clear()
             self.w.bandCombo.addItem('All')
-            if self.node.img is not None:
-                self.w.bandCombo.addItems([str(x) for x in range(0, self.node.img.channels)])
+            img = self.node.getOutput(0, Datum.IMG)
+            if img is not None:
+                self.w.bandCombo.addItems([str(x) for x in range(0, img.channels)])
                 self.w.bandCombo.setCurrentText("All")
                 if self.node.band is None:
                     self.w.bandCombo.setCurrentText("All")
@@ -101,6 +118,11 @@ class TabDQMod(ui.tabs.Tab):
                     self.w.bandCombo.setCurrentText(str(self.node.band))
             else:
                 self.w.bandCombo.setCurrentText("All")
+
+        self.w.canvas.setMapping(self.node.mapping)
+        self.w.canvas.setGraph(self.node.graph)
+        self.w.canvas.setPersister(self.node)
+        self.w.canvas.display(self.node.getOutput(0))
 
         if not self.dontSetText:
             self.w.dataCombo.setCurrentText(self.node.data)
@@ -113,24 +135,28 @@ class TabDQMod(ui.tabs.Tab):
     def DQChanged(self):
         self.mark()
         self.node.dq = self.w.dqbits.bits
+        self.changed()
 
     def modChanged(self, s):
         self.mark()
         self.dontSetText = True
         self.node.mod = s
         self.dontSetText = False
+        self.changed()
 
     def testChanged(self, s):
         self.mark()
         self.dontSetText = True
         self.node.test = s
         self.dontSetText = False
+        self.changed()
 
     def dataChanged(self, s):
         self.mark()
         self.dontSetText = True
         self.node.data = s
         self.dontSetText = False
+        self.changed()
 
     def bandChanged(self, s):
         self.mark()
@@ -140,6 +166,7 @@ class TabDQMod(ui.tabs.Tab):
         else:
             self.node.band = int(s)
         self.dontSetText = False
+        self.changed()
 
     def testEditChanged(self, t):
         v = 0 if t == '' else float(t)

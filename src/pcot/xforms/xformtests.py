@@ -500,6 +500,7 @@ class XFormStringTest(XFormType):
 
     def init(self, node):
         node.string = ""
+        node.inp = "No input yet"
 
     def createTab(self, xform, window):
         return TabStringTest(xform, window)
@@ -508,8 +509,8 @@ class XFormStringTest(XFormType):
         out = None
         inp = node.getInput(0)
         if inp.val is not None:
-            inp = str(inp.val).strip().replace('\r\n', '\n')
-            if inp != node.string.strip():
+            node.inp = str(inp.val).strip().replace('\r\n', '\n')
+            if node.inp != node.string.strip():
                 out = "Mismatch!"
         else:
             out = "NO INPUT"
@@ -540,6 +541,7 @@ class TabStringTest(pcot.ui.tabs.Tab):
     def onNodeChanged(self):
         self.w.expected.setPlainText(self.node.string)
         self.w.finishedButton.setStyleSheet("")
+        self.w.actual.setPlainText(self.node.inp)
 
     def editFinished(self, t):
         self.mark()

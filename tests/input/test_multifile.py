@@ -21,10 +21,11 @@ def test_multifile_load_with_default_pattern(globaldatadir):
     assert v == "all images must be the same size in a multifile"
 
     # this should load, but the sources are going to be a complete mess.
-    assert doc.setInputMulti(0, str(globaldatadir / "multi"), ["0.png", "32768.png", "65535.png"]) is None
+    names = ["0.png", "32768.png", "65535.png"]
+    assert doc.setInputMulti(0, str(globaldatadir / "multi"), names) is None
 
     node = doc.graph.create("input 0")
-    doc.changed()
+    doc.run()
     img = node.getOutput(0, Datum.IMG)
 
     # check the image
@@ -35,21 +36,21 @@ def test_multifile_load_with_default_pattern(globaldatadir):
 
     # check the sources, such as they are
     assert len(img.sources) == 3
-    for sourceSet in img.sources:
+    for i, sourceSet in enumerate(img.sources):
         #  First, make sure each band has a source set of a single source
         assert len(sourceSet) == 1
         s = sourceSet.getOnlyItem()
-        f = s.filterOrName
+        f = s.getFilter()
         print(s.long())
-        assert isinstance(f, Filter)
         # if we haven't got a good regex to extract the filter data, multifile will extract dummy data.
         assert f.cwl == 0
         assert f.fwhm == 0
         assert f.name == '??'
         assert f.position == '??'
-        assert f.transmission == 0
-        path = str(globaldatadir / "multi")
-        assert s.long() == f"MULTI: path={path} 0: 0.png, 1: 32768.png, 2: 65535.png]: wavelength 0, fwhm 0"
+        assert f.transmission == 1
+        path = str(globaldatadir / "multi" / names[i])
+        # starts with zero because this is for input 0
+        assert s.long() == f"0: wavelength 0, fwhm 0 {path}"
 
 
 def test_multifile_load_with_bad_pattern(globaldatadir):
@@ -62,7 +63,7 @@ def test_multifile_load_with_bad_pattern(globaldatadir):
                              filterpat='[') is None
 
     node = doc.graph.create("input 0")
-    doc.changed()
+    doc.run()
     img = node.getOutput(0, Datum.IMG)
 
     # check the image
@@ -75,15 +76,13 @@ def test_multifile_load_with_bad_pattern(globaldatadir):
         #  First, make sure each band has a source set of a single source
         assert len(sourceSet) == 1
         s = sourceSet.getOnlyItem()
-        f = s.filterOrName
+        f = s.getFilter()
         # again, the filters will be "I have no idea"
         assert f.cwl == 0
         assert f.fwhm == 0
         assert f.name == '??'
         assert f.position == '??'
-        assert f.transmission == 0
-        path = str(globaldatadir / "multi")
-        assert s.long() == f"MULTI: path={path} 0: 0.png, 1: 32768.png, 2: 65535.png]: wavelength 0, fwhm 0"
+        assert f.transmission == 1
 
 
 def test_multifile_load_with_good_pattern(globaldatadir):
@@ -99,7 +98,7 @@ def test_multifile_load_with_good_pattern(globaldatadir):
                              filterpat=r'.*Filter(?P<lens>L|R)(?P<n>[0-9][0-9]).*') is None
 
     node = doc.graph.create("input 0")
-    doc.changed()
+    doc.run()
     img = node.getOutput(0, Datum.IMG)
 
     # check the image
@@ -108,8 +107,7 @@ def test_multifile_load_with_good_pattern(globaldatadir):
     assert img.h == 30
     assert np.allclose(img.img[0][0], (32768 / 65535, 0, 1))
 
-    path = str(globaldatadir / "multi")
-    filenames = ", ".join([f"{i}: {s}" for i, s in enumerate(filenames)])
+    path = globaldatadir / "multi"
 
     # pancam filters L02, L01, R10.
     for sourceSet, pos, name, cwl, fwhm, trans, fn in zip(img.sources,
@@ -123,7 +121,7 @@ def test_multifile_load_with_good_pattern(globaldatadir):
         #  First, make sure each band has a source set of a single source
         assert len(sourceSet) == 1
         s = sourceSet.getOnlyItem()
-        f = s.filterOrName
+        f = s.getFilter()
         # again, the filters will be "I have no idea"
         assert f.cwl == cwl
         assert f.fwhm == fwhm
@@ -133,7 +131,7 @@ def test_multifile_load_with_good_pattern(globaldatadir):
         qq = s.long()
         # the long string here is a bit weird, in that it has the filenames for all the filters in always,
         # but that's because we're using the long string for the multifile input as a whole.
-        assert s.long() == f"MULTI: path={path} {filenames}]: wavelength {cwl}, fwhm {fwhm}"
+        assert s.long() == f"0: wavelength {cwl}, fwhm {fwhm} {path / fn}"
 
 
 def test_multifile_load_with_cwl(globaldatadir):
@@ -147,7 +145,7 @@ def test_multifile_load_with_cwl(globaldatadir):
                              filterpat=r'.*F(?P<cwl>[0-9]+).*') is None
 
     node = doc.graph.create("input 0")
-    doc.changed()
+    doc.run()
     img = node.getOutput(0, Datum.IMG)
 
     # check the image
@@ -170,14 +168,11 @@ def test_multifile_load_with_cwl(globaldatadir):
         #  First, make sure each band has a source set of a single source
         assert len(sourceSet) == 1
         s = sourceSet.getOnlyItem()
-        f = s.filterOrName
+        f = s.getFilter()
         # again, the filters will be "I have no idea"
         assert f.cwl == cwl
         assert f.fwhm == fwhm
         assert f.name == name
         assert f.position == pos
         assert f.transmission == trans
-        qq = s.long()
-        # the long string here is a bit weird, in that it has the filenames for all the filters in always,
-        # but that's because we're using the long string for the multifile input as a whole.
-        assert s.long() == f"MULTI: path={path} {filenames}]: wavelength {cwl}, fwhm {fwhm}"
+

@@ -7,43 +7,39 @@ from pcot.datum import Datum
 
 class VariantWidget(QtWidgets.QGroupBox):
     """
-    Custom widget for variant type selection in Tabs.
+    Custom widget for box containing multiple radio buttons, vertically arranged. To use it,
+    subclass it and pass the list of strings into the constructor.
     Signal:
-        changed(conntype.Type), emitted when the selection changes
-    Method:
-        set(conntype.Type) to set the value
+        changed(int), emitted when the selection changes, with the index of the selected item.
+    Methods:
+        set(int) to set the value
     """
 
-    changed = Signal(datum.Type)
+    changed = Signal(int)
 
-    def __init__(self, parent):
+    def __init__(self, title, options, parent):
         super().__init__(parent)
         # populate with types
         layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
         self.buttons = []
         idx = 0
-        for x in Datum.types:
-            # I would operate on a filtered list, but note that we still need the
-            # indices to be incremented on every type.
-            if not x.internal:
-                b = QtWidgets.QRadioButton(str(x))
-                layout.addWidget(b)
-                self.buttons.append(b)
-                b.idx = idx
-                b.toggled.connect(self.buttonToggled)
+        self.options = options
+        super().setTitle(title)
+        for x in options:
+            b = QtWidgets.QRadioButton(str(x))
+            layout.addWidget(b)
+            self.buttons.append(b)
+            b.idx = idx
+            b.toggled.connect(self.buttonToggled)
             idx += 1
 
     def buttonToggled(self, checked):
         if checked:     # ignore button toggling off event
             for b in self.buttons:
                 if b.isChecked():
-                    t = Datum.types[b.idx]
-                    self.changed.emit(t)
+                    self.changed.emit(b.idx)
 
-    def set(self, t):
-        i = Datum.types.index(t)
+    def set(self, i):
         self.buttons[i].setChecked(True)
 
-    def setTitle(self, s):
-        super().setTitle(s)

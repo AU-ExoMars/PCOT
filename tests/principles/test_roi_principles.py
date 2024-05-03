@@ -29,7 +29,7 @@ def test_roi_single_image(allblack):
     exprNode.expr = "clamp(a+4)"  # will add 4 to the value and clip to 1.
     exprNode.connect(0, roiNode, 0)
 
-    doc.changed()
+    doc.run()
     img = exprNode.getOutput(0, Datum.IMG)
     assert np.sum(img.img) == 12 * 3  # right number of pixels changed for a 3 channel image
     checkexpr(exprNode)
@@ -71,7 +71,7 @@ def test_roi_intersection(allblack):
     setWhiteNode.expr = "clamp(a+4)"
     setWhiteNode.connect(0, importNode, 0)
 
-    doc.changed()
+    doc.run()
 
     checkexpr(exprNode)
     img = setWhiteNode.getOutput(0, Datum.IMG)
@@ -100,8 +100,8 @@ def test_roi_union_expr(allblack):
     # outputs (not the images)
     exprNode = doc.graph.create("expr")
     exprNode.expr = "a+b"  # add = union for ROIs
-    exprNode.connect(0, roiNode1, 2)
-    exprNode.connect(1, roiNode2, 2)
+    exprNode.connect(0, roiNode1, 1)
+    exprNode.connect(1, roiNode2, 1)
 
     # take that intersected ROI and apply it to the image
     importNode = doc.graph.create("importroi")
@@ -114,7 +114,7 @@ def test_roi_union_expr(allblack):
     setWhiteNode.expr = "clamp(a+4)"
     setWhiteNode.connect(0, importNode, 0)
 
-    doc.changed()
+    doc.run()
 
     img = setWhiteNode.getOutput(0, Datum.IMG)
     checkexpr(exprNode)
@@ -145,7 +145,7 @@ def test_roi_union(allblack):
     setWhiteNode.expr = "clamp(a+4)"
     setWhiteNode.connect(0, roiNode2, 0)
 
-    doc.changed()
+    doc.run()
 
     checkexpr(setWhiteNode)
     img = setWhiteNode.getOutput(0, Datum.IMG)
@@ -179,7 +179,7 @@ def test_roi_binop_image_lhs():
     expr.connect(1, green, 0)  # right hand side (green) does not
     expr.expr = "a+b"
 
-    doc.changed()
+    doc.run()
     img = expr.getOutput(0, Datum.IMG)
     checkexpr(expr)
     assert img is not None
@@ -220,7 +220,7 @@ def test_roi_binop_image_rhs():
     expr.connect(1, roi, 0)  # right hand side (blue) does not
     expr.expr = "a+b"
 
-    doc.changed()
+    doc.run()
     img = expr.getOutput(0, Datum.IMG)
     checkexpr(expr)
     assert img is not None
@@ -279,7 +279,7 @@ def test_rois_on_both_sides_of_binop():
     expr.connect(1, roi2b, 0)
     expr.expr = "a+b"
 
-    doc.changed()
+    doc.run()
     img = expr.getOutput(0, Datum.IMG)
 
     assert img is None
@@ -306,7 +306,7 @@ def test_rois_same_on_both_sides():
     expr.connect(0, roi, 0)
     expr.expr = "a$R+a$G"
 
-    doc.changed()
+    doc.run()
     checkexpr(expr)
     img = expr.getOutput(0, Datum.IMG)
     assert img is not None
@@ -329,7 +329,7 @@ def _testinternal_image_and_scalar(exprString):
     expr.connect(0, roi, 0)
     expr.expr = exprString
 
-    doc.changed()
+    doc.run()
     checkexpr(expr)
     img = expr.getOutput(0, Datum.IMG)
     assert img is not None
@@ -347,7 +347,7 @@ def test_roi_image_plus_scalar():
     _testinternal_image_and_scalar("a+0.2")
 
 
-def test_roi_image_plus_scalar():
+def test_roi_scalar_plus_image():
     """Test that a imageWithROI+scalar uses the ROI"""
     _testinternal_image_and_scalar("0.2+a")
 
@@ -385,7 +385,7 @@ def perform_roi_op(exprString) -> ImageCube:
 
     # doc.save("c:/users/jim/xxxx.pcot")
 
-    doc.changed()
+    doc.run()
     checkexpr(expr)
     img = expr2.getOutput(0, Datum.IMG)
     assert img is not None
@@ -403,7 +403,7 @@ def test_roi_intersection_expr():
             assert np.array_equal(pix, expected)
 
 
-def test_roi_union_expr():
+def test_roi_union_expr_import():
     """Test that we can union two ROIs correctly with expr and importroi"""
     img = perform_roi_op("a+b")
 
@@ -468,7 +468,7 @@ def test_roi_neg_expr():
     mod.expr = "a*0"
     mod.connect(0, imp, 0)
 
-    doc.changed()
+    doc.run()
 
     img = mod.getOutput(0, Datum.IMG)
     assert img is not None

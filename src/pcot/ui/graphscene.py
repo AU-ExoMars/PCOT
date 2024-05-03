@@ -245,6 +245,8 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
             togact = None
         helpact = m.addAction("Help")
         openact = m.addAction("Open in tab")
+        valignact = m.addAction("Align vertically")
+        halignact = m.addAction("Align horizontally")
 
         # only worth doing if there are menu items! Note that by now this is always true
         # but I'll leave the condition here.
@@ -264,6 +266,16 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
                     ui.mainwindow.MainUI.rebuildAll()
             elif action == helpact:
                 w.openHelp(self.node.type, node=self.node)
+            elif action == valignact:
+                # relies on scene() being XFormGraphScene
+                s = self.scene()
+                if isinstance(s, XFormGraphScene):
+                    s.alignV()
+            elif action == halignact:
+                # relies on scene() being XFormGraphScene
+                s = self.scene()
+                if isinstance(s, XFormGraphScene):
+                    s.alignH()
 
 
 class GConnectRect(QtWidgets.QGraphicsRectItem):
@@ -785,7 +797,6 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
     def copy(self):
         """copy operation, serialises the items to the system clipboard"""
         self.graph.copy(self.selection)
-        # pcot.utils.deb.show(self)
 
     def paste(self):
         """paste operation, deserialises items from the system clipboard"""
@@ -820,3 +831,27 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
     def mark(self):
         """Mark an undo point"""
         self.graph.doc.mark()
+
+    def alignV(self):
+        """Vertically align selected nodes"""
+        # find average X coordinate of node centres
+        if len(self.selection) < 2:
+            return   # nothing to do
+
+        x = sum([n.xy[0] + n.w / 2 for n in self.selection]) / len(self.selection)
+
+        # set all nodes to this X coordinate
+        for n in self.selection:
+            n.xy = (x - n.w / 2, n.xy[1])
+        self.rebuild()
+
+    def alignH(self):
+        """Horizontally align selected nodes"""
+        # find average Y coordinate of node centres
+        if len(self.selection) < 2:
+            return
+
+        y = sum([n.xy[1] + n.h / 2 for n in self.selection]) / len(self.selection)
+        for n in self.selection:
+            n.xy = (n.xy[0], y - n.h / 2)
+        self.rebuild()

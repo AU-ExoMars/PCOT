@@ -23,10 +23,16 @@ source set for some operations (since the union of the band sets is available).
 consists of the union of the sets.
 
 
-As an example, consider the rather contrived example below.
+As an example, consider the rather contrived example below. Here,
 
-![!An example graph with each datum marked as a black circle. Image inputs are in yellow,
-scalar inputs are in blue.](SourcesExample.svg)
+* each datum is marked as a black circle below which is a description of the the sources - there's more explanation of this below.
+* image inputs are in yellow
+* scalar inputs are in blue
+* nodes are white rectangles
+* *expr* nodes (which calculate mathematical expressions) are marked as
+such with the expression being the main text
+
+![!An example graph.](SourcesExample.svg)
 
 We have three inputs into the graph:
 
@@ -41,15 +47,15 @@ These data are then combined in various ways:
 
 What do the sources look like for each datum?
 
-* Datum A is an image, and as such it has one source set per band. 
-Each source set consists of a single "image source" giving details of input and
-filter wavelength. So here, the sources for A could be written as
+* Datum A is an image, and as such it has one source set per band. Each source
+set consists of a single source, with details of input and filter
+wavelength. So here, the sources for A could be written as
 
         [ {0:640}, {0:540}, {0:440} ]
 
     That is, a list of three sets, each of which contains a single source which I've written
     in the form ```input:wavelength```.
-
+    
 * Datum B is the extracted 540nm band of input A, so its sources are:
 
         [ {0:540} ]
@@ -153,8 +159,8 @@ these rules:
 \end{align}
 
 @@@ warning
-Remember that this only applies if the bands are independent. In reality there
-is always a covariance between them.
+Remember that generally these rules only apply if the bands are independent. In reality there
+is always a covariance between them, but we have to ignore that.
 @@@
 
 
@@ -186,9 +192,11 @@ considered. While calculations will still be done on BAD data, the BAD bits will
 of nodes which generate a scalar from images, such as finding the mean or SD of a set of pixels (or similar operations in the 
 *spectrum* node) the pixels marked BAD should be ignored.
 
-* It should be possible to set bits based on per-pixel conditions with the *bits* node. For example, convert all uncertainties
-greater than a given value into errors. In fact, **this should be done
-by default for a certain global value** if possible. <font color="red">BITS NODE NOT YET IMPLEMENTED</font>
+* It is possible to set bits based on per-pixel conditions with the *dqmod* node. For example, convert all uncertainties
+greater than a given value into errors. 
+
+* It is possible to convert DQ bits into regions of interest using the *roidq* node, with the region being made up of
+pixels for which certain bits are absent or present. This can be done looking at all bands or just one.
 
 * In general, when multiple image bands
 are combined (either from the same image or from different images) these are OR-ed together. This typically happens in a band-wise fashion
@@ -209,11 +217,6 @@ B_i(\text{decorr}(a)) = \bigvee_i B_i(a)
 * Nodes which perform a convolution operation or similar should propagate the error pixel to all affected pixels, leading to a blob of pixels in the output.
 I realise **This isn't ideal**; another possibility could be to just zero the mask? But then we lose the error data. At the moment I don't believe we have any
 "non-local" behaviour where pixels affect regions of pixels in the output, so the point could be moot.
-
-### Error ROIs <font color="red">UNIMPLEMENTED</font>
-It should
-be possible to construct an ROI of error or non-error pixels in an image (i.e. pixels which have an error on any band).
-
 
 ## Filter aberration <font color="red">UNIMPLEMENTED</font>
 

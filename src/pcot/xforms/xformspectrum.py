@@ -1,163 +1,145 @@
+import dataclasses
 import math
 
 import matplotlib
 import numpy as np
 from PySide2 import QtWidgets, QtCore
 from PySide2.QtWidgets import QDialog
-from collections import namedtuple
 
 import pcot
 import pcot.ui as ui
 from pcot.datum import Datum
-from pcot.filters import wav2RGB
+from pcot.filters import wav2RGB, Filter
 from pcot.sources import SourceSet
 from pcot.ui import uiloader
 from pcot.ui.tabs import Tab
+from pcot.utils.spectrum import Spectrum, SpectrumSet
 from pcot.utils.table import Table
+from pcot.value import Value
 from pcot.xform import XFormType, xformtype, XFormException
 
 
-# find the mean/sd of all the masked values. Note mask negation!
-def getSpectrum(chanImg, chanUnc, chanDQ, mask, ignorePixSD=False):
-    # note that "mask" is a positive mask - values are True if we are using them.
-    if mask is None:
-        mask = np.full(chanImg.shape, True)  # no bits masked out
-    else:
-        mask = np.copy(mask)  # need a copy or we'll change the mask in the subimage.
-    # we also have to mask out the bad bits. This will give us a mask which is True
-    # for the bits we want to hide.
-    badmask = (chanDQ & pcot.dq.BAD).astype(bool)
-    mask &= ~badmask  # REMOVE those pixels
-
-    a = np.ma.masked_array(data=chanImg, mask=~mask)
-    mean = a.mean()  # get the mean of the nominal values
-
-    if not ignorePixSD:
-        # we're going to try to take account of the uncertainties of each pixel:
-        # "Thus the variance of the pooled set is the mean of the variances plus the variance of the means."
-        # by https://arxiv.org/ftp/arxiv/papers/1007/1007.1012.pdf
-        # So we'll calculate the variance of the means added to the mean of the variances.
-        # And then we'll need to root that variance to get back to SD.
-        # There is a similar calculation called pooled_sd() in builtins!
-
-        std = np.sqrt(a.var() + np.mean(np.ma.masked_array(data=chanUnc, mask=~mask) ** 2))
-    else:
-        std = a.std()  # otherwise get the SD of the nominal values
-
-    return mean, std
-
-
-DataPoint = namedtuple('DataPoint', ['chan', 'cwl', 'mean', 'sd', 'label', 'pixcount'])
-
-
-def processData(table, legend, data, pxct, wavelengths, spectrum, chans, chanlabels):
+def processData(legend, data, spec):
     """
-    table: Table object for dump output
-    legend: name of ROI/image
+    Process the data from a single ROI/image into the data dictionary, which contains
+
+    legend: name of ROI/image to be added.
     data: data dictionary
-        part of processData's responsibility is to set the entries in here
+        processData's responsibility is to add to the entries in here
             - key is ROI/image name (legend), value is a list of data.
-            - value is a list of tuples (chanidx, cwl, mean, sd, labels, pixct)
-    Then a list for each channel, giving
-        wavelengths:    cwl of channel
-        spectrum        (mean,sd) of intensity across ROI/image for this channel
-
-    Consider two images. Image 0 has an ROI with 3132 pixels in it, image 1 has an ROI
-    with only 484 pixels in it. However, the two ROIs both have the same name, and are fed
-    into a spectrum. They will be combined into a single data list looking like this:
-    [
-        # channel index, cwl, mean intensity, sd of intensity, channel label, pixel count
-       (0, 438.0, 0.09718827482688777, 0.033184560153696856, 'L4_438', 3132),
-        (1, 500.0, 0.12427511008154235, 0.04296475099012811, 'L5_500', 3132),
-        (2, 532.0, 0.15049515647449713, 0.04899176061731549, 'L6_532', 3132),
-        (3, 568.0, 0.18620748507717713, 0.05834286572257662, 'L7_568', 3132),
-        (4, 610.0, 0.23161822595511056, 0.07227542372780232, 'L8_610', 3132),
-        (5, 671.0, 0.2626209478268678, 0.08226790002558386, 'L9_671', 3132),
-        (0, 740.0, 0.3917202910115896, 0.08213716515845079, 'R4_740', 484),
-        (1, 780.0, 0.41594551023372933, 0.08695280835403581, 'R5_780', 484),
-        (2, 832.0, 0.39478648792613635, 0.08164454531723438, 'R6_832', 484),
-        (3, 900.0, 0.37751833072378616, 0.07634822775362438, 'R7_900', 484),
-        (4, 950.0, 0.3726376304941729, 0.07310612483354316, 'R8_950', 484),
-        (5, 1000.0, 0.4105814784026343, 0.08091608212909969, 'R9_1000', 484)]
-    ]
-
-    This should mean that the standard error will be calculated correctly for both of the ROI.
+            - value is a list of tuples - see below - (chanidx, filter, mean, sd, label, pixct)
+    spec: a Spectrum object describing the spectrum for this ROI/image
     """
 
-    # zip them all together and append to the list for that legend (creating a new list
-    # if there isn't one)
+    @dataclasses.dataclass
+    class DataPoint:
+        # this is our data point object.
+        chan: int
+        filter: Filter
+        value: Value
+        pixcount: int
 
+    # build the data points
+    dp = []
+    for i in range(spec.channels):
+        p = spec.getByChannel(i)
+        if p is not None:
+            p = DataPoint(i, spec.filters[i], p.v, p.pixels)
+            dp.append(p)
+
+    # now we have a list of data points - channel, filter, value, pixcount.
+
+    # add them to the data set, which is indexed by legend (ROI or image name).
     if legend not in data:
-        data[legend] = []
+        data[legend] = []   # make a new list if there isn't one
+    data[legend] += dp
 
-    # spectrum is [(mean,sd), (mean,sd)...] but we also build a pixcount array
-    means, sds, pixcts = [x[0] for x in spectrum], [x[1] for x in spectrum], [pxct for _ in spectrum]
-
-    # data for each region is [ (chan,wave,mean,sd,chanlabel,pixcount), (chan,wave,mean,sd,chanlabel,pixcount)..]
-    # This means pixcount get dupped a lot but it's not a problem
-    data[legend] += [DataPoint(*x) for x in zip(chans, wavelengths, means, sds, chanlabels, pixcts)]
-
-    # add to table
-    table.newRow(legend)
-    table.add("name", legend)
-    table.add("pixels", pxct)
-    for w, s in zip(wavelengths, spectrum):
-        m, sd = s
-        w = int(w)  # Convert wavelength to integer for better table form. Let's hope this doesn't cause problems.
-        table.add("{}mean".format(w), m)
-        table.add("{}sd".format(w), sd)
+    # you end up with a dict of ROI/image data e.g.
+    #   "ROI/image" -> [value @ frequency, value @ frequency...]
+    # where each entry in the dict should be a line in the result.
 
 
+# number of inputs on the node
 NUMINPUTS = 8
 
+# enums for error bar modes used in the dialog
 ERRORBARMODE_NONE = 0
 ERRORBARMODE_STDERROR = 1
 ERRORBARMODE_STDDEV = 2
 
+# enums for colour modes used in the dialog
 COLOUR_FROMROIS = 0
 COLOUR_SCHEME1 = 1
 COLOUR_SCHEME2 = 2
 
+# enums for bandwidth modes used in the dialog
+BANDWIDTHMODE_NONE = 0
+BANDWIDTHMODE_ERRORBAR = 1
+BANDWIDTHMODE_VERTBAR = 2
+
 
 def fixSortList(node):
-    """fix the sortlist, making sure that only legends for data we have are present,
-    and that all of them are present"""
-    # now remove any data from the sort list which are not present in the data
+    # fix the sort list, making sure that only legends for the data we have are present,
+    # and that all of them are present. This list is used to "stack" items in the plot,
+    # and nowhere else (it doesn't order items in the tabular output, for example).
     legends = node.data.keys()
+    # filter out items that aren't in the data
     node.sortlist = [x for x in node.sortlist if x in legends]
-    # and add any new items
-    for x in [x for x in legends if x not in node.sortlist]:
-        node.sortlist.append(x)
+    # add new items
+    node.sortlist.extend([x for x in legends if x not in node.sortlist])
 
 
 @xformtype
 class XFormSpectrum(XFormType):
     """
-    Show the mean intensities for each frequency band in each input. Each input has a separate line in
-    the resulting plot, labelled with either a generated label or the annotation of the last ROI on that
-    input. If two inputs have the same ROI label, they are merged into a single line.
+    Show the mean intensities for each frequency band in each region of interest (ROI) in each input.
+    If an input has no ROI, the intensities of all the pixels in the input are used.
+
+    It's quite possible for the different inputs to be different images, to permit comparison.
+
+    Each region (or input) has a separate line in
+    the resulting plot, labelled with the annotation for the ROI (or "inputN" for an input with no ROI).
+    If ROIs in different inputs have the same annotation, they are labelled as "inN:annotation" where N is
+    the input number.
+
+    Each pixel has its own variance, so the shown variance is the pooled variance of all the pixels in
+    the region. This is calculated as the variance of the means, plus the mean of the variances.
 
     If a point has data with BAD DQ bits in a band, those pixels are ignored in that band. If there
     are no good points, the point is not plotted for that band.
+
+    A table of the values is also produced, and this output as CSV text. The table has one row per
+    ROI or input, and the columns
+
+    * name - the name of the ROI or input
+    * m*wavelength* - the mean intensity for the given wavelength band
+    * s*wavelength* - the standard deviation of the mean intensity for the given wavelength band
+    * p*wavelength* - the number of pixels in the given wavelength band (usually the same as the number of pixels in
+    the ROI, but may be fewer if the ROI has "bad" pixels in that band)
+
+    The last two columns are repeated for each wavelength band.
     """
 
     def __init__(self):
         super().__init__("spectrum", "data", "0.0.0")
         self.autoserialise = ('sortlist', 'errorbarmode', 'legendFontSize', 'axisFontSize', 'stackSep', 'labelFontSize',
                               'bottomSpace', 'colourmode', 'rightSpace',
-                              ('ignorePixSD', False)  # this one has a default because it was developed later
+                              # these have defaults because they were developed later.
+                              ('ignorePixSD', False),
+                              ('bandwidthmode', BANDWIDTHMODE_NONE),
                               )
         for i in range(NUMINPUTS):
             self.addInputConnector(str(i), Datum.IMG, "a single line in the plot")
         self.addOutputConnector("data", Datum.DATA, "a CSV output (use 'dump' or 'sink' to read it)")
 
-    def createTab(self, n, w):
+    def createTab(self, n, window):
         pcot.ui.msg("creating a tab with a plot widget takes time...")
-        return TabSpectrum(n, w)
+        return TabSpectrum(n, window)
 
     def init(self, node):
         node.errorbarmode = ERRORBARMODE_STDDEV
         node.colourmode = COLOUR_FROMROIS
+        node.bandwidthmode = BANDWIDTHMODE_NONE
         node.legendFontSize = 8
         node.axisFontSize = 8
         node.labelFontSize = 12
@@ -166,88 +148,19 @@ class XFormSpectrum(XFormType):
         node.stackSep = 0
         node.ignorePixSD = self.getAutoserialiseDefault('ignorePixSD')
         node.sortlist = []  # list of legends (ROI names) - the order in which spectra should be stacked.
-        node.colsByLegend = None  # this is a legend->col dictionary used if colourmode is COLOUR_FROMROIS
         node.data = None
 
     def perform(self, node):
-        table = Table()
-        # dict of output spectra, key is ROI or image name (several inputs might go into one entry if names are same, and one input might
-        # have several ROIs each with a different value)
-        # For each ROI/image there is a lists of tuples, one for each channel : (chanidx, wavelength, mean, sd, name)
-        data = dict()
-        cols = dict()  # colour dictionary for ROIs/images
-        sources = set()  # sources
-        for i in range(NUMINPUTS):
-            img = node.getInput(i, Datum.IMG)
-            if img is not None:
-                # first, generate a list of indices of channels with a single source which has a wavelength,
-                # and a list of those wavelengths
-                wavelengths = [img.wavelength(x) for x in range(img.channels)]
-                # wavelengths = [x for x in wavelengths if x > 0]     removed; given the filter on the next line it does nowt
-                chans = [x for x in range(img.channels) if wavelengths[x] > 0]
-
-                # add the channels we found to a set of sources
-                for x in chans:
-                    sources |= img.sources.sourceSets[x].sourceSet
-
-                if len(wavelengths) == 0:
-                    raise XFormException("DATA", "no single-wavelength channels in image")
-
-                # generate a list of labels, one for each channel
-                # NOTE THAT this currently gets ignored, we don't use the chanlabel right now. It gets packed into
-                # the data elements, but the unzip in replot() throws it away when we come to do the plot.
-                chanlabels = [img.sources.sourceSets[x].brief(node.graph.doc.settings.captionType) for x in chans]
-
-                def proc(_subimg, _legend):
-                    # this nested function is used both when there is no ROI and for each ROI in the image.
-                    # It gets the spectrum for that ROI (or entire image), processes the data and adds
-                    # it to the plot. It's given a subimage with BAD pixels masked out.
-
-                    # now we need to get the mean amplitude of the pixels in each channel in the ROI
-                    # this returns a tuple for each channel of (mean,sd)
-
-                    # this is unfolded from a list comprehension for easier breakpoint debugging!
-                    spec = []
-                    if len(chans) == 1:
-                        # single channel images are stored as 2D arrays.
-                        ss = getSpectrum(_subimg.img[:, :], _subimg.uncertainty[:, :], _subimg.dq[:, :],
-                                         _subimg.mask,
-                                         ignorePixSD=node.ignorePixSD)
-                        spec.append(ss)
-                    else:
-                        for cc in chans:
-                            ss = getSpectrum(_subimg.img[:, :, cc], _subimg.uncertainty[:, :, cc], _subimg.dq[:, :, cc],
-                                             _subimg.mask,
-                                             ignorePixSD=node.ignorePixSD)
-                            spec.append(ss)
-
-                    processData(table, _legend, data, subimg.pixelCount(),
-                                wavelengths, spec, chans, chanlabels)
-
-                if len(img.rois) == 0:
-                    # no ROIs, do the whole image
-                    legend = "node input {}".format(i)
-                    cols[legend] = (0, 0, 0)  # what colour??
-                    subimg = img.subimage()
-                    proc(subimg, legend)
-                else:
-                    for roi in img.rois:
-                        # only include valid ROIs
-                        if roi.bb() is None:
-                            continue
-                        legend = roi.label  # get the name for this ROI, which will appear as a thingy.
-                        cols[legend] = roi.colour
-                        # get the ROI bounded image
-                        subimg = img.subimage(roi=roi)
-                        proc(subimg, legend)
-
-        # now, for each list in the dict, build a new dict of the lists sorted
-        # by wavelength
-        node.data = {legend: sorted(lst, key=lambda x: x.cwl) for legend, lst in data.items()}
-        node.colsByLegend = cols  # we use this if we're using the ROI colours
+        # first we need to create a SpectrumSet from the inputs
+        inputDict = {
+            f"in{i}": node.getInput(i, Datum.IMG) for i in range(NUMINPUTS)
+        }
+        # filter out null inputs
+        inputDict = {k: v for k, v in inputDict.items() if v is not None}
+        # and construct the SpectrumSet
+        node.data = SpectrumSet(inputDict, ignorePixSD=node.ignorePixSD)
         fixSortList(node)
-
-        node.setOutput(0, Datum(Datum.DATA, table, sources=SourceSet(sources)))
+        node.setOutput(0, Datum(Datum.DATA, node.data.table(), sources=node.data.getSources()))
 
 
 class ReorderDialog(QDialog):
@@ -312,6 +225,7 @@ class TabSpectrum(ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabspectrum.ui')
         self.w.errorbarmode.currentIndexChanged.connect(self.errorbarmodeChanged)
+        self.w.bandwidthmode.currentIndexChanged.connect(self.bandwidthmodeChanged)
         self.w.colourmode.currentIndexChanged.connect(self.colourmodeChanged)
         self.w.replot.clicked.connect(self.replot)
         self.w.save.clicked.connect(self.save)
@@ -329,7 +243,7 @@ class TabSpectrum(ui.tabs.Tab):
     def replot(self):
         ax = self.w.mpl.ax
         # set up the plot
-        self.w.mpl.fig.suptitle(self.node.comment)
+        # self.w.mpl.fig.suptitle("TODO")  # TODO? Do we need a title?
         ax.cla()  # clear any previous plot
 
         # make sure the legend list is correct
@@ -359,24 +273,34 @@ class TabSpectrum(ui.tabs.Tab):
             unfiltered = self.node.data[legend]
 
             # filter out any "masked" means - those are from regions which are entirely DQ BAD in a channel.
-            x = [a for a in unfiltered if a.mean is not np.ma.masked]
+            # These also seem to show up as None sometimes, so we have to check for that too.
+
+            x = {filt: spec for filt, spec in unfiltered.data.items() if spec.v is not None and
+                 spec.v.n is not np.ma.masked}
 
             if len(x) == 0:
-                ui.error(f"No points have good data for point {legend}")
+                ui.error(f"No points have good data for point {legend}", False)
                 continue
-            if len(x) != len(unfiltered):
-                ui.error(f"Some points have bad data for point {legend}")
+            if len(x) != len(unfiltered.data):
+                ui.error(f"Some points have bad data for point {legend}", False)
 
-            try:
-                [_, wavelengths, means, sds, _, pixcounts] = list(zip(*x))  # "unzip" idiom
-            except ValueError:
-                raise XFormException("DATA", "cannot get spectrum - problem with ROIs?")
+            # get a list of the filters (the dict keys) sorted by filter cwl
+            filters = sorted(x.keys(), key=lambda ff: ff.cwl)
+
+            # extract data from the dictionary
+            values = [x[filt] for filt in filters]
+            means = [a.v.n for a in values]
+            sds = [a.v.u for a in values]
+            pixcounts = [a.pixels for a in values]
 
             if self.node.colourmode == COLOUR_FROMROIS:
-                col = self.node.colsByLegend[legend]
+                col = self.node.data.getColour(legend)
             else:
                 col = cols[colidx % len(cols)]
             means = [x + stackSep * stackpos for x in means]
+
+            wavelengths = [x.cwl for x in filters]
+
             ax.plot(wavelengths, means, c=col, label=legend)
             ax.scatter(wavelengths, means, c=[wav2RGB(x) for x in wavelengths], s=0)
 
@@ -385,14 +309,25 @@ class TabSpectrum(ui.tabs.Tab):
                 stderrs = [std / math.sqrt(pixels) for std, pixels in zip(sds, pixcounts)]
                 ax.errorbar(wavelengths, means,
                             stderrs if self.node.errorbarmode == ERRORBARMODE_STDERROR else sds,
+                            # only show the x error bar if we are in the correct bandwidth mode
+                            xerr=[x.fwhm / 2 for x in filters] if self.node.bandwidthmode == BANDWIDTHMODE_ERRORBAR else None,
                             ls="None", capsize=4, c=col)
             colidx += 1
             # subtraction to make the plots stack the same way as the legend!
             stackpos -= self.node.stackSep
 
+            # now show the bandwidth as a vertical span if we are in the correct mode
+            if self.node.bandwidthmode == BANDWIDTHMODE_VERTBAR:
+                for f in filters:
+                    ax.axvspan(f.cwl - f.fwhm / 2, f.cwl + f.fwhm / 2, color=col, alpha=0.1)
+
         ax.legend(fontsize=self.node.legendFontSize)
         ymin, ymax = ax.get_ylim()
-        ax.set_ylim(ymin - self.node.bottomSpace / 10, ymax)
+        ymin = ymin - self.node.bottomSpace / 10
+        if ymax-ymin < 0.01:  # if the y range is too small, expand it
+            ymin -= 0.01
+            ymax += 0.01
+        ax.set_ylim(ymin, ymax)
         xmin, xmax = ax.get_xlim()
         ax.set_xlim(xmin, xmax + self.node.rightSpace * 100)
 
@@ -422,6 +357,11 @@ class TabSpectrum(ui.tabs.Tab):
     def errorbarmodeChanged(self, mode):
         self.mark()
         self.node.errorbarmode = mode
+        self.changed()
+
+    def bandwidthmodeChanged(self, mode):
+        self.mark()
+        self.node.bandwidthmode = mode
         self.changed()
 
     def colourmodeChanged(self, mode):
@@ -475,6 +415,7 @@ class TabSpectrum(ui.tabs.Tab):
         self.markReplotReady()
         # these will each cause the widget's changed slot to get called and lots of calls to mark()
         self.w.errorbarmode.setCurrentIndex(self.node.errorbarmode)
+        self.w.bandwidthmode.setCurrentIndex(self.node.bandwidthmode)
         self.w.colourmode.setCurrentIndex(self.node.colourmode)
         self.w.stackSepSpin.setValue(self.node.stackSep)
         self.w.bottomSpaceSpin.setValue(self.node.bottomSpace)

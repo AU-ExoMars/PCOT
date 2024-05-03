@@ -41,32 +41,10 @@ def checkApp():
         app = QtWidgets.QApplication()
 
 
-def load_plugins():
-    """plugin dirs are semicolon separated, stored in Locations/plugins"""
-
-    pluginDirs = [os.path.expanduser(x) for x in pcot.config.getDefaultDir('pluginpath').split(';')]
-    logger.info(f"Plugin directories {','.join(pluginDirs)}")
-    # Load any plugins by recursively walking the plugin directories and importing .py files.
-
-    for d in pluginDirs:
-        for root, dirs, files in os.walk(d):
-            for filename in files:
-                base, ext = os.path.splitext(filename)
-                if ext == '.py':
-                    path = os.path.join(root, filename)
-                    logger.info(f"Loading plugin : {path}")
-                    spec = importlib.util.spec_from_file_location(base, path)
-                    module = importlib.util.module_from_spec(spec)
-                    sys.modules[base] = module
-                    spec.loader.exec_module(module)
-
-
 def main():
     """the main function: parses command line, loads any files specified,
     opens a mainwindow and runs its code."""
     global app
-
-    load_plugins()
 
     app = QtWidgets.QApplication(sys.argv)
     app.setApplicationVersion(pcot.__fullversion__)  # this comes from the VERSION.txt file

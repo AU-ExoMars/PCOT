@@ -164,7 +164,6 @@ class XFormMacro(XFormType):
         # superinit
         super().__init__(name, "macros", "0.0.0")
         self._md5 = ''  # we ignore the MD5 checksum for versioning
-        self.hasEnable = True
         self.doc = doc
         # create our prototype graph 
         self.graph = xform.XFormGraph(doc, True)

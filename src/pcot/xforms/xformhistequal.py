@@ -52,10 +52,9 @@ class XformHistEqual(XFormType):
     """
 
     def __init__(self):
-        super().__init__("histequal", "processing", "0.0.0")
+        super().__init__("histequal", "processing", "0.0.0", hasEnable=True)
         self.addInputConnector("", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
-        self.hasEnable = True
 
     def createTab(self, n, w):
         return TabData(n, w)
@@ -68,8 +67,6 @@ class XformHistEqual(XFormType):
         if img is None:
             # can't equalize a non-existent image!
             out = None
-        elif not node.enabled:
-            out = img
         else:
             img = img.copy()  # act always on a copy
             # first extract the ROI subimage; the rectangle which
@@ -93,7 +90,6 @@ class XformHistEqual(XFormType):
 
             # make a copy of the image and paste the modified version of the subimage into it
             out = img.modifyWithSub(subimage, equalized)
-        if out is not None:
             out.setMapping(node.mapping)
-        node.out = Datum(Datum.IMG, out)
-        node.setOutput(0, node.out)
+
+        node.setOutput(0, Datum(Datum.IMG, out))

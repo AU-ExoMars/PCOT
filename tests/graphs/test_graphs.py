@@ -6,7 +6,6 @@ contains MUSTFAIL then there must be at least one failure (this is to test the t
 import inspect
 import logging
 import os
-from os import getcwd
 
 import pytest
 
@@ -49,16 +48,31 @@ def test_graph_files(graphname):
     logger.info(f"Running graph {graphname}")
     pcot.setup()
     doc = Document(graphname)
-    doc.changed()
+    doc.run()       # will run all nodes, including disabled ones
+
+    commentFound = False
+
+    comments = doc.graph.getByDisplayName("comment")
+    for n in comments:
+        if n.string.startswith("DOC"):
+            commentFound = True
+
+    if not commentFound:
+        pytest.fail("Graph tests require a comment that starts with DOC for documentation")
+
     ns = doc.graph.getByDisplayName("sink")
+    foundOne = False    # we must find at least one sink that outputs a test result
     if len(ns) == 0:
         pytest.fail("cannot find sink")
     for n in ns:
-        res = n.out.get(Datum.TESTRESULT)
+        res = n.data.get(Datum.TESTRESULT)
         logger.info(f"Found a sink, output is {res}")
-        if res is None:
-            pytest.fail("output of sink is not an test result")
-        if "mustfail" in graphname.lower():
-            assert len(res) > 0
-        else:
-            assert len(res) == 0
+        if res is not None:
+            foundOne = True
+            if "mustfail" in graphname.lower():
+                assert len(res) > 0
+            else:
+                assert len(res) == 0
+
+    if not foundOne:
+        pytest.fail("cannot find a sink with test result output")

@@ -7,17 +7,17 @@ abstract class ROI <<abstract>> {
 class ROIRect extends ROI {
 }
 
-class SubImageCubeROI {
+class SubImageCube {
     +fullmask():ndarray<bool>
     +cropother(img:ImageCube):ImageCube
     
 }
 
-SubImageCubeROI o-- ImageCube:img
+SubImageCube o-- ImageCube:img
 
 class ImageCube {
-    +subimage():SubImageCubeROI
-    +modifyWithSub(subimage:SubImageCubeROI,newimg:ndarray<float>)
+    +subimage():SubImageCube
+    +modifyWithSub(subimage:SubImageCube,newimg:ndarray<float>)
 }
 
 ImageCube *-- "0..*" ROI : rois

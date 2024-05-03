@@ -6,93 +6,122 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>768</width>
-    <height>500</height>
+    <width>1113</width>
+    <height>691</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0" colspan="8">
-    <widget class="Canvas" name="canvas" native="true">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
+   <item row="4" column="3">
+    <widget class="QCheckBox" name="drawbg">
+     <property name="layoutDirection">
+      <enum>Qt::RightToLeft</enum>
      </property>
-    </widget>
-   </item>
-   <item row="2" column="3">
-    <widget class="QLabel" name="label_2">
      <property name="text">
-      <string>Scale</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      <string>Background</string>
      </property>
     </widget>
    </item>
-   <item row="3" column="4" colspan="2">
+   <item row="4" column="4" colspan="2">
     <widget class="QPushButton" name="clearButton">
      <property name="text">
       <string>Clear</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="label_4">
+   <item row="0" column="0" colspan="8">
+    <widget class="Canvas" name="canvas" native="true">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
        <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
+       <verstretch>1</verstretch>
       </sizepolicy>
      </property>
+    </widget>
+   </item>
+   <item row="1" column="0" rowspan="3">
+    <widget class="QWidget" name="widget" native="true">
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <widget class="QLabel" name="label_4">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>Dot Size (pixels)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="MouseReleaseSpinBox" name="dotSize">
+        <property name="maximum">
+         <number>800</number>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="radioCircles">
+        <property name="text">
+         <string>Circles</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="radioPainted">
+        <property name="text">
+         <string>Painted</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="3" column="6">
+    <widget class="QLabel" name="label_2">
      <property name="text">
-      <string>Dot Size (pixels)</string>
+      <string>Font size</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
      </property>
     </widget>
    </item>
-   <item row="2" column="7">
-    <widget class="QPushButton" name="colourButton">
-     <property name="text">
-      <string>Colour</string>
-     </property>
+   <item row="1" column="1" rowspan="3">
+    <widget class="QWidget" name="widget_2" native="true">
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <widget class="QPushButton" name="captureButton">
+        <property name="text">
+         <string>Capture ROIs from image</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="convertButton">
+        <property name="text">
+         <string>Convert circles to painted</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="helpButton">
+        <property name="styleSheet">
+         <string notr="true">background-color: rgb(255, 185, 185)</string>
+        </property>
+        <property name="text">
+         <string>Help!</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
-   <item row="2" column="5">
-    <widget class="QLabel" name="label_3">
-     <property name="text">
-      <string>Thickness</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="6">
-    <widget class="QSpinBox" name="thickness">
-     <property name="minimum">
-      <number>0</number>
-     </property>
-     <property name="maximum">
-      <number>20</number>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="6" colspan="2">
-    <widget class="QPushButton" name="recolour">
-     <property name="text">
-      <string>Recolour all</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="0">
-    <widget class="QLabel" name="caplabel">
-     <property name="text">
-      <string>Name</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="4">
+   <item row="3" column="7">
     <widget class="QSpinBox" name="fontsize">
      <property name="minimum">
       <number>2</number>
@@ -105,38 +134,126 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="3">
-    <widget class="QCheckBox" name="drawbg">
-     <property name="layoutDirection">
-      <enum>Qt::RightToLeft</enum>
-     </property>
+   <item row="4" column="2">
+    <widget class="QLineEdit" name="caption"/>
+   </item>
+   <item row="4" column="6" colspan="2">
+    <widget class="QPushButton" name="recolour">
      <property name="text">
-      <string>Background</string>
+      <string>Recolour all</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="0" colspan="2">
-    <widget class="QLabel" name="label_6">
+   <item row="4" column="0" colspan="2">
+    <widget class="QLabel" name="caplabel">
+     <property name="text">
+      <string>Region name</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="7">
+    <widget class="QSpinBox" name="thickness">
+     <property name="minimum">
+      <number>0</number>
+     </property>
+     <property name="maximum">
+      <number>20</number>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="6">
+    <widget class="QLabel" name="label_3">
+     <property name="text">
+      <string>Thickness</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="2" rowspan="3" colspan="4">
+    <widget class="QStackedWidget" name="stackedWidget">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
+     <property name="currentIndex">
+      <number>1</number>
+     </property>
+     <widget class="QWidget" name="page_3">
+      <layout class="QGridLayout" name="gridLayout_2">
+       <item row="0" column="0" colspan="2">
+        <widget class="QLabel" name="label_6">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>CIRCLE mode: Click to select, Shift-Click to add</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="page_4">
+      <layout class="QGridLayout" name="gridLayout_3">
+       <item row="0" column="0" colspan="2">
+        <widget class="QLabel" name="label_7">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>PAINTED mode: Click to select, Shift+Click for create painted ROI, Alt+Click for unpaint, Ctrl+Click for add. Add/Create mode sets whether circle or flood is used.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="tolerance"/>
+       </item>
+       <item row="0" column="3" rowspan="2">
+        <widget class="ModeWidget" name="createMode" native="true"/>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>tolerance for fill</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="2">
+        <widget class="QPushButton" name="erodeButton">
+         <property name="text">
+          <string>Erode</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="2">
+        <widget class="QPushButton" name="dilateButton">
+         <property name="text">
+          <string>Dilate</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item row="1" column="6" colspan="2">
+    <widget class="QPushButton" name="colourButton">
      <property name="text">
-      <string>Click to select, Shift-Click to add</string>
+      <string>Region colour</string>
      </property>
     </widget>
-   </item>
-   <item row="2" column="2">
-    <widget class="MouseReleaseSpinBox" name="dotSize">
-     <property name="maximum">
-      <number>800</number>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="2">
-    <widget class="QLineEdit" name="caption"/>
    </item>
   </layout>
  </widget>
@@ -151,6 +268,12 @@
    <class>MouseReleaseSpinBox</class>
    <extends>QSpinBox</extends>
    <header>pcot.ui.smallwidgets</header>
+  </customwidget>
+  <customwidget>
+   <class>ModeWidget</class>
+   <extends>QWidget</extends>
+   <header>pcot.xforms.xformmultidot</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>

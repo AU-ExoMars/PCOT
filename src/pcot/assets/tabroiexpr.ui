@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1156</width>
-    <height>825</height>
+    <height>826</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -49,12 +49,12 @@
         <widget class="QLabel" name="label_4">
          <property name="maximumSize">
           <size>
-           <width>50</width>
+           <width>200</width>
            <height>16777215</height>
           </size>
          </property>
          <property name="text">
-          <string>Tests</string>
+          <string>Regions of interest a,b,c...</string>
          </property>
         </widget>
        </item>
@@ -142,7 +142,7 @@
           <item row="0" column="0" colspan="2">
            <widget class="QLineEdit" name="exprEdit">
             <property name="placeholderText">
-             <string>Enter expression here in terms of a,b,c,d etc.</string>
+             <string>Enter expression here in terms of a,b,c,d,p,q,r etc.</string>
             </property>
            </widget>
           </item>

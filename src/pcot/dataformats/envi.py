@@ -29,7 +29,7 @@ import numpy as np
 import pcot.ui as ui
 from pcot.filters import Filter
 from pcot.imagecube import ChannelMapping, ImageCube
-from pcot.sources import InputSource, MultiBandSource
+from pcot.sources import MultiBandSource, Source, External, StringExternal
 
 
 def parseHeader(lines):
@@ -109,7 +109,7 @@ class ENVIHeader:
 
         if 'default bands' in d:
             # based at one, for heaven's sake.
-            self.defaultBands = [int(x)-1 for x in d['default bands']]
+            self.defaultBands = [int(x) - 1 for x in d['default bands']]
         else:
             self.defaultBands = None
 
@@ -142,7 +142,7 @@ class ENVIHeader:
             self.ignoreValue = None
 
 
-def _load(fn):
+def load(fn):
     """Takes the ENVI header name. Actually loads the envi, returning a tuple of (header, ndarray)"""
     with open(fn) as f:
         h = ENVIHeader(f)
@@ -174,7 +174,7 @@ def _load(fn):
             gain = h.gains[i]
             if sys.byteorder != h.byteorder:
                 band = band.byteswap()
-            bands.append(band)      # Do I need to apply the data gain values here??
+            bands.append(band)  # Do I need to apply the data gain values here??
 
     # now have list of 6 bands. Interleave.
     img = np.stack(bands, axis=-1)
@@ -182,29 +182,9 @@ def _load(fn):
     return h, img
 
 
-def load(fn, doc, inpidx, mapping: ChannelMapping = None) -> ImageCube:
-    """Load a file as an ENVI. The filename is the header filename (.hdr).
-    Requires a Document and an input index, so don't call this directly - Document.setInputENVI()."""
-
-    # perform cached load
-    h, img = _load(fn)
-
-    # construct the source data
-    sources = MultiBandSource([InputSource(doc, inpidx, f) for f in h.filters])
-
-    if mapping is None:
-        mapping = ChannelMapping()
-    if h.defaultBands is not None:
-        mapping.set(*h.defaultBands)
-        return ImageCube(img, mapping, sources, defaultMapping=mapping.copy())
-    else:
-        return ImageCube(img, mapping, sources)
-
-
-
-def _genheader(f, w: int, h: int, freqs: List[float],camname="LWAC"):
+def _genheader(f, w: int, h: int, freqs: List[float], camname="LWAC"):
     """Crude envi header writer"""
-    
+
     f.write("ENVI\n")
     f.write(f"samples = {w}\nlines   = {h}\nbands   = {len(freqs)}\n")
     f.write("data type = 4\ninterleave = bsq\nfile type = ENVI Standard\n")
@@ -215,9 +195,9 @@ def _genheader(f, w: int, h: int, freqs: List[float],camname="LWAC"):
     f.write(f"    0.00000000, {h - 1}.00000000, {h - 1}.00000000,    0.00000000,\n")
     f.write(f" {w - 1}.00000000, {h - 1}.00000000, {w - 1}.00000000, {h - 1}.00000000}}\n")
 
-#    defbands = [min(x, len(freqs)) for x in [1, 2, 3]]
-#    s = ",".join([str(x) for x in defbands])
-#    f.write(f"default bands = {{{s}}}\n")
+    #    defbands = [min(x, len(freqs)) for x in [1, 2, 3]]
+    #    s = ",".join([str(x) for x in defbands])
+    #    f.write(f"default bands = {{{s}}}\n")
     bandnames = ", ".join([f"L{i + 1}_{f}" for i, f in enumerate(freqs)])
     f.write(f"band names = {{\n {bandnames}}}\n")
     s = ", ".join([f"{f:0.6f}" for f in freqs])
@@ -250,7 +230,7 @@ def _write(name: str, freqs: List[float], img: np.ndarray, camname):
 
     # first, write out the header
     with open(f"{name}.hdr", "w") as f:
-        _genheader(f, w, h, freqs,camname)
+        _genheader(f, w, h, freqs, camname)
 
     # now output the actual ENVI data
     bands = [np.reshape(x, img.shape[:2]) for x in np.dsplit(img, img.shape[-1])]
@@ -262,8 +242,8 @@ def _write(name: str, freqs: List[float], img: np.ndarray, camname):
 
 
 def write(fn: str, img: ImageCube, camname="LWAC"):
-        # convert the sources to frequencies, assuming there is only
-        # one source per channel and they all have centre wavelength values
-        freqs = [next(iter(s)).getFilter().cwl for s in img.sources]
+    # convert the sources to frequencies, assuming there is only
+    # one source per channel and they all have centre wavelength values
+    freqs = [next(iter(s)).getFilter().cwl for s in img.sources]
 
-        _write(fn, freqs, img.img, camname)
+    _write(fn, freqs, img.img, camname)

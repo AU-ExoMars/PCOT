@@ -20,6 +20,13 @@ conditions = ["When all present",  # 0
 class XFormROIDQ(XFormType):
     """
     Automatically generate an ROI from DQ bits in a band or in all bands.
+
+    <blockquote style="background-color: #ffd0d0;">
+    **WARNING**: the ROI will be generated from DQ data from any bands in this image.
+    It can then be applied to any other image or band - but this information is not
+    tracked by the source mechanism. This means that some source tracking information
+    can be lost. (Issue #68)
+    </blockquote>
     """
 
     def __init__(self):
@@ -44,7 +51,6 @@ class XFormROIDQ(XFormType):
         return TabROIDQ(n, w)
 
     def init(self, node):
-        node.img = None
         node.caption = ''
         node.captiontop = False
         node.fontsize = 10
@@ -65,15 +71,20 @@ class XFormROIDQ(XFormType):
             dqs = subimg.maskedDQ()
 
             # now we have that data, we need to convert into a single band.
-            if node.chan == -2:  # ANY bands, so we OR them all together
-                dqs = np.bitwise_or.reduce(dqs, axis=2)
+
+            if img.channels > 1:
+                if node.chan == -2:  # ANY bands, so we OR them all together
+                    dqs = np.bitwise_or.reduce(dqs, axis=2)
+                    sources = img.sources.getSources()  # source for ROI is all bands
+                elif node.chan == -1:  # ALL bands, so we AND them together
+                    dqs = np.bitwise_and.reduce(dqs, axis=2)
+                    sources = img.sources.getSources()  # source for ROI is all bands
+                else:  # otherwise it's just some band
+                    dqs = dqs[:, :, node.chan]
+                    sources = img.sources.sourceSets[node.chan]  # source for ROI is just one band
+            else:
+                # leave dqs as it is for a 1-channel image
                 sources = img.sources.getSources()  # source for ROI is all bands
-            elif node.chan == -1:  # ALL bands, so we AND them together
-                dqs = np.bitwise_and.reduce(dqs, axis=2)
-                sources = img.sources.getSources()  # source for ROI is all bands
-            else:  # otherwise it's just some band
-                dqs = dqs[:, :, node.chan]
-                sources = img.sources.sourceSets[node.chan]  # source for ROI is just one band
 
             # now we perform the actual action
             if node.condition == 0:  # when all bits present
@@ -96,23 +107,25 @@ class XFormROIDQ(XFormType):
             roi = ROIPainted(mask=res)
             roi.setContainingImageDimensions(img.w, img.h)
             roi.cropDownWithDraw()
-            # here we set the origin of the ROI to the origin of the subimage, because
-            # that's what we were working on.
+
+            # here we add the origin of the ROI to the origin of the subimage, because
+            # that's what we were working on. What's going on here is that the new ROI
+            # is inside the subimage and relative to it, so we need to get the coordinates
+            # relative to the whole image.
             if roi.bbrect is not None:
                 # the BB rect is None if the ROI has no pixels in it!
-                roi.bbrect.x = subimg.bb.x
-                roi.bbrect.y = subimg.bb.y
+                roi.bbrect.x += subimg.bb.x
+                roi.bbrect.y += subimg.bb.y
+
             roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.thickness, node.drawbg)
 
             img = img.copy()
             img.rois = [roi]
 
-            node.img = img
             node.roi = roi
             outImgDatum = Datum(Datum.IMG, img)
             outROIDatum = Datum(Datum.ROI, roi, sources=sources)
         else:
-            node.img = None
             node.roi = None
             outImgDatum = Datum(Datum.IMG, None, nullSourceSet)
             outROIDatum = Datum(Datum.ROI, None, nullSourceSet)
@@ -125,7 +138,6 @@ class XFormROIDQ(XFormType):
 
     def getMyROIs(self, node):
         return [node.roi]
-
 
 
 class TabROIDQ(pcot.ui.tabs.Tab):
@@ -206,9 +218,10 @@ class TabROIDQ(pcot.ui.tabs.Tab):
             self.w.chanCombo.clear()
             self.w.chanCombo.addItem("Any bands", -1)
             self.w.chanCombo.addItem("All bands", -2)
-            if self.node.img is not None:
+            img = self.node.getOutput(0, Datum.IMG)
+            if img is not None:
                 chanNames = [s.brief(self.node.graph.doc.settings.captionType) for s in
-                             self.node.img.sources.sourceSets]
+                             img.sources.sourceSets]
                 for i, desc in enumerate(chanNames):
                     self.w.chanCombo.addItem(desc, i)
 
@@ -219,7 +232,7 @@ class TabROIDQ(pcot.ui.tabs.Tab):
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)
         self.w.canvas.setROINode(self.node)
-        self.w.canvas.display(self.node.img)
+        self.w.canvas.display(self.node.getOutput(0, Datum.IMG))
 
         if not self.dontSetText:
             self.w.caption.setText(self.node.caption)

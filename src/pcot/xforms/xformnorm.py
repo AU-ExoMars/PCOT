@@ -14,7 +14,6 @@ class XformNormImage(XFormType):
         super().__init__("normimage", "processing", "0.0.0")
         self.addInputConnector("", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
-        self.hasEnable = True
         self.autoserialise = ('mode',)
 
     def createTab(self, n, w):
@@ -22,7 +21,6 @@ class XformNormImage(XFormType):
 
     def init(self, node):
         node.mode = 0
-        node.img = None
 
     def perform(self, node):
         # this uses the performOp function to wrap the "norm" operation function so that
@@ -47,4 +45,4 @@ class TabNorm(pcot.ui.tabs.Tab):
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)
         self.w.mode.setCurrentIndex(self.node.mode)
-        self.w.canvas.display(self.node.img)
+        self.w.canvas.display(self.node.getOutput(0, Datum.IMG))

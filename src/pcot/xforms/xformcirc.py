@@ -36,7 +36,6 @@ class XformCirc(XFormROIType):
         return TabCirc(n, w)
 
     def init(self, node):
-        node.img = None
         node.croprect = None  # would be (x,y,w,h) tuple
         node.caption = ''
         node.captiontop = False
@@ -154,7 +153,7 @@ class TabCirc(pcot.ui.tabs.Tab):
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)
         self.w.canvas.setROINode(self.node)
-        self.w.canvas.display(self.node.img)
+        self.w.canvas.display(self.node.getOutput(XFormROIType.OUT_IMG))
         if not self.dontSetText:
             self.w.caption.setText(self.node.caption)
         self.w.fontsize.setValue(self.node.fontsize)

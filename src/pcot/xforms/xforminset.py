@@ -32,13 +32,11 @@ class XformInset(XFormType):
         self.addOutputConnector("", Datum.IMG)
         self.autoserialise = ('insetrect', 'caption', 'captiontop',
                               'fontsize', 'thickness', 'colour')
-        self.hasEnable = True
 
     def createTab(self, n, w):
         return TabInset(n, w)
 
     def init(self, node):
-        node.img = None
         node.insetrect = None
         node.caption = ''
         node.captiontop = False
@@ -80,7 +78,7 @@ class XformInset(XFormType):
             if inset is None:
                 # there's no inset image, draw a rectangle
                 cv.rectangle(out, (x, y), (x + w, y + h), (0, 0, 255), -1)  # -1=filled
-            elif node.enabled:  # only add the inset if enabled
+            else:
                 # resize the inset (and cvt to RGB if necessary); note that we're again
                 # using the RGB mapping it should have been given in the previous node.
                 insetrgb = inset.rgb()
@@ -100,10 +98,10 @@ class XformInset(XFormType):
 
         # build output image
         if out is None:
-            node.img = None
+            img = None
         else:
-            node.img = ImageCube(out, node.mapping, sources=src, rois=[roi])
-        node.setOutput(0, Datum(Datum.IMG, node.img))
+            img = ImageCube(out, node.mapping, sources=src, rois=[roi])
+        node.setOutput(0, Datum(Datum.IMG, img))
 
 
 class TabInset(pcot.ui.tabs.Tab):
@@ -160,10 +158,11 @@ class TabInset(pcot.ui.tabs.Tab):
     # causes the tab to update itself from the node
     def onNodeChanged(self):
         # we just draw the composited image
-        if self.node.img is not None:
+        img = self.node.getOutput(Datum.IMG)
+        if img is not None:
             # have to do canvas set up here to handle extreme undo events which change the graph and nodes
             self.w.canvas.setPersister(self.node)
-            self.w.canvas.display(self.node.img)
+            self.w.canvas.display(img)
         if not self.dontSetText:
             self.w.caption.setText(self.node.caption)
         self.w.fontsize.setValue(self.node.fontsize)

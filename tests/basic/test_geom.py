@@ -51,3 +51,21 @@ def test_rect_corners():
     assert y1 == 23
     assert x2 == 113
     assert y2 == 323
+
+
+def test_rect_contains():
+    """Test the rectangle containment method"""
+    x = 13
+    y = 23
+    w = 100
+    h = 300
+    a = Rect(x, y, w, h)
+    assert (x, y) in a
+    assert (x + w - 1, y + h - 1) in a
+    assert (x + w, y + h) not in a
+    assert (x - 1, y) not in a
+    assert (x, y - 1) not in a
+    assert (x + w, y) not in a
+    assert (x, y + h) not in a
+    assert (x + w - 1, y + h) not in a
+    assert (x + w, y + h - 1) not in a

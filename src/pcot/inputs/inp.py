@@ -158,17 +158,9 @@ class Input:
             m.deserialise(data)  # and deserialise its data
         return m
 
-    def __str__(self):
+    def __repr__(self):
         """string for internal use only"""
         return f"Input-{self.idx}-active-{self.activeMethod}"
-
-    def brief(self):
-        """string for use in captions, etc."""
-        return self.getActive().brief()
-
-    def long(self):
-        """long description"""
-        return self.getActive().long()
 
 
 ## how many inputs the system can have

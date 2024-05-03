@@ -22,8 +22,8 @@ def getvar(d):
 class XFormExpr(XFormType):
     r"""
     Expression evaluator. The node box will show the text of the expression. The "run" button must be clicked to
-    set the node to the new expression and perform it. Additionally, the output type must be set - the system cannot
-    determine the output type from the input types.
+    set the node to the new expression and perform it. The input can accept any type of data
+    and the output type is determined when the node is run.
 
     The four inputs are assigned to the variables a, b, c, and d. They are typically (but not necessarily) images
     or scalar values.
@@ -37,12 +37,12 @@ class XFormExpr(XFormType):
     ### Image/numeric operators:
     |operator    |description| precedence (higher binds tighter)
     |-------|-----------|----------------
-    | + | add \[r\] | 10
-    | - | subtract \[r\] | 10
-    | / | divide \[r\] | 20
-    | * | multiply \[r\] | 20
-    | ^ | exponentiate \[r\] | 30
-    |-A            |element-wise -A|50
+    |A + B| add A to B (can act on ROIs)| 10
+    |A - B| subtract A from B (can act on ROIs)| 10
+    |A / B| divide A by B (can act on ROIs)| 20
+    |A * B| multiply A by B (can act on ROIs)| 20
+    |A ^ B| exponentiate A to the power B (can act on ROIs)| 30
+    |-A            |element-wise negation of A (can act on ROIs)|50
     |A.B           |property B of entity A (e.g. a.h is height of image a)|80
     |A$546         |extract single band image of wavelength 546|100
     |A$_2          |extract single band image from band 2 explicitly|100
@@ -53,7 +53,8 @@ class XFormExpr(XFormType):
     All operators can act on images and scalars (numeric values),
     with the exception of **.** and **$** which have images on the left-hand side and identifiers
     or integers on the right-hand side.
-    Those operators marked with \[r\] can also act on pairs of ROIs (regions of interest, see below).
+
+    Those operators marked with **(can act on ROIs)** can also act on pairs of ROIs (regions of interest, see below).
     
     ### Binary operations on image pairs
     These act by performing the binary operation on the two underlying Numpy arrays. This means you may need to be
@@ -139,6 +140,7 @@ class XFormExpr(XFormType):
     def __init__(self):
         super().__init__("expr", "maths", "0.0.0")
         self.parser = ExpressionEvaluator()
+
         self.addInputConnector("a", Datum.ANY)
         self.addInputConnector("b", Datum.ANY)
         self.addInputConnector("c", Datum.ANY)
@@ -152,7 +154,8 @@ class XFormExpr(XFormType):
     def init(self, node):
         node.tmpexpr = ""
         node.expr = ""
-        # used when we have an image on the output
+        # used when we have an image on the output. We keep this unlike a lot of other nodes so
+        # we can see when the channel count changes.
         node.img = None
         # a string to display the image
         node.resultStr = ""
@@ -228,4 +231,8 @@ class TabExpr(pcot.ui.tabs.Tab):
         self.w.canvas.setPersister(self.node)
         self.w.expr.setPlainText(self.node.expr)
         self.w.result.setPlainText(self.node.resultStr)
-        self.w.canvas.display(self.node.img)
+        d = self.node.getOutputDatum(0)
+        if d is not None and d.tp == Datum.IMG:
+            self.w.canvas.display(d.val)
+        else:
+            self.w.canvas.display(None)

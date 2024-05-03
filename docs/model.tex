@@ -547,7 +547,7 @@ each of which is an instantiation of a subclass of \texttt{ROI}.
 
 To honouring regions of interest inside a node's \texttt{perform()} method:
 \begin{itemize}
-\item \texttt{ImageCube.subimage()} will return a \texttt{SubImageCubeROI} object. This encapsulates
+\item \texttt{ImageCube.subimage()} will return a \texttt{SubImageCube} object. This encapsulates
 a numpy array containing the image bounded to a rectangle around the regions of interest and
 a boolean mask (again as a numpy array) specifying which pixels in this rectangle are actually
 in regions of interest.

@@ -191,7 +191,7 @@ class GradientLegend(Annotation):
         else:
             return 0, 0, 0, 0
 
-    def _doAnnotate(self, p: QPainter, inPDF):
+    def _doAnnotate(self, p: QPainter, alpha, inPDF):
         """Core annotation method"""
         # if we're doing a margin annotation we override many of the values passed in
         i2u = self.inchesToUnits
@@ -229,17 +229,19 @@ class GradientLegend(Annotation):
                               (fontscale + textGap) * 2)  # -font size and a little bit
             else:
                 raise XFormException('DATA', 'Bad margin placement option')
+            col = rgb2qcol(colour)
         else:
             x, y, w, h = self.rect
             colour = self.colour
             vertical = self.vertical
             fontscale = self.fontscale
             borderThickness = self.thickness
+            col = rgb2qcol(colour, alpha)
             barThickness = w
 
         p.fillRect(QRectF(x, y, w, h), self.grad.getGradient(vertical=vertical))
         p.setBrush(Qt.NoBrush)
-        pen = QPen(rgb2qcol(colour))
+        pen = QPen(col)
         pen.setWidth(borderThickness)
         p.setPen(pen)
         p.drawRect(int(x), int(y), int(w), int(h))
@@ -264,9 +266,9 @@ class GradientLegend(Annotation):
         if self.legendpos != IN_IMAGE and self.legendpos != NONE and self.legendpos is not None:
             self._doAnnotate(p, True)
 
-    def annotate(self, p: QPainter, img):
+    def annotate(self, p: QPainter, img, alpha):
         if self.legendpos == IN_IMAGE:
-            self._doAnnotate(p, False)
+            self._doAnnotate(p, alpha, False)
 
 
 def _normAndGetRange(subimage):
@@ -311,10 +313,10 @@ class XformGradient(XFormType):
     def __init__(self):
         super().__init__("gradient", "data", "0.0.0")
         self.addInputConnector("mono", Datum.IMG)
-        self.addInputConnector("insetinto", Datum.IMG)
+        self.addInputConnector("background", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
-        self.hasEnable = True
         self.autoserialise = ('colour', 'legendrect', 'vertical', 'thickness', 'fontscale', 'legendPos',
+                              ('normbackground', False),
                               ('sigfigs', 6))
 
     def serialise(self, node):
@@ -327,7 +329,6 @@ class XformGradient(XFormType):
         return TabGradient(n, w)
 
     def init(self, node):
-        node.img = None
         node.gradient = presetGradients['viridis']
         node.colour = (1, 1, 0)
         node.legendrect = (0, 0, 100, 20)
@@ -336,20 +337,18 @@ class XformGradient(XFormType):
         node.sigfigs = 6
         node.thickness = 1
         node.legendPos = IN_IMAGE
+        node.normbackground = False
 
     def perform(self, node):
         mono = node.getInput(0, Datum.IMG)
         rgb = node.getInput(1, Datum.IMG)
 
-        if not node.enabled:
-            return
-
         node.minval = 0.0
         node.maxval = 1.0
         if mono is None and rgb is None:
-            node.img = None
+            out = None
         elif mono is None:
-            node.img = ImageCube(rgb.rgb(), node.mapping, sources=rgb.rgbSources())
+            out = ImageCube(rgb.rgb(), node.mapping, sources=rgb.rgbSources())
         elif mono.channels != 1:
             raise XFormException('DATA', 'Gradient must be on greyscale images')
         elif rgb is None or len(mono.rois) == 0:
@@ -362,7 +361,7 @@ class XformGradient(XFormType):
             source = mono.sources.getSources()
             outimg = ImageCube(mono.rgb(), node.mapping, sources=MultiBandSource([source, source, source]))
             outimg.rois = mono.rois  # copy ROIs in so they are visible if desired
-            node.img = outimg.modifyWithSub(subimage, newsubimg, keepMapping=True)
+            out = outimg.modifyWithSub(subimage, newsubimg, keepMapping=True)
         else:
             # save the ROIs, because we're going to need them later
             monoROIs = mono.rois
@@ -371,8 +370,15 @@ class XformGradient(XFormType):
             node.minval, node.maxval, subimage.img = _normAndGetRange(subimage)
             newsubimg = node.gradient.apply(subimage.img, subimage.mask)
             source = mono.sources.getSources()
-            # this time we get the RGB from the rgb input
-            outimg = ImageCube(rgb.rgb(), node.mapping, sources=MultiBandSource([source, source, source]))
+            # this time we get the RGB from the background input
+            # and we need to normalise the rgb first
+            rgb = rgb.rgb()
+            if node.normbackground:
+                mx = np.max(rgb)
+                mn = np.min(rgb)
+                rgb = (rgb - mn) / (mx - mn)
+
+            outimg = ImageCube(rgb, node.mapping, sources=MultiBandSource([source, source, source]))
             outimg.rois = monoROIs  # copy ROIs in so they are visible if desired
             # we keep the same RGB mapping and this time we're modifying an image at the original size,
             # so we splice the old ROIs back in. This is pretty horrific; I hope it makes sense. Remember
@@ -382,21 +388,21 @@ class XformGradient(XFormType):
             roiUnion = ROI.roiUnion(monoROIs)  # may return None if there is an unset ROI
             if roiUnion is not None:
                 subimage.setROI(outimg, roiUnion)
-            node.img = outimg.modifyWithSub(subimage, newsubimg, keepMapping=True)
+            out = outimg.modifyWithSub(subimage, newsubimg, keepMapping=True)
 
-        fs = "{:."+str(node.sigfigs)+"}"
-        if node.img is not None:
-            node.img.annotations.append(GradientLegend(node.gradient,
-                                                       node.legendPos,
-                                                       node.legendrect,
-                                                       node.vertical,
-                                                       node.colour,
-                                                       node.fontscale,
-                                                       node.thickness,
-                                                       (fs.format(node.minval), fs.format(node.maxval))
-                                                       ))
+        fs = "{:." + str(node.sigfigs) + "}"
+        if out is not None:
+            out.annotations.append(GradientLegend(node.gradient,
+                                                  node.legendPos,
+                                                  node.legendrect,
+                                                  node.vertical,
+                                                  node.colour,
+                                                  node.fontscale,
+                                                  node.thickness,
+                                                  (fs.format(node.minval), fs.format(node.maxval))
+                                                  ))
 
-        node.setOutput(0, Datum(Datum.IMG, node.img))
+        node.setOutput(0, Datum(Datum.IMG, out))
 
 
 removeSpaces = str.maketrans('', '', ' ')
@@ -416,6 +422,7 @@ class TabGradient(pcot.ui.tabs.Tab):
         self.w.sigFigs.valueChanged.connect(self.sigFigsChanged)
         self.w.orientCombo.currentTextChanged.connect(self.orientChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
+        self.w.normCheck.toggled.connect(self.normChanged)
 
         self.pageButtons = [
             self.w.gradPageButton,
@@ -441,6 +448,11 @@ class TabGradient(pcot.ui.tabs.Tab):
     def legendPosChanged(self, string):
         self.mark()
         self.node.legendPos = string
+        self.changed()
+
+    def normChanged(self, val):
+        self.mark()
+        self.node.normbackground = val
         self.changed()
 
     def fontChanged(self, val):
@@ -507,7 +519,6 @@ class TabGradient(pcot.ui.tabs.Tab):
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)
         self.w.gradient.setGradient(self.node.gradient.data)
-        self.w.canvas.display(self.node.img)
         s = f"Min:{self.node.minval:.6g}\nMax:{self.node.maxval:.6g}"
         self.w.rangeLabel.setText(s)
 
@@ -523,8 +534,10 @@ class TabGradient(pcot.ui.tabs.Tab):
         r, g, b = [x * 255 for x in self.node.colour]
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
 
-        if self.node.img is not None:
-            self.w.xSpin.setMaximum(self.node.img.w)
-            self.w.ySpin.setMaximum(self.node.img.h)
-            self.w.wSpin.setMaximum(self.node.img.w)
-            self.w.hSpin.setMaximum(self.node.img.h)
+        img = self.node.getOutput(0)
+        self.w.canvas.display(img)
+        if img is not None:
+            self.w.xSpin.setMaximum(img.w)
+            self.w.ySpin.setMaximum(img.h)
+            self.w.wSpin.setMaximum(img.w)
+            self.w.hSpin.setMaximum(img.h)

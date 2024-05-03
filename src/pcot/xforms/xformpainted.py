@@ -28,7 +28,6 @@ class XFormPainted(XFormROIType):
         return TabPainted(n, w)
 
     def init(self, node):
-        node.img = None
         node.caption = ''
         node.captiontop = False
         node.fontsize = 10
@@ -160,7 +159,7 @@ class TabPainted(pcot.ui.tabs.Tab):
         self.w.canvas.setGraph(self.node.graph)
         self.w.canvas.setPersister(self.node)
         self.w.canvas.setROINode(self.node)
-        self.w.canvas.display(self.node.img)
+        self.w.canvas.display(self.node.getOutput(XFormROIType.OUT_IMG))
 
         if not self.dontSetText:
             self.w.caption.setText(self.node.caption)

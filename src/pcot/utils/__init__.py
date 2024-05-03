@@ -50,7 +50,8 @@ class singleton:
 
 
 class SignalBlocker:
-    """Handy class for blocking signals on several widgets at once"""
+    """Handy class for blocking signals on several widgets at once. It looks like QSignalBlocker
+    in PySide2 doesn't have __enter__ and __exit__, so this lets us use it in a with statement."""
 
     def __init__(self, *args):
         self.objects = args

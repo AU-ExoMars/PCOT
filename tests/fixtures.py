@@ -9,7 +9,7 @@ import pytest
 from distutils import dir_util
 import numpy as np
 
-from pcot.sources import MultiBandSource, nullSource, InputSource
+from pcot.sources import MultiBandSource, nullSource, Source
 
 """
 Assorted test fixtures, mainly for generating input data (typically images)
@@ -56,7 +56,7 @@ def globaldatadir(tmp_path, request):
         if parents[i].name == 'tests' and (parents[i] / 'data').exists():
             xx = parents[i] / 'data'
             return xx
-    raise FileNotFoundError(f"cannot find tests/data in parents of test directory {path}")
+    raise Exception(f"cannot find tests/data in parents of test directory {path}")
 
 
 @pytest.fixture
@@ -75,7 +75,8 @@ def rectimage(globaldatadir):
 
 def genmono(w,h,v,u,dq,doc=None,inpidx=None):
     if doc is not None and inpidx is not None:
-        sources = MultiBandSource([InputSource(doc,inpidx,'M')])
+        s = Source().setBand('M')
+        sources = MultiBandSource([s])
     else:
         sources = MultiBandSource([nullSource])
 
@@ -90,18 +91,15 @@ def genmono(w,h,v,u,dq,doc=None,inpidx=None):
 
 
 def genrgb(w, h, r, g, b, u=None, d=None, doc=None, inpidx=None):
-    """Generate an RGB image. If document and input index are given, we create an InputSource, otherwise
-    it has to be a nullSource.
+    """Generate an RGB image. If the input index is provided, use it.
     If u is provided, it is an (r,g,b) uncertainty tuple.
     If d is provided, it is an (r,g,b) dq bits tuple
 
     """
-    if doc is not None and inpidx is not None:
-        sources = MultiBandSource([InputSource(doc, inpidx, 'R'),
-                                   InputSource(doc, inpidx, 'G'),
-                                   InputSource(doc, inpidx, 'B')])
-    else:
-        sources = MultiBandSource([nullSource, nullSource, nullSource])
+    # generated as "orphan" sources that come from no input
+    sources = MultiBandSource([Source().setBand('R').setInputIdx(inpidx),
+                               Source().setBand('G').setInputIdx(inpidx),
+                               Source().setBand('B').setInputIdx(inpidx)])
 
     bands = [np.full((h, w), x) for x in (r, g, b)]
     bands = np.dstack(bands).astype(np.float32)
@@ -133,7 +131,7 @@ def gen_two_halves(w, h, v1, u1, v2, u2, doc=None, inpidx=None):
     if doc is not None and inpidx is not None:
         # generate source names of the form r,g,b,c3,c4..
         sourceNames = ["r", "g", "b"] + [f"c{i}" for i in range(3, len(v1))]
-        sources = MultiBandSource([InputSource(doc, inpidx, sourceNames[i]) for i in range(0, len(v1))])
+        sources = MultiBandSource([Source().setBand(sourceNames[i]) for i in range(0, len(v1))])
     else:
         sources = MultiBandSource([nullSource] * len(v1))
 
@@ -198,3 +196,4 @@ def envi_image_2(tmp_path):
 
     # return the filename (with a .hdr)
     return fn.with_suffix(".hdr")
+

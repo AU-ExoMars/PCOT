@@ -174,10 +174,6 @@ class Tab(QtWidgets.QWidget):
 
     updatingTabs = False  # we are updating after a perform, don't take too much notice of calls to changed()
 
-    def commentChanged(self):
-        """the comment field changed, set the data in the node."""
-        self.node.comment = self.comment.toPlainText().strip()
-
     def __init__(self, window, node, uifile):
         """constructor, which should be called by the subclass ctor"""
         super(Tab, self).__init__()
@@ -187,56 +183,53 @@ class Tab(QtWidgets.QWidget):
         # store a ref to the main UI window which created the tab
         self.window = window
 
-        # set the entire tab to be a vertical layout (just there to contain
-        # everything, could be any layout)
+        # create the layout
         lay = QtWidgets.QVBoxLayout()
         self.setLayout(lay)
-
-        # create a splitter inside the tab and add both the main widget
-        # and the comment field to it
-        splitter = QtWidgets.QSplitter()
-        splitter.setOrientation(Qt.Vertical)
-        lay.addWidget(splitter)
         self.w = QtWidgets.QWidget()
-        splitter.addWidget(self.w)
-        self.comment = QtWidgets.QTextEdit()
-        self.comment.setPlaceholderText("add a comment on this node here")
-        self.comment.setMinimumHeight(30)
-        self.comment.setMaximumHeight(150)
-        widlower = QtWidgets.QWidget()
-        splitter.addWidget(widlower)
-        laylower = QtWidgets.QVBoxLayout()
-        widlower.setLayout(laylower)
-        laylower.setContentsMargins(1, 1, 1, 1)
+        lay.addWidget(self.w)
 
-        widCommentAndEnable = QtWidgets.QWidget()
-        layCommentAndEnable = QtWidgets.QHBoxLayout()
-        layCommentAndEnable.setContentsMargins(1, 1, 1, 1)
-        widCommentAndEnable.setLayout(layCommentAndEnable)
-        laylower.addWidget(widCommentAndEnable)
-
-        layCommentAndEnable.addWidget(self.comment)
-        self.comment.textChanged.connect(self.commentChanged)
+        # lower element for error message
+        self.lower = QtWidgets.QWidget()
+        lowerLay = QtWidgets.QHBoxLayout()
+        self.lower.setLayout(lowerLay)
+        lay.addWidget(self.lower)
+        self.lower.setStyleSheet("background-color: rgb(240, 240, 240);")
 
         # default invisible error
         self.errorText = QtWidgets.QLabel("")
-        self.errorText.setVisible(False)
         self.errorText.setFont(tabErrorFont)
         self.errorText.setStyleSheet("QLabel{color: rgb(200, 0, 0);}")
+        lowerLay.addWidget(self.errorText)
+        self.errorText.setVisible(False)
+        # much of this is pointless, because the error message controls set the visibility.
+        # Ideally, I'd like to have the widget have a zero height when it has no children, but
+        # I can't figure out how to do that right now. Indeed, it may not be possible.
+        self.lower.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
+                                                  QtWidgets.QSizePolicy.Fixed))
+        self.lower.setMinimumHeight(0)
 
-        laylower.addWidget(self.errorText)
+        # There used to be a "comment" field, but it was never used and was removed.
+        # However, the widget that contains its represetation is still there, and is
+        # used to contain the "enabled" widget if the node has one. But we only
+        # create it if the node has an enabled widget.
+        # Most nodes don't have one.
 
-        # most nodes don't have an enabled widget.
         if node.type.hasEnable:
-            self.enable = QtWidgets.QRadioButton("enabled")
-            layCommentAndEnable.addWidget(self.enable)
-            self.enable.setChecked(node.enabled)
-            self.enable.toggled.connect(self.enableChanged)
+            self.enableRadioButton = QtWidgets.QRadioButton("enabled")
+            lowerLay.addWidget(self.enableRadioButton)
+            self.enableRadioButton.setChecked(node.enabled)
+            self.enableRadioButton.toggled.connect(self.enableChanged)
+
+            self.runButton = QtWidgets.QPushButton("Run")
+            lowerLay.addWidget(self.runButton)
+            self.runButton.clicked.connect(self.runClicked)
         else:
-            self.enable = None
+            self.enableRadioButton = None
 
         # load the UI file into the main widget
-        uiloader.loadUi(uifile, self.w)
+        if uifile is not None:
+            uiloader.loadUi(uifile, self.w)
         # add the containing widget (self) to the tabs,
         # keeping the index at which it was created
         self.idx = window.tabWidget.addTab(self, self.title)
@@ -247,12 +240,16 @@ class Tab(QtWidgets.QWidget):
         # have to show the widgets first - sizes() returns
         # zero for invisible widgets
         self.w.show()
-        self.comment.show()
-        splitter.show()
         self.show()
-        total = sum(splitter.sizes())
 
-        splitter.setSizes([total * 0.9, total * 0.1])
+    def runClicked(self):
+        """The run button has been clicked on a tab with an enable widget."""
+        # We need to temporarily enable the node to run it. The button should be disabled if the node is enabled, because
+        # then it runs automatically.
+        old = self.node.enabled
+        self.node.enabled = True
+        self.node.graph.changed(self.node)
+        self.node.enabled = old
 
     def changed(self, uiOnly=False):
         """The tab's widgets have changed the data, we need
@@ -270,9 +267,14 @@ class Tab(QtWidgets.QWidget):
     def enableChanged(self, b):
         self.node.setEnabled(b)
 
-    def setNodeEnabled(self, b):
-        if self.enable is not None:
-            self.enable.setChecked(b)
+    def setNodeEnabled(self):
+        """The enabled state has been changed - update the tab widgets."""
+        if self.enableRadioButton is not None:
+            # only do stuff if there is an enable widget
+            self.enableRadioButton.setChecked(self.node.enabled)
+            # if the node is enabled, the run button is disabled because the node will run automatically.
+            self.runButton.setDisabled(self.node.enabled)
+            self.runButton.setStyleSheet("background-color: rgb(200, 100, 100);" if not self.node.enabled else "")
 
     def nodeDeleted(self):
         """node has been deleted, remove me from tabs"""
@@ -291,20 +293,25 @@ class Tab(QtWidgets.QWidget):
         t = self.node.displayName
         if self.node.displayName != self.node.type.name:
             t += f" ({self.node.type.name})"
-        if self.node.error is not None:
-            t += f" [{self.node.error.message}]"
+        # removing the display of error states in the title because (a) they can be extremely long and (b) they
+        # are very difficult to update. The error state is displayed in the graph and the lower widget.
+        # if self.node.error is not None:
+        #     t += f" [{self.node.error.message}]"
         if self.node.rectText is not None:
             t += f" [{self.node.rectText}]"
         self.title = t
         return self.title
 
     def updateError(self):
-        """Update the error field"""
+        """Update the error field and set the lower widget visible if there is an error. The widget is always
+        visible if the node has an enable widget."""
         if self.node.error is not None:
+            self.lower.setVisible(True)
             self.errorText.setText("Error " + self.node.error.code + ": " + self.node.error.message)
             self.errorText.setVisible(True)
         else:
             self.errorText.setVisible(False)
+            self.lower.setVisible(self.enableRadioButton is not None)
 
     def onNodeChanged(self):
         """should update the tab when the node's data has changed"""
@@ -315,6 +322,7 @@ class Tab(QtWidgets.QWidget):
         tab widgets; this avoids the changes to those widgets triggering another changed and rerun."""
         Tab.updatingTabs = True
         self.onNodeChanged()
+        self.setNodeEnabled()
         Tab.updatingTabs = False
 
     def mark(self):

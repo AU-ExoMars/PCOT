@@ -93,6 +93,7 @@ pcot
 ## Running PCOT inside Pycharm
 These instructions may be useful if you want to run PCOT inside a debugger - for example, if you 
 are testing a custom node.
+
 * First set up the Conda environment and interpreter:
     * Open PyCharm and open the PCOT directory as an existing project.
     * Open **File/Settings..** (Ctrl+Alt+S)

@@ -19,58 +19,117 @@ For example, use ```~/blah/RIM Dewarping``` and not
 This is covered in [a separate document](types.md), as it's not often done
 and is a little involved.
 
-## Adding new *expr* functions
+## Adding new Datum functions (for use in *expr* and Python code)
 
-Here is a snippet of code which will add a function to take two numbers a,b
-and calculate a+b*2. It works by adding a registration function, which will
-add our new function with its parameter types and help text. Note that as
+The functions used in the *expr* expression node can also be used in
+Python programs which use PCOT as a library (this is 
+[covered here](library.md)). These are called Datum functions because
+they both take and return Datum objects.
+
+To create a Datum function:
+
+* use the `@datumfunc` decorator. This will
+register the function and wrap it in two separate wrappers: one for use
+in *expr*, the other for use in Python.
+* write a docstring in the correct format, as illustrated below.
+
+Here's an example which declares a function to take two numbers
+a,b and calculate a+b*2. Note that as
 in all PCOT code we have to make sure the sources are handled correctly.
 
 ```python
-import pcot.config
-from pcot.datum import Datum
-from pcot.sources import SourceSet
-
-# the function itself, which takes a list of mandatory arguments and a
-# list of optional arguments (of which there are none)
-def testfunc(args, optargs):
-    a = args[0].get(Datum.NUMBER)   # get the first argument, which is numeric
-    b = args[1].get(Datum.NUMBER)   # and the second argument.
-    result = a + b * 2              # calculate the result
-
-    # get the source sets from the inputs and combine them.
-    sources = SourceSet([args[0].getSources(), args[1].getSources()])
-    
-    # convert the result into a numeric Datum and return it, attaching sources.
-    return Datum(Datum.NUMBER, result, sources)
-
-# This function will register new functions, of which we have only one.
-
-def regfuncs(p):
-    # late import of Parameter to avoid cyclic import problems.
-
-    from pcot.expressions import Parameter
-
-    # register our function.
-    p.registerFunc("testf",                 # name
-                   "calculates a+2*b",      # description
-                   # a list defining our parameters by name, description and type
-                   [Parameter("a", "number 1", Datum.NUMBER),
-                    Parameter("b", "number 2", Datum.NUMBER)
-                    ],
-                   # the empty list of optional parameters
-                   [],
-                   # the function reference
-                   testfunc)
-
-
-# this will add a hook to the system to register these functions when the
-# expression parser is created (which has to be done quite late).
-pcot.config.addExprFuncHook(regfuncs)
+@datumfunc
+def example_func(a, b):
+    """
+    Example function that takes two numbers a,b and returns a+b*2
+    @param a: number: first number
+    @param b: number: second number
+    """
+    return a + b * Datum.k(2)
 ```
 
-For more examples of functions, look at the ```ExpressionEvaluator``` constructor
-in the ```pcot.expressions.eval``` module.
+This is a trivial example that relies on Datum objects having operator
+overloads, but note that we need to multiply b by a Datum, not a number.
+To do this we use `Datum.k` to create a scalar constant.
+
+### The docstring
+
+This should consist of a number of lines describing the function followed
+by a number of `@param` lines, one for each parameter. These contain
+the following, separated by colons:
+
+* The string `@param'
+* A Datum type name - these can be found in the constructors of datum type
+objects in `datumtypes.py`, but the most common are `number`, `img`, `roi`,
+`string`.
+* A description of the parameter
+
+### Optional numeric/string arguments
+
+Optional arguments with defaults can be provided, but only if they
+are numeric or strings (because these are the only types which make
+sense for the default values). In this case the defaults will be
+converted to Datum objects if they are used.
+
+Here is an example of a function which
+multiplies an image by a constant, with the default being 2:
+
+```
+@datumfunc
+def example_func(img, k=2):
+    """
+    Example function that takes two numbers a,b and returns a+b*2
+    @param img:img:the image
+    @param k:number:the multiplier
+    """
+    # no need to construct a Datum with Datum.k(), because k is already
+    # a Datum.
+    return img * k
+```
+Here's another example which adds two numbers or multiplies them,
+depending on a string - and the default is to add:
+
+```
+@datumfunc
+def stringexample(a, b, op='add'):
+    """
+    String argument example
+    @param a: number: first number
+    @param b: number: second number
+    @param op: string: operation to perform
+    """
+    if op.get(Datum.STRING) == 'add':
+        return a + b
+    elif op.get(Datum.STRING) == 'sub':
+        return a - b
+    else:
+        raise ValueError("Unknown operation")
+```
+Note that you usually have to extract the actual value from the Datum
+objects, as we do with the `op` argument above. In previous examples,
+we take advantage of Datum's extensive operator overloading.
+
+### Variadic arguments
+
+For a variable number of arguments, use the `*args` keyword. Here, you have
+to check the types by hand. For example, this function will sum numbers:
+```
+@datumfunc
+def sumall(*args):
+    """
+    Sum all arguments
+    """
+    s = sum([x.get(Datum.NUMBER).n for x in args])
+    return Datum(Datum.NUMBER, Value(s, 0, NOUNCERTAINTY), nullSourceSet)
+```
+Note the use of `Value` here to construct a scalar value with
+standard deviation (zero here) and DQ bits (indicating no uncertainty data).
+Also note the mandatory use of a source set - just the `nullSourceSet`
+here to indicate there is no source; this is just a test function. In a real
+function we would combine the input sources.
+
+For more examples of functions, look at the ```ExpressionEvaluator```
+constructor in the ```pcot.expressions.eval``` module.
 
 ## Adding new menu items
 

@@ -14,10 +14,10 @@ import numpy as np
 from PySide2.QtGui import QPainter
 
 import pcot
-from pcot import dq
+from pcot import dq, ui
 from pcot.documentsettings import DocumentSettings
-from pcot.rois import ROI, ROIPainted, ROIBoundsException
-from pcot.sources import MultiBandSource, SourcesObtainable, FilterOnlySource
+from pcot.rois import ROI, ROIBoundsException
+from pcot.sources import MultiBandSource, SourcesObtainable, Source
 from pcot.utils import annotations
 from pcot.utils.annotations import annotFont
 from pcot.utils import image
@@ -28,7 +28,7 @@ from pcot.value import Value
 logger = logging.getLogger(__name__)
 
 
-class SubImageCubeROI:
+class SubImageCube:
     """This is a class representing the parts of an imagecube which are covered by ROIs or an ROI.
     It consists of
     * the image cropped to the bounding box of the ROIs; this is a view into the original image.
@@ -149,7 +149,8 @@ class SubImageCubeROI:
         return self.bb == other.bb and self.mask == other.mask
 
     def pixelCount(self):
-        """How many pixels in the masked subimage?"""
+        """How many pixels in the masked subimage? This does not take BAD bits into account,
+        because different bands may have different bad bits."""
         return self.mask.sum()
 
     def setROI(self, img, roi):
@@ -271,6 +272,33 @@ class ChannelMapping:
         return "ChannelMapping-{} r{} g{} b{}".format(id(self), self.red, self.green, self.blue)
 
 
+def load_rgb_image(fname) -> np.ndarray:
+    """This is used by ImageCube to load its image data. It's a function because it's
+    also used by the multifile loader."""
+    fname = str(fname)  # fname could potentially be some kind of Path object.
+    # imread with this argument will load any depth, any
+    # number of channels
+    img = cv.imread(fname, -1)
+    if img is None:
+        raise Exception(f'Cannot read file {fname}')
+    if len(img.shape) == 2:  # expand to RGB. Annoyingly we cut it down later sometimes.
+        img = image.imgmerge((img, img, img))
+    # get the scaling factor
+    if img.dtype == np.uint8:
+        scale = 255.0
+    elif img.dtype == np.uint16:
+        scale = 65535.0
+    else:
+        scale = 1.0
+    # convert from BGR to RGB (OpenCV is weird)
+    img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+    # convert to floats (32 bit)
+    img = img.astype(np.float32)
+    # scale to 0..1
+    img /= scale
+    return img
+
+
 class ImageCube(SourcesObtainable):
     """
     an image - just a numpy array (the image) and a list of ROI objects. The array
@@ -372,7 +400,7 @@ class ImageCube(SourcesObtainable):
             self.sources = sources
         else:
             self.sources = MultiBandSource.createEmptySourceSets(self.channels)
-            
+
         self.defaultMapping = defaultMapping
 
         # get the mapping sorted, which may be None (in which case rgb() might not work).
@@ -402,6 +430,7 @@ class ImageCube(SourcesObtainable):
             dq = np.zeros(img.shape, dtype=np.uint16)
         if dq.dtype != np.uint16:
             raise Exception("DQ data is not 16-bit unsigned integers")
+        dq = cvt1channel(dq)
         if dq.shape != img.shape:
             raise Exception("DQ data is not same shape as image data")
 
@@ -413,38 +442,19 @@ class ImageCube(SourcesObtainable):
         self.mapping = mapping
         if mapping is not None:
             mapping.ensureValid(self)
+        return self
 
     ## class method for loading an image (using cv's imread)
     # Always builds an RGB image. Sources must be provided.
     @classmethod
     def load(cls, fname, mapping, sources):
-        fname = str(fname)  # fname could potentially be some kind of Path object.
         logger.info(f"ImageCube load: {fname}")
-        # imread with this argument will load any depth, any
-        # number of channels
-        img = cv.imread(fname, -1)
-        if img is None:
-            raise Exception(f'Cannot read file {fname}')
-        if len(img.shape) == 2:  # expand to RGB. Annoyingly we cut it down later sometimes.
-            img = image.imgmerge((img, img, img))
-        # get the scaling factor
-        if img.dtype == np.uint8:
-            scale = 255.0
-        elif img.dtype == np.uint16:
-            scale = 65535.0
-        else:
-            scale = 1.0
-        # convert from BGR to RGB (OpenCV is weird)
-        img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-        # convert to floats (32 bit)
-        img = img.astype(np.float32)
-        # scale to 0..1 
-        img /= scale
+        img = load_rgb_image(fname)
         # create sources if none given
         if sources is None:
-            sources = MultiBandSource([FilterOnlySource('R'),
-                                       FilterOnlySource('G'),
-                                       FilterOnlySource('B')])
+            sources = MultiBandSource([Source().setBand('R'),
+                                       Source().setBand('G'),
+                                       Source().setBand('B')])
         # and construct the image
         return cls(img, mapping, sources)
 
@@ -528,20 +538,31 @@ class ImageCube(SourcesObtainable):
     # in which case you get this image cropped to the other image's ROIs!
     # You can also limit to a single ROI or use all of them (the default)
     def subimage(self, imgToUse=None, roi=None):
-        return SubImageCubeROI(self, imgToUse, roi)
+        return SubImageCube(self, imgToUse, roi)
 
-    def __str__(self):
+    def __repr__(self):
+        """simple string representation - should probably have no newlines in it. I've deliberately made it look a bit
+        line an HTML tag, for no very good reason."""
+
         s = "<Image-{} {}x{} array:{} channels:{}, {} bytes, ".format(id(self), self.w, self.h,
                                                                       str(self.img.shape), self.channels,
                                                                       self.img.nbytes)
-        # caption type 0 is filter positions only
-        xx = self.sources.brief()
 
-        s += "src: [{}]".format(xx)
-        xx = [r.bb() for r in self.rois]
-        xx = [x for x in xx if x]  # filter out None
-        xx = [", ROI {},{},{}x{}".format(x, y, w, h) for x, y, w, h in xx if xx]
-        s += "/".join(xx) + ">"
+        s += "src: [{}]".format(self.sources.brief())
+        rois = ";".join([str(r) for r in self.rois])
+        s += rois + ">"
+        return s
+
+    def __str__(self):
+        """Prettier string representation - but (importantly) doesn't have a unique ID so we can use it
+        in string tests."""
+        s = "Image {}x{} array:{} channels:{}, {} bytes".format(self.w, self.h,
+                                                                str(self.img.shape), self.channels,
+                                                                self.img.nbytes)
+
+        s += "\nsrc: [{}]".format(self.sources.brief())
+        if len(self.rois) > 0:
+            s += "\n"+"\n".join([str(r) for r in self.rois])
         return s
 
     ## the descriptor is a string which can vary depending on main window settings.
@@ -616,9 +637,10 @@ class ImageCube(SourcesObtainable):
     def hasROI(self):
         return len(self.rois) > 0
 
-    def modifyWithSub(self, subimage: SubImageCubeROI, newimg: np.ndarray,
+    def modifyWithSub(self, subimage: SubImageCube, newimg: np.ndarray,
                       sources=None, keepMapping=False,
-                      dqv=None, dqOR=np.uint16(0), uncertainty=None
+                      dqv=None, dqOR=np.uint16(0), uncertainty=None,
+                      dontWriteBadPixels=False
                       ) -> 'ImageCube':
         """return a copy of the image, with the given image spliced in at the subimage's coordinates and masked
         according to the subimage. keepMapping will ensure that the new image has the same mapping as the old.
@@ -635,7 +657,7 @@ class ImageCube(SourcesObtainable):
         x, y, w, h = subimage.bb
         # we only want to paste into the bits in the image that are covered
         # by the mask - and we want the full mask
-        mask = subimage.fullmask()
+        mask = subimage.fullmask(maskBadPixels=dontWriteBadPixels)
 
         # if the dq we're going to OR in isn't a scalar, make it fit the mask.
         if not np.isscalar(dqOR):
@@ -678,12 +700,19 @@ class ImageCube(SourcesObtainable):
         sources = []
         dqs = []
         uncertainties = []
+
         # now create a list of source sets and a list of single channel images
         for i in lstOfChannels:
             sources.append(self.sources.sourceSets[i])
-            chans.append(self.img[:, :, i])
-            dqs.append(self.dq[:, :, i])
-            uncertainties.append(self.uncertainty[:, :, i])
+            if self.channels == 1:
+                # sometimes I really regret not making single band images (h,w,1) shape. This is one of those times.
+                chans.append(self.img)
+                dqs.append(self.dq)
+                uncertainties.append(self.uncertainty)
+            else:
+                chans.append(self.img[:, :, i])
+                dqs.append(self.dq[:, :, i])
+                uncertainties.append(self.uncertainty[:, :, i])
 
         if len(lstOfChannels) == 1:
             # single channel case
@@ -697,24 +726,6 @@ class ImageCube(SourcesObtainable):
             uncertainties = np.stack(uncertainties, axis=-1)
         # and a new imagecube
         return ImageCube(img, sources=MultiBandSource(sources), uncertainty=uncertainties, dq=dqs)
-
-    ## annoyingly similar to the two methods above, this is used to get a channel _index_.
-    def getChannelIdx(self, nameOrCwl):
-        for i in range(len(self.sources.sourceSets)):  # iterate so we have the index
-            x = self.sources[i]
-            if len(x) == 1:
-                # there must be only one source in the set; get it.
-                item = next(iter(x))
-                # match either the filter name or position, case-dependent
-                iname = item.getFilterName()
-                ipos = item.getFilterPos()
-                if iname == nameOrCwl or ipos == nameOrCwl:
-                    return i
-                if isinstance(nameOrCwl, numbers.Number):
-                    f = item.getFilter()
-                    if f is not None and math.isclose(nameOrCwl, f.cwl):
-                        return i
-        return None
 
     ## crop an image down to its regions of interest.
     def cropROI(self):
@@ -808,23 +819,29 @@ class ImageCube(SourcesObtainable):
         return cls(data, rgbMapping=mapping, sources=sources, defaultMapping=defmapping,
                    uncertainty=uncertainty, dq=dq)
 
-    def wavelengthAndFWHM(self, channelNumber):
-        """get cwl and mean fwhm for a channel if all sources are of the same wavelength, else -1. Compare with
-        wavelength() below."""
+    def filter(self, channelNumber):
+        """Get the filter for a channel if all sources have the same filter, else None. Compare with
+        wavelength() and wavelengthAndFWHM() below."""
         # get the SourceSet
         sources = self.sources.sourceSets[channelNumber]
         # all sources in this channel should have a filter
         sources = [s for s in sources.sourceSet if s.getFilter()]
-        # all the sources in this channel should have the same cwl
-        wavelengthsAndFWHMs = set([(s.getFilter().cwl, s.getFilter().fwhm) for s in sources])
-        # extract the wavelengths and make sure there's only one
-        wavelengths = set([t[0] for t in wavelengthsAndFWHMs])
-        if len(wavelengths) != 1:
-            return -1, -1  # too many wavelengths
-        # looks weird, but just unpacks that single-item wavelength set
-        [cwl] = wavelengths
-        # and find the mean of the fwhms
-        return cwl, np.mean([t[1] for t in wavelengthsAndFWHMs])
+        # all the sources in this channel should have the same filter
+        filters = set([s.getFilter() for s in sources])
+        if len(filters) != 1:
+            return None
+        # return the only item in that set
+        [f] = filters
+        return f
+
+    def wavelengthAndFWHM(self, channelNumber):
+        """get cwl and mean fwhm for a channel if all sources have the same filter, else -1. Compare with
+        wavelength() below."""
+        f = self.filter(channelNumber)
+        if f is None:
+            return -1, -1
+        else:
+            return f.cwl, f.fwhm
 
     def wavelength(self, channelNumber):
         """return wavelength if all sources in channel are of the same wavelength, else -1."""
@@ -870,7 +887,8 @@ class ImageCube(SourcesObtainable):
 
     def drawAnnotationsAndROIs(self, p: QPainter,
                                onlyROI: Union[ROI, Sequence] = None,
-                               inPDF: bool = False):
+                               inPDF: bool = False,
+                               alpha: float = 1.0):
         """Draw annotations and ROIs onto a painter (either in a canvas or an output device).
         Will save and restore font because we might be doing font resizing"""
 
@@ -884,7 +902,7 @@ class ImageCube(SourcesObtainable):
                 ann.annotatePDF(p, self)
         else:
             for ann in self.annotations + rois:
-                ann.annotate(p, self)
+                ann.annotate(p, self, alpha=alpha)
 
         p.setFont(oldFont)
 
@@ -906,4 +924,73 @@ class ImageCube(SourcesObtainable):
         else:
             d = np.bitwise_or.reduce(self.dq, axis=2)
         return np.count_nonzero(d & dq.BAD)
+
+    def rotate(self, angleDegrees):
+        """Rotate the image by the given angle (in degrees), returning a new image or None if the angle is not valid.
+        Will return a copy of the image with the annotations and ROIs removed."""
+        # first, make sure angleDegrees is positive and in range 0-360
+        angleDegrees = angleDegrees % 360
+        if angleDegrees % 90 != 0:
+            return None
+        # work out how many times we need to rotate 90 degrees
+        n = int(angleDegrees / 90)
+        # make a copy of the image and rotate its arrays in-place that many times
+        img = self.copy()
+        img.img = np.rot90(img.img, n)
+        img.uncertainty = np.rot90(img.uncertainty, n)
+        img.dq = np.rot90(img.dq, n)
+        # remove all annotations and ROIs
+        img.annotations = []
+        img.rois = []
+        # switch the w and h fields
+        img.w, img.h = img.h, img.w
+
+        return img
+
+    def flip(self, vertical=True):
+        """Flip an image horizontally or vertically. Returns a new image with annotations and ROIs removed."""
+        img = self.copy()
+        if vertical:
+            img.img = np.flipud(img.img)
+            img.uncertainty = np.flipud(img.uncertainty)
+            img.dq = np.flipud(img.dq)
+        else:
+            img.img = np.fliplr(img.img)
+            img.uncertainty = np.fliplr(img.uncertainty)
+            img.dq = np.fliplr(img.dq)
+        # remove all annotations and ROIs
+        img.annotations = []
+        img.rois = []
+        return img
+
+    def resize(self, w, h, method):
+        """
+        Resize the image using one the OpenCV methods.
+        Note that we don't resize DQ. Instead, if any BAD bit is present in a channel it is propagated
+        to all the bits in the channel.
+        """
+        try:
+            outimg = cv.resize(self.img, (w, h), interpolation=method)
+            outunc = cv.resize(self.uncertainty, (w, h), interpolation=method)
+        except Exception as e:
+            ui.log(str(e))
+            raise Exception(f"OpenCV error - could not resize image")
+
+        dqs = []
+        if self.channels == 1:
+            # dammit. Two cases because two different image formats.
+            # OR together all the DQ bits in the channel
+            badbits = np.bitwise_or.reduce(self.dq, axis=None) & pcot.dq.BAD
+            outdq = np.full((h, w), badbits, dtype=np.uint16)
+        else:
+            dqs = []
+            for i in range(self.channels):
+                dqbits = self.dq[:, :, i]
+                # OR together all the DQ bits in the channel
+                badbits = np.bitwise_or.reduce(dqbits, axis=None) & pcot.dq.BAD
+                dqbits = np.full((h, w), badbits, dtype=np.uint16)
+                dqs.append(dqbits)
+            outdq = np.stack(dqs, axis=-1)
+
+        return ImageCube(outimg, self.mapping, self.sources, uncertainty=outunc, dq=outdq)
 

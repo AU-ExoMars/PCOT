@@ -102,8 +102,8 @@ component).
 
 ### Uncertainty 
 The uncertainty is expressed as standard deviation, and is propagated through
-most operations. Be careful here, however - all values are assumed to be independent.
-This can lead to grossly incorrect results. For example, we could set up a graph
+most operations. Be careful here, however - **all values are assumed to be independent.
+This can lead to grossly incorrect results**. For example, we could set up a graph
 consisting of a node with the value $0\pm1$, feed it into a mathematical expression (*expr*) node
 as variable *a), and set the node's expression to $a-a$:
 

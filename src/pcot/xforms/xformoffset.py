@@ -18,13 +18,11 @@ class XFormOffset(XFormType):
         self.addInputConnector("", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
         self.autoserialise = ('x', 'y')
-        self.hasEnable = True
 
     def createTab(self, n, w):
         return TabOffset(n, w)
 
     def init(self, node):
-        node.img = None
         node.x = 0
         node.y = 0
 
@@ -32,8 +30,6 @@ class XFormOffset(XFormType):
         img = node.getInput(0, Datum.IMG)
         if img is None:
             out = None
-        elif not node.enabled:
-            out = img
         else:
             # make new image, new unc and new DQ
             newimg = np.zeros(img.img.shape, dtype=np.float32)
@@ -53,8 +49,7 @@ class XFormOffset(XFormType):
             # remember to copy ROI
             out = ImageCube(newimg, node.mapping, img.sources, dq=newdq, uncertainty=newunc)
 
-        node.img = Datum(Datum.IMG, out)
-        node.setOutput(0, node.img)
+        node.setOutput(0, Datum(Datum.IMG, out))
 
 
 class TabOffset(pcot.ui.tabs.Tab):
@@ -82,4 +77,4 @@ class TabOffset(pcot.ui.tabs.Tab):
         self.w.canvas.setPersister(self.node)
         self.w.xoff.setText(str(self.node.x))
         self.w.yoff.setText(str(self.node.y))
-        self.w.canvas.display(self.node.img)
+        self.w.canvas.display(self.node.getOutput(0,Datum.IMG))
