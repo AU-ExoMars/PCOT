@@ -178,6 +178,34 @@
 <h2 id="beta-releases">Beta releases</h2>
 <p>None</p>
 <h2 id="alpha-releases">Alpha releases</h2>
+<h3 id="070-alpha-2024-05-03-east-pentire">0.7.0-alpha 2024-05-03 EAST PENTIRE</h3>
+<ul>
+<li>Very many more unit tests</li>
+<li>Bug fixes</li>
+<li>Complete rewrite of spectrum system, using the SpectrumSet object</li>
+<li>Multidot now does painted regions and floodfill</li>
+<li>Joseph's PCT detector outputs image with ROIs</li>
+<li>Dump removed and sink enhanced</li>
+<li>TabData shows sources</li>
+<li>Inputs decoupled from Sources - Sources now use composition, not inheritance</li>
+<li>Comment box for nodes removed (it was never used)</li>
+<li>Direct multifile loading</li>
+<li>Direct PDS4 loading - required refactoring of entire PDS4 layer</li>
+<li>Direct ENVI loading</li>
+<li>Raw file loading from mono images supporting lots of formats</li>
+<li>Loader presets for multifile</li>
+<li>Operator overloading on Datum objects </li>
+<li>The "datumfunc" system replacing hand-registration of functions</li>
+<li>flip and rotate functions (datumfuncs)</li>
+<li>String datum objects and strings usable in expr</li>
+<li>Docs on library usage</li>
+<li>Changes to nodes so that slow nodes can be disabled and very slow nodes start disabled. This
+functionality existed before, but was "ad-hoc"</li>
+<li>Document.changed() is now Document.run() and forces disabled nodes to run</li>
+<li>Most nodes now store data in their outputs rather than a "node.out" which is then written to
+an output</li>
+<li>Changes to multidot - doc improvements, UX and bug fixes</li>
+</ul>
 <h3 id="061-alpha-2023-10-04-dynas-cove-minor-release">0.6.1-alpha 2023-10-04 DYNAS COVE (minor release)</h3>
 <ul>
 <li>Multifile input can accept BMP files</li>
