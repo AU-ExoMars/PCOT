@@ -1,8 +1,8 @@
 """
 This is an example XFormType (node) class. It is a class that you can copy and modify
-to make your own nodes. It also has a tab with a single control - however, this tab creates
+to make your own nodes. It also has a tab with a single control - however, unlike most other nodes, this tab creates
 the controls programmatically rather than loading them from a .ui file created in Designer. See
-other nodes for examples of how to do that, but you'll have to add the .ui file to the assets directory.
+other nodes for examples of how to do that - you'll have to add the .ui file to the assets directory.
 """
 import numpy as np
 from PySide2.QtWidgets import QWidget, QGridLayout, QLabel, QSlider, QDoubleSpinBox, QComboBox, QSizePolicy
@@ -18,8 +18,9 @@ from pcot.xform import XFormType, xformtype, XForm
 @xformtype
 class XFormExample(XFormType):
     """
-    This object is not a node, but the singleton that nodes of this type point to
     to control their behaviour.
+    This object is not a node, but the singleton to which nodes this type point to
+    determine their behaviour.
 
     This docstring will form the help text for the node in the UI. Markdown is permitted
     and processed into HTML. Look at (say) XFormGradient for an example of how to write this.
@@ -40,8 +41,9 @@ class XFormExample(XFormType):
         # hasEnable=True - this will add a checkbox to the node's properties panel that allows the user to
         #                  disable the node temporarily. This is useful for nodes that are a bit slow.
         # startEnabled=False - this will start the node disabled. This is useful for nodes that are very slow.
+        #                  It has no effect if hasEnable is false.
 
-        super().__init__("example", "hidden", "0.0.0",
+        super().__init__("example", "testing", "0.0.0",
                          #  hasEnable=True,
                          #  startEnabled=False
                          )
@@ -59,9 +61,6 @@ class XFormExample(XFormType):
         This method is called to actually initialise a node (an XForm object).
         It typically does this by filling in some fields of the node object.
         """
-
-        # this is the node's output, initialised to the null datum.
-        node.out = Datum.null
 
         # this is some value that the node has as a parameter, controlling its
         # behaviour. We'll modify this value using the UI in the tab. In this case
@@ -121,9 +120,9 @@ class XFormExample(XFormType):
             newimg = None
 
         # wrap the output image in a Datum
-        node.out = Datum(Datum.IMG, newimg)
+        out = Datum(Datum.IMG, newimg)
         # and set the node's output to be that datum.
-        node.setOutput(0, node.out)
+        node.setOutput(0, out)
 
     def createTab(self, node, window):
         """
@@ -237,4 +236,5 @@ class TabExample(pcot.ui.tabs.Tab):
         self.canvas.setGraph(self.node.graph)
         self.canvas.setPersister(self.node)
         # then display the image
-        self.canvas.display(self.node.out.get(Datum.IMG))
+        img = self.node.getOutput(0, Datum.IMG)
+        self.canvas.display(img)
