@@ -10,6 +10,7 @@ from PySide2.QtWidgets import QInputDialog, QMessageBox
 
 import pcot.rois
 import pcot.ui
+from pcot import ui
 from pcot.datum import Datum
 from pcot.expressions import ExpressionEvaluator
 from pcot.imagecube import ImageCube
@@ -19,7 +20,10 @@ from pcot.xform import xformtype, XFormType, XFormException
 
 
 def getROIName(i):
+    """Get the name of an ROI from its index. If it's greater than 26, return a string name."""
     return chr(97 + i) if i < 26 else f"roi{i}"
+
+
 
 
 @xformtype
@@ -62,9 +66,7 @@ class XFormROIExpr(XFormType):
 
     def init(self, node):
         node.rois = []
-        node.editors = dict()
         node.expr = ""
-        node.selected = None
         node.canvimg = None
         node.selColour = (0, 1, 0)  # colour of selected ROI
         node.unselColour = (0, 1, 1)  # colour of unselected ROI
@@ -98,6 +100,12 @@ class XFormROIExpr(XFormType):
         if img is not None:
             img = img.copy()
             node.previewRadius = pcot.rois.getRadiusFromSlider(node.brushSize, img.w, img.h)
+
+            # update the ROIs so that the image dimensions are correct
+            for r in node.rois:
+                # patch image size into the ROI so we can do negation
+                r.setContainingImageDimensions(img.w, img.h)
+
             if len(node.expr.strip()) > 0:
                 # we create a new parser here, because we want it to be empty of ROIs etc.
                 parser = ExpressionEvaluator()
@@ -105,8 +113,6 @@ class XFormROIExpr(XFormType):
                     r.drawBox = False
                     # register the ROIs into the parser (or rather lambdas that return datums)
                     roiname = getROIName(i)
-                    # patch image size into the ROI so we can do negation
-                    node.rois[i].setContainingImageDimensions(img.w, img.h)
                     # Register a variable which returns an ROI datum for that ROI
                     # *shakes fist at late-binding closures*
                     f = partial(lambda ii: Datum(Datum.ROI, node.rois[ii], sources=nullSourceSet), i)
@@ -153,8 +159,6 @@ class XFormROIExpr(XFormType):
                 inROIlist = []
             # impose the individual ROIs as annotations
             if not node.hideROIs:
-                for i, r in enumerate(node.rois):
-                    r.colour = node.selColour if i == node.selected else node.unselColour
                 # we want to see the input ROIs as well, so add them.
                 inROIlist = [x.get(Datum.ROI) for x in inROIlist]
                 img.annotations = node.rois + [x for x in inROIlist if x is not None]
@@ -198,10 +202,11 @@ class Model(QAbstractTableModel):
         super().__init__()
         self.columnItems = False
         self.tab = tab
-        self.node = node
+        self.editors = dict()   # keyed on index in list
+
         # create editors for existing nodes
-        for r in self.node.rois:
-            self.node.editors[r] = r.createEditor(tab)
+        for i, r in enumerate(self.tab.node.rois):
+            self.editors[i] = r.createEditor(tab)
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole and orientation == Qt.Horizontal:
@@ -211,7 +216,7 @@ class Model(QAbstractTableModel):
         return super().headerData(section, orientation, role)
 
     def rowCount(self, index):
-        return len(self.node.rois)
+        return len(self.tab.node.rois)
 
     def columnCount(self, index):
         return len(COLNAMES)
@@ -220,7 +225,7 @@ class Model(QAbstractTableModel):
         if role == Qt.DisplayRole:
             item = index.row()
             field = index.column()
-            roi = self.node.rois[item]
+            roi = self.tab.node.rois[item]
 
             if field == 0:
                 return roi.tpname
@@ -228,30 +233,36 @@ class Model(QAbstractTableModel):
                 return str(roi)
 
     def add_item(self, sourceIndex=None):
-        n = len(self.node.rois)
+        node = self.tab.node
+        n = len(node.rois)
         if sourceIndex is None:
             # pick an ROI - this is a dict of name to class
             choices = {x.tpname: x for x in pcot.rois.ROI.__subclasses__()}
             k, ok = QInputDialog.getItem(None, "Select a type", "type", list(choices.keys()), 0, False)
             if not ok:
                 return
-            # construct the new item
+            # construct the new item - we'll set the dimensions in perform too.
             new = choices[k]()
+            img = node.getInput(0, Datum.IMG)
+            if img is not None:  # not much we can do if there's no image -
+                # but that can't happen, how would we click on it?
+                new.setContainingImageDimensions(img.w, img.h)
         else:
-            new = self.node.rois[sourceIndex].copy()
+            new = node.rois[sourceIndex].copy()
         new.colour = (0, 1, 0)  # green by default
         # create an editor for the new ROI
-        self.node.editors[new] = new.createEditor(self.tab)
+        self.editors[n] = new.createEditor(self.tab)
         self.beginInsertRows(QModelIndex(), n, n)
-        self.node.rois.append(new)
+        node.rois.append(new)
         self.endInsertRows()
         self.changed.emit()
         return n
 
     def delete_item(self, n):
-        if n < len(self.node.rois):
+        if n < len(self.tab.node.rois):
             self.beginRemoveRows(QModelIndex(), n, n)
-            del self.node.rois[n]
+            del self.tab.node.rois[n]
+            del self.editors[n]
             self.endRemoveRows()
             self.changed.emit()
 
@@ -286,20 +297,29 @@ class TabROIExpr(Tab):
         self.nodeChanged()
 
     def onNodeChanged(self):
+        node = self.node
+        # here we apply colour to the selected ROI. We used to do this in perform.
+        # but this data got lost after an undo. It's not a good idea to keep the
+        # selected index in the node.
+        selected = self.get_selected_item()
+        for i, r in enumerate(node.rois):
+            r.colour = node.selColour if i == selected else node.unselColour
+
         # have to do canvas set up here to handle extreme undo events which change the graph and nodes
-        self.w.canvas.setMapping(self.node.mapping)
-        self.w.canvas.setGraph(self.node.graph)
-        self.w.canvas.setPersister(self.node)
-        self.w.canvas.setROINode(self.node)
-        self.w.canvas.display(self.node.canvimg)
+
+        self.w.canvas.setMapping(node.mapping)
+        self.w.canvas.setGraph(node.graph)
+        self.w.canvas.setPersister(node)
+        self.w.canvas.setROINode(node)
+        self.w.canvas.display(node.canvimg)
         self.w.tableView.dataChanged(QModelIndex(), QModelIndex())
 
-        self.w.exprEdit.setText(self.node.expr)
-        self.w.hideCheck.setChecked(self.node.hideROIs)
-        self.w.brushSize.setValue(self.node.brushSize)
-        setColourButton(self.w.outColButton, self.node.outColour)
-        setColourButton(self.w.selColButton, self.node.selColour)
-        setColourButton(self.w.unselColButton, self.node.unselColour)
+        self.w.exprEdit.setText(node.expr)
+        self.w.hideCheck.setChecked(node.hideROIs)
+        self.w.brushSize.setValue(node.brushSize)
+        setColourButton(self.w.outColButton, node.outColour)
+        setColourButton(self.w.selColButton, node.selColour)
+        setColourButton(self.w.unselColButton, node.unselColour)
 
     def doubleClick(self, index):
         item = index.row()
@@ -312,8 +332,7 @@ class TabROIExpr(Tab):
             h = self.node.canvimg.h
 
         if 0 <= item < len(self.node.rois):
-            item = self.node.rois[item]
-            self.node.editors[item].openDialog(w, h)
+            self.model.editors[item].openDialog(w, h)
 
     def brushSizeChanged(self, val):
         self.mark()
@@ -351,7 +370,6 @@ class TabROIExpr(Tab):
         self.changed()
 
     def selectionChanged(self, idx):
-        self.node.selected = idx
         self.changed(uiOnly=True)
 
     def roisChanged(self):
@@ -384,9 +402,19 @@ class TabROIExpr(Tab):
 
     def getEditor(self):
         if (item := self.get_selected_item()) is not None:
-            roi = self.node.rois[item]
-            return self.node.editors[roi]
+            try:
+                return self.model.editors[item]
+            except KeyError:
+                ui.log(f"Can't open editor for ROI {item}")
         return None
+
+    def getROI(self):
+        if (item := self.get_selected_item()) is not None:
+            try:
+                return self.node.rois[item]
+            except IndexError:
+                ui.log(f"Can't get ROI {item}")
+        raise XFormException('INTR', "No ROI selected in getROI()")
 
     def canvasPaintHook(self, p: QPainter):
         if (editor := self.getEditor()) is not None:

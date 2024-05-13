@@ -71,7 +71,7 @@ class XformPoly(XFormROIType):
 class TabPoly(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabpoly.ui')
-        self.editor = PolyEditor(self, node.roi)
+        self.editor = PolyEditor(self)
         # set the paint hook in the canvas so we can draw on the image
         self.w.canvas.mouseHook = self
         self.w.canvas.keyHook = self

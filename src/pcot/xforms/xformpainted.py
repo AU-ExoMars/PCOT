@@ -76,9 +76,11 @@ class XFormPainted(XFormROIType):
 
 
 class TabPainted(pcot.ui.tabs.Tab):
+    """Editor for painted items.
+    """
     def __init__(self, node, w):
         super().__init__(w, node, 'tabpainted.ui')
-        self.editor = PaintedEditor(self, node.roi)
+        self.editor = PaintedEditor(self)
         # set the paint hook in the canvas so we can draw on the image
         self.w.canvas.paintHook = self
         self.w.canvas.mouseHook = self

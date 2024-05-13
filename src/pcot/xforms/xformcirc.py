@@ -64,7 +64,7 @@ class XformCirc(XFormROIType):
 class TabCirc(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabcirc.ui')
-        self.editor = CircleEditor(self, self.node.roi)
+        self.editor = CircleEditor(self)
         self.w.canvas.mouseHook = self
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
         self.w.drawbg.stateChanged.connect(self.drawbgChanged)
@@ -137,7 +137,7 @@ class TabCirc(pcot.ui.tabs.Tab):
     def YEditChanged(self):
         c = self.node.roi.get()
         x, y, r = c if c is not None else (0, 0, 0)
-        y = getInt(self.w.XEdit.text())
+        y = getInt(self.w.YEdit.text())
         self.roiSet(x, y, r)
 
     def radiusEditChanged(self):

@@ -459,6 +459,14 @@ class ROI(SourcesObtainable, Annotation):
         Rect and Circle it's necessary. Other ROIs have different ways of knowing if they have a valid value."""
         pass
 
+    def copy(self):
+        """Create a copy of the ROI - here for completeness; it's more pythonic to use copy.copy() or copy.deepcopy()"""
+        return self.__copy__()
+
+    def __copy__(self):
+        """should be overriden"""
+        raise NotImplementedError("copy not implemented for this ROI type")
+
 
 class ROIRect(ROI):
     """Rectangular ROI"""
@@ -554,7 +562,7 @@ class ROIRect(ROI):
         return self._str(True)
 
     def createEditor(self, tab):
-        return RectEditor(tab, self)
+        return RectEditor(tab)
 
 
 class ROICircle(ROI):
@@ -645,7 +653,7 @@ class ROICircle(ROI):
         return r
 
     def createEditor(self, tab):
-        return CircleEditor(tab, self)
+        return CircleEditor(tab)
 
     def __str__(self):
         lab = "(no label)" if self.label is None else self.label
@@ -826,7 +834,7 @@ class ROIPainted(ROI):
         return r
 
     def createEditor(self, tab):
-        return PaintedEditor(tab, self)
+        return PaintedEditor(tab)
 
     def _str(self, use_id):
         lab = "(no label)" if self.label is None else self.label
@@ -985,7 +993,7 @@ class ROIPoly(ROI):
         return r
 
     def createEditor(self, tab):
-        return PolyEditor(tab, self)
+        return PolyEditor(tab)
 
     def _str(self, use_id):
         lab = "(no label)" if self.label is None else self.label

@@ -1,5 +1,7 @@
 import logging
 import traceback
+from datetime import datetime
+
 import pcot.ui.mainwindow as mainwindow
 from PySide2 import QtWidgets
 from PySide2.QtCore import Qt
@@ -37,8 +39,13 @@ def msg(t):
         logger.debug(f"LOG ui.msg {t}")
 
 
-## show a message in all window logs
-def log(s, toStdout=True):
+def log(s, toStdout=True, timestamp=True):
+    """show a message in all window logs"""
+
+    # add timestamp, just HMS will do.
+    if timestamp:
+        s = f"{datetime.now().strftime('%H:%M:%S')} {s}"
+
     if application is not None:
         for x in mainwindow.MainUI.windows:
             x.logText.append(s)

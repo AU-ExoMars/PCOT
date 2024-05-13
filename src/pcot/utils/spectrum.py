@@ -29,7 +29,7 @@ def getMeanValue(chanImg, chanUnc, chanDQ, mask, ignorePixSD=False):
 
     # if the size is bad, throw an exception
     if mask.size == 0:
-        raise XFormException("subimage has no pixels (size zero)")
+        raise XFormException('DATA',"subimage has no pixels (size zero)")
 
     # note that "mask" is a positive mask - values are True if we are using them.
     if mask is None:
