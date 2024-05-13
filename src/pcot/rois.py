@@ -794,7 +794,7 @@ class ROIPainted(ROI):
     def moveBBTo(self, x, y):
         """move the bounding box to a new position, returning True if the move was OK"""
         imgw, imgh = self.containingImageDimensions
-        if x >= 0 and y >= 0 and x+self.bbrect.w < imgw and y+self.bbrect.w < imgh:
+        if x >= 0 and y >= 0 and x + self.bbrect.w < imgw and y + self.bbrect.w < imgh:
             self.bbrect.x = x
             self.bbrect.y = y
             return True
@@ -890,16 +890,19 @@ class ROIPoly(ROI):
 
     def serialise(self):
         d = super().serialise()
-        return serialiseFields(self,
-                               [('points', 0), ('drawPoints', True)],
-                               d=d)
+        d = serialiseFields(self,
+                            [('points', 0), ('drawPoints', True)],
+                            d=d)
+        return d
 
     def deserialise(self, d):
         super().deserialise(d)
         if 'points' in d:
             pts = d['points']
+            print(f"Deserialising {len(pts)} points")
             # points will be saved as lists, turn back into tuples
             self.points = [tuple(x) for x in pts]
+
 
     def mask(self):
         # return a boolean array, same size as BB. We use opencv here to build a uint8 image

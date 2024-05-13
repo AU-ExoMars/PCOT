@@ -1,4 +1,6 @@
 #
+import copy
+
 
 def serialiseFields(obj, attrs, d=None):
     """Turn some fields of an object into a dict - can also
@@ -7,7 +9,8 @@ def serialiseFields(obj, attrs, d=None):
     of field names and default values."""
 
     ks = [x[0] for x in attrs]
-    nd = {k: obj.__dict__[k] for k in ks}
+    nd = copy.deepcopy({k: obj.__dict__[k] for k in ks})
+
     if d is not None:
         d.update(nd)
         return d
