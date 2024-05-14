@@ -1,3 +1,4 @@
+import copy
 from typing import Tuple
 
 import cv2 as cv
@@ -464,11 +465,7 @@ class ROI(SourcesObtainable, Annotation):
 
     def copy(self):
         """Create a copy of the ROI - here for completeness; it's more pythonic to use copy.copy() or copy.deepcopy()"""
-        return self.__copy__()
-
-    def __copy__(self):
-        """should be overriden"""
-        raise NotImplementedError("copy not implemented for this ROI type")
+        return copy.copy(self)
 
 
 class ROIRect(ROI):
