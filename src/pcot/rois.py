@@ -7,6 +7,7 @@ from PySide2.QtGui import QPainter, QImage, QPen
 from numpy import ndarray
 from scipy import ndimage
 
+import pcot.sources
 from pcot.sources import SourcesObtainable, nullSourceSet
 from pcot.ui.roiedit import RectEditor, CircleEditor, PaintedEditor, PolyEditor
 from pcot.utils import serialiseFields, deserialiseFields
@@ -267,7 +268,9 @@ class ROI(SourcesObtainable, Annotation):
                     # add it at that position
                     mask[y:y + rh, x:x + rw] |= roimask
             # should not be saved
-            return ROI(bb, mask, isTemp=True, containingImageDimensions=dims if dimsOK else None)
+            roi = ROI(bb, mask, isTemp=True, containingImageDimensions=dims if dimsOK else None)
+            roi.sources = pcot.sources.SourceSet(rois)  # can pass list of SourcesObtainable to ctor
+            return roi
         else:
             # return a null ROI
             return None

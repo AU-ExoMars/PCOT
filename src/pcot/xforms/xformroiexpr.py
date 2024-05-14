@@ -3,7 +3,6 @@ than using multiple ROI and expr nodes with an importroi node."""
 from copy import copy
 from functools import partial
 
-
 from PySide2.QtCore import QModelIndex, Signal, QAbstractTableModel, Qt
 from PySide2.QtGui import QPainter
 from PySide2.QtWidgets import QInputDialog, QMessageBox
@@ -24,21 +23,23 @@ def getROIName(i):
     return chr(97 + i) if i < 26 else f"roi{i}"
 
 
-
-
 @xformtype
 class XFormROIExpr(XFormType):
     """
     This node allows a region of interest to be composed from several regions of interest using an expression and
-    imposed on an image. Several ROIs can be created within the node itself by using the "Add ROI" button.
+    imposed on an image.
+
+    **It is not a node for creating several ROIs at once - the output is always a single ROI**.
+
+    ROIs can be created for use within the expression by using the "Add ROI" button.
     These will be assigned to the variables a,b,c.. within the expression, and can be edited by:
 
     * clicking on their label in the left-most column of the table (to select the entire row) and then clicking and dragging on the canvas,
     * double clicking on the description text in the table to open a numerical editor (not for poly or painted).
 
     Additional ROIs can be connected to the p, q, r inputs; these will be assigned to those variables within the expression.
-    The input image is available as the variable 'img', so it is possible
-    to access the image's original region of interest (or the union of all ROIs if it has more than one) by using roi(img).
+    The input image's ROIs are combined into a single ROI and assigned to the variable 'i'.
+    The input image itself is available as the variable 'img'.
 
     Other properties of the image are available and other calculations may be made, but the result of the expression must be an ROI.
 
@@ -51,6 +52,7 @@ class XFormROIExpr(XFormType):
     * **roi(img) - p**  : any ROIs on the image already, but with the ROI on input 'p' cut out
 
     """
+
     def __init__(self):
         super().__init__("roiexpr", "regions", "0.0.0")
         self.addInputConnector("", Datum.IMG, "Image input")
@@ -71,11 +73,14 @@ class XFormROIExpr(XFormType):
         node.selColour = (0, 1, 0)  # colour of selected ROI
         node.unselColour = (0, 1, 1)  # colour of unselected ROI
         node.outColour = (1, 1, 0)  # colour of output ROI
+        node.imgROIColour = (1, 0, 1)  # colour of input image's ROI
+
         node.hideROIs = False  # hide individual ROIs
         node.brushSize = 20  # scale of 0-99 i.e. a slider value. Converted to pixel radius in getRadiusFromSlider()
         node.previewRadius = None  # see xformpainted.
 
-        self.autoserialise = ('selColour', 'unselColour', 'outColour', 'expr', 'hideROIs', 'previewRadius')
+        self.autoserialise = ('selColour', 'unselColour', 'outColour', 'expr', 'hideROIs', 'previewRadius',
+                              ('imgROIColour', (1,0,1)))
 
     def serialise(self, node):
         return {'rois': [(r.tpname, r.serialise()) for r in node.rois]}
@@ -106,44 +111,57 @@ class XFormROIExpr(XFormType):
                 # patch image size into the ROI so we can do negation
                 r.setContainingImageDimensions(img.w, img.h)
 
+            # we create a new parser here, because we want it to be empty of ROIs etc.
+            parser = ExpressionEvaluator()
+            for i, r in enumerate(node.rois):
+                r.drawBox = False
+                # register the ROIs into the parser (or rather lambdas that return datums)
+                roiname = getROIName(i)
+                # Register a variable which returns an ROI datum for that ROI
+                # *shakes fist at late-binding closures*
+                f = partial(lambda ii: Datum(Datum.ROI, node.rois[ii], sources=nullSourceSet), i)
+                parser.registerVar(roiname, f'value of ROI {i}', f)
+            # might be useful to have the input image there too
+            parser.registerVar('img', 'input image', lambda: Datum(Datum.IMG, img))
+            # and three extra ROI inputs that might come from other data
+
+            # get any ROIs on the image and union them
+            if len(img.rois) > 0:
+                # register the union of these ROIs as 'i'
+                imgroi = pcot.rois.ROI.roiUnion(img.rois)
+                imgroi.colour = node.imgROIColour
+                if imgroi is not None:
+                    imgroi = Datum(Datum.ROI, imgroi, imgroi.getSources())
+                else:
+                    imgroi = Datum.null
+            else:
+                imgroi = Datum.null
+            parser.registerVar('i', 'union of image ROIs', lambda: imgroi)
+
+            # this function gets an ROI input but patches the image width and height
+            # into that ROI, so we can do daft stuff like negating ROIs.
+            def getROIInput(i):
+                # ugly, but we need to access this to get the sources
+                d: Datum = node.getInput(i)
+                # and then immediately do this to get the actual ROI even if I'm doing work again.
+                rr = node.getInput(i, Datum.ROI)
+                if rr is None:
+                    return Datum.null
+                else:
+                    rr = copy(rr)
+                    rr.setContainingImageDimensions(img.w, img.h)
+                    return Datum(Datum.ROI, rr, sources=d.sources)
+
+            inROIp = getROIInput(1)
+            inROIq = getROIInput(2)
+            inROIr = getROIInput(3)
+            inROIlist = [x for x in [inROIp, inROIq, inROIr, imgroi] if x is not None]
+
+            parser.registerVar("p", "ROI input p", lambda: inROIp)
+            parser.registerVar("q", "ROI input q", lambda: inROIq)
+            parser.registerVar("r", "ROI input r", lambda: inROIr)
+
             if len(node.expr.strip()) > 0:
-                # we create a new parser here, because we want it to be empty of ROIs etc.
-                parser = ExpressionEvaluator()
-                for i, r in enumerate(node.rois):
-                    r.drawBox = False
-                    # register the ROIs into the parser (or rather lambdas that return datums)
-                    roiname = getROIName(i)
-                    # Register a variable which returns an ROI datum for that ROI
-                    # *shakes fist at late-binding closures*
-                    f = partial(lambda ii: Datum(Datum.ROI, node.rois[ii], sources=nullSourceSet), i)
-                    parser.registerVar(roiname, f'value of ROI {i}', f)
-                # might be useful to have the input image there too
-                parser.registerVar('img', 'input image', lambda: Datum(Datum.IMG, img))
-                # and three extra ROI inputs that might come from other data
-
-                # this function gets an ROI input but patches the image width and height
-                # into that ROI, so we can do daft stuff like negating ROIs.
-                def getROIInput(i):
-                    # ugly, but we need to access this to get the sources
-                    d: Datum = node.getInput(i)
-                    # and then immediately do this to get the actual ROI even if I'm doing work again.
-                    rr = node.getInput(i, Datum.ROI)
-                    if rr is None:
-                        return Datum.null
-                    else:
-                        rr = copy(rr)
-                        rr.setContainingImageDimensions(img.w, img.h)
-                        return Datum(Datum.ROI, rr, sources=d.sources)
-
-                inROIp = getROIInput(1)
-                inROIq = getROIInput(2)
-                inROIr = getROIInput(3)
-                inROIlist = [x for x in [inROIp, inROIq, inROIr] if x is not None]
-
-                parser.registerVar("p", "ROI input p", lambda: inROIp)
-                parser.registerVar("q", "ROI input q", lambda: inROIq)
-                parser.registerVar("r", "ROI input r", lambda: inROIr)
-
                 # now execute the expression and get it back as an ROI
                 res = parser.run(node.expr)
                 node.roi = res.get(Datum.ROI)
@@ -156,12 +174,16 @@ class XFormROIExpr(XFormType):
                     img.rois = [node.roi]
                     outROIDatum = Datum(Datum.ROI, node.roi, node.roi.sources)
             else:
-                inROIlist = []
+                img.rois = []  # remove all existing ROIs from the image for output
             # impose the individual ROIs as annotations
             if not node.hideROIs:
                 # we want to see the input ROIs as well, so add them.
                 inROIlist = [x.get(Datum.ROI) for x in inROIlist]
                 img.annotations = node.rois + [x for x in inROIlist if x is not None]
+                ui.log(f"Adding {len(img.annotations)} ROIs to annotations")
+            else:
+                ui.log("Not adding ROIs to annotations")
+                img.annotations = []
             # set mapping from node
             img.setMapping(node.mapping)
             # 'img' so far is the image we are going to display.
@@ -202,7 +224,7 @@ class Model(QAbstractTableModel):
         super().__init__()
         self.columnItems = False
         self.tab = tab
-        self.editors = dict()   # keyed on index in list
+        self.editors = dict()  # keyed on index in list
 
         # create editors for existing nodes
         for i, r in enumerate(self.tab.node.rois):
@@ -285,6 +307,7 @@ class TabROIExpr(Tab):
         self.w.outColButton.clicked.connect(self.outColButtonChanged)
         self.w.selColButton.clicked.connect(self.selColButtonChanged)
         self.w.unselColButton.clicked.connect(self.unselColButtonChanged)
+        self.w.imgROIColButton.clicked.connect(self.imgROIColButtonChanged)
         self.w.brushSize.valueChanged.connect(self.brushSizeChanged)
         self.w.tableView.doubleClicked.connect(self.doubleClick)
 
@@ -320,12 +343,13 @@ class TabROIExpr(Tab):
         setColourButton(self.w.outColButton, node.outColour)
         setColourButton(self.w.selColButton, node.selColour)
         setColourButton(self.w.unselColButton, node.unselColour)
+        setColourButton(self.w.imgROIColButton, node.imgROIColour)
 
     def doubleClick(self, index):
         item = index.row()
         # we need to tell the dialog the size of the image we are working with so it can set limits
         # in the editor dialogs.
-        w = 2000    # defaults
+        w = 2000  # defaults
         h = 2000
         if self.node.canvimg is not None:
             w = self.node.canvimg.w
@@ -358,6 +382,13 @@ class TabROIExpr(Tab):
         if col is not None:
             self.mark()
             self.node.unselColour = col
+            self.changed()
+
+    def imgROIColButtonChanged(self):
+        col = pcot.utils.colour.colDialog(self.node.imgROIColour)
+        if col is not None:
+            self.mark()
+            self.node.imgROIColour = col
             self.changed()
 
     def exprChanged(self):
