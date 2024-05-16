@@ -282,10 +282,7 @@ class TabCrossCalib(pcot.ui.tabs.Tab):
         self.changed(uiOnly=True)
 
     def onNodeChanged(self):
-        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
-        self.w.canvas.setMapping(self.node.mapping)
-        self.w.canvas.setGraph(self.node.graph)
-        self.w.canvas.setPersister(self.node)
+        self.w.canvas.setNode(self.node)
         self.w.radioSource.setChecked(self.node.imagemode == IMAGEMODE_SOURCE)
         self.w.radioDest.setChecked(self.node.imagemode == IMAGEMODE_DEST)
         self.w.radioResult.setChecked(self.node.imagemode == IMAGEMODE_RESULT)

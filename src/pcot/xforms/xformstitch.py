@@ -235,9 +235,7 @@ class TabStitch(Tab):
         self.changed()
 
     def onNodeChanged(self):
-        self.w.canvas.setMapping(self.node.mapping)
-        self.w.canvas.setGraph(self.node.graph)
-        self.w.canvas.setPersister(self.node)
+        self.w.canvas.setNode(self.node)
         self.w.showimage.setChecked(self.node.showImage)
         img = self.node.getOutput(0, Datum.IMG)
         if img is not None:  # draw the premapped rgb, not the actual stitched image

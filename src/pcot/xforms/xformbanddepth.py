@@ -111,11 +111,6 @@ class TabBandDepth(pcot.ui.tabs.Tab):
         self.changed()
 
     def onNodeChanged(self):
-        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
-        self.w.canvas.setMapping(self.node.mapping)
-        self.w.canvas.setGraph(self.node.graph)
-        self.w.canvas.setPersister(self.node)
-
         # need to repopulate without triggering bandChanged. With a newer version of Pyside2 we could
         # sensibly use QSignalBlocker. NOT WORKING.
         self.w.bandCombo.blockSignals(True)
@@ -129,4 +124,5 @@ class TabBandDepth(pcot.ui.tabs.Tab):
         if self.node.bandidx >= 0:
             self.w.bandCombo.setCurrentIndex(self.node.bandidx)
 
+        self.w.canvas.setNode(self.node)
         self.w.canvas.display(self.node.img)

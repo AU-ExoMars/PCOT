@@ -225,10 +225,7 @@ class TabExpr(pcot.ui.tabs.Tab):
         self.changed()
 
     def onNodeChanged(self):
-        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
-        self.w.canvas.setMapping(self.node.mapping)
-        self.w.canvas.setGraph(self.node.graph)
-        self.w.canvas.setPersister(self.node)
+        self.w.canvas.setNode(self.node)
         self.w.expr.setPlainText(self.node.expr)
         self.w.result.setPlainText(self.node.resultStr)
         d = self.node.getOutputDatum(0)

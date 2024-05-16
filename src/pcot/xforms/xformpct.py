@@ -235,11 +235,6 @@ class TabPCT(pcot.ui.tabs.Tab):
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
-        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
-        self.w.canvas.setMapping(self.node.mapping)
-        self.w.canvas.setGraph(self.node.graph)
-        self.w.canvas.setPersister(self.node)
-
         # some buttons are disabled in some modes
         if not self.node.rois:  # empty ROI list
             rotateEnabled = len(self.node.pctPoints) == 3
@@ -254,6 +249,7 @@ class TabPCT(pcot.ui.tabs.Tab):
         self.w.rotateButton.setEnabled(rotateEnabled)
         self.w.drawMode.setCurrentIndex(self.w.drawMode.findText(self.node.drawMode))
 
+        self.w.canvas.setNode(self.node)
         if self.node.img is not None:
             # We're displaying a "premapped" image : this node's perform code is
             # responsible for doing the RGB mapping, unlike most other nodes where it's

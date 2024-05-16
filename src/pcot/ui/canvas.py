@@ -1381,3 +1381,13 @@ class Canvas(QtWidgets.QWidget):
                 text = "Cannot plot: no frequency data in channel sources\n" + text
                 data = None
             self.spectrumWidget.set(data, text)
+
+    def setNode(self, node):
+        """This links fields in the canvas to fields in the node. We can't just have a `node` reference, because
+        sometimes canvasses don't have nodes (inputs for example). And sometimes we only want to do part of this
+        process, so the three different operations are available separately. But we have to do this in nodes before
+        every redisplay, because the node may have been replaced by an undo operation."""
+
+        self.setMapping(node.mapping)       # tell the canvas to use the node's RGB mapping
+        self.setGraph(node.graph)           # tell the canvas what the graph is
+        self.setPersister(node)             # and where it should store its data (ugly, yes).

@@ -26,12 +26,6 @@ class TabData(pcot.ui.tabs.Tab):
         self.source = src
         self.disptype = DATA
         self.w.dispTypeBox.currentIndexChanged.connect(self.dispTypeChanged)
-        # these were inside onNodeChanged when out.isImage was true. I've moved them here
-        # because really they should happen once, not every time the node changes, and it
-        # should make no difference if an image is present or not.
-        self.w.canvas.setMapping(self.node.mapping)
-        self.w.canvas.setGraph(self.node.graph)
-        self.w.canvas.setPersister(self.node)
         # sync tab with node
         self.nodeChanged()
 
@@ -42,7 +36,8 @@ class TabData(pcot.ui.tabs.Tab):
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
-        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
+        # have to do canvas set up here to handle undo events which change the graph and nodes
+        self.w.canvas.setNode(self.node)
         if self.source == self.SRC_OUTPUT0:
             out = self.node.getOutputDatum(0)
         elif self.source == self.SRC_DATA:

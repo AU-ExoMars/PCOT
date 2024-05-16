@@ -324,9 +324,7 @@ class TabGen(pcot.ui.tabs.Tab):
         self.changed()
 
     def onNodeChanged(self):
-        self.w.canvas.setMapping(self.node.mapping)
-        self.w.canvas.setGraph(self.node.graph)
-        self.w.canvas.setPersister(self.node)
+        self.w.canvas.setNode(self.node)
 
         with SignalBlocker(self.w.spinWidth, self.w.spinHeight):
             self.w.spinWidth.setValue(self.node.imgwidth)

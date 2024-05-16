@@ -40,9 +40,6 @@ class TabNorm(pcot.ui.tabs.Tab):
         self.changed()
 
     def onNodeChanged(self):
-        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
-        self.w.canvas.setMapping(self.node.mapping)
-        self.w.canvas.setGraph(self.node.graph)
-        self.w.canvas.setPersister(self.node)
+        self.w.canvas.setNode(self.node)
         self.w.mode.setCurrentIndex(self.node.mode)
         self.w.canvas.display(self.node.getOutput(0, Datum.IMG))

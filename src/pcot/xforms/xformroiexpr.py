@@ -328,11 +328,7 @@ class TabROIExpr(Tab):
         for i, r in enumerate(node.rois):
             r.colour = node.selColour if i == selected else node.unselColour
 
-        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
-
-        self.w.canvas.setMapping(node.mapping)
-        self.w.canvas.setGraph(node.graph)
-        self.w.canvas.setPersister(node)
+        self.w.canvas.setNode(self.node)
         self.w.canvas.setROINode(node)
         self.w.canvas.display(node.canvimg)
         self.w.tableView.dataChanged(QModelIndex(), QModelIndex())

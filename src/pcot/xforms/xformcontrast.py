@@ -132,10 +132,7 @@ class TabContrast(pcot.ui.tabs.Tab):
     # image on the tab's canvas - this is a class in the ui package which can display OpenCV
     # images.
     def onNodeChanged(self):
-        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
-        self.w.canvas.setMapping(self.node.mapping)
-        self.w.canvas.setGraph(self.node.graph)
-        self.w.canvas.setPersister(self.node)
+        self.w.canvas.setNode(self.node)
 
         self.w.dial.setValue(self.node.tol * 200)
         self.w.canvas.display(self.node.getOutput(0))

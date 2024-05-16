@@ -234,9 +234,7 @@ class TabExample(pcot.ui.tabs.Tab):
 
         # Bear this in mind - self.node will change when you undo.
 
-        self.canvas.setMapping(self.node.mapping)
-        self.canvas.setGraph(self.node.graph)
-        self.canvas.setPersister(self.node)
+        self.w.canvas.setNode(self.node)
 
         # then display the image
         img = self.node.getOutput(0, Datum.IMG)

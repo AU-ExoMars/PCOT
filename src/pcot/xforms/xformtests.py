@@ -276,9 +276,7 @@ class TabPixTest(pcot.ui.tabs.Tab):
 
     def onNodeChanged(self):
         self.model.failed = self.node.failed
-        self.w.canvas.setMapping(self.node.mapping)
-        self.w.canvas.setGraph(self.node.graph)
-        self.w.canvas.setPersister(self.node)
+        self.w.canvas.setNode(self.node)
         self.w.canvas.display(self.node.img)
 
     def canvasMousePressEvent(self, x, y, e):

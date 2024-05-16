@@ -119,9 +119,7 @@ class TabDQMod(ui.tabs.Tab):
             else:
                 self.w.bandCombo.setCurrentText("All")
 
-        self.w.canvas.setMapping(self.node.mapping)
-        self.w.canvas.setGraph(self.node.graph)
-        self.w.canvas.setPersister(self.node)
+        self.w.canvas.setNode(self.node)
         self.w.canvas.display(self.node.getOutput(0))
 
         if not self.dontSetText:

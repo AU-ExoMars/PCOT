@@ -161,6 +161,7 @@ class TabInset(pcot.ui.tabs.Tab):
         img = self.node.getOutput(Datum.IMG)
         if img is not None:
             # have to do canvas set up here to handle extreme undo events which change the graph and nodes
+            # TODO - not sure why we aren't doing the whole setNode here.
             self.w.canvas.setPersister(self.node)
             self.w.canvas.display(img)
         if not self.dontSetText:

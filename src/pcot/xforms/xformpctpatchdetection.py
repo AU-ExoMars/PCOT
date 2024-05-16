@@ -1095,9 +1095,7 @@ More information can be found under the HoughCircles() method documentation <a h
         self.w.canvas.setVisible(True)
         if self.node.inputImg is not None:
             # Display mapped RGB image on canvas
-            self.w.canvas.setMapping(self.node.mapping)
-            self.w.canvas.setGraph(self.node.graph)
-            self.w.canvas.setPersister(self.node)
+            self.w.canvas.setNode(self.node)
             self.w.canvas.display(self.node.inputImg)
 
         # handle the detections list in the bottom left widget
