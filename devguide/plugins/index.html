@@ -16,13 +16,16 @@
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/font-awesome.min.css" rel="stylesheet">
         <link href="../../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
     <link rel="stylesheet" href="../../css/lightbox.min.css">
     <link rel="stylesheet" href="../../css/site.css">
 
     
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-        <script>hljs.highlightAll();</script>
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
     <script src="../../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
@@ -303,8 +306,10 @@ constructor in the <code>pcot.expressions.eval</code> module.</p>
 <h2 id="adding-new-menu-items">Adding new menu items</h2>
 <p>This is done by adding a function to a list of functions called when a
 a main window is opened. Writing code here will require some knowledge of Qt.
-Here is a menu option added to the File menu which will look for an
-<em>input 0</em> node and save its output image (if there is one) to an ENVI file.</p>
+Here is a menu option added to the File menu which will look for 
+selected node in the document's graph, fetch its first output, and
+save it as an ENVI file (assuming it is an image - error checking
+is left as an exercise for the reader).</p>
 <pre><code class="language-python">import pcot
 import os
 from PySide2 import QtWidgets
@@ -312,24 +317,25 @@ from PySide2.QtWidgets import QAction, QMessageBox
 from pcot.dataformats import envi
 
 def saveEnvi(w):
-    &quot;&quot;&quot;Function takes a PCOT main window. It finds the input 0 if it can,
-    and then saves an ENVI from that image.&quot;&quot;&quot;
+    &quot;&quot;&quot;Function takes a PCOT main window. It finds the first selected
+    node, gets its output 0, and then saves an ENVI from that image.&quot;&quot;&quot;
 
-    try:
-        node = w.doc.getNodeByName(&quot;input 0&quot;)
-    except NameError:
-        print(&quot;cannot find node&quot;)
+    sel = w.doc.getSelection()
+    if len(sel) == 0:
+        ui.log(&quot;no selected node&quot;)
         return
+    node = sel[0]
 
+    directory = os.path.expanduser(pcot.config.getDefaultDir('pcotfiles'))
     res = QtWidgets.QFileDialog.getSaveFileName(w,
                                                 &quot;ENVI file &quot;,
                                                 os.path.expanduser(pcot.config.getDefaultDir('pcotfiles')),
                                                 &quot;ENVI files (*.hdr)&quot;)
     if res[0] != '':
+        # get the output of that node
         (root, ext) = os.path.splitext(res[0])
-        # get the output of that input 0 node
-        img = node.getOutput(0,pcot.datum.Datum.IMG)
-        envi.write(root,img)
+        img = node.getOutput(0, pcot.datum.Datum.IMG)
+        envi.write(root, img)
 
 
 # the function to add the new menu item. This will take a single parameter:
@@ -496,15 +502,13 @@ undo mechanism).</p></div>
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
-        <script src="../../js/jquery-3.6.0.min.js"></script>
-        <script src="../../js/bootstrap.min.js"></script>
         <script>
             var base_url = "../..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../../js/base.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
-        <script src="../../search/main.js"></script>
+        <script src="../../js/base.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
+        <script src="../../search/main.js" defer></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
