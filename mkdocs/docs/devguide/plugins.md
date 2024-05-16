@@ -215,10 +215,10 @@ attribute, which should be a ```Datum.```
 * **perform(self, node)** will actually perform the node's action, reading inputs 
 and setting outputs.
 
-Remember: there is only one ```XFormType``` object for each node type. All nodes
-are of type ```XForm```, and they link to an ```XFormType``` object to tell them
-how to behave. This might seem a really odd way to do things, but it follows
-"favour composition over inheritance" and saves messiness elsewhere.
+Remember: there is only one ```XFormType``` object for each node type. All
+nodes are of type ```XForm```, and they link to an ```XFormType``` object to
+tell them how to behave. This might seem a really odd way to do things, but it
+follows "favour composition over inheritance" and saves messiness elsewhere.
 
 Here is an example which does edge detection with OpenCV:
 
@@ -284,3 +284,62 @@ class XFormEdgeDetect(XFormType):
         # output node.out
         node.setOutput(0, node.out)
 ```
+
+### Writing custom Tabs
+
+As noted above, a new `XFormType` subclass (i.e. a new node type)
+can often just use `TabData`, which will display the Datum stored on
+its first output (output 0). Sometimes, however, a custom tab needs to be
+written. This can be a complex task, but an example is given in
+`xformexample.py` in the `xforms` package. All the standard XFormTypes
+are in this package, so you can also look at them. 
+
+The basic idea is:
+
+* Create a subclass of `pcot.ui.tabs.Tab`
+* Write the constructor to call the superclass constructor and create the UI
+(or load a Designer-created UI by passing an argument to the superclass.
+constructor), and call `self.nodeChanged()` at the end to refresh the tab from the node.
+* Override `onNodeChanged()` to update the tab from the node.
+* Use the Qt signal/slot mechanism to connect the tab's controls to methods in the tab class
+and write code to update the node from the tab in these methods, calling
+`self.changed()` at the end of each method.
+
+The tab will have a `node` field which addresses the node it is viewing, but see
+[below](#undo-and-references-to-data-in-nodes) for a "gotcha" - the value of this field
+will change after an undo operation!
+
+### Using Canvas in custom tabs
+
+Creating a Canvas programmatically is straightforward, and there is an example of this
+in `xformexample.py`. 
+If you are creating a tab in Designer, you need to add a canvas as a QWidget which you then "promote"
+to a custom control (the canvas). In the promote dialog, the class should be `Canvas` and the
+header file `pcot.ui.canvas` (i.e. the package name). 
+
+
+In your `onNodeChanged()` method you
+will need to update the canvas. This involves doing a little setup, then getting the 
+image we want to display - usually the output - and telling the canvas to display it:
+```
+    # do some setup
+    self.canvas.setNode(self.node)
+
+    # then display the image
+    img = self.node.getOutput(0, Datum.IMG)
+    self.canvas.display(img)
+```
+
+The setup synchronises the canvas with the node, telling the canvas about the RGB mappings
+and that it should store data in the node for serialisation. We have to set that up each
+time because of how undo works, which is discussed in the next section.
+
+### Undo and references to data in nodes
+
+This is a major "gotcha." Whenever an undo occurs, the old node is discarded and a new node
+created from a previously archived version in memory. This means that the `node` field changes.
+Because of this, your tab **must not** store references to objects inside the node, because after
+an undo those references will be stale. Instead, always use `self.node...` to access data.
+
+It is OK to use the tab to store UI-only data which is not persisted (saved to a file or to the
+undo mechanism).
