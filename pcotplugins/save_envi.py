@@ -23,7 +23,7 @@ def test(w):
                                                 os.path.expanduser(pcot.config.getDefaultDir('pcotfiles')),
                                                 "ENVI files (*.hdr)")
     if res[0] != '':
-        # get the output of that input 0 node
+        # get the output of that node
         (root, ext) = os.path.splitext(res[0])
         print(f"{res[0]}, saving to {root}")
         img = node.getOutput(0, pcot.datum.Datum.IMG)
