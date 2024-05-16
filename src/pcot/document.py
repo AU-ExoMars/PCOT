@@ -298,3 +298,9 @@ class Document:
         when a document variable is set to null, it doesn't get garbage collected because all those
         instances still contain refs to that doc's nodes."""
         self.graph.clearAllNodes(True)
+
+    def getSelection(self):
+        """Get the selected nodes in the graph - useful in user plugins."""
+        if self.graph.scene is None:
+            return []   # there's no scene, so no selection
+        return self.graph.scene.selection
