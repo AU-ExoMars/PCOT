@@ -41,6 +41,7 @@ class XformBandDepth(XFormType):
 
     def perform(self, node):
         img: Optional[ImageCube] = node.getInput(0, Datum.IMG)
+        out = None
         if img is not None:
             node.cwls = []
             for x in range(0, img.channels):
@@ -94,8 +95,6 @@ class XformBandDepth(XFormType):
                         defaultMapping=None
                     )
                     out = Datum(Datum.IMG, out)
-        else:
-            out = None
         node.setOutput(0, out)
 
 
@@ -125,4 +124,5 @@ class TabBandDepth(pcot.ui.tabs.Tab):
             self.w.bandCombo.setCurrentIndex(self.node.bandidx)
 
         self.w.canvas.setNode(self.node)
-        self.w.canvas.display(self.node.img)
+        img = self.node.getOutput(0, Datum.IMG)
+        self.w.canvas.display(img)
