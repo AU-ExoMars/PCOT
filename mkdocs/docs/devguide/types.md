@@ -92,7 +92,9 @@ See **example1.py** for how this new type is used.
 ## Operators
 
 @@@info
-Work in progress
+Work in progress - read [the Value documentation](values.md) to see
+how this works in detail, particularly with numeric and image data
+(i.e. data which can be expressed as (mean,sd,DQ) triples).
 @@@
 
 Previously operators were entirely hardwired in utils.ops. This stopped us
