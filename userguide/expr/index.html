@@ -16,16 +16,13 @@
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/font-awesome.min.css" rel="stylesheet">
         <link href="../../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
     <link rel="stylesheet" href="../../css/lightbox.min.css">
     <link rel="stylesheet" href="../../css/site.css">
 
     
-
-        <script src="../../js/jquery-1.10.2.min.js" defer></script>
-        <script src="../../js/bootstrap.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script>
     <script src="../../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
@@ -231,8 +228,8 @@ the node, and is the authoritative documentation.</p>
 <h1 id="expr">expr</h1>
 <h2 id="description">Description</h2>
 <p>Expression evaluator. The node box will show the text of the expression. The "run" button must be clicked to
-set the node to the new expression and perform it. Additionally, the output type must be set - the system cannot
-determine the output type from the input types.</p>
+set the node to the new expression and perform it. The input can accept any type of data
+and the output type is determined when the node is run.</p>
 <p>The four inputs are assigned to the variables a, b, c, and d. They are typically (but not necessarily) images
 or scalar values.</p>
 <p>The standard operators +,/,*,- and ^ all have their usual meanings. When applied to images they work in
@@ -250,33 +247,33 @@ and <strong>$</strong> for band extraction. These are described below.</p>
 </thead>
 <tbody>
 <tr>
-<td>+</td>
-<td>add [r]</td>
+<td>A + B</td>
+<td>add A to B (can act on ROIs)</td>
 <td>10</td>
 </tr>
 <tr>
-<td>-</td>
-<td>subtract [r]</td>
+<td>A - B</td>
+<td>subtract A from B (can act on ROIs)</td>
 <td>10</td>
 </tr>
 <tr>
-<td>/</td>
-<td>divide [r]</td>
+<td>A / B</td>
+<td>divide A by B (can act on ROIs)</td>
 <td>20</td>
 </tr>
 <tr>
-<td>*</td>
-<td>multiply [r]</td>
+<td>A * B</td>
+<td>multiply A by B (can act on ROIs)</td>
 <td>20</td>
 </tr>
 <tr>
-<td>^</td>
-<td>exponentiate [r]</td>
+<td>A ^ B</td>
+<td>exponentiate A to the power B (can act on ROIs)</td>
 <td>30</td>
 </tr>
 <tr>
 <td>-A</td>
-<td>element-wise -A</td>
+<td>element-wise negation of A (can act on ROIs)</td>
 <td>50</td>
 </tr>
 <tr>
@@ -286,7 +283,12 @@ and <strong>$</strong> for band extraction. These are described below.</p>
 </tr>
 <tr>
 <td>A$546</td>
-<td>extract single channel image of wavelength 546</td>
+<td>extract single band image of wavelength 546</td>
+<td>100</td>
+</tr>
+<tr>
+<td>A$_2</td>
+<td>extract single band image from band 2 explicitly</td>
 <td>100</td>
 </tr>
 <tr>
@@ -308,8 +310,8 @@ and <strong>$</strong> for band extraction. These are described below.</p>
 </table>
 <p>All operators can act on images and scalars (numeric values),
 with the exception of <strong>.</strong> and <strong>$</strong> which have images on the left-hand side and identifiers
-or integers on the right-hand side.
-Those operators marked with [r] can also act on pairs of ROIs (regions of interest, see below).</p>
+or integers on the right-hand side.</p>
+<p>Those operators marked with <strong>(can act on ROIs)</strong> can also act on pairs of ROIs (regions of interest, see below).</p>
 <h3>Binary operations on image pairs</h3>
 <p>These act by performing the binary operation on the two underlying Numpy arrays. This means you may need to be
 careful about the ordering of the bands in the two images, because they will simply be operated on in the order
@@ -379,9 +381,9 @@ can be achieved using expr nodes on ROIs and an importroi node.</p>
 <p>You can source ROIs from the "roi" output of ROI nodes, and impose resulting ROIs on images with "importroi" node.</p>
 <h3>Band extraction</h3>
 <p>The notation <strong>$name</strong> or <strong>$wavelength</strong> takes an image on the left-hand
-side and extracts a single band, generating a new monochrome image.
-The right-hand side is either a filter name, a filter position or a
-wavelength. Depending on the camera, all these could be valid:</p>
+side and extracts a single band, generating a new monochrome image.</p>
+<p>The right-hand side is either a filter name, a filter position, a
+wavelength or a band index preceded by "_". Depending on the camera, all these could be valid:</p>
 <table>
 <thead>
 <tr>
@@ -393,6 +395,10 @@ wavelength. Depending on the camera, all these could be valid:</p>
 <tr>
 <td><strong>a$780</strong></td>
 <td>the 780nm band in image <em>a</em></td>
+</tr>
+<tr>
+<td><strong>a$_2</strong></td>
+<td>band 2 in the image <em>a</em></td>
 </tr>
 <tr>
 <td><strong>(a+b)$G0</strong></td>
@@ -432,6 +438,12 @@ image's width.</p>
 and selecting "List all functions." Help on an individual function can be found by hovering over
 the name of a function, right-clicking and selecting "Get help on 'somefunction'".
 Similar actions are supported for properties.</p>
+<h2>Uncertainties are assumed to be independent in all binary operations</h2>
+<p>While uncertainty is propagated through operations (as standard deviation) all quantities are assumed
+to be independent (calculating covariances is beyond the scope of this system). Be very careful here.
+For example, the uncertainty for the expression <strong>tan(a)</strong> will be calculated correctly, but if you try
+to use <strong>sin(a)/cos(a)</strong> the uncertainty will be incorrect because the nominator and denominator are
+not independent.</p>
 
 <hr />
 <h2 id="connections">Connections</h2>
@@ -498,13 +510,15 @@ Similar actions are supported for properties.</p>
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
+        <script src="../../js/jquery-3.6.0.min.js"></script>
+        <script src="../../js/bootstrap.min.js"></script>
         <script>
             var base_url = "../..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../../js/base.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
-        <script src="../../search/main.js" defer></script>
+        <script src="../../js/base.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+        <script src="../../search/main.js"></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">

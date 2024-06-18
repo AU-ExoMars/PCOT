@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+    
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="robots" content="noindex,nofollow">
+
+        <title>How Values work - PCOT Documentation</title>
+    
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
+    <link rel="stylesheet" href="../../css/lightbox.min.css">
+    <link rel="stylesheet" href="../../css/site.css">
+
+    
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script>
+    <script src="../../js/lightbox-plus-jquery.min.js"></script>
+ 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">PCOT Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Getting Started <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../gettingstarted/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/installrun/" class="dropdown-item">Installing and running</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/concepts/" class="dropdown-item">PCOT concepts</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/tutorial/" class="dropdown-item">Tutorial</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/inputs/" class="dropdown-item">Loading other image formats</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/help/" class="dropdown-item">Getting help</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../userguide/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/principles/" class="dropdown-item">Operating principles</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/canvas/" class="dropdown-item">The Canvas</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/globalcontrols/" class="dropdown-item">Global Controls</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/multifile/" class="dropdown-item">Reading images from multiple files</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/expr/" class="dropdown-item">The "expr" node for mathematical expressions</a>
+</li>
+                                    
+<li>
+    <a href="../../autodocs/" class="dropdown-item">Autodocs</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer's Guide <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../library/" class="dropdown-item">Using PCOT as a library</a>
+</li>
+                                    
+<li>
+    <a href="../plugins/" class="dropdown-item">Writing PCOT plugins</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="navitem">
+                                <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../../gettingstarted/issues/" class="nav-link">Known issues</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="1"><a href="#how-values-work" class="nav-link">How Values work</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#binary-and-unary-operations-on-value-objects" class="nav-link">Binary and unary operations on Value objects</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#binary-and-unary-operations-on-datum-objects" class="nav-link">Binary and unary operations on Datum objects</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#binary-and-unary-operations-in-an-expr-node" class="nav-link">Binary and unary operations in an expr node</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#functions-of-value-objects" class="nav-link">functions of Value objects</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#datumfuncs-functions-of-datum-objects" class="nav-link">datumfuncs: functions of Datum objects</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="how-values-work">How Values work</h1>
+<p>Value is PCOT's fundamental type for working with uncertain numerical data. Values are triplets of:</p>
+<ul>
+<li>a 32-bit floating point <strong>nominal</strong> value (i.e. a mean),</li>
+<li>a 32-bit floating point  <strong>uncertainty</strong> value (as standard deviation) around that mean,</li>
+<li>and a set of 16 <strong>data quality</strong> (DQ) bits.</li>
+</ul>
+<p>As a user of PCOT you may never encounter Values, but they are used internally
+whenever any operations involving uncertainty are done. Here are the typical
+situations where that occurs:</p>
+<h2 id="binary-and-unary-operations-on-value-objects">Binary and unary operations on <em>Value</em> objects</h2>
+<p>This is the "base case".
+Values have dunder methods for operations. These are usually quite simple, although some
+(such as exponentiation) are nasty. They:</p>
+<ul>
+<li>perform the operation to get the new nominal value. This is usually done with a lambda function,
+relying on Numpy's broadcasting to do the "right thing" with what it's given.</li>
+<li>call a function to calculate the new uncertainty value</li>
+<li>call a function to combine the two DQs</li>
+<li>pass the three results into Value's constructor to get a new value</li>
+</ul>
+<p>Examples - the multiplication operator:</p>
+<pre><code class="language-python">    def __mul__(self, other):
+        return Value(self.n * other.n, mul_unc(self.n, self.u, other.n, other.u),
+                     combineDQs(self, other))
+</code></pre>
+<p>The AND operator:</p>
+<pre><code>    def __and__(self, other):
+        &quot;&quot;&quot;The &amp; operator actually finds the minimum (Zadeh fuzzy op)&quot;&quot;&quot;
+        n = np.where(self.n &gt; other.n, other.n, self.n)
+        u = np.where(self.n &gt; other.n, other.u, self.u)
+        d = np.where(self.n &gt; other.n, other.dq, self.dq)
+        return Value(n, u, d)
+</code></pre>
+<h2 id="binary-and-unary-operations-on-datum-objects">Binary and unary operations on <em>Datum</em> objects</h2>
+<p>This is for binops - unary operations are much the same, but a lot simpler (although
+imageUnop currently takes the underlying numpy array).</p>
+<ol>
+<li>Datum dunder function runs - this is usually very simple. For example, for addition it's just<ul>
+<li><code>return ops.binop(ops.Operator.ADD, self, other)</code>.</li>
+</ul>
+</li>
+<li>Calls pcot.expressions.ops.binop with the appopriate ops.Operator code</li>
+<li>ops.binop runs<ul>
+<li>converting any raw numbers to Datum.NUMBER data with zero uncertainty.</li>
+<li>Each possible triple (operator, leftdatum, rightdatum) of operator and Datum types
+  will have a "binop semantics Datum wrapper" method registered for
+  it by ops.initOps. For example, (multiplication, Datum.IMG, Datum.NUMBER) will
+  call ops.imageNumberBinop with the lambda <code>lambda x,y: x*y</code> where the latter will take
+  and return Value.</li>
+<li>ops.binop calls the binop semantics method for the two Datum types</li>
+</ul>
+</li>
+<li>For pairings of numbers and/or images, The binop semantics Datum wrapper converts any image data into a Value after performing
+subimage extraction, then calls the provided lambda. This calls the appropriate
+dunder method on the two Values. In fact, we could replace <code>lambda x,y: x*y</code> with
+<code>Value.__mul__</code> etc., but it's much clearer this way.<ul>
+<li>see above for details of this.</li>
+</ul>
+</li>
+<li>In imageNumberBinop (or equivalent) the returned array Value will be stitched back into the
+left-hand image using <code>ImageCube.modifyWithSub</code>, and that new image will be returned wrapped
+in a Datum. If the semantic wrapper was numberBinop, so that a number is
+returned, we just wrap that in a Datum.</li>
+</ol>
+<p>For other types - not Datum.NUMBER or Datum.IMG - other semantics methods will have been written. For example,
+the ROI types have binary operators which construct ROIBinop objects using dunder methods:</p>
+<pre><code>    def regROIBinopSemantics(op, fn):
+        &quot;&quot;&quot;Used to register binops for ROIs, which support a subset of ops.&quot;&quot;&quot;
+        registerBinopSemantics(op, Datum.ROI, Datum.ROI, lambda dx, dy: ROIBinop(dx, dy, fn))
+
+    regROIBinopSemantics(Operator.ADD, lambda x, y: x + y)
+    regROIBinopSemantics(Operator.SUB, lambda x, y: x - y)
+    regROIBinopSemantics(Operator.MUL, lambda x, y: x * y)
+    regROIBinopSemantics(Operator.DIV, lambda x, y: x / y)
+    regROIBinopSemantics(Operator.POW, lambda x, y: x ** y)
+</code></pre>
+<h2 id="binary-and-unary-operations-in-an-expr-node">Binary and unary operations in an <em>expr</em> node</h2>
+<ul>
+<li>pcot.expressions.parse.InstOp runs, popping two Datum objects and calling a callback function
+stored in binopRegistry.
+This callback will have been registered by Parser.registerBinop, and is simply a lambda
+calling pcot.expressions.ops.binop with an Operator code for the operator, e.g.<ul>
+<li><code>p.registerBinop('*', 20, lambda a, b: binop(Operator.MUL, a, b))</code> (20 is the precedence)</li>
+</ul>
+</li>
+<li>The callback will call ops.binop, which is step 3 in the preceding
+section.</li>
+</ul>
+<p>Again, unary operations are very similar but rather simpler.</p>
+<h2 id="functions-of-value-objects">functions of <em>Value</em> objects</h2>
+<p>Value generally has a method for each supported function. For example, the <code>tan</code> method
+will perform the trigonometric <code>tan</code> with uncertainty, returning a new Value. This is rarely
+called directly - instead, we generally work with Datum objects.</p>
+<h2 id="datumfuncs-functions-of-datum-objects">datumfuncs: functions of <em>Datum</em> objects</h2>
+<p>These are registered with the <code>@datumfunc</code> operator (see <a href="../plugins/">the plugins documentation</a>)
+which can be found in pcot.expressions.register.
+This registers two separate wrappers: the expression wrapper, used when the function is called
+from an <em>expr</em> node; and the Python function wrapper, called when the function is called
+from inside Python.</p>
+<p>They can take any number of arguments, but they must be either Datum objects or numeric.</p>
+<h3 id="datumfuncs-called-from-python">Datumfuncs called from Python</h3>
+<p>The <code>@datumfunc</code> decorator will have wrapped the function in the Python decorator, so that
+subsequent calls from Python will go through the wrapper. This wrapper will</p>
+<ul>
+<li>set default values for missing arguments (which must be string or numeric)</li>
+<li>convert numeric and string arguments to Datum objects</li>
+<li>call the original function and return the result (which must be Datum)</li>
+</ul>
+<h3 id="datumfuncs-called-from-expr-nodes">Datumfuncs called from <em>expr</em> nodes</h3>
+<p>The <code>@datumfunc</code> decorator also wraps the function in another wrapper - the exprwrapper - and
+registers the wrapped function with the expression parser. The wrapper itself is simpler than
+the Python wrapper because it can make use of facilities in the parser to convert values and
+check for errors. When data reaches the exprwrapper, we already know that the arguments are
+all Datum objects.</p>
+<h3 id="datumfuncs-of-single-numericscalar-arguments">Datumfuncs of single numeric/scalar arguments</h3>
+<p>Functions of a single numeric or image Datum are sometimes written using an "inner wrapper", which will
+turn imagecubes and numbers into Value objects in a similar way to how the semantic binop
+wrappers work for operations. It will also wrap the resulting Value in a Datum.
+An example is <code>pcot.expression.register.funcWrapper</code>. Here is the datumfunc <code>sin</code> in full:</p>
+<pre><code>@datumfunc
+def sin(a):
+    &quot;&quot;&quot;
+    Calculate sine of an angle in radians
+    @param a:img,number:the angle (or image in which each pixel is a single angle)
+    &quot;&quot;&quot;
+    return funcWrapper(lambda xx: xx.sin(), a)
+</code></pre>
+<p>We don't need worry about whether the argument is an image or a scalar, because the funcWrapper
+will deal with it. However, funcWrapper can only deal with images and scalars.</p>
+<h3 id="the-stats-wrapper">The stats wrapper</h3>
+<p>Another datumfunc inner wrapper which can be used is statsWrapper. This takes a variable number
+of image and numeric arguments which it aggregates into a single 1D array, on which it then
+runs its function. It's typically for taking the mean or sum of images and/or values</p>
+<div class="alert alert-warning" role="alert">
+<p>I don't like how this works at the moment; the results are often meaningless or prone to 
+misinterpretation. Finding the mean of a multiband image should result in a vector of values,
+ideally.</p>
+</div></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../../js/jquery-3.6.0.min.js"></script>
+        <script src="../../js/bootstrap.min.js"></script>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+        <script src="../../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

@@ -16,16 +16,13 @@
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/font-awesome.min.css" rel="stylesheet">
         <link href="../../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
     <link rel="stylesheet" href="../../css/lightbox.min.css">
     <link rel="stylesheet" href="../../css/site.css">
 
     
-
-        <script src="../../js/jquery-1.10.2.min.js" defer></script>
-        <script src="../../js/bootstrap.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script>
     <script src="../../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
@@ -173,11 +170,76 @@
 
 <h1 id="multidot">multidot</h1>
 <h2 id="description">Description</h2>
-<p>Add multiple small circle ROIs. Most subsequent operations will only
-be performed on the union of all regions of interest.
+<p>Add multiple small ROIs which are either circular or painted. Painted modes can be created and edited with
+a circular brush or a flood fill.</p>
+<p>Most subsequent operations will only be performed on the union of all regions of interest.
 Also outputs an RGB image annotated with the ROIs on the 'ann' RGB input,
-or the input image converted to RGB if that input is not connected.
-Note that this type doesn't inherit from XFormROI</p>
+or the input image converted to RGB if that input is not connected.</p>
+<p>This can also "capture" ROIs from the incoming image, so that they can be edited. This copies the
+ROIs from the image into the node, and suppresses the image's original ROIs.</p>
+<p>In addition to this, the "convert circles" button will convert all circular ROIs in the node into painted ROIs.</p>
+<h2>Quick guide:</h2>
+<p>To add and edit circular ROIs:</p>
+<ul>
+<li>select "Circles" on the left-hand side</li>
+<li>set the dot size to the desired radius</li>
+<li>shift-click to add and select a new ROI</li>
+<li>click to select an existing ROI (or deselect)</li>
+<li>drag to move the centre of the circle</li>
+<li>edit parameters like dot size, name, colour, etc. to change the current ROI or next created ROI</li>
+</ul>
+<p>To add and edit painted ROIs:</p>
+<ul>
+<li>select "Painted" on the left-hand side</li>
+<li>set the dot size to the desired radius</li>
+<li>set add/create mode to Brush</li>
+<li>shift-click to add and select a new painted ROI</li>
+<li>click inside an ROI to select it</li>
+<li>ctrl-click to add a circle to a selected painted ROI</li>
+<li>alt-click to "unpaint" a circle from a selected painted ROI</li>
+</ul>
+<p>To add and edit filled ROIs:</p>
+<ul>
+<li>select "Painted" on the left-hand side</li>
+<li>set add/create mode to Fill</li>
+<li>set tolerance to a low number (e.g. 0.1)</li>
+<li>shift-click to add and select a new filled ROI</li>
+<li>possibly undo (ctrl-Z) to remove the last fill, then change the tolerance!</li>
+<li>click inside an ROI to select it</li>
+<li>ctrl-click to add more flood fill to a selected ROI<ul>
+<li>set add/create mode to "Brush" to paint circular brushstrokes on a ROI</li>
+</ul>
+</li>
+<li>alt-click to "unpaint" a circle from a selected ROI</li>
+</ul>
+<h2>General controls:</h2>
+<ul>
+<li><strong>Circles or Painted</strong> selects the type of new ROIs</li>
+<li><strong>click inside an ROI</strong> (or very near a circle) to show and edit its properties</li>
+<li><strong>Dot size</strong> is the size of the circle used for both creating circle ROIs and for circular painting in Painted mode.</li>
+<li><strong>Scale</strong> is the font size for all annotations created by this node</li>
+<li><strong>Thickness</strong> is the border size for (currently) all circles only</li>
+<li><strong>Colour</strong> is the colour of the current ROI's annotation</li>
+<li><strong>Recolour all</strong> will select random colours for all ROIs</li>
+<li><strong>Name</strong> is the name of the current ROI</li>
+<li><strong>Background</strong> is whether a background rectangle is used to make the name clearer for all ROIs</li>
+<li><strong>Capture</strong> captures the ROIs from the incoming image, and suppresses the image's original ROIs</li>
+<li><strong>Convert circles</strong> will convert all circular ROIs in the node into painted ROIs.</li>
+<li><strong>tolerance</strong> is the colour difference between the current pixel and surrounding pixels required to stop flood filling. PICK CAREFULLY - it may need to be very small.</li>
+<li><strong>add/create mode</strong> is whether we are new ROIs are created with a circular brush or flood fill in Painted mode</li>
+</ul>
+<p>Circle mode:</p>
+<ul>
+<li><strong>shift-click</strong> to add a new ROI</li>
+<li><strong>drag</strong> to move centre of circle</li>
+</ul>
+<p>Painted mode:</p>
+<ul>
+<li><strong>shift-click</strong> to add a new painted ROI. Will use a circle if "Paint Mode" is circle, or a flood fill with the given tolerance if the mode is "Fill".</li>
+<li><strong>ctrl-click</strong> to add a circle or flood fill to a selected painted ROI, provided we are in the same mode as the selected ROI. Circle or fill depends on Paint Mode.</li>
+<li><strong>alt-click</strong> to "unpaint" a circle from a selected painted ROI</li>
+</ul>
+<p>(Internal: Note that this type doesn't inherit from XFormROI.)</p>
 
 <hr />
 <h2 id="connections">Connections</h2>
@@ -198,12 +260,6 @@ Note that this type doesn't inherit from XFormROI</p>
 <td>img</td>
 <td>(none)</td>
 </tr>
-<tr>
-<td>1</td>
-<td>ann</td>
-<td>imgrgb</td>
-<td>used as base for annotated image</td>
-</tr>
 </tbody>
 </table>
 <h3 id="outputs">Outputs</h3>
@@ -223,12 +279,6 @@ Note that this type doesn't inherit from XFormROI</p>
 <td>img</td>
 <td>image with ROIs</td>
 </tr>
-<tr>
-<td>1</td>
-<td>ann</td>
-<td>imgrgb</td>
-<td>image as RGB with ROIs, with added annotations around ROIs</td>
-</tr>
 </tbody>
 </table></div>
             </div>
@@ -238,13 +288,15 @@ Note that this type doesn't inherit from XFormROI</p>
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
+        <script src="../../js/jquery-3.6.0.min.js"></script>
+        <script src="../../js/bootstrap.min.js"></script>
         <script>
             var base_url = "../..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../../js/base.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
-        <script src="../../search/main.js" defer></script>
+        <script src="../../js/base.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+        <script src="../../search/main.js"></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
