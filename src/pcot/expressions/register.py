@@ -51,6 +51,8 @@ def funcWrapper(fn: Callable[[Value], Value], d: Datum) -> Datum:
             # ...or splice it back into the image
             img = img.modifyWithSub(subimage, rv.n, uncertainty=rv.u, dqv=rv.dq)
             return Datum(Datum.IMG, img)
+    else:
+        raise XFormException('EXPR', 'unsupported type for function')
 
 
 def statsWrapper(fn, d: List[Optional[Datum]], *args) -> Datum:
