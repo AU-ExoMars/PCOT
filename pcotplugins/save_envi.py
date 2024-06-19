@@ -21,19 +21,23 @@ def test(w):
     res = QtWidgets.QFileDialog.getSaveFileName(w,
                                                 "ENVI file ",
                                                 os.path.expanduser(pcot.config.getDefaultDir('pcotfiles')),
-                                                "ENVI files (*.hdr)")
+                                                "ENVI files (*.hdr)",
+                                                options=pcot.config.getFileDialogOptions())
     if res[0] != '':
         # get the output of that node
         (root, ext) = os.path.splitext(res[0])
         print(f"{res[0]}, saving to {root}")
         img = node.getOutput(0, pcot.datum.Datum.IMG)
-        envi.write(root, img)
+        if img.channels == 1:
+            ui.log("Cannot save single-band image to ENVI")
+        else:
+            envi.write(root, img)
 
 
 def addMenus(w):
-    """Add an item to the Edit menu"""
+    """Add an item to the File menu"""
     act = QAction("save to ENVI", parent=w)
-    w.menuEdit.addAction(act)
+    w.menuFile.addAction(act)
     act.triggered.connect(lambda: test(w))
 
 
