@@ -340,13 +340,19 @@ class Value:
     def __str__(self):
         return self.sigfigs(5)
 
+    @staticmethod
+    def scalar_out(n,u,d,sigfigs=5):
+        """Output a scalar value"""
+        # first get a string for the DQ bits
+        dqstr = dq.chars(d)
+        return f"{n:.{sigfigs}g}±{u:.{sigfigs}g}{dqstr}"
+
     def sigfigs(self, figs):
         """a string representation to a given number of significant figures"""
         if np.isscalar(self.n):
-            return f"{self.n:.{figs}g}±{self.u:.{figs}g}"
+            return self.scalar_out(self.n,self.u,self.dq,figs)
         else:
             return f"Value:array{self.n.shape}"
-
 
     def __repr__(self):
         return self.__str__()
