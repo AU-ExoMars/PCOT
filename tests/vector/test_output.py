@@ -14,7 +14,7 @@ def test_vector_output():
 
     # we can specify no unc and no dq
     v = Value([10, 20, 30])
-    assert str(v) == "[10, 20, 30]"
+    assert str(v) == "[10±0, 20±0, 30±0]"
 
     # or no DQ
     v = Value([10, 20, 30], [0.1, 0.2, 0.3])

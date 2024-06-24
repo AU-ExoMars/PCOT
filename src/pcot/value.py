@@ -1,7 +1,8 @@
 import math
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
+from numpy.typing import NDArray
 
 from pcot import dq
 
@@ -146,9 +147,10 @@ class Value:
     """Wraps a value with uncertainty and data quality. This can be either an array or a scalar, but they
     have to match."""
 
-    n: np.float32
-    u: np.float32
-    dq: np.uint16
+    # each of these is either a scalar or an array
+    n: Union[NDArray[np.float32], np.float32]
+    u: Union[NDArray[np.float32], np.float32]
+    dq: Union[NDArray[np.uint16], np.uint16]
 
     def __init__(self, n, u: Any = 0.0, d=dq.NONE):
         """Initialise a value - either array of float32 or scalar.
@@ -310,21 +312,21 @@ class Value:
         COSTHRESH = 1e-7
         COSREPLACE = 1e-7
 
-        extra = dq.NONE   # bits to OR into the DQ of the result
+        extra = dq.NONE  # bits to OR into the DQ of the result
         if self.isscalar():
             cos = np.cos(self.n)
             if np.abs(cos) < COSTHRESH:
                 cos = COSREPLACE
                 extra = dq.DIVZERO
             sec = 1.0 / cos
-            u = np.sqrt((sec**2 * self.u)**2)
+            u = np.sqrt((sec ** 2 * self.u) ** 2)
         else:
             cos = np.cos(self.n)
             cossmall = np.abs(cos) < COSTHRESH
-            cos = np.where(cossmall, COSREPLACE, cos)   # turn infs into large
+            cos = np.where(cossmall, COSREPLACE, cos)  # turn infs into large
             extra = np.where(cossmall, dq.DIVZERO, dq.NONE)
             sec = 1.0 / cos
-            u = np.sqrt((sec**2 * self.u)**2)
+            u = np.sqrt((sec ** 2 * self.u) ** 2)
 
         return Value(np.tan(self.n), u, self.dq | extra)
 
@@ -341,7 +343,7 @@ class Value:
         return self.sigfigs(5)
 
     @staticmethod
-    def scalar_out(n,u,d,sigfigs=5):
+    def scalar_out(n, u, d, sigfigs=5):
         """Output a scalar value"""
         # first get a string for the DQ bits
         dqstr = dq.chars(d)
@@ -350,9 +352,14 @@ class Value:
     def sigfigs(self, figs):
         """a string representation to a given number of significant figures"""
         if np.isscalar(self.n):
-            return self.scalar_out(self.n,self.u,self.dq,figs)
+            return self.scalar_out(self.n, self.u, self.dq, figs)
         else:
-            return f"Value:array{self.n.shape}"
+            if len(self.n.shape) == 1 and self.n.shape[0] < 20:
+                # print 1D arrays if they are short enough
+                return "[" + ", ".join([self.scalar_out(n, u, d, figs) for n, u, d in
+                                        zip(self.n, self.u, self.dq)]) + "]"
+            else:
+                return f"Value:array{self.n.shape}"
 
     def __repr__(self):
         return self.__str__()
