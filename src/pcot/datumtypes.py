@@ -126,7 +126,7 @@ class NumberType(Type):
         super().__init__('number', valid=[pcot.value.Value])
 
     def getDisplayString(self, d: 'Datum'):
-        return f"{d.val.n:.5g}±{d.val.u:.5g}{dq.chars(d.val.dq)}"
+        return str(d.val)
 
     def serialise(self, d):
         return self.name, (d.val.serialise(),

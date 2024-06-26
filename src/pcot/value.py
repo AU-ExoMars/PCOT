@@ -152,12 +152,22 @@ class Value:
     u: Union[NDArray[np.float32], np.float32]
     dq: Union[NDArray[np.uint16], np.uint16]
 
-    def __init__(self, n, u: Any = 0.0, d=dq.NONE):
+    # maximum number of elements to display in an array
+    MAXARRAYDISPLAY = 10
+
+    def __init__(self, n, u: Any = None, d=dq.NONE):
         """Initialise a value - either array of float32 or scalar.
         n = nominal value
         u = uncertainty (SD)
         d = data quality bits (see DQ; these are error bits).
-        This has to make sure that n, u and d are all the same dimensionality."""
+        This method will expand scalars to ensure that n, u and d are all the same dimensionality.
+        If no uncertainty is provided, it is set to zero and the NOUNCERTAINTY bit is set in the DQ bits.
+        """
+
+        # if u is None, we assume no uncertainty value is provided
+        if u is None:
+            u = 0.0
+            d |= dq.NOUNCERTAINTY
 
         n = np.float32(n)  # convert to correct types (will also convert arrays)
         u = np.float32(u)
@@ -340,7 +350,11 @@ class Value:
         return Value(1 - self.n, self.u, self.dq)
 
     def __str__(self):
-        return self.sigfigs(5)
+        return self.out(5)
+
+    def __repr__(self):
+        return self.__str__()
+
 
     @staticmethod
     def scalar_out(n, u, d, sigfigs=5):
@@ -349,24 +363,28 @@ class Value:
         dqstr = dq.chars(d)
         return f"{n:.{sigfigs}g}±{u:.{sigfigs}g}{dqstr}"
 
-    def sigfigs(self, figs):
+    def out(self, figs):
         """a string representation to a given number of significant figures"""
         if np.isscalar(self.n):
             return self.scalar_out(self.n, self.u, self.dq, figs)
         else:
-            if len(self.n.shape) == 1 and self.n.shape[0] < 20:
-                # print 1D arrays if they are short enough
+            if len(self.n.shape) == 1:
+                # truncate and note if we're truncating
+                truncate = len(self.n) > self.MAXARRAYDISPLAY
+                n = self.n[:self.MAXARRAYDISPLAY] if truncate else self.n
+                u = self.u[:self.MAXARRAYDISPLAY] if truncate else self.u
+                d = self.dq[:self.MAXARRAYDISPLAY] if truncate else self.dq
+                truncstr = "..." if truncate else ""
                 return "[" + ", ".join([self.scalar_out(n, u, d, figs) for n, u, d in
-                                        zip(self.n, self.u, self.dq)]) + "]"
+                                        zip(n, u, d)]) + truncstr + "]"
             else:
-                return f"Value:array{self.n.shape}"
+                # funny array - just show the shape
+                return f"Array of shape {self.n.shape}"
 
-    def __repr__(self):
-        return self.__str__()
-
-    def brief(self):
-        """Very brief ASCII-safe representation used in e.g. test names"""
-        if self.dq != 0:
-            return f"{self.n}|{self.u}|{dq.names(self.dq, True)}"
+    def brief_internal_repr(self):
+        """Used for *very* brief names in internal tests. It can't contain non-ascii characters or space because it's
+        used in test names (so we can't use the __str__)."""
+        if np.isscalar(self.n):
+            return f"{self.n:.2g}|{self.u:.2g}|{dq.chars(self.dq)}"
         else:
-            return f"{self.n}|{self.u}"
+            return f"arrayvalue{self.n.shape}"
