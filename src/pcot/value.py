@@ -355,7 +355,6 @@ class Value:
     def __repr__(self):
         return self.__str__()
 
-
     @staticmethod
     def scalar_out(n, u, d, sigfigs=5):
         """Output a scalar value"""
@@ -388,3 +387,22 @@ class Value:
             return f"{self.n:.2g}|{self.u:.2g}|{dq.chars(self.dq)}"
         else:
             return f"arrayvalue{self.n.shape}"
+
+    def split(self):
+        """Split a vector/array value into an list of Value objects. The result will be a 1D list, regardless
+        of the shape of the original. Used in tests."""
+
+        assert not np.isscalar(self.n)  # can't split a scalar
+
+        # if we're here, we have an array. Now it gets ugly. First. flatten the arrays
+        n = self.n.ravel()
+        u = self.u.ravel()
+        d = self.dq.ravel()
+        # now build a list of Values from the flattened arrays
+        return [Value(ni, ui, di) for ni, ui, di in zip(n, u, d)]
+
+
+
+
+
+

@@ -286,6 +286,19 @@ def test_propagation():
     core(genArray, Value, genArray)
 
 
+def test_propagation_unary():
+    """test that unary operators copy their DQ bits to the result"""
+
+    def core(a):
+        assert -a(2, 0.1) == a(-2, 0.1, dq.NONE)
+        assert ~a(0.25, 0.1) == a(0.75, 0.1, dq.NONE)
+        assert -a(2, 0.1, dq.TEST) == a(-2, 0.1, dq.TEST)
+        assert ~a(0.25, 0.1, dq.TEST) == a(0.75, 0.1, dq.TEST)
+
+    core(Value)
+    core(genArray)
+
+
 def test_negate_invert():
     """Test unary operations"""
 
