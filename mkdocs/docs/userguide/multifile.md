@@ -56,8 +56,8 @@ Regular expressions describe patterns which texts might match. For example,
 the regex `c[a-z]t` will match any three-letter string starting with `c` and
 ending with `t`. 
 
-* (Beginner's guide)[https://www.regular-expressions.info/index.html]
-* (Useful 'playground' to try out expressions)[https://regex101.com/]
+* [Beginner's guide](https://www.regular-expressions.info/index.html)
+* [Useful 'playground' to try out expressions](https://regex101.com/)
 
 We can also use a regex to extract parts of the string.
 

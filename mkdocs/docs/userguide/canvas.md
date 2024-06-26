@@ -1,11 +1,10 @@
 # The Canvas and its optional views
 
-Most nodes and inputs use a **canvas** to display some bands of an image as RGB.
-This will take up a large proportion of their view - in some cases
-all of it. It is worth discussing
-in some detail. Another is shown below as the entire control area
-for an actual *input* node, which brings one of the four inputs into
-the graph.
+Most nodes and inputs use a **canvas** to display some bands of an image as
+RGB. This will take up a large proportion of their view - in some cases all of
+it. It is worth discussing in some detail. A canvas is shown below as the
+entire control area for an  *input* node, which brings one of the four
+inputs into the graph.
 
 ![!An open *input 0* node|inputnode](inputnode.png)
 
@@ -20,7 +19,8 @@ in it, so is scrollable with collapsible sections, rather like the palette.
 At the top - and not collapsible - are three combo boxes which determine
 the image *mapping* : how the bands within the (probably) multispectral image
 map onto RGB channels for viewing. Each band in the combo box shows the input
-number, a colon, and typically the name, position or wavelength of the band.
+number (i.e. which of the four global inputs the data is sourced from),
+a colon, and typically the name, position or wavelength of the band.
 Exactly what is shown depends on the image being loaded and the Caption
 [global control](../userguide/globalcontrols.md).
 The **Guess RGB** button tries to guess appropriate channels for the RGB canvas image.
@@ -76,8 +76,8 @@ Each image has a set of data quality bits and an uncertainty value associated wi
 of each band. Viewing this can be challenging. We make three "layers" of DQ data available: each
 works the same way:
 
-* **SRC** specifies which band we are viewing the DQ for. If *max* is
-specified, the maximum uncertainty across all bands is used. If *sum*, then
+* **SRC** specifies which band we are viewing the DQ or uncertainty for. If *max* is
+specified and we are viewing uncertainty, the maximum uncertainty across all bands is used. If *sum*, then
 the sum of the uncertainties is used. If a DQ bit is being shown, the
 intersection of those bits across all bands is used for both *max* and *sum*.
 * **DATA** specifies what data is being shown:
