@@ -26,7 +26,7 @@ class XFormExpr(XFormType):
     and the output type is determined when the node is run.
 
     The four inputs are assigned to the variables a, b, c, and d. They are typically (but not necessarily) images
-    or scalar values.
+    or numeric values.
     
     The standard operators +,/,\*,- and ^ all have their usual meanings. When applied to images they work in
     a pixel-wise fashion, so if **a** is an image, **2\*a** will double the brightness. If **b** is also an image,
@@ -50,7 +50,7 @@ class XFormExpr(XFormType):
     |A\|B          |element-wise maximum of A and B (Zadeh's OR operator)|20
     |!A            |element-wise 1-A (Zadeh's NOT operator)|50
 
-    All operators can act on images and scalars (numeric values),
+    All operators can act on images, 1D vectors and scalars
     with the exception of **.** and **$** which have images on the left-hand side and identifiers
     or integers on the right-hand side.
 
@@ -73,13 +73,21 @@ class XFormExpr(XFormType):
     This probably isn't what you wanted. Note that this is obviously not an issue when an operation is being performed
     on bands in a single image.
 
-    ### binary operators on images with regions of interest
+    ### Binary operators on images with regions of interest
     If one of the two images has an ROI, the operation is only performed on that ROI; the remaining area of output is
     taken from the image without an ROI. If both images have an ROI an error will result - it is likely that this
     is a mistake on the user's part, and doing something more "intelligent" might conceal this. The desired result
     can be achieved using expr nodes on ROIs and an importroi node.
 
-
+    ### Operations with vectors
+    Some functions can generate vectors, such as `mean` for getting the means of the bands, and `vec` for generating
+    vectors by hand.
+    
+    If an image is used in a binary operation with a vector on the other side, the vector must have the same number of
+    elements as there are bands in the image. The operation will be performed on each band. Consider a 3-band image
+    and the vector `[2,3,4]`. If we multiply them, the result will an image with the first band multiplied by 2,
+    the second band multiplied by 3, and the third band multiplied by 4. 
+    
     ### Operators on ROIs themselves (as opposed to images with ROIs)
 
     |operator    |description|
@@ -112,6 +120,9 @@ class XFormExpr(XFormType):
     |------------|---------|
     | **(a+b)$G0** | **a$G0 + b$G0** |
     | **((a+b)/2)$780** | **(a$780+b$780)/2**  |
+    
+    Band extraction can also be performed with vectors provided the vector elements are numeric (i.e. wavelengths):
+    `a $ vec(640,550,440)` is valid.
     
 
     ### Properties
