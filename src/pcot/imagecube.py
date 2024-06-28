@@ -7,6 +7,7 @@ import itertools
 import logging
 import math
 import numbers
+from collections.abc import Iterable
 from typing import List, Optional, Tuple, Sequence, Union
 
 import cv2 as cv
@@ -693,6 +694,9 @@ class ImageCube(SourcesObtainable):
         """Given a filter name, position or CWL, get a list of all channels which use it. Then build an image
         out of those channels. Usually this returns a single channel image, but it could very easily not."""
         # get list of matching channel indices (often only one)
+
+        if not isinstance(filterNameOrCWL, Iterable):
+            filterNameOrCWL = [filterNameOrCWL]  # might get some kind of iterable, or just a bare value
         lstOfChannels = [self.sources.search(filterNameOrCWL=x) for x in list(filterNameOrCWL)]
         lstOfChannels = list(itertools.chain.from_iterable(lstOfChannels))  # flatten the list-of-lists we got
         if len(lstOfChannels) == 0:

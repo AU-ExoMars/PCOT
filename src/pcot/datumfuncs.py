@@ -468,11 +468,45 @@ def flatmean(val, *args):
     Uncertainties in the data will be pooled. Images will be flattened into a list of values,
     so the result for multiband images may not be what you expect.
 
-    @param val:img,number:value(s) to input
+    @param val:img,number:first value(s) to input (others can follow)
     """
     v = (val,) + args
     return statsWrapper(lambda n, u: Value(np.mean(n), pooled_sd(n, u), pcot.dq.NONE), v)
 
+
+@datumfunc
+def mean(val):
+    """
+    Find the mean±sd of a Datum. This does different things depending on what kind of Datum we are dealing with.
+    For a scalar, it just returns the scalar. For a vector, it returns the mean and sd of the vector. For an
+    image, it returns a vector of the means and sds of each channel.
+
+    @param val:img,number:the value to process
+    """
+    if val.tp == Datum.NUMBER:
+        return val.uncertainty()
+    elif val.tp == Datum.IMG:
+        img = val.get(Datum.IMG)
+        if img is None:
+            return None
+
+        if img.channels == 1:
+            # mono image
+            v = Value(np.mean(img.img), pooled_sd(img.img, img.uncertainty), pcot.dq.NONE)
+        else:
+            # split the image into bands
+            ns = image.imgsplit(img.img)
+            us = image.imgsplit(img.uncertainty)
+
+            perchann = [np.mean(x) for x in ns]
+            perchanu = [pooled_sd(ns[i], us[i]) for i in range(0, len(ns))]
+            v = Value(perchann, perchanu, pcot.dq.NONE)
+
+        return Datum(Datum.NUMBER, v, img.sources)
+
+    else:
+        # shouldn't happen because we check types
+        raise XFormException('DATA', 'mean() can only take numbers or images')
 
 @datumfunc
 def min(val, *args):
