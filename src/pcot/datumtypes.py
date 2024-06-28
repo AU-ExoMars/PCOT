@@ -12,7 +12,6 @@ import pcot.sources
 import pcot.value
 import pcot.datum
 import pcot.sources
-from pcot import dq
 
 typesByName = dict()
 
@@ -60,6 +59,11 @@ class Type:
         """create a copy of the Datum which is an independent piece of data and can be modified independently."""
         raise pcot.datumexceptions.NoDatumCopy(self.name)
 
+    def uncertainty(self, d):
+        """Get the uncertainty of the datum as Datum of the same type. For example, an image will return an image of
+        uncertainties. A vector will return a scalar."""
+        raise pcot.datumexceptions.NoUncertainty(self.name)
+
 
 # Built-in datum types
 
@@ -99,6 +103,9 @@ class ImgType(Type):
 
     def copy(self, d):
         return pcot.datum.Datum(pcot.datum.Datum.IMG, d.val.copy())
+
+    def uncertainty(self, d):
+        return pcot.datum.Datum(pcot.datum.Datum.IMG, d.val.get_uncertainty_image())
 
 
 class RoiType(Type):
@@ -145,6 +152,9 @@ class NumberType(Type):
 
     def copy(self, d):
         return d    # this type is immutable
+
+    def uncertainty(self, d):
+        return pcot.datum.Datum(pcot.datum.Datum.NUMBER, pcot.value.Value(d.val.uncertainty()), d.getSources())
 
 
 class VariantType(Type):

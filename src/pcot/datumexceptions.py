@@ -38,3 +38,8 @@ class DatumWithNoSourcesException(DatumException):
 class NoDatumCopy(DatumException):
     def __init__(self, typename):
         super().__init__(f"Datum type {typename} has no copy operation")
+
+
+class NoUncertainty(DatumException):
+    def __init__(self, typename):
+        super().__init__(f"Datum type {typename} has no uncertainty operation")

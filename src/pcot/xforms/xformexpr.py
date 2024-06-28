@@ -128,7 +128,7 @@ class XFormExpr(XFormType):
 
     ## Uncertainties are assumed to be independent in all binary operations
 
-    While uncertainty is propagated through operations (as standard deviation) all quantities are assumed
+    While uncertainty is propagated through operations (as population standard deviation) all quantities are assumed
     to be independent (calculating covariances is beyond the scope of this system). Be very careful here.
     For example, the uncertainty for the expression **tan(a)** will be calculated correctly, but if you try
     to use **sin(a)/cos(a)** the uncertainty will be incorrect because the nominator and denominator are

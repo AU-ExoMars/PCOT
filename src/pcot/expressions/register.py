@@ -129,20 +129,28 @@ def registerBuiltinFunctions(p):
 def registerBuiltinProperties(p):
     p.registerProperty('w', Datum.IMG,
                        "give the width of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",
-                       lambda q: Datum(Datum.NUMBER, Value(q.subimage().bb.w, 0.0), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Value(q.get(Datum.IMG).subimage().bb.w, 0.0), SourceSet(q.getSources())))
     p.registerProperty('w', Datum.ROI, "give the width of an ROI in pixels",
-                       lambda q: Datum(Datum.NUMBER, Value(q.bb().w, 0.0), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Value(q.get(Datum.ROI).bb().w, 0.0), SourceSet(q.getSources())))
     p.registerProperty('h', Datum.IMG,
                        "give the height of an image in pixels (if there are ROIs, give the width of the BB of the ROI union)",
-                       lambda q: Datum(Datum.NUMBER, Value(q.subimage().bb.h, 0.0), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Value(q.get(Datum.IMG).subimage().bb.h, 0.0), SourceSet(q.getSources())))
     p.registerProperty('h', Datum.ROI, "give the width of an ROI in pixels",
-                       lambda q: Datum(Datum.NUMBER, Value(q.bb().h, 0.0), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Value(q.get(Datum.ROI).bb().h, 0.0), SourceSet(q.getSources())))
 
     p.registerProperty('n', Datum.IMG,
                        "give the area of an image in pixels (if there are ROIs, give the number of pixels in the ROI union)",
-                       lambda q: Datum(Datum.NUMBER, Value(q.subimage().mask.sum(), 0.0), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Value(q.get(Datum.IMG).subimage().mask.sum(), 0.0), SourceSet(q.getSources())))
     p.registerProperty('n', Datum.ROI, "give the number of pixels in an ROI",
-                       lambda q: Datum(Datum.NUMBER, Value(q.pixels(), 0.0), SourceSet(q.getSources())))
+                       lambda q: Datum(Datum.NUMBER, Value(q.get(Datum.ROI).pixels(), 0.0), SourceSet(q.getSources())))
+
+    p.registerProperty('u', Datum.IMG,
+                       "return an new image containing the uncertainties of the image's pixels",
+                       lambda d: d.uncertainty())
+
+    p.registerProperty('u', Datum.NUMBER,
+                       "return the uncertainty of the scalar or vector (if vector, individual uncertainties will be pooled). DQ is ignored.",
+                       lambda d: d.uncertainty())
 
 
 class datumfunc:

@@ -143,6 +143,11 @@ class Datum(SourcesObtainable):
         # and run the deserialisation
         return t.deserialise(d, document)
 
+    def uncertainty(self):
+        """Get the uncertainty of the datum as Datum of the same type. For example, an image will return an image of
+        uncertainties. A vector will return a scalar."""
+        return self.tp.uncertainty(self)
+
     #
     # This block of code maps operations on Datum objects to the binary operations registered in the "ops" system
     # by the initOps function (and any other functions that may be run in plugins to register additional types).

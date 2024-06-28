@@ -995,3 +995,9 @@ class ImageCube(SourcesObtainable):
 
         return ImageCube(outimg, self.mapping, self.sources, uncertainty=outunc, dq=outdq)
 
+    def get_uncertainty_image(self):
+        """Return an image with this image's uncertainty as its nominal values and zero uncertainty.
+        Sources, mapping and ROIs are preserved.
+        """
+        return ImageCube(self.uncertainty, self.mapping, self.sources, rois=self.rois)
+

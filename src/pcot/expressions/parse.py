@@ -533,7 +533,7 @@ class Parser:
 
         try:
             _, func = self.properties[(propName, a.tp)]
-            return func(a.get(a.tp))
+            return func(a)   # pass a Datum even though we already know the type; we might need (say) source info.
         except KeyError:
             raise ParseException('unknown property "{}" for given type in "." operator'.format(propName))
 

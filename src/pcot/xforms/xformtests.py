@@ -2,6 +2,7 @@ import dataclasses
 import logging
 import math
 from dataclasses import dataclass
+import random
 from typing import List, Any, Tuple
 
 import numpy as np
@@ -22,6 +23,8 @@ from pcot.xforms.tabdata import TabData
 
 logger = logging.getLogger(__name__)
 
+
+COLOURS = ['red', 'green', 'blue', 'yellow', 'cyan', 'magenta', 'black', 'white']
 
 @dataclass
 class PixTest:
@@ -120,6 +123,15 @@ class Model(TableModel):
             self.dataChanged.emit(QModelIndex(), QModelIndex(), (QtCore.Qt.DisplayRole,))
             self.changed.emit()
 
+    def add_random(self, chans, w, h):
+        x = random.randrange(0, w)
+        y = random.randrange(0, h)
+        for i in range(0, chans):
+            item = self.add_item()
+            self.d[item] = PixTest(x, y, i, 0, 0, 0, random.choice(COLOURS))
+        self.dataChanged.emit(QModelIndex(), QModelIndex(), (QtCore.Qt.DisplayRole,))
+        self.changed.emit()
+
 
 @xformtype
 class XFormPixTest(XFormType):
@@ -209,6 +221,7 @@ class TabPixTest(pcot.ui.tabs.Tab):
         self.w.deleteButton.clicked.connect(self.deleteClicked)
         self.w.tableView.delete.connect(self.deleteClicked)
         self.w.tableView.selChanged.connect(self.selectionChanged)
+        self.w.randButton.clicked.connect(self.randClicked)
 
         self.model = Model(self, node.tests)
         self.w.tableView.setModel(self.model)
@@ -217,9 +230,7 @@ class TabPixTest(pcot.ui.tabs.Tab):
         self.w.tableView.setItemDelegateForRow(PixTest.getHeader().index('DQ'),
                                                DQDelegate(self.w.tableView, self.model))
         self.w.tableView.setItemDelegateForRow(PixTest.getHeader().index('col'),
-                                               ComboBoxDelegate(self.w.tableView, self.model,
-                                                                ['white', 'black', 'blue', 'green', 'red', 'yellow',
-                                                                 'cyan', 'magenta', 'brown']))
+                                               ComboBoxDelegate(self.w.tableView, self.model, COLOURS))
 
         self.nodeChanged()
 
@@ -269,6 +280,10 @@ class TabPixTest(pcot.ui.tabs.Tab):
             if QMessageBox.question(self.window, "Delete test", "Are you sure?",
                                     QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
                 self.model.delete_item(col)
+
+    def randClicked(self):
+        self.mark()
+        self.model.add_random(self.node.img.channels, self.node.img.w, self.node.img.h)
 
     def testsChanged(self):
         """Tests have been changed in the UI, not programatically"""
@@ -381,6 +396,7 @@ class TabScalarTest(pcot.ui.tabs.Tab):
         self.w.nEdit.textChanged.connect(self.nEditChanged)
         self.w.uEdit.textChanged.connect(self.uEditChanged)
         self.w.dqEditButton.clicked.connect(self.dqButtonClicked)
+        self.w.setButton.clicked.connect(self.setButtonClicked)
 
         self.dontSetText = False
         self.dialog = None
@@ -426,6 +442,15 @@ class TabScalarTest(pcot.ui.tabs.Tab):
         self.dontSetText = True
         self.changed()
         self.dontSetText = False
+
+    def setButtonClicked(self):
+        if (v := self.node.getInput(0, Datum.NUMBER)) is not None:
+            self.mark()
+            # make sure the types are serialisable
+            self.node.n = float(v.n)
+            self.node.u = float(v.u)
+            self.node.dq = int(v.dq)
+            self.changed()
 
     def dqButtonClicked(self):
         def done():

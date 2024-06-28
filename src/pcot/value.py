@@ -5,6 +5,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from pcot import dq
+from pcot.utils.maths import pooled_sd
 
 
 def add_sub_unc(ua, ub):
@@ -412,7 +413,12 @@ class Value:
         # now build a list of Values from the flattened arrays
         return [Value(ni, ui, di) for ni, ui, di in zip(n, u, d)]
 
-
+    def uncertainty(self):
+        """If a scalar, just return the uncertainty. If a vector, calculate the pooled SD."""
+        if self.isscalar():
+            return self.u
+        else:
+            return pooled_sd(self.n, self.u)
 
 
 

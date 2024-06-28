@@ -16,6 +16,7 @@ from pcot.sources import MultiBandSource, SourceSet, Source
 from pcot.utils import image
 from pcot.utils.deb import Timer
 from pcot.utils.geom import Rect
+from pcot.utils.maths import pooled_sd
 from pcot.value import Value, add_sub_unc_list
 from pcot.xform import XFormException
 
@@ -460,21 +461,8 @@ def setcwl(img, cwl):
     return Datum(Datum.IMG, img)
 
 
-def pooled_sd(n, u):
-    """Returns pooled standard deviation for an array of nominal values and an array of stddevs."""
-    # "Thus the variance of the pooled set is the mean of the variances plus the variance of the means."
-    # by https://arxiv.org/ftp/arxiv/papers/1007/1007.1012.pdf
-    # the variance of the means is n.var()
-    # the mean of the variances is np.mean(u**2) (since u is stddev, and stddev**2 is variance)
-    # so the sum of those is pooled variance. Root that to get the pooled stddev.
-    # There is a similar calculation in xformspectrum!
-    varianceOfMeans = n.var()
-    meanOfVariances = np.mean(u ** 2)
-    return np.sqrt(varianceOfMeans + meanOfVariances)
-
-
 @datumfunc
-def mean(val, *args):
+def flatmean(val, *args):
     """
     find the mean±sd of the values of a set of images and/or scalars.
     Uncertainties in the data will be pooled. Images will be flattened into a list of values,
@@ -484,19 +472,6 @@ def mean(val, *args):
     """
     v = (val,) + args
     return statsWrapper(lambda n, u: Value(np.mean(n), pooled_sd(n, u), pcot.dq.NONE), v)
-
-
-@datumfunc
-def sd(val, *args):
-    """
-    find the standard deviation of the values of a set of images and/or scalars.
-    Uncertainties in the data will be pooled. Images will be flattened into a list of values,
-    so the result for multiband images may not be what you expect.
-
-    @param val:img,number:value(s) to input
-    """
-    v = (val,) + args
-    return statsWrapper(lambda n, u: Value(pooled_sd(n, u), 0, pcot.dq.NOUNCERTAINTY), v)
 
 
 @datumfunc

@@ -161,6 +161,19 @@
            </property>
           </widget>
          </item>
+         <item>
+          <widget class="QPushButton" name="randButton">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Maximum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Create random test per channel</string>
+           </property>
+          </widget>
+         </item>
         </layout>
        </item>
       </layout>
