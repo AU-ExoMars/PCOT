@@ -209,6 +209,17 @@ class Value:
         n, u, d = t
         return Value(n, u, d)
 
+    def __getitem__(self, idx):
+        if self.isscalar():
+            raise Exception("Can't get by index from a scalar")
+        if isinstance(idx, Value):
+            idx = idx.n
+        idx = int(idx)
+        try:
+            return Value(self.n[idx], self.u[idx], self.dq[idx])
+        except IndexError:
+            raise IndexError(f"Index {idx} out of range for Value vector of length {self.n.shape[0]}")
+
     def __eq__(self, other):
         return np.array_equal(self.n, other.n) and np.array_equal(self.u, other.u) and np.array_equal(self.dq, other.dq)
 

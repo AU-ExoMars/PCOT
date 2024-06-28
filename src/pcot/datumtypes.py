@@ -3,6 +3,8 @@
 # lookup by name for serialisation
 from copy import copy
 
+import numpy as np
+
 import pcot.rois
 import pcot.datumexceptions
 import pcot.imagecube
@@ -43,9 +45,9 @@ class Type:
     def __str__(self):
         return self.name
 
-    def getDisplayString(self, d: 'Datum'):
-        """Return the datum as a SHORT string - small enough to fit in a graph box; default
-        is just to return the name"""
+    def getDisplayString(self, d: 'Datum', box=False):
+        """Return the datum as a fairly brief string - if box is true it must be small enough to fit in a graph box
+        or tab title; default is just to return the name"""
         return self.name
 
     def serialise(self, d: 'Datum'):
@@ -65,7 +67,7 @@ class AnyType(Type):
     def __init__(self):
         super().__init__('any', valid=None)
 
-    def getDisplayString(self, d: 'Datum'):
+    def getDisplayString(self, d: 'Datum', box=False):
         """Might seem a bit weird, but an unconnected input actually gives "any" as its type."""
         if d.val is None:
             return "none"
@@ -82,7 +84,7 @@ class ImgType(Type):
         # remember what they are.
         super().__init__('img', image=True, valid={pcot.imagecube.ImageCube, type(None)})
 
-    def getDisplayString(self, d: 'Datum'):
+    def getDisplayString(self, d: 'Datum', box=False):
         if d.val is None:
             return "IMG(NONE)"
         else:
@@ -121,11 +123,14 @@ class RoiType(Type):
 
 
 class NumberType(Type):
-    """Number datums contain a scalar OpData object."""
+    """Number datums contain a Value object (scalar or vector, currently)."""
     def __init__(self):
         super().__init__('number', valid=[pcot.value.Value])
 
-    def getDisplayString(self, d: 'Datum'):
+    def getDisplayString(self, d: 'Datum', box=False):
+        """in the graph box, a vec is just displayed as VEC[n] where n is the number of elements"""
+        if box and not np.isscalar(d.val.n):
+            return f"VEC[{d.val.n.shape[0]}]"
         return str(d.val)
 
     def serialise(self, d):
@@ -162,7 +167,7 @@ class TestResultType(Type):
     def __init__(self):
         super().__init__('testresult', valid=[list])
 
-    def getDisplayString(self, d: 'Datum'):
+    def getDisplayString(self, d: 'Datum', box=False):
         failed = len(d.val)
         if failed > 0:
             return f"FAILED {failed}"

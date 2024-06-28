@@ -3,7 +3,7 @@ and also incorporates region-of-interest data.  Conversions to and from float ar
 done in many operations. Avoiding floats saves memory and speeds things up,
 but we could change things later.
 """
-
+import itertools
 import logging
 import math
 import numbers
@@ -693,7 +693,8 @@ class ImageCube(SourcesObtainable):
         """Given a filter name, position or CWL, get a list of all channels which use it. Then build an image
         out of those channels. Usually this returns a single channel image, but it could very easily not."""
         # get list of matching channel indices (often only one)
-        lstOfChannels = self.sources.search(filterNameOrCWL=filterNameOrCWL)
+        lstOfChannels = [self.sources.search(filterNameOrCWL=x) for x in list(filterNameOrCWL)]
+        lstOfChannels = list(itertools.chain.from_iterable(lstOfChannels))  # flatten the list-of-lists we got
         if len(lstOfChannels) == 0:
             return None  # no matches found
         chans = []

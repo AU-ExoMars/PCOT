@@ -24,7 +24,7 @@ def mknumFloat(n: float):
 
 
 def mknumNum(n: Value):
-    """Create a null source set numerical datum from a OpData for testing"""
+    """Create a null source set numerical datum from a Value for testing"""
     return Datum(Datum.NUMBER, n, sources=nullSourceSet)
 
 

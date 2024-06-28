@@ -35,5 +35,5 @@ def test_funcwrapper(t: FuncTest):
 
     res = e.getOutput(0, Datum.NUMBER)
     assert res is not None
-    exp = Value(*t.exp[0])
+    exp = Value(*t.exp)
     assert res.approxeq(exp)

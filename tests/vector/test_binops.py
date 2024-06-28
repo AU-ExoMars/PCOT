@@ -65,6 +65,7 @@ def calc(a: Value, b: Value, op: Callable[[Value, Value], Value]) -> Value:
         d = np.array([r.dq for r in res]).reshape(a.n.shape)
         return Value(n, u, d)
 
+
 ops = [
     ("addition", lambda a, b: a + b),
     ("subtraction", lambda a, b: a - b),

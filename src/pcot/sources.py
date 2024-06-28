@@ -142,7 +142,7 @@ class Source(SourcesObtainable):
         if inp is not None:
             if self.inputIdx != inp:
                 return False
-        if bandNameOrCWL:
+        if bandNameOrCWL is not None:
             if isinstance(bandNameOrCWL, str):
                 name = self.band.name if isinstance(self.band, Filter) else self.band
                 pos = self.band.position if isinstance(self.band, Filter) else None
@@ -413,7 +413,7 @@ class MultiBandSource(SourcesObtainable):
         """
         out = []
 
-        # here we process things like "$_5" to get band 5 explicitly.
+        # here we process things like "$_5" to get band 5 explicitly. It's possibly a historical artifact?
         if isinstance(filterNameOrCWL, str) and filterNameOrCWL.startswith('_'):
             band = filterNameOrCWL[1:]
             try:

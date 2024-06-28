@@ -189,7 +189,7 @@ class XFormExpr(XFormType):
                                 node.mapping = ChannelMapping()
                             node.img.setMapping(node.mapping)
                     node.resultStr = res.tp.getDisplayString(res)
-                    node.setRectText(node.resultStr)
+                    node.setRectText(res.tp.getDisplayString(res, True))
                 else:
                     # no output, so reset the output type
                     node.changeOutputType(0, Datum.NONE)

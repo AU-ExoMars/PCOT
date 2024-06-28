@@ -27,6 +27,7 @@ def test_logical_negation():
     r = ~v
     assert r == Value([0, 1, 0.5], [0.1, 0.2, 0.3], dq.TEST)
 
+
 @pytest.mark.parametrize("t", func_tests, ids=lambda x: x.__str__())
 def test_funcwrapper(t: FuncTest):
     """This is very similar to the test in test_funcwrapper.py, but we're testing the unary functions on vectors.

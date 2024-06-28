@@ -349,6 +349,38 @@ def abs(a):     # careful now, we're shadowing the builtin "abs" here.
     return funcWrapper(lambda xx: builtins.abs(xx), a)
 
 
+@datumfunc
+def vec(s1, *remainingargs):
+    """
+    Create a 1D numeric vector from several scalars or vectors.
+    @param s1:number:the first scalar or vector
+    """
+    args = [s1] + list(remainingargs)
+    if any([x is None for x in args]):
+        raise XFormException('EXPR', 'argument is None for vec')
+
+    if any([x.tp != Datum.NUMBER for x in args]):
+        raise XFormException('EXPR', 'vec must take only numbers')
+
+    # extract numeric values and concatenate them
+    values = [x.get(Datum.NUMBER) for x in args]
+
+    def concat(xx,dtype):
+        """Take a list of mixed scalar and 1D numpy arrays. Concatenate into
+        a single 1D numpy array."""
+        es = [np.array([e],dtype=dtype) if np.isscalar(e) else e for e in xx]
+        return np.concatenate(es)
+
+    ns = concat([x.n for x in values],np.float32)
+    us = concat([x.u for x in values],np.float32)
+    dqs = concat([x.dq for x in values],np.uint16)
+
+    # now build our value
+    return Datum(Datum.NUMBER, Value(ns,us,dqs), sources=SourceSet([x.sources for x in args]))
+
+
+
+
 testImageCache = {}
 
 

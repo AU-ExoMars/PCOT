@@ -32,7 +32,7 @@ def registerBuiltinOperatorSyntax(p):
     p.registerBinop('|', 20, lambda a, b: binop(Operator.OR, a, b))
     p.registerUnop('!', 50, lambda a: unop(Operator.NOT, a))
 
-    p.registerBinop('$', 100, lambda a, b: binop(Operator.DOLLAR, a, b))
+    p.registerBinop('$', 60, lambda a, b: binop(Operator.DOLLAR, a, b))
 
 
 class ExpressionEvaluator(Parser):

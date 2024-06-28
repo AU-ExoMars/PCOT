@@ -8,13 +8,14 @@ import numbers
 import logging
 
 from io import BytesIO
-from tokenize import tokenize, TokenInfo, NUMBER, NAME, OP, ENCODING, ENDMARKER, NEWLINE, ERRORTOKEN, PERCENT, DOT, STRING
+from tokenize import tokenize, TokenInfo, NUMBER, NAME, OP, ENCODING, ENDMARKER, NEWLINE, ERRORTOKEN, PERCENT, DOT, \
+    STRING
 
 from typing import List, Any, Optional, Callable, Dict, Tuple, Union
 
 from pcot.datum import Datum
 from pcot.datumtypes import Type
-from pcot.sources import nullSourceSet
+from pcot.sources import nullSourceSet, SourceSet
 from pcot.utils.table import Table
 from pcot.value import Value
 
@@ -47,6 +48,7 @@ class ParamException(Exception):
 
 class ParseException(Exception):
     """A generic error in the parser"""
+
     def __init__(self, msg: str, t: Optional[TokenInfo] = None):
         if t is not None:
             msg = "{}: '{}' at chars {}-{}".format(msg, t.string, t.start[1], t.end[1])
@@ -55,6 +57,7 @@ class ParseException(Exception):
 
 class Parameter:
     """a definition of a function parameter"""
+
     def __init__(self,
                  name: str,  # name
                  desc: str,  # description
@@ -94,6 +97,7 @@ class Parameter:
 
 class Variable:
     """defines a variable, which is a wrapper around a parameterless function and a description"""
+
     def __init__(self, name: str, fn: Callable[[], Any], desc: str):
         self.desc = desc
         self.fn = fn
@@ -106,6 +110,7 @@ class Variable:
 
 class Function:
     """defines a function callable from an eval string; is called from registerFunc."""
+
     def __init__(self, name: str, fn: Callable[[List[Any]], Any], description: str,
                  mandatoryParams: List[Parameter], optParams: List[Parameter], varargs):
         self.fn = fn
@@ -121,7 +126,7 @@ class Function:
         """generate help text using the Table class, returning Markdown."""
         s = f"{self.desc}"
 
-        if len(self.mandatoryParams)>0:
+        if len(self.mandatoryParams) > 0:
             t = Table()
             for x in self.mandatoryParams:
                 t.newRow()
@@ -131,7 +136,7 @@ class Function:
             margs = t.markdown()
             s += f"\n\n## Mandatory arguments\n\n{margs}"
         t = Table()
-        if len(self.optParams)>0:
+        if len(self.optParams) > 0:
             for x in self.optParams:
                 t.newRow()
                 t.add("name", x.name)
@@ -217,6 +222,7 @@ class Function:
 
 class Instruction:
     """Interface for all instructions in the virtual machine"""
+
     def exec(self, stack: Stack):
         pass
 
@@ -335,6 +341,7 @@ class InstOp(Instruction):
 class InstBracket(InstOp):
     """A VM instruction used internally to process brackets in the shunting yard algorithm;
     should never be output as part of the instruction stream"""
+
     def __init__(self, parser: 'Parser'):
         # still need the string argument so InstOp knows which precedence to look up
         super().__init__('(', False, parser)
@@ -344,9 +351,23 @@ class InstBracket(InstOp):
         raise Exception("bracket instruction should never be executed")
 
 
+class InstSquareBracket(InstOp):
+    """A VM instruction used internally to process square brackets in the shunting yard algorithm;
+    should never be output as part of the instruction stream"""
+
+    def __init__(self, parser: 'Parser'):
+        # still need the string argument so InstOp knows which precedence to look up
+        super().__init__('[', False, parser)
+        self.argcount = 0
+
+    def exec(self, stack: Stack):
+        raise Exception("bracket instruction should never be executed")
+
+
 class InstCall(Instruction):
     """The VM instruction which calls the function on top of the stack (see InstFunction).
     If the function wasn't registered, an ident will be stacked instead."""
+
     def __init__(self, argcount):
         self.argcount = argcount
 
@@ -374,6 +395,43 @@ class InstCall(Instruction):
         else:
             # if we do (say) "a()", we'll get "cannot call a (whatever input A is connected to)..."
             raise ParseException("cannot call a {} as if it were a function".format(v.tp))
+
+
+class InstVector(Instruction):
+    """VM instruction for getting an element of a vector - e.g. vector[index]. The vector will
+    be below the index on the stack"""
+
+    def __init__(self, argcount):
+        self.argcount = argcount
+
+    def __str__(self):
+        return "INSTVECTOR  argcount: {}".format(self.argcount)
+
+    def exec(self, stack: Stack):
+        """execute: pop off the args, then pop off the vector value"""
+        if self.argcount != 0:
+            args = stack[-self.argcount:]
+        else:
+            args = []
+        for x in range(0, self.argcount):
+            stack.pop()
+        v = stack.pop()
+        if v.tp == Datum.IDENT:
+            raise ParseException("unknown function '{}' ".format(v.val))
+        elif v.tp == Datum.NUMBER:
+            if len(args) > 1:
+                raise ParseException("only 1D vectors supported")
+            idx = args[0]
+            if idx.tp != Datum.NUMBER or not idx.val.isscalar():
+                raise ParseException("indices must be scalars")
+            i = idx.get(Datum.NUMBER)
+
+            res = v.val[i.n]
+            sources = SourceSet([v.sources, idx.sources])
+            stack.append(Datum(Datum.NUMBER, res, sources))
+        else:
+            # if we do (say) "a()", we'll get "cannot call a (whatever input A is connected to)..."
+            raise ParseException("cannot get a value from a {} as if it were a vector".format(v.tp))
 
 
 def execute(seq: List[Instruction], stack: Stack) -> float:
@@ -479,7 +537,7 @@ class Parser:
         except KeyError:
             raise ParseException('unknown property "{}" for given type in "." operator'.format(propName))
 
-    def listProps(self, nameToFind:Optional[str]=None):
+    def listProps(self, nameToFind: Optional[str] = None):
         """Generate help on properties as Markdown, or get help on a single property"""
         t = Table()
         for k, v in self.properties.items():
@@ -487,7 +545,7 @@ class Parser:
             desc, _ = v
             if nameToFind is None or nameToFind == name:
                 t.newRow()
-                t.add("name", "x."+name)
+                t.add("name", "x." + name)
                 t.add("type of x", tp.name)
                 t.add("desc", desc)
         if len(t) == 0:
@@ -545,6 +603,8 @@ class Parser:
         # preregister the special operators for open bracket
         self.binopRegistry['('] = (100, None)
         self.unopRegistry['('] = (100, None)
+        self.binopRegistry['['] = (100, None)
+        self.unopRegistry['['] = (100, None)
         # getProperty is built into the parser, but can be bound to any operator.
         self.registerBinop('.', 80, lambda a, b: self.getProperty(a, b))
 
@@ -571,27 +631,39 @@ class Parser:
                 if t is None:
                     raise ParseException("premature end", t)
                 elif isOp(t):
-                    #  if the token is an prefix operator or an '(':
+                    #  if the token is an prefix operator or an open bracket:
                     #    mark it as prefix and push it onto the operator stack
                     # Note that the bracket case is different from when we meet it in the
                     # !wantOperand case. It's just a prefix op here, otherwise we'd end up
                     # generating a CALL when we don't want one.
-                    if t.string in self.unopRegistry or t.string == '(':
+                    if t.string in self.unopRegistry or t.string == '(' or t.string == '[':
                         self.stackOp(InstOp(t.string, True, self))
-                        #     goto want_operand (we just loop)
-                    elif t.string == ')':
-                        #     if we meet a ')' it should be a function with no arguments
+                    #  if we meet a ')' or ']' it should be a function/array with no arguments
+                    #  So all the code in these two clauses only applies to [] or (). Sorry.
+                    elif t.string == ']':
                         if len(self.opstack) == 0:  # we need that left bracket
                             raise ParseException("syntax error : bad no-arg function - no left bracket", t)
                         op = self.opstack.pop()
-                        if isinstance(op, InstBracket) and not op.prefix:
-                            if op.argcount != 0:
-                                raise ParseException("syntax error : bad no-arg function - has args!", t)
-                            self.out(InstCall(0))
-                            wantOperand = False
+                        if isinstance(op, InstSquareBracket):
+                            raise ParseException('syntax error: empty square brackets', t)
+                        elif isinstance(op, InstBracket):
+                            raise ParseException("syntax error : open bracket matched with close square bracket?", t)
                         else:
-                            raise ParseException("syntax error : no arg-func with no name? ", t)
-                #   if the token is an operand (identifier or variable):
+                            raise ParseException('syntax error: no-arg function with no name?', t)
+                    elif t.string == ')':
+                        if len(self.opstack) == 0:  # we need that left bracket
+                            raise ParseException("syntax error : bad no-arg function - no left bracket", t)
+                        op = self.opstack.pop()
+                        if isinstance(op, InstBracket):
+                            if not op.prefix:
+                                if op.argcount != 0:
+                                    raise ParseException("syntax error : bad no-arg function - has args!", t)
+                                self.out(InstCall(0))
+                                wantOperand = False
+                        elif isinstance(op, InstSquareBracket):
+                            raise ParseException("syntax error : open square bracket matched with close bracket?", t)
+                        else:
+                            raise ParseException('syntax error: no-arg function with no name?', t)
                 #     add it to the output queue
                 #     goto have_operand
                 elif t.type == NUMBER:
@@ -624,17 +696,17 @@ class Parser:
                     #     pop all operators off the stack, adding each one to the output queue.
                     while len(self.opstack) > 0:
                         op = self.opstack.pop()
-                        #     if a `(` is found on the stack, announce an error and stop.
-                        if isinstance(op, InstOp) and op.name == '(':
+                        #     if an open bracket is found on the stack, announce an error and stop.
+                        if isinstance(op, InstOp) and op.name == '(' or op.name == '[':
                             raise ParseException("syntax error : mismatched bracket left", t)
                         self.out(op)
                     return  # ALL DONE
                 #   if the token is a postfix operator:
                 #   could deal with postfix here, but won't.
 
-                # if the token is a ')':
-                if isOp(t) and t.string == ')':
-                    #     while the top of the stack is not '(':
+                # if the token is a close bracket:
+                if isOp(t) and t.string == ')' or t.string == ']':
+                    #     while the top of the stack is not '(' or '[':
                     while self.stackTopIsNotLPar():
                         #       pop an operator off the stack and add it to the output queue
                         op = self.opstack.pop()
@@ -645,21 +717,29 @@ class Parser:
                     #     if the '(' is marked infix, add a "call" operator to the output queue (*)
                     #     (using the arg count from the '(' )
                     op = self.opstack.pop()
+                    if isinstance(op, InstSquareBracket) and t.string == ')':
+                        raise ParseException("syntax error : mismatched bracket, expected ]", t)
+                    if isinstance(op, InstBracket) and t.string == ']':
+                        raise ParseException("syntax error : mismatched bracket, expected )", t)
                     if not op.prefix:
-                        if not isinstance(op, InstBracket):
+                        # I regret to inform you that I have no idea why I have to add 1 to the argument count
+                        if isinstance(op, InstSquareBracket):
+                            self.out(InstVector(op.argcount + 1))
+                        elif isinstance(op, InstBracket):
+                            self.out(InstCall(op.argcount + 1))
+                        else:
                             raise ParseException("syntax error : mismatched bracket right 2", t)
-                        self.out(InstCall(op.argcount + 1))
                     #     pop the '(' off the top of the stack
                     #     goto have_operand (already there)
 
                 elif isOp(t) and t.string == ',':
                     #   if the token is a ',':
-                    #     while the top of the stack is not '(':
+                    #     while the top of the stack is not a '(' or '[' bracket:
                     while self.stackTopIsNotLPar():
                         #       pop an operator off the stack and add it to the output queue
                         op = self.opstack.pop()
                         self.out(op)
-                    # top of stack should now be a '(', which is special - increment the argument count
+                    # top of stack should now be a '(' or '[', which is special - increment the argument count
                     self.opstack[-1].argcount += 1
                     #                    self.out(InstComma())  # JCF mod - add comma as actual operator with low precendence
                     #     if the stack becomes empty, announce an error
@@ -671,6 +751,8 @@ class Parser:
                     #   if the token is an infix operator:
                     if t.string == '(':
                         op = InstBracket(self)
+                    elif t.string == '[':
+                        op = InstSquareBracket(self)
                     else:
                         op = InstOp(t.string, False, self)
                     while self.stackTopIsOperatorPoppable(op):
@@ -687,7 +769,7 @@ class Parser:
             return False
         op = self.opstack[-1]  # peek
         # must be an operator, and not a left-parenthesis
-        return op.name != '('
+        return op.name != '(' and op.name != '['
 
     def stackTopIsOperatorPoppable(self, curop):
         """internal method - stack top is poppable to output"""
@@ -695,7 +777,7 @@ class Parser:
             return False
         op = self.opstack[-1]  # peek
         # must not be a left-parenthesis
-        if op.name == '(':
+        if op.name == '(' or op.name == '[':
             return False
         # operator at stack top must have greater precedence, or the same precedence and token is left-assoc
         # (which they all are)

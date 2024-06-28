@@ -33,7 +33,6 @@ class Datum(SourcesObtainable):
     # register built-in types; extras can be registered with registerType
     types = [
         ANY := pcot.datumtypes.AnyType(),
-        # image types, which all contain 'img' in their string (yes, ugly).
         IMG := pcot.datumtypes.ImgType(),
         ROI := pcot.datumtypes.RoiType(),
         NUMBER := pcot.datumtypes.NumberType(),
