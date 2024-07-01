@@ -340,7 +340,7 @@ def sqrt(a):
 
 
 @datumfunc
-def abs(a):     # careful now, we're shadowing the builtin "abs" here.
+def abs(a):  # careful now, we're shadowing the builtin "abs" here.
     """
     Calculate absolute value
     @param a:img,number:values (image or number)
@@ -366,20 +366,18 @@ def vec(s1, *remainingargs):
     # extract numeric values and concatenate them
     values = [x.get(Datum.NUMBER) for x in args]
 
-    def concat(xx,dtype):
+    def concat(xx, dtype):
         """Take a list of mixed scalar and 1D numpy arrays. Concatenate into
         a single 1D numpy array."""
-        es = [np.array([e],dtype=dtype) if np.isscalar(e) else e for e in xx]
+        es = [np.array([e], dtype=dtype) if np.isscalar(e) else e for e in xx]
         return np.concatenate(es)
 
-    ns = concat([x.n for x in values],np.float32)
-    us = concat([x.u for x in values],np.float32)
-    dqs = concat([x.dq for x in values],np.uint16)
+    ns = concat([x.n for x in values], np.float32)
+    us = concat([x.u for x in values], np.float32)
+    dqs = concat([x.dq for x in values], np.uint16)
 
     # now build our value
-    return Datum(Datum.NUMBER, Value(ns,us,dqs), sources=SourceSet([x.sources for x in args]))
-
-
+    return Datum(Datum.NUMBER, Value(ns, us, dqs), sources=SourceSet([x.sources for x in args]))
 
 
 testImageCache = {}
@@ -474,6 +472,36 @@ def flatmean(val, *args):
     return statsWrapper(lambda n, u: Value(np.mean(n), pooled_sd(n, u), pcot.dq.NONE), v)
 
 
+def stats(val, nfunc, ufunc, dqfunc):
+    if val.tp == Datum.NUMBER:
+        ns = val.get(Datum.NUMBER).n
+        us = val.get(Datum.NUMBER).u
+        dqs = val.get(Datum.NUMBER).dq
+        return Datum(Datum.NUMBER, Value(nfunc(ns, us), ufunc(ns, us), dqfunc(dqs)),
+                     sources=val.sources)
+    elif val.tp == Datum.IMG:
+        img = val.get(Datum.IMG)
+        if img is None:
+            return None
+
+        if img.channels == 1:
+            # mono image
+            v = Value(nfunc(img.img, img.uncertainty), ufunc(img.img, img.uncertainty), dqfunc(img.dq))
+        else:
+            # split the image into bands
+            ns = image.imgsplit(img.img)
+            us = image.imgsplit(img.uncertainty)
+
+            perchann = [nfunc(ns[i], us[i]) for i in range(0, len(ns))]
+            perchanu = [ufunc(ns[i], us[i]) for i in range(0, len(ns))]
+            v = Value(perchann, perchanu, dqfunc(img.dq))
+
+        return Datum(Datum.NUMBER, v, img.sources)
+    else:
+        # shouldn't happen because we check types
+        raise XFormException('DATA', 'stats functions can only take numbers or images')
+
+
 @datumfunc
 def mean(val):
     """
@@ -483,30 +511,26 @@ def mean(val):
 
     @param val:img,number:the value to process
     """
-    if val.tp == Datum.NUMBER:
-        return val.uncertainty()
-    elif val.tp == Datum.IMG:
-        img = val.get(Datum.IMG)
-        if img is None:
-            return None
+    return stats(val,
+                 lambda n, u: np.mean(n),
+                 pooled_sd,
+                 lambda x: pcot.dq.NONE)
 
-        if img.channels == 1:
-            # mono image
-            v = Value(np.mean(img.img), pooled_sd(img.img, img.uncertainty), pcot.dq.NONE)
-        else:
-            # split the image into bands
-            ns = image.imgsplit(img.img)
-            us = image.imgsplit(img.uncertainty)
 
-            perchann = [np.mean(x) for x in ns]
-            perchanu = [pooled_sd(ns[i], us[i]) for i in range(0, len(ns))]
-            v = Value(perchann, perchanu, pcot.dq.NONE)
+@datumfunc
+def sd(val):
+    """Find the SD of a Datum. This does different things depending on what kind of Datum we are dealing with.
+    For a scalar, it just returns 0. For a vector or single-channel image, it returns a scalar. For an image, it returns a
+    vector of the SDs of each channel.
 
-        return Datum(Datum.NUMBER, v, img.sources)
+    @param val:img,number:the value to process
+    """
 
-    else:
-        # shouldn't happen because we check types
-        raise XFormException('DATA', 'mean() can only take numbers or images')
+    return stats(val,
+                 lambda n, u: np.std(n),
+                 lambda n, u: 0,
+                 lambda x: pcot.dq.NONE)
+
 
 @datumfunc
 def min(val, *args):
@@ -721,17 +745,17 @@ def interp(img, factor, w=-1):
 
     # get the ROI if present, otherwise the whole image
     if img.rois is None or len(img.rois) == 0:
-        rect = Rect(0,0, img.w, img.h)
+        rect = Rect(0, 0, img.w, img.h)
     else:
         r = ROI.roiUnion(img.rois)
         if r is None:
-            rect = Rect(0,0, img.w, img.h)
+            rect = Rect(0, 0, img.w, img.h)
         else:
             rect = r.bb()
 
     # now get the wavelengths in the image
     wavelengths = [img.wavelength(i) for i in range(img.channels)]
-    if len(wavelengths)<2:
+    if len(wavelengths) < 2:
         raise XFormException('DATA', 'image must have at least two bands to interpolate')
     # fail if any are -1
     if any([x == -1 for x in wavelengths]):
@@ -761,8 +785,8 @@ def interp(img, factor, w=-1):
         yfactor = rect.h / height
         for x in range(width):
             for y in range(height):
-                xx = x*xfactor + rect.x
-                yy = y*yfactor + rect.y
+                xx = x * xfactor + rect.x
+                yy = y * yfactor + rect.y
                 outimg[y, x] = ip.trilinear_interpolation_fast(y_volume, x_volume, z_volume, volume, yy, xx, factor)
             print(x)
     # construct the new imagecube

@@ -693,9 +693,12 @@ class ImageCube(SourcesObtainable):
     def getChannelImageByFilter(self, filterNameOrCWL):
         """Given a filter name, position or CWL, get a list of all channels which use it. Then build an image
         out of those channels. Usually this returns a single channel image, but it could very easily not."""
-        # get list of matching channel indices (often only one)
 
-        if not isinstance(filterNameOrCWL, Iterable):
+        # get list of matching channel indices (often only one). If a single wavelength or filtername is provided
+        # we should turn that into a list of one element. The test here is like it is because strings are
+        # also iterable.
+
+        if not isinstance(filterNameOrCWL, Iterable) or isinstance(filterNameOrCWL, str):
             filterNameOrCWL = [filterNameOrCWL]  # might get some kind of iterable, or just a bare value
         lstOfChannels = [self.sources.search(filterNameOrCWL=x) for x in list(filterNameOrCWL)]
         lstOfChannels = list(itertools.chain.from_iterable(lstOfChannels))  # flatten the list-of-lists we got

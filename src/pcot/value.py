@@ -170,7 +170,7 @@ class Value:
             u = 0.0
             d |= dq.NOUNCERTAINTY
 
-        n = np.float32(n)  # convert to correct types (will also convert arrays)
+        n = np.float32(n)  # convert to correct types (will also convert lists into np.arrays)
         u = np.float32(u)
         d = np.uint16(d)
 

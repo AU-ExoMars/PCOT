@@ -8,7 +8,6 @@ def pooled_sd(n, u):
     # the variance of the means is n.var()
     # the mean of the variances is np.mean(u**2) (since u is stddev, and stddev**2 is variance)
     # so the sum of those is pooled variance. Root that to get the pooled stddev.
-    # There is a similar calculation in xformspectrum!
-    varianceOfMeans = n.var()
-    meanOfVariances = np.mean(u ** 2)
+    varianceOfMeans = n.var()           # variance of the means
+    meanOfVariances = np.mean(u ** 2)   # get all the SDs, square them to convert to variances, then get the mean of those.
     return np.sqrt(varianceOfMeans + meanOfVariances)
