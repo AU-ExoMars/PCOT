@@ -1,7 +1,7 @@
 """
 Registration and utility functions for the expression evaluator
 """
-
+from inspect import signature
 from numbers import Number
 from typing import List, Optional, Callable
 
@@ -53,69 +53,6 @@ def funcWrapper(fn: Callable[[Value], Value], d: Datum) -> Datum:
             return Datum(Datum.IMG, img)
     else:
         raise XFormException('EXPR', 'unsupported type for function')
-
-
-def statsWrapper(fn, d: List[Optional[Datum]], *args) -> Datum:
-    """similar to funcWrapper, but can take lots of image and number arguments which it aggregates to do stats on.
-    The result of fn must be a number. Works by flattening any images and concatenating them with any numbers,
-    and doing the operation on the resulting data.
-
-    fn takes a tuple of nominal and uncertainty values compressed into a 1D array, and returns a Value.
-    """
-
-    intermediate = None
-    uncintermediate = None
-
-    sources = []
-    for x in d:
-        # get each datum, which is either numeric or an image.
-        if x is None:
-            continue
-        elif x.isImage():
-            # if an image, convert to a 1D array
-            subimage = x.val.subimage()
-            # we ignore "bad" pixels in the data
-            mask = subimage.fullmask(maskBadPixels=True)
-            cp = subimage.img.copy()
-            cpu = subimage.uncertainty.copy()
-
-            sources.append(x.sources)
-            masked = np.ma.masked_array(cp, mask=~mask)
-            uncmasked = np.ma.masked_array(cpu, mask=~mask)
-
-            # we convert the data into a flat numpy array if it isn't one already
-            if isinstance(masked, np.ma.masked_array):
-                newdata = masked.compressed()  # convert to 1d and remove masked elements
-            elif isinstance(masked, np.ndarray):
-                newdata = masked.flatten()  # convert to 1d
-            else:
-                raise XFormException('EXPR', 'internal: data in masked array is wrong type in statsWrapper')
-            if isinstance(uncmasked, np.ma.masked_array):
-                uncnewdata = uncmasked.compressed()  # convert to 1d and remove masked elements
-            elif isinstance(uncmasked, np.ndarray):
-                uncnewdata = uncmasked.flatten()  # convert to 1d
-            else:
-                raise XFormException('EXPR', 'internal: data in uncmasked array is wrong type in statsWrapper')
-
-        elif x.tp == Datum.NUMBER:
-            # if a number, convert to a single-value array
-            newdata = np.array([x.val.n], np.float32)
-            uncnewdata = np.array([x.val.u], np.float32)
-            sources.append(x.sources)
-        else:
-            raise XFormException('EXPR', 'internal: bad type passed to statsWrapper')
-
-        # and concat it to the intermediate array
-        if intermediate is None:
-            intermediate = newdata
-            uncintermediate = uncnewdata
-        else:
-            intermediate = np.concatenate((intermediate, newdata))
-            uncintermediate = np.concatenate((uncintermediate, uncnewdata))
-
-    # then we perform the function on the collated arrays
-    val = fn(intermediate, uncintermediate, *args)
-    return Datum(Datum.NUMBER, val, SourceSet(sources))
 
 
 @parserhook
@@ -287,8 +224,7 @@ class datumfunc:
                 # we call.
                 vals = mandatory + optional
             # now we can call the original function
-            rv = func(*vals)
-            return rv
+            return func(*vals)
 
         # and another wrapper which just runs through the arguments and converts any numeric and string types to Datum
         # objects, then calls the original function.

@@ -55,13 +55,14 @@ def test_mean():
     assert r.get(Datum.NUMBER).u == testu
 
 
-
 def test_sum():
-    x = [Datum.k(10 + x / 100, x / 1000) for x in range(100)]
-    seq = [10 + x / 100 for x in range(100)]
-    r = df.sum(*x)
-    assert r.get(Datum.NUMBER).n == np.sum(seq).astype(np.float32)
+    ns = [10+x/100 for x in range(100)]
+    us = [x/1000 for x in range(100)]
+    x = Datum.k(ns, us)
+    r = df.sum(x)
+    assert r.get(Datum.NUMBER).n == np.sum(ns).astype(np.float32)
 
-    # we're adding standard deviations, so they add in quadrature
-    testu = np.sqrt(np.sum([x.get(Datum.NUMBER).u ** 2 for x in x])).astype(np.float32)
+    # we're adding standard deviations, so they add in quadrature, and they need to be added
+    # to the variation in the entire set.
+    testu = np.sqrt(np.sum([x ** 2 for x in us]) + np.var(ns)).astype(np.float32)
     assert r.get(Datum.NUMBER).u == testu

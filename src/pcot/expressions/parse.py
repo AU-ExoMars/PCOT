@@ -209,6 +209,8 @@ class Function:
             # propagate parameter exception adding the name
             raise ArgsException("{}: {}".format(self.name, e.message))
 
+        if len(args)>0:
+            raise ArgsException("Too many arguments in {}".format(self.name))
         return mandatArgs, optArgs
 
     def call(self, args):
@@ -389,7 +391,7 @@ class InstCall(Instruction):
         if v.tp == Datum.IDENT:
             raise ParseException("unknown function '{}' ".format(v.val))
         elif v.tp == Datum.FUNC:
-            # this executes the function by calling it's call method,
+            # this executes the function by calling its call method,
             # which will do argument type checking.
             stack.append(v.val.call(args))
         else:

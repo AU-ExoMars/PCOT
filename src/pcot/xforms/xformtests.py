@@ -359,7 +359,9 @@ class XFormScalarTest(XFormType):
         v = node.getInput(0, Datum.NUMBER)
         out = None
         if v is not None:
-            if not testFloat(v.n, node.nTest, node.n):
+            if not v.isscalar():
+                out = f"Fail - input not scalar"
+            elif not testFloat(v.n, node.nTest, node.n):
                 out = f"Nominal fail: actual {v.n} {node.nTest} expected {node.n}"
             elif not testFloat(v.u, node.uTest, node.u):
                 out = f"Uncertainty fail: actual {v.u} {node.uTest} expected {node.u}"
