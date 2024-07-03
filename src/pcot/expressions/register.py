@@ -80,6 +80,8 @@ def registerBuiltinProperties(p):
                        lambda q: Datum(Datum.NUMBER, Value(q.get(Datum.IMG).subimage().mask.sum(), 0.0), SourceSet(q.getSources())))
     p.registerProperty('n', Datum.ROI, "give the number of pixels in an ROI",
                        lambda q: Datum(Datum.NUMBER, Value(q.get(Datum.ROI).pixels(), 0.0), SourceSet(q.getSources())))
+    p.registerProperty('n', Datum.NUMBER, "give the number of items in a vector",
+                       lambda q: Datum(Datum.NUMBER, Value(len(q.get(Datum.NUMBER)), 0.0), SourceSet(q.getSources())))
 
     p.registerProperty('u', Datum.IMG,
                        "return an new image containing the uncertainties of the image's pixels",
@@ -280,7 +282,8 @@ class datumfunc:
                         from pcot.expressions.parse import ArgsException
                         raise ArgsException(f"Function {self.name} parameter {i} is of the wrong type")
 
-            return func(*vals, **kwargs)
+            rv = func(*vals, **kwargs)
+            return rv
 
         # store the funcs and register the function
         self.exprfunc = exprwrapper

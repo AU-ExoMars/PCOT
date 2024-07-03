@@ -5,7 +5,7 @@ import cv2 as cv
 import numpy as np
 
 import pcot.dq
-from pcot import rois, operations
+from pcot import rois, operations, dq
 from pcot.config import getAssetPath
 from pcot.datum import Datum
 from pcot.expressions.register import funcWrapper, datumfunc
@@ -22,16 +22,20 @@ from pcot.value import Value, add_sub_unc_list
 from pcot.xform import XFormException
 
 
-def flat_wrapper(fn, d: List[Optional[Datum]], *args) -> Datum:
-    """similar to funcWrapper, but can take lots of image and number arguments which it aggregates to do stats on.
-    The result of fn must be a number. Works by flattening any images and concatenating them with any numbers,
-    and doing the operation on the resulting data.
+@datumfunc
+def flat(val, *args):
+    """
+    Turns a list of vectors, images and numbers into a single vector, by flattening each into a 1D vector
+    and concatenating them all together. Data with any of the dq.BAD bits is removed.
 
-    fn takes a tuple of nominal and uncertainty values compressed into a 1D array, and returns a Value.
+    @param val:img,number:the first value (image, number or vector)
     """
 
     intermediate = None
     uncintermediate = None
+    dqintermediate = None
+
+    d = [val] + list(args)
 
     sources = []
     for x in d:
@@ -45,10 +49,12 @@ def flat_wrapper(fn, d: List[Optional[Datum]], *args) -> Datum:
             mask = subimage.fullmask(maskBadPixels=True)
             cp = subimage.img.copy()
             cpu = subimage.uncertainty.copy()
+            cpd = subimage.dq.copy()
 
             sources.append(x.sources)
             masked = np.ma.masked_array(cp, mask=~mask)
             uncmasked = np.ma.masked_array(cpu, mask=~mask)
+            dqmasked = np.ma.masked_array(cpd, mask=~mask)
 
             # we convert the data into a flat numpy array if it isn't one already
             if isinstance(masked, np.ma.masked_array):
@@ -57,6 +63,7 @@ def flat_wrapper(fn, d: List[Optional[Datum]], *args) -> Datum:
                 newdata = masked.flatten()  # convert to 1d
             else:
                 raise XFormException('EXPR', 'internal: data in masked array is wrong type in stats_wrapper')
+
             if isinstance(uncmasked, np.ma.masked_array):
                 uncnewdata = uncmasked.compressed()  # convert to 1d and remove masked elements
             elif isinstance(uncmasked, np.ndarray):
@@ -64,10 +71,30 @@ def flat_wrapper(fn, d: List[Optional[Datum]], *args) -> Datum:
             else:
                 raise XFormException('EXPR', 'internal: data in uncmasked array is wrong type in stats_wrapper')
 
+            if isinstance(dqmasked, np.ma.masked_array):
+                dqnewdata = dqmasked.compressed()
+            elif isinstance(dqmasked, np.ndarray):
+                dqnewdata = dqmasked.flatten()
+            else:
+                raise XFormException('EXPR', 'internal: data in dqmasked array is wrong type in stats_wrapper')
+
         elif x.tp == Datum.NUMBER:
-            # if a number, convert to a single-value array
-            newdata = np.array([x.val.n], np.float32)
-            uncnewdata = np.array([x.val.u], np.float32)
+            if x.val.isscalar():
+                # if a number, convert to a single-value array
+                if not x.val.dq & dq.BAD:
+                    newdata = np.array([x.val.n], np.float32)
+                    uncnewdata = np.array([x.val.u], np.float32)
+                    dqnewdata = np.array([x.val.dq], np.uint16)
+                else:
+                    continue  # skip bad data
+            else:
+                # vector data. We need to remove any bad data with indexing tricks
+                good_indices = (x.val.dq & dq.BAD) == 0
+                newdata = x.val.n[good_indices]
+                uncnewdata = x.val.u[good_indices]
+                dqnewdata = x.val.dq[good_indices]
+                if len(newdata) == 0:
+                    continue  # if all data bad, skip it
             sources.append(x.sources)
         else:
             raise XFormException('EXPR', 'internal: bad type passed to stats_wrapper')
@@ -76,22 +103,26 @@ def flat_wrapper(fn, d: List[Optional[Datum]], *args) -> Datum:
         if intermediate is None:
             intermediate = newdata
             uncintermediate = uncnewdata
+            dqintermediate = dqnewdata
         else:
             intermediate = np.concatenate((intermediate, newdata))
             uncintermediate = np.concatenate((uncintermediate, uncnewdata))
+            dqintermediate = np.concatenate((dqintermediate, dqnewdata))
 
-    # then we perform the function on the collated arrays
-    val = fn(intermediate, uncintermediate, *args)
+    # then create the value
+    val = Value(intermediate, uncintermediate, dqintermediate)
     return Datum(Datum.NUMBER, val, SourceSet(sources))
 
 
-def stats_wrapper(val, nfunc, ufunc, dqfunc):
+def stats_wrapper(val, func):
+    """Takes a function that operates on a (nom,unc,dqs) tuple and returns same
+    """
     if val.tp == Datum.NUMBER:
         ns = val.get(Datum.NUMBER).n
         us = val.get(Datum.NUMBER).u
         dqs = val.get(Datum.NUMBER).dq
-        return Datum(Datum.NUMBER, Value(nfunc(ns, us), ufunc(ns, us), dqfunc(dqs)),
-                     sources=val.sources)
+        nr, ur, dqr = func(ns, us, dqs)
+        return Datum(Datum.NUMBER, Value(nr, ur, dqr), sources=val.sources)
     elif val.isImage():
         img = val.get(Datum.IMG)
         if img is None:
@@ -108,20 +139,18 @@ def stats_wrapper(val, nfunc, ufunc, dqfunc):
 
         if img.channels == 1:
             # mono image
-            v = Value(nfunc(imgn_masked, imgu_masked),
-                      ufunc(imgn_masked, imgu_masked), dqfunc(imgd_masked))
+            ns, us, ds = func(imgn_masked, imgu_masked, imgd_masked)
         else:
             # split the image into bands
             ns = image.imgsplit(imgn_masked)
             us = image.imgsplit(imgu_masked)
             ds = image.imgsplit(imgd_masked)
-
-            perchann = [nfunc(ns[i], us[i]) for i in range(0, len(ns))]
-            perchanu = [ufunc(ns[i], us[i]) for i in range(0, len(ns))]
-            perchand = [dqfunc(ds[i]) for i in range(0, len(ns))]
-            v = Value(perchann, perchanu, perchand)
-
-        return Datum(Datum.NUMBER, v, img.sources)
+            v = [func(ns[i], us[i], ds[i]) for i in range(0, len(ns))]
+            # we now have a list of tuples. We want to get from this:
+            # [(n,u,d),(n,u,d),(n,u,d) .. ] to [(n,n,n,n),(u,u,u,u),(d,d,d,d)]
+            # so we use zip to transpose the list of tuples
+            ns, us, ds = list(zip(*v))
+        return Datum(Datum.NUMBER, Value(ns, us, ds), img.sources)
     else:
         # shouldn't happen because we check types
         raise XFormException('DATA', 'stats functions can only take numbers or images')
@@ -566,20 +595,6 @@ def setcwl(img, cwl):
 
 
 @datumfunc
-def flatmean(val, *args):
-    """
-    find the mean±sd of the values of a set of images and/or scalars.
-    Uncertainties in the data will be pooled. Images will be flattened into a list of values,
-    so the result for multiband images may not be what you expect.
-    Pixels with "bad" DQ bits will be ignored.
-
-    @param val:img,number:first value(s) to input (others can follow)
-    """
-    v = (val,) + args
-    return flat_wrapper(lambda n, u: Value(np.mean(n), pooled_sd(n, u), pcot.dq.NONE), v)
-
-
-@datumfunc
 def mean(val):
     """
     Find the mean±sd of a Datum. This does different things depending on what kind of Datum we are dealing with.
@@ -591,9 +606,7 @@ def mean(val):
     @param val:img,number:the value to process
     """
     return stats_wrapper(val,
-                         lambda n, u: np.mean(n),
-                         pooled_sd,
-                         lambda x: pcot.dq.NONE)
+                         lambda n, u, d: (np.mean(n), pooled_sd(n, u), pcot.dq.NONE))
 
 
 @datumfunc
@@ -608,27 +621,33 @@ def sd(val):
     """
 
     return stats_wrapper(val,
-                         lambda n, u: pooled_sd(n, u),
-                         lambda n, u: 0,
-                         lambda x: pcot.dq.NONE)
+                         lambda n, u, d: (pooled_sd(n, u), 0, pcot.dq.NONE))
 
+
+def minmax(f, n, u, d):
+    """Find the minimum and maximum of a set of values, with uncertainty. This is a helper function for min and max;
+    you pass np.argmin or np.argmax depending on what you want. The arrays passed in are the individual arrays which
+    make up a value or image, and they can be of any dimensionality."""
+    if np.isscalar(n):
+        return n, u, d
+    else:
+        # find the index of the minimum value
+        idx = np.unravel_index(f(n), n.shape)
+        return n[idx], u[idx], d[idx]
 
 @datumfunc
 def min(val):
     """
     Find the minimum of a Datum. For a multiband image, returns a vector of the minimum value of each band.
     For a single band image, a scalar, or a vector, returns a scalar.
-    The result will have no uncertainty.
     Pixels with "bad" DQ bits will be ignored.
 
     See also the & (AND) operator, which will find the minimum of two values (or images, vectors etc).
 
     @param val:img,number:value to process
     """
-    return stats_wrapper(val,
-                         lambda n, u: np.min(n),
-                         lambda n, u: 0,
-                         lambda x: pcot.dq.NOUNCERTAINTY)
+
+    return stats_wrapper(val, lambda n, u, d: minmax(np.argmin, n, u, d))
 
 
 @datumfunc
@@ -636,17 +655,13 @@ def max(val):
     """
     Find the maximum of a Datum. For a multiband image, returns a vector of the maximum of each band.
     For a single band image, a scalar, or a vector, returns a scalar.
-    The result will have no uncertainty.
     Pixels with "bad" DQ bits will be ignored.
 
     See also the | (OR) operator, which will find the minimum of two values (or images, vectors etc).
 
     @param val:img,number:value to process
     """
-    return stats_wrapper(val,
-                         lambda n, u: np.max(n),
-                         lambda n, u: 0,
-                         lambda x: pcot.dq.NOUNCERTAINTY)
+    return stats_wrapper(val, lambda n, u, d: minmax(np.argmax, n, u, d))
 
 
 @datumfunc
@@ -671,9 +686,7 @@ def sum(val):
         return np.sqrt(varianceOfMeans + sumOfVariances)
 
     rr = stats_wrapper(val,
-                       lambda n, u: np.sum(n),
-                       sum_of_variances,
-                       lambda x: pcot.dq.NOUNCERTAINTY)
+                       lambda n, u, d: (np.sum(n), sum_of_variances(n,u), pcot.dq.NOUNCERTAINTY))
     return rr
 
 

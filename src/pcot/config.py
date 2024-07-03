@@ -182,3 +182,7 @@ def executeParserHooks(p):
     """Execute the parser callbacks on the given parser"""
     for f in exprFuncHooks:
         f(p)
+
+
+# significant figures to display for Values
+sigfigs = int(getDef('sigfigs', '5'))

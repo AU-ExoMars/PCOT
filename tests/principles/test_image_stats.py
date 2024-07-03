@@ -60,7 +60,7 @@ def test_flatmean_const_3chan():
     pcot.setup()
     doc = Document()
     img = genrgb(50, 50, 0, 0.3, 0, doc=doc, inpidx=0)  # dark green
-    runop(doc, img, "flatmean(a)", 0.1, 0.1414213627576828)
+    runop(doc, img, "mean(flat(a))", 0.1, 0.1414213627576828)
 
 
 def test_mean_const_3chan():
@@ -69,7 +69,7 @@ def test_mean_const_3chan():
     pcot.setup()
     doc = Document()
     img = genrgb(50, 50, 0, 0.3, 0, doc=doc, inpidx=0)  # dark green
-    runop(doc, img, "flatmean(a)", 0.1, 0.1414213627576828)
+    runop(doc, img, "mean(flat(a))", 0.1, 0.1414213627576828)
 
 
 def test_mean_2halves():
@@ -77,7 +77,7 @@ def test_mean_2halves():
     pcot.setup()
     doc = Document()
     img = gen_two_halves(50, 50, (0.1,), (0.0,), (0.2,), (0.0,), doc=doc, inpidx=0)
-    runop(doc, img, "flatmean(a)", 0.15, 0.05)
+    runop(doc, img, "mean(flat(a))", 0.15, 0.05)
     runop(doc, img, "mean(a)", 0.15, 0.05)
 
 
@@ -185,7 +185,7 @@ def test_max_2d():
     pcot.setup()
     doc = Document()
     img = gen_two_halves(2, 2, (1,), (0.1,), (2,), (0.2,), doc=doc, inpidx=0)
-    runop(doc, img, "max(a)", 2, 0, dq.NOUNCERTAINTY)
+    runop(doc, img, "max(a)", 2, 0.2, dq.NONE)
 
 
 def test_min_3d():
@@ -193,4 +193,4 @@ def test_min_3d():
     doc = Document()
     img = genrgb(50, 50, 0, 0.3, 0, doc=doc, inpidx=0)  # dark green
     img.img[10, 10] = [-0.1, 0.2, 0.9]
-    runop(doc, img, "min(a)", [-0.1, 0.2 ,0], [0,0,0], [dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY])
+    runop(doc, img, "min(a)", [-0.1, 0.2, 0], [0, 0, 0], [dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY])

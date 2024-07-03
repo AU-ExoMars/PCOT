@@ -4,7 +4,7 @@ from typing import Any, Union
 import numpy as np
 from numpy.typing import NDArray
 
-from pcot import dq
+from pcot import dq, config
 from pcot.utils.maths import pooled_sd
 
 
@@ -352,6 +352,12 @@ class Value:
 
         return Value(np.tan(self.n), u, self.dq | extra)
 
+    def __len__(self):
+        if self.isscalar():
+            raise Exception("Can't get length of a scalar")
+        else:
+            return len(self.n)
+
     def __abs__(self):
         return Value(np.abs(self.n), self.u, self.dq)
 
@@ -362,22 +368,22 @@ class Value:
         return Value(1 - self.n, self.u, self.dq)
 
     def __str__(self):
-        return self.out(5)
+        return self.out()
 
     def __repr__(self):
         return self.__str__()
 
     @staticmethod
-    def scalar_out(n, u, d, sigfigs=5):
+    def scalar_out(n, u, d, sigfigs):
         """Output a scalar value"""
         # first get a string for the DQ bits
         dqstr = dq.chars(d)
         return f"{n:.{sigfigs}g}±{u:.{sigfigs}g}{dqstr}"
 
-    def out(self, figs):
+    def out(self, sigfigs=config.sigfigs):
         """a string representation to a given number of significant figures"""
         if np.isscalar(self.n):
-            return self.scalar_out(self.n, self.u, self.dq, figs)
+            return self.scalar_out(self.n, self.u, self.dq, sigfigs)
         else:
             if len(self.n.shape) == 1:
                 # truncate and note if we're truncating
@@ -386,7 +392,7 @@ class Value:
                 u = self.u[:self.MAXARRAYDISPLAY] if truncate else self.u
                 d = self.dq[:self.MAXARRAYDISPLAY] if truncate else self.dq
                 truncstr = "..." if truncate else ""
-                return "[" + ", ".join([self.scalar_out(n, u, d, figs) for n, u, d in
+                return "[" + ", ".join([self.scalar_out(n, u, d, sigfigs) for n, u, d in
                                         zip(n, u, d)]) + truncstr + "]"
             else:
                 # funny array - just show the shape
