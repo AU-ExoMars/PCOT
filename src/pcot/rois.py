@@ -385,6 +385,13 @@ class ROI(SourcesObtainable, Annotation):
 
         return ROI(bb, mask, isTemp=True, containingImageDimensions=dims)
 
+    def getSize(self):
+        """return the size of the serialised ROI in bytes, or zero if it's negligible."""
+        if self.isTemp:
+            raise Exception("attempt to get size of a temporary ROI")
+        else:
+            return 0
+
     def __contains__(self, xyTuple):
         """Is a point inside the ROI?"""
         x, y = xyTuple
@@ -724,6 +731,9 @@ class ROIPainted(ROI):
     def mask(self):
         """return a boolean array, same size as BB"""
         return self.map > 0
+
+    def getSize(self):
+        return 0 if self.map is None else self.map.nbytes
 
     def fullsize(self):
         """return the full size mask"""

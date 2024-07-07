@@ -44,6 +44,11 @@ class Type:
     def __str__(self):
         return self.name
 
+    def getSize(self, v):
+        """Get the size of the value in bytes. This is used to manage the cache in the DatumArchive.
+        By default, items have negligible size. Override this method for types that have a significant size."""
+        return 0
+
     def getDisplayString(self, d: 'Datum', box=False):
         """Return the datum as a fairly brief string - if box is true it must be small enough to fit in a graph box
         or tab title; default is just to return the name"""
@@ -107,6 +112,9 @@ class ImgType(Type):
     def uncertainty(self, d):
         return pcot.datum.Datum(pcot.datum.Datum.IMG, d.val.get_uncertainty_image())
 
+    def getSize(self, v):
+        return v.img.nbytes + v.uncertainty.nbytes + v.dq.nbytes
+
 
 class RoiType(Type):
     def __init__(self):
@@ -127,6 +135,9 @@ class RoiType(Type):
     def copy(self, d):
         r = copy(d.val)  # deep copy with __copy__
         return pcot.datum.Datum(pcot.datum.Datum.ROI, r)
+
+    def getSize(self, v):
+        return v.getSize()
 
 
 class NumberType(Type):
@@ -155,6 +166,12 @@ class NumberType(Type):
 
     def uncertainty(self, d):
         return pcot.datum.Datum(pcot.datum.Datum.NUMBER, pcot.value.Value(d.val.uncertainty()), d.getSources())
+
+    def getSize(self, d):
+        if np.isscalar(d.val.n):
+            return 0
+        else:
+            return d.val.n.nbytes + d.val.u.nbytes + d.val.dq.nbytes
 
 
 class VariantType(Type):

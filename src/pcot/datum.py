@@ -148,6 +148,10 @@ class Datum(SourcesObtainable):
         uncertainties. A vector will return a scalar."""
         return self.tp.uncertainty(self)
 
+    def getSize(self):
+        """Get the size of the datum in bytes. For datum objects with a negligible size, this can be 0."""
+        return self.tp.getSize(self.val)
+
     #
     # This block of code maps operations on Datum objects to the binary operations registered in the "ops" system
     # by the initOps function (and any other functions that may be run in plugins to register additional types).
