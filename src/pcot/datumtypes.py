@@ -112,7 +112,8 @@ class ImgType(Type):
     def uncertainty(self, d):
         return pcot.datum.Datum(pcot.datum.Datum.IMG, d.val.get_uncertainty_image())
 
-    def getSize(self, v):
+    def getSize(self, d):
+        v = d.val
         return v.img.nbytes + v.uncertainty.nbytes + v.dq.nbytes
 
 

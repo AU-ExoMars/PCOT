@@ -203,11 +203,18 @@ class Value:
         return np.isscalar(self.n)
 
     def serialise(self):
-        return self.n, self.u, self.dq
+        if self.isscalar():
+            return float(self.n), float(self.u), int(self.dq)
+        else:
+            return self.n, self.u, self.dq
 
     @staticmethod
     def deserialise(t):
         n, u, d = t
+        if np.isscalar(n):
+            n = np.float32(n)
+            u = np.float32(u)
+            d = np.uint16(d)
         return Value(n, u, d)
 
     def __getitem__(self, idx):

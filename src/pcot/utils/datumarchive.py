@@ -4,7 +4,7 @@ from typing import Dict, Optional
 
 from pcot.datum import Datum
 from pcot.document import Document
-from pcot.utils.archive import Archive
+from pcot.utils.archive import Archive, FileArchive
 
 
 @dataclasses.dataclass
@@ -34,6 +34,7 @@ class DatumArchive:
     archive: Archive
     cache: Dict[str, CachedItem]
     max_size: int
+    write_mode: bool
 
     def __init__(self, archive: Archive, max_size: int):
         """
@@ -44,19 +45,32 @@ class DatumArchive:
         self.archive = archive
         self.cache = {}
         self.size = max_size
+        self.read_count = 0
 
     def writeDatum(self, name: str, d: Datum):
         """This is used to write a Datum object to the archive; it's doesn't write to the cache. It will
-        probably only be used in scripts that prepare archives."""
-        with self.archive as a:
-            a.writeJson(name, d.serialise())
+        probably only be used in scripts that prepare archives.
+
+        This MUST BE inside a context manager because the archive must be open for all items.
+        """
+
+        if not self.archive.is_open():
+            raise Exception("archive must be open to write")
+
+        self.archive.writeJson(name, d.serialise())
 
     def get(self, name, doc: Document) -> Optional[Datum]:
         """
         Get an item from the archive. If it's already in the cache, return it from there. Otherwise, read it from
         the archive and return it. If it's not in the archive, return None. We need the document so that the
         sources can be reconstructed for images.
+
+        This MUST NOT be inside an Archive context manager; it will open/close the archive with a context
+        manager itself.
         """
+
+        if self.archive.is_open():
+            raise Exception("archive must not be 'pre-opened' to read")
 
         if name not in self.cache:
             # we may need to make room in the cache. Total the size to find out.
@@ -71,7 +85,7 @@ class DatumArchive:
                 if found is not None:
                     del self.cache[found]  # delete it. This may not work if we have stale references!!!
                 else:
-                    raise Exception("internal error: cache must be lying about size")
+                    raise Exception("internal error: cache must be lying about size or cache is too small")
 
             # now we can read in an item
             with self.archive as a:
@@ -82,6 +96,7 @@ class DatumArchive:
                 # construct a CachedItem - it's OK for the time to be zero here, it will be overwritten very
                 # soon so there's no point calling time().
                 self.cache[name] = CachedItem(datum.getSize(), 0, datum)
+                self.read_count += 1
 
         self.cache[name].time = time.time()  # set timestamp of access
         return self.cache[name].datum  # and return
