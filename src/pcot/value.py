@@ -21,8 +21,8 @@ def add_sub_unc_list(lst):
 def mul_unc(a, ua, b, ub):
     """Multiplication - this is derived from the standard answer
     (thanks, Wolfram!) assuming the values are real"""
-    # This is the "standard answer" - you can confirm it's the same when all values are positive
-    #    return np.abs(a*b) * np.sqrt((ua/a)**2 + (ub/b)**2)
+    # This is the "standard answer" - you can confirm it's the same when all unc values are non-negative
+    # return np.abs(a*b) * np.sqrt((ua/a)**2 + (ub/b)**2)
 
     # this is the simplification
     return np.sqrt((a * ub) ** 2 + (b * ua) ** 2)
@@ -34,7 +34,7 @@ def div_unc(a, ua, b, ub):
     #   standard answer - throws exceptions with either a or b is 0.
     # return np.abs(a/b) * np.sqrt((ua/a)**2 + (ub/b)**2)
 
-    #   is equivalent to this when all values are positive
+    #   is equivalent to this when all unc values are non-negative
     return np.sqrt(((a * ub) ** 2 + (b * ua) ** 2)) / (b ** 2)
 
 
