@@ -91,6 +91,10 @@ def registerBuiltinProperties(p):
                        "return the uncertainty of the scalar or vector (if vector, individual uncertainties will be pooled). DQ is ignored.",
                        lambda d: d.uncertainty())
 
+    p.registerProperty('bands', Datum.IMG,
+                       "return a vector of the centre wavelengths of each band in the image",
+                       lambda d: d.bands())
+
 
 class datumfunc:
     """
