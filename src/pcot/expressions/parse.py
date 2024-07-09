@@ -344,9 +344,9 @@ class InstBracket(InstOp):
     """A VM instruction used internally to process brackets in the shunting yard algorithm;
     should never be output as part of the instruction stream"""
 
-    def __init__(self, parser: 'Parser'):
+    def __init__(self, parser: 'Parser', pre=False):
         # still need the string argument so InstOp knows which precedence to look up
-        super().__init__('(', False, parser)
+        super().__init__('(', pre, parser)
         self.argcount = 0
 
     def exec(self, stack: Stack):
@@ -357,9 +357,9 @@ class InstSquareBracket(InstOp):
     """A VM instruction used internally to process square brackets in the shunting yard algorithm;
     should never be output as part of the instruction stream"""
 
-    def __init__(self, parser: 'Parser'):
+    def __init__(self, parser: 'Parser', pre=False):
         # still need the string argument so InstOp knows which precedence to look up
-        super().__init__('[', False, parser)
+        super().__init__('[', pre, parser)
         self.argcount = 0
 
     def exec(self, stack: Stack):
@@ -380,13 +380,11 @@ class InstCall(Instruction):
         """execute: pop off the args, then pop off the function value"""
         if self.argcount != 0:
             args = stack[-self.argcount:]
+            del stack[-self.argcount:]
         else:
             args = []
         # args.reverse()   # is this faster than just popping them in reverse order?
-        # this is really annoying; can't delete multiple items from the stack without slicing and
-        # can't slice because that wouldn't change the original stack.
-        for x in range(0, self.argcount):
-            stack.pop()
+
         v = stack.pop()
         if v.tp == Datum.IDENT:
             raise ParseException("unknown function '{}' ".format(v.val))
@@ -399,7 +397,43 @@ class InstCall(Instruction):
             raise ParseException("cannot call a {} as if it were a function".format(v.tp))
 
 
-class InstVector(Instruction):
+class InstCreateVector(Instruction):
+    """Instruction for generating a vector. The argument count is how many items we need to pop; how
+    many items will be in the vector."""
+    def __init__(self, argcount):
+        self.argcount = argcount
+
+    def __str__(self):
+        return "INSTCREATEVECTOR  argcount: {}".format(self.argcount)
+
+    def exec(self, stack: Stack):
+        """execute: pop off the args, then create a new vector"""
+        if self.argcount != 0:
+            args = stack[-self.argcount:]
+            del stack[-self.argcount:]
+        else:
+            args = []
+
+        sources = SourceSet()
+        for x in args:
+            sources.add(x.sources)
+
+        args = [x.get(Datum.NUMBER) for x in args]
+
+        if any([x is None for x in args]):
+            raise ParseException("only numbers can be in a vector")
+
+        if any([not x.isscalar() for x in args]):
+            raise ParseException("only scalars can be in a vector")
+
+        # now make the vector
+        n = [v.n for v in args]
+        u = [v.u for v in args]
+        d = [v.dq for v in args]
+        stack.append(Datum(Datum.NUMBER, Value(n, u, d), sources))
+
+
+class InstIndex(Instruction):
     """VM instruction for getting an element of a vector - e.g. vector[index]. The vector will
     be below the index on the stack"""
 
@@ -407,7 +441,7 @@ class InstVector(Instruction):
         self.argcount = argcount
 
     def __str__(self):
-        return "INSTVECTOR  argcount: {}".format(self.argcount)
+        return "INSTINDEX  argcount: {}".format(self.argcount)
 
     def exec(self, stack: Stack):
         """execute: pop off the args, then pop off the vector value"""
@@ -444,6 +478,10 @@ def execute(seq: List[Instruction], stack: Stack) -> float:
             logger.debug(f"EXECUTED {inst}, STACK NOW (top shown last):")
             for x in stack:
                 logger.debug(f"    {x}")
+    if stack is None or len(stack) == 0:
+        raise ParseException("empty stack")
+    if len(stack) > 1:
+        raise ParseException("too many values from expression!")
     return stack[0]
 
 
@@ -638,7 +676,11 @@ class Parser:
                     # Note that the bracket case is different from when we meet it in the
                     # !wantOperand case. It's just a prefix op here, otherwise we'd end up
                     # generating a CALL when we don't want one.
-                    if t.string in self.unopRegistry or t.string == '(' or t.string == '[':
+                    if t.string == '(':
+                        self.stackOp(InstBracket(self, pre=True))
+                    elif t.string == '[':
+                        self.stackOp(InstSquareBracket(self, pre=True))
+                    elif t.string in self.unopRegistry:
                         self.stackOp(InstOp(t.string, True, self))
                     #  if we meet a ')' or ']' it should be a function/array with no arguments
                     #  So all the code in these two clauses only applies to [] or (). Sorry.
@@ -723,14 +765,24 @@ class Parser:
                         raise ParseException("syntax error : mismatched bracket, expected ]", t)
                     if isinstance(op, InstBracket) and t.string == ']':
                         raise ParseException("syntax error : mismatched bracket, expected )", t)
-                    if not op.prefix:
-                        # I regret to inform you that I have no idea why I have to add 1 to the argument count
+                    if op.prefix:
+                        # the open bracket for the close we just got was a prefix op - not a bracket that
+                        # immediately followed an operand. So it was something like the open bracket in
+                        # "4+(2-3)" and not like that in "foo(1,2,3)". We need do nothing if it was a normal
+                        # bracket. Square brackets need to generate a vector.
                         if isinstance(op, InstSquareBracket):
-                            self.out(InstVector(op.argcount + 1))
+                            # We're creating a vector. See below for why the +1.
+                            self.out(InstCreateVector(op.argcount + 1))
+                    else:
+                        # We increment the argument count here because (like ",") closing a bracket marks a
+                        # new argument. That's why we have to deal with no arguments cleverly.
+                        if isinstance(op, InstSquareBracket):
+                            self.out(InstIndex(op.argcount + 1))
                         elif isinstance(op, InstBracket):
                             self.out(InstCall(op.argcount + 1))
                         else:
                             raise ParseException("syntax error : mismatched bracket right 2", t)
+
                     #     pop the '(' off the top of the stack
                     #     goto have_operand (already there)
 

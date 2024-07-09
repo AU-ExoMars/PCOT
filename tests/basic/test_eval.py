@@ -62,6 +62,7 @@ def execute(s, nakedIdents=False):
     p.registerBinop('-', 10, lambda a, b: binop(a, b, lambda x, y: x - y))
     p.registerBinop('/', 20, lambda a, b: binop(a, b, lambda x, y: x / y))
     p.registerBinop('*', 20, lambda a, b: binop(a, b, lambda x, y: x * y))
+    p.registerBinop('^', 30, lambda a, b: binop(a, b, lambda x, y: x ** y))
     p.registerUnop('-', 200, lambda a: mknumFloat(-(a.get(Datum.NUMBER).n)))
     p.registerVar('var1', "test var", lambda: variable_1)
     p.registerVar('var2', "test var", lambda: variable_2)
@@ -131,6 +132,26 @@ class TestPrecedenceAndBrackets(unittest.TestCase):
         """```10-2*2```"""
         self.assertEqual(execute('10-2*2'), 6.0)
 
+    def test_9(self):
+        self.assertEquals(execute('(4 * (5 + 6))/2'), 22.0)
+
+    def test_10(self):
+        self.assertEquals(execute('((4 + 5) * 6)/2'), 27.0)
+
+    def test_11(self):
+        self.assertEquals(execute('(((1 + 2) + 3) * (4 + (5 * 6))) ^ 2'), 41616.0)
+
+    def test_12(self):
+        self.assertEquals(execute('((1 + (2 * (3 + 4))) * (5 + (6 * 7)))'), 705.0)
+
+    def test_13(self):
+        self.assertEquals(execute('((1 + (2 * (3 + 4))) - 3 * (5 + (6 * 7)))'), -126.0)
+
+    def test_14(self):
+        self.assertEquals(execute('2 + ((1 + (2 * (3 + 4))) - 3 * (5 + (6 * 7)))'), -124.0)
+
+    def test_15(self):
+        self.assertEquals(execute('2 + ((1 + (2 * (3 + 4))) - 3 * (5 + (6 * 7))) - 8'), -132.0)
 
 class TestUnaryMinus(unittest.TestCase):
     """Tests of the syntax for the unary minus operator
@@ -262,6 +283,7 @@ class TestFunctions(unittest.TestCase):
     def test_12(self):
         """max(1,2,4+7,5+1,min(100,50,200))"""
         self.assertEqual(execute('max(1,2,4+7,5+1,min(100,50,200))'), 50)
+
 
 
 if __name__ == '__main__':
