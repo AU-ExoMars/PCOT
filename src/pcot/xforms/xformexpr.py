@@ -112,6 +112,12 @@ class XFormExpr(XFormType):
     |------------|---------|
     | **(a+b)$G0** | **a$G0 + b$G0** |
     | **((a+b)/2)$780** | **(a$780+b$780)/2**  |
+
+    ### Brackets
+
+    Round brackets are used to group expressions as usual, but square brackets are used for indexing into a vector.
+    For example, **a[3]** will extract the fourth element of the vector **a**. However, square brackets cannot
+    (yet) create a vector. To do this, use the `vec` function - so `vec(1,2,3)[1]` will return 2.
     
 
     ### Properties

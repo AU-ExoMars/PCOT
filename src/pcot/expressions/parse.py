@@ -23,7 +23,6 @@ Stack = List[Any]
 
 logger = logging.getLogger(__name__)
 
-
 class ArgsException(Exception):
     """Exception indicating an error has occurred while processing an argument"""
     ## @var message
