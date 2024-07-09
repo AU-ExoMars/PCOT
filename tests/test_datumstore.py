@@ -9,7 +9,7 @@ from pcot.datum import Datum
 from pcot.document import Document
 from pcot.sources import nullSourceSet
 from pcot.utils.archive import FileArchive
-from pcot.utils.datumarchive import DatumArchive
+from pcot.utils.datumstore import DatumStore
 from pcot.value import Value
 
 
@@ -20,14 +20,14 @@ def test_create():
 
         # open for writing, must be inside a context manager
         with FileArchive(fn, 'w') as a:
-            a = DatumArchive(a, 1000)
+            a = DatumStore(a, 1000)
             d = Datum.k(10, 0.2, dq.TEST)
             a.writeDatum("test", d)
             d = Datum.k(11, 0.7, dq.TEST)
             a.writeDatum("test2", d)
 
         # open for reading, must be outside a context manager
-        a = DatumArchive(FileArchive(fn), 1000)
+        a = DatumStore(FileArchive(fn), 1000)
 
         d = a.get("test", None)
         assert Value(10, 0.2, dq.TEST) == d.get(Datum.NUMBER)
@@ -42,14 +42,14 @@ def test_cache():
 
         # open for writing, must be inside a context manager
         with FileArchive(fn, 'w') as a:
-            a = DatumArchive(a, 1000)
+            a = DatumStore(a, 1000)
             d = Datum.k(10, 0.2, dq.TEST)
             a.writeDatum("test", d)
             d = Datum.k(11, 0.7, dq.TEST)
             a.writeDatum("test2", d)
 
         # open for reading, must be outside a context manager
-        a = DatumArchive(FileArchive(fn), 1000)
+        a = DatumStore(FileArchive(fn), 1000)
 
         d = a.get("test", None)
         assert Value(10, 0.2, dq.TEST) == d.get(Datum.NUMBER)
@@ -102,12 +102,12 @@ def test_image():
 
         # open for writing, must be inside a context manager
         with FileArchive(fn, 'w') as a:
-            a = DatumArchive(a, 10000)
+            a = DatumStore(a, 10000)
             a.writeDatum("test", d)
             a.writeDatum("test2", d2)
 
         # open for reading, must be outside a context manager
-        a = DatumArchive(FileArchive(fn), 7000)
+        a = DatumStore(FileArchive(fn), 7000)
 
         d = a.get("test", doc)
         img = d.get(Datum.IMG)
@@ -145,13 +145,13 @@ def test_cache_discard():
 
         # open for writing, must be inside a context manager
         with FileArchive(fn, 'w') as a:
-            a = DatumArchive(a, 10000)
+            a = DatumStore(a, 10000)
             a.writeDatum("test", d)
             a.writeDatum("test2", d2)
             a.writeDatum("test3", d3)
 
         # open for reading, must be outside a context manager
-        a = DatumArchive(FileArchive(fn), 7000)     # cache size enough for 2 items?
+        a = DatumStore(FileArchive(fn), 7000)     # cache size enough for 2 items?
 
         d = a.get("test", doc)
         img = d.get(Datum.IMG)
@@ -195,7 +195,7 @@ def test_vector_and_cache():
 
         # open for writing, must be inside a context manager
         with FileArchive(fn, 'w') as a:
-            a = DatumArchive(a, 10000)
+            a = DatumStore(a, 10000)
 
             vec = np.linspace(0, 1, 1000)
             d = Datum(Datum.NUMBER, Value(vec, 0.1, dq.TEST), sources=nullSourceSet)
@@ -211,7 +211,7 @@ def test_vector_and_cache():
 
             print(d.getSize())
 
-        a = DatumArchive(FileArchive(fn), 20000)  # enough for two of the vectors
+        a = DatumStore(FileArchive(fn), 20000)  # enough for two of the vectors
         d = a.get("test0", doc)
         assert np.allclose(d.get(Datum.NUMBER).n, np.linspace(0, 1, 1000))
         assert np.allclose(d.get(Datum.NUMBER).u, 0.1)

@@ -7,20 +7,14 @@ from pcot.document import Document
 from pcot.utils.archive import Archive, FileArchive
 
 
-@dataclasses.dataclass
-class CachedItem:
+class DatumStore:
     """
-    This is a simple class to hold the information we need to cache an item in the DatumArchive.
-    """
-    size: int  # size in bytes
-    time: float  # timestamp when accessed
-    datum: Datum  # the Datum object
+    This class allows Datum objects to be stored into, and retrieved from, an Archive object.
 
+    It's mainly used for handling blocks of data used in calibration pipeline and pipeline emulation - flatfields
+    and the like.
 
-class DatumArchive:
-    """
-    This class allows Datum objects to be stored into, and retrieved from, an Archive object. It's not used
-    for serialisation, however, because serialisation is primarily for storing XForms and graph data.
+    It's not used for serialisation, however, because serialisation is primarily for storing XForms and graph data.
 
     This uses a LRU-cache of a slightly unusual kind, in that the size is specified in bytes. If reading
     a new item would exceed this size, least-recently-used items of non-zero size are removed until there
@@ -30,6 +24,15 @@ class DatumArchive:
 
     Be VERY SURE that you don't keep any references to the Datum objects, or the LRU deletion won't work!
     """
+
+    @dataclasses.dataclass
+    class CachedItem:
+        """
+        This is a simple class to hold the information we need to cache an item in the DatumArchive.
+        """
+        size: int  # size in bytes
+        time: float  # timestamp when accessed
+        datum: Datum  # the Datum object
 
     archive: Archive
     cache: Dict[str, CachedItem]
@@ -84,7 +87,7 @@ class DatumArchive:
                 datum = Datum.deserialise(item, doc)
                 size = datum.getSize()
                 # we may need to make room in the cache. Total the size to find out.
-                while self.total_size()+size > self.size:
+                while self.total_size() + size > self.size:
                     # find the least-recently-used item with non-zero size
                     found = None
                     oldest = time.perf_counter()
@@ -99,7 +102,7 @@ class DatumArchive:
 
                 # construct a CachedItem - it's OK for the time to be zero here, it will be overwritten very
                 # soon so there's no point calling time().
-                self.cache[name] = CachedItem(datum.getSize(), 0, datum)
+                self.cache[name] = DatumStore.CachedItem(datum.getSize(), 0, datum)
                 self.read_count += 1
 
         self.cache[name].time = time.perf_counter()  # set timestamp of access
