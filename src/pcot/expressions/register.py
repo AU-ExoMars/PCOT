@@ -93,7 +93,7 @@ def registerBuiltinProperties(p):
 
     p.registerProperty('bands', Datum.IMG,
                        "return a vector of the centre wavelengths of each band in the image",
-                       lambda d: d.bands())
+                       lambda d: Datum(Datum.NUMBER, Value(d.get(Datum.IMG).bands()), SourceSet(d.getSources())))
 
 
 class datumfunc:
