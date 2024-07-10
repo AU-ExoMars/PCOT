@@ -202,6 +202,9 @@ class XFormExpr(XFormType):
 
         except Exception as e:
             traceback.print_exc()
+            node.img = None
+            node.setOutput(0, Datum.null)
+            node.changeOutputType(0, Datum.NONE)
             node.resultStr = str(e)
             ui.error(f"Error in expression: {str(e)}")
             raise XFormException('EXPR', str(e))

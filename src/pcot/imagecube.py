@@ -1010,7 +1010,7 @@ class ImageCube(SourcesObtainable):
 
     def bands(self):
         """Return a list of the CWLs of the filters. If there are no filters on any of the bands, raise."""
-        d = [self.wavelengthAndFWHM(i) for i in range(self.channels)]
-        if any([x[0] == -1 for x in d]):
+        d = [self.wavelengthAndFWHM(i)[0] for i in range(self.channels)]
+        if any([x == -1 for x in d]):
             raise Exception("bands property: Not all bands have a filter")
-        return [x[0] for x in d]
+        return d
