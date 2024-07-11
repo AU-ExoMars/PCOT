@@ -126,6 +126,8 @@ This is the fundamental numeric type, consisting of
 It's usually used for scalars but can also hold array data - internally
 ImageCubes (or parts of them) are converted into array Values for maths.
 If it does hold array data, the three elements must be the same shape.
+It's possible to create 1D vectors in an *expr* node using square brackets,
+and some functions and operations return such vectors.
 
 This type supports mathematical operations which propagate uncertainty
 and DQ.

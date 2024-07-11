@@ -115,7 +115,7 @@ def flat(val, *args):
 
 
 def stats_wrapper(val, func):
-    """Takes a function that operates on a (nom,unc,dqs) tuple and returns same
+    """Takes a function that operates on a tuple of val,unc,dq and returns same
     """
     if val.tp == Datum.NUMBER:
         ns = val.get(Datum.NUMBER).n
