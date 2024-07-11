@@ -1,5 +1,5 @@
 import builtins
-from typing import Optional, List
+from typing import Optional, List, Callable
 
 import cv2 as cv
 import numpy as np
@@ -8,7 +8,7 @@ import pcot.dq
 from pcot import rois, operations, dq
 from pcot.config import getAssetPath
 from pcot.datum import Datum
-from pcot.expressions.register import funcWrapper, datumfunc
+from pcot.expressions.register import datumfunc
 from pcot.expressions.ops import combineImageWithNumberSources
 from pcot.filters import Filter
 from pcot.imagecube import ImageCube
@@ -62,21 +62,21 @@ def flat(val, *args):
             elif isinstance(masked, np.ndarray):
                 newdata = masked.flatten()  # convert to 1d
             else:
-                raise XFormException('EXPR', 'internal: data in masked array is wrong type in stats_wrapper')
+                raise XFormException('EXPR', 'internal: data in masked array is wrong type in flat()')
 
             if isinstance(uncmasked, np.ma.masked_array):
                 uncnewdata = uncmasked.compressed()  # convert to 1d and remove masked elements
             elif isinstance(uncmasked, np.ndarray):
                 uncnewdata = uncmasked.flatten()  # convert to 1d
             else:
-                raise XFormException('EXPR', 'internal: data in uncmasked array is wrong type in stats_wrapper')
+                raise XFormException('EXPR', 'internal: data in uncmasked array is wrong type in flat()')
 
             if isinstance(dqmasked, np.ma.masked_array):
                 dqnewdata = dqmasked.compressed()
             elif isinstance(dqmasked, np.ndarray):
                 dqnewdata = dqmasked.flatten()
             else:
-                raise XFormException('EXPR', 'internal: data in dqmasked array is wrong type in stats_wrapper')
+                raise XFormException('EXPR', 'internal: data in dqmasked array is wrong type in flat()')
 
         elif x.tp == Datum.NUMBER:
             if x.val.isscalar():
@@ -97,7 +97,7 @@ def flat(val, *args):
                     continue  # if all data bad, skip it
             sources.append(x.sources)
         else:
-            raise XFormException('EXPR', 'internal: bad type passed to stats_wrapper')
+            raise XFormException('EXPR', 'internal: bad type passed to flat()')
 
         # and concat it to the intermediate array
         if intermediate is None:
@@ -112,6 +112,46 @@ def flat(val, *args):
     # then create the value
     val = Value(intermediate, uncintermediate, dqintermediate)
     return Datum(Datum.NUMBER, val, SourceSet(sources))
+
+
+def func_wrapper(fn: Callable[[Value], Value], d: Datum) -> Datum:
+    """Takes a function which takes and returns Value, and a datum. This is a utility for dealing with
+    functions. For images, it strips out the relevant pixels (subject to ROIs) and creates a masked array. However, BAD
+    pixels are included. It then performs the operation and creates a new image which is a copy of the
+    input with the new data spliced in."""
+
+    if d is None:
+        return None
+    elif d.tp == Datum.NUMBER:  # deal with numeric argument (always returns a numeric result)
+        # get sources for all arguments
+        ss = d.getSources()
+        rv = fn(d.val)
+        return Datum(Datum.NUMBER, rv, SourceSet(ss))
+    elif d.isImage():
+        img = d.val
+        ss = d.sources
+        subimage = img.subimage()
+
+        # make copies of the source data into which we will splice the results
+        imgcopy = subimage.img.copy()
+        unccopy = subimage.uncertainty.copy()
+        dqcopy = subimage.dq.copy()
+
+        # Perform the calculation on the entire subimage rectangle, but only the results covered by ROI
+        # will be spliced back into the image (modifyWithSub does this).
+        v = Value(imgcopy, unccopy, dqcopy)
+
+        rv = fn(v)
+        # depending on the result type..
+        if rv.isscalar():
+            # ...either use it as a number datum
+            return Datum(Datum.NUMBER, rv, ss)
+        else:
+            # ...or splice it back into the image
+            img = img.modifyWithSub(subimage, rv.n, uncertainty=rv.u, dqv=rv.dq)
+            return Datum(Datum.IMG, img)
+    else:
+        raise XFormException('EXPR', 'unsupported type for function')
 
 
 def stats_wrapper(val, func):
@@ -444,7 +484,7 @@ def sin(a):
     Calculate sine of an angle in radians
     @param a:img,number:the angle (or image in which each pixel is a single angle)
     """
-    return funcWrapper(lambda xx: xx.sin(), a)
+    return func_wrapper(lambda xx: xx.sin(), a)
 
 
 @datumfunc
@@ -453,7 +493,7 @@ def cos(a):
     Calculate cosine of an angle in radians
     @param a:img,number:the angle (or image in which each pixel is a single angle)
     """
-    return funcWrapper(lambda xx: xx.cos(), a)
+    return func_wrapper(lambda xx: xx.cos(), a)
 
 
 @datumfunc
@@ -462,7 +502,7 @@ def tan(a):
     Calculate tangent of an angle in radians
     @param a:img,number:the angle (or image in which each pixel is a single angle)
     """
-    return funcWrapper(lambda xx: xx.tan(), a)
+    return func_wrapper(lambda xx: xx.tan(), a)
 
 
 @datumfunc
@@ -471,7 +511,7 @@ def sqrt(a):
     Calculate square root
     @param a:img,number:values (image or number)
     """
-    return funcWrapper(lambda xx: xx.sqrt(), a)
+    return func_wrapper(lambda xx: xx.sqrt(), a)
 
 
 @datumfunc
@@ -482,7 +522,7 @@ def abs(a):  # careful now, we're shadowing the builtin "abs" here.
     """
     # We don't want to inadvertently recurse, so call the builtin
     # abs function.
-    return funcWrapper(lambda xx: builtins.abs(xx), a)
+    return func_wrapper(lambda xx: builtins.abs(xx), a)
 
 
 @datumfunc

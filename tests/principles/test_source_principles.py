@@ -151,8 +151,8 @@ def test_extract_by_band():
 
     expr.expr = "a$_4"
     doc.run()
-    img = expr.getOutput(0, Datum.IMG)
-    assert img is None
+    img = expr.getOutputDatum(0)
+    assert img is Datum.null
     assert isinstance(expr.error, XFormException)
     assert expr.error.message == "unable to get this wavelength from an image: <DATUM-ident, value _4>"
 

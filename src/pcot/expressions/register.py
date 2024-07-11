@@ -1,58 +1,14 @@
 """
 Registration and utility functions for the expression evaluator
 """
-from inspect import signature
 from numbers import Number
-from typing import List, Optional, Callable
-
-import numpy as np
+from typing import List, Callable
 
 from pcot.config import parserhook
 from pcot.datum import Datum
 from pcot.expressions import Parameter
 from pcot.sources import SourceSet, nullSourceSet
 from pcot.value import Value
-from pcot.xform import XFormException
-
-
-def funcWrapper(fn: Callable[[Value], Value], d: Datum) -> Datum:
-    """Takes a function which takes and returns Value, and a datum. This is a utility for dealing with
-    functions. For images, it strips out the relevant pixels (subject to ROIs) and creates a masked array. However, BAD
-    pixels are included. It then performs the operation and creates a new image which is a copy of the
-    input with the new data spliced in."""
-
-    if d is None:
-        return None
-    elif d.tp == Datum.NUMBER:  # deal with numeric argument (always returns a numeric result)
-        # get sources for all arguments
-        ss = d.getSources()
-        rv = fn(d.val)
-        return Datum(Datum.NUMBER, rv, SourceSet(ss))
-    elif d.isImage():
-        img = d.val
-        ss = d.sources
-        subimage = img.subimage()
-
-        # make copies of the source data into which we will splice the results
-        imgcopy = subimage.img.copy()
-        unccopy = subimage.uncertainty.copy()
-        dqcopy = subimage.dq.copy()
-
-        # Perform the calculation on the entire subimage rectangle, but only the results covered by ROI
-        # will be spliced back into the image (modifyWithSub does this).
-        v = Value(imgcopy, unccopy, dqcopy)
-
-        rv = fn(v)
-        # depending on the result type..
-        if rv.isscalar():
-            # ...either use it as a number datum
-            return Datum(Datum.NUMBER, rv, ss)
-        else:
-            # ...or splice it back into the image
-            img = img.modifyWithSub(subimage, rv.n, uncertainty=rv.u, dqv=rv.dq)
-            return Datum(Datum.IMG, img)
-    else:
-        raise XFormException('EXPR', 'unsupported type for function')
 
 
 @parserhook
