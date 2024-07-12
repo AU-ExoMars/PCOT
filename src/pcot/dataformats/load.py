@@ -161,8 +161,6 @@ def multifile(directory: str,
         mult = r.mult or 1.0
         rawloader = r.rawloader
 
-    print(rawloader)
-
     def getFilterSearchParam(p) -> Tuple[Optional[Union[str, int]], Optional[str]]:
         """Returns the thing to search for to match a filter to a path and the type of the search"""
         if filterre is None:
