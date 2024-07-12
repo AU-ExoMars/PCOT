@@ -293,13 +293,17 @@ def grey(img, opencv=0):
             # 'out' will be the greyscale image found by calculating the mean of all channels in img.img
             out = np.mean(img.img, axis=2).astype(np.float32)
 
-            # uncertainty is messier - add the squared uncertainties, divide by N, and root.
-            outu = np.zeros(img.uncertainty.shape[:2], dtype=np.float32)
-            for i in range(0, img.channels):
-                c = img.uncertainty[:, :, i]
-                outu += c * c
-            # divide by the count and root
-            outu = np.sqrt(outu) / img.channels
+            # to calculate the uncertainty, the pooled variance will be the variance of the means, plus the
+            # mean of the variances. So first we'll find the variances of each channel (this is the "variance
+            # of the means").
+            varchans = np.var(img.img, axis=2)
+            # then we calculate the mean of the variances - to do this, we need to square the uncertainty (to give
+            # us variance) and calculate the mean per pixel.
+            outu = np.mean(np.square(img.uncertainty), axis=2)
+            # we can then add these together - that gives the pooled variance, which we can root to get the pooled
+            # standard deviation.
+            outu = np.sqrt(outu + varchans)
+
             img = ImageCube(out, img.mapping, sources, uncertainty=outu, dq=dq, rois=img.rois)
     return Datum(Datum.IMG, img)
 

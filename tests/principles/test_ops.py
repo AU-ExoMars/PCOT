@@ -239,14 +239,14 @@ def test_greyscale_simple():
     assert isinstance(x, ImageCube)
     p = x[0, 0]
     assert isinstance(p, Value)
-    assert p.approxeq(Value(5, 4.6427960923947))
+    assert p.approxeq(Value(5, 8.082904))
 
     # and with an explicit false argument
     expr.expr = "grey(a,0)"
     doc.run()
     x = expr.getOutput(0, Datum.IMG)
     p = x[0, 0]
-    assert p.approxeq(Value(5, 4.6427960923947))
+    assert p.approxeq(Value(5, 8.082904))
 
 
 def test_greyscale_human():
