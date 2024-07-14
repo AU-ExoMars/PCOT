@@ -3,16 +3,17 @@ import logging
 import math
 import os
 import platform
+import sys
 import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional, Union, List, Tuple, Dict
 
 import cv2 as cv
 import numpy as np
-from PySide2 import QtWidgets, QtCore
+from PySide2 import QtWidgets, QtCore, QtGui
 from PySide2.QtCore import Qt, QSize, QTimer
 from PySide2.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent
-from PySide2.QtWidgets import QCheckBox, QMessageBox
+from PySide2.QtWidgets import QCheckBox, QMessageBox, QMenu
 
 import pcot
 import pcot.ui as ui
@@ -23,7 +24,6 @@ from pcot.ui.canvasdq import CanvasDQSpec
 from pcot.ui.collapser import Collapser, CollapserSection
 from pcot.ui.spectrumwidget import SpectrumWidget
 import pcot.dq
-from pcot.ui.texttogglebutton import TextToggleButton
 from pcot.utils.deb import Timer
 
 if TYPE_CHECKING:
@@ -770,21 +770,17 @@ class Canvas(QtWidgets.QWidget):
         layout.addWidget(self.spectrumToggle, 2, 1)
         self.spectrumToggle.toggled.connect(self.spectrumToggleChanged)
 
-        self.saveButton = QtWidgets.QPushButton("Export image")
-        layout.addWidget(self.saveButton, 3, 0, 1, 2)
-        self.saveButton.clicked.connect(self.exportButtonClicked)
-
         self.coordsText = QtWidgets.QLabel('')
-        layout.addWidget(self.coordsText, 4, 0, 1, 2)
+        layout.addWidget(self.coordsText, 3, 0, 1, 2)
 
         self.roiText = QtWidgets.QLabel('')
-        layout.addWidget(self.roiText, 5, 0, 1, 2)
+        layout.addWidget(self.roiText, 4, 0, 1, 2)
 
         self.dimensions = QtWidgets.QLabel('')
-        layout.addWidget(self.dimensions, 6, 0, 1, 2)
+        layout.addWidget(self.dimensions, 5, 0, 1, 2)
 
         self.hideDQ = QtWidgets.QCheckBox("hide DQ")
-        layout.addWidget(self.hideDQ, 7, 0, 1, 2)
+        layout.addWidget(self.hideDQ, 6, 0, 1, 2)
         self.hideDQ.toggled.connect(self.hideDQChanged)
 
         self.collapser.addSection("data", layout, isOpen=True)
@@ -907,6 +903,20 @@ class Canvas(QtWidgets.QWidget):
             self.getDQWidgetState()
             self.recursing = False
             self.redisplay()
+
+    def contextMenuEvent(self, ev: QtGui.QContextMenuEvent) -> None:
+        super().contextMenuEvent(ev)   # run the super's menu, which will run any item's menu
+        if not ev.isAccepted():        # if the event wasn't accepted, run our menu
+            menu = QMenu()
+            export = menu.addAction("Export as PDF, PNG or SVG")
+            save = menu.addAction("Save as PDAT")
+            a = menu.exec_(ev.globalPos())
+
+            if a == export:
+                self.exportAction()
+            elif a == save:
+                self.saveAction()
+
 
     def ensureDQValid(self):
         """Make sure the DQ data is valid for the image if present; if not reset to None"""
@@ -1124,7 +1134,7 @@ class Canvas(QtWidgets.QWidget):
             x.setVisible(not self.isDQHidden)
         self.redisplay()
 
-    def exportButtonClicked(self, c):
+    def exportAction(self):
         if self.previmg is None:
             return
         res = QtWidgets.QFileDialog.getSaveFileName(self,
@@ -1155,6 +1165,36 @@ class Canvas(QtWidgets.QWidget):
                 ui.log(f"Image and annotations exported to {path}")
             elif ext == '.svg':
                 imageexport.exportSVG(self.previmg, path)
+            else:
+                QMessageBox.critical(self, 'Error', "Filename has a strange extension.")
+                ui.log(ext)
+
+    def saveAction(self):
+        """Save to a PDAT file - a DatumStore with only one item in it."""
+        if self.previmg is None:
+            return
+        res = QtWidgets.QFileDialog.getSaveFileName(self,
+                                                    'Save RGB image as PNG (without annotations)',
+                                                    os.path.expanduser(pcot.config.getDefaultDir('savedimages')),
+                                                    "PDAT files (*.pdat)",
+                                                    options=pcot.config.getFileDialogOptions()
+                                                    )
+        if res[0] != '':
+            path, filt = res
+            (root, ext) = os.path.splitext(path)
+            pcot.config.setDefaultDir('savedimages', os.path.split(path)[0])
+            ext = ext.lower()
+            if ext == '':
+                ext = '.pdat'
+            if ext == '.pdat':
+                from pcot.utils.archive import FileArchive
+                from pcot.utils.datumstore import DatumStore
+
+                path = root + ext
+                with FileArchive(path, "w") as a:
+                    ds = DatumStore(a)
+                    datum = Datum(Datum.IMG, self.previmg)
+                    ds.writeDatum("main",datum)
             else:
                 QMessageBox.critical(self, 'Error', "Filename has a strange extension.")
                 ui.log(ext)

@@ -1,4 +1,5 @@
 import dataclasses
+import sys
 import time
 from typing import Dict, Optional
 
@@ -10,7 +11,6 @@ from pcot.utils.archive import Archive, FileArchive
 class DatumStore:
     """
     This class allows Datum objects to be stored into, and retrieved from, an Archive object.
-
     It's mainly used for handling blocks of data used in calibration pipeline and pipeline emulation - flatfields
     and the like.
 
@@ -20,7 +20,18 @@ class DatumStore:
     a new item would exceed this size, least-recently-used items of non-zero size are removed until there
     is enough space. This is because Datum objects can be quite large, and we don't want to run out of memory.
 
-    The Zip archive is only open while data is being written or read (PCOT archive objects are context managers).
+    Usage example for writing:
+        with FileArchive("foo.zip", "w") as a:
+            da = DatumStore(a)
+            da.writeDatum("bar", some_datum_object)
+            da.writeDatum("baz", some_other_datum_object)
+
+    Usage example for reading:
+            a = DatumStore(FileArchive(fn), 1000)
+            d = a.get("test", None)
+
+    The Zip archive is only open while data is being written or read (PCOT archive objects - which this class uses -
+    are context managers).
 
     Be VERY SURE that you don't keep any references to the Datum objects, or the LRU deletion won't work!
     """
@@ -39,7 +50,7 @@ class DatumStore:
     max_size: int
     write_mode: bool
 
-    def __init__(self, archive: Archive, max_size: int):
+    def __init__(self, archive: Archive, max_size: int = sys.maxsize):
         """
         Create a new DatumArchive object. The size parameter is the maximum total size of the cached items
         in bytes.
