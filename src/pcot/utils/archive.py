@@ -63,6 +63,14 @@ class Archive:
     def is_open(self):
         return self.zip is not None
 
+    def assert_read(self):
+        if self.mode != 'r':
+            raise Exception("Archive is not open for reading")
+
+    def assert_write(self):
+        if self.mode != 'w':
+            raise Exception("Archive is not open for writing")
+
     def progress(self, s):
         if self.progressCallback:
             self.progressCallback(s)
@@ -70,6 +78,7 @@ class Archive:
     def writeArray(self, name: str, a: np.ndarray):
         if self.zip is None:
             raise Exception("Archive is not open")
+        self.assert_write()
         b = BytesIO()
         np.save(b, a)
         self.zip.writestr(name, b.getvalue())
@@ -83,6 +92,7 @@ class Archive:
     def writeStr(self, name: str, string: str):
         if self.zip is None:
             raise Exception("Archive is not open")
+        self.assert_write()
         print(f"Writing to {name}")
         # I'm aware it'll do the encoding anyway, but I wanted to make it explicit
         self.zip.writestr(name, string.encode('utf-8'))
@@ -90,6 +100,7 @@ class Archive:
     def readArray(self, name: str) -> np.ndarray:
         if self.zip is None:
             raise Exception("Archive is not open")
+        self.assert_read()
         b = self.zip.read(name)
         bio = BytesIO(b)
         a = np.load(bio)
@@ -98,6 +109,7 @@ class Archive:
     def readStr(self, name: str) -> str:
         if self.zip is None:
             raise Exception("Archive is not open")
+        self.assert_read()
         b = self.zip.read(name)
         return b.decode('utf-8')
 
@@ -186,6 +198,8 @@ class MemoryArchive(Archive):
     """
     Used for ZIP archives in memory
     """
+
+    mode: bool      # 'r' or 'w', set by subclass
 
     def __init__(self, data=None, progressCallback=None):
         if data is None:

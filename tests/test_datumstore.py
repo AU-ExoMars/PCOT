@@ -20,11 +20,11 @@ def test_create():
 
         # open for writing, must be inside a context manager
         with FileArchive(fn, 'w') as a:
-            a = DatumStore(a, 1000)
-            d = Datum.k(10, 0.2, dq.TEST)
-            a.writeDatum("test", d)
-            d = Datum.k(11, 0.7, dq.TEST)
-            a.writeDatum("test2", d)
+            with DatumStore(a) as da:
+                d = Datum.k(10, 0.2, dq.TEST)
+                da.writeDatum("test", d)
+                d = Datum.k(11, 0.7, dq.TEST)
+                da.writeDatum("test2", d)
 
         # open for reading, must be outside a context manager
         a = DatumStore(FileArchive(fn), 1000)
@@ -40,13 +40,16 @@ def test_cache():
     with tempfile.TemporaryDirectory() as td:
         fn = td + "/eek.pcot"
 
-        # open for writing, must be inside a context manager
+        # open for writing, must be inside a context manager - but here we're
+        # not using a context manager for the store, we're explicitly calling
+        # writeManifest.
         with FileArchive(fn, 'w') as a:
             a = DatumStore(a, 1000)
             d = Datum.k(10, 0.2, dq.TEST)
             a.writeDatum("test", d)
             d = Datum.k(11, 0.7, dq.TEST)
             a.writeDatum("test2", d)
+            a.writeManifest()
 
         # open for reading, must be outside a context manager
         a = DatumStore(FileArchive(fn), 1000)
@@ -102,9 +105,9 @@ def test_image():
 
         # open for writing, must be inside a context manager
         with FileArchive(fn, 'w') as a:
-            a = DatumStore(a, 10000)
-            a.writeDatum("test", d)
-            a.writeDatum("test2", d2)
+            with DatumStore(a) as da:
+                da.writeDatum("test", d)
+                da.writeDatum("test2", d2)
 
         # open for reading, must be outside a context manager
         a = DatumStore(FileArchive(fn), 7000)
@@ -144,11 +147,10 @@ def test_cache_discard():
         fn = td + "/eek.pcot"
 
         # open for writing, must be inside a context manager
-        with FileArchive(fn, 'w') as a:
-            a = DatumStore(a, 10000)
-            a.writeDatum("test", d)
-            a.writeDatum("test2", d2)
-            a.writeDatum("test3", d3)
+        with FileArchive(fn, 'w') as a, DatumStore(a) as da:
+            da.writeDatum("test", d)
+            da.writeDatum("test2", d2)
+            da.writeDatum("test3", d3)
 
         # open for reading, must be outside a context manager
         a = DatumStore(FileArchive(fn), 7000)     # cache size enough for 2 items?
@@ -194,9 +196,7 @@ def test_vector_and_cache():
         fn = td + "/eek.pcot"
 
         # open for writing, must be inside a context manager
-        with FileArchive(fn, 'w') as a:
-            a = DatumStore(a, 10000)
-
+        with FileArchive(fn, 'w') as fa, DatumStore(fa) as a:
             vec = np.linspace(0, 1, 1000)
             d = Datum(Datum.NUMBER, Value(vec, 0.1, dq.TEST), sources=nullSourceSet)
             a.writeDatum("test0", d)

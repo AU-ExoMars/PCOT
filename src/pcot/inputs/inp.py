@@ -1,13 +1,6 @@
 from typing import List, Optional, TYPE_CHECKING
 
-from .directinput import DirectInputMethod
-from .envimethod import ENVIInputMethod
 from .inputmethod import InputMethod
-from .multifile import MultifileInputMethod
-from .nullinput import NullInputMethod
-from .rgb import RGBInputMethod
-from .pds4input import PDS4InputMethod
-
 from pcot.ui.inputs import InputWindow
 from ..datum import Datum
 
@@ -37,6 +30,14 @@ class Input:
         """this will intialise an Input from scratch, typically when
         you're creating a new main graph. The input will be initialised
         to use the null method."""
+        from .datumarchive import DatumArchiveInputMethod
+        from .directinput import DirectInputMethod
+        from .envimethod import ENVIInputMethod
+        from .multifile import MultifileInputMethod
+        from .nullinput import NullInputMethod
+        from .rgb import RGBInputMethod
+        from .pds4input import PDS4InputMethod
+
         self.mgr = mgr
         self.idx = idx
         self.activeMethod = 0
@@ -48,6 +49,7 @@ class Input:
             MultifileInputMethod(self),
             ENVIInputMethod(self),
             PDS4InputMethod(self),
+            DatumArchiveInputMethod(self),
             DirectInputMethod(self),
         ]
 

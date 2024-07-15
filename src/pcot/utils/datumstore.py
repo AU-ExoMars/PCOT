@@ -1,7 +1,7 @@
 import dataclasses
 import sys
 import time
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 from pcot.datum import Datum
 from pcot.document import Document
@@ -21,10 +21,27 @@ class DatumStore:
     is enough space. This is because Datum objects can be quite large, and we don't want to run out of memory.
 
     Usage example for writing:
+        with FileArchive("foo.zip", "w") as a, DatumStore(a) as da:
+            da.writeDatum("bar", some_datum_object)
+            da.writeDatum("baz", some_other_datum_object)
+
+    Which is sort-of the same as:
+
+        with FileArchive("foo.zip", "w") as a:
+            with DatumStore(a) as da:
+                da.writeDatum("bar", some_datum_object)
+                da.writeDatum("baz", some_other_datum_object)
+
+    or you can do:
+
         with FileArchive("foo.zip", "w") as a:
             da = DatumStore(a)
             da.writeDatum("bar", some_datum_object)
             da.writeDatum("baz", some_other_datum_object)
+            da.writeManifest()
+
+    This is because we have to write the manifest at the end. The context manager will check we have the archive
+    open in write mode, and will write the manifest automatically. If we're not using a CM we have to do it ourselves.
 
     Usage example for reading:
             a = DatumStore(FileArchive(fn), 1000)
@@ -50,6 +67,12 @@ class DatumStore:
     max_size: int
     write_mode: bool
 
+    # this is a manifest of the items in the archive.
+    # It's a dictionary of name: (datumtype name, description, repr).
+    # Description is an optional string provided when the item is written, repr is the string
+    # representation of the datum.
+    manifest: Dict[str, Tuple[str, str, str]] = {}
+
     def __init__(self, archive: Archive, max_size: int = sys.maxsize):
         """
         Create a new DatumArchive object. The size parameter is the maximum total size of the cached items
@@ -61,9 +84,33 @@ class DatumStore:
         self.size = max_size
         self.read_count = 0
 
-    def writeDatum(self, name: str, d: Datum):
+        if not self.archive.is_open():
+            # assume we are reading. Read the manifest.
+            with self.archive as a:
+                if (m := a.readJson("MANIFEST")) is not None:
+                    self.manifest = m
+        else:
+            self.manifest = {}
+            self.write_mode = True
+
+    def __enter__(self):
+        """This will just return self; the magic happens in __exit__"""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """If we're in write mode, write the manifest."""
+        self.writeManifest()
+
+    def writeManifest(self):
+        """Write the manifest to the archive. This is only done in write mode."""
+        if self.archive.mode == 'w':
+            self.archive.writeJson("MANIFEST", self.manifest)
+
+    def writeDatum(self, name: str, d: Datum, description: str = "", extra: str = ""):
         """This is used to write a Datum object to the archive; it's doesn't write to the cache. It will
         probably only be used in scripts that prepare archives.
+
+        description: an optional text description of the datum
 
         This MUST BE inside a context manager because the archive must be open for all items.
         """
@@ -71,12 +118,16 @@ class DatumStore:
         if not self.archive.is_open():
             raise Exception("archive must be open to write")
 
+        # update the manifest
+        self.manifest[name] = (d.tp.name, description, str(d))
+
+        # write the item to the archive
         self.archive.writeJson(name, d.serialise())
 
     def total_size(self):
         return sum([item.size for item in self.cache.values()])
 
-    def get(self, name, doc: Document) -> Optional[Datum]:
+    def get(self, name, doc: Optional[Document]) -> Optional[Datum]:
         """
         Get an item from the archive. If it's already in the cache, return it from there. Otherwise, read it from
         the archive and return it. If it's not in the archive, return None. We need the document so that the
@@ -85,6 +136,8 @@ class DatumStore:
         This MUST NOT be inside an Archive context manager; it will open/close the archive with a context
         manager itself.
         """
+
+        # Note that we don't bother to check the manifest.
 
         if self.archive.is_open():
             raise Exception("archive must not be 'pre-opened' to read")
