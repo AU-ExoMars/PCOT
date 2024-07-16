@@ -28,6 +28,9 @@ class InputMethod(ABC):
         Canvas.initPersistData(self)  # creates data inside the canvas
         self.showROIs = False  # used by the canvas
 
+    def _document(self):
+        return self.input.mgr.doc if self.input is not None else None
+
     def isActive(self):
         """Is this method active?"""
         return self.input.isActive(self)
