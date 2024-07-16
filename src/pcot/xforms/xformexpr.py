@@ -234,11 +234,7 @@ class TabExpr(pcot.ui.tabs.Tab):
         self.changed()
 
     def onNodeChanged(self):
-        self.w.canvas.setNode(self.node)
+        self.w.data.canvas.setNode(self.node)
         self.w.expr.setPlainText(self.node.expr)
-        self.w.result.setPlainText(self.node.resultStr)
         d = self.node.getOutputDatum(0)
-        if d is not None and d.tp == Datum.IMG:
-            self.w.canvas.display(d.val)
-        else:
-            self.w.canvas.display(None)
+        self.w.data.display(d)
