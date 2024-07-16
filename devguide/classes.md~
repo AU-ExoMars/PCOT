@@ -123,11 +123,14 @@ This is the fundamental numeric type, consisting of
 * uncertainty value (standard deviation)
 * DQ bits
 
-It's usually used for scalars but can also hold array data. If it
-does hold array data, the three elements must be the same shape.
+It's usually used for scalars but can also hold array data - internally
+ImageCubes (or parts of them) are converted into array Values for maths.
+If it does hold array data, the three elements must be the same shape.
 
 This type supports mathematical operations which propagate uncertainty
 and DQ.
+
+More on how Values work [here](values.md)
 
 @@@info
 **Note**: You may wonder why ImageCube and SubImageCube don't use

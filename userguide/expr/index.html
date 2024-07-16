@@ -231,7 +231,7 @@ the node, and is the authoritative documentation.</p>
 set the node to the new expression and perform it. The input can accept any type of data
 and the output type is determined when the node is run.</p>
 <p>The four inputs are assigned to the variables a, b, c, and d. They are typically (but not necessarily) images
-or scalar values.</p>
+or numeric values.</p>
 <p>The standard operators +,/,*,- and ^ all have their usual meanings. When applied to images they work in
 a pixel-wise fashion, so if <strong>a</strong> is an image, <strong>2*a</strong> will double the brightness. If <strong>b</strong> is also an image,
 <strong>a+b</strong> will add the two images, pixel by pixel. There are two non-standard operators: <strong>.</strong> for properties
@@ -308,7 +308,7 @@ and <strong>$</strong> for band extraction. These are described below.</p>
 </tr>
 </tbody>
 </table>
-<p>All operators can act on images and scalars (numeric values),
+<p>All operators can act on images, 1D vectors and scalars
 with the exception of <strong>.</strong> and <strong>$</strong> which have images on the left-hand side and identifiers
 or integers on the right-hand side.</p>
 <p>Those operators marked with <strong>(can act on ROIs)</strong> can also act on pairs of ROIs (regions of interest, see below).</p>
@@ -350,11 +350,18 @@ they appear.</p>
 </table>
 <p>This probably isn't what you wanted. Note that this is obviously not an issue when an operation is being performed
 on bands in a single image.</p>
-<h3>binary operators on images with regions of interest</h3>
+<h3>Binary operators on images with regions of interest</h3>
 <p>If one of the two images has an ROI, the operation is only performed on that ROI; the remaining area of output is
 taken from the image without an ROI. If both images have an ROI an error will result - it is likely that this
 is a mistake on the user's part, and doing something more "intelligent" might conceal this. The desired result
 can be achieved using expr nodes on ROIs and an importroi node.</p>
+<h3>Operations with vectors</h3>
+<p>Some functions can generate vectors, such as <code>mean</code> for getting the means of the bands, and <code>vec</code> for generating
+vectors by hand.</p>
+<p>If an image is used in a binary operation with a vector on the other side, the vector must have the same number of
+elements as there are bands in the image. The operation will be performed on each band. Consider a 3-band image
+and the vector <code>[2,3,4]</code>. If we multiply them, the result will an image with the first band multiplied by 2,
+the second band multiplied by 3, and the third band multiplied by 4. </p>
 <h3>Operators on ROIs themselves (as opposed to images with ROIs)</h3>
 <table>
 <thead>
@@ -430,6 +437,8 @@ the band before performing the operation, thus:</p>
 </tr>
 </tbody>
 </table>
+<p>Band extraction can also be performed with vectors provided the vector elements are numeric (i.e. wavelengths):
+<code>a $ vec(640,550,440)</code> is valid.</p>
 <h3>Properties</h3>
 <p>Properties are indicated by the <strong>.</strong> operator, e.g. <strong>a.w</strong> to find an
 image's width.</p>

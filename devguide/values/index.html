@@ -181,12 +181,14 @@
                     <div class="col-md-9" role="main">
 
 <h1 id="how-values-work">How Values work</h1>
-<p>Value is PCOT's fundamental type for working with uncertain numerical data. Values are triplets of:</p>
+<p>Value is PCOT's fundamental type for working with uncertain numerical data.
+Values are triplets of:</p>
 <ul>
 <li>a 32-bit floating point <strong>nominal</strong> value (i.e. a mean),</li>
 <li>a 32-bit floating point  <strong>uncertainty</strong> value (as standard deviation) around that mean,</li>
 <li>and a set of 16 <strong>data quality</strong> (DQ) bits.</li>
 </ul>
+<p>These are usually scalar, but 1D vectors can also be created.</p>
 <p>As a user of PCOT you may never encounter Values, but they are used internally
 whenever any operations involving uncertainty are done. Here are the typical
 situations where that occurs:</p>
@@ -299,26 +301,36 @@ all Datum objects.</p>
 <p>Functions of a single numeric or image Datum are sometimes written using an "inner wrapper", which will
 turn imagecubes and numbers into Value objects in a similar way to how the semantic binop
 wrappers work for operations. It will also wrap the resulting Value in a Datum.
-An example is <code>pcot.expression.register.funcWrapper</code>. Here is the datumfunc <code>sin</code> in full:</p>
-<pre><code>@datumfunc
+An example is <code>pcot.datumfuncs.func_wrapper</code>. Here is the datumfunc <code>sin</code> in full:</p>
+<pre><code class="language-python">@datumfunc
 def sin(a):
     &quot;&quot;&quot;
     Calculate sine of an angle in radians
     @param a:img,number:the angle (or image in which each pixel is a single angle)
     &quot;&quot;&quot;
-    return funcWrapper(lambda xx: xx.sin(), a)
+    return func_wrapper(lambda xx: xx.sin(), a)
 </code></pre>
-<p>We don't need worry about whether the argument is an image or a scalar, because the funcWrapper
-will deal with it. However, funcWrapper can only deal with images and scalars.</p>
+<p>We don't need worry about whether the argument is an image or a scalar, because the func_wrapper
+will deal with it. However, func_wrapper can only deal with images and scalars.</p>
 <h3 id="the-stats-wrapper">The stats wrapper</h3>
-<p>Another datumfunc inner wrapper which can be used is statsWrapper. This takes a variable number
-of image and numeric arguments which it aggregates into a single 1D array, on which it then
-runs its function. It's typically for taking the mean or sum of images and/or values</p>
-<div class="alert alert-warning" role="alert">
-<p>I don't like how this works at the moment; the results are often meaningless or prone to 
-misinterpretation. Finding the mean of a multiband image should result in a vector of values,
-ideally.</p>
-</div></div>
+<p>Another datumfunc inner wrapper which can be used is stats_wrapper. This wraps a function
+which takes a (nominal,uncertainty,dq) tuple and returns another tuple of the same type.
+It does the following:</p>
+<ul>
+<li>If provided with a numeric value, calls the wrapped function and creates a Value from the
+returned data.</li>
+<li>If provided with an ImageCube, gets the subimage, splits it into bands, and calls the
+wrapped function on the non-BAD values in each band. The results for each band - assumed to be
+scalar - are converted into a vector Value with one value for each band.</li>
+</ul>
+<p>This lets us write the <code>mean</code> like this:</p>
+<pre><code>@datumfunc
+def mean(val):
+    return stats_wrapper(val,
+        lambda n, u, d: (np.mean(n), pooled_sd(n, u), pcot.dq.NONE))
+</code></pre>
+<p>and it will work on scalar Values, vector Values and images - in the latter case, producing a vector
+Value.</p></div>
             </div>
         </div>
 

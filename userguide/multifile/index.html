@@ -171,6 +171,14 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-level="2"><a href="#reading-raw-binary-files" class="nav-link">Reading raw binary files</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#presets" class="nav-link">Presets</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -185,13 +193,15 @@ The regex aspect of multifile is complicated, so documenting it was
 a priority.</p>
 </div>
 <p>The multifile input method allows multiple monochrome files of "standard"
-types like PNG and BMP to be imported as multispectral images. Each file
-is flattened to greyscale in the process if it is RGB by finding the mean
-of the three channels for each pixel.</p>
-<p>For this to work, PCOT needs to be able to find out which filter was used
-for each image. This is done by storing a set of filters in a CSV file
-and using parts of the image files' names to work out which filter is used.</p>
+types like PNG and BMP to be imported as multispectral images. It can
+also read raw binary files.</p>
+<p>Each file is flattened to greyscale in the process (if it is RGB) by finding
+the mean of the three channels for each pixel.</p>
 <h2 id="filter-csv-files">Filter CSV files</h2>
+<p>In order to analyse the images,
+PCOT needs to be able to find out which filter was used for each image. This
+is done by storing a set of filters in a CSV file and using parts of the image
+files' names to work out which filter is used.</p>
 <p>Two files are available by default. These are PANCAM (for the actual
 ExoMars camera) and AUPE (Aberystwyth PANCAM Emulator). These can be
 found in the <code>src/pcot/assets/</code> directory.</p>
@@ -201,7 +211,15 @@ found in the <code>src/pcot/assets/</code> directory.</p>
 530,15,0.957,L02,G03
 610,10,0.956,L03,G05
 </code></pre>
-<p>It should be fairly obvious.</p>
+<p>In each line:</p>
+<ul>
+<li><strong>cwl</strong> is the centre wavelength</li>
+<li><strong>fwhm</strong> is the bandwidth as as full width at half maximum</li>
+<li><strong>transmission</strong> is how much energy the filter lets through at the CWL</li>
+<li><strong>position</strong> is the position of the filter in the filter wheel, typically as a camera letter
+(e.g. R or L) and an index number</li>
+<li><strong>name</strong> is the name of the filter.</li>
+</ul>
 <p>If you need to add a new filter set, edit the <code>.pcot.ini</code> file in your 
 home directory and a <code>[filters]</code> block if one does not exist. To this block,
 add a line like this:</p>
@@ -215,18 +233,19 @@ JCFCAM=c:/users/jim/jimfilters.csv
 </code></pre>
 <p>This new set, called JCFCAM, will be loaded when PCOT is started.</p>
 <h2 id="setting-a-file-pattern">Setting a file pattern</h2>
-<p>The file pattern is a regular expression
-used to work out which filter is used for which image. 
+<p>PCOT needs to be able to work out which filter was used to capture an
+image. This is done by extracting the filter name or position from the
+filename using a regular expression (or <em>regex</em>).
 If you have some experience with regular expressions (or access to someone
 with this experience), it will <a href="https://xkcd.com/208/">help immensely</a>.</p>
 <p>Regular expressions describe patterns which texts might match. For example,
 the regex <code>c[a-z]t</code> will match any three-letter string starting with <code>c</code> and
-ending with <code>t</code>. </p>
+ending with <code>t</code>: it's <code>c</code>, followed by any character between <code>a</code> and <code>z</code>, 
+followed by <code>t</code>.</p>
 <ul>
 <li>(Beginner's guide)[<a href="https://www.regular-expressions.info/index.html">https://www.regular-expressions.info/index.html</a>]</li>
 <li>(Useful 'playground' to try out expressions)[<a href="https://regex101.com/">https://regex101.com/</a>]</li>
 </ul>
-<p>We can also use a regex to extract parts of the string.</p>
 <p>The default pattern looks something like this:</p>
 <pre><code class="language-txt">.*(?P&lt;lens&gt;L|R)WAC(?P&lt;n&gt;[0-9][0-9]).*
 </code></pre>
@@ -254,13 +273,43 @@ will be matched, and will result in <code>L</code> being stored as <code>lens</c
 to form a filter position which is looked up in the filter set (by
 the <code>position</code> column).
 The idea is that <code>lens</code> indicates either the left or right camera
-and <code>n</code> identifies a filter.</li>
+and <code>n</code> identifies a filter. They're separate because many early
+files used names like <code>LWAC02</code> or <code>LWideAngle02</code>, in which the
+two elements were separate.</li>
 <li><code>name</code>: if this is found, it is used to match a filter using the <code>name</code>
 column</li>
 <li><code>cwl</code>: if this is found, it is used to match a filter using the <code>cwl</code>
 (wavelength) column</li>
 </ul>
-<p>If you need assistance, or this isn't flexible enough, contact us.</p></div>
+<p>If you need assistance, or this isn't flexible enough, contact us.</p>
+<h2 id="reading-raw-binary-files">Reading raw binary files</h2>
+<p>Data is often provided "as is" from the camera, in a raw binary format.
+Reading these files requires a little more information in advance:</p>
+<ul>
+<li>What the numeric format of the data is (e.g. 16-bit unsigned integer)</li>
+<li>How big the image is in pixels</li>
+<li>Whether there is a header at the start which should be skipped and
+how big it is (the "offset")</li>
+<li>Whether the image needs to be rotated and/or flipped</li>
+<li>Whether the data is "big-endian" or "little-endian."</li>
+</ul>
+<p>These can be set by clicking the "raw loader settings" dialog. </p>
+<div class="alert alert-primary" role="alert">
+<p>For images from AUPE, the settings are:</p>
+<ul>
+<li>16-bit unsigned integer</li>
+<li>1024x1024</li>
+<li>48 byte offset</li>
+<li>Rotate 90 degrees</li>
+<li>Big-endian data</li>
+</ul>
+</div>
+<h2 id="presets">Presets</h2>
+<p>You can save
+and load these values - and most other settings for multifile input, such
+as the pattern and filter - using the "Presets" button. Presets are currently stored
+in your home user directory in a file called <code>MFPresets.json</code>. Users can
+easily copy this file from other users.</p></div>
             </div>
         </div>
 

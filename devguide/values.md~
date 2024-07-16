@@ -1,10 +1,13 @@
 # How Values work
 
-Value is PCOT's fundamental type for working with uncertain numerical data. Values are triplets of:
+Value is PCOT's fundamental type for working with uncertain numerical data.
+Values are triplets of:
 
 * a 32-bit floating point **nominal** value (i.e. a mean),
 * a 32-bit floating point  **uncertainty** value (as standard deviation) around that mean,
 * and a set of 16 **data quality** (DQ) bits.
+
+These are usually scalar, but 1D vectors can also be created.
 
 As a user of PCOT you may never encounter Values, but they are used internally
 whenever any operations involving uncertainty are done. Here are the typical
@@ -127,11 +130,11 @@ all Datum objects.
 
 ### Datumfuncs of single numeric/scalar arguments
 
-Functions of a single Datum are sometimes written using an "inner wrapper", which will
+Functions of a single numeric or image Datum are sometimes written using an "inner wrapper", which will
 turn imagecubes and numbers into Value objects in a similar way to how the semantic binop
 wrappers work for operations. It will also wrap the resulting Value in a Datum.
 An example is `pcot.expression.register.funcWrapper`. Here is the datumfunc `sin` in full:
-```
+```python
 @datumfunc
 def sin(a):
     """
@@ -145,12 +148,22 @@ will deal with it. However, funcWrapper can only deal with images and scalars.
 
 ### The stats wrapper
 
-Another datumfunc inner wrapper which can be used is statsWrapper. This takes a variable number
-of image and numeric arguments which it aggregates into a single 1D array, on which it then
-runs its function. It's typically for taking the mean or sum of images and/or values
+Another datumfunc inner wrapper which can be used is statsWrapper. This wraps a function
+which takes a (nominal,uncertainty,dq) tuple and returns another tuple of the same type.
+It does the following:
 
-@@@warning
-I don't like how this works at the moment; the results are often meaningless or prone to 
-misinterpretation. Finding the mean of a multiband image should result in a vector of values,
-ideally.
-@@@
+* If provided with a numeric value, calls the wrapped function and creates a Value from the
+returned data.
+* If provided with an ImageCube, gets the subimage, splits it into bands, and calls the
+wrapped function on the non-BAD values in each band. The results for each band - assumed to be
+scalar - are converted into a vector Value with one value for each band.
+
+This lets us write the `mean` like this:
+```
+@datumfunc
+def mean(val):
+    return stats_wrapper(val,
+        lambda n, u, d: (np.mean(n), pooled_sd(n, u), pcot.dq.NONE))
+```
+and it will work on scalar Values, vector Values and images - in the latter case, producing a vector
+Value.

@@ -171,15 +171,17 @@
 <h1 id="roiexpr">roiexpr</h1>
 <h2 id="description">Description</h2>
 <p>This node allows a region of interest to be composed from several regions of interest using an expression and
-imposed on an image. Several ROIs can be created within the node itself by using the "Add ROI" button.
+imposed on an image.</p>
+<p><strong>It is not a node for creating several ROIs at once - the output is always a single ROI</strong>.</p>
+<p>ROIs can be created for use within the expression by using the "Add ROI" button.
 These will be assigned to the variables a,b,c.. within the expression, and can be edited by:</p>
 <ul>
 <li>clicking on their label in the left-most column of the table (to select the entire row) and then clicking and dragging on the canvas,</li>
 <li>double clicking on the description text in the table to open a numerical editor (not for poly or painted).</li>
 </ul>
 <p>Additional ROIs can be connected to the p, q, r inputs; these will be assigned to those variables within the expression.
-The input image is available as the variable 'img', so it is possible
-to access the image's original region of interest (or the union of all ROIs if it has more than one) by using roi(img).</p>
+The input image's ROIs are combined into a single ROI and assigned to the variable 'i'.
+The input image itself is available as the variable 'img'.</p>
 <p>Other properties of the image are available and other calculations may be made, but the result of the expression must be an ROI.</p>
 <p>Examples:</p>
 <ul>
