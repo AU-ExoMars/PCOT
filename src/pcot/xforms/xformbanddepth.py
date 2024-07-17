@@ -18,6 +18,9 @@ from pcot.xform import xformtype, XFormType, XFormException
 class XformBandDepth(XFormType):
     """
     Calculate band depth using a linear weighted mean of the two bands either side.
+    Band depth is NOT the distance between the predicted reflectance of the centre band
+    the actual centre band measurement, but the one minus the ratio of those measurements.
+
     Reference: "Revised CRISM spectral parameters... " Viviano, Seelos et al. 2015.
 
     Issues:

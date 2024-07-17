@@ -557,9 +557,7 @@ class ImageCube(SourcesObtainable):
     def __str__(self):
         """Prettier string representation - but (importantly) doesn't have a unique ID so we can use it
         in string tests."""
-        s = "Image {}x{} array:{} channels:{}, {} bytes".format(self.w, self.h,
-                                                                str(self.img.shape), self.channels,
-                                                                self.img.nbytes)
+        s = f"Image {self.w}x{self.h}x{self.channels} {self.img.nbytes} bytes"
 
         s += "\nsrc: [{}]".format(self.sources.brief())
         if len(self.rois) > 0:

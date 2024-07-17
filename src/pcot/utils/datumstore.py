@@ -106,7 +106,7 @@ class DatumStore:
         if self.archive.mode == 'w':
             self.archive.writeJson("MANIFEST", self.manifest)
 
-    def writeDatum(self, name: str, d: Datum, description: str = "", extra: str = ""):
+    def writeDatum(self, name: str, d: Datum, description: str = ""):
         """This is used to write a Datum object to the archive; it's doesn't write to the cache. It will
         probably only be used in scripts that prepare archives.
 
@@ -119,7 +119,7 @@ class DatumStore:
             raise Exception("archive must be open to write")
 
         # update the manifest
-        self.manifest[name] = (d.tp.name, description, str(d))
+        self.manifest[name] = (d.tp.name, description, str(d.val))
 
         # write the item to the archive
         self.archive.writeJson(name, d.serialise())

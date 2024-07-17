@@ -909,7 +909,7 @@ class Canvas(QtWidgets.QWidget):
         if not ev.isAccepted():        # if the event wasn't accepted, run our menu
             menu = QMenu()
             export = menu.addAction("Export as PDF, PNG or SVG")
-            save = menu.addAction("Save as PDAT")
+            save = menu.addAction("Save as DatumArchive")
             a = menu.exec_(ev.globalPos())
 
             if a == export:
@@ -1170,31 +1170,37 @@ class Canvas(QtWidgets.QWidget):
                 ui.log(ext)
 
     def saveAction(self):
-        """Save to a PDAT file - a DatumStore with only one item in it."""
+        """Save to a PARC file - a DatumStore with only one item in it."""
         if self.previmg is None:
             return
         res = QtWidgets.QFileDialog.getSaveFileName(self,
-                                                    'Save RGB image as PNG (without annotations)',
+                                                    'Save as PARC',
                                                     os.path.expanduser(pcot.config.getDefaultDir('savedimages')),
-                                                    "PDAT files (*.pdat)",
+                                                    "Datum Archive files (*.parc)",
                                                     options=pcot.config.getFileDialogOptions()
                                                     )
         if res[0] != '':
+
+            desc, ok = QtWidgets.QInputDialog.getText(self,"Description",
+                                                     "Enter text description (optional):",
+                                                     QtWidgets.QLineEdit.Normal,
+                                                     "")
+            if not ok:
+                desc = ''
             path, filt = res
             (root, ext) = os.path.splitext(path)
             pcot.config.setDefaultDir('savedimages', os.path.split(path)[0])
             ext = ext.lower()
             if ext == '':
-                ext = '.pdat'
-            if ext == '.pdat':
+                ext = '.parc'
+            if ext == '.parc':
                 from pcot.utils.archive import FileArchive
                 from pcot.utils.datumstore import DatumStore
 
                 path = root + ext
-                with FileArchive(path, "w") as a:
-                    ds = DatumStore(a)
+                with FileArchive(path, "w") as a, DatumStore(a) as ds:
                     datum = Datum(Datum.IMG, self.previmg)
-                    ds.writeDatum("main",datum)
+                    ds.writeDatum("main", datum, description=desc)
             else:
                 QMessageBox.critical(self, 'Error', "Filename has a strange extension.")
                 ui.log(ext)

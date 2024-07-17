@@ -4,7 +4,6 @@ Data widget that shows either a text view or a canvas view of the data.
 
 from PySide2 import QtWidgets
 
-from pcot.datum import Datum
 from pcot.ui.canvas import Canvas
 from pcot.utils import SignalBlocker
 from pcot.utils.text import generateIndenting

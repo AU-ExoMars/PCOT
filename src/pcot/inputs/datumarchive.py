@@ -3,8 +3,13 @@ The input method for Datum archives (items saved using the DatumStore/FileArchiv
 mechanism). These should have a MANIFEST file.
 """
 import logging
+import os
 from typing import Optional, Tuple, Dict
 
+from PySide2 import QtCore, QtWidgets
+from PySide2.QtCore import Qt
+
+import pcot
 from pcot.datum import Datum
 from pcot.imagecube import ChannelMapping
 from pcot.inputs.inputmethod import InputMethod
@@ -46,6 +51,7 @@ class DatumArchiveInputMethod(InputMethod):
             self.datum = a.get(self.itemname, self._document())
         else:
             self.datum = None
+        return self.datum
 
     def getName(self):
         return "DatumArchive"
@@ -57,16 +63,47 @@ class DatumArchiveInputMethod(InputMethod):
         Canvas.serialise(self, x)
 
     def deserialise(self, data, internal):
-        self.fname = data['fname']
-        self.itemname = data['itemname']
-        if internal and data['datum'] is not None:
-            self.datum = Datum.deserialise(data['datum'], self._document())
+        if data is not None:
+            self.fname = data['fname']
+            self.itemname = data['itemname']
+            if internal and data['datum'] is not None:
+                self.datum = Datum.deserialise(data['datum'], self._document())
+            else:
+                self.datum = None
+            Canvas.deserialise(self, data)
         else:
+            self.fname = None
+            self.itemname = None
             self.datum = None
-        Canvas.deserialise(self, data)
 
     def createWidget(self):
         return DatumArchiveMethodWidget(self)
+
+
+class Model(QtCore.QAbstractTableModel):
+    def __init__(self, parent, manifest):
+        super().__init__(parent)
+        self.manifest = manifest
+
+    def rowCount(self, parent):
+        return len(self.manifest)
+
+    def columnCount(self, parent):
+        return 4
+
+    def data(self, index, role):
+        if not index.isValid():
+            return None
+        if role == Qt.DisplayRole:
+            # get a sorted list of the manifest keys
+            keys = sorted(list(self.manifest.keys()))
+            # and return the appropriate item
+            item = self.manifest[keys[index.row()]]
+            print(item)
+            if index.column() == 0:
+                return keys[index.row()]            # column zero is the key
+            else:
+                return item[index.column() - 1]     # columns 1-3 are elements of the tuple in the manifest
 
 
 class DatumArchiveMethodWidget(MethodWidget):
@@ -74,7 +111,9 @@ class DatumArchiveMethodWidget(MethodWidget):
         super().__init__(m)
         uiloader.loadUi("inputdatum.ui", self)
         self.openButton.clicked.connect(self.openFile)
-        self.itemList.doubleClicked.connect(self.itemSelected)
+        self.tableView.doubleClicked.connect(self.itemSelected)
+        self.tableView.setModel(Model(self, m.manifest))
+        self.tableView.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
 
         self.data.canvas.setMapping(m.mapping)
         # the canvas gets its "caption display" setting from the graph, so
@@ -87,10 +126,31 @@ class DatumArchiveMethodWidget(MethodWidget):
         self.onInputChanged()
 
     def onInputChanged(self):
-        pass
+        self.invalidate()  # input has changed, invalidate so the cache is dirtied
+        # we don't do this when the window is opening, otherwise it happens a lot!
+        if not self.method.openingWindow:
+            self.method.input.performGraph()
+        self.data.display(self.method.datum)
 
     def openFile(self):
-        pass
+        # use an file dialog to select a file
+        res = QtWidgets.QFileDialog.getOpenFileName(self,
+                                                    'Open file',
+                                                    os.path.expanduser(pcot.config.getDefaultDir('pcotfiles')),
+                                                    "PCOT datum archive files (*.parc)",
+                                                    options=pcot.config.getFileDialogOptions())
+        if res[0] != '':
+            self.method.fname = res[0]
+            self.method.loadManifest()
+            self.tableView.setModel(Model(self, self.method.manifest))
+            pcot.config.setDefaultDir('pcotfiles', os.path.dirname(res[0]))
 
     def itemSelected(self):
-        pass
+        self.method.mark()
+        self.method.datum = None
+        model = self.tableView.model()
+        keys = sorted(list(model.manifest.keys()))
+        self.method.itemname = keys[self.tableView.currentIndex().row()]
+        self.method.get()
+        pcot.config.setDefaultDir('images', os.path.dirname(self.method.fname))
+        self.onInputChanged()

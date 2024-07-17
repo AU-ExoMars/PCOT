@@ -24,7 +24,8 @@ class Input:
     MULTIFILE = 2
     ENVI = 3
     PDS4 = 4
-    DIRECT = 5
+    DATUMARCH = 5
+    DIRECT = 6
 
     def __init__(self, mgr, idx):
         """this will intialise an Input from scratch, typically when
