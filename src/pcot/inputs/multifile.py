@@ -206,6 +206,8 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
 
     def loaderSettings(self):
         self.method.rawLoader.edit(self)
+        # clear the cache, we'll need to reload those files!
+        self.method.cachedFiles = {}
         self.loaderSettingsText.setText(str(self.method.rawLoader))
 
     def onInputChanged(self):

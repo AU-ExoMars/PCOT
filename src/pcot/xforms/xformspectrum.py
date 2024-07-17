@@ -104,6 +104,7 @@ class XFormSpectrum(XFormType):
 
     Each pixel has its own variance, so the shown variance is the pooled variance of all the pixels in
     the region. This is calculated as the variance of the means, plus the mean of the variances.
+    SpectrumSet handles this.
 
     If a point has data with BAD DQ bits in a band, those pixels are ignored in that band. If there
     are no good points, the point is not plotted for that band.
@@ -113,7 +114,7 @@ class XFormSpectrum(XFormType):
 
     * name - the name of the ROI or input
     * m*wavelength* - the mean intensity for the given wavelength band
-    * s*wavelength* - the standard deviation of the mean intensity for the given wavelength band
+    * s*wavelength* - the population standard deviation of the mean intensity for the given wavelength band
     * p*wavelength* - the number of pixels in the given wavelength band (usually the same as the number of pixels in
     the ROI, but may be fewer if the ROI has "bad" pixels in that band)
 

@@ -341,8 +341,10 @@ def test_norm():
     a = r * 0.1
     # normalize
     b = df.norm(a)
-    # should be the same as the original image
-    assert df.max(df.abs(b - r)).get(Datum.NUMBER).n < 1e-7
+    # should be the same as the original image - we're doing max to get the per-channel differences as a vector,
+    # then max again to get the maximum of those.
+    diffs = df.max(df.max(df.abs(b - r))).get(Datum.NUMBER).n
+    assert diffs < 1e-7
 
     rpix = r.get(Datum.IMG)[255, 0]
     bpix = b.get(Datum.IMG)[255, 0]

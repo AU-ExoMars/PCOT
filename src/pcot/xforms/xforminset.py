@@ -158,7 +158,7 @@ class TabInset(pcot.ui.tabs.Tab):
     # causes the tab to update itself from the node
     def onNodeChanged(self):
         # we just draw the composited image
-        img = self.node.getOutput(Datum.IMG)
+        img = self.node.getOutput(0, Datum.IMG)
         if img is not None:
             # have to do canvas set up here to handle extreme undo events which change the graph and nodes
             # TODO - not sure why we aren't doing the whole setNode here.

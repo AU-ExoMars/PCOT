@@ -1,13 +1,14 @@
 import builtins
+from typing import Optional, List, Callable
 
 import cv2 as cv
 import numpy as np
 
 import pcot.dq
-from pcot import rois, operations
+from pcot import rois, operations, dq
 from pcot.config import getAssetPath
 from pcot.datum import Datum
-from pcot.expressions.register import funcWrapper, statsWrapper, datumfunc
+from pcot.expressions.register import datumfunc
 from pcot.expressions.ops import combineImageWithNumberSources
 from pcot.filters import Filter
 from pcot.imagecube import ImageCube
@@ -16,8 +17,183 @@ from pcot.sources import MultiBandSource, SourceSet, Source
 from pcot.utils import image
 from pcot.utils.deb import Timer
 from pcot.utils.geom import Rect
+from pcot.utils.maths import pooled_sd
 from pcot.value import Value, add_sub_unc_list
 from pcot.xform import XFormException
+
+
+@datumfunc
+def flat(val, *args):
+    """
+    Turns a list of vectors, images and numbers into a single vector, by flattening each into a 1D vector
+    and concatenating them all together. Data with any of the dq.BAD bits is removed.
+
+    @param val:img,number:the first value (image, number or vector)
+    """
+
+    intermediate = None
+    uncintermediate = None
+    dqintermediate = None
+
+    d = [val] + list(args)
+
+    sources = []
+    for x in d:
+        # get each datum, which is either numeric or an image.
+        if x is None:
+            continue
+        elif x.isImage():
+            # if an image, convert to a 1D array
+            subimage = x.val.subimage()
+            # we ignore "bad" pixels in the data
+            mask = subimage.fullmask(maskBadPixels=True)
+            cp = subimage.img.copy()
+            cpu = subimage.uncertainty.copy()
+            cpd = subimage.dq.copy()
+
+            sources.append(x.sources)
+            masked = np.ma.masked_array(cp, mask=~mask)
+            uncmasked = np.ma.masked_array(cpu, mask=~mask)
+            dqmasked = np.ma.masked_array(cpd, mask=~mask)
+
+            # we convert the data into a flat numpy array if it isn't one already
+            if isinstance(masked, np.ma.masked_array):
+                newdata = masked.compressed()  # convert to 1d and remove masked elements
+            elif isinstance(masked, np.ndarray):
+                newdata = masked.flatten()  # convert to 1d
+            else:
+                raise XFormException('EXPR', 'internal: data in masked array is wrong type in flat()')
+
+            if isinstance(uncmasked, np.ma.masked_array):
+                uncnewdata = uncmasked.compressed()  # convert to 1d and remove masked elements
+            elif isinstance(uncmasked, np.ndarray):
+                uncnewdata = uncmasked.flatten()  # convert to 1d
+            else:
+                raise XFormException('EXPR', 'internal: data in uncmasked array is wrong type in flat()')
+
+            if isinstance(dqmasked, np.ma.masked_array):
+                dqnewdata = dqmasked.compressed()
+            elif isinstance(dqmasked, np.ndarray):
+                dqnewdata = dqmasked.flatten()
+            else:
+                raise XFormException('EXPR', 'internal: data in dqmasked array is wrong type in flat()')
+
+        elif x.tp == Datum.NUMBER:
+            if x.val.isscalar():
+                # if a number, convert to a single-value array
+                if not x.val.dq & dq.BAD:
+                    newdata = np.array([x.val.n], np.float32)
+                    uncnewdata = np.array([x.val.u], np.float32)
+                    dqnewdata = np.array([x.val.dq], np.uint16)
+                else:
+                    continue  # skip bad data
+            else:
+                # vector data. We need to remove any bad data with indexing tricks
+                good_indices = (x.val.dq & dq.BAD) == 0
+                newdata = x.val.n[good_indices]
+                uncnewdata = x.val.u[good_indices]
+                dqnewdata = x.val.dq[good_indices]
+                if len(newdata) == 0:
+                    continue  # if all data bad, skip it
+            sources.append(x.sources)
+        else:
+            raise XFormException('EXPR', 'internal: bad type passed to flat()')
+
+        # and concat it to the intermediate array
+        if intermediate is None:
+            intermediate = newdata
+            uncintermediate = uncnewdata
+            dqintermediate = dqnewdata
+        else:
+            intermediate = np.concatenate((intermediate, newdata))
+            uncintermediate = np.concatenate((uncintermediate, uncnewdata))
+            dqintermediate = np.concatenate((dqintermediate, dqnewdata))
+
+    # then create the value
+    val = Value(intermediate, uncintermediate, dqintermediate)
+    return Datum(Datum.NUMBER, val, SourceSet(sources))
+
+
+def func_wrapper(fn: Callable[[Value], Value], d: Datum) -> Datum:
+    """Takes a function which takes and returns Value, and a datum. This is a utility for dealing with
+    functions. For images, it strips out the relevant pixels (subject to ROIs) and creates a masked array. However, BAD
+    pixels are included. It then performs the operation and creates a new image which is a copy of the
+    input with the new data spliced in."""
+
+    if d is None:
+        return None
+    elif d.tp == Datum.NUMBER:  # deal with numeric argument (always returns a numeric result)
+        # get sources for all arguments
+        ss = d.getSources()
+        rv = fn(d.val)
+        return Datum(Datum.NUMBER, rv, SourceSet(ss))
+    elif d.isImage():
+        img = d.val
+        ss = d.sources
+        subimage = img.subimage()
+
+        # make copies of the source data into which we will splice the results
+        imgcopy = subimage.img.copy()
+        unccopy = subimage.uncertainty.copy()
+        dqcopy = subimage.dq.copy()
+
+        # Perform the calculation on the entire subimage rectangle, but only the results covered by ROI
+        # will be spliced back into the image (modifyWithSub does this).
+        v = Value(imgcopy, unccopy, dqcopy)
+
+        rv = fn(v)
+        # depending on the result type..
+        if rv.isscalar():
+            # ...either use it as a number datum
+            return Datum(Datum.NUMBER, rv, ss)
+        else:
+            # ...or splice it back into the image
+            img = img.modifyWithSub(subimage, rv.n, uncertainty=rv.u, dqv=rv.dq)
+            return Datum(Datum.IMG, img)
+    else:
+        raise XFormException('EXPR', 'unsupported type for function')
+
+
+def stats_wrapper(val, func):
+    """Takes a function that operates on a tuple of val,unc,dq and returns same
+    """
+    if val.tp == Datum.NUMBER:
+        ns = val.get(Datum.NUMBER).n
+        us = val.get(Datum.NUMBER).u
+        dqs = val.get(Datum.NUMBER).dq
+        nr, ur, dqr = func(ns, us, dqs)
+        return Datum(Datum.NUMBER, Value(nr, ur, dqr), sources=val.sources)
+    elif val.isImage():
+        img = val.get(Datum.IMG)
+        if img is None:
+            return None
+
+        # get the subimage (i.e. only the part covered by ROIs if there are any)
+        # and mask out the bad pixels
+        subimage = img.subimage()
+        mask = subimage.fullmask(maskBadPixels=True)
+        # I was making a copy, but I don't think it's needed.
+        imgn_masked = np.ma.masked_array(subimage.img, mask=~mask)
+        imgu_masked = np.ma.masked_array(subimage.uncertainty, mask=~mask)
+        imgd_masked = np.ma.masked_array(subimage.dq, mask=~mask)
+
+        if img.channels == 1:
+            # mono image
+            ns, us, ds = func(imgn_masked, imgu_masked, imgd_masked)
+        else:
+            # split the image into bands
+            ns = image.imgsplit(imgn_masked)
+            us = image.imgsplit(imgu_masked)
+            ds = image.imgsplit(imgd_masked)
+            v = [func(ns[i], us[i], ds[i]) for i in range(0, len(ns))]
+            # we now have a list of tuples. We want to get from this:
+            # [(n,u,d),(n,u,d),(n,u,d) .. ] to [(n,n,n,n),(u,u,u,u),(d,d,d,d)]
+            # so we use zip to transpose the list of tuples
+            ns, us, ds = list(zip(*v))
+        return Datum(Datum.NUMBER, Value(ns, us, ds), img.sources)
+    else:
+        # shouldn't happen because we check types
+        raise XFormException('DATA', 'stats functions can only take numbers or images')
 
 
 @datumfunc  # NOUNCERTAINTYTEST
@@ -117,13 +293,17 @@ def grey(img, opencv=0):
             # 'out' will be the greyscale image found by calculating the mean of all channels in img.img
             out = np.mean(img.img, axis=2).astype(np.float32)
 
-            # uncertainty is messier - add the squared uncertainties, divide by N, and root.
-            outu = np.zeros(img.uncertainty.shape[:2], dtype=np.float32)
-            for i in range(0, img.channels):
-                c = img.uncertainty[:, :, i]
-                outu += c * c
-            # divide by the count and root
-            outu = np.sqrt(outu) / img.channels
+            # to calculate the uncertainty, the pooled variance will be the variance of the means, plus the
+            # mean of the variances. So first we'll find the variances of each channel (this is the "variance
+            # of the means").
+            varchans = np.var(img.img, axis=2)
+            # then we calculate the mean of the variances - to do this, we need to square the uncertainty (to give
+            # us variance) and calculate the mean per pixel.
+            outu = np.mean(np.square(img.uncertainty), axis=2)
+            # we can then add these together - that gives the pooled variance, which we can root to get the pooled
+            # standard deviation.
+            outu = np.sqrt(outu + varchans)
+
             img = ImageCube(out, img.mapping, sources, uncertainty=outu, dq=dq, rois=img.rois)
     return Datum(Datum.IMG, img)
 
@@ -308,7 +488,7 @@ def sin(a):
     Calculate sine of an angle in radians
     @param a:img,number:the angle (or image in which each pixel is a single angle)
     """
-    return funcWrapper(lambda xx: xx.sin(), a)
+    return func_wrapper(lambda xx: xx.sin(), a)
 
 
 @datumfunc
@@ -317,7 +497,7 @@ def cos(a):
     Calculate cosine of an angle in radians
     @param a:img,number:the angle (or image in which each pixel is a single angle)
     """
-    return funcWrapper(lambda xx: xx.cos(), a)
+    return func_wrapper(lambda xx: xx.cos(), a)
 
 
 @datumfunc
@@ -326,7 +506,7 @@ def tan(a):
     Calculate tangent of an angle in radians
     @param a:img,number:the angle (or image in which each pixel is a single angle)
     """
-    return funcWrapper(lambda xx: xx.tan(), a)
+    return func_wrapper(lambda xx: xx.tan(), a)
 
 
 @datumfunc
@@ -335,18 +515,48 @@ def sqrt(a):
     Calculate square root
     @param a:img,number:values (image or number)
     """
-    return funcWrapper(lambda xx: xx.sqrt(), a)
+    return func_wrapper(lambda xx: xx.sqrt(), a)
 
 
 @datumfunc
-def abs(a):     # careful now, we're shadowing the builtin "abs" here.
+def abs(a):  # careful now, we're shadowing the builtin "abs" here.
     """
     Calculate absolute value
     @param a:img,number:values (image or number)
     """
     # We don't want to inadvertently recurse, so call the builtin
     # abs function.
-    return funcWrapper(lambda xx: builtins.abs(xx), a)
+    return func_wrapper(lambda xx: builtins.abs(xx), a)
+
+
+@datumfunc
+def vec(s1, *remainingargs):
+    """
+    Create a 1D numeric vector from several scalars or vectors.
+    @param s1:number:the first scalar or vector
+    """
+    args = [s1] + list(remainingargs)
+    if any([x is None for x in args]):
+        raise XFormException('EXPR', 'argument is None for vec')
+
+    if any([x.tp != Datum.NUMBER for x in args]):
+        raise XFormException('EXPR', 'vec must take only numbers')
+
+    # extract numeric values and concatenate them
+    values = [x.get(Datum.NUMBER) for x in args]
+
+    def concat(xx, dtype):
+        """Take a list of mixed scalar and 1D numpy arrays. Concatenate into
+        a single 1D numpy array."""
+        es = [np.array([e], dtype=dtype) if np.isscalar(e) else e for e in xx]
+        return np.concatenate(es)
+
+    ns = concat([x.n for x in values], np.float32)
+    us = concat([x.u for x in values], np.float32)
+    dqs = concat([x.dq for x in values], np.uint16)
+
+    # now build our value
+    return Datum(Datum.NUMBER, Value(ns, us, dqs), sources=SourceSet([x.sources for x in args]))
 
 
 testImageCache = {}
@@ -358,7 +568,7 @@ def testimg(index):
     Load a test image
     @param index : number : the index of the image to load
     """
-    fileList = ("marsRGB.png", "gradRGB.png")
+    fileList = ("marsRGB.png", "gradRGB.png", "corrib.png")
     n = int(index.get(Datum.NUMBER).n)
     if n < 0:
         raise XFormException('DATA', 'negative test file index')
@@ -428,82 +638,100 @@ def setcwl(img, cwl):
     return Datum(Datum.IMG, img)
 
 
-def pooled_sd(n, u):
-    """Returns pooled standard deviation for an array of nominal values and an array of stddevs."""
-    # "Thus the variance of the pooled set is the mean of the variances plus the variance of the means."
-    # by https://arxiv.org/ftp/arxiv/papers/1007/1007.1012.pdf
-    # the variance of the means is n.var()
-    # the mean of the variances is np.mean(u**2) (since u is stddev, and stddev**2 is variance)
-    # so the sum of those is pooled variance. Root that to get the pooled stddev.
-    # There is a similar calculation in xformspectrum!
-    varianceOfMeans = n.var()
-    meanOfVariances = np.mean(u ** 2)
-    return np.sqrt(varianceOfMeans + meanOfVariances)
+@datumfunc
+def mean(val):
+    """
+    Find the mean±sd of a Datum. This does different things depending on what kind of Datum we are dealing with.
+    For a scalar, it just returns the scalar. For a vector, it returns the mean and sd of the vector. For an
+    image, it returns a vector of the means and sds of each channel.
+    Pixels with "bad" DQ bits will be ignored.
+
+
+    @param val:img,number:the value to process
+    """
+    return stats_wrapper(val,
+                         lambda n, u, d: (np.mean(n), pooled_sd(n, u), pcot.dq.NONE))
 
 
 @datumfunc
-def mean(val, *args):
-    """
-    find the mean±sd of the values of a set of images and/or scalars.
-    Uncertainties in the data will be pooled. Images will be flattened into a list of values,
-    so the result for multiband images may not be what you expect.
+def sd(val):
+    """Find the SD of a Datum. This does different things depending on what kind of Datum we are dealing with.
+    For a scalar, it just returns 0. For a vector or single-channel image, it returns a scalar. For an image, it returns a
+    vector of the SDs of each channel. Because each individual value in the input set can have its own uncertainty, the
+    uncertainty is pooled (the pooled variance is the mean of the variances plus the variance of the means).
+    Pixels with "bad" DQ bits will be ignored.
 
-    @param val:img,number:value(s) to input
+    @param val:img,number:the value to process
     """
-    v = (val,) + args
-    return statsWrapper(lambda n, u: Value(np.mean(n), pooled_sd(n, u), pcot.dq.NONE), v)
+
+    return stats_wrapper(val,
+                         lambda n, u, d: (pooled_sd(n, u), 0, pcot.dq.NONE))
+
+
+def minmax(f, n, u, d):
+    """Find the minimum and maximum of a set of values, with uncertainty. This is a helper function for min and max;
+    you pass np.argmin or np.argmax depending on what you want. The arrays passed in are the individual arrays which
+    make up a value or image, and they can be of any dimensionality."""
+    if np.isscalar(n):
+        return n, u, d
+    else:
+        # find the index of the minimum value
+        idx = np.unravel_index(f(n), n.shape)
+        return n[idx], u[idx], d[idx]
+
+@datumfunc
+def min(val):
+    """
+    Find the minimum of a Datum. For a multiband image, returns a vector of the minimum value of each band.
+    For a single band image, a scalar, or a vector, returns a scalar.
+    Pixels with "bad" DQ bits will be ignored.
+
+    See also the & (AND) operator, which will find the minimum of two values (or images, vectors etc).
+
+    @param val:img,number:value to process
+    """
+
+    return stats_wrapper(val, lambda n, u, d: minmax(np.argmin, n, u, d))
 
 
 @datumfunc
-def sd(val, *args):
+def max(val):
     """
-    find the standard deviation of the values of a set of images and/or scalars.
-    Uncertainties in the data will be pooled. Images will be flattened into a list of values,
-    so the result for multiband images may not be what you expect.
+    Find the maximum of a Datum. For a multiband image, returns a vector of the maximum of each band.
+    For a single band image, a scalar, or a vector, returns a scalar.
+    Pixels with "bad" DQ bits will be ignored.
 
-    @param val:img,number:value(s) to input
+    See also the | (OR) operator, which will find the minimum of two values (or images, vectors etc).
+
+    @param val:img,number:value to process
     """
-    v = (val,) + args
-    return statsWrapper(lambda n, u: Value(pooled_sd(n, u), 0, pcot.dq.NOUNCERTAINTY), v)
+    return stats_wrapper(val, lambda n, u, d: minmax(np.argmax, n, u, d))
 
 
 @datumfunc
-def min(val, *args):
+def sum(val):
     """
-    find the minimum of the nominal values of a set of images and/or scalars.
-    Images will be flattened into a list of values,
-    so the result for multiband images may not be what you expect.
+    Find the sum of a Datum. For a multiband image, returns a vector of the sums of each band.
+    For a single band image, a scalar, or a vector, returns a scalar.
+    The uncertainty is pooled differently as this is a sum. The variance will be the variance of
+    the means plus the sum of the variances.
 
-    @param val:img,number:value(s) to input
+    Pixels with "bad" DQ bits will be ignored.
+
+    @param val:img,number:value to process
     """
-    v = (val,) + args
-    return statsWrapper(lambda n, u: Value(np.min(n), 0, pcot.dq.NOUNCERTAINTY), v)
 
+    def sum_of_variances(n, u):
+        # we calculate variance of the values in the set
+        varianceOfMeans = n.var()
+        # we calculate the sum of the variances (not the mean this time!)
+        sumOfVariances = np.sum(u ** 2)
+        # and return the sum of those two.
+        return np.sqrt(varianceOfMeans + sumOfVariances)
 
-@datumfunc
-def max(val, *args):
-    """
-    find the maximum of the nominal values of a set of images and/or scalars.
-    Images will be flattened into a list of values,
-    so the result for multiband images may not be what you expect.
-
-    @param val:img,number:value(s) to input
-    """
-    v = (val,) + args
-    return statsWrapper(lambda n, u: Value(np.max(n), 0, pcot.dq.NOUNCERTAINTY), v)
-
-
-@datumfunc
-def sum(val, *args):
-    """
-    find the sum of the values of a set of images and/or scalars.
-    Images will be flattened into a list of values,
-    so the result for multiband images may not be what you expect.
-
-    @param val:img,number:value(s) to input
-    """
-    v = (val,) + args
-    return statsWrapper(lambda n, u: Value(np.sum(n), add_sub_unc_list(u), pcot.dq.NONE), v)
+    rr = stats_wrapper(val,
+                       lambda n, u, d: (np.sum(n), sum_of_variances(n,u), pcot.dq.NOUNCERTAINTY))
+    return rr
 
 
 @datumfunc
@@ -680,17 +908,17 @@ def interp(img, factor, w=-1):
 
     # get the ROI if present, otherwise the whole image
     if img.rois is None or len(img.rois) == 0:
-        rect = Rect(0,0, img.w, img.h)
+        rect = Rect(0, 0, img.w, img.h)
     else:
         r = ROI.roiUnion(img.rois)
         if r is None:
-            rect = Rect(0,0, img.w, img.h)
+            rect = Rect(0, 0, img.w, img.h)
         else:
             rect = r.bb()
 
     # now get the wavelengths in the image
     wavelengths = [img.wavelength(i) for i in range(img.channels)]
-    if len(wavelengths)<2:
+    if len(wavelengths) < 2:
         raise XFormException('DATA', 'image must have at least two bands to interpolate')
     # fail if any are -1
     if any([x == -1 for x in wavelengths]):
@@ -720,8 +948,8 @@ def interp(img, factor, w=-1):
         yfactor = rect.h / height
         for x in range(width):
             for y in range(height):
-                xx = x*xfactor + rect.x
-                yy = y*yfactor + rect.y
+                xx = x * xfactor + rect.x
+                yy = y * yfactor + rect.y
                 outimg[y, x] = ip.trilinear_interpolation_fast(y_volume, x_volume, z_volume, volume, yy, xx, factor)
             print(x)
     # construct the new imagecube

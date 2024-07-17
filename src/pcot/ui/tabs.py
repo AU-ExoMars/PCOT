@@ -176,7 +176,7 @@ class Tab(QtWidgets.QWidget):
 
     updatingTabs = False  # we are updating after a perform, don't take too much notice of calls to changed()
 
-    def __init__(self, window, node, uifile):
+    def __init__(self, window, node, uifile=None):
         """constructor, which should be called by the subclass ctor"""
         super(Tab, self).__init__()
         self.expanded = None

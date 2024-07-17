@@ -120,6 +120,12 @@ class XFormExpr(XFormType):
     |------------|---------|
     | **(a+b)$G0** | **a$G0 + b$G0** |
     | **((a+b)/2)$780** | **(a$780+b$780)/2**  |
+
+    ### Brackets
+
+    Round brackets are used to group expressions as usual, but square brackets are used for indexing into a vector.
+    For example, **a[3]** will extract the fourth element of the vector **a**. However, square brackets cannot
+    (yet) create a vector. To do this, use the `vec` function - so `vec(1,2,3)[1]` will return 2.
     
     Band extraction can also be performed with vectors provided the vector elements are numeric (i.e. wavelengths):
     `a $ vec(640,550,440)` is valid.
@@ -139,7 +145,7 @@ class XFormExpr(XFormType):
 
     ## Uncertainties are assumed to be independent in all binary operations
 
-    While uncertainty is propagated through operations (as standard deviation) all quantities are assumed
+    While uncertainty is propagated through operations (as population standard deviation) all quantities are assumed
     to be independent (calculating covariances is beyond the scope of this system). Be very careful here.
     For example, the uncertainty for the expression **tan(a)** will be calculated correctly, but if you try
     to use **sin(a)/cos(a)** the uncertainty will be incorrect because the nominator and denominator are
@@ -200,13 +206,16 @@ class XFormExpr(XFormType):
                                 node.mapping = ChannelMapping()
                             node.img.setMapping(node.mapping)
                     node.resultStr = res.tp.getDisplayString(res)
-                    node.setRectText(node.resultStr)
+                    node.setRectText(res.tp.getDisplayString(res, True))
                 else:
                     # no output, so reset the output type
                     node.changeOutputType(0, Datum.NONE)
 
         except Exception as e:
             traceback.print_exc()
+            node.img = None
+            node.setOutput(0, Datum.null)
+            node.changeOutputType(0, Datum.NONE)
             node.resultStr = str(e)
             ui.error(f"Error in expression: {str(e)}")
             raise XFormException('EXPR', str(e))
@@ -236,11 +245,7 @@ class TabExpr(pcot.ui.tabs.Tab):
         self.changed()
 
     def onNodeChanged(self):
-        self.w.canvas.setNode(self.node)
+        self.w.data.canvas.setNode(self.node)
         self.w.expr.setPlainText(self.node.expr)
-        self.w.result.setPlainText(self.node.resultStr)
         d = self.node.getOutputDatum(0)
-        if d is not None and d.tp == Datum.IMG:
-            self.w.canvas.display(d.val)
-        else:
-            self.w.canvas.display(None)
+        self.w.data.display(d)

@@ -1,9 +1,11 @@
 import math
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
+from numpy.typing import NDArray
 
-from pcot import dq
+from pcot import dq, config
+from pcot.utils.maths import pooled_sd
 
 
 def add_sub_unc(ua, ub):
@@ -19,8 +21,8 @@ def add_sub_unc_list(lst):
 def mul_unc(a, ua, b, ub):
     """Multiplication - this is derived from the standard answer
     (thanks, Wolfram!) assuming the values are real"""
-    # This is the "standard answer" - you can confirm it's the same when all values are positive
-    #    return np.abs(a*b) * np.sqrt((ua/a)**2 + (ub/b)**2)
+    # This is the "standard answer" - you can confirm it's the same when all unc values are non-negative
+    # return np.abs(a*b) * np.sqrt((ua/a)**2 + (ub/b)**2)
 
     # this is the simplification
     return np.sqrt((a * ub) ** 2 + (b * ua) ** 2)
@@ -32,7 +34,7 @@ def div_unc(a, ua, b, ub):
     #   standard answer - throws exceptions with either a or b is 0.
     # return np.abs(a/b) * np.sqrt((ua/a)**2 + (ub/b)**2)
 
-    #   is equivalent to this when all values are positive
+    #   is equivalent to this when all unc values are non-negative
     return np.sqrt(((a * ub) ** 2 + (b * ua) ** 2)) / (b ** 2)
 
 
@@ -146,18 +148,29 @@ class Value:
     """Wraps a value with uncertainty and data quality. This can be either an array or a scalar, but they
     have to match."""
 
-    n: np.float32
-    u: np.float32
-    dq: np.uint16
+    # each of these is either a scalar or an array
+    n: Union[NDArray[np.float32], np.float32]
+    u: Union[NDArray[np.float32], np.float32]
+    dq: Union[NDArray[np.uint16], np.uint16]
 
-    def __init__(self, n, u: Any = 0.0, d=dq.NONE):
+    # maximum number of elements to display in an array
+    MAXARRAYDISPLAY = 10
+
+    def __init__(self, n, u: Any = None, d=dq.NONE):
         """Initialise a value - either array of float32 or scalar.
         n = nominal value
         u = uncertainty (SD)
         d = data quality bits (see DQ; these are error bits).
-        This has to make sure that n, u and d are all the same dimensionality."""
+        This method will expand scalars to ensure that n, u and d are all the same dimensionality.
+        If no uncertainty is provided, it is set to zero and the NOUNCERTAINTY bit is set in the DQ bits.
+        """
 
-        n = np.float32(n)  # convert to correct types (will also convert arrays)
+        # if u is None, we assume no uncertainty value is provided
+        if u is None:
+            u = 0.0
+            d |= dq.NOUNCERTAINTY
+
+        n = np.float32(n)  # convert to correct types (will also convert lists into np.arrays)
         u = np.float32(u)
         d = np.uint16(d)
 
@@ -190,12 +203,30 @@ class Value:
         return np.isscalar(self.n)
 
     def serialise(self):
-        return self.n, self.u, self.dq
+        if self.isscalar():
+            return float(self.n), float(self.u), int(self.dq)
+        else:
+            return self.n, self.u, self.dq
 
     @staticmethod
     def deserialise(t):
         n, u, d = t
+        if np.isscalar(n):
+            n = np.float32(n)
+            u = np.float32(u)
+            d = np.uint16(d)
         return Value(n, u, d)
+
+    def __getitem__(self, idx):
+        if self.isscalar():
+            raise Exception("Can't get by index from a scalar")
+        if isinstance(idx, Value):
+            idx = idx.n
+        idx = int(idx)
+        try:
+            return Value(self.n[idx], self.u[idx], self.dq[idx])
+        except IndexError:
+            raise IndexError(f"Index {idx} out of range for Value vector of length {self.n.shape[0]}")
 
     def __eq__(self, other):
         return np.array_equal(self.n, other.n) and np.array_equal(self.u, other.u) and np.array_equal(self.dq, other.dq)
@@ -310,23 +341,29 @@ class Value:
         COSTHRESH = 1e-7
         COSREPLACE = 1e-7
 
-        extra = dq.NONE   # bits to OR into the DQ of the result
+        extra = dq.NONE  # bits to OR into the DQ of the result
         if self.isscalar():
             cos = np.cos(self.n)
             if np.abs(cos) < COSTHRESH:
                 cos = COSREPLACE
                 extra = dq.DIVZERO
             sec = 1.0 / cos
-            u = np.sqrt((sec**2 * self.u)**2)
+            u = np.sqrt((sec ** 2 * self.u) ** 2)
         else:
             cos = np.cos(self.n)
             cossmall = np.abs(cos) < COSTHRESH
-            cos = np.where(cossmall, COSREPLACE, cos)   # turn infs into large
+            cos = np.where(cossmall, COSREPLACE, cos)  # turn infs into large
             extra = np.where(cossmall, dq.DIVZERO, dq.NONE)
             sec = 1.0 / cos
-            u = np.sqrt((sec**2 * self.u)**2)
+            u = np.sqrt((sec ** 2 * self.u) ** 2)
 
         return Value(np.tan(self.n), u, self.dq | extra)
+
+    def __len__(self):
+        if self.isscalar():
+            raise Exception("Can't get length of a scalar")
+        else:
+            return len(self.n)
 
     def __abs__(self):
         return Value(np.abs(self.n), self.u, self.dq)
@@ -338,22 +375,64 @@ class Value:
         return Value(1 - self.n, self.u, self.dq)
 
     def __str__(self):
-        return self.sigfigs(5)
-
-    def sigfigs(self, figs):
-        """a string representation to a given number of significant figures"""
-        if np.isscalar(self.n):
-            return f"{self.n:.{figs}g}±{self.u:.{figs}g}"
-        else:
-            return f"Value:array{self.n.shape}"
-
+        return self.out()
 
     def __repr__(self):
         return self.__str__()
 
-    def brief(self):
-        """Very brief ASCII-safe representation used in e.g. test names"""
-        if self.dq != 0:
-            return f"{self.n}|{self.u}|{dq.names(self.dq, True)}"
+    @staticmethod
+    def scalar_out(n, u, d, sigfigs):
+        """Output a scalar value"""
+        # first get a string for the DQ bits
+        dqstr = dq.chars(d)
+        return f"{n:.{sigfigs}g}±{u:.{sigfigs}g}{dqstr}"
+
+    def out(self, sigfigs=config.sigfigs):
+        """a string representation to a given number of significant figures"""
+        if np.isscalar(self.n):
+            return self.scalar_out(self.n, self.u, self.dq, sigfigs)
         else:
-            return f"{self.n}|{self.u}"
+            if len(self.n.shape) == 1:
+                # truncate and note if we're truncating
+                truncate = len(self.n) > self.MAXARRAYDISPLAY
+                n = self.n[:self.MAXARRAYDISPLAY] if truncate else self.n
+                u = self.u[:self.MAXARRAYDISPLAY] if truncate else self.u
+                d = self.dq[:self.MAXARRAYDISPLAY] if truncate else self.dq
+                truncstr = "..." if truncate else ""
+                return "[" + ", ".join([self.scalar_out(n, u, d, sigfigs) for n, u, d in
+                                        zip(n, u, d)]) + truncstr + "]"
+            else:
+                # funny array - just show the shape
+                return f"Array of shape {self.n.shape}"
+
+    def brief_internal_repr(self):
+        """Used for *very* brief names in internal tests. It can't contain non-ascii characters or space because it's
+        used in test names (so we can't use the __str__)."""
+        if np.isscalar(self.n):
+            return f"{self.n:.2g}|{self.u:.2g}|{dq.chars(self.dq)}"
+        else:
+            return f"arrayvalue{self.n.shape}"
+
+    def split(self):
+        """Split a vector/array value into an list of Value objects. The result will be a 1D list, regardless
+        of the shape of the original. Used in tests."""
+
+        assert not np.isscalar(self.n)  # can't split a scalar
+
+        # if we're here, we have an array. Now it gets ugly. First. flatten the arrays
+        n = self.n.ravel()
+        u = self.u.ravel()
+        d = self.dq.ravel()
+        # now build a list of Values from the flattened arrays
+        return [Value(ni, ui, di) for ni, ui, di in zip(n, u, d)]
+
+    def uncertainty(self):
+        """If a scalar, just return the uncertainty. If a vector, calculate the pooled SD."""
+        if self.isscalar():
+            return self.u
+        else:
+            return pooled_sd(self.n, self.u)
+
+
+
+

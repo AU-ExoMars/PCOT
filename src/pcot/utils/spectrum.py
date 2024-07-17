@@ -12,6 +12,7 @@ from pcot.filters import Filter
 from pcot.imagecube import ImageCube
 from pcot.rois import ROI
 from pcot.sources import SourceSet, SourcesObtainable
+from pcot.utils.maths import pooled_sd
 from pcot.utils.table import Table
 from pcot.value import Value
 from pcot.xform import XFormException
@@ -57,9 +58,8 @@ def getMeanValue(chanImg, chanUnc, chanDQ, mask, ignorePixSD=False):
         # by https://arxiv.org/ftp/arxiv/papers/1007/1007.1012.pdf
         # So we'll calculate the variance of the means added to the mean of the variances.
         # And then we'll need to root that variance to get back to SD.
-        # There is a similar calculation called pooled_sd() in builtins!
 
-        std = np.sqrt(a.var() + np.mean(np.ma.masked_array(data=chanUnc, mask=~mask) ** 2))
+        std = pooled_sd(a, np.ma.masked_array(data=chanUnc, mask=~mask))
     else:
         std = a.std()  # otherwise get the SD of the nominal values
 

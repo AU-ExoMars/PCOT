@@ -29,7 +29,7 @@ def test_expansion_scalar_float():
     a = Value(0.0)
     assert a.n == 0.0
     assert a.u == 0.0
-    assert a.dq == dq.NONE
+    assert a.dq == dq.NOUNCERTAINTY
 
 
 def test_expansion_scalar_int():
@@ -38,7 +38,7 @@ def test_expansion_scalar_int():
     assert isinstance(a.n, np.float32)
     assert a.n == 0.0
     assert a.u == 0.0
-    assert a.dq == dq.NONE
+    assert a.dq == dq.NOUNCERTAINTY
 
 
 def test_expansion_noUorDQ():
@@ -50,7 +50,7 @@ def test_expansion_noUorDQ():
     assert a.dq.shape == (4, 4)
     assert np.allclose(a.n, 1.0)
     assert np.allclose(a.u, 0.0)
-    assert np.all(a.dq == dq.NONE)
+    assert np.all(a.dq == dq.NOUNCERTAINTY)
 
 
 def test_expansion_noDQ():
@@ -68,13 +68,13 @@ def test_expansion_noDQ():
 def test_expansion_noU():
     """expand a nominal array with a scalar DQ"""
     arr = np.full((4, 4), 1.0, dtype=np.float32)
-    a = Value(arr, d=dq.NONE)
+    a = Value(arr, d=dq.TEST)
     assert a.n.shape == (4, 4)
     assert a.u.shape == (4, 4)
     assert a.dq.shape == (4, 4)
     assert np.allclose(a.n, 1.0)
     assert np.allclose(a.u, 0.0)
-    assert np.all(a.dq == dq.NONE)
+    assert np.all(a.dq == dq.TEST | dq.NOUNCERTAINTY)
 
 
 def test_expansion_scalarUandDQ():
@@ -286,6 +286,19 @@ def test_propagation():
     core(genArray, Value, genArray)
 
 
+def test_propagation_unary():
+    """test that unary operators copy their DQ bits to the result"""
+
+    def core(a):
+        assert -a(2, 0.1) == a(-2, 0.1, dq.NONE)
+        assert ~a(0.25, 0.1) == a(0.75, 0.1, dq.NONE)
+        assert -a(2, 0.1, dq.TEST) == a(-2, 0.1, dq.TEST)
+        assert ~a(0.25, 0.1, dq.TEST) == a(0.75, 0.1, dq.TEST)
+
+    core(Value)
+    core(genArray)
+
+
 def test_negate_invert():
     """Test unary operations"""
 
@@ -296,3 +309,4 @@ def test_negate_invert():
 
     core(Value)
     core(genArray)
+

@@ -239,14 +239,14 @@ def test_greyscale_simple():
     assert isinstance(x, ImageCube)
     p = x[0, 0]
     assert isinstance(p, Value)
-    assert p.approxeq(Value(5, 4.6427960923947))
+    assert p.approxeq(Value(5, 8.082904))
 
     # and with an explicit false argument
     expr.expr = "grey(a,0)"
     doc.run()
     x = expr.getOutput(0, Datum.IMG)
     p = x[0, 0]
-    assert p.approxeq(Value(5, 4.6427960923947))
+    assert p.approxeq(Value(5, 8.082904))
 
 
 def test_greyscale_human():
@@ -311,7 +311,7 @@ def test_unconnected_input_binop():
 
         doc.run()
         out = expr.getOutputDatum(0)
-        assert out is None
+        assert out is Datum.null
         assert expr.error.message == "variable's input is not connected"
 
 
@@ -334,7 +334,7 @@ def test_null_datum_input_binop():
 
         doc.run()
         out = expr.getOutputDatum(0)
-        assert out is None
+        assert out is Datum.null
         assert expr.error.message == f"incompatible types for operator ADD: {ts}"
 
 
@@ -359,5 +359,5 @@ def test_null_image_input_binop():
 
         doc.run()
         out = expr.getOutputDatum(0)
-        assert out is None
+        assert out is Datum.null
         assert expr.error.message == "cannot perform binary operation on None image"
