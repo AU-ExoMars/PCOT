@@ -14,9 +14,9 @@ It will load all the files for each distinct name and wavelength as 1-band
 images and average them into a single 1-band image, with the uncertainty of
 each pixel calculated from the input images.
 
-They will then all be merged into a single n-band ENVI.
+They will then all be merged into a single n-band data archive
 
-    out_<name>.hdr, out_<name>.dat
+    out_<name>.zip
 """
 
 import re
@@ -28,6 +28,8 @@ from pcot.dataformats import envi
 from pcot.datum import Datum
 from pcot.filters import Filter,getFilter
 from pcot.sources import MultiBandSource, Source, StringExternal
+from pcot.utils.archive import FileArchive
+from pcot.utils.datumstore import DatumStore
 
 import pcot.datumfuncs as df
 
@@ -69,24 +71,24 @@ def process(data):
     for name,d in data.items():
         band_images = []
         print(f"{name} has {len(d)} filters")
-        for filterpos,filenames in d.items():
-            # get the filter data for this filter
-            filter = getFilter(FILTERSET,filterpos,search='pos')
-            if filter.cwl == 0:
-                raise Exception(f"cannot find filter {filterpos}")
-            # we have a list of filenames. Let's load them all in as a single image.
-            datum = load.multifile(".",filenames)
-            # we now have a 10-band image! Let's greyscale that image. This will also aggregate the uncertainties.
-            img = df.grey(datum).get(Datum.IMG)
-            # set the source to be the filter we're using
-            source = Source().setBand(filter).setExternal(StringExternal("createflatfield","creatflatfield"))
-            img.sources = MultiBandSource([source])
-            band_images.append(img)
-        # now merge all the individual band images - have to wrap in Datum first and then
-        # expand!
-        img = df.merge(*[Datum(Datum.IMG,x) for x in band_images])
-        # now save that as ENVI.
-        envi.write(f"out_{name}",img.get(Datum.IMG),camname=CAMNAME)
+        with FileArchive(f"out_{name}.parc","w") as fa, DatumStore(fa) as a:
+            for filterpos,filenames in d.items():
+                # get the filter data for this filter
+                filter = getFilter(FILTERSET,filterpos,search='pos')
+                if filter.cwl == 0:
+                    raise Exception(f"cannot find filter {filterpos}")
+                # we have a list of filenames. Let's load them all in as a single image.
+                datum = load.multifile(".",filenames)
+                # we now have a 10-band image! Let's greyscale that image. This will also aggregate the uncertainties.
+                img = df.grey(datum).get(Datum.IMG)
+                # set the source to be the filter we're using
+                source = Source().setBand(filter).setExternal(StringExternal("createflatfield","creatflatfield"))
+                img.sources = MultiBandSource([source])
+                band_images.append(img)
+            # now merge all the individual band images - have to wrap in Datum first and then
+            # expand!
+            img = df.merge(*[Datum(Datum.IMG,x) for x in band_images])
+            a.writeDatum("main",img)
         
 
 process(readfiles())
