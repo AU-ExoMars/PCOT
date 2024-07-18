@@ -28,6 +28,9 @@ from the ExoMars PANCAM instrument - but we also support
 <a href="autodocs/" class="btn btn-primary" role="button">Automatically generated node and function docs</a>
 </div>
 
+## Updating 
+Existing PCOT installs can be updated by following the instructions
+[here](userguide/update.md).
 
 
 ## Reporting bugs
