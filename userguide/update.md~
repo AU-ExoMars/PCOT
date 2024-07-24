@@ -1,8 +1,0 @@
-# Updating PCOT
-
-Updating an existing PCOT install should be fairly simple.
-
-* Go into the directory where you installed PCOT before (where you did the `git clone` command)
-* Type `git pull` - this should pull the latest release
-* Type `poetry install` - this should check for any updated packages and download them
-
