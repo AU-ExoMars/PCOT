@@ -6,7 +6,7 @@ from pcot.sources import MultiBandSource, nullSource, Source
 
 rng = np.random.default_rng()
 
-SIZE = (256,256)
+SIZE = (1024,1024)
 
 def genfile(name,f,index):
     # loc is mean, scale is SD.

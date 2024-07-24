@@ -79,7 +79,7 @@ def process(data):
                     raise Exception(f"cannot find filter {filterpos}")
                 # we have a list of filenames. Let's load them all in as a single image.
                 datum = load.multifile(".",filenames)
-                # we now have a 10-band image! Let's greyscale that image. This will also aggregate the uncertainties.
+                # we now have a multi-band image! Let's greyscale that image. This will also aggregate the uncertainties.
                 img = df.grey(datum).get(Datum.IMG)
                 # set the source to be the filter we're using
                 source = Source().setBand(filter).setExternal(StringExternal("createflatfield","creatflatfield"))
@@ -88,7 +88,7 @@ def process(data):
             # now merge all the individual band images - have to wrap in Datum first and then
             # expand!
             img = df.merge(*[Datum(Datum.IMG,x) for x in band_images])
-            a.writeDatum("main",img)
+            a.writeDatum("main",img,description="Flat/darkfield data")
         
 
 process(readfiles())

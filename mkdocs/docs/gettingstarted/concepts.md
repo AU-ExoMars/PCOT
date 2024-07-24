@@ -41,7 +41,14 @@ might be this:
 
 We can see the graph in the panel on the right, showing each node as a box
 with connections to other nodes (ignore the green numbers, they just show
-how many times each node has run - it's a debugging aid!)
+how many times each node has run - it's a debugging aid!) The colours
+on the input connectors at the top and the output connectors at the bottom
+show the types of the values accepted and produced by those connectors,
+as shown [on this page](connectors.md).
+
+
+
+
 Here's what each node in the graph is doing:
 
 * The *input 0* node reads input number 0 into the graph. The inputs are set up separately from the graph,
@@ -67,8 +74,10 @@ as easy as clicking on the image.
 
 ![!Spectrogram example](spec.png)
 
-Here I have "undocked" the *spectrum* node's view to be a separate window for easy viewing. The spectrum can also be saved as a PDF
-or converted into CSV data. I'm also showing the entire app, including the menu bar and four input buttons.
+Here I have "undocked" the *spectrum* node's view to be a separate window for
+easy viewing. The spectrum can also be saved as a PDF or converted into CSV
+data. I'm also showing the entire app, including the menu bar and four input
+buttons.
 
 ## The Document
 A PCOT document is a file which can be shared among users. It consists of 
