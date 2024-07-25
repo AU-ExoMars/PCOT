@@ -11,7 +11,7 @@
         <link rel="shortcut icon" href="../../img/favicon.ico">
     <meta name="robots" content="noindex,nofollow">
 
-        <title>banddepth - PCOT Documentation</title>
+        <title>Release procedure - PCOT Documentation</title>
     
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/font-awesome.min.css" rel="stylesheet">
@@ -98,7 +98,7 @@
 </li>
                                     
 <li>
-    <a href="../" class="dropdown-item">Autodocs</a>
+    <a href="../../autodocs/" class="dropdown-item">Autodocs</a>
 </li>
                                 </ul>
                             </li>
@@ -107,15 +107,15 @@
                                 <ul class="dropdown-menu">
                                     
 <li>
-    <a href="../../devguide/" class="dropdown-item">Overview</a>
+    <a href="../" class="dropdown-item">Overview</a>
 </li>
                                     
 <li>
-    <a href="../../devguide/library/" class="dropdown-item">Using PCOT as a library</a>
+    <a href="../library/" class="dropdown-item">Using PCOT as a library</a>
 </li>
                                     
 <li>
-    <a href="../../devguide/plugins/" class="dropdown-item">Writing PCOT plugins</a>
+    <a href="../plugins/" class="dropdown-item">Writing PCOT plugins</a>
 </li>
                                 </ul>
                             </li>
@@ -151,16 +151,8 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-level="1"><a href="#banddepth" class="nav-link">banddepth</a>
+            <li class="nav-item" data-level="1"><a href="#release-procedure" class="nav-link">Release procedure</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-level="2"><a href="#description" class="nav-link">Description</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-level="2"><a href="#connections" class="nav-link">Connections</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
               </ul>
             </li>
         </ul>
@@ -168,58 +160,38 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="banddepth">banddepth</h1>
-<h2 id="description">Description</h2>
-<p>Calculate band depth using a linear weighted mean of the two bands either side.
-Band depth is NOT the distance between the predicted reflectance of the centre band
-the actual centre band measurement, but the one minus the ratio of those measurements.</p>
-<p>Reference: "Revised CRISM spectral parameters... " Viviano, Seelos et al. 2015.</p>
-<p>Issues:</p>
-<ul>
-<li>Ignores FWHM (bandwidth) of all bands.</li>
-<li>can't do weird stuff like Figs. 7c and 7d in the Viviano et al.</li>
+<h1 id="release-procedure">Release procedure</h1>
+<p>To make a new release, follow this checklist.</p>
+<ol>
+<li>Make sure the dev branch is merged into the master branch.</li>
+<li>Create a new version number and codeword. For the version number, use   <a href="https://semver.org">semantic versioning</a>. This means:<ul>
+<li>Version number in MAJOR.MINOR.PATCH format</li>
+<li>append "-alpha" if we are still in alpha</li>
+<li>increment the MAJOR number if backward incompatible changes are introduced</li>
+<li>increment the MINOR number if new, backward compatible changes are introduced OR if deprecating functionality.</li>
+<li>increment the PATCH number if backward compatible bug fixes are introduced</li>
+<li>The version codeword is a helpful mnemonic. We were  using a script to generate <a href="http://pale.org/rainbow.php">Rainbow codes</a>, but we've now moved on to <a href="https://m.megalithic.co.uk/asb_mapsquare.php">Megalithic sites in the UK</a> running through letters of the alphabet and roughly south to north, trying to stick with more memorable names. <ul>
+<li>Only increment the name letter for a major release - for example, DRIFT STONES had a minor change, so went to DYNAS COVE rather than (say) EATHORNE.</li>
 </ul>
-
-<hr />
-<h2 id="connections">Connections</h2>
-<h3 id="inputs">Inputs</h3>
-<table>
-<thead>
-<tr>
-<th>Index</th>
-<th>Name</th>
-<th>Type</th>
-<th>Desc</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>0</td>
-<td>(none)</td>
-<td>img</td>
-<td>(none)</td>
-</tr>
-</tbody>
-</table>
-<h3 id="outputs">Outputs</h3>
-<table>
-<thead>
-<tr>
-<th>Index</th>
-<th>Name</th>
-<th>Type</th>
-<th>Desc</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>0</td>
-<td>(none)</td>
-<td>img</td>
-<td>(none)</td>
-</tr>
-</tbody>
-</table></div>
+</li>
+</ul>
+</li>
+<li>Edit <strong>PCOT/src/pcot/VERSION.txt</strong> to add the new version data, also specifying codename and the date (in ISO 8601, YYYY-MM-DD format).</li>
+<li>Edit <strong>PCOT/pyproject.toml</strong> to add the new version data (without the codename)</li>
+<li>Run <strong>poetry install</strong> on both Windows and Linux and check PCOT still runs (and that the title bar and About version data is correct)</li>
+<li>Run <strong>generate_autodocs.py</strong> in <strong>mkdocs</strong> to get up-to-date autodocs.</li>
+<li>Create a list of the changes by looking at the Git log and add this
+to <strong>PCOT/mkdocs/docs/releases.md</strong> under a new section for the new release.</li>
+<li>(pyinstaller only)<ol>
+<li>Make <strong>pyInstaller</strong> builds for Windows and Linux. Do this by going into the <strong>pyInstaller</strong> directory on the required platform and running <strong>pyinstaller file.spec</strong>. Check each build works, fixing if necessary. Note that the splash screen will have been automatically generated by the <strong>file.spec</strong> file from the VERSION.txt, so if it looks weird, check here.</li>
+<li>Make a MacOS pyInstaller build. This is more complex, and is shown below.</li>
+<li>Upload to the release repo (see below) (not done now we're not using PyInstaller)</li>
+</ol>
+</li>
+<li>Upload the docs to the documentation site.</li>
+<li>Commit with "version bump for release (VERSION NAME)" in the text</li>
+<li>Make a release tag in the repository, copying the change list from the documentation.</li>
+</ol></div>
             </div>
         </div>
 

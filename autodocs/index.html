@@ -296,6 +296,12 @@ node, <a href="expr">expr</a>.</p>
 <td>sets DQ bits</td>
 </tr>
 <tr>
+<td>flat</td>
+<td>val...</td>
+<td></td>
+<td>Turns a list of vectors, images and numbers into a single vector, by flattening each into a 1D vector and concatenating them all together. Data with any of the dq.BAD bits is removed.</td>
+</tr>
+<tr>
 <td>fliph</td>
 <td>img</td>
 <td></td>
@@ -333,15 +339,15 @@ node, <a href="expr">expr</a>.</p>
 </tr>
 <tr>
 <td>max</td>
-<td>val...</td>
+<td>val</td>
 <td></td>
-<td>find the maximum of the nominal values of a set of images and/or scalars. Images will be flattened into a list of values, so the result for multiband images may not be what you expect.</td>
+<td>Find the maximum of a Datum. For a multiband image, returns a vector of the maximum of each band. For a single band image, a scalar, or a vector, returns a scalar. Pixels with "bad" DQ bits will be ignored.  See also the</td>
 </tr>
 <tr>
 <td>mean</td>
-<td>val...</td>
+<td>val</td>
 <td></td>
-<td>find the mean±sd of the values of a set of images and/or scalars. Uncertainties in the data will be pooled. Images will be flattened into a list of values, so the result for multiband images may not be what you expect.</td>
+<td>Find the mean±sd of a Datum. This does different things depending on what kind of Datum we are dealing with. For a scalar, it just returns the scalar. For a vector, it returns the mean and sd of the vector. For an image, it returns a vector of the means and sds of each channel. Pixels with "bad" DQ bits will be ignored.</td>
 </tr>
 <tr>
 <td>merge</td>
@@ -351,9 +357,9 @@ node, <a href="expr">expr</a>.</p>
 </tr>
 <tr>
 <td>min</td>
-<td>val...</td>
+<td>val</td>
 <td></td>
-<td>find the minimum of the nominal values of a set of images and/or scalars. Images will be flattened into a list of values, so the result for multiband images may not be what you expect.</td>
+<td>Find the minimum of a Datum. For a multiband image, returns a vector of the minimum value of each band. For a single band image, a scalar, or a vector, returns a scalar. Pixels with "bad" DQ bits will be ignored.  See also the &amp; (AND) operator, which will find the minimum of two values (or images, vectors etc).</td>
 </tr>
 <tr>
 <td>nominal</td>
@@ -393,9 +399,9 @@ node, <a href="expr">expr</a>.</p>
 </tr>
 <tr>
 <td>sd</td>
-<td>val...</td>
+<td>val</td>
 <td></td>
-<td>find the standard deviation of the values of a set of images and/or scalars. Uncertainties in the data will be pooled. Images will be flattened into a list of values, so the result for multiband images may not be what you expect.</td>
+<td>Find the SD of a Datum. This does different things depending on what kind of Datum we are dealing with. For a scalar, it just returns 0. For a vector or single-channel image, it returns a scalar. For an image, it returns a vector of the SDs of each channel. Because each individual value in the input set can have its own uncertainty, the uncertainty is pooled (the pooled variance is the mean of the variances plus the variance of the means). Pixels with "bad" DQ bits will be ignored.</td>
 </tr>
 <tr>
 <td>setcwl</td>
@@ -423,9 +429,9 @@ node, <a href="expr">expr</a>.</p>
 </tr>
 <tr>
 <td>sum</td>
-<td>val...</td>
+<td>val</td>
 <td></td>
-<td>find the sum of the values of a set of images and/or scalars. Images will be flattened into a list of values, so the result for multiband images may not be what you expect.</td>
+<td>Find the sum of a Datum. For a multiband image, returns a vector of the sums of each band. For a single band image, a scalar, or a vector, returns a scalar. The uncertainty is pooled differently as this is a sum. The variance will be the variance of the means plus the sum of the variances.  Pixels with "bad" DQ bits will be ignored.</td>
 </tr>
 <tr>
 <td>tan</td>
@@ -462,6 +468,12 @@ node, <a href="expr">expr</a>.</p>
 <td>n,u</td>
 <td>dqbits (0)</td>
 <td>create a new value with uncertainty by combining two values. These can be either numbers or images. " Ignores and discards ROIs.</td>
+</tr>
+<tr>
+<td>vec</td>
+<td>s1...</td>
+<td></td>
+<td>Create a 1D numeric vector from several scalars or vectors.</td>
 </tr>
 </tbody>
 </table>
@@ -509,6 +521,26 @@ image <em>a</em>.</p>
 <td>x.n</td>
 <td>roi</td>
 <td>give the number of pixels in an ROI</td>
+</tr>
+<tr>
+<td>x.n</td>
+<td>number</td>
+<td>give the number of items in a vector</td>
+</tr>
+<tr>
+<td>x.u</td>
+<td>img</td>
+<td>return an new image containing the uncertainties of the image's pixels</td>
+</tr>
+<tr>
+<td>x.u</td>
+<td>number</td>
+<td>return the uncertainty of the scalar or vector (if vector, individual uncertainties will be pooled). DQ is ignored.</td>
+</tr>
+<tr>
+<td>x.bands</td>
+<td>img</td>
+<td>return a vector of the centre wavelengths of each band in the image</td>
 </tr>
 </tbody>
 </table></div>

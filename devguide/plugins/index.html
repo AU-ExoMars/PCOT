@@ -331,8 +331,8 @@ def saveEnvi(w):
     if res[0] != '':
         # get the output of that node
         (root, ext) = os.path.splitext(res[0])
-        img = node.getOutput(0, pcot.datum.Datum.IMG)
-        envi.write(root, img)
+        img = node.getOutput(0,pcot.datum.Datum.IMG)
+        envi.write(root,img)
 
 
 # the function to add the new menu item. This will take a single parameter:

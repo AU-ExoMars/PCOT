@@ -178,6 +178,33 @@
 <h2 id="beta-releases">Beta releases</h2>
 <p>None</p>
 <h2 id="alpha-releases">Alpha releases</h2>
+<h3 id="080-alpha-2024-07-25-fenton-saurus">0.8.0-alpha 2024-07-25 FENTON SAURUS</h3>
+<p>Yes, really: <a href="https://www.megalithic.co.uk/article.php?sid=8106">Fenton Saurus</a></p>
+<ul>
+<li>More unit tests</li>
+<li>colour connector "swatch" generator script</li>
+<li>started work on dark/flat field generator</li>
+<li>Datum archives - a file format (.PARC) for saving Datum objects, with an associated
+input method and exporters. Required because we have no other way of saving images
+with uncertainty and DQ.</li>
+<li>DatumStore class wraps Archive objects so we can store Datum (this is used for the datum archives)</li>
+<li><em>expr</em> uses a DataWidget, as does TabData.</li>
+<li>1D vectors supported as a Datum.NUMBER type. Modifications made to datumfuncs
+and operators permit this. Notably, the semantics of <code>mean</code>, <code>sd</code>, <code>sum</code>, <code>min</code> and</li>
+<li>square bracket parsing in expressions generates vector-creation and vector-index instructions
+<code>max</code> have changed to operate band-wise and generate a vector when performed on images.</li>
+<li>Multiband extraction, e.g. <code>a$[640,550,440]</code>.</li>
+<li><code>.bands</code> property generates a vector of wavelengths, so we can do <code>a$b.bands</code>, to get
+the bands in <code>a</code> that are also in <code>b</code>, in the same order as in <code>b</code>.</li>
+<li><code>.u</code> property</li>
+<li>properties graph tests and QoL work for test building</li>
+<li>precedence adjustments in expressions</li>
+<li>getSelection in document can help get selected nodes in plugins</li>
+<li>serialiseFields does a deepcopy - fixes undo bugs</li>
+<li>fixes to <em>roiexpr</em>; it no longer keeps UI data in the node so undo works better</li>
+<li>Cookbook in progress, but not part of the main repository to allow it to be updated more frequently</li>
+<li>First release for Zenodo</li>
+</ul>
 <h3 id="070-alpha-2024-05-03-east-pentire">0.7.0-alpha 2024-05-03 EAST PENTIRE</h3>
 <ul>
 <li>Very many more unit tests</li>

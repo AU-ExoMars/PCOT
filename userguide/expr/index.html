@@ -437,6 +437,10 @@ the band before performing the operation, thus:</p>
 </tr>
 </tbody>
 </table>
+<h3>Brackets</h3>
+<p>Round brackets are used to group expressions as usual, but square brackets are used for indexing into a vector.
+For example, <strong>a[3]</strong> will extract the fourth element of the vector <strong>a</strong>. However, square brackets cannot
+(yet) create a vector. To do this, use the <code>vec</code> function - so <code>vec(1,2,3)[1]</code> will return 2.</p>
 <p>Band extraction can also be performed with vectors provided the vector elements are numeric (i.e. wavelengths):
 <code>a $ vec(640,550,440)</code> is valid.</p>
 <h3>Properties</h3>
@@ -448,7 +452,7 @@ and selecting "List all functions." Help on an individual function can be found 
 the name of a function, right-clicking and selecting "Get help on 'somefunction'".
 Similar actions are supported for properties.</p>
 <h2>Uncertainties are assumed to be independent in all binary operations</h2>
-<p>While uncertainty is propagated through operations (as standard deviation) all quantities are assumed
+<p>While uncertainty is propagated through operations (as population standard deviation) all quantities are assumed
 to be independent (calculating covariances is beyond the scope of this system). Be very careful here.
 For example, the uncertainty for the expression <strong>tan(a)</strong> will be calculated correctly, but if you try
 to use <strong>sin(a)/cos(a)</strong> the uncertainty will be incorrect because the nominator and denominator are

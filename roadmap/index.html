@@ -163,7 +163,7 @@
             
             <li class="nav-item" data-level="1"><a href="#development-roadmap" class="nav-link">Development roadmap</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-level="2"><a href="#next-major-release-080" class="nav-link">Next major release: 0.8.0</a>
+            <li class="nav-item" data-level="2"><a href="#next-major-release-090" class="nav-link">Next major release: 0.9.0</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -180,56 +180,37 @@
 
 <h1 id="development-roadmap">Development roadmap</h1>
 <p>This is a rough guide, and things may change!</p>
-<h2 id="next-major-release-080">Next major release: 0.8.0</h2>
+<h2 id="next-major-release-090">Next major release: 0.9.0</h2>
+<h2 id="future-releases">Future releases</h2>
 <ul>
 <li>Reorganise the node palette</li>
 <li>Obtain user stories and feedback</li>
-<li>Documentation<ul>
+<li>
+<p>Documentation</p>
+<ul>
 <li>User guide<ul>
 <li>Page on <em>expr</em> nodes</li>
 <li>documentation for properties of nodes for library use (e.g. <em>expr</em> nodes have ".expr")</li>
-<li>How-to for common tasks</li>
+<li>How-to for common tasks (the "cookbook")</li>
 </ul>
 </li>
 </ul>
 </li>
-</ul>
-<p>(yes, still waiting for these)        </p>
-<h2 id="future-releases">Future releases</h2>
-<ul>
 <li>
 <p>Calibration: the PCT detection node is fine, but does nothing!</p>
 </li>
 <li>
-<p>Obtain user stories for analysis of HK data (which could potentially
-get messy, as these are likely to be time series)</p>
-</li>
-<li>
-<p>Consider a vector type</p>
-<ul>
-<li>It might be useful if functions
-such as max(), sd() etc. produced a vector of a values
-rather than a single value in multiband image contexts. For example,
-a 4-band image with the first channel set to 1 while all others are zero
-could produce a mean vector of [1,0,0,0]. We would then perform a max()
-on this vector to get a single value.</li>
-</ul>
-</li>
-<li>
-<p>Preparing for filter aberration and de-hardwiring cameras:</p>
-<ul>
-<li>Actual values removed from filters.py and put into a config file</li>
-<li>PANCAM/AUPE camera types no longer hardwired but got from that config</li>
-<li>Filter aberration parameters added to this config</li>
-</ul>
-</li>
-<li>
 <p>Filter aberration</p>
 <ul>
+<li>Filter aberration parameters need to be obtained and added to config</li>
 <li>Node (or func??) to convert aberration to image</li>
 <li>Calculate and process in canvas spectrum</li>
 <li>Calculate and process in <em>spectrum</em> node</li>
 </ul>
+</li>
+<li>
+<p>Obtain user stories for analysis of HK data (which could potentially
+get messy, as these are likely to be time series)</p>
 </li>
 </ul></div>
             </div>

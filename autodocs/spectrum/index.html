@@ -178,7 +178,8 @@ the resulting plot, labelled with the annotation for the ROI (or "inputN" for an
 If ROIs in different inputs have the same annotation, they are labelled as "inN:annotation" where N is
 the input number.</p>
 <p>Each pixel has its own variance, so the shown variance is the pooled variance of all the pixels in
-the region. This is calculated as the variance of the means, plus the mean of the variances.</p>
+the region. This is calculated as the variance of the means, plus the mean of the variances.
+SpectrumSet handles this.</p>
 <p>If a point has data with BAD DQ bits in a band, those pixels are ignored in that band. If there
 are no good points, the point is not plotted for that band.</p>
 <p>A table of the values is also produced, and this output as CSV text. The table has one row per
@@ -186,7 +187,7 @@ ROI or input, and the columns</p>
 <ul>
 <li>name - the name of the ROI or input</li>
 <li>m<em>wavelength</em> - the mean intensity for the given wavelength band</li>
-<li>s<em>wavelength</em> - the standard deviation of the mean intensity for the given wavelength band</li>
+<li>s<em>wavelength</em> - the population standard deviation of the mean intensity for the given wavelength band</li>
 <li>p<em>wavelength</em> - the number of pixels in the given wavelength band (usually the same as the number of pixels in
 the ROI, but may be fewer if the ROI has "bad" pixels in that band)</li>
 </ul>
