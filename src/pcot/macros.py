@@ -365,9 +365,7 @@ class TabMacro(Tab):
     def __init__(self, node: XFormMacro, w):
         super().__init__(w, node, 'tabmacro.ui')
         self.w.openProto.clicked.connect(self.openProto)
-        self.w.canvas.setMapping(node.mapping)
-        self.w.canvas.setGraph(node.graph)
-        self.w.canvas.setPersister(node)
+        self.w.canvas.setNode(node)
         self.nodeChanged()
 
     def openProto(self):
@@ -378,10 +376,7 @@ class TabMacro(Tab):
 
     def onNodeChanged(self):
         # have to do canvas set up here to handle extreme undo events which change the graph and nodes
-        self.w.canvas.setMapping(self.node.mapping)
-        self.w.canvas.setGraph(self.node.graph)
-        self.w.canvas.setPersister(self.node)
-
+        self.w.canvas.setNode(self.node)
         self.w.canvas.display(self.node.sinkimg)
 
 

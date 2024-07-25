@@ -21,7 +21,7 @@ result is a 12-band image.
 ## Functions
 
 Merge is one of a large number of functions that *expr* supports, and more can be added
-using the (plug-in mechanism)[/devguide/plugins/]. Full details of built-in functions 
+using the [plug-in mechanism](/devguide/plugins/). Full details of built-in functions 
 can be found [in the autodocs](/autodocs/#expr-functions)
 
 ## Properties

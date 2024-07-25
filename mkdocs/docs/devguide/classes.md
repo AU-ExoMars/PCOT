@@ -17,7 +17,7 @@ controls its behaviour.
 * Nodes (XForms) communicate by passing **pcot.datum.Datum** objects.
 * Each Datum points to a **pcot.datumtype.Type** subclass singleton
 providing serialisation, copy, and display facilities.
-* They also point have values - two common value classes are
+* They also have values - two common value classes are
 **pcot.imagecube.ImageCube** for images, and **pcot.value.Value**
 objects for other arrays and scalars.
 * ImageCubes can generate **SubImageCube** objects which are subsets of
@@ -123,11 +123,16 @@ This is the fundamental numeric type, consisting of
 * uncertainty value (standard deviation)
 * DQ bits
 
-It's usually used for scalars but can also hold array data. If it
-does hold array data, the three elements must be the same shape.
+It's usually used for scalars but can also hold array data - internally
+ImageCubes (or parts of them) are converted into array Values for maths.
+If it does hold array data, the three elements must be the same shape.
+It's possible to create 1D vectors in an *expr* node using square brackets,
+and some functions and operations return such vectors.
 
 This type supports mathematical operations which propagate uncertainty
 and DQ.
+
+More on how Values work [here](values.md)
 
 @@@info
 **Note**: You may wonder why ImageCube and SubImageCube don't use

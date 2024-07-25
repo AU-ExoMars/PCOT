@@ -75,7 +75,7 @@ class InputWindow(QtWidgets.QMainWindow):
 
         topBox = QtWidgets.QWidget()
         topBox.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred,
-                                                   QtWidgets.QSizePolicy.Preferred))
+                                                   QtWidgets.QSizePolicy.Maximum))
         topBoxLayout = QtWidgets.QHBoxLayout()
         topBox.setLayout(topBoxLayout)
         layout.addWidget(topBox)

@@ -14,6 +14,7 @@ import pcot
 # this to use dockable tabs, and have a tabWidget tab container.
 from PySide2.QtGui import QFont
 
+from pcot import ui
 from pcot.ui import uiloader
 
 
@@ -70,6 +71,7 @@ class DockableTabWindow(QtWidgets.QMainWindow):
         if tab is not None:
             if tab in tab.node.tabs:
                 tab.node.tabs.remove(tab)  # need to check because sometimes an error can mess this up
+            tab.onClose()
             self.tabWidget.removeTab(index)
             self.tabs = {k: v for k, v in self.tabs.items() if v != tab}
 
@@ -174,7 +176,7 @@ class Tab(QtWidgets.QWidget):
 
     updatingTabs = False  # we are updating after a perform, don't take too much notice of calls to changed()
 
-    def __init__(self, window, node, uifile):
+    def __init__(self, window, node, uifile=None):
         """constructor, which should be called by the subclass ctor"""
         super(Tab, self).__init__()
         self.expanded = None
@@ -317,6 +319,10 @@ class Tab(QtWidgets.QWidget):
         """should update the tab when the node's data has changed"""
         pass
 
+    def onClose(self):
+        """called when the tab is closed, so it can do any cleanup it needs."""
+        pass
+
     def nodeChanged(self):
         """will set a flag to stop undo marking and perform before calling onNodeChanged to update
         tab widgets; this avoids the changes to those widgets triggering another changed and rerun."""
@@ -335,4 +341,10 @@ class Tab(QtWidgets.QWidget):
         """The node has changed, but only the user interface needs updating - the outputs will not change."""
         self.node.type.uichange(self.node)    # tell the node to update; for some nodes this calls perform() (e.g. ROIs)
         self.node.updateTabs()
+
+    def getROI(self):
+        """Used in tabs which can open ROI editors, this gets the ROI currently being edited. The default
+        implementation returns .node.roi, but it can be overridden, typically by tabs which can edit more
+        than one ROI."""
+        return self.node.roi
 

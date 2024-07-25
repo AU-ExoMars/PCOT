@@ -135,8 +135,10 @@ constructor in the ```pcot.expressions.eval``` module.
 
 This is done by adding a function to a list of functions called when a
 a main window is opened. Writing code here will require some knowledge of Qt.
-Here is a menu option added to the File menu which will look for an
-*input 0* node and save its output image (if there is one) to an ENVI file.
+Here is a menu option added to the File menu which will look for 
+selected node in the document's graph, fetch its first output, and
+save it as an ENVI file (assuming it is an image - error checking
+is left as an exercise for the reader).
 
 
 ```python
@@ -147,22 +149,23 @@ from PySide2.QtWidgets import QAction, QMessageBox
 from pcot.dataformats import envi
 
 def saveEnvi(w):
-    """Function takes a PCOT main window. It finds the input 0 if it can,
-    and then saves an ENVI from that image."""
+    """Function takes a PCOT main window. It finds the first selected
+    node, gets its output 0, and then saves an ENVI from that image."""
     
-    try:
-        node = w.doc.getNodeByName("input 0")
-    except NameError:
-        print("cannot find node")
+    sel = w.doc.getSelection()
+    if len(sel) == 0:
+        ui.log("no selected node")
         return
+    node = sel[0]
         
+    directory = os.path.expanduser(pcot.config.getDefaultDir('pcotfiles'))
     res = QtWidgets.QFileDialog.getSaveFileName(w,
                                                 "ENVI file ",
                                                 os.path.expanduser(pcot.config.getDefaultDir('pcotfiles')),
                                                 "ENVI files (*.hdr)")
     if res[0] != '':
+        # get the output of that node
         (root, ext) = os.path.splitext(res[0])
-        # get the output of that input 0 node
         img = node.getOutput(0,pcot.datum.Datum.IMG)
         envi.write(root,img)
         
@@ -305,9 +308,9 @@ constructor), and call `self.nodeChanged()` at the end to refresh the tab from t
 and write code to update the node from the tab in these methods, calling
 `self.changed()` at the end of each method.
 
-The tab will have a `node` field which addresses the node it is viewing, but see
+The tab will have a `node` field which addresses the node it is viewing (but see
 [below](#undo-and-references-to-data-in-nodes) for a "gotcha" - the value of this field
-will change after an undo operation!
+will change after an undo operation!)
 
 ### Using Canvas in custom tabs
 

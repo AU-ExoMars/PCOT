@@ -33,7 +33,6 @@ class Datum(SourcesObtainable):
     # register built-in types; extras can be registered with registerType
     types = [
         ANY := pcot.datumtypes.AnyType(),
-        # image types, which all contain 'img' in their string (yes, ugly).
         IMG := pcot.datumtypes.ImgType(),
         ROI := pcot.datumtypes.RoiType(),
         NUMBER := pcot.datumtypes.NumberType(),
@@ -115,7 +114,7 @@ class Datum(SourcesObtainable):
             return self.val if self.tp == tp else None
 
     def __str__(self):
-        return "[DATUM-{}, value {}]".format(self.tp, self.val)
+        return "<DATUM-{}, value {}>".format(self.tp, self.val)
 
     def getSources(self):
         """Get the full source set as an actual single set, unioning all SourceSets within."""
@@ -143,6 +142,15 @@ class Datum(SourcesObtainable):
 
         # and run the deserialisation
         return t.deserialise(d, document)
+
+    def uncertainty(self):
+        """Get the uncertainty of the datum as Datum of the same type. For example, an image will return an image of
+        uncertainties. A vector will return a scalar."""
+        return self.tp.uncertainty(self)
+
+    def getSize(self):
+        """Get the size of the datum in bytes. For datum objects with a negligible size, this can be 0."""
+        return self.tp.getSize(self)
 
     #
     # This block of code maps operations on Datum objects to the binary operations registered in the "ops" system

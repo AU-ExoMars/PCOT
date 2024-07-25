@@ -54,7 +54,6 @@ class ROIEditDialog(QDialog):
 
 
 class ROIEditor:
-
     # these are fields we can edit in a dialog: they consist of triplets,
     #   - field name in the ROI object
     #   - min value (typically zero)
@@ -62,12 +61,14 @@ class ROIEditor:
 
     roiFields = None
 
-    def __init__(self, tab, roi):
-        """We assume that the tab contains .w.canvas and .node."""
+    def __init__(self, tab):
+        """We assume that the tab contains .w.canvas and .node. The tab will have a getROI() method to get the ROI."""
         self.mouseDown = False
         self.tab = tab
-        self.roi = roi
         self.dlg = None
+
+    def roi(self):
+        return self.tab.getROI()
 
     def canvasMouseMoveEvent(self, x2, y2, e):
         pass
@@ -103,7 +104,7 @@ class RectEditor(ROIEditor):
 
     def canvasMouseMoveEvent(self, x2, y2, e):
         if self.mouseDown:
-            bb = self.roi.bb()
+            bb = self.roi().bb()
             if bb is None:
                 x, y, w, h = 0, 0, 0, 0
             else:
@@ -115,14 +116,14 @@ class RectEditor(ROIEditor):
             if h < 10:
                 h = 10
             # we don't do a mark here to avoid multiple marks - one is done on mousedown.
-            self.roi.set(x, y, w, h)
+            self.roi().set(x, y, w, h)
             self.tab.changed()
         self.tab.w.canvas.update()
 
     def canvasMousePressEvent(self, x, y, e):
         self.mouseDown = True
         self.tab.mark()
-        self.roi.set(x, y, 5, 5)
+        self.roi().set(x, y, 5, 5)
         self.tab.changed()
         self.tab.w.canvas.update()
 
@@ -138,7 +139,7 @@ class CircleEditor(ROIEditor):
     )
 
     def setRadius(self, x2, y2):
-        c = self.roi.get()
+        c = self.roi().get()
         x, y, r = c if c is not None else (0, 0, 0)
         dx = x - x2
         dy = y - y2
@@ -146,7 +147,7 @@ class CircleEditor(ROIEditor):
         if r < 1:
             r = 1
         # we don't do a mark here to avoid multiple marks - one is done on mousedown.
-        self.roi.set(x, y, r)
+        self.roi().set(x, y, r)
         self.tab.changed()
         self.tab.w.canvas.update()
 
@@ -157,14 +158,15 @@ class CircleEditor(ROIEditor):
     def canvasMousePressEvent(self, x, y, e):
         self.mouseDown = True
         self.tab.mark()
-        if e.button() == Qt.RightButton and self.roi.get() is not None:
+        roi = self.roi()
+        if e.button() == Qt.RightButton and roi.get() is not None:
             self.setRadius(x, y)
         else:
-            if e.modifiers() & Qt.ShiftModifier and self.roi.get() is not None:
-                _, _, r = self.roi.get()
+            if e.modifiers() & Qt.ShiftModifier and roi.get() is not None:
+                _, _, r = roi.get()
             else:
                 r = 10
-            self.roi.set(x, y, r)
+            roi.set(x, y, r)
             self.tab.changed()
             self.tab.w.canvas.update()
 
@@ -173,21 +175,20 @@ class CircleEditor(ROIEditor):
 
 
 class PolyEditor(ROIEditor):
-
     roiFields = None
 
     def canvasMouseMoveEvent(self, x, y, _):
         if self.mouseDown:
-            if self.roi.moveSelPoint(x, y):
+            if self.roi().moveSelPoint(x, y):
                 self.tab.changed()
 
     def canvasMousePressEvent(self, x, y, e):
         self.mouseDown = True
         self.tab.mark()
         if e.modifiers() & Qt.ShiftModifier:
-            self.roi.addPoint(x, y)
+            self.roi().addPoint(x, y)
         else:
-            self.roi.selPoint(x, y)
+            self.roi().selPoint(x, y)
         self.tab.changed()
         self.tab.w.canvas.update()
 
@@ -197,40 +198,39 @@ class PolyEditor(ROIEditor):
     def canvasKeyPressEvent(self, e: QKeyEvent):
         if e.key() == Qt.Key_Delete:
             self.tab.mark()
-            self.roi.delSelPoint()
+            self.roi().delSelPoint()
             self.tab.changed()
 
 
 class PaintedEditor(ROIEditor):
-
     roiFields = None
 
-    def __init__(self, tab, roi):
-        super().__init__(tab, roi)
-        self.node = tab.node
+    def __init__(self, tab):
+        super().__init__(tab)
         self.mousePos = None
 
     # extra drawing! Preview of brush
     def canvasPaintHook(self, p: QPainter):
         c = self.tab.w.canvas
-        if self.mousePos is not None and self.node.previewRadius is not None:
+        if self.mousePos is not None and self.tab.node.previewRadius is not None:
             p.setBrush(Qt.NoBrush)
-            p.setPen(QColor(*[v * 255 for v in self.node.colour]))
-            r = self.node.previewRadius / (c.canvas.getScale())
+            p.setPen(QColor(*[v * 255 for v in self.tab.node.colour]))
+            r = self.tab.node.previewRadius / (c.canvas.getScale())
             p.drawEllipse(self.mousePos, r, r)
 
     def doSet(self, x, y, e):
+        n = self.tab.node
         if e.modifiers() & Qt.ControlModifier:
             # we need to use the image stored in the node, which should be a copy of the original,
             # as the reference image for the flood fill. We have to fetch it from the node output.
             from pcot.xform import XFormROIType
-            img = self.node.getOutput(XFormROIType.OUT_IMG)
+            img = n.getOutput(XFormROIType.OUT_IMG)
             if img is not None:
-                self.roi.fill(img, x, y, FloodFillParams(threshold=0.03))      # flood fill
+                self.roi().fill(img, x, y, FloodFillParams(threshold=0.03))  # flood fill
         elif e.modifiers() & Qt.ShiftModifier:
-            self.roi.setCircle(x, y, self.node.brushSize, True)  # delete
+            self.roi().setCircle(x, y, n.brushSize, True, relativeSize=True)  # delete
         else:
-            self.roi.setCircle(x, y, self.node.brushSize, False)
+            self.roi().setCircle(x, y, n.brushSize, False, relativeSize=True)
 
     def canvasMouseMoveEvent(self, x, y, e):
         self.mousePos = e.pos()
@@ -240,7 +240,7 @@ class PaintedEditor(ROIEditor):
         self.tab.w.canvas.update()
 
     def canvasMousePressEvent(self, x, y, e):
-        self.tab.mark()
+        # self.tab.mark()    We avoid marking here, because we'll mark when we lift the mouse button.
         self.mouseDown = True
         self.doSet(x, y, e)
         self.tab.changed()

@@ -18,4 +18,5 @@ examples and reading the source code!
 
 
 * [notes on type internals and adding new types](types.md).
+* [notes on how operations/functions on Datum and Value work](values.md)
 * [test/scratchpad of LaTeX support](latex.md).

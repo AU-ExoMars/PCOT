@@ -64,7 +64,7 @@ class XformCirc(XFormROIType):
 class TabCirc(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabcirc.ui')
-        self.editor = CircleEditor(self, self.node.roi)
+        self.editor = CircleEditor(self)
         self.w.canvas.mouseHook = self
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
         self.w.drawbg.stateChanged.connect(self.drawbgChanged)
@@ -137,7 +137,7 @@ class TabCirc(pcot.ui.tabs.Tab):
     def YEditChanged(self):
         c = self.node.roi.get()
         x, y, r = c if c is not None else (0, 0, 0)
-        y = getInt(self.w.XEdit.text())
+        y = getInt(self.w.YEdit.text())
         self.roiSet(x, y, r)
 
     def radiusEditChanged(self):
@@ -148,10 +148,7 @@ class TabCirc(pcot.ui.tabs.Tab):
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
-        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
-        self.w.canvas.setMapping(self.node.mapping)
-        self.w.canvas.setGraph(self.node.graph)
-        self.w.canvas.setPersister(self.node)
+        self.w.canvas.setNode(self.node)
         self.w.canvas.setROINode(self.node)
         self.w.canvas.display(self.node.getOutput(XFormROIType.OUT_IMG))
         if not self.dontSetText:

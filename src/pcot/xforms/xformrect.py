@@ -3,6 +3,7 @@ from PySide2.QtGui import QIntValidator
 import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
+from pcot import ui
 from pcot.rois import ROIRect
 from pcot.ui.roiedit import RectEditor
 from pcot.xform import xformtype, XFormROIType
@@ -51,7 +52,7 @@ class XformRect(XFormROIType):
 class TabRect(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabrect.ui')
-        self.editor = RectEditor(self, self.node.roi)
+        self.editor = RectEditor(self)
         self.w.canvas.mouseHook = self
         self.w.fontsize.valueChanged.connect(self.fontSizeChanged)
         self.w.drawbg.stateChanged.connect(self.drawbgChanged)
@@ -75,7 +76,6 @@ class TabRect(pcot.ui.tabs.Tab):
         self.dontSetText = False
         # sync tab with node
         self.nodeChanged()
-
 
     def drawbgChanged(self, val):
         self.mark()
@@ -169,9 +169,7 @@ class TabRect(pcot.ui.tabs.Tab):
     # causes the tab to update itself from the node
     def onNodeChanged(self):
         # have to do canvas set up here to handle extreme undo events which change the graph and nodes
-        self.w.canvas.setMapping(self.node.mapping)
-        self.w.canvas.setGraph(self.node.graph)
-        self.w.canvas.setPersister(self.node)
+        self.w.canvas.setNode(self.node)
         self.w.canvas.setROINode(self.node)
         self.w.canvas.display(self.node.getOutput(XFormROIType.OUT_IMG))
         if not self.dontSetText:
@@ -194,6 +192,7 @@ class TabRect(pcot.ui.tabs.Tab):
         self.editor.canvasMouseMoveEvent(x, y, e)
 
     def canvasMousePressEvent(self, x, y, e):
+        ui.log(f"node is {self.node}, ROI is {repr(self.node.roi)}")
         self.editor.canvasMousePressEvent(x, y, e)
 
     def canvasMouseReleaseEvent(self, x, y, e):

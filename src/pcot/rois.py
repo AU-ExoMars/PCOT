@@ -1,3 +1,4 @@
+import copy
 from typing import Tuple
 
 import cv2 as cv
@@ -7,6 +8,7 @@ from PySide2.QtGui import QPainter, QImage, QPen
 from numpy import ndarray
 from scipy import ndimage
 
+import pcot.sources
 from pcot.sources import SourcesObtainable, nullSourceSet
 from pcot.ui.roiedit import RectEditor, CircleEditor, PaintedEditor, PolyEditor
 from pcot.utils import serialiseFields, deserialiseFields
@@ -267,7 +269,9 @@ class ROI(SourcesObtainable, Annotation):
                     # add it at that position
                     mask[y:y + rh, x:x + rw] |= roimask
             # should not be saved
-            return ROI(bb, mask, isTemp=True, containingImageDimensions=dims if dimsOK else None)
+            roi = ROI(bb, mask, isTemp=True, containingImageDimensions=dims if dimsOK else None)
+            roi.sources = pcot.sources.SourceSet(rois)  # can pass list of SourcesObtainable to ctor
+            return roi
         else:
             # return a null ROI
             return None
@@ -381,6 +385,13 @@ class ROI(SourcesObtainable, Annotation):
 
         return ROI(bb, mask, isTemp=True, containingImageDimensions=dims)
 
+    def getSize(self):
+        """return the size of the serialised ROI in bytes, or zero if it's negligible."""
+        if self.isTemp:
+            raise Exception("attempt to get size of a temporary ROI")
+        else:
+            return 0
+
     def __contains__(self, xyTuple):
         """Is a point inside the ROI?"""
         x, y = xyTuple
@@ -458,6 +469,10 @@ class ROI(SourcesObtainable, Annotation):
         """Notify the ROI that its values have been set. This may not actually do anything, but for ROIs like
         Rect and Circle it's necessary. Other ROIs have different ways of knowing if they have a valid value."""
         pass
+
+    def copy(self):
+        """Create a copy of the ROI - here for completeness; it's more pythonic to use copy.copy() or copy.deepcopy()"""
+        return copy.copy(self)
 
 
 class ROIRect(ROI):
@@ -554,7 +569,7 @@ class ROIRect(ROI):
         return self._str(True)
 
     def createEditor(self, tab):
-        return RectEditor(tab, self)
+        return RectEditor(tab)
 
 
 class ROICircle(ROI):
@@ -645,7 +660,7 @@ class ROICircle(ROI):
         return r
 
     def createEditor(self, tab):
-        return CircleEditor(tab, self)
+        return CircleEditor(tab)
 
     def __str__(self):
         lab = "(no label)" if self.label is None else self.label
@@ -717,6 +732,9 @@ class ROIPainted(ROI):
         """return a boolean array, same size as BB"""
         return self.map > 0
 
+    def getSize(self):
+        return 0 if self.map is None else self.map.nbytes
+
     def fullsize(self):
         """return the full size mask"""
         imgw, imgh = self.containingImageDimensions
@@ -786,7 +804,7 @@ class ROIPainted(ROI):
     def moveBBTo(self, x, y):
         """move the bounding box to a new position, returning True if the move was OK"""
         imgw, imgh = self.containingImageDimensions
-        if x >= 0 and y >= 0 and x+self.bbrect.w < imgw and y+self.bbrect.w < imgh:
+        if x >= 0 and y >= 0 and x + self.bbrect.w < imgw and y + self.bbrect.w < imgh:
             self.bbrect.x = x
             self.bbrect.y = y
             return True
@@ -826,7 +844,7 @@ class ROIPainted(ROI):
         return r
 
     def createEditor(self, tab):
-        return PaintedEditor(tab, self)
+        return PaintedEditor(tab)
 
     def _str(self, use_id):
         lab = "(no label)" if self.label is None else self.label
@@ -882,16 +900,19 @@ class ROIPoly(ROI):
 
     def serialise(self):
         d = super().serialise()
-        return serialiseFields(self,
-                               [('points', 0), ('drawPoints', True)],
-                               d=d)
+        d = serialiseFields(self,
+                            [('points', 0), ('drawPoints', True)],
+                            d=d)
+        return d
 
     def deserialise(self, d):
         super().deserialise(d)
         if 'points' in d:
             pts = d['points']
+            print(f"Deserialising {len(pts)} points")
             # points will be saved as lists, turn back into tuples
             self.points = [tuple(x) for x in pts]
+
 
     def mask(self):
         # return a boolean array, same size as BB. We use opencv here to build a uint8 image
@@ -985,7 +1006,7 @@ class ROIPoly(ROI):
         return r
 
     def createEditor(self, tab):
-        return PolyEditor(tab, self)
+        return PolyEditor(tab)
 
     def _str(self, use_id):
         lab = "(no label)" if self.label is None else self.label

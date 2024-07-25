@@ -3,13 +3,13 @@ than using multiple ROI and expr nodes with an importroi node."""
 from copy import copy
 from functools import partial
 
-
 from PySide2.QtCore import QModelIndex, Signal, QAbstractTableModel, Qt
 from PySide2.QtGui import QPainter
 from PySide2.QtWidgets import QInputDialog, QMessageBox
 
 import pcot.rois
 import pcot.ui
+from pcot import ui
 from pcot.datum import Datum
 from pcot.expressions import ExpressionEvaluator
 from pcot.imagecube import ImageCube
@@ -19,6 +19,7 @@ from pcot.xform import xformtype, XFormType, XFormException
 
 
 def getROIName(i):
+    """Get the name of an ROI from its index. If it's greater than 26, return a string name."""
     return chr(97 + i) if i < 26 else f"roi{i}"
 
 
@@ -26,15 +27,19 @@ def getROIName(i):
 class XFormROIExpr(XFormType):
     """
     This node allows a region of interest to be composed from several regions of interest using an expression and
-    imposed on an image. Several ROIs can be created within the node itself by using the "Add ROI" button.
+    imposed on an image.
+
+    **It is not a node for creating several ROIs at once - the output is always a single ROI**.
+
+    ROIs can be created for use within the expression by using the "Add ROI" button.
     These will be assigned to the variables a,b,c.. within the expression, and can be edited by:
 
     * clicking on their label in the left-most column of the table (to select the entire row) and then clicking and dragging on the canvas,
     * double clicking on the description text in the table to open a numerical editor (not for poly or painted).
 
     Additional ROIs can be connected to the p, q, r inputs; these will be assigned to those variables within the expression.
-    The input image is available as the variable 'img', so it is possible
-    to access the image's original region of interest (or the union of all ROIs if it has more than one) by using roi(img).
+    The input image's ROIs are combined into a single ROI and assigned to the variable 'i'.
+    The input image itself is available as the variable 'img'.
 
     Other properties of the image are available and other calculations may be made, but the result of the expression must be an ROI.
 
@@ -47,6 +52,7 @@ class XFormROIExpr(XFormType):
     * **roi(img) - p**  : any ROIs on the image already, but with the ROI on input 'p' cut out
 
     """
+
     def __init__(self):
         super().__init__("roiexpr", "regions", "0.0.0")
         self.addInputConnector("", Datum.IMG, "Image input")
@@ -62,18 +68,19 @@ class XFormROIExpr(XFormType):
 
     def init(self, node):
         node.rois = []
-        node.editors = dict()
         node.expr = ""
-        node.selected = None
         node.canvimg = None
         node.selColour = (0, 1, 0)  # colour of selected ROI
         node.unselColour = (0, 1, 1)  # colour of unselected ROI
         node.outColour = (1, 1, 0)  # colour of output ROI
+        node.imgROIColour = (1, 0, 1)  # colour of input image's ROI
+
         node.hideROIs = False  # hide individual ROIs
         node.brushSize = 20  # scale of 0-99 i.e. a slider value. Converted to pixel radius in getRadiusFromSlider()
         node.previewRadius = None  # see xformpainted.
 
-        self.autoserialise = ('selColour', 'unselColour', 'outColour', 'expr', 'hideROIs', 'previewRadius')
+        self.autoserialise = ('selColour', 'unselColour', 'outColour', 'expr', 'hideROIs', 'previewRadius',
+                              ('imgROIColour', (1,0,1)))
 
     def serialise(self, node):
         return {'rois': [(r.tpname, r.serialise()) for r in node.rois]}
@@ -98,46 +105,63 @@ class XFormROIExpr(XFormType):
         if img is not None:
             img = img.copy()
             node.previewRadius = pcot.rois.getRadiusFromSlider(node.brushSize, img.w, img.h)
+
+            # update the ROIs so that the image dimensions are correct
+            for r in node.rois:
+                # patch image size into the ROI so we can do negation
+                r.setContainingImageDimensions(img.w, img.h)
+
+            # we create a new parser here, because we want it to be empty of ROIs etc.
+            parser = ExpressionEvaluator()
+            for i, r in enumerate(node.rois):
+                r.drawBox = False
+                # register the ROIs into the parser (or rather lambdas that return datums)
+                roiname = getROIName(i)
+                # Register a variable which returns an ROI datum for that ROI
+                # *shakes fist at late-binding closures*
+                f = partial(lambda ii: Datum(Datum.ROI, node.rois[ii], sources=nullSourceSet), i)
+                parser.registerVar(roiname, f'value of ROI {i}', f)
+            # might be useful to have the input image there too
+            parser.registerVar('img', 'input image', lambda: Datum(Datum.IMG, img))
+            # and three extra ROI inputs that might come from other data
+
+            # get any ROIs on the image and union them
+            if len(img.rois) > 0:
+                # register the union of these ROIs as 'i'
+                imgroi = pcot.rois.ROI.roiUnion(img.rois)
+                imgroi.colour = node.imgROIColour
+                if imgroi is not None:
+                    imgroi = Datum(Datum.ROI, imgroi, imgroi.getSources())
+                else:
+                    imgroi = Datum.null
+            else:
+                imgroi = Datum.null
+            parser.registerVar('i', 'union of image ROIs', lambda: imgroi)
+
+            # this function gets an ROI input but patches the image width and height
+            # into that ROI, so we can do daft stuff like negating ROIs.
+            def getROIInput(i):
+                # ugly, but we need to access this to get the sources
+                d: Datum = node.getInput(i)
+                # and then immediately do this to get the actual ROI even if I'm doing work again.
+                rr = node.getInput(i, Datum.ROI)
+                if rr is None:
+                    return Datum.null
+                else:
+                    rr = copy(rr)
+                    rr.setContainingImageDimensions(img.w, img.h)
+                    return Datum(Datum.ROI, rr, sources=d.sources)
+
+            inROIp = getROIInput(1)
+            inROIq = getROIInput(2)
+            inROIr = getROIInput(3)
+            inROIlist = [x for x in [inROIp, inROIq, inROIr, imgroi] if x is not None]
+
+            parser.registerVar("p", "ROI input p", lambda: inROIp)
+            parser.registerVar("q", "ROI input q", lambda: inROIq)
+            parser.registerVar("r", "ROI input r", lambda: inROIr)
+
             if len(node.expr.strip()) > 0:
-                # we create a new parser here, because we want it to be empty of ROIs etc.
-                parser = ExpressionEvaluator()
-                for i, r in enumerate(node.rois):
-                    r.drawBox = False
-                    # register the ROIs into the parser (or rather lambdas that return datums)
-                    roiname = getROIName(i)
-                    # patch image size into the ROI so we can do negation
-                    node.rois[i].setContainingImageDimensions(img.w, img.h)
-                    # Register a variable which returns an ROI datum for that ROI
-                    # *shakes fist at late-binding closures*
-                    f = partial(lambda ii: Datum(Datum.ROI, node.rois[ii], sources=nullSourceSet), i)
-                    parser.registerVar(roiname, f'value of ROI {i}', f)
-                # might be useful to have the input image there too
-                parser.registerVar('img', 'input image', lambda: Datum(Datum.IMG, img))
-                # and three extra ROI inputs that might come from other data
-
-                # this function gets an ROI input but patches the image width and height
-                # into that ROI, so we can do daft stuff like negating ROIs.
-                def getROIInput(i):
-                    # ugly, but we need to access this to get the sources
-                    d: Datum = node.getInput(i)
-                    # and then immediately do this to get the actual ROI even if I'm doing work again.
-                    rr = node.getInput(i, Datum.ROI)
-                    if rr is None:
-                        return Datum.null
-                    else:
-                        rr = copy(rr)
-                        rr.setContainingImageDimensions(img.w, img.h)
-                        return Datum(Datum.ROI, rr, sources=d.sources)
-
-                inROIp = getROIInput(1)
-                inROIq = getROIInput(2)
-                inROIr = getROIInput(3)
-                inROIlist = [x for x in [inROIp, inROIq, inROIr] if x is not None]
-
-                parser.registerVar("p", "ROI input p", lambda: inROIp)
-                parser.registerVar("q", "ROI input q", lambda: inROIq)
-                parser.registerVar("r", "ROI input r", lambda: inROIr)
-
                 # now execute the expression and get it back as an ROI
                 res = parser.run(node.expr)
                 node.roi = res.get(Datum.ROI)
@@ -150,14 +174,16 @@ class XFormROIExpr(XFormType):
                     img.rois = [node.roi]
                     outROIDatum = Datum(Datum.ROI, node.roi, node.roi.sources)
             else:
-                inROIlist = []
+                img.rois = []  # remove all existing ROIs from the image for output
             # impose the individual ROIs as annotations
             if not node.hideROIs:
-                for i, r in enumerate(node.rois):
-                    r.colour = node.selColour if i == node.selected else node.unselColour
                 # we want to see the input ROIs as well, so add them.
                 inROIlist = [x.get(Datum.ROI) for x in inROIlist]
                 img.annotations = node.rois + [x for x in inROIlist if x is not None]
+                ui.log(f"Adding {len(img.annotations)} ROIs to annotations")
+            else:
+                ui.log("Not adding ROIs to annotations")
+                img.annotations = []
             # set mapping from node
             img.setMapping(node.mapping)
             # 'img' so far is the image we are going to display.
@@ -198,10 +224,11 @@ class Model(QAbstractTableModel):
         super().__init__()
         self.columnItems = False
         self.tab = tab
-        self.node = node
+        self.editors = dict()  # keyed on index in list
+
         # create editors for existing nodes
-        for r in self.node.rois:
-            self.node.editors[r] = r.createEditor(tab)
+        for i, r in enumerate(self.tab.node.rois):
+            self.editors[i] = r.createEditor(tab)
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole and orientation == Qt.Horizontal:
@@ -211,7 +238,7 @@ class Model(QAbstractTableModel):
         return super().headerData(section, orientation, role)
 
     def rowCount(self, index):
-        return len(self.node.rois)
+        return len(self.tab.node.rois)
 
     def columnCount(self, index):
         return len(COLNAMES)
@@ -220,7 +247,7 @@ class Model(QAbstractTableModel):
         if role == Qt.DisplayRole:
             item = index.row()
             field = index.column()
-            roi = self.node.rois[item]
+            roi = self.tab.node.rois[item]
 
             if field == 0:
                 return roi.tpname
@@ -228,30 +255,36 @@ class Model(QAbstractTableModel):
                 return str(roi)
 
     def add_item(self, sourceIndex=None):
-        n = len(self.node.rois)
+        node = self.tab.node
+        n = len(node.rois)
         if sourceIndex is None:
             # pick an ROI - this is a dict of name to class
             choices = {x.tpname: x for x in pcot.rois.ROI.__subclasses__()}
             k, ok = QInputDialog.getItem(None, "Select a type", "type", list(choices.keys()), 0, False)
             if not ok:
                 return
-            # construct the new item
+            # construct the new item - we'll set the dimensions in perform too.
             new = choices[k]()
+            img = node.getInput(0, Datum.IMG)
+            if img is not None:  # not much we can do if there's no image -
+                # but that can't happen, how would we click on it?
+                new.setContainingImageDimensions(img.w, img.h)
         else:
-            new = self.node.rois[sourceIndex].copy()
+            new = node.rois[sourceIndex].copy()
         new.colour = (0, 1, 0)  # green by default
         # create an editor for the new ROI
-        self.node.editors[new] = new.createEditor(self.tab)
+        self.editors[n] = new.createEditor(self.tab)
         self.beginInsertRows(QModelIndex(), n, n)
-        self.node.rois.append(new)
+        node.rois.append(new)
         self.endInsertRows()
         self.changed.emit()
         return n
 
     def delete_item(self, n):
-        if n < len(self.node.rois):
+        if n < len(self.tab.node.rois):
             self.beginRemoveRows(QModelIndex(), n, n)
-            del self.node.rois[n]
+            del self.tab.node.rois[n]
+            del self.editors[n]
             self.endRemoveRows()
             self.changed.emit()
 
@@ -274,6 +307,7 @@ class TabROIExpr(Tab):
         self.w.outColButton.clicked.connect(self.outColButtonChanged)
         self.w.selColButton.clicked.connect(self.selColButtonChanged)
         self.w.unselColButton.clicked.connect(self.unselColButtonChanged)
+        self.w.imgROIColButton.clicked.connect(self.imgROIColButtonChanged)
         self.w.brushSize.valueChanged.connect(self.brushSizeChanged)
         self.w.tableView.doubleClicked.connect(self.doubleClick)
 
@@ -286,34 +320,39 @@ class TabROIExpr(Tab):
         self.nodeChanged()
 
     def onNodeChanged(self):
-        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
-        self.w.canvas.setMapping(self.node.mapping)
-        self.w.canvas.setGraph(self.node.graph)
-        self.w.canvas.setPersister(self.node)
-        self.w.canvas.setROINode(self.node)
-        self.w.canvas.display(self.node.canvimg)
+        node = self.node
+        # here we apply colour to the selected ROI. We used to do this in perform.
+        # but this data got lost after an undo. It's not a good idea to keep the
+        # selected index in the node.
+        selected = self.get_selected_item()
+        for i, r in enumerate(node.rois):
+            r.colour = node.selColour if i == selected else node.unselColour
+
+        self.w.canvas.setNode(self.node)
+        self.w.canvas.setROINode(node)
+        self.w.canvas.display(node.canvimg)
         self.w.tableView.dataChanged(QModelIndex(), QModelIndex())
 
-        self.w.exprEdit.setText(self.node.expr)
-        self.w.hideCheck.setChecked(self.node.hideROIs)
-        self.w.brushSize.setValue(self.node.brushSize)
-        setColourButton(self.w.outColButton, self.node.outColour)
-        setColourButton(self.w.selColButton, self.node.selColour)
-        setColourButton(self.w.unselColButton, self.node.unselColour)
+        self.w.exprEdit.setText(node.expr)
+        self.w.hideCheck.setChecked(node.hideROIs)
+        self.w.brushSize.setValue(node.brushSize)
+        setColourButton(self.w.outColButton, node.outColour)
+        setColourButton(self.w.selColButton, node.selColour)
+        setColourButton(self.w.unselColButton, node.unselColour)
+        setColourButton(self.w.imgROIColButton, node.imgROIColour)
 
     def doubleClick(self, index):
         item = index.row()
         # we need to tell the dialog the size of the image we are working with so it can set limits
         # in the editor dialogs.
-        w = 2000    # defaults
+        w = 2000  # defaults
         h = 2000
         if self.node.canvimg is not None:
             w = self.node.canvimg.w
             h = self.node.canvimg.h
 
         if 0 <= item < len(self.node.rois):
-            item = self.node.rois[item]
-            self.node.editors[item].openDialog(w, h)
+            self.model.editors[item].openDialog(w, h)
 
     def brushSizeChanged(self, val):
         self.mark()
@@ -341,6 +380,13 @@ class TabROIExpr(Tab):
             self.node.unselColour = col
             self.changed()
 
+    def imgROIColButtonChanged(self):
+        col = pcot.utils.colour.colDialog(self.node.imgROIColour)
+        if col is not None:
+            self.mark()
+            self.node.imgROIColour = col
+            self.changed()
+
     def exprChanged(self):
         self.mark()
         self.node.expr = self.w.exprEdit.text()
@@ -351,7 +397,6 @@ class TabROIExpr(Tab):
         self.changed()
 
     def selectionChanged(self, idx):
-        self.node.selected = idx
         self.changed(uiOnly=True)
 
     def roisChanged(self):
@@ -384,9 +429,19 @@ class TabROIExpr(Tab):
 
     def getEditor(self):
         if (item := self.get_selected_item()) is not None:
-            roi = self.node.rois[item]
-            return self.node.editors[roi]
+            try:
+                return self.model.editors[item]
+            except KeyError:
+                ui.log(f"Can't open editor for ROI {item}")
         return None
+
+    def getROI(self):
+        if (item := self.get_selected_item()) is not None:
+            try:
+                return self.node.rois[item]
+            except IndexError:
+                ui.log(f"Can't get ROI {item}")
+        raise XFormException('INTR', "No ROI selected in getROI()")
 
     def canvasPaintHook(self, p: QPainter):
         if (editor := self.getEditor()) is not None:

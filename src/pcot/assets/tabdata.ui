@@ -24,59 +24,15 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <property name="topMargin">
-      <number>0</number>
-     </property>
-     <property name="rightMargin">
-      <number>0</number>
-     </property>
-     <item>
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>Type</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLineEdit" name="type"/>
-     </item>
-     <item>
-      <widget class="QComboBox" name="dispTypeBox">
-       <item>
-        <property name="text">
-         <string>Data</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Sources</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <widget class="Canvas" name="canvas" native="true"/>
-   </item>
-   <item>
-    <widget class="QTextEdit" name="text">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-    </widget>
+    <widget class="DataWidget" name="data" native="true"/>
    </item>
   </layout>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>Canvas</class>
+   <class>DataWidget</class>
    <extends>QWidget</extends>
-   <header>pcot.ui.canvas</header>
+   <header>pcot.ui.datawidget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

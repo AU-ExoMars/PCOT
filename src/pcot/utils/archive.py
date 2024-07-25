@@ -58,9 +58,18 @@ class Archive:
         pass
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.zip is not None:
-            self.zip.close()
-            self.zip = None
+        pass
+
+    def is_open(self):
+        return self.zip is not None
+
+    def assert_read(self):
+        if self.mode != 'r':
+            raise Exception("Archive is not open for reading")
+
+    def assert_write(self):
+        if self.mode != 'w':
+            raise Exception("Archive is not open for writing")
 
     def progress(self, s):
         if self.progressCallback:
@@ -69,6 +78,7 @@ class Archive:
     def writeArray(self, name: str, a: np.ndarray):
         if self.zip is None:
             raise Exception("Archive is not open")
+        self.assert_write()
         b = BytesIO()
         np.save(b, a)
         self.zip.writestr(name, b.getvalue())
@@ -82,12 +92,15 @@ class Archive:
     def writeStr(self, name: str, string: str):
         if self.zip is None:
             raise Exception("Archive is not open")
+        self.assert_write()
+        print(f"Writing to {name}")
         # I'm aware it'll do the encoding anyway, but I wanted to make it explicit
         self.zip.writestr(name, string.encode('utf-8'))
 
     def readArray(self, name: str) -> np.ndarray:
         if self.zip is None:
             raise Exception("Archive is not open")
+        self.assert_read()
         b = self.zip.read(name)
         bio = BytesIO(b)
         a = np.load(bio)
@@ -96,6 +109,7 @@ class Archive:
     def readStr(self, name: str) -> str:
         if self.zip is None:
             raise Exception("Archive is not open")
+        self.assert_read()
         b = self.zip.read(name)
         return b.decode('utf-8')
 
@@ -148,12 +162,15 @@ class Archive:
 
 class FileArchive(Archive):
     """
-    Used for ZIP files on disk
+    Used for ZIP files on disk.
     """
 
     def __init__(self, name, mode='r',  progressCallback: Callable[[str], None] = None):
+        """Open a Zip archive on disk."""
         super().__init__(mode, progressCallback=progressCallback)
         self.name = name
+        self.tempdir = None
+        self.tempfilename = None
         self.arrayct = 0
 
     def __enter__(self):
@@ -165,12 +182,12 @@ class FileArchive(Archive):
             self.zip = zipfile.ZipFile(self.name, self.mode, compression=zipfile.ZIP_DEFLATED)
         return self
 
-    def __exit__(self, tp, value, traceback):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         if self.zip is not None:
             self.zip.close()
             self.zip = None
             if self.mode == 'w':
-                if tp is None:  # we ONLY write the destination archive if there were no exceptions!
+                if exc_type is None:  # we ONLY write the destination archive if there were no exceptions!
                     shutil.move(self.tempfilename, self.name)
                 else:
                     ui.warn("File did not save due to an exception.")
@@ -181,6 +198,8 @@ class MemoryArchive(Archive):
     """
     Used for ZIP archives in memory
     """
+
+    mode: bool      # 'r' or 'w', set by subclass
 
     def __init__(self, data=None, progressCallback=None):
         if data is None:
@@ -193,9 +212,14 @@ class MemoryArchive(Archive):
         self.data = data
 
     def __enter__(self):
-        pass
         self.zip = zipfile.ZipFile(self.data, self.mode, compression=zipfile.ZIP_DEFLATED)
         return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.zip is not None:
+            print("CLosing archive")
+            self.zip.close()
+            self.zip = None
 
     def get(self) -> BytesIO:
         return self.data

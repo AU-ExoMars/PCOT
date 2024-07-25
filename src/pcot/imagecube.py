@@ -3,10 +3,11 @@ and also incorporates region-of-interest data.  Conversions to and from float ar
 done in many operations. Avoiding floats saves memory and speeds things up,
 but we could change things later.
 """
-
+import itertools
 import logging
 import math
 import numbers
+from collections.abc import Iterable
 from typing import List, Optional, Tuple, Sequence, Union
 
 import cv2 as cv
@@ -556,9 +557,7 @@ class ImageCube(SourcesObtainable):
     def __str__(self):
         """Prettier string representation - but (importantly) doesn't have a unique ID so we can use it
         in string tests."""
-        s = "Image {}x{} array:{} channels:{}, {} bytes".format(self.w, self.h,
-                                                                str(self.img.shape), self.channels,
-                                                                self.img.nbytes)
+        s = f"Image {self.w}x{self.h}x{self.channels} {self.img.nbytes} bytes"
 
         s += "\nsrc: [{}]".format(self.sources.brief())
         if len(self.rois) > 0:
@@ -692,8 +691,15 @@ class ImageCube(SourcesObtainable):
     def getChannelImageByFilter(self, filterNameOrCWL):
         """Given a filter name, position or CWL, get a list of all channels which use it. Then build an image
         out of those channels. Usually this returns a single channel image, but it could very easily not."""
-        # get list of matching channel indices (often only one)
-        lstOfChannels = self.sources.search(filterNameOrCWL=filterNameOrCWL)
+
+        # get list of matching channel indices (often only one). If a single wavelength or filtername is provided
+        # we should turn that into a list of one element. The test here is like it is because strings are
+        # also iterable.
+
+        if not isinstance(filterNameOrCWL, Iterable) or isinstance(filterNameOrCWL, str):
+            filterNameOrCWL = [filterNameOrCWL]  # might get some kind of iterable, or just a bare value
+        lstOfChannels = [self.sources.search(filterNameOrCWL=x) for x in list(filterNameOrCWL)]
+        lstOfChannels = list(itertools.chain.from_iterable(lstOfChannels))  # flatten the list-of-lists we got
         if len(lstOfChannels) == 0:
             return None  # no matches found
         chans = []
@@ -994,3 +1000,15 @@ class ImageCube(SourcesObtainable):
 
         return ImageCube(outimg, self.mapping, self.sources, uncertainty=outunc, dq=outdq)
 
+    def get_uncertainty_image(self):
+        """Return an image with this image's uncertainty as its nominal values and zero uncertainty.
+        Sources, mapping and ROIs are preserved.
+        """
+        return ImageCube(self.uncertainty, self.mapping, self.sources, rois=self.rois)
+
+    def bands(self):
+        """Return a list of the CWLs of the filters. If there are no filters on any of the bands, raise."""
+        d = [self.wavelengthAndFWHM(i)[0] for i in range(self.channels)]
+        if any([x == -1 for x in d]):
+            raise Exception("bands property: Not all bands have a filter")
+        return d

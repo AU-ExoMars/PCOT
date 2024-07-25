@@ -26,7 +26,7 @@ class XFormExpr(XFormType):
     and the output type is determined when the node is run.
 
     The four inputs are assigned to the variables a, b, c, and d. They are typically (but not necessarily) images
-    or scalar values.
+    or numeric values.
     
     The standard operators +,/,\*,- and ^ all have their usual meanings. When applied to images they work in
     a pixel-wise fashion, so if **a** is an image, **2\*a** will double the brightness. If **b** is also an image,
@@ -50,7 +50,7 @@ class XFormExpr(XFormType):
     |A\|B          |element-wise maximum of A and B (Zadeh's OR operator)|20
     |!A            |element-wise 1-A (Zadeh's NOT operator)|50
 
-    All operators can act on images and scalars (numeric values),
+    All operators can act on images, 1D vectors and scalars
     with the exception of **.** and **$** which have images on the left-hand side and identifiers
     or integers on the right-hand side.
 
@@ -73,13 +73,21 @@ class XFormExpr(XFormType):
     This probably isn't what you wanted. Note that this is obviously not an issue when an operation is being performed
     on bands in a single image.
 
-    ### binary operators on images with regions of interest
+    ### Binary operators on images with regions of interest
     If one of the two images has an ROI, the operation is only performed on that ROI; the remaining area of output is
     taken from the image without an ROI. If both images have an ROI an error will result - it is likely that this
     is a mistake on the user's part, and doing something more "intelligent" might conceal this. The desired result
     can be achieved using expr nodes on ROIs and an importroi node.
 
-
+    ### Operations with vectors
+    Some functions can generate vectors, such as `mean` for getting the means of the bands, and `vec` for generating
+    vectors by hand.
+    
+    If an image is used in a binary operation with a vector on the other side, the vector must have the same number of
+    elements as there are bands in the image. The operation will be performed on each band. Consider a 3-band image
+    and the vector `[2,3,4]`. If we multiply them, the result will an image with the first band multiplied by 2,
+    the second band multiplied by 3, and the third band multiplied by 4. 
+    
     ### Operators on ROIs themselves (as opposed to images with ROIs)
 
     |operator    |description|
@@ -112,6 +120,15 @@ class XFormExpr(XFormType):
     |------------|---------|
     | **(a+b)$G0** | **a$G0 + b$G0** |
     | **((a+b)/2)$780** | **(a$780+b$780)/2**  |
+
+    ### Brackets
+
+    Round brackets are used to group expressions as usual, but square brackets are used for indexing into a vector.
+    For example, **a[3]** will extract the fourth element of the vector **a**. However, square brackets cannot
+    (yet) create a vector. To do this, use the `vec` function - so `vec(1,2,3)[1]` will return 2.
+    
+    Band extraction can also be performed with vectors provided the vector elements are numeric (i.e. wavelengths):
+    `a $ vec(640,550,440)` is valid.
     
 
     ### Properties
@@ -128,7 +145,7 @@ class XFormExpr(XFormType):
 
     ## Uncertainties are assumed to be independent in all binary operations
 
-    While uncertainty is propagated through operations (as standard deviation) all quantities are assumed
+    While uncertainty is propagated through operations (as population standard deviation) all quantities are assumed
     to be independent (calculating covariances is beyond the scope of this system). Be very careful here.
     For example, the uncertainty for the expression **tan(a)** will be calculated correctly, but if you try
     to use **sin(a)/cos(a)** the uncertainty will be incorrect because the nominator and denominator are
@@ -189,13 +206,16 @@ class XFormExpr(XFormType):
                                 node.mapping = ChannelMapping()
                             node.img.setMapping(node.mapping)
                     node.resultStr = res.tp.getDisplayString(res)
-                    node.setRectText(node.resultStr)
+                    node.setRectText(res.tp.getDisplayString(res, True))
                 else:
                     # no output, so reset the output type
                     node.changeOutputType(0, Datum.NONE)
 
         except Exception as e:
             traceback.print_exc()
+            node.img = None
+            node.setOutput(0, Datum.null)
+            node.changeOutputType(0, Datum.NONE)
             node.resultStr = str(e)
             ui.error(f"Error in expression: {str(e)}")
             raise XFormException('EXPR', str(e))
@@ -225,14 +245,7 @@ class TabExpr(pcot.ui.tabs.Tab):
         self.changed()
 
     def onNodeChanged(self):
-        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
-        self.w.canvas.setMapping(self.node.mapping)
-        self.w.canvas.setGraph(self.node.graph)
-        self.w.canvas.setPersister(self.node)
+        self.w.data.canvas.setNode(self.node)
         self.w.expr.setPlainText(self.node.expr)
-        self.w.result.setPlainText(self.node.resultStr)
         d = self.node.getOutputDatum(0)
-        if d is not None and d.tp == Datum.IMG:
-            self.w.canvas.display(d.val)
-        else:
-            self.w.canvas.display(None)
+        self.w.data.display(d)

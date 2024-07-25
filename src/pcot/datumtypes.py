@@ -3,6 +3,8 @@
 # lookup by name for serialisation
 from copy import copy
 
+import numpy as np
+
 import pcot.rois
 import pcot.datumexceptions
 import pcot.imagecube
@@ -10,7 +12,6 @@ import pcot.sources
 import pcot.value
 import pcot.datum
 import pcot.sources
-from pcot import dq
 
 typesByName = dict()
 
@@ -43,9 +44,14 @@ class Type:
     def __str__(self):
         return self.name
 
-    def getDisplayString(self, d: 'Datum'):
-        """Return the datum as a SHORT string - small enough to fit in a graph box; default
-        is just to return the name"""
+    def getSize(self, v):
+        """Get the size of the value in bytes. This is used to manage the cache in the DatumArchive.
+        By default, items have negligible size. Override this method for types that have a significant size."""
+        return 0
+
+    def getDisplayString(self, d: 'Datum', box=False):
+        """Return the datum as a fairly brief string - if box is true it must be small enough to fit in a graph box
+        or tab title; default is just to return the name"""
         return self.name
 
     def serialise(self, d: 'Datum'):
@@ -58,6 +64,11 @@ class Type:
         """create a copy of the Datum which is an independent piece of data and can be modified independently."""
         raise pcot.datumexceptions.NoDatumCopy(self.name)
 
+    def uncertainty(self, d):
+        """Get the uncertainty of the datum as Datum of the same type. For example, an image will return an image of
+        uncertainties. A vector will return a scalar."""
+        raise pcot.datumexceptions.NoUncertainty(self.name)
+
 
 # Built-in datum types
 
@@ -65,7 +76,7 @@ class AnyType(Type):
     def __init__(self):
         super().__init__('any', valid=None)
 
-    def getDisplayString(self, d: 'Datum'):
+    def getDisplayString(self, d: 'Datum', box=False):
         """Might seem a bit weird, but an unconnected input actually gives "any" as its type."""
         if d.val is None:
             return "none"
@@ -82,7 +93,7 @@ class ImgType(Type):
         # remember what they are.
         super().__init__('img', image=True, valid={pcot.imagecube.ImageCube, type(None)})
 
-    def getDisplayString(self, d: 'Datum'):
+    def getDisplayString(self, d: 'Datum', box=False):
         if d.val is None:
             return "IMG(NONE)"
         else:
@@ -97,6 +108,13 @@ class ImgType(Type):
 
     def copy(self, d):
         return pcot.datum.Datum(pcot.datum.Datum.IMG, d.val.copy())
+
+    def uncertainty(self, d):
+        return pcot.datum.Datum(pcot.datum.Datum.IMG, d.val.get_uncertainty_image())
+
+    def getSize(self, d):
+        v = d.val
+        return v.img.nbytes + v.uncertainty.nbytes + v.dq.nbytes
 
 
 class RoiType(Type):
@@ -119,14 +137,20 @@ class RoiType(Type):
         r = copy(d.val)  # deep copy with __copy__
         return pcot.datum.Datum(pcot.datum.Datum.ROI, r)
 
+    def getSize(self, v):
+        return v.getSize()
+
 
 class NumberType(Type):
-    """Number datums contain a scalar OpData object."""
+    """Number datums contain a Value object (scalar or vector, currently)."""
     def __init__(self):
         super().__init__('number', valid=[pcot.value.Value])
 
-    def getDisplayString(self, d: 'Datum'):
-        return f"{d.val.n:.5g}±{d.val.u:.5g}{dq.chars(d.val.dq)}"
+    def getDisplayString(self, d: 'Datum', box=False):
+        """in the graph box, a vec is just displayed as VEC[n] where n is the number of elements"""
+        if box and not np.isscalar(d.val.n):
+            return f"VEC[{d.val.n.shape[0]}]"
+        return str(d.val)
 
     def serialise(self, d):
         return self.name, (d.val.serialise(),
@@ -140,6 +164,15 @@ class NumberType(Type):
 
     def copy(self, d):
         return d    # this type is immutable
+
+    def uncertainty(self, d):
+        return pcot.datum.Datum(pcot.datum.Datum.NUMBER, pcot.value.Value(d.val.uncertainty()), d.getSources())
+
+    def getSize(self, d):
+        if np.isscalar(d.val.n):
+            return 0
+        else:
+            return d.val.n.nbytes + d.val.u.nbytes + d.val.dq.nbytes
 
 
 class VariantType(Type):
@@ -162,7 +195,7 @@ class TestResultType(Type):
     def __init__(self):
         super().__init__('testresult', valid=[list])
 
-    def getDisplayString(self, d: 'Datum'):
+    def getDisplayString(self, d: 'Datum', box=False):
         failed = len(d.val)
         if failed > 0:
             return f"FAILED {failed}"

@@ -15,6 +15,7 @@ to install and run PCOT and give you a tutorial covering the basics.
 * [The canvas and its optional views](canvas)
 
 ### Special topics
+* [Updating PCOT](update.md)
 * [Using the multifile input to read multispectral data from BMP, PNG etc.](multifile)
 * [Using the *expr* node to perform mathematical operations](expr.md)
 

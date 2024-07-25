@@ -108,6 +108,12 @@ def combineImageWithNumberSources(img: ImageCube, other: SourceSet) -> MultiBand
     return MultiBandSource([SourceSet(x.sourceSet.union(other.sourceSet)) for x in img.sources.sourceSets])
 
 
+#
+#  These are the "binop semantics Datum wrappers" - they take Datum objects of various types,
+#  convert to Values (or extract Values), perform Value operations on them, and return a new Datum.
+#  Generally, anyway. imageUnop actually extracts ndarray and performs operations on that, making
+#  the assumption that unops have no effect on uncertainty or DQ.
+
 def imageUnop(d: Datum, f: Callable[[np.ndarray], np.ndarray]) -> Datum:
     """This wraps unary operations on imagecubes
 
@@ -210,6 +216,8 @@ def ROIBinop(dx: Datum, dy: Datum, f: Callable[[ROI, ROI], ROI]) -> Datum:
     r = f(dx.val, dy.val)
     return Datum(Datum.ROI, r, SourceSet([dx.getSources(), dy.getSources()]))
 
+# end of binop semantics wrappers
+
 
 def extractChannelByName(a: Datum, b: Datum) -> Datum:
     """Extract a channel by name from an image, used for the $ operator.
@@ -253,6 +261,7 @@ def initOps():
         registerBinopSemantics(op, Datum.IMG, Datum.NUMBER, lambda dx, dy: imageNumberBinop(dx, dy, fn))
         registerBinopSemantics(op, Datum.NUMBER, Datum.NUMBER, lambda dx, dy: numberBinop(dx, dy, fn))
 
+    # we COULD just replace the lambdas with Value.__add__ etc, but it's clearer this way.
     regAllBinopSemantics(Operator.ADD, lambda x, y: x + y)
     regAllBinopSemantics(Operator.SUB, lambda x, y: x - y)
     regAllBinopSemantics(Operator.MUL, lambda x, y: x * y)

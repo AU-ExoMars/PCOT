@@ -134,6 +134,11 @@ All values in PCOT - scalar and image - can have an uncertainty value and data q
 In imagecubes, this applies to every pixel of every band. The uncertainty values are expressed
 as standard deviations. Operations need to combine these data in a sensible way.
 
+@@@warn
+Note that the standard deviation used is the **population** standard
+deviation, not the **sample** standard deviation.
+@@@
+
 This is currently implemented using the **Value** class.
 
 Consists of:

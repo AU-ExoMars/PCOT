@@ -3,6 +3,7 @@ from typing import Optional
 import numpy as np
 from PySide2.QtCore import QSignalBlocker
 
+from pcot import dq
 from pcot.datum import Datum
 import pcot.operations as operations
 import pcot.ui.tabs
@@ -17,6 +18,9 @@ from pcot.xform import xformtype, XFormType, XFormException
 class XformBandDepth(XFormType):
     """
     Calculate band depth using a linear weighted mean of the two bands either side.
+    Band depth is NOT the distance between the predicted reflectance of the centre band
+    the actual centre band measurement, but the one minus the ratio of those measurements.
+
     Reference: "Revised CRISM spectral parameters... " Viviano, Seelos et al. 2015.
 
     Issues:
@@ -41,6 +45,7 @@ class XformBandDepth(XFormType):
 
     def perform(self, node):
         img: Optional[ImageCube] = node.getInput(0, Datum.IMG)
+        out = None
         if img is not None:
             node.cwls = []
             for x in range(0, img.channels):
@@ -75,9 +80,9 @@ class XformBandDepth(XFormType):
                     rL = Value(img.img[:, :, lidx], img.uncertainty[:, :, lidx], img.dq[:, :, lidx])
 
                     # get weighted mean, the predicted value.
-                    rCStar: Value = (rL * Value(t)) + (rS * Value(1.0 - t))
+                    rCStar: Value = (rL * Value(t, 0)) + (rS * Value(1.0 - t, 0))
                     # and find the depth!
-                    depth: Value = Value(1.0) - (rC / rCStar)
+                    depth: Value = Value(1.0, 0) - (rC / rCStar)
 
                     sources = MultiBandSource([SourceSet([
                         img.sources[sidx],
@@ -94,8 +99,6 @@ class XformBandDepth(XFormType):
                         defaultMapping=None
                     )
                     out = Datum(Datum.IMG, out)
-        else:
-            out = None
         node.setOutput(0, out)
 
 
@@ -111,11 +114,6 @@ class TabBandDepth(pcot.ui.tabs.Tab):
         self.changed()
 
     def onNodeChanged(self):
-        # have to do canvas set up here to handle extreme undo events which change the graph and nodes
-        self.w.canvas.setMapping(self.node.mapping)
-        self.w.canvas.setGraph(self.node.graph)
-        self.w.canvas.setPersister(self.node)
-
         # need to repopulate without triggering bandChanged. With a newer version of Pyside2 we could
         # sensibly use QSignalBlocker. NOT WORKING.
         self.w.bandCombo.blockSignals(True)
@@ -129,4 +127,6 @@ class TabBandDepth(pcot.ui.tabs.Tab):
         if self.node.bandidx >= 0:
             self.w.bandCombo.setCurrentIndex(self.node.bandidx)
 
-        self.w.canvas.display(self.node.img)
+        self.w.canvas.setNode(self.node)
+        img = self.node.getOutput(0, Datum.IMG)
+        self.w.canvas.display(img)

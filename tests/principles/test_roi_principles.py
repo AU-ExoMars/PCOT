@@ -280,9 +280,9 @@ def test_rois_on_both_sides_of_binop():
     expr.expr = "a+b"
 
     doc.run()
-    img = expr.getOutput(0, Datum.IMG)
+    img = expr.getOutputDatum(0)
 
-    assert img is None
+    assert img is Datum.null
     assert expr.error.message == "cannot have two images with ROIs on both sides of a binary operation"
 
 
