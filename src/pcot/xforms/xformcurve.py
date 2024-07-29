@@ -2,6 +2,7 @@ from pcot.datum import Datum
 import pcot.operations as operations
 import pcot.ui.tabs
 from pcot.operations.curve import curve, genLut, lutxcoords
+from pcot.utils.taggedaggregates import TaggedDictType
 from pcot.xform import xformtype, XFormType
 
 
@@ -19,7 +20,10 @@ class XformCurve(XFormType):
         super().__init__("curve", "processing", "0.0.0", hasEnable=True)
         self.addInputConnector("", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
-        self.autoserialise = ('add', 'mul')
+
+        self.params = TaggedDictType(
+            mul=(float, "multiplicative factor (done first)", 1.0),
+            add=(float, "additive constant (done last)", 0.0))
 
     def createTab(self, n, w):
         pcot.ui.msg("creating a tab with a plot widget takes time...")

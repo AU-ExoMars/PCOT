@@ -82,7 +82,7 @@ class DQDelegate(QStyledItemDelegate):
 
     def createEditor(self, parent, option, index):
         i = index.column()
-        dialog = DQDialog(self.model.d[i].dq, parent)
+        dialog = DQDialog(self.model.tags[i].dq, parent)
         dialog.open()
         return dialog
 

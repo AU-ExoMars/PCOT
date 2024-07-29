@@ -197,6 +197,15 @@ class XFormType:
         # parent node threw an exception.
         self.alwaysRunAfter = False
 
+        # If this is not None, then this type has a set of parameters which can be
+        # edited in a parameter file. These will be serialised using a different
+        # mechanism. This field will contain information about those parameters as
+        # TaggedAggregateType objects (typically a structure with a TaggedDictType at the root).
+        # Within each node, a mirror of that structure containing the actual data will
+        # exist, such as a TaggedDict.
+
+        self.params = None
+
     def md5(self):
         """returns a checksum of the sourcecode for the module defining the type, MD5 hash, used to check versions"""
         return self._md5
@@ -471,6 +480,9 @@ class XForm:
     # recursion avoidance
     inUIChange: bool
 
+    # the serialised parameters in a TaggedAggregate, or None. Usually it's TaggedDict.
+    params: Optional['TaggedAggregate']
+
     def __init__(self, tp, dispname):
         """constructor, takes type and displayname"""
         self.instance = None
@@ -497,6 +509,10 @@ class XForm:
         self.runTime = 0
         self.timesPerformed = 0  # used for debugging/optimising
         self.rebuildTabsAfterPerform = False
+
+        # create default parameter data
+        self.params = None if tp.params is None else tp.params.create()
+
 
         # UI-DEPENDENT DATA DOWN HERE
 
@@ -616,6 +632,11 @@ class XForm:
             # avoids a type check problem
             d.update(d2 or {})
         Canvas.serialise(self, d)
+
+        # serialise the parameters
+        if self.params is not None:
+            self.params.serialise(d)
+
         return d
 
     def deserialise(self, d):
@@ -644,6 +665,9 @@ class XForm:
         self.type.doAutodeserialise(self, d)
         # run the additional deserialisation method
         self.type.deserialise(self, d)
+        # deserialise parameters
+        if self.params is not None:
+            self.params.deserialise(d)
 
     def getOutputType(self, i) -> Optional['pcot.datumtypes.Type']:
         """return the actual type of an output, taking account of overrides (node outputTypes).
