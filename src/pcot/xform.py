@@ -513,7 +513,6 @@ class XForm:
         # create default parameter data
         self.params = None if tp.params is None else tp.params.create()
 
-
         # UI-DEPENDENT DATA DOWN HERE
 
         # this SHOULD be serialised
@@ -633,9 +632,15 @@ class XForm:
             d.update(d2 or {})
         Canvas.serialise(self, d)
 
-        # serialise the parameters
+        # serialise the parameters into the same dict
         if self.params is not None:
-            self.params.serialise(d)
+            # but flag an error if there are keys which already exist because that will cause problems
+            # when deserialising.
+            d2 = self.params.serialise()
+            intersect = set(d.keys()).intersection(set(d2.keys()))
+            if len(intersect) > 0:
+                raise Exception(f"Parameter keys already exist in serialised node data: {intersect}")
+            d.update(d2)
 
         return d
 
@@ -666,8 +671,9 @@ class XForm:
         # run the additional deserialisation method
         self.type.deserialise(self, d)
         # deserialise parameters
-        if self.params is not None:
-            self.params.deserialise(d)
+        if self.type.params is not None:
+            # this will replace the defaults.
+            self.params = self.type.params.deserialise(d)
 
     def getOutputType(self, i) -> Optional['pcot.datumtypes.Type']:
         """return the actual type of an output, taking account of overrides (node outputTypes).

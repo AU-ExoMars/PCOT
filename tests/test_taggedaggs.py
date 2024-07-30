@@ -21,10 +21,19 @@ def test_taggeddict():
     assert td['a'] == 10
     assert td['b'] == "foo"
     assert td['c'] == 3.14
+    assert td.a == 10
+    assert td.b == "foo"
+    assert td.c == 3.14
+    with pytest.raises(KeyError):
+        print(td.d)
+
     assert len(td.values) == 3
 
     td['a'] = 20
     assert td['a'] == 20
+
+    td.b = "hello"
+    assert td.b == "hello"
 
     with pytest.raises(ValueError):
         td['a'] = "wibble"
@@ -50,6 +59,10 @@ def test_taggedtuple():
     assert tt[2] == 3.14
     assert len(tt.values) == 3
 
+    assert tt.a == 10
+    assert tt.b == "foo"
+    assert tt.c == 3.14
+
     tt[0] = 20
     assert tt[0] == 20
     # check we can set by name
@@ -57,8 +70,13 @@ def test_taggedtuple():
     # and that it actually works
     assert tt[0] == 40
     assert tt['a'] == 40
+    assert tt.a == 40
+
     assert tt[1] == "foo"  # make sure it's still the same otherwise
     assert tt[2] == 3.14
+
+    with pytest.raises(KeyError):
+        print(tt.d)
 
     with pytest.raises(ValueError):
         tt[0] = "wibble"

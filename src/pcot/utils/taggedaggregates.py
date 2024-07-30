@@ -25,7 +25,7 @@ class TaggedAggregate(ABC):
     Each has an appropriate TaggedAggregateType object that defines the types of the values. The reference to
     the type is here, not in the subtype, although the subtype limits what the actual type can be. This is to
     make it easier to check we have the correct type."""
-    tp: TaggedAggregateType  # will always be the appropriate subtype of TaggedAggregateType
+    type: TaggedAggregateType  # will always be the appropriate subtype of TaggedAggregateType
 
     def __init__(self, tp: TaggedAggregateType):
         self.type = tp
@@ -99,7 +99,10 @@ class TaggedDictType(TaggedAggregateType):
 
 
 class TaggedDict(TaggedAggregate):
-    """This is the actual tagged dict object"""
+    """This is the actual tagged dict object. It acts like a dict, in that you can set and get
+    values by key, but each value has a type, description and default value stored in the type object.
+    You can also access items as attributes - so if you have a TaggedDict with a tag 'foo', you can
+    use tag.foo"""
 
     values: Dict[str, Any]
     type: TaggedDictType
@@ -151,6 +154,14 @@ class TaggedDict(TaggedAggregate):
 
         self.values[key] = value
 
+    def __getattr__(self, key):
+        """Allow access to the values by name"""
+        return self.values[key]
+
+    def __setattr__(self, key, value):
+        """Allow setting the values by name"""
+        super().__setattr__(key, value)
+
     def serialise(self):
         """Serialise the structure rooted here into a JSON-serialisable structure. We don't need to record what the
         types are, because that information will be stored in the type object when we deserialise.
@@ -162,6 +173,8 @@ class TaggedDict(TaggedAggregate):
 class TaggedTupleType(TaggedAggregateType):
     """This acts like a tuple, but each item has a type, description and default value. That means
     that it must be initialised with a set of such values.
+    It works like a TaggedDict in many ways, so if there is a "foo" entry you could access it with
+    tag.foo as well as tag[0] and tag["foo"] (assuming foo's index is 0 of course).
     """
 
     tags: List[Tuple[str, Tag]]  # the name and tag for each item
@@ -266,6 +279,15 @@ class TaggedTuple(TaggedAggregate):
             raise ValueError(f"Value {value} is not of type {tag.type}")
 
         self.values[idx] = value
+
+    def __getattr__(self, item):
+        """Allow access to the values by name"""
+        idx = self.type.indicesByName[item]
+        return self.values[idx]
+
+    def __setattr__(self, key, value):
+        """Allow setting the values by name"""
+        super().__setattr__(key, value)
 
     def serialise(self):
         """Serialise the structure rooted here into a JSON-serialisable tuple. We don't need to record what the
