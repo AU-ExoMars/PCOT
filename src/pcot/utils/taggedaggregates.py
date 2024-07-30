@@ -1,17 +1,26 @@
 import dataclasses
-from typing import Any, Dict, Union, List, Tuple
+from typing import Any, Dict, Union, List, Tuple, Optional
+from abc import ABC, abstractmethod
 
 
-class TaggedAggregateType:
+class TaggedAggregateType(ABC):
     """This is the base class for tagged aggregate type objects. These define what types the values in the aggregate
     should have. Each TaggedAggregate has a ref to one of these *of the appropriate type*, so a TaggedDict will have
     a TaggedDictType, etc."""
+
+    @abstractmethod
     def create(self):
         """Create a the appropriate default values"""
         raise NotImplementedError("createDefaults not implemented")
 
+    @abstractmethod
+    def deserialise(self, data):
+        """Deserialise the type from a JSON-serialisable structure, returning a new instance of the appropriate
+        TaggedAggregate"""
+        raise NotImplementedError("deserialise not implemented")
 
-class TaggedAggregate:
+
+class TaggedAggregate(ABC):
     """This is the base class for tagged aggregate objects. These are the actual objects that hold the values.
     Each has an appropriate TaggedAggregateType object that defines the types of the values. The reference to
     the type is here, not in the subtype, although the subtype limits what the actual type can be. This is to
@@ -20,6 +29,11 @@ class TaggedAggregate:
 
     def __init__(self, tp: TaggedAggregateType):
         self.type = tp
+
+    @abstractmethod
+    def serialise(self):
+        """Serialise the type into a JSON-serialisable structure"""
+        raise NotImplementedError("serialise not implemented")
 
 
 @dataclasses.dataclass
@@ -79,6 +93,10 @@ class TaggedDictType(TaggedAggregateType):
         """Create a the appropriate default values"""
         return TaggedDict(self)
 
+    def deserialise(self, data) -> 'TaggedDict':
+        """Create a new TaggedDict of this type from a JSON-serialisable structure"""
+        return TaggedDict(self, data)
+
 
 class TaggedDict(TaggedAggregate):
     """This is the actual tagged dict object"""
@@ -86,16 +104,29 @@ class TaggedDict(TaggedAggregate):
     values: Dict[str, Any]
     type: TaggedDictType
 
-    def __init__(self, td: TaggedDictType):
-        """Initialise the TaggedDict with a TaggedDictType"""
+    def __init__(self, td: TaggedDictType, data: Optional[dict] = None):
+        """Initialise the TaggedDict with a TaggedDictType. If a dict is provided, use the values therein instead
+        of the defaults given in the type object"""
         super().__init__(td)
         self.values = {}
         # easier to read than a dict comprehension
         for k, v in td.tags.items():
-            if isinstance(v.type, TaggedAggregateType):
-                self.values[k] = v.type.create()
+            if data is not None and k in data:
+                # if we have data, use that instead of the defaults.
+                if isinstance(v.type, TaggedAggregateType):
+                    # if we have a tagged aggregate, create it from the data stored in the serialised dict
+                    self.values[k] = v.type.deserialise(data[k])
+                else:
+                    # otherwise just use the data as is
+                    self.values[k] = data[k]
             else:
-                self.values[k] = v.deflt
+                # we are creating from defaults
+                if isinstance(v.type, TaggedAggregateType):
+                    # just create a default object for this type
+                    self.values[k] = v.type.create()
+                else:
+                    # use default as is
+                    self.values[k] = v.deflt
 
     def __getitem__(self, key):
         """Return the value for a given key"""
@@ -119,6 +150,13 @@ class TaggedDict(TaggedAggregate):
             raise ValueError(f"Value {value} is not of type {tag.type}")
 
         self.values[key] = value
+
+    def serialise(self):
+        """Serialise the structure rooted here into a JSON-serialisable structure. We don't need to record what the
+        types are, because that information will be stored in the type object when we deserialise.
+        This assumes that the only items in the structure are JSON-serialisable or TaggedAggregate."""
+
+        return {k: (v.serialise() if isinstance(v, TaggedAggregate) else v) for k, v in self.values.items()}
 
 
 class TaggedTupleType(TaggedAggregateType):
@@ -164,6 +202,10 @@ class TaggedTupleType(TaggedAggregateType):
         """Create a the appropriate default values"""
         return TaggedTuple(self)
 
+    def deserialise(self, data) -> 'TaggedTuple':
+        """Create a new TaggedTuple of this type from a JSON-serialisable structure"""
+        return TaggedTuple(self, data)
+
 
 class TaggedTuple(TaggedAggregate):
     """This is the actual tagged tuple object"""
@@ -173,10 +215,26 @@ class TaggedTuple(TaggedAggregate):
     values: List[Any]
     type: TaggedTupleType
 
-    def __init__(self, tt: TaggedTupleType):
-        """Initialise the TaggedTuple with a TaggedTupleType"""
+    def __init__(self, tt: TaggedTupleType, data: Optional[Tuple] = None):
+        """Initialise the TaggedTuple with a TaggedTupleType.
+        If a tuple is provided, use the values therein instead of the defaults
+        given in the type object"""
         super().__init__(tt)
-        self.values = [v.deflt for k, v in tt.tags]
+        if data is not None:
+            self.values = []
+            if len(data) != len(tt.tags):
+                raise ValueError(f"Data {data} does not match tags {tt.tags}")
+            # run through the tags and the data
+            for i, v in enumerate(data):
+                tagname, tag = tt.tags[i]
+                if isinstance(tag.type, TaggedAggregateType):
+                    # if the type is a tagged aggregate, create it from the data stored in the serialised tuple
+                    self.values.append(tag.type.deserialise(v))
+                else:
+                    # otherwise just use the data as is
+                    self.values.append(v)
+        else:
+            self.values = [v.deflt for k, v in tt.tags]
 
     def __getitem__(self, idxOrKey: Union[int, str]):
         """Return the value for a given index OR tagname"""
@@ -209,6 +267,14 @@ class TaggedTuple(TaggedAggregate):
 
         self.values[idx] = value
 
+    def serialise(self):
+        """Serialise the structure rooted here into a JSON-serialisable tuple. We don't need to record what the
+        types are, because that information will be stored in the type object when we deserialise.
+        This assumes that the only items in the structure are JSON-serialisable or TaggedAggregate."""
+
+        # return a tuple
+        return tuple([(v.serialise() if isinstance(v, TaggedAggregate) else v) for v in self.values])
+
 
 class TaggedListType(TaggedAggregateType):
     """This acts like a list, with all items having the same tag (type, description, default).
@@ -231,7 +297,8 @@ class TaggedListType(TaggedAggregateType):
         # if type is a TaggedAggregate the default has to be an int!
         if isinstance(v.type, TaggedAggregateType):
             if not isinstance(v.deflt, int):
-                raise ValueError(f"TaggedListType: Type {v.type} is a TaggedAggregateType, so default must be integer (number of items)")
+                raise ValueError(
+                    f"TaggedListType: Type {v.type} is a TaggedAggregateType, so default must be integer (number of items)")
         else:
             # otherwise the default has to be a list, and all items must be of the correct type
             if not isinstance(v.deflt, list):
@@ -244,6 +311,10 @@ class TaggedListType(TaggedAggregateType):
         """Create a the appropriate default values"""
         return TaggedList(self)
 
+    def deserialise(self, data) -> 'TaggedList':
+        """Create a new TaggedTuple of this type from a JSON-serialisable structure"""
+        return TaggedList(self, data)
+
 
 class TaggedList(TaggedAggregate):
     """This is the actual tagged list object"""
@@ -251,14 +322,24 @@ class TaggedList(TaggedAggregate):
     values: List[Any]
     type: TaggedListType
 
-    def __init__(self, tl: TaggedListType):
+    def __init__(self, tl: TaggedListType, data: Optional[List] = None):
         """Initialise the TaggedList with a TaggedListType"""
         super().__init__(tl)
-        if isinstance(tl.tag.type, TaggedAggregateType):
-            # if the type is a tagged aggregate, create the correct number of them
-            self.values = [tl.tag.type.create() for _ in range(tl.tag.deflt)]
+        if data is not None:
+            # data is provided.
+            if isinstance(tl.tag.type, TaggedAggregateType):
+                # if the type is a tagged aggregate, them from the data provided
+                self.values = [tl.tag.type.deserialise(v) for v in data]
+            else:
+                # otherwise just use the data as is
+                self.values = data
         else:
-            self.values = [v for v in tl.tag.deflt]     # create copies
+            # we are creating from defaults
+            if isinstance(tl.tag.type, TaggedAggregateType):
+                # if the type is a tagged aggregate, create the correct number of them
+                self.values = [tl.tag.type.create() for _ in range(tl.tag.deflt)]
+            else:
+                self.values = [v for v in tl.tag.deflt]  # create copies
 
     def __getitem__(self, idx):
         """Return the value for a given index"""
@@ -279,11 +360,18 @@ class TaggedList(TaggedAggregate):
 
         self.values[idx] = value
 
+    def serialise(self):
+        """Serialise the structure rooted here into a JSON-serialisable list. We don't need to record what the
+        types are, because that information will be stored in the type object when we deserialise.
+        This assumes that the only items in the structure are JSON-serialisable or TaggedAggregate."""
+
+        return [v.serialise() if isinstance(v, TaggedAggregate) else v for v in self.values]
+
 
 #
 # Special aggregates we use a lot
 #
 
-taggedColour = TaggedTupleType(r=("The red component 0-1",float, 0.0),
-                               g=("The green component 0-1",float, 0.0),
-                               b=("The blue component 0-1",float, 0.0))
+taggedColour = TaggedTupleType(r=("The red component 0-1", float, 0.0),
+                               g=("The green component 0-1", float, 0.0),
+                               b=("The blue component 0-1", float, 0.0))
