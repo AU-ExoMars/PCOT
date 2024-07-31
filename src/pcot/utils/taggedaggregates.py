@@ -394,6 +394,6 @@ class TaggedList(TaggedAggregate):
 # Special aggregates we use a lot
 #
 
-taggedColour = TaggedTupleType(r=("The red component 0-1", float, 0.0),
-                               g=("The green component 0-1", float, 0.0),
-                               b=("The blue component 0-1", float, 0.0))
+TaggedColourType = TaggedTupleType(r=("The red component 0-1", float, 0.0),
+                                   g=("The green component 0-1", float, 0.0),
+                                   b=("The blue component 0-1", float, 0.0))

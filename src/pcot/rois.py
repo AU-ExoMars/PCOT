@@ -16,6 +16,7 @@ from pcot.utils.annotations import Annotation, annotDrawText
 from pcot.utils.colour import rgb2qcol
 from pcot.utils.flood import FastFloodFiller, FloodFillParams
 from pcot.utils.geom import Rect
+from pcot.utils.taggedaggregates import TaggedDictType, TaggedColourType
 
 
 class BadOpException(Exception):
@@ -42,7 +43,7 @@ ROISERIALISEFIELDS = (
     ('colour', (1, 1, 0)),
     ('thickness', 0),
     ('fontsize', 10),
-    ('containingImageDimensions', 'missing'),
+    ('containingImageDimensions', None),
     ('drawbg', True),
     ('drawBox', True),
     ('drawEdge', True),
