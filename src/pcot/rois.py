@@ -43,7 +43,7 @@ ROISERIALISEFIELDS = (
     ('colour', (1, 1, 0)),
     ('thickness', 0),
     ('fontsize', 10),
-    ('containingImageDimensions', None),
+#    ('containingImageDimensions', None),
     ('drawbg', True),
     ('drawBox', True),
     ('drawEdge', True),

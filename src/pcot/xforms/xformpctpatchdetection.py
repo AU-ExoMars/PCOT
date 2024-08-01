@@ -41,6 +41,17 @@ def createInterpolatedROI(x, y, r, label):
     return r
 
 
+def toPair(x):
+    """
+    If the input is not a coordinate pair (x,y) but an ROICircle, convert to pair.
+    Ugly.
+    """
+    if isinstance(x, ROICircle):
+        return x.x, x.y
+    else:
+        return x
+
+
 # This class defines the back-end functionality of the node
 # tag allows auto-registration of node
 @xformtype
@@ -183,12 +194,14 @@ class XformPCTPatchDetection(XFormType):
 
                 # now try to detect flippage and modify the detections if required
                 self.detectFlippage(node)
+                node.detections.labelROIs()
 
                 # create image showing patch detections and identities to the user
                 self.plotDetections(node, finalCirclesList, workingImg)
                 # set the ROIs on the input image (which is a copy of the actual input) - this
                 # replaces any ROIs already there!
-                node.inputImg.rois = [x for x in node.detections.toROIList() if x is not None]
+                roisList = node.detections.toROIList()
+                node.inputImg.rois = [x for x in roisList if x is not None]
                 # and that will be the output image
                 node.setOutput(0, Datum(Datum.IMG, node.inputImg, node.inputImg.sources))
             else:
@@ -663,9 +676,10 @@ class XformPCTPatchDetection(XFormType):
 
             if d.RG610 is None:
                 # RG610 Rule 2: If OG515 identified, RG610 = 1.8 x mean(Pyroceram, WCT-2065) > OG515 translation
-                meanLargePatchCoordinates = [int((d.Pyroceram[0] + d.WCT2065[0]) / 2),
-                                             int((d.Pyroceram[1] + d.WCT2065[1]) / 2)]
-                d.RG610, existingDetections = self.interpolationTranslation(node, "RG610", meanLargePatchCoordinates,
+                meanLargePatchCoordinates = [int((d.Pyroceram.x + d.WCT2065.x) / 2),
+                                             int((d.Pyroceram.y + d.WCT2065.y) / 2)]
+                d.RG610, existingDetections = self.interpolationTranslation(node, "RG610",
+                                                                            meanLargePatchCoordinates,
                                                                             d.OG515, 0.8,
                                                                             existingDetections)
 
@@ -704,9 +718,10 @@ class XformPCTPatchDetection(XFormType):
 
             if d.OG515 is None:
                 # OG515 Rule 2: If RG610 identified, OG515 = 0.56 x mean(Pyroceram, WCT-2065) > RG610 translation
-                meanLargePatchCoordinates = [int((d.Pyroceram[0] + d.WCT2065[0]) / 2),
-                                             int((d.Pyroceram[1] + d.WCT2065[1]) / 2)]
+                meanLargePatchCoordinates = [int((d.Pyroceram.x + d.WCT2065.x) / 2),
+                                             int((d.Pyroceram.y + d.WCT2065.y) / 2)]
                 d.OG515, existingDetections = self.interpolationTranslation(node, "OG515",
+                                                                            meanLargePatchCoordinates,
                                                                             d.RG610, -0.44,
                                                                             existingDetections)
 
@@ -756,6 +771,9 @@ class XformPCTPatchDetection(XFormType):
         """
         # check the translation components are not null
         if None not in (patchOne, patchTwo):
+            patchOne = toPair(patchOne)
+            patchTwo = toPair(patchTwo)
+
             predictedXY = [int((patchOne[0] + patchTwo[0]) / 2),
                            int((patchOne[1] + patchTwo[1]) / 2)]
             # check if any exiting detections closely match the coordinates and use those instead if so
@@ -777,10 +795,14 @@ class XformPCTPatchDetection(XFormType):
         """
         # check the translation components are not null
         if None not in (translationSource, translationDestination):
-            predictedXY = [translationDestination.x + int(
-                translationMagnitude * (translationDestination.x - translationSource.x)),
-                           translationDestination.y + int(
-                               translationMagnitude * (translationDestination.y - translationSource.y))]
+            # this is a bit bloody unpleasant because the two positions can be either ROIs or tuples/lists!
+            translationSource = toPair(translationSource)
+            translationDestination = toPair(translationDestination)
+
+            predictedXY = [translationDestination[0] + int(
+                translationMagnitude * (translationDestination[0] - translationSource[0])),
+                           translationDestination[1] + int(
+                               translationMagnitude * (translationDestination[1] - translationSource[1]))]
             # check if any exiting detections closely match the coordinates and use those instead if so
             predictedXY, replaced = self.checkExistingDetections(predictedXY, existingDetections)
             # if the predicted coordinates were a new detection, add to the detections array with a tag that it was a interpolated detection
@@ -799,8 +821,12 @@ class XformPCTPatchDetection(XFormType):
         """
         # check the parallelogram corners are not null
         if None not in (leftCorner, oppositeCorner, rightCorner):
-            predictedX = leftCorner.x + (rightCorner.x - oppositeCorner.x)
-            predictedY = leftCorner.y + (rightCorner.y - oppositeCorner.y)
+            leftCorner = toPair(leftCorner)
+            oppositeCorner = toPair(oppositeCorner)
+            rightCorner = toPair(rightCorner)
+
+            predictedX = leftCorner[0] + (rightCorner[0] - oppositeCorner[0])
+            predictedY = leftCorner[1] + (rightCorner[1] - oppositeCorner[1])
             predictedXY = [predictedX, predictedY]
             # check if any exiting detections closely match the coordinates and use those instead if so
             predictedXY, replaced = self.checkExistingDetections(predictedXY, existingDetections)
@@ -827,7 +853,7 @@ class XformPCTPatchDetection(XFormType):
 
         def getAngle(cc, p):
             """Find the angle between the centroid and a patch"""
-            if cc is None:
+            if cc is None or p is None:
                 return None
             cx, cy = cc
             return math.atan2(p.y - cy, p.x - cx)
@@ -1167,6 +1193,7 @@ class PCTPatchData:
             return r
 
         # build the ROIs from the patches
+        # We label these with tentative labels - the real labels will be set later because they could get "flipped".
         self.NG4 = patch2circ(NG4, "NG4")
         self.RG610 = patch2circ(RG610, "RG610")
         self.BG3 = patch2circ(BG3, "BG3")
@@ -1232,6 +1259,13 @@ class PCTPatchData:
             self.complete = True
         else:
             self.complete = False
+
+    def labelROIs(self):
+        """Label the ROIs with the correct patch names; they may have been flipped"""
+        for name in self.PATCHNAMES:
+            patch = getattr(self, name)
+            if patch is not None:
+                patch.label = name
 
     def toROIList(self):
         """return a list of the patches in the order of the patch names"""
