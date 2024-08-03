@@ -328,11 +328,28 @@ class XFormType:
         """
         pass
 
+    def serialiseToTaggedDict(self, xform):
+        """This is used when a transform isn't using the standard serialisation mechanism to store
+        data that can be modified by a parameter file - data that lives in a TaggedDict (at least for
+        a bit). This is typically data like the ROI data for ROI nodes, which lives at the same
+        level as the node data.
+
+        It takes a node and returns a TaggedDict containing the data. This will be serialised and
+        merged with the node's data.
+        """
+        return None
+
+    def deserialiseViaTaggedDict(self, xform, d):
+        """This is the counterpart to serialiseToTaggedDict. It takes a node and a dictionary,
+        and reads some data from that dictionary (it will be the entire node data) to create a TaggedDict
+        the parameter system will work with. It will then use the data to set the node's data.
+        """
+        pass
+
     def createTab(self, xform, window):
         """usually override this - create a tab connected to this xform, parented to a main window.
             Might return none, if this xform doesn't have a meaningful UI.
             """
-
         return None
 
     def clearData(self, xform):
@@ -625,11 +642,21 @@ class XForm:
 
         # add autoserialised data
         d.update(self.type.doAutoserialise(self))
-        # and run the additional serialisation method
+        # and run the additional serialisation tasks, serialising things which
+        # can't be autoserialised (because they aren't JSON-serialisable) and
+        # perhaps converting data into self.params fields.
         d2 = self.type.serialise(self)
         if d2 is not None:
             # avoids a type check problem
             d.update(d2 or {})
+
+        # also serialise to TD if we're doing something weird with tagged attributes and not
+        # using the built-in parameter system (.params)
+        td = self.type.serialiseToTaggedDict(self)
+        if td is not None:
+            d2 = td.serialise()
+            d.update(d2)
+
         Canvas.serialise(self, d)
 
         # serialise the parameters into the same dict
@@ -668,12 +695,18 @@ class XForm:
 
         # autoserialised data
         self.type.doAutodeserialise(self, d)
-        # run the additional deserialisation method
-        self.type.deserialise(self, d)
+        # deserialise parameter data which need to be processed another way, not via
+        # self.type.params and self.params
+        # TODO handle parameter file modification
+        self.type.deserialiseViaTaggedDict(self, d)
         # deserialise parameters
         if self.type.params is not None:
             # this will replace the defaults.
+            # TODO handle parameter file modification
             self.params = self.type.params.deserialise(d)
+        # finally do any extra deserialisation tasks, such as deserialising things which
+        # can't be autoserialised and such as converting self.params into data
+        self.type.deserialise(self, d)
 
     def getOutputType(self, i) -> Optional['pcot.datumtypes.Type']:
         """return the actual type of an output, taking account of overrides (node outputTypes).
@@ -1479,6 +1512,7 @@ class XFormROIType(XFormType):
 
     OUT_IMG = 0
     OUT_ROI = 1
+
 
     def __init__(self, name, group, ver):
         super().__init__(name, group, ver)

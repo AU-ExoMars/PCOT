@@ -1,5 +1,6 @@
 import copy
-from typing import Tuple
+from numbers import Number
+from typing import Tuple, Optional
 
 import cv2 as cv
 import numpy as np
@@ -16,7 +17,7 @@ from pcot.utils.annotations import Annotation, annotDrawText
 from pcot.utils.colour import rgb2qcol
 from pcot.utils.flood import FastFloodFiller, FloodFillParams
 from pcot.utils.geom import Rect
-from pcot.utils.taggedaggregates import TaggedDictType, TaggedColourType
+from pcot.utils.taggedaggregates import TaggedDictType, taggedColourType, TaggedDict, taggedRectType, TaggedTuple
 
 
 class BadOpException(Exception):
@@ -38,16 +39,22 @@ class ROIBoundsException(Exception):
             "ROI is out of bounds or entirely outside image. Have you loaded a new image?")
 
 
-ROISERIALISEFIELDS = (
-    ('label', 'unknown!'),
-    ('colour', (1, 1, 0)),
-    ('thickness', 0),
-    ('fontsize', 10),
-#    ('containingImageDimensions', None),
-    ('drawbg', True),
-    ('drawBox', True),
-    ('drawEdge', True),
-)
+# These are the fields that make up the common basis of ROIs, as they could
+# be passed into a TaggedDictType constructor. We add to these fields for each
+# ROI.
+
+ROICOLOURTYPE = taggedColourType(1, 0, 0)
+
+BASEROIFIELDS = [
+    ("type", ("type", str, "")),
+    ("label", ("label", Optional[str], "")),
+    ("colour", ("colour", ROICOLOURTYPE)),
+    ("thickness", ("thickness", Number, 0)),
+    ("fontsize", ("fontsize", Number, 10)),
+    ("drawbg", ("draw background", bool, True)),
+    ("drawBox", ("draw box", bool, True)),
+    ("drawEdge", ("draw edge", bool, True)),
+]
 
 
 class ROI(SourcesObtainable, Annotation):
@@ -207,31 +214,51 @@ class ROI(SourcesObtainable, Annotation):
         self.annotateText(p, alpha)
         self.annotateMask(p, alpha)
 
-    def serialise(self):
-        """Serialises the ROI to a dict. This is used for saving to file or memory"""
+    def serialiseCommon(self, td: TaggedDict):
+        """Serialises the common parts of an ROI to am existing TaggedDict. Parts
+        that are specific to particular kinds of ROI are handled in that type,
+        along with creating the TD in the first place."""
         if self.isTemp:
             raise Exception("attempt to serialise a temporary ROI")
-        d = serialiseFields(self, ROISERIALISEFIELDS)
-        # we also need to add the type
-        d['type'] = self.__class__.tpname
-        return d
 
-    def deserialise(self, d):
-        """Deserialises the ROI from a dict. This is used for loading from file or memory and acts
-        on an existing ROI."""
-        deserialiseFields(self, d, ROISERIALISEFIELDS)
+        td.label = self.label
+        td.colour = ROICOLOURTYPE.create().set(*self.colour)
+        td.thickness = self.thickness
+        td.fontsize = self.fontsize
+        td.drawbg = self.drawbg
+        td.drawBox = self.drawBox
+        td.drawEdge = self.drawEdge
+
+        # we also need to add the type
+        td['type'] = self.__class__.tpname
+        return td
+
+    def deserialiseCommon(self, td: TaggedDict):
+        """Deserialise the common parts of an ROI to an existing TaggedDict."""
+        # deserialise the common data
+        self.label = td.label
+        self.colour = td.colour.get()
+        self.thickness = td.thickness
+        self.fontsize = td.fontsize
+        self.drawbg = td.drawbg
+        self.drawBox = td.drawBox
+        self.drawEdge = td.drawEdge
 
     @staticmethod
-    def fromSerialised(d):
-        """Creates a new ROI from a dict. This is used for loading from file or memory and creates
+    def fromSerialised(td: TaggedDict):
+        """Creates a new ROI from a tagged dict. This is used for loading from file or memory and creates
         a new ROI. It inspects the dict to find the type of ROI to create."""
-        if 'type' not in d:
-            raise Exception("ROI deserialise: no type field")
+        if not isinstance(td, TaggedDict):
+            raise Exception("ROI fromSerialised: not a TaggedDict")
+        if 'type' not in td:
+            raise Exception("ROI fromSerialised: no type field")
         # get the constructor for the ROI type and construct an instance
-        constructor = ROI.roiTypes[d['type']]
+        constructor = ROI.roiTypes[td['type']]
         r = constructor()
-        # deserialise the fields
-        r.deserialise(d)
+        # deserialise the common data
+        r.deserialiseCommon(td)
+        # deserialise the subclass data
+        r.deserialise(td)
         return r
 
     @staticmethod
@@ -479,6 +506,14 @@ class ROI(SourcesObtainable, Annotation):
 class ROIRect(ROI):
     """Rectangular ROI"""
     tpname = "rect"
+    # build the tagged dict structure we use for serialising rects - it's a tagged dict with the fields
+    # of a rect, plus the base ROI fields.
+    rectType = taggedRectType(0, 0, 0, 0)
+    fields = BASEROIFIELDS + [
+        ('bb',('rectangle', rectType)),
+        ('isset', ('is rectangle set (internal)', bool, False))]
+
+    ROIRECTTAGGEDDICT = TaggedDictType(*fields)
 
     def __init__(self, sourceROI=None, label=None, rect: Tuple[float, float, float, float] = None):
         """Takes the following forms:
@@ -536,17 +571,16 @@ class ROIRect(ROI):
         self.isSet = True
 
     def serialise(self):
-        d = super().serialise()
-        d.update({'bb': (self.x, self.y, self.w, self.h)})
-        return d
+        td = self.ROIRECTTAGGEDDICT.create()
+        super().serialiseCommon(td)
+        td.bb = self.rectType.create().set(self.x, self.y, self.w, self.h)
+        td.isset = self.isSet
+        return td
 
-    def deserialise(self, d):
-        super().deserialise(d)
-        self.x, self.y, self.w, self.h = d['bb']
-        if 'isset' in d:
-            self.isSet = d['isset']
-        else:
-            self.isSet = self.x >= 0  # legacy
+    def deserialise(self, td):
+        super().deserialiseCommon(td)
+        self.x, self.y, self.w, self.h = td['bb']
+        self.isSet = td['isset']
 
     def __copy__(self):
         r = ROIRect(sourceROI=self)
@@ -913,7 +947,6 @@ class ROIPoly(ROI):
             print(f"Deserialising {len(pts)} points")
             # points will be saved as lists, turn back into tuples
             self.points = [tuple(x) for x in pts]
-
 
     def mask(self):
         # return a boolean array, same size as BB. We use opencv here to build a uint8 image

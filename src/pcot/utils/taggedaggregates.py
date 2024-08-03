@@ -1,6 +1,24 @@
 import dataclasses
-from typing import Any, Dict, Union, List, Tuple, Optional
+import inspect
+from numbers import Number
+import types
+from typing import Any, Dict, Union, List, Tuple, Optional, get_origin, get_args
 from abc import ABC, abstractmethod
+
+
+def is_value_of_type(value, tp):
+    """Type checker that is aware of Union types (but not other generics). That will also cover Optional.
+    This doesn't do what check_type inside the constructors do - that checks that the type is OK, this checks
+    that a value matches a type."""
+    if get_origin(tp) is Union:
+        # if it's a Union, we need to check all the types
+        return any(is_value_of_type(value, t) for t in get_args(tp))
+    if tp is type(None):        # NoneType isn't available anywhere, but there's only one None and one NoneType
+        return value is None
+    if isinstance(tp, TaggedAggregateType):
+        raise "TaggedAggregateType should not be used in type_ok"
+
+    return isinstance(value, tp)
 
 
 class TaggedAggregateType(ABC):
@@ -45,9 +63,25 @@ class Tag:
 
     def assert_valid(self):
         """Check the tag is valid"""
-        # type has to be a JSON-serialisable type or a string
-        if not (self.type in (int, float, str, bool, list, dict, tuple) or isinstance(self.type, TaggedAggregateType)):
-            raise ValueError(f"Type {self.type} is neither a JSON-serialisable type nor a TaggedAggregateType")
+        # type has to be a JSON-serialisable type, Number or a TaggedAggregateType. That could include a Union
+        # or Optional.
+
+        def check_type(t):
+            # check a single type is json-serialisable, TaggedAggregate or Number
+            if t in (int, float, str, bool, list, dict, tuple):
+                return
+            if isinstance(t, TaggedAggregateType):
+                return
+            if t is Number or t is type(None):
+                return
+            raise ValueError(f"Type {t} is neither a JSON-serialisable type nor a TaggedAggregateType")
+
+        if get_origin(self.type) is Union:
+            # if it's a Union, we need to check all the types
+            for t in get_args(self.type):
+                check_type(t)
+        else:
+            check_type(self.type)
 
 
 class TaggedDictType(TaggedAggregateType):
@@ -82,7 +116,7 @@ class TaggedDictType(TaggedAggregateType):
                 if v.deflt is not None:
                     raise ValueError(f"Type {v.type} is a TaggedAggregateType, so default must be None")
             # otherwise the default has to be of the correct type
-            elif not isinstance(v.deflt, v.type):
+            elif not is_value_of_type(v.deflt, v.type):
                 raise ValueError(f"Default {v.deflt} is not of type {v.type}")
 
     def tag(self, key):
@@ -94,7 +128,8 @@ class TaggedDictType(TaggedAggregateType):
         return TaggedDict(self)
 
     def deserialise(self, data) -> 'TaggedDict':
-        """Create a new TaggedDict of this type from a JSON-serialisable structure"""
+        """Create a new TaggedDict of this type from a JSON-serialisable structure. It's important that data can
+        have a subset or superset of the keys of the TaggedDict."""
         return TaggedDict(self, data)
 
 
@@ -121,6 +156,8 @@ class TaggedDict(TaggedAggregate):
                     self.values[k] = v.type.deserialise(data[k])
                 else:
                     # otherwise just use the data as is
+                    if not is_value_of_type(data[k], v.type):
+                        raise ValueError(f"TaggedDict key {k}: Value {data[k]} is not of type {v.type}")
                     self.values[k] = data[k]
             else:
                 # we are creating from defaults
@@ -128,7 +165,7 @@ class TaggedDict(TaggedAggregate):
                     # just create a default object for this type
                     self.values[k] = v.type.create()
                 else:
-                    # use default as is
+                    # use default as is (type should have been checked)
                     self.values[k] = v.deflt
 
     def __getitem__(self, key):
@@ -145,22 +182,34 @@ class TaggedDict(TaggedAggregate):
         if isinstance(tag.type, TaggedAggregateType):
             # if the type is a tagged aggregate, make sure it's the right type
             if not isinstance(value, TaggedAggregate):
-                raise ValueError(f"Value {value} is not a TaggedAggregate")
-            if tag.type != value.tp:
-                raise ValueError(f"Value {value} is not a TaggedAggregate of type {self.tags[key].type}")
-        elif not isinstance(value, tag.type):
+                raise ValueError(f"TaggedKey key {key}: Value {value} is not a TaggedAggregate")
+            if tag.type != value.type:
+                raise ValueError(f"TaggedKey key {key}: Value {value} is not a TaggedAggregate of type {self.tags[key].type}")
+        elif not is_value_of_type(value, tag.type):
             # otherwise check the type
-            raise ValueError(f"Value {value} is not of type {tag.type}")
+            raise ValueError(f"TaggedDict key {key}: Value {value} is not of type {tag.type}")
 
         self.values[key] = value
 
     def __getattr__(self, key):
-        """Allow access to the values by name"""
+        """Allow access to the values by name. This is only called when it's NOT found in the usual places"""
         return self.values[key]
 
     def __setattr__(self, key, value):
         """Allow setting the values by name"""
-        super().__setattr__(key, value)
+        if key in ('values', 'type'):
+            super().__setattr__(key, value)
+        else:
+            self[key] = value
+
+    def keys(self):
+        return self.values.keys()
+
+    def __contains__(self, item):
+        return item in self.values
+
+    def items(self):
+        return self.values.items()
 
     def serialise(self):
         """Serialise the structure rooted here into a JSON-serialisable structure. We don't need to record what the
@@ -208,7 +257,7 @@ class TaggedTupleType(TaggedAggregateType):
                 if v.deflt is not None:
                     raise ValueError(f"Type {v.type} is a TaggedAggregateType, so default must be None")
             # otherwise the default has to be of the correct type
-            elif not isinstance(v.deflt, v.type):
+            elif not is_value_of_type(v.deflt, v.type):
                 raise ValueError(f"Default {v.deflt} is not of type {v.type}")
 
     def create(self):
@@ -245,6 +294,8 @@ class TaggedTuple(TaggedAggregate):
                     self.values.append(tag.type.deserialise(v))
                 else:
                     # otherwise just use the data as is
+                    if not is_value_of_type(v, tag.type):
+                        raise ValueError(f"TaggedTuple index {i}: Value {v} is not of type {tag.type}")
                     self.values.append(v)
         else:
             self.values = [v.deflt for k, v in tt.tags]
@@ -274,7 +325,7 @@ class TaggedTuple(TaggedAggregate):
                 raise ValueError(f"Value {value} is not a TaggedAggregate")
             if tag.type != value.tp:
                 raise ValueError(f"Value {value} is not a TaggedAggregate of type {tag.type}")
-        elif not isinstance(value, tag.type):
+        elif not is_value_of_type(value, tag.type):
             # otherwise check the type
             raise ValueError(f"Value {value} is not of type {tag.type}")
 
@@ -287,7 +338,22 @@ class TaggedTuple(TaggedAggregate):
 
     def __setattr__(self, key, value):
         """Allow setting the values by name"""
-        super().__setattr__(key, value)
+        if key in ('values', 'type'):
+            super().__setattr__(key, value)
+        else:
+            self[key] = value
+
+    def set(self, *args):
+        """Set the values from a list or tuple"""
+        if len(args) != len(self.values):
+            raise ValueError(f"Length of values {args} does not match tags {self.type.tags}")
+        for i, v in enumerate(args):
+            self[i] = v
+        return self
+
+    def get(self):
+        """Return the data as an actual tuple"""
+        return self.values
 
     def serialise(self):
         """Serialise the structure rooted here into a JSON-serialisable tuple. We don't need to record what the
@@ -326,7 +392,7 @@ class TaggedListType(TaggedAggregateType):
             if not isinstance(v.deflt, list):
                 raise ValueError(f"Default {v.deflt} is not a list")
             for i in v.deflt:
-                if not isinstance(i, v.type):
+                if not is_value_of_type(i, v.type):
                     raise ValueError(f"Default {v.deflt} contains an item {i} that is not of type {v.type}")
 
     def create(self):
@@ -354,6 +420,9 @@ class TaggedList(TaggedAggregate):
                 self.values = [tl.tag.type.deserialise(v) for v in data]
             else:
                 # otherwise just use the data as is
+                for v in data:
+                    if not is_value_of_type(v, tl.tag.type):
+                        raise ValueError(f"Value {v} is not of type {tl.tag.type}")
                 self.values = data
         else:
             # we are creating from defaults
@@ -376,7 +445,7 @@ class TaggedList(TaggedAggregate):
                 raise ValueError(f"Value {value} is not a TaggedAggregate")
             if tp.tag.type != value.tp:
                 raise ValueError(f"Value {value} is not a TaggedAggregate of type {tp.tag.type}")
-        elif not isinstance(value, tp.tag.type):
+        elif not is_value_of_type(value, tp.tag.type):
             # otherwise check the type
             raise ValueError(f"Value {value} is not of type {tp.tag.type}")
 
@@ -394,6 +463,15 @@ class TaggedList(TaggedAggregate):
 # Special aggregates we use a lot
 #
 
-TaggedColourType = TaggedTupleType(r=("The red component 0-1", float, 0.0),
-                                   g=("The green component 0-1", float, 0.0),
-                                   b=("The blue component 0-1", float, 0.0))
+def taggedColourType(r, g, b):
+    return TaggedTupleType(r=("The red component 0-1", Number, float(r)),
+                           g=("The green component 0-1", Number, float(g)),
+                           b=("The blue component 0-1", Number, float(b)))
+
+
+def taggedRectType(x, y, w, h):
+    return TaggedTupleType(x=("The x coordinate of the top left corner", Number, float(x)),
+                           y=("The y coordinate of the top left corner", Number, float(y)),
+                           w=("The width of the rectangle", Number, float(w)),
+                           h=("The height of the rectangle", Number, float(h))
+                           )

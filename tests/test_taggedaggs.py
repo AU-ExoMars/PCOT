@@ -34,6 +34,7 @@ def test_taggeddict():
 
     td.b = "hello"
     assert td.b == "hello"
+    assert td['b'] == "hello"
 
     with pytest.raises(ValueError):
         td['a'] = "wibble"
@@ -71,6 +72,11 @@ def test_taggedtuple():
     assert tt[0] == 40
     assert tt['a'] == 40
     assert tt.a == 40
+
+    tt.a = 50
+    assert tt[0] == 50
+    assert tt['a'] == 50
+    assert tt.a == 50
 
     assert tt[1] == "foo"  # make sure it's still the same otherwise
     assert tt[2] == 3.14
@@ -458,3 +464,100 @@ def test_complex_ser_deser():
     assert serial2 == serial
 
 
+def test_setbydot():
+    tdt = TaggedDictType(
+        a=("a", int, 10),
+        b=("b", str, "foo"),
+        c=("c", float, 3.14)
+    )
+
+    td = tdt.create()
+
+    td.a = 20
+    assert td['a'] == 20
+
+    ttt = TaggedTupleType(
+        a=("a", int, 10),
+        b=("b", str, "foo"),
+        c=("c", float, 3.14)
+    )
+
+    tt = ttt.create()
+
+    tt.a = 20
+    assert tt['a'] == 20
+    assert tt.a == 20
+    assert tt[0] == 20
+
+
+def test_typing():
+    with pytest.raises(ValueError):
+        tdt = TaggedDictType(
+            a=("a", int, "cat")
+        )
+
+    with pytest.raises(ValueError):
+        tdt = TaggedDictType(
+            a=("a", str, 7)
+        )
+
+    with pytest.raises(ValueError):
+        tdt = TaggedDictType(
+            a=("a", TaggedTupleType(
+                b=("b", str, "foo"),
+            ), 7)
+        )
+
+    with pytest.raises(ValueError):
+        tdt = TaggedDictType(
+            a=("a", TaggedTupleType(
+                b=("b", str, 7),
+            ))
+        )
+
+    with pytest.raises(ValueError):
+        TaggedListType(
+            "a", int, [10, 20, "cat"]
+        )
+
+    TaggedListType(
+        "a", int, [10, 20, 30]
+    )
+
+    # now test the optional type - this is fine
+    TaggedDictType(
+        a=("a", int, 10),
+        b=("b", Optional[str], "foo"),
+        c=("c", float, 3.14)
+    )
+
+    # and this
+    tdt = TaggedDictType(
+        a=("a", int, 10),
+        b=("b", Optional[str], None),
+        c=("c", float, 3.14)
+    )
+
+    # not this though!
+    with pytest.raises(ValueError):
+        TaggedDictType(
+            a=("a", int, 10),
+            b=("b", Optional[str], 3.14),
+            c=("c", float, 3.14)
+        )
+
+    # let's create an example of that TD with a None value for b
+    td = tdt.create()
+    assert td.a == 10
+    assert td.b is None
+    assert td.c == 3.14
+
+    # let's set it to a string
+    td.b = "hello"
+    assert td.b == "hello"
+    # and set it back to null
+    td.b = None
+    assert td.b is None
+    # and now set it to something it can't be
+    with pytest.raises(ValueError):
+        td.b = 4

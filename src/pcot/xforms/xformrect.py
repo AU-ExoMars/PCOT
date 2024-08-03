@@ -6,6 +6,7 @@ import pcot.utils.text
 from pcot import ui
 from pcot.rois import ROIRect
 from pcot.ui.roiedit import RectEditor
+from pcot.utils.taggedaggregates import TaggedDict
 from pcot.xform import xformtype, XFormROIType
 
 
@@ -21,6 +22,8 @@ class XformRect(XFormROIType):
 
     def __init__(self):
         super().__init__("rect", "regions", "0.0.0")
+        # the parameters for this node are essentially the parameters for a ROIRect
+        self.params = ROIRect.ROIRECTTAGGEDDICT
 
     def createTab(self, n, w):
         return TabRect(n, w)
@@ -36,10 +39,21 @@ class XformRect(XFormROIType):
         node.roi = ROIRect()
 
     def serialise(self, node):
-        return node.roi.serialise()
+        return None
 
     def deserialise(self, node, d):
-        node.roi.deserialise(d)
+        pass
+
+    def serialiseToTaggedDict(self, node):
+        # this will produce a TaggedDict that will be serialised to JSON
+        # and merged with the rest of the node's data.
+        return node.roi.serialise()
+
+    def deserialiseViaTaggedDict(self, node, d):
+        # this will take the node's entire dict and generate a TaggedDict,
+        # from which we will generate the node's ROI.
+        td = ROIRect.ROIRECTTAGGEDDICT.deserialise(d)
+        node.roi.deserialise(td)
 
     def setProps(self, node, img):
         node.roi.setContainingImageDimensions(img.w, img.h)
