@@ -336,6 +336,8 @@ class XFormType:
 
         It takes a node and returns a TaggedDict containing the data. This will be serialised and
         merged with the node's data.
+
+        TODO hopefully redundant
         """
         return None
 
@@ -343,6 +345,8 @@ class XFormType:
         """This is the counterpart to serialiseToTaggedDict. It takes a node and a dictionary,
         and reads some data from that dictionary (it will be the entire node data) to create a TaggedDict
         the parameter system will work with. It will then use the data to set the node's data.
+
+        TODO hopefully redundant
         """
         pass
 
@@ -1513,21 +1517,11 @@ class XFormROIType(XFormType):
     OUT_IMG = 0
     OUT_ROI = 1
 
-
     def __init__(self, name, group, ver):
         super().__init__(name, group, ver)
         self.addInputConnector("input", Datum.IMG)
         self.addOutputConnector("img", Datum.IMG, "image with ROI")  # image+roi
         self.addOutputConnector("roi", Datum.ROI, "the region of interest")
-
-        self.autoserialise = (
-            ('caption', 'unknown'),
-            ('captiontop', False),
-            ('fontsize', 10),
-            ('thickness', 2),
-            ('colour', (1, 1, 0)),
-            ('drawbg', True)
-        )
 
     def setProps(self, node, img):
         """Set properties in the node and ROI attached to the node. Assumes img is a valid
@@ -1537,8 +1531,7 @@ class XFormROIType(XFormType):
     def perform(self, node):
         img = node.getInput(self.IN_IMG, Datum.IMG)
         # label the ROI
-        node.roi.label = node.caption
-        node.setRectText(node.caption)
+        node.setRectText(node.roi.caption)
 
         if img is None:
             # no image

@@ -43,10 +43,10 @@ class TaggedAggregate(ABC):
     Each has an appropriate TaggedAggregateType object that defines the types of the values. The reference to
     the type is here, not in the subtype, although the subtype limits what the actual type can be. This is to
     make it easier to check we have the correct type."""
-    type: TaggedAggregateType  # will always be the appropriate subtype of TaggedAggregateType
+    _type: TaggedAggregateType  # will always be the appropriate subtype of TaggedAggregateType
 
     def __init__(self, tp: TaggedAggregateType):
-        self.type = tp
+        self._type = tp
 
     @abstractmethod
     def serialise(self):
@@ -139,43 +139,43 @@ class TaggedDict(TaggedAggregate):
     You can also access items as attributes - so if you have a TaggedDict with a tag 'foo', you can
     use tag.foo"""
 
-    values: Dict[str, Any]
-    type: TaggedDictType
+    _values: Dict[str, Any]
+    _type: TaggedDictType
 
     def __init__(self, td: TaggedDictType, data: Optional[dict] = None):
         """Initialise the TaggedDict with a TaggedDictType. If a dict is provided, use the values therein instead
         of the defaults given in the type object"""
         super().__init__(td)
-        self.values = {}
+        self._values = {}
         # easier to read than a dict comprehension
         for k, v in td.tags.items():
             if data is not None and k in data:
                 # if we have data, use that instead of the defaults.
                 if isinstance(v.type, TaggedAggregateType):
                     # if we have a tagged aggregate, create it from the data stored in the serialised dict
-                    self.values[k] = v.type.deserialise(data[k])
+                    self._values[k] = v.type.deserialise(data[k])
                 else:
                     # otherwise just use the data as is
                     if not is_value_of_type(data[k], v.type):
                         raise ValueError(f"TaggedDict key {k}: Value {data[k]} is not of type {v.type}")
-                    self.values[k] = data[k]
+                    self._values[k] = data[k]
             else:
                 # we are creating from defaults
                 if isinstance(v.type, TaggedAggregateType):
                     # just create a default object for this type
-                    self.values[k] = v.type.create()
+                    self._values[k] = v.type.create()
                 else:
                     # use default as is (type should have been checked)
-                    self.values[k] = v.deflt
+                    self._values[k] = v.deflt
 
     def __getitem__(self, key):
         """Return the value for a given key"""
-        return self.values[key]
+        return self._values[key]
 
     def __setitem__(self, key, value):
         """Set the value for a given key. Will raise KeyError if it's not in the tags,
         and ValueError if the value is not of the correct type."""
-        tp = self.type
+        tp = self._type
         if key not in tp.tags:
             raise KeyError(f"Key {key} not in tags")
         tag = tp.tags[key]
@@ -183,40 +183,43 @@ class TaggedDict(TaggedAggregate):
             # if the type is a tagged aggregate, make sure it's the right type
             if not isinstance(value, TaggedAggregate):
                 raise ValueError(f"TaggedKey key {key}: Value {value} is not a TaggedAggregate")
-            if tag.type != value.type:
+            if tag.type != value._type:
                 raise ValueError(f"TaggedKey key {key}: Value {value} is not a TaggedAggregate of type {self.tags[key].type}")
         elif not is_value_of_type(value, tag.type):
             # otherwise check the type
             raise ValueError(f"TaggedDict key {key}: Value {value} is not of type {tag.type}")
 
-        self.values[key] = value
+        self._values[key] = value
 
     def __getattr__(self, key):
         """Allow access to the values by name. This is only called when it's NOT found in the usual places"""
-        return self.values[key]
+        return self._values[key]
 
     def __setattr__(self, key, value):
         """Allow setting the values by name"""
-        if key in ('values', 'type'):
+        if key in ('_values', '_type'):
             super().__setattr__(key, value)
         else:
             self[key] = value
 
+    def __len__(self):
+        return len(self._values)
+
     def keys(self):
-        return self.values.keys()
+        return self._values.keys()
 
     def __contains__(self, item):
-        return item in self.values
+        return item in self._values
 
     def items(self):
-        return self.values.items()
+        return self._values.items()
 
     def serialise(self):
         """Serialise the structure rooted here into a JSON-serialisable structure. We don't need to record what the
         types are, because that information will be stored in the type object when we deserialise.
         This assumes that the only items in the structure are JSON-serialisable or TaggedAggregate."""
 
-        return {k: (v.serialise() if isinstance(v, TaggedAggregate) else v) for k, v in self.values.items()}
+        return {k: (v.serialise() if isinstance(v, TaggedAggregate) else v) for k, v in self._values.items()}
 
 
 class TaggedTupleType(TaggedAggregateType):
@@ -274,8 +277,8 @@ class TaggedTuple(TaggedAggregate):
 
     # while we *serialise* as a tuple, we're stored as a list - otherwise
     # we wouldn't be able to change the values
-    values: List[Any]
-    type: TaggedTupleType
+    _values: List[Any]
+    _type: TaggedTupleType
 
     def __init__(self, tt: TaggedTupleType, data: Optional[Tuple] = None):
         """Initialise the TaggedTuple with a TaggedTupleType.
@@ -283,34 +286,37 @@ class TaggedTuple(TaggedAggregate):
         given in the type object"""
         super().__init__(tt)
         if data is not None:
-            self.values = []
-            if len(data) != len(tt.tags):
-                raise ValueError(f"Data {data} does not match tags {tt.tags}")
+            self._values = []
+            if len(tt.tags) > len(data):
+                raise ValueError(f"Data {data} doesn't have enough to fill specification {tt.tags}")
             # run through the tags and the data
             for i, v in enumerate(data):
-                tagname, tag = tt.tags[i]
-                if isinstance(tag.type, TaggedAggregateType):
-                    # if the type is a tagged aggregate, create it from the data stored in the serialised tuple
-                    self.values.append(tag.type.deserialise(v))
-                else:
-                    # otherwise just use the data as is
-                    if not is_value_of_type(v, tag.type):
-                        raise ValueError(f"TaggedTuple index {i}: Value {v} is not of type {tag.type}")
-                    self.values.append(v)
+                # it can happen that there is more data than tags (usually due to redundant legacy
+                # stuff). Just ignore it.
+                if i < len(tt.tags):
+                    tagname, tag = tt.tags[i]
+                    if isinstance(tag.type, TaggedAggregateType):
+                        # if the type is a tagged aggregate, create it from the data stored in the serialised tuple
+                        self._values.append(tag.type.deserialise(v))
+                    else:
+                        # otherwise just use the data as is
+                        if not is_value_of_type(v, tag.type):
+                            raise ValueError(f"TaggedTuple index {i}: Value {v} is not of type {tag.type}")
+                        self._values.append(v)
         else:
-            self.values = [v.deflt for k, v in tt.tags]
+            self._values = [v.deflt for k, v in tt.tags]
 
     def __getitem__(self, idxOrKey: Union[int, str]):
         """Return the value for a given index OR tagname"""
         if isinstance(idxOrKey, str):
             # if it's a string, look up the index
-            idxOrKey = self.type.indicesByName[idxOrKey]
-        return self.values[idxOrKey]
+            idxOrKey = self._type.indicesByName[idxOrKey]
+        return self._values[idxOrKey]
 
     def __setitem__(self, idxOrKey, value):
         """Set the value for a given key or index. Will raise KeyError if it's not in the tags,
         and ValueError if the value is not of the correct type."""
-        tp = self.type
+        tp = self._type
         if isinstance(idxOrKey, str):
             # if it's a string, look up the index
             idx = tp.indicesByName[idxOrKey]
@@ -329,31 +335,34 @@ class TaggedTuple(TaggedAggregate):
             # otherwise check the type
             raise ValueError(f"Value {value} is not of type {tag.type}")
 
-        self.values[idx] = value
+        self._values[idx] = value
 
     def __getattr__(self, item):
         """Allow access to the values by name"""
-        idx = self.type.indicesByName[item]
-        return self.values[idx]
+        idx = self._type.indicesByName[item]
+        return self._values[idx]
 
     def __setattr__(self, key, value):
         """Allow setting the values by name"""
-        if key in ('values', 'type'):
+        if key in ('_values', '_type'):
             super().__setattr__(key, value)
         else:
             self[key] = value
 
     def set(self, *args):
         """Set the values from a list or tuple"""
-        if len(args) != len(self.values):
-            raise ValueError(f"Length of values {args} does not match tags {self.type.tags}")
+        if len(args) != len(self._values):
+            raise ValueError(f"Length of values {args} does not match tags {self._type.tags}")
         for i, v in enumerate(args):
             self[i] = v
         return self
 
     def get(self):
         """Return the data as an actual tuple"""
-        return self.values
+        return self._values
+
+    def __len__(self):
+        return len(self._values)
 
     def serialise(self):
         """Serialise the structure rooted here into a JSON-serialisable tuple. We don't need to record what the
@@ -361,7 +370,7 @@ class TaggedTuple(TaggedAggregate):
         This assumes that the only items in the structure are JSON-serialisable or TaggedAggregate."""
 
         # return a tuple
-        return tuple([(v.serialise() if isinstance(v, TaggedAggregate) else v) for v in self.values])
+        return tuple([(v.serialise() if isinstance(v, TaggedAggregate) else v) for v in self._values])
 
 
 class TaggedListType(TaggedAggregateType):
@@ -407,8 +416,8 @@ class TaggedListType(TaggedAggregateType):
 class TaggedList(TaggedAggregate):
     """This is the actual tagged list object"""
 
-    values: List[Any]
-    type: TaggedListType
+    _values: List[Any]
+    _type: TaggedListType
 
     def __init__(self, tl: TaggedListType, data: Optional[List] = None):
         """Initialise the TaggedList with a TaggedListType"""
@@ -417,28 +426,28 @@ class TaggedList(TaggedAggregate):
             # data is provided.
             if isinstance(tl.tag.type, TaggedAggregateType):
                 # if the type is a tagged aggregate, them from the data provided
-                self.values = [tl.tag.type.deserialise(v) for v in data]
+                self._values = [tl.tag.type.deserialise(v) for v in data]
             else:
                 # otherwise just use the data as is
                 for v in data:
                     if not is_value_of_type(v, tl.tag.type):
                         raise ValueError(f"Value {v} is not of type {tl.tag.type}")
-                self.values = data
+                self._values = data
         else:
             # we are creating from defaults
             if isinstance(tl.tag.type, TaggedAggregateType):
                 # if the type is a tagged aggregate, create the correct number of them
-                self.values = [tl.tag.type.create() for _ in range(tl.tag.deflt)]
+                self._values = [tl.tag.type.create() for _ in range(tl.tag.deflt)]
             else:
-                self.values = [v for v in tl.tag.deflt]  # create copies
+                self._values = [v for v in tl.tag.deflt]  # create copies
 
     def __getitem__(self, idx):
         """Return the value for a given index"""
-        return self.values[idx]
+        return self._values[idx]
 
     def __setitem__(self, idx, value):
         """Set the value for a given index. Will raise ValueError if the value is not of the correct type."""
-        tp = self.type
+        tp = self._type
         if isinstance(tp.tag.type, TaggedAggregateType):
             # if the type is a tagged aggregate, make sure it's the right type
             if not isinstance(value, TaggedAggregate):
@@ -449,14 +458,17 @@ class TaggedList(TaggedAggregate):
             # otherwise check the type
             raise ValueError(f"Value {value} is not of type {tp.tag.type}")
 
-        self.values[idx] = value
+        self._values[idx] = value
+
+    def __len__(self):
+        return len(self._values)
 
     def serialise(self):
         """Serialise the structure rooted here into a JSON-serialisable list. We don't need to record what the
         types are, because that information will be stored in the type object when we deserialise.
         This assumes that the only items in the structure are JSON-serialisable or TaggedAggregate."""
 
-        return [v.serialise() if isinstance(v, TaggedAggregate) else v for v in self.values]
+        return [v.serialise() if isinstance(v, TaggedAggregate) else v for v in self._values]
 
 
 #

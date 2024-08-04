@@ -27,7 +27,7 @@ def test_taggeddict():
     with pytest.raises(KeyError):
         print(td.d)
 
-    assert len(td.values) == 3
+    assert len(td) == 3
 
     td['a'] = 20
     assert td['a'] == 20
@@ -58,7 +58,7 @@ def test_taggedtuple():
     assert tt[0] == 10
     assert tt[1] == "foo"
     assert tt[2] == 3.14
-    assert len(tt.values) == 3
+    assert len(tt) == 3
 
     assert tt.a == 10
     assert tt.b == "foo"
@@ -106,7 +106,7 @@ def test_taggedlist():
 
     tl = tlt.create()
     assert tl[0] == 10
-    assert len(tl.values) == 3
+    assert len(tl) == 3
 
     tl[0] = 60
     assert tl[0] == 60
@@ -137,7 +137,7 @@ def test_dict_of_lists():
     assert td['b'][1] == 20
     assert td['b'][2] == 30
     assert td['c'] == 3.14
-    assert len(td.values) == 3
+    assert len(td) == 3
 
     td['b'][0] = 60
     assert td['b'][0] == 60
@@ -172,7 +172,7 @@ def test_list_of_tuples():
     assert tl[1][0] == 10
     assert tl[1][1] == "foo"
     assert tl[1][2] == 3.14
-    assert len(tl.values) == 2
+    assert len(tl) == 2
 
     tl[0][0] = 60
     assert tl[0][0] == 60
@@ -211,9 +211,9 @@ def test_dict_of_list_of_tuples():
     assert td['b'][1][1] == "foo"
     assert td['b'][1][2] == 3.14
     assert td['c'] == 3.14
-    assert len(td.values) == 3
-    assert len(td['b'].values) == 2
-    assert len(td['b'][0].values) == 3
+    assert len(td) == 3
+    assert len(td['b']) == 2
+    assert len(td['b'][0]) == 3
 
     td['b'][0][0] = 60
     assert td['b'][0][0] == 60
@@ -352,7 +352,7 @@ def test_dict_ser_deser():
     serial = {'c': 3.14, 'a': 10, 'b': 'foo'}
 
     td2 = tdt.deserialise(serial)
-    assert td2.type == tdt
+    assert td2._type == tdt
     assert td2['a'] == 10
     assert td2['b'] == "foo"
     assert td2['c'] == 3.14
@@ -367,7 +367,7 @@ def test_tuple_ser_deser():
     serial = (10, 'foo', 3.14)
 
     tt2 = ttt.deserialise(serial)
-    assert tt2.type == ttt
+    assert tt2._type == ttt
     assert tt2[0] == 10
     assert tt2[1] == "foo"
     assert tt2[2] == 3.14
@@ -380,7 +380,7 @@ def test_list_ser_deser():
     serial = [10, 20, 30]
 
     tl2 = tlt.deserialise(serial)
-    assert tl2.type == tlt
+    assert tl2._type == tlt
     assert tl2[0] == 10
     assert tl2[1] == 20
     assert tl2[2] == 30
@@ -402,7 +402,7 @@ def test_dict_of_tuples_ser_deser():
     serial = {'c': 3.14, 'a': 10, 'b': (10, 'foo', 3.14), 'b1': (20, 'bar', 'dogfish')}
 
     td2 = tdt.deserialise(serial)
-    assert td2.type == tdt
+    assert td2._type == tdt
     assert td2['a'] == 10
     assert td2['b'][0] == 10
     assert td2['b'][1] == "foo"
@@ -456,7 +456,7 @@ def test_complex_ser_deser():
 
     # deserialise from that structure
     td2 = tdt.deserialise(serial)
-    assert td2.type == tdt
+    assert td2._type == tdt
 
     # serialise it again
     serial2 = td2.serialise()
