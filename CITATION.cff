@@ -1,0 +1,78 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: PanCam Operations Toolkit (PCOT)
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: James
+    family-names: Finnis
+    email: jcf12@aber.ac.uk
+    affiliation: Aberystwyth University
+    orcid: 'https://orcid.org/0000-0003-4933-0273'
+  - given-names: Helen
+    family-names: Miles
+    orcid: 'https://orcid.org/0000-0003-4063-6479'
+    affiliation: Aberystwyth University
+    email: hem23@aber.ac.uk
+  - given-names: Matt
+    family-names: Gunn
+    email: mmg@aber.ac.uk
+    affiliation: Aberystwyth University
+    orcid: 'https://orcid.org/0000-0002-1366-678X'
+  - given-names: Ariel
+    family-names: Ladegaard
+    email: arl13@aber.ac.uk
+    affiliation: Aberystwyth University
+    orcid: 'https://orcid.org/0000-0002-7318-3368'
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.12819549
+    description: The Github repository for the software
+repository-code: 'https://github.com/AU-ExoMars/PCOT'
+url: 'https://au-exomars.github.io/PCOT/'
+abstract: >-
+  The Pancam Operations Toolkit is a Python application and
+  library primarily intended for processing data from the
+  Pancam instrument on the Rosalind Franklin rover, although
+  it lends itself to any task involving processing
+  multispectral image data.
+
+
+  For example, with PCOT you can:
+
+
+  load ENVI (BSQ interleaved 4-byte float) and (to a basic
+  level) PDS4 multispectral images
+
+  load multiple images in other formats (e.g. PNG) and
+  combine them into multispectral images
+
+  define regions of interest in the data
+
+  perform mathematical operations
+
+  view spectra and histograms
+
+  and many other things besides. PCOT is highly extensible
+  and open-source, so any missing functionality is easily
+  added.
+
+
+  PCOT operates on a graph model - the data is processed
+  through a set of nodes which manipulate it in various ways
+  (e.g. add regions of interest, perform maths, splice
+  images together, merge image channels, plot spectra). A
+  PCOT document describes this graph, and we intend that
+  documents are distributed along with the data they
+  generate to help reproducibility.
+keywords:
+  - 'multispectral '
+  - image processing
+  - geology
+  - spectroscopy
+  - uncertainty
+license: MIT

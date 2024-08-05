@@ -8,6 +8,34 @@ None
 
 ## Alpha releases
 
+### 0.8.0-alpha 2024-07-25 FENTON SAURUS
+
+Yes, really: [Fenton Saurus](https://www.megalithic.co.uk/article.php?sid=8106)
+
+* More unit tests
+* colour connector "swatch" generator script
+* started work on dark/flat field generator
+* Datum archives - a file format (.PARC) for saving Datum objects, with an associated
+input method and exporters. Required because we have no other way of saving images
+with uncertainty and DQ.
+* DatumStore class wraps Archive objects so we can store Datum (this is used for the datum archives)
+* *expr* uses a DataWidget, as does TabData.
+* 1D vectors supported as a Datum.NUMBER type. Modifications made to datumfuncs
+and operators permit this. Notably, the semantics of `mean`, `sd`, `sum`, `min` and
+* square bracket parsing in expressions generates vector-creation and vector-index instructions
+`max` have changed to operate band-wise and generate a vector when performed on images.
+* Multiband extraction, e.g. `a$[640,550,440]`.
+* `.bands` property generates a vector of wavelengths, so we can do `a$b.bands`, to get
+the bands in `a` that are also in `b`, in the same order as in `b`.
+* `.u` property
+* properties graph tests and QoL work for test building
+* precedence adjustments in expressions
+* getSelection in document can help get selected nodes in plugins
+* serialiseFields does a deepcopy - fixes undo bugs
+* fixes to *roiexpr*; it no longer keeps UI data in the node so undo works better
+* Cookbook in progress, but not part of the main repository to allow it to be updated more frequently
+* First release for Zenodo
+
 ### 0.7.0-alpha 2024-05-03 EAST PENTIRE
 
 * Very many more unit tests

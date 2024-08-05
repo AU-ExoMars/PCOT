@@ -151,13 +151,13 @@ from pcot.dataformats import envi
 def saveEnvi(w):
     """Function takes a PCOT main window. It finds the first selected
     node, gets its output 0, and then saves an ENVI from that image."""
-
+    
     sel = w.doc.getSelection()
     if len(sel) == 0:
         ui.log("no selected node")
         return
     node = sel[0]
-
+        
     directory = os.path.expanduser(pcot.config.getDefaultDir('pcotfiles'))
     res = QtWidgets.QFileDialog.getSaveFileName(w,
                                                 "ENVI file ",
@@ -166,8 +166,8 @@ def saveEnvi(w):
     if res[0] != '':
         # get the output of that node
         (root, ext) = os.path.splitext(res[0])
-        img = node.getOutput(0, pcot.datum.Datum.IMG)
-        envi.write(root, img)
+        img = node.getOutput(0,pcot.datum.Datum.IMG)
+        envi.write(root,img)
         
         
 # the function to add the new menu item. This will take a single parameter:
