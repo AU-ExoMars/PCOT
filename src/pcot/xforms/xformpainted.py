@@ -8,6 +8,7 @@ import pcot.utils.text
 from pcot import ui
 from pcot.rois import ROIPainted, getRadiusFromSlider
 from pcot.ui.roiedit import PaintedEditor
+from pcot.utils.taggedaggregates import TaggedDictType, TaggedDict
 from pcot.xform import xformtype, XFormROIType
 
 
@@ -22,18 +23,13 @@ class XFormPainted(XFormROIType):
 
     def __init__(self):
         super().__init__("painted", "regions", "0.0.0")
-        self.autoserialise += ('brushSize', 'drawMode')
+        t = [(k, v) for k, v in ROIPainted.TAGGEDDICTDEFINITION if k != "type"]
+        self.params = TaggedDictType(*t)
 
     def createTab(self, n, w):
         return TabPainted(n, w)
 
     def init(self, node):
-        node.caption = ''
-        node.captiontop = False
-        node.fontsize = 10
-        node.drawbg = True
-        node.thickness = 0
-        node.colour = (1, 1, 0)
         node.brushSize = 20  # scale of 0-99 i.e. a slider value. Converted to pixel radius in getRadiusFromSlider()
         node.previewRadius = None  # previewing needs the image, but that's awkward - so we stash this data in perform()
         node.drawMode = 0
@@ -44,10 +40,16 @@ class XFormPainted(XFormROIType):
         node.roi = ROIPainted()
 
     def serialise(self, node):
-        return node.roi.serialise()
+        node.params = TaggedDict(self.params)
+        # serialise the ROI into a TaggedDict, and copy fields from that into the node.params we just made.
+        rser = node.roi.serialise()
+        for k in node.params.keys():
+            node.params[k] = rser[k]
+        # the caller will use node.params.
+        return None
 
     def deserialise(self, node, d):
-        node.roi.deserialise(d)
+        node.roi.deserialise(node.params)
 
     def setProps(self, node, img):
         # set the properties of the ROI
@@ -65,7 +67,6 @@ class XFormPainted(XFormROIType):
             drawEdge = False
             drawBox = False
 
-        node.roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.thickness, node.drawbg)
         node.roi.drawEdge = drawEdge
         node.roi.drawBox = drawBox
 

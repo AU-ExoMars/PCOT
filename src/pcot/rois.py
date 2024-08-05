@@ -18,7 +18,10 @@ from pcot.utils.colour import rgb2qcol
 from pcot.utils.flood import FastFloodFiller, FloodFillParams
 from pcot.utils.geom import Rect
 from pcot.utils.taggedaggregates import TaggedDictType, taggedColourType, TaggedDict, taggedRectType, TaggedTuple, \
-    TaggedTupleType
+    TaggedTupleType, Maybe
+
+# used as the basic default rectangle for ROIs
+rectType = taggedRectType(0, 0, 0, 0)
 
 
 class BadOpException(Exception):
@@ -48,7 +51,7 @@ ROICOLOURTYPE = taggedColourType(1, 0, 0)
 
 BASEROIFIELDS = [
     ("type", ("type", str, "")),
-    ("caption", ("caption", Optional[str], "")),
+    ("caption", ("caption", Maybe(str), "")),
     ("captiontop", ("caption on top?", bool, False)),
     ("colour", ("colour", ROICOLOURTYPE)),
     ("thickness", ("thickness", Number, 0)),
@@ -504,12 +507,11 @@ class ROIRect(ROI):
     tpname = "rect"
     # build the tagged dict structure we use for serialising rects - it's a tagged dict with the fields
     # of a rect, plus the base ROI fields.
-    rectType = taggedRectType(0, 0, 0, 0)
     TAGGEDDICTDEFINITION = BASEROIFIELDS + [
         ('bb', ('rectangle', rectType)),
         ('isset', ('is rectangle set? (internal)', bool, False))]
 
-    ROIRECTTAGGEDDICT = TaggedDictType(*TAGGEDDICTDEFINITION)
+    TAGGEDDICT = TaggedDictType(*TAGGEDDICTDEFINITION)
 
     def __init__(self, sourceROI=None, caption=None, rect: Tuple[float, float, float, float] = None):
         """Takes the following forms:
@@ -567,9 +569,9 @@ class ROIRect(ROI):
         self.isSet = True
 
     def serialise(self):
-        td = self.ROIRECTTAGGEDDICT.create()
+        td = self.TAGGEDDICT.create()
         super().serialiseCommon(td)
-        td.bb = self.rectType.create()
+        td.bb = rectType.create()
         td.bb.set(self.x, self.y, self.w, self.h)
         td.isset = self.isSet
         return td
@@ -624,7 +626,7 @@ class ROICircle(ROI):
     TAGGEDDICTDEFINITION = BASEROIFIELDS + [
         ('croi', ('circle definition', circleType))]
 
-    ROICIRCLETAGGEDDICT = TaggedDictType(*TAGGEDDICTDEFINITION)
+    TAGGEDDICT = TaggedDictType(*TAGGEDDICTDEFINITION)
 
     def __init__(self, x=-1, y=0, r=0, sourceROI=None, caption=None):
         super().__init__(sourceROI=sourceROI, caption=caption)
@@ -673,7 +675,7 @@ class ROICircle(ROI):
         return m > 0
 
     def serialise(self):
-        td = self.ROICIRCLETAGGEDDICT.create()
+        td = self.TAGGEDDICT.create()
         super().serialiseCommon(td)
         td.croi = self.circleType.create()
         td.croi.set(self.x, self.y, self.r, self.isSet)
@@ -717,6 +719,17 @@ class ROIPainted(ROI):
     """A painted ROI, which is essentially just a mask"""
     tpname = "painted"
 
+    bbrect: Optional[Rect]
+    map: Optional[np.array]
+
+    TAGGEDDICTDEFINITION = BASEROIFIELDS + [
+        ('bbrect', ('bounding box', Maybe(taggedRectType(0,0,0,0)), None)),
+        ('map', ('mask', Maybe(ndarray), None)),
+        ("r", ('brush radius', Number, 10))
+    ]
+
+    TAGGEDDICT = TaggedDictType(*TAGGEDDICTDEFINITION)
+
     # we can create this ab initio or from a subimage mask of an image.
     def __init__(self, mask=None, caption=None, sourceROI=None, containingImageDimensions=None):
         super().__init__(sourceROI=sourceROI, caption=caption,
@@ -730,14 +743,9 @@ class ROIPainted(ROI):
                 self.bbrect = Rect(0, 0, w, h)
                 self.map = np.zeros((h, w), dtype=np.uint8)
                 self.map[mask] = 255
-            self.drawEdge = True
-            self.drawBox = True
         else:
-            self.drawBox = sourceROI.drawBox
-            self.drawEdge = sourceROI.drawEdge
             self.map = sourceROI.mask()  # not a copy?
             self.bbrect = Rect.copy(sourceROI.bb())
-            self.containingImageDimensions = sourceROI.containingImageDimensions
         self.r = 10  # default "circle size" for painting; used in multidot editor
 
     def clear(self):
@@ -753,16 +761,17 @@ class ROIPainted(ROI):
         return x + w / 2, y + h / 2
 
     def serialise(self):
-        d = super().serialise()
-        d['bbrect'] = self.bbrect.astuple() if self.bbrect else None
-        d['r'] = self.r
-        return serialiseFields(self, [('map', None)], d=d)
+        td = self.TAGGEDDICT.create()
+        super().serialiseCommon(td)
+        td.bbrect = self.bbrect.astuple() if self.bbrect else None
+        td.map = self.map
+        return td
 
-    def deserialise(self, d):
-        super().deserialise(d)
-        self.bbrect = Rect.fromtuple(d['bbrect'])
-        self.r = d.get('r', 10)
-        deserialiseFields(self, d, [('map', None)])
+    def deserialise(self, td):
+        super().deserialiseCommon(td)
+        self.bbrect = Rect.fromtuple(td.bbrect)
+        self.r = td.r
+        self.map = td.map
 
     def mask(self):
         """return a boolean array, same size as BB"""

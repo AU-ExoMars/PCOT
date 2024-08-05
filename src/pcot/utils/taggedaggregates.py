@@ -2,21 +2,43 @@ import dataclasses
 import inspect
 from numbers import Number
 import types
-from typing import Any, Dict, Union, List, Tuple, Optional, get_origin, get_args
+from typing import Any, Dict, Union, List, Tuple, Optional
 from abc import ABC, abstractmethod
+
+import numpy as np
+
+
+class Maybe:
+    """Objects of this class wrap both type objects ('int' etc) and TaggedAggregateType objects, to indicate that
+    this is optional in a type hint. We can't use Optional because it woon't work with TaggedAggregateType objects
+
+    We did have an Amalgam object, but that can't possibly work because we don't actually store type data in
+    the serialisation so we can't tell what to deserialise to. Maybe only works because we can check for None.
+    """
+    def __init__(self, tp):
+        self.tp = tp
+
+    def __repr__(self):
+        return f"Maybe({self.tp})"
 
 
 def is_value_of_type(value, tp):
-    """Type checker that is aware of Union types (but not other generics). That will also cover Optional.
+    """Type checker that is aware of "Maybe"
     This doesn't do what check_type inside the constructors do - that checks that the type is OK, this checks
     that a value matches a type."""
-    if get_origin(tp) is Union:
-        # if it's a Union, we need to check all the types
-        return any(is_value_of_type(value, t) for t in get_args(tp))
+    if isinstance(tp, Maybe):
+        # check the value is None or of the correct type
+        return value is None or is_value_of_type(value, tp.tp)
     if tp is type(None):        # NoneType isn't available anywhere, but there's only one None and one NoneType
         return value is None
     if isinstance(tp, TaggedAggregateType):
-        raise "TaggedAggregateType should not be used in type_ok"
+        # are we expecting a tagged aggregate?
+        if isinstance(value, TaggedAggregate):
+            # it's a tagged agg, but not the right type.
+            return tp == value._type
+        else:
+            # we're expecting a tagged agg and we haven't got one.
+            return False
 
     return isinstance(value, tp)
 
@@ -68,7 +90,7 @@ class Tag:
 
         def check_type(t):
             # check a single type is json-serialisable, TaggedAggregate or Number
-            if t in (int, float, str, bool, list, dict, tuple):
+            if t in (int, float, str, bool, list, dict, tuple, np.ndarray):
                 return
             if isinstance(t, TaggedAggregateType):
                 return
@@ -76,10 +98,9 @@ class Tag:
                 return
             raise ValueError(f"Type {t} is neither a JSON-serialisable type nor a TaggedAggregateType")
 
-        if get_origin(self.type) is Union:
-            # if it's a Union, we need to check all the types
-            for t in get_args(self.type):
-                check_type(t)
+        if isinstance(self.type, Maybe):
+            # check the type is valid
+            check_type(self.type.tp)
         else:
             check_type(self.type)
 
@@ -147,18 +168,32 @@ class TaggedDict(TaggedAggregate):
         of the defaults given in the type object"""
         super().__init__(td)
         self._values = {}
-        # easier to read than a dict comprehension
+
+        # go through the items. This is a bit horrid because of how the maybe processing is done.
         for k, v in td.tags.items():
             if data is not None and k in data:
+                d = data[k]
                 # if we have data, use that instead of the defaults.
                 if isinstance(v.type, TaggedAggregateType):
                     # if we have a tagged aggregate, create it from the data stored in the serialised dict
-                    self._values[k] = v.type.deserialise(data[k])
+                    self._values[k] = v.type.deserialise(d)
+                elif isinstance(v.type, Maybe):
+                    # if we have a maybe, we have to check null.
+                    if d is None:
+                        self._values[k] = None
+                    elif isinstance(v.type.tp, TaggedAggregateType):
+                        # it's not a null, so use the underlying type to deserialise - first the TA case
+                        self._values[k] = v.type.tp.deserialise(d)
+                    elif not is_value_of_type(d, v.type.tp):
+                        # then the "normal" case.
+                        raise ValueError(f"TaggedDict key {k}: Value {d} is not of type {v.type.tp}")
+                    else:
+                        self._values[k] = d
                 else:
                     # otherwise just use the data as is
-                    if not is_value_of_type(data[k], v.type):
-                        raise ValueError(f"TaggedDict key {k}: Value {data[k]} is not of type {v.type}")
-                    self._values[k] = data[k]
+                    if not is_value_of_type(d, v.type):
+                        raise ValueError(f"TaggedDict key {k}: Value {d} is not of type {v.type}")
+                    self._values[k] = d
             else:
                 # we are creating from defaults
                 if isinstance(v.type, TaggedAggregateType):
@@ -219,7 +254,21 @@ class TaggedDict(TaggedAggregate):
         types are, because that information will be stored in the type object when we deserialise.
         This assumes that the only items in the structure are JSON-serialisable or TaggedAggregate."""
 
-        return {k: (v.serialise() if isinstance(v, TaggedAggregate) else v) for k, v in self._values.items()}
+        out = {}
+        for k,v in self._values.items():
+            tp = self._type.tags[k].type
+            if isinstance(tp, TaggedAggregateType):
+                out[k] = v.serialise()
+            elif isinstance(tp, Maybe):
+                if v is None:
+                    out[k] = None
+                elif isinstance(tp, TaggedAggregateType):
+                    out[k] = v.serialise()
+                else:
+                    out[k] = v
+            else:
+                out[k] = v
+        return out
 
 
 class TaggedTupleType(TaggedAggregateType):
@@ -444,6 +493,9 @@ class TaggedList(TaggedAggregate):
     def __getitem__(self, idx):
         """Return the value for a given index"""
         return self._values[idx]
+
+    def get(self):
+        return self._values
 
     def __setitem__(self, idx, value):
         """Set the value for a given index. Will raise ValueError if the value is not of the correct type."""

@@ -1,7 +1,4 @@
-import math
-
-from PySide2.QtCore import Qt
-from PySide2.QtGui import QIntValidator, QMouseEvent
+from PySide2.QtGui import QIntValidator
 
 import pcot.ui.tabs
 import pcot.utils.colour
