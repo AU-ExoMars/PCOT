@@ -47,6 +47,20 @@ def test_taggeddict():
         td['d'] = 12
 
 
+def test_cant_set_with_plain_aggregate():
+    tlt = TaggedListType(
+        "a", int, [10, 20, 30]
+    )
+    tdt = TaggedDictType(
+        b=("b", tlt),
+    )
+
+    td = tdt.create()
+    with pytest.raises(ValueError):
+        # we can't set what should be a TaggedList with a plain list,
+        # even if it's the right type.
+        td['b'] = [1,2,3]
+
 def test_taggedtuple():
     ttt = TaggedTupleType(
         a=("a", int, 10),

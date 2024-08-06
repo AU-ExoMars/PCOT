@@ -43,7 +43,9 @@ class XformCirc(XFormROIType):
     def serialise(self, node):
         node.params = TaggedDict(self.params)
         # serialise the ROI into a TaggedDict, and copy fields from that into the node.params we just made.
-        rser = node.roi.serialise()
+        # See Rect for why we do this nonsense (it's because we're storing the fields of the ROI
+        # in the same dictionary as the node's parameters, and they both have a "type" field.)
+        rser = node.roi.to_tagged_dict()
         for k in node.params.keys():
             node.params[k] = rser[k]
         # the caller will use node.params.
@@ -52,7 +54,7 @@ class XformCirc(XFormROIType):
     def deserialise(self, node, d):
         # deserialise the ROI from node.params, ignoring the dictionary passed in
         # because we don't do any "old style" direct serialisation to JSON
-        node.roi.deserialise(node.params)
+        node.roi.from_tagged_dict(node.params)
 
     def setProps(self, node, img):
         node.roi.setContainingImageDimensions(img.w, img.h)

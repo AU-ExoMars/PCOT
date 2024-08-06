@@ -214,7 +214,7 @@ class PaintedEditor(ROIEditor):
         c = self.tab.w.canvas
         if self.mousePos is not None and self.tab.node.previewRadius is not None:
             p.setBrush(Qt.NoBrush)
-            p.setPen(QColor(*[v * 255 for v in self.tab.node.colour]))
+            p.setPen(QColor(*[v * 255 for v in self.tab.node.roi.colour]))
             r = self.tab.node.previewRadius / (c.canvas.getScale())
             p.drawEllipse(self.mousePos, r, r)
 

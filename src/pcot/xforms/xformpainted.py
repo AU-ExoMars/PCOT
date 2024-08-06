@@ -42,14 +42,14 @@ class XFormPainted(XFormROIType):
     def serialise(self, node):
         node.params = TaggedDict(self.params)
         # serialise the ROI into a TaggedDict, and copy fields from that into the node.params we just made.
-        rser = node.roi.serialise()
+        rser = node.roi.to_tagged_dict()
         for k in node.params.keys():
             node.params[k] = rser[k]
         # the caller will use node.params.
         return None
 
     def deserialise(self, node, d):
-        node.roi.deserialise(node.params)
+        node.roi.from_tagged_dict(node.params)
 
     def setProps(self, node, img):
         # set the properties of the ROI
@@ -102,7 +102,7 @@ class TabPainted(pcot.ui.tabs.Tab):
 
     def drawbgChanged(self, val):
         self.mark()
-        self.node.drawbg = (val != 0)
+        self.node.roi.drawbg = (val != 0)
         self.changed()
 
     def drawModeChanged(self, idx):
@@ -117,12 +117,12 @@ class TabPainted(pcot.ui.tabs.Tab):
 
     def topChanged(self, checked):
         self.mark()
-        self.node.captiontop = checked
+        self.node.roi.captiontop = checked
         self.changed()
 
     def fontSizeChanged(self, i):
         self.mark()
-        self.node.fontsize = i
+        self.node.roi.fontsize = i
         self.changed()
 
     def clearPressed(self):
@@ -134,7 +134,7 @@ class TabPainted(pcot.ui.tabs.Tab):
 
     def textChanged(self, t):
         self.mark()
-        self.node.caption = t
+        self.node.roi.caption = t
         # this will cause perform, which will cause onNodeChanged, which will
         # set the text again. We set a flag to stop the text being reset.
         self.dontSetText = True
@@ -145,14 +145,14 @@ class TabPainted(pcot.ui.tabs.Tab):
 
     def thicknessChanged(self, i):
         self.mark()
-        self.node.thickness = i
+        self.node.roi.thickness = i
         self.changed()
 
     def colourPressed(self):
         col = pcot.utils.colour.colDialog(self.node.colour)
         if col is not None:
             self.mark()
-            self.node.colour = col
+            self.node.roi.colour = col
             self.changed()
 
     # causes the tab to update itself from the node
@@ -163,15 +163,15 @@ class TabPainted(pcot.ui.tabs.Tab):
         self.w.canvas.display(self.node.getOutput(XFormROIType.OUT_IMG))
 
         if not self.dontSetText:
-            self.w.caption.setText(self.node.caption)
-        self.w.fontsize.setValue(self.node.fontsize)
-        self.w.thickness.setValue(self.node.thickness)
-        self.w.captionTop.setChecked(self.node.captiontop)
+            self.w.caption.setText(self.node.roi.caption)
+        self.w.fontsize.setValue(self.node.roi.fontsize)
+        self.w.thickness.setValue(self.node.roi.thickness)
+        self.w.captionTop.setChecked(self.node.roi.captiontop)
         self.w.brushSize.setValue(self.node.brushSize)
         self.w.drawMode.setCurrentIndex(self.node.drawMode)
-        self.w.drawbg.setChecked(self.node.drawbg)
+        self.w.drawbg.setChecked(self.node.roi.drawbg)
 
-        r, g, b = [x * 255 for x in self.node.colour]
+        r, g, b = [x * 255 for x in self.node.roi.colour]
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
 
     # extra drawing! Preview of brush

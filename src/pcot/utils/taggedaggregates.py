@@ -213,16 +213,22 @@ class TaggedDict(TaggedAggregate):
         tp = self._type
         if key not in tp.tags:
             raise KeyError(f"Key {key} not in tags")
-        tag = tp.tags[key]
-        if isinstance(tag.type, TaggedAggregateType):
+        correct_type = tp.tags[key].type
+        if isinstance(correct_type, Maybe):
+            if value is None:
+                self._values[key] = None
+                return
+            else:
+                correct_type = correct_type.tp
+        if isinstance(correct_type, TaggedAggregateType):
             # if the type is a tagged aggregate, make sure it's the right type
             if not isinstance(value, TaggedAggregate):
-                raise ValueError(f"TaggedKey key {key}: Value {value} is not a TaggedAggregate")
-            if tag.type != value._type:
-                raise ValueError(f"TaggedKey key {key}: Value {value} is not a TaggedAggregate of type {self.tags[key].type}")
-        elif not is_value_of_type(value, tag.type):
+                raise ValueError(f"TaggedDict key {key}: Value {value} is not a TaggedAggregate")
+            if correct_type != value._type:
+                raise ValueError(f"TaggedDict key {key}: Value {value} is not a TaggedAggregate of type {correct_type}")
+        elif not is_value_of_type(value, correct_type):
             # otherwise check the type
-            raise ValueError(f"TaggedDict key {key}: Value {value} is not of type {tag.type}")
+            raise ValueError(f"TaggedDict key {key}: Value {value} is not of type {correct_type}")
 
         self._values[key] = value
 
@@ -257,15 +263,14 @@ class TaggedDict(TaggedAggregate):
         out = {}
         for k,v in self._values.items():
             tp = self._type.tags[k].type
-            if isinstance(tp, TaggedAggregateType):
-                out[k] = v.serialise()
-            elif isinstance(tp, Maybe):
+            if isinstance(tp, Maybe):
                 if v is None:
                     out[k] = None
-                elif isinstance(tp, TaggedAggregateType):
-                    out[k] = v.serialise()
-                else:
-                    out[k] = v
+                    continue
+                # otherwise fall through with the underlying type, having assured the value isn't none.
+                tp = tp.tp
+            if isinstance(tp, TaggedAggregateType):
+                out[k] = v.serialise()
             else:
                 out[k] = v
         return out
@@ -410,6 +415,8 @@ class TaggedTuple(TaggedAggregate):
         """Return the data as an actual tuple"""
         return self._values
 
+    astuple = get       # alias!
+
     def __len__(self):
         return len(self._values)
 
@@ -497,20 +504,29 @@ class TaggedList(TaggedAggregate):
     def get(self):
         return self._values
 
-    def __setitem__(self, idx, value):
-        """Set the value for a given index. Will raise ValueError if the value is not of the correct type."""
+    aslist = get
+
+    def _check_value(self, value):
+        """check an item before setting"""
         tp = self._type
         if isinstance(tp.tag.type, TaggedAggregateType):
             # if the type is a tagged aggregate, make sure it's the right type
             if not isinstance(value, TaggedAggregate):
                 raise ValueError(f"Value {value} is not a TaggedAggregate")
-            if tp.tag.type != value.tp:
+            if tp.tag.type != value._type:
                 raise ValueError(f"Value {value} is not a TaggedAggregate of type {tp.tag.type}")
         elif not is_value_of_type(value, tp.tag.type):
             # otherwise check the type
             raise ValueError(f"Value {value} is not of type {tp.tag.type}")
 
+    def __setitem__(self, idx, value):
+        """Set the value for a given index. Will raise ValueError if the value is not of the correct type."""
+        self._check_value(value)
         self._values[idx] = value
+
+    def append(self, value):
+        self._check_value(value)
+        self._values.append(value)
 
     def __len__(self):
         return len(self._values)
