@@ -8,6 +8,7 @@ import pcot.utils.text
 
 from pcot.rois import ROIPoly
 from pcot.ui.roiedit import PolyEditor
+from pcot.utils.taggedaggregates import TaggedDictType, TaggedDict
 from pcot.xform import xformtype, XFormROIType
 
 
@@ -23,18 +24,13 @@ class XformPoly(XFormROIType):
 
     def __init__(self):
         super().__init__("poly", "regions", "0.0.0")
-        self.autoserialise += ('drawMode',)
+        t = [(k, v) for k, v in ROIPoly.TAGGEDDICTDEFINITION if k != "type"]
+        self.params = TaggedDictType(*t)
 
     def createTab(self, n, w):
         return TabPoly(n, w)
 
     def init(self, node):
-        node.caption = ''
-        node.captiontop = False
-        node.fontsize = 10
-        node.thickness = 0
-        node.drawbg = True
-        node.colour = (1, 1, 0)
         node.drawMode = 0
 
         # initialise the ROI data, which will consist of a bounding box within the image and
@@ -43,10 +39,14 @@ class XformPoly(XFormROIType):
         node.roi = ROIPoly()
 
     def serialise(self, node):
-        return node.roi.serialise()
+        node.params = TaggedDict(self.params)
+        rser = node.roi.to_tagged_dict()
+        for k in node.params.keys():
+            node.params[k] = rser[k]
+        return None
 
     def deserialise(self, node, d):
-        node.roi.deserialise(d)
+        node.roi.from_tagged_dict(node.params)
 
     def setProps(self, node, img):
         node.roi.setContainingImageDimensions(img.w, img.h)
@@ -60,7 +60,6 @@ class XformPoly(XFormROIType):
             drawPoints = False
             drawBox = False
 
-        node.roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.thickness, node.drawbg)
         node.roi.drawPoints = drawPoints
         node.roi.drawBox = drawBox
 
@@ -91,7 +90,7 @@ class TabPoly(pcot.ui.tabs.Tab):
 
     def drawbgChanged(self, val):
         self.mark()
-        self.node.drawbg = (val != 0)
+        self.node.roi.drawbg = (val != 0)
         self.changed()
 
     def drawModeChanged(self, idx):
@@ -101,17 +100,17 @@ class TabPoly(pcot.ui.tabs.Tab):
 
     def topChanged(self, checked):
         self.mark()
-        self.node.captiontop = checked
+        self.node.roi.captiontop = checked
         self.changed()
 
     def fontSizeChanged(self, i):
         self.mark()
-        self.node.fontsize = i
+        self.node.roi.fontsize = i
         self.changed()
 
     def textChanged(self, t):
         self.mark()
-        self.node.caption = t
+        self.node.roi.caption = t
         # this will cause perform, which will cause onNodeChanged, which will
         # set the text again. We set a flag to stop the text being reset.
         self.dontSetText = True
@@ -120,14 +119,14 @@ class TabPoly(pcot.ui.tabs.Tab):
 
     def thicknessChanged(self, i):
         self.mark()
-        self.node.thickness = i
+        self.node.roi.thickness = i
         self.changed()
 
     def colourPressed(self):
         col = pcot.utils.colour.colDialog(self.node.colour)
         if col is not None:
             self.mark()
-            self.node.colour = col
+            self.node.roi.colour = col
             self.changed()
 
     def clearPressed(self):
@@ -143,13 +142,13 @@ class TabPoly(pcot.ui.tabs.Tab):
         self.w.canvas.setROINode(self.node)
         self.w.canvas.display(self.node.getOutput(XFormROIType.OUT_IMG))
         if not self.dontSetText:
-            self.w.caption.setText(self.node.caption)
-        self.w.drawbg.setChecked(self.node.drawbg)
-        self.w.fontsize.setValue(self.node.fontsize)
-        self.w.thickness.setValue(self.node.thickness)
-        self.w.captionTop.setChecked(self.node.captiontop)
+            self.w.caption.setText(self.node.roi.caption)
+        self.w.drawbg.setChecked(self.node.roi.drawbg)
+        self.w.fontsize.setValue(self.node.roi.fontsize)
+        self.w.thickness.setValue(self.node.roi.thickness)
+        self.w.captionTop.setChecked(self.node.roi.captiontop)
         self.w.drawMode.setCurrentIndex(self.node.drawMode)
-        r, g, b = [x * 255 for x in self.node.colour]
+        r, g, b = [x * 255 for x in self.node.roi.colour]
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
 
     def canvasMouseMoveEvent(self, x, y, e):

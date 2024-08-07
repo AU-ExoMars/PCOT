@@ -47,6 +47,20 @@ def test_taggeddict():
         td['d'] = 12
 
 
+def test_cant_set_with_plain_aggregate():
+    tlt = TaggedListType(
+        "a", int, [10, 20, 30]
+    )
+    tdt = TaggedDictType(
+        b=("b", tlt),
+    )
+
+    td = tdt.create()
+    with pytest.raises(ValueError):
+        # we can't set what should be a TaggedList with a plain list,
+        # even if it's the right type.
+        td['b'] = [1,2,3]
+
 def test_taggedtuple():
     ttt = TaggedTupleType(
         a=("a", int, 10),
@@ -491,6 +505,7 @@ def test_setbydot():
 
 
 def test_typing():
+    # checking that bad types throw errors
     with pytest.raises(ValueError):
         tdt = TaggedDictType(
             a=("a", int, "cat")
@@ -527,14 +542,14 @@ def test_typing():
     # now test the optional type - this is fine
     TaggedDictType(
         a=("a", int, 10),
-        b=("b", Optional[str], "foo"),
+        b=("b", Maybe(str), "foo"),
         c=("c", float, 3.14)
     )
 
     # and this
     tdt = TaggedDictType(
         a=("a", int, 10),
-        b=("b", Optional[str], None),
+        b=("b", Maybe(str), None),
         c=("c", float, 3.14)
     )
 
@@ -542,7 +557,7 @@ def test_typing():
     with pytest.raises(ValueError):
         TaggedDictType(
             a=("a", int, 10),
-            b=("b", Optional[str], 3.14),
+            b=("b", Maybe(str), 3.14),
             c=("c", float, 3.14)
         )
 
@@ -561,3 +576,47 @@ def test_typing():
     # and now set it to something it can't be
     with pytest.raises(ValueError):
         td.b = 4
+
+
+def test_optional_aggregates():
+    tlt = TaggedListType(
+        "a", Maybe(int), [10, 20, 30]
+    )
+
+    tdt = TaggedDictType(
+        a=("a", tlt),
+        b=("b", Maybe(tlt), None),
+        c=("c", float, 3.14)
+    )
+
+    td = tdt.create()
+    assert td['a'].get() == [10, 20, 30]
+    assert td['b'] is None
+    assert td['c'] == 3.14
+
+    td['b'] = TaggedList(tlt, [10, 204, 30])
+
+    assert td.b.get() == [10, 204, 30]
+
+
+def test_optional_ser():
+    tlt = TaggedListType(
+        "a", Maybe(int), [10, 20, 30]
+    )
+
+    tdt = TaggedDictType(
+        a=("a", tlt),
+        b=("b", Maybe(tlt), None),
+        c=("c", Maybe(float), 3.14)
+    )
+
+    td = tdt.create()
+
+    s = td.serialise()
+    assert s == {'a': [10, 20, 30], 'b': None, 'c': 3.14}
+
+    td = tdt.deserialise(s)
+    s = td.serialise()
+    assert s == {'a': [10, 20, 30], 'b': None, 'c': 3.14}
+
+

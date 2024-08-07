@@ -42,7 +42,7 @@ class XformRect(XFormROIType):
         # Again - more hackery to get around ROI having 'type' and this clashing with node's 'type'
         node.params = TaggedDict(self.params)  # build a dict without the 'type' (see init)
         # Serialise the ROI into a TaggedDict, and copy fields from that into the node.params we just made.
-        rser = node.roi.serialise()
+        rser = node.roi.to_tagged_dict()
         for k in node.params.keys():
             node.params[k] = rser[k]
         # don't return anything; our return is essentially the
@@ -52,7 +52,7 @@ class XformRect(XFormROIType):
     def deserialise(self, node, d):
         # this deserialises data from .params into the node's ROI directly - it ignores the
         # dictionary passed in because we don't do any "old style" direct serialisation to JSON
-        node.roi.deserialise(node.params)
+        node.roi.from_tagged_dict(node.params)
 
     def setProps(self, node, img):
         node.roi.setContainingImageDimensions(img.w, img.h)

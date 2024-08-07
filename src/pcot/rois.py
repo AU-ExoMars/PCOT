@@ -18,7 +18,10 @@ from pcot.utils.colour import rgb2qcol
 from pcot.utils.flood import FastFloodFiller, FloodFillParams
 from pcot.utils.geom import Rect
 from pcot.utils.taggedaggregates import TaggedDictType, taggedColourType, TaggedDict, taggedRectType, TaggedTuple, \
-    TaggedTupleType
+    TaggedTupleType, Maybe, TaggedListType
+
+# used as the basic default rectangle for ROIs
+rectType = taggedRectType(0, 0, 0, 0)
 
 
 class BadOpException(Exception):
@@ -48,7 +51,7 @@ ROICOLOURTYPE = taggedColourType(1, 0, 0)
 
 BASEROIFIELDS = [
     ("type", ("type", str, "")),
-    ("caption", ("caption", Optional[str], "")),
+    ("caption", ("caption", Maybe(str), "")),
     ("captiontop", ("caption on top?", bool, False)),
     ("colour", ("colour", ROICOLOURTYPE)),
     ("thickness", ("thickness", Number, 0)),
@@ -208,7 +211,7 @@ class ROI(SourcesObtainable, Annotation):
         self.annotateText(p, alpha)
         self.annotateMask(p, alpha)
 
-    def serialiseCommon(self, td: TaggedDict):
+    def to_tagged_dict_common(self, td: TaggedDict):
         """Serialises the common parts of an ROI to am existing TaggedDict. Parts
         that are specific to particular kinds of ROI are handled in that type,
         along with creating the TD in the first place."""
@@ -228,8 +231,8 @@ class ROI(SourcesObtainable, Annotation):
         td.type = self.__class__.tpname
         return td
 
-    def deserialiseCommon(self, td: TaggedDict):
-        """Deserialise the common parts of an ROI to an existing TaggedDict."""
+    def from_tagged_dict_common(self, td: TaggedDict):
+        """Deserialise the common parts of an ROI from an existing TaggedDict."""
         # deserialise the common data
         self.caption = td.caption
         self.captiontop = td.captiontop
@@ -241,7 +244,7 @@ class ROI(SourcesObtainable, Annotation):
         self.drawEdge = td.drawEdge
 
     @staticmethod
-    def fromSerialised(td: TaggedDict):
+    def new_from_tagged_dict(td: TaggedDict):
         """Creates a new ROI from a tagged dict. This is used for loading from file or memory and creates
         a new ROI. It inspects the dict to find the type of ROI to create."""
         if not isinstance(td, TaggedDict):
@@ -256,6 +259,42 @@ class ROI(SourcesObtainable, Annotation):
         # deserialise the subclass data
         r.deserialise(td)
         return r
+
+    @staticmethod
+    def fromSerialised(d):
+        """Generate from JSON-serialised data with a type field; it's like new_from_tagged_dict
+        except it works on a plain JSON-serialisable dict"""
+        constructor = ROI.roiTypes['type']
+        r = constructor()
+        r.deserialise(d)
+        return r
+
+    def to_tagged_dict(self) -> TaggedDict:
+        """Store the ROI in a tagged dict, whose type (i.e. TaggedDictType) is
+        specific to that ROI. Overriden in each subtype."""
+        pass
+
+    def from_tagged_dict(self, td: TaggedDict):
+        """Set the ROI from the state stored in the TaggedDict, which must be of
+        the correct TaggedDictType"""
+        pass
+
+    def serialise(self):
+        """Convert to JSON-serialisable data via a TaggedDict"""
+        td = self.to_tagged_dict()
+        return td.serialise()
+
+    def deserialise(self, d):
+        """Convert from JSON-serialisable data to a TaggedDict of the correct
+        type, and then initialise from that data. Very unlikely we'll call
+        this directly but it's here for completeness"""
+        # the subclass must have one of these!
+        td = self.TAGGEDDICT.deserialise(d)
+        self.from_tagged_dict(td)
+
+
+
+
 
     @staticmethod
     def roiUnion(rois):
@@ -504,12 +543,11 @@ class ROIRect(ROI):
     tpname = "rect"
     # build the tagged dict structure we use for serialising rects - it's a tagged dict with the fields
     # of a rect, plus the base ROI fields.
-    rectType = taggedRectType(0, 0, 0, 0)
     TAGGEDDICTDEFINITION = BASEROIFIELDS + [
         ('bb', ('rectangle', rectType)),
         ('isset', ('is rectangle set? (internal)', bool, False))]
 
-    ROIRECTTAGGEDDICT = TaggedDictType(*TAGGEDDICTDEFINITION)
+    TAGGEDDICT = TaggedDictType(*TAGGEDDICTDEFINITION)
 
     def __init__(self, sourceROI=None, caption=None, rect: Tuple[float, float, float, float] = None):
         """Takes the following forms:
@@ -566,16 +604,16 @@ class ROIRect(ROI):
     def changed(self):
         self.isSet = True
 
-    def serialise(self):
-        td = self.ROIRECTTAGGEDDICT.create()
-        super().serialiseCommon(td)
-        td.bb = self.rectType.create()
+    def to_tagged_dict(self):
+        td = self.TAGGEDDICT.create()
+        super().to_tagged_dict_common(td)
+        td.bb = rectType.create()
         td.bb.set(self.x, self.y, self.w, self.h)
         td.isset = self.isSet
         return td
 
-    def deserialise(self, td):
-        super().deserialiseCommon(td)
+    def from_tagged_dict(self, td):
+        super().from_tagged_dict_common(td)
         self.x, self.y, self.w, self.h = td['bb']
         self.isSet = td['isset']
 
@@ -624,7 +662,7 @@ class ROICircle(ROI):
     TAGGEDDICTDEFINITION = BASEROIFIELDS + [
         ('croi', ('circle definition', circleType))]
 
-    ROICIRCLETAGGEDDICT = TaggedDictType(*TAGGEDDICTDEFINITION)
+    TAGGEDDICT = TaggedDictType(*TAGGEDDICTDEFINITION)
 
     def __init__(self, x=-1, y=0, r=0, sourceROI=None, caption=None):
         super().__init__(sourceROI=sourceROI, caption=caption)
@@ -672,15 +710,15 @@ class ROICircle(ROI):
         cv.circle(m, (self.r, self.r), self.r, 255, -1)
         return m > 0
 
-    def serialise(self):
-        td = self.ROICIRCLETAGGEDDICT.create()
-        super().serialiseCommon(td)
+    def to_tagged_dict(self):
+        td = self.TAGGEDDICT.create()
+        super().to_tagged_dict_common(td)
         td.croi = self.circleType.create()
         td.croi.set(self.x, self.y, self.r, self.isSet)
         return td
 
-    def deserialise(self, td):
-        super().deserialiseCommon(td)
+    def from_tagged_dict(self, td):
+        super().from_tagged_dict_common(td)
         t = td.croi
         self.x, self.y, self.r = t.x, t.y, t.r
         self.isSet = t.isSet
@@ -717,6 +755,17 @@ class ROIPainted(ROI):
     """A painted ROI, which is essentially just a mask"""
     tpname = "painted"
 
+    bbrect: Optional[Rect]
+    map: Optional[np.array]
+
+    TAGGEDDICTDEFINITION = BASEROIFIELDS + [
+        ('bbrect', ('bounding box', Maybe(rectType), None)),
+        ('map', ('mask', Maybe(ndarray), None)),
+        ("r", ('brush radius', Number, 10))
+    ]
+
+    TAGGEDDICT = TaggedDictType(*TAGGEDDICTDEFINITION)
+
     # we can create this ab initio or from a subimage mask of an image.
     def __init__(self, mask=None, caption=None, sourceROI=None, containingImageDimensions=None):
         super().__init__(sourceROI=sourceROI, caption=caption,
@@ -730,14 +779,9 @@ class ROIPainted(ROI):
                 self.bbrect = Rect(0, 0, w, h)
                 self.map = np.zeros((h, w), dtype=np.uint8)
                 self.map[mask] = 255
-            self.drawEdge = True
-            self.drawBox = True
         else:
-            self.drawBox = sourceROI.drawBox
-            self.drawEdge = sourceROI.drawEdge
             self.map = sourceROI.mask()  # not a copy?
             self.bbrect = Rect.copy(sourceROI.bb())
-            self.containingImageDimensions = sourceROI.containingImageDimensions
         self.r = 10  # default "circle size" for painting; used in multidot editor
 
     def clear(self):
@@ -752,17 +796,20 @@ class ROIPainted(ROI):
         x, y, w, h = self.bbrect
         return x + w / 2, y + h / 2
 
-    def serialise(self):
-        d = super().serialise()
-        d['bbrect'] = self.bbrect.astuple() if self.bbrect else None
-        d['r'] = self.r
-        return serialiseFields(self, [('map', None)], d=d)
+    def to_tagged_dict(self):
+        td = self.TAGGEDDICT.create()
+        super().to_tagged_dict_common(td)
+        # we can't just do td.bbrect = self.bbrect.astuple(), because td.bbrect is a TaggedTuple and
+        # self.bbrect is a Rect. Instead we need to create a TaggedTuple.
+        td.bbrect = None if self.bbrect is None else rectType.deserialise(self.bbrect.astuple())
+        td.map = self.map
+        return td
 
-    def deserialise(self, d):
-        super().deserialise(d)
-        self.bbrect = Rect.fromtuple(d['bbrect'])
-        self.r = d.get('r', 10)
-        deserialiseFields(self, d, [('map', None)])
+    def from_tagged_dict(self, td):
+        super().from_tagged_dict_common(td)
+        self.bbrect = Rect.fromtuple(td.bbrect)
+        self.r = td.r
+        self.map = td.map
 
     def mask(self):
         """return a boolean array, same size as BB"""
@@ -904,15 +951,23 @@ class ROIPainted(ROI):
 class ROIPoly(ROI):
     tpname = "poly"
 
+    pointType = TaggedTupleType(x=("x", Number, 0.0),
+                                y=("y", Number, 0.0))
+
+    listOfPointsType = TaggedListType("list of points", pointType, 0)
+
+    TAGGEDDICTDEFINITION = BASEROIFIELDS + [
+        ('points', ('points', listOfPointsType)),
+        ('drawPoints', ('draw points', bool, True))]
+    TAGGEDDICT = TaggedDictType(*TAGGEDDICTDEFINITION)
+
     def __init__(self, sourceROI=None, caption=None):
         super().__init__(sourceROI=sourceROI, caption=caption)
         self.selectedPoint = None  # don't set the selected point in copies
         if sourceROI is None:
             self.drawPoints = True
-            self.drawBox = True
             self.points = []
         else:
-            self.drawBox = sourceROI.drawBox
             self.drawPoints = sourceROI.drawPoints
             self.points = [(x, y) for x, y in sourceROI.points]  # deep copy
 
@@ -934,20 +989,20 @@ class ROIPoly(ROI):
 
         return Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1)
 
-    def serialise(self):
-        d = super().serialise()
-        d = serialiseFields(self,
-                            [('points', 0), ('drawPoints', True)],
-                            d=d)
-        return d
+    def to_tagged_dict(self) -> TaggedDict:
+        td = self.TAGGEDDICT.create()
+        super().to_tagged_dict_common(td)
+        td.points = self.listOfPointsType.create()
+        for p in self.points:
+            tp = self.pointType.create().set(*p)
+            td.points.append(tp)
+        td.drawPoints = self.drawPoints
+        return td
 
-    def deserialise(self, d):
-        super().deserialise(d)
-        if 'points' in d:
-            pts = d['points']
-            print(f"Deserialising {len(pts)} points")
-            # points will be saved as lists, turn back into tuples
-            self.points = [tuple(x) for x in pts]
+    def from_tagged_dict(self, td: TaggedDict):
+        super().from_tagged_dict_common(td)
+        self.points = [p.astuple() for p in td.points]
+        self.drawPoints = td.drawPoints
 
     def mask(self):
         # return a boolean array, same size as BB. We use opencv here to build a uint8 image
@@ -1058,8 +1113,8 @@ class ROIPoly(ROI):
         return self._str(use_id=False)
 
 
-def deserialise(tp, d):
-    """Not to be confused with ROI.deserialise(). This deserialises an serialised ROI **object** given its type."""
+def new_from_tagged_dict(tp, td):
+    """Not to be confused with ROI.new_from_tagged_dict(). This creates a new ROI from a TaggedDict given its type."""
     # first create the ROI
     if tp == 'rect':
         r = ROIRect()
@@ -1072,5 +1127,5 @@ def deserialise(tp, d):
     else:
         raise Exception(f"cannot deserialise ROI type '{tp}'")
     # then construct its data
-    r.deserialise(d)
+    r.from_tagged_dict(td)
     return r
