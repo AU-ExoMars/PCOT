@@ -244,7 +244,7 @@ def multifile(directory: str,
             # that takes human perception into account. We want to keep the
             # original values, so we just take the mean of the three channels.
             if len(img.shape) == 3:
-                img = np.mean(img, axis=2).astype(np.float)
+                img = np.mean(img, axis=2).astype(np.float32)
 
             # build source data for this image
             filtpos, searchtype = getFilterSearchParam(path)

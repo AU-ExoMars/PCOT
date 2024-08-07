@@ -133,25 +133,25 @@ class TestPrecedenceAndBrackets(unittest.TestCase):
         self.assertEqual(execute('10-2*2'), 6.0)
 
     def test_9(self):
-        self.assertEquals(execute('(4 * (5 + 6))/2'), 22.0)
+        self.assertEqual(execute('(4 * (5 + 6))/2'), 22.0)
 
     def test_10(self):
-        self.assertEquals(execute('((4 + 5) * 6)/2'), 27.0)
+        self.assertEqual(execute('((4 + 5) * 6)/2'), 27.0)
 
     def test_11(self):
-        self.assertEquals(execute('(((1 + 2) + 3) * (4 + (5 * 6))) ^ 2'), 41616.0)
+        self.assertEqual(execute('(((1 + 2) + 3) * (4 + (5 * 6))) ^ 2'), 41616.0)
 
     def test_12(self):
-        self.assertEquals(execute('((1 + (2 * (3 + 4))) * (5 + (6 * 7)))'), 705.0)
+        self.assertEqual(execute('((1 + (2 * (3 + 4))) * (5 + (6 * 7)))'), 705.0)
 
     def test_13(self):
-        self.assertEquals(execute('((1 + (2 * (3 + 4))) - 3 * (5 + (6 * 7)))'), -126.0)
+        self.assertEqual(execute('((1 + (2 * (3 + 4))) - 3 * (5 + (6 * 7)))'), -126.0)
 
     def test_14(self):
-        self.assertEquals(execute('2 + ((1 + (2 * (3 + 4))) - 3 * (5 + (6 * 7)))'), -124.0)
+        self.assertEqual(execute('2 + ((1 + (2 * (3 + 4))) - 3 * (5 + (6 * 7)))'), -124.0)
 
     def test_15(self):
-        self.assertEquals(execute('2 + ((1 + (2 * (3 + 4))) - 3 * (5 + (6 * 7))) - 8'), -132.0)
+        self.assertEqual(execute('2 + ((1 + (2 * (3 + 4))) - 3 * (5 + (6 * 7))) - 8'), -132.0)
 
 class TestUnaryMinus(unittest.TestCase):
     """Tests of the syntax for the unary minus operator
