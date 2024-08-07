@@ -160,7 +160,7 @@ def multifile(directory: str,
         filterset = r.filterset or 'PANCAM'
         mult = r.mult or 1.0
         rawloader = r.rawloader
-
+        
     def getFilterSearchParam(p) -> Tuple[Optional[Union[str, int]], Optional[str]]:
         """Returns the thing to search for to match a filter to a path and the type of the search"""
         if filterre is None:
@@ -168,7 +168,9 @@ def multifile(directory: str,
         else:
             m = filterre.match(p)
             if m is None:
+                logger.critical(f"NO MATCH FOUND FOR path {p}, regex {filterre}")
                 return None, None
+        
             m = m.groupdict()
             if '<lens>' in filterpat:
                 if '<n>' not in filterpat:
