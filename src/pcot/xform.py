@@ -1531,7 +1531,7 @@ class XFormROIType(XFormType):
     def perform(self, node):
         img = node.getInput(self.IN_IMG, Datum.IMG)
         # label the ROI
-        node.setRectText(node.roi.caption)
+        node.setRectText(node.roi.label)
 
         if img is None:
             # no image

@@ -324,7 +324,7 @@ def test_roi_serialisation_rect():
     """Test that we can serialise and deserialise a rect ROI"""
     roi = ROIRect()
     roi.set(20, 20, 50, 50)
-    x = roi.serialise().serialise()     # serialise to a TaggedDict, serialise *that* to JSON
+    x = roi.serialise()
     assert isinstance(json.dumps(x), str)
     # now deserialise into a rect
     roi2 = ROIRect()

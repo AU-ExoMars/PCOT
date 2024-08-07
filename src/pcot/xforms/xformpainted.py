@@ -117,7 +117,7 @@ class TabPainted(pcot.ui.tabs.Tab):
 
     def topChanged(self, checked):
         self.mark()
-        self.node.roi.captiontop = checked
+        self.node.roi.labeltop = checked
         self.changed()
 
     def fontSizeChanged(self, i):
@@ -134,7 +134,7 @@ class TabPainted(pcot.ui.tabs.Tab):
 
     def textChanged(self, t):
         self.mark()
-        self.node.roi.caption = t
+        self.node.roi.label = t
         # this will cause perform, which will cause onNodeChanged, which will
         # set the text again. We set a flag to stop the text being reset.
         self.dontSetText = True
@@ -163,10 +163,10 @@ class TabPainted(pcot.ui.tabs.Tab):
         self.w.canvas.display(self.node.getOutput(XFormROIType.OUT_IMG))
 
         if not self.dontSetText:
-            self.w.caption.setText(self.node.roi.caption)
+            self.w.caption.setText(self.node.roi.label)
         self.w.fontsize.setValue(self.node.roi.fontsize)
         self.w.thickness.setValue(self.node.roi.thickness)
-        self.w.captionTop.setChecked(self.node.roi.captiontop)
+        self.w.captionTop.setChecked(self.node.roi.labeltop)
         self.w.brushSize.setValue(self.node.brushSize)
         self.w.drawMode.setCurrentIndex(self.node.drawMode)
         self.w.drawbg.setChecked(self.node.roi.drawbg)

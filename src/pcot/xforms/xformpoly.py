@@ -100,7 +100,7 @@ class TabPoly(pcot.ui.tabs.Tab):
 
     def topChanged(self, checked):
         self.mark()
-        self.node.roi.captiontop = checked
+        self.node.roi.labeltop = checked
         self.changed()
 
     def fontSizeChanged(self, i):
@@ -110,7 +110,7 @@ class TabPoly(pcot.ui.tabs.Tab):
 
     def textChanged(self, t):
         self.mark()
-        self.node.roi.caption = t
+        self.node.roi.label = t
         # this will cause perform, which will cause onNodeChanged, which will
         # set the text again. We set a flag to stop the text being reset.
         self.dontSetText = True
@@ -142,11 +142,11 @@ class TabPoly(pcot.ui.tabs.Tab):
         self.w.canvas.setROINode(self.node)
         self.w.canvas.display(self.node.getOutput(XFormROIType.OUT_IMG))
         if not self.dontSetText:
-            self.w.caption.setText(self.node.roi.caption)
+            self.w.caption.setText(self.node.roi.label)
         self.w.drawbg.setChecked(self.node.roi.drawbg)
         self.w.fontsize.setValue(self.node.roi.fontsize)
         self.w.thickness.setValue(self.node.roi.thickness)
-        self.w.captionTop.setChecked(self.node.roi.captiontop)
+        self.w.captionTop.setChecked(self.node.roi.labeltop)
         self.w.drawMode.setCurrentIndex(self.node.drawMode)
         r, g, b = [x * 255 for x in self.node.roi.colour]
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));

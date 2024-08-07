@@ -117,7 +117,11 @@ class XFormROIDQ(XFormType):
                 roi.bbrect.x += subimg.bb.x
                 roi.bbrect.y += subimg.bb.y
 
-            roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.thickness, node.drawbg)
+            roi.captiontop = node.captiontop
+            roi.colour = node.colour
+            roi.fontsize = node.fontsize
+            roi.thickness = node.thickness
+            roi.drawbg = node.drawbg
 
             img = img.copy()
             img.rois = [roi]

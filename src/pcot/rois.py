@@ -51,8 +51,8 @@ ROICOLOURTYPE = taggedColourType(1, 0, 0)
 
 BASEROIFIELDS = [
     ("type", ("type", str, "")),
-    ("caption", ("caption", Maybe(str), "")),
-    ("captiontop", ("caption on top?", bool, False)),
+    ("label", ("label", Maybe(str), "")),
+    ("labeltop", ("label on top?", bool, False)),
     ("colour", ("colour", ROICOLOURTYPE)),
     ("thickness", ("thickness", Number, 0)),
     ("fontsize", ("fontsize", Number, 10)),
@@ -77,7 +77,7 @@ class ROI(SourcesObtainable, Annotation):
 
     def __init__(self, bbrect: Rect = None, maskimg: np.array = None,
                  sourceROI=None, isTemp=False, containingImageDimensions=None,
-                 caption=None):
+                 label=None):
         """Constructor. Takes an ROI type name, optional rect and mask (for 'base' ROIs consisting of just these)
         and an optional sourceROI from which some data is copied, for copy operations"""
 
@@ -91,11 +91,11 @@ class ROI(SourcesObtainable, Annotation):
 
         self.isTemp = isTemp  # for temporary ROIs created by expressions
 
-        if caption is None:
-            self.caption = None if sourceROI is None else sourceROI.caption
+        if label is None:
+            self.label = None if sourceROI is None else sourceROI.label
         else:
-            self.caption = caption
-        self.captiontop = False if sourceROI is None else sourceROI.captiontop  # draw the caption at the top?
+            self.label = label
+        self.labeltop = False if sourceROI is None else sourceROI.labeltop  # draw the label at the top?
         self.colour = (1, 1, 0) if sourceROI is None else sourceROI.colour  # annotation colour
         self.thickness = 0 if sourceROI is None else sourceROI.thickness  # thickness of lines
         self.fontsize = 10 if sourceROI is None else sourceROI.fontsize  # annotation font size
@@ -194,12 +194,12 @@ class ROI(SourcesObtainable, Annotation):
 
     def annotateText(self, p: QPainter, alpha):
         """Draw the text for the ROI onto the painter"""
-        if (bb := self.bb()) is not None and self.fontsize > 0 and self.caption is not None and self.caption != '':
+        if (bb := self.bb()) is not None and self.fontsize > 0 and self.label is not None and self.label != '':
             x, y, x2, y2 = bb.corners()
-            ty = y if self.captiontop else y2
+            ty = y if self.labeltop else y2
 
-            annotDrawText(p, x, ty, self.caption, self.colour, alpha,
-                          basetop=self.captiontop,
+            annotDrawText(p, x, ty, self.label, self.colour, alpha,
+                          basetop=self.labeltop,
                           bgcol=(0, 0, 0) if self.drawbg else None,
                           fontsize=self.fontsize)
 
@@ -218,8 +218,8 @@ class ROI(SourcesObtainable, Annotation):
         if self.isTemp:
             raise Exception("attempt to serialise a temporary ROI")
 
-        td.caption = self.caption
-        td.captiontop = self.captiontop
+        td.label = self.label
+        td.labeltop = self.labeltop
         td.colour = ROICOLOURTYPE.create().set(*self.colour)
         td.thickness = self.thickness
         td.fontsize = self.fontsize
@@ -234,8 +234,8 @@ class ROI(SourcesObtainable, Annotation):
     def from_tagged_dict_common(self, td: TaggedDict):
         """Deserialise the common parts of an ROI from an existing TaggedDict."""
         # deserialise the common data
-        self.caption = td.caption
-        self.captiontop = td.captiontop
+        self.label = td.label
+        self.labeltop = td.labeltop
         self.colour = td.colour.get()
         self.thickness = td.thickness
         self.fontsize = td.fontsize
@@ -254,17 +254,14 @@ class ROI(SourcesObtainable, Annotation):
         # get the constructor for the ROI type and construct an instance
         constructor = ROI.roiTypes[td['type']]
         r = constructor()
-        # deserialise the common data
-        r.deserialiseCommon(td)
-        # deserialise the subclass data
-        r.deserialise(td)
+        r.from_tagged_dict(td)
         return r
 
     @staticmethod
     def fromSerialised(d):
         """Generate from JSON-serialised data with a type field; it's like new_from_tagged_dict
         except it works on a plain JSON-serialisable dict"""
-        constructor = ROI.roiTypes['type']
+        constructor = ROI.roiTypes[d['type']]
         r = constructor()
         r.deserialise(d)
         return r
@@ -503,7 +500,7 @@ class ROI(SourcesObtainable, Annotation):
         raise BadOpException()
 
     def _str(self, use_id):
-        lab = "(no caption)" if self.caption is None else self.caption
+        lab = "(no label)" if self.label is None else self.label
         s = f"ROI-BASE{self.internalIdx}" if use_id else "ROI-BASE"
         if not self.bb():
             return f"{s}:{lab} (no data)"
@@ -549,13 +546,13 @@ class ROIRect(ROI):
 
     TAGGEDDICT = TaggedDictType(*TAGGEDDICTDEFINITION)
 
-    def __init__(self, sourceROI=None, caption=None, rect: Tuple[float, float, float, float] = None):
+    def __init__(self, sourceROI=None, label=None, rect: Tuple[float, float, float, float] = None):
         """Takes the following forms:
         ROIRect() - empty ROI
         ROIRect(rect=(x,y,w,h)) - ROI with given bounding box
         ROIRect(sourceROI=roi) - copy of ROI
-        Can also specify a caption with caption="""
-        super().__init__(sourceROI=sourceROI, caption=caption)
+        Can also specify a label with label="""
+        super().__init__(sourceROI=sourceROI, label=label)
         if sourceROI is None:
             if rect is None:
                 self.x = 0
@@ -628,7 +625,7 @@ class ROIRect(ROI):
         return r
 
     def _str(self, use_id):
-        lab = "(no caption)" if self.caption is None else self.caption
+        lab = "(no label)" if self.label is None else self.label
         s = f"ROI-RECT{self.internalIdx}" if use_id else "ROI-RECT"
         return f"{s}:{lab} {self.x} {self.y} {self.w}x{self.h}"
 
@@ -664,8 +661,8 @@ class ROICircle(ROI):
 
     TAGGEDDICT = TaggedDictType(*TAGGEDDICTDEFINITION)
 
-    def __init__(self, x=-1, y=0, r=0, sourceROI=None, caption=None):
-        super().__init__(sourceROI=sourceROI, caption=caption)
+    def __init__(self, x=-1, y=0, r=0, sourceROI=None, label=None):
+        super().__init__(sourceROI=sourceROI, label=label)
         if sourceROI is None:
             self.set(x, y, r)
         else:
@@ -737,11 +734,11 @@ class ROICircle(ROI):
         return CircleEditor(tab)
 
     def __str__(self):
-        lab = "(no caption)" if self.caption is None else self.caption
+        lab = "(no label)" if self.label is None else self.label
         return f"ROI-CIRCLE:{lab} {self.x} {self.y} {self.r}"
 
     def __repr__(self):
-        lab = "(no caption)" if self.caption is None else self.caption
+        lab = "(no label)" if self.label is None else self.label
         return f"ROI-CIRCLE{self.internalIdx}:{lab} {self.x} {self.y} {self.r}"
 
 
@@ -767,8 +764,8 @@ class ROIPainted(ROI):
     TAGGEDDICT = TaggedDictType(*TAGGEDDICTDEFINITION)
 
     # we can create this ab initio or from a subimage mask of an image.
-    def __init__(self, mask=None, caption=None, sourceROI=None, containingImageDimensions=None):
-        super().__init__(sourceROI=sourceROI, caption=caption,
+    def __init__(self, mask=None, label=None, sourceROI=None, containingImageDimensions=None):
+        super().__init__(sourceROI=sourceROI, label=label,
                          containingImageDimensions=containingImageDimensions)
         if sourceROI is None:
             if mask is None:
@@ -930,7 +927,7 @@ class ROIPainted(ROI):
         return PaintedEditor(tab)
 
     def _str(self, use_id):
-        lab = "(no caption)" if self.caption is None else self.caption
+        lab = "(no label)" if self.label is None else self.label
         s = f"ROI-PAINTED{self.internalIdx}" if use_id else f"ROI-PAINTED:{lab}"
         if self.bbrect:
             x, y, w, h = self.bb()
@@ -961,8 +958,8 @@ class ROIPoly(ROI):
         ('drawPoints', ('draw points', bool, True))]
     TAGGEDDICT = TaggedDictType(*TAGGEDDICTDEFINITION)
 
-    def __init__(self, sourceROI=None, caption=None):
-        super().__init__(sourceROI=sourceROI, caption=caption)
+    def __init__(self, sourceROI=None, label=None):
+        super().__init__(sourceROI=sourceROI, label=label)
         self.selectedPoint = None  # don't set the selected point in copies
         if sourceROI is None:
             self.drawPoints = True
@@ -1099,7 +1096,7 @@ class ROIPoly(ROI):
         return PolyEditor(tab)
 
     def _str(self, use_id):
-        lab = "(no caption)" if self.caption is None else self.caption
+        lab = "(no label)" if self.label is None else self.label
         s = f"ROI-POLY{self.internalIdx}:{lab}" if use_id else f"ROI-POLY:{lab}"
         if not self.hasPoly():
             return s + " (no points)"

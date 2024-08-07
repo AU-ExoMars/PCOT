@@ -400,6 +400,17 @@ def test_list_ser_deser():
     assert tl2[2] == 30
 
 
+def test_list_iter():
+    tlt = TaggedListType(
+        "a", int, [0, 0, 0]
+    )
+    serial = [10, 20, 30]
+
+    tl2 = tlt.deserialise(serial)
+    for i, v in enumerate(tl2):
+        assert v == serial[i]
+
+
 def test_dict_of_tuples_ser_deser():
     tdt = TaggedDictType(
         a=("a", int, 0),
@@ -619,4 +630,48 @@ def test_optional_ser():
     s = td.serialise()
     assert s == {'a': [10, 20, 30], 'b': None, 'c': 3.14}
 
+
+def test_tagged_variant_dict():
+    tdt1 = TaggedDictType(
+        a=("a", int, 10),
+        b=("b", str, "foo"),
+        c=("c", float, 3.14)
+    )
+    tdt2 = TaggedDictType(
+        a=("a", int, 10),
+        b=("b", float, 3.14),
+        d=("d", str, "wibble"),
+        e=("e", bool, False)
+    )
+
+    tvdt = TaggedVariantDictType("type",
+                                 {
+                                        "type1": tdt1,
+                                        "type2": tdt2
+                                    })
+
+    tl = TaggedListType("stuff", tvdt, 0)
+    ll = tl.create()
+
+    d = tdt1.create()
+    d.a = 212
+    t = tvdt.create().set(d)
+    ll.append(t)
+
+    d = tdt2.create()
+    d.a = 2121
+    t = tvdt.create().set(d)
+    ll.append(t)
+
+    s = ll.serialise()
+    ll = tl.deserialise(s)
+
+    assert len(ll) == 2
+    assert ll[0].get_type() == 'type1'
+    assert ll[0].get().a == 212
+    assert ll[0].get()._type == tdt1
+
+    assert ll[1].get_type() == 'type2'
+    assert ll[1].get().e is False
+    assert ll[1].get()._type == tdt2
 

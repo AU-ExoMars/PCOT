@@ -15,6 +15,7 @@ class Maybe:
     We did have an Amalgam object, but that can't possibly work because we don't actually store type data in
     the serialisation so we can't tell what to deserialise to. Maybe only works because we can check for None.
     """
+
     def __init__(self, tp):
         self.tp = tp
 
@@ -29,7 +30,7 @@ def is_value_of_type(value, tp):
     if isinstance(tp, Maybe):
         # check the value is None or of the correct type
         return value is None or is_value_of_type(value, tp.tp)
-    if tp is type(None):        # NoneType isn't available anywhere, but there's only one None and one NoneType
+    if tp is type(None):  # NoneType isn't available anywhere, but there's only one None and one NoneType
         return value is None
     if isinstance(tp, TaggedAggregateType):
         # are we expecting a tagged aggregate?
@@ -85,6 +86,7 @@ class Tag:
 
     def assert_valid(self):
         """Check the tag is valid"""
+
         # type has to be a JSON-serialisable type, Number or a TaggedAggregateType. That could include a Union
         # or Optional.
 
@@ -261,7 +263,7 @@ class TaggedDict(TaggedAggregate):
         This assumes that the only items in the structure are JSON-serialisable or TaggedAggregate."""
 
         out = {}
-        for k,v in self._values.items():
+        for k, v in self._values.items():
             tp = self._type.tags[k].type
             if isinstance(tp, Maybe):
                 if v is None:
@@ -415,7 +417,7 @@ class TaggedTuple(TaggedAggregate):
         """Return the data as an actual tuple"""
         return self._values
 
-    astuple = get       # alias!
+    astuple = get  # alias!
 
     def __len__(self):
         return len(self._values)
@@ -537,6 +539,84 @@ class TaggedList(TaggedAggregate):
         This assumes that the only items in the structure are JSON-serialisable or TaggedAggregate."""
 
         return [v.serialise() if isinstance(v, TaggedAggregate) else v for v in self._values]
+
+
+class TaggedVariantDictType(TaggedAggregateType):
+    """This is intended for by e.g. list containing ROIs, where ROIs are stored as TaggedDicts of different types,
+    but each dict has a field which tells you what TaggedDictType it is. It's an oddly specific use case.."""
+
+    discriminator_field: str  # the field that tells us what type we are
+    type_dict: Dict[str, TaggedDictType]  # the types we can be
+
+    def __init__(self, discriminator_field, type_dict):
+        super().__init__()
+        self.discriminator_field = discriminator_field
+        self.type_dict = type_dict
+
+        for k, v in type_dict.items():
+            if not isinstance(v, TaggedDictType):
+                raise ValueError(f"Value {v} is not a TaggedDictType")
+
+    def create(self):
+        return TaggedVariantDict(self)
+
+    def deserialise(self, data) -> 'TaggedVariantDict':
+        return TaggedVariantDict(self, data)
+
+
+class TaggedVariantDict(TaggedAggregate):
+    """This is the actual tagged variant dict object"""
+
+    _value: Optional[TaggedDict]
+    _type: TaggedVariantDictType
+    _type_name: Optional[str]
+
+    def __init__(self, tt: TaggedVariantDictType, data: Optional[Dict] = None):
+        super().__init__(tt)
+        if data is None:
+            # we initialise as containing no data
+            self._value = None
+            self._type_name = None
+        else:
+            # use the discriminator field to find the type
+            if tt.discriminator_field not in data:
+                raise ValueError(f"TaggedVariantDict does not have a discriminator field {tt.discriminator_field}")
+            tp = data[tt.discriminator_field]
+            if tp not in tt.type_dict:
+                raise ValueError(f"TaggedVariantDict does not have a type {tp} in the type dictionary")
+            # we should now be ready to deserialise the TaggedDict
+            self._value = tt.type_dict[tp].deserialise(data)
+            self._type_name = tp
+
+    def get(self):
+        """return the underlying TaggedDict"""
+        return self._value
+
+    def set(self, td):
+        """Set the value to a tagged dict, making sure it's of the correct type. Fluent - returns self."""
+        if td._type not in self._type.type_dict.values():
+            raise ValueError(f"TaggedVariantDict does not have a type {td._type} in the type dictionary")
+        self._value = td
+        for k, v in self._type.type_dict.items():
+            if v == td._type:
+                self._type_name = k
+                return self
+        raise ValueError("Internal error - type not found in type dictionary")
+
+    def get_type(self):
+        """return the name of the underlying TaggedDict"""
+        return self._type_name
+
+    def serialise(self):
+        """Serialise the structure rooted here into a JSON-serialisable structure. We don't need to record what the
+        types are, because that information will be stored in the type object when we deserialise.
+        This assumes that the only items in the structure are JSON-serialisable or TaggedAggregate."""
+        if self._value is None:
+            return None
+        out = self._value.serialise()
+        # make very sure that the discriminator is set
+        out[self._type.discriminator_field] = self._type_name
+        return out
 
 
 #
