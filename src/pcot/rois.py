@@ -1108,21 +1108,3 @@ class ROIPoly(ROI):
 
     def __repr__(self):
         return self._str(use_id=False)
-
-
-def new_from_tagged_dict(tp, td):
-    """Not to be confused with ROI.new_from_tagged_dict(). This creates a new ROI from a TaggedDict given its type."""
-    # first create the ROI
-    if tp == 'rect':
-        r = ROIRect()
-    elif tp == 'circle':
-        r = ROICircle()
-    elif tp == 'painted':
-        r = ROIPainted()
-    elif tp == 'poly':
-        r = ROIPoly()
-    else:
-        raise Exception(f"cannot deserialise ROI type '{tp}'")
-    # then construct its data
-    r.from_tagged_dict(td)
-    return r
