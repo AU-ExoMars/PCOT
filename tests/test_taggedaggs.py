@@ -133,6 +133,13 @@ def test_taggedlist():
     with pytest.raises(IndexError):
         tl[9] = 12
 
+    # append an item
+    tl.append(12)
+    assert tl[3] == 12
+    # append a default item - we can't for non-tagged types
+    with pytest.raises(ValueError):
+        tl.append_default()
+
 
 #
 # Now check that we can create nested types
@@ -201,6 +208,16 @@ def test_list_of_tuples():
         tl[9] = 12
     with pytest.raises(ValueError):  # the usual kind of error for this sort of nonsense.
         tl['frongworth'] = 12
+
+    # append default items
+    tl.append_default()
+    assert tl[2].a == 10
+    assert tl[2].b == "foo"
+    assert tl[2].c == 3.14
+    tl.append_default()
+    assert tl[3].a == 10
+    assert tl[3].b == "foo"
+    assert tl[3].c == 3.14
 
 
 def test_dict_of_list_of_tuples():

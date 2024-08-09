@@ -527,8 +527,16 @@ class TaggedList(TaggedAggregate):
         self._values[idx] = value
 
     def append(self, value):
+        """Append a value to a list. If you want to append a default value, use append_default"""
         self._check_value(value)
         self._values.append(value)
+
+    def append_default(self):
+        """Append a default value to a list. If you want to append a specific value, use append"""
+        if isinstance(self._type.tag.type, TaggedAggregateType):
+            self._values.append(self._type.tag.type.create())
+        else:
+            raise ValueError("Can't append default to non-TaggedAggregateType list")
 
     def __len__(self):
         return len(self._values)

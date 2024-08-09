@@ -42,6 +42,10 @@ class Filter:
         use a filter as a key in a dictionary."""
         return hash(self.name)
 
+    def __eq__(self, other):
+        return self.name == other.name and self.cwl == other.cwl and self.fwhm == other.fwhm and \
+            self.transmission == other.transmission and self.position == other.position
+
     def serialise(self):
         return self.cwl, self.fwhm, self.transmission, self.position, \
                self.name
