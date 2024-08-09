@@ -6,12 +6,13 @@ This is a rough guide, and things may change!
         
 ## Future releases
 
+* Batch and parameter files, major changes to node serialisation internals required by this
 * Reorganise the node palette
 * Obtain user stories and feedback
 * Documentation
     * User guide
         * Page on *expr* nodes
-        * documentation for properties of nodes for library use (e.g. *expr* nodes have ".expr")
+        * documentation for properties of nodes for library use (e.g. *expr* nodes have ".expr") (Note: now should be automatically produced by parameter file definitions to some extents)
         * How-to for common tasks (the "cookbook")
 
 * Calibration: the PCT detection node is fine, but does nothing!
