@@ -46,8 +46,10 @@ class MultifileInputMethod(InputMethod):
             self.dir = os.path.expanduser("~")
         # files we have checked in the file list
         self.files = []
-        # all data in all channels is multiplied by this (used for, say, 10 bit images)
-        self.mult = 1
+        # bit depth - how many bits are used in the data. For example, if the data is 16 bit and only 10 bits
+        # are used, set this to 10. The data will then by divided by 1023 (2^10-1) rather than 65535 (2^16-1).
+        # If it is None, the data is always divided by 65535 for 16 bit data, 255 for 8 bit.
+        self.bitdepth = None
         self.filterset = "PANCAM"
         self.filterpat = r'.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*'
         self.filterre = None
@@ -74,7 +76,7 @@ class MultifileInputMethod(InputMethod):
 
         return load.multifile(self.dir, self.files,
                               filterpat=self.filterpat,
-                              mult=np.float32(self.mult),
+                              bitdepth=self.bitdepth,
                               inpidx=self.input.idx,
                               mapping=self.mapping,
                               cache=self.cachedFiles,
@@ -106,7 +108,7 @@ class MultifileInputMethod(InputMethod):
         x = {
              'dir': self.dir,
              'files': self.files,
-             'mult': self.mult,
+             'bitdepth': self.bitdepth,
              'filterpat': self.filterpat,
              'filterset': self.filterset,
              'rawloader': self.rawLoader.serialise(),
@@ -120,7 +122,7 @@ class MultifileInputMethod(InputMethod):
     def deserialise(self, data, internal):
         self.dir = data['dir']
         self.files = data['files']
-        self.mult = data['mult']
+        self.bitdepth = data.get('bitdepth', None)
         self.filterpat = data['filterpat']
         if 'rawloader' in data:
             self.rawLoader.deserialise(data['rawloader'])
@@ -156,7 +158,7 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         self.getinitial.clicked.connect(self.getInitial)
         self.filelist.activated.connect(self.itemActivated)
         self.filterpat.editingFinished.connect(self.patChanged)
-        self.mult.currentTextChanged.connect(self.multChanged)
+        self.bitdepth.currentTextChanged.connect(self.bitdepthChanged)
         self.filtSetCombo.currentIndexChanged.connect(self.filterSetChanged)
         self.loaderSettingsButton.clicked.connect(self.loaderSettings)
         self.loaderSettingsText.setText(str(self.method.rawLoader))
@@ -181,7 +183,7 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         self.method.filterset = preset['filterset']
         self.method.rawLoader.deserialise(preset['rawloader'])
         self.method.filterpat = preset['filterpat']
-        self.method.mult = preset['mult']
+        self.method.bitdepth = preset.get('bitdepth', None)
         self.onInputChanged()
 
     def fetchPreset(self):
@@ -190,7 +192,7 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
             "filterset": self.method.filterset,
             "rawloader": self.method.rawLoader.serialise(),
             "filterpat": self.method.filterpat,
-            "mult": self.method.mult
+            "bitdepth": self.method.bitdepth
         }
 
     def filterSetChanged(self, i):
@@ -220,8 +222,11 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
             s += "{}:\t{}\n".format(i, self.method.files[i])
         #        s+="\n".join([str(x) for x in self.node.imgpaths])
         self.outputFiles.setPlainText(s)
-        i = self.mult.findText(str(int(self.method.mult)) + ' ', Qt.MatchFlag.MatchStartsWith)
-        self.mult.setCurrentIndex(i)
+        if self.method.bitdepth is not None:
+            i = self.bitdepth.findText(str(int(self.method.bitdepth)) + ' ', Qt.MatchFlag.MatchStartsWith)
+        else:
+            i = 0
+        self.bitdepth.setCurrentIndex(i)
         self.filterpat.setText(self.method.filterpat)
         # this won't work if the filter set isn't in the combobox.
         self.filtSetCombo.setCurrentText(self.method.filterset)
@@ -275,15 +280,18 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         self.method.filterpat = self.filterpat.text()
         self.onInputChanged()
 
-    def multChanged(self, s):
+    def bitdepthChanged(self, s):
         try:
-            # strings in the combobox are typically "64 (6 bit shift)"
-            ll = s.split()
-            if len(ll) > 0:
-                self.method.mult = float(ll[0])
-                self.onInputChanged()
+            # strings in the combobox are typically "10 bits" or "FulL"
+            if s == "Full":
+                self.method.bitdepth = None
+            else:
+                ll = s.split()
+                if len(ll) > 0:
+                    self.method.bitdepth = int(ll[0])
+                    self.onInputChanged()
         except (ValueError, OverflowError):
-            raise Exception("CTRL", "Bad mult string in 'multifile': " + s)
+            raise Exception("CTRL", "Bad bitdepth string in 'multifile': " + s)
 
     def buildModel(self):
         # build the model that the list view uses
@@ -308,12 +316,12 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         self.method.compileRegex()
         if RawLoader.is_raw_file(path):
             # if it's a raw file, load it with the raw loader and create an ImageCube
-            arr = self.method.rawLoader.load(path)
+            arr = self.method.rawLoader.load(path, bitdepth=self.method.bitdepth)
             img = ImageCube(arr, self.method.mapping)
         else:
             # otherwise load it with the ImageCube RGB loader
-            img = ImageCube.load(path, self.method.mapping, None)  # RGB image, null sources
-        img.img *= self.method.mult
+            img = ImageCube.load(path, self.method.mapping, None, bitdepth=self.method.bitdepth)  # RGB image, null sources
+
         self.activatedImagePath = path
         self.activatedImage = img
         self.displayActivatedImage()
