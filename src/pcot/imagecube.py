@@ -273,7 +273,7 @@ class ChannelMapping:
         return "ChannelMapping-{} r{} g{} b{}".format(id(self), self.red, self.green, self.blue)
 
 
-def load_rgb_image(fname) -> np.ndarray:
+def load_rgb_image(fname, bitdepth=None) -> np.ndarray:
     """This is used by ImageCube to load its image data. It's a function because it's
     also used by the multifile loader."""
     fname = str(fname)  # fname could potentially be some kind of Path object.
@@ -284,8 +284,11 @@ def load_rgb_image(fname) -> np.ndarray:
         raise Exception(f'Cannot read file {fname}')
     if len(img.shape) == 2:  # expand to RGB. Annoyingly we cut it down later sometimes.
         img = image.imgmerge((img, img, img))
-    # get the scaling factor
-    if img.dtype == np.uint8:
+    # get the scaling factor, which depends on the bitdepth if one is provided, or will be the full bitdepth of
+    # the image if not.
+    if bitdepth is not None:
+        scale = 2 ** bitdepth - 1
+    elif img.dtype == np.uint8:
         scale = 255.0
     elif img.dtype == np.uint16:
         scale = 65535.0
@@ -448,9 +451,9 @@ class ImageCube(SourcesObtainable):
     ## class method for loading an image (using cv's imread)
     # Always builds an RGB image. Sources must be provided.
     @classmethod
-    def load(cls, fname, mapping, sources):
+    def load(cls, fname, mapping, sources, bitdepth=None):
         logger.info(f"ImageCube load: {fname}")
-        img = load_rgb_image(fname)
+        img = load_rgb_image(fname,bitdepth=bitdepth)
         # create sources if none given
         if sources is None:
             sources = MultiBandSource([Source().setBand('R'),

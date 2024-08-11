@@ -132,7 +132,6 @@ def test_raw_uint16_bigend():
                            horzflip=False, vertflip=False)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             mult=1,
                              filterset='AUPE',
                              rawloader=loader
                              )
@@ -160,7 +159,6 @@ def test_raw_uint16_littleend():
                            horzflip=False, vertflip=False)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             mult=1,
                              filterset='AUPE',
                              rawloader=loader
                              )
@@ -184,7 +182,6 @@ def test_raw_uint16_littleend_offset():
                            horzflip=False, vertflip=False)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             mult=1,
                              filterset='AUPE',
                              rawloader=loader
                              )
@@ -209,7 +206,6 @@ def test_raw_uint16_littleend_rotate():
         loader = RawLoader(format=RawLoader.UINT16, width=16, height=32, rot=90)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             mult=1,
                              filterset='AUPE',
                              rawloader=loader
                              )
@@ -236,7 +232,6 @@ def test_raw_uint16_littleend_rotate270():
         loader = RawLoader(format=RawLoader.UINT16, width=16, height=32, rot=270)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             mult=1,
                              filterset='AUPE',
                              rawloader=loader
                              )
@@ -263,7 +258,6 @@ def test_raw_uint16_littleend_flipv():
         loader = RawLoader(format=RawLoader.UINT16, width=16, height=32, vertflip=True)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             mult=1,
                              filterset='AUPE',
                              rawloader=loader
                              )
@@ -290,7 +284,6 @@ def test_raw_uint16_littleend_fliph():
         loader = RawLoader(format=RawLoader.UINT16, width=16, height=32, horzflip=True)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             mult=1,
                              filterset='AUPE',
                              rawloader=loader
                              )
@@ -317,7 +310,6 @@ def test_raw_uint16_littleend_flipboth():
         loader = RawLoader(format=RawLoader.UINT16, width=16, height=32, horzflip=True, vertflip=True)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             mult=1,
                              filterset='AUPE',
                              rawloader=loader
                              )
@@ -346,7 +338,6 @@ def test_raw_float32_bigend():
                            horzflip=False, vertflip=False)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             mult=1,
                              filterset='AUPE',
                              rawloader=loader
                              )
@@ -374,7 +365,6 @@ def test_raw_float32_littleend_offset():
                            horzflip=False, vertflip=False)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             mult=1,
                              filterset='AUPE',
                              rawloader=loader
                              )
@@ -412,7 +402,6 @@ def test_raw_byte_offset():
                            horzflip=False, vertflip=False)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             mult=1,
                              filterset='AUPE',
                              rawloader=loader
                              )
@@ -445,7 +434,6 @@ def test_raw_byte_offset_rot90_vflip():
                            vertflip=True)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             mult=1,
                              filterset='AUPE',
                              rawloader=loader
                              )
