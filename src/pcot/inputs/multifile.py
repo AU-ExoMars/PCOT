@@ -74,7 +74,7 @@ class MultifileInputMethod(InputMethod):
         # we force the mapping to have to be "reguessed"
         self.mapping.red = -1
 
-        return load.multifile(self.dir, self.files,
+        img = load.multifile(self.dir, self.files,
                               filterpat=self.filterpat,
                               bitdepth=self.bitdepth,
                               inpidx=self.input.idx,
@@ -82,6 +82,8 @@ class MultifileInputMethod(InputMethod):
                               cache=self.cachedFiles,
                               rawloader=self.rawLoader,
                               filterset=self.filterset)
+        logger.info(f"------------ Image loaded: {img} from {len(self.files)} files, mapping is {self.mapping}")
+        return img
 
     def getName(self):
         return "Multifile"
@@ -231,9 +233,9 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         # this won't work if the filter set isn't in the combobox.
         self.filtSetCombo.setCurrentText(self.method.filterset)
         self.displayActivatedImage()
-        self.invalidate()  # input has changed, invalidate so the cache is dirtied
         # we don't do this when the window is opening, otherwise it happens a lot!
         if not self.method.openingWindow:
+            self.invalidate()  # input has changed, invalidate so the cache is dirtied
             self.method.input.performGraph()
         self.method.compileRegex()
         self.canvas.display(self.method.get())

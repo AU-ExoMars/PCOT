@@ -61,6 +61,7 @@ class DatumArchiveInputMethod(InputMethod):
         if internal:
             x['datum'] = self.datum.serialise() if self.datum is not None else None
         Canvas.serialise(self, x)
+        return x
 
     def deserialise(self, data, internal):
         if data is not None:
@@ -126,9 +127,9 @@ class DatumArchiveMethodWidget(MethodWidget):
         self.onInputChanged()
 
     def onInputChanged(self):
-        self.invalidate()  # input has changed, invalidate so the cache is dirtied
         # we don't do this when the window is opening, otherwise it happens a lot!
         if not self.method.openingWindow:
+            self.invalidate()  # input has changed, invalidate so the cache is dirtied
             self.method.input.performGraph()
         self.data.display(self.method.datum)
 

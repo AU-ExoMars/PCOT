@@ -28,7 +28,7 @@ class ENVIInputMethod(InputMethod):
         logger.debug("PERFORMING FILE READ")
         # try to load the image.
         self.img = load.envi(self.fname, self.input.idx if self.input else None, self.mapping)
-        logger.debug(f"Image {self.fname} loaded: {self.img}, mapping is {self.mapping}")
+        logger.info(f"------------ Image {self.fname} loaded: {self.img}, mapping is {self.mapping}")
 
     def readData(self):
         # if the image is not loaded and the filename is set, then load it
@@ -76,7 +76,8 @@ class ENVIMethodWidget(TreeMethodWidget):
         # ensure image is also using my mapping, if it's an image
         logger.debug("ENVI onInputChanged")
 
-        self.invalidate()  # input has changed, invalidate so the cache is dirtied
+        if not self.method.openingWindow:
+            self.invalidate()  # input has changed, invalidate so the cache is dirtied
         d = self.method.get()
         if d is None or d.isNone():   # if we can't get a datum, or the datum is null, return
             return
