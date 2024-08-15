@@ -956,3 +956,14 @@ def interp(img, factor, w=-1):
     img = ImageCube(outimg, None, img.sources, uncertainty=None, dq=None)
 
     return Datum(Datum.IMG, img)
+
+@datumfunc
+def marksat(img):
+    """
+    Mark any pixel at 1.0 or above as saturated
+    @param img:img:the image
+    """
+    cube = img.get(Datum.IMG).copy()
+    bitsToChange = np.where(cube.img == 1.0, pcot.dq.SAT, 0).astype(np.uint16)
+    cube.dq |= bitsToChange
+    return Datum(Datum.IMG, cube)

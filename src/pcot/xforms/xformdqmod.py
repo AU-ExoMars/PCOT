@@ -74,8 +74,16 @@ class XFormDQMod(XFormType):
             # now do the test, modifying the DQ accordingly.
             if node.test == 'Less than or equal to':
                 bitsToChange = np.where(d <= node.val, node.dq, 0).astype(np.uint16)
-            else:
+            elif node.test == 'Greater than or equal to':
                 bitsToChange = np.where(d >= node.val, node.dq, 0).astype(np.uint16)
+            elif node.test == 'Greater than':
+                bitsToChange = np.where(d > node.val, node.dq, 0).astype(np.uint16)
+            elif node.test == 'Less than':
+                bitsToChange = np.where(d < node.val, node.dq, 0).astype(np.uint16)
+            elif node.test == 'ALWAYS':
+                bitsToChange = np.uint16(node.dq)
+            else:
+                raise XFormException("CTRL", f"Unknown test in dqmod {node.test}")
 
             if node.mod == 'Set':
                 dq |= bitsToChange
