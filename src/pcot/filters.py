@@ -42,6 +42,12 @@ class Filter:
         use a filter as a key in a dictionary."""
         return hash(self.name)
 
+    def __eq__(self, other):
+        """Two filters are equal if their members are equal."""
+        if not isinstance(other, Filter):
+            return False
+        return vars(self) == vars(other)
+
     def serialise(self):
         return self.cwl, self.fwhm, self.transmission, self.position, \
                self.name

@@ -76,6 +76,7 @@ DIVZERO = reg('divzero', 3, 'Z', "Pixel data is result of divided by zero")
 UNDEF = reg('undefined', 4, '?', "Pixel data is undefined result")
 COMPLEX = reg('complex', 5, 'C', "Pixel data is result of calculation with complex result")
 ERROR = reg('error', 6, 'E', "Pixel data has unspecified error")
+ZERO = reg('zero', 7, '0', "Pixel data is zero")
 
 NONE = np.uint16(0)
 
