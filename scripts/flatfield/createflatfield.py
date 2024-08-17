@@ -4,6 +4,13 @@
 Each directory contains images for a single filter. The images we are
 interested in for creating flat fields are those captured at 80% saturation,
 of which there are 10.
+
+These are averaged into a single image per band, and these are then composed
+into a single multiband image. If any pixel in any of the input images 
+is saturated, the output pixel is marked as saturated in that band. If the
+uncertainty of that pixel is zero, all the input images had a saturated
+pixel.
+
 """
 
 
@@ -11,8 +18,10 @@ import re
 from typing import Dict,List
 from os import listdir
 from os.path import isfile, isdir, join
+import numpy as np
 
 import pcot
+from pcot import dq
 from pcot.datum import Datum
 from pcot.filters import Filter,getFilter,loadFilterSet
 from pcot.sources import MultiBandSource, Source, StringExternal
@@ -106,22 +115,30 @@ def process(pos, dir, lst):
     print(lst)        
     img = load.multifile(dir,lst,
         filterpat=".*/[0-9]{6}_[0-9]{6}_Training Model-(?P<lens>(L|R))(?P<n>[0-9]+).*",
-        mult=64,
+        bitdepth=10,
         filterset="training-geom",
         rawloader=loader)
+        
+    # now we want to set the SAT bit on all saturated pixels
+    cube = img.get(Datum.IMG)
+    # clear all the NOUNC bits
+    cube.dq &= ~dq.NOUNC
+    bitsToChange = np.where(cube.img == 1.0, dq.SAT, 0).astype(np.uint16)
+    print(f"   {np.count_nonzero(bitsToChange)} pixels are saturated")
+    cube.dq |= bitsToChange
 
     
     # greyscale that image - find the mean across all pixels -  which will aggregate uncertainties
     img = df.grey(img)
 
-    print(df.min(img),df.max(img),df.mean(img),df.sd(img))
+    print(f"Wavelength {img.get(Datum.IMG).wavelength(0)}")
+    print(f"  As read: range({df.min(img)},{df.max(img)}), mean={df.mean(img)},sd={df.sd(img)}")
 
 
     # now divide the new 1-band image by the mean of all its pixels
     img = img/df.mean(img)
     
-    print(df.min(img),df.max(img),df.mean(img),df.sd(img))
-    print(img.get(Datum.IMG).wavelength(0))    
+    print(f"  Result after div by mean range({df.min(img)},{df.max(img)}), mean={df.mean(img)},sd={df.sd(img)}")
     return img
         
 

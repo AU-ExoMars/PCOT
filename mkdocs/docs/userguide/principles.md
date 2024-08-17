@@ -189,6 +189,7 @@ Bits are currently:
 |**UNDEF**|The data is the result of an undefined operation|BAD|
 |**COMPLEX**|The data is a complex number likely to be undefined (or just the real part)|BAD|
 |**ERROR**|There is an unspecified error in this data|BAD|
+|**ZERO**|This data is zero||
 |NOUNCERTAINTY|There is no uncertainty data||
 
 All bits are propagated into the data generated from the data they are attached to. 

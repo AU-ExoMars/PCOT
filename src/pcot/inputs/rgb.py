@@ -72,9 +72,9 @@ class RGBMethodWidget(TreeMethodWidget):
                          ["*.jpg", "*.png", "*.ppm", "*.tga", "*.tif"])
 
     def onInputChanged(self):
-        self.invalidate()  # input has changed, invalidate so the cache is dirtied
         # we don't do this when the window is opening, otherwise it happens a lot!
         if not self.method.openingWindow:
+            self.invalidate()  # input has changed, invalidate so the cache is dirtied
             self.method.input.performGraph()
         self.canvas.display(self.method.img)
 

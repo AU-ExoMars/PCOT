@@ -169,28 +169,27 @@ def test_marksat():
     img = r.get(Datum.IMG)
     assert img.channels == 3
     assert img.shape == (256, 256, 3)
-    assert img.countBadPixels() == 65536  # all pixels will be bad!
+    assert img.countBadPixels() == 33023  # just over half
 
-    # top left corner is all zeroes, so error.
-    assert np.all(img.dq[0, 0] == [dq.ERROR | dq.NOUNCERTAINTY] * 3)
+    # top left corner has B zero
+    assert np.all(img.dq[3, 3] == [dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY|dq.ZERO])
 
-    # bottom left corner (0,1,1)
-    dqs = [x.dq for x in img[0, 255]]
-    assert dqs == [dq.ERROR | dq.NOUNCERTAINTY,
-                   dq.SAT | dq.NOUNCERTAINTY,
+    # bottom left corner
+    dqs = [x.dq for x in img[3, 250]]
+    assert dqs == [dq.NOUNCERTAINTY,
+                   dq.NOUNCERTAINTY,
                    dq.SAT | dq.NOUNCERTAINTY]
 
-    # bottom right corner (1,1,0)
-    dqs = [x.dq for x in img[255, 255]]
-    assert dqs == [dq.SAT | dq.NOUNCERTAINTY,
-                   dq.SAT | dq.NOUNCERTAINTY,
-                   dq.ERROR | dq.NOUNCERTAINTY]
+    # bottom right corner
+    dqs = [x.dq for x in img[250, 250]]
+    assert dqs == [dq.NOUNCERTAINTY,
+                   dq.NOUNCERTAINTY,
+                   dq.ZERO | dq.NOUNCERTAINTY]
 
-    dqs = [x.dq for x in img[130, 130]]
-    assert dqs == [dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY | dq.ERROR]
-
-    dqs = [x.dq for x in img[130, 126]]
-    assert dqs == [dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY | dq.SAT]
+    dqs = [x.dq for x in img[250, 255]]  # right on the bottom line green is sat
+    assert dqs == [dq.NOUNCERTAINTY,
+                   dq.NOUNCERTAINTY | dq.SAT,
+                   dq.ZERO | dq.NOUNCERTAINTY]
 
     # now mask off an area with an ROI
     rect = Datum(Datum.ROI, ROICircle(128, 128, 10), sources=nullSourceSet)
@@ -203,7 +202,7 @@ def test_marksat():
 
     # but changed inside the ROI
     dqs = [x.dq for x in img[130, 130]]
-    assert dqs == [dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY | dq.ERROR]
+    assert dqs == [dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY | dq.ZERO]
 
     dqs = [x.dq for x in img[130, 126]]
     assert dqs == [dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY | dq.SAT]
@@ -231,7 +230,7 @@ def test_marksat_masked():
     # previous test
     img = node2.getOutput(0, Datum.IMG)
     dqs = [x.dq for x in img[130, 130]]
-    assert dqs == [dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY | dq.ERROR]
+    assert dqs == [dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY | dq.ZERO]
 
     dqs = [x.dq for x in img[130, 126]]
     assert dqs == [dq.NOUNCERTAINTY, dq.NOUNCERTAINTY, dq.NOUNCERTAINTY | dq.SAT]
@@ -279,7 +278,7 @@ def test_marksat_masked():
     dqs = [x.dq for x in img[255, 255]]
     assert dqs == [dq.SAT | dq.NOUNCERTAINTY,
                    dq.SAT | dq.NOUNCERTAINTY,
-                   dq.ERROR | dq.NOUNCERTAINTY]
+                   dq.ZERO | dq.NOUNCERTAINTY]
 
 
 def test_marksat_args():
@@ -291,14 +290,14 @@ def test_marksat_args():
 
     img = r.get(Datum.IMG)
     # top left corner is all zeroes, so error.
-    assert [x.dq for x in img[0, 0]] == [dq.ERROR | dq.NOUNCERTAINTY] * 3
-    assert [x.dq for x in img[20, 0]] == [dq.ERROR | dq.NOUNCERTAINTY] * 3
-    assert [x.dq for x in img[127, 0]] == [dq.ERROR | dq.NOUNCERTAINTY] * 3
-    assert [x.dq for x in img[128, 0]] == [dq.NOUNCERTAINTY, dq.ERROR | dq.NOUNCERTAINTY, dq.SAT | dq.NOUNCERTAINTY]
-    assert [x.dq for x in img[200, 0]] == [dq.NOUNCERTAINTY, dq.ERROR | dq.NOUNCERTAINTY, dq.SAT | dq.NOUNCERTAINTY]
-    assert [x.dq for x in img[205, 0]] == [dq.SAT | dq.NOUNCERTAINTY, dq.ERROR | dq.NOUNCERTAINTY,
+    assert [x.dq for x in img[0, 0]] == [dq.ZERO | dq.NOUNCERTAINTY] * 3
+    assert [x.dq for x in img[20, 0]] == [dq.ZERO | dq.NOUNCERTAINTY] * 3
+    assert [x.dq for x in img[127, 0]] == [dq.ZERO | dq.NOUNCERTAINTY] * 3
+    assert [x.dq for x in img[128, 0]] == [dq.NOUNCERTAINTY, dq.ZERO | dq.NOUNCERTAINTY, dq.SAT | dq.NOUNCERTAINTY]
+    assert [x.dq for x in img[200, 0]] == [dq.NOUNCERTAINTY, dq.ZERO | dq.NOUNCERTAINTY, dq.SAT | dq.NOUNCERTAINTY]
+    assert [x.dq for x in img[205, 0]] == [dq.SAT | dq.NOUNCERTAINTY, dq.ZERO | dq.NOUNCERTAINTY,
                                            dq.SAT | dq.NOUNCERTAINTY]
-    assert [x.dq for x in img[255, 0]] == [dq.SAT | dq.NOUNCERTAINTY, dq.ERROR | dq.NOUNCERTAINTY,
+    assert [x.dq for x in img[255, 0]] == [dq.SAT | dq.NOUNCERTAINTY, dq.ZERO | dq.NOUNCERTAINTY,
                                            dq.SAT | dq.NOUNCERTAINTY]
 
 

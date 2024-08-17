@@ -1,27 +1,21 @@
 import logging
 import os
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import Optional, List
 
-import numpy as np
-import proctools
 from PySide2 import QtWidgets
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QPen
 from PySide2.QtWidgets import QMessageBox, QTableWidgetItem
-from dateutil import parser
 from proctools.products import ProductDepot, DataProduct
 
 import pcot
 import pcot.dq
 import pcot.ui as ui
-from pcot.dataformats import pds4
-from pcot.dataformats.pds4 import PDS4ImageProduct, PDS4Product, PDS4External, ProductList
+from pcot.dataformats.pds4 import PDS4ImageProduct, ProductList
 from pcot.datum import Datum
-from pcot.filters import Filter
-from pcot.imagecube import ImageCube, ChannelMapping
+from pcot.imagecube import ChannelMapping
 from pcot.inputs.inputmethod import InputMethod
-from pcot.sources import Source, MultiBandSource
 from pcot.ui import uiloader
 from pcot.ui.canvas import Canvas
 from pcot.ui.help import HelpWindow
@@ -460,8 +454,8 @@ class PDS4ImageMethodWidget(MethodWidget):
                 f"setting multiplier combo index to 0, because I don't know about multiplier {self.method.multValue}!")
 
         logger.debug("Displaying data {}, mapping {}".format(self.method.out, self.method.mapping))
-        self.invalidate()  # input has changed, invalidate so the cache is dirtied
         # we don't do this when the window is opening, otherwise it happens a lot!
         if not self.method.openingWindow:
+            self.invalidate()  # input has changed, invalidate so the cache is dirtied
             self.method.input.performGraph()
         self.updateDisplay()

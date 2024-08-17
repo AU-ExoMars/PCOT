@@ -82,11 +82,12 @@ def fixSortList(node):
     # fix the sort list, making sure that only legends for the data we have are present,
     # and that all of them are present. This list is used to "stack" items in the plot,
     # and nowhere else (it doesn't order items in the tabular output, for example).
-    legends = node.data.keys()
-    # filter out items that aren't in the data
-    node.sortlist = [x for x in node.sortlist if x in legends]
-    # add new items
-    node.sortlist.extend([x for x in legends if x not in node.sortlist])
+    if node.data is not None:
+        legends = node.data.keys()
+        # filter out items that aren't in the data
+        node.sortlist = [x for x in node.sortlist if x in legends]
+        # add new items
+        node.sortlist.extend([x for x in legends if x not in node.sortlist])
 
 
 @xformtype

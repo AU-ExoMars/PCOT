@@ -281,13 +281,14 @@ class SourceSet(SourcesObtainable):
         return SourceSet([x.copy() for x in self.sourceSet])
 
     def __str__(self):
-        """internal text description; uses (none) for null sources"""
+        """internal text description; uses (none) for null sources and skips dups"""
         strdata = [x.brief() for x in self.sourceSet]
-        return "&".join(sorted([x if x else "(none)" for x in strdata]))
+        strdata = sorted([x if x else "(none)" for x in strdata])
+        return "&".join(list(dict.fromkeys(strdata)))
 
     def brief(self, captionType=DocumentSettings.CAP_DEFAULT):
-        """external (user-facing) text description, skips null sources"""
-        x = [x.brief(captionType) for x in self.sourceSet]
+        """external (user-facing) text description, skips null sources and duplicates"""
+        x = list(dict.fromkeys([x.brief(captionType) for x in self.sourceSet]))
         return "&".join(sorted([s for s in x if s]))
 
     def debug(self):
@@ -431,7 +432,7 @@ class MultiBandSource(SourcesObtainable):
         return out
 
     def brief(self):
-        """Brief text description - note, may not be used for captions."""
+        """Brief text description - note, may not be used for captions. Note the "|" separator for separate bands."""
         out = [s.brief() for s in self.sourceSets]
         return "|".join(out)
 
