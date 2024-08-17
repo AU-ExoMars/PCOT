@@ -90,10 +90,19 @@ class InputMethod(ABC):
             self.setInputException(None)
             try:
                 self.data = self.readData()  # this is a method in each subclass
-                if self.data.isNone():  # it's still not there
-                    logger.info("CACHE WAS INVALID AND DATA COULD NOT BE READ")
+                # a lot of debugging output
+                name = f"{self.input.idx}:{self.getName()}"
+                if self.isActive():
+                    if self.data.isNone():  # it's still not there
+                        logger.info(f"{name}: ACTIVE METHOD - CACHE WAS INVALID AND DATA COULD NOT BE READ")
+                    else:
+                        logger.info(f"{name}: ACTIVE METHOD - CACHE WAS INVALID, DATA HAS BEEN READ")
                 else:
-                    logger.info("CACHE WAS INVALID, DATA HAS BEEN READ")
+                    if self.data.isNone():  # it's still not there
+                        logger.info(f"{name}: Cache invalid, data not read for inactive method")
+                    else:
+                        logger.info(f"{name}: CACHE WAS INVALID, DATA HAS BEEN READ FOR INACTIVE METHOD!!!")
+
             except FileNotFoundError as e:
                 # this one usually doesn't happen except in a library
                 self.setInputException(f"Cannot read file {e.filename}")

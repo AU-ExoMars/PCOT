@@ -3,6 +3,7 @@ from typing import Optional, List, Callable
 
 import cv2 as cv
 import numpy as np
+import logging
 
 import pcot.dq
 from pcot import rois, operations, dq
@@ -21,6 +22,7 @@ from pcot.utils.maths import pooled_sd
 from pcot.value import Value, add_sub_unc_list
 from pcot.xform import XFormException
 
+logger = logging.getLogger(__name__)
 
 @datumfunc
 def flat(val, *args):
@@ -602,12 +604,14 @@ def marksat(img, mn=0, mx=1.0):
     img = img.get(Datum.IMG)
     mn = mn.get(Datum.NUMBER).n
     mx = mx.get(Datum.NUMBER).n
+
     if img is None:
         return None
 
     subimage = img.subimage()
     data = subimage.masked()
-    dq = np.where(data <= mn, pcot.dq.ERROR, 0).astype(np.uint16)
+
+    dq = np.where(data <= mn, pcot.dq.ZERO, 0).astype(np.uint16)
     dq |= np.where(data >= mx, pcot.dq.SAT, 0).astype(np.uint16)
 
     img = img.modifyWithSub(subimage, None,

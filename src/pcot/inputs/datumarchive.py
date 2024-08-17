@@ -10,9 +10,11 @@ from PySide2 import QtCore, QtWidgets
 from PySide2.QtCore import Qt
 
 import pcot
+from pcot.dataformats import load
 from pcot.datum import Datum
 from pcot.imagecube import ChannelMapping
 from pcot.inputs.inputmethod import InputMethod
+from pcot.sources import nullSource, nullSourceSet
 from pcot.ui import uiloader
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
@@ -46,11 +48,7 @@ class DatumArchiveInputMethod(InputMethod):
             self.manifest = {}
 
     def readData(self):
-        if self.fname is not None and self.itemname is not None:
-            a = DatumStore(FileArchive(self.fname))
-            self.datum = a.get(self.itemname, self._document())
-        else:
-            self.datum = None
+        self.datum = load.datumarchive(self.fname, self.itemname, self.input.idx)
         return self.datum
 
     def getName(self):
@@ -61,6 +59,7 @@ class DatumArchiveInputMethod(InputMethod):
         if internal:
             x['datum'] = self.datum.serialise() if self.datum is not None else None
         Canvas.serialise(self, x)
+        return x
 
     def deserialise(self, data, internal):
         if data is not None:
@@ -126,9 +125,9 @@ class DatumArchiveMethodWidget(MethodWidget):
         self.onInputChanged()
 
     def onInputChanged(self):
-        self.invalidate()  # input has changed, invalidate so the cache is dirtied
         # we don't do this when the window is opening, otherwise it happens a lot!
         if not self.method.openingWindow:
+            self.invalidate()  # input has changed, invalidate so the cache is dirtied
             self.method.input.performGraph()
         self.data.display(self.method.datum)
 

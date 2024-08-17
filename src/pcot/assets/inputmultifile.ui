@@ -22,50 +22,15 @@
     </widget>
    </item>
    <item row="8" column="2" colspan="3">
-    <widget class="QComboBox" name="mult">
+    <widget class="QComboBox" name="bitdepth">
      <item>
       <property name="text">
-       <string>1 (no shift)</string>
+       <string>Full</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>2 (1 bit shift)</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>4 (2 bit shift)</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>8 (3 bit shift)</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>16 (4 bit shift)</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>32 (5 bit shift)</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>64 (6 bit shift)</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>128 (7 bit shift)</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>256 (8 bit shift)</string>
+       <string>10 bits</string>
       </property>
      </item>
     </widget>
@@ -80,7 +45,7 @@
    <item row="8" column="0">
     <widget class="QLabel" name="label_4">
      <property name="text">
-      <string>Multiplier</string>
+      <string>Bit depth</string>
      </property>
     </widget>
    </item>
@@ -212,7 +177,7 @@ pattern</string>
   <tabstop>filterpat</tabstop>
   <tabstop>filelist</tabstop>
   <tabstop>outputFiles</tabstop>
-  <tabstop>mult</tabstop>
+  <tabstop>bitdepth</tabstop>
  </tabstops>
  <resources/>
  <connections/>

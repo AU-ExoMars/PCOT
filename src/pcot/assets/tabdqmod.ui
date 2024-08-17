@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1202</width>
-    <height>852</height>
+    <height>861</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -113,6 +113,21 @@
             <item>
              <property name="text">
               <string>Greater than or equal to</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Less than</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Greater than</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>ALWAYS</string>
              </property>
             </item>
            </widget>

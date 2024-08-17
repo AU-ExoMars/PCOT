@@ -43,8 +43,10 @@ class Filter:
         return hash(self.name)
 
     def __eq__(self, other):
-        return self.name == other.name and self.cwl == other.cwl and self.fwhm == other.fwhm and \
-            self.transmission == other.transmission and self.position == other.position
+        """Two filters are equal if their members are equal."""
+        if not isinstance(other, Filter):
+            return False
+        return vars(self) == vars(other)
 
     def serialise(self):
         return self.cwl, self.fwhm, self.transmission, self.position, \

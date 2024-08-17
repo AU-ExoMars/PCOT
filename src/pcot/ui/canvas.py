@@ -1403,7 +1403,7 @@ class Canvas(QtWidgets.QWidget):
                 p = pixel[i]
                 u = pixuncs[i]
                 d = pixdqs[i]
-                text += f"{i}) {ss.brief()} = {p:.3} +/- {u:.3} : {pcot.dq.names(d)} ({d})\n"
+                text += f"{i}) = {p:.3} +/- {u:.3} : {pcot.dq.names(d)} ({d}) {ss.brief()}\n"
 
             # get the channels which have a single wavelength
             # what do we do if they don't? I don't think you can display a spectrum!

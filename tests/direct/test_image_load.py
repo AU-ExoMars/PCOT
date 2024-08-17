@@ -100,7 +100,7 @@ def test_direct_load_multifile_nofilter(globaldatadir):
     datum = load.multifile(globaldatadir / "multi", ["0.png", "32768.png", "65535.png"])
 
     # check the sources
-    assert datum.getSources().brief() == "Multi:0&Multi:0&Multi:0"
+    assert datum.getSources().brief() == "Multi:0"      # same sources will be collapsed into a single entry
     # check dimensions
     img = datum.get(Datum.IMG)
     assert img.img.shape == (30, 80, 3)
