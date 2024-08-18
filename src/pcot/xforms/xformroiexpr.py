@@ -15,7 +15,7 @@ from pcot.expressions import ExpressionEvaluator
 from pcot.imagecube import ImageCube
 from pcot.sources import nullSourceSet
 from pcot.ui.tabs import Tab
-from pcot.utils.taggedaggregates import TaggedVariantDictType, TaggedListType, TaggedDictType, TaggedDict
+from pcot.parameters.taggedaggregates import TaggedVariantDictType, TaggedListType, TaggedDictType, TaggedDict
 from pcot.xform import xformtype, XFormType, XFormException
 
 

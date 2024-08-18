@@ -6,7 +6,7 @@ import pcot.utils.text
 from pcot import ui
 from pcot.rois import ROIRect
 from pcot.ui.roiedit import RectEditor
-from pcot.utils.taggedaggregates import TaggedDict, TaggedDictType
+from pcot.parameters.taggedaggregates import TaggedDict, TaggedDictType
 from pcot.xform import xformtype, XFormROIType
 
 

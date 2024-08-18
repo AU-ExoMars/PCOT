@@ -5,7 +5,7 @@ import pcot.utils.colour
 import pcot.utils.text
 from pcot.rois import ROICircle
 from pcot.ui.roiedit import CircleEditor
-from pcot.utils.taggedaggregates import TaggedDictType, TaggedDict
+from pcot.parameters.taggedaggregates import TaggedDictType, TaggedDict
 from pcot.xform import xformtype, XFormROIType
 
 

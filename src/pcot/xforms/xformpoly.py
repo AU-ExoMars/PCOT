@@ -1,5 +1,3 @@
-from PySide2.QtCore import Qt
-from PySide2.QtGui import QKeyEvent
 from PySide2.QtWidgets import QMessageBox
 
 import pcot.ui.tabs
@@ -8,7 +6,7 @@ import pcot.utils.text
 
 from pcot.rois import ROIPoly
 from pcot.ui.roiedit import PolyEditor
-from pcot.utils.taggedaggregates import TaggedDictType, TaggedDict
+from pcot.parameters.taggedaggregates import TaggedDictType, TaggedDict
 from pcot.xform import xformtype, XFormROIType
 
 

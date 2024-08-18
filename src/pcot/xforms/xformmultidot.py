@@ -1,4 +1,3 @@
-import copy
 import logging
 import random
 from functools import partial
@@ -16,7 +15,7 @@ from pcot.datum import Datum
 from pcot.rois import ROICircle, ROIPainted, ROI
 from pcot.ui.variantwidget import VariantWidget
 from pcot.utils.flood import FloodFillParams
-from pcot.utils.taggedaggregates import TaggedVariantDictType, TaggedListType, TaggedDictType, TaggedDict
+from pcot.parameters.taggedaggregates import TaggedVariantDictType, TaggedListType, TaggedDictType, TaggedDict
 from pcot.xform import xformtype, XFormType
 
 logger = logging.getLogger(__name__)

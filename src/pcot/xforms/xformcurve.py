@@ -1,8 +1,8 @@
 from pcot.datum import Datum
 import pcot.operations as operations
 import pcot.ui.tabs
-from pcot.operations.curve import curve, genLut, lutxcoords
-from pcot.utils.taggedaggregates import TaggedDictType
+from pcot.operations.curve import genLut, lutxcoords
+from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.xform import xformtype, XFormType
 
 

@@ -1,5 +1,4 @@
-from PySide2.QtCore import Qt
-from PySide2.QtGui import QPainter, QColor
+from PySide2.QtGui import QPainter
 from PySide2.QtWidgets import QMessageBox
 
 import pcot.ui.tabs
@@ -8,7 +7,7 @@ import pcot.utils.text
 from pcot import ui
 from pcot.rois import ROIPainted, getRadiusFromSlider
 from pcot.ui.roiedit import PaintedEditor
-from pcot.utils.taggedaggregates import TaggedDictType, TaggedDict
+from pcot.parameters.taggedaggregates import TaggedDictType, TaggedDict
 from pcot.xform import xformtype, XFormROIType
 
 

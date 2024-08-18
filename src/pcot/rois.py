@@ -1,6 +1,6 @@
 import copy
 from numbers import Number
-from typing import Tuple, Optional, Any
+from typing import Tuple, Optional
 
 import cv2 as cv
 import numpy as np
@@ -12,12 +12,11 @@ from scipy import ndimage
 import pcot.sources
 from pcot.sources import SourcesObtainable, nullSourceSet
 from pcot.ui.roiedit import RectEditor, CircleEditor, PaintedEditor, PolyEditor
-from pcot.utils import serialiseFields, deserialiseFields
 from pcot.utils.annotations import Annotation, annotDrawText
 from pcot.utils.colour import rgb2qcol
 from pcot.utils.flood import FastFloodFiller, FloodFillParams
 from pcot.utils.geom import Rect
-from pcot.utils.taggedaggregates import TaggedDictType, taggedColourType, TaggedDict, taggedRectType, TaggedTuple, \
+from pcot.parameters.taggedaggregates import TaggedDictType, taggedColourType, TaggedDict, taggedRectType, \
     TaggedTupleType, Maybe, TaggedListType
 
 # used as the basic default rectangle for ROIs

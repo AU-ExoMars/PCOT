@@ -3,7 +3,7 @@ Tests for TaggedAggregates
 """
 import pytest
 
-from pcot.utils.taggedaggregates import *
+from pcot.parameters.taggedaggregates import *
 
 
 #
