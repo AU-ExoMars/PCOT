@@ -15,15 +15,23 @@ path is used to look up the TA in the dict, and the rest of the path is used to 
 Quite often there will only be a single TA in the dict. We load a single parameter file, and then run every node
 in the graph through it as we load them, with just that node in the dictionary.
 """
-
-
+from numbers import Number
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict
 import logging
 
-from pcot.parameters.taggedaggregates import TaggedAggregate
+from pcot.parameters.taggedaggregates import TaggedAggregate, TaggedAggregateType, Maybe
 
 logger = logging.getLogger(__name__)
+
+
+def get_element_to_modify(data: TaggedAggregate, path: List[str]):
+    """Walk down the tree to the last element of the path, returning the parent and the key of the last element"""
+
+    # surely it can't be just this??
+    for p in path:
+        data = data[p]
+    return data
 
 
 class Change:
@@ -59,6 +67,38 @@ class SetValue(Change):
 
     def apply(self, data: TaggedAggregate):
         logger.info(f"Setting {self.path + [self.key]} to {self.value}")
+        # walk down the path to get the element we want to change
+        element = get_element_to_modify(data, self.path)
+        # get its tag so we can get its type, and check it.
+        tag = element._type.tag(self.key)
+
+        # do the actual setting, if possible - but resolve Maybe first.
+        try:
+            tp = tag.type
+            # if the type is Maybe, check to see if we're setting it to None, and if so, set the element to None.
+            if isinstance(tag.type, Maybe):
+                v = self.value.lower()
+                if v == 'none' or v == 'null':          # "none" and "null" are both acceptable, in upper or lowercase
+                    element[self.key] = None
+                    return  # return early, we're done.
+                tp = tag.type.tp
+            if isinstance(tp, TaggedAggregateType):
+                raise ValueError(f"Cannot set a value to a tagged aggregate: {str(self)}")
+            if tp is int:
+                element[self.key] = int(self.value)
+            elif tp is float or tag.type is Number:
+                element[self.key] = float(self.value)
+            elif tp is str:
+                element[self.key] = self.value
+            elif tp is bool:
+                element[self.key] = self.value.lower()[0] == 't'    # just check the first character, upper or lower
+            else:
+                raise ValueError(f"unparameterisable {tag.type} for {str(self)}")
+        except ValueError as e:
+            raise ValueError(f"{str(self)}: could not set {self.value} as a {tag.type}") from e
+
+    def __str__(self):
+        return f"line {self.line}: {'.'.join(self.path)}.{self.key} = {self.value}"
 
     def __repr__(self):
         return f"SetValue({self.line}, {'.'.join(self.path)}, {self.key}, {self.value})"
@@ -195,7 +235,7 @@ class ParameterFile:
             self._path, key = self._process_path(line)
             return None
 
-    def apply(self, data: dict[str, TaggedAggregate]):
+    def apply(self, data: Dict[str, TaggedAggregate]):
         """Try to apply the changes to some data objects. Firstly, we look up the tagged aggregate using the first
         element of the path. If it doesn't exist, we abort silently. Otherwise we use the rest of the path to reference
         data within the aggregate and change it."""

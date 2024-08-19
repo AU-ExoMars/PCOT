@@ -85,8 +85,7 @@ class Tag:
     def assert_valid(self):
         """Check the tag is valid"""
 
-        # type has to be a JSON-serialisable type, Number or a TaggedAggregateType. That could include a Union
-        # or Optional.
+        # type has to be a JSON-serialisable type, Number or a TaggedAggregateType.
 
         def check_type(t):
             # check a single type is json-serialisable, TaggedAggregate or Number
@@ -105,7 +104,17 @@ class Tag:
             check_type(self.type)
 
 
-class TaggedDictType(TaggedAggregateType):
+class DictLikeType(TaggedAggregateType, ABC):
+    """
+    Acts like a dictionary or a named tuple.
+    """
+
+    def tag(self, key) -> Tag:
+        """Return the tag for a given key"""
+        pass
+
+
+class TaggedDictType(DictLikeType):
     """This acts like a dictionary, but each item has a type, description and default value. That means
     that it must be initialised with a set of such values.
     """
@@ -141,7 +150,7 @@ class TaggedDictType(TaggedAggregateType):
                 raise ValueError(f"Default {v.deflt} is not of type {v.type}")
 
     def tag(self, key):
-        """Return the tag for a given key"""
+        """Return the tag for a given key - raises a key error on failure"""
         return self.tags[key]
 
     def create(self):
@@ -276,7 +285,7 @@ class TaggedDict(TaggedAggregate):
         return out
 
 
-class TaggedTupleType(TaggedAggregateType):
+class TaggedTupleType(DictLikeType):
     """This acts like a tuple, but each item has a type, description and default value. That means
     that it must be initialised with a set of such values.
     It works like a TaggedDict in many ways, so if there is a "foo" entry you could access it with
@@ -324,6 +333,10 @@ class TaggedTupleType(TaggedAggregateType):
     def deserialise(self, data) -> 'TaggedTuple':
         """Create a new TaggedTuple of this type from a JSON-serialisable structure"""
         return TaggedTuple(self, data)
+
+    def tag(self, key) -> Tag:
+        """Return the tag for a given key - raises a key error on failure"""
+        return self.tags[self.indicesByName[key]][1]
 
 
 class TaggedTuple(TaggedAggregate):
