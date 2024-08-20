@@ -517,7 +517,10 @@ class TaggedList(TaggedAggregate):
 
     def __getitem__(self, idx):
         """Return the value for a given index"""
-        return self._values[idx]
+        try:
+            return self._values[int(idx)]
+        except ValueError as e:
+            raise ValueError(f"List index {idx} is not an integer") from e
 
     def get(self):
         return self._values

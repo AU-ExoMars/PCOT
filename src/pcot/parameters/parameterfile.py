@@ -98,10 +98,10 @@ class SetValue(Change):
             raise ValueError(f"{str(self)}: expected {tag.type}, got {type(self.value)} ({self.value})") from e
 
     def __str__(self):
-        return f"line {self.line}: {'.'.join(self.path)}.{self.key} = {self.value}"
+        return f"line {self.line}: {self.root_name}.{'.'.join(self.path)}.{self.key} = {self.value}"
 
     def __repr__(self):
-        return f"SetValue({self.line}, {'.'.join(self.path)}, {self.key}, {self.value})"
+        return f"SetValue({self.line}, {self.root_name}.{'.'.join(self.path)}, {self.key}, {self.value})"
 
 
 class DeleteValue(Change):
@@ -112,9 +112,24 @@ class DeleteValue(Change):
 
     def apply(self, data: TaggedAggregate):
         logger.info(f"Deleting {self.path + [self.key]}")
+        raise NotImplementedError(repr(self))
 
     def __repr__(self):
-        return f"DeleteValue({self.line}, {'.'.join(self.path)}, {self.key})"
+        return f"DeleteValue({self.line}, {self.root_name}.{'.'.join(self.path)}, {self.key})"
+
+
+class Add(Change):
+    """Add to the list at the given path+key"""
+
+    def __init__(self, path: List[str], line: int, key: str):
+        super().__init__(path, line, key)
+
+    def __repr__(self):
+        return f"Add({self.line}, {self.root_name}.{'.'.join(self.path)}, {self.key})"
+
+    def apply(self, data: TaggedAggregate):
+        logger.info(f"Adding to {self.path + [self.key]}")
+        raise NotImplementedError(repr(self))
 
 
 class ParameterFile:
@@ -143,20 +158,48 @@ class ParameterFile:
     def parse(self, ss) -> 'ParameterFile':
         """Load a parameter file from a string, returns self for fluent use"""
         for i, line in enumerate(ss.split('\n')):
+            # remove comments - anything after the final '#'
+            if '#' in line:
+                line = line[:line.index('#')]
+            # clean up the line
             line = line.strip()
+            # skip empty lines
             if not line:
                 continue
-            if line.startswith('#'):
-                continue
-            c = self._process(line, i)
-            if c:
-                self._changes.append(c)
+            self._process(line, i)
         return self
 
-    def _process_path(self, path_string: str):
+    def apply(self, data: Dict[str, TaggedAggregate]):
+        """Try to apply the changes to some data objects. Firstly, we look up the tagged aggregate using the first
+        element of the path. If it doesn't exist, we abort silently. Otherwise we use the rest of the path to reference
+        data within the aggregate and change it."""
+
+        for c in self._changes:
+            if c.root_name in data:
+                c.apply(data[c.root_name])
+
+    def _process(self, line: str, lineNo: int = 0):
+        """Process each line, adding Change objects to the list of changes if required"""
+        if '=' in line:
+            parts = [x.strip() for x in line.split('=')]
+            path, key = self._process_path(lineNo, parts[0], False)    # may append an Add change
+            self._changes.append(SetValue(path, lineNo, key, parts[1]))
+        elif line.startswith('del'):
+            line = line[3:].strip()
+            path, key = self._process_path(lineNo, line)    # may append an Add change
+            self._changes.append(DeleteValue(path, lineNo, key))
+        else:
+            # don't create a change, we're just changing the path
+            self._process_path(lineNo, line, True)
+            return None
+
+    def _process_path(self, lineNo: int, path_string: str, is_path_only: bool = False) -> (List[str], str):
         """Set the path and key from a path string - this is the bit before the equals sign. The path
         is (if you like) the "directory" of the parameter, the key is the individual parameter name.
-        For example "foo.bar.baz" would set the path to ["foo", "bar"] and the key to "baz".
+        For example "foo.bar.baz" would set the path to ["foo", "bar"] and the key to "baz". Then returns
+        the current path (or a copy thereof) and the key so we can create a Change if required.
+        May also create some Changes itself - such as Adds, which indicate a new item should be created in
+        a list.
         """
         # it is divided into parts by dots. The last dot indicates the end of the path, and after the last dot
         # is the key we want to set.
@@ -191,7 +234,7 @@ class ParameterFile:
                 if '' in path[1:]:
                     raise ValueError(
                         f"Invalid parameter: {path_string} - an absolute path must not contain empty elements.")
-                # and set can just set the current path from the path we read.
+                # and set can just set the current path from the path we read,
                 self._path = path
             else:
                 # The path is relative. If there is just one empty element, that doesn't change the path - we're working
@@ -220,32 +263,47 @@ class ParameterFile:
                     self._path = self._path[:-pop_count]
                 # remaining items in path are appended to the current path.
                 self._path.extend(path)
+
+        # now we post-process the path to handle "+" symbols. This will create Add changes.
+        self._process_adds_in_path(lineNo)
+
+        # we'll have to handle the key separately, which may also have a "+". In that case we
+        # convert (say) a.b+ into a.b.-1, and create an Add change for a.b.
+        if key.endswith('+'):
+            # strip the +
+            key = key[:-1]
+            # create the add for that
+            self._changes.append(Add(self._path.copy(), lineNo, key))
+            # append this key to the path (sans the +) for subsequent adds
+            self._path.append(key)
+            if is_path_only:
+                # if we're just a path setter, we add -1 to the path so that subsequent relative paths
+                # will be relative to the item we just added.
+                self._path.append('-1')
+                key = ''
+            else:
+                # and set the key to -1 for returning; the SetValue will modify the item added to the list
+                key = '-1'
+
         logger.info(f"path now is {self._path}, key is {key}")
         return self._path.copy(), key  # return a copy of the path, not the path itself.
 
-    def _process(self, line: str, lineNo: int = 0) -> Optional[Change]:
-        """Process each line, generating a Change of some kind"""
-        if '=' in line:
-            parts = [x.strip() for x in line.split('=')]
-            path, key = self._process_path(parts[0])
-            return SetValue(path, lineNo, key, parts[1])
-        elif line.startswith('del'):
-            line = line[3:].strip()
-            path, key = self._process_path(line)
-            return DeleteValue(path, lineNo, key)
-        else:
-            # don't create a change, we're just changing the path
-            self._path, key = self._process_path(line)
-            return None
-
-    def apply(self, data: Dict[str, TaggedAggregate]):
-        """Try to apply the changes to some data objects. Firstly, we look up the tagged aggregate using the first
-        element of the path. If it doesn't exist, we abort silently. Otherwise we use the rest of the path to reference
-        data within the aggregate and change it."""
-
-        for c in self._changes:
-            if c.root_name in data:
-                c.apply(data[c.root_name])
+    def _process_adds_in_path(self, lineNo: int):
+        """Run through the elements of the path looking for "+" symbols. If we find one, we create an Add change
+        for that point in the path. This is used to add a new item to a list.
+        Consider the path
+            foo.bar+.baz
+        This should become
+            foo.bar.-1.baz
+        with an Add change created for foo.bar
+        """
+        for i, p in enumerate(self._path):
+            if p.endswith('+'):
+                # remove the "+" and create an Add change for this path
+                self._path[i] = p[:-1]
+                self._changes.append(Add(self._path[:i], lineNo, p[:-1]))   # path, line-no, key
+                # now add the index to the path
+                self._path.insert(i+1, '-1')
 
     def __str__(self):
         return f"{self.path}: {len(self._changes)} changes"

@@ -136,9 +136,11 @@ def test_dict_in_dict():
     assert td.base.b == "bar"
     assert td.base.c == 43.5
 
-    f = ParameterFile().parse("foo.base.a=12\n.b = bar\n..base2.b = foo\n")
+    f = ParameterFile().parse("foo.base.a=12\n.b = bar\n..base2.b = foo\n.c=48\n")
     f.apply({"foo": td})
     assert td.base.a == 12
     assert td.base.b == "bar"
     assert td.base2.b == "foo"
+    assert td.base2.c == 48     # ..base2.b will have switched the path to base2
+    assert td.base.c == 3.14    # should be unchanged
 

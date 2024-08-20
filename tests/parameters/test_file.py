@@ -1,3 +1,5 @@
+import pytest
+
 from pcot.parameters.parameterfile import ParameterFile
 
 
@@ -74,7 +76,7 @@ def test_string():
     test ="""
     # this is a comment
     foo.bar.baz = 1
-    foo.bar.quux = "hello"
+    foo.bar.quux = "hello"      # this is an end-of-line comment
     foo.bar[1] = 2
     foo.bar[1].quux = "world"
     .blonk = 3
@@ -87,4 +89,27 @@ def test_string():
     assert repr(f._changes[3]) == 'SetValue(5, foo.bar.1, quux, "world")'
     assert repr(f._changes[4]) == 'SetValue(6, foo.bar.1, blonk, 3)'
     assert repr(f._changes[5]) == 'DeleteValue(7, foo.bar, 1)'
+
+
+def test_list_add_at_root_invalid():
+    with pytest.raises(ValueError):
+        f = ParameterFile().parse("root+")
+
+
+def test_list_adds():
+    test = """
+    foo.bar+        # add an item at node foo.bar, with default values. Set the path to foo.bar.-1
+    .a = 1          # change foo.bar.a.-1 to 1
+    .b = 2          # change foo.bar.b.-1 to 2
+    foo.bar+.a = 1  # add an item at foo.bar, with a=1. Set the path to foo.bar.-1.
+    .b = 2          # change foo.bar.b.-1 to 2
+    """
+    f = ParameterFile().parse(test)
+    assert repr(f._changes.pop(0)) == "Add(1, foo., bar)"
+    assert repr(f._changes.pop(0)) == "SetValue(2, foo.bar.-1, a, 1)"
+    assert repr(f._changes.pop(0)) == "SetValue(3, foo.bar.-1, b, 2)"
+    assert repr(f._changes.pop(0)) == "Add(4, foo., bar)"
+    assert repr(f._changes.pop(0)) == "SetValue(4, foo.bar.-1, a, 1)"
+    assert repr(f._changes.pop(0)) == "SetValue(5, foo.bar.-1, b, 2)"
+
 
