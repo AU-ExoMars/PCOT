@@ -95,7 +95,7 @@ class SetValue(Change):
             else:
                 raise ValueError(f"unparameterisable {tag.type} for {str(self)}")
         except ValueError as e:
-            raise ValueError(f"{str(self)}: could not set {self.value} as a {tag.type}") from e
+            raise ValueError(f"{str(self)}: expected {tag.type}, got {type(self.value)} ({self.value})") from e
 
     def __str__(self):
         return f"line {self.line}: {'.'.join(self.path)}.{self.key} = {self.value}"
@@ -197,6 +197,9 @@ class ParameterFile:
                 # The path is relative. If there is just one empty element, that doesn't change the path - we're working
                 # at the same level. For each extra empty element, we go up one level - at each level ensuring that
                 # we haven't run out of elements.
+
+                if len(self._path) == 0:
+                    raise ValueError(f"Invalid parameter path: {path_string} - relative path not valid here.")
                 prev_path = self._path.copy()
                 # pop empty elements off the start of the path until we hit a non-empty element.
                 empty_ct = 0
@@ -206,13 +209,13 @@ class ParameterFile:
                 # ensure there are no empty elements in the rest of the path.
                 if '' in path:
                     raise ValueError(
-                        f"Invalid parameter: {path_string} - relative path must not contain empty elements after the "
+                        f"Invalid parameter path: {path_string} - relative path must not contain empty elements after the "
                         f"first.")
                 # now pop the same number of elements off the current path (less one!), making sure there are enough
                 pop_count = empty_ct - 1
                 if pop_count > len(self._path):
                     raise ValueError(
-                        f"Invalid parameter: {path_string} - relative path goes too high for path {prev_path}.")
+                        f"Invalid parameter path: {path_string} - relative path goes too high for path {prev_path}.")
                 if pop_count > 0:
                     self._path = self._path[:-pop_count]
                 # remaining items in path are appended to the current path.

@@ -446,7 +446,11 @@ class TaggedListType(TaggedAggregateType):
     """This acts like a list, with all items having the same tag (type, description, default).
     """
 
-    tag: Tag
+    _tag: Tag
+
+    def tag(self, _=None) -> Tag:
+        """All elements have the same type"""
+        return self._tag
 
     def __init__(self, desc, tp, deflt=None):
         """Initialise the list with a type. If the type is a TaggedAggregateType, then the deflt field gives
@@ -457,9 +461,9 @@ class TaggedListType(TaggedAggregateType):
 
         """
         super().__init__()
-        self.tag = Tag(desc, tp, deflt)
-        self.tag.assert_valid()
-        v = self.tag
+        self._tag = Tag(desc, tp, deflt)
+        self._tag.assert_valid()
+        v = self._tag
         # if type is a TaggedAggregate the default has to be an int!
         if isinstance(v.type, TaggedAggregateType):
             if not isinstance(v.deflt, int):
@@ -491,24 +495,25 @@ class TaggedList(TaggedAggregate):
     def __init__(self, tl: TaggedListType, data: Optional[List] = None):
         """Initialise the TaggedList with a TaggedListType"""
         super().__init__(tl)
+        tt = tl.tag().type
         if data is not None:
             # data is provided.
-            if isinstance(tl.tag.type, TaggedAggregateType):
+            if isinstance(tt, TaggedAggregateType):
                 # if the type is a tagged aggregate, them from the data provided
-                self._values = [tl.tag.type.deserialise(v) for v in data]
+                self._values = [tt.deserialise(v) for v in data]
             else:
                 # otherwise just use the data as is
                 for v in data:
-                    if not is_value_of_type(v, tl.tag.type):
-                        raise ValueError(f"Value {v} is not of type {tl.tag.type}")
+                    if not is_value_of_type(v, tt):
+                        raise ValueError(f"Value {v} is not of type {tt}")
                 self._values = data
         else:
             # we are creating from defaults
-            if isinstance(tl.tag.type, TaggedAggregateType):
+            if isinstance(tt, TaggedAggregateType):
                 # if the type is a tagged aggregate, create the correct number of them
-                self._values = [tl.tag.type.create() for _ in range(tl.tag.deflt)]
+                self._values = [tt.create() for _ in range(tl.tag().deflt)]
             else:
-                self._values = [v for v in tl.tag.deflt]  # create copies
+                self._values = [v for v in tl.tag().deflt]  # create copies
 
     def __getitem__(self, idx):
         """Return the value for a given index"""
@@ -521,20 +526,24 @@ class TaggedList(TaggedAggregate):
 
     def _check_value(self, value):
         """check an item before setting"""
-        tp = self._type
-        if isinstance(tp.tag.type, TaggedAggregateType):
+        tp = self._type.tag().type
+        if isinstance(tp, TaggedAggregateType):
             # if the type is a tagged aggregate, make sure it's the right type
             if not isinstance(value, TaggedAggregate):
                 raise ValueError(f"Value {value} is not a TaggedAggregate")
-            if tp.tag.type != value._type:
-                raise ValueError(f"Value {value} is not a TaggedAggregate of type {tp.tag.type}")
-        elif not is_value_of_type(value, tp.tag.type):
+            if tp != value._type:
+                raise ValueError(f"Value {value} is not a TaggedAggregate of type {tp}")
+        elif not is_value_of_type(value, tp):
             # otherwise check the type
-            raise ValueError(f"Value {value} is not of type {tp.tag.type}")
+            raise ValueError(f"Value {value} is not of type {tp}")
 
     def __setitem__(self, idx, value):
         """Set the value for a given index. Will raise ValueError if the value is not of the correct type."""
         self._check_value(value)
+        try:
+            idx = int(idx)  # make sure it's an int; it will probably arrive as a string.
+        except ValueError:
+            raise ValueError(f"List index {idx} is not an integer")
         self._values[idx] = value
 
     def append(self, value):
@@ -544,8 +553,8 @@ class TaggedList(TaggedAggregate):
 
     def append_default(self):
         """Append a default value to a list. If you want to append a specific value, use append"""
-        if isinstance(self._type.tag.type, TaggedAggregateType):
-            self._values.append(self._type.tag.type.create())
+        if isinstance(self._type.tag().type, TaggedAggregateType):
+            self._values.append(self._type.tag().type.create())
         else:
             raise ValueError("Can't append default to non-TaggedAggregateType list")
 
