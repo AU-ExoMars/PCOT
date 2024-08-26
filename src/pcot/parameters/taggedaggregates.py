@@ -7,18 +7,20 @@ import numpy as np
 
 
 class Maybe:
-    """Objects of this class wrap both type objects ('int' etc) and TaggedAggregateType objects, to indicate that
+    """Objects of this class wrap both type objects ('int' etc.) and TaggedAggregateType objects, to indicate that
     this is optional in a type hint. We can't use Optional because it woon't work with TaggedAggregateType objects
 
     We did have an Amalgam object, but that can't possibly work because we don't actually store type data in
     the serialisation so we can't tell what to deserialise to. Maybe only works because we can check for None.
     """
 
+    type_if_exists: Any
+
     def __init__(self, tp):
-        self.tp = tp
+        self.type_if_exists = tp
 
     def __repr__(self):
-        return f"Maybe({self.tp})"
+        return f"Maybe({self.type_if_exists})"
 
 
 def is_value_of_type(value, tp):
@@ -27,14 +29,14 @@ def is_value_of_type(value, tp):
     that a value matches a type."""
     if isinstance(tp, Maybe):
         # check the value is None or of the correct type
-        return value is None or is_value_of_type(value, tp.tp)
+        return value is None or is_value_of_type(value, tp.type_if_exists)
     if tp is type(None):  # NoneType isn't available anywhere, but there's only one None and one NoneType
         return value is None
     if isinstance(tp, TaggedAggregateType):
         # are we expecting a tagged aggregate?
         if isinstance(value, TaggedAggregate):
             # it's a tagged agg, but not the right type.
-            return tp == value._type
+            return tp == value.type
         else:
             # we're expecting a tagged agg and we haven't got one.
             return False
@@ -69,6 +71,11 @@ class TaggedAggregate(ABC):
     def __init__(self, tp: TaggedAggregateType):
         self._type = tp
 
+    @property
+    def type(self):
+        """Return the type of this object"""
+        return self._type
+
     @abstractmethod
     def serialise(self):
         """Serialise the type into a JSON-serialisable structure"""
@@ -99,7 +106,7 @@ class Tag:
 
         if isinstance(self.type, Maybe):
             # check the type is valid
-            check_type(self.type.tp)
+            check_type(self.type.type_if_exists)
         else:
             check_type(self.type)
 
@@ -190,12 +197,12 @@ class TaggedDict(TaggedAggregate):
                     # if we have a maybe, we have to check null.
                     if d is None:
                         self._values[k] = None
-                    elif isinstance(v.type.tp, TaggedAggregateType):
+                    elif isinstance(v.type.type_if_exists, TaggedAggregateType):
                         # it's not a null, so use the underlying type to deserialise - first the TA case
-                        self._values[k] = v.type.tp.deserialise(d)
-                    elif not is_value_of_type(d, v.type.tp):
+                        self._values[k] = v.type.type_if_exists.deserialise(d)
+                    elif not is_value_of_type(d, v.type.type_if_exists):
                         # then the "normal" case.
-                        raise ValueError(f"TaggedDict key {k}: Value {d} is not of type {v.type.tp}")
+                        raise ValueError(f"TaggedDict key {k}: Value {d} is not of type {v.type.type_if_exists}")
                     else:
                         self._values[k] = d
                 else:
@@ -228,7 +235,7 @@ class TaggedDict(TaggedAggregate):
                 self._values[key] = None
                 return
             else:
-                correct_type = correct_type.tp
+                correct_type = correct_type.type_if_exists
         if isinstance(correct_type, TaggedAggregateType):
             # if the type is a tagged aggregate, make sure it's the right type
             if not isinstance(value, TaggedAggregate):
@@ -276,8 +283,8 @@ class TaggedDict(TaggedAggregate):
                 if v is None:
                     out[k] = None
                     continue
+                tp = tp.type_if_exists
                 # otherwise fall through with the underlying type, having assured the value isn't none.
-                tp = tp.tp
             if isinstance(tp, TaggedAggregateType):
                 out[k] = v.serialise()
             else:
@@ -396,7 +403,7 @@ class TaggedTuple(TaggedAggregate):
             # if the type is a tagged aggregate, make sure it's the right type
             if not isinstance(value, TaggedAggregate):
                 raise ValueError(f"Value {value} is not a TaggedAggregate")
-            if tag.type != value.tp:
+            if tag.type != value._type:
                 raise ValueError(f"Value {value} is not a TaggedAggregate of type {tag.type}")
         elif not is_value_of_type(value, tag.type):
             # otherwise check the type
@@ -446,29 +453,40 @@ class TaggedListType(TaggedAggregateType):
     """This acts like a list, with all items having the same tag (type, description, default).
     """
 
-    _tag: Tag
+    _tag: Tag       # tag giving description, default value of new lists, and type of values.
+    deflt_append: Optional[Any]    # if a list of non-tagged-aggs, adding will append this.
 
-    def tag(self, _=None) -> Tag:
-        """All elements have the same type"""
+    def tag(self, key=None) -> Tag:
+        """All elements have the same type, so the key argument is ignored"""
         return self._tag
 
-    def __init__(self, desc, tp, deflt=None):
-        """Initialise the list with a type. If the type is a TaggedAggregateType, then the deflt field gives
+    def __init__(self, desc, tp, deflt=None, deflt_append=None):
+        """Constructor for tagged list types.
+
+        The deflt field specifies the initial value of the TaggedList that
+        will be generated by create(). If the type is a TaggedAggregateType, then the deflt field gives
         the length of the list - otherwise it is a list of that type. For example:
         TaggedListType("description", int, [1,2,3]) will set the default to [1,2,3], while
         TaggedListType("description", TaggedTupleType(foo=( "foo", int, 30)), 3) will set the default to 3 TaggedTuple
         objects, each with a single integer value of 30.
 
+        The deflt_append value is used when we append to a list of objects which are not tagged aggregates. For
+        example, TaggedListType("desc", int, [1,2,3], 0) will create a list with 3 integers, and if we append to it
+        we will append 0. If we append to a list of tagged aggregates, the default is to append a new object of the
+        correct type, so a deflt_append value is not valid here (and we check for this).
         """
         super().__init__()
         self._tag = Tag(desc, tp, deflt)
         self._tag.assert_valid()
         v = self._tag
+        self.deflt_append = deflt_append   # not always valid to provide one; we check later.
         # if type is a TaggedAggregate the default has to be an int!
         if isinstance(v.type, TaggedAggregateType):
             if not isinstance(v.deflt, int):
                 raise ValueError(
                     f"TaggedListType: Type {v.type} is a TaggedAggregateType, so default must be integer (number of items)")
+            if deflt_append is not None:
+                raise ValueError("A deflt_append value should not be provided for a list of tagged aggregates")
         else:
             # otherwise the default has to be a list, and all items must be of the correct type
             if not isinstance(v.deflt, list):
@@ -476,6 +494,8 @@ class TaggedListType(TaggedAggregateType):
             for i in v.deflt:
                 if not is_value_of_type(i, v.type):
                     raise ValueError(f"Default {v.deflt} contains an item {i} that is not of type {v.type}")
+            if self.deflt_append is not None and not is_value_of_type(self.deflt_append, v.type):
+                raise ValueError(f"Default append value {self.deflt_append} is not of type {v.type}")
 
     def create(self):
         """Create a the appropriate default values"""
@@ -558,8 +578,10 @@ class TaggedList(TaggedAggregate):
         """Append a default value to a list. If you want to append a specific value, use append"""
         if isinstance(self._type.tag().type, TaggedAggregateType):
             self._values.append(self._type.tag().type.create())
+        elif self._type.deflt_append is not None:
+            self._values.append(self._type.deflt_append)
         else:
-            raise ValueError("Can't append default to non-TaggedAggregateType list")
+            raise ValueError("Default append not provided for non-TaggedAggregateType list")
 
     def __len__(self):
         return len(self._values)

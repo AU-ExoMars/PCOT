@@ -5,61 +5,61 @@ from pcot.parameters.parameterfile import ParameterFile
 
 def test_path_absolute():
     f = ParameterFile()
-    p, k = f._process_path("foo")
+    p, k = f._process_path(0, "foo")
     assert p == []
     assert k == "foo"
 
-    p, k = f._process_path("foo.bar")
+    p, k = f._process_path(0, "foo.bar")
     assert p == ["foo"]
     assert k == "bar"
 
-    p, k = f._process_path("foo.bar.baz")
+    p, k = f._process_path(0, "foo.bar.baz")
     assert p == ["foo", "bar"]
     assert k == "baz"
 
 
 def test_path_relative():
     f = ParameterFile()
-    f._process_path("foo.bar.baz")
+    f._process_path(0,"foo.bar.baz")
 
-    p, k = f._process_path(".quux")
+    p, k = f._process_path(0,".quux")
     assert p == ["foo", "bar"]
     assert k == "quux"
 
-    p, k = f._process_path(".quux.blah")
+    p, k = f._process_path(0,".quux.blah")
     assert p == ["foo", "bar", "quux"]
     assert k == "blah"
 
-    p, k = f._process_path("foo.bar.quux.blah")
+    p, k = f._process_path(0,"foo.bar.quux.blah")
     assert p == ["foo", "bar", "quux"]
     assert k == "blah"
-    p, k = f._process_path(".x")
+    p, k = f._process_path(0,".x")
     assert p == ["foo", "bar", "quux"]
     assert k == "x"
-    p, k = f._process_path("..y")
+    p, k = f._process_path(0,"..y")
     assert p == ["foo", "bar"]
     assert k == "y"
 
 
 def test_path_indexed():
     f = ParameterFile()
-    p, k = f._process_path("foo.bar[1]")
+    p, k = f._process_path(0,"foo.bar[1]")
     assert p == ["foo", "bar"]
     assert k == "1"
 
-    p, k = f._process_path("foo.bar[1][2]")
+    p, k = f._process_path(0,"foo.bar[1][2]")
     assert p == ["foo", "bar", "1"]
     assert k == "2"
 
-    p, k = f._process_path("foo[1].bar[2]")
+    p, k = f._process_path(0,"foo[1].bar[2]")
     assert p == ["foo", "1", "bar"]
     assert k == "2"
 
-    p, k = f._process_path("foo[1].bar[2].baz")
+    p, k = f._process_path(0,"foo[1].bar[2].baz")
     assert p == ["foo", "1", "bar", "2"]
     assert k == "baz"
 
-    p, k = f._process_path("foo.bar[1].quux")
+    p, k = f._process_path(0,"foo.bar[1].quux")
     assert p == ["foo", "bar", "1"]
     assert k == "quux"
 
@@ -113,3 +113,47 @@ def test_list_adds():
     assert repr(f._changes.pop(0)) == "SetValue(5, foo.bar.-1, b, 2)"
 
 
+def test_list_adds_partial():
+    test = """
+    foo.bar+        # add an item at node foo.bar, with default values. Set the path to foo.bar.-1
+    .a = 1          # change foo.bar.-1.a to 1
+    .b = 2          # change foo.bar.-1.b to 2
+
+    # we have to go up three because the path is foo.bar.-1:
+    # .xx would put us at foo.bar.-1.xx,
+    # ..xx would put us at foo.bar.xx,
+    # ...xx would put us at foo.xx which is where we want to be!
+
+    ...bar+.a = 1   # add an item at foo.bar, with a=1. Set the path to foo.bar.-1.
+    .b = 2          # change foo.bar.-1.b to 2
+    """
+    f = ParameterFile().parse(test)
+    assert repr(f._changes.pop(0)) == "Add(1, foo., bar)"
+    assert repr(f._changes.pop(0)) == "SetValue(2, foo.bar.-1, a, 1)"
+    assert repr(f._changes.pop(0)) == "SetValue(3, foo.bar.-1, b, 2)"
+    assert repr(f._changes.pop(0)) == "Add(4, foo., bar)"
+    assert repr(f._changes.pop(0)) == "SetValue(4, foo.bar.-1, a, 1)"
+    assert repr(f._changes.pop(0)) == "SetValue(5, foo.bar.-1, b, 2)"
+
+
+def test_list_adds_variant():
+    test = """
+    foo.bar+rect    # add an item at node foo.bar which will be a rectangle. Foo.bar must be list of variants, 
+                    # and rect must be a valid variant within it. Set the path to foo.bar.-1.rect
+    .a = 1          # change foo.bar.-1.rect.a to 1
+    """
+    f = ParameterFile().parse(test)
+    assert repr(f._changes.pop(0)) == "Add(1, foo., bar, variant rect)"
+    assert repr(f._changes.pop(0)) == "SetValue(2, foo.bar.-1.rect, a, 1)"
+
+
+def test_adhoc():
+    test = """
+    foo.bar.a = 1   # change foo.bar.a to 1
+    .b = 2          # change foo.bar.b to 2
+    ..baz.a = 1     # add an item at foo.baz, with a=1. Set the path to foo.baz.-1.
+    """
+    f = ParameterFile().parse(test)
+    assert repr(f._changes.pop(0)) == "SetValue(1, foo.bar, a, 1)"
+    assert repr(f._changes.pop(0)) == "SetValue(2, foo.bar, b, 2)"
+    assert repr(f._changes.pop(0)) == "SetValue(3, foo.baz, a, 1)"

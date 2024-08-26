@@ -667,12 +667,17 @@ def test_tagged_variant_dict():
                                         "type2": tdt2
                                     })
 
+    # type for a list of variant dicts, where the underlying dicts are either type1 or type2.
     tl = TaggedListType("stuff", tvdt, 0)
+    # create the list
     ll = tl.create()
 
+    # create an item - we do this by creating the underlying dict, then creating a TaggedVariantDict
     d = tdt1.create()
-    d.a = 212
+    d.a = 212       # set an item in it while we're here
+    # now create a TaggedVariantDict and set it to contain that item
     t = tvdt.create().set(d)
+    # and add it to the list.
     ll.append(t)
 
     d = tdt2.create()
@@ -686,9 +691,9 @@ def test_tagged_variant_dict():
     assert len(ll) == 2
     assert ll[0].get_type() == 'type1'
     assert ll[0].get().a == 212
-    assert ll[0].get()._type == tdt1
+    assert ll[0].get().tp == tdt1
 
     assert ll[1].get_type() == 'type2'
     assert ll[1].get().e is False
-    assert ll[1].get()._type == tdt2
+    assert ll[1].get().tp == tdt2
 

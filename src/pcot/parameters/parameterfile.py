@@ -20,13 +20,16 @@ from pathlib import Path
 from typing import List, Optional, Dict
 import logging
 
-from pcot.parameters.taggedaggregates import TaggedAggregate, TaggedAggregateType, Maybe
+from pcot.parameters.taggedaggregates import TaggedAggregate, TaggedAggregateType, Maybe, TaggedListType, \
+    TaggedVariantDictType
 
 logger = logging.getLogger(__name__)
 
 
 def get_element_to_modify(data: TaggedAggregate, path: List[str]):
-    """Walk down the tree to the last element of the path, returning the parent and the key of the last element"""
+    """Walk down the tree to the last element of the path, returning the parent of the last element.
+    Remember that a path like foo.bar.baz.quux is split into root=foo, path=[bar,baz], key=quux. This
+    will return the baz element - the last in the path proper, which is guaranteed to be a TaggedAggregate."""
 
     # surely it can't be just this??
     for p in path:
@@ -50,6 +53,8 @@ class Change:
     line: int
 
     def __init__(self, path: List[str], line: int, key: str):
+        if len(path) < 1:
+            raise ValueError(f"Zero length path - are you trying to change the root?")
         self.root_name, *self.path = path
         self.key = key
         self.line = line
@@ -67,10 +72,10 @@ class SetValue(Change):
 
     def apply(self, data: TaggedAggregate):
         logger.info(f"Setting {self.path + [self.key]} to {self.value}")
-        # walk down the path to get the element we want to change
+        # walk down the path to get the element we want to change (well, its parent - the last item in the path)
         element = get_element_to_modify(data, self.path)
-        # get its tag so we can get its type, and check it.
-        tag = element._type.tag(self.key)
+        # use the key to get its tag so we can get its type, and check it.
+        tag = element.type.tag(self.key)
 
         # do the actual setting, if possible - but resolve Maybe first.
         try:
@@ -78,7 +83,7 @@ class SetValue(Change):
             # if the type is Maybe, check to see if we're setting it to None, and if so, set the element to None.
             if isinstance(tag.type, Maybe):
                 v = self.value.lower()
-                if v == 'none' or v == 'null':          # "none" and "null" are both acceptable, in upper or lowercase
+                if v == 'none' or v == 'null':  # "none" and "null" are both acceptable, in upper or lowercase
                     element[self.key] = None
                     return  # return early, we're done.
                 tp = tag.type.tp
@@ -91,7 +96,7 @@ class SetValue(Change):
             elif tp is str:
                 element[self.key] = self.value
             elif tp is bool:
-                element[self.key] = self.value.lower()[0] == 't'    # just check the first character, upper or lower
+                element[self.key] = self.value.lower()[0] == 't'  # just check the first character, upper or lower
             else:
                 raise ValueError(f"unparameterisable {tag.type} for {str(self)}")
         except ValueError as e:
@@ -119,17 +124,51 @@ class DeleteValue(Change):
 
 
 class Add(Change):
-    """Add to the list at the given path+key"""
+    """Add to the list at the given path+key. It may be that we are adding to a list of variant dicts, in
+    which case we should specify the type of the variant."""
 
-    def __init__(self, path: List[str], line: int, key: str):
+    def __init__(self, path: List[str], line: int, key: str, variant: Optional[str] = None):
         super().__init__(path, line, key)
+        if variant == '':  # in typical usage the variant is an empty string!
+            variant = None
+        self.variant = variant
 
     def __repr__(self):
-        return f"Add({self.line}, {self.root_name}.{'.'.join(self.path)}, {self.key})"
+        if self.variant is not None:
+            return f"Add({self.line}, {self.root_name}.{'.'.join(self.path)}, {self.key}, variant {self.variant})"
+        else:
+            return f"Add({self.line}, {self.root_name}.{'.'.join(self.path)}, {self.key})"
 
     def apply(self, data: TaggedAggregate):
         logger.info(f"Adding to {self.path + [self.key]}")
-        raise NotImplementedError(repr(self))
+        # check it's a list - we get the parent of the item we want to append to
+        element = get_element_to_modify(data, self.path)
+        # then get the tag for the item we want to append to
+        tag = element.type.tag(self.key)
+        # and check its type
+        if not isinstance(tag.type, TaggedListType):
+            raise ValueError(f"Cannot add to a non-list: {str(self)}")
+        # get the type of the items in the list. The tag has a TaggedListType object (tag.type) which itself
+        # will have a tag, which will have a type (the type of the items).
+        type_of_items = tag.type.tag().type
+        if self.variant is not None:  # a variant has been specified (e.g. "foo+bar" in a path)
+            # are we dealing with a list of variant dicts?
+            if not isinstance(type_of_items, TaggedVariantDictType):
+                raise ValueError(
+                    f"specifying a variant when adding to a non-variant list (e.g. foo+bar) is invalid: {str(self)}")
+            # we are. Check that the variant is valid in this list.
+            if self.variant not in type_of_items.type_dict:
+                poss = ",".join(type_of_items.type_dict.keys())
+                raise ValueError(
+                    f"{self.variant} is not a valid variant for adding to this list. Possibilities are: {poss}")
+            # it's valid, so we should be able to make one.
+            underlying_dict = type_of_items.type_dict[self.variant].create()   # will create the underlying dict
+            # now create the containing variant dict and set it to contain that item
+            variant_dict_item = type_of_items.create().set(underlying_dict)
+            # and append
+            element[self.key].append(variant_dict_item)
+        else:
+            element[self.key].append_default()
 
 
 class ParameterFile:
@@ -182,11 +221,11 @@ class ParameterFile:
         """Process each line, adding Change objects to the list of changes if required"""
         if '=' in line:
             parts = [x.strip() for x in line.split('=')]
-            path, key = self._process_path(lineNo, parts[0], False)    # may append an Add change
+            path, key = self._process_path(lineNo, parts[0], False)  # may append an Add change
             self._changes.append(SetValue(path, lineNo, key, parts[1]))
         elif line.startswith('del'):
             line = line[3:].strip()
-            path, key = self._process_path(lineNo, line)    # may append an Add change
+            path, key = self._process_path(lineNo, line)  # may append an Add change
             self._changes.append(DeleteValue(path, lineNo, key))
         else:
             # don't create a change, we're just changing the path
@@ -208,7 +247,7 @@ class ParameterFile:
         # preprocessing - any element that ends in [xxxx] is an index, and should be split into two elements, so
         # x[y] becomes two elements x,y. These needs to work on multidimensional arrays too, so x[y][z] becomes
         # x,y,z.
-        path = []           # this is the path we are building by preprocessing the elements to handle indices
+        path = []  # this is the path we are building by preprocessing the elements to handle indices
         for s in elements:
             if '[' in s:
                 # split the string into parts - so foo[bar] becomes foo,bar] and foo[bar][baz] becomes foo,bar],baz]
@@ -269,11 +308,11 @@ class ParameterFile:
 
         # we'll have to handle the key separately, which may also have a "+". In that case we
         # convert (say) a.b+ into a.b.-1, and create an Add change for a.b.
-        if key.endswith('+'):
+        if "+" in key:
             # strip the +
-            key = key[:-1]
+            key, variant = key.split('+')
             # create the add for that
-            self._changes.append(Add(self._path.copy(), lineNo, key))
+            self._changes.append(Add(self._path.copy(), lineNo, key, variant))
             # append this key to the path (sans the +) for subsequent adds
             self._path.append(key)
             if is_path_only:
@@ -298,15 +337,21 @@ class ParameterFile:
         with an Add change created for foo.bar
         """
         for i, p in enumerate(self._path):
-            if p.endswith('+'):
+            if "+" in p:
                 # remove the "+" and create an Add change for this path
-                self._path[i] = p[:-1]
-                self._changes.append(Add(self._path[:i], lineNo, p[:-1]))   # path, line-no, key
+                pathElement, variant = p.split('+')
+                self._path[i] = pathElement
+                self._changes.append(Add(self._path[:i], lineNo, pathElement, variant))  # path, line-no, key
                 # now add the index to the path
-                self._path.insert(i+1, '-1')
+                self._path.insert(i + 1, '-1')
 
     def __str__(self):
         return f"{self.path}: {len(self._changes)} changes"
 
     def __repr__(self):
         return f"ParameterFile({self.path})"
+
+    def dump(self):
+        print(f"Parameter file {self.path}")
+        for c in self._changes:
+            print(repr(c))
