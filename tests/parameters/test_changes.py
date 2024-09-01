@@ -1,7 +1,8 @@
 import pytest
 
 from pcot.parameters.parameterfile import ParameterFile
-from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType, TaggedTupleType, TaggedVariantDictType
+from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType, TaggedTupleType, TaggedVariantDictType, \
+    Maybe
 
 base_tagged_dict_type = TaggedDictType(
     a=("a desc", int, 10),
@@ -229,6 +230,33 @@ def test_dict_in_dict():
     assert td.base2.b == "foo"
     assert td.base2.c == 48  # ..base2.b will have switched the path to base2
     assert td.base.c == 3.14  # should be unchanged
+
+
+def test_maybe_in_dict():
+    tdt = TaggedDictType(
+        a=("a", str, "foo"),
+        b=("b", Maybe(str), None),
+        c=("c", Maybe(int), 10)
+    )
+    td = tdt.create()
+    assert(td.b is None)
+    assert(td.c == 10)
+
+    f = ParameterFile().parse("foo.b = bar")
+    f.apply({"foo": td})
+    assert td.b == "bar"
+
+    f = ParameterFile().parse("foo.c = bar")
+    with pytest.raises(ValueError):
+        f.apply({"foo": td})
+    assert td.c == 10
+
+    f = ParameterFile().parse("foo.c = 22")
+    f.apply({"foo": td})
+    assert td.c == 22
+
+
+
 
 
 def test_add_to_variant_dict_list():

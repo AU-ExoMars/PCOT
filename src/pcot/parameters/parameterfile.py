@@ -41,7 +41,8 @@ def get_element_to_modify(data: TaggedAggregate, path: List[str]):
                 field B
             dict y
 
-    We want to access A as "foo.bar.A" once the x has been created.
+    We want to access A as "foo.bar.A" once the x has been created. That avoids the need to know the underlying
+    type of the variant (we don't need to know that it's x and not y).
 
 
     """
@@ -104,7 +105,7 @@ class SetValue(Change):
                 if v == 'none' or v == 'null':  # "none" and "null" are both acceptable, in upper or lowercase
                     element[self.key] = None
                     return  # return early, we're done.
-                tp = tag.type.tp
+                tp = tag.type.type_if_exists
             if isinstance(tp, TaggedAggregateType):
                 raise ValueError(f"Cannot set a value to a tagged aggregate: {str(self)}")
             if tp is int:
