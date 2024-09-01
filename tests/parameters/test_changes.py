@@ -124,8 +124,9 @@ def test_base_list():
     f.apply({"foo": tl})
     assert tl[1] == 22
 
+    # wrong kind of index!
     f = ParameterFile().parse("foo[bar] = 22")
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         f.apply({"foo": tl})
 
 

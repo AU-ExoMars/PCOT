@@ -131,20 +131,23 @@ def test_list_adds_partial():
     assert repr(f._changes.pop(0)) == "Add(1, foo., bar)"
     assert repr(f._changes.pop(0)) == "SetValue(2, foo.bar.-1, a, 1)"
     assert repr(f._changes.pop(0)) == "SetValue(3, foo.bar.-1, b, 2)"
-    assert repr(f._changes.pop(0)) == "Add(4, foo., bar)"
-    assert repr(f._changes.pop(0)) == "SetValue(4, foo.bar.-1, a, 1)"
-    assert repr(f._changes.pop(0)) == "SetValue(5, foo.bar.-1, b, 2)"
+    assert repr(f._changes.pop(0)) == "Add(10, foo., bar)"
+    assert repr(f._changes.pop(0)) == "SetValue(10, foo.bar.-1, a, 1)"
+    assert repr(f._changes.pop(0)) == "SetValue(11, foo.bar.-1, b, 2)"
 
 
 def test_list_adds_variant():
     test = """
     foo.bar+rect    # add an item at node foo.bar which will be a rectangle. Foo.bar must be list of variants, 
-                    # and rect must be a valid variant within it. Set the path to foo.bar.-1.rect
-    .a = 1          # change foo.bar.-1.rect.a to 1
+                    # and rect must be a valid variant within it. Set the path to foo.bar.-1
+    .a = 1          # change foo.bar.-1(.rect).a to 1
     """
     f = ParameterFile().parse(test)
     assert repr(f._changes.pop(0)) == "Add(1, foo., bar, variant rect)"
-    assert repr(f._changes.pop(0)) == "SetValue(2, foo.bar.-1.rect, a, 1)"
+    # the generated change doesn't mention "rect" at all because of how
+    # get_element_to_modify works - it will automatically do a get() in the variant layer.
+    # We jump straight from the variant to the containing dict.
+    assert repr(f._changes.pop(0)) == "SetValue(3, foo.bar.-1, a, 1)"
 
 
 def test_adhoc():

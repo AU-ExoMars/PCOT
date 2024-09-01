@@ -221,7 +221,13 @@ class TaggedDict(TaggedAggregate):
 
     def __getitem__(self, key):
         """Return the value for a given key"""
-        return self._values[key]
+        try:
+            return self._values[key]
+        except KeyError as e:
+            raise KeyError(f"Key {key} not in TaggedDict: valid keys are {','.join(self.keys())}") from e
+
+    def __iter__(self):
+        raise NotImplementedError("TaggedDict iteration not implemented - iterate over the keys()")
 
     def __setitem__(self, key, value):
         """Set the value for a given key. Will raise KeyError if it's not in the tags,
@@ -431,8 +437,8 @@ class TaggedTuple(TaggedAggregate):
             self[i] = v
         return self
 
-    def get(self):
-        """Return the data as an actual tuple"""
+    def get(self) -> List[Any]:
+        """Return the data as an actual tuple (well, a list)"""
         return self._values
 
     astuple = get  # alias!
@@ -542,7 +548,7 @@ class TaggedList(TaggedAggregate):
         except ValueError as e:
             raise ValueError(f"List index {idx} is not an integer") from e
 
-    def get(self):
+    def get(self) -> List[Any]:
         return self._values
 
     aslist = get
@@ -566,7 +572,7 @@ class TaggedList(TaggedAggregate):
         try:
             idx = int(idx)  # make sure it's an int; it will probably arrive as a string.
         except ValueError:
-            raise ValueError(f"List index {idx} is not an integer")
+            raise TypeError(f"List index {idx} is not an integer")
         self._values[idx] = value
 
     def append(self, value):
@@ -641,7 +647,7 @@ class TaggedVariantDict(TaggedAggregate):
             self._value = tt.type_dict[tp].deserialise(data)
             self._type_name = tp
 
-    def get(self):
+    def get(self) -> TaggedDict:
         """return the underlying TaggedDict"""
         return self._value
 

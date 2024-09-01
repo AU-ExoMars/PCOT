@@ -691,9 +691,9 @@ def test_tagged_variant_dict():
     assert len(ll) == 2
     assert ll[0].get_type() == 'type1'
     assert ll[0].get().a == 212
-    assert ll[0].get().tp == tdt1
+    assert ll[0].get().type == tdt1
 
     assert ll[1].get_type() == 'type2'
     assert ll[1].get().e is False
-    assert ll[1].get().tp == tdt2
+    assert ll[1].get().type == tdt2
 

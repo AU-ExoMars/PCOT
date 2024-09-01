@@ -1,7 +1,9 @@
 """
 Handling how parameter files can modify inputs.
 """
+from pcot.document import Document
 from pcot.inputs.inp import NUMINPUTS
+from pcot.parameters.parameterfile import ParameterFile
 # first we define the tagged dict type for each input type
 
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType, Maybe
@@ -67,4 +69,23 @@ inputMethodDictType = TaggedDictType(
 kwargs = {f"{i}": (f"input {i}", inputMethodDictType, None) for i in range(NUMINPUTS)}
 inputsDictType = TaggedDictType(**kwargs)
 
-print(inputsDictType)
+
+def processParameterFile(doc: Document, p: ParameterFile):
+    """Creates an input dict with the inputsDictType specification, and modifies it
+    using a parameter file. Then uses any inputs actually set in the dict to modify
+    the live inputs in the document."""
+    inputs = inputsDictType.create()
+    p.apply({"inputs": inputs})
+
+    for i in range(NUMINPUTS):
+        # note that we are using the string representation of the input numbers as keys
+        ii = inputs[str(i)]
+        inp = doc.inputMgr.getInput(i)
+        modifyInput(ii, inp)
+        print(i)
+
+
+def modifyInput(inputDict, inDict: TaggedDictType):
+    """Modifies an input object based on a dict."""
+    for key in inputDict.keys():
+        print(key)
