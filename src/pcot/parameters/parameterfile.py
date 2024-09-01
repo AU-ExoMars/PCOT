@@ -21,7 +21,7 @@ from typing import List, Optional, Dict
 import logging
 
 from pcot.parameters.taggedaggregates import TaggedAggregate, TaggedAggregateType, Maybe, TaggedListType, \
-    TaggedVariantDictType
+    TaggedVariantDictType, TaggedVariantDict
 
 logger = logging.getLogger(__name__)
 
@@ -29,11 +29,29 @@ logger = logging.getLogger(__name__)
 def get_element_to_modify(data: TaggedAggregate, path: List[str]):
     """Walk down the tree to the last element of the path, returning the parent of the last element.
     Remember that a path like foo.bar.baz.quux is split into root=foo, path=[bar,baz], key=quux. This
-    will return the baz element - the last in the path proper, which is guaranteed to be a TaggedAggregate."""
+    will return the baz element - the last in the path proper, which is guaranteed to be a TaggedAggregate.
+
+    If at any point we meet a TaggedVariantDict, we skip straight to the underlying dict. Consider the
+    structure
+
+    dict foo:
+        variant dict bar:
+            dict x:
+                field A
+                field B
+            dict y
+
+    We want to access A as "foo.bar.A" once the x has been created.
+
+
+    """
 
     # surely it can't be just this??
     for p in path:
         data = data[p]
+        # if we come across a TaggedVariantDict, we need to get the underlying dict
+        if isinstance(data, TaggedVariantDict):
+            data = data.get()
     return data
 
 

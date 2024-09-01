@@ -261,3 +261,34 @@ def test_add_to_variant_dict_list():
     # from the variant
     assert td.lst[1].get().d == 3.24
     assert td.lst[0].get().b == "foo"
+
+
+def test_modify_variant_dict_list():
+    td = tagged_variant_dict_in_dict_type.create()
+    f = ParameterFile().parse("foo.lst+x")
+    f.apply({"foo": td})
+    assert len(td.lst) == 1
+    # check that the variant dict has been created
+    assert td.lst[0].get_type() == "x"
+    assert td.lst[0].get().b == "foo"   # check a value
+
+    # modify
+    f = ParameterFile().parse("foo.lst[0].b = bar")
+    f.apply({"foo": td})
+
+
+def test_modify_variant_dict_in_dict2():
+    """In this code we aren't adding a variant dict to a list but
+    creating one in a normal dict.
+    """
+    tdt = TaggedDictType(
+        base=("an ordinary tagged dict", base_tagged_dict_type, None),
+        bloon=("a bloon", str, "bloon"),
+        dd=("a variant dict", tagged_variant_dict_type, None)
+        )
+
+    td = tdt.create()
+
+    # tell it to create an X dict in the dd variant dict
+    f = ParameterFile().parse("foo.dd/x.a = 22")
+    pytest.fail("Not implemented")
