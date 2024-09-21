@@ -16,6 +16,7 @@ from pcot.dataformats.pds4 import PDS4ImageProduct, ProductList
 from pcot.datum import Datum
 from pcot.imagecube import ChannelMapping
 from pcot.inputs.inputmethod import InputMethod
+from pcot.parameters.taggedaggregates import TaggedDict
 from pcot.ui import uiloader
 from pcot.ui.canvas import Canvas
 from pcot.ui.help import HelpWindow
@@ -168,6 +169,11 @@ class PDS4InputMethod(InputMethod):
             Canvas.deserialise(self, data)
         except KeyError as e:
             ui.error(f"can't read '{e}' from serialised PDS4 input data")
+
+    def modifyWithParameterDict(self, d: TaggedDict) -> bool:
+        if d.pds4.directory is not None:
+            raise Exception("PDS4 input method parameters not yet implemented")
+        return False
 
 
 class ImageMarkerItem(QtWidgets.QGraphicsRectItem):

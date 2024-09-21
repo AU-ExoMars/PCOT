@@ -5,6 +5,7 @@ from typing import Optional, Any
 
 from pcot import ui
 from pcot.datum import Datum
+from pcot.parameters.taggedaggregates import TaggedDict
 from pcot.ui.canvas import Canvas
 
 logger = logging.getLogger(__name__)
@@ -17,13 +18,11 @@ class InputMethod(ABC):
     """
 
     input: 'Input'  # this may be None for an "orphan" input method which isn't connected to the document
-    name: str
     data: Any
     showROIs: bool
 
     def __init__(self, inp):
         self.input = inp
-        self.name = ''
         self.data = Datum.null
         Canvas.initPersistData(self)  # creates data inside the canvas
         self.showROIs = False  # used by the canvas
@@ -114,9 +113,10 @@ class InputMethod(ABC):
                 self.setInputException(str(e))
         return self.data
 
+    @abstractmethod
     def getName(self):
         """to override - returns the name for display purposes"""
-        return 'override-getName!'
+        return 'override-getDisplayName!'
 
     @abstractmethod
     def createWidget(self):
@@ -135,3 +135,9 @@ class InputMethod(ABC):
         """to override - sets this method's data from JSON-read data"""
         raise Exception("InputMethod does not have a deserialise method")
 
+    def modifyWithParameterDict(self, d: 'TaggedDict') -> bool:
+        """to override - modifies the method with a set of parameters from a
+        parameter file. Returns true if the method was modified, false if not."""
+        # by default does nothing. Don't make it throw because it still gets
+        # called on direct, null etc.
+        return False

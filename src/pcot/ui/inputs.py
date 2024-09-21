@@ -20,7 +20,7 @@ class MethodSelectButton(QtWidgets.QPushButton):
         super().__init__()
         self.window = w
         self.method = m
-        self.setText(m.getName())
+        self.setText(m.getDisplayName())
         self.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred,
                                                  QtWidgets.QSizePolicy.Maximum))
         self.clicked.connect(self.onClick)

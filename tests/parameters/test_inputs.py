@@ -2,8 +2,10 @@
 Test modifications to inputs by parameter files
 """
 import pcot
+from fixtures import *
+from pcot.datum import Datum
 from pcot.document import Document
-from pcot.parameters.inputs import processParameterFile
+from pcot.parameters.inputs import processParameterFileForInputs
 from pcot.parameters.parameterfile import ParameterFile
 
 
@@ -11,4 +13,96 @@ def test_no_items():
     pcot.setup()
     d = Document()
     f = ParameterFile().parse("")
-    processParameterFile(d, f)
+    processParameterFileForInputs(d, f)
+
+
+def test_rgb_input(globaldatadir):
+    """Can we use a parameter file to modify a fresh document to load a couple of images as inputs?"""
+    pcot.setup()
+
+    # create a new document with no inputs (i.e. all inputs null)
+    doc = Document()
+
+    # create a parrameter file which will set a pair of RGB inputs
+    test = f"""
+    inputs.0.rgb.filename = {globaldatadir/'basn0g01.png'}  # black and white image
+    inputs.1.rgb.filename = {globaldatadir/'basn2c16.png'}  # colour image
+    """
+    # process this directly
+    f = ParameterFile().parse(test)
+    processParameterFileForInputs(doc, f)
+
+    # create the document with a couple of input nodes and run it
+    # No need to create input 0, because one is created by default in new documents
+    doc.graph.create("input 1")
+
+    doc.run()
+    # check the nodes - first node 0.
+    img = doc.graph.getByDisplayName("input 0", True).getOutput(0, Datum.IMG)
+
+    # check the basic stats - that it's the right image
+    assert img.channels == 3
+    assert img.w == 32
+    assert img.h == 32
+    assert np.array_equal(img.img[0][0], (1, 1, 1))
+    assert np.array_equal(img.img[31][31], (0, 0, 0))
+
+    assert len(img.sources) == 3
+    for sourceSet, colname in zip(img.sources, ['R', 'G', 'B']):
+        #  First, make sure each band has a source set of a single source
+        assert len(sourceSet) == 1
+        s = sourceSet.getOnlyItem()
+        assert isinstance(s.band, str)      # not a filter, just a named band
+        assert s.inputIdx == 0
+        print(s.external)
+
+    # now some more cursory tests on the second image
+    img = doc.graph.getByDisplayName("input 1", True).getOutput(0, Datum.IMG)
+    assert img.channels == 3
+    assert img.w == 32
+    assert img.h == 32
+    assert np.array_equal(img.img[0][0], (1, 1, 0)) # top left yellow
+    assert np.array_equal(img.img[31][31], (0, 0, 1)) # bottom right blue
+
+
+def test_image_envi(envi_image_1, envi_image_2):
+    pcot.setup()
+
+    # create a new document with no inputs (i.e. all inputs null)
+    doc = Document()
+
+    # create a parrameter file which will set a pair of RGB inputs
+    test = f"""
+    inputs.0.envi.filename = {envi_image_1}
+    inputs.1.envi.filename = {envi_image_2}
+    """
+    # process this directly
+    f = ParameterFile().parse(test)
+    processParameterFileForInputs(doc, f)
+
+    # create the document with a couple of input nodes and run it
+    # No need to create input 0, because one is created by default in new documents
+    doc.graph.create("input 1")
+    doc.run()
+    # check the nodes - first node 0.
+    img = doc.graph.getByDisplayName("input 0", True).getOutput(0, Datum.IMG)
+
+    # some very basic tests on the image (this is not a full test of ENVI load)
+    assert img.channels == 4
+    assert img.w == 80
+    assert img.h == 60
+    assert len(img.sources) == 4
+    for ss, cwl in zip(img.sources, (800, 640, 550, 440)):
+        f = ss.getOnlyItem().getFilter()
+        assert f.cwl == cwl
+
+    img = doc.graph.getByDisplayName("input 1", True).getOutput(0, Datum.IMG)
+
+    # some very basic tests on the image (this is not a full test of ENVI load)
+    assert img.channels == 4
+    assert img.w == 80
+    assert img.h == 60
+    assert len(img.sources) == 4
+    for ss, cwl in zip(img.sources, (1000, 2000, 3000, 4000)):
+        f = ss.getOnlyItem().getFilter()
+        assert f.cwl == cwl

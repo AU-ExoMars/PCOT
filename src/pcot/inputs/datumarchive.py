@@ -14,6 +14,7 @@ from pcot.dataformats import load
 from pcot.datum import Datum
 from pcot.imagecube import ChannelMapping
 from pcot.inputs.inputmethod import InputMethod
+from pcot.parameters.taggedaggregates import TaggedDict
 from pcot.sources import nullSource, nullSourceSet
 from pcot.ui import uiloader
 from pcot.ui.canvas import Canvas
@@ -74,6 +75,11 @@ class DatumArchiveInputMethod(InputMethod):
             self.fname = None
             self.itemname = None
             self.datum = None
+
+    def modifyWithParameterDict(self, d: TaggedDict) -> bool:
+        if d.datumarchive.filename is not None:
+            raise Exception("DatumArchive input parameters not yet implemented")
+        return False
 
     def createWidget(self):
         return DatumArchiveMethodWidget(self)

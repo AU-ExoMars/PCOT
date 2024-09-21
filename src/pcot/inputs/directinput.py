@@ -3,6 +3,7 @@ from typing import Optional
 from .inputmethod import InputMethod
 from ..datum import Datum
 from ..imagecube import ImageCube
+from ..parameters.taggedaggregates import TaggedDict
 
 
 class DirectInputMethod(InputMethod):
@@ -46,3 +47,8 @@ class DirectInputMethod(InputMethod):
             self.datum = Datum.deserialise(data['d'], self.input.mgr.doc)
         else:
             self.datum = Datum.null  # could happen in legacy files
+
+    def modifyWithParameterDict(self, d: TaggedDict) -> bool:
+        if d.direct.filename is not None:
+            raise Exception("Direct input method parameters not supported")
+        return False

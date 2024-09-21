@@ -6,6 +6,7 @@ from pcot.dataformats import load
 from pcot.datum import Datum
 from pcot.inputs.inputmethod import InputMethod
 from pcot.imagecube import ImageCube, ChannelMapping
+from pcot.parameters.taggedaggregates import TaggedDict
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import TreeMethodWidget
 
@@ -66,6 +67,12 @@ class ENVIInputMethod(InputMethod):
         else:
             self.img = None   # ensure image is reloaded
         Canvas.deserialise(self, data)
+
+    def modifyWithParameterDict(self, d: TaggedDict) -> bool:
+        if d.envi.filename is not None:
+            self.fname = d.envi.filename
+            return True
+        return False
 
 
 class ENVIMethodWidget(TreeMethodWidget):

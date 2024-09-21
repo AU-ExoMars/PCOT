@@ -18,6 +18,7 @@ from .. import ui
 from ..dataformats import load
 from ..dataformats.raw import RawLoader
 from ..filters import getFilterSetNames
+from ..parameters.taggedaggregates import TaggedDict
 from ..ui import uiloader
 from ..ui.presetmgr import PresetModel, PresetDialog, PresetOwner
 from ..utils import SignalBlocker
@@ -139,9 +140,13 @@ class MultifileInputMethod(InputMethod):
 
         Canvas.deserialise(self, data)
 
+    def modifyWithParameterDict(self, d: TaggedDict) -> bool:
+        if d.multifile.directory is not None:
+            raise Exception("Multifile input parameters not yet implemented")
+        return False
 
-# Then the UI class..
 
+# Then the UI class...
 
 IMAGETYPERE = re.compile(r".*\.(?i:jpg|bmp|png|ppm|tga|tif|raw|bin)")
 
