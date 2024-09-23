@@ -6,6 +6,7 @@ from typing import Dict, Optional, Tuple
 from pcot.datum import Datum
 from pcot.document import Document
 from pcot.utils.archive import Archive, FileArchive
+from pcot.sources import StringExternal, SourceSet, MultiBandSource, Source
 
 
 class DatumStore:
@@ -15,6 +16,8 @@ class DatumStore:
     and the like.
 
     It's not used for serialisation, however, because serialisation is primarily for storing XForms and graph data.
+    However, it can be used for saving Datum objects to a file in a simple way - for example, the ".parc" data
+    format is an archive containing one item, called "main".
 
     This uses a LRU-cache of a slightly unusual kind, in that the size is specified in bytes. If reading
     a new item would exceed this size, least-recently-used items of non-zero size are removed until there
@@ -171,3 +174,72 @@ class DatumStore:
 
         self.cache[name].time = time.perf_counter()  # set timestamp of access
         return self.cache[name].datum  # and return
+
+
+def writeParc(filename: str, d: Datum, description=None):
+    """Write a PARC file - a DatumStore with a single item called "main".
+
+    """
+    with FileArchive(filename, "w") as a, DatumStore(a) as da:
+        da.writeDatum("main", d, description=description)
+        da.writeManifest()
+
+
+def readParc(fname: str, itemname: str, inpidx: int = None) -> Optional[Datum]:
+    """Load a Datum from a Datum archive file. We also patch the sources, overwriting the source data
+    in the archive because we want the data to look like it came from the archive and not whatever
+    the archive was created from. This may seem a bit rude - and that we're losing a record of something
+    that might be important - but otherwise we could get bogged down with references to data on other systems.
+    # Later we may revise this to avoid lossy source loading for (say) PDS4 products.
+
+    - fname: the name of the archive file
+    - itemname: the name of the item in the archive
+    - inpidx: the input index to use or None if not connected to a graph input
+    """
+
+
+    if fname is not None and itemname is not None:
+        fa = FileArchive(fname)
+        ds = DatumStore(fa)
+        datum = ds.get(itemname, None)
+    else:
+        return None
+
+    if datum is None:
+        return None
+
+    # Patch sources as described above
+
+    e = StringExternal("PARC", f"{fname}:{itemname}")  # the label we'll attach
+
+    def patchSource(s):
+        if isinstance(s, SourceSet):
+            # take all the sources in a sources set and patch them. Then merge any duplicates.
+            return SourceSet(set([patchSource(ss) for ss in s]))
+        elif isinstance(s, MultiBandSource):
+            # perform the patch operation on all bands in a MultiBandSource
+            return MultiBandSource([patchSource(ss) for ss in s])
+        elif isinstance(s, Source):
+            # for each root source, we create a new source with our new external (giving the name of the archive)
+            # and the input index. Keep the band data (which will be a filter or a band name).
+            return Source().setExternal(e).setBand(s.band).setInputIdx(inpidx)
+
+    datum.val.sources = patchSource(datum.val.sources)
+
+    #
+    # if isinstance(datum.val.sources, MultiBandSource):
+    #     sources = []
+    #     # for each band, we make a new source with the same bands and the same external
+    #     for s in datum.val.sources:
+    #         # get the original sources; there may be more than one for each band
+    #         ss = s.getSources()
+    #         # flatten them down into a single set of bands
+    #         bands = set([s.band for s in ss])
+    #         # create sources from those bands
+    #         ss = SourceSet([Source().setBand(b).setExternal(e).setInputIdx(inpidx) for b in bands])
+    #         sources.append(ss)
+    #     ms = MultiBandSource(sources)
+    #     datum.val.sources = ms
+
+    return datum
+

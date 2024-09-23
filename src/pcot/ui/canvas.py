@@ -1194,13 +1194,10 @@ class Canvas(QtWidgets.QWidget):
             if ext == '':
                 ext = '.parc'
             if ext == '.parc':
-                from pcot.utils.archive import FileArchive
-                from pcot.utils.datumstore import DatumStore
+                from pcot.utils.datumstore import writeParc
 
                 path = root + ext
-                with FileArchive(path, "w") as a, DatumStore(a) as ds:
-                    datum = Datum(Datum.IMG, self.previmg)
-                    ds.writeDatum("main", datum, description=desc)
+                writeParc(path, Datum(Datum.IMG, self.previmg), description=desc)
             else:
                 QMessageBox.critical(self, 'Error', "Filename has a strange extension.")
                 ui.log(ext)
