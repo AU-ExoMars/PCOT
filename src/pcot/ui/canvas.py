@@ -393,7 +393,7 @@ class InnerCanvas(QtWidgets.QWidget):
                             data = (data - mn) / rng
                         else:
                             data = np.zeros(data.shape, dtype=float)
-
+                    mask = data > 0     # we'll need to mask the bits where there's a value present for later.
                 elif d.data > 0:
                     # otherwise it's a DQ bit (or BAD dq bits), so cut that out
                     data = self.imgCube.dq[cuty:cuty + cuth, cutx:cutx + cutw]
@@ -416,13 +416,17 @@ class InnerCanvas(QtWidgets.QWidget):
                     # now convert that to float, setting nonzero to 1 and zero to 0.
                     data = mask.astype(np.float32)
                     t.mark("tofloat")
+                else:
+                    data = None
+                    mask = None
+
                 # expand the data to RGB, but in different ways depending on the colour!
                 r, g, b, flash = canvasdq.colours[d.col]
                 if flash:
                     self.redrawOnTick = True
                 # avoiding the creating of new arrays where we can.
 
-                if not flash or self.flashCycle:
+                if (not flash or self.flashCycle) and data is not None:
                     zeroes = np.zeros(data.shape, dtype=float)
                     data = data ** 2*d.contrast
                     t.mark("contrast")
@@ -438,10 +442,16 @@ class InnerCanvas(QtWidgets.QWidget):
                     t.mark("stack")
                     # additive or "normal" blending
                     if d.additive:
+                        # if additive:
+                        #   if showing uncertainty we add the colour to the image value
+                        #   if showing DQ we add the colour to the image value when DQ bit is set
                         np.add(data, img, out=data)
                         t.mark("add")
                     else:
-                        mask = np.dstack([mask, mask, mask]).astype(np.bool)
+                        # if we're not additive:
+                        #   if showing uncertainty we replace the image value when unc>0
+                        #   if showing DQ we replace the image value when DQ bit is set
+                        mask = np.dstack([mask, mask, mask]).astype(np.bool8)
                         # img is the original image. Mask so only the bits we want to set get changed.
                         img = np.ma.masked_array(img, ~mask)
                         img *= d.trans
