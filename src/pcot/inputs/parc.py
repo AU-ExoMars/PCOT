@@ -1,5 +1,5 @@
 """
-The input method for Datum archives (items saved using the DatumStore/FileArchive
+The input method for PCOT Datum archives (items saved using the DatumStore/FileArchive
 mechanism). These should have a MANIFEST file.
 """
 import logging
@@ -25,7 +25,7 @@ from pcot.utils.datumstore import DatumStore
 logger = logging.getLogger(__name__)
 
 
-class DatumArchiveInputMethod(InputMethod):
+class PARCInputMethod(InputMethod):
     datum: Optional[Datum]
     fname: Optional[str]
     itemname: Optional[str]
@@ -49,11 +49,11 @@ class DatumArchiveInputMethod(InputMethod):
             self.manifest = {}
 
     def readData(self):
-        self.datum = load.datumarchive(self.fname, self.itemname, self.input.idx)
+        self.datum = load.parc(self.fname, self.itemname, self.input.idx)
         return self.datum
 
     def getName(self):
-        return "DatumArchive"
+        return "PARC"
 
     def serialise(self, internal):
         x = {'fname': self.fname, 'itemname': self.itemname}
@@ -77,12 +77,12 @@ class DatumArchiveInputMethod(InputMethod):
             self.datum = None
 
     def modifyWithParameterDict(self, d: TaggedDict) -> bool:
-        if d.datumarchive.filename is not None:
-            raise Exception("DatumArchive input parameters not yet implemented")
+        if d.parc.filename is not None:
+            raise Exception("PARC input parameters not yet implemented")
         return False
 
     def createWidget(self):
-        return DatumArchiveMethodWidget(self)
+        return PARCMethodWidget(self)
 
 
 class Model(QtCore.QAbstractTableModel):
@@ -111,10 +111,10 @@ class Model(QtCore.QAbstractTableModel):
                 return item[index.column() - 1]     # columns 1-3 are elements of the tuple in the manifest
 
 
-class DatumArchiveMethodWidget(MethodWidget):
+class PARCMethodWidget(MethodWidget):
     def __init__(self, m):
         super().__init__(m)
-        uiloader.loadUi("inputdatum.ui", self)
+        uiloader.loadUi("inputparc.ui", self)
         self.openButton.clicked.connect(self.openFile)
         self.tableView.doubleClicked.connect(self.itemSelected)
         self.tableView.setModel(Model(self, m.manifest))

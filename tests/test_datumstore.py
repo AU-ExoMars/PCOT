@@ -14,9 +14,9 @@ from pcot.value import Value
 
 
 def test_create():
-    """Basic smoke test - can we make a DatumArchive, shove a couple of scalars in it, and get them out?"""
+    """Basic smoke test - can we make a PARC file, shove a couple of scalars in it, and get them out?"""
     with tempfile.TemporaryDirectory() as td:
-        fn = td + "/eek.pcot"
+        fn = td + "/eek.parc"
 
         # open for writing, must be inside a context manager
         with FileArchive(fn, 'w') as a:
@@ -38,7 +38,7 @@ def test_create():
 def test_cache():
     """Test basic cache behaviour using the read_count attribute"""
     with tempfile.TemporaryDirectory() as td:
-        fn = td + "/eek.pcot"
+        fn = td + "/eek.parc"
 
         # open for writing, must be inside a context manager - but here we're
         # not using a context manager for the store, we're explicitly calling
@@ -101,7 +101,7 @@ def test_image():
     d2 = Datum(Datum.IMG, img2)
 
     with tempfile.TemporaryDirectory() as td:
-        fn = td + "/eek.pcot"
+        fn = td + "/eek.parc"
 
         # open for writing, must be inside a context manager
         with FileArchive(fn, 'w') as a:
@@ -144,7 +144,7 @@ def test_cache_discard():
     d3 = Datum(Datum.IMG, img3)
 
     with tempfile.TemporaryDirectory() as td:
-        fn = td + "/eek.pcot"
+        fn = td + "/eek.parc"
 
         # open for writing, must be inside a context manager
         with FileArchive(fn, 'w') as a, DatumStore(a) as da:
@@ -193,7 +193,7 @@ def test_vector_and_cache():
     doc = Document()
 
     with tempfile.TemporaryDirectory() as td:
-        fn = td + "/eek.pcot"
+        fn = td + "/eek.parc"
 
         # open for writing, must be inside a context manager
         with FileArchive(fn, 'w') as fa, DatumStore(fa) as a:

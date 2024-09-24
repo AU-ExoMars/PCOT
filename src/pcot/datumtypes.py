@@ -45,7 +45,8 @@ class Type:
         return self.name
 
     def getSize(self, v):
-        """Get the size of the value in bytes. This is used to manage the cache in the DatumArchive.
+        """Get the size of the value in bytes. This is used to manage the cache in a DatumStore (which is used to
+        implement the PARC format).
         By default, items have negligible size. Override this method for types that have a significant size."""
         return 0
 

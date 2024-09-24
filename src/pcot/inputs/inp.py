@@ -24,14 +24,14 @@ class Input:
     MULTIFILE = 2
     ENVI = 3
     PDS4 = 4
-    DATUMARCH = 5
+    PARC = 5
     DIRECT = 6
 
     def __init__(self, mgr, idx):
         """this will intialise an Input from scratch, typically when
         you're creating a new main graph. The input will be initialised
         to use the null method."""
-        from .datumarchive import DatumArchiveInputMethod
+        from .parc import PARCInputMethod
         from .directinput import DirectInputMethod
         from .envimethod import ENVIInputMethod
         from .multifile import MultifileInputMethod
@@ -50,7 +50,7 @@ class Input:
             MultifileInputMethod(self),
             ENVIInputMethod(self),
             PDS4InputMethod(self),
-            DatumArchiveInputMethod(self),
+            PARCInputMethod(self),
             DirectInputMethod(self),
         ]
 
@@ -141,6 +141,9 @@ class Input:
 
         self.activeMethod = d['active']
         methodsByName = {type(m).__name__: m for m in self.methods}
+
+        # if you add new methods, old files will still work - they just won't deserialise data from
+        # for the new method because it won't be in the loaded dict.
         for name, data in d['methods']:
             m = methodsByName[name]
             m.deserialise(data, internal)

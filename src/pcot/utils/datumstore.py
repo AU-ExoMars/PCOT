@@ -11,33 +11,32 @@ from pcot.sources import StringExternal, SourceSet, MultiBandSource, Source
 
 class DatumStore:
     """
-    This class allows Datum objects to be stored into, and retrieved from, an Archive object.
-    It's mainly used for handling blocks of data used in calibration pipeline and pipeline emulation - flatfields
-    and the like.
+    This class allows Datum objects to be stored into, and retrieved from, an Archive object. It is used to
+    implement the PARC file format, which handles archives of Datum objects.
 
-    It's not used for serialisation, however, because serialisation is primarily for storing XForms and graph data.
-    However, it can be used for saving Datum objects to a file in a simple way - for example, the ".parc" data
-    format is an archive containing one item, called "main".
+    Its simplest use is to store a single Datum object in an archive, but it can also be used to store multiple
+    datum objects which it can handle in an LRU cache. This mode is used for handling collections of data used in
+    calibration pipeline and pipeline emulation - flatfields and the like.
 
     This uses a LRU-cache of a slightly unusual kind, in that the size is specified in bytes. If reading
     a new item would exceed this size, least-recently-used items of non-zero size are removed until there
     is enough space. This is because Datum objects can be quite large, and we don't want to run out of memory.
 
     Usage example for writing:
-        with FileArchive("foo.zip", "w") as a, DatumStore(a) as da:
+        with FileArchive("foo.parc", "w") as a, DatumStore(a) as da:
             da.writeDatum("bar", some_datum_object)
             da.writeDatum("baz", some_other_datum_object)
 
     Which is sort-of the same as:
 
-        with FileArchive("foo.zip", "w") as a:
+        with FileArchive("foo.parc", "w") as a:
             with DatumStore(a) as da:
                 da.writeDatum("bar", some_datum_object)
                 da.writeDatum("baz", some_other_datum_object)
 
     or you can do:
 
-        with FileArchive("foo.zip", "w") as a:
+        with FileArchive("foo.parc", "w") as a:
             da = DatumStore(a)
             da.writeDatum("bar", some_datum_object)
             da.writeDatum("baz", some_other_datum_object)
@@ -59,7 +58,7 @@ class DatumStore:
     @dataclasses.dataclass
     class CachedItem:
         """
-        This is a simple class to hold the information we need to cache an item in the DatumArchive.
+        This is a simple class to hold the information we need to cache an item in the archive.
         """
         size: int  # size in bytes
         time: float  # timestamp when accessed
@@ -78,7 +77,7 @@ class DatumStore:
 
     def __init__(self, archive: Archive, max_size: int = sys.maxsize):
         """
-        Create a new DatumArchive object. The size parameter is the maximum total size of the cached items
+        Create a new DatumStore object. The size parameter is the maximum total size of the cached items
         in bytes.
         """
 
@@ -177,15 +176,14 @@ class DatumStore:
 
 
 def writeParc(filename: str, d: Datum, description=None):
-    """Write a PARC file - a DatumStore with a single item called "main".
-
+    """Write a simple PARC file - a DatumStore with a single item called "main".
     """
     with FileArchive(filename, "w") as a, DatumStore(a) as da:
         da.writeDatum("main", d, description=description)
         da.writeManifest()
 
 
-def readParc(fname: str, itemname: str, inpidx: int = None) -> Optional[Datum]:
+def readParc(fname: str, itemname: str = 'main', inpidx: int = None) -> Optional[Datum]:
     """Load a Datum from a Datum archive file. We also patch the sources, overwriting the source data
     in the archive because we want the data to look like it came from the archive and not whatever
     the archive was created from. This may seem a bit rude - and that we're losing a record of something
@@ -193,10 +191,9 @@ def readParc(fname: str, itemname: str, inpidx: int = None) -> Optional[Datum]:
     # Later we may revise this to avoid lossy source loading for (say) PDS4 products.
 
     - fname: the name of the archive file
-    - itemname: the name of the item in the archive
+    - itemname: the name of the item in the archive ('main' by default)
     - inpidx: the input index to use or None if not connected to a graph input
     """
-
 
     if fname is not None and itemname is not None:
         fa = FileArchive(fname)
@@ -242,4 +239,3 @@ def readParc(fname: str, itemname: str, inpidx: int = None) -> Optional[Datum]:
     #     datum.val.sources = ms
 
     return datum
-

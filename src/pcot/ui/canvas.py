@@ -909,7 +909,7 @@ class Canvas(QtWidgets.QWidget):
         if not ev.isAccepted():        # if the event wasn't accepted, run our menu
             menu = QMenu()
             export = menu.addAction("Export as PDF, PNG or SVG")
-            save = menu.addAction("Save as DatumArchive")
+            save = menu.addAction("Save as PARC (PCOT datum archive)")
             a = menu.exec_(ev.globalPos())
 
             if a == export:

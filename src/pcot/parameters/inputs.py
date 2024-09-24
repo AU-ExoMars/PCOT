@@ -53,9 +53,9 @@ PDS4DictType = TaggedDictType(
     wildcard=("wildcard for filenames (mutually exclusive with 'filenames')", Maybe(str), None)
 )
 
-# datum archive
+# PARC - PCOT datum archive file
 
-DatumArchDictType = TaggedDictType(
+PARCDictType = TaggedDictType(
     filename=("filename", Maybe(str), None))
 
 # now we define the tagged dict type for the entire input method. The active input method is
@@ -66,9 +66,9 @@ inputMethodDictType = TaggedDictType(
     envi=("ENVI input method", enviDictType, None),
     multifile=("Multifile input method", multifileDictType, None),
     pds4=("PDS4 input method", PDS4DictType, None),
-    datumarchive=("Datum Archive input method", DatumArchDictType, None),
+    parc=("PCOT datum drchive input method", PARCDictType, None),
 
-    direct=("Direct input method", DatumArchDictType, None))   # not actually valid, but we need a placeholder
+    direct=("Direct input method", PARCDictType, None))   # not actually valid, but we need a placeholder
 
 # and there are N inputs
 
