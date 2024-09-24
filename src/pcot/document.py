@@ -197,6 +197,10 @@ class Document:
         """set graph's input to an ENVI"""
         return self.setInputData(inputidx, inputs.Input.ENVI, lambda method: method.setFileName(fname))
 
+    def setInputPARC(self, inputidx, fname, itemname='main'):
+        """set graph's input to a PARC"""
+        return self.setInputData(inputidx, inputs.Input.PARC, lambda method: method.setFileAndItem(fname, itemname))
+
     def setInputRGB(self, inputidx, fname):
         """set graph's input to RGB"""
         return self.setInputData(inputidx, inputs.Input.RGB, lambda method: method.setFileName(fname))

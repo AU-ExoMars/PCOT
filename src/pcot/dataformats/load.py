@@ -327,5 +327,9 @@ def parc(fname: str, itemname: str, inpidx: int = None) -> Optional[Datum]:
     - inpidx: the input index to use or None if not connected to a graph input
     """
 
-    return readParc(fname, itemname, inpidx)    # delegated to the datumstore module
+    try:
+        return readParc(fname, itemname, inpidx)    # delegated to the datumstore module
+    except FileNotFoundError as e:
+        # we throw this to be consistent with the other methods
+        raise Exception(f"Cannot read file {fname}") from e
 

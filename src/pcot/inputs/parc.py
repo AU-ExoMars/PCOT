@@ -41,6 +41,12 @@ class PARCInputMethod(InputMethod):
         self.manifest = {}
         self.mapping = ChannelMapping()
 
+    def setFileAndItem(self, fname, itemname='main'):
+        self.fname = fname
+        self.itemname = itemname
+        self.mapping = ChannelMapping()
+        return self
+
     def loadManifest(self):
         if self.fname is not None:
             a = DatumStore(FileArchive(self.fname))
@@ -78,7 +84,9 @@ class PARCInputMethod(InputMethod):
 
     def modifyWithParameterDict(self, d: TaggedDict) -> bool:
         if d.parc.filename is not None:
-            raise Exception("PARC input parameters not yet implemented")
+            self.fname = d.parc.filename
+            self.itemname = d.parc.itemname   # this will be defaulted to 'main' by the PARCDictType
+            return True
         return False
 
     def createWidget(self):

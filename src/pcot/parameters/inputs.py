@@ -56,7 +56,9 @@ PDS4DictType = TaggedDictType(
 # PARC - PCOT datum archive file
 
 PARCDictType = TaggedDictType(
-    filename=("filename", Maybe(str), None))
+    filename=("filename", Maybe(str), None),
+    itemname=("name of the item in the archive", Maybe(str), 'main')
+)
 
 # now we define the tagged dict type for the entire input method. The active input method is
 # the one which has certain key fields filled in.
@@ -68,7 +70,7 @@ inputMethodDictType = TaggedDictType(
     pds4=("PDS4 input method", PDS4DictType, None),
     parc=("PCOT datum drchive input method", PARCDictType, None),
 
-    direct=("Direct input method", PARCDictType, None))   # not actually valid, but we need a placeholder
+    direct=("Direct input method", rgbDictType, None))   # not actually valid, but we need a placeholder
 
 # and there are N inputs
 

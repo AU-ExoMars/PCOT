@@ -106,3 +106,51 @@ def test_image_envi(envi_image_1, envi_image_2):
     for ss, cwl in zip(img.sources, (1000, 2000, 3000, 4000)):
         f = ss.getOnlyItem().getFilter()
         assert f.cwl == cwl
+
+
+def test_image_parc(globaldatadir):
+    pcot.setup()
+    doc = Document()
+
+    test = "inputs.0.parc.filename = " + str(globaldatadir / "parc/testimage.parc")
+    f = ParameterFile().parse(test)
+    processParameterFileForInputs(doc, f)
+
+    doc.graph.create("input 1")
+    doc.run()
+    img = doc.graph.getByDisplayName("input 0", True).getOutput(0, Datum.IMG)
+
+    assert img.channels == 2
+    assert img.w == 32
+    assert img.h == 32
+
+    # check the sources.
+    assert len(img.sources) == 2
+    for sourceSet in img.sources:
+        #  First, make sure each band has a source set of a single source
+        assert len(sourceSet) == 1
+        s = img.sources.sourceSets[0].getOnlyItem()
+        # and that it's from input 0, and that it's attached to a Filter
+        assert s.inputIdx == 0
+        assert s.getFilter() is not None
+    # now check the filter frequencies and names
+    for ss, cwl, fwhm in zip(img.sources, (100, 200), (30, 30)):    # gen creates 30 fwhm for all filters
+        s = ss.getOnlyItem()
+        f = s.getFilter()
+        assert f.cwl == cwl
+        assert f.name == f"{cwl}"       # name is just the CWL
+        assert f.position is None       # there is no position in the PARC file
+        assert f.fwhm == fwhm           # the gen node sets all fwhm to 25
+
+    # quick pixel checks
+
+    assert np.allclose(img.img[22][16], (0.360292,0.896834))
+    assert np.allclose(img.uncertainty[22][16], (1,1))
+    assert img.dq[22][16][0] == 0
+    assert img.dq[22][16][1] == 0
+
+    assert np.allclose(img.img[9][18], (0.919903,0.817746))
+    assert np.allclose(img.uncertainty[9][18], (0,1))
+    assert img.dq[9][18][0] == dq.ERROR
+    assert img.dq[9][18][1] == dq.ERROR
+
