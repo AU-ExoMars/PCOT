@@ -18,7 +18,7 @@ base_tagged_ordered_dict_type = TaggedDictType(
     d=("dee", float, 3.24),
     e=("eee", int, 11),
     f=("eff", str, "dog")
-).setOrdering(["d", "e", "f"])
+).setOrdered()
 
 
 list_of_ordered_dicts_type = TaggedListType("list of ODs", base_tagged_ordered_dict_type, 0)

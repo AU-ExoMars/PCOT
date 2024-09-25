@@ -649,7 +649,7 @@ class ROICircle(ROI):
                                 y=("Centre y coordinate", Number, 0.0),
                                 r=("Radius", Number, 0.0),
                                 isSet=("Is set? (internal)", bool, False)
-                                ).setOrdering(["x", "y", "r", "isSet"])
+                                ).setOrdered()
 
     TAGGEDDICTDEFINITION = BASEROIFIELDS + [
         ('croi', ('circle definition', circleType))]
@@ -949,7 +949,7 @@ class ROIPoly(ROI):
     tpname = "poly"
 
     pointType = TaggedDictType(x=("x", Number, 0.0),
-                               y=("y", Number, 0.0)).setOrdering(["x", "y"])
+                               y=("y", Number, 0.0)).setOrdered()
 
     listOfPointsType = TaggedListType("list of points", pointType, 0)
 

@@ -157,7 +157,7 @@ def test_ser_complex():
         b=("b", TaggedListType("b", TaggedDictType(
             a=("a", int, 10),
             b=("b", str, "foo"),
-            c=("c", float, 3.14)).setOrdering(["a","b","c"]), 2)),
+            c=("c", float, 3.14)).setOrdered(), 2)),
         c=("c", float, 3.14),
         # a list of 4 identical dicts
         d=("d", TaggedListType("d", TaggedDictType(
@@ -169,7 +169,7 @@ def test_ser_complex():
                                TaggedDictType(foo=("foo",
                                                    TaggedDictType(a=("a", int, 10),
                                                                    b=("ith", str, "blungle"),
-                                                                   c=("c", float, 123.4)).setOrdering(["a","b","c"])
+                                                                   c=("c", float, 123.4)).setOrdered()
                                                    ),
                                               bar=("bar",
                                                    TaggedListType("none", int, [10, 20, 30])
@@ -244,11 +244,11 @@ def test_dict_of_ordered_dicts_ser_deser():
         b=("b", TaggedDictType(
             a=("a", int, 0),
             b=("b", str, ""),
-            c=("c", float, 0.0)).setOrdering(["a","b","c"]), None),
+            c=("c", float, 0.0)).setOrdered(), None),
         b1=("b1", TaggedDictType(
             aa=("aa", int, 0),
             bb=("bb", str, ""),
-            cc=("c", str, "")).setOrdering(["aa","bb","cc"]), None),
+            cc=("c", str, "")).setOrdered(), None),
         c=("c", float, 0.0)
     )
     serial = {'c': 3.14, 'a': 10, 'b': (10, 'foo', 3.14), 'b1': (20, 'bar', 'dogfish')}
@@ -272,7 +272,7 @@ def test_complex_ser_deser():
         b=("b", TaggedListType("b", TaggedDictType(
             a=("a", int, 0),
             b=("b", str, ""),
-            c=("c", float, 0.0)).setOrdering(["a","b","c"]), 2)),
+            c=("c", float, 0.0)).setOrdered(), 2)),
         c=("c", float, 0.0),
         # a list of 4 identical dicts
         d=("d", TaggedListType("d", TaggedDictType(
@@ -284,7 +284,7 @@ def test_complex_ser_deser():
                                TaggedDictType(foo=("foo",
                                                    TaggedDictType(a=("a", int, 0),
                                                                    b=("ith", str, ""),
-                                                                   c=("c", float, 0.0)).setOrdering(["a","b","c"])),
+                                                                   c=("c", float, 0.0)).setOrdered()),
                                               bar=("bar",
                                                    TaggedListType("none", int, [])
                                                    )
@@ -334,7 +334,7 @@ def test_setbydot():
         a=("a", int, 10),
         b=("b", str, "foo"),
         c=("c", float, 3.14)
-    ).setOrdering(["a", "b", "c"])
+    ).setOrdered()
 
     tt = ttt.create()
 

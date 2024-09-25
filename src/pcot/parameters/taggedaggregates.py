@@ -145,11 +145,15 @@ class TaggedDictType(DictLikeType):
         self.tags = {}
         self.ordering = None
 
+        self._putative_ordering = []
+
         for k, v in args:
             self.tags[k] = Tag(*v)
+            self._putative_ordering.append(k)
 
         for k, v in kwargs.items():
             self.tags[k] = Tag(*v)
+            self._putative_ordering.append(k)
 
         for k, v in self.tags.items():
             v.assert_valid()
@@ -165,14 +169,11 @@ class TaggedDictType(DictLikeType):
         """Return the tag for a given key - raises a key error on failure"""
         return self.tags[key]
 
-    def setOrdering(self, o: List[str]) -> 'TaggedDictType':
-        """Set the ordering of the keys. This is used for legacy data that has been serialised as a tuple."""
-        if len(o) < len(self.tags):
-            raise ValueError("Not enough keys in ordering for tags")
-        for k in o:
-            if k not in self.tags:
-                raise ValueError(f"Key {k} in ordering is not in tags")
-        self.ordering = o
+    def setOrdered(self) -> 'TaggedDictType':
+        """Make the dict ordered, so it will be serialised and deserialised as a tuple/list and can use integer keys.
+        The key ordering will be that given in the constructor."""
+        self.ordering = self._putative_ordering
+        self._putative_ordering = None
         return self
 
     def create(self):
@@ -587,7 +588,7 @@ class TaggedVariantDict(TaggedAggregate):
 def taggedColourType(r, g, b):
     return TaggedDictType(r=("The red component 0-1", Number, float(r)),
                            g=("The green component 0-1", Number, float(g)),
-                           b=("The blue component 0-1", Number, float(b))).setOrdering(['r', 'g', 'b'])
+                           b=("The blue component 0-1", Number, float(b))).setOrdered()
 
 
 def taggedRectType(x, y, w, h):
@@ -595,4 +596,4 @@ def taggedRectType(x, y, w, h):
                            y=("The y coordinate of the top left corner", Number, float(y)),
                            w=("The width of the rectangle", Number, float(w)),
                            h=("The height of the rectangle", Number, float(h))
-                           ).setOrdering(['x', 'y', 'w', 'h'])
+                           ).setOrdered()
