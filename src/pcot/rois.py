@@ -17,7 +17,7 @@ from pcot.utils.colour import rgb2qcol
 from pcot.utils.flood import FastFloodFiller, FloodFillParams
 from pcot.utils.geom import Rect
 from pcot.parameters.taggedaggregates import TaggedDictType, taggedColourType, TaggedDict, taggedRectType, \
-    TaggedTupleType, Maybe, TaggedListType
+    Maybe, TaggedListType
 
 # used as the basic default rectangle for ROIs
 rectType = taggedRectType(0, 0, 0, 0)
@@ -287,10 +287,6 @@ class ROI(SourcesObtainable, Annotation):
         # the subclass must have one of these!
         td = self.TAGGEDDICT.deserialise(d)
         self.from_tagged_dict(td)
-
-
-
-
 
     @staticmethod
     def roiUnion(rois):
@@ -649,11 +645,11 @@ class ROICircle(ROI):
 
     # the tagged dict structure for serialising circles is a single key - croi (circle ROI) - that
     # holds a tuple defining the circle.
-    circleType = TaggedTupleType(x=("Centre x coordinate", Number, 0.0),
-                                 y=("Centre y coordinate", Number, 0.0),
-                                 r=("Radius", Number, 0.0),
-                                 isSet=("Is set? (internal)", bool, False)
-                                 )
+    circleType = TaggedDictType(x=("Centre x coordinate", Number, 0.0),
+                                y=("Centre y coordinate", Number, 0.0),
+                                r=("Radius", Number, 0.0),
+                                isSet=("Is set? (internal)", bool, False)
+                                ).setOrdering(["x", "y", "r", "isSet"])
 
     TAGGEDDICTDEFINITION = BASEROIFIELDS + [
         ('croi', ('circle definition', circleType))]
@@ -710,7 +706,12 @@ class ROICircle(ROI):
         td = self.TAGGEDDICT.create()
         super().to_tagged_dict_common(td)
         td.croi = self.circleType.create()
-        td.croi.set(self.x, self.y, self.r, self.isSet)
+        td.croi.x = self.x
+        td.croi.y = self.y
+        td.croi.r = self.r
+        td.croi.isSet = self.isSet
+
+        # td.croi.set(self.x, self.y, self.r, self.isSet)
         return td
 
     def from_tagged_dict(self, td):
@@ -795,8 +796,8 @@ class ROIPainted(ROI):
     def to_tagged_dict(self):
         td = self.TAGGEDDICT.create()
         super().to_tagged_dict_common(td)
-        # we can't just do td.bbrect = self.bbrect.astuple(), because td.bbrect is a TaggedTuple and
-        # self.bbrect is a Rect. Instead we need to create a TaggedTuple.
+        # we can't just do td.bbrect = self.bbrect.astuple(), because td.bbrect is a TaggedDict and
+        # self.bbrect is a Rect. Instead we need to create a TaggedDict.
         td.bbrect = None if self.bbrect is None else rectType.deserialise(self.bbrect.astuple())
         td.map = self.map
         return td
@@ -947,8 +948,8 @@ class ROIPainted(ROI):
 class ROIPoly(ROI):
     tpname = "poly"
 
-    pointType = TaggedTupleType(x=("x", Number, 0.0),
-                                y=("y", Number, 0.0))
+    pointType = TaggedDictType(x=("x", Number, 0.0),
+                               y=("y", Number, 0.0)).setOrdering(["x", "y"])
 
     listOfPointsType = TaggedListType("list of points", pointType, 0)
 

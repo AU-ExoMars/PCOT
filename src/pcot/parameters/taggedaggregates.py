@@ -128,6 +128,9 @@ class TaggedDictType(DictLikeType):
 
     tags: Dict[str, Tag]
 
+    # in legacy data some TD's may be serialised as a tuple. This gives the ordering of elements if present.
+    ordering: Optional[List[str]]
+
     def __init__(self, *args, **kwargs):
         """Initialise the dictionary with a set of key-value pairs, where the value is a tuple of
         (description, type, default). You can also specify these as kwargs.
@@ -140,6 +143,8 @@ class TaggedDictType(DictLikeType):
         super().__init__()
 
         self.tags = {}
+        self.ordering = None
+
         for k, v in args:
             self.tags[k] = Tag(*v)
 
@@ -159,6 +164,16 @@ class TaggedDictType(DictLikeType):
     def tag(self, key):
         """Return the tag for a given key - raises a key error on failure"""
         return self.tags[key]
+
+    def setOrdering(self, o: List[str]) -> 'TaggedDictType':
+        """Set the ordering of the keys. This is used for legacy data that has been serialised as a tuple."""
+        if len(o) < len(self.tags):
+            raise ValueError("Not enough keys in ordering for tags")
+        for k in o:
+            if k not in self.tags:
+                raise ValueError(f"Key {k} in ordering is not in tags")
+        self.ordering = o
+        return self
 
     def create(self):
         """Create a the appropriate default values"""
@@ -184,6 +199,16 @@ class TaggedDict(TaggedAggregate):
         of the defaults given in the type object"""
         super().__init__(td)
         self._values = {}
+
+        if isinstance(data, list) or isinstance(data, tuple):
+            # we have legacy data that has been serialised as tuple or list. Deal with it by converting to a dict -
+            # we need to know what the ordering is.
+            if td.ordering is None:
+                raise ValueError("TaggedDictType has no ordering, but data is a tuple")
+            if len(td.ordering) > len(data):
+                raise ValueError("Not enough keys in TaggedDictType for data")
+
+            data = {k: v for k, v in zip(td.ordering, data)}
 
         # go through the items. This is a bit horrid because of how the maybe processing is done.
         for k, v in td.tags.items():
@@ -219,15 +244,21 @@ class TaggedDict(TaggedAggregate):
                     # use default as is (type should have been checked)
                     self._values[k] = v.deflt
 
+    def _intkey2str(self, key):
+        """Convert an integer key to a string key"""
+        if isinstance(key, int):
+            if self._type.ordering is None:
+                raise KeyError("No ordering for TaggedDict, can't use integer keys")
+            key = self._type.ordering[key]
+        return key
+
     def __getitem__(self, key):
         """Return the value for a given key"""
         try:
+            key = self._intkey2str(key)
             return self._values[key]
         except KeyError as e:
             raise KeyError(f"Key {key} not in TaggedDict: valid keys are {','.join(self.keys())}") from e
-
-    def __iter__(self):
-        raise NotImplementedError("TaggedDict iteration not implemented - iterate over the keys()")
 
     def __setitem__(self, key, value):
         """Set the value for a given key. Will raise KeyError if it's not in the tags,
@@ -235,6 +266,7 @@ class TaggedDict(TaggedAggregate):
         tp = self._type
         if key not in tp.tags:
             raise KeyError(f"Key {key} not in tags")
+        key = self._intkey2str(key)
         correct_type = tp.tags[key].type
         if isinstance(correct_type, Maybe):
             if value is None:
@@ -253,6 +285,28 @@ class TaggedDict(TaggedAggregate):
             raise ValueError(f"TaggedDict key {key}: Value {value} is not of type {correct_type}")
 
         self._values[key] = value
+
+    def set(self, *args) -> 'TaggedDict':
+        """If there is an ordering, set the values in the order given."""
+        if self._type.ordering is None:
+            raise ValueError("No ordering for TaggedDict")
+        if len(args) != len(self._type.ordering):
+            raise ValueError("Wrong number of arguments")
+        for k, v in zip(self._type.ordering, args):
+            self[k] = v
+        return self
+
+    def get(self) -> List[Any]:
+        """If there is an ordering, return the values as a list in the order given"""
+        if self._type.ordering is None:
+            raise ValueError("No ordering for TaggedDict")
+        return [self[k] for k in self._type.ordering]
+
+    astuple = get
+    aslist = get
+
+    def __iter__(self):
+        return iter(self.get())
 
     def __getattr__(self, key):
         """Allow access to the values by name. This is only called when it's NOT found in the usual places"""
@@ -295,164 +349,12 @@ class TaggedDict(TaggedAggregate):
                 out[k] = v.serialise()
             else:
                 out[k] = v
+
+        if self._type.ordering is not None:
+            # this is an ordered dict - we need to serialise as a tuple
+            out = tuple([out[k] for k in self._type.ordering])
+
         return out
-
-
-class TaggedTupleType(DictLikeType):
-    """This acts like a tuple, but each item has a type, description and default value. That means
-    that it must be initialised with a set of such values.
-    It works like a TaggedDict in many ways, so if there is a "foo" entry you could access it with
-    tag.foo as well as tag[0] and tag["foo"] (assuming foo's index is 0 of course).
-    """
-
-    tags: List[Tuple[str, Tag]]  # the name and tag for each item
-    indicesByName: Dict[str, int]  # a dictionary of indices by name
-
-    def __init__(self, *args, **kwargs):
-        """Initialise the tuple with a set of key-value pairs, where the value is a tuple of
-        (description, type, default). You can also specify these as kwargs.
-        If the type is a TaggedAggregateType, then the default value is ignored and should be None or omitted (the
-        create method for that type will create the correct default).
-        Otherwise the default value should be of the correct type.
-        """
-
-        super().__init__()
-
-        def addTag(kk, vv):
-            t = Tag(*vv)
-            self.indicesByName[kk] = len(self.tags)
-            self.tags.append((kk, t))
-
-        self.tags = []
-        self.indicesByName = {}
-        for k, v in args:
-            addTag(k, v)
-        for k, v in kwargs.items():
-            addTag(k, v)
-        for k, v in self.tags:
-            v.assert_valid()
-            # if type is a TaggedAggregate the default has to be None
-            if isinstance(v.type, TaggedAggregateType):
-                if v.deflt is not None:
-                    raise ValueError(f"Type {v.type} is a TaggedAggregateType, so default must be None")
-            # otherwise the default has to be of the correct type
-            elif not is_value_of_type(v.deflt, v.type):
-                raise ValueError(f"Default {v.deflt} is not of type {v.type}")
-
-    def create(self):
-        """Create a the appropriate default values"""
-        return TaggedTuple(self)
-
-    def deserialise(self, data) -> 'TaggedTuple':
-        """Create a new TaggedTuple of this type from a JSON-serialisable structure"""
-        return TaggedTuple(self, data)
-
-    def tag(self, key) -> Tag:
-        """Return the tag for a given key - raises a key error on failure"""
-        return self.tags[self.indicesByName[key]][1]
-
-
-class TaggedTuple(TaggedAggregate):
-    """This is the actual tagged tuple object"""
-
-    # while we *serialise* as a tuple, we're stored as a list - otherwise
-    # we wouldn't be able to change the values
-    _values: List[Any]
-    _type: TaggedTupleType
-
-    def __init__(self, tt: TaggedTupleType, data: Optional[Tuple] = None):
-        """Initialise the TaggedTuple with a TaggedTupleType.
-        If a tuple is provided, use the values therein instead of the defaults
-        given in the type object"""
-        super().__init__(tt)
-        if data is not None:
-            self._values = []
-            if len(tt.tags) > len(data):
-                raise ValueError(f"Data {data} doesn't have enough to fill specification {tt.tags}")
-            # run through the tags and the data
-            for i, v in enumerate(data):
-                # it can happen that there is more data than tags (usually due to redundant legacy
-                # stuff). Just ignore it.
-                if i < len(tt.tags):
-                    tagname, tag = tt.tags[i]
-                    if isinstance(tag.type, TaggedAggregateType):
-                        # if the type is a tagged aggregate, create it from the data stored in the serialised tuple
-                        self._values.append(tag.type.deserialise(v))
-                    else:
-                        # otherwise just use the data as is
-                        if not is_value_of_type(v, tag.type):
-                            raise ValueError(f"TaggedTuple index {i}: Value {v} is not of type {tag.type}")
-                        self._values.append(v)
-        else:
-            self._values = [v.deflt for k, v in tt.tags]
-
-    def __getitem__(self, idxOrKey: Union[int, str]):
-        """Return the value for a given index OR tagname"""
-        if isinstance(idxOrKey, str):
-            # if it's a string, look up the index
-            idxOrKey = self._type.indicesByName[idxOrKey]
-        return self._values[idxOrKey]
-
-    def __setitem__(self, idxOrKey, value):
-        """Set the value for a given key or index. Will raise KeyError if it's not in the tags,
-        and ValueError if the value is not of the correct type."""
-        tp = self._type
-        if isinstance(idxOrKey, str):
-            # if it's a string, look up the index
-            idx = tp.indicesByName[idxOrKey]
-        else:
-            idx = idxOrKey
-        if idx >= len(tp.tags):
-            raise KeyError(f"Key {idxOrKey} out of range")
-        name, tag = tp.tags[idx]
-        if isinstance(tag.type, TaggedAggregateType):
-            # if the type is a tagged aggregate, make sure it's the right type
-            if not isinstance(value, TaggedAggregate):
-                raise ValueError(f"Value {value} is not a TaggedAggregate")
-            if tag.type != value._type:
-                raise ValueError(f"Value {value} is not a TaggedAggregate of type {tag.type}")
-        elif not is_value_of_type(value, tag.type):
-            # otherwise check the type
-            raise ValueError(f"Value {value} is not of type {tag.type}")
-
-        self._values[idx] = value
-
-    def __getattr__(self, item):
-        """Allow access to the values by name"""
-        idx = self._type.indicesByName[item]
-        return self._values[idx]
-
-    def __setattr__(self, key, value):
-        """Allow setting the values by name"""
-        if key in ('_values', '_type'):
-            super().__setattr__(key, value)
-        else:
-            self[key] = value
-
-    def set(self, *args):
-        """Set the values from a list or tuple"""
-        if len(args) != len(self._values):
-            raise ValueError(f"Length of values {args} does not match tags {self._type.tags}")
-        for i, v in enumerate(args):
-            self[i] = v
-        return self
-
-    def get(self) -> List[Any]:
-        """Return the data as an actual tuple (well, a list)"""
-        return self._values
-
-    astuple = get  # alias!
-
-    def __len__(self):
-        return len(self._values)
-
-    def serialise(self):
-        """Serialise the structure rooted here into a JSON-serialisable tuple. We don't need to record what the
-        types are, because that information will be stored in the type object when we deserialise.
-        This assumes that the only items in the structure are JSON-serialisable or TaggedAggregate."""
-
-        # return a tuple
-        return tuple([(v.serialise() if isinstance(v, TaggedAggregate) else v) for v in self._values])
 
 
 class TaggedListType(TaggedAggregateType):
@@ -473,7 +375,7 @@ class TaggedListType(TaggedAggregateType):
         will be generated by create(). If the type is a TaggedAggregateType, then the deflt field gives
         the length of the list - otherwise it is a list of that type. For example:
         TaggedListType("description", int, [1,2,3]) will set the default to [1,2,3], while
-        TaggedListType("description", TaggedTupleType(foo=( "foo", int, 30)), 3) will set the default to 3 TaggedTuple
+        TaggedListType("description", TaggedDictType(foo=( "foo", int, 30)), 3) will set the default to 3 TaggedDict
         objects, each with a single integer value of 30.
 
         The deflt_append value is used when we append to a list of objects which are not tagged aggregates. For
@@ -508,7 +410,7 @@ class TaggedListType(TaggedAggregateType):
         return TaggedList(self)
 
     def deserialise(self, data) -> 'TaggedList':
-        """Create a new TaggedTuple of this type from a JSON-serialisable structure"""
+        """Create a new TaggedList of this type from a JSON-serialisable structure"""
         return TaggedList(self, data)
 
 
@@ -683,14 +585,14 @@ class TaggedVariantDict(TaggedAggregate):
 #
 
 def taggedColourType(r, g, b):
-    return TaggedTupleType(r=("The red component 0-1", Number, float(r)),
+    return TaggedDictType(r=("The red component 0-1", Number, float(r)),
                            g=("The green component 0-1", Number, float(g)),
-                           b=("The blue component 0-1", Number, float(b)))
+                           b=("The blue component 0-1", Number, float(b))).setOrdering(['r', 'g', 'b'])
 
 
 def taggedRectType(x, y, w, h):
-    return TaggedTupleType(x=("The x coordinate of the top left corner", Number, float(x)),
+    return TaggedDictType(x=("The x coordinate of the top left corner", Number, float(x)),
                            y=("The y coordinate of the top left corner", Number, float(y)),
                            w=("The width of the rectangle", Number, float(w)),
                            h=("The height of the rectangle", Number, float(h))
-                           )
+                           ).setOrdering(['x', 'y', 'w', 'h'])

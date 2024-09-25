@@ -1,7 +1,7 @@
 import pytest
 
 from pcot.parameters.parameterfile import ParameterFile
-from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType, TaggedTupleType, TaggedVariantDictType, \
+from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType, TaggedVariantDictType, \
     Maybe
 
 base_tagged_dict_type = TaggedDictType(
@@ -14,21 +14,22 @@ base_tagged_list_type = TaggedListType(
     "base list", int, [10, 20, 30], -1
 )
 
-base_tagged_tuple_type = TaggedTupleType(
+base_tagged_ordered_dict_type = TaggedDictType(
     d=("dee", float, 3.24),
     e=("eee", int, 11),
     f=("eff", str, "dog")
-)
+).setOrdering(["d", "e", "f"])
 
-list_of_tuples_type = TaggedListType("list of tuples", base_tagged_tuple_type, 0)
+
+list_of_ordered_dicts_type = TaggedListType("list of ODs", base_tagged_ordered_dict_type, 0)
+
 
 tagged_dict_type = TaggedDictType(
     base=("a base tagged dict", base_tagged_dict_type, None),
     bloon=("a bloon", str, "bloon"),
     base2=("another base tagged dict", base_tagged_dict_type, None),
     list1=("a list", base_tagged_list_type),  # empty list of ints
-    tuple1=("a tuple", base_tagged_tuple_type),  # empty tuple
-    list2=("a list of tuples", list_of_tuples_type, None)  # empty list of tuples
+    list2=("a list of ordered dicts", list_of_ordered_dicts_type, None)
 )
 
 tagged_variant_dict_type = TaggedVariantDictType("type",
@@ -182,27 +183,6 @@ def test_list_add_ta_cursor():
     assert len(td.list2) == 2
     assert td.list2[0].d == 36
     assert td.list2[1].d == 48
-
-
-def test_base_tuple():
-    tt = base_tagged_tuple_type.create()
-    f = ParameterFile().parse("foo.d = 22")
-    f.apply({"foo": tt})
-    assert tt.d == 22
-    assert isinstance(tt.d, float)
-
-    f = ParameterFile().parse("foo[e] = 44")
-    f.apply({"foo": tt})
-    assert tt.e == 44
-    assert isinstance(tt.e, int)
-
-    f = ParameterFile().parse("foo[f] = bar")
-    f.apply({"foo": tt})
-    assert tt.f == "bar"
-
-    f = ParameterFile().parse("foo[g] = 22")
-    with pytest.raises(KeyError):
-        f.apply({"foo": tt})
 
 
 def test_dict_in_dict():
