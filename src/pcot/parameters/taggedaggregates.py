@@ -111,7 +111,7 @@ class Tag:
             check_type(self.type)
 
 
-class TaggedDictType:
+class TaggedDictType(TaggedAggregateType):
     """This acts like a dictionary, but each item has a type, description and default value. That means
     that it must be initialised with a set of such values.
     """
@@ -341,7 +341,7 @@ class TaggedDict(TaggedAggregate):
             else:
                 out[k] = v
 
-        if not self._type.isOrdered:
+        if self._type.isOrdered:
             # this is an ordered dict - we need to serialise as a tuple
             out = tuple([out[k] for k in self._type.ordering])
 
