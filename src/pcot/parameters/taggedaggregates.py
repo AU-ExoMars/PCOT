@@ -111,25 +111,17 @@ class Tag:
             check_type(self.type)
 
 
-class DictLikeType(TaggedAggregateType, ABC):
-    """
-    Acts like a dictionary or a named tuple.
-    """
-
-    def tag(self, key) -> Tag:
-        """Return the tag for a given key"""
-        pass
-
-
-class TaggedDictType(DictLikeType):
+class TaggedDictType:
     """This acts like a dictionary, but each item has a type, description and default value. That means
     that it must be initialised with a set of such values.
     """
 
     tags: Dict[str, Tag]
 
-    # in legacy data some TD's may be serialised as a tuple. This gives the ordering of elements if present.
+    # in legacy data some TD's may be serialised as a tuple. This gives the ordering of elements.
     ordering: Optional[List[str]]
+    # but it's only used if this is true
+    isOrdered: bool
 
     def __init__(self, *args, **kwargs):
         """Initialise the dictionary with a set of key-value pairs, where the value is a tuple of
@@ -143,17 +135,16 @@ class TaggedDictType(DictLikeType):
         super().__init__()
 
         self.tags = {}
-        self.ordering = None
-
-        self._putative_ordering = []
+        self.ordering = []
+        self.isOrdered = False
 
         for k, v in args:
             self.tags[k] = Tag(*v)
-            self._putative_ordering.append(k)
+            self.ordering.append(k)
 
         for k, v in kwargs.items():
             self.tags[k] = Tag(*v)
-            self._putative_ordering.append(k)
+            self.ordering.append(k)
 
         for k, v in self.tags.items():
             v.assert_valid()
@@ -172,8 +163,7 @@ class TaggedDictType(DictLikeType):
     def setOrdered(self) -> 'TaggedDictType':
         """Make the dict ordered, so it will be serialised and deserialised as a tuple/list and can use integer keys.
         The key ordering will be that given in the constructor."""
-        self.ordering = self._putative_ordering
-        self._putative_ordering = None
+        self.isOrdered = True
         return self
 
     def create(self):
@@ -204,7 +194,7 @@ class TaggedDict(TaggedAggregate):
         if isinstance(data, list) or isinstance(data, tuple):
             # we have legacy data that has been serialised as tuple or list. Deal with it by converting to a dict -
             # we need to know what the ordering is.
-            if td.ordering is None:
+            if not td.isOrdered:
                 raise ValueError("TaggedDictType has no ordering, but data is a tuple")
             if len(td.ordering) > len(data):
                 raise ValueError("Not enough keys in TaggedDictType for data")
@@ -248,7 +238,7 @@ class TaggedDict(TaggedAggregate):
     def _intkey2str(self, key):
         """Convert an integer key to a string key"""
         if isinstance(key, int):
-            if self._type.ordering is None:
+            if not self._type.isOrdered:
                 raise KeyError("No ordering for TaggedDict, can't use integer keys")
             key = self._type.ordering[key]
         return key
@@ -289,7 +279,7 @@ class TaggedDict(TaggedAggregate):
 
     def set(self, *args) -> 'TaggedDict':
         """If there is an ordering, set the values in the order given."""
-        if self._type.ordering is None:
+        if not self._type.isOrdered:
             raise ValueError("No ordering for TaggedDict")
         if len(args) != len(self._type.ordering):
             raise ValueError("Wrong number of arguments")
@@ -299,7 +289,7 @@ class TaggedDict(TaggedAggregate):
 
     def get(self) -> List[Any]:
         """If there is an ordering, return the values as a list in the order given"""
-        if self._type.ordering is None:
+        if not self._type.isOrdered:
             raise ValueError("No ordering for TaggedDict")
         return [self[k] for k in self._type.ordering]
 
@@ -351,7 +341,7 @@ class TaggedDict(TaggedAggregate):
             else:
                 out[k] = v
 
-        if self._type.ordering is not None:
+        if not self._type.isOrdered:
             # this is an ordered dict - we need to serialise as a tuple
             out = tuple([out[k] for k in self._type.ordering])
 
