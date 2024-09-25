@@ -111,19 +111,22 @@ This is the method we use when we want to be able to edit the parameters of node
 using parameter files (see [batch mode](/userguide/batch)). It is probably the best method
 to use because of this, but it is rather more complicated.
 
-We make use of **tagged aggregate structures**, which can be found in `pcot.utils.taggedaggregate`. These
-are dictionaries, tuples and lists but each has a formal, typed structure with "tags" giving the names
-of the members, their types, and default values. Each is described by a type singleton object
+We make use of **tagged aggregate structures**, which can be found in
+`pcot.utils.taggedaggregate`. These are dictionaries and lists, but
+each has a formal, typed structure with "tags" giving the names of the
+members, their types, and default values. Each is described by a type
+singleton object
 
-For example, here is a `TaggedTupleType` definition for a rectangle. Tagged tuples are rather like named
-tuples; they are converted to tuples on serialisation. Hopefully it is self-explanatory:
+For example, here is a `TaggedDictType` definition for a rectangle. 
+This is for an ordered dict, so it will be serialised
+to a tuple. Hopefully it is self-explanatory:
 
 ```python
-taggedRectType = TaggedTupleType(
+taggedRectType = TaggedDictType(
     x=("The x coordinate of the top left corner", Number, 0),
     y=("The y coordinate of the top left corner", Number, 0),
     w=("The width of the rectangle", Number, 10),
-    h=("The height of the rectangle", Number, 10))
+    h=("The height of the rectangle", Number, 10)).setOrdered()
 ```
 @@@info
 Bear in mind that there are functions for generating rectangle and colour type object in
@@ -152,7 +155,14 @@ print(listOfThings[0].rect.x)
 ```
 For more details on how to use these structures, read the tests in `tests/test_taggedaggs.py`.
 
-
+@@@info
+You might wonder why we don't make all tagged dicts ordered, so they
+are all serialised as tuples. The answer is that doing that would make
+it harder to implement backcompatibility - if we serialise as a tuple,
+adding and removing fields in the future becomes difficult. Only 
+use ordered dicts for things like rectangles, where we are very unlikely
+to change the structure. In fact, I'm only doing it for legacy support.
+@@@
 
 You'll note that all the elements of a TaggedAggregate structure are JSON-serialisable, although
 some can be numpy arrays. However, the nature of the structure allows defaults - and documentation -

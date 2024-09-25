@@ -357,7 +357,7 @@ as "serialisation," even though it's really only the first step. It's just
 that the JSON library takes care of the rest of the process.
 
 JSON-serialisable data consists of built-in Python types: strings, numbers,
-lists, dicts and tuples. PCOT also permits 
+lists, dicts and tuples.
 
 PCOT has no less than four mechanisms for converting node data into JSON:
 [read more about them here](nodeser.md).
