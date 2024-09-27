@@ -146,11 +146,8 @@ def test_list_add_non_ta():
 
 def test_list_add_non_ta_nodefault():
     """You have to provide a default append item for non-TA lists if you ever want to append to them"""
-    tlt = TaggedListType("base list", int, [10])     # no default append
-    td = TaggedDictType(lst=("a list", tlt)).create()
     with pytest.raises(ValueError) as info:
-        f = ParameterFile().parse("foo.lst+ = 20")
-        f.apply({"foo": td})
+        tlt = TaggedListType("base list", int, [10])     # no default append
     assert "Default append not provided" in str(info.value)
 
 
@@ -283,6 +280,28 @@ def test_modify_variant_dict_list():
 
     # modify
     f = ParameterFile().parse("foo.lst[0].b = bar")
+    f.apply({"foo": td})
+
+
+def test_maybe_list_in_dict():
+    """Test we can add to a Maybe(list) in a dict"""
+    tlt = TaggedListType("list", int, [], 0)
+    tdt = TaggedDictType(
+        base=("an ordinary tagged dict", base_tagged_dict_type, None),
+        bloon=("a bloon", str, "bloon"),
+        lst=("a list", Maybe(tlt), None)
+        )
+
+    # should fail; the list is null
+    td = tdt.create()
+    f = ParameterFile().parse("foo.lst+ = 22")
+    with pytest.raises(ValueError) as info:
+        f.apply({"foo": td})
+    assert "Cannot add to a null list" in str(info.value)
+
+    td = tdt.create()
+    td.lst = tlt.create()
+    f = ParameterFile().parse("foo.lst+ = 22")
     f.apply({"foo": td})
 
 

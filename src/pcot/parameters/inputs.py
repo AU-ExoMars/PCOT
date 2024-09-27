@@ -25,13 +25,14 @@ enviDictType = TaggedDictType(
 # process binary data.
 multifileDictType = TaggedDictType(
     directory=("directory to load from", Maybe(str), None),  # if not present, we are inactive
+    # either filenames or wildcard can be set, but not both. If filenames is non-zero length we use it.
     filenames=("list of filenames (mutually exclusive with 'wildcard')",
-               Maybe(TaggedListType("filename", str, [])), None),
+               TaggedListType("filename", str, [], '')),
     wildcard=("wildcard for filenames (mutually exclusive with 'filenames')", Maybe(str), None),
     filter_pattern=("pattern for filter identification", str, r".*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*"),
     filter_set=("name of filter set to use", str, "PANCAM"),
     bit_depth=("number of bits used in the image (default is all bits)", Maybe(int), None),
-    raw_preset=("preset for loading raw data (overriden by raw_params)", Maybe(str), None),
+    preset=("preset name for some params (can be overridden by other params)", Maybe(str), None),
     raw_params=("parameters for loading raw data", TaggedDictType(
         format=("integer format (e.g. uint16, which is the default", str, "uint16"),  # default is uint16
         width=("image width", int, 1024),
@@ -49,7 +50,7 @@ multifileDictType = TaggedDictType(
 PDS4DictType = TaggedDictType(
     directory=("directory to load from", Maybe(str), None),  # if not present, we are inactive
     filenames=("list of filenames (mutually exclusive with 'wildcard')",
-               Maybe(TaggedListType("filename", str, [])), None),
+               TaggedListType("filename", str, [], '')),
     wildcard=("wildcard for filenames (mutually exclusive with 'filenames')", Maybe(str), None)
 )
 
@@ -107,7 +108,9 @@ def modifyInput(inputDict, inp: Input):
     # we have to modify all the methods in the input object,
     # because we don't know which one is active. In fact, it's
     # likely that none of them are active (i.e. null is). We want
-    # the modification to actually set the active method.
+    # the modification to actually set the active method. However,
+    # once we have modified one method we skip the others.
+
     for method in inp.methods:
         if method.modifyWithParameterDict(inputDict):
             # the method was modified, so we need to select it and force reload

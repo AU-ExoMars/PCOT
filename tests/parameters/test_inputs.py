@@ -66,6 +66,7 @@ def test_rgb_input(globaldatadir):
 
 
 def test_image_envi(envi_image_1, envi_image_2):
+    """Test ENVI loading into two different inputs"""
     pcot.setup()
 
     # create a new document with no inputs (i.e. all inputs null)
@@ -109,6 +110,7 @@ def test_image_envi(envi_image_1, envi_image_2):
 
 
 def test_image_parc(globaldatadir):
+    """Load a PARC image with uncertainty and DQ data"""
     pcot.setup()
     doc = Document()
 
@@ -116,7 +118,6 @@ def test_image_parc(globaldatadir):
     f = ParameterFile().parse(test)
     processParameterFileForInputs(doc, f)
 
-    doc.graph.create("input 1")
     doc.run()
     img = doc.graph.getByDisplayName("input 0", True).getOutput(0, Datum.IMG)
 
@@ -154,3 +155,31 @@ def test_image_parc(globaldatadir):
     assert img.dq[9][18][0] == dq.ERROR
     assert img.dq[9][18][1] == dq.ERROR
 
+
+def test_multifile_simple(globaldatadir):
+    """Load three PNGs with a simple filter pattern"""
+    pcot.setup()
+    doc = Document()
+    test = f"""
+    inputs.0.multifile.directory = {globaldatadir}/multi
+    .filenames+ = FilterL02.png
+    ..filenames+ = TestFilterL01image.png
+    ..filenames+ = FilterR10.png
+    ..filter_pattern = *Filter(?P<lens>L|R)(?P<n>[0-9][0-9]).*
+    """
+
+    f = ParameterFile().parse(test)
+    f.dump()
+    processParameterFileForInputs(doc, f)
+    doc.run()
+    img = doc.graph.getByDisplayName("input 0", True).getOutput(0, Datum.IMG)
+
+    assert img.channels == 3
+
+def test_foo():
+    test = """
+    foo.bar+ = 1
+    .+ = 2
+    """
+    f = ParameterFile().parse(test)
+    f.dump()

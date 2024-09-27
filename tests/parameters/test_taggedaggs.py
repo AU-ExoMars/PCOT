@@ -49,7 +49,7 @@ def test_taggeddict():
 
 def test_cant_set_with_plain_aggregate():
     tlt = TaggedListType(
-        "a", int, [10, 20, 30]
+        "a", int, [10, 20, 30], 0
     )
     tdt = TaggedDictType(
         b=("b", tlt),
@@ -64,7 +64,7 @@ def test_cant_set_with_plain_aggregate():
 
 def test_taggedlist():
     tlt = TaggedListType(
-        "a", int, [10, 20, 30]
+        "a", int, [10, 20, 30], 0
     )
 
     tl = tlt.create()
@@ -85,9 +85,6 @@ def test_taggedlist():
     # append an item
     tl.append(12)
     assert tl[3] == 12
-    # append a default item - we can't for non-tagged types
-    with pytest.raises(ValueError):
-        tl.append_default()
 
 
 #
@@ -97,7 +94,7 @@ def test_taggedlist():
 def test_dict_of_lists():
     tdt = TaggedDictType(
         a=("a", int, 10),
-        b=("b", TaggedListType("b", int, [10, 20, 30]), None),
+        b=("b", TaggedListType("b", int, [10, 20, 30], 0), None),
         c=("c", float, 3.14)
     )
 
@@ -142,7 +139,7 @@ def test_dict_serialise():
 
 def test_list_serialise():
     ttt = TaggedListType(
-        "a", int, [10, 20, 30]
+        "a", int, [10, 20, 30], 0
     )
     tl = ttt.create()
     serial = tl.serialise()
@@ -172,7 +169,7 @@ def test_ser_complex():
                                                                    c=("c", float, 123.4)).setOrdered()
                                                    ),
                                               bar=("bar",
-                                                   TaggedListType("none", int, [10, 20, 30])
+                                                   TaggedListType("none", int, [10, 20, 30], 0)
                                                    )
                                               )
                                , 2)
@@ -216,7 +213,7 @@ def test_dict_ser_deser():
 
 def test_list_ser_deser():
     tlt = TaggedListType(
-        "a", int, [0, 0, 0]
+        "a", int, [0, 0, 0], 0
     )
     serial = [10, 20, 30]
 
@@ -229,7 +226,7 @@ def test_list_ser_deser():
 
 def test_list_iter():
     tlt = TaggedListType(
-        "a", int, [0, 0, 0]
+        "a", int, [0, 0, 0], 0
     )
     serial = [10, 20, 30]
 
@@ -286,7 +283,7 @@ def test_complex_ser_deser():
                                                                    b=("ith", str, ""),
                                                                    c=("c", float, 0.0)).setOrdered()),
                                               bar=("bar",
-                                                   TaggedListType("none", int, [])
+                                                   TaggedListType("none", int, [], 0)
                                                    )
                                               )
                                , 3)
@@ -372,12 +369,17 @@ def test_typing():
 
     with pytest.raises(ValueError):
         TaggedListType(
-            "a", int, [10, 20, "cat"]
+            "a", int, [10, 20, "cat"], 0
         )
 
     TaggedListType(
-        "a", int, [10, 20, 30]
+        "a", int, [10, 20, 30], 0
     )
+
+    with pytest.raises(ValueError):
+        TaggedListType(
+            "a", int, [10, 20, 30], "cat"
+        )
 
     # now test the optional type - this is fine
     TaggedDictType(
@@ -420,7 +422,7 @@ def test_typing():
 
 def test_optional_aggregates():
     tlt = TaggedListType(
-        "a", Maybe(int), [10, 20, 30]
+        "a", Maybe(int), [10, 20, 30], 0
     )
 
     tdt = TaggedDictType(
@@ -441,7 +443,7 @@ def test_optional_aggregates():
 
 def test_optional_ser():
     tlt = TaggedListType(
-        "a", Maybe(int), [10, 20, 30]
+        "a", Maybe(int), [10, 20, 30], 0
     )
 
     tdt = TaggedDictType(

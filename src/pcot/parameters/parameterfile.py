@@ -15,6 +15,7 @@ path is used to look up the TA in the dict, and the rest of the path is used to 
 Quite often there will only be a single TA in the dict. We load a single parameter file, and then run every node
 in the graph through it as we load them, with just that node in the dictionary.
 """
+from idlelib.autocomplete import ATTRS
 from numbers import Number
 from pathlib import Path
 from typing import List, Optional, Dict
@@ -70,6 +71,7 @@ class Change:
     path: List[str]
     key: str
     line: int
+    lineText: str       # gets filled in post-parse
 
     def __init__(self, path: List[str], line: int, key: str):
         if len(path) < 1:
@@ -115,17 +117,15 @@ class SetValue(Change):
             elif tp is str:
                 element[self.key] = self.value
             elif tp is bool:
-                element[self.key] = self.value.lower()[0] == 't'  # just check the first character, upper or lower
+                c = self.value.lower()[0]
+                element[self.key] = (c == 't') or (c == 'y')  # just check the first character, upper or lower
             else:
                 raise ValueError(f"unparameterisable {tag.type} for {str(self)}")
         except ValueError as e:
             raise ValueError(f"{str(self)}: expected {tag.type}, got {type(self.value)} ({self.value})") from e
 
-    def __str__(self):
-        return f"line {self.line}: {self.root_name}.{'.'.join(self.path)}.{self.key} = {self.value}"
-
     def __repr__(self):
-        return f"SetValue({self.line}, {self.root_name}.{'.'.join(self.path)}, {self.key}, {self.value})"
+        return f"SetValue({self.line}, root={self.root_name} path={'.'.join(self.path)} key={self.key}) val={self.value}"
 
 
 class DeleteValue(Change):
@@ -139,7 +139,7 @@ class DeleteValue(Change):
         raise NotImplementedError(repr(self))
 
     def __repr__(self):
-        return f"DeleteValue({self.line}, {self.root_name}.{'.'.join(self.path)}, {self.key})"
+        return f"DeleteValue({self.line}, root={self.root_name} path={'.'.join(self.path)} key={self.key})"
 
 
 class Add(Change):
@@ -154,9 +154,9 @@ class Add(Change):
 
     def __repr__(self):
         if self.variant is not None:
-            return f"Add({self.line}, {self.root_name}.{'.'.join(self.path)}, {self.key}, variant {self.variant})"
+            return f"Add({self.line}, root={self.root_name} path={'.'.join(self.path)} key={self.key} variant={self.variant})"
         else:
-            return f"Add({self.line}, {self.root_name}.{'.'.join(self.path)}, {self.key})"
+            return f"Add({self.line}, root={self.root_name} path={'.'.join(self.path)} key={self.key})"
 
     def apply(self, data: TaggedAggregate):
         logger.info(f"Adding to {self.path + [self.key]}")
@@ -164,12 +164,18 @@ class Add(Change):
         element = get_element_to_modify(data, self.path)
         # then get the tag for the item we want to append to
         tag = element.type.tag(self.key)
-        # and check its type
-        if not isinstance(tag.type, TaggedListType):
+        # and check its type (it should be a list). "Maybe" checking is a bit messy here.
+        # We also get the type of the items in the list. The tag has a TaggedListType object (tag.type)
+        # which itself will have a tag, which will have a type (the type of the items).
+        #
+        if isinstance(tag.type, Maybe):
+            if not isinstance(tag.type.type_if_exists, TaggedListType):
+                raise ValueError(f"Cannot add to a non-list: {str(self)}")
+            type_of_items = tag.type.type_if_exists.tag().type
+        elif isinstance(tag.type, TaggedListType):
+            type_of_items = tag.type.tag().type
+        else:
             raise ValueError(f"Cannot add to a non-list: {str(self)}")
-        # get the type of the items in the list. The tag has a TaggedListType object (tag.type) which itself
-        # will have a tag, which will have a type (the type of the items).
-        type_of_items = tag.type.tag().type
         if self.variant is not None:  # a variant has been specified (e.g. "foo+bar" in a path)
             # are we dealing with a list of variant dicts?
             if not isinstance(type_of_items, TaggedVariantDictType):
@@ -181,12 +187,14 @@ class Add(Change):
                 raise ValueError(
                     f"{self.variant} is not a valid variant for adding to this list. Possibilities are: {poss}")
             # it's valid, so we should be able to make one.
-            underlying_dict = type_of_items.type_dict[self.variant].create()   # will create the underlying dict
+            underlying_dict = type_of_items.type_dict[self.variant].create()  # will create the underlying dict
             # now create the containing variant dict and set it to contain that item
             variant_dict_item = type_of_items.create().set(underlying_dict)
             # and append
             element[self.key].append(variant_dict_item)
         else:
+            if element[self.key] is None:
+                raise ValueError(f"Cannot add to a null list: {str(self)}")
             element[self.key].append_default()
 
 
@@ -215,7 +223,8 @@ class ParameterFile:
 
     def parse(self, ss) -> 'ParameterFile':
         """Load a parameter file from a string, returns self for fluent use"""
-        for i, line in enumerate(ss.split('\n')):
+        lines = ss.split('\n')
+        for i, line in enumerate(lines):
             # remove comments - anything after the final '#'
             if '#' in line:
                 line = line[:line.index('#')]
@@ -224,7 +233,9 @@ class ParameterFile:
             # skip empty lines
             if not line:
                 continue
-            self._process(line, i)
+            self._parse(line, i)
+        for c in self._changes:
+            c.lineText = lines[c.line]
         return self
 
     def apply(self, data: Dict[str, TaggedAggregate]):
@@ -234,24 +245,30 @@ class ParameterFile:
 
         for c in self._changes:
             if c.root_name in data:
-                c.apply(data[c.root_name])
+                try:
+                    c.apply(data[c.root_name])
+                except Exception as e:
+                    logger.error(f"Error applying change {c}: {e}")
+                    logger.error(f"Change was: {c.lineText}: {c}")
+                    raise e
 
-    def _process(self, line: str, lineNo: int = 0):
+
+    def _parse(self, line: str, lineNo: int = 0):
         """Process each line, adding Change objects to the list of changes if required"""
+        logger.info(f"Processing line {lineNo}: {line}")
         if '=' in line:
             parts = [x.strip() for x in line.split('=')]
-            path, key = self._process_path(lineNo, parts[0], False)  # may append an Add change
+            path, key = self._parse_path(lineNo, parts[0], False)  # may append an Add change
             self._changes.append(SetValue(path, lineNo, key, parts[1]))
         elif line.startswith('del'):
             line = line[3:].strip()
-            path, key = self._process_path(lineNo, line)  # may append an Add change
+            path, key = self._parse_path(lineNo, line)  # may append an Add change
             self._changes.append(DeleteValue(path, lineNo, key))
         else:
             # don't create a change, we're just changing the path
-            self._process_path(lineNo, line, True)
-            return None
+            self._parse_path(lineNo, line, True)
 
-    def _process_path(self, lineNo: int, path_string: str, is_path_only: bool = False) -> (List[str], str):
+    def _parse_path(self, lineNo: int, path_string: str, is_path_only: bool = False) -> (List[str], str):
         """Set the path and key from a path string - this is the bit before the equals sign. The path
         is (if you like) the "directory" of the parameter, the key is the individual parameter name.
         For example "foo.bar.baz" would set the path to ["foo", "bar"] and the key to "baz". Then returns
@@ -330,6 +347,11 @@ class ParameterFile:
         if "+" in key:
             # strip the +
             key, variant = key.split('+')
+            if key == '':
+                # special case - we're just adding to the list at this point. The previous add - and
+                # there must be one - will have added the key to the path, so we want to split that back
+                # into path and key.
+                key = self._path.pop()
             # create the add for that
             self._changes.append(Add(self._path.copy(), lineNo, key, variant))
             # append this key to the path (sans the +) for subsequent adds

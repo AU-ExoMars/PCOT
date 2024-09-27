@@ -3,6 +3,7 @@
 import logging
 import os
 import re
+from typing import Any, Dict
 
 import PySide2
 import numpy as np
@@ -76,13 +77,13 @@ class MultifileInputMethod(InputMethod):
         self.mapping.red = -1
 
         img = load.multifile(self.dir, self.files,
-                              filterpat=self.filterpat,
-                              bitdepth=self.bitdepth,
-                              inpidx=self.input.idx,
-                              mapping=self.mapping,
-                              cache=self.cachedFiles,
-                              rawloader=self.rawLoader,
-                              filterset=self.filterset)
+                             filterpat=self.filterpat,
+                             bitdepth=self.bitdepth,
+                             inpidx=self.input.idx,
+                             mapping=self.mapping,
+                             cache=self.cachedFiles,
+                             rawloader=self.rawLoader,
+                             filterset=self.filterset)
         logger.info(f"------------ Image loaded: {img} from {len(self.files)} files, mapping is {self.mapping}")
         return img
 
@@ -109,13 +110,13 @@ class MultifileInputMethod(InputMethod):
 
     def serialise(self, internal):
         x = {
-             'dir': self.dir,
-             'files': self.files,
-             'bitdepth': self.bitdepth,
-             'filterpat': self.filterpat,
-             'filterset': self.filterset,
-             'rawloader': self.rawLoader.serialise(),
-             }
+            'dir': self.dir,
+            'files': self.files,
+            'bitdepth': self.bitdepth,
+            'filterpat': self.filterpat,
+            'filterset': self.filterset,
+            'rawloader': self.rawLoader.serialise(),
+        }
         if internal:
             x['cache'] = self.cachedFiles
 
@@ -141,9 +142,82 @@ class MultifileInputMethod(InputMethod):
         Canvas.deserialise(self, data)
 
     def modifyWithParameterDict(self, d: TaggedDict) -> bool:
-        if d.multifile.directory is not None:
-            raise Exception("Multifile input parameters not yet implemented")
-        return False
+        m = d.multifile
+        if m.directory is None:
+            return False  # no change to this input (directory must be provided)
+
+        # attempt to load presets
+        if m.preset is not None:
+            class Preset(PresetOwner):
+                """This owns presets for when we modify with a parameter dict. It sort
+                of works the same way as the RawPresets in dataformats.load."""
+
+                def __init__(self):
+                    self.filterset = None
+                    self.filterpat = None
+                    self.bitdepth = None
+                    self.rawloader = None
+
+                def applyPreset(self, preset: Dict[str, Any]):
+                    self.filterset = preset['filterset']
+                    self.rawloader = RawLoader()
+                    self.rawloader.deserialise(preset['rawloader'])
+                    self.filterpat = preset['filterpat']
+                    self.bitdepth = preset.get('bitdepth', None)
+
+            preset = Preset()
+            # will throw if we can't find the preset. Otherwise it will apply the loaded
+            # preset to the object we just created.
+            preset.applyPreset(presetModel.presets[m.preset])
+            # now initialise things with the data we just loaded. Some of these may get
+            # overriden further down.
+            self.filterset = preset.filterset
+            self.filterpat = preset.filterpat
+            self.bitdepth = preset.bitdepth
+            self.rawLoader = preset.rawloader
+
+        # get the directory and the files therein.
+        self.dir = m.directory
+        if len(m.filenames) > 0 and m.wildcard is not None:
+            raise Exception("Cannot have both filenames and wildcard in multifile input")
+        if len(m.filenames) > 0:
+            self.files = m.filenames
+        elif m.wildcard is not None:
+            self.files = []
+            # get all the files in dir which match the wildcard string
+            self.files = sorted([f for f in os.listdir(self.dir) if os.path.isfile(os.path.join(self.dir, f))
+                                 and re.match(m.wildcard, f) is not None])
+        else:
+            raise Exception("Must have either filenames or wildcard in multifile input")
+
+        # other parameters, which may override the preset.
+        if m.filter_pattern is not None:
+            self.filterpat = m.filter_pattern
+            self.compileRegex()
+        if m.filter_set is not None:
+            self.filterset = m.filter_set
+        if m.bit_depth is not None:
+            self.bitdepth = m.bit_depth
+        # and the raw parameters block. Ugly, but comprehensible.
+        if m.raw_params is not None:
+            p = m.raw_params
+            if p.format is not None:
+                self.rawLoader.format = p.format
+            if p.width is not None:
+                self.rawLoader.width = p.width
+            if p.height is not None:
+                self.rawLoader.height = p.height
+            if p.bigendian is not None:
+                self.rawLoader.bigendian = p.bigendian
+            if p.offset is not None:
+                self.rawLoader.offset = p.offset
+            if p.rot is not None:
+                self.rawLoader.rot = p.rot
+            if p.horzflip is not None:
+                self.rawLoader.horzflip = p.horzflip
+            if p.vertflip is not None:
+                self.rawLoader.vertflip = p.vertflip
+        return True
 
 
 # Then the UI class...
@@ -327,7 +401,8 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
             img = ImageCube(arr, self.method.mapping)
         else:
             # otherwise load it with the ImageCube RGB loader
-            img = ImageCube.load(path, self.method.mapping, None, bitdepth=self.method.bitdepth)  # RGB image, null sources
+            img = ImageCube.load(path, self.method.mapping, None,
+                                 bitdepth=self.method.bitdepth)  # RGB image, null sources
 
         self.activatedImagePath = path
         self.activatedImage = img

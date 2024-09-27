@@ -5,61 +5,61 @@ from pcot.parameters.parameterfile import ParameterFile
 
 def test_path_absolute():
     f = ParameterFile()
-    p, k = f._process_path(0, "foo")
+    p, k = f._parse_path(0, "foo")
     assert p == []
     assert k == "foo"
 
-    p, k = f._process_path(0, "foo.bar")
+    p, k = f._parse_path(0, "foo.bar")
     assert p == ["foo"]
     assert k == "bar"
 
-    p, k = f._process_path(0, "foo.bar.baz")
+    p, k = f._parse_path(0, "foo.bar.baz")
     assert p == ["foo", "bar"]
     assert k == "baz"
 
 
 def test_path_relative():
     f = ParameterFile()
-    f._process_path(0,"foo.bar.baz")
+    f._parse_path(0, "foo.bar.baz")
 
-    p, k = f._process_path(0,".quux")
+    p, k = f._parse_path(0, ".quux")
     assert p == ["foo", "bar"]
     assert k == "quux"
 
-    p, k = f._process_path(0,".quux.blah")
+    p, k = f._parse_path(0, ".quux.blah")
     assert p == ["foo", "bar", "quux"]
     assert k == "blah"
 
-    p, k = f._process_path(0,"foo.bar.quux.blah")
+    p, k = f._parse_path(0, "foo.bar.quux.blah")
     assert p == ["foo", "bar", "quux"]
     assert k == "blah"
-    p, k = f._process_path(0,".x")
+    p, k = f._parse_path(0, ".x")
     assert p == ["foo", "bar", "quux"]
     assert k == "x"
-    p, k = f._process_path(0,"..y")
+    p, k = f._parse_path(0, "..y")
     assert p == ["foo", "bar"]
     assert k == "y"
 
 
 def test_path_indexed():
     f = ParameterFile()
-    p, k = f._process_path(0,"foo.bar[1]")
+    p, k = f._parse_path(0, "foo.bar[1]")
     assert p == ["foo", "bar"]
     assert k == "1"
 
-    p, k = f._process_path(0,"foo.bar[1][2]")
+    p, k = f._parse_path(0, "foo.bar[1][2]")
     assert p == ["foo", "bar", "1"]
     assert k == "2"
 
-    p, k = f._process_path(0,"foo[1].bar[2]")
+    p, k = f._parse_path(0, "foo[1].bar[2]")
     assert p == ["foo", "1", "bar"]
     assert k == "2"
 
-    p, k = f._process_path(0,"foo[1].bar[2].baz")
+    p, k = f._parse_path(0, "foo[1].bar[2].baz")
     assert p == ["foo", "1", "bar", "2"]
     assert k == "baz"
 
-    p, k = f._process_path(0,"foo.bar[1].quux")
+    p, k = f._parse_path(0, "foo.bar[1].quux")
     assert p == ["foo", "bar", "1"]
     assert k == "quux"
 

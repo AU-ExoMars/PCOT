@@ -113,7 +113,36 @@ class Tag:
 
 class TaggedDictType(TaggedAggregateType):
     """This acts like a dictionary, but each item has a type, description and default value. That means
-    that it must be initialised with a set of such values.
+    that it must be initialised with a set of such values. This is done by calling the constructor like this:
+    ```
+    tdt = TaggedDictType(
+        a=("description of a", int, 3),
+        b=("description of b", str, "hello"),
+        c=("a nested tagged dict", someOtherTaggedDictType, None)
+        )
+    ```
+    Note that the default value is ignored if the type is a TaggedAggregateType, because these have their own
+    defaults.
+
+    For Maybe types the default can either be None or the underlying type - unless the type is a TaggedAggregateType,
+    in which case None should be used.
+
+    If a TaggedDict is ordered (by calling setOrdered) then:
+
+    * it will be serialised/deserialised as a tuple
+    * elements can be accessed by integer indices
+    * get() will return a list of elements
+    * set() can take a variable number of arguments to set elements (i.e. it is `def set(*args)`)
+    * it can create iterators
+    * the order is that given in the constructor
+
+    You might think that all dicts should work this way - it provides more functionality and saves
+    more efficientiy - but it should only be used sparingly. Serialising as a tuple causes problems
+    with backcompatibility if the dict should change later - generally a dict will be more forgiving,
+    but a savefile with a tuple in it is more likely to fail.
+
+    It is currently only used for values where the fields are obvious and unlikely to change, such as
+    colour (r,g,b), rectangles (x,y,w,h) and points (x,y).
     """
 
     tags: Dict[str, Tag]
@@ -373,6 +402,8 @@ class TaggedListType(TaggedAggregateType):
         example, TaggedListType("desc", int, [1,2,3], 0) will create a list with 3 integers, and if we append to it
         we will append 0. If we append to a list of tagged aggregates, the default is to append a new object of the
         correct type, so a deflt_append value is not valid here (and we check for this).
+
+        The deflt_append value must be provided for non-tagged-aggregate lists.
         """
         super().__init__()
         self._tag = Tag(desc, tp, deflt)
@@ -393,7 +424,9 @@ class TaggedListType(TaggedAggregateType):
             for i in v.deflt:
                 if not is_value_of_type(i, v.type):
                     raise ValueError(f"Default {v.deflt} contains an item {i} that is not of type {v.type}")
-            if self.deflt_append is not None and not is_value_of_type(self.deflt_append, v.type):
+            if self.deflt_append is None:
+                raise ValueError("Default append not provided for non-TaggedAggregateType list")
+            if not is_value_of_type(self.deflt_append, v.type):
                 raise ValueError(f"Default append value {self.deflt_append} is not of type {v.type}")
 
     def create(self):
