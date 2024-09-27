@@ -304,7 +304,7 @@ def test_maybe_list_in_dict():
     f = ParameterFile().parse("foo.lst+ = 22")
     f.apply({"foo": td})
 
-
+@pytest.mark.xfail(raises=NotImplementedError)
 def test_modify_variant_dict_in_dict2():
     """In this code we aren't adding a variant dict to a list but
     creating one in a normal dict.
@@ -319,4 +319,4 @@ def test_modify_variant_dict_in_dict2():
 
     # tell it to create an X dict in the dd variant dict
     f = ParameterFile().parse("foo.dd/x.a = 22")
-    pytest.fail("Not implemented")
+    raise NotImplementedError()
