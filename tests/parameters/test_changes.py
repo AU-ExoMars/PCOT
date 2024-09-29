@@ -134,11 +134,11 @@ def test_base_list():
 def test_list_add_non_ta():
     """Test adding an item to a list of non-tagged aggregates"""
     td = tagged_dict_type.create()
-    f = ParameterFile().parse("foo.list1+ = 20")
+    f = ParameterFile().parse("foo.list1.+ = 20")
     f.apply({"foo": td})
     assert len(td.list1) == 4
     assert td.list1[3] == 20
-    f = ParameterFile().parse("foo.list1+")     # add default item
+    f = ParameterFile().parse("foo.list1.+")     # add default item
     f.apply({"foo": td})
     assert len(td.list1) == 5
     assert td.list1[4] == -1
@@ -154,7 +154,7 @@ def test_list_add_non_ta_nodefault():
 def test_list_add_ta():
     """Test adding an item to a list of tagged aggregates"""
     td = tagged_dict_type.create()
-    f = ParameterFile().parse("foo.list2+")
+    f = ParameterFile().parse("foo.list2.+")
     f.apply({"foo": td})
     assert len(td.list2) == 1
     assert td.list2[0].d == 3.24
@@ -167,13 +167,8 @@ def test_list_add_ta_cursor():
     which is actually down a level from where we might think it should be!"""
     td = tagged_dict_type.create()
     f = ParameterFile().parse("""
-        foo.list2+.d = 36
-        # we are at foo.list2.-1 because we added to the list and the cursor
-        # was set to the last item in the list.
-        # . will keep us at foo.list2.-1 (i.e. sibling, so ".d" would edit a field in the last item)
-        # .. will take us to foo.list2 (up one level)
-        # ... will take us to foo (up two levels) which is where we want to be
-        ...list2+.d = 48
+        foo.list2.+.d = 36
+        ...list2.+.d = 48
     """)
     f.dump()
     f.apply({"foo": td})
@@ -244,12 +239,12 @@ def test_add_to_variant_dict_list():
 
     # there isn't an "invalid" variant dict type in the variant dict, so this will fail.
     with pytest.raises(ValueError) as info:
-        f = ParameterFile().parse("foo.lst+invalid")
+        f = ParameterFile().parse("foo.lst.+invalid")
         f.apply({"foo": td})
     assert "not a valid variant" in str(info)
 
     # now add a valid variant
-    f = ParameterFile().parse("foo.lst+x")
+    f = ParameterFile().parse("foo.lst.+x")
     f.apply({"foo": td})
     assert len(td.lst) == 1
     # check that the variant dict has been created
@@ -258,7 +253,7 @@ def test_add_to_variant_dict_list():
     assert td.lst[0].type != "x" # but NOT THIS - this gets the dict type
 
     # now add another valid variant
-    f = ParameterFile().parse("foo.lst+y")
+    f = ParameterFile().parse("foo.lst.+y")
     f.apply({"foo": td})
     assert len(td.lst) == 2
     assert td.lst[1].get_type() == "y"
@@ -271,7 +266,7 @@ def test_add_to_variant_dict_list():
 
 def test_modify_variant_dict_list():
     td = tagged_variant_dict_in_dict_type.create()
-    f = ParameterFile().parse("foo.lst+x")
+    f = ParameterFile().parse("foo.lst.+x")
     f.apply({"foo": td})
     assert len(td.lst) == 1
     # check that the variant dict has been created
@@ -294,14 +289,14 @@ def test_maybe_list_in_dict():
 
     # should fail; the list is null
     td = tdt.create()
-    f = ParameterFile().parse("foo.lst+ = 22")
+    f = ParameterFile().parse("foo.lst.+ = 22")
     with pytest.raises(ValueError) as info:
         f.apply({"foo": td})
     assert "Cannot add to a null list" in str(info.value)
 
     td = tdt.create()
     td.lst = tlt.create()
-    f = ParameterFile().parse("foo.lst+ = 22")
+    f = ParameterFile().parse("foo.lst.+ = 22")
     f.apply({"foo": td})
 
 @pytest.mark.xfail(raises=NotImplementedError)

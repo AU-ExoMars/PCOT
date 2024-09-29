@@ -252,7 +252,6 @@ class ParameterFile:
                     logger.error(f"Change was: {c.lineText}: {c}")
                     raise e
 
-
     def _parse(self, line: str, lineNo: int = 0):
         """Process each line, adding Change objects to the list of changes if required"""
         logger.info(f"Processing line {lineNo}: {line}")
@@ -343,19 +342,16 @@ class ParameterFile:
         self._process_adds_in_path(lineNo)
 
         # we'll have to handle the key separately, which may also have a "+". In that case we
-        # convert (say) a.b+ into a.b.-1, and create an Add change for a.b.
+        # convert (say) a.b.+ into a.b.-1, and create an Add change for a.b.
         if "+" in key:
+            if key[0] != '+':
+                raise ValueError(f"Invalid path element {key} in {self._path}")
             # strip the +
-            key, variant = key.split('+')
-            if key == '':
-                # special case - we're just adding to the list at this point. The previous add - and
-                # there must be one - will have added the key to the path, so we want to split that back
-                # into path and key.
-                key = self._path.pop()
+            variant = key[1:]
             # create the add for that
-            self._changes.append(Add(self._path.copy(), lineNo, key, variant))
-            # append this key to the path (sans the +) for subsequent adds
-            self._path.append(key)
+            p = self._path.copy()
+            # if we have (say) a.b.c.+, we want to do the add at a.b key c.
+            self._changes.append(Add(p[:-1], lineNo, p[-1], variant))
             if is_path_only:
                 # if we're just a path setter, we add -1 to the path so that subsequent relative paths
                 # will be relative to the item we just added.
@@ -372,19 +368,25 @@ class ParameterFile:
         """Run through the elements of the path looking for "+" symbols. If we find one, we create an Add change
         for that point in the path. This is used to add a new item to a list.
         Consider the path
-            foo.bar+.baz
+            foo.bar.+.baz
         This should become
             foo.bar.-1.baz
-        with an Add change created for foo.bar
+        with an Add change created for foo.bar executed before the SetValue for foo.bar.-1.baz.
         """
         for i, p in enumerate(self._path):
             if "+" in p:
-                # remove the "+" and create an Add change for this path
-                pathElement, variant = p.split('+')
-                self._path[i] = pathElement
-                self._changes.append(Add(self._path[:i], lineNo, pathElement, variant))  # path, line-no, key
-                # now add the index to the path
-                self._path.insert(i + 1, '-1')
+                if p[0] != '+':
+                    # if it's not at the beginning it's not valid
+                    raise ValueError(f"Invalid path element {p} in {self._path}")
+                # anything after the + indicates we're adding a variant dict and what the
+                # type of the variant is.
+                variant = p[1:]
+                # create a new change to add an element to the list at this point
+                # In the case of "foo.bar.+.baz" we need to add the new element at path=foo, key=bar.
+                self._changes.append(Add(self._path[:i-1], lineNo, self._path[i-1], variant))  # path, line-no, key
+                # replace the + with -1 (we're adding at the end, so we're now setting
+                # data in the new last element)
+                self._path[i] = '-1'
 
     def __str__(self):
         return f"{self.path}: {len(self._changes)} changes"
@@ -396,3 +398,22 @@ class ParameterFile:
         print(f"Parameter file {self.path}")
         for c in self._changes:
             print(repr(c))
+
+
+if __name__ == "__main__":
+    # read a line from console
+    ln = 0
+    p = ParameterFile()
+    while True:
+        s = input("enter a parameter file line:")
+        if s == 'quit':
+            break
+        if s == 'clr':
+            p = ParameterFile()
+            ln = 0
+            continue
+        p._parse(s, ln)
+        ln+=1
+        print("---------------------------------" + s)
+        for x in p._changes:
+            print(x)

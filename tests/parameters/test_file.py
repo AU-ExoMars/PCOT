@@ -98,10 +98,10 @@ def test_list_add_at_root_invalid():
 
 def test_list_adds():
     test = """
-    foo.bar+        # add an item at node foo.bar, with default values. Set the path to foo.bar.-1
+    foo.bar.+        # add an item at node foo.bar, with default values. Set the path to foo.bar.-1
     .a = 1          # change foo.bar.a.-1 to 1
     .b = 2          # change foo.bar.b.-1 to 2
-    foo.bar+.a = 1  # add an item at foo.bar, with a=1. Set the path to foo.bar.-1.
+    foo.bar.+.a = 1  # add an item at foo.bar, with a=1. Set the path to foo.bar.-1.
     .b = 2          # change foo.bar.b.-1 to 2
     """
     f = ParameterFile().parse(test)
@@ -115,30 +115,25 @@ def test_list_adds():
 
 def test_list_adds_partial():
     test = """
-    foo.bar+        # add an item at node foo.bar, with default values. Set the path to foo.bar.-1
+    foo.bar.+        # add an item at node foo.bar, with default values. Set the path to foo.bar.-1
     .a = 1          # change foo.bar.-1.a to 1
     .b = 2          # change foo.bar.-1.b to 2
 
-    # we have to go up three because the path is foo.bar.-1:
-    # .xx would put us at foo.bar.-1.xx,
-    # ..xx would put us at foo.bar.xx,
-    # ...xx would put us at foo.xx which is where we want to be!
-
-    ...bar+.a = 1   # add an item at foo.bar, with a=1. Set the path to foo.bar.-1.
+    ..+.a = 1       # add an item at foo.bar, with a=1. Set the path to foo.bar.-1.
     .b = 2          # change foo.bar.-1.b to 2
     """
     f = ParameterFile().parse(test)
     assert repr(f._changes.pop(0)) == "Add(1, root=foo path= key=bar)"
     assert repr(f._changes.pop(0)) == "SetValue(2, root=foo path=bar.-1 key=a) val=1"
     assert repr(f._changes.pop(0)) == "SetValue(3, root=foo path=bar.-1 key=b) val=2"
-    assert repr(f._changes.pop(0)) == "Add(10, root=foo path= key=bar)"
-    assert repr(f._changes.pop(0)) == "SetValue(10, root=foo path=bar.-1 key=a) val=1"
-    assert repr(f._changes.pop(0)) == "SetValue(11, root=foo path=bar.-1 key=b) val=2"
+    assert repr(f._changes.pop(0)) == "Add(5, root=foo path= key=bar)"
+    assert repr(f._changes.pop(0)) == "SetValue(5, root=foo path=bar.-1 key=a) val=1"
+    assert repr(f._changes.pop(0)) == "SetValue(6, root=foo path=bar.-1 key=b) val=2"
 
 
 def test_list_adds_variant():
     test = """
-    foo.bar+rect    # add an item at node foo.bar which will be a rectangle. Foo.bar must be list of variants, 
+    foo.bar.+rect   # add an item at node foo.bar which will be a rectangle. Foo.bar must be list of variants, 
                     # and rect must be a valid variant within it. Set the path to foo.bar.-1
     .a = 1          # change foo.bar.-1(.rect).a to 1
     """

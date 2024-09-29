@@ -162,9 +162,9 @@ def test_multifile_simple(globaldatadir):
     doc = Document()
     test = f"""
     inputs.0.multifile.directory = {globaldatadir}/multi
-    .filenames+ = FilterL02.png
-    ..filenames+ = TestFilterL01image.png
-    ..filenames+ = FilterR10.png
+    .filenames.+ = FilterL02.png
+    .+ = TestFilterL01image.png
+    .+ = FilterR10.png
     ..filter_pattern = *Filter(?P<lens>L|R)(?P<n>[0-9][0-9]).*
     """
 
@@ -175,11 +175,3 @@ def test_multifile_simple(globaldatadir):
     img = doc.graph.getByDisplayName("input 0", True).getOutput(0, Datum.IMG)
 
     assert img.channels == 3
-
-def test_foo():
-    test = """
-    foo.bar+ = 1
-    .+ = 2
-    """
-    f = ParameterFile().parse(test)
-    f.dump()
