@@ -76,13 +76,14 @@ def test_add_multiple_items_shorthand2():
     foo.lst2+ = 25
     foo.lst2+ = 26
     .+ = 27
+    .+ = 28
     foo.lst+.a = bvoz
     .b = 101
     """)
 
     f.apply({"foo": td})
 
-    assert [x for x in td.lst2] == [25, 26, 27]
+    assert [x for x in td.lst2] == [25, 26, 27,28]
     assert td.lst[0].a == "flibble"
     assert td.lst[0].b == 100
     assert td.lst[1].a == "bvoz"
