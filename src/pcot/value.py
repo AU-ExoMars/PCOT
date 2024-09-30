@@ -1,4 +1,5 @@
 import math
+import warnings
 from typing import Any, Union
 
 import numpy as np
@@ -277,7 +278,9 @@ class Value:
             # it puts the fill value for the array into the data and masks it! Therefore we have to make
             # sure any masked arrays which feed into here are masked appropriately.
             undefined = (self.n == 0.0) & (power.n < 0)
-            n = np.where(undefined, 0, self.n ** power.n)
+            with warnings.catch_warnings() as w:
+                warnings.filterwarnings('ignore', category=RuntimeWarning)
+                n = np.where(undefined, 0, self.n ** power.n)
             u = np.where(undefined, 0, pow_unc(self.n, self.u, power.n, power.u))
             d = combineDQs(self, power, np.where(undefined, dq.UNDEF, dq.NONE))
             # remove NaN in n and u, and replace with zero, marking the n NaNs in the DQ

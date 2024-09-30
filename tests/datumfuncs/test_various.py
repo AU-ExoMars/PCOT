@@ -1,3 +1,5 @@
+import warnings
+
 import pcot
 from pcot.datum import Datum
 from pcot.document import Document
@@ -407,8 +409,10 @@ def test_clamp_multiply():
     # and compare with the original image - at 50,50 the new image should be double the original.
     pixb = b.get(Datum.IMG)[50, 50]
     pixr = r.get(Datum.IMG)[50, 50]
-    rat = [x.n / y.n for x, y in zip(pixb, pixr)]
-    urat = [x.u / y.u for x, y in zip(pixb, pixr)]
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=RuntimeWarning)  # ignore the divide by zero
+        rat = [x.n / y.n for x, y in zip(pixb, pixr)]
+        urat = [x.u / y.u for x, y in zip(pixb, pixr)]
     # just look at RG because B will be zero and we'd get a divide by zero
     assert np.allclose(rat[:2], [2, 2])
     assert np.allclose(urat[:2], [2, 2])
