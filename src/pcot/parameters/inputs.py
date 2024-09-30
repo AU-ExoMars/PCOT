@@ -33,17 +33,16 @@ multifileDictType = TaggedDictType(
     filter_set=("name of filter set to use", str, "PANCAM"),
     bit_depth=("number of bits used in the image (default is all bits)", Maybe(int), None),
     preset=("preset name for some params (can be overridden by other params)", Maybe(str), None),
-    raw_params=("parameters for loading raw data", TaggedDictType(
-        format=("integer format (e.g. uint16, which is the default", str, "uint16"),  # default is uint16
+    raw_params=("parameters for loading raw data", Maybe(TaggedDictType(
+        format=("integer format (e.g. uint16, which is the default)", str, "uint16"),  # default is uint16
         width=("image width", int, 1024),
         height=("image height", int, 1024),
         bigendian=("whether the data is big-endian", bool, False),
         offset=("size of the header in bytes (this is skipped)", int, 0),
         rot=("counter-clockwise rotation of the image in degrees (must be multiple of 90)", int, 0),
         horzflip=("whether the image is flipped horizontally (after rotation)", bool, False),
-        vertflip=("whether the image is flipped vertically (after rotation)", bool, False)),
-                None)
-)
+        vertflip=("whether the image is flipped vertically (after rotation)", bool, False))),
+                None))
 
 # PDS4 - this may change a lot later on.
 

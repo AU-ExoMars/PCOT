@@ -190,32 +190,36 @@ class MultifileInputMethod(InputMethod):
         else:
             raise Exception("Must have either filenames or wildcard in multifile input")
 
-        # other parameters, which may override the preset.
-        if m.filter_pattern is not None:
+        # other parameters, which may override the preset IF they have been changed from their default values
+        if m.isNotDefault('filter_pattern'):
             self.filterpat = m.filter_pattern
             self.compileRegex()
-        if m.filter_set is not None:
+        if m.isNotDefault('filter_set'):
             self.filterset = m.filter_set
-        if m.bit_depth is not None:
+        if m.isNotDefault('bit_depth'):
             self.bitdepth = m.bit_depth
         # and the raw parameters block. Ugly, but comprehensible.
         if m.raw_params is not None:
             p = m.raw_params
-            if p.format is not None:
-                self.rawLoader.format = p.format
-            if p.width is not None:
+            if p.isNotDefault('format'):
+                f = {
+                    'uint8': RawLoader.UINT8,
+                    'uint16': RawLoader.UINT16,
+                }[p.format]
+                self.rawLoader.format = f
+            if p.isNotDefault('width'):
                 self.rawLoader.width = p.width
-            if p.height is not None:
+            if p.isNotDefault('height'):
                 self.rawLoader.height = p.height
-            if p.bigendian is not None:
+            if p.isNotDefault('bigendian'):
                 self.rawLoader.bigendian = p.bigendian
-            if p.offset is not None:
+            if p.isNotDefault('offset'):
                 self.rawLoader.offset = p.offset
-            if p.rot is not None:
+            if p.isNotDefault('rot'):
                 self.rawLoader.rot = p.rot
-            if p.horzflip is not None:
+            if p.isNotDefault('horzflip'):
                 self.rawLoader.horzflip = p.horzflip
-            if p.vertflip is not None:
+            if p.isNotDefault('vertflip'):
                 self.rawLoader.vertflip = p.vertflip
         return True
 

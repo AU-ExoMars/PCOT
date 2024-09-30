@@ -1,12 +1,15 @@
 """
 Test modifications to inputs by parameter files
 """
+import tempfile
+
 import pcot
 from fixtures import *
 from pcot.datum import Datum
 from pcot.document import Document
 from pcot.parameters.inputs import processParameterFileForInputs
 from pcot.parameters.parameterfile import ParameterFile
+from pcot.value import Value
 
 
 def test_no_items():
@@ -169,9 +172,65 @@ def test_multifile_simple(globaldatadir):
     """
 
     f = ParameterFile().parse(test)
-    f.dump()
     processParameterFileForInputs(doc, f)
     doc.run()
     img = doc.graph.getByDisplayName("input 0", True).getOutput(0, Datum.IMG)
 
     assert img.channels == 3
+
+
+def test_multifile_raw_preset():
+    """
+    Here we test loading a raw file using a preset. Because presets are user-defined, this is tricky -
+    I add a preset to the preset system by hand, rather than having it loaded at startup.
+    """
+
+    from pcot.inputs.multifile import presetModel
+    from pcot.dataformats.raw import RawLoader
+    from direct.test_image_load_raw import create_dir_of_raw2, create_raw_uint8
+
+    pcot.setup()
+
+    # create a preset by hand
+    loader = RawLoader(format=RawLoader.UINT8, width=16, height=32, bigendian=False, offset=12, rot=90,
+                       vertflip=True)
+    # The preset is stored as a dict
+    preset = {
+        'rawloader': loader.serialise(),
+        'filterpat': '.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
+        'mult': 1,
+        'filterset': 'AUPE'
+    }
+    presetModel.addPreset("testpreset", preset)
+
+    # we can now use that preset
+    with tempfile.TemporaryDirectory() as d:
+        create_dir_of_raw2(create_raw_uint8, d, 12, False)
+
+        doc = Document()
+        test = f"""
+        inputs.0.multifile.directory = {d}
+        .preset = testpreset
+        .filenames.+ = Test-L01.raw
+        .+ = Test-L02.raw
+        """
+        f = ParameterFile().parse(test)
+        processParameterFileForInputs(doc, f)
+        doc.run()
+        img = doc.graph.getByDisplayName("input 0", True).getOutput(0, Datum.IMG)
+
+        assert img.channels == 2
+        assert img.w == 32
+        assert img.h == 16
+
+        # check the wavelengths are correct for AUPE positions 01 and 02.
+        assert img.sources[0].getOnlyItem().getFilter().cwl == 440
+        assert img.sources[1].getOnlyItem().getFilter().cwl == 540
+
+        assert img[0, 0][0].approxeq(Value(1 / 255, 0, dq.NOUNCERTAINTY))
+        assert img[0, 0][1].approxeq(Value(2 / 255, 0, dq.NOUNCERTAINTY))
+        assert img[31, 0][0].approxeq(Value(1, 0, dq.NOUNCERTAINTY))
+        assert img[31, 0][1].approxeq(Value(0, 0, dq.NOUNCERTAINTY))
+        assert img[0, 15][0].approxeq(Value(0, 0, dq.NOUNCERTAINTY))
+        assert img[0, 15][1].approxeq(Value(2 / 255, 0, dq.NOUNCERTAINTY))
+

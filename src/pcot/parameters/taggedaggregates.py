@@ -325,6 +325,12 @@ class TaggedDict(TaggedAggregate):
     astuple = get
     aslist = get
 
+    def isNotDefault(self, key) -> bool:
+        """True if a value is not equal to the default stored for that key - i.e. it has been set in
+        the parameter file"""
+        key = self._intkey2str(key)
+        return self._values[key] != self._type.tags[key].deflt
+
     def __iter__(self):
         return iter(self.get())
 

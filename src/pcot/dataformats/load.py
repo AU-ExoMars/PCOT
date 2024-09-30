@@ -1,25 +1,21 @@
 import errno
+import logging
 import os
 from typing import List, Tuple, Optional, Union, Dict, Any
 
 import numpy as np
-import logging
-from dateutil import parser
 from proctools.products import DataProduct
 
 from pcot import ui
-from pcot.dataformats.pds4 import PDS4Product, PDS4ImageProduct, ProductList
+from pcot.dataformats.pds4 import ProductList
 from pcot.dataformats.raw import RawLoader
 from pcot.datum import Datum
-from pcot.filters import getFilter, Filter
+from pcot.filters import getFilter
 from pcot.imagecube import ChannelMapping, ImageCube, load_rgb_image
-from pcot.inputs.multifile import presetModel
-from pcot.sources import StringExternal, MultiBandSource, Source, SourceSet
+from pcot.sources import StringExternal, MultiBandSource, Source
 from pcot.ui.presetmgr import PresetOwner
-
 from pcot.utils import image
-from pcot.utils.archive import FileArchive
-from pcot.utils.datumstore import DatumStore, readParc
+from pcot.utils.datumstore import readParc
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +123,7 @@ def multifile(directory: str,
 
     """
 
+    from pcot.inputs.multifile import presetModel
     if rawloader is None:
         class RawPresets(PresetOwner):
             """
