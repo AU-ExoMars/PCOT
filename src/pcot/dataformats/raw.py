@@ -19,6 +19,11 @@ class RawLoader:
     UINT8 = 2
     FORMAT_NAMES = ['f32', 'u16', 'u8']
 
+    @staticmethod
+    def formatByName(s: str) -> int:
+        """Get the format by name."""
+        return RawLoader.FORMAT_NAMES.index(s)
+
     # we currently assume that the image is a single channel, but this could be extended to multiple channels.
     # We'd have to add depth and interleaving parameters to the constructor.
 

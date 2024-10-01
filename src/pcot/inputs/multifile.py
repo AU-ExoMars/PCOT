@@ -199,14 +199,10 @@ class MultifileInputMethod(InputMethod):
         if m.isNotDefault('bit_depth'):
             self.bitdepth = m.bit_depth
         # and the raw parameters block. Ugly, but comprehensible.
-        if m.raw_params is not None:
-            p = m.raw_params
+        if m.raw is not None:
+            p = m.raw
             if p.isNotDefault('format'):
-                f = {
-                    'uint8': RawLoader.UINT8,
-                    'uint16': RawLoader.UINT16,
-                }[p.format]
-                self.rawLoader.format = f
+                self.rawLoader.format = RawLoader.formatByName(p.format)
             if p.isNotDefault('width'):
                 self.rawLoader.width = p.width
             if p.isNotDefault('height'):

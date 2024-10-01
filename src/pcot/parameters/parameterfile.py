@@ -249,7 +249,7 @@ class ParameterFile:
                     c.apply(data[c.root_name])
                 except Exception as e:
                     logger.error(f"Error applying change {c}: {e}")
-                    logger.error(f"Change was: {c.lineText}: {c}")
+                    logger.error(f"Change was at line {c.line}: {c.lineText}: {c}")
                     raise e
 
     def _parse(self, line: str, lineNo: int = 0):

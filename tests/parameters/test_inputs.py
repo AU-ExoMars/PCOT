@@ -198,7 +198,6 @@ def test_multifile_raw_preset():
     preset = {
         'rawloader': loader.serialise(),
         'filterpat': '.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-        'mult': 1,
         'filterset': 'AUPE'
     }
     presetModel.addPreset("testpreset", preset)
@@ -234,3 +233,107 @@ def test_multifile_raw_preset():
         assert img[0, 15][0].approxeq(Value(0, 0, dq.NOUNCERTAINTY))
         assert img[0, 15][1].approxeq(Value(2 / 255, 0, dq.NOUNCERTAINTY))
 
+
+def test_multifile_raw_nopreset():
+    """Here we're going to test a raw file with no preset - we'll
+    set all the parameters we need to by hand"""
+
+    from direct.test_image_load_raw import create_dir_of_raw2, create_raw_float32
+
+    pcot.setup()
+
+    with tempfile.TemporaryDirectory() as d:
+        create_dir_of_raw2(create_raw_float32, d, 50, True)
+
+        doc = Document()
+        test = f"""
+        inputs.0.multifile.directory = {d}
+        .raw.format = f32
+        .width = 16
+        .height = 32
+        .bigendian = y      # alternate form!
+        .offset = 50
+        .rot = 180
+        ..filter_pattern = .*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*
+        .filter_set = AUPE
+
+        .filenames.+ = Test-L01.raw
+        .+ = Test-L02.raw
+
+        """
+        f = ParameterFile().parse(test)
+        processParameterFileForInputs(doc, f)
+        doc.run()
+        img = doc.graph.getByDisplayName("input 0", True).getOutput(0, Datum.IMG)
+
+        assert img.channels == 2
+        assert img.w == 16
+        assert img.h == 32
+
+        # check the wavelengths are correct for AUPE positions 01 and 02.
+        assert img.sources[0].getOnlyItem().getFilter().cwl == 440
+        assert img.sources[1].getOnlyItem().getFilter().cwl == 540
+
+        # image will be rotated 180 degrees
+        assert img[0, 0][0].approxeq(Value(0, 0, dq.NOUNCERTAINTY))
+        assert img[0, 0][1].approxeq(Value(0, 0, dq.NOUNCERTAINTY))
+        assert img[15,31][0].approxeq(Value(1, 0, dq.NOUNCERTAINTY))
+        assert img[15,31][1].approxeq(Value(2, 0, dq.NOUNCERTAINTY))
+        assert img[15, 0][0].approxeq(Value(255, 0, dq.NOUNCERTAINTY))
+        assert img[15, 0][1].approxeq(Value(0, 0, dq.NOUNCERTAINTY))
+        assert img[0, 31][0].approxeq(Value(0, 0, dq.NOUNCERTAINTY))
+        assert img[0, 31][1].approxeq(Value(2, 0, dq.NOUNCERTAINTY))
+
+
+def test_multifile_raw_somepreset():
+    """Here we override a preset with some parameters"""
+
+    from pcot.inputs.multifile import presetModel
+    from pcot.dataformats.raw import RawLoader
+    from direct.test_image_load_raw import create_dir_of_raw2, create_raw_uint8
+
+    pcot.setup()
+
+    # create a preset by hand
+    loader = RawLoader(format=RawLoader.UINT8, width=16, height=32, bigendian=False, offset=12, rot=90,
+                       vertflip=True)
+    # The preset is stored as a dict
+    preset = {
+        'rawloader': loader.serialise(),
+        'filterpat': '.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
+        'filterset': 'AUPE'
+    }
+    presetModel.addPreset("testpreset", preset)
+
+    # we can now use that preset
+    with tempfile.TemporaryDirectory() as d:
+        create_dir_of_raw2(create_raw_uint8, d, 12, False)
+
+        doc = Document()
+        test = f"""
+        inputs.0.multifile.directory = {d}
+        .preset = testpreset
+        .filenames.+ = Test-L01.raw
+        .+ = Test-L02.raw
+        # but here we say we're going to flip left-right
+        ..raw.horzflip = true
+        """
+        f = ParameterFile().parse(test)
+        processParameterFileForInputs(doc, f)
+        doc.run()
+        img = doc.graph.getByDisplayName("input 0", True).getOutput(0, Datum.IMG)
+
+        assert img.channels == 2
+        assert img.w == 32
+        assert img.h == 16
+
+        # check the wavelengths are correct for AUPE positions 01 and 02.
+        assert img.sources[0].getOnlyItem().getFilter().cwl == 440
+        assert img.sources[1].getOnlyItem().getFilter().cwl == 540
+
+        assert img[31, 0][0].approxeq(Value(1 / 255, 0, dq.NOUNCERTAINTY))
+        assert img[31, 0][1].approxeq(Value(2 / 255, 0, dq.NOUNCERTAINTY))
+        assert img[0, 0][0].approxeq(Value(1, 0, dq.NOUNCERTAINTY))
+        assert img[0, 0][1].approxeq(Value(0, 0, dq.NOUNCERTAINTY))
+        assert img[31, 15][0].approxeq(Value(0, 0, dq.NOUNCERTAINTY))
+        assert img[31, 15][1].approxeq(Value(2 / 255, 0, dq.NOUNCERTAINTY))
