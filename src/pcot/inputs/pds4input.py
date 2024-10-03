@@ -1,5 +1,7 @@
+import fnmatch
 import logging
 import os
+import re
 from pathlib import Path
 from typing import Optional, List
 
@@ -171,10 +173,29 @@ class PDS4InputMethod(InputMethod):
             ui.error(f"can't read '{e}' from serialised PDS4 input data")
 
     def modifyWithParameterDict(self, d: TaggedDict) -> bool:
-        if d.pds4.directory is not None:
-            raise Exception("PDS4 input method parameters not yet implemented")
-        return False
+        m = d.pds4
+        if m.directory is None:
+            return False  # no change to this input (directory must be provided)
+        self.dir = m.directory
 
+        # now we need to either use wildcard or filenames
+        if len(m.filenames) > 0 and m.wildcard is not None:
+            raise Exception("Cannot have both filenames and wildcard in PDS4 input")
+        if len(m.filenames) > 0:
+            files = m.filenames
+        elif m.wildcard is not None:
+            files = []
+            # get all the files in dir which match the wildcard string. NOTE that this
+            # uses "simple" regular expressions of the UNIX filename type; e.g. "*" to
+            # match any number of characters, "?" to match a single character.
+            files = sorted([f for f in os.listdir(self.dir) if os.path.isfile(os.path.join(self.dir, f))
+                            and fnmatch.fnmatch(f, m.wildcard)])
+        else:
+            raise Exception("Must have either filenames or wildcard in multifile input")
+
+        plist = [DataProduct.from_file(Path(os.path.join(self.dir, f))) for f in files]
+        self.setProducts(plist)
+        return True
 
 class ImageMarkerItem(QtWidgets.QGraphicsRectItem):
     """Marker for images"""

@@ -2,7 +2,9 @@
 Test modifications to inputs by parameter files
 """
 import tempfile
+from pathlib import Path
 
+import direct.test_image_load_pds4
 import pcot
 from fixtures import *
 from pcot.datum import Datum
@@ -210,8 +212,7 @@ def test_multifile_raw_preset():
         test = f"""
         inputs.0.multifile.directory = {d}
         .preset = testpreset
-        .filenames.+ = Test-L01.raw
-        .+ = Test-L02.raw
+        .wildcard = Test-*.raw
         """
         f = ParameterFile().parse(test)
         processParameterFileForInputs(doc, f)
@@ -337,3 +338,42 @@ def test_multifile_raw_somepreset():
         assert img[0, 0][1].approxeq(Value(0, 0, dq.NOUNCERTAINTY))
         assert img[31, 15][0].approxeq(Value(0, 0, dq.NOUNCERTAINTY))
         assert img[31, 15][1].approxeq(Value(2 / 255, 0, dq.NOUNCERTAINTY))
+
+#
+# PDS4 tests require the test data directory to be set in the .pcot.ini file
+# and (obviously) the data to be present.
+#
+
+
+testdatadir = None
+try:
+    testdatadir = os.path.expanduser(pcot.config.getDefaultDir("testpds4data"))
+except KeyError:
+    pytest.fail("testpds4data is not set in the .pcot.ini file")
+
+if not os.path.isdir(testdatadir):
+    pytest.fail(f"PDS4 test data directory {testdatadir} does not exist")
+
+
+def test_pds4():
+    """Basic test of reading a PDS4 file"""
+
+    # get a list of the files in the test data directory which are LWAC images
+    filenames = [str(x) for x in Path(testdatadir).glob("*l0*.xml")]
+    assert len(filenames) == 9
+
+    pcot.setup()
+    doc = Document()
+    test = f"""
+    inputs.0.pds4.directory = {testdatadir}
+    .wildcard = *l0*.xml
+    """
+    f = ParameterFile().parse(test)
+    processParameterFileForInputs(doc, f)
+    doc.run()
+
+    d = doc.graph.getByDisplayName("input 0", True)
+    img = d.getOutput(0, Datum.IMG)
+
+    # test the output
+    direct.test_image_load_pds4.check_data(img, 0)

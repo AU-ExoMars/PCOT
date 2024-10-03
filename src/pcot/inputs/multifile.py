@@ -1,5 +1,6 @@
 ## the Multifile input method, inputting several greyscale images
 # into a single image
+import fnmatch
 import logging
 import os
 import re
@@ -184,9 +185,10 @@ class MultifileInputMethod(InputMethod):
             self.files = m.filenames
         elif m.wildcard is not None:
             self.files = []
-            # get all the files in dir which match the wildcard string
+            # get all the files in dir which match the wildcard string, using UNIX wildcards
+            # (e.g. foo*.raw). Simpler for the user than full regexes.
             self.files = sorted([f for f in os.listdir(self.dir) if os.path.isfile(os.path.join(self.dir, f))
-                                 and re.match(m.wildcard, f) is not None])
+                                 and fnmatch.fnmatch(f, m.wildcard)])
         else:
             raise Exception("Must have either filenames or wildcard in multifile input")
 
