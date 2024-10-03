@@ -237,6 +237,12 @@ Note: I would have used Optional from the typing package, but that can only take
 not the type objects we use here.
 @@@
 
+@@@danger
+Avoid using Maybe for tagged aggregates etc., because you can't
+*create* a new one using a parameter file, just modify values in an
+existing one.
+@@@
+
 ## TaggedVariantDicts
 
 Sometimes it is necessary to store different kinds of object in a list. We can do this with
