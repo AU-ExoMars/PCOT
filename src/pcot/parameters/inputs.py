@@ -98,9 +98,6 @@ def processParameterFileForInputs(doc: Document, p: ParameterFile):
         inp = doc.inputMgr.getInput(i)
         modifyInput(ii, inp)
 
-    # TODO apply the inputs to the document's nodes
-    # TODO add a call to this method in the document's load method
-
 
 def modifyInput(inputDict, inp: Input):
     """Modifies an input object based on a dict."""

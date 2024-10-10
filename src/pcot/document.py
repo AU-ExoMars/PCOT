@@ -1,7 +1,8 @@
 import logging
 import time
 from collections import deque
-from typing import Dict, List
+from pathlib import Path
+from typing import Dict, List, Optional
 
 import pcot.config
 from pcot import inputs, ui
@@ -93,7 +94,7 @@ class Document:
     def __del__(self):
         pass
 
-    def __init__(self, fileName=None):
+    def __init__(self, fileName: Optional[Path] = None):
         """Create a new document, and (optionally) load a file into it"""
         self.graph = XFormGraph(self, False)  # false - is not a macro
         self.inputMgr = InputManager(self)
@@ -108,11 +109,11 @@ class Document:
         else:
             self.graph.create("input 0")
 
-    ## create a dictionary of everything in the app we need to save: global settings,
-    # the graph, macros etc. If internal is true, this data is used for internal undo/redo
-    # stuff and should operate very quickly without loading data. As such, it may not actually
-    # perform a strict serialisation - you'll get information out with references in etc.
     def serialise(self, internal=False, saveInputs=True):
+        """create a dictionary of everything in the app we need to save: global settings,
+        the graph, macros etc. If internal is true, this data is used for internal undo/redo
+        stuff and should operate very quickly without loading data. As such, it may not actually
+        perform a strict serialisation - you'll get information out with references in etc."""
         macros = {}
         for k, v in self.macros.items():
             macros[k] = v.graph.serialise()
@@ -126,12 +127,20 @@ class Document:
              }
         return d
 
-    # deserialise everything from the given top-level dictionary into an existing graph;
-    # also deserialises the macros (which are global to all graphs).
-    # Deserialising the inputs is optional : we don't do it if we are loading templates
-    # or if there is no INPUTS entry in the file, or there's no input manager (shouldn't
-    # happen unless we're doing something weird like loading a macro prototype graph)
     def deserialise(self, d, deserialiseInputs=True, internal=False, closetabs=True):
+        """deserialise everything from the given top-level dictionary into an existing graph;
+        also deserialises the macros (which are global to all graphs).
+        Deserialising the inputs is optional : we don't do it if we are loading templates
+        or if there is no INPUTS entry in the file, or there's no input manager (shouldn't
+        happen unless we're doing something weird like loading a macro prototype graph)
+
+        If internal is True, then we are deserialising for internal purposes, such as undo/redo.
+        If closetabs is true, when we delete the existing nodes we also close any open tabs
+        they may have. We don't do that when we are replacing the graph from a memento using
+        replaceGraph (as in undo/redo). In that case, we keep the tabs open and patch the tabs
+        to point to the new nodes.
+
+        """
         # deserialise macros before graph!
         if 'MACROS' in d:
             for k, v in d['MACROS'].items():
@@ -147,6 +156,19 @@ class Document:
 
         self.settings.deserialise(d['SETTINGS'])
 
+    def saveToMemoryArchive(self):
+        """Save the document to a memory archive, returning the archive object."""
+        arc = archive.MemoryArchive()
+        arc.writeJson("JSON", self.serialise())
+        return arc
+
+    def loadFromMemoryArchive(self, arc):
+        """Load the document from a memory archive. Does nothing special (e.g. adding to recent, setting
+        filenames [except for a default] or showing status)"""
+        d = arc.readJson("JSON")
+        self.deserialise(d)
+        self.fileName = f"(from memory archive)"
+
     def save(self, fname, saveInputs=True):
         # note that the archive mechanism deals with numpy array saving and also
         # saves to a temp file before moving when it's all OK at the end.
@@ -154,7 +176,7 @@ class Document:
             arc.writeJson("JSON", self.serialise(saveInputs=saveInputs))
             pcot.config.addRecent(fname)
 
-    def load(self, fname):
+    def load(self, fname: Path):
         """Load data into this document - is used in ctor, can also be used on existing document.
         Also adds to the recent files list.
         May throw exceptions, typically FileNotFoundError"""
@@ -306,5 +328,5 @@ class Document:
     def getSelection(self):
         """Get the selected nodes in the graph - useful in user plugins."""
         if self.graph.scene is None:
-            return []   # there's no scene, so no selection
+            return []  # there's no scene, so no selection
         return self.graph.scene.selection

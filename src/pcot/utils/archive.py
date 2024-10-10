@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 import tempfile
+from pathlib import Path
 from typing import Callable
 
 import numpy as np
@@ -165,10 +166,10 @@ class FileArchive(Archive):
     Used for ZIP files on disk.
     """
 
-    def __init__(self, name, mode='r',  progressCallback: Callable[[str], None] = None):
+    def __init__(self, path: Path, mode='r',  progressCallback: Callable[[str], None] = None):
         """Open a Zip archive on disk."""
         super().__init__(mode, progressCallback=progressCallback)
-        self.name = name
+        self.path = path
         self.tempdir = None
         self.tempfilename = None
         self.arrayct = 0
@@ -179,7 +180,7 @@ class FileArchive(Archive):
             self.tempfilename = os.path.join(self.tempdir, 'temp.pcot')
             self.zip = zipfile.ZipFile(self.tempfilename, self.mode, compression=zipfile.ZIP_DEFLATED)
         else:
-            self.zip = zipfile.ZipFile(self.name, self.mode, compression=zipfile.ZIP_DEFLATED)
+            self.zip = zipfile.ZipFile(self.path, self.mode, compression=zipfile.ZIP_DEFLATED)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -188,7 +189,7 @@ class FileArchive(Archive):
             self.zip = None
             if self.mode == 'w':
                 if exc_type is None:  # we ONLY write the destination archive if there were no exceptions!
-                    shutil.move(self.tempfilename, self.name)
+                    shutil.move(self.tempfilename, self.path)
                 else:
                     ui.warn("File did not save due to an exception.")
                 shutil.rmtree(self.tempdir)
