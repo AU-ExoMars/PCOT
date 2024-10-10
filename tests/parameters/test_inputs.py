@@ -9,7 +9,7 @@ import pcot
 from fixtures import *
 from pcot.datum import Datum
 from pcot.document import Document
-from pcot.parameters.inputs import processParameterFileForInputs
+from pcot.parameters.inputs import processParameterFileForInputsTest
 from pcot.parameters.parameterfile import ParameterFile
 from pcot.value import Value
 
@@ -18,7 +18,7 @@ def test_no_items():
     pcot.setup()
     d = Document()
     f = ParameterFile().parse("")
-    processParameterFileForInputs(d, f)
+    processParameterFileForInputsTest(d, f)
 
 
 def test_rgb_input(globaldatadir):
@@ -35,7 +35,7 @@ def test_rgb_input(globaldatadir):
     """
     # process this directly
     f = ParameterFile().parse(test)
-    processParameterFileForInputs(doc, f)
+    processParameterFileForInputsTest(doc, f)
 
     # create the document with a couple of input nodes and run it
     # No need to create input 0, because one is created by default in new documents
@@ -84,7 +84,7 @@ def test_image_envi(envi_image_1, envi_image_2):
     """
     # process this directly
     f = ParameterFile().parse(test)
-    processParameterFileForInputs(doc, f)
+    processParameterFileForInputsTest(doc, f)
 
     # create the document with a couple of input nodes and run it
     # No need to create input 0, because one is created by default in new documents
@@ -121,7 +121,7 @@ def test_image_parc(globaldatadir):
 
     test = "inputs.0.parc.filename = " + str(globaldatadir / "parc/testimage.parc")
     f = ParameterFile().parse(test)
-    processParameterFileForInputs(doc, f)
+    processParameterFileForInputsTest(doc, f)
 
     doc.run()
     img = doc.graph.getByDisplayName("input 0", True).getOutput(0, Datum.IMG)
@@ -174,7 +174,7 @@ def test_multifile_simple(globaldatadir):
     """
 
     f = ParameterFile().parse(test)
-    processParameterFileForInputs(doc, f)
+    processParameterFileForInputsTest(doc, f)
     doc.run()
     img = doc.graph.getByDisplayName("input 0", True).getOutput(0, Datum.IMG)
 
@@ -215,7 +215,7 @@ def test_multifile_raw_preset():
         .wildcard = Test-*.raw
         """
         f = ParameterFile().parse(test)
-        processParameterFileForInputs(doc, f)
+        processParameterFileForInputsTest(doc, f)
         doc.run()
         img = doc.graph.getByDisplayName("input 0", True).getOutput(0, Datum.IMG)
 
@@ -263,7 +263,7 @@ def test_multifile_raw_nopreset():
 
         """
         f = ParameterFile().parse(test)
-        processParameterFileForInputs(doc, f)
+        processParameterFileForInputsTest(doc, f)
         doc.run()
         img = doc.graph.getByDisplayName("input 0", True).getOutput(0, Datum.IMG)
 
@@ -320,7 +320,7 @@ def test_multifile_raw_somepreset():
         ..raw.horzflip = true
         """
         f = ParameterFile().parse(test)
-        processParameterFileForInputs(doc, f)
+        processParameterFileForInputsTest(doc, f)
         doc.run()
         img = doc.graph.getByDisplayName("input 0", True).getOutput(0, Datum.IMG)
 
@@ -369,7 +369,7 @@ def test_pds4():
     .wildcard = *l0*.xml
     """
     f = ParameterFile().parse(test)
-    processParameterFileForInputs(doc, f)
+    processParameterFileForInputsTest(doc, f)
     doc.run()
 
     d = doc.graph.getByDisplayName("input 0", True)

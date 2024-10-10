@@ -79,10 +79,12 @@ kwargs = {f"{i}": (f"input {i}", inputMethodDictType, None) for i in range(NUMIN
 inputsDictType = TaggedDictType(**kwargs)
 
 
-def processParameterFileForInputs(doc: Document, p: ParameterFile):
+def processParameterFileForInputsTest(doc: Document, p: ParameterFile):
     """Creates an input dict with the inputsDictType specification, and modifies it
     using a parameter file. Then uses any inputs actually set in the dict to modify
-    the live inputs in the document."""
+    the live inputs in the document. This is for testing purposes only,
+    the live system uses runner.run() to call modifyInputs.
+    """
 
     # create the dictionary
     inputs = inputsDictType.create()
