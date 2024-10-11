@@ -157,15 +157,16 @@ class Document:
         self.settings.deserialise(d['SETTINGS'])
 
     def saveToMemoryArchive(self):
-        """Save the document to a memory archive, returning the archive object."""
-        arc = archive.MemoryArchive()
-        arc.writeJson("JSON", self.serialise())
-        return arc
+        """Save the document to a memory archive, returning the compressed data."""
+        with archive.MemoryArchive() as arc:
+            arc.writeJson("JSON", self.serialise())
+        return arc.get()  # return the raw data
 
-    def loadFromMemoryArchive(self, arc):
+    def loadFromMemoryArchive(self, compressed_data):
         """Load the document from a memory archive. Does nothing special (e.g. adding to recent, setting
         filenames [except for a default] or showing status)"""
-        d = arc.readJson("JSON")
+        with archive.MemoryArchive(compressed_data) as arc:
+            d = arc.readJson("JSON")
         self.deserialise(d)
         self.fileName = f"(from memory archive)"
 
