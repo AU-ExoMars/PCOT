@@ -69,7 +69,7 @@ inputMethodDictType = TaggedDictType(
     envi=("ENVI input method", enviDictType, None),
     multifile=("Multifile input method", multifileDictType, None),
     pds4=("PDS4 input method", PDS4DictType, None),
-    parc=("PCOT datum drchive input method", PARCDictType, None),
+    parc=("PCOT datum archive input method", PARCDictType, None),
 
     direct=("Direct input method", rgbDictType, None))   # not actually valid, but we need a placeholder
 

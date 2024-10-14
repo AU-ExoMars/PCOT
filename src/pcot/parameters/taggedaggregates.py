@@ -420,7 +420,7 @@ class TaggedListType(TaggedAggregateType):
         if isinstance(v.type, TaggedAggregateType):
             if not isinstance(v.deflt, int):
                 raise ValueError(
-                    f"TaggedListType: Type {v.type} is a TaggedAggregateType, so default must be integer (number of items)")
+                    f"TaggedListType: Type {v.type.__class__.__name__} is a TaggedAggregateType, so default must be integer (number of items)")
             if deflt_append is not None:
                 raise ValueError("A deflt_append value should not be provided for a list of tagged aggregates")
         else:

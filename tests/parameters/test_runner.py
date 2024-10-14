@@ -1,3 +1,5 @@
+import tempfile
+
 import pcot
 from pcot.datum import Datum
 from pcot.parameters.runner import Runner
@@ -8,13 +10,13 @@ def test_create_runner(globaldatadir):
     r = Runner(globaldatadir / "doubler.pcot")
 
 
-def test_run_noparams(globaldatadir):
+def test_noparams(globaldatadir):
     pcot.setup()
     r = Runner(globaldatadir / "doubler.pcot")
     r.run(None)
 
 
-def test_run_with_input(globaldatadir):
+def test_with_input(globaldatadir):
     pcot.setup()
     r = Runner(globaldatadir / "doubler.pcot")
 
@@ -23,3 +25,16 @@ def test_run_with_input(globaldatadir):
     """
     r.run(None, test)
 
+
+def test_run(globaldatadir):
+    pcot.setup()
+    r = Runner(globaldatadir / "doubler.pcot")
+
+    out = tempfile.NamedTemporaryFile(suffix=".png")
+
+    test = f"""
+    inputs.0.rgb.filename = {globaldatadir/'basn2c16.png'}  # colour image
+    outputs.+.file = {out.name}
+    .node = sink
+    """
+    r.run(None, test)

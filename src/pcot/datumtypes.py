@@ -70,6 +70,12 @@ class Type:
         uncertainties. A vector will return a scalar."""
         raise pcot.datumexceptions.NoUncertainty(self.name)
 
+    def writeFile(self, d, fileName):
+        """Write to a file - this is the default implementation which just writes the
+        string representation of the value to a file."""
+        with open(fileName, "w") as f:
+            f.write(str(d.val))
+
 
 # Built-in datum types
 

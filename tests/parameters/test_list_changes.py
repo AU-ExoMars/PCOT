@@ -1,6 +1,6 @@
 import pytest
 
-from pcot.parameters.parameterfile import ParameterFile
+from pcot.parameters.parameterfile import ParameterFile, ApplyException
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType
 
 basetdt = TaggedDictType(
@@ -21,7 +21,7 @@ tdt = TaggedDictType(
 def test_no_items():
     td = tdt.create()
     f = ParameterFile().parse("foo.lst[0].a = bar")
-    with pytest.raises(IndexError):
+    with pytest.raises(ApplyException):
         f.apply({"foo": td})
 
 

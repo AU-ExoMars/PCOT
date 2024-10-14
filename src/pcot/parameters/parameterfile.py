@@ -15,16 +15,22 @@ path is used to look up the TA in the dict, and the rest of the path is used to 
 Quite often there will only be a single TA in the dict. We load a single parameter file, and then run every node
 in the graph through it as we load them, with just that node in the dictionary.
 """
-from idlelib.autocomplete import ATTRS
 from numbers import Number
 from pathlib import Path
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, cast
 import logging
 
 from pcot.parameters.taggedaggregates import TaggedAggregate, TaggedAggregateType, Maybe, TaggedListType, \
-    TaggedVariantDictType, TaggedVariantDict
+    TaggedVariantDictType, TaggedVariantDict, TaggedList
 
 logger = logging.getLogger(__name__)
+
+
+class ApplyException(Exception):
+    """An exception raised when applying a change to a tagged aggregate"""
+
+    def __init__(self, msg):
+        super().__init__(msg)
 
 
 def get_element_to_modify(data: TaggedAggregate, path: List[str]):
@@ -67,17 +73,23 @@ class Change:
     For example, the absolute path foo.bar.baz will be split into root_name = foo, path = [bar], key = baz.
     """
 
+    # if we are trying to modify the root, things get weird. I'll try setting
+    # the key to None
     root_name: str
     path: List[str]
     key: str
     line: int
-    lineText: str       # gets filled in post-parse
+    lineText: str  # gets filled in post-parse
 
     def __init__(self, path: List[str], line: int, key: str):
         if len(path) < 1:
-            raise ValueError(f"Zero length path - are you trying to change the root?")
-        self.root_name, *self.path = path
-        self.key = key
+            #            raise ValueError(f"Zero length path - are you trying to change the root?")
+            self.path = []
+            self.root_name = key
+            self.key = None
+        else:
+            self.root_name, *self.path = path
+            self.key = key
         self.line = line
 
     def apply(self, data: TaggedAggregate):
@@ -142,6 +154,13 @@ class DeleteValue(Change):
         return f"DeleteValue({self.line}, root={self.root_name} path={'.'.join(self.path)} key={self.key})"
 
 
+class AddToNonListException(ValueError):
+    def __init__(self, add: 'Add', elem):
+        msg = \
+            f"Cannot append to a non-list: {'.'.join(add.path)} is a {type(elem).__name__}"
+        super().__init__(msg)
+
+
 class Add(Change):
     """Add to the list at the given path+key. It may be that we are adding to a list of variant dicts, in
     which case we should specify the type of the variant."""
@@ -160,22 +179,37 @@ class Add(Change):
 
     def apply(self, data: TaggedAggregate):
         logger.info(f"Adding to {self.path + [self.key]}")
-        # check it's a list - we get the parent of the item we want to append to
-        element = get_element_to_modify(data, self.path)
-        # then get the tag for the item we want to append to
-        tag = element.type.tag(self.key)
-        # and check its type (it should be a list). "Maybe" checking is a bit messy here.
-        # We also get the type of the items in the list. The tag has a TaggedListType object (tag.type)
-        # which itself will have a tag, which will have a type (the type of the items).
-        #
-        if isinstance(tag.type, Maybe):
-            if not isinstance(tag.type.type_if_exists, TaggedListType):
+        # then get the tag for the item we want to append to. If the key is
+        # None, we're trying to append to a list at the root.
+        if self.key is None:
+            # In that case, we need to do things differently because the tag in the list
+            # applies to the members of the list. We can't check the that the item is a list
+            # itself the same way as we do in the more common 'else' clause, because we don't
+            # have a tag for it (it's the root, not part of a TaggedAggregate).
+            if not isinstance(data.type, TaggedListType):
                 raise ValueError(f"Cannot add to a non-list: {str(self)}")
-            type_of_items = tag.type.type_if_exists.tag().type
-        elif isinstance(tag.type, TaggedListType):
-            type_of_items = tag.type.tag().type
+            type_of_items = data.type.tag().type
+            list_to_append_to = cast(TaggedList, data)
         else:
-            raise ValueError(f"Cannot add to a non-list: {str(self)}")
+            # otherwise we can get a tag for the list from the parent.
+            # check it's a list - we get the parent of the item we want to append to
+            element_containing_the_list = get_element_to_modify(data, self.path)
+            if not isinstance(element_containing_the_list, TaggedAggregate):
+                raise AddToNonListException(self, element_containing_the_list)
+            # now we can get the type of the item we want to append to (which should be a TaggedList)
+            tag = element_containing_the_list.type.tag(self.key)
+            # and check its type (it should be a list). "Maybe" checking is a bit messy here.
+            # We also get the type of the items in the list. The tag has a TaggedListType object (tag.type)
+            # which itself will have a tag, which will have a type (the type of the items).
+            if isinstance(tag.type, Maybe):
+                if not isinstance(tag.type.type_if_exists, TaggedListType):
+                    raise AddToNonListException(self, tag.type.type_if_exists)
+                type_of_items = tag.type.type_if_exists.tag().type
+            elif isinstance(tag.type, TaggedListType):
+                type_of_items = tag.type.tag().type
+            else:
+                raise AddToNonListException(self, tag.type)
+            list_to_append_to = element_containing_the_list[self.key]
         if self.variant is not None:  # a variant has been specified (e.g. "foo+bar" in a path)
             # are we dealing with a list of variant dicts?
             if not isinstance(type_of_items, TaggedVariantDictType):
@@ -191,11 +225,11 @@ class Add(Change):
             # now create the containing variant dict and set it to contain that item
             variant_dict_item = type_of_items.create().set(underlying_dict)
             # and append
-            element[self.key].append(variant_dict_item)
+            list_to_append_to.append(variant_dict_item)
         else:
-            if element[self.key] is None:
+            if list_to_append_to is None:
                 raise ValueError(f"Cannot add to a null list: {str(self)}")
-            element[self.key].append_default()
+            list_to_append_to.append_default()
 
 
 class ParameterFile:
@@ -248,9 +282,8 @@ class ParameterFile:
                 try:
                     c.apply(data[c.root_name])
                 except Exception as e:
-                    logger.error(f"Error applying change {c}: {e}")
-                    logger.error(f"Change was at line {c.line}: {c.lineText}: {c}")
-                    raise e
+                    raise ApplyException(
+                        f"Error applying change line {c.line}: {c.lineText}, change is {c}. Error: {e} ") from e
 
     def _parse(self, line: str, lineNo: int = 0):
         """Process each line, adding Change objects to the list of changes if required"""
@@ -383,7 +416,7 @@ class ParameterFile:
                 variant = p[1:]
                 # create a new change to add an element to the list at this point
                 # In the case of "foo.bar.+.baz" we need to add the new element at path=foo, key=bar.
-                self._changes.append(Add(self._path[:i-1], lineNo, self._path[i-1], variant))  # path, line-no, key
+                self._changes.append(Add(self._path[:i - 1], lineNo, self._path[i - 1], variant))  # path, line-no, key
                 # replace the + with -1 (we're adding at the end, so we're now setting
                 # data in the new last element)
                 self._path[i] = '-1'
@@ -413,7 +446,7 @@ if __name__ == "__main__":
             ln = 0
             continue
         p._parse(s, ln)
-        ln+=1
+        ln += 1
         print("---------------------------------" + s)
         for x in p._changes:
             print(x)

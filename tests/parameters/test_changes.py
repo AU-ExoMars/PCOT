@@ -1,13 +1,13 @@
 import pytest
 
-from pcot.parameters.parameterfile import ParameterFile
+from pcot.parameters.parameterfile import ParameterFile, ApplyException
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType, TaggedVariantDictType, \
     Maybe
 
 base_tagged_dict_type = TaggedDictType(
     a=("a desc", int, 10),
     b=("b desc", str, "foo"),
-    c=("c desc", float, 3.14)
+    c=("c desc", float, 3.14),
 )
 
 base_tagged_list_type = TaggedListType(
@@ -17,7 +17,8 @@ base_tagged_list_type = TaggedListType(
 base_tagged_ordered_dict_type = TaggedDictType(
     d=("dee", float, 3.24),
     e=("eee", int, 11),
-    f=("eff", str, "dog")
+    f=("eff", str, "dog"),
+    g=("d desc", TaggedListType("embedded list", int, [1, 2, 3, 4, 5, 6], 48))
 ).setOrdered()
 
 
@@ -91,12 +92,12 @@ def test_changes_base_dict():
 
     # check that invalid values raise an error
     f = ParameterFile().parse("foo.a = bar")
-    with pytest.raises(ValueError):
+    with pytest.raises(ApplyException):
         f.apply({"foo": td})
 
     # check that invalid keys raise an error
     f = ParameterFile().parse("foo.d = 11")
-    with pytest.raises(KeyError):
+    with pytest.raises(ApplyException):
         f.apply({"foo": td})
 
 
@@ -115,7 +116,7 @@ def test_changes_base_dict_multiple():
 def test_changes_bad_type():
     td = base_tagged_dict_type.create()
     f = ParameterFile().parse("foo.b = bar\n.a = bar")
-    with pytest.raises(ValueError):
+    with pytest.raises(ApplyException):
         f.apply({"foo": td})
 
 
@@ -127,7 +128,7 @@ def test_base_list():
 
     # wrong kind of index!
     f = ParameterFile().parse("foo[bar] = 22")
-    with pytest.raises(TypeError):
+    with pytest.raises(ApplyException):
         f.apply({"foo": tl})
 
 
@@ -220,7 +221,7 @@ def test_maybe_in_dict():
     assert td.b == "bar"
 
     f = ParameterFile().parse("foo.c = bar")
-    with pytest.raises(ValueError):
+    with pytest.raises(ApplyException):
         f.apply({"foo": td})
     assert td.c == 10
 
@@ -238,7 +239,7 @@ def test_add_to_variant_dict_list():
     assert len(td.lst) == 0
 
     # there isn't an "invalid" variant dict type in the variant dict, so this will fail.
-    with pytest.raises(ValueError) as info:
+    with pytest.raises(ApplyException) as info:
         f = ParameterFile().parse("foo.lst.+invalid")
         f.apply({"foo": td})
     assert "not a valid variant" in str(info)
@@ -290,7 +291,7 @@ def test_maybe_list_in_dict():
     # should fail; the list is null
     td = tdt.create()
     f = ParameterFile().parse("foo.lst.+ = 22")
-    with pytest.raises(ValueError) as info:
+    with pytest.raises(ApplyException) as info:
         f.apply({"foo": td})
     assert "Cannot add to a null list" in str(info.value)
 
@@ -315,3 +316,73 @@ def test_modify_variant_dict_in_dict2():
     # tell it to create an X dict in the dd variant dict
     f = ParameterFile().parse("foo.dd/x.a = 22")
     raise NotImplementedError()
+
+
+def test_change_top_level_list():
+    """Create a list at the top level and try modifying it"""
+
+    tl = list_of_ordered_dicts_type.create()
+
+    # first an add - this should create a new default item
+    f = ParameterFile().parse("foo.+")
+    f.apply({"foo": tl})
+
+    assert len(tl) == 1
+    assert tl[0].d == 3.24
+
+    # here we create a fresh list, then add an item and modifythat item in a single step.
+    tl = list_of_ordered_dicts_type.create()
+    f = ParameterFile().parse("foo.+.d = 12")
+    f.apply({"foo": tl})
+
+    assert len(tl) == 1
+    assert tl[0].d == 12
+
+    #on another fresh list:
+    #  create a new item at the top level
+    #  add a new item to that item's sublist
+    tl = list_of_ordered_dicts_type.create()
+    f = ParameterFile().parse("foo.+.g.+")
+    f.apply({"foo": tl})
+    assert len(tl) == 1         # foo is a list containing one item, a dict
+    assert len(tl[0]) == 4      # four items in the dict, in which g is a list
+    assert len(tl[0].g) == 7    # six items in the list
+    assert tl[0].g[6] == 48      # the last item is 48 (default new item)
+
+    # as above, and  add a value to the last item
+    tl = list_of_ordered_dicts_type.create()
+    f = ParameterFile().parse("foo.+.g.+ = 101")
+    f.apply({"foo": tl})
+    assert len(tl) == 1         # foo is a list containing one item, a dict
+    assert len(tl[0]) == 4      # four items in the dict, in which g is a list
+    assert len(tl[0].g) == 7    # seven items in the list
+    assert tl[0].g[6] == 101    # the last item is 101
+
+    # now we are going to break down the changes
+    tl = list_of_ordered_dicts_type.create()
+    f = ParameterFile().parse("""
+    foo.+               # add an item
+    .g.+ = 101          # in that item, add an item to g and set it to 101
+    """)
+    f.apply({"foo": tl})
+    assert len(tl) == 1         # foo is a list containing one item, a dict
+    assert len(tl[0]) == 4      # four items in the dict, in which g is a list
+    assert len(tl[0].g) == 7    # seven items in the list
+    assert tl[0].g[6] == 101    # the last item is 101
+
+    tl = list_of_ordered_dicts_type.create()
+    f = ParameterFile().parse("""
+    foo.+
+    .g.+ = 101
+    ...+.g.+ = 102
+    ...+.g.+ = 103
+    foo.+.g.+ = 104
+    """)
+
+    f.apply({"foo": tl})
+    assert len(tl) == 4
+    assert len(tl[1]) == 4
+    assert len(tl[1].g) == 7
+    assert tl[1].g[6] == 102
+    assert tl[2].g[6] == 103
+    assert tl[3].g[6] == 104

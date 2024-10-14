@@ -52,3 +52,8 @@ class XformSink(XFormType):
     def clearData(self, node):
         node.data = None
         node.setRectText("")
+
+    def getBatchOutputValue(self, node):
+        """This is the value which will be used in a batch file - a parameter file - as
+        an output value"""
+        return node.data

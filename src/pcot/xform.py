@@ -362,6 +362,17 @@ class XFormType:
         """
         pass
 
+    def getBatchOutputValue(self, node):
+        """
+        Similarly, some nodes generate output values which can be saved by a runner, but don't necessarily
+        have an actual output. We can get that behaviour here. By default, this will return the first output,
+        but nodes like "sink" which don't have an output can override it. It will also throw an error if there
+        is no first output.
+        """
+        if len(self.outputConnectors) == 0:
+            raise Exception(f"Node type {self.name} has no output connectors")
+        else:
+            return node.getOutputDatum(0)
 
     @staticmethod
     def buildText(n):
@@ -746,7 +757,10 @@ class XForm:
 
     def getOutputDatum(self, i):
         """Get a 'raw' output as just a datum"""
-        return self.outputs[i]  # may raise IndexError
+        try:
+            return self.outputs[i]  # may raise IndexError
+        except IndexError as e:
+            raise IndexError(f"Node '{self.displayName}' has no output {i}") from e
 
     def getOutput(self, i, tp=None):
         """get an output, raising an exception if the type is incorrect or the index is output range

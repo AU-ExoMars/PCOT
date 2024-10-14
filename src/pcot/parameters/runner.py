@@ -31,21 +31,23 @@ from pcot.document import Document
 from pcot.inputs.inp import NUMINPUTS
 from pcot.parameters.inputs import inputsDictType, modifyInput
 from pcot.parameters.parameterfile import ParameterFile
-from pcot.parameters.taggedaggregates import TaggedDictType, Maybe
+from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedListType
 
 # this is the tagged dict type which holds information about output nodes and files
 
 outputDictType = TaggedDictType(
     node=("node name", Maybe(str), None),
-    output=("node output connection", int, 0),
+
+    # specifying None will typically mean the first output, but this is overriden
+    # in some node types. For example, "sink" has no outputs, so None specifies the
+    # stored value from last time. That should be the behaviour for all nodes.
+
+    output=("node output connection (or None for the default)", Maybe(int), None),
     file=("output file", Maybe(str), None)
 )
 
-outputSetDictType = TaggedDictType(
-    a=("output A", outputDictType, None),
-    b=("output B", outputDictType, None),
-    c=("output C", outputDictType, None),
-)
+# we have a list of outputs
+outputListType = TaggedListType("output list", outputDictType, 0)
 
 
 class Runner:
@@ -63,7 +65,7 @@ class Runner:
         # in the document. It's a fresh dict each time.
         # We also build an output dict, saying where the output should go.
         self.paramdict = {'inputs': inputsDictType.create(),
-                          'outputs': outputSetDictType.create()}
+                          'outputs': outputListType.create()}
 
         # now one for each node. Here, we're referencing dicts that exist inside
         # the nodes themselves.
@@ -111,11 +113,18 @@ class Runner:
         """This checks the parameter dict for an output node and file. We could alternatively
         store output file names in the sink node, but this is a quick and dirty (and perhaps better) way to
         do it"""
-        for k, v in self.paramdict['outputs'].items():
+        for v in self.paramdict['outputs']:
             if v.node is not None and v.file is not None:
                 # get the node
                 node = self.doc.graph.getByDisplayName(v.node, single=True)
-                # get the output
-                output = node.getOutputDatum(int(v.output))
+                if v.output is None:
+                    # get the default output value, which is not necessarily the value
+                    # of any output connection (c.f sink, which has no actual outputs)
+                    output = node.type.getBatchOutputValue(node)
+                else:
+                    # get the output
+                    output = node.getOutputDatum(int(v.output))
                 # write it to the file
-                print(output)
+                if output is None:
+                    raise ValueError(f"No output from node {v.node}")
+                output.writeFile(v.file)

@@ -152,6 +152,10 @@ class Datum(SourcesObtainable):
         """Get the size of the datum in bytes. For datum objects with a negligible size, this can be 0."""
         return self.tp.getSize(self)
 
+    def writeFile(self, fileName):
+        """Write the datum to a filename somehow - delegates to the type object"""
+        self.tp.writeFile(self, fileName)
+
     #
     # This block of code maps operations on Datum objects to the binary operations registered in the "ops" system
     # by the initOps function (and any other functions that may be run in plugins to register additional types).
