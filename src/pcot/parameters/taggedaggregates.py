@@ -1,5 +1,6 @@
 import dataclasses
 from abc import ABC, abstractmethod
+from copy import copy
 from numbers import Number
 from typing import Any, Dict, Union, List, Tuple, Optional
 
@@ -261,8 +262,9 @@ class TaggedDict(TaggedAggregate):
                     # just create a default object for this type
                     self._values[k] = v.type.create()
                 else:
-                    # use default as is (type should have been checked)
-                    self._values[k] = v.deflt
+                    # use default as is (type should have been checked). Make sure we use a copy of the default
+                    # (it could, in rare cases, be a mutable object like a dict).
+                    self._values[k] = copy(v.deflt)
 
     def _intkey2str(self, key):
         """Convert an integer key to a string key"""

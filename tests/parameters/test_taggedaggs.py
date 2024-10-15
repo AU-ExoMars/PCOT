@@ -511,3 +511,29 @@ def test_tagged_variant_dict():
     assert ll[1].get().e is False
     assert ll[1].get().type == tdt2
 
+
+def test_python_dict():
+    """is it possible to have a TaggedDict containing a basic python dict?"""
+    tdt = TaggedDictType(
+        a=("a", int, 10),
+        b=("b", dict, {"foo": 1, "bar": 2}),
+        c=("c", float, 3.14)
+    )
+
+    td = tdt.create()
+    assert td['a'] == 10
+    assert td['b']['foo'] == 1
+    assert td['b']['bar'] == 2
+    assert td['c'] == 3.14
+
+    td['b']['foo'] = 3
+
+    # make sure modifying the dict hasn't modified the default (i.e. that a copy was made)
+    td2 = tdt.create()
+    assert td2['b']['foo'] == 1
+
+    # does it serialise?
+
+    s = td.serialise()
+    assert s == {'a': 10, 'b': {'foo': 3, 'bar': 2}, 'c': 3.14}
+

@@ -43,7 +43,8 @@ outputDictType = TaggedDictType(
     # stored value from last time. That should be the behaviour for all nodes.
 
     output=("node output connection (or None for the default)", Maybe(int), None),
-    file=("output file", Maybe(str), None)
+    file=("output file", Maybe(str), None),
+    options=("options for the output", dict, {})    # these are miscellaneous options for the datum's writeToFile method
 )
 
 # we have a list of outputs
@@ -101,7 +102,6 @@ class Runner:
         # run the document
         self.doc.run()
 
-        # TODO save the output
         self.writeOutputs()
 
         # restore the document to its original state and rebuild the paramdict ready
@@ -118,13 +118,14 @@ class Runner:
                 # get the node
                 node = self.doc.graph.getByDisplayName(v.node, single=True)
                 if v.output is None:
-                    # get the default output value, which is not necessarily the value
-                    # of any output connection (c.f sink, which has no actual outputs)
+                    # no output connector is specified, so get the default output value, which is not
+                    # necessarily the value of any output connection (c.f sink, which has no actual outputs)
                     output = node.type.getBatchOutputValue(node)
                 else:
-                    # get the output
+                    # otherwise get the output
                     output = node.getOutputDatum(int(v.output))
-                # write it to the file
+                # write it to the file if we can
                 if output is None:
                     raise ValueError(f"No output from node {v.node}")
+
                 output.writeFile(v.file)
