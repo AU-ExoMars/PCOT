@@ -27,6 +27,8 @@ OR we can do this, modifying the parameters directly
 from pathlib import Path
 from typing import Optional
 
+from PySide2.examples.utils.pyside2_config import description
+
 from pcot.document import Document
 from pcot.inputs.inp import NUMINPUTS
 from pcot.parameters.inputs import inputsDictType, modifyInput
@@ -44,7 +46,13 @@ outputDictType = TaggedDictType(
 
     output=("node output connection (or None for the default)", Maybe(int), None),
     file=("output filename", Maybe(str), None),
-    options=("options for the output", dict, {})    # these are miscellaneous options for the datum's writeToFile method
+
+    description=("description of the data (if a PARC is being written)", Maybe(str), None),
+    drawAnnotations=("draw ROIs/annotations on the image (not for PARC)", bool, True),
+
+    append=("append to a PARC or text file if it exists", bool, False),
+
+    # options=("options for the output", dict, {}),    # these are miscellaneous options for the datum's writeToFile method
 )
 
 # we have a list of outputs
