@@ -5,6 +5,7 @@ from typing import Dict, Optional, Tuple
 
 from pcot.datum import Datum
 from pcot.document import Document
+from pcot.imagecube import ImageCube
 from pcot.utils.archive import Archive, FileArchive
 from pcot.sources import StringExternal, SourceSet, MultiBandSource, Source
 
@@ -180,7 +181,13 @@ def writeParc(filename: str, d: Datum, description=None):
     """
     with FileArchive(filename, "w") as a, DatumStore(a) as da:
         da.writeDatum("main", d, description=description)
-        da.writeManifest()
+
+
+def writeImageParc(filename: str, img: ImageCube, description=None):
+    """Write an image to a simple PARC file - a DatumStore with a single item called "main".
+    """
+    # simple wrapper around writeParc to avoid importing Datum in the calling code
+    writeParc(filename, Datum(Datum.IMG, img), description)
 
 
 def readParc(fname: str, itemname: str = 'main', inpidx: int = None) -> Optional[Datum]:

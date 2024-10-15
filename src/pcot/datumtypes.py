@@ -123,6 +123,11 @@ class ImgType(Type):
         v = d.val
         return v.img.nbytes + v.uncertainty.nbytes + v.dq.nbytes
 
+    def writeFile(self, d, fileName):
+        v = d.val
+
+
+
 
 class RoiType(Type):
     def __init__(self):

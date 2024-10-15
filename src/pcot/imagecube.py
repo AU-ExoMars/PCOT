@@ -7,6 +7,7 @@ import itertools
 import logging
 import math
 import numbers
+import os.path
 from collections.abc import Iterable
 from typing import List, Optional, Tuple, Sequence, Union
 
@@ -453,7 +454,7 @@ class ImageCube(SourcesObtainable):
     @classmethod
     def load(cls, fname, mapping, sources, bitdepth=None):
         logger.info(f"ImageCube load: {fname}")
-        img = load_rgb_image(fname,bitdepth=bitdepth)
+        img = load_rgb_image(fname, bitdepth=bitdepth)
         # create sources if none given
         if sources is None:
             sources = MultiBandSource([Source().setBand('R'),
@@ -528,15 +529,6 @@ class ImageCube(SourcesObtainable):
         sourcesB = self.sources.sourceSets[mapping.blue]
         return MultiBandSource([sourcesR, sourcesG, sourcesB])
 
-    def rgbWrite(self, filename):
-        """save RGB representation"""
-        img = self.rgb()
-        # convert to 8-bit integer from 32-bit float
-        img8 = (img * 256).clip(max=255).astype(np.ubyte)
-        # and change endianness
-        img8 = cv.cvtColor(img8, cv.COLOR_RGB2BGR)
-        cv.imwrite(filename, img8)
-
     ## extract the "subimage" - the image cropped to regions of interest,
     # with a mask for those ROIs. Note that you can also supply an image,
     # in which case you get this image cropped to the other image's ROIs!
@@ -564,7 +556,7 @@ class ImageCube(SourcesObtainable):
 
         s += "\nsrc: [{}]".format(self.sources.brief())
         if len(self.rois) > 0:
-            s += "\n"+"\n".join([str(r) for r in self.rois])
+            s += "\n" + "\n".join([str(r) for r in self.rois])
         return s
 
     ## the descriptor is a string which can vary depending on main window settings.
@@ -1015,3 +1007,45 @@ class ImageCube(SourcesObtainable):
         if any([x == -1 for x in d]):
             raise Exception("bands property: Not all bands have a filter")
         return d
+
+    def save(self, filename, annotations=False, format: str = None, description: str = ""):
+        """Write the image to a file, with or without annotations. If format is provided, it will be used
+        otherwise the format will be inferred from the filename extension.
+        The description is a text description of the image and is only used by
+        formats which support it (currently only our own PARC format)"""
+
+        from pcot import imageexport
+        from pcot.utils import datumstore
+
+        if format is None:
+            if '.' not in filename:
+                raise Exception(f"No file extension provided in filename {filename}")
+            _, format = os.path.splitext(filename)
+            format = format[1:]  # remove the dot
+        elif '.' not in filename:
+            filename += f".{format}"
+
+        format = format.lower()
+
+        if format == 'pdf':
+            imageexport.exportPDF(self, filename, annotations=annotations)
+        elif format == 'svg':
+            imageexport.exportSVG(self, filename, annotations=annotations)
+        elif format in ('png', 'jpg', 'jpeg', 'bmp', 'tiff'):
+            if annotations:
+                imageexport.exportRaster(self, filename, annotations=annotations)
+            else:
+                # direct write with imwrite - this used to be its own method, rgbWrite()
+                img = self.rgb()
+                # convert to 8-bit integer from 32-bit float
+                img8 = (img * 256).clip(max=255).astype(np.ubyte)
+                # and change endianness
+                img8 = cv.cvtColor(img8, cv.COLOR_RGB2BGR)
+                cv.imwrite(filename, img8)
+        elif format == 'parc':
+            if annotations:
+                raise Exception("PARC format does not support annotations")
+            else:
+                datumstore.writeImageParc(filename, self, description)
+        else:
+            raise Exception(f"Unsupported file format for image save: {format}")

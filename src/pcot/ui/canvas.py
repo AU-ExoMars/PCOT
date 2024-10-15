@@ -17,7 +17,7 @@ from PySide2.QtWidgets import QCheckBox, QMessageBox, QMenu
 
 import pcot
 import pcot.ui as ui
-from pcot import imageexport, canvasnormalise, dq
+from pcot import canvasnormalise, dq
 from pcot.datum import Datum
 from pcot.ui import canvasdq
 from pcot.ui.canvasdq import CanvasDQSpec
@@ -918,14 +918,10 @@ class Canvas(QtWidgets.QWidget):
         super().contextMenuEvent(ev)   # run the super's menu, which will run any item's menu
         if not ev.isAccepted():        # if the event wasn't accepted, run our menu
             menu = QMenu()
-            export = menu.addAction("Export as PDF, PNG or SVG")
-            save = menu.addAction("Save as PARC (PCOT datum archive)")
+            save = menu.addAction("Save as image, PDF, SVG or PARC")
             a = menu.exec_(ev.globalPos())
-
-            if a == export:
-                self.exportAction()
-            elif a == save:
-                self.saveAction()
+            if a == save:
+              self.saveAction()
 
 
     def ensureDQValid(self):
@@ -1144,73 +1140,54 @@ class Canvas(QtWidgets.QWidget):
             x.setVisible(not self.isDQHidden)
         self.redisplay()
 
-    def exportAction(self):
+    def saveAction(self):
         if self.previmg is None:
             return
+
+        fileTypes = (
+            'PNG files (*.png)',
+            'PDF files (*.pdf)',
+            'SVG files (*.svg)',
+            'PARC files (*.parc)',
+        )
+        fileTypes = " ;; ".join(fileTypes)
+
         res = QtWidgets.QFileDialog.getSaveFileName(self,
-                                                    'Save RGB image as PNG (without annotations)',
+                                                    'Save RGB image (with or without annotations)',
                                                     os.path.expanduser(pcot.config.getDefaultDir('savedimages')),
-                                                    "PDF files (*.pdf) ;; PNG files (*.png)  ;; SVG files (*.svg)",
+                                                    fileTypes,
                                                     options=pcot.config.getFileDialogOptions()
                                                     )
         if res[0] != '':
             path, filt = res
             (_, ext) = os.path.splitext(path)
             pcot.config.setDefaultDir('savedimages', os.path.split(path)[0])
-            ext = ext.lower()
             if ext == '':
-                QMessageBox.critical(self, 'Error', "Filename should have an extension.")
-            elif ext == '.png':
-                r = QMessageBox.question(self, "Export to PNG", "Save with annotations?",
+                # no extension provided - we need to extract the extension from the filter string.
+                # Assuming the filter string is in the form "PNG files (*.png)"
+                ext = filt.split('(')[1].split(')')[0].split('.')[1].lower()
+                path += '.' + ext
+            else:
+                ext = ext[1:].lower()
+
+            if ext == 'parc':
+                annotations = False
+                desc, ok = QtWidgets.QInputDialog.getText(self, "Description",
+                                                          "Enter text description (optional):",
+                                                          QtWidgets.QLineEdit.Normal,
+                                                          "")
+                if not ok:
+                    desc = ''
+            else:
+                r = QMessageBox.question(self, "Save", "Save with annotations?",
                                          QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
-                if r == QMessageBox.No:
-                    self.previmg.rgbWrite(path)
-                    ui.log(f"Image written to {path}")
-                elif r == QMessageBox.Yes:
-                    imageexport.exportRaster(self.previmg, path)
-                else:
-                    ui.log("Export cancelled")
-            elif ext == '.pdf':
-                imageexport.exportPDF(self.previmg, path)
-                ui.log(f"Image and annotations exported to {path}")
-            elif ext == '.svg':
-                imageexport.exportSVG(self.previmg, path)
-            else:
-                QMessageBox.critical(self, 'Error', "Filename has a strange extension.")
-                ui.log(ext)
-
-    def saveAction(self):
-        """Save to a PARC file - a DatumStore with only one item in it."""
-        if self.previmg is None:
-            return
-        res = QtWidgets.QFileDialog.getSaveFileName(self,
-                                                    'Save as PARC',
-                                                    os.path.expanduser(pcot.config.getDefaultDir('savedimages')),
-                                                    "Datum Archive files (*.parc)",
-                                                    options=pcot.config.getFileDialogOptions()
-                                                    )
-        if res[0] != '':
-
-            desc, ok = QtWidgets.QInputDialog.getText(self,"Description",
-                                                     "Enter text description (optional):",
-                                                     QtWidgets.QLineEdit.Normal,
-                                                     "")
-            if not ok:
+                if r == QMessageBox.Cancel:
+                    ui.log("export cancelled")
+                    return
+                annotations = (r == QMessageBox.Yes)
                 desc = ''
-            path, filt = res
-            (root, ext) = os.path.splitext(path)
-            pcot.config.setDefaultDir('savedimages', os.path.split(path)[0])
-            ext = ext.lower()
-            if ext == '':
-                ext = '.parc'
-            if ext == '.parc':
-                from pcot.utils.datumstore import writeParc
 
-                path = root + ext
-                writeParc(path, Datum(Datum.IMG, self.previmg), description=desc)
-            else:
-                QMessageBox.critical(self, 'Error', "Filename has a strange extension.")
-                ui.log(ext)
+            self.previmg.save(path, annotations=annotations, description=desc)
 
     ## this initialises a combo box, setting the possible values to be the channels in the image
     # input

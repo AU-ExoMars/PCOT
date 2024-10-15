@@ -43,7 +43,7 @@ outputDictType = TaggedDictType(
     # stored value from last time. That should be the behaviour for all nodes.
 
     output=("node output connection (or None for the default)", Maybe(int), None),
-    file=("output file", Maybe(str), None),
+    file=("output filename", Maybe(str), None),
     options=("options for the output", dict, {})    # these are miscellaneous options for the datum's writeToFile method
 )
 

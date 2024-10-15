@@ -134,25 +134,3 @@ def test_pds4_load_from_stringlist():
     d = load.pds4(filenames)  # passing a list of data products
     img = d.get(Datum.IMG)
     check_data(img)
-
-
-def test_foo():
-    # get a list of the files in the test data directory which are LWAC images
-    filenames = [str(x) for x in Path(testdatadir).glob("*l0*.xml")]
-    d = load.pds4(filenames)  # pass a list of XML label files
-
-    # set up an expression evaluator, tell it the variable "a" is the image Datum
-    # we just loaded, and run the expression "norm(a$670/a$540)". This will divide
-    # the 670nm band by the 540nm band, normalise the result to [0,1], and apply
-    # gamma correction by raising the result to the power 0.3.
-    # Finally extract the image from the resulting Datum.
-    res = ExpressionEvaluator().run("norm(a$670/a$540)^0.3", {
-        'a': d,
-    }).get(Datum.IMG)
-
-    # or we could just do this! Note - no norm yet.
-    res = ((d % 670) / (d % 540)) ** 0.3
-
-    # write the resulting single-band image as a monochrome RGB.
-
-    res.get(Datum.IMG).rgbWrite("c:/users/jim/testout.png")
