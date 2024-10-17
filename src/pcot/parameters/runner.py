@@ -27,8 +27,6 @@ OR we can do this, modifying the parameters directly
 from pathlib import Path
 from typing import Optional
 
-from PySide2.examples.utils.pyside2_config import description
-
 from pcot.document import Document
 from pcot.inputs.inp import NUMINPUTS
 from pcot.parameters.inputs import inputsDictType, modifyInput
