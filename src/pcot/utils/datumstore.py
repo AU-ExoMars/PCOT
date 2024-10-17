@@ -1,6 +1,7 @@
 import dataclasses
 import sys
 import time
+from datetime import datetime
 from typing import Dict, Optional, Tuple
 
 from pcot.datum import Datum
@@ -22,6 +23,8 @@ class DatumStore:
     This uses a LRU-cache of a slightly unusual kind, in that the size is specified in bytes. If reading
     a new item would exceed this size, least-recently-used items of non-zero size are removed until there
     is enough space. This is because Datum objects can be quite large, and we don't want to run out of memory.
+
+    By default the cache is infinitely large, so objects will sit around until the store goes away!!!
 
     Usage example for writing:
         with FileArchive("foo.parc", "w") as a, DatumStore(a) as da:
@@ -65,16 +68,40 @@ class DatumStore:
         time: float  # timestamp when accessed
         datum: Datum  # the Datum object
 
+    @dataclasses.dataclass
+    class ManifestItem:
+        """An item in the manifest. The name is not included, because this is always part of a dict
+        of name -> manifest item."""
+        datumtype: str      # the type of the datum (as a string)
+        description: str    # a description of the datum - could be empty
+        repr: str           # the string representation of the datum
+        created: datetime   # the time when created in ISO 8601 format
+
+        def serialise(self):
+            return {
+                "datumtype": self.datumtype,
+                "description": self.description,
+                "repr": self.repr,
+                "created": self.created.isoformat()
+            }
+
+        @staticmethod
+        def deserialise(d):
+            return DatumStore.ManifestItem(
+                d["datumtype"],
+                d["description"],
+                d["repr"],
+                datetime.fromisoformat(d["created"])
+            )
+
     archive: Archive
     cache: Dict[str, CachedItem]
     max_size: int
     write_mode: bool
 
     # this is a manifest of the items in the archive.
-    # It's a dictionary of name: (datumtype name, description, repr).
-    # Description is an optional string provided when the item is written, repr is the string
-    # representation of the datum.
-    manifest: Dict[str, Tuple[str, str, str]] = {}
+    # It's a dictionary of name -> ManifestItem
+    manifest: Dict[str, ManifestItem] = {}
 
     def __init__(self, archive: Archive, max_size: int = sys.maxsize):
         """
@@ -91,7 +118,10 @@ class DatumStore:
             # assume we are reading. Read the manifest.
             with self.archive as a:
                 if (m := a.readJson("MANIFEST")) is not None:
-                    self.manifest = m
+                    try:
+                        self.manifest = {k: DatumStore.ManifestItem.deserialise(v) for k, v in m.items()}
+                    except Exception as e:
+                        raise Exception(f"Error reading manifest - cannot deserialise") from e
         else:
             self.manifest = {}
             self.write_mode = True
@@ -106,11 +136,14 @@ class DatumStore:
 
     def writeManifest(self):
         """Write the manifest to the archive. This is only done in write mode."""
-        if self.archive.mode == 'w':
-            self.archive.writeJson("MANIFEST", self.manifest)
+        if self.archive.is_writable():
+            # serialise the manifest
+            m = {k: v.serialise() for k, v in self.manifest.items()}
+            # we may be appending, so we need to permit replacement of the manifest
+            self.archive.writeJson("MANIFEST", m, permit_replace=True)
 
     def writeDatum(self, name: str, d: Datum, description: str = ""):
-        """This is used to write a Datum object to the archive; it's doesn't write to the cache. It will
+        """This is used to write a Datum object to the archive; it doesn't write to the cache. It will
         probably only be used in scripts that prepare archives.
 
         description: an optional text description of the datum
@@ -118,11 +151,11 @@ class DatumStore:
         This MUST BE inside a context manager because the archive must be open for all items.
         """
 
-        if not self.archive.is_open():
+        if not self.archive.is_open() or not self.archive.is_writable():
             raise Exception("archive must be open to write")
 
         # update the manifest
-        self.manifest[name] = (d.tp.name, description, str(d.val))
+        self.manifest[name] = DatumStore.ManifestItem(d.tp.name, description, str(d), datetime.now())
 
         # write the item to the archive
         self.archive.writeJson(name, d.serialise())
@@ -175,6 +208,12 @@ class DatumStore:
         self.cache[name].time = time.perf_counter()  # set timestamp of access
         return self.cache[name].datum  # and return
 
+    def clearCache(self):
+        """Clear the cache of all items. This is useful if you want to free up memory."""
+        self.cache = {}
+
+# these are the functions that are used to write and read PARC files. They are simple wrappers around the
+# DatumStore class, which is the real workhorse.
 
 def writeParc(filename: str, d: Datum, description=None):
     """Write a simple PARC file - a DatumStore with a single item called "main".

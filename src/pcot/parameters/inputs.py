@@ -116,6 +116,9 @@ def modifyInput(inputDict, inp: Input):
             inp.selectMethod(method)
             method.invalidate()
             method.get()
+            if inp.exception is not None:
+                # if there was an exception, we need to stop
+                raise Exception(f"Error in input {inp.idx}: {inp.exception}")
             # skip the rest of the methods
             break
 

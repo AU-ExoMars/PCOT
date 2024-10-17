@@ -61,6 +61,9 @@ class Archive:
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
+    def is_writable(self):
+        return self.mode in ['w', 'a', 'A']
+
     def is_open(self):
         return self.zip is not None
 
@@ -69,8 +72,12 @@ class Archive:
             raise Exception("Archive is not open for reading")
 
     def assert_write(self):
-        if self.mode != 'w':
+        if not self.is_writable():
             raise Exception("Archive is not open for writing")
+
+    def assert_unique_name(self, name):
+        if name in self.zip.namelist():
+            raise Exception(f"Name {name} is already in the archive")
 
     def progress(self, s):
         if self.progressCallback:
@@ -82,6 +89,7 @@ class Archive:
         self.assert_write()
         b = BytesIO()
         np.save(b, a)
+        self.assert_unique_name(name)
         self.zip.writestr(name, b.getvalue())
 
     def writeArrayAndGenerateName(self, a: np.ndarray):
@@ -90,11 +98,13 @@ class Archive:
         self.arrayct += 1
         return name
 
-    def writeStr(self, name: str, string: str):
+    def writeStr(self, name: str, string: str, permit_replace=False):
         if self.zip is None:
             raise Exception("Archive is not open")
         self.assert_write()
         print(f"Writing to {name}")
+        if not permit_replace:
+            self.assert_unique_name(name)
         # I'm aware it'll do the encoding anyway, but I wanted to make it explicit
         self.zip.writestr(name, string.encode('utf-8'))
 
@@ -145,12 +155,19 @@ class Archive:
         else:
             return d
 
-    def writeJson(self, name, d):
+    def writeJson(self, name, d, permit_replace=False):
+        """Write a JSON-serisalisable object. If permit_replace is true, we can replace
+        an item with the same name. Otherwise we'll get an exception. This will be raised
+        before the converted arrays get written.
+        """
         if self.zip is None:
             raise Exception("Archive is not open")
+        if not permit_replace:
+            # do this BEFORE we convert the arrays to tags. It gets done in writeStr too!
+            self.assert_unique_name(name)
         d = self.convertArraysToTags(d)
         s = json.dumps(d, sort_keys=True, indent=4)
-        self.writeStr(name, s)
+        self.writeStr(name, s, permit_replace=permit_replace)
 
     def readJson(self, name):
         if self.zip is None:
@@ -167,27 +184,45 @@ class FileArchive(Archive):
     """
 
     def __init__(self, path: Path, mode='r',  progressCallback: Callable[[str], None] = None):
-        """Open a Zip archive on disk."""
+        """Open a Zip archive on disk.
+        The mode is 'r' for read, 'w' for write, and 'a'/'A' for append. If 'A' is used, the archive is appended
+        in place. Otherwise, the archive is copied to a temporary file before appending, appended to, and then
+        moved to the original location.
+        """
+        assert mode in ['r', 'w', 'a', 'A']
         super().__init__(mode, progressCallback=progressCallback)
         self.path = path
         self.tempdir = None
         self.tempfilename = None
-        self.arrayct = 0
 
     def __enter__(self):
-        if self.mode == 'w':
+        if self.mode == 'w' or self.mode == 'a':
+            # When writing a new file or using append mode 'a' (not in place), the writing is done to a temporary file
+            # so that a failure during serialisation won't leave a corrupted file
             self.tempdir = tempfile.mkdtemp()
             self.tempfilename = os.path.join(self.tempdir, 'temp.pcot')
+            if self.mode == 'a':
+                # append-not-in-place - copy the archive to the temp file
+                shutil.copyfile(self.path, self.tempfilename)
             self.zip = zipfile.ZipFile(self.tempfilename, self.mode, compression=zipfile.ZIP_DEFLATED)
         else:
-            self.zip = zipfile.ZipFile(self.path, self.mode, compression=zipfile.ZIP_DEFLATED)
+            # reading or append-in-place
+            self.zip = zipfile.ZipFile(self.path, self.mode.lower(), compression=zipfile.ZIP_DEFLATED)
+
+        if self.mode.lower() == 'a':
+            # if we're doing either kind of append, now the file is open we should try to work out
+            # the next array number.
+            array_items = [x[5:] for x in self.zip.namelist() if x.startswith("ARAE-")]
+            if len(array_items) > 0:
+                self.arrayct = max([int(x) for x in array_items]) + 1
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.zip is not None:
             self.zip.close()
             self.zip = None
-            if self.mode == 'w':
+            if self.mode == 'w' or self.mode == 'a':
+                # writing or append-not-in-place
                 if exc_type is None:  # we ONLY write the destination archive if there were no exceptions!
                     shutil.move(self.tempfilename, self.path)
                 else:
