@@ -1,16 +1,17 @@
+import shutil
 import tempfile
-
-import numpy as np
+from datetime import datetime
+from tempfile import TemporaryDirectory
 
 import pcot
-from fixtures import genrgb
-from pcot import dq
+from fixtures import *
 from pcot.datum import Datum
 from pcot.document import Document
 from pcot.sources import nullSourceSet
 from pcot.utils.archive import FileArchive
 from pcot.utils.datumstore import DatumStore
 from pcot.value import Value
+import pcot.datumfuncs as df
 
 
 def test_create():
@@ -230,3 +231,66 @@ def test_vector_and_cache():
         assert a.read_count == 4
 
 
+def test_datumstore_append(globaldatadir):
+    """Test we can append to a datum store. First, we should copy an existing test store"""
+
+    with TemporaryDirectory() as tmpdir:
+        # copy the test archive into a new archive onto which we will append
+        newarchive = os.path.join(tmpdir, "newarchive.dat")
+        shutil.copyfile(globaldatadir / "parc/multi.parc", newarchive)
+
+        # first we'll open the archive for reading to get some stuff from it. We can't read from
+        # an archive opened for append. Note that we're not using a context manager for the FileArchive
+        # here, only for the DatumStore. That means the FileArchive will be closed when the DatumStore
+        # is created, so the DatumStore opens the FileArchive.
+
+        with DatumStore(FileArchive(newarchive, 'r')) as a:
+            img1 = a.get("image0", None)
+            img2 = a.get("image1", None)
+
+        # combine those images into a third
+        img3 = img1 + img2
+        assert img3.tp == Datum.IMG
+        # and get a vector of the means of its channels
+        means = df.mean(img3)
+
+        # here, though, we are using context managers for both.
+        with FileArchive(newarchive, 'a') as fa, DatumStore(fa) as a:
+            # now append that image and the vector of means
+            a.writeDatum("combined", img3, "images 0 and 1 combined")
+            a.writeDatum("combinedmeans", means, "means of combined image channels")
+
+        # that done, open for reading.
+        with DatumStore(FileArchive(newarchive, 'r')) as a:
+            img3 = a.get("combined", None)
+            means = a.get("combinedmeans", None)
+            assert img3.tp == Datum.IMG
+            assert means.tp == Datum.NUMBER
+            img = img3.get(Datum.IMG)
+            assert img.shape == (256, 256, 3)
+
+            # check the info in the manifest is correct
+            info = a.getInfo("combined")
+            assert info.datumtype == 'img'
+            assert info.description == "images 0 and 1 combined"
+            delta = datetime.now() - info.created
+            assert delta.total_seconds() < 20
+
+
+def test_manifest_read(globaldatadir):
+    """Test we can read item info from the manifest"""
+    with DatumStore(FileArchive(globaldatadir / "parc/multi.parc")) as a:
+        assert len(a.getManifest()) == 14
+
+        m = a.getInfo("image0")
+        assert m is not None
+        assert m.datumtype == 'img'
+        assert m.description == 'testimg(0)'
+
+        m = a.getInfo("testvec1")
+        assert m is not None
+        assert m.datumtype == 'number'
+        assert m.description == '0-2, 200 numbers'
+        tt = datetime.fromisoformat("2024-10-18")
+        delta = m.created - tt
+        assert delta.days < 1

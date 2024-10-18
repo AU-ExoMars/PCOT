@@ -11,6 +11,33 @@ from pcot.utils.archive import Archive, FileArchive
 from pcot.sources import StringExternal, SourceSet, MultiBandSource, Source
 
 
+@dataclasses.dataclass
+class ManifestItem:
+    """An item in the manifest. The name is not included, because this is always part of a dict
+    of name -> manifest item."""
+    datumtype: str  # the type of the datum (as a string)
+    description: str  # a description of the datum - could be empty
+    repr: str  # the string representation of the datum
+    created: datetime  # the time when created in ISO 8601 format
+
+    def serialise(self):
+        return {
+            "datumtype": self.datumtype,
+            "description": self.description,
+            "repr": self.repr,
+            "created": self.created.isoformat()
+        }
+
+    @staticmethod
+    def deserialise(d):
+        return ManifestItem(
+            d["datumtype"],
+            d["description"],
+            d["repr"],
+            datetime.fromisoformat(d["created"])
+        )
+
+
 class DatumStore:
     """
     This class allows Datum objects to be stored into, and retrieved from, an Archive object. It is used to
@@ -68,32 +95,6 @@ class DatumStore:
         time: float  # timestamp when accessed
         datum: Datum  # the Datum object
 
-    @dataclasses.dataclass
-    class ManifestItem:
-        """An item in the manifest. The name is not included, because this is always part of a dict
-        of name -> manifest item."""
-        datumtype: str      # the type of the datum (as a string)
-        description: str    # a description of the datum - could be empty
-        repr: str           # the string representation of the datum
-        created: datetime   # the time when created in ISO 8601 format
-
-        def serialise(self):
-            return {
-                "datumtype": self.datumtype,
-                "description": self.description,
-                "repr": self.repr,
-                "created": self.created.isoformat()
-            }
-
-        @staticmethod
-        def deserialise(d):
-            return DatumStore.ManifestItem(
-                d["datumtype"],
-                d["description"],
-                d["repr"],
-                datetime.fromisoformat(d["created"])
-            )
-
     archive: Archive
     cache: Dict[str, CachedItem]
     max_size: int
@@ -119,7 +120,7 @@ class DatumStore:
             with self.archive as a:
                 if (m := a.readJson("MANIFEST")) is not None:
                     try:
-                        self.manifest = {k: DatumStore.ManifestItem.deserialise(v) for k, v in m.items()}
+                        self.manifest = {k: ManifestItem.deserialise(v) for k, v in m.items()}
                     except Exception as e:
                         raise Exception(f"Error reading manifest - cannot deserialise") from e
         else:
@@ -155,13 +156,21 @@ class DatumStore:
             raise Exception("archive must be open to write")
 
         # update the manifest
-        self.manifest[name] = DatumStore.ManifestItem(d.tp.name, description, str(d), datetime.now())
+        self.manifest[name] = ManifestItem(d.tp.name, description, str(d), datetime.now())
 
         # write the item to the archive
         self.archive.writeJson(name, d.serialise())
 
     def total_size(self):
         return sum([item.size for item in self.cache.values()])
+
+    def getInfo(self, name: str) -> ManifestItem:
+        """Get the manifest item for a given name, or None if it doesn't exist."""
+        return self.manifest.get(name, None)
+
+    def getManifest(self) -> Dict[str, ManifestItem]:
+        """Get the manifest item for all names."""
+        return self.manifest
 
     def get(self, name, doc: Optional[Document]) -> Optional[Datum]:
         """

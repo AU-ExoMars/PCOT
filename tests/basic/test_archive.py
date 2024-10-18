@@ -208,3 +208,17 @@ def test_duplicate_name():
             a.writeJson("block1", test_data_d1)
             with pytest.raises(Exception):
                 a.writeJson("block1", test_data_d2)
+
+
+def test_cant_read_in_append_mode(globaldatadir):
+    """Test that trying to read from an archive open for append raises an exception"""
+
+    with TemporaryDirectory() as tmpdir:
+        # copy the test archive into a new archive onto which we will append
+        newarchive = os.path.join(tmpdir, "newarchive.dat")
+        shutil.copyfile(globaldatadir / "parc/testarch.dat", newarchive)
+
+        with FileArchive(globaldatadir / "parc/testarch.dat", "a") as a:
+            with pytest.raises(Exception, match=".* not open for reading"):
+                d1a = a.readJson("data1")
+
