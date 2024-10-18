@@ -22,8 +22,7 @@ def test_datum_can_create_and_serialise_img(bwimage):
     data = genrgb(32,32,
                   1.1, 2.2, 3.3,    # rgb
                   u=(0.1, 0.2, 0.3), # unc
-                  d=(dq.NONE, dq.UNDEF, dq.DIVZERO), # dq
-                  doc = doc
+                  d=(dq.NONE, dq.UNDEF, dq.DIVZERO) # dq
                   )
 
     img = Datum(Datum.IMG, data)

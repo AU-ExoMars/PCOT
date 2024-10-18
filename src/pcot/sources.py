@@ -119,7 +119,7 @@ class Source(SourcesObtainable):
         self.external = e
         return self
 
-    def setInputIdx(self, i: int):
+    def setInputIdx(self, i: Optional[int]):
         """Set the input index"""
         self.inputIdx = i
         return self

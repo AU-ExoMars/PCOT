@@ -73,8 +73,8 @@ def rectimage(globaldatadir):
     return ImageCube.load(str(path), None, None)
 
 
-def genmono(w,h,v,u,dq,doc=None,inpidx=None):
-    if doc is not None and inpidx is not None:
+def genmono(w,h,v,u,dq,inpidx=None):
+    if inpidx is not None:
         s = Source().setBand('M')
         sources = MultiBandSource([s])
     else:
@@ -90,13 +90,14 @@ def genmono(w,h,v,u,dq,doc=None,inpidx=None):
     return imgc
 
 
-def genrgb(w, h, r, g, b, u=None, d=None, doc=None, inpidx=None):
-    """Generate an RGB image. If the input index is provided, use it.
+def genrgb(w, h, r, g, b, u=None, d=None, inpidx=None):
+    """Generate an RGB image.
     If u is provided, it is an (r,g,b) uncertainty tuple.
     If d is provided, it is an (r,g,b) dq bits tuple
 
     """
-    # generated as "orphan" sources that come from no input
+    # These are generated as "orphan" sources that come from no real input unless
+    # an index is specified (it's OK to call setInputIdx with None).
     sources = MultiBandSource([Source().setBand('R').setInputIdx(inpidx),
                                Source().setBand('G').setInputIdx(inpidx),
                                Source().setBand('B').setInputIdx(inpidx)])
@@ -123,12 +124,12 @@ def genrgb(w, h, r, g, b, u=None, d=None, doc=None, inpidx=None):
     return imgc
 
 
-def gen_two_halves(w, h, v1, u1, v2, u2, doc=None, inpidx=None):
+def gen_two_halves(w, h, v1, u1, v2, u2,     inpidx=None):
     """Generate an image of two halves. The top half is value v1 and uncertainty u1, the bottom half is v2,u2.
     Each of the values must be a tuple.
     """
 
-    if doc is not None and inpidx is not None:
+    if inpidx is not None:
         # generate source names of the form r,g,b,c3,c4..
         sourceNames = ["r", "g", "b"] + [f"c{i}" for i in range(3, len(v1))]
         sources = MultiBandSource([Source().setBand(sourceNames[i]) for i in range(0, len(v1))])

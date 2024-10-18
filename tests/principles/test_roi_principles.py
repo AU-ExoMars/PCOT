@@ -161,11 +161,11 @@ def test_roi_binop_image_lhs():
     pcot.setup()
     doc = Document()
 
-    redimg = genrgb(50, 50, 1, 0, 0, doc=doc, inpidx=0)
+    redimg = genrgb(50, 50, 1, 0, 0, inpidx=0)
     assert doc.setInputDirectImage(0, redimg) is None
     red = doc.graph.create("input 0", displayName="RED input")
 
-    greenimg = genrgb(50, 50, 0, 1, 0, doc=doc, inpidx=1)
+    greenimg = genrgb(50, 50, 0, 1, 0, inpidx=1)
     assert doc.setInputDirectImage(1, greenimg) is None
     green = doc.graph.create("input 1", displayName="GREEN input")
 
@@ -202,11 +202,11 @@ def test_roi_binop_image_rhs():
     pcot.setup()
     doc = Document()
 
-    greenimg = genrgb(50, 50, 0, 1, 0, doc=doc, inpidx=0)
+    greenimg = genrgb(50, 50, 0, 1, 0, inpidx=0)
     assert doc.setInputDirectImage(0, greenimg) is None
     green = doc.graph.create("input 0", displayName="GREEN input")
 
-    blueimg = genrgb(50, 50, 0, 0, 1, doc=doc, inpidx=1)
+    blueimg = genrgb(50, 50, 0, 0, 1, inpidx=1)
     assert doc.setInputDirectImage(1, blueimg) is None
     blue = doc.graph.create("input 1", displayName="Blue input")
 
@@ -247,8 +247,8 @@ def test_rois_on_both_sides_of_binop():
 
     # make 2 images, one red and one blue. Make sure the input indices are correct
     # for the sources!
-    redimg = genrgb(50, 50, 1, 0, 0, doc=doc, inpidx=0)  # red 50x50
-    blueimg = genrgb(50, 50, 0, 0, 1, doc=doc, inpidx=1)  # blue 50x50
+    redimg = genrgb(50, 50, 1, 0, 0, inpidx=0)  # red 50x50
+    blueimg = genrgb(50, 50, 0, 0, 1, inpidx=1)  # blue 50x50
 
     assert doc.setInputDirectImage(0, redimg) is None
     assert doc.setInputDirectImage(1, blueimg) is None
@@ -294,7 +294,7 @@ def test_rois_same_on_both_sides():
 
     # make 2 images, one red and one blue. Make sure the input indices are correct
     # for the sources!
-    greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # dark green
+    greenimg = genrgb(50, 50, 0, 0.5, 0, inpidx=0)  # dark green
     assert doc.setInputDirectImage(0, greenimg) is None
     green = doc.graph.create("input 0", displayName="GREEN input")
 
@@ -317,7 +317,7 @@ def _testinternal_image_and_scalar(exprString):
     pcot.setup()
     doc = Document()
 
-    greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # dark green
+    greenimg = genrgb(50, 50, 0, 0.5, 0, inpidx=0)  # dark green
     assert doc.setInputDirectImage(0, greenimg) is None
     green = doc.graph.create("input 0", displayName="GREEN input")
 
@@ -358,7 +358,7 @@ def perform_roi_op(exprString) -> ImageCube:
     pcot.setup()
     doc = Document()
 
-    redimg = genrgb(50, 50, 1, 0, 0, doc=doc, inpidx=0)  # red 50x50
+    redimg = genrgb(50, 50, 1, 0, 0, inpidx=0)  # red 50x50
     assert doc.setInputDirectImage(0, redimg) is None
     red = doc.graph.create("input 0")
 
@@ -448,7 +448,7 @@ def test_roi_neg_expr():
     pcot.setup()
     doc = Document()
 
-    redimg = genrgb(50, 50, 1, 0, 0, doc=doc, inpidx=0)  # red 50x50
+    redimg = genrgb(50, 50, 1, 0, 0, inpidx=0)  # red 50x50
     assert doc.setInputDirectImage(0, redimg) is None
     red = doc.graph.create("input 0")
 

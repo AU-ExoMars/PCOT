@@ -1,5 +1,3 @@
-
-
 # lookup by name for serialisation
 from copy import copy
 
