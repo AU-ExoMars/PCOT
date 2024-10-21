@@ -5,6 +5,7 @@ from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.expressions import ExpressionEvaluator
 from pcot.imagecube import ChannelMapping
+from pcot.utils import SignalBlocker
 from pcot.xform import XFormType, xformtype, XFormException, XForm
 
 
@@ -246,6 +247,7 @@ class TabExpr(pcot.ui.tabs.Tab):
 
     def onNodeChanged(self):
         self.w.data.canvas.setNode(self.node)
-        self.w.expr.setPlainText(self.node.expr)
+        with SignalBlocker(self.w.expr):
+            self.w.expr.setPlainText(self.node.expr)
         d = self.node.getOutputDatum(0)
         self.w.data.display(d)

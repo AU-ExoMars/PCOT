@@ -36,21 +36,31 @@ from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedListTy
 # this is the tagged dict type which holds information about output nodes and files
 
 outputDictType = TaggedDictType(
+    # which node we are getting the output from
     node=("node name", Maybe(str), None),
 
     # specifying None will typically mean the first output, but this is overriden
     # in some node types. For example, "sink" has no outputs, so None specifies the
     # stored value from last time. That should be the behaviour for all nodes.
-
     output=("node output connection (or None for the default)", Maybe(int), None),
+
+    # the file to write to
     file=("output filename", Maybe(str), None),
 
+    # only used when we are writing a PARC
     description=("description of the data (if a PARC is being written)", Maybe(str), None),
+    # only used when we are writing an image to a "standard" file (e.g. PNG, SVG, PDF).
     drawAnnotations=("draw ROIs/annotations on the image (not for PARC)", bool, True),
 
+    # if we are writing a PARC this is the name of the item we are going to store in the archive. If it is already
+    # there, we will add -N to the name until we find a free slot. If it is None, we will use name "main"
+    name=("name of the datum in the archive", Maybe(str), None),
+
+    # only used when we are writing a text file or PARC. In the latter case, the datum will be appended to the archive
+    # if there is no existing datum of that name (see 'name' above).
     append=("append to a PARC or text file if it exists", bool, False),
 
-    # options=("options for the output", dict, {}),    # these are miscellaneous options for the datum's writeToFile method
+    # options=("options for the output", dict, {}),    # miscellaneous options for the datum's writeToFile method
 )
 
 # we have a list of outputs
@@ -134,4 +144,7 @@ class Runner:
                 if output is None:
                     raise ValueError(f"No output from node {v.node}")
 
-                output.writeFile(v.file)
+                # we pass the ENTIRE output dict to the writeToFile method. It's a little ugly with quite a
+                # bit of unnecessary information for some cases, but at least the method signature is simple
+                # and the data well-organised (as it's a TaggedDict).
+                output.writeFile(v)
