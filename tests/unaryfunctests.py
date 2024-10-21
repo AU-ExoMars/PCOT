@@ -1,5 +1,6 @@
 """
 A list of unary function tests we can use.
+Run from basic/test_funcwrapper and vector/test_unops.
 """
 
 import dataclasses
