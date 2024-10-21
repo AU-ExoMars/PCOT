@@ -146,9 +146,9 @@ def test_simple_node():
 
     # create two constant nodes set to output 1 and 30.
     const0 = doc.graph.create("constant")
-    const0.val = 1
+    const0.params.val = 1.0
     const1 = doc.graph.create("constant")
-    const1.val = 30
+    const1.params.val = 30.0
 
     # connect them to the inputs of the testtype node.
     node.connect(0, const0, 0)

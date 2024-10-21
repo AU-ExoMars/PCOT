@@ -1,4 +1,5 @@
 # lookup by name for serialisation
+import os
 from copy import copy
 
 import numpy as np
@@ -70,10 +71,12 @@ class Type:
 
     def writeFile(self, d, outputDescription: 'TaggedDict'):
         """Write to a file - this is the default implementation which just writes the
-        string representation of the value to a file. The TaggedDict is of OutputDictType, and
-        can be found in parameters/runner.py"""
+        string representation of the value to a file followed by a newline.
+        The TaggedDict is of OutputDictType, and can be found in parameters/runner.py"""
+        if not outputDescription.clobber and os.path.exists(outputDescription.file):
+            raise FileExistsError(f"File {outputDescription.file} already exists")
         with open(outputDescription.file, "w") as f:
-            f.write(str(d.val))
+            f.write(str(d.val)+"\n")
 
 
 # Built-in datum types

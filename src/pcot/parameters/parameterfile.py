@@ -92,6 +92,13 @@ class Change:
             self.key = key
         self.line = line
 
+    def show(self):
+        """try to generate a string that gives the absolute path"""
+        if len(self.path) > 0:
+            return f"{self.root_name}.{'.'.join(self.path)}.{self.key}"
+        else:
+            return f"{self.root_name}.{self.key}"
+
     def apply(self, data: TaggedAggregate):
         pass
 
@@ -108,7 +115,11 @@ class SetValue(Change):
         # walk down the path to get the element we want to change (well, its parent - the last item in the path)
         element = get_element_to_modify(data, self.path)
         # use the key to get its tag so we can get its type, and check it.
-        tag = element.type.tag(self.key)
+
+        try:
+            tag = element.type.tag(self.key)
+        except KeyError as e:
+            raise KeyError(f"Cannot find {self.show()}")
 
         # do the actual setting, if possible - but resolve Maybe first.
         try:

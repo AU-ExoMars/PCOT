@@ -29,8 +29,8 @@ def numberWithUncNode(doc, v, u, dqv=0):
     node and string manipulation on its expr, but this feels better somehow"""
     nodeV = doc.graph.create("constant")
     nodeU = doc.graph.create("constant")
-    nodeV.val = v
-    nodeU.val = u
+    nodeV.params.val = float(v)
+    nodeU.params.val = float(u)
     expr = doc.graph.create("expr")
     expr.expr = f"v(a,b,{dqv})"
     expr.connect(0, nodeV, 0, autoPerform=False)

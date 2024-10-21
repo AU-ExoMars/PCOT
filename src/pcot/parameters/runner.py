@@ -47,6 +47,9 @@ outputDictType = TaggedDictType(
     # the file to write to
     file=("output filename", Maybe(str), None),
 
+    # clobber - if the file already exists, silently overwrite it, otherwise throw an error
+    clobber=("overwrite the file if it exists", bool, False),
+
     # only used when we are writing a PARC
     description=("description of the data (if a PARC is being written)", Maybe(str), None),
     # only used when we are writing an image to a "standard" file (e.g. PNG, SVG, PDF).
@@ -95,35 +98,38 @@ class Runner:
     def run(self, param_file: Optional[Path], param_file_text: Optional[str] = None):
         """Run the document with the parameters set from the given file. The param_file_text
         is provided for testing - it allows a parameter file to be passed in as a string."""
-        if param_file:
-            params = ParameterFile().load(param_file)
-            # Apply the parameter file to the parameters in the paramdict.
-            params.apply(self.paramdict)
-            # The nodes will be modified, but the modifications to the inputs
-            # need to be processed separately.
-        elif param_file_text:
-            params = ParameterFile().parse(param_file_text)
-            params.apply(self.paramdict)
 
-        # we MAY have run a parameter file, but the input parameters may have been modified
-        # directly. We need to apply these to the inputs. No need to worry about the nodes
-        # as they are already modified. Ditto the output parameters, which are handled in
-        # writeOutputs.
-        for i in range(NUMINPUTS):
-            # note that we are using the string representation of the input numbers as keys
-            ii = self.paramdict['inputs'][str(i)]
-            inp = self.doc.inputMgr.getInput(i)
-            modifyInput(ii, inp)
+        try:
+            if param_file:
+                params = ParameterFile().load(param_file)
+                # Apply the parameter file to the parameters in the paramdict.
+                params.apply(self.paramdict)
+                # The nodes will be modified, but the modifications to the inputs
+                # need to be processed separately.
+            elif param_file_text:
+                params = ParameterFile().parse(param_file_text)
+                params.apply(self.paramdict)
 
-        # run the document
-        self.doc.run()
+            # we MAY have run a parameter file, but the input parameters may have been modified
+            # directly. We need to apply these to the inputs. No need to worry about the nodes
+            # as they are already modified. Ditto the output parameters, which are handled in
+            # writeOutputs.
+            for i in range(NUMINPUTS):
+                # note that we are using the string representation of the input numbers as keys
+                ii = self.paramdict['inputs'][str(i)]
+                inp = self.doc.inputMgr.getInput(i)
+                modifyInput(ii, inp)
 
-        self.writeOutputs()
+            # run the document
+            self.doc.run()
 
-        # restore the document to its original state and rebuild the paramdict ready
-        # for the next run
-        self.doc.loadFromMemoryArchive(self.archive)
-        self._build_param_dict()
+            self.writeOutputs()
+        finally:
+            # restore the document to its original state and rebuild the paramdict ready
+            # for the next run. This is in a finally block in case any of the above code
+            # throws an exception - we definitely want to restore!
+            self.doc.loadFromMemoryArchive(self.archive)
+            self._build_param_dict()
 
     def writeOutputs(self):
         """This checks the parameter dict for an output node and file. We could alternatively

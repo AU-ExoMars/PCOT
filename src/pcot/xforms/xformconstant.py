@@ -3,6 +3,7 @@ from PySide2.QtCore import Qt
 
 from pcot.datum import Datum
 import pcot.ui as ui
+from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.sources import nullSourceSet
 from pcot.value import Value
 from pcot.xform import xformtype, XFormType
@@ -12,10 +13,11 @@ validKeys = {Qt.Key_0, Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5, Qt.Key_
              Qt.Key_Delete, Qt.Key_Backspace, Qt.Key_Left, Qt.Key_Right}
 
 
-## text in middle of main rect and on connections
+
 class GNumberText(QtWidgets.QGraphicsTextItem):
+    """text in middle of main rect and on connections - we can edit this!"""
     def __init__(self, parent, node):
-        super().__init__(str(node.val), parent=parent)
+        super().__init__(str(node.params.val), parent=parent)
         self.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
         self.setTextWidth(50)
         self.setTabChangesFocus(True)
@@ -72,23 +74,32 @@ class XFormConstant(XFormType):
     def __init__(self):
         super().__init__("constant", "maths", "0.0.0")
         self.addOutputConnector("", Datum.NUMBER)
-        self.autoserialise = ('val',)
+        self.params = TaggedDictType(
+            val=("The value of the constant", float, 0.0)
+        )
 
-    ## build the text element of the graph scene object for the node. By default, this
-    # will just create static text, but can be overridden. I've made it store the value
-    # in the node because otherwise the underlying C++ object gets freed.
     @staticmethod
     def buildText(n):
+        """Build the text object for the constant node."""
         x, y = n.xy
         n.text = GNumberText(n.rect, n)
-        n.text.setPos(x + ui.graphscene.XTEXTOFFSET, y + ui.graphscene.YTEXTOFFSET + ui.graphscene.CONNECTORHEIGHT)
+        n.text.setPos(x + ui.graphscene.XTEXTOFFSET - 7,
+                      y + ui.graphscene.YTEXTOFFSET + ui.graphscene.CONNECTORHEIGHT - 8
+                      )
         return n.text
 
     def createTab(self, n, w):
         return None
 
     def init(self, node):
-        node.val = 0
+        pass    # should be initialised automatically
 
     def perform(self, node):
-        node.setOutput(0, Datum(Datum.NUMBER, Value(node.val, 0.0), nullSourceSet))
+        node.setOutput(0, Datum(Datum.NUMBER, Value(node.params.val, 0.0), nullSourceSet))
+        # if the node has been renamed, display the name as the rect text. This is like the result
+        # text for a node like expr. It's not ideal, but it does mean that the user can see the
+        # display name.
+        if node.displayName != node.type.name:
+            node.setRectText(node.displayName)
+        else:
+            node.setRectText('')

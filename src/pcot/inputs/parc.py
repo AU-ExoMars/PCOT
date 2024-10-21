@@ -20,7 +20,7 @@ from pcot.ui import uiloader
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
 from pcot.utils.archive import FileArchive
-from pcot.utils.datumstore import DatumStore
+from pcot.utils.datumstore import DatumStore, ManifestItem
 
 logger = logging.getLogger(__name__)
 
@@ -111,12 +111,13 @@ class Model(QtCore.QAbstractTableModel):
             # get a sorted list of the manifest keys
             keys = sorted(list(self.manifest.keys()))
             # and return the appropriate item
-            item = self.manifest[keys[index.row()]]
+            item: ManifestItem = self.manifest[keys[index.row()]]
             print(item)
             if index.column() == 0:
                 return keys[index.row()]            # column zero is the key
             else:
-                return item[index.column() - 1]     # columns 1-3 are elements of the tuple in the manifest
+                tmp = [item.description, item.datumtype, item.created.strftime('%Y-%m-%d %H:%M:%S')]
+                return tmp[index.column()-1]         # columns 1, 2, 3 are the size, type, date
 
 
 class PARCMethodWidget(MethodWidget):
