@@ -18,7 +18,8 @@ in the graph through it as we load them, with just that node in the dictionary.
 import json
 from numbers import Number
 from pathlib import Path
-from typing import List, Optional, Dict, cast
+from jinja2 import Template
+from typing import List, Optional, Dict, cast, Any
 import logging
 
 from pcot.parameters.taggedaggregates import TaggedAggregate, TaggedAggregateType, Maybe, TaggedListType, \
@@ -112,7 +113,7 @@ class SetValue(Change):
         self.value = value
 
     def apply(self, data: TaggedAggregate):
-        logger.info(f"Setting {self.path + [self.key]} to {self.value}")
+        logger.info(f"Setting {self.show()} to {self.value}")
         # walk down the path to get the element we want to change (well, its parent - the last item in the path)
         element = get_element_to_modify(data, self.path)
         # use the key to get its tag so we can get its type, and check it.
@@ -258,17 +259,23 @@ class ParameterFile:
         self._changes = []
         self.path = "(no path)"
 
-    def load(self, path: Path) -> 'ParameterFile':
-        """Load a parameter file from a path, returns self for fluent use"""
+    def load(self, path: Path, template_data: Optional[Dict[str, Any]]=None) -> 'ParameterFile':
+        """Load a parameter file from a path, returns self for fluent use. The parameter file will
+        also be run through Jinja2 templating with the data passed in."""
         self.path = str(path)
         logger.info(f"Processing parameter file {self.path}")
         with open(path, 'r') as f:
             s = f.read()
-            self.parse(s)
+            self.parse(s, template_data or {})
         return self
 
-    def parse(self, ss) -> 'ParameterFile':
-        """Load a parameter file from a string, returns self for fluent use"""
+    def parse(self, ss, template_data: Optional[Dict[str, Any]]=None) -> 'ParameterFile':
+        """Load a parameter file from a string, returns self for fluent use. We also process
+        the parameter file as a Jinja2 template"""
+
+        template = Template(ss)     # read in the parameter file and create a Jinja template from it
+        ss = template.render(template_data)  # render the template with the data passed in
+
         lines = ss.split('\n')
         for i, line in enumerate(lines):
             # remove comments - anything after the final '#'
@@ -303,12 +310,12 @@ class ParameterFile:
         if '=' in line:
             parts = [x.strip() for x in line.split('=', 1)]
             path, key = self._parse_path(lineNo, parts[0], False)  # may append an Add change
-            # it seems the most straightforward way of decoding backslash-escapes is using JSON, but we need
-            # to make sure everything it gets is a string.
+            # this is where the processing has to get a bit weird. We take the value, and if it begins
+            # and ends with a quote we assume it's a JSON-serialisable value and decode it. That lets us
+            # put whitespace and escaped characters in it.
             v = parts[1]
-            if v.strip()[0] != '"':
-                v = f'"{v}"'
-            v = json.loads(v)
+            if v.strip()[0] == '"' and v.strip()[-1] == '"':
+                v = json.loads(v)
             self._changes.append(SetValue(path, lineNo, key, v))
         elif line.startswith('del'):
             line = line[3:].strip()
