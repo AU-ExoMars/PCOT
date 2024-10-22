@@ -44,7 +44,9 @@ outputDictType = TaggedDictType(
     # stored value from last time. That should be the behaviour for all nodes.
     output=("node output connection (or None for the default)", Maybe(int), None),
 
-    # the file to write to
+    # the file to write to. If not provided, it should be whatever the last output was.
+    # Combined with the append parameter, this allows us to write to the same file multiple times without
+    # needing to specify the file and append mode each time.
     file=("output filename", Maybe(str), None),
 
     # clobber - if the file already exists, silently overwrite it, otherwise throw an error
@@ -60,8 +62,14 @@ outputDictType = TaggedDictType(
     name=("name of the datum in the archive", Maybe(str), None),
 
     # only used when we are writing a text file or PARC. In the latter case, the datum will be appended to the archive
-    # if there is no existing datum of that name (see 'name' above).
-    append=("append to a PARC or text file if it exists", bool, False),
+    # if there is no existing datum of that name (see 'name' above). The default value None means whatever the previous
+    # output was set to, unless there wasn't one, in which case it will be False.
+    append=("append to a PARC or text file if it exists", Maybe(bool), None),
+
+    # if we're outputting to a text file, this string will be prefixed to the output. It's a good place to put
+    # a header, for example. Note that this is not used for PARC files, and does not apply to images.
+    # The string will be immediately followed by the output - add any desired whitespace or separators.
+    prefix=("prefix for the output", Maybe(str), None),
 
     # options=("options for the output", dict, {}),    # miscellaneous options for the datum's writeToFile method
 )
@@ -135,7 +143,19 @@ class Runner:
         """This checks the parameter dict for an output node and file. We could alternatively
         store output file names in the sink node, but this is a quick and dirty (and perhaps better) way to
         do it"""
+
+        # these two variables are used if the file or append mode is not specified for an output;
+        # they will be set to the last filename and append mode used.
+        prev_filename = None
+        prev_append = False
         for v in self.paramdict['outputs']:
+            if v.file is None:
+                v.file = prev_filename
+            if v.append is None:
+                v.append = prev_append
+            prev_filename = v.file
+            prev_append = v.append
+
             if v.node is not None and v.file is not None:
                 # get the node
                 node = self.doc.graph.getByDisplayName(v.node, single=True)

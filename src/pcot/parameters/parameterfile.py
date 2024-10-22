@@ -15,6 +15,7 @@ path is used to look up the TA in the dict, and the rest of the path is used to 
 Quite often there will only be a single TA in the dict. We load a single parameter file, and then run every node
 in the graph through it as we load them, with just that node in the dictionary.
 """
+import json
 from numbers import Number
 from pathlib import Path
 from typing import List, Optional, Dict, cast
@@ -300,9 +301,15 @@ class ParameterFile:
         """Process each line, adding Change objects to the list of changes if required"""
         logger.info(f"Processing line {lineNo}: {line}")
         if '=' in line:
-            parts = [x.strip() for x in line.split('=')]
+            parts = [x.strip() for x in line.split('=', 1)]
             path, key = self._parse_path(lineNo, parts[0], False)  # may append an Add change
-            self._changes.append(SetValue(path, lineNo, key, parts[1]))
+            # it seems the most straightforward way of decoding backslash-escapes is using JSON, but we need
+            # to make sure everything it gets is a string.
+            v = parts[1]
+            if v.strip()[0] != '"':
+                v = f'"{v}"'
+            v = json.loads(v)
+            self._changes.append(SetValue(path, lineNo, key, v))
         elif line.startswith('del'):
             line = line[3:].strip()
             path, key = self._parse_path(lineNo, line)  # may append an Add change

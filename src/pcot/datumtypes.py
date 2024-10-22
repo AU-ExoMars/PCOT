@@ -73,9 +73,13 @@ class Type:
         """Write to a file - this is the default implementation which just writes the
         string representation of the value to a file followed by a newline.
         The TaggedDict is of OutputDictType, and can be found in parameters/runner.py"""
-        if not outputDescription.clobber and os.path.exists(outputDescription.file):
+
+        # note that append implies clobber
+        if not (outputDescription.append or outputDescription.clobber) and os.path.exists(outputDescription.file):
             raise FileExistsError(f"File {outputDescription.file} already exists")
-        with open(outputDescription.file, "w") as f:
+        with open(outputDescription.file, "a" if outputDescription.append else "w") as f:
+            if outputDescription.prefix is not None:
+                f.write(outputDescription.prefix)
             f.write(str(d.val)+"\n")
 
 
