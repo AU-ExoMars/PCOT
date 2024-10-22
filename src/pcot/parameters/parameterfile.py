@@ -274,7 +274,7 @@ class ParameterFile:
         the parameter file as a Jinja2 template"""
 
         template = Template(ss)     # read in the parameter file and create a Jinja template from it
-        ss = template.render(template_data)  # render the template with the data passed in
+        ss = template.render(template_data or {})  # render the template with the data passed in
 
         lines = ss.split('\n')
         for i, line in enumerate(lines):
