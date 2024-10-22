@@ -21,8 +21,8 @@ Another change could be:
 ```txt
 k.val = 2
 ```
-which assumes that there is a *constant* node called `k`, whose value
-we now set to 2.
+which assumes that there is a node called `k`, whose parameter `val`
+we now set to 2 (this is probably a [constant](/autodocs/constant) node).
 
 
 ## Lists
@@ -42,6 +42,30 @@ inputs.0.multifile.filenames.+ = FilterR10.png
 This tells the multifile loader where the files are (the `directory`
 element), how to decode the names to get a filter (the `filter_pattern`
 element) and finally adds three filenames to the filename list.
+
+What the `+` element actually does is create a new item at the end of
+the list and start modifying that item. In the example above each item
+is just a string, but they could be structures. 
+
+
+@@@danger
+THIS BIT needs working. The example we *should* use is outputs, probably.
+Adding a new output works this way.
+@@@
+
+
+For example,
+the [multidot](/autodocs/multidot) node has a `rois` parameter
+which is a list of either `painted` or `circle` rois. You could add
+a new ROI like this:
+
+```txt
+mynode.rois.+.circle.x = 100
+.y = 100
+.r = 30
+.isSet = y```
+
+Here, the first line creates a new element and sets its `circle`
 
 
 ## Shortcuts
