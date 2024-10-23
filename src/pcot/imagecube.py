@@ -59,7 +59,12 @@ class SubImageCube:
         genFullImage = True  # true if there is no valid ROI
         if len(rois) > 0:
             # construct a temporary ROI union of all the ROIs on this image
-            roi = ROI.roiUnion(rois)
+            try:
+                roi = ROI.roiUnion(rois)
+            except TypeError as e:
+                print("Argh!")
+                ROI.roiUnion(rois)
+                raise e
             if roi is not None:  # if the ROI union is OK
                 genFullImage = False
                 self.bb = roi.bb()  # the bounding box within the image

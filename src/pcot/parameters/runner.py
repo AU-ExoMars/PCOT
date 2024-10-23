@@ -153,6 +153,10 @@ class Runner:
                 params = ParameterFile().parse(param_file_text, data_for_template)
                 params.apply(self.paramdict)
 
+            # now tell all the nodes in the graph that use CTAS (complex TaggedAggregate serialisation)
+            # to reconstruct their data from the modified parameters.
+            self.doc.graph.nodeDataFromParams()
+
             # we MAY have run a parameter file, but the input parameters may have been modified
             # directly. We need to apply these to the inputs. No need to worry about the nodes
             # as they are already modified. Ditto the output parameters, which are handled in

@@ -223,20 +223,17 @@ class Add(Change):
             else:
                 raise AddToNonListException(self, tag.type)
             list_to_append_to = element_containing_the_list[self.key]
+        if isinstance(type_of_items, TaggedVariantDictType) and self.variant is None:
+            raise ValueError(
+                f"Cannot add to a list of variant dicts without specifying a variant (e.g. with foo.bar.+variant_type): {str(self)}")
         if self.variant is not None:  # a variant has been specified (e.g. "foo+bar" in a path)
             # are we dealing with a list of variant dicts?
             if not isinstance(type_of_items, TaggedVariantDictType):
                 raise ValueError(
                     f"specifying a variant when adding to a non-variant list (e.g. foo+bar) is invalid: {str(self)}")
-            # we are. Check that the variant is valid in this list.
-            if self.variant not in type_of_items.type_dict:
-                poss = ",".join(type_of_items.type_dict.keys())
-                raise ValueError(
-                    f"{self.variant} is not a valid variant for adding to this list. Possibilities are: {poss}")
-            # it's valid, so we should be able to make one.
-            underlying_dict = type_of_items.type_dict[self.variant].create()  # will create the underlying dict
-            # now create the containing variant dict and set it to contain that item
-            variant_dict_item = type_of_items.create().set(underlying_dict)
+            # try to make an appropriate item and wrap it in a TaggedVariantDict. This will raise KeyError if
+            # the type name is not correct.
+            variant_dict_item = type_of_items.create(self.variant)
             # and append
             list_to_append_to.append(variant_dict_item)
         else:

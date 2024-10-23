@@ -252,3 +252,28 @@ def test_multiple_text_output_append_shorthand_from_file(globaldatadir):
             [0.9536±0.27318, 0.61933±0.19381, 0.37154±0.13477]
             mean image for 2   0.64816±0.31675
             """)+"\n"
+
+
+def test_add_circle_to_multidot(globaldatadir):
+    pcot.setup()
+    r = Runner(globaldatadir / "runner/test2.pcot")
+
+    with tempfile.TemporaryDirectory() as td:
+        out = os.path.join(td, "output.txt")
+        text = f"""
+            multidot.rois.+circle.label = fish
+            .croi.x = 100
+            .y = 100
+            .r = 30
+
+            inputs.0.parc.filename = {globaldatadir / 'parc/multi.parc'}
+            .itemname = image0
+            outputs.+.file = {out}
+            .clobber = y
+            .node = spectrum
+        """
+        r.run(None,
+              param_file_text=text,
+              data_for_template={"out": out, "globaldatadir": globaldatadir})
+        txt = open(out).read()
+        print(txt)

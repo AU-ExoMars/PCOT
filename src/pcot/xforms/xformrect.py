@@ -49,9 +49,7 @@ class XformRect(XFormROIType):
         # node.params
         return None
 
-    def deserialise(self, node, d):
-        # this deserialises data from .params into the node's ROI directly - it ignores the
-        # dictionary passed in because we don't do any "old style" direct serialisation to JSON
+    def nodeDataFromParams(self, node):
         node.roi.from_tagged_dict(node.params)
 
     def setProps(self, node, img):

@@ -47,7 +47,7 @@ class XFormPainted(XFormROIType):
         # the caller will use node.params.
         return None
 
-    def deserialise(self, node, d):
+    def nodeDataFromParams(self, node):
         node.roi.from_tagged_dict(node.params)
 
     def setProps(self, node, img):

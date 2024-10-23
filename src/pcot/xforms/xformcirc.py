@@ -51,9 +51,9 @@ class XformCirc(XFormROIType):
         # the caller will use node.params.
         return None
 
-    def deserialise(self, node, d):
-        # deserialise the ROI from node.params, ignoring the dictionary passed in
-        # because we don't do any "old style" direct serialisation to JSON
+    def nodeDataFromParams(self, node):
+        """We're using "CTAS" - complex tagged aggregate serialisation. Build the object's data from
+        tagged dict."""
         node.roi.from_tagged_dict(node.params)
 
     def setProps(self, node, img):

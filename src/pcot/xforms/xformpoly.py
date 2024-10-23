@@ -43,7 +43,7 @@ class XformPoly(XFormROIType):
             node.params[k] = rser[k]
         return None
 
-    def deserialise(self, node, d):
+    def nodeDataFromParams(self, node):
         node.roi.from_tagged_dict(node.params)
 
     def setProps(self, node, img):
