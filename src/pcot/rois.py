@@ -251,6 +251,8 @@ class ROI(SourcesObtainable, Annotation):
         if 'type' not in td:
             raise Exception("ROI fromSerialised: no type field")
         # get the constructor for the ROI type and construct an instance
+        if td['type'] not in ROI.roiTypes:
+            raise Exception(f"ROI fromSerialised: unknown type {td['type']}")
         constructor = ROI.roiTypes[td['type']]
         r = constructor()
         r.from_tagged_dict(td)
@@ -645,9 +647,9 @@ class ROICircle(ROI):
 
     # the tagged dict structure for serialising circles is a single key - croi (circle ROI) - that
     # holds a tuple defining the circle.
-    circleType = TaggedDictType(x=("Centre x coordinate", Number, 0.0),
-                                y=("Centre y coordinate", Number, 0.0),
-                                r=("Radius", Number, 0.0),
+    circleType = TaggedDictType(x=("Centre x coordinate", int, 0),
+                                y=("Centre y coordinate", int, 0),
+                                r=("Radius", int, 0),
                                 isSet=("Is set? (internal)", bool, False)
                                 ).setOrdered()
 
@@ -718,7 +720,8 @@ class ROICircle(ROI):
         super().from_tagged_dict_common(td)
         t = td.croi
         self.x, self.y, self.r = t.x, t.y, t.r
-        self.isSet = t.isSet
+        # this handles the case where we haven't set isSet in a parameter file
+        self.isSet = t.isSet or self.r>0
 
     def __copy__(self):
         r = ROICircle(sourceROI=self)

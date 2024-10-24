@@ -306,7 +306,11 @@ class TaggedDict(TaggedAggregate):
             # otherwise check the type
             raise ValueError(f"TaggedDict key {key}: Value {value} is not of type {correct_type}")
 
-        self._values[key] = value
+        # this will convert the value to the exact type declared in the tag if possible
+        if correct_type in (int, float, str, bool):
+            self._values[key] = correct_type(value)
+        else:
+            self._values[key] = value
 
     def set(self, *args) -> 'TaggedDict':
         """If there is an ordering, set the values in the order given."""
@@ -550,8 +554,22 @@ class TaggedVariantDictType(TaggedAggregateType):
             if not isinstance(v, TaggedDictType):
                 raise ValueError(f"Value {v} is not a TaggedDictType")
 
-    def create(self):
-        return TaggedVariantDict(self)
+    def create(self, type_name=None):
+        """Create an instance of TaggedVariantDict. By default it will have no child dict, but if a name is provided
+        it will
+        - look up the name in the type_dict to get the type
+        - create a new dict of that type and set it to be the child dict
+        - set the value of the discriminator field in that dict to be the type name"""
+        d = TaggedVariantDict(self)
+        if type_name is not None:
+            if type_name not in self.type_dict:
+                poss = ",".join(self.type_dict.keys())
+                raise KeyError(
+                    f"{type_name} is not a valid variant for adding to this list. Possibilities are: {poss}")
+            subd = self.type_dict[type_name].create()
+            d.set(subd)
+            subd[self.discriminator_field] = type_name
+        return d
 
     def deserialise(self, data) -> 'TaggedVariantDict':
         return TaggedVariantDict(self, data)
@@ -623,8 +641,8 @@ def taggedColourType(r, g, b):
 
 
 def taggedRectType(x, y, w, h):
-    return TaggedDictType(x=("The x coordinate of the top left corner", Number, float(x)),
-                           y=("The y coordinate of the top left corner", Number, float(y)),
-                           w=("The width of the rectangle", Number, float(w)),
-                           h=("The height of the rectangle", Number, float(h))
+    return TaggedDictType(x=("The x coordinate of the top left corner", int, int(x)),
+                           y=("The y coordinate of the top left corner", int, int(y)),
+                           w=("The width of the rectangle", int, int(w)),
+                           h=("The height of the rectangle", int, int(h))
                            ).setOrdered()

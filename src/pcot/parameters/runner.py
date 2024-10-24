@@ -24,8 +24,9 @@ OR we can do this, modifying the parameters directly
             restore the document to its original state and rebuild paramdict
 
 """
+import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any, Dict
 
 from pcot.document import Document
 from pcot.inputs.inp import NUMINPUTS
@@ -81,6 +82,8 @@ outputListType = TaggedListType("output list", outputDictType, 0)
 class Runner:
     def __init__(self, document_path: Path):
         self.doc = Document(document_path)
+        self.document_path = document_path
+        self.count = 0
         self.archive = self.doc.saveToMemoryArchive()
         self._build_param_dict()
 
@@ -103,20 +106,56 @@ class Runner:
             # we even do this if the node has no parameters so we can check for that.
             self.paramdict[node.displayName] = node.params
 
-    def run(self, param_file: Optional[Path], param_file_text: Optional[str] = None):
+    def run(self, param_file: Optional[Path], param_file_text: Optional[str] = None,
+            data_for_template: Optional[Dict[str, Any]] = None):
         """Run the document with the parameters set from the given file. The param_file_text
-        is provided for testing - it allows a parameter file to be passed in as a string."""
+        is provided for testing - it allows a parameter file to be passed in as a string.
+        The data_for_template is a dictionary which will be used to fill in template strings
+        (in Jinja2 format) in the parameter file.
+        Some template items are preset:
+            - {{docpath}} - the path to the document (with backslashes replaced by forward slashes)
+            - {{docfile}} - the name of the document file (i.e. the final part of the path)
+            - {{parampath}} - the path to the parameter file (if one is used, it is "NoFile" otherwise)
+            - {{paramfile}} - the name of the parameter file (if one is used, it is "NoFile" otherwise)
+            - {{count}} - the number of times the document has been run
+            - {{datetime}} - the current date and time in ISO 8601 format
+            - {{date}} - the current date in ISO 8601 format
+        """
+
+        # make sure a dict exists for the templater
+        data_for_template = data_for_template or {}
+        # and merge in the preset values
+        data_for_template.update({
+            "docpath": str(self.document_path).replace("\\", "/"),
+            "docfile": str(self.document_path.name),
+            "datetime": datetime.datetime.now().isoformat(),
+            "date": datetime.datetime.now().date().isoformat(),
+            "count": self.count})
+
+        self.count += 1
 
         try:
             if param_file:
-                params = ParameterFile().load(param_file)
+                data_for_template.update({
+                    "parampath": str(param_file).replace("\\", "/"),
+                    "paramfile": str(param_file.name)
+                })
+                params = ParameterFile().load(param_file, data_for_template)
                 # Apply the parameter file to the parameters in the paramdict.
                 params.apply(self.paramdict)
                 # The nodes will be modified, but the modifications to the inputs
                 # need to be processed separately.
             elif param_file_text:
-                params = ParameterFile().parse(param_file_text)
+                data_for_template.update({
+                    "parampath": "NoFile",
+                    "paramfile": "NoFile"
+                })
+                params = ParameterFile().parse(param_file_text, data_for_template)
                 params.apply(self.paramdict)
+
+            # now tell all the nodes in the graph that use CTAS (complex TaggedAggregate serialisation)
+            # to reconstruct their data from the modified parameters.
+            self.doc.graph.nodeDataFromParams()
 
             # we MAY have run a parameter file, but the input parameters may have been modified
             # directly. We need to apply these to the inputs. No need to worry about the nodes

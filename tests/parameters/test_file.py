@@ -78,15 +78,15 @@ def test_string():
     foo.bar.baz = 1
     foo.bar.quux = "hello"      # this is an end-of-line comment
     foo.bar[1] = 2
-    foo.bar[1].quux = "world"
+    foo.bar[1].quux = world
     .blonk = 3
     del foo.bar[1]
     """
     f = ParameterFile().parse(test)
     assert repr(f._changes[0]) == "SetValue(2, root=foo path=bar key=baz) val=1"
-    assert repr(f._changes[1]) == 'SetValue(3, root=foo path=bar key=quux) val="hello"'
+    assert repr(f._changes[1]) == 'SetValue(3, root=foo path=bar key=quux) val=hello'
     assert repr(f._changes[2]) == 'SetValue(4, root=foo path=bar key=1) val=2'
-    assert repr(f._changes[3]) == 'SetValue(5, root=foo path=bar.1 key=quux) val="world"'
+    assert repr(f._changes[3]) == 'SetValue(5, root=foo path=bar.1 key=quux) val=world'
     assert repr(f._changes[4]) == 'SetValue(6, root=foo path=bar.1 key=blonk) val=3'
     assert repr(f._changes[5]) == 'DeleteValue(7, root=foo path=bar key=1)'
 

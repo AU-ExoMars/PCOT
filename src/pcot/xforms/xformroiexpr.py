@@ -113,7 +113,7 @@ class XFormROIExpr(XFormType):
         # and don't return anything, because we've stored the data in node.params.
         return None
 
-    def deserialise(self, node, d):
+    def nodeDataFromParams(self, node):
         # here, we do extra work to retrieve parameters from the .params structure.
         # for more detail, see how multidot's deserialise does it!
         node.rois = [ROI.new_from_tagged_dict(x.get()) for x in node.params.rois]

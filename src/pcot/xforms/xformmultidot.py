@@ -227,8 +227,8 @@ class XFormMultiDot(XFormType):
         # and don't return anything, because we've stored the data in node.params.
         return None
 
-    def deserialise(self, node, d):
-        # get the TaggedList of variant dicts
+    def nodeDataFromParams(self, node):
+        """CTAS deserialisation"""
         lst = node.params.rois
 
         rs = []

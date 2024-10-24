@@ -190,17 +190,18 @@ When the node is serialised, the structure will be serialised.
 
 ## complex TaggedAggregate serialisation
 
-The previous method dealt with data which can be JSON-serialised directly. If we need to modify
-non-JSON-serialisable data with parameter files, we need to do something similar to the
-complex serialisation method described above but going through a TaggedAggregate: we set the
-TaggedAggregate from our complex data, and then PCOT will serialise that.
+The previous method dealt with data which can be JSON-serialised directly. If
+we need to modify non-JSON-serialisable data with parameter files, we need to
+do something similar to the complex serialisation method described above but
+going through a TaggedAggregate: we set the TaggedAggregate from our complex
+data, and then PCOT will serialise that.
 
-To do this, we create a `params` in the type as we did in the previous section, containing
-a TaggedDictType which we will build from our actual data.
+To do this, we create a `params` in the type as we did in the previous
+section, containing a TaggedDictType which we will build from our actual data.
 
-Again we write `serialise` and `deserialise` methods in `XFormType`. This time,
-however, we use `serialise` to create a `node.params` structure which will be automatically saved
-on return:
+Now we write `serialise` as before, but building a TaggedDict from the
+data and storing it in the node's `params`. It should return None, because we're not using a standard Python
+dict for serialisation. Here's an example:
 
 ```python
 def serialise(self, node):
@@ -216,11 +217,15 @@ def serialise(self, node):
     # JSON-serialisable dict.
     
     return None
+```
 
-def deserialise(self, node, _):
-    # we ignore the dictionary, because we will be working with the JSON-serialisable version
-    # of our data that is stored in the TaggedAggregate in node.params
-    
+Instead of a `deserialise` method we should write `nodeDataToParams`. This
+takes a node, and uses its `params` field (a TaggedDict) to set the
+node's internal data:
+
+```python
+def nodeDataToParams(self, node):
+    # convert some data in node.params into our own private data
     our_data = some_function_of(node.params.foo, node.params.bar)
 ```
 
@@ -297,6 +302,16 @@ and append it to the list:
 ```python
     ll.append(t)
 ```
+We can pass a type name to the `create` method of the variant type to automatically create
+an embedded dict of the correct type, so we could write the above lines as:
+```python
+d = tvdt.create("type1")
+ll.append(d)
+```
+
+
+
+
 To examine an item, we can get its discriminator value:
 ```
     assert ll[0].get_type() == 'type1'

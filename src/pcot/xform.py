@@ -318,36 +318,23 @@ class XFormType:
 
     def serialise(self, xform):
         """maybe override - return a dict of all values belonging to the node which should be saved.
+        If you're doing "complex TaggedAggregate serialisation" this should also build a params field
+        in the node containing a TaggedDict of the appropriate type.
             This happens in addition to autoserialisation/deserialisation
         """
         pass
 
     def deserialise(self, xform, d):
-        """maybe override - given a dictionary, set the values in the node from the dictionary
+        """maybe override - given a dictionary, set the values in the node from the dictionary.
+        If you are doing "complex TaggedAggregate serialisation" you should probably leave this
+        alone and instead write a nodeDataFromParams() method.
             This happens in addition to autoserialisation/deserialisation
         """
         pass
 
-    def serialiseToTaggedDict(self, xform):
-        """This is used when a transform isn't using the standard serialisation mechanism to store
-        data that can be modified by a parameter file - data that lives in a TaggedDict (at least for
-        a bit). This is typically data like the ROI data for ROI nodes, which lives at the same
-        level as the node data.
-
-        It takes a node and returns a TaggedDict containing the data. This will be serialised and
-        merged with the node's data.
-
-        TODO hopefully redundant
-        """
-        return None
-
-    def deserialiseViaTaggedDict(self, xform, d):
-        """This is the counterpart to serialiseToTaggedDict. It takes a node and a dictionary,
-        and reads some data from that dictionary (it will be the entire node data) to create a TaggedDict
-        the parameter system will work with. It will then use the data to set the node's data.
-
-        TODO hopefully redundant
-        """
+    def nodeDataFromParams(self, xform):
+        """override if you are doing "complex TaggedAggregate serialisation - build the node's data
+        from the node's .params field."""
         pass
 
     def createTab(self, xform, window):
@@ -665,13 +652,6 @@ class XForm:
             # avoids a type check problem
             d.update(d2 or {})
 
-        # also serialise to TD if we're doing something weird with tagged attributes and not
-        # using the built-in parameter system (.params)
-        td = self.type.serialiseToTaggedDict(self)
-        if td is not None:
-            d2 = td.serialise()
-            d.update(d2)
-
         Canvas.serialise(self, d)
 
         # serialise the parameters into the same dict
@@ -712,16 +692,14 @@ class XForm:
         self.type.doAutodeserialise(self, d)
         # deserialise parameter data which need to be processed another way, not via
         # self.type.params and self.params
-        # TODO handle parameter file modification
-        self.type.deserialiseViaTaggedDict(self, d)
         # deserialise parameters
         if self.type.params is not None:
             # this will replace the defaults.
-            # TODO handle parameter file modification
             self.params = self.type.params.deserialise(d)
         # finally do any extra deserialisation tasks, such as deserialising things which
         # can't be autoserialised and such as converting self.params into data
         self.type.deserialise(self, d)
+        self.type.nodeDataFromParams(self)
 
     def getOutputType(self, i) -> Optional['pcot.datumtypes.Type']:
         """return the actual type of an output, taking account of overrides (node outputTypes).
@@ -1519,6 +1497,13 @@ class XFormGraph:
     def getMyROIs(self, node):
         """If this node creates an ROI or ROIs, return it/them as a list, otherwise None (not an empty list)"""
         return None
+
+    def nodeDataFromParams(self):
+        """Used in the parameter file runner to set the node data from parameters which have been
+        modified since the node was created. This does mean this gets called at least twice - once
+        when the node is created, and once when the node is modified."""
+        for n in self.nodes:
+            n.type.nodeDataFromParams(n)
 
 
 class XFormROIType(XFormType):
