@@ -522,11 +522,6 @@ class ROI(SourcesObtainable, Annotation):
         """Create an editor for the ROI"""
         pass
 
-    def changed(self):
-        """Notify the ROI that its values have been set. This may not actually do anything, but for ROIs like
-        Rect and Circle it's necessary. Other ROIs have different ways of knowing if they have a valid value."""
-        pass
-
     def copy(self):
         """Create a copy of the ROI - here for completeness; it's more pythonic to use copy.copy() or copy.deepcopy()"""
         return copy.copy(self)
@@ -539,7 +534,7 @@ class ROIRect(ROI):
     # of a rect, plus the base ROI fields.
     TAGGEDDICTDEFINITION = BASEROIFIELDS + [
         ('bb', ('rectangle', rectType)),
-        ('isset', ('is rectangle set? (internal)', bool, False))]
+    ]
 
     TAGGEDDICT = TaggedDictType(*TAGGEDDICTDEFINITION)
 
@@ -558,12 +553,10 @@ class ROIRect(ROI):
                 self.h = 0
             else:
                 self.x, self.y, self.w, self.h = rect
-            self.isSet = False
         else:
             if rect is not None:
                 raise ValueError("Can't specify both sourceROI and rect")
             self.x, self.y, self.w, self.h = sourceROI.x, sourceROI.y, sourceROI.w, sourceROI.h
-            self.isSet = True
 
     def bb(self):
         if self.w > 0:
@@ -593,23 +586,20 @@ class ROIRect(ROI):
         self.y = y
         self.w = w
         self.h = h
-        self.isSet = True
 
     def changed(self):
-        self.isSet = True
+        raise NotImplementedError("ROIRect.changed")
 
     def to_tagged_dict(self):
         td = self.TAGGEDDICT.create()
         super().to_tagged_dict_common(td)
         td.bb = rectType.create()
         td.bb.set(self.x, self.y, self.w, self.h)
-        td.isset = self.isSet
         return td
 
     def from_tagged_dict(self, td):
         super().from_tagged_dict_common(td)
         self.x, self.y, self.w, self.h = td['bb']
-        self.isSet = td['isset']
 
     def __copy__(self):
         r = ROIRect(sourceROI=self)
@@ -642,15 +632,13 @@ class ROICircle(ROI):
 
     x: int
     y: int
-    r: int
-    isSet: bool
+    r: int      # if <=0 we have not been set
 
     # the tagged dict structure for serialising circles is a single key - croi (circle ROI) - that
     # holds a tuple defining the circle.
     circleType = TaggedDictType(x=("Centre x coordinate", int, 0),
                                 y=("Centre y coordinate", int, 0),
-                                r=("Radius", int, 0),
-                                isSet=("Is set? (internal)", bool, False)
+                                r=("Radius", int, -1),
                                 ).setOrdered()
 
     TAGGEDDICTDEFINITION = BASEROIFIELDS + [
@@ -663,17 +651,12 @@ class ROICircle(ROI):
         if sourceROI is None:
             self.set(x, y, r)
         else:
-            self.isSet = sourceROI.isSet
             self.x, self.y, self.r = sourceROI.x, sourceROI.y, sourceROI.r
 
     def set(self, x, y, r):
-        self.x = int(x)  # if this is -ve, isSet will be false.
+        self.x = int(x)
         self.y = int(y)
         self.r = int(r)
-        self.isSet = (x >= 0)
-
-    def changed(self):
-        self.isSet = True
 
     def annotate(self, p: QPainter, img, alpha):
         if (bb := self.bb()) is not None:
@@ -685,13 +668,13 @@ class ROICircle(ROI):
             p.drawEllipse(x, y, w, h)
 
     def get(self):
-        if self.isSet:
+        if self.x >= 0:
             return self.x, self.y, self.r
         else:
             return None
 
     def bb(self):
-        if self.isSet:
+        if self.x >= 0:
             return Rect(self.x - self.r, self.y - self.r, self.r * 2 + 1, self.r * 2 + 1)
         else:
             return None
@@ -711,17 +694,13 @@ class ROICircle(ROI):
         td.croi.x = self.x
         td.croi.y = self.y
         td.croi.r = self.r
-        td.croi.isSet = self.isSet
 
-        # td.croi.set(self.x, self.y, self.r, self.isSet)
         return td
 
     def from_tagged_dict(self, td):
         super().from_tagged_dict_common(td)
         t = td.croi
         self.x, self.y, self.r = t.x, t.y, t.r
-        # this handles the case where we haven't set isSet in a parameter file
-        self.isSet = t.isSet or self.r>0
 
     def __copy__(self):
         r = ROICircle(sourceROI=self)
