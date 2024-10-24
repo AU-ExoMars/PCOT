@@ -45,30 +45,23 @@ element) and finally adds three filenames to the filename list.
 
 What the `+` element actually does is create a new item at the end of
 the list and start modifying that item. In the example above each item
-is just a string, but they could be structures. 
+is just a string, but they could be structures. Adding a new structure
+to a list creates a default structure and adds it, and we can then
+immediately modify it.
 
-
-@@@danger
-THIS BIT needs working. The example we *should* use is outputs, probably.
-Adding a new output works this way.
-@@@
-
-
-For example,
-the [multidot](/autodocs/multidot) node has a `rois` parameter
-which is a list of either `painted` or `circle` rois. You could add
-a new ROI like this:
-
+For example, we can add a new output like this:
 ```txt
-mynode.rois.+.circle.x = 100
-.y = 100
-.r = 30
-.isSet = y```
+outputs.+.file = out.csv
+outputs.0.clobber = y
+outputs.0.node = spectrum
+```
+The first line creates a new default output element in the outputs and
+sets its `file` to `out.csv`. The next two lines modify other values within
+that same output, which is the first output (numbered zero).
 
-Here, the first line creates a new element and sets its `circle`
+We can write this more concisely using a relative path.
 
-
-## Shortcuts
+## Relative paths
 
 The left-hand side of each line is called the "path" because
 it describes how to get to each item we need to change. 
@@ -78,7 +71,17 @@ structure. So far we have seen *absolute* paths describing route in full,
 but if we start a path with a `.` - making a *relative* path - we 
 are assumed to be at the same place as the last change.
 
-We can change the previous example to this:
+We can change the previous output example to this:
+```txt
+outputs.+.file = out.csv
+.clobber = y
+.node = spectrum
+```
+The first line creates a new output element and sets its `file` to "out.csv".
+The next two lines modify that output element, because the last thing we set
+was `output.0.file`, inside `output.0`. 
+
+We can also modify the input example the same way:
 ```txt
 inputs.0.multifile.directory = {globaldatadir}/multi
 .filter_pattern = *Filter(?P<lens>L|R)(?P<n>[0-9][0-9]).*
@@ -89,11 +92,31 @@ inputs.0.multifile.directory = {globaldatadir}/multi
 The leading `.` means "stay at the same level," which in this case is
 `inputs.0.multifile`.
 
+## Path setters
+
+If we write a path without setting a value, it just sets the current path for
+the next items - this kind of line is called a **path setter**. 
+We could also write the output example like this:
+```txt
+outputs.+
+.file = out.csv
+.clobber = y
+.node = spectrum
+```
+The first line creates a new output and sets the path. The next
+three lines modify the structure at that path - the output just created.
+
+
+
 @@@danger
 Not yet written below here
 @@@
 
 ### Going up levels with multiple dots
+
+### List notation for ordered dicts
+
+Some parameters are grouped together
 
 ### Using Jinja2 templates
 
