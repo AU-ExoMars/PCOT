@@ -134,8 +134,9 @@ class SetValue(Change):
                     return  # return early, we're done.
                 tp = tag.type.type_if_exists
             if isinstance(tp, TaggedAggregateType):
-                raise ValueError(f"Cannot set a value to a tagged aggregate: {str(self)}")
-            if tp is int:
+                # attempt to initialise the aggregate from the JSON value we just got
+                element[self.key] = tp.deserialise(self.value)
+            elif tp is int:
                 element[self.key] = int(self.value)
             elif tp is float or tag.type is Number:
                 element[self.key] = float(self.value)
@@ -145,7 +146,7 @@ class SetValue(Change):
                 c = self.value.lower()[0]
                 element[self.key] = (c == 't') or (c == 'y')  # just check the first character, upper or lower
             else:
-                raise ValueError(f"unparameterisable {tag.type} for {str(self)}")
+                raise Exception(f"unparameterisable {tag.type} for {str(self)}")
         except ValueError as e:
             raise ValueError(f"{str(self)}: expected {tag.type}, got {type(self.value)} ({self.value})") from e
 
@@ -311,7 +312,8 @@ class ParameterFile:
             # and ends with a quote we assume it's a JSON-serialisable value and decode it. That lets us
             # put whitespace and escaped characters in it.
             v = parts[1]
-            if v.strip()[0] == '"' and v.strip()[-1] == '"':
+            vstrip = v.strip()
+            if (vstrip[0] == '"' and vstrip[-1] == '"') or (vstrip[0] == "[" and vstrip[-1] == "]"):
                 v = json.loads(v)
             self._changes.append(SetValue(path, lineNo, key, v))
         elif line.startswith('del'):
