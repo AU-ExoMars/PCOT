@@ -1,5 +1,9 @@
 # Node serialisation
 
+This page discusses how to serialise the parameters for 
+node types. If you don't know what that means, you're either in the wrong
+place or haven't read [Writing PCOT plugins](plugins.md).
+
 Nodes typically store parameters and data as attributes of their `XForm`
 objects. It's not really "polite" programming, but this is the kind of thing
 you can do with Python. For example, the *expr* node contains a string also
@@ -167,6 +171,8 @@ to change the structure. In fact, I'm only doing it for legacy support.
 You'll note that all the elements of a TaggedAggregate structure are JSON-serialisable, although
 some can be numpy arrays. However, the nature of the structure allows defaults - and documentation -
 to be generated automatically.
+
+## Using TaggedAggregates to serialise nodes
 
 To use a TaggedAggregate to serialise node data, create a `TaggedDictType ` and assign
 it to the `params` member of the `XFormType` in the constructor. For example:

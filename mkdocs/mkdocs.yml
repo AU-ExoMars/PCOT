@@ -37,6 +37,7 @@ nav:
         - Overview: devguide/index.md
         - Using PCOT as a library: devguide/library.md
         - Writing PCOT plugins: devguide/plugins.md
+        - Node serialisation: devguide/nodeser.md
     - Roadmap: roadmap.md
     - Known issues: gettingstarted/issues.md
 
