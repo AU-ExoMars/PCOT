@@ -933,11 +933,11 @@ class ROIPoly(ROI):
     pointType = TaggedDictType(x=("x", Number, 0.0),
                                y=("y", Number, 0.0)).setOrdered()
 
-    listOfPointsType = TaggedListType("list of points", pointType, 0)
+    listOfPointsType = TaggedListType("", pointType, 0)
 
     TAGGEDDICTDEFINITION = BASEROIFIELDS + [
-        ('points', ('points', listOfPointsType)),
-        ('drawPoints', ('draw points', bool, True))]
+        ('points', ('list of points', listOfPointsType)),
+        ('drawPoints', ('should we draw points', bool, True))]
     TAGGEDDICT = TaggedDictType(*TAGGEDDICTDEFINITION)
 
     def __init__(self, sourceROI=None, label=None):

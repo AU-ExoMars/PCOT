@@ -391,6 +391,7 @@ class TaggedDict(TaggedAggregate):
 
 class TaggedListType(TaggedAggregateType):
     """This acts like a list, with all items having the same tag (type, description, default).
+    Usually the description isn't used, since the containing tag will know what the list is for.
     """
 
     _tag: Tag       # tag giving description, default value of new lists, and type of values.
@@ -409,6 +410,9 @@ class TaggedListType(TaggedAggregateType):
         TaggedListType("description", int, [1,2,3]) will set the default to [1,2,3], while
         TaggedListType("description", TaggedDictType(foo=( "foo", int, 30)), 3) will set the default to 3 TaggedDict
         objects, each with a single integer value of 30.
+
+        Often the description will be empty - this is because the parent type (usually a TaggedDictType) has
+        a description for the item, rendering this description redundant.
 
         The deflt_append value is used when we append to a list of objects which are not tagged aggregates. For
         example, TaggedListType("desc", int, [1,2,3], 0) will create a list with 3 integers, and if we append to it

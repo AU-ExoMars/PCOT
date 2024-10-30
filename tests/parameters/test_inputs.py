@@ -287,7 +287,7 @@ def test_multifile_raw_nopreset():
 
 
 def test_multifile_raw_somepreset():
-    """Here we override a preset with some parameters"""
+    """Here we override a preset with some parameters - and we'll try wildcard loading too"""
 
     from pcot.inputs.multifile import presetModel
     from pcot.dataformats.raw import RawLoader
@@ -314,10 +314,9 @@ def test_multifile_raw_somepreset():
         test = f"""
         inputs.0.multifile.directory = {d}
         .preset = testpreset
-        .filenames.+ = Test-L01.raw
-        .+ = Test-L02.raw
+        .wildcard = Test-L*.raw
         # but here we say we're going to flip left-right
-        ..raw.horzflip = true
+        .raw.horzflip = true
         """
         f = ParameterFile().parse(test)
         processParameterFileForInputsTest(doc, f)

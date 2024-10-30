@@ -294,11 +294,15 @@ def test_add_circle_to_multidot_using_list(globaldatadir):
     with tempfile.TemporaryDirectory() as td:
         out = os.path.join(td, "output.txt")
         text = f"""
-            multidot.rois.+circle.label = fish
+            multidot.rois.+circle
+            .label = fish
             .croi = [100, 150, 4]
+            
             inputs.0.parc.filename = {globaldatadir / 'parc/multi.parc'}
             .itemname = image0
-            outputs.+.file = {out}
+            
+            outputs.+
+            .file = {out}
             .clobber = y
             .node = spectrum
         """

@@ -111,7 +111,7 @@ class XFormMultiDot(XFormType):
                                             "circle": ROICircle.TAGGEDDICT
                                         })
 
-    TAGGEDLIST = TaggedListType("rois", TAGGEDVDICT, 0)
+    TAGGEDLIST = TaggedListType("", TAGGEDVDICT, 0)
 
     def __init__(self):
         super().__init__("multidot", "regions", "0.0.0")

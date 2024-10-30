@@ -27,7 +27,7 @@ multifileDictType = TaggedDictType(
     directory=("directory to load from", Maybe(str), None),  # if not present, we are inactive
     # either filenames or wildcard can be set, but not both. If filenames is non-zero length we use it.
     filenames=("list of filenames (mutually exclusive with 'wildcard')",
-               TaggedListType("filename", str, [], '')),
+               TaggedListType("", str, [], '')),
     wildcard=("wildcard for filenames (mutually exclusive with 'filenames')", Maybe(str), None),
     filter_pattern=("pattern for filter identification", str, r".*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*"),
     filter_set=("name of filter set to use", str, "PANCAM"),
@@ -50,7 +50,7 @@ multifileDictType = TaggedDictType(
 PDS4DictType = TaggedDictType(
     directory=("directory to load from", Maybe(str), None),  # if not present, we are inactive
     filenames=("list of filenames (mutually exclusive with 'wildcard')",
-               TaggedListType("filename", str, [], '')),
+               TaggedListType("", str, [], '')),
     wildcard=("wildcard for filenames (mutually exclusive with 'filenames')", Maybe(str), None)
 )
 
