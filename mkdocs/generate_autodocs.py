@@ -9,6 +9,7 @@ their doc strings.
 """
 
 import pcot
+from pcot.parameters.autodoc import generate_inputs_documentation, generate_outputs_documentation
 import os
 import shutil
 
@@ -28,12 +29,14 @@ inputs from various sources and manipulating them in various ways.
 {nodes}
 
 ## *Expr* functions
+
 Below are functions which can be used in the expression evaluation
 node, [expr](expr).
 
 {funcs}
 
 ## *Expr* properties
+
 Below are properties which can be used in the expression evaluation
 node, [expr](autodocs/expr).
 Properties are names which can be used as identifiers on the
@@ -41,6 +44,21 @@ right hand side of a "." operator, such as *a.w* to get the width of an
 image *a*.
 
 {props}
+
+## Input and output parameters for the parameter file (batch) runner
+
+Below are parameters for setting the inputs and outputs in
+parameter files. See [batch mode](/userguide/batch) for more details.
+
+### Inputs
+
+{inputparams}
+
+### outputs
+
+{outputparams}
+
+
 
 """
 
@@ -67,6 +85,9 @@ def genNodes():
 with open("docs/autodocs/index.md","w") as idxfile:
     str = template.format(nodes=genNodes(),
         funcs=parser.listFuncs(),
-        props=parser.listProps())
+        props=parser.listProps(),
+        inputparams=generate_inputs_documentation(),
+        outputparams=generate_outputs_documentation())
     idxfile.write(str)
     
+

@@ -75,7 +75,7 @@ inputMethodDictType = TaggedDictType(
 
 # and there are N inputs
 
-kwargs = {f"{i}": (f"input {i}", inputMethodDictType, None) for i in range(NUMINPUTS)}
+kwargs = {f"{i}": (f"inputs by index", inputMethodDictType, None) for i in range(NUMINPUTS)}
 inputsDictType = TaggedDictType(**kwargs)
 
 
