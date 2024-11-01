@@ -13,8 +13,28 @@ from pcot.parameters.autodoc import generate_inputs_documentation, generate_outp
 import os
 import shutil
 
+# this style is added to all autodocs pages to make them wider.
+
+custom_style = """
+<style>
+div.navbar > div.container {
+    max-width: 1440px;
+}
+
+body > div.container {
+    max-width: 1440px;
+}
+</style>
+"""
+
 template = """
+
+
 # Autodocs
+
+{custom_style}
+
+
 Below are automatically generated documents for certain entities
 in PCOT. The text in them is extracted from the Python source code,
 usually from "docstring" comments to classes or functions.
@@ -79,11 +99,14 @@ def genNodes():
         out += f"* [{realname}]({name})\n"
         print(name)
         with open(f"docs/autodocs/{name}.md","w") as file:
-            file.write(pcot.ui.help.getHelpMarkdown(x))
+            file.write(custom_style+"\n")
+            s = pcot.ui.help.getHelpMarkdown(x)
+            file.write(s)
     return out
             
 with open("docs/autodocs/index.md","w") as idxfile:
     str = template.format(nodes=genNodes(),
+        custom_style=custom_style,
         funcs=parser.listFuncs(),
         props=parser.listProps(),
         inputparams=generate_inputs_documentation(),
