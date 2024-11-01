@@ -18,16 +18,17 @@ from PySide2.QtGui import QImage, QPixmap
 from PySide2.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QMessageBox
 
 from pcot.datum import Datum
+from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.rois import ROICircle
 from pcot.ui.tabs import Tab
 from pcot.xform import xformtype, XFormType
 
 # Set the default values for object detection parameters
 # definitions of these parameters found in parameter description button on node
-DP = 1
-MINDISTANCE = 27
-CANNYHIGHPARAM = 55
-CANNYLOWPARAM = 24
+DP = 1.0
+MINDISTANCE = 27.0
+CANNYHIGHPARAM = 55.0
+CANNYLOWPARAM = 24.0
 MINRADIUS = 8
 MAXRADIUS = 24
 
@@ -71,9 +72,18 @@ class XformPCTPatchDetection(XFormType):
         self.addInputConnector("img", Datum.IMG)
         self.addOutputConnector("img+rois", Datum.IMG)
         # set following node variables to be serialised when required, which is needed for saving and the undo stack
-        self.autoserialise = ("dp", "minDist", "cannyHighParam",
-                              "cannyLowParam", "minRadius", "maxRadius",
-                              "parametersLocked")
+        self.autoserialise = ("parametersLocked",)  # this is kept as autoserialise but not a parameter
+
+        # register parameters for the OpenCV HoughCircles detection
+        # these should match the default values of the parameter sliders and be within slider limits
+        self.params = TaggedDictType(
+            dp=("Inverse ratio of the accumulator resolution to the image resolution for Hough detections", float, DP),
+            minDist=("Minimum distance between the centers of the detected circles", float, MINDISTANCE),
+            cannyHighParam=("Higher of the two Canny edge detection parameters", float, CANNYHIGHPARAM),
+            cannyLowParam=("Lower of the two CAnny edge detection parameters", float, CANNYLOWPARAM),
+            minRadius=("Minimum circle radius for patch detection (pixels)", int, MINRADIUS),
+            maxRadius=("Maximum circle radius for patch detection (pixels)", int, MAXRADIUS),
+        )
 
     def createTab(self, node, window):
         """
@@ -90,15 +100,6 @@ class XformPCTPatchDetection(XFormType):
         node.inputImg = None
         # the detections Datum
         node.detections = None
-
-        # register parameters for the OpenCV HoughCircles detection
-        # these should match the default values of the parameter sliders and be within slider limits
-        node.dp = DP
-        node.minDist = MINDISTANCE
-        node.cannyHighParam = CANNYHIGHPARAM
-        node.cannyLowParam = CANNYLOWPARAM
-        node.minRadius = MINRADIUS
-        node.maxRadius = MAXRADIUS
 
         # additionally create a variable to hold the state of the paramater lock checkbox
         # this needs to be held as a variable in the node to allow it to use the undo stack and saving
@@ -239,15 +240,15 @@ class XformPCTPatchDetection(XFormType):
             workingImg = workingImg[node.detectionExtremities[2]:node.detectionExtremities[3],
                          node.detectionExtremities[0]:node.detectionExtremities[1]]
             # additionally, cache some parameters that will be later changed
-            cachedParam1 = node.cannyHighParam
-            cachedParam2 = node.cannyLowParam
+            cachedParam1 = node.params.cannyHighParam
+            cachedParam2 = node.params.cannyLowParam
             # and alter the parameters temporarily for looser detections, limiting by slider minimums
-            node.cannyHighParam = max(node.cannyHighParam - 32, 20)
+            node.cannyHighParam = max(node.params.cannyHighParam - 32, 20)
             # two levels of looser detections depending on current detection state
             if looseDetectionsLevel == 1:
-                node.cannyLowParam = max(node.cannyLowParam - 5, 10)
+                node.params.cannyLowParam = max(node.params.cannyLowParam - 5, 10)
             elif looseDetectionsLevel == 2:
-                node.cannyLowParam = max(node.cannyLowParam - 8, 10)
+                node.params.cannyLowParam = max(node.params.cannyLowParam - 8, 10)
 
         # apply large kernel low blurs to smooth large sections like sand
         blurredWorkingImg = cv.GaussianBlur(workingImg, (17, 17), 1.5)
@@ -259,18 +260,18 @@ class XformPCTPatchDetection(XFormType):
         # https://docs.opencv.org/4.x/dd/d1a/group__imgproc__feature.html#ga47849c3be0d0406ad3ca45db65a25d2d
         circlesList = cv.HoughCircles(blurredWorkingImg,
                                       cv.HOUGH_GRADIENT,
-                                      dp=node.dp,
-                                      minDist=node.minDist,
-                                      param1=node.cannyHighParam,
-                                      param2=node.cannyLowParam,
-                                      minRadius=node.minRadius,
-                                      maxRadius=node.maxRadius)
+                                      dp=node.params.dp,
+                                      minDist=node.params.minDist,
+                                      param1=node.params.cannyHighParam,
+                                      param2=node.params.cannyLowParam,
+                                      minRadius=node.params.minRadius,
+                                      maxRadius=node.params.maxRadius)
 
         # post-processing if detections were loose on just PCT area:
         if looseDetectionsLevel != 0:
             # reset parameters to cached versions as they were changed
-            node.cannyHighParam = cachedParam1
-            node.cannyLowParam = cachedParam2
+            node.params.cannyHighParam = cachedParam1
+            node.params.cannyLowParam = cachedParam2
             # and index the detection coordinates to the original image
 
         if circlesList is not None:
@@ -1041,37 +1042,37 @@ class TabPCTPatchDetection(Tab):
     def changeDPValue(self):
         """Links dp slider to node instance variable"""
         self.mark()
-        self.node.dp = self.w.dpSlider.value()
+        self.node.params.dp = float(self.w.dpSlider.value())
         self.changed()
 
     def changeMinDistValue(self):
         """Links minDist slider to node instance variable"""
         self.mark()
-        self.node.minDist = self.w.minDistSlider.value()
+        self.node.params.minDist = float(self.w.minDistSlider.value())
         self.changed()
 
     def changeCannyHighValue(self):
         """Links cannyHighParam slider to node instance variable"""
         self.mark()
-        self.node.cannyHighParam = self.w.cannyHighSlider.value()
+        self.node.params.cannyHighParam = float(self.w.cannyHighSlider.value())
         self.changed()
 
     def changeCannyLowValue(self):
         """Links cannyLowParam slider to node instance variable"""
         self.mark()
-        self.node.cannyLowParam = self.w.cannyLowSlider.value()
+        self.node.params.cannyLowParam = float(self.w.cannyLowSlider.value())
         self.changed()
 
     def changeMinRadiusValue(self):
         """Links minRadius slider to node instance variable"""
         self.mark()
-        self.node.minRadius = self.w.minRadiusSlider.value()
+        self.node.params.minRadius = self.w.minRadiusSlider.value()
         self.changed()
 
     def changeMaxRadiusValue(self):
         """Links maxRadius slider to node instance variable"""
         self.mark()
-        self.node.maxRadius = self.w.maxRadiusSlider.value()
+        self.node.params.maxRadius = self.w.maxRadiusSlider.value()
         self.changed()
 
     def showParameterDescriptionsPopup(self):
@@ -1107,12 +1108,12 @@ More information can be found under the HoughCircles() method documentation <a h
         This function runs each time changed() is called and updates the visual states of the node
         """
         # backwards connection from detector parameters to sliders - needed for undo stack
-        self.w.dpSlider.setValue(self.node.dp)
-        self.w.minDistSlider.setValue(self.node.minDist)
-        self.w.cannyHighSlider.setValue(self.node.cannyHighParam)
-        self.w.cannyLowSlider.setValue(self.node.cannyLowParam)
-        self.w.minRadiusSlider.setValue(self.node.minRadius)
-        self.w.maxRadiusSlider.setValue(self.node.maxRadius)
+        self.w.dpSlider.setValue(self.node.params.dp)
+        self.w.minDistSlider.setValue(self.node.params.minDist)
+        self.w.cannyHighSlider.setValue(self.node.params.cannyHighParam)
+        self.w.cannyLowSlider.setValue(self.node.params.cannyLowParam)
+        self.w.minRadiusSlider.setValue(self.node.params.minRadius)
+        self.w.maxRadiusSlider.setValue(self.node.params.maxRadius)
 
         # update paramater lock checkbox
         self.w.lockParametersCheckBox.setChecked(self.node.parametersLocked)
@@ -1144,12 +1145,12 @@ More information can be found under the HoughCircles() method documentation <a h
         self.w.detectionsPlot.setScene(detectionsPlotScene)
 
         # update paramater slider labels to the current value in the node
-        self.w.dpValueLabel.setText(str(self.node.dp))
-        self.w.minDistValueLabel.setText(str(self.node.minDist))
-        self.w.cannyHighValueLabel.setText(str(self.node.cannyHighParam))
-        self.w.cannyLowValueLabel.setText(str(self.node.cannyLowParam))
-        self.w.minRadiusValueLabel.setText(str(self.node.minRadius))
-        self.w.maxRadiusValueLabel.setText(str(self.node.maxRadius))
+        self.w.dpValueLabel.setText(str(self.node.params.dp))
+        self.w.minDistValueLabel.setText(str(self.node.params.minDist))
+        self.w.cannyHighValueLabel.setText(str(self.node.params.cannyHighParam))
+        self.w.cannyLowValueLabel.setText(str(self.node.params.cannyLowParam))
+        self.w.minRadiusValueLabel.setText(str(self.node.params.minRadius))
+        self.w.maxRadiusValueLabel.setText(str(self.node.params.maxRadius))
 
 
 ####################################################################################################
