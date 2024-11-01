@@ -99,7 +99,7 @@ def build_tree(agg: Union[type, TaggedAggregateType], name: str, desc: Optional[
         root = TreeNode(name, desc, optional)
         disc = agg.discriminator_field
         for key, tp in agg.type_dict.items():
-            root.add(build_tree(tp, f"{disc}={key}", None))
+            root.add(build_tree(tp, f"{disc} = {key}", None))
     else:
         raise ValueError(f"Unknown type {agg}")
     return root

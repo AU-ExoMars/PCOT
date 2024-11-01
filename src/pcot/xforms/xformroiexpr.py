@@ -77,7 +77,7 @@ class XFormROIExpr(XFormType):
         self.autoserialise = ('selColour', 'unselColour', 'outColour', 'hideROIs', 'previewRadius',
                               ('imgROIColour', (1, 0, 1)))
 
-        self.params = TaggedDictType(rois=("List of ROIs", self.TAGGEDLIST),
+        self.params = TaggedDictType(rois=("List of ROIs, assigned to a,b,c,d.. in the expression", self.TAGGEDLIST),
                                      expr=("Expression", str, ""))
 
     def createTab(self, n, w):

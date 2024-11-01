@@ -49,15 +49,15 @@ class ROIBoundsException(Exception):
 ROICOLOURTYPE = taggedColourType(1, 0, 0)
 
 BASEROIFIELDS = [
-    ("type", ("type", str, "")),
-    ("label", ("label", Maybe(str), "")),
-    ("labeltop", ("label on top?", bool, False)),
-    ("colour", ("colour", ROICOLOURTYPE)),
-    ("thickness", ("thickness", Number, 0)),
-    ("fontsize", ("fontsize", Number, 10)),
-    ("drawbg", ("draw background", bool, True)),
-    ("drawBox", ("draw box", bool, True)),
-    ("drawEdge", ("draw edge", bool, True)),
+    ("type", ("type of the ROI", str, "")),
+    ("label", ("the ROI's label ", Maybe(str), "")),
+    ("labeltop", ("should the label be above or below the ROI when rendered?", bool, False)),
+    ("colour", ("the colour of the ROI", ROICOLOURTYPE)),
+    ("thickness", ("the border thickness for rendering", Number, 0)),
+    ("fontsize", ("the fontsize for rendering", Number, 10)),
+    ("drawbg", ("should the label's background container be filled with black?", bool, True)),
+    ("drawBox", ("draw the ROI bounding box? (painted only)", bool, True)),
+    ("drawEdge", ("draw the ROI edge, or fill it? (painted only)", bool, True)),
 ]
 
 
