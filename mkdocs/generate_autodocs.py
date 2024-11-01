@@ -13,8 +13,12 @@ from pcot.parameters.autodoc import generate_inputs_documentation, generate_outp
 import os
 import shutil
 
+
 template = """
+
+
 # Autodocs
+
 Below are automatically generated documents for certain entities
 in PCOT. The text in them is extracted from the Python source code,
 usually from "docstring" comments to classes or functions.
@@ -79,7 +83,8 @@ def genNodes():
         out += f"* [{realname}]({name})\n"
         print(name)
         with open(f"docs/autodocs/{name}.md","w") as file:
-            file.write(pcot.ui.help.getHelpMarkdown(x))
+            s = pcot.ui.help.getHelpMarkdown(x)
+            file.write(s)
     return out
             
 with open("docs/autodocs/index.md","w") as idxfile:

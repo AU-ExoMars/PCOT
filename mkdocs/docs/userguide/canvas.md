@@ -38,7 +38,9 @@ it.
 image will plot the spectrum of the pixel under the cursor in this pane. If
 no filter wavelengths are available, a list of the values for each band is shown.
 The show spectrum pane looks like this:
+
 ![!The "show spectrum" pane on an input node's canvas|canvasspec](canvasspec.png)
+
 The screenshot isn't showing the cursor, unfortunately, but the spectrum is for
 the pixel under the cursor.
 
