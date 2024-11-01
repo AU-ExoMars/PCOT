@@ -1,5 +1,9 @@
 site_name: PCOT Documentation
 
+# If the URL contains any of these strings, render them on wide pages
+# (typically for big tables of data)
+wide_pages: ['autodoc']
+
 theme:
     name: mkdocs
     custom_dir: theme

@@ -1,4 +1,10 @@
 <!DOCTYPE html>
+{%- set ns=namespace(wideclass="") -%}
+{%- for x in config.wide_pages -%}
+{%- if x in page.url -%}
+{%- set ns.wideclass = "wide" -%}
+{%- endif -%}
+{%- endfor -%}
 <html lang="{{ config.theme.locale|default('en') }}">
     <head>
       {%- block site_meta %}
@@ -69,7 +75,7 @@
 
     <body{% if page and page.is_homepage %} class="homepage"{% endif %}>
         <div class="navbar fixed-top navbar-expand-lg navbar-{% if config.theme.nav_style == "light" %}light{% else %}dark{% endif %} bg-{{ config.theme.nav_style }}">
-            <div class="container">
+            <div class="container {{ns.wideclass}}">
 
                 {%- block site_name %}
                 <a class="navbar-brand" href="{{ nav.homepage.url|url }}">{{ config.site_name }}</a>
@@ -170,7 +176,7 @@
             </div>
         </div>
 
-        <div class="container">
+        <div class="container {{ns.wideclass}}">
             <div class="row">
                 {%- block content %}
                     <div class="col-md-3">{% include "toc.html" %}</div>
