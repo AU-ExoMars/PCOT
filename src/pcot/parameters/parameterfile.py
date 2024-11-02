@@ -19,7 +19,7 @@ import json
 from numbers import Number
 from pathlib import Path
 from jinja2 import Template
-from typing import List, Optional, Dict, cast, Any
+from typing import List, Optional, Dict, cast, Any, Callable
 import logging
 
 from pcot.parameters.taggedaggregates import TaggedAggregate, TaggedAggregateType, Maybe, TaggedListType, \
@@ -243,6 +243,39 @@ class Add(Change):
             list_to_append_to.append_default()
 
 
+class ResetValue(Change):
+    """A change to reset a value to its default."""
+
+    def __init__(self, path: List[str], line: int, key: str):
+        super().__init__(path, line, key)
+
+    def apply(self, data: TaggedAggregate):
+        logger.info(f"Resetting {self.path + [self.key]}")
+        element = get_element_to_modify(data, self.path)
+        element.reset(self.key)
+
+    def __repr__(self):
+        return f"ResetValue({self.line}, root={self.root_name} path={'.'.join(self.path)} key={self.key})"
+    
+    
+class RunCallback(Change):
+    """A change, but not really - it tells the file to run its callback (actually use the modified parameter
+    data)."""
+
+    def __init__(self, line: int, run_func: Callable):
+        # empty string ensures this will always run (see ParameterFile.apply())
+        super().__init__([], line, '')
+        self.run_func = run_func
+        self.line = line
+
+    def apply(self, data: TaggedAggregate):
+        logger.info(f"Running callback at line {self.line}")
+        self.run_func()
+
+    def __repr__(self):
+        return f"RunCallback({self.line})"
+
+
 class ParameterFile:
     """Represents a parameter file: a set of changes which can be applied to a graph as it is loaded.
     This class knows nothing about TaggedAggregates, it just deals with the file format."""
@@ -251,10 +284,12 @@ class ParameterFile:
     _changes: List[Change]  # the changes to be applied
     path: str  # either the path to the file or "(no path)"
 
-    def __init__(self):
-        """Create the parameter file object - then use either load (for files) or parse (for strings) to read it"""
+    def __init__(self, run_func: Optional[Callable]=None):
+        """Create the parameter file object - then use either load (for files) or parse (for strings) to read it.
+        The parameter is a function which should be called when a "run" command or the end of the file is reached."""
         self._path = []
         self._changes = []
+        self._run = run_func
         self.path = "(no path)"
 
     def load(self, path: Path, template_data: Optional[Dict[str, Any]]=None) -> 'ParameterFile':
@@ -287,6 +322,12 @@ class ParameterFile:
             self._parse(line, i)
         for c in self._changes:
             c.lineText = lines[c.line]
+
+        # add the implied run
+        if self._run:
+            c = RunCallback(len(lines), self._run)
+            c.lineText = "end-of-file"
+            self._changes.append(c)
         return self
 
     def apply(self, data: Dict[str, TaggedAggregate]):
@@ -295,7 +336,12 @@ class ParameterFile:
         data within the aggregate and change it."""
 
         for c in self._changes:
-            if c.root_name in data:
+            # if the root name is in the data, or it's RunCallback, apply the change.
+            if isinstance(c, RunCallback):
+                # RunCallback is an anomaly because it's not really a change. It doesn't
+                # take any data. We also skip over the exception rethrow here.
+                c.apply(None)
+            elif c.root_name in data:
                 try:
                     c.apply(data[c.root_name])
                 except Exception as e:
@@ -320,6 +366,14 @@ class ParameterFile:
             line = line[3:].strip()
             path, key = self._parse_path(lineNo, line)  # may append an Add change
             self._changes.append(DeleteValue(path, lineNo, key))
+        elif line.startswith('reset'):
+            line = line[5:].strip()
+            path, key = self._parse_path(lineNo, line)
+            self._changes.append(ResetValue(path, lineNo, key))
+        elif line.strip() == 'run':
+            if self._run:
+                # don't bother if there's no runner callback
+                self._changes.append(RunCallback(lineNo, self._run))
         else:
             # don't create a change, we're just changing the path
             self._parse_path(lineNo, line, True)

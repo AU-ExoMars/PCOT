@@ -319,3 +319,107 @@ def test_add_circle_to_multidot_using_list(globaldatadir):
         4,0.7445,0.06635,29,0.48617,0.05383,29,0.28073,0.04494,29
         fish,0.57056,0.16577,49,0.37397,0.12172,49,0.23904,0.08788,49
         """)
+
+
+def test_run_modify_run(globaldatadir):
+    """This tests that we can change an output file name and an input node and run again"""
+
+    pcot.setup()
+    r = Runner(globaldatadir / "runner/test2.pcot")
+
+    with tempfile.TemporaryDirectory() as td:
+        out1 = os.path.join(td, "output1.txt")
+        out2 = os.path.join(td, "output2.txt")
+
+        test = f"""
+        inputs.0.parc.filename = {globaldatadir / 'parc/multi.parc'}
+        .itemname = image0
+        outputs.+.file = {out1}
+        .node = mean
+        run
+        
+        outputs.0.file = {out2}
+        k.val = 2.4
+        """
+        r.run(None, test)
+
+        txt = open(out1).read()
+        assert txt == "0.45332±0.19508\n"
+        txt = open(out2).read()
+        assert txt == "0.90664±0.39016\n"   # double the previous value
+
+
+def test_run_modify_with_reset_value_run(globaldatadir):
+    """Test that the reset command does what it should - reset to the saved data.
+    Here we reset an individual value in a node.
+    """
+
+    pcot.setup()
+    r = Runner(globaldatadir / "runner/test2.pcot")
+
+    with tempfile.TemporaryDirectory() as td:
+        out1 = os.path.join(td, "output1.txt")
+        out2 = os.path.join(td, "output2.txt")
+        out3 = os.path.join(td, "output3.txt")
+
+        test = f"""
+        inputs.0.parc.filename = {globaldatadir / 'parc/multi.parc'}
+        .itemname = image0
+        outputs.+.file = {out1}
+        .node = mean
+        run
+
+        outputs.0.file = {out2}
+        k.val = 2.4
+        run
+
+        outputs.0.file = {out3}
+        reset k.val
+        run
+        """
+        r.run(None, test)
+
+        txt = open(out1).read()
+        assert txt == "0.45332±0.19508\n"
+        txt = open(out2).read()
+        assert txt == "0.90664±0.39016\n"  # double the previous value
+        txt = open(out3).read()
+        assert txt == "0.45332±0.19508\n"
+
+
+def test_run_modify_with_reset_node_run(globaldatadir):
+    """Test that the reset command does what it should - reset to the saved data.
+    Here we reset a node.
+    """
+
+    pcot.setup()
+    r = Runner(globaldatadir / "runner/test2.pcot")
+
+    with tempfile.TemporaryDirectory() as td:
+        out1 = os.path.join(td, "output1.txt")
+        out2 = os.path.join(td, "output2.txt")
+        out3 = os.path.join(td, "output3.txt")
+
+        test = f"""
+        inputs.0.parc.filename = {globaldatadir / 'parc/multi.parc'}
+        .itemname = image0
+        outputs.+.file = {out1}
+        .node = mean
+        run
+
+        outputs.0.file = {out2}
+        k.val = 2.4
+        run
+
+        outputs.0.file = {out3}
+        reset k
+        run
+        """
+        r.run(None, test)
+
+        txt = open(out1).read()
+        assert txt == "0.45332±0.19508\n"
+        txt = open(out2).read()
+        assert txt == "0.90664±0.39016\n"  # double the previous value
+        txt = open(out3).read()
+        assert txt == "0.45332±0.19508\n"

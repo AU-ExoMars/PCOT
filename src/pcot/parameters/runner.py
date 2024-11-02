@@ -135,42 +135,44 @@ class Runner:
         self.count += 1
 
         try:
+            def run():
+                # now tell all the nodes in the graph that use CTAS (complex TaggedAggregate serialisation)
+                # to reconstruct their data from the modified parameters.
+                self.doc.graph.nodeDataFromParams()
+
+                # we MAY have run a parameter file, but the input parameters may have been modified
+                # directly. We need to apply these to the inputs. No need to worry about the nodes
+                # as they are already modified. Ditto the output parameters, which are handled in
+                # writeOutputs.
+                for i in range(NUMINPUTS):
+                    # note that we are using the string representation of the input numbers as keys
+                    ii = self.paramdict['inputs'][str(i)]
+                    inp = self.doc.inputMgr.getInput(i)
+                    modifyInput(ii, inp)
+                # run the document
+                self.doc.run()
+                # write the outputs
+                self.writeOutputs()
+
             if param_file:
+                # this if we are running from an actual parameter file on disk
                 data_for_template.update({
                     "parampath": str(param_file).replace("\\", "/"),
                     "paramfile": str(param_file.name)
                 })
-                params = ParameterFile().load(param_file, data_for_template)
+                params = ParameterFile(run).load(param_file, data_for_template)
                 # Apply the parameter file to the parameters in the paramdict.
                 params.apply(self.paramdict)
                 # The nodes will be modified, but the modifications to the inputs
                 # need to be processed separately.
             elif param_file_text:
+                # this if we are running from a block of text
                 data_for_template.update({
                     "parampath": "NoFile",
                     "paramfile": "NoFile"
                 })
-                params = ParameterFile().parse(param_file_text, data_for_template)
+                params = ParameterFile(run).parse(param_file_text, data_for_template)
                 params.apply(self.paramdict)
-
-            # now tell all the nodes in the graph that use CTAS (complex TaggedAggregate serialisation)
-            # to reconstruct their data from the modified parameters.
-            self.doc.graph.nodeDataFromParams()
-
-            # we MAY have run a parameter file, but the input parameters may have been modified
-            # directly. We need to apply these to the inputs. No need to worry about the nodes
-            # as they are already modified. Ditto the output parameters, which are handled in
-            # writeOutputs.
-            for i in range(NUMINPUTS):
-                # note that we are using the string representation of the input numbers as keys
-                ii = self.paramdict['inputs'][str(i)]
-                inp = self.doc.inputMgr.getInput(i)
-                modifyInput(ii, inp)
-
-            # run the document
-            self.doc.run()
-
-            self.writeOutputs()
         finally:
             # restore the document to its original state and rebuild the paramdict ready
             # for the next run. This is in a finally block in case any of the above code

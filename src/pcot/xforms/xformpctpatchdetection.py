@@ -243,7 +243,7 @@ class XformPCTPatchDetection(XFormType):
             cachedParam1 = node.params.cannyHighParam
             cachedParam2 = node.params.cannyLowParam
             # and alter the parameters temporarily for looser detections, limiting by slider minimums
-            node.cannyHighParam = max(node.params.cannyHighParam - 32, 20)
+            node.params.cannyHighParam = max(node.params.cannyHighParam - 32, 20)
             # two levels of looser detections depending on current detection state
             if looseDetectionsLevel == 1:
                 node.params.cannyLowParam = max(node.params.cannyLowParam - 5, 10)

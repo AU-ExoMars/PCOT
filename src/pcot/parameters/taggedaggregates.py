@@ -45,6 +45,13 @@ def is_value_of_type(value, tp):
     return isinstance(value, tp)
 
 
+def process_numeric_type(value, tp):
+    """Handle int->float promotion"""
+    if tp is float and isinstance(value, int):
+        return float(value)
+    return value
+
+
 class TaggedAggregateType(ABC):
     """This is the base class for tagged aggregate type objects. These define what types the values in the aggregate
     should have. Each TaggedAggregate has a ref to one of these *of the appropriate type*, so a TaggedDict will have
@@ -240,6 +247,8 @@ class TaggedDict(TaggedAggregate):
                     # if we have a tagged aggregate, create it from the data stored in the serialised dict
                     self._values[k] = v.type.deserialise(d)
                 elif isinstance(v.type, Maybe):
+                    # handle int->float promotion
+                    d = process_numeric_type(d, v.type.type_if_exists)
                     # if we have a maybe, we have to check null.
                     if d is None:
                         self._values[k] = None
@@ -253,6 +262,8 @@ class TaggedDict(TaggedAggregate):
                         self._values[k] = d
                 else:
                     # otherwise just use the data as is
+                    # handle int->float promotion
+                    d = process_numeric_type(d, v.type)
                     if not is_value_of_type(d, v.type):
                         raise ValueError(f"TaggedDict key {k}: Value {d} is not of type {v.type}")
                     self._values[k] = d
@@ -296,6 +307,8 @@ class TaggedDict(TaggedAggregate):
                 return
             else:
                 correct_type = correct_type.type_if_exists
+        # handle int->float promotion
+        value = process_numeric_type(value, correct_type)
         if isinstance(correct_type, TaggedAggregateType):
             # if the type is a tagged aggregate, make sure it's the right type
             if not isinstance(value, TaggedAggregate):
@@ -427,6 +440,7 @@ class TaggedListType(TaggedAggregateType):
         v = self._tag
         self.deflt_append = deflt_append   # not always valid to provide one; we check later.
         # if type is a TaggedAggregate the default has to be an int!
+        # handle int->float promotion
         if isinstance(v.type, TaggedAggregateType):
             if not isinstance(v.deflt, int):
                 raise ValueError(
@@ -437,6 +451,8 @@ class TaggedListType(TaggedAggregateType):
             # otherwise the default has to be a list, and all items must be of the correct type
             if not isinstance(v.deflt, list):
                 raise ValueError(f"Default {v.deflt} is not a list")
+            # handle int->float promotion
+            v.deflt = [process_numeric_type(i, v.type) for i in v.deflt]
             for i in v.deflt:
                 if not is_value_of_type(i, v.type):
                     raise ValueError(f"Default {v.deflt} contains an item {i} that is not of type {v.type}")
@@ -470,6 +486,8 @@ class TaggedList(TaggedAggregate):
                 # if the type is a tagged aggregate, them from the data provided
                 self._values = [tt.deserialise(v) for v in data]
             else:
+                # handle int->float promotion
+                data = [process_numeric_type(v, tt) for v in data]
                 # otherwise just use the data as is
                 for v in data:
                     if not is_value_of_type(v, tt):
@@ -510,6 +528,7 @@ class TaggedList(TaggedAggregate):
 
     def __setitem__(self, idx, value):
         """Set the value for a given index. Will raise ValueError if the value is not of the correct type."""
+        value = process_numeric_type(value, self._type.tag().type)    # handle int->float promotion
         self._check_value(value)
         try:
             idx = int(idx)  # make sure it's an int; it will probably arrive as a string.
