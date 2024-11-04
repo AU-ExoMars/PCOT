@@ -75,9 +75,23 @@ class TaggedAggregate(ABC):
     the type is here, not in the subtype, although the subtype limits what the actual type can be. This is to
     make it easier to check we have the correct type."""
     _type: TaggedAggregateType  # will always be the appropriate subtype of TaggedAggregateType
+    # we may change this object and want to reset back - this will store the original data. If it's None,
+    # restoring (which is done in ParameterFile) is not possible.
+
+    original: Optional['TaggedAggregate']
 
     def __init__(self, tp: TaggedAggregateType):
         self._type = tp
+        self.original = None
+
+    def clone(self):
+        """Create a deep copy of this object with the exception of numpy arrays"""
+        d = self.serialise()
+        return self._type.deserialise(d)
+
+    def generate_original(self):
+        """Generate the original data which we may need to restore"""
+        self.original = self.clone()
 
     @property
     def type(self):
@@ -88,6 +102,10 @@ class TaggedAggregate(ABC):
     def serialise(self):
         """Serialise the type into a JSON-serialisable structure"""
         raise NotImplementedError("serialise not implemented")
+
+    @abstractmethod
+    def restore_to_original(self):
+        pass
 
 
 @dataclasses.dataclass
@@ -293,6 +311,14 @@ class TaggedDict(TaggedAggregate):
         except KeyError as e:
             raise KeyError(f"Key {key} not in TaggedDict: valid keys are {','.join(self.keys())}") from e
 
+    def restore_to_original(self):
+        """Restore the object to the original state"""
+        if self.original is None:
+            raise ValueError("No original data to restore")
+        # clumsy deep copy; we take advantage of serialisation again, and that the ctor can deserialise.
+        xx = self.original.serialise()
+        self.__init__(self._type, xx)
+
     def __setitem__(self, key, value):
         """Set the value for a given key. Will raise KeyError if it's not in the tags,
         and ValueError if the value is not of the correct type."""
@@ -359,7 +385,7 @@ class TaggedDict(TaggedAggregate):
 
     def __setattr__(self, key, value):
         """Allow setting the values by name"""
-        if key in ('_values', '_type'):
+        if key in ('_values', '_type', 'original'):
             super().__setattr__(key, value)
         else:
             self[key] = value
@@ -550,6 +576,14 @@ class TaggedList(TaggedAggregate):
         else:
             raise ValueError("Default append not provided for non-TaggedAggregateType list")
 
+    def restore_to_original(self):
+        """Restore the object to the original state"""
+        if self.original is None:
+            raise ValueError("No original data to restore")
+        # clumsy deep copy; we take advantage of serialisation again, and that the ctor can deserialise.
+        xx = self.original.serialise()
+        self.__init__(self._type, xx)
+
     def __len__(self):
         return len(self._values)
 
@@ -651,6 +685,14 @@ class TaggedVariantDict(TaggedAggregate):
         # make very sure that the discriminator is set
         out[self._type.discriminator_field] = self._type_name
         return out
+
+    def restore_to_original(self):
+        """Restore the object to the original state"""
+        if self.original is None:
+            raise ValueError("No original data to restore")
+        # clumsy deep copy; we take advantage of serialisation again, and that the ctor can deserialise.
+        xx = self.original.serialise()
+        self.__init__(self._type, xx)
 
 
 #

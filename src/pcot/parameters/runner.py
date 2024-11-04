@@ -32,7 +32,7 @@ from pcot.document import Document
 from pcot.inputs.inp import NUMINPUTS
 from pcot.parameters.inputs import inputsDictType, modifyInput
 from pcot.parameters.parameterfile import ParameterFile
-from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedListType
+from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedListType, TaggedAggregate
 
 # this is the tagged dict type which holds information about output nodes and files
 
@@ -105,6 +105,12 @@ class Runner:
         for node in self.doc.graph.nodes:
             # we even do this if the node has no parameters so we can check for that.
             self.paramdict[node.displayName] = node.params
+
+        # create the 'originals' which will be used to reset the parameters with
+        # the "reset" commands
+        for p in self.paramdict.values():
+            if isinstance(p, TaggedAggregate):
+                p.generate_original()
 
     def run(self, param_file: Optional[Path], param_file_text: Optional[str] = None,
             data_for_template: Optional[Dict[str, Any]] = None):

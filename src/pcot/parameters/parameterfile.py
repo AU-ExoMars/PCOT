@@ -244,15 +244,38 @@ class Add(Change):
 
 
 class ResetValue(Change):
-    """A change to reset a value to its default."""
+    """A change to reset a value to its original. We require that the original structure is still in place,
+    stored in the "original" field of the TaggedAggregate"""
 
     def __init__(self, path: List[str], line: int, key: str):
         super().__init__(path, line, key)
 
     def apply(self, data: TaggedAggregate):
         logger.info(f"Resetting {self.path + [self.key]}")
-        element = get_element_to_modify(data, self.path)
-        element.reset(self.key)
+
+        # trying to reset a root node
+        if self.key is None:
+            if not data.original:
+                raise KeyError(f"Cannot reset {self.show()} - no original structure stored")
+            data.restore_to_original()
+            return
+
+        # get the parent of the element we want to reset
+        element_parent = get_element_to_modify(data, self.path)
+        # and get the parent of that element in the original
+        if not data.original:
+            raise KeyError(f"Cannot reset {self.show()} - no original structure stored")
+        original_parent = get_element_to_modify(data.original, self.path)
+        if not original_parent:
+            raise KeyError(f"Cannot reset {self.show()} - key not found in original")
+        # and set the element to the original value
+        original_value = original_parent[self.key]
+        if isinstance(original_value, TaggedAggregate):
+            element_parent[self.key] = original_value.clone()
+        else:
+            element_parent[self.key] = original_value
+
+
 
     def __repr__(self):
         return f"ResetValue({self.line}, root={self.root_name} path={'.'.join(self.path)} key={self.key})"
@@ -269,7 +292,7 @@ class RunCallback(Change):
         self.line = line
 
     def apply(self, data: TaggedAggregate):
-        logger.info(f"Running callback at line {self.line}")
+        logger.info(f"Running callback at line {self.line}!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         self.run_func()
 
     def __repr__(self):
