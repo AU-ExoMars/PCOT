@@ -386,3 +386,111 @@ def test_change_top_level_list():
     assert tl[1].g[6] == 102
     assert tl[2].g[6] == 103
     assert tl[3].g[6] == 104
+
+
+def test_reset_embedded_plain_value():
+    td = tagged_dict_type.create()
+    # change some items so they aren't the same as the defaults
+    td.base.a = 1032
+    td.base.b = "bar"
+    td.bloon = "xyz"
+    # save the state
+    td.generate_original()
+
+    # now change them again
+    td.base.a = 1033
+    td.base.b = "baz"
+    td.bloon = "abc"
+
+    # reset base.a in a parameter file
+    f = ParameterFile().parse("reset foo.base.a")
+    f.apply({"foo": td})
+
+    # check that base.a has been reset
+    assert td.base.a == 1032
+    # and the others haven't
+    assert td.base.b == "baz"
+    assert td.bloon == "abc"
+
+
+def test_reset_dict_embedded_in_top_level():
+    td = tagged_dict_type.create()
+    # change some items so they aren't the same as the defaults
+    td.base.a = 1032
+    td.base.b = "bar"
+    td.base.c = 2.1
+    td.bloon = "xyz"
+    # save the state
+    td.generate_original()
+
+    # now change them again
+    td.base.a = 1033
+    td.base.b = "baz"
+    td.base.c = 2.2
+    td.bloon = "abc"
+
+    # reset base in a parameter file
+    f = ParameterFile().parse("reset foo.base")
+    f.apply({"foo": td})
+
+    # check that base has been reset
+    assert td.base.a == 1032
+    assert td.base.b == "bar"
+    assert td.base.c == 2.1
+    assert td.bloon == "abc"    # unchanged
+
+
+def test_reset_dict_in_list():
+    td = tagged_dict_type.create()
+    # change some items so they aren't the same as the defaults
+    td.base.a = 1032
+    td.base.b = "bar"
+    td.base.c = 2.1
+    td.bloon = "xyz"
+    # add to the list2 and change a couple of members - easiest to use a parameter file
+    f = ParameterFile().parse("foo.list2.+.d = 36.1\n.f=blart48")
+    f.apply({"foo": td})
+    # save the state
+    td.generate_original()
+
+    # check the values
+    assert len(td.list2) == 1
+    assert td.list2[0].d == 36.1
+    assert td.list2[0].f == "blart48"
+
+    # now change them again
+    td.list2[0].d = 36.2
+    td.list2[0].f = "blart49"
+    # confirm the changes
+    assert td.list2[0].d == 36.2
+    assert td.list2[0].f == "blart49"
+    # reset
+    f = ParameterFile().parse("reset foo.list2[0]")
+    f.apply({"foo": td})
+    # check that the values have been reset
+    assert td.list2[0].d == 36.1
+    assert td.list2[0].f == "blart48"
+
+    # change them back again
+    td.list2[0].d = 36.2
+    td.list2[0].f = "blart49"
+    # confirm the changes
+    assert td.list2[0].d == 36.2
+    assert td.list2[0].f == "blart49"
+
+    # now just reset one of those items.
+    f = ParameterFile().parse("reset foo.list2[0].d")
+    f.apply({"foo": td})
+    # check that only that value has been reset
+    assert td.list2[0].d == 36.1
+    assert td.list2[0].f == "blart49"
+
+    # repeat that test with the alternate list index format
+    td.list2[0].d = 36.2
+    td.list2[0].f = "blart49"
+    f = ParameterFile().parse("reset foo.list2.0.d")
+    f.apply({"foo": td})
+    assert td.list2[0].d == 36.1
+    assert td.list2[0].f == "blart49"
+
+
