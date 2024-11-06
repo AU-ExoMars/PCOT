@@ -21,9 +21,7 @@ base_tagged_ordered_dict_type = TaggedDictType(
     g=("d desc", TaggedListType("embedded list", int, [1, 2, 3, 4, 5, 6], 48))
 ).setOrdered()
 
-
 list_of_ordered_dicts_type = TaggedListType("list of ODs", base_tagged_ordered_dict_type, 0)
-
 
 tagged_dict_type = TaggedDictType(
     base=("a base tagged dict", base_tagged_dict_type, None),
@@ -39,13 +37,18 @@ tagged_variant_dict_type = TaggedVariantDictType("type",
                                                          type=("type", str, "x"),
                                                          a=("a desc", int, 10),
                                                          b=("b desc", str, "foo"),
-                                                         c=("c desc", float, 3.14)
+                                                         c=("c desc", float, 3.14),
                                                      ),
                                                      "y": TaggedDictType(
                                                          type=("type", str, "y"),
                                                          d=("dee", float, 3.24),
                                                          e=("eee", int, 11),
-                                                         f=("eff", str, "dog"))}
+                                                         f=("eff", str, "dog"),
+                                                         g=("gee", TaggedDictType(
+                                                                h=("h", int, 1),
+                                                                i=("i", int, 2)), None)
+                                                     )
+                                                 }
                                                  )
 
 tagged_variant_dict_in_dict_type = TaggedDictType(
@@ -139,7 +142,7 @@ def test_list_add_non_ta():
     f.apply({"foo": td})
     assert len(td.list1) == 4
     assert td.list1[3] == 20
-    f = ParameterFile().parse("foo.list1.+")     # add default item
+    f = ParameterFile().parse("foo.list1.+")  # add default item
     f.apply({"foo": td})
     assert len(td.list1) == 5
     assert td.list1[4] == -1
@@ -148,7 +151,7 @@ def test_list_add_non_ta():
 def test_list_add_non_ta_nodefault():
     """You have to provide a default append item for non-TA lists if you ever want to append to them"""
     with pytest.raises(ValueError) as info:
-        tlt = TaggedListType("base list", int, [10])     # no default append
+        tlt = TaggedListType("base list", int, [10])  # no default append
     assert "Default append not provided" in str(info.value)
 
 
@@ -213,8 +216,8 @@ def test_maybe_in_dict():
         c=("c", Maybe(int), 10)
     )
     td = tdt.create()
-    assert(td.b is None)
-    assert(td.c == 10)
+    assert (td.b is None)
+    assert (td.c == 10)
 
     f = ParameterFile().parse("foo.b = bar")
     f.apply({"foo": td})
@@ -228,9 +231,6 @@ def test_maybe_in_dict():
     f = ParameterFile().parse("foo.c = 22")
     f.apply({"foo": td})
     assert td.c == 22
-
-
-
 
 
 def test_add_to_variant_dict_list():
@@ -249,9 +249,9 @@ def test_add_to_variant_dict_list():
     f.apply({"foo": td})
     assert len(td.lst) == 1
     # check that the variant dict has been created
-    assert td.lst[0].get_type() == "x"      # can do this
-    assert td.lst[0].get()["type"] == "x"   # or this
-    assert td.lst[0].type != "x" # but NOT THIS - this gets the dict type
+    assert td.lst[0].get_type() == "x"  # can do this
+    assert td.lst[0].get()["type"] == "x"  # or this
+    assert td.lst[0].type != "x"  # but NOT THIS - this gets the dict type
 
     # now add another valid variant
     f = ParameterFile().parse("foo.lst.+y")
@@ -272,7 +272,7 @@ def test_modify_variant_dict_list():
     assert len(td.lst) == 1
     # check that the variant dict has been created
     assert td.lst[0].get_type() == "x"
-    assert td.lst[0].get().b == "foo"   # check a value
+    assert td.lst[0].get().b == "foo"  # check a value
 
     # modify
     f = ParameterFile().parse("foo.lst[0].b = bar")
@@ -286,7 +286,7 @@ def test_maybe_list_in_dict():
         base=("an ordinary tagged dict", base_tagged_dict_type, None),
         bloon=("a bloon", str, "bloon"),
         lst=("a list", Maybe(tlt), None)
-        )
+    )
 
     # should fail; the list is null
     td = tdt.create()
@@ -300,6 +300,7 @@ def test_maybe_list_in_dict():
     f = ParameterFile().parse("foo.lst.+ = 22")
     f.apply({"foo": td})
 
+
 @pytest.mark.xfail(raises=NotImplementedError)
 def test_modify_variant_dict_in_dict2():
     """In this code we aren't adding a variant dict to a list but
@@ -309,7 +310,7 @@ def test_modify_variant_dict_in_dict2():
         base=("an ordinary tagged dict", base_tagged_dict_type, None),
         bloon=("a bloon", str, "bloon"),
         dd=("a variant dict", tagged_variant_dict_type, None)
-        )
+    )
 
     td = tdt.create()
 
@@ -344,19 +345,19 @@ def test_change_top_level_list():
     tl = list_of_ordered_dicts_type.create()
     f = ParameterFile().parse("foo.+.g.+")
     f.apply({"foo": tl})
-    assert len(tl) == 1         # foo is a list containing one item, a dict
-    assert len(tl[0]) == 4      # four items in the dict, in which g is a list
-    assert len(tl[0].g) == 7    # six items in the list
-    assert tl[0].g[6] == 48      # the last item is 48 (default new item)
+    assert len(tl) == 1  # foo is a list containing one item, a dict
+    assert len(tl[0]) == 4  # four items in the dict, in which g is a list
+    assert len(tl[0].g) == 7  # six items in the list
+    assert tl[0].g[6] == 48  # the last item is 48 (default new item)
 
     # as above, and  add a value to the last item
     tl = list_of_ordered_dicts_type.create()
     f = ParameterFile().parse("foo.+.g.+ = 101")
     f.apply({"foo": tl})
-    assert len(tl) == 1         # foo is a list containing one item, a dict
-    assert len(tl[0]) == 4      # four items in the dict, in which g is a list
-    assert len(tl[0].g) == 7    # seven items in the list
-    assert tl[0].g[6] == 101    # the last item is 101
+    assert len(tl) == 1  # foo is a list containing one item, a dict
+    assert len(tl[0]) == 4  # four items in the dict, in which g is a list
+    assert len(tl[0].g) == 7  # seven items in the list
+    assert tl[0].g[6] == 101  # the last item is 101
 
     # now we are going to break down the changes
     tl = list_of_ordered_dicts_type.create()
@@ -365,10 +366,10 @@ def test_change_top_level_list():
     .g.+ = 101          # in that item, add an item to g and set it to 101
     """)
     f.apply({"foo": tl})
-    assert len(tl) == 1         # foo is a list containing one item, a dict
-    assert len(tl[0]) == 4      # four items in the dict, in which g is a list
-    assert len(tl[0].g) == 7    # seven items in the list
-    assert tl[0].g[6] == 101    # the last item is 101
+    assert len(tl) == 1  # foo is a list containing one item, a dict
+    assert len(tl[0]) == 4  # four items in the dict, in which g is a list
+    assert len(tl[0].g) == 7  # seven items in the list
+    assert tl[0].g[6] == 101  # the last item is 101
 
     tl = list_of_ordered_dicts_type.create()
     f = ParameterFile().parse("""
@@ -437,7 +438,7 @@ def test_reset_dict_embedded_in_top_level():
     assert td.base.a == 1032
     assert td.base.b == "bar"
     assert td.base.c == 2.1
-    assert td.bloon == "abc"    # unchanged
+    assert td.bloon == "abc"  # unchanged
 
 
 def test_reset_dict_in_list():
@@ -492,5 +493,95 @@ def test_reset_dict_in_list():
     f.apply({"foo": td})
     assert td.list2[0].d == 36.1
     assert td.list2[0].f == "blart49"
+
+
+def test_reset_variant_dict():
+    td = tagged_variant_dict_in_dict_type.create()
+    # add an item to the list of variant dicts
+    v = tagged_variant_dict_type.create("x")
+    td.lst.append(v)
+    td.lst[0].get().a = 100  # remember, get() deferences the variable dict
+    td.lst[0].get().b = "bar"
+
+    # save that state
+    td.generate_original()
+
+    # make some changes
+    td.lst[0].get().a = 101
+    td.lst[0].get().b = "baz"
+
+    # now reset the entire dict
+    f = ParameterFile().parse("reset foo.lst[0]")
+    f.apply({"foo": td})
+    # check things match the saved state
+    assert len(td.lst) == 1
+    assert td.lst[0].get().a == 100
+    assert td.lst[0].get().b == "bar"
+
+
+def test_reset_value_in_variant_dict():
+    td = tagged_variant_dict_in_dict_type.create()
+    # add an item to the list of variant dicts
+    v = tagged_variant_dict_type.create("x")
+    td.lst.append(v)
+    td.lst[0].get().a = 100  # remember, get() deferences the variable dict
+    td.lst[0].get().b = "bar"
+
+    # save that state
+    td.generate_original()
+
+    # make some changes
+    td.lst[0].get().a = 101
+    td.lst[0].get().b = "baz"
+
+    # now reset the entire dict
+    f = ParameterFile().parse("reset foo.lst[0].a")
+    f.apply({"foo": td})
+    # check unchanged values match saved state
+    assert len(td.lst) == 1
+    assert td.lst[0].get().a == 100
+    assert td.lst[0].get().b == "baz"  # should be unchanged
+
+
+def test_reset_dict_in_variant_dict():
+    td = tagged_variant_dict_in_dict_type.create()
+    # add an item to the list of variant dicts
+    v = tagged_variant_dict_type.create("y")
+    td.lst.append(v)
+    # change stuff in the dict inside the variant dict and elsewhere
+    td.bloon = "trampoline"
+    td.lst[0].get().d = 10.1
+    td.lst[0].get().e = 20
+    td.lst[0].get().f = "cat"
+    # g is a dict, and is itself a member of the dict inside the variant dict
+    td.lst[0].get().g.h = 100
+    td.lst[0].get().g.i = 200
+
+    # save that state
+    td.generate_original()
+
+    # now make some changes
+    td.bloon = "kelp"
+    td.lst[0].get().d = 10.5
+    td.lst[0].get().e = 21
+    td.lst[0].get().f = "cat or meringue"
+    # g is a dict, and is itself a member of the dict inside the variant dict
+    td.lst[0].get().g.h = 101
+    td.lst[0].get().g.i = 202
+
+    # reset the dict inside the variant
+    f = ParameterFile().parse("reset foo.lst[0].g")
+    f.apply({"foo": td})
+
+    # check data is as it was just modified, except in the dict
+    # inside the variant
+    assert td.bloon == "kelp"
+    assert td.lst[0].get().d == 10.5
+    assert td.lst[0].get().e == 21
+    assert td.lst[0].get().f == "cat or meringue"
+    # these will be changed back
+    assert td.lst[0].get().g.h == 100
+    assert td.lst[0].get().g.i == 200
+
 
 

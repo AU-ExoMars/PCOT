@@ -423,6 +423,3 @@ def test_run_modify_with_reset_node_run(globaldatadir):
         assert txt == "0.90664±0.39016\n"  # double the previous value
         txt = open(out3).read()
         assert txt == "0.45332±0.19508\n"
-
-
-# TODO test for resetting an item in a tagged variant dict!
