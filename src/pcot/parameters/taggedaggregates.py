@@ -203,6 +203,8 @@ class TaggedDictType(TaggedAggregateType):
 
         for k, v in self.tags.items():
             v.assert_valid()
+            v.deflt = process_numeric_type(v.deflt, v.type)
+            
             # if type is a TaggedAggregate the default has to be None
             if isinstance(v.type, TaggedAggregateType):
                 if v.deflt is not None:
