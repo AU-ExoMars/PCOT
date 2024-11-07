@@ -196,7 +196,6 @@ class TreeMethodWidget(MethodWidget):
         self.treeView.clicked.connect(self.fileClickedAction)
         self.goto(root)
 
-        self.canvas.setMapping(m.mapping)
         # the canvas gets its "caption display" setting from the graph, so
         # we need to get it from the document, which is stored in the manager,
         # which we get from the input, which we get from the method. Ugh.

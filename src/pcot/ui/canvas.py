@@ -599,12 +599,6 @@ class Canvas(QtWidgets.QWidget):
     # the graph of which I am a part. Not really optional, but I have to set it after construction.
     graph: Optional['XFormGraph']
 
-    ## @var mapping
-    # the mapping we are editing, and using to display/generate the RGB representation. Unless we're in 'alreadyRGBMapped'
-    # in which case it's just a mapping we are editing - we display an image mapped elsewhere. Again, not actually
-    # optional - we have to set it in the containing window's init.
-    mapping: Optional['ChannelMapping']
-
     ## @var previmg
     # previous image, so we can avoid redisplay.
     previmg: Optional['ImageCube']
@@ -711,9 +705,6 @@ class Canvas(QtWidgets.QWidget):
         layout.addWidget(self.resetButton, 1, 1)
         self.resetButton.clicked.connect(self.reset)
 
-        # the mapping we are using - the image owns this, we just get a ref. when
-        # the tab is created
-        self.mapping = None
         # previous image (in case mapping changes and we need to redisplay the old image with a new mapping)
         self.previmg = None
         self.isPremapped = False
@@ -1088,11 +1079,6 @@ class Canvas(QtWidgets.QWidget):
         if not hasattr(o, 'persist'):
             o.canvaspersist = PersistBlock()
 
-    # these sets a reference to the mapping this canvas is using - bear in mind this class can mutate
-    # that mapping!
-    def setMapping(self, mapping):
-        self.mapping = mapping
-
     def resetMapButtonClicked(self):
         if self.previmg is not None:
             self.previmg.defaultMapping = None  # force a guess even if there is a default mat
@@ -1106,18 +1092,24 @@ class Canvas(QtWidgets.QWidget):
 
     def redIndexChanged(self, i):
         logger.debug(f"RED CHANGED TO {i}")
-        self.mapping.red = i
-        self.redisplay()
+        # this shouldn't happen if there is no image because the combo will be empty
+        if self.previmg:
+            self.previmg.mapping.red = i
+            self.redisplay()
 
     def greenIndexChanged(self, i):
         logger.debug(f"GREEN CHANGED TO {i}")
-        self.mapping.green = i
-        self.redisplay()
+        # this shouldn't happen if there is no image because the combo will be empty
+        if self.previmg:
+            self.previmg.mapping.green = i
+            self.redisplay()
 
     def blueIndexChanged(self, i):
         logger.debug(f"GREEN CHANGED TO {i}")
-        self.mapping.blue = i
-        self.redisplay()
+        # this shouldn't happen if there is no image because the combo will be empty
+        if self.previmg:
+            self.previmg.mapping.blue = i
+            self.redisplay()
 
     def roiToggleChanged(self, v):
         # can only work when a persister is there; if there isn't, will crash.
@@ -1218,16 +1210,13 @@ class Canvas(QtWidgets.QWidget):
 
         if isinstance(img, Datum):
             img = img.get(Datum.IMG)  # if we are given a Datum, "unwrap" it
-        if self.mapping is None:
-            raise Exception(
-                "Mapping not set in ui.canvas.Canvas.display() - should be done in tab's ctor with setMapping()")
         if self.graph is None:
             raise Exception(
                 "Graph not set in ui.canvas.Canvas.display() - should be done in tab's ctor with setGraph()")
         if img is not None:
             # ensure there is a valid mapping (only do this if not already mapped)
             if alreadyRGBMappedImageSource is None:
-                self.mapping.ensureValid(img)
+                img.mapping.ensureValid(img)
             # now make the combo box options match the sources in the image
             # and finally make the selection each each box match the actual channel assignment
             self.blockSignalsOnComboBoxes(True)  # temporarily disable signals to avoid indexChanged calls
@@ -1236,9 +1225,9 @@ class Canvas(QtWidgets.QWidget):
             self.setCombosToImageChannels(alreadyRGBMappedImageSource
                                           if alreadyRGBMappedImageSource is not None
                                           else img)
-            self.redChanCombo.setCurrentIndex(self.mapping.red)
-            self.greenChanCombo.setCurrentIndex(self.mapping.green)
-            self.blueChanCombo.setCurrentIndex(self.mapping.blue)
+            self.redChanCombo.setCurrentIndex(img.mapping.red)
+            self.greenChanCombo.setCurrentIndex(img.mapping.green)
+            self.blueChanCombo.setCurrentIndex(img.mapping.blue)
             self.blockSignalsOnComboBoxes(False)  # and enable signals again
             self.setScrollBarsFromCanvas()
         # cache the image in case the mapping changes, and also for redisplay itself
@@ -1254,11 +1243,12 @@ class Canvas(QtWidgets.QWidget):
 
     def updateChannelSelections(self):
         # update the channel selections in the combo boxes if they've been changed in code
-        self.blockSignalsOnComboBoxes(True)  # temporarily disable signals to avoid indexChanged calls
-        self.redChanCombo.setCurrentIndex(self.mapping.red)
-        self.greenChanCombo.setCurrentIndex(self.mapping.green)
-        self.blueChanCombo.setCurrentIndex(self.mapping.blue)
-        self.blockSignalsOnComboBoxes(False)  # and enable signals again
+        if self.previmg:
+            self.blockSignalsOnComboBoxes(True)  # temporarily disable signals to avoid indexChanged calls
+            self.redChanCombo.setCurrentIndex(self.previmg.mapping.red)
+            self.greenChanCombo.setCurrentIndex(self.previmg.mapping.green)
+            self.blueChanCombo.setCurrentIndex(self.previmg.mapping.blue)
+            self.blockSignalsOnComboBoxes(False)  # and enable signals again
 
     def redisplay(self):
         # similar to the below; avoid redisplay when we haven't displayed anything yet!
@@ -1268,7 +1258,6 @@ class Canvas(QtWidgets.QWidget):
         # updatetabs -> onNodeChanged -> display -> redisplay -> updatetabs...
         # This is the simplest way to avoid it.
 
-        print(f"REDISPLAY of {self.previmg} with mapping {self.mapping}")
         if not self.recursing:
             self.recursing = True
             n = self.nodeToUIChange
@@ -1415,9 +1404,8 @@ class Canvas(QtWidgets.QWidget):
     def setNode(self, node):
         """This links fields in the canvas to fields in the node. We can't just have a `node` reference, because
         sometimes canvasses don't have nodes (inputs for example). And sometimes we only want to do part of this
-        process, so the three different operations are available separately. But we have to do this in nodes before
+        process, so the different operations are available separately. But we have to do this in nodes before
         every redisplay, because the node may have been replaced by an undo operation."""
 
-        self.setMapping(node.mapping)       # tell the canvas to use the node's RGB mapping
         self.setGraph(node.graph)           # tell the canvas what the graph is
         self.setPersister(node)             # and where it should store its data (ugly, yes).

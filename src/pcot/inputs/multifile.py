@@ -245,7 +245,6 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         self.filtSetCombo.currentIndexChanged.connect(self.filterSetChanged)
         self.loaderSettingsButton.clicked.connect(self.loaderSettings)
         self.loaderSettingsText.setText(str(self.method.rawLoader))
-        self.canvas.setMapping(m.mapping)
         self.presetButton.pressed.connect(self.presetPressed)
         # self.canvas.hideMapping()  # because we're showing greyscale for each image
         self.canvas.setGraph(self.method.input.mgr.doc.graph)

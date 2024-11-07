@@ -366,7 +366,7 @@ class TaggedDict(TaggedAggregate):
     def get(self) -> List[Any]:
         """If there is an ordering, return the values as a list in the order given"""
         if not self._type.isOrdered:
-            raise ValueError("No ordering for TaggedDict")
+            raise ValueError("Can only create iterators for ordered TaggedDicts")
         return [self[k] for k in self._type.ordering]
 
     astuple = get
@@ -564,19 +564,25 @@ class TaggedList(TaggedAggregate):
             raise TypeError(f"List index {idx} is not an integer")
         self._values[idx] = value
 
+    def __delitem__(self, key):
+        """Delete an item from the list"""
+        del self._values[key]
+
     def append(self, value):
         """Append a value to a list. If you want to append a default value, use append_default"""
         self._check_value(value)
         self._values.append(value)
 
     def append_default(self):
-        """Append a default value to a list. If you want to append a specific value, use append"""
+        """Append a default value to a list. If you want to append a specific value, use append.
+        Returns the appended value."""
         if isinstance(self._type.tag().type, TaggedAggregateType):
             self._values.append(self._type.tag().type.create())
         elif self._type.deflt_append is not None:
             self._values.append(self._type.deflt_append)
         else:
             raise ValueError("Default append not provided for non-TaggedAggregateType list")
+        return self._values[-1]
 
     def restore_to_original(self):
         """Restore the object to the original state"""

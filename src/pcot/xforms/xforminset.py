@@ -100,7 +100,7 @@ class XformInset(XFormType):
         if out is None:
             img = None
         else:
-            img = ImageCube(out, node.mapping, sources=src, rois=[roi])
+            img = ImageCube(out, node.mapping, sources=src, rois=[roi] if roi else None)
         node.setOutput(0, Datum(Datum.IMG, img))
 
 
@@ -115,8 +115,6 @@ class TabInset(pcot.ui.tabs.Tab):
         self.w.colourButton.pressed.connect(self.colourPressed)
         self.w.captionTop.toggled.connect(self.topChanged)
         self.w.canvas.setGraph(node.graph)
-        # the image is always RGB, so we shouldn't be able to remap it
-        self.w.canvas.setMapping(ChannelMapping(0, 1, 2))
         self.w.canvas.hideMapping()
 
         self.mouseDown = False
@@ -163,6 +161,7 @@ class TabInset(pcot.ui.tabs.Tab):
             # have to do canvas set up here to handle extreme undo events which change the graph and nodes
             # TODO - not sure why we aren't doing the whole setNode here.
             self.w.canvas.setPersister(self.node)
+            img.mapping = ChannelMapping(0,1,2)
             self.w.canvas.display(img)
         if not self.dontSetText:
             self.w.caption.setText(self.node.caption)

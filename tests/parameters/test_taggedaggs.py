@@ -87,6 +87,18 @@ def test_taggedlist():
     assert tl[3] == 12
 
 
+def test_list_delete():
+    tlt = TaggedListType(
+        "a", int, [10, 20, 30], 0
+    )
+
+    tl = tlt.create()
+    del tl[1]
+    assert tl[0] == 10
+    assert tl[1] == 30
+    assert len(tl) == 2
+
+
 #
 # Now check that we can create nested types
 #
@@ -260,6 +272,18 @@ def test_dict_of_ordered_dicts_ser_deser():
     assert td2['b1'][1] == "bar"
     assert td2['b1'][2] == "dogfish"
     assert td2['c'] == 3.14
+
+
+def test_ordered_dict_destructuring():
+    t = TaggedDictType(
+        x=("x", int, 10),
+        y=("y", int, 20)).setOrdered()
+
+    td = t.create()
+    x,y = td
+
+    assert x == 10
+    assert y == 20
 
 
 def test_complex_ser_deser():
