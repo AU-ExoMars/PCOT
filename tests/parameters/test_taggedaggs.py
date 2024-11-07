@@ -13,7 +13,7 @@ from pcot.parameters.taggedaggregates import *
 def test_taggeddict():
     tdt = TaggedDictType(
         a=("a", int, 10),
-        b=("b", str, "foo"),
+        b=("b", str, "foo", ["foo", "bar", "baz"]),
         c=("c", float, 3.14)
     )
 
@@ -32,9 +32,9 @@ def test_taggeddict():
     td['a'] = 20
     assert td['a'] == 20
 
-    td.b = "hello"
-    assert td.b == "hello"
-    assert td['b'] == "hello"
+    td.b = "bar"
+    assert td.b == "bar"
+    assert td['b'] == "bar"
 
     with pytest.raises(ValueError):
         td['a'] = "wibble"
@@ -42,6 +42,8 @@ def test_taggeddict():
         td['a'] = 3.14
     with pytest.raises(ValueError):
         td['b'] = 64
+    with pytest.raises(ValueError, match=r".*'wibble' is not in the list of valid strings foo,bar,baz"):
+        td['b'] = 'wibble'  # not one of the valid strings
 
     with pytest.raises(KeyError):
         td['d'] = 12

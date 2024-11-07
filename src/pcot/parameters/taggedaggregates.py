@@ -114,6 +114,7 @@ class Tag:
     description: str
     type: Union[type, TaggedAggregateType]  # either a type or one of the TaggedAggregateType objects
     deflt: Any = None  # the default value is ignored (and none) if the type is a TaggedAggregateType
+    valid_strings: Union[List[str],None] = None # if the type is a string, these are the valid values (or any if none)
 
     def assert_valid(self):
         """Check the tag is valid"""
@@ -145,6 +146,7 @@ class TaggedDictType(TaggedAggregateType):
         a=("description of a", int, 3),
         b=("description of b", str, "hello"),
         c=("a nested tagged dict", someOtherTaggedDictType, None)
+        d=("a string 'enum'", str, 'a', ['a', 'b', 'c']), # either a,b, or c as a string
         )
     ```
     Note that the default value is ignored if the type is a TaggedAggregateType, because these have their own
@@ -297,6 +299,11 @@ class TaggedDict(TaggedAggregate):
                     # (it could, in rare cases, be a mutable object like a dict).
                     self._values[k] = copy(v.deflt)
 
+            if v.type == str:
+                # if the type is a string, check it's in the list of valid strings
+                if v.valid_strings is not None and self._values[k] not in v.valid_strings:
+                    raise ValueError(f"TaggedDict key {k}: Value {self._values[k]} is not in the list of valid strings {v.valid_strings}")
+
     def _intkey2str(self, key):
         """Convert an integer key to a string key"""
         if isinstance(key, int):
@@ -346,6 +353,12 @@ class TaggedDict(TaggedAggregate):
         elif not is_value_of_type(value, correct_type):
             # otherwise check the type
             raise ValueError(f"TaggedDict key {key}: Value {value} is not of type {correct_type}")
+        # check string validity
+        if correct_type == str:
+            vstrs = tp.tags[key].valid_strings
+            if vstrs is not None and value not in vstrs:
+                ss = ",".join(vstrs)
+                raise ValueError(f"TaggedDict key {key}: Value '{value}' is not in the list of valid strings {ss}")
 
         # this will convert the value to the exact type declared in the tag if possible
         if correct_type in (int, float, str, bool):
