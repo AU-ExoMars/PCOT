@@ -5,6 +5,7 @@ from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.expressions import ExpressionEvaluator
 from pcot.imagecube import ChannelMapping
+from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.utils import SignalBlocker
 from pcot.xform import XFormType, xformtype, XFormException, XForm
 
@@ -164,14 +165,15 @@ class XFormExpr(XFormType):
         self.addInputConnector("c", Datum.ANY)
         self.addInputConnector("d", Datum.ANY)
         self.addOutputConnector("", Datum.NONE)   # this changes type dynamically
-        self.autoserialise = ('expr',)
+        self.params = TaggedDictType(
+            expr=("Expression to evaluate", str, "")
+        )
 
     def createTab(self, n, w):
         return TabExpr(n, w)
 
     def init(self, node):
         node.tmpexpr = ""
-        node.expr = ""
         # used when we have an image on the output. We keep this unlike a lot of other nodes so
         # we can see when the channel count changes.
         node.img = None
@@ -189,11 +191,12 @@ class XFormExpr(XFormType):
         self.parser.registerVar('d', 'value of input d', lambda: getvar(node.getInput(3)))
 
         try:
-            if len(node.expr.strip()) > 0:
+            expr = node.params.expr.strip()
+            if len(expr) > 0:
                 # get the previous number of channels (or None if the result is not an image)
                 oldChans = None if node.img is None else node.img.channels
                 # run the expression
-                res = self.parser.run(node.expr)
+                res = self.parser.run(expr)
                 node.setOutput(0, res)
                 if res is not None:   # should never be None, but I'll leave this in
                     node.img = None
@@ -241,13 +244,13 @@ class TabExpr(pcot.ui.tabs.Tab):
         self.mark()
         # note that we use a temporary expression, so that the expression isn't constantly changing and we have
         # difficulty marking undo points.
-        self.node.expr = self.node.tmpexpr
+        self.node.params.expr = self.node.tmpexpr
         self.node.rect.setSizeToText()
         self.changed()
 
     def onNodeChanged(self):
         self.w.data.canvas.setNode(self.node)
         with SignalBlocker(self.w.expr):
-            self.w.expr.setPlainText(self.node.expr)
+            self.w.expr.setPlainText(self.node.params.expr)
         d = self.node.getOutputDatum(0)
         self.w.data.display(d)

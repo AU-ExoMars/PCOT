@@ -17,7 +17,7 @@ def runop(doc, img, e, expectedn: Union[list, float], expectedu: Union[list, flo
     green = doc.graph.create("input 0", displayName="GREEN input")
 
     expr = doc.graph.create("expr")
-    expr.expr = e
+    expr.params.expr = e
     expr.connect(0, green, 0, autoPerform=False)
 
     doc.run()

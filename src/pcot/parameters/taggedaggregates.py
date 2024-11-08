@@ -1,4 +1,5 @@
 import dataclasses
+import numbers
 from abc import ABC, abstractmethod
 from copy import copy
 from numbers import Number
@@ -49,6 +50,8 @@ def process_numeric_type(value, tp):
     """Handle int->float promotion"""
     if tp is float and isinstance(value, int):
         return float(value)
+    elif tp is int and isinstance(value, numbers.Integral):
+        return int(value)
     return value
 
 

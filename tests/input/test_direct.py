@@ -59,7 +59,7 @@ def test_direct_scalar():
     # process the input through an expr to check that connections work
     ee = doc.graph.create("expr")
     ee.connect(0, node, 0)
-    ee.expr = "a+1"
+    ee.params.expr = "a+1"
 
     doc.run()
     out = ee.getOutputDatum(0)
