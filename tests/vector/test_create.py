@@ -14,7 +14,7 @@ def test_noargs():
 
     # this should fail
     n = doc.graph.create("expr")
-    n.expr = "[]"
+    n.params.expr = "[]"
 
     doc.run()
     assert isinstance(n.error, XFormException)
@@ -27,7 +27,7 @@ def test_one_element():
     doc = Document()
 
     n = doc.graph.create("expr")
-    n.expr = "[1]"
+    n.params.expr = "[1]"
 
     doc.run()
     assert n.getOutput(0, Datum.NUMBER).n.shape == (1,)
@@ -40,7 +40,7 @@ def test_two_elements():
     doc = Document()
 
     n = doc.graph.create("expr")
-    n.expr = "[1, v(2,0.1)]"
+    n.params.expr = "[1, v(2,0.1)]"
 
     doc.run()
     assert n.getOutput(0, Datum.NUMBER).n.shape == (2,)

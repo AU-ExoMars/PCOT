@@ -242,7 +242,6 @@ class PDS4ImageMethodWidget(MethodWidget):
 
         self.recurseBox.setCheckState(Qt.Checked if self.method.recurse else Qt.Unchecked)
 
-        self.canvas.setMapping(m.mapping)
         self.canvas.setGraph(self.method.input.mgr.doc.graph)
         self.canvas.setPersister(m)
 

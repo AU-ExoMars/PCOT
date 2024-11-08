@@ -26,7 +26,7 @@ def test_roi_single_image(allblack):
     roiNode.connect(0, inputNode, 0)
 
     exprNode = doc.graph.create("expr")
-    exprNode.expr = "clamp(a+4)"  # will add 4 to the value and clip to 1.
+    exprNode.params.expr = "clamp(a+4)"  # will add 4 to the value and clip to 1.
     exprNode.connect(0, roiNode, 0)
 
     doc.run()
@@ -58,7 +58,7 @@ def test_roi_intersection(allblack):
     exprNode = doc.graph.create("expr")
     exprNode.connect(0, roiNode1, 1)
     exprNode.connect(1, roiNode2, 1)
-    exprNode.expr = "a*b"  # multiply = intersect for ROIs
+    exprNode.params.expr = "a*b"  # multiply = intersect for ROIs
 
     # take that intersected ROI and apply it to the image
     importNode = doc.graph.create("importroi")
@@ -68,7 +68,7 @@ def test_roi_intersection(allblack):
     # now take that image with the intersected ROI and set it to white (by adding a large
     # number and clipping). The resulting image should have had 4 pixels set to white.
     setWhiteNode = doc.graph.create("expr")
-    setWhiteNode.expr = "clamp(a+4)"
+    setWhiteNode.params.expr = "clamp(a+4)"
     setWhiteNode.connect(0, importNode, 0)
 
     doc.run()
@@ -99,7 +99,7 @@ def test_roi_union_expr(allblack):
     # now create an expression node to union the two ROIs, taking its input from the ROI
     # outputs (not the images)
     exprNode = doc.graph.create("expr")
-    exprNode.expr = "a+b"  # add = union for ROIs
+    exprNode.params.expr = "a+b"  # add = union for ROIs
     exprNode.connect(0, roiNode1, 1)
     exprNode.connect(1, roiNode2, 1)
 
@@ -111,7 +111,7 @@ def test_roi_union_expr(allblack):
     # now take that image with the union ROI and set it to white (by adding a large
     # number and clipping). The resulting image should have had 14 pixels set to white.
     setWhiteNode = doc.graph.create("expr")
-    setWhiteNode.expr = "clamp(a+4)"
+    setWhiteNode.params.expr = "clamp(a+4)"
     setWhiteNode.connect(0, importNode, 0)
 
     doc.run()
@@ -142,7 +142,7 @@ def test_roi_union(allblack):
     # now take that image with the union ROI and set it to white (by adding a large
     # number and clipping). The resulting image should have had 14 pixels set to white.
     setWhiteNode = doc.graph.create("expr")
-    setWhiteNode.expr = "clamp(a+4)"
+    setWhiteNode.params.expr = "clamp(a+4)"
     setWhiteNode.connect(0, roiNode2, 0)
 
     doc.run()
@@ -177,7 +177,7 @@ def test_roi_binop_image_lhs():
     expr = doc.graph.create("expr")
     expr.connect(0, roi, 0)  # left hand side (red) has ROI
     expr.connect(1, green, 0)  # right hand side (green) does not
-    expr.expr = "a+b"
+    expr.params.expr = "a+b"
 
     doc.run()
     img = expr.getOutput(0, Datum.IMG)
@@ -218,7 +218,7 @@ def test_roi_binop_image_rhs():
     expr = doc.graph.create("expr")
     expr.connect(0, green, 0)  # left hand side (green) has no ROI
     expr.connect(1, roi, 0)  # right hand side (blue) does not
-    expr.expr = "a+b"
+    expr.params.expr = "a+b"
 
     doc.run()
     img = expr.getOutput(0, Datum.IMG)
@@ -277,7 +277,7 @@ def test_rois_on_both_sides_of_binop():
     expr = doc.graph.create("expr")
     expr.connect(0, roi1b, 0)
     expr.connect(1, roi2b, 0)
-    expr.expr = "a+b"
+    expr.params.expr = "a+b"
 
     doc.run()
     img = expr.getOutputDatum(0)
@@ -304,7 +304,7 @@ def test_rois_same_on_both_sides():
 
     expr = doc.graph.create("expr")
     expr.connect(0, roi, 0)
-    expr.expr = "a$R+a$G"
+    expr.params.expr = "a$R+a$G"
 
     doc.run()
     checkexpr(expr)
@@ -327,7 +327,7 @@ def _testinternal_image_and_scalar(exprString):
 
     expr = doc.graph.create("expr")
     expr.connect(0, roi, 0)
-    expr.expr = exprString
+    expr.params.expr = exprString
 
     doc.run()
     checkexpr(expr)
@@ -373,7 +373,7 @@ def perform_roi_op(exprString) -> ImageCube:
     expr = doc.graph.create("expr")
     expr.connect(0, roi1, 1)  # use the ROI output
     expr.connect(1, roi2, 1)
-    expr.expr = exprString
+    expr.params.expr = exprString
 
     importroi = doc.graph.create("importroi")
     importroi.connect(0, red, 0)
@@ -381,7 +381,7 @@ def perform_roi_op(exprString) -> ImageCube:
 
     expr2 = doc.graph.create("expr")
     expr2.connect(0, importroi, 0)
-    expr2.expr = "a+1"
+    expr2.params.expr = "a+1"
 
     # doc.save("c:/users/jim/xxxx.pcot")
 
@@ -457,7 +457,7 @@ def test_roi_neg_expr():
     roi1.connect(0, red, 0)
 
     expr = doc.graph.create("expr")
-    expr.expr = "-a"
+    expr.params.expr = "-a"
     expr.connect(0, roi1, 1)  # use the ROI output
 
     imp = doc.graph.create("importroi")
@@ -465,7 +465,7 @@ def test_roi_neg_expr():
     imp.connect(1, expr, 0)
 
     mod = doc.graph.create("expr")
-    mod.expr = "a*0"
+    mod.params.expr = "a*0"
     mod.connect(0, imp, 0)
 
     doc.run()

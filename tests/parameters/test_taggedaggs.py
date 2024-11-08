@@ -13,7 +13,7 @@ from pcot.parameters.taggedaggregates import *
 def test_taggeddict():
     tdt = TaggedDictType(
         a=("a", int, 10),
-        b=("b", str, "foo"),
+        b=("b", str, "foo", ["foo", "bar", "baz"]),
         c=("c", float, 3.14)
     )
 
@@ -32,9 +32,9 @@ def test_taggeddict():
     td['a'] = 20
     assert td['a'] == 20
 
-    td.b = "hello"
-    assert td.b == "hello"
-    assert td['b'] == "hello"
+    td.b = "bar"
+    assert td.b == "bar"
+    assert td['b'] == "bar"
 
     with pytest.raises(ValueError):
         td['a'] = "wibble"
@@ -42,6 +42,8 @@ def test_taggeddict():
         td['a'] = 3.14
     with pytest.raises(ValueError):
         td['b'] = 64
+    with pytest.raises(ValueError, match=r".*'wibble' is not in the list of valid strings foo,bar,baz"):
+        td['b'] = 'wibble'  # not one of the valid strings
 
     with pytest.raises(KeyError):
         td['d'] = 12
@@ -85,6 +87,18 @@ def test_taggedlist():
     # append an item
     tl.append(12)
     assert tl[3] == 12
+
+
+def test_list_delete():
+    tlt = TaggedListType(
+        "a", int, [10, 20, 30], 0
+    )
+
+    tl = tlt.create()
+    del tl[1]
+    assert tl[0] == 10
+    assert tl[1] == 30
+    assert len(tl) == 2
 
 
 #
@@ -260,6 +274,18 @@ def test_dict_of_ordered_dicts_ser_deser():
     assert td2['b1'][1] == "bar"
     assert td2['b1'][2] == "dogfish"
     assert td2['c'] == 3.14
+
+
+def test_ordered_dict_destructuring():
+    t = TaggedDictType(
+        x=("x", int, 10),
+        y=("y", int, 20)).setOrdered()
+
+    td = t.create()
+    x,y = td
+
+    assert x == 10
+    assert y == 20
 
 
 def test_complex_ser_deser():

@@ -1,4 +1,5 @@
 import dataclasses
+import numbers
 from abc import ABC, abstractmethod
 from copy import copy
 from numbers import Number
@@ -49,6 +50,8 @@ def process_numeric_type(value, tp):
     """Handle int->float promotion"""
     if tp is float and isinstance(value, int):
         return float(value)
+    elif tp is int and isinstance(value, numbers.Integral):
+        return int(value)
     return value
 
 
@@ -114,6 +117,7 @@ class Tag:
     description: str
     type: Union[type, TaggedAggregateType]  # either a type or one of the TaggedAggregateType objects
     deflt: Any = None  # the default value is ignored (and none) if the type is a TaggedAggregateType
+    valid_strings: Union[List[str],None] = None # if the type is a string, these are the valid values (or any if none)
 
     def assert_valid(self):
         """Check the tag is valid"""
@@ -145,6 +149,7 @@ class TaggedDictType(TaggedAggregateType):
         a=("description of a", int, 3),
         b=("description of b", str, "hello"),
         c=("a nested tagged dict", someOtherTaggedDictType, None)
+        d=("a string 'enum'", str, 'a', ['a', 'b', 'c']), # either a,b, or c as a string
         )
     ```
     Note that the default value is ignored if the type is a TaggedAggregateType, because these have their own
@@ -297,6 +302,11 @@ class TaggedDict(TaggedAggregate):
                     # (it could, in rare cases, be a mutable object like a dict).
                     self._values[k] = copy(v.deflt)
 
+            if v.type == str:
+                # if the type is a string, check it's in the list of valid strings
+                if v.valid_strings is not None and self._values[k] not in v.valid_strings:
+                    raise ValueError(f"TaggedDict key {k}: Value {self._values[k]} is not in the list of valid strings {v.valid_strings}")
+
     def _intkey2str(self, key):
         """Convert an integer key to a string key"""
         if isinstance(key, int):
@@ -346,6 +356,12 @@ class TaggedDict(TaggedAggregate):
         elif not is_value_of_type(value, correct_type):
             # otherwise check the type
             raise ValueError(f"TaggedDict key {key}: Value {value} is not of type {correct_type}")
+        # check string validity
+        if correct_type == str:
+            vstrs = tp.tags[key].valid_strings
+            if vstrs is not None and value not in vstrs:
+                ss = ",".join(vstrs)
+                raise ValueError(f"TaggedDict key {key}: Value '{value}' is not in the list of valid strings {ss}")
 
         # this will convert the value to the exact type declared in the tag if possible
         if correct_type in (int, float, str, bool):
@@ -366,7 +382,7 @@ class TaggedDict(TaggedAggregate):
     def get(self) -> List[Any]:
         """If there is an ordering, return the values as a list in the order given"""
         if not self._type.isOrdered:
-            raise ValueError("No ordering for TaggedDict")
+            raise ValueError("Can only create iterators for ordered TaggedDicts")
         return [self[k] for k in self._type.ordering]
 
     astuple = get
@@ -564,19 +580,25 @@ class TaggedList(TaggedAggregate):
             raise TypeError(f"List index {idx} is not an integer")
         self._values[idx] = value
 
+    def __delitem__(self, key):
+        """Delete an item from the list"""
+        del self._values[key]
+
     def append(self, value):
         """Append a value to a list. If you want to append a default value, use append_default"""
         self._check_value(value)
         self._values.append(value)
 
     def append_default(self):
-        """Append a default value to a list. If you want to append a specific value, use append"""
+        """Append a default value to a list. If you want to append a specific value, use append.
+        Returns the appended value."""
         if isinstance(self._type.tag().type, TaggedAggregateType):
             self._values.append(self._type.tag().type.create())
         elif self._type.deflt_append is not None:
             self._values.append(self._type.deflt_append)
         else:
             raise ValueError("Default append not provided for non-TaggedAggregateType list")
+        return self._values[-1]
 
     def restore_to_original(self):
         """Restore the object to the original state"""

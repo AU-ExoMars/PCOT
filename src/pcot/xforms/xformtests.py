@@ -14,6 +14,7 @@ from PySide2.QtWidgets import QMessageBox
 import pcot
 from pcot import ui, dq
 from pcot.datum import Datum
+from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.sources import nullSourceSet
 from pcot.ui.tablemodel import TableModel, ComboBoxDelegate, DQDelegate, DQDialog
 from pcot.utils.annotations import IndexedPointAnnotation
@@ -564,13 +565,13 @@ class TabStringTest(pcot.ui.tabs.Tab):
         self.w.finishedButton.setStyleSheet("background-color:rgb(255,100,100)")
 
     def onNodeChanged(self):
-        self.w.expected.setPlainText(self.node.string)
+        self.w.expected.setPlainText(self.node.params.string)
         self.w.finishedButton.setStyleSheet("")
         self.w.actual.setPlainText(self.node.inp)
 
     def editFinished(self, t):
         self.mark()
-        self.node.string = self.w.expected.toPlainText()
+        self.node.params.string = self.w.expected.toPlainText()
         self.changed()
 
 
@@ -582,11 +583,10 @@ class XFormErrorTest(XFormType):
         super().__init__("errortest", "testing", "0.0.0")
         self.addInputConnector("", Datum.ANY)
         self.addOutputConnector("", Datum.TESTRESULT)
-        self.autoserialise = ('string',)
+        self.params = TaggedDictType(
+            string=("Error code to check for", str, "")
+        )
         self.alwaysRunAfter = True
-
-    def init(self, node):
-        node.string = ""
 
     def createTab(self, xform, window):
         return TabStringTest(xform, window)
@@ -598,8 +598,8 @@ class XFormErrorTest(XFormType):
             n, _ = node.inputs[0]
             if n.error is None:
                 out = "NO ERROR"
-            elif n.error.code != node.string.strip():
-                out = f"{n.error.code}!={node.string.strip()}"
+            elif n.error.code != node.params.string.strip():
+                out = f"{n.error.code}!={node.params.string.strip()}"
         else:
             out = "NO INPUT"
 

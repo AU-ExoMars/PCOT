@@ -129,7 +129,6 @@ class PARCMethodWidget(MethodWidget):
         self.tableView.setModel(Model(self, m.manifest))
         self.tableView.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
 
-        self.data.canvas.setMapping(m.mapping)
         # the canvas gets its "caption display" setting from the graph, so
         # we need to get it from the document, which is stored in the manager,
         # which we get from the input, which we get from the method. Ugh.

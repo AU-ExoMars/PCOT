@@ -10,6 +10,7 @@ from PySide2.QtWidgets import QWidget, QGridLayout, QLabel, QSlider, QDoubleSpin
 import pcot.ui.tabs
 from pcot.datum import Datum
 from pcot.imagecube import ImageCube
+from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.ui.canvas import Canvas
 from pcot.utils import SignalBlocker
 from pcot.xform import XFormType, xformtype, XForm
@@ -47,6 +48,23 @@ class XFormExample(XFormType):
                          #  startEnabled=False
                          )
 
+        # set up parameters. This is a "tagged dictionary" - see the taggedaggregates.py file for more information,
+        # but essentially it's a dict with description, type and default value for every item. This object
+        # is the "type singleton" which defines the parameters for nodes of this type; calling create() on
+        # it will create the actual TaggedDict instance. This is done automatically when we create a new node.
+        #
+        # We also have TaggedList, and both TaggedList and TaggedDict can contain other TaggedLists and TaggedDict.
+        # Check out the tests in test_taggedaggs.py, some of those are quite complex.
+
+        self.params = TaggedDictType(
+            # this is a float parameter called "parameter" with a default value of 0.0. We'll modify it in
+            # the UI.
+            parameter=("Parameter 1", float, 0.0),
+            # this is a string parameter called "parameter2" with a default value of "default". We'll also
+            # modify this in the UI, this time with a combo box.
+            parameter2=("Parameter 2", str, "default")
+        )
+
         # add input and output connectors. The first parameter is the name of the connector,
         # the second is the type of data that can be connected to it.
         # Connectors don't really need a name - they're displayed above the connector
@@ -57,30 +75,11 @@ class XFormExample(XFormType):
 
     def init(self, node: XForm):
         """
-        This method is called to actually initialise a node (an XForm object).
-        It typically does this by filling in some fields of the node object.
+        This method is called to actually initialise a node (an XForm object). It typically does this by
+        filling in some fields of the node object.
+        Here, though, there's nothing to do because node.params will already have been created from self.params
         """
-
-        # this is some value that the node has as a parameter, controlling its
-        # behaviour. We'll modify this value using the UI in the tab. In this case
-        # it's a float.
-        node.parameter = 0.0
-        # for good measure here's another parameter, this time a string (we'll have
-        # a combo box for these).
-        node.parameter2 = "default"
-
-        # this is a tuple of fields in the node that can be serialised and deserialised. This is used to save the
-        # node's state to a file and to the undo stack. The fields must be JSON-serialisable types. If they are not,
-        # you'll have to do something more clever overriding the serialise() and deserialise() methods.
-        #
-        # Each field is a tuple in the form ('name', defaultvalue). The default value is a recent addition to PCOT,
-        # and is useful when new parameters are added to a node and they aren't found in files loaded from older
-        # versions of the software. If the field is not found in the file, the default value is used.
-        #
-        # Remember that if you only have one parameter this still needs to be a tuple, so do "self.autoserialise = (
-        # 'myparam',)
-        self.autoserialise = (('parameter', 0.0),
-                              ('parameter2', 'default'))
+        pass
 
     def perform(self, node):
         """
@@ -88,6 +87,7 @@ class XFormExample(XFormType):
         typically by nodes upstream of this one. It's where the node does its
         work.
         """
+        params = node.params   # get a handy reference to the parameters TaggedDict
 
         img: ImageCube = node.getInput(0, Datum.IMG)  # get the input image
         if img is not None:
@@ -100,8 +100,9 @@ class XFormExample(XFormType):
             # take the top left pixel's nominal value
             pix = nom[0][0]
 
-            # multiply it by the node's parameter
-            pix = pix * node.parameter
+            # multiply it by the node's parameter (we're not using the other parameter because
+            # this is just an example)
+            pix = pix * params.parameter
 
             # and make a new (h,w,depth) array filled with it
             newdata = np.full((32, 32, img.channels), pix)
@@ -203,14 +204,14 @@ class TabExample(pcot.ui.tabs.Tab):
         """This slot method is called when the spinbox changes its value. We update the node and tell it
         that it has changed, which causes the node (and all its children) to run perform()."""
 
-        self.node.parameter = val
+        self.node.params.parameter = val
         self.changed()
 
     def onComboChanged(self, newIdx):
         """Here the combo box value has changed - we're not using it, but we'll change it in the node anyway.
         Although we're using the index, we're going to set the text."""
 
-        self.node.parameter2 = self.combo.itemText(newIdx)
+        self.node.params.parameter2 = self.combo.itemText(newIdx)
         self.changed()
 
     def onNodeChanged(self):
@@ -218,7 +219,7 @@ class TabExample(pcot.ui.tabs.Tab):
 
         # easy part - just set the spinbox and combo box values to the node's values.
 
-        self.spin.setValue(self.node.parameter)
+        self.spin.setValue(self.node.params.parameter)
 
         # this avoids an infinite loop where changing the combo changes the node,
         # which runs this method to change the combo, which changes the node...
@@ -226,7 +227,7 @@ class TabExample(pcot.ui.tabs.Tab):
         # you come across it.
 
         with SignalBlocker(self.combo):
-            self.combo.setCurrentText(self.node.parameter2)
+            self.combo.setCurrentText(self.node.params.parameter2)
 
         # slightly harder part - update the canvas with the image in the node.
         # some setup stuff first. We have to do this here, not in the init, because

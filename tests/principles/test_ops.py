@@ -42,7 +42,7 @@ def test_scalar_ops(e, expected):
     pcot.setup()
     doc = Document()
     expr = doc.graph.create("expr")
-    expr.expr = e
+    expr.params.expr = e
     doc.run()
     n = expr.getOutput(0, Datum.NUMBER).n
     assert n == expected
@@ -74,7 +74,7 @@ def test_image_scalar_ops(e, expected):
     green = doc.graph.create("input 0", displayName="GREEN input")
 
     expr = doc.graph.create("expr")
-    expr.expr = e
+    expr.params.expr = e
     expr.connect(0, green, 0, autoPerform=False)
 
     doc.run()
@@ -110,7 +110,7 @@ def test_image_image_ops(e, expected):
     red = doc.graph.create("input 1")
 
     expr = doc.graph.create("expr")
-    expr.expr = e
+    expr.params.expr = e
     expr.connect(0, green, 0, autoPerform=False)
     expr.connect(1, red, 0, autoPerform=False)
 
@@ -129,7 +129,7 @@ def test_scalar_div_zero():
     pcot.setup()
     doc = Document()
     expr = doc.graph.create("expr")
-    expr.expr = "1/0"
+    expr.params.expr = "1/0"
     doc.run()
     d = expr.getOutputDatum(0)
     assert d.val == Value(0, 0, dq.DIVZERO)
@@ -143,7 +143,7 @@ def test_image_division_by_scalar_zero():
     assert doc.setInputDirectImage(0, greenimg) is None
     green = doc.graph.create("input 0")
     expr = doc.graph.create("expr")
-    expr.expr = "a/0"
+    expr.params.expr = "a/0"
     expr.connect(0, green, 0)
     doc.run()
     d = expr.getOutput(0, Datum.IMG)
@@ -163,7 +163,7 @@ def test_scalar_divide_by_zero_image():
     assert doc.setInputDirectImage(0, greenimg) is None
     green = doc.graph.create("input 0")
     expr = doc.graph.create("expr")
-    expr.expr = "1/a"
+    expr.params.expr = "1/a"
     expr.connect(0, green, 0)
     doc.run()
     d = expr.getOutput(0, Datum.IMG)
@@ -176,7 +176,7 @@ def test_scalar_divide_by_zero_image():
 
     # now check 0/0
 
-    expr.expr = "0/a"
+    expr.params.expr = "0/a"
     doc.run()
     d = expr.getOutput(0, Datum.IMG)
 
@@ -232,7 +232,7 @@ def test_greyscale_simple():
     assert doc.setInputDirectImage(0, inputimg) is None
     inpnode = doc.graph.create("input 0")
     expr = doc.graph.create("expr")
-    expr.expr = "grey(a)"
+    expr.params.expr = "grey(a)"
     expr.connect(0, inpnode, 0)
     doc.run()
     x = expr.getOutput(0, Datum.IMG)
@@ -242,7 +242,7 @@ def test_greyscale_simple():
     assert p.approxeq(Value(5, 8.082904))
 
     # and with an explicit false argument
-    expr.expr = "grey(a,0)"
+    expr.params.expr = "grey(a,0)"
     doc.run()
     x = expr.getOutput(0, Datum.IMG)
     p = x[0, 0]
@@ -260,7 +260,7 @@ def test_greyscale_human():
     assert doc.setInputDirectImage(0, inputimg) is None
     inpnode = doc.graph.create("input 0")
     expr = doc.graph.create("expr")
-    expr.expr = "grey(a,1)"
+    expr.params.expr = "grey(a,1)"
     expr.connect(0, inpnode, 0)
     doc.run()
     x = expr.getOutput(0, Datum.IMG)
@@ -291,7 +291,7 @@ def test_all_expr_inputs():
     # change the expr to read each input in turn, run the graph each time and make sure the
     # output image is the right colour for that input
     for i, var in zip(range(4), ("a", "b", "c", "d")):
-        expr.expr = var
+        expr.params.expr = var
         doc.run()
         img = expr.getOutput(0, Datum.IMG)
         assert img is not None
@@ -307,7 +307,7 @@ def test_unconnected_input_binop():
         doc = Document()
 
         expr = doc.graph.create("expr")  # unconnected input
-        expr.expr = s
+        expr.params.expr = s
 
         doc.run()
         out = expr.getOutputDatum(0)
@@ -328,7 +328,7 @@ def test_null_datum_input_binop():
         inpB = doc.graph.create("input 1")  # inputs created but not set; they'll be None (but not images)
 
         expr = doc.graph.create("expr")
-        expr.expr = s
+        expr.params.expr = s
         expr.connect(0, inpA, 0)
         expr.connect(1, inpB, 0)
 
@@ -353,7 +353,7 @@ def test_null_image_input_binop():
         doc.setInputDirectImage(1, None)
 
         expr = doc.graph.create("expr")
-        expr.expr = s
+        expr.params.expr = s
         expr.connect(0, inpA, 0)
         expr.connect(1, inpB, 0)
 

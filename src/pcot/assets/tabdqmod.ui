@@ -55,12 +55,12 @@
            <widget class="QComboBox" name="modCombo">
             <item>
              <property name="text">
-              <string>Set</string>
+              <string>set</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>Clear</string>
+              <string>clear</string>
              </property>
             </item>
            </widget>
@@ -87,12 +87,12 @@
            <widget class="QComboBox" name="dataCombo">
             <item>
              <property name="text">
-              <string>Nominal</string>
+              <string>nominal</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>Uncertainty</string>
+              <string>uncertainty</string>
              </property>
             </item>
            </widget>

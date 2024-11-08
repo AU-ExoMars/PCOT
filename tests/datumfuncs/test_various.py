@@ -219,11 +219,11 @@ def test_marksat_masked():
 
     # create a node which brings in that same image
     node1 = doc.graph.create("expr")
-    node1.expr = "testimg(1)"
+    node1.params.expr = "testimg(1)"
 
     # create a node which marksat's the image as a quick check
     node2 = doc.graph.create("expr")
-    node2.expr = "marksat(a)"
+    node2.params.expr = "marksat(a)"
     node2.connect(0, node1, 0)
 
     doc.run()
@@ -247,13 +247,13 @@ def test_marksat_masked():
 
     node4 = doc.graph.create("dqmod")
     node4.connect(0, node3, 0)
+    params = node4.params
     # we're going to set DQ in band zero if the nominal value is >= -1
-    node4.band = None  # All bands
-    node4.mod = "Set"  # set DQ bits
-    node4.data = "Nominal"
-    node4.test = "Greater than or equal to"
-    node4.value = -1
-    node4.dq = dq.DIVZERO  # an arbitrary "BAD" bit to set
+    params.band = None  # All bands
+    params.mod = "set"  # set DQ bits
+    params.data = "nominal"
+    params.test = "ge"
+    params.dq = dq.DIVZERO  # an arbitrary "BAD" bit to set
 
     # pass that into a node to strip the ROIs
     node5 = doc.graph.create("striproi")

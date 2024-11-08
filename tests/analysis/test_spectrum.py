@@ -257,7 +257,7 @@ def create_test_image2():
 
     # we want the 200 channel to be multiplied
     mult200 = doc.graph.create("expr")
-    mult200.expr = "merge(a$100,a$200*0.5)"
+    mult200.params.expr = "merge(a$100,a$200*0.5)"
     mult200.connect(0, gen, 0)
 
     # offset to get uncertainties
@@ -266,7 +266,7 @@ def create_test_image2():
     offset.connect(0, mult200, 0)
     # combine the two with an expression
     expr = doc.graph.create("expr")
-    expr.expr = "v(a*0.5+0.3,b*0.2+0.1)"
+    expr.params.expr = "v(a*0.5+0.3,b*0.2+0.1)"
     expr.connect(0, mult200, 0)
     expr.connect(1, offset, 0)
 
