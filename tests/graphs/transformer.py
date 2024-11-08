@@ -1,3 +1,7 @@
+"""
+Template and example for a script which modifies graphs!
+"""
+
 import zipfile
 import sys
 import os
@@ -25,7 +29,7 @@ def traverse(fn,n,changed,path):
 
 def process(fn,data):
     d = json.loads(data)
-    
+
     if traverse(fn,d,False,[]):        
         return True,json.dumps(d)
     return False,data        
