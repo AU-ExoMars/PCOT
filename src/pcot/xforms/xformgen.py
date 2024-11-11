@@ -16,7 +16,7 @@ from pcot.datum import Datum
 from pcot.filters import Filter
 from pcot.imagecube import ImageCube
 from pcot.sources import MultiBandSource, Source, StringExternal
-from pcot.ui.tablemodel import TableModel, ComboBoxDelegate
+from pcot.ui.tablemodel import ComboBoxDelegate, TableModelDataClass
 from pcot.utils import SignalBlocker
 from pcot.utils.image import generate_gradient
 from pcot.xform import xformtype, XFormType, XFormException
@@ -215,7 +215,7 @@ class XFormGen(XFormType):
         node.imgchannels = [ChannelData.deserialise(x) for x in d['chans']]
 
 
-class GenModel(TableModel):
+class GenModel(TableModelDataClass):
     """This is the model which acts between the list of ChannelData items and the table view."""
 
     def __init__(self, tab, _data: List[ChannelData]):

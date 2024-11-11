@@ -222,6 +222,12 @@ class TaggedDictType(TaggedAggregateType):
         """Return the tag for a given key - raises a key error on failure"""
         return self.tags[key]
 
+    def getHeader(self):
+        """Used in table models - returns a list of the keys. The dict must be ordered"""
+        if not self.isOrdered:
+            raise ValueError("Can only create headers for ordered TaggedDicts")
+        return self.ordering
+
     def setOrdered(self) -> 'TaggedDictType':
         """Make the dict ordered, so it will be serialised and deserialised as a tuple/list and can use integer keys.
         The key ordering will be that given in the constructor."""
@@ -314,6 +320,11 @@ class TaggedDict(TaggedAggregate):
                 raise KeyError("No ordering for TaggedDict, can't use integer keys")
             key = self._type.ordering[key]
         return key
+
+    def clone(self):
+        """Create a deep copy of this object with the exception of numpy arrays"""
+        d = self.serialise()
+        return self._type.deserialise(d)
 
     def __getitem__(self, key):
         """Return the value for a given key"""

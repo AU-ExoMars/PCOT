@@ -16,7 +16,7 @@ from pcot import ui, dq
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.sources import nullSourceSet
-from pcot.ui.tablemodel import TableModel, ComboBoxDelegate, DQDelegate, DQDialog
+from pcot.ui.tablemodel import TableModelDataClass, ComboBoxDelegate, DQDelegate, DQDialog
 from pcot.utils.annotations import IndexedPointAnnotation
 from pcot.value import Value
 from pcot.xform import XFormType, xformtype, XFormException
@@ -55,7 +55,7 @@ class PixTest:
         return PixTest(*t)
 
 
-class Model(TableModel):
+class Model(TableModelDataClass):
     changed = Signal()
 
     def __init__(self, tab, _data: List[PixTest]):
