@@ -11,6 +11,7 @@ from typing import List, Optional, OrderedDict, ClassVar, Dict
 
 import markdown
 from PySide2 import QtWidgets
+from PySide2.QtCore import Qt
 from PySide2.QtGui import QTextCursor
 from PySide2.QtWidgets import QAction, QMessageBox, QDialog, QMenu
 
@@ -98,7 +99,8 @@ class MainUI(ui.tabs.DockableTabWindow):
         uiloader.loadUi('main.ui', self)
         # connect buttons etc.
         self.autolayoutButton.clicked.connect(self.autoLayoutButton)
-        self.dumpButton.clicked.connect(lambda: self.graph.dump())
+        # self.dumpButton.clicked.connect(lambda: self.graph.dump())
+        self.fitButton.clicked.connect(self.fitClicked)
         self.capCombo.currentIndexChanged.connect(self.captionChanged)
         self.annotalphaSlider.sliderReleased.connect(self.annotalphaChanged)
 
@@ -221,6 +223,9 @@ class MainUI(ui.tabs.DockableTabWindow):
     @classmethod
     def getWindowsForDocument(cls, d):
         return [w for w in cls.windows if w.doc == d]
+
+    def fitClicked(self):
+        self.view.fitInView(self.graph.scene.sceneRect(), Qt.KeepAspectRatio)
 
     def rebuildRecents(self):
         # add recent files to menu, removing old ones first. Note that recent files must be at the end

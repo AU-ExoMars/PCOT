@@ -346,9 +346,9 @@ class TaggedDict(TaggedAggregate):
         """Set the value for a given key. Will raise KeyError if it's not in the tags,
         and ValueError if the value is not of the correct type."""
         tp = self._type
+        key = self._intkey2str(key)
         if key not in tp.tags:
             raise KeyError(f"Key {key} not in tags")
-        key = self._intkey2str(key)
         correct_type = tp.tags[key].type
         if isinstance(correct_type, Maybe):
             if value is None:
@@ -361,12 +361,12 @@ class TaggedDict(TaggedAggregate):
         if isinstance(correct_type, TaggedAggregateType):
             # if the type is a tagged aggregate, make sure it's the right type
             if not isinstance(value, TaggedAggregate):
-                raise ValueError(f"TaggedDict key {key}: Value {value} is not a TaggedAggregate")
+                raise ValueError(f"TaggedDict key {key}: Value {value} is not a TaggedAggregate, is a {type(value)}")
             if correct_type != value._type:
-                raise ValueError(f"TaggedDict key {key}: Value {value} is not a TaggedAggregate of type {correct_type}")
+                raise ValueError(f"TaggedDict key {key}: Value {value} is not a TaggedAggregate of type {correct_type}, is a {type(value)}")
         elif not is_value_of_type(value, correct_type):
             # otherwise check the type
-            raise ValueError(f"TaggedDict key {key}: Value {value} is not of type {correct_type}")
+            raise ValueError(f"TaggedDict key {key}: Value {value} is not of type {correct_type}, is a {type(value)}")
         # check string validity
         if correct_type == str:
             vstrs = tp.tags[key].valid_strings

@@ -139,8 +139,8 @@ class TableView(QTableView):
 
 class TableModel(QAbstractTableModel):
     """This is a model which acts between a list of dataclass or taggeddict items
-    and a table view. Subclasses are TableModelDataClass and TableModelOrderedTaggedDict.
-    You must write setData() in any subclass of those."""
+    and a table view. Subclasses are TableModelDataClass and TableModelTaggedAggregate.
+    You must write setData() in any subclass of TableModelDataClass."""
 
     # custom signal used when we change data
     changed = Signal()
@@ -155,7 +155,8 @@ class TableModel(QAbstractTableModel):
     def setData(self, index: QModelIndex, value: Any, role: int) -> bool:
         """Here we modify data in the underlying model in response to the tableview
         or any item delegates. No shortcuts here because each item needs to
-        be treated differently for validation, etc. YOU NEED TO IMPLEMENT THIS."""
+        be treated differently for validation, etc. YOU NEED TO IMPLEMENT THIS if you subclass
+        TableModelDataClass, but it should just work in TableModelTaggedAggregate"""
         pass
 
     def isFailed(self, item):
@@ -328,7 +329,10 @@ class TableModelDataClass(TableModel):
         return dataclasses.replace(self.d[n])
 
 
-class TableModelOrderedTaggedList(TableModel):
+class TableModelTaggedAggregate(TableModel):
+    """
+    This is a table model that works with a TaggedList of ordered TaggedDicts - see xformgen.py for an example
+    """
     def __init__(self, tab, _data: TaggedList, columnItems: bool):
         super().__init__(tab, columnItems)
         self.listType = _data.type
@@ -336,7 +340,7 @@ class TableModelOrderedTaggedList(TableModel):
         # we have to check that the list is of TaggedDicts
         tt = self.listType.tag().type
         if not isinstance(tt, TaggedDictType):
-            raise ValueError("TableModelOrderedTaggedList requires a TaggedList of TaggedDicts")
+            raise ValueError("TableModelTaggedAggregate requires a TaggedList of ordered TaggedDicts")
         self.header = tt.getHeader()  # get headers from static method
 
     def _get_data(self, item, field):
@@ -344,6 +348,30 @@ class TableModelOrderedTaggedList(TableModel):
         item = self.d[item]
         # and the field in that item
         return item[field]
+
+    def setData(self, index: QModelIndex, value: Any, role: int) -> bool:
+        item, field = self.getItemAndField(index)
+
+        # we need to make sure the value is of the right type - or at least that it's a string
+        # or numeric appropriately. We could make the process_numeric_type method in TaggedDict
+        # class handle this, but I don't want to attempt to promote strings (although int/float
+        # conversion is OK) so I handle it here.
+
+        # get the type of the field
+        dictType = self.listType.tag().type
+        fieldName = dictType.ordering[field]
+        fieldType = dictType.tags[fieldName].type
+
+        try:
+            if fieldType == int:
+                value = int(value)
+            elif fieldType == float:
+                value = float(value)
+        except ValueError as e:
+            raise ValueError(f"Value must be a number for field {fieldName} in this table") from e
+        self.d[item][field] = value
+        self.changed.emit()
+        return True
 
     def itemCount(self):
         return len(self.d)
