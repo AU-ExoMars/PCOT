@@ -1,11 +1,6 @@
-import dataclasses
 import logging
-from dataclasses import dataclass
-from typing import Any, List
 
 import numpy as np
-from PySide2 import QtCore
-from PySide2.QtCore import QModelIndex
 from PySide2.QtWidgets import QMessageBox
 
 import cv2 as cv

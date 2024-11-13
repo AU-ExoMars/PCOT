@@ -8,7 +8,7 @@ is also provided; it was used in testing.
 from typing import List, Union, Optional
 
 from pcot.parameters.taggedaggregates import TaggedListType, TaggedDictType, Maybe, TaggedVariantDictType, \
-    TaggedAggregateType
+    TaggedAggregateType, Tag
 
 
 class TreeNode:
@@ -32,7 +32,7 @@ class TreeNode:
         self.row = -1
         self.column = -1
         self.rowspan = -1
-        self.rowbuffer = 0      # holds the row value of the parent while we calculate the row value of the children
+        self.rowbuffer = 0  # holds the row value of the parent while we calculate the row value of the children
         self.unique_id = TreeNode.count
         self.parent = None
         TreeNode.count += 1
@@ -60,48 +60,61 @@ class TreeNode:
         return f"TreeNode({self.name}, row {self.row}, span {self.rowspan})"
 
 
-def build_tree(agg: Union[type, TaggedAggregateType], name: str, desc: Optional[str]) -> TreeNode:
-    if isinstance(agg, Maybe):
+def build_tree(name: str, tp: TaggedDictType) -> TreeNode:
+    """Given a name and a TaggedDictType, build a tree of TreeNode objects."""
+    root = TreeNode(name, "", False)
+    for key, tag in tp.tags.items():
+        root.add(build_tree_from_tag(key, tag))
+    return root
+
+
+def build_tree_from_tag(name: str, tag: Tag) -> TreeNode:
+    """Given a name and a Tag, build a tree of TreeNode objects - used from build_tree and recursively"""
+    tp = tag.type
+    if isinstance(tp, Maybe):
         optional = True
-        agg = agg.type_if_exists
+        tp = tp.type_if_exists
     else:
         optional = False
 
-    if not isinstance(agg, TaggedAggregateType):
+    if not isinstance(tp, TaggedAggregateType):
         # if this is a node for a plain type, we create a node for name and type immediately
-        return TreeNode(f"{agg.__name__} {name}", desc, optional)
-    elif isinstance(agg, TaggedDictType):
+        d = tag.get_primitive_type_desc()
+        return TreeNode(f"{name}: {d}", tag.description, optional)
+    elif isinstance(tp, TaggedDictType):
+        # show if the dict is ordered
+        root = TreeNode(name, tag.description + (" (ordered)" if tp.isOrdered else ""), optional)
+        keys = list(tp.tags.keys())
+        vals = [x.type for x in tp.tags.values()]
         # we need to detect the special case where we have a fixed dict of numbered items (e.g. inputs) which are
         # all the same
-        root = TreeNode(name, desc, optional)
-        keys = list(agg.tags.keys())
-        vals = [x.type for x in agg.tags.values()]
-        snark = vals.count(vals[0])
         if keys[0].isdigit() and vals.count(vals[0]) == len(vals):
             # we have a fixed dict of numbered items - all we need to do is create a node for the first item
             # with a name that indicates the range (e.g. "0-3"). First get that name.
             first = int(keys[0])
             last = first + len(keys) - 1
-            tag = agg.tags[keys[0]]
-            root.add(build_tree(tag.type, f"{first}-{last}", tag.description))
+            tag = tp.tags[keys[0]]
+            root.add(build_tree_from_tag(f"{first}-{last}", tag))
         else:
             # otherwise we create a node for each key
-            for key, tag in agg.tags.items():
-                root.add(build_tree(tag.type, key, tag.description))
-    elif isinstance(agg, TaggedListType):
+            for key, tag in tp.tags.items():
+                root.add(build_tree_from_tag(key, tag))
+    elif isinstance(tp, TaggedListType):
         # Note that here we are IGNORING the desc field set inside the list, and using the desc field assigned
         # to the list item the parent dict. TaggedListTypes shouldn't really have descriptions in their single tag.
-        if not isinstance(agg.tag().type, TaggedAggregateType):
-            root = TreeNode(f"{agg.tag().type.__name__} {name}[]", desc, optional)
+        list_tag = tp.tag  # the tag of the *list items* not of the list itself in its containing list/dict.
+        if not isinstance(list_tag.type, TaggedAggregateType):
+            d = list_tag.get_primitive_type_desc()
+            root = TreeNode(f"{name}: list of {d}", tag.description, optional)
         else:
-            root = build_tree(agg.tag().type, name + "[]", desc)
-    elif isinstance(agg, TaggedVariantDictType):
-        root = TreeNode(name, desc, optional)
-        disc = agg.discriminator_field
-        for key, tp in agg.type_dict.items():
-            root.add(build_tree(tp, f"{disc} = {key}", None))
+            root = build_tree_from_tag(f"{name}: list", list_tag)
+    elif isinstance(tp, TaggedVariantDictType):
+        root = TreeNode(name, tag.description, optional)
+        disc = tp.discriminator_field
+        for key, var_tp in tp.type_dict.items():
+            root.add(build_tree_from_tag(f"{disc} = {key}", var_tp.tag))  # var_tp must be TaggedDict
     else:
-        raise ValueError(f"Unknown type {agg}")
+        raise ValueError(f"Unknown type {tp}")
     return root
 
 
@@ -132,16 +145,16 @@ def calculate_positions(root: TreeNode):
     queue = [root]
     max_row = 0
     while queue:
-        node = queue.pop(0)         # get the next node
-        if node.parent is None:     # if it's the root, the row is zero
+        node = queue.pop(0)  # get the next node
+        if node.parent is None:  # if it's the root, the row is zero
             node.row = 0
             node.rowbuffer = 0
         else:
-            node.row = node.parent.rowbuffer        # otherwise, it's the row of the parent
-            node.rowbuffer = node.row               # we store this in the buffer so we can calculate the row of the children
+            node.row = node.parent.rowbuffer  # otherwise, it's the row of the parent
+            node.rowbuffer = node.row  # we store this in the buffer so we can calculate the row of the children
             # and we modify it because we have taken up some rows - but we dont' want to modify the parent's actual row!
             node.parent.rowbuffer += node.rowspan
-        queue.extend(node.children)     # add the children to the queue
+        queue.extend(node.children)  # add the children to the queue
         if node.row > max_row:
             max_row = node.row
     return max_row, max_column
@@ -161,7 +174,7 @@ def output_as_table(root: TreeNode):
                 return found
         return None
 
-    for row in range(max_row+1):
+    for row in range(max_row + 1):
         out += "<tr>"
         for col in range(max_column + 1):
             node = find_node(root, col, row)
@@ -177,14 +190,14 @@ def output_as_table(root: TreeNode):
 def generate_outputs_documentation():
     """Generate documentation for the outputs."""
     from pcot.parameters.runner import outputDictType
-    root = build_tree(outputDictType, "outputs", None)
+    root = build_tree("outputs", outputDictType)
     return output_as_table(root)
 
 
 def generate_inputs_documentation():
     """Generate documentation for the inputs."""
     from pcot.parameters.inputs import inputsDictType
-    root = build_tree(inputsDictType, "inputs", None)
+    root = build_tree("inputs", inputsDictType)
     return output_as_table(root)
 
 
@@ -194,7 +207,7 @@ def generate_node_documentation(nodeName: str):
     t = allTypes.get(nodeName)
     if t.params is None:
         return f"No automatic parameter documentation available for {nodeName}"
-    root = build_tree(t.params, nodeName, None)
+    root = build_tree(nodeName, t.params)
     return output_as_table(root)
 
 
@@ -205,5 +218,5 @@ def test_tree():
     pcot.setup()
     s = generate_node_documentation("multidot")
 
-    with open("c:/users/jim/out.html","w") as f:
+    with open("c:/users/jim/out.html", "w") as f:
         f.write(s)

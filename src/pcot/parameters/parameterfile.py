@@ -202,7 +202,7 @@ class Add(Change):
             # have a tag for it (it's the root, not part of a TaggedAggregate).
             if not isinstance(data.type, TaggedListType):
                 raise ValueError(f"Cannot add to a non-list: {str(self)}")
-            type_of_items = data.type.tag().type
+            type_of_items = data.type.tag.type
             list_to_append_to = cast(TaggedList, data)
         else:
             # otherwise we can get a tag for the list from the parent.
@@ -218,9 +218,9 @@ class Add(Change):
             if isinstance(tag.type, Maybe):
                 if not isinstance(tag.type.type_if_exists, TaggedListType):
                     raise AddToNonListException(self, tag.type.type_if_exists)
-                type_of_items = tag.type.type_if_exists.tag().type
+                type_of_items = tag.type.type_if_exists.tag.type
             elif isinstance(tag.type, TaggedListType):
-                type_of_items = tag.type.tag().type
+                type_of_items = tag.type.tag.type
             else:
                 raise AddToNonListException(self, tag.type)
             list_to_append_to = element_containing_the_list[self.key]

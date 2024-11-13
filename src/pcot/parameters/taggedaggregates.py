@@ -140,6 +140,24 @@ class Tag:
         else:
             check_type(self.type)
 
+    def get_primitive_type_desc(self):
+        """Only really valid for tags which are primitive types, this returns a descriptive string
+        which holds the type name and extra details such as valid strings"""
+        tp = self.type.type_if_exists if isinstance(self.type, Maybe) else self.type
+        if tp == str:
+            if self.valid_strings is not None:
+                return f"string ({', '.join(self.valid_strings)})"
+            return "string"
+        if tp == int:
+            return "integer"
+        if tp == float:
+            return "float"
+        if tp == bool:
+            return "boolean"
+        if tp == Number:
+            return "int or float"
+        return tp.__name__
+
 
 class TaggedDictType(TaggedAggregateType):
     """This acts like a dictionary, but each item has a type, description and default value. That means
@@ -462,12 +480,8 @@ class TaggedListType(TaggedAggregateType):
     Usually the description isn't used, since the containing tag will know what the list is for.
     """
 
-    _tag: Tag       # tag giving description, default value of new lists, and type of values.
     deflt_append: Optional[Any]    # if a list of non-tagged-aggs, adding will append this.
-
-    def tag(self, key=None) -> Tag:
-        """All elements have the same type, so the key argument is ignored"""
-        return self._tag
+    tag: Tag
 
     def __init__(self, desc, tp, deflt=None, deflt_append=None):
         """Constructor for tagged list types.
@@ -490,31 +504,30 @@ class TaggedListType(TaggedAggregateType):
         The deflt_append value must be provided for non-tagged-aggregate lists.
         """
         super().__init__()
-        self._tag = Tag(desc, tp, deflt)
-        self._tag.assert_valid()
-        v = self._tag
+        self.tag = Tag(desc, tp, deflt)
+        self.tag.assert_valid()
         self.deflt_append = deflt_append   # not always valid to provide one; we check later.
         # if type is a TaggedAggregate the default has to be an int!
         # handle int->float promotion
-        if isinstance(v.type, TaggedAggregateType):
-            if not isinstance(v.deflt, int):
+        if isinstance(self.tag.type, TaggedAggregateType):
+            if not isinstance(self.tag.deflt, int):
                 raise ValueError(
-                    f"TaggedListType: Type {v.type.__class__.__name__} is a TaggedAggregateType, so default must be integer (number of items)")
+                    f"TaggedListType: Type {self.tag.type.__class__.__name__} is a TaggedAggregateType, so default must be integer (number of items)")
             if deflt_append is not None:
                 raise ValueError("A deflt_append value should not be provided for a list of tagged aggregates")
         else:
             # otherwise the default has to be a list, and all items must be of the correct type
-            if not isinstance(v.deflt, list):
-                raise ValueError(f"Default {v.deflt} is not a list")
+            if not isinstance(self.tag.deflt, list):
+                raise ValueError(f"Default {self.tag.deflt} is not a list")
             # handle int->float promotion
-            v.deflt = [process_numeric_type(i, v.type) for i in v.deflt]
-            for i in v.deflt:
-                if not is_value_of_type(i, v.type):
-                    raise ValueError(f"Default {v.deflt} contains an item {i} that is not of type {v.type}")
+            self.tag.deflt = [process_numeric_type(i, self.tag.type) for i in self.tag.deflt]
+            for i in self.tag.deflt:
+                if not is_value_of_type(i, self.tag.type):
+                    raise ValueError(f"Default {self.tag.deflt} contains an item {i} that is not of type {self.tag.type}")
             if self.deflt_append is None:
                 raise ValueError("Default append not provided for non-TaggedAggregateType list")
-            if not is_value_of_type(self.deflt_append, v.type):
-                raise ValueError(f"Default append value {self.deflt_append} is not of type {v.type}")
+            if not is_value_of_type(self.deflt_append, self.tag.type):
+                raise ValueError(f"Default append value {self.deflt_append} is not of type {self.tag.type}")
 
     def create(self):
         """Create a the appropriate default values"""
@@ -534,7 +547,7 @@ class TaggedList(TaggedAggregate):
     def __init__(self, tl: TaggedListType, data: Optional[List] = None):
         """Initialise the TaggedList with a TaggedListType"""
         super().__init__(tl)
-        tt = tl.tag().type
+        tt = tl.tag.type
         if data is not None:
             # data is provided.
             if isinstance(tt, TaggedAggregateType):
@@ -552,9 +565,9 @@ class TaggedList(TaggedAggregate):
             # we are creating from defaults
             if isinstance(tt, TaggedAggregateType):
                 # if the type is a tagged aggregate, create the correct number of them
-                self._values = [tt.create() for _ in range(tl.tag().deflt)]
+                self._values = [tt.create() for _ in range(tl.tag.deflt)]
             else:
-                self._values = [v for v in tl.tag().deflt]  # create copies
+                self._values = [v for v in tl.tag.deflt]  # create copies
 
     def __getitem__(self, idx):
         """Return the value for a given index"""
@@ -570,7 +583,7 @@ class TaggedList(TaggedAggregate):
 
     def _check_value(self, value):
         """check an item before setting"""
-        tp = self._type.tag().type
+        tp = self._type.tag.type
         if isinstance(tp, TaggedAggregateType):
             # if the type is a tagged aggregate, make sure it's the right type
             if not isinstance(value, TaggedAggregate):
@@ -583,7 +596,7 @@ class TaggedList(TaggedAggregate):
 
     def __setitem__(self, idx, value):
         """Set the value for a given index. Will raise ValueError if the value is not of the correct type."""
-        value = process_numeric_type(value, self._type.tag().type)    # handle int->float promotion
+        value = process_numeric_type(value, self._type.tag.type)    # handle int->float promotion
         self._check_value(value)
         try:
             idx = int(idx)  # make sure it's an int; it will probably arrive as a string.
@@ -603,8 +616,8 @@ class TaggedList(TaggedAggregate):
     def append_default(self):
         """Append a default value to a list. If you want to append a specific value, use append.
         Returns the appended value."""
-        if isinstance(self._type.tag().type, TaggedAggregateType):
-            self._values.append(self._type.tag().type.create())
+        if isinstance(self._type.tag.type, TaggedAggregateType):
+            self._values.append(self._type.tag.type.create())
         elif self._type.deflt_append is not None:
             self._values.append(self._type.deflt_append)
         else:

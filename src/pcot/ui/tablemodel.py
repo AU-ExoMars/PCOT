@@ -338,7 +338,7 @@ class TableModelTaggedAggregate(TableModel):
         self.listType = _data.type
         self.d = _data  # the list of data which is our model
         # we have to check that the list is of TaggedDicts
-        tt = self.listType.tag().type
+        tt = self.listType.tag.type
         if not isinstance(tt, TaggedDictType):
             raise ValueError("TableModelTaggedAggregate requires a TaggedList of ordered TaggedDicts")
         self.header = tt.getHeader()  # get headers from static method
@@ -358,7 +358,7 @@ class TableModelTaggedAggregate(TableModel):
         # conversion is OK) so I handle it here.
 
         # get the type of the field
-        dictType = self.listType.tag().type
+        dictType = self.listType.tag.type
         fieldName = dictType.ordering[field]
         fieldType = dictType.tags[fieldName].type
 
