@@ -66,6 +66,11 @@ class TaggedAggregateType(ABC):
         raise NotImplementedError("createDefaults not implemented")
 
     @abstractmethod
+    def get_tag(self, key):
+        """Return the tag for a given key - raises a key error on failure"""
+        pass
+
+    @abstractmethod
     def deserialise(self, data):
         """Deserialise the type from a JSON-serialisable structure, returning a new instance of the appropriate
         TaggedAggregate"""
@@ -236,7 +241,7 @@ class TaggedDictType(TaggedAggregateType):
             elif not is_value_of_type(v.deflt, v.type):
                 raise ValueError(f"Default {v.deflt} is not of type {v.type}")
 
-    def tag(self, key):
+    def get_tag(self, key):
         """Return the tag for a given key - raises a key error on failure"""
         return self.tags[key]
 
@@ -399,10 +404,11 @@ class TaggedDict(TaggedAggregate):
             self._values[key] = value
 
     def set(self, *args) -> 'TaggedDict':
-        """If there is an ordering, set the values in the order given."""
+        """If there is an ordering, set the values in the order given. If fewer values are given than there are keys,
+        the remaining keys will be set to their default values. If more values are given we throw an exception."""
         if not self._type.isOrdered:
             raise ValueError("No ordering for TaggedDict")
-        if len(args) != len(self._type.ordering):
+        if len(args) > len(self._type.ordering):
             raise ValueError("Wrong number of arguments")
         for k, v in zip(self._type.ordering, args):
             self[k] = v
@@ -537,6 +543,9 @@ class TaggedListType(TaggedAggregateType):
         """Create a new TaggedList of this type from a JSON-serialisable structure"""
         return TaggedList(self, data)
 
+    def get_tag(self, _):
+        """Return the tag for a given key. In a TL, all the items effectively have the same tag"""
+        return self.tag
 
 class TaggedList(TaggedAggregate):
     """This is the actual tagged list object"""
@@ -678,6 +687,10 @@ class TaggedVariantDictType(TaggedAggregateType):
 
     def deserialise(self, data) -> 'TaggedVariantDict':
         return TaggedVariantDict(self, data)
+
+    def get_tag(self, key):
+        """Return the tag for a given key - raises a key error on failure"""
+        raise KeyError("TaggedVariantDictType has no tags (ironically)")
 
 
 class TaggedVariantDict(TaggedAggregate):

@@ -10,7 +10,6 @@ from pcot.document import Document
 from pcot.rois import ROICircle, ROIRect, ROI
 from pcot.utils.spectrum import Spectrum, SpectrumSet, NameResolver
 from pcot.value import Value
-from pcot.xforms.xformgen import ChannelData
 from fixtures import globaldatadir
 
 
@@ -25,15 +24,13 @@ def create_test_image1():
     doc = Document()
 
     node = doc.graph.create("gen")
-    node.imgwidth, node.imgheight = 256, 256
-    node.imgchannels = [
-        # n, u, wavelength, mode. For all these modes, N and U don't mean N and U; check
-        # the gen node documentation for details. But basically we're creating two
-        # stepped gradients and a checkerboard pattern in the different channels.
-        ChannelData(2, 10, 100, "gradient-x"),
-        ChannelData(3, 20, 200, "gradient-y"),
-        ChannelData(25, 0, 300, "checkx")
-    ]
+    node.params.imgwidth, node.params.imgheight = 256, 256
+
+    # some cleverness here because each TaggedDict we create inside the chans TaggedList is ordered.
+    node.params.chans.append_default().set(2, 10, 100, "gradient-x")
+    node.params.chans.append_default().set(3, 20, 200, "gradient-y")
+    node.params.chans.append_default().set(25, 0, 300, "checkx")
+
     doc.run()
     img = node.getOutput(0, Datum.IMG)
     assert img.channels == 3  # just to be sure
@@ -249,11 +246,9 @@ def create_test_image2():
 
     # generates the nominal values
     gen = doc.graph.create("gen")
-    gen.imgwidth, gen.imgheight = 256, 256
-    gen.imgchannels = [
-        ChannelData(2, 10, 100, "gradient-x"),
-        ChannelData(2, 20, 200, "gradient-y")
-    ]
+    gen.params.imgwidth, gen.params.imgheight = 256, 256
+    gen.params.chans.append_default().set(2, 10, 100, "gradient-x")
+    gen.params.chans.append_default().set(2, 20, 200, "gradient-y")
 
     # we want the 200 channel to be multiplied
     mult200 = doc.graph.create("expr")

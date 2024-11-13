@@ -45,10 +45,8 @@ def test_node_output_none():
                 except BadTypeException:
                     pytest.fail("Spectrum should output Datum.DATA even when not connected")
             elif x == 'gen':
-                try:
-                    assert node.getOutput(0, Datum.IMG) is not None, f"Gen should return an image with default args"
-                except BadTypeException:
-                    pytest.fail("Gen should return an image")
+                if node.getOutput(0, Datum.NONE) is not None:
+                    pytest.fail("Gen should return None with no args")
             elif x == 'pixtest':
                 try:
                     out = node.getOutput(0, Datum.TESTRESULT)

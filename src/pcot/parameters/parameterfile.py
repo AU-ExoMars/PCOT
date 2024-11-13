@@ -119,7 +119,7 @@ class SetValue(Change):
         # use the key to get its tag so we can get its type, and check it.
 
         try:
-            tag = element.type.tag(self.key)
+            tag = element.type.get_tag(self.key)
         except KeyError as e:
             raise KeyError(f"Cannot find {self.show()}")
 
@@ -211,7 +211,7 @@ class Add(Change):
             if not isinstance(element_containing_the_list, TaggedAggregate):
                 raise AddToNonListException(self, element_containing_the_list)
             # now we can get the type of the item we want to append to (which should be a TaggedList)
-            tag = element_containing_the_list.type.tag(self.key)
+            tag = element_containing_the_list.type.get_tag(self.key)
             # and check its type (it should be a list). "Maybe" checking is a bit messy here.
             # We also get the type of the items in the list. The tag has a TaggedListType object (tag.type)
             # which itself will have a tag, which will have a type (the type of the items).
