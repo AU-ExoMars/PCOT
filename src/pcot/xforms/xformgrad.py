@@ -9,6 +9,7 @@ from PySide2.QtWidgets import QInputDialog
 from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.imagecube import ImageCube
+from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType, taggedColourType, taggedRectType
 from pcot.rois import ROI
 from pcot.sources import MultiBandSource
 from pcot.utils.annotations import Annotation, annotFont, pixels2painter
@@ -280,6 +281,25 @@ def _normAndGetRange(subimage):
     return minval, maxval, (masked - minval) / (maxval - minval)
 
 
+TAGGEDDICT = TaggedDictType(
+    gradient=('gradient', TaggedListType("gradient",
+        TaggedDictType(
+            x=('x', float, 0.0),
+            colour=('colour', taggedColourType(0.0,0.0,0.0), None)
+        ), 0), None),
+    colour=('legend colour', taggedColourType(1.0,1.0,0.0), None),
+    legendrect=('legend rectangle if in image', taggedRectType(0,0,100,20), None),
+    vertical=('is legend vertical?', bool, False),
+    fontscale=('size of legend font', float, 10),
+    thickness=('thickness of legend border', float, 1),
+    legendPos=('legend location', str, IN_IMAGE),
+    normbackground=('normalise background', bool, False),
+    sigfigs=('significant figures', int, 6)
+)
+
+
+
+
 @xformtype
 class XformGradient(XFormType):
     """
@@ -315,15 +335,14 @@ class XformGradient(XFormType):
         self.addInputConnector("mono", Datum.IMG)
         self.addInputConnector("background", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
-        self.autoserialise = ('colour', 'legendrect', 'vertical', 'thickness', 'fontscale', 'legendPos',
-                              ('normbackground', False),
-                              ('sigfigs', 6))
 
     def serialise(self, node):
-        return {'gradient': node.gradient.data}
+        # todo convert node gradient to tagged list
+        pass
 
     def deserialise(self, node, d):
-        node.gradient = Gradient(d['gradient'])
+        # todo convert tagged list to node gradient
+        pass
 
     def createTab(self, n, w):
         return TabGradient(n, w)
