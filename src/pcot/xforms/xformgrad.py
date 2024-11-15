@@ -361,17 +361,23 @@ class XformGradient(XFormType):
         # data.
         return None
 
-    def deserialise(self, node, _):
+    def nodeDataFromParams(self, node):
         # We're ignoring the actual dict and building from the params structure that's already been processed
         # into the node.
-        # First clear the gradient data
-        node.gradient.data = []
 
-        logger.info(f"Deserialising gradient - preset is {node.params.preset}")
-
-        # run through the elements in the TaggedList and add them to the gradient
-        for x in node.params.gradient:
-            node.gradient.data.append((x.x, x.colour))
+        if node.params.preset is None:
+            # no preset provided - the usual case - so build a gradient from the list in the
+            # parameters.
+            node.gradient.data = []
+            # run through the elements in the TaggedList and add them to the gradient
+            for x in node.params.gradient:
+                node.gradient.data.append((x.x, x.colour))
+        else:
+            # a preset has been given from a parameter file (usually) so set node.gradient from that
+            if node.params.preset in presetGradients:
+                node.gradient = presetGradients[node.params.preset]
+            else:
+                raise XFormException('DATA', f"Unknown gradient preset {node.params.preset}")
 
     def createTab(self, n, w):
         return TabGradient(n, w)

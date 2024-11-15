@@ -25,6 +25,7 @@ OR we can do this, modifying the parameters directly
 
 """
 import datetime
+import logging
 from pathlib import Path
 from typing import Optional, Any, Dict
 
@@ -33,6 +34,8 @@ from pcot.inputs.inp import NUMINPUTS
 from pcot.parameters.inputs import inputsDictType, modifyInput
 from pcot.parameters.parameterfile import ParameterFile
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedListType, TaggedAggregate
+
+logger = logging.getLogger(__name__)
 
 # this is the tagged dict type which holds information about output nodes and files
 
@@ -183,8 +186,11 @@ class Runner:
             # restore the document to its original state and rebuild the paramdict ready
             # for the next run. This is in a finally block in case any of the above code
             # throws an exception - we definitely want to restore!
+            logger.debug("Restoring document to original state")
             self.doc.loadFromMemoryArchive(self.archive)
+            logger.debug("rebuilding param dict")
             self._build_param_dict()
+            logger.debug("rebuild done")
 
     def writeOutputs(self):
         """This checks the parameter dict for an output node and file. We could alternatively
@@ -220,4 +226,5 @@ class Runner:
                 # we pass the ENTIRE output dict to the writeToFile method. It's a little ugly with quite a
                 # bit of unnecessary information for some cases, but at least the method signature is simple
                 # and the data well-organised (as it's a TaggedDict).
+                logger.info(f"writing output to {v.file}")
                 output.writeFile(v)
