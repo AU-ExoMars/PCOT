@@ -644,6 +644,10 @@ class TaggedList(TaggedAggregate):
     def __len__(self):
         return len(self._values)
 
+    def clear(self):
+        """Clear the list"""
+        self._values = []
+
     def serialise(self):
         """Serialise the structure rooted here into a JSON-serialisable list. We don't need to record what the
         types are, because that information will be stored in the type object when we deserialise.

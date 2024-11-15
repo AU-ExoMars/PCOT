@@ -423,3 +423,32 @@ def test_run_modify_with_reset_node_run(globaldatadir):
         assert txt == "0.90664±0.39016\n"  # double the previous value
         txt = open(out3).read()
         assert txt == "0.45332±0.19508\n"
+
+
+def test_gradient(globaldatadir):
+    pcot.setup()
+    r = Runner(globaldatadir / "runner/gradient.pcot")
+
+    with tempfile.TemporaryDirectory() as td:
+        out1 = os.path.join(td, "output1.txt")
+        out2 = os.path.join(td, "output2.txt")
+
+        test = f"""
+        # run without changes
+        outputs.+.file = {out1}
+        .node = mean(a)
+        run
+        
+        # now set the gradient from a preset
+        gradient.preset = magma
+        outputs.0.file = {out2}
+        """
+
+        r.run(None, test)
+
+        txt = open(out1).read()
+        # standard viridis default will be fairly cyan
+        assert txt == "[0.15516±0.023474, 0.51942±0.079119, 0.54824±0.012403]\n"
+        txt = open(out2).read()
+        # magma default will be fairly purple
+        assert txt == "[0.63664±0.13113, 0.19228±0.05203, 0.47936±0.027683]\n"

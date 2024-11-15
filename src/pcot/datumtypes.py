@@ -131,7 +131,7 @@ class ImgType(Type):
         return v.img.nbytes + v.uncertainty.nbytes + v.dq.nbytes
 
     def writeFile(self, d, fileName):
-        v = d.val
+        raise ValueError("Cannot write an image to a file from a parameter file yet!")
 
 
 
