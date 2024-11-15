@@ -1,4 +1,4 @@
-# Node serialisation
+M# Node serialisation
 
 This page discusses how to serialise the parameters for 
 node types. If you don't know what that means, you're either in the wrong
@@ -188,7 +188,7 @@ output = node.params.add + node.params.mul * node.getInput(0, Datum.IMG)
 ```
 When the node is serialised, the structure will be serialised.
 
-## complex TaggedAggregate serialisation
+## complex TaggedAggregate serialisation (CTAS)
 
 The previous method dealt with data which can be JSON-serialised directly. If
 we need to modify non-JSON-serialisable data with parameter files, we need to
@@ -205,7 +205,7 @@ dict for serialisation. Here's an example:
 
 ```python
 def serialise(self, node):
-    node.params = TaggedDict(self.params)
+    node.params = self.params.create()
     
     # fill in the node.params with data
     node.params.foo = some_data_or_other
@@ -321,10 +321,28 @@ and get the item itself with the `get` method in the variant:
     assert ll[0].get().a == 10
 ```
 
+@@@info
+**Where to find examples**
+
+Probably the most complex but straightforward example of CTAS is the *gradient* node. This
+converts a monochrome image to a false colour RGB gradient based on a set of gradient colours. This
+exists as a pcot.utils.gradient.Gradient object which is a wrapper around a list of (x,(r,g,b)) tuples
+defining the colour *r,g,b* at value *x*. 
+
+The CTAS methods are responsible for converting tagged aggregate data and this
+Gradient object. They also handle a *preset* string which can override the
+data when set from a [parameter file](/userguide/batch).
+
+ROIs are a rather more complex example...
+@@@
 
 
+## A footnote: ROIs and CTAS
 
-### A footnote: ROIs
+@@@alert
+Hopefully you will never need to know about the hackery involved in the complex tagged
+aggregate serialisation involved in regions of interest, but if you do...
+@@@
 
 ROIs are a bit complicated. All ROIs have a set of attributes in common, and each subtype has
 some extra. To do that, we have code like this:
@@ -361,8 +379,28 @@ in each ROI:
 * `to_tagged_dict(self)` will convert the ROI to the right kind of tagged dict
 * `from_tagged_dict(self,td)` will set the current ROI from its tagged dict
 
-and then `ROI.new_from_tagged_dict(td)` will create an ROI from a tagged dict; it will inspect the
+The CTAS methods for `XFormRect` (the rectangle node) are then:
+```
+    def serialise(self, node):
+        # this returns None, but stores data into .params ready for serialisation
+        # Again - more hackery to get around ROI having 'type' and this clashing with node's 'type'
+        node.params = TaggedDict(self.params)  # build a dict without the 'type' (see init)
+        # Serialise the ROI into a TaggedDict, and copy fields from that into the node.params we just made.
+        rser = node.roi.to_tagged_dict()
+        for k in node.params.keys():
+            node.params[k] = rser[k]
+        # don't return anything; our return is essentially the
+        # node.params
+        return None
+
+    def nodeDataFromParams(self, node):
+        node.roi.from_tagged_dict(node.params)
+```
+
+Finally `ROI.new_from_tagged_dict(td)` will create an ROI from a tagged dict; it will inspect the
 type field to see what type is. 
+
+### How `multidot` does CTAS of ROIs
 
 The *multidot* node uses this system in quite a complex way, because it needs to be able to store
 a list of different ROIs. It does this using a list of variant dicts - here are the type definitions:
@@ -396,10 +434,10 @@ def serialise(self, node):
     # and don't return anything, because we've stored the data in node.params.
     return None
 ```
-and here is the `deserialise` method:
+and here is the `nodeDataFromParams` method:
 ```python
-    def deserialise(self, node, d):
-        # get the TaggedList of variant dicts
+    def nodeDataFromParams(self, node):
+        """CTAS deserialisation"""
         lst = node.params.rois
 
         rs = []
