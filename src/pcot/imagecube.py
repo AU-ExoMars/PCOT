@@ -5,8 +5,7 @@ but we could change things later.
 """
 import itertools
 import logging
-import math
-import numbers
+
 import os.path
 from collections.abc import Iterable
 from typing import List, Optional, Tuple, Sequence, Union
@@ -1013,11 +1012,18 @@ class ImageCube(SourcesObtainable):
             raise Exception("bands property: Not all bands have a filter")
         return d
 
-    def save(self, filename, annotations=False, format: str = None, description: str = ""):
+    def save(self, filename, annotations=False, format: str = None,
+             name: str = None, description: str = "", append: bool=False):
         """Write the image to a file, with or without annotations. If format is provided, it will be used
-        otherwise the format will be inferred from the filename extension.
-        The description is a text description of the image and is only used by
-        formats which support it (currently only our own PARC format)"""
+        otherwise the format will be inferred from the filename extension. Note that this will always clobber -
+        determining if the file already exists must be handled by the caller.
+
+        * annotations - add annotations if true (not PARC)
+        * format - use this to determine the format, not the file extension
+        * name - the name of the image (used in the PARC format)
+        * description - a text description of the image (used in the PARC format)
+        * append - if True, append to an existing PARC file, otherwise create a new PARC.
+        """
 
         from pcot import imageexport
         from pcot.utils import datumstore

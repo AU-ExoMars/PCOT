@@ -295,14 +295,15 @@ TAGGEDDICT = TaggedDictType(
                                          ).setOrdered(), 0),
               None),
     # this is only really used when we use parameter files to set from presets.
-    preset=('preset', Maybe(str), None),
+    preset=('preset', Maybe(str), None, presetGradients.keys()),
     # other params are normal
     colour=('legend colour', taggedColourType(1.0, 1.0, 0.0), None),
     legendrect=('legend rectangle if in image', taggedRectType(0, 0, 100, 20), None),
     vertical=('is legend vertical?', bool, False),
     fontscale=('size of legend font', float, 10),
     thickness=('thickness of legend border', float, 1),
-    legendPos=('legend location', str, IN_IMAGE),
+    legendPos=('legend location', str, IN_IMAGE,
+               [LEFT_MARGIN, RIGHT_MARGIN, TOP_MARGIN, BOTTOM_MARGIN, IN_IMAGE, NONE]),
     normbackground=('normalise background', bool, False),
     sigfigs=('significant figures', int, 6),
 )

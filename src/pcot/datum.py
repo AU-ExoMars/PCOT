@@ -153,7 +153,8 @@ class Datum(SourcesObtainable):
         return self.tp.getSize(self)
 
     def writeFile(self, outputDescription: 'TaggedDict'):
-        """Write the datum to an output somehow - delegates to the type object"""
+        """Write the datum to an output somehow - delegates to the type object. The input
+        is a TaggedDict in the format given by pcot.parameters.runner.OutputDictType"""
         self.tp.writeFile(self, outputDescription)
 
     #

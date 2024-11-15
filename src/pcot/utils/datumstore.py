@@ -221,22 +221,6 @@ class DatumStore:
         """Clear the cache of all items. This is useful if you want to free up memory."""
         self.cache = {}
 
-# these are the functions that are used to write and read PARC files. They are simple wrappers around the
-# DatumStore class, which is the real workhorse.
-
-def writeParc(filename: str, d: Datum, description=None):
-    """Write a simple PARC file - a DatumStore with a single item called "main".
-    """
-    with FileArchive(filename, "w") as a, DatumStore(a) as da:
-        da.writeDatum("main", d, description=description)
-
-
-def writeImageParc(filename: str, img: ImageCube, description=None):
-    """Write an image to a simple PARC file - a DatumStore with a single item called "main".
-    """
-    # simple wrapper around writeParc to avoid importing Datum in the calling code
-    writeParc(filename, Datum(Datum.IMG, img), description)
-
 
 def readParc(fname: str, itemname: str = 'main', inpidx: int = None) -> Optional[Datum]:
     """Load a Datum from a Datum archive file. We also patch the sources, overwriting the source data

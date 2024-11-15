@@ -3,6 +3,7 @@ import os
 from copy import copy
 
 import numpy as np
+from PySide2.examples.utils.pyside2_config import description
 
 import pcot.rois
 import pcot.datumexceptions
@@ -130,7 +131,18 @@ class ImgType(Type):
         v = d.val
         return v.img.nbytes + v.uncertainty.nbytes + v.dq.nbytes
 
-    def writeFile(self, d, fileName):
+    def writeFile(self, d, output: 'TaggedDict'):
+        if os.path.exists(output.file) and not output.clobber:
+            raise FileExistsError(f"File {output.file} already exists and clobber is not set")
+
+        img = d.val
+        img.save(output.file,
+                 annotations=output.annotations,
+                 format=output.format,
+                 name=output.name,
+                 description=output.description,
+                 append=output.append)
+
         raise ValueError("Cannot write an image to a file from a parameter file yet!")
 
 

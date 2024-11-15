@@ -51,31 +51,24 @@ outputDictType = TaggedDictType(
     # the file to write to. If not provided, it should be whatever the last output was.
     # Combined with the append parameter, this allows us to write to the same file multiple times without
     # needing to specify the file and append mode each time.
-    file=("output filename", Maybe(str), None),
+    file=("output filename - if not provided, use previous output's value (see 'append')", Maybe(str), None),
 
-    # clobber - if the file already exists, silently overwrite it, otherwise throw an error
-    clobber=("overwrite the file if it exists", bool, False),
+    clobber=("overwrite the file if it exists (else raise an exception)", bool, False),
+    format=("output format for image (will determine from extension if not given)", Maybe(str), None),
+    annotations=("draw ROIs/annotations on the image (not for PARC)", bool, True),
 
-    # only used when we are writing a PARC
+    name=("name of the datum (if a PARC is being written) - 'main' if not given", Maybe(str), None),
     description=("description of the data (if a PARC is being written)", Maybe(str), None),
-    # only used when we are writing an image to a "standard" file (e.g. PNG, SVG, PDF).
-    drawAnnotations=("draw ROIs/annotations on the image (not for PARC)", bool, True),
-
-    # if we are writing a PARC this is the name of the item we are going to store in the archive. If it is already
-    # there, we will add -N to the name until we find a free slot. If it is None, we will use name "main"
-    name=("name of the datum in the archive", Maybe(str), None),
 
     # only used when we are writing a text file or PARC. In the latter case, the datum will be appended to the archive
     # if there is no existing datum of that name (see 'name' above). The default value None means whatever the previous
     # output was set to, unless there wasn't one, in which case it will be False.
-    append=("append to a PARC or text file if it exists", Maybe(bool), None),
+    append=("append to a PARC or text file if it exists. If not provided, use previous output's value (or false if first output)", Maybe(bool), None),
 
     # if we're outputting to a text file, this string will be prefixed to the output. It's a good place to put
     # a header, for example. Note that this is not used for PARC files, and does not apply to images.
     # The string will be immediately followed by the output - add any desired whitespace or separators.
-    prefix=("prefix for the output", Maybe(str), None),
-
-    # options=("options for the output", dict, {}),    # miscellaneous options for the datum's writeToFile method
+    prefix=("prefix for the output (text outputs only)", Maybe(str), None),
 )
 
 # we have a list of outputs
