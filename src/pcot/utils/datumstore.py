@@ -6,7 +6,6 @@ from typing import Dict, Optional, Tuple
 
 from pcot.datum import Datum
 from pcot.document import Document
-from pcot.imagecube import ImageCube
 from pcot.utils.archive import Archive, FileArchive
 from pcot.sources import StringExternal, SourceSet, MultiBandSource, Source
 
@@ -116,8 +115,10 @@ class DatumStore:
         self.read_count = 0
 
         if not self.archive.is_open():
-            # assume we are reading. Read the manifest.
+            # assume we are reading. When reading, we create the archive outside a context manager which
+            # means enter hasn't been called so the ZipFile object hasn't been created.
             with self.archive as a:
+                # The ZipFile has now been created (we just entered the archive's context)
                 if (m := a.readJson("MANIFEST")) is not None:
                     try:
                         self.manifest = {k: ManifestItem.deserialise(v) for k, v in m.items()}

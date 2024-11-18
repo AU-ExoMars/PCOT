@@ -1057,6 +1057,6 @@ class ImageCube(SourcesObtainable):
             if annotations:
                 raise Exception("PARC format does not support annotations")
             else:
-                datumstore.writeImageParc(filename, self, description)
+                raise Exception("PARC image write is currently disabled")
         else:
             raise Exception(f"Unsupported file format for image save: {format}")
