@@ -4,6 +4,7 @@ from typing import Optional, List, Callable
 import cv2 as cv
 import numpy as np
 import logging
+import pytest
 
 import pcot.dq
 from pcot import rois, operations, dq
