@@ -33,14 +33,15 @@ def test_run(globaldatadir):
     pcot.setup()
     r = Runner(globaldatadir / "runner/doubler.pcot")
 
-    out = tempfile.NamedTemporaryFile(suffix=".png")
+    with tempfile.TemporaryDirectory() as td:
+        out = os.path.join(td, "output.png")
+        test = f"""
+        inputs.0.rgb.filename = {globaldatadir / 'basn2c16.png'}  # colour image
+        outputs.+.file = {out}
+        .node = sink
+        """
+        r.run(None, test)
 
-    test = f"""
-    inputs.0.rgb.filename = {globaldatadir / 'basn2c16.png'}  # colour image
-    outputs.+.file = {out.name}
-    .node = sink
-    """
-    r.run(None, test)
 
 
 def test_scalar_output(globaldatadir):
