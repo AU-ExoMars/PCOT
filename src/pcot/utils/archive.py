@@ -1,15 +1,10 @@
 import json
-import os
-import shutil
-import tempfile
 from pathlib import Path
 from typing import Callable
 
 import numpy as np
 import zipfile
 from io import BytesIO
-
-import pcot.ui as ui
 
 
 class Archive:
@@ -55,14 +50,23 @@ class Archive:
         self.zip = None
         self.progressCallback = progressCallback
 
-    def __enter__(self):
+    def open(self):
+        """Must open the zip, setting self.zip to the zipfile.ZipFile object"""
         pass
+
+    def close(self):
+        """Must close the zip file and set self.zip to None"""
+        pass
+
+    def __enter__(self):
+        self.open()
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
+        self.close()
 
     def is_writable(self):
-        return self.mode in ['w', 'a', 'A']
+        return self.mode in ['w', 'a']
 
     def is_open(self):
         return self.zip is not None
@@ -185,49 +189,26 @@ class FileArchive(Archive):
 
     def __init__(self, path: Path, mode='r',  progressCallback: Callable[[str], None] = None):
         """Open a Zip archive on disk.
-        The mode is 'r' for read, 'w' for write, and 'a'/'A' for append. If 'A' is used, the archive is appended
-        in place. Otherwise, the archive is copied to a temporary file before appending, appended to, and then
-        moved to the original location.
+        The mode is 'r' for read, 'w' for write, and 'a' for append.
         """
-        assert mode in ['r', 'w', 'a', 'A']
+        assert mode in ['r', 'w', 'a']
         super().__init__(mode, progressCallback=progressCallback)
         self.path = path
-        self.tempdir = None
-        self.tempfilename = None
 
-    def __enter__(self):
-        if self.mode == 'w' or self.mode == 'a':
-            # When writing a new file or using append mode 'a' (not in place), the writing is done to a temporary file
-            # so that a failure during serialisation won't leave a corrupted file
-            self.tempdir = tempfile.mkdtemp()
-            self.tempfilename = os.path.join(self.tempdir, 'temp.pcot')
-            if self.mode == 'a':
-                # append-not-in-place - copy the archive to the temp file
-                shutil.copyfile(self.path, self.tempfilename)
-            self.zip = zipfile.ZipFile(self.tempfilename, self.mode, compression=zipfile.ZIP_DEFLATED)
-        else:
-            # reading or append-in-place
-            self.zip = zipfile.ZipFile(self.path, self.mode.lower(), compression=zipfile.ZIP_DEFLATED)
+    def open(self):
+        self.zip = zipfile.ZipFile(self.path, self.mode.lower(), compression=zipfile.ZIP_DEFLATED)
 
         if self.mode.lower() == 'a':
-            # if we're doing either kind of append, now the file is open we should try to work out
+            # if we're doing append, now the file is open we should try to work out
             # the next array number.
             array_items = [x[5:] for x in self.zip.namelist() if x.startswith("ARAE-")]
             if len(array_items) > 0:
                 self.arrayct = max([int(x) for x in array_items]) + 1
-        return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def close(self):
         if self.zip is not None:
             self.zip.close()
             self.zip = None
-            if self.mode == 'w' or self.mode == 'a':
-                # writing or append-not-in-place
-                if exc_type is None:  # we ONLY write the destination archive if there were no exceptions!
-                    shutil.move(self.tempfilename, self.path)
-                else:
-                    ui.warn("File did not save due to an exception.")
-                shutil.rmtree(self.tempdir)
 
 
 class MemoryArchive(Archive):
@@ -247,13 +228,11 @@ class MemoryArchive(Archive):
         super().__init__(mode, progressCallback=progressCallback)
         self.data = data
 
-    def __enter__(self):
+    def open(self):
         self.zip = zipfile.ZipFile(self.data, self.mode, compression=zipfile.ZIP_DEFLATED)
-        return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def close(self):
         if self.zip is not None:
-            print("CLosing archive")
             self.zip.close()
             self.zip = None
 

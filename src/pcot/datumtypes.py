@@ -3,7 +3,6 @@ import os
 from copy import copy
 
 import numpy as np
-from PySide2.examples.utils.pyside2_config import description
 
 import pcot.rois
 import pcot.datumexceptions

@@ -102,32 +102,7 @@ def test_file_archive_premade(globaldatadir):
         d2_correct(d2a)
 
 
-def test_file_append_in_place(globaldatadir):
-    with TemporaryDirectory() as tmpdir:
-        # copy the test archive into a new archive onto which we will append
-        newarchive = os.path.join(tmpdir, "newarchive.dat")
-        shutil.copyfile(globaldatadir / "parc/testarch.dat", newarchive)
-
-        # open the archive for append-in-place
-        with FileArchive(Path(newarchive), "A") as a:
-            # append some data
-            dd = {"a": 1, "b": 2, "c": np.array([4, 3, 2, 1])}
-            a.writeJson("newdata", dd)
-
-        # now read it back
-        with FileArchive(Path(newarchive), "r") as a:
-            d1a = a.readJson("data1")
-            d2a = a.readJson("data2")
-            d3a = a.readJson("newdata")
-
-            d1_correct(d1a)
-            d2_correct(d2a)
-            assert d3a["a"] == 1
-            assert d3a["b"] == 2
-            assert np.all(d3a["c"] == np.array([4, 3, 2, 1]))
-
-
-def test_file_append_not_in_place(globaldatadir):
+def test_file_append(globaldatadir):
     with TemporaryDirectory() as tmpdir:
         # copy the test archive into a new archive onto which we will append
         newarchive = os.path.join(tmpdir, "newarchive.dat")
@@ -152,7 +127,7 @@ def test_file_append_not_in_place(globaldatadir):
             assert np.all(d3a["c"] == np.array([4, 3, 2, 1]))
 
 
-def test_file_append_not_in_place_error(globaldatadir):
+def test_file_append_error(globaldatadir):
     """Make sure that an error doesn't result in the file being appended to getting
     corrupted"""
 
