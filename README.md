@@ -103,6 +103,28 @@ and packaging manager. It may take some time.
 PCOT.
 * You should now be able to run **pcot** to start the application.
 
+## Updating PCOT
+
+You can usually upgrade PCOT just by running **git pull** in your PCOT
+directory, assuming you cloned it. If you downloaded it, you'll need to download
+the PCOT directory again.
+
+It's generally best to do **poetry install** once in a while to make sure
+all the packages are correct, particularly if you notice **poetry.lock**
+has changed.
+
+Finally, **if the Python version has changed** you will need to rebuild the 
+Conda environment from scratch. The following instructions assume you 
+are using a shall of some sort:
+* **conda deactivate pcot** will make sure you are not actively using the 
+environment
+* **conda env remove -n pcot** will delete the old environment
+* **conda create -n pcot python=3.11 poetry** will create a new environment -
+replace "3.11" with the correct new version
+* **poetry install** will reinstall all the packages.
+* You will probably need to refer to the instructions below on **Running PCOT inside Pycharm**
+to update the interpreter to the new version.
+    
 
 ## Running PCOT
 Open an Anaconda shell and run the following commands (assuming you installed PCOT into your home directory):
