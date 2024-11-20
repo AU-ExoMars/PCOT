@@ -181,6 +181,9 @@ class Archive:
         d = self.convertTagsToArrays(d)
         return d
 
+    def getNames(self):
+        return self.zip.namelist()
+
 
 class FileArchive(Archive):
     """

@@ -11,7 +11,7 @@ from pcot.sources import StringExternal, SourceSet, MultiBandSource, Source
 
 
 @dataclasses.dataclass
-class ManifestItem:
+class Metadata:
     """An item in the manifest. The name is not included, because this is always part of a dict
     of name -> manifest item."""
     datumtype: str  # the type of the datum (as a string)
@@ -29,7 +29,7 @@ class ManifestItem:
 
     @staticmethod
     def deserialise(d):
-        return ManifestItem(
+        return Metadata(
             d["datumtype"],
             d["description"],
             d["repr"],
@@ -53,36 +53,29 @@ class DatumStore:
     By default the cache is infinitely large, so objects will sit around until the store goes away!!!
 
     Usage example for writing:
-        with FileArchive("foo.parc", "w") as a, DatumStore(a) as da:
-            da.writeDatum("bar", some_datum_object)
-            da.writeDatum("baz", some_other_datum_object)
-
-    Which is sort-of the same as:
-
-        with FileArchive("foo.parc", "w") as a:
-            with DatumStore(a) as da:
+            with FileArchive("foo.parc", "w") as a:
+                da = DatumStore(a)
                 da.writeDatum("bar", some_datum_object)
                 da.writeDatum("baz", some_other_datum_object)
-
-    or you can do:
-
-        with FileArchive("foo.parc", "w") as a:
-            da = DatumStore(a)
-            da.writeDatum("bar", some_datum_object)
-            da.writeDatum("baz", some_other_datum_object)
-            da.writeManifest()
-
-    This is because we have to write the manifest at the end. The context manager will check we have the archive
-    open in write mode, and will write the manifest automatically. If we're not using a CM we have to do it ourselves.
 
     Usage example for reading:
             a = DatumStore(FileArchive(fn), 1000)
             d = a.get("test", None)
 
+    Note the difference - when writing, the archive is open for writing either using open() or inside a context manager.
+
     The Zip archive is only open while data is being written or read (PCOT archive objects - which this class uses -
     are context managers).
 
     Be VERY SURE that you don't keep any references to the Datum objects, or the LRU deletion won't work!
+    
+    Internal format: each item is a JSON file. Strings in that JSON which are of the form "ARAE-n" are actually
+    numpy arrays stored in files of that name. This is handled by FileArchive.
+
+    Each JSON file also has a metadata file with the same name but with a .meta extension. This is a JSON file
+    containing a serialisation of a Metadata object. These are stored in the manifest dictionary.
+    
+    
     """
 
     @dataclasses.dataclass
@@ -100,8 +93,8 @@ class DatumStore:
     write_mode: bool
 
     # this is a manifest of the items in the archive.
-    # It's a dictionary of name -> ManifestItem
-    manifest: Dict[str, ManifestItem] = {}
+    # It's a dictionary of name -> Metadata
+    manifest: Dict[str, Metadata]
 
     def __init__(self, archive: Archive, max_size: int = sys.maxsize):
         """
@@ -111,30 +104,36 @@ class DatumStore:
 
         self.archive = archive
         self.cache = {}
+        self.manifest = {}
         self.size = max_size
         self.read_count = 0
 
         if not self.archive.is_open():
             # assume we are reading. When reading, we create the archive outside a context manager which
             # means enter hasn't been called so the ZipFile object hasn't been created.
-            with self.archive as a:
-                # The ZipFile has now been created (we just entered the archive's context)
-                if (m := a.readJson("MANIFEST")) is not None:
-                    try:
-                        self.manifest = {k: ManifestItem.deserialise(v) for k, v in m.items()}
-                    except Exception as e:
-                        raise Exception(f"Error reading manifest - cannot deserialise") from e
+            with self.archive as a:   # This briefly opens the archive to read the manifest
+                self.readManifest(a)
         else:
             self.manifest = {}
             self.write_mode = True
 
-    def __enter__(self):
-        """This will just return self; the magic happens in __exit__"""
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """If we're in write mode, write the manifest."""
-        self.writeManifest()
+    def readManifest(self, archive):
+        names = archive.getNames()
+        for x in names:
+            # every item in the archive that ends with .meta should be a metadata file for a file without
+            # that extension.
+            if x.endswith(".meta"):
+                # for every .meta file we get the name of the file it's associated with
+                name = x[:-5]
+                if name in names:
+                    # and if it exists in the archive we load the metadata file.
+                    try:
+                        if (d := archive.readJson(x)) is not None:
+                            self.manifest[name] = Metadata.deserialise(d)
+                        else:
+                            raise Exception(f"metadata missing")
+                    except Exception as e:
+                        print(f"Error reading metadata for {name}: {e}")
 
     def writeManifest(self):
         """Write the manifest to the archive. This is only done in write mode."""
@@ -157,20 +156,23 @@ class DatumStore:
             raise Exception("archive must be open to write")
 
         # update the manifest
-        self.manifest[name] = ManifestItem(d.tp.name, description, str(d), datetime.now())
+        meta = Metadata(d.tp.name, description, str(d), datetime.now())
+        self.manifest[name] = meta
 
         # write the item to the archive
         self.archive.writeJson(name, d.serialise())
+        # and the metadata too
+        self.archive.writeJson(name+".meta", meta.serialise())
 
     def total_size(self):
         return sum([item.size for item in self.cache.values()])
 
-    def getInfo(self, name: str) -> ManifestItem:
-        """Get the manifest item for a given name, or None if it doesn't exist."""
+    def getMetadata(self, name: str) -> Metadata:
+        """Get the metadata item for a given name, or None if it doesn't exist."""
         return self.manifest.get(name, None)
 
-    def getManifest(self) -> Dict[str, ManifestItem]:
-        """Get the manifest item for all names."""
+    def getManifest(self) -> Dict[str, Metadata]:
+        """Get the entire menifest of metadata objects"""
         return self.manifest
 
     def get(self, name, doc: Optional[Document]) -> Optional[Datum]:

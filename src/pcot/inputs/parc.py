@@ -15,12 +15,11 @@ from pcot.datum import Datum
 from pcot.imagecube import ChannelMapping
 from pcot.inputs.inputmethod import InputMethod
 from pcot.parameters.taggedaggregates import TaggedDict
-from pcot.sources import nullSource, nullSourceSet
 from pcot.ui import uiloader
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
 from pcot.utils.archive import FileArchive
-from pcot.utils.datumstore import DatumStore, ManifestItem
+from pcot.utils.datumstore import DatumStore, Metadata
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +110,7 @@ class Model(QtCore.QAbstractTableModel):
             # get a sorted list of the manifest keys
             keys = sorted(list(self.manifest.keys()))
             # and return the appropriate item
-            item: ManifestItem = self.manifest[keys[index.row()]]
+            item: Metadata = self.manifest[keys[index.row()]]
             print(item)
             if index.column() == 0:
                 return keys[index.row()]            # column zero is the key

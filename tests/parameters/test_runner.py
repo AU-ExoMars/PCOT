@@ -43,7 +43,6 @@ def test_run(globaldatadir):
         r.run(None, test)
 
 
-
 def test_scalar_output(globaldatadir):
     """This tests a graph which should produce a scalar output (among other things), but it will
     also test we can read an image from a multi-image PARC file and modify a constant node"""
