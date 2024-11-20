@@ -293,6 +293,6 @@ def test_manifest_read(globaldatadir):
     assert m is not None
     assert m.datumtype == 'number'
     assert m.description == '0-2, 200 numbers'
-    tt = datetime.fromisoformat("2024-10-18")
+    tt = datetime.fromisoformat("2024-11-20")
     delta = m.created - tt
     assert delta.days < 1

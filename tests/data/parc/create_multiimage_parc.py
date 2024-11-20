@@ -41,7 +41,8 @@ x = df.testimg(0)
 y = df.testimg(1)
 
 
-with FileArchive("multi.parc","w") as a, DatumStore(a) as da:
+with FileArchive("multi.parc","w") as a:
+    da = DatumStore(a)
     da.writeDatum("image0",x, description="testimg(0)")
     da.writeDatum("image1",y, description="testimg(1)")
     
