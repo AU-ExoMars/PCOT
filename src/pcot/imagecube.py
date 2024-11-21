@@ -13,6 +13,7 @@ from typing import List, Optional, Tuple, Sequence, Union
 import cv2 as cv
 import numpy as np
 from PySide2.QtGui import QPainter
+from tifffile.geodb import Datum
 
 import pcot
 from pcot import dq, ui
@@ -22,6 +23,7 @@ from pcot.sources import MultiBandSource, SourcesObtainable, Source
 from pcot.utils import annotations
 from pcot.utils.annotations import annotFont
 from pcot.utils import image
+from pcot.utils.archive import FileArchive
 from pcot.utils.geom import Rect
 import pcot.dq
 from pcot.value import Value
@@ -1026,7 +1028,7 @@ class ImageCube(SourcesObtainable):
         """
 
         from pcot import imageexport
-        from pcot.utils import datumstore
+        from pcot.utils.datumstore import DatumStore
 
         if format is None:
             if '.' not in filename:
@@ -1057,6 +1059,9 @@ class ImageCube(SourcesObtainable):
             if annotations:
                 raise Exception("PARC format does not support annotations")
             else:
-                raise Exception("PARC image write is currently disabled")
+                with FileArchive(filename, "a" if append else "w") as a:
+                    from pcot.datum import Datum    # late import otherwise cyclic fun
+                    ds = DatumStore(a)
+                    ds.writeDatum(name, Datum(Datum.IMG, self))
         else:
             raise Exception(f"Unsupported file format for image save: {format}")

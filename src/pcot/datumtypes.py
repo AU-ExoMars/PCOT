@@ -142,8 +142,6 @@ class ImgType(Type):
                  description=output.description,
                  append=output.append)
 
-        raise ValueError("Cannot write an image to a file from a parameter file yet!")
-
 
 
 
