@@ -69,7 +69,7 @@ class Type:
         uncertainties. A vector will return a scalar."""
         raise pcot.datumexceptions.NoUncertainty(self.name)
 
-    def writeFile(self, d, outputDescription: 'TaggedDict'):
+    def writeBatchOutputFile(self, d, outputDescription: 'TaggedDict'):
         """Write to a file - this is the default implementation which just writes the
         string representation of the value to a file followed by a newline.
         The TaggedDict is of OutputDictType, and can be found in parameters/runner.py"""
@@ -130,7 +130,7 @@ class ImgType(Type):
         v = d.val
         return v.img.nbytes + v.uncertainty.nbytes + v.dq.nbytes
 
-    def writeFile(self, d, output: 'TaggedDict'):
+    def writeBatchOutputFile(self, d, output: 'TaggedDict'):
         if os.path.exists(output.file) and not output.clobber:
             raise FileExistsError(f"File {output.file} already exists and clobber is not set")
 

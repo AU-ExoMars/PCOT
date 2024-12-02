@@ -216,8 +216,8 @@ class Runner:
                 if output is None:
                     raise ValueError(f"No output from node {v.node}")
 
-                # we pass the ENTIRE output dict to the writeToFile method. It's a little ugly with quite a
+                # we pass the ENTIRE output dict to the file writing method. It's a little ugly with quite a
                 # bit of unnecessary information for some cases, but at least the method signature is simple
                 # and the data well-organised (as it's a TaggedDict).
                 logger.info(f"writing output to {v.file}")
-                output.writeFile(v)
+                output.writeBatchOutputFile(v)
