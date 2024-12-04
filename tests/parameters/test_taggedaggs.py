@@ -563,3 +563,23 @@ def test_python_dict():
     s = td.serialise()
     assert s == {'a': 10, 'b': {'foo': 3, 'bar': 2}, 'c': 3.14}
 
+
+def test_valid_strings():
+    """Test that only valid strings options are accepted in a TaggedDict which specified them for a string element"""
+    tdt = TaggedDictType(
+        a=("a", str, "foo", ["foo", "bar", "baz"]),
+        b=("b", str, "foo")
+    )
+
+    td = tdt.create()
+
+    td['a'] = "bar"
+    assert td['a'] == "bar"
+
+    with pytest.raises(ValueError, match=r".*'wibble' is not in the list of valid strings foo,bar,baz"):
+        td['a'] = 'wibble'  # not one of the valid strings
+
+    for xx in ["foo", "bar", "baz"]:
+        td['a'] = xx  #  this are all OK because they are in the list of valid strings
+
+    td['b'] = 'wibble'  # not one of the valid strings, but this is OK because it's not specified with a valid list
