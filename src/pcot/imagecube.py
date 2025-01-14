@@ -1032,13 +1032,19 @@ class ImageCube(SourcesObtainable):
 
         if format is None:
             if '.' not in filename:
-                raise Exception(f"No file extension provided in filename {filename}")
+                raise ValueError(f"No file extension provided in filename {filename}")
             _, format = os.path.splitext(filename)
             format = format[1:]  # remove the dot
         elif '.' not in filename:
             filename += f".{format}"
 
         format = format.lower()
+
+        if format != 'parc':
+            if description is not None:
+                raise ValueError("Description is not supported for image formats other than PARC")
+            if append:
+                raise ValueError("Append is not supported for image formats other than PARC")
 
         if format == 'pdf':
             imageexport.exportPDF(self, filename, annotations=annotations)
@@ -1057,11 +1063,11 @@ class ImageCube(SourcesObtainable):
                 cv.imwrite(filename, img8)
         elif format == 'parc':
             if annotations:
-                raise Exception("PARC format does not support annotations")
+                raise ValueError("PARC format does not support annotations")
             else:
                 with FileArchive(filename, "a" if append else "w") as a:
                     from pcot.datum import Datum    # late import otherwise cyclic fun
                     ds = DatumStore(a)
                     ds.writeDatum(name, Datum(Datum.IMG, self), description)
         else:
-            raise Exception(f"Unsupported file format for image save: {format}")
+            raise ValueError(f"Unsupported file format for image save: {format}")

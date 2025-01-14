@@ -75,13 +75,23 @@ class Type:
         The TaggedDict is of OutputDictType, and can be found in parameters/runner.py"""
         from pcot.parameters.runner import VALID_IMAGE_OUTPUT_FORMATS
 
+        # get the extension
+        if outputDescription.file is None:
+            raise ValueError("No file specified for output")
+        extension = os.path.splitext(outputDescription.file)[1]
+        if len(extension)>0:
+            extension = extension[1:]   # strip the initial dot if there is an extension
+
+        if outputDescription.format is not None:
+            raise ValueError("Cannot specify format for text output")
+
         # note that append implies clobber
 
         if not (outputDescription.append or outputDescription.clobber) and os.path.exists(outputDescription.file):
             raise FileExistsError(f"File {outputDescription.file} already exists")
-        if outputDescription.format == 'parc':
+        if extension == 'parc':
             raise ValueError("Cannot write default format (text) data to a PARC file")
-        elif outputDescription.format in VALID_IMAGE_OUTPUT_FORMATS:
+        elif extension in VALID_IMAGE_OUTPUT_FORMATS:
             raise ValueError("Cannot write non-image data to an image file")
         with open(outputDescription.file, "a" if outputDescription.append else "w") as f:
             if outputDescription.prefix is not None:
@@ -137,8 +147,15 @@ class ImgType(Type):
         return v.img.nbytes + v.uncertainty.nbytes + v.dq.nbytes
 
     def writeBatchOutputFile(self, d, output: 'TaggedDict'):
-        if os.path.exists(output.file) and not output.clobber:
+        if not (output.append or output.clobber) and os.path.exists(output.file):
             raise FileExistsError(f"File {output.file} already exists and clobber is not set")
+        if output.prefix is not None:
+            raise ValueError("Cannot specify prefix text for image output")
+
+        # format is processed inside save, and if format is not provided it is generated
+        # from the extension of the file name.
+
+        # Description is also processed inside save, only being valid if the format is PARC.
 
         img: pcot.imagecube.ImageCube = d.val
         img.save(output.file,

@@ -147,21 +147,27 @@ class Tag:
 
     def get_primitive_type_desc(self):
         """Only really valid for tags which are primitive types, this returns a descriptive string
-        which holds the type name and extra details such as valid strings"""
+        which holds the type name and extra details such as valid strings and defaults"""
         tp = self.type.type_if_exists if isinstance(self.type, Maybe) else self.type
+        deflt = self.deflt
         if tp == str:
             if self.valid_strings is not None:
-                return f"string ({', '.join(self.valid_strings)})"
-            return "string"
-        if tp == int:
-            return "integer"
-        if tp == float:
-            return "float"
-        if tp == bool:
-            return "boolean"
-        if tp == Number:
-            return "int or float"
-        return tp.__name__
+                s = f"string ({', '.join(self.valid_strings)})"
+            else:
+                s = "string"
+            deflt = f"'{deflt}'" if deflt is not None else "None"
+        elif tp == int:
+            s = "integer"
+        elif tp == float:
+            s = "float"
+        elif tp == bool:
+            s = "boolean"
+        elif tp == Number:
+            s = "int or float"
+        else:
+            s = tp.__name__
+        s += f" (default {deflt})"
+        return s
 
 
 class TaggedDictType(TaggedAggregateType):

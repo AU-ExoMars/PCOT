@@ -19,15 +19,13 @@ class TreeNode:
     unique_id: int
     children: List['TreeNode']
     desc: Optional[str]
-    optional: bool
     parent: Optional['TreeNode']
 
     count = 0
 
-    def __init__(self, name: str, desc: Optional[str], optional: bool):
+    def __init__(self, name: str, desc: Optional[str]):
         self.name = name
         self.desc = desc
-        self.optional = optional
         self.children = []
         self.row = -1
         self.column = -1
@@ -62,7 +60,7 @@ class TreeNode:
 
 def build_tree(name: str, tp: TaggedDictType) -> TreeNode:
     """Given a name and a TaggedDictType, build a tree of TreeNode objects."""
-    root = TreeNode(name, "", False)
+    root = TreeNode(name, "")
     for key, tag in tp.tags.items():
         root.add(build_tree_from_tag(key, tag))
     return root
@@ -72,18 +70,15 @@ def build_tree_from_tag(name: str, tag: Tag) -> TreeNode:
     """Given a name and a Tag, build a tree of TreeNode objects - used from build_tree and recursively"""
     tp = tag.type
     if isinstance(tp, Maybe):
-        optional = True
         tp = tp.type_if_exists
-    else:
-        optional = False
 
     if not isinstance(tp, TaggedAggregateType):
         # if this is a node for a plain type, we create a node for name and type immediately
         d = tag.get_primitive_type_desc()
-        return TreeNode(f"{name}: {d}", tag.description, optional)
+        return TreeNode(f"{name}: {d}", tag.description)
     elif isinstance(tp, TaggedDictType):
         # show if the dict is ordered
-        root = TreeNode(name, tag.description + (" (ordered)" if tp.isOrdered else ""), optional)
+        root = TreeNode(name, tag.description + (" (ordered)" if tp.isOrdered else ""))
         keys = list(tp.tags.keys())
         vals = [x.type for x in tp.tags.values()]
         # we need to detect the special case where we have a fixed dict of numbered items (e.g. inputs) which are
@@ -105,14 +100,14 @@ def build_tree_from_tag(name: str, tag: Tag) -> TreeNode:
         list_tag = tp.tag  # the tag of the *list items* not of the list itself in its containing list/dict.
         if not isinstance(list_tag.type, TaggedAggregateType):
             d = list_tag.get_primitive_type_desc()
-            root = TreeNode(f"{name}: list of {d}", tag.description, optional)
+            root = TreeNode(f"{name}: list of {d}", tag.description)
         else:
             root = build_tree_from_tag(f"{name}: list", list_tag)
     elif isinstance(tp, TaggedVariantDictType):
-        root = TreeNode(name, tag.description, optional)
+        root = TreeNode(name, tag.description)
         disc = tp.discriminator_field
         for key, var_tp in tp.type_dict.items():
-            root.add(build_tree_from_tag(f"{disc} = {key}", var_tp.tag))  # var_tp must be TaggedDict
+            root.add(build_tree(f"{disc} = {key}", var_tp))  # var_tp must be TaggedDict
     else:
         raise ValueError(f"Unknown type {tp}")
     return root
@@ -217,6 +212,16 @@ def test_tree():
     from pcot.xforms.xformmultidot import XFormMultiDot
     pcot.setup()
     s = generate_node_documentation("multidot")
+
+    with open("c:/users/jim/out.html", "w") as f:
+        f.write(s)
+
+def test_out():
+    import pcot
+    from pcot.parameters.inputs import inputsDictType
+    from pcot.xforms.xformmultidot import XFormMultiDot
+    pcot.setup()
+    s = generate_outputs_documentation()
 
     with open("c:/users/jim/out.html", "w") as f:
         f.write(s)
