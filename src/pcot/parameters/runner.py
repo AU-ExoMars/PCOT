@@ -117,11 +117,11 @@ class Runner:
         Some template items are preset:
             - {{docpath}} - the path to the document (with backslashes replaced by forward slashes)
             - {{docfile}} - the name of the document file (i.e. the final part of the path)
-            - {{parampath}} - the path to the parameter file (if one is used, it is "NoFile" otherwise)
-            - {{paramfile}} - the name of the parameter file (if one is used, it is "NoFile" otherwise)
-            - {{count}} - the number of times the document has been run
             - {{datetime}} - the current date and time in ISO 8601 format
             - {{date}} - the current date in ISO 8601 format
+            - {{count}} - the number of times the document has been run
+            - {{parampath}} - the path to the parameter file (if one is used, it is "NoFile" otherwise)
+            - {{paramfile}} - the name of the parameter file (if one is used, it is "NoFile" otherwise)
         """
 
         # make sure a dict exists for the templater

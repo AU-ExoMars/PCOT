@@ -426,6 +426,12 @@ def test_run_modify_with_reset_node_run(globaldatadir):
 
 
 def test_gradient(globaldatadir):
+    """Here we look at the output of a gradient node on a small part of an image using two different
+    gradient presets. This tests:
+    - the gradient node and presets
+    - the "run" directive which performs multiple runs of the same graph with different parameters
+    - text file output to two separate files, one for each run
+    """
     pcot.setup()
     r = Runner(globaldatadir / "runner/gradient.pcot")
 
@@ -452,3 +458,47 @@ def test_gradient(globaldatadir):
         txt = open(out2).read()
         # magma default will be fairly purple
         assert txt == "[0.63664±0.13113, 0.19228±0.05203, 0.47936±0.027683]\n"
+
+
+def test_write_text_number_to_image_filename(globaldatadir):
+    """It's actually OK to write a number to an image filename - it will be converted to a string, of course,
+    but it's a bit of a weird thing to do. This test is just to check that it works. Otherwise I could add a check
+    that we're not trying to write to an image format filename, but that seems (a) unnecessary and (b) hard to define
+    (has anyone got a list of all image formats?)."""
+    pcot.setup()
+    r = Runner(globaldatadir / "runner/gradient.pcot")
+
+    with tempfile.TemporaryDirectory() as td:
+        out = os.path.join(td, "output1.png")
+
+        test = f"""
+        # run without changes
+        outputs.+.file = {out}
+        .node = mean(a)
+        """
+
+        r.run(None, test)
+
+        txt = open(out).read()
+        assert txt == "[0.15516±0.023474, 0.51942±0.079119, 0.54824±0.012403]\n"
+
+
+def test_write_number_to_parc(globaldatadir):
+    pcot.setup()
+    r = Runner(globaldatadir / "runner/gradient.pcot")
+
+    with tempfile.TemporaryDirectory() as td:
+        out = os.path.join(td, "output1.parc")
+
+        test = f"""
+        # run without changes
+        outputs.+.file = {out}
+        .format = parc
+        .node = mean(a)
+        """
+
+        r.run(None, test)
+
+        txt = open(out).read()
+        # standard viridis default will be fairly cyan
+        assert txt == "[0.15516±0.023474, 0.51942±0.079119, 0.54824±0.012403]\n"

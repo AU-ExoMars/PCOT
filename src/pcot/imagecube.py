@@ -1021,7 +1021,7 @@ class ImageCube(SourcesObtainable):
         determining if the file already exists must be handled by the caller.
 
         * annotations - add annotations if true (not PARC)
-        * format - use this to determine the format, not the file extension
+        * format - if not None, use this to determine the format, not the file extension
         * name - the name of the image (used in the PARC format)
         * description - a text description of the image (used in the PARC format)
         * append - if True, append to an existing PARC file, otherwise create a new PARC.
@@ -1062,6 +1062,6 @@ class ImageCube(SourcesObtainable):
                 with FileArchive(filename, "a" if append else "w") as a:
                     from pcot.datum import Datum    # late import otherwise cyclic fun
                     ds = DatumStore(a)
-                    ds.writeDatum(name, Datum(Datum.IMG, self))
+                    ds.writeDatum(name, Datum(Datum.IMG, self), description)
         else:
             raise Exception(f"Unsupported file format for image save: {format}")

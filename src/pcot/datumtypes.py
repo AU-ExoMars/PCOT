@@ -75,6 +75,7 @@ class Type:
         The TaggedDict is of OutputDictType, and can be found in parameters/runner.py"""
 
         # note that append implies clobber
+
         if not (outputDescription.append or outputDescription.clobber) and os.path.exists(outputDescription.file):
             raise FileExistsError(f"File {outputDescription.file} already exists")
         with open(outputDescription.file, "a" if outputDescription.append else "w") as f:
@@ -134,7 +135,7 @@ class ImgType(Type):
         if os.path.exists(output.file) and not output.clobber:
             raise FileExistsError(f"File {output.file} already exists and clobber is not set")
 
-        img = d.val
+        img: pcot.imagecube.ImageCube = d.val
         img.save(output.file,
                  annotations=output.annotations,
                  format=output.format,
