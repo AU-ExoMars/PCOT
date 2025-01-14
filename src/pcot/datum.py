@@ -152,10 +152,10 @@ class Datum(SourcesObtainable):
         """Get the size of the datum in bytes. For datum objects with a negligible size, this can be 0."""
         return self.tp.getSize(self)
 
-    def writeFile(self, outputDescription: 'TaggedDict'):
+    def writeBatchOutputFile(self, outputDescription: 'TaggedDict'):
         """Write the datum to an output somehow - delegates to the type object. The input
         is a TaggedDict in the format given by pcot.parameters.runner.OutputDictType"""
-        self.tp.writeFile(self, outputDescription)
+        self.tp.writeBatchOutputFile(self, outputDescription)
 
     #
     # This block of code maps operations on Datum objects to the binary operations registered in the "ops" system

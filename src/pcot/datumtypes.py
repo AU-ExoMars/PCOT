@@ -69,15 +69,20 @@ class Type:
         uncertainties. A vector will return a scalar."""
         raise pcot.datumexceptions.NoUncertainty(self.name)
 
-    def writeFile(self, d, outputDescription: 'TaggedDict'):
+    def writeBatchOutputFile(self, d, outputDescription: 'TaggedDict'):
         """Write to a file - this is the default implementation which just writes the
         string representation of the value to a file followed by a newline.
         The TaggedDict is of OutputDictType, and can be found in parameters/runner.py"""
+        from pcot.parameters.runner import VALID_IMAGE_OUTPUT_FORMATS
 
         # note that append implies clobber
 
         if not (outputDescription.append or outputDescription.clobber) and os.path.exists(outputDescription.file):
             raise FileExistsError(f"File {outputDescription.file} already exists")
+        if outputDescription.format == 'parc':
+            raise ValueError("Cannot write default format (text) data to a PARC file")
+        elif outputDescription.format in VALID_IMAGE_OUTPUT_FORMATS:
+            raise ValueError("Cannot write non-image data to an image file")
         with open(outputDescription.file, "a" if outputDescription.append else "w") as f:
             if outputDescription.prefix is not None:
                 f.write(outputDescription.prefix)
@@ -131,7 +136,7 @@ class ImgType(Type):
         v = d.val
         return v.img.nbytes + v.uncertainty.nbytes + v.dq.nbytes
 
-    def writeFile(self, d, output: 'TaggedDict'):
+    def writeBatchOutputFile(self, d, output: 'TaggedDict'):
         if os.path.exists(output.file) and not output.clobber:
             raise FileExistsError(f"File {output.file} already exists and clobber is not set")
 

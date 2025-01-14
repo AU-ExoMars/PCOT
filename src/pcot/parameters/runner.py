@@ -39,6 +39,9 @@ logger = logging.getLogger(__name__)
 
 # this is the tagged dict type which holds information about output nodes and files
 
+VALID_IMAGE_OUTPUT_FORMATS = ['pdf', 'svg', 'png', 'jpg', 'jpeg', 'bmp', 'tiff', 'parc']
+VALID_TEXT_OUTPUT_FORMATS =  ['txt','csv']
+
 outputDictType = TaggedDictType(
     # which node we are getting the output from
     node=("node name", Maybe(str), None),
@@ -54,7 +57,8 @@ outputDictType = TaggedDictType(
     file=("output filename - if not provided, use previous output's value (see 'append')", Maybe(str), None),
 
     clobber=("overwrite the file if it exists (else raise an exception)", bool, False),
-    format=("output format for image (will determine from extension if not given)", Maybe(str), None),
+    format=("output format for image in lowercase (will determine from extension if not given)", Maybe(str), None,
+            VALID_TEXT_OUTPUT_FORMATS + VALID_IMAGE_OUTPUT_FORMATS),
     annotations=("draw ROIs/annotations on the image (not for PARC)", bool, True),
 
     name=("name of the datum (if a PARC is being written) - 'main' if not given", Maybe(str), None),
@@ -216,8 +220,8 @@ class Runner:
                 if output is None:
                     raise ValueError(f"No output from node {v.node}")
 
-                # we pass the ENTIRE output dict to the writeToFile method. It's a little ugly with quite a
+                # we pass the ENTIRE output dict to the file writing method. It's a little ugly with quite a
                 # bit of unnecessary information for some cases, but at least the method signature is simple
                 # and the data well-organised (as it's a TaggedDict).
                 logger.info(f"writing output to {v.file}")
-                output.writeFile(v)
+                output.writeBatchOutputFile(v)

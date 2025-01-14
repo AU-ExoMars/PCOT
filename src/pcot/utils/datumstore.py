@@ -148,8 +148,6 @@ class DatumStore:
         probably only be used in scripts that prepare archives.
 
         description: an optional text description of the datum
-
-        This MUST BE inside a context manager because the archive must be open for all items.
         """
 
         if not self.archive.is_open() or not self.archive.is_writable():
