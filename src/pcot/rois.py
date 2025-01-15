@@ -55,7 +55,7 @@ BASEROIFIELDS = [
     ("colour", ("the colour of the ROI", ROICOLOURTYPE)),
     ("thickness", ("the border thickness for rendering", Number, 0)),
     ("fontsize", ("the fontsize for rendering", Number, 10)),
-    ("drawbg", ("should the label's background container be filled with black?", bool, True)),
+    ("drawbg", ("should the label's background container be filled with black/white (depending on colour)?", bool, True)),
     ("drawBox", ("draw the ROI bounding box? (painted only)", bool, True)),
     ("drawEdge", ("draw the ROI edge, or fill it? (painted only)", bool, True)),
 ]
@@ -197,9 +197,19 @@ class ROI(SourcesObtainable, Annotation):
             x, y, x2, y2 = bb.corners()
             ty = y if self.labeltop else y2
 
+            # background colour should be black, unless the self.colour is dark in which case it
+            # should be white.
+
+            is_bright = sum(self.colour) > 1.5
+
+            if is_bright:
+                bgcol = (0, 0, 0)
+            else:
+                bgcol = (255, 255, 255)
+
             annotDrawText(p, x, ty, self.label, self.colour, alpha,
                           basetop=self.labeltop,
-                          bgcol=(0, 0, 0) if self.drawbg else None,
+                          bgcol=bgcol if self.drawbg else None,
                           fontsize=self.fontsize)
 
     def annotate(self, p: QPainter, img, alpha):
