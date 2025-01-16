@@ -1015,7 +1015,8 @@ class ImageCube(SourcesObtainable):
         return d
 
     def save(self, filename, annotations=False, format: str = None,
-             name: str = None, description: str = "", append: bool=False):
+             name: str = None, description: str = "", append: bool=False,
+             pixelWidth=None):
         """Write the image to a file, with or without annotations. If format is provided, it will be used
         otherwise the format will be inferred from the filename extension. Note that this will always clobber -
         determining if the file already exists must be handled by the caller.
@@ -1025,6 +1026,7 @@ class ImageCube(SourcesObtainable):
         * name - the name of the image (used in the PARC format)
         * description - a text description of the image (used in the PARC format)
         * append - if True, append to an existing PARC file, otherwise create a new PARC.
+        * pixelWidth - if there are annotations, resize to this (default 1000) before saving.
         """
 
         from pcot import imageexport
@@ -1032,7 +1034,7 @@ class ImageCube(SourcesObtainable):
 
         if format is None:
             if '.' not in filename:
-                raise ValueError(f"No file extension provided in filename {filename}")
+                raise ValueError(f"No extension provided in filename {filename}")
             _, format = os.path.splitext(filename)
             format = format[1:]  # remove the dot
         elif '.' not in filename:
@@ -1052,7 +1054,7 @@ class ImageCube(SourcesObtainable):
             imageexport.exportSVG(self, filename, annotations=annotations)
         elif format in ('png', 'jpg', 'jpeg', 'bmp', 'tiff'):
             if annotations:
-                imageexport.exportRaster(self, filename, annotations=annotations)
+                imageexport.exportRaster(self, filename, annotations=annotations, pixelWidth=pixelWidth)
             else:
                 # direct write with imwrite - this used to be its own method, rgbWrite()
                 img = self.rgb()

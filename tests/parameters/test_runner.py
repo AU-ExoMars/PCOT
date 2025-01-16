@@ -163,7 +163,7 @@ def test_multiple_text_output_append(globaldatadir):
         assert txt == "[0.67498±0.11292, 0.43386±0.085651, 0.25112±0.060702]\n0.45332±0.19508\n"
 
 
-def test_multiple_text_output_append_shorthand(globaldatadir):
+def test_multiple_text_output_append_shorthand_and_prefix(globaldatadir):
     """Test that we can use the append option to add to a file when we're doing text output, using the "shorthand"
     that lets us use the previous filename and append mode by simply not specifying them.
     We also test output prefixes here and the idea that things in quotes will be unescaped using JSON"""
@@ -203,11 +203,13 @@ def test_multiple_text_output_append_shorthand(globaldatadir):
             """)+"\n"
 
 
-def test_multiple_text_output_append_shorthand_from_file(globaldatadir):
+def test_multiple_text_output_append_shorthand_from_file_jinja(globaldatadir):
     """Test that we can use the append option to add to a file when we're doing text output, using the "shorthand"
     that lets us use the previous filename and append mode by simply not specifying them.
     We also test output prefixes here and the idea that things in quotes will be unescaped using JSON.
-    This time we read the test string from a file and use Jinja templating to set the input file."""
+    This time we read the test string from a file and use Jinja templating to set the input file.
+    Remember to read this in association with the file in tests/data/runner/testscalars.params!
+    """
 
     pcot.setup()
     r = Runner(globaldatadir / "runner/test2.pcot")
@@ -258,6 +260,9 @@ def test_multiple_text_output_append_shorthand_from_file(globaldatadir):
 
 
 def test_spectrum(globaldatadir):
+    """Test a spectrum (just Datum.DATA) is output correctly, and that we can add a point
+    in the parameter file."""
+
     pcot.setup()
     r = Runner(globaldatadir / "runner/test2.pcot")
 
@@ -291,6 +296,8 @@ def test_spectrum(globaldatadir):
 
 
 def test_add_circle_to_multidot_using_list(globaldatadir):
+    """Test a spectrum (just Datum.DATA) is output correctly, and that we can add a point
+    in the parameter file using a list format for the .croi (circular ROI)"""
     pcot.setup()
     r = Runner(globaldatadir / "runner/test2.pcot")
 
@@ -439,18 +446,23 @@ def test_gradient(globaldatadir):
     r = Runner(globaldatadir / "runner/gradient.pcot")
 
     with tempfile.TemporaryDirectory() as td:
+        # we'll get four outputs - two means, and two pngs.
         out1 = os.path.join(td, "output1.txt")
         out2 = os.path.join(td, "output2.txt")
+        png1 = os.path.join(td, "output1.png")
+        png2 = os.path.join(td, "output2.png")
 
         test = f"""
-        # run without changes
         outputs.+.file = {out1}
         .node = mean(a)
+        outputs.+.file = {png1}
+        .node = gradient
         run
         
-        # now set the gradient from a preset
+        # now set the gradient from a preset and run it again
         gradient.preset = magma
         outputs.0.file = {out2}
+        outputs.1.file = {png2}
         """
 
         r.run(None, test)
@@ -461,5 +473,72 @@ def test_gradient(globaldatadir):
         txt = open(out2).read()
         # magma default will be fairly purple
         assert txt == "[0.63664±0.13113, 0.19228±0.05203, 0.47936±0.027683]\n"
+
+        # now check the images themselves
+        from PIL import Image
+        with Image.open(png1) as im:
+            assert im.size == (1000, 1000)   # 1000 is the default size for export with annotations
+
+        with Image.open(png2) as im:
+            assert im.size == (1000, 1000)   # 1000 is the default size for export with annotations
+
+
+def test_image_export_sizes(globaldatadir):
+    """When we output to raster formats like PNG, and we have annotations on (the default), the image will
+    be resized to 1000 to make the annotations legible. We can change this behaviour:
+
+    - annotations=n will turn off annotations and resizing
+    - width=nnn will set the width of the output image to nnn, and the height will be scaled accordingly.
+    - width=-1 will turn off resizing
+    """
+    pcot.setup()
+    r = Runner(globaldatadir / "runner/gradient.pcot")
+
+    from PIL import Image
+    with tempfile.TemporaryDirectory() as td:
+        # first test - just output an image with annotations; it will resize to the default 1000.
+        png = os.path.join(td, "output-annot-1000.png")
+        test = f"""
+        outputs.+.file = {png}
+        .node = gradient
+        """
+        r.run(None, test)
+        with Image.open(png) as im:
+            assert im.size == (1000, 1000)
+
+        # second test - a specific size
+        png = os.path.join(td, "output-annot-500.png")
+        test = f"""
+        outputs.+.file = {png}
+        .node = gradient
+        .width = 500
+        """
+        r.run(None, test)
+        with Image.open(png) as im:
+            assert im.size == (500, 500)
+
+        # third test - no annotations
+        png = os.path.join(td, "output-no-annot.png")
+        test = f"""
+        outputs.+.file = {png}
+        .node = gradient
+        .annotations = n
+        """
+        r.run(None, test)
+        with Image.open(png) as im:
+            assert im.size == (256, 256)
+
+        png = os.path.join(td, "output-annot-same.png")
+        test = f"""
+        outputs.+.file = {png}
+        .node = gradient
+        .width = -1
+        """
+        r.run(None, test)
+        with Image.open(png) as im:
+            assert im.size == (256, 256)
+
+
+
 
 

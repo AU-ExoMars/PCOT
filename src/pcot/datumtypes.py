@@ -163,9 +163,8 @@ class ImgType(Type):
                  format=output.format,
                  name=output.name,
                  description=output.description,
+                 pixelWidth=output.width,
                  append=output.append)
-
-
 
 
 class RoiType(Type):

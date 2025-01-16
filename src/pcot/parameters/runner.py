@@ -63,6 +63,7 @@ outputDictType = TaggedDictType(
 
     name=("name of the datum (if a PARC is being written) - 'main' if not given", Maybe(str), None),
     description=("description of the data (if a PARC is being written)", Maybe(str), None),
+    width=("width of output image when exporting to raster formats (in pixels) (if annotations is true)", int, 1000),
 
     # only used when we are writing a text file or PARC. In the latter case, the datum will be appended to the archive
     # if there is no existing datum of that name (see 'name' above). The default value None means whatever the previous

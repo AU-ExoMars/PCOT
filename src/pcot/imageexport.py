@@ -8,7 +8,7 @@ from PySide2.QtSvg import QSvgGenerator
 EXPORT_UNIT_WIDTH = 10000.0  # size of an image and its borders in internal units.
 
 
-def export(imgcube, prepfunction, annotations=True):
+def export(imgcube, prepfunction, annotations=True, margin=0.2):
     """A bit functional. The drawing process consists of a lot of prep which creates a QPainter drawing
     on some backing object - such as a QPdfWriter or a QImage. So here we calculate all the things necessary
     to do the drawing and to create that backing object, and call a 'prepfunction' to create said object and
@@ -26,10 +26,10 @@ def export(imgcube, prepfunction, annotations=True):
     # these are "pseudomargins" in inches; we can draw inside them so we aren't using
     # actual margins.
 
-    marginTop = 0.2  # these are all minima
-    marginBottom = 0.2
-    marginLeft = 0.2
-    marginRight = 0.2
+    marginTop = margin  # these are all minima
+    marginBottom = margin
+    marginLeft = margin
+    marginRight = margin
 
     # and then expand the margins if annotations require it
     for ann in imgcube.annotations + imgcube.rois:
@@ -107,7 +107,7 @@ def exportPDF(imgcube, path, annotations=True):
     export(imgcube, prepfunc, annotations)
 
 
-def exportRaster(imgcube, path, pixelWidth=1000, transparentBackground=False, annotations=True):
+def exportRaster(imgcube, path, pixelWidth, transparentBackground=False, annotations=True):
     """Export an image to a PNG, JPG, GIF, PBM, PPM, BMP... Gets the format from
     the extension (see https://doc.qt.io/qt-6/qimage.html#reading-and-writing-image-files)
     Params:
@@ -118,11 +118,14 @@ def exportRaster(imgcube, path, pixelWidth=1000, transparentBackground=False, an
 
     outputImage = None   # see note on exportPDF
 
+    if pixelWidth < 0:
+        pixelWidth = imgcube.w
+
     def prepfunc(win, hin):
         # now calculate image size. That's THREE coordinate systems: pixels, nominal "inches", and "units" (required because
         # too many things take ints so we can't use inches)
 
-        pixelHeight = pixelWidth * (hin / win)
+        pixelHeight = round(pixelWidth * (hin / win))
 
         # create an image in memory - 32bit ARGB if we need a transparent background, 24bit RGB if we don't
         nonlocal outputImage
@@ -134,7 +137,7 @@ def exportRaster(imgcube, path, pixelWidth=1000, transparentBackground=False, an
         # and now paint on it.
         return QPainter(outputImage)
 
-    export(imgcube, prepfunc, annotations)
+    export(imgcube, prepfunc, annotations, margin=0)
 
     # and save the image. Ignore the error here; outputImage is a reference to
     # None but that changes in the callback.
