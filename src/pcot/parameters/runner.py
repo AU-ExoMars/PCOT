@@ -59,11 +59,11 @@ outputDictType = TaggedDictType(
     clobber=("overwrite the file if it exists (else raise an exception)", bool, False),
     format=("output format for image in lowercase (will determine from extension if not given)", Maybe(str), None,
             VALID_TEXT_OUTPUT_FORMATS + VALID_IMAGE_OUTPUT_FORMATS),
-    annotations=("draw ROIs/annotations on the image (not for PARC)", bool, True),
+    annotations=("draw ROIs/annotations on the image (must be false for PARC). If not provided, use previous output's value (or false if first output)", Maybe(bool), None),
 
     name=("name of the datum (if a PARC is being written) - 'main' if not given", Maybe(str), None),
     description=("description of the data (if a PARC is being written)", Maybe(str), None),
-    width=("width of output image when exporting to raster formats (in pixels) (if annotations is true)", int, 1000),
+    width=("width of output image when exporting to raster formats (in pixels) if annotations is true. If annotations is false or width is negative, no resizing is done.", int, 1000),
 
     # only used when we are writing a text file or PARC. In the latter case, the datum will be appended to the archive
     # if there is no existing datum of that name (see 'name' above). The default value None means whatever the previous
@@ -195,17 +195,22 @@ class Runner:
         store output file names in the sink node, but this is a quick and dirty (and perhaps better) way to
         do it"""
 
-        # these two variables are used if the file or append mode is not specified for an output;
-        # they will be set to the last filename and append mode used.
+        # these variables are used if the file or append mode is not specified for an output;
+        # they will be set to the last filename and append mode used. Same with annotations (added later)
         prev_filename = None
         prev_append = False
+        prev_annot = True   # annotations are exported by default
         for v in self.paramdict['outputs']:
             if v.file is None:
                 v.file = prev_filename
             if v.append is None:
                 v.append = prev_append
+            if v.annotations is None:
+                v.annotations = prev_annot
+
             prev_filename = v.file
             prev_append = v.append
+            prev_annot = v.annotations
 
             if v.node is not None and v.file is not None:
                 # get the node

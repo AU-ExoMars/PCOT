@@ -786,16 +786,20 @@ def rotate(img, angle):
 
 
 @datumfunc
-def striproi(img):
+def striproi(img, stripannots=0):
     """
     Strip all regions of interest from an image
     @param img:img:image to strip
+    @param stripannots:number:if nonzero, also strip annotations (e.g. gradient legends) (default is 0)
     """
+
     img: ImageCube = img.get(Datum.IMG)
     if img is None:
         return None
     img = img.shallowCopy()
     img.rois = []
+    if stripannots.get(Datum.NUMBER).n:
+        img.annotations = []
     return Datum(Datum.IMG, img)
 
 

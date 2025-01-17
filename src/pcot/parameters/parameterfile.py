@@ -346,11 +346,12 @@ class ParameterFile:
         for c in self._changes:
             c.lineText = lines[c.line]
 
-        # add the implied run
-        if self._run:
-            c = RunCallback(len(lines), self._run)
-            c.lineText = "end-of-file"
-            self._changes.append(c)
+        if len(self._changes) > 0:
+            # add the implied run IF the last line is not a run
+            if self._run and not isinstance(self._changes[-1], RunCallback):
+                c = RunCallback(len(lines), self._run)
+                c.lineText = "end-of-file"
+                self._changes.append(c)
         return self
 
     def apply(self, data: Dict[str, TaggedAggregate]):

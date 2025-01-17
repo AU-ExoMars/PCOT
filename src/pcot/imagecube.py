@@ -1064,6 +1064,8 @@ class ImageCube(SourcesObtainable):
                 img8 = cv.cvtColor(img8, cv.COLOR_RGB2BGR)
                 cv.imwrite(filename, img8)
         elif format == 'parc':
+            if name is None:
+                raise ValueError("PARC format requires a name for the datum being saved (not just a filename)")
             if annotations:
                 raise ValueError("PARC format does not support annotations")
             else:

@@ -114,6 +114,8 @@ class DatumStore:
             with self.archive as a:   # This briefly opens the archive to read the manifest
                 self.readManifest(a)
         else:
+            if not self.archive.is_writable():
+                raise Exception("archive must be open for writing if it is open when passed to a DatumStore constructor (don't use a context manager for the archive in read mode)")
             self.manifest = {}
             self.write_mode = True
 
@@ -152,6 +154,10 @@ class DatumStore:
 
         if not self.archive.is_open() or not self.archive.is_writable():
             raise Exception("archive must be open to write")
+
+        # in most circumstances this is a double check, another check having been done up-stack
+        if name is None:
+            raise Exception("name must not be None in writeDatum")
 
         # update the manifest
         meta = Metadata(d.tp.name, description, str(d), datetime.now())

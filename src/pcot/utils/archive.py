@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Union
 
 import numpy as np
 import zipfile
@@ -190,7 +190,7 @@ class FileArchive(Archive):
     Used for ZIP files on disk.
     """
 
-    def __init__(self, path: Path, mode='r',  progressCallback: Callable[[str], None] = None):
+    def __init__(self, path: Union[Path,str], mode='r',  progressCallback: Callable[[str], None] = None):
         """Open a Zip archive on disk.
         The mode is 'r' for read, 'w' for write, and 'a' for append.
         """
