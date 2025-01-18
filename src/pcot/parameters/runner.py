@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 # this is the tagged dict type which holds information about output nodes and files
 
 VALID_IMAGE_OUTPUT_FORMATS = ['pdf', 'svg', 'png', 'jpg', 'jpeg', 'bmp', 'tiff', 'parc']
-VALID_TEXT_OUTPUT_FORMATS =  ['txt','csv']
+VALID_TEXT_OUTPUT_FORMATS = ['txt', 'csv']
 
 outputDictType = TaggedDictType(
     # which node we are getting the output from
@@ -62,16 +62,22 @@ outputDictType = TaggedDictType(
     clobber=("overwrite the file if it exists (else raise an exception)", bool, False),
     format=("output format for image in lowercase (will determine from extension if not given)", Maybe(str), None,
             VALID_TEXT_OUTPUT_FORMATS + VALID_IMAGE_OUTPUT_FORMATS),
-    annotations=("draw ROIs/annotations on the image (must be false for PARC). If not provided, use previous output's value (or false if first output)", Maybe(bool), None),
+    annotations=(
+    "draw ROIs/annotations on the image (must be false for PARC). If not provided, use previous output's value (or false if first output)",
+    Maybe(bool), None),
 
     name=("name of the datum (if a PARC is being written) - 'main' if not given", Maybe(str), None),
     description=("description of the data (if a PARC is being written)", Maybe(str), None),
-    width=("width of output image when exporting to raster formats (in pixels) if annotations is true. If annotations is false or width is negative, no resizing is done.", int, 1000),
+    width=(
+    "width of output image when exporting to raster formats (in pixels) if annotations is true. If annotations is false or width is negative, no resizing is done.",
+    int, 1000),
 
     # only used when we are writing a text file or PARC. In the latter case, the datum will be appended to the archive
     # if there is no existing datum of that name (see 'name' above). The default value None means whatever the previous
     # output was set to, unless there wasn't one, in which case it will be False.
-    append=("append to a PARC or text file if it exists. If not provided, use previous output's value (or false if first output)", Maybe(bool), None),
+    append=(
+    "append to a PARC or text file if it exists. If not provided, use previous output's value (or false if first output)",
+    Maybe(bool), None),
 
     # if we're outputting to a text file, this string will be prefixed to the output. It's a good place to put
     # a header, for example. Note that this is not used for PARC files, and does not apply to images.
@@ -83,22 +89,31 @@ outputDictType = TaggedDictType(
 outputListType = TaggedListType("output list", outputDictType, 0)
 
 
-# create a Jinja2 environment for templating, and add some stuff
-if 'jinja_env' not in globals():
-    jinja_env = Environment()
-    jinja_env.filters['basename'] = os.path.basename        # return the last part of a file path: foo/bar.png -> bar.png
-    jinja_env.filters['dirname'] = os.path.dirname          # return the directory part of a file path: foo/bar.png -> foo
-    jinja_env.filters['stripext'] = lambda xx: os.path.splitext(xx)[0]          # remove extension: foo.bar -> foo
-    jinja_env.filters['extension'] = lambda xx: os.path.splitext(xx)[1]         # get extension: foo.bar -> .bar
-
-
 class Runner:
-    def __init__(self, document_path: Path):
+    def __init__(self, document_path: Path, jinja_env: Optional[Environment] = None):
+        """Create a runner. The document is loaded from the given path. The jinja_env is an optional
+        Jinja2 environment; if not provided one is created. You can use this to add custom filters
+        and functions to the templating engine. Some are added by default (see below).
+        """
         self.doc = Document(document_path)
         self.document_path = document_path
         self.count = 0
         self.archive = self.doc.saveToMemoryArchive()
         self._build_param_dict()
+
+        if jinja_env is None:
+            # create one if it wasn't provided
+            jinja_env = Environment()
+
+        # add stuff to the Jinja2 environment - this will, of course, override any custom things with the same
+        # name that you may already have added.
+
+        jinja_env.filters['basename'] = os.path.basename  # return the last part of a file path: foo/bar.png -> bar.png
+        jinja_env.filters['dirname'] = os.path.dirname  # return the directory part of a file path: foo/bar.png -> foo
+        jinja_env.filters['stripext'] = lambda xx: os.path.splitext(xx)[0]  # remove extension: foo.bar -> foo
+        jinja_env.filters['extension'] = lambda xx: os.path.splitext(xx)[1]  # get extension: foo.bar -> .bar
+
+        self.jinja_env = jinja_env
 
     def _build_param_dict(self):
         # we create a dict for each of the TaggedDicts we are working
@@ -140,7 +155,7 @@ class Runner:
             - {{parampath}} - the path to the parameter file (if one is used, it is "NoFile" otherwise)
             - {{paramfile}} - the name of the parameter file (if one is used, it is "NoFile" otherwise)
 
-        See also some useful filters defined in the jinja_env at the top of this module.
+        See also some useful filters we add to the Jinja2 environment in the constructor.
         """
 
         # make sure a dict exists for the templater
@@ -174,7 +189,7 @@ class Runner:
                 self.doc.run()
                 # see if there were any errors in the run
                 error_nodes = self.doc.graph.getAnyErrors()
-                if len(error_nodes)>0:
+                if len(error_nodes) > 0:
                     error_msg = ""
                     for node in error_nodes:
                         logger.error(f"Error in node {node.displayName} - {node.error}")
@@ -190,7 +205,7 @@ class Runner:
                     "parampath": str(param_file).replace("\\", "/"),
                     "paramfile": str(param_file.name)
                 })
-                params = ParameterFile(jinja_env, run).load(param_file, data_for_template)
+                params = ParameterFile(self.jinja_env, run).load(param_file, data_for_template)
                 # Apply the parameter file to the parameters in the paramdict.
                 params.apply(self.paramdict)
                 # The nodes will be modified, but the modifications to the inputs
@@ -201,7 +216,7 @@ class Runner:
                     "parampath": "NoFile",
                     "paramfile": "NoFile"
                 })
-                params = ParameterFile(jinja_env, run).parse(param_file_text, data_for_template)
+                params = ParameterFile(self.jinja_env, run).parse(param_file_text, data_for_template)
                 params.apply(self.paramdict)
         finally:
             # restore the document to its original state and rebuild the paramdict ready
@@ -222,7 +237,7 @@ class Runner:
         # they will be set to the last filename and append mode used. Same with annotations (added later)
         prev_filename = None
         prev_append = False
-        prev_annot = True   # annotations are exported by default
+        prev_annot = True  # annotations are exported by default
         for v in self.paramdict['outputs']:
             if v.file is None:
                 v.file = prev_filename

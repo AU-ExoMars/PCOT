@@ -307,14 +307,15 @@ class ParameterFile:
     _changes: List[Change]  # the changes to be applied
     path: str  # either the path to the file or "(no path)"
 
-    def __init__(self, jinja_env: Environment, run_func: Optional[Callable]=None):
+    def __init__(self, jinja_env: Optional[Environment]=None, run_func: Optional[Callable]=None):
         """Create the parameter file object - then use either load (for files) or parse (for strings) to read it.
         The parameter is a function which should be called when a "run" command or the end of the file is reached.
-        We also pass in a Jinja2 Environment to use for creating templates."""
+        We also pass in a Jinja2 Environment to use for creating templates, or create one if not provided (the Runner
+        will always provide one, passing None is only used in testing)."""
         self._path = []
         self._changes = []
         self._run = run_func
-        self._jinja_env = jinja_env
+        self._jinja_env = jinja_env if jinja_env else Environment()
         self.path = "(no path)"
 
     def load(self, path: Path, template_data: Optional[Dict[str, Any]]=None) -> 'ParameterFile':
