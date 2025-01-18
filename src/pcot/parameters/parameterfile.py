@@ -18,7 +18,7 @@ in the graph through it as we load them, with just that node in the dictionary.
 import json
 from numbers import Number
 from pathlib import Path
-from jinja2 import Template
+from jinja2 import Environment
 from typing import List, Optional, Dict, cast, Any, Callable
 import logging
 
@@ -307,12 +307,14 @@ class ParameterFile:
     _changes: List[Change]  # the changes to be applied
     path: str  # either the path to the file or "(no path)"
 
-    def __init__(self, run_func: Optional[Callable]=None):
+    def __init__(self, jinja_env: Environment, run_func: Optional[Callable]=None):
         """Create the parameter file object - then use either load (for files) or parse (for strings) to read it.
-        The parameter is a function which should be called when a "run" command or the end of the file is reached."""
+        The parameter is a function which should be called when a "run" command or the end of the file is reached.
+        We also pass in a Jinja2 Environment to use for creating templates."""
         self._path = []
         self._changes = []
         self._run = run_func
+        self._jinja_env = jinja_env
         self.path = "(no path)"
 
     def load(self, path: Path, template_data: Optional[Dict[str, Any]]=None) -> 'ParameterFile':
@@ -329,7 +331,7 @@ class ParameterFile:
         """Load a parameter file from a string, returns self for fluent use. We also process
         the parameter file as a Jinja2 template"""
 
-        template = Template(ss)     # read in the parameter file and create a Jinja template from it
+        template = self._jinja_env.from_string(ss)     # read in the parameter file and create a Jinja template from it
         ss = template.render(template_data or {})  # render the template with the data passed in
 
         lines = ss.split('\n')

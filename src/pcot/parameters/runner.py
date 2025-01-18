@@ -26,8 +26,11 @@ OR we can do this, modifying the parameters directly
 """
 import datetime
 import logging
+import os
 from pathlib import Path
 from typing import Optional, Any, Dict
+
+from jinja2 import Environment
 
 from pcot.document import Document
 from pcot.inputs.inp import NUMINPUTS
@@ -80,6 +83,15 @@ outputDictType = TaggedDictType(
 outputListType = TaggedListType("output list", outputDictType, 0)
 
 
+# create a Jinja2 environment for templating, and add some stuff
+if 'jinja_env' not in globals():
+    jinja_env = Environment()
+    jinja_env.filters['basename'] = os.path.basename        # return the last part of a file path: foo/bar.png -> bar.png
+    jinja_env.filters['dirname'] = os.path.dirname          # return the directory part of a file path: foo/bar.png -> foo
+    jinja_env.filters['stripext'] = lambda xx: os.path.splitext(xx)[0]          # remove extension: foo.bar -> foo
+    jinja_env.filters['extension'] = lambda xx: os.path.splitext(xx)[1]         # get extension: foo.bar -> .bar
+
+
 class Runner:
     def __init__(self, document_path: Path):
         self.doc = Document(document_path)
@@ -127,6 +139,8 @@ class Runner:
             - {{count}} - the number of times the document has been run
             - {{parampath}} - the path to the parameter file (if one is used, it is "NoFile" otherwise)
             - {{paramfile}} - the name of the parameter file (if one is used, it is "NoFile" otherwise)
+
+        See also some useful filters defined in the jinja_env at the top of this module.
         """
 
         # make sure a dict exists for the templater
@@ -158,6 +172,15 @@ class Runner:
                     modifyInput(ii, inp)
                 # run the document
                 self.doc.run()
+                # see if there were any errors in the run
+                error_nodes = self.doc.graph.getAnyErrors()
+                if len(error_nodes)>0:
+                    error_msg = ""
+                    for node in error_nodes:
+                        logger.error(f"Error in node {node.displayName} - {node.error}")
+                        error_msg += f" {node.displayName} - {node.error}\n"
+                    raise ValueError(f"Errors in run ({len(error_nodes)} nodes failed):\n{error_msg}")
+
                 # write the outputs
                 self.writeOutputs()
 
@@ -167,18 +190,18 @@ class Runner:
                     "parampath": str(param_file).replace("\\", "/"),
                     "paramfile": str(param_file.name)
                 })
-                params = ParameterFile(run).load(param_file, data_for_template)
+                params = ParameterFile(jinja_env, run).load(param_file, data_for_template)
                 # Apply the parameter file to the parameters in the paramdict.
                 params.apply(self.paramdict)
                 # The nodes will be modified, but the modifications to the inputs
-                # need to be processed separately.
+                # need to be processed separately inside the run function
             elif param_file_text:
                 # this if we are running from a block of text
                 data_for_template.update({
                     "parampath": "NoFile",
                     "paramfile": "NoFile"
                 })
-                params = ParameterFile(run).parse(param_file_text, data_for_template)
+                params = ParameterFile(jinja_env, run).parse(param_file_text, data_for_template)
                 params.apply(self.paramdict)
         finally:
             # restore the document to its original state and rebuild the paramdict ready

@@ -539,6 +539,51 @@ def test_image_export_sizes(globaldatadir):
             assert im.size == (256, 256)
 
 
+def test_error_check(globaldatadir):
+    """Test that we can use custom Jinja2 functions - we've added a 'test' function that will wrap a
+    string with xxx..xxx"""
+
+    pcot.setup()
+    r = Runner(globaldatadir / "runner/test2.pcot")
+
+    with tempfile.TemporaryDirectory() as td:
+        out = os.path.join(td, "output.txt")
+        test = f"""
+        inputs.0.rgb.filename = {globaldatadir / 'basn2c16.png'}  # colour image
+        outputs.+.file = {out}
+        .node = mean        # get the mean of all channels
+        """
+
+        # this will fail because we're now using a tiny image into which the ROI doesn't fit
+        with pytest.raises(ValueError) as e:
+            r.run(None, test)
+        assert "Errors in run (2 nodes failed)" in str(e.value)
+        assert "ROI is out of bounds" in str(e.value)
+        assert "Bad argument in mean" in str(e.value)
+
+        assert not os.path.exists(out)  # should not have been able to create output
 
 
+def test_jinja2_functions(globaldatadir):
+    """Test that we can use custom Jinja2 functions - I've added some for manipulating paths"""
 
+    pcot.setup()
+    r = Runner(globaldatadir / "runner/test2.pcot")
+
+    with tempfile.TemporaryDirectory() as td:
+        # for this test we're using Jinja2 and no native f-string templating, so we can test the
+        # functions we've added for path manipulation
+        inp = globaldatadir / 'basn2c16.png'
+        out = os.path.join(td, "output.txt")
+
+        test = """
+        inputs.0.rgb.filename = {{inp}}
+        circle.croi = [15,14,5]     # change the region of interest (it's too big right now)
+        outputs.+.file = {{out}}
+        .prefix = "{{inp | basename | stripext}} -> {{out | basename | stripext}} "
+        .node = mean        # get the mean of all channels
+        """
+        r.run(None, test, data_for_template={"inp": inp, "out": out})
+
+        txt = open(out).read()
+        assert txt == "basn2c16 -> output 0.43473±0.30135\n"

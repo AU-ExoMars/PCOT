@@ -1505,6 +1505,10 @@ class XFormGraph:
         for n in self.nodes:
             n.type.nodeDataFromParams(n)
 
+    def getAnyErrors(self) -> List[XForm]:
+        """Return a list of all nodes which have errors in the graph - used in batch files after a run"""
+        return [x for x in self.nodes if x.error is not None]
+
 
 class XFormROIType(XFormType):
     """Class for handling ROI xform types, does most of the heavy lifting of the node's perform
