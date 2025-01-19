@@ -99,12 +99,145 @@ the next items - this kind of line is called a **path setter**.
 We could also write the output example like this:
 ```txt
 outputs.+
+.node = spectrum
 .file = out.csv
 .clobber = y
-.node = spectrum
 ```
 The first line creates a new output and sets the path. The next
 three lines modify the structure at that path - the output just created.
+
+
+
+### Going up levels with multiple dots
+
+In the example above we add an output and then modify it. We could add another output
+by adding an extra set of lines, like this:
+```txt
+outputs.+.file = out.csv
+.clobber = y
+.node = spectrum
+
+outputs.+.file = out2.csv
+.node = spectrum2
+```
+But we can also do this:
+```txt
+outputs.+.file = out.csv
+.clobber = y
+.node = spectrum
+
+..+.file = out2.csv
+.node = spectrum2
+```
+That's because after the first output, our path is set to `output.0.`. Using two dots
+lets us go back up the path one level, to `output.`, so we can now add a new output.
+
+### List notation for ordered parameters
+
+Some parameters have an implicit ordering. These are marked in the documentation as
+"(ordered)". For example, the *circle* node type [autodocs](/autodocs/circle/) contain
+this:
+
+<table border='1' style='border-collapse: collapse;'>
+<tr><td rowspan="3" style="border-right: none;">croi</td><td rowspan="3" style="border-left: none;">circle definition (ordered)</td><td rowspan="1" style="border-right: none;">x: integer (default 0)</td><td rowspan="1" style="border-left: none;">Centre x coordinate</td></tr>
+<tr><td rowspan="1" style="border-right: none;">y: integer (default 0)</td><td rowspan="1" style="border-left: none;">Centre y coordinate</td></tr>
+<tr><td rowspan="1" style="border-right: none;">r: integer (default -1)</td><td rowspan="1" style="border-left: none;">Radius</td></tr></table>
+
+That means that while you can set the region of interest within a *circle* node with this:
+```txt
+circle.croi.x = 100
+.y = 100
+.r = 20
+```
+you can also use a list, and the values will be assigned from the list with the order given
+in the documentation:
+```txt
+circle.croi = [100,100,20]
+```
+
+### The 'run' directive - running multiple times
+
+If the file contains a line with just the word `run` (excluding comments), PCOT will
+run with the parameters as they stand at the current point in the file. That means you can
+write things like this:
+```txt
+outputs.+.file = double.csv
+expr.expr = a*2
+run
+
+outputs.0.file = triple.csv
+expr.expr = a*3
+run
+
+outputs.0.file = quad.csv
+expr.expr = a*4
+run
+```
+Here we are running the same graph three times, with three different expressions in the
+node called `expr`. Each time we are modifying the first (and only) output filename. Note
+that we need to create output for the first run,
+and then we modify its filename for subsequent runs.
+
+### Using Jinja2 templates
+
+Before they are run, each parameter file is processed using the
+[Jinja2 templating engine](https://jinja.palletsprojects.com/en/stable/templates/), more typically
+used to create websites (as is obvious from its documentation).
+
+Here is an example of a file written to make use of this facility. It performs some
+manipulations on an image, writing the results to a single PARC (PCOT archive) file.
+It will generate four images.
+
+```txt
+outputs.+.file = output.parc
+.annotations = n    # annotations not supported in PARC
+.node = striproi(a,1)
+.name = main   # the name the output will have in the PARC file
+.description = Primary output image     # description in the PARC
+run
+
+# now we run a loop for values 1,2,3 using Jinja2
+
+{% for i in range(1,4) %}
+    # just one output, keep the same file and settings but append.
+    outputs.0.append = y    # we are now appending to the PARC
+    .node = test{{i}}       # get output from node1, node2 or node3.
+    .name = testimg{{i}}    # call it testimg1, testimg2 or testimg3
+    .description = Test image {{i}}
+    run
+{% endfor %}
+# normally a "run" is silently appended to the end of a parameter file,
+# but this won't happen if the previous command was also a "run", which
+# it will be here.
+```
+
+PCOT automatically sets up the following Jinja2 variables for you to use:
+
+|variable name|description|
+|-----------|----------|
+|{{docpath}}|the path to the document (with backslashes replaced by forward slashes)|
+|{{docfile}}|the name of the document file (i.e. the final part of the path)|
+|{{datetime}}|the current date and time in ISO 8601 format|
+|{{date}}|the current date in ISO 8601 format|
+|{{count}}|the number of times the document has been run (useful in loops)|
+|{{parampath}}|the path to the parameter file (if one is used, it is "NoFile" otherwise)|
+|{{paramfile}}|the name of the parameter file (if one is used, it is "NoFile" otherwise)|
+
+We also set up some Jinja2 "filters" to manipulate filenames, etc.:
+
+|filter|action|
+|-------|-----------|
+|basename|return the last part of a file path: "foo/bar.png" becomes "bar.png"|
+|dirname|return the directory part of a file path: "foo/bar.png" becomes "foo"
+|stripext|remove extension: "foo.bar" becomes "foo"|
+|extension|get extension: "foo.bar" becomes ".bar"|
+
+This lets us do things like this, which will add the parameter file name
+as a prefix to any text output, but strip off any directory elements:
+```txt
+output.0.prefix = {{paramfile | basename}}
+```
+
 
 
 
@@ -112,12 +245,5 @@ three lines modify the structure at that path - the output just created.
 Not yet written below here
 @@@
 
-### Going up levels with multiple dots
-
-### List notation for ordered dicts
-
-Some parameters are grouped together
-
-### Using Jinja2 templates
 
 ## Inputs, outputs and nodes
