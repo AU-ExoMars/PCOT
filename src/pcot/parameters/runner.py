@@ -108,6 +108,8 @@ class Runner:
         # add stuff to the Jinja2 environment - this will, of course, override any custom things with the same
         # name that you may already have added.
 
+        # IF YOU CHANGE THIS, REMEMBER TO CHANGE mkdocs/docs/userguide/batch/params.md
+
         jinja_env.filters['basename'] = os.path.basename  # return the last part of a file path: foo/bar.png -> bar.png
         jinja_env.filters['dirname'] = os.path.dirname  # return the directory part of a file path: foo/bar.png -> foo
         jinja_env.filters['stripext'] = lambda xx: os.path.splitext(xx)[0]  # remove extension: foo.bar -> foo
@@ -146,14 +148,19 @@ class Runner:
         is provided for testing - it allows a parameter file to be passed in as a string.
         The data_for_template is a dictionary which will be used to fill in template strings
         (in Jinja2 format) in the parameter file.
-        Some template items are preset:
+ 
+       Some template items are preset:
+
+       IF YOU CHANGE THIS, REMEMBER TO CHANGE mkdocs/docs/userguide/batch/params.md
+
             - {{docpath}} - the path to the document (with backslashes replaced by forward slashes)
             - {{docfile}} - the name of the document file (i.e. the final part of the path)
             - {{datetime}} - the current date and time in ISO 8601 format
             - {{date}} - the current date in ISO 8601 format
-            - {{count}} - the number of times the document has been run
+            - {{count}} - the number of times the document has been run (useful in loops)
             - {{parampath}} - the path to the parameter file (if one is used, it is "NoFile" otherwise)
             - {{paramfile}} - the name of the parameter file (if one is used, it is "NoFile" otherwise)
+
 
         See also some useful filters we add to the Jinja2 environment in the constructor.
         """
