@@ -12,6 +12,7 @@ from pcot.document import Document
 from pcot.parameters.inputs import processParameterFileForInputsTest
 from pcot.parameters.parameterfile import ParameterFile
 from pcot.value import Value
+from pds4data import get_pds4_test_data_dir
 
 
 def test_no_items():
@@ -338,26 +339,12 @@ def test_multifile_raw_somepreset():
         assert img[31, 15][0].approxeq(Value(0, 0, dq.NOUNCERTAINTY))
         assert img[31, 15][1].approxeq(Value(2 / 255, 0, dq.NOUNCERTAINTY))
 
-#
-# PDS4 tests require the test data directory to be set in the .pcot.ini file
-# and (obviously) the data to be present.
-#
-
-
-testdatadir = None
-try:
-    testdatadir = os.path.expanduser(pcot.config.getDefaultDir("testpds4data"))
-except KeyError:
-    pytest.fail("testpds4data is not set in the .pcot.ini file")
-
-if not os.path.isdir(testdatadir):
-    pytest.fail(f"PDS4 test data directory {testdatadir} does not exist")
-
 
 def test_pds4():
     """Basic test of reading a PDS4 file"""
 
     # get a list of the files in the test data directory which are LWAC images
+    testdatadir = get_pds4_test_data_dir()
     filenames = [str(x) for x in Path(testdatadir).glob("*l0*.xml")]
     assert len(filenames) == 9
 

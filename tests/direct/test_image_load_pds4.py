@@ -2,32 +2,14 @@
 Test direct PDS4 image loading. This is a separate file from the other load tests
 because it requires a data set which may not be present (it's very large).
 """
-import logging
-import os
 from pathlib import Path
 
-import numpy as np
-import pytest
-import pcot
 from pcot.dataformats import load
 from pcot.dataformats.pds4 import PDS4External, ProductList
 from pcot.datum import Datum
 from proctools.products import ProductDepot
 
-from pcot.expressions import ExpressionEvaluator
-from pcot.imagecube import ChannelMapping
-from pcot.rois import ROICircle
-from pcot.sources import nullSource
-from pcot.value import Value
-
-testdatadir = None
-try:
-    testdatadir = os.path.expanduser(pcot.config.getDefaultDir("testpds4data"))
-except KeyError:
-    pytest.fail("testpds4data is not set in the .pcot.ini file")
-
-if not os.path.isdir(testdatadir):
-    pytest.fail(f"PDS4 test data directory {testdatadir} does not exist")
+from pds4data import get_pds4_test_data_dir
 
 
 def check_data(img, inpidx=None):
@@ -101,6 +83,8 @@ def check_data(img, inpidx=None):
 def test_pds4_load_from_dplist():
     """Use the proctools depot to load a PDS4 image from a DataProduct list"""
     depot = ProductDepot()
+    testdatadir = get_pds4_test_data_dir()
+
     depot.load(Path(testdatadir), recursive=True)
     specrads = [x for x in depot.retrieve("spec-rad") if x.meta.camera == 'WACL']
     assert len(specrads) == 9  # 9 left hand camera images
@@ -113,6 +97,7 @@ def test_pds4_load_from_dplist():
 def test_pds4_load_from_productlist():
     """Try to load PDS4 image from a ProductList"""
     depot = ProductDepot()
+    testdatadir = get_pds4_test_data_dir()
     depot.load(Path(testdatadir), recursive=True)
     specrads = [x for x in depot.retrieve("spec-rad") if x.meta.camera == 'WACL']
     assert len(specrads) == 9  # 9 left hand camera images
@@ -126,7 +111,7 @@ def test_pds4_load_from_productlist():
 
 def test_pds4_load_from_stringlist():
     """Try to load PDS4 image from a list of strings"""
-
+    testdatadir = get_pds4_test_data_dir()
     # get a list of the files in the test data directory which are LWAC images
     filenames = [str(x) for x in Path(testdatadir).glob("*l0*.xml")]
     assert len(filenames) == 9

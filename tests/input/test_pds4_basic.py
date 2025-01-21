@@ -13,6 +13,8 @@ from pcot.datum import Datum
 from pcot.document import Document
 import pytest
 
+from pds4data import get_pds4_test_data_dir
+
 
 def test_pds4_load():
     """Load some PDS4 data, check the channel count in the result, the LIDs, the filter properties
@@ -21,17 +23,7 @@ def test_pds4_load():
     pcot.setup()
     doc = Document()
 
-    # this won't work at all if the link to a test data directory isn't found. I don't want
-    # to check that data in, it's enormous. The test data should currently be rcp_output (which can
-    # be found on the AU_ExoMars sharepoint). You should set this in your .pcot.ini file in your
-    # home directory.
-
-    try:
-        testdatadir = os.path.expanduser(pcot.config.getDefaultDir("testpds4data"))
-    except KeyError:
-        pytest.fail("testpds4data is not set in the .pcot.ini file")
-    if not os.path.isdir(testdatadir):
-        pytest.fail(f"PDS4 test data directory {testdatadir} does not exist")
+    testdatadir = get_pds4_test_data_dir()
 
     # PDS4 input works through proctools; load the products.
     depot = ProductDepot()
