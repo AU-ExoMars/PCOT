@@ -1043,7 +1043,7 @@ class ImageCube(SourcesObtainable):
         format = format.lower()
 
         if format != 'parc':
-            if description is not None:
+            if description is not None and description != "":
                 raise ValueError("Description is not supported for image formats other than PARC")
             if append:
                 raise ValueError("Append is not supported for image formats other than PARC")

@@ -196,14 +196,14 @@ class GradientLegend(Annotation):
         else:
             return 0, 0, 0, 0
 
-    def _doAnnotate(self, p: QPainter, alpha, inPDF):
+    def _doAnnotate(self, p: QPainter, alpha, inVectorFormat):
         """Core annotation method"""
         # if we're doing a margin annotation we override many of the values passed in
         i2u = self.inchesToUnits
         heightUnits = p.window().height()
         textGap = 0
 
-        if inPDF:
+        if inVectorFormat:
             textGap = i2u * 0.1  # gap between text and bar
             fontscale = i2u * 0.2
             barThickness = i2u * 0.3
@@ -269,7 +269,7 @@ class GradientLegend(Annotation):
 
     def annotatePDF(self, p: QPainter, img):
         if self.legendpos != IN_IMAGE and self.legendpos != NONE and self.legendpos is not None:
-            self._doAnnotate(p, True)
+            self._doAnnotate(p, True, True)
 
     def annotate(self, p: QPainter, img, alpha):
         if self.legendpos == IN_IMAGE:
