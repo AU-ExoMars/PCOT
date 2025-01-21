@@ -70,14 +70,15 @@ def test_changes_none():
 
 
 def test_changes_irrelevant():
-    """Make sure that a parameter file with irrelevant changes doesn't do anything"""
+    """Make sure that a parameter file with irrelevant changes throws an error"""
     td = tagged_dict_type.create()
     s = td.serialise()
 
     f = ParameterFile().parse("""
     foo.bar.baz = 10
     """)
-    f.apply({"zog": td})
+    with pytest.raises(ApplyException):
+        f.apply({"zog": td})
     assert td.serialise() == s
 
 

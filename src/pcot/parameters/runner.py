@@ -179,6 +179,8 @@ class Runner:
 
         try:
             def run():
+                logger.info("Running the document")
+
                 # now tell all the nodes in the graph that use CTAS (complex TaggedAggregate serialisation)
                 # to reconstruct their data from the modified parameters.
                 self.doc.graph.nodeDataFromParams()
@@ -192,6 +194,7 @@ class Runner:
                     ii = self.paramdict['inputs'][str(i)]
                     inp = self.doc.inputMgr.getInput(i)
                     modifyInput(ii, inp)
+
                 # run the document
                 self.doc.run()
                 # see if there were any errors in the run
@@ -245,6 +248,8 @@ class Runner:
         prev_filename = None
         prev_append = False
         prev_annot = True  # annotations are exported by default
+        if len(self.paramdict['outputs']) == 0:
+            logger.warn("No outputs provided for this parameter file")
         for v in self.paramdict['outputs']:
             if v.file is None:
                 v.file = prev_filename

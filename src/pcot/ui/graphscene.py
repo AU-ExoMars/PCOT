@@ -693,7 +693,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         if self.checkSelChange:
             items = self.selectedItems()
             self.selection = []
-            logger.info("selChanged")
+            logger.debug("selChanged")
             for n in self.graph.nodes:
                 if n.rect in items:
                     self.selection.append(n)
@@ -810,7 +810,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             x, y = n.xy
             n.xy = (x + PASTEOFFSET, y + PASTEOFFSET)
         self.rebuild()  # rebuild all nodes
-        logger.info("paste")
+        logger.debug("paste")
         # colour selected nodes
         self.setColourToState()
         self.graph.changed()
@@ -824,7 +824,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         self.graph.copy(self.selection)
         for n in self.selection:
             self.graph.remove(n)
-        logger.info("cut")
+        logger.debug("cut")
         self.selection = []
         self.rebuild()
 

@@ -6,6 +6,9 @@ import numpy as np
 import zipfile
 from io import BytesIO
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class Archive:
     """
@@ -106,7 +109,7 @@ class Archive:
         if self.zip is None:
             raise Exception("Archive is not open")
         self.assert_write()
-        print(f"Writing to {name}")
+        logger.debug(f"Writing to {name} in {str(self)}")
         if not permit_replace:
             self.assert_unique_name(name)
         # I'm aware it'll do the encoding anyway, but I wanted to make it explicit
@@ -207,11 +210,15 @@ class FileArchive(Archive):
             array_items = [x[5:] for x in self.zip.namelist() if x.startswith("ARAE-")]
             if len(array_items) > 0:
                 self.arrayct = max([int(x) for x in array_items]) + 1
+        logger.debug(f"Opened {self}")
 
     def close(self):
         if self.zip is not None:
             self.zip.close()
             self.zip = None
+
+    def __str__(self):
+        return f"FileArchive({self.path, self.mode})"
 
 
 class MemoryArchive(Archive):
@@ -220,6 +227,7 @@ class MemoryArchive(Archive):
     """
 
     mode: bool      # 'r' or 'w', set by subclass
+    id: int = 0     # unique ID for each archive
 
     def __init__(self, data=None, progressCallback=None):
         if data is None:
@@ -230,9 +238,12 @@ class MemoryArchive(Archive):
             mode = 'r'
         super().__init__(mode, progressCallback=progressCallback)
         self.data = data
+        self.id = MemoryArchive.id
+        MemoryArchive.id += 1
 
     def open(self):
         self.zip = zipfile.ZipFile(self.data, self.mode, compression=zipfile.ZIP_DEFLATED)
+        logger.debug(f"Opened {self}")
 
     def close(self):
         if self.zip is not None:
@@ -241,3 +252,6 @@ class MemoryArchive(Archive):
 
     def get(self) -> BytesIO:
         return self.data
+
+    def __str__(self):
+        return f"MemoryArchive(id={self.id}, {self.mode})"

@@ -26,10 +26,10 @@ class ENVIInputMethod(InputMethod):
         self.mapping = ChannelMapping()
 
     def loadImg(self):
-        logger.debug("PERFORMING FILE READ")
+        logger.debug(f"Envi file read {self.fname}")
         # try to load the image.
         self.img = load.envi(self.fname, self.input.idx if self.input else None, self.mapping)
-        logger.info(f"------------ Image {self.fname} loaded: {self.img}, mapping is {self.mapping}")
+        logger.debug(f"ENVI read {self.fname} loaded: {self.img}, mapping is {self.mapping}")
 
     def readData(self):
         # if the image is not loaded and the filename is set, then load it
@@ -91,7 +91,7 @@ class ENVIMethodWidget(TreeMethodWidget):
         img = d.get(Datum.IMG)
         if img is not None:
             img.setMapping(self.method.mapping)
-            logger.info(f"Displaying image {img}, mapping {self.method.mapping}")
+            logger.debug(f"Displaying image {img}, mapping {self.method.mapping}")
         # we don't do this when the window is opening, otherwise it happens a lot!
         if not self.method.openingWindow:
             self.method.input.performGraph()

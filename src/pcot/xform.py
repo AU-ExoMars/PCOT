@@ -1199,7 +1199,7 @@ class XFormGraph:
                 for x in node.tabs:
                     x.nodeDeleted()
             self.nodes.remove(node)
-            print(f"DELETE {node.name}")
+            logger.debug(f"DELETE {node.name} {node.type.name}")
             del self.nodeDict[node.name]
 
             # having deleted the node try to call all the children. That might seem a bit

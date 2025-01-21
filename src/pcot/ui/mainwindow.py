@@ -344,7 +344,7 @@ class MainUI(ui.tabs.DockableTabWindow):
                                                     os.path.expanduser(pcot.config.getDefaultDir('pcotfiles')),
                                                     "PCOT files (*.pcot)",
                                                     options=pcot.config.getFileDialogOptions())
-        logger.info(f"Dialog result: {res[0]}")
+        logger.debug(f"Dialog result: {res[0]}")
         if res[0] != '':
             path = res[0]
             (root, ext) = os.path.splitext(path)
@@ -352,7 +352,7 @@ class MainUI(ui.tabs.DockableTabWindow):
                 ext += '.pcot'
             path = root + ext
 
-            logger.info(f"Save file name: {res[0]}")
+            logger.info(f"saving: {res[0]}")
             self.save(path, saveInputs=saveInputs)
             self.saveFileName = path
             ui.log("Document written to " + path)

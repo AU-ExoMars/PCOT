@@ -26,7 +26,7 @@ class RGBInputMethod(InputMethod):
 
     def loadImg(self):
         # will throw exception if load failed
-        logger.info("RGB PERFORMING FILE READ")
+        logger.debug("RGB PERFORMING FILE READ")
         self.img = load.rgb(self.fname,
                             self.input.idx if self.input else None,
                             self.mapping)

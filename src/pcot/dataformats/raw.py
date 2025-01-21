@@ -95,9 +95,10 @@ class RawLoader:
 
         # convert to float32 if necessary, dividing down to the range 0-1
         if dtype != np.float32:
-            logger.info(f"Loading data, currently the range is {data.min()} to {data.max()}, format is {dtype}")
+            logger.debug(f"Loading data, currently the range is {data.min()} to {data.max()}, format is {dtype}")
             data = data.astype(np.float32) * scale
-            logger.info(f"Loaded as F32. Range is now {data.min()} to {data.max()}")
+            logger.debug(f"Loaded as F32. Range is now {data.min()} to {data.max()}")
+        logger.info(f"Image loaded into multifile - size is {data.shape}")
         return data
 
     @staticmethod

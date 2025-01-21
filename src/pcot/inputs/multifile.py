@@ -66,7 +66,7 @@ class MultifileInputMethod(InputMethod):
 
     def compileRegex(self):
         # compile the regexp that gets the filter ID out.
-        logger.info(f"Compiling RE: {self.filterpat}")
+        logger.debug(f"Compiling RE: {self.filterpat}")
         try:
             self.filterre = re.compile(self.filterpat)
         except re.error:
@@ -85,7 +85,7 @@ class MultifileInputMethod(InputMethod):
                              cache=self.cachedFiles,
                              rawloader=self.rawLoader,
                              filterset=self.filterset)
-        logger.info(f"------------ Image loaded: {img} from {len(self.files)} files, mapping is {self.mapping}")
+        logger.debug(f"------------ Image loaded: {img} from {len(self.files)} files, mapping is {self.mapping}")
         return img
 
     def getName(self):

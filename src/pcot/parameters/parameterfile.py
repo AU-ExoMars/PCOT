@@ -113,7 +113,7 @@ class SetValue(Change):
         self.value = value
 
     def apply(self, data: TaggedAggregate):
-        logger.info(f"Setting {self.show()} to {self.value}")
+        logger.debug(f"Setting {self.show()} to {self.value}")
         # walk down the path to get the element we want to change (well, its parent - the last item in the path)
         element = get_element_to_modify(data, self.path)
         # use the key to get its tag so we can get its type, and check it.
@@ -161,7 +161,7 @@ class DeleteValue(Change):
         super().__init__(path, line, key)
 
     def apply(self, data: TaggedAggregate):
-        logger.info(f"Deleting {self.path + [self.key]}")
+        logger.debug(f"Deleting {self.path + [self.key]}")
         raise NotImplementedError(repr(self))
 
     def __repr__(self):
@@ -192,7 +192,7 @@ class Add(Change):
             return f"Add({self.line}, root={self.root_name} path={'.'.join(self.path)} key={self.key})"
 
     def apply(self, data: TaggedAggregate):
-        logger.info(f"Adding to {self.path + [self.key]}")
+        logger.debug(f"Adding to {self.path + [self.key]}")
         # then get the tag for the item we want to append to. If the key is
         # None, we're trying to append to a list at the root.
         if self.key is None:
@@ -251,7 +251,7 @@ class ResetValue(Change):
         super().__init__(path, line, key)
 
     def apply(self, data: TaggedAggregate):
-        logger.info(f"Resetting {self.path + [self.key]}")
+        logger.debug(f"Resetting {self.path + [self.key]}")
 
         # trying to reset a root node
         if self.key is None:
@@ -275,12 +275,10 @@ class ResetValue(Change):
         else:
             element_parent[self.key] = original_value
 
-
-
     def __repr__(self):
         return f"ResetValue({self.line}, root={self.root_name} path={'.'.join(self.path)} key={self.key})"
-    
-    
+
+
 class RunCallback(Change):
     """A change, but not really - it tells the file to run its callback (actually use the modified parameter
     data)."""
@@ -292,7 +290,7 @@ class RunCallback(Change):
         self.line = line
 
     def apply(self, data: TaggedAggregate):
-        logger.info(f"Running callback at line {self.line}!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        logger.debug(f"Running callback at line {self.line}!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         self.run_func()
 
     def __repr__(self):
@@ -307,7 +305,7 @@ class ParameterFile:
     _changes: List[Change]  # the changes to be applied
     path: str  # either the path to the file or "(no path)"
 
-    def __init__(self, jinja_env: Optional[Environment]=None, run_func: Optional[Callable]=None):
+    def __init__(self, jinja_env: Optional[Environment] = None, run_func: Optional[Callable] = None):
         """Create the parameter file object - then use either load (for files) or parse (for strings) to read it.
         The parameter is a function which should be called when a "run" command or the end of the file is reached.
         We also pass in a Jinja2 Environment to use for creating templates, or create one if not provided (the Runner
@@ -318,25 +316,26 @@ class ParameterFile:
         self._jinja_env = jinja_env if jinja_env else Environment()
         self.path = "(no path)"
 
-    def load(self, path: Path, template_data: Optional[Dict[str, Any]]=None) -> 'ParameterFile':
+    def load(self, path: Path, template_data: Optional[Dict[str, Any]] = None) -> 'ParameterFile':
         """Load a parameter file from a path, returns self for fluent use. The parameter file will
         also be run through Jinja2 templating with the data passed in."""
         self.path = str(path)
-        logger.info(f"Processing parameter file {self.path}")
+        logger.debug(f"Processing parameter file {self.path}")
         with open(path, 'r') as f:
             s = f.read()
             self.parse(s, template_data or {})
         return self
 
-    def parse(self, ss, template_data: Optional[Dict[str, Any]]=None) -> 'ParameterFile':
+    def parse(self, ss, template_data: Optional[Dict[str, Any]] = None) -> 'ParameterFile':
         """Load a parameter file from a string, returns self for fluent use. We also process
         the parameter file as a Jinja2 template"""
 
-        template = self._jinja_env.from_string(ss)     # read in the parameter file and create a Jinja template from it
+        template = self._jinja_env.from_string(ss)  # read in the parameter file and create a Jinja template from it
         ss = template.render(template_data or {})  # render the template with the data passed in
 
         lines = ss.split('\n')
         for i, line in enumerate(lines):
+            logger.debug(f"---- LINE {i}: {line}")
             # remove comments - anything after the final '#'
             if '#' in line:
                 line = line[:line.index('#')]
@@ -349,12 +348,14 @@ class ParameterFile:
         for c in self._changes:
             c.lineText = lines[c.line]
 
-        if len(self._changes) > 0:
-            # add the implied run IF the last line is not a run
-            if self._run and not isinstance(self._changes[-1], RunCallback):
-                c = RunCallback(len(lines), self._run)
-                c.lineText = "end-of-file"
-                self._changes.append(c)
+        # add the implied run IF the last line is not a run (or there are no changes at all)
+        if self._run and (len(self._changes) == 0 or not isinstance(self._changes[-1], RunCallback)):
+            c = RunCallback(len(lines), self._run)
+            c.lineText = "end-of-file"
+            self._changes.append(c)
+            logger.debug("Adding an implied run command")
+        else:
+            logger.debug("Not adding an implied run command")
         return self
 
     def apply(self, data: Dict[str, TaggedAggregate]):
@@ -374,6 +375,8 @@ class ParameterFile:
                 except Exception as e:
                     raise ApplyException(
                         f"Error applying change line {c.line}: {c.lineText}, change is {c}. Error: {e} ") from e
+            else:
+                raise ApplyException(f"Cannot find '{c.root_name}' in the possible top-level parameter sets: {data.keys()}")
 
     def _parse(self, line: str, lineNo: int = 0):
         """Process each line, adding Change objects to the list of changes if required"""

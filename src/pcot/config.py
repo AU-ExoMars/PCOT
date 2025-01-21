@@ -10,7 +10,6 @@ from collections import deque
 from PySide2 import QtWidgets
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
 
 
 def getAssetAsString(fn, package="pcot.assets"):
@@ -98,7 +97,7 @@ def save():
 
 
 def setDefaultDir(kind, directory):
-    logger.info(f"Setting default dir for {kind} to {directory}")
+    logger.debug(f"Setting default dir for {kind} to {directory}")
     directory = os.path.realpath(directory)
     data['Locations'][kind] = directory
     save()
@@ -167,7 +166,7 @@ def addExprFuncHook(x):
     """Call this function with another function. This function is called with a Parser argument, and can add
     new functions, operators and properties. Consider using the @parserhook decorator instead - it does the
     same thing."""
-    logger.info(f"Adding parser hook {x}")
+    logger.debug(f"Adding parser hook {x}")
     exprFuncHooks.append(x)
 
 

@@ -148,7 +148,6 @@ def wav2RGB(wavelength, scale=1.0):
 
 
 _filterSets = {}
-logger.critical(f"Filters cleared")
 
 
 def loadFilterSet(name: str, path: Path):
@@ -172,7 +171,7 @@ def loadFilterSet(name: str, path: Path):
             filters.append(f)
     # and store that in a dictionary of filter set name -> filter list
     _filterSets[name] = filters
-    logger.critical(f"Loaded filter set {name} from {path}")
+    logger.info(f"Loaded filter set {name} from {path}")
 
 
 def saveFilters(path: str, filters: List[Filter]):

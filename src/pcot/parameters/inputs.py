@@ -8,6 +8,9 @@ from pcot.parameters.parameterfile import ParameterFile
 
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType, Maybe
 
+import logging
+logger = logging.getLogger(__name__)
+
 # RGB inputs don't have much - just a filename.
 rgbDictType = TaggedDictType(
     filename=("filename", Maybe(str), None)
@@ -113,6 +116,7 @@ def modifyInput(inputDict, inp: Input):
     for method in inp.methods:
         if method.modifyWithParameterDict(inputDict):
             # the method was modified, so we need to select it and force reload
+            logger.debug(f"Selecting input method {method}")
             inp.selectMethod(method)
             method.invalidate()
             method.get()
