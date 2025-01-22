@@ -247,3 +247,8 @@ Not yet written below here
 
 
 ## Inputs, outputs and nodes
+
+@@@info
+How inputs work is complicated. There's a structure that you fill in
+that modifies the inputs as they are in the document.
+@@@
