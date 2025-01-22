@@ -1,7 +1,9 @@
 ##
+import fnmatch
 import logging
+import os
 from abc import ABC, abstractmethod
-from typing import Optional, Any
+from typing import Optional, Any, List
 
 from pcot import ui
 from pcot.datum import Datum
@@ -141,3 +143,41 @@ class InputMethod(ABC):
         # by default does nothing. Don't make it throw because it still gets
         # called on direct, null etc.
         return False
+
+    def _getFilesFromParameterDict(self, d: 'TaggedDict') :
+        """Helper method used to process the "filenames" batch parameter for input
+        methods which use it - it's a list of UNIX filename patterns.
+        Assume we have 'directory' in the tagged dict, and a tagged list of
+        'filenames'. The output will be self.dir and self.files. """
+
+        # get the directory and the files therein.
+
+        self.dir = d.directory
+        files_in_directory = os.listdir(self.dir)
+
+        # each filename is actually a pattern - find filenames that match, sort them, then add them to file list
+        # so that the sort order is alphabetic within the groups found for each pattern, but keeps the order
+        # of the patterns.
+
+        self.files = []
+        if len(d.filenames) < 0:
+            raise Exception(f"No filenames found in {self.getName()} input")
+        for pattern in d.filenames:
+            files_for_this_pattern = []
+            logger.debug(f" Checking for wildcard match against {pattern}")
+            for f in files_in_directory:
+                # Filenames are UNIX patterns - we use fnmatch to match them. E.g. "*.bin" and not ".*\.bin"
+                if fnmatch.fnmatch(f, pattern) and os.path.isfile(os.path.join(self.dir, f)):
+                    logger.debug(f" {f} MATCH!!!!!")
+                    files_for_this_pattern.append(f)
+                logger.debug(f" {f}")
+            if len(files_for_this_pattern) == 0:
+                raise Exception(f"No files found matching: {pattern}")
+            files_for_this_pattern.sort()
+            logger.info(f"files found with pattern: {pattern}")
+            self.files.extend(files_for_this_pattern)
+
+
+
+
+

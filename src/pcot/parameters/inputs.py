@@ -23,15 +23,13 @@ enviDictType = TaggedDictType(
 )
 
 # Multifile input is rather more complex. We have two ways of specifying the files:
-# a list of filenames, or a single filename with a wildcard. We also need to have a
-# pattern to get the filter names/positions, and several options - including how to
-# process binary data.
+# a list of filename patterns. We also need to have a # pattern to get the filter names/positions, and several options
+# including how to # process binary data.
 multifileDictType = TaggedDictType(
     directory=("directory to load from", Maybe(str), None),  # if not present, we are inactive
     # either filenames or wildcard can be set, but not both. If filenames is non-zero length we use it.
-    filenames=("list of filenames (mutually exclusive with 'wildcard')",
+    filenames=("list of filenames or filename patterns to match. All files matching each pattern will be added, sorted by name within each pattern.",
                TaggedListType("", str, [], '')),
-    wildcard=("wildcard for filenames (mutually exclusive with 'filenames')", Maybe(str), None),
     filter_pattern=("pattern for filter identification", str, r".*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*"),
     filter_set=("name of filter set to use", str, "PANCAM"),
     bit_depth=("number of bits used in the image (default is all bits)", Maybe(int), None),
@@ -52,9 +50,8 @@ multifileDictType = TaggedDictType(
 
 PDS4DictType = TaggedDictType(
     directory=("directory to load from", Maybe(str), None),  # if not present, we are inactive
-    filenames=("list of filenames (mutually exclusive with 'wildcard')",
-               TaggedListType("", str, [], '')),
-    wildcard=("wildcard for filenames (mutually exclusive with 'filenames')", Maybe(str), None)
+    filenames=("list of filenames or filename patterns to match. All files matching each pattern will be added, sorted by name within each pattern.",
+               TaggedListType("", str, [], ''))
 )
 
 # PARC - PCOT datum archive file

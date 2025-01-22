@@ -236,23 +236,28 @@ def ROIBinop(dx: Datum, dy: Datum, f: Callable[[ROI, ROI], ROI]) -> Datum:
 # end of binop semantics wrappers
 
 
-def extractChannelByName(a: Datum, b: Datum) -> Datum:
+def extractChannel(a: Datum, b: Datum) -> Datum:
     """Extract a channel by name from an image, used for the $ operator.
     a: a Datum which must be an image
     b: a Datum which must be an identifier or numeric wavelength
     return: a new single-channel image datum
     """
     img = a.val
+    is_scalar = True
 
     if b.tp == Datum.NUMBER:
         img = img.getChannelImageByFilter(b.val.n)
+        is_scalar = b.val.isscalar()
     elif b.tp == Datum.IDENT:
         img = img.getChannelImageByFilter(b.val)
     else:
-        raise OperatorException("channel extract operator '$' requires ident or numeric wavelength RHS")
+        raise OperatorException("band extract operator '$' requires ident or numeric wavelength RHS")
 
     if img is None:
         raise OperatorException("unable to get this wavelength from an image: " + str(b))
+
+    if img.channels > 1 and is_scalar:
+        raise OperatorException("'$' has multiple bands in result from a single requested band - does the image have more than one band with the same wavelength/name?")
 
     img.rois = a.val.rois.copy()
     return Datum(Datum.IMG, img)
@@ -300,8 +305,8 @@ def initOps():
     registerUnopSemantics(Operator.NEG, Datum.ROI,
                           lambda d: Datum(Datum.ROI, -d.get(Datum.ROI), d.getSources()))
 
-    registerBinopSemantics(Operator.DOLLAR, Datum.IMG, Datum.NUMBER, extractChannelByName)
-    registerBinopSemantics(Operator.DOLLAR, Datum.IMG, Datum.IDENT, extractChannelByName)
+    registerBinopSemantics(Operator.DOLLAR, Datum.IMG, Datum.NUMBER, extractChannel)
+    registerBinopSemantics(Operator.DOLLAR, Datum.IMG, Datum.IDENT, extractChannel)
 
 
 initOps()

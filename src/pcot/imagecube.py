@@ -691,7 +691,9 @@ class ImageCube(SourcesObtainable):
 
     def getChannelImageByFilter(self, filterNameOrCWL):
         """Given a filter name, position or CWL, get a list of all channels which use it. Then build an image
-        out of those channels. Usually this returns a single channel image, but it could very easily not."""
+        out of those channels. Usually this returns a single channel image, but it could very easily not. If this is
+        being called from the $ operator, that operator raise an error if this method produces more than one channel.
+        """
 
         # get list of matching channel indices (often only one). If a single wavelength or filtername is provided
         # we should turn that into a list of one element. The test here is like it is because strings are

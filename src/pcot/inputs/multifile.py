@@ -177,20 +177,8 @@ class MultifileInputMethod(InputMethod):
             self.bitdepth = preset.bitdepth
             self.rawLoader = preset.rawloader
 
-        # get the directory and the files therein.
-        self.dir = m.directory
-        if len(m.filenames) > 0 and m.wildcard is not None:
-            raise Exception("Cannot have both filenames and wildcard in multifile input")
-        if len(m.filenames) > 0:
-            self.files = m.filenames
-        elif m.wildcard is not None:
-            self.files = []
-            # get all the files in dir which match the wildcard string, using UNIX wildcards
-            # (e.g. foo*.raw). Simpler for the user than full regexes.
-            self.files = sorted([f for f in os.listdir(self.dir) if os.path.isfile(os.path.join(self.dir, f))
-                                 and fnmatch.fnmatch(f, m.wildcard)])
-        else:
-            raise Exception("Must have either filenames or wildcard in multifile input")
+        # get the files
+        self._getFilesFromParameterDict(m)
 
         # other parameters, which may override the preset IF they have been changed from their default values
         if m.isNotDefault('filter_pattern'):

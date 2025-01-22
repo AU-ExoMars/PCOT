@@ -176,24 +176,10 @@ class PDS4InputMethod(InputMethod):
         m = d.pds4
         if m.directory is None:
             return False  # no change to this input (directory must be provided)
-        self.dir = m.directory
 
-        # now we need to either use wildcard or filenames
-        if len(m.filenames) > 0 and m.wildcard is not None:
-            raise Exception("Cannot have both filenames and wildcard in PDS4 input")
-        if len(m.filenames) > 0:
-            files = m.filenames
-        elif m.wildcard is not None:
-            files = []
-            # get all the files in dir which match the wildcard string. NOTE that this
-            # uses "simple" regular expressions of the UNIX filename type; e.g. "*" to
-            # match any number of characters, "?" to match a single character.
-            files = sorted([f for f in os.listdir(self.dir) if os.path.isfile(os.path.join(self.dir, f))
-                            and fnmatch.fnmatch(f, m.wildcard)])
-        else:
-            raise Exception("Must have either filenames or wildcard in multifile input")
+        self._getFilesFromParameterDict(m)
 
-        plist = [DataProduct.from_file(Path(os.path.join(self.dir, f))) for f in files]
+        plist = [DataProduct.from_file(Path(os.path.join(self.dir, f))) for f in self.files]
         self.setProducts(plist)
         return True
 

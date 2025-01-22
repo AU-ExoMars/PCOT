@@ -213,7 +213,7 @@ def test_multifile_raw_preset():
         test = f"""
         inputs.0.multifile.directory = {d}
         .preset = testpreset
-        .wildcard = Test-*.raw
+        .filenames.+ = Test-*.raw
         """
         f = ParameterFile().parse(test)
         processParameterFileForInputsTest(doc, f)
@@ -315,9 +315,9 @@ def test_multifile_raw_somepreset():
         test = f"""
         inputs.0.multifile.directory = {d}
         .preset = testpreset
-        .wildcard = Test-L*.raw
+        .filenames.+ = Test-L*.raw
         # but here we say we're going to flip left-right
-        .raw.horzflip = true
+        ..raw.horzflip = true
         """
         f = ParameterFile().parse(test)
         processParameterFileForInputsTest(doc, f)
@@ -352,7 +352,7 @@ def test_pds4():
     doc = Document()
     test = f"""
     inputs.0.pds4.directory = {testdatadir}
-    .wildcard = *l0*.xml
+    .filenames.+ = *l0*.xml
     """
     f = ParameterFile().parse(test)
     processParameterFileForInputsTest(doc, f)

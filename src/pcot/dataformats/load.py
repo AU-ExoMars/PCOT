@@ -123,8 +123,8 @@ def multifile(directory: str,
 
     """
 
-    print(f"SNARK {directory}")
     from pcot.inputs.multifile import presetModel
+    logger.debug(f"Multifile load from directory {directory}")
     if rawloader is None:
         class RawPresets(PresetOwner):
             """
