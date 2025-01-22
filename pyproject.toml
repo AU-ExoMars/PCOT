@@ -48,6 +48,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 pcot = 'pcot.main:main'
+pcotbatch = 'pcot.batch:main'
 
 [tool.black]
 line-length = 88
