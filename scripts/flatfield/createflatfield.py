@@ -34,8 +34,8 @@ import pcot.datumfuncs as df
 
 pcot.setup()
 
-# this is the training set of filters, filter wheel 1 (geometry)
-pcot.filters.loadFilterSet("training-geom","training1.csv")
+# this is the training set of filters, filter wheel 1 (geology)
+pcot.filters.loadFilterSet("training-geol","training1.csv")
 
 # set up a raw loader
 loader = RawLoader(format=RawLoader.UINT16,width=1024,height=1024,bigendian=True,
@@ -107,7 +107,7 @@ def process(pos, dir, lst):
     if len(pos)==2:
         pos = pos[0]+"0"+pos[1]
 
-    filter = getFilter("training-geom",pos,search="pos")
+    filter = getFilter("training-geol",pos,search="pos")
     if filter.cwl == 0:
         raise Exception(f"cannot find filter {pos}")
 
@@ -116,7 +116,7 @@ def process(pos, dir, lst):
     img = load.multifile(dir,lst,
         filterpat=".*/[0-9]{6}_[0-9]{6}_Training Model-(?P<lens>(L|R))(?P<n>[0-9]+).*",
         bitdepth=10,
-        filterset="training-geom",
+        filterset="training-geol",
         rawloader=loader)
         
     # now we want to set the SAT bit on all saturated pixels
