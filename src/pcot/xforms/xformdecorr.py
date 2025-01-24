@@ -2,6 +2,7 @@ import numpy as np
 
 import pcot.dq
 from pcot.datum import Datum
+from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.sources import MultiBandSource, SourceSet
 from pcot.utils import image
 from pcot.xform import xformtype, XFormType, XFormException
@@ -24,6 +25,7 @@ class XformDecorr(XFormType):
         super().__init__("decorr stretch", "processing", "0.0.0", hasEnable=True)
         self.addInputConnector("rgb", Datum.IMG)
         self.addOutputConnector("rgb", Datum.IMG)
+        self.params = TaggedDictType()  # no parameters
 
     def createTab(self, n, w):
         return TabData(n, w)

@@ -484,6 +484,7 @@ class XFormMergeTests(XFormType):
         for i in range(0, 8):
             self.addInputConnector("", Datum.TESTRESULT)
         self.addOutputConnector("results", Datum.TESTRESULT)
+        self.params = TaggedDictType()  # no parameters
 
     def init(self, node):
         pass

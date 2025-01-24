@@ -1,4 +1,5 @@
 from pcot.datum import Datum
+from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.xform import xformtype, XFormType
 from pcot.xforms.tabdata import TabData
 
@@ -13,6 +14,7 @@ class XformCropROI(XFormType):
         super().__init__("croproi", "ROI edit", "0.0.0")
         self.addInputConnector("", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
+        self.params = TaggedDictType()  # no parameters
 
     def createTab(self, n, w):
         return TabData(n, w)

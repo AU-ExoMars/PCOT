@@ -7,6 +7,7 @@ import pcot.xform as xform
 from pcot import datum
 from pcot.datum import Datum
 from pcot.imagecube import ChannelMapping
+from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.ui.tabs import Tab
 from pcot.utils import deb
 from pcot.xform import XFormType, XFormGraph
@@ -104,6 +105,7 @@ class XFormMacroIn(XFormMacroConnector):
         super().__init__("in")
         # does not appear until specified by the user
         self.addOutputConnector("", Datum.VARIANT)
+        self.params = TaggedDictType()  # no parameters
 
     def perform(self, node):
         """perform sets the output from data set in XFormMacro.perform()"""
@@ -123,6 +125,7 @@ class XFormMacroOut(XFormMacroConnector):
         super().__init__("out")
         # does not appear until specified by the user
         self.addInputConnector("", Datum.VARIANT)
+        self.params = TaggedDictType()  # no parameters
 
     def perform(self, node):
         """perform stores its input in its data field, ready for XFormMacro.perform() to read it"""
