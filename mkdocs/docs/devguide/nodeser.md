@@ -288,7 +288,7 @@ to define field in the dict types, because the variant wrapper will add it autom
 We can now create a list of these variants:
 ```python
     tl = TaggedListType("stuff", tvdt, 0)
-    ll = tl.create()
+    lst = tl.create()
 ```
 create a "type 1" dict:
 ```python
@@ -300,13 +300,13 @@ create a new variant wrapper and set it to that new dict:
 ```
 and append it to the list:
 ```python
-    ll.append(t)
+    lst.append(t)
 ```
 We can pass a type name to the `create` method of the variant type to automatically create
 an embedded dict of the correct type, so we could write the above lines as:
 ```python
 d = tvdt.create("type1")
-ll.append(d)
+lst.append(d)
 ```
 
 
@@ -314,11 +314,11 @@ ll.append(d)
 
 To examine an item, we can get its discriminator value:
 ```
-    assert ll[0].get_type() == 'type1'
+    assert lst[0].get_type() == 'type1'
 ```
 and get the item itself with the `get` method in the variant:
 ```
-    assert ll[0].get().a == 10
+    assert lst[0].get().a == 10
 ```
 
 @@@info
