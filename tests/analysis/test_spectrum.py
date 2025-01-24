@@ -348,7 +348,9 @@ def test_spectrum_table(globaldatadir):
     md3img = doc.graph.getByDisplayName("multidot 3", single=True).getOutput(0, Datum.IMG)
 
     # get desired results; strip and convert crlf to lf. This deals with platform differences.
-    res1 = doc.graph.getByDisplayName("stringtest 1", single=True).string.strip().replace('\r\n', '\n')
+    # This is really ugly because we need to rummage around inside the node!
+
+    res1 = doc.graph.getByDisplayName("stringtest 1", single=True).params.string.strip().replace('\r\n', '\n')
 
     # create the spectrum sets and tables for the gen1/md1 set (look at the graph, you can see that
     # gen1 and md1 connect to inputs 0 and 4 on the spectrum node).
@@ -357,13 +359,13 @@ def test_spectrum_table(globaldatadir):
     assert t == res1
 
     # same with md2
-    res2 = doc.graph.getByDisplayName("stringtest 2", single=True).string.strip().replace('\r\n', '\n')
+    res2 = doc.graph.getByDisplayName("stringtest 2", single=True).params.string.strip().replace('\r\n', '\n')
     ss2 = SpectrumSet({"in0": md2img})
     t = str(ss2.table()).strip().replace('\r\n', '\n')
     assert t == res2
 
     # and finally the complex test with md3
-    res3 = doc.graph.getByDisplayName("stringtest 3", single=True).string.strip().replace('\r\n', '\n')
+    res3 = doc.graph.getByDisplayName("stringtest 3", single=True).params.string.strip().replace('\r\n', '\n')
     ss3 = SpectrumSet({
         "in0": gen1img,
         "in1": md1img,

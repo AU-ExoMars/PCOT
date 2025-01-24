@@ -663,7 +663,6 @@ class XForm:
             if len(intersect) > 0:
                 raise Exception(f"Parameter keys already exist in serialised node data: {intersect}")
             d.update(d2)
-
         return d
 
     def deserialise(self, d):

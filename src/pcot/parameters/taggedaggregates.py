@@ -216,6 +216,9 @@ class TaggedDictType(TaggedAggregateType):
         """Initialise the dictionary with a set of key-value pairs, where the value is a tuple of
         (description, type, default). You can also specify these as kwargs.
 
+        For strings, you can specify
+        (description, str, default, valid_strings) where valid_strings is a list of strings that are valid.
+
         If the type is a TaggedAggregateType, then the default value is ignored and should be None or omitted (the
         create method for that type will create the correct default).
         Otherwise the default value should be of the correct type.

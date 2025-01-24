@@ -307,28 +307,53 @@ class TabPixTest(pcot.ui.tabs.Tab):
     def canvasMouseReleaseEvent(self, x, y, e):
         pass
 
+################################
+# Scalar tests
+
+
+# this is a mapping from the parameter value to the text in the combobox for float scalar tests
+# (nominal and uncertainty)
+mappingParamToComboboxFloat = {
+    "equal": "Equals",
+    "notequal": "Not equals",
+    "lessthan": "Less than",
+    "greaterthan": "Greater than",
+}
+# this is the inverse mapping
+mappingComboboxToParamFloat = {v: k for k, v in mappingParamToComboboxFloat.items()}
+
+# this is a mapping from the parameter value to the text in the combo box for DQ bits
+mappingParamToComboboxDQ = {
+    "equal": "Equals",
+    "notequal": "Does not equal",
+    "contains": "Contains",
+    "notcontains": "Does not contain",
+}
+# this is the inverse mapping
+mappingComboboxToParamDQ = {v: k for k, v in mappingParamToComboboxDQ.items()}
+
 
 def testFloat(inpval, test, testval):
-    if test == 'Equals':
+    if test == 'equal':
         return np.isclose(inpval, testval)
-    elif test == 'Not equals':
+    elif test == 'notequal':
         return not np.isclose(inpval, testval)
-    elif test == 'Less than':
+    elif test == 'lessthan':
         return inpval < testval
-    elif test == 'Greater than':
+    elif test == 'greaterthan':
         return inpval > testval
     else:
         raise XFormException('INTR', f"bad comparison: {test}")
 
 
 def testDQ(inpval, test, testval):
-    if test == 'Equals':
+    if test == 'equal':
         return inpval == testval
-    if test == 'Does not equal':
+    if test == 'notequal':
         return inpval != testval
-    if test == 'Contains':
+    if test == 'contains':
         return (inpval & testval) > 0
-    if test == 'Does not contain':
+    if test == 'notcontains':
         return (inpval & testval) == 0
     else:
         raise XFormException('INTR', f"bad DQ comparison: {test}")
@@ -342,16 +367,33 @@ class XFormScalarTest(XFormType):
         super().__init__("scalartest", "testing", "0.0.0")
         self.addInputConnector("", Datum.NUMBER)
         self.addOutputConnector("results", Datum.TESTRESULT)
-        self.autoserialise = ('n', 'u', 'dq', 'nTest', 'uTest', 'dqTest')
+
+        # the possible tests are both the keys and values of the mappings given above, because legacy.
+        possibleTestsFloat = list(mappingParamToComboboxFloat.keys()) + list(mappingParamToComboboxFloat.values())
+        possibleTestsDQ = list(mappingParamToComboboxDQ.keys()) + list(mappingParamToComboboxDQ.values())
+
+        self.params = TaggedDictType(
+            n=("Nominal value to test", float, 0),
+            u=("Uncertainty to test", float, 0),
+            dq=("DQ to test", int, 0),
+            nTest=("Test to apply to nominal", str, "equal", possibleTestsFloat),
+            uTest=("Test to apply to uncertainty", str, "equal", possibleTestsFloat),
+            dqTest=("Test to apply to DQ", str, "equal", possibleTestsDQ)
+        )
 
     def init(self, node):
-        node.n = 0
-        node.u = 0
-        node.dq = 0
-        node.nTest = "Equals"
-        node.uTest = "Equals"
-        node.dqTest = "Equals"
         node.failed = set()
+
+    def deserialise(self, node, _):
+        # deal with converting legacy data where tests have the same name as given in the combobox
+        # back into actual test names, e.g. "Less than" -> "lessthan"
+        p = node.params
+        if p.dqTest not in mappingParamToComboboxDQ:
+            p.dqTest = mappingComboboxToParamDQ[p.dqTest]
+        if p.nTest not in mappingParamToComboboxFloat:
+            p.nTest = mappingComboboxToParamFloat[p.nTest]
+        if p.uTest not in mappingParamToComboboxFloat:
+            p.uTest = mappingComboboxToParamFloat[p.uTest]
 
     def createTab(self, xform, window):
         return TabScalarTest(xform, window)
@@ -362,12 +404,12 @@ class XFormScalarTest(XFormType):
         if v is not None:
             if not v.isscalar():
                 out = f"Fail - input not scalar"
-            elif not testFloat(v.n, node.nTest, node.n):
-                out = f"Nominal fail: actual {v.n} {node.nTest} expected {node.n}"
-            elif not testFloat(v.u, node.uTest, node.u):
-                out = f"Uncertainty fail: actual {v.u} {node.uTest} expected {node.u}"
-            elif not testDQ(v.dq, node.dqTest, node.dq):
-                out = f"Uncertainty fail: actual {v.dq} {node.dqTest} expected {node.dq}"
+            elif not testFloat(v.n, node.params.nTest, node.params.n):
+                out = f"Nominal fail: actual {v.n} {node.params.nTest} expected {node.params.n}"
+            elif not testFloat(v.u, node.params.uTest, node.params.u):
+                out = f"Uncertainty fail: actual {v.u} {node.params.uTest} expected {node.params.u}"
+            elif not testDQ(v.dq, node.params.dqTest, node.params.dq):
+                out = f"Uncertainty fail: actual {v.dq} {node.params.dqTest} expected {node.params.dq}"
         else:
             out = "NO VALUE"
         if out is None:
@@ -406,34 +448,36 @@ class TabScalarTest(pcot.ui.tabs.Tab):
         self.nodeChanged()
 
     def onNodeChanged(self):
-        self.w.nCombo.setCurrentText(self.node.nTest)
-        self.w.uCombo.setCurrentText(self.node.uTest)
-        self.w.dqCombo.setCurrentText(self.node.dqTest)
-        self.w.dqEditButton.setText(dq.chars(self.node.dq, shownone=True))
+        p = self.node.params
+        self.w.nCombo.setCurrentText(mappingParamToComboboxFloat[p.nTest])
+        self.w.uCombo.setCurrentText(mappingParamToComboboxFloat[p.uTest])
+        self.w.dqCombo.setCurrentText(mappingParamToComboboxDQ[p.dqTest])
+
+        self.w.dqEditButton.setText(dq.chars(p.dq, shownone=True))
 
         if not self.dontSetText:
-            self.w.nEdit.setText(str(self.node.n))
-            self.w.uEdit.setText(str(self.node.u))
+            self.w.nEdit.setText(str(p.n))
+            self.w.uEdit.setText(str(p.u))
 
     def nComboChanged(self, t):
         self.mark()
-        self.node.nTest = t
+        self.node.params.nTest = mappingComboboxToParamFloat[t]
         self.changed()
 
     def uComboChanged(self, t):
         self.mark()
-        self.node.uTest = t
+        self.node.params.uTest = mappingComboboxToParamFloat[t]
         self.changed()
 
     def dqComboChanged(self, t):
         self.mark()
-        self.node.dqTest = t
+        self.node.params.dqTest = mappingComboboxToParamDQ[t]
         self.changed()
 
     def nEditChanged(self, t):
         v = 0 if t == '' else float(t)
         self.mark()
-        self.node.n = v
+        self.node.params.n = v
         self.dontSetText = True
         self.changed()
         self.dontSetText = False
@@ -441,7 +485,7 @@ class TabScalarTest(pcot.ui.tabs.Tab):
     def uEditChanged(self, t):
         v = 0 if t == '' else float(t)
         self.mark()
-        self.node.u = v
+        self.node.params.u = v
         self.dontSetText = True
         self.changed()
         self.dontSetText = False
@@ -450,25 +494,25 @@ class TabScalarTest(pcot.ui.tabs.Tab):
         if (v := self.node.getInput(0, Datum.NUMBER)) is not None:
             self.mark()
             # make sure the types are serialisable
-            self.node.n = float(v.n)
-            self.node.u = float(v.u)
-            self.node.dq = int(v.dq)
+            self.node.params.n = float(v.n)
+            self.node.params.u = float(v.u)
+            self.node.params.dq = int(v.dq)
             self.changed()
 
     def dqButtonClicked(self):
         def done():
             self.mark()
-            self.node.dq = self.dialog.get()
+            self.node.params.dq = self.dialog.get()
             self.changed()
 
-        self.dialog = DQDialog(self.node.dq, self)
+        self.dialog = DQDialog(self.node.params.dq, self)
         self.dialog.accepted.connect(done)
         self.dialog.open()
 
     def dqEditChanged(self, t):
         v = 0 if t == '' else int(t)
         self.mark()
-        self.node.dq = v
+        self.node.params.dq = v
         self.dontSetText = True
         self.changed()
         self.dontSetText = False
@@ -523,10 +567,11 @@ class XFormStringTest(XFormType):
         super().__init__("stringtest", "testing", "0.0.0")
         self.addInputConnector("", Datum.ANY)
         self.addOutputConnector("", Datum.TESTRESULT)
-        self.autoserialise = ('string',)
+        self.params = TaggedDictType(
+            string=("String to check for", str, "")
+        )
 
     def init(self, node):
-        node.string = ""
         node.inp = "No input yet"
 
     def createTab(self, xform, window):
@@ -537,7 +582,7 @@ class XFormStringTest(XFormType):
         inp = node.getInput(0)
         if inp.val is not None:
             node.inp = str(inp.val).strip().replace('\r\n', '\n')
-            if node.inp != node.string.strip():
+            if node.inp != node.params.string.strip():
                 out = "Mismatch!"
         else:
             out = "NO INPUT"
