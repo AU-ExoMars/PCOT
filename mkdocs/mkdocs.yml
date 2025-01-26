@@ -20,6 +20,9 @@ markdown_extensions:
         check_paths: True
         base_path: ['docs/','.']
 
+toc:
+    permalink: True
+
 nav:
     - Getting Started:
         - Overview: gettingstarted/index.md

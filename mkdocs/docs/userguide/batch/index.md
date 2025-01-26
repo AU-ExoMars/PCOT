@@ -84,7 +84,7 @@ Here, we are running the graph once as above and then making some changes:
 * changing the gradient's appearance with a preset
 * changing the output to write to a different filename
 
-@@@danger
+@@@todo
 Write more on how the inputs work - intro here, more in params.md or
 elsewhere. Write more in general. Note [autodocs](/autodocs).
 

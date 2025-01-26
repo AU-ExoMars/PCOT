@@ -19,6 +19,7 @@ import xml.etree.ElementTree as etree
 import re
 
 classNameDict = {
+    'todo' : 'alert-danger fw-bold',
     'danger' : 'alert-danger',
     'primary' : 'alert-primary',
     'secondary' : 'alert-secondary',
