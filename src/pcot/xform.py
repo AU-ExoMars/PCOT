@@ -661,7 +661,7 @@ class XForm:
             d2 = self.params.serialise()
             intersect = set(d.keys()).intersection(set(d2.keys()))
             if len(intersect) > 0:
-                raise Exception(f"Parameter keys already exist in serialised node data: {intersect}")
+                raise Exception(f"Parameter keys already exist in serialised node data: {intersect} (are you using both TaggedAggregate and autoserialise?)")
             d.update(d2)
         return d
 
