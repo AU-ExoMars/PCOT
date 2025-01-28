@@ -9,6 +9,7 @@ from skimage.transform import warp
 from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.imagecube import ImageCube
+from pcot.parameters.taggedaggregates import TaggedDictType, taggedPointListType, taggedPointType
 from pcot.utils import text, image
 from pcot.xform import XFormType, xformtype, XFormException
 
@@ -101,23 +102,52 @@ class XFormManualRegister(XFormType):
         self.addInputConnector("moving", Datum.IMG)
         self.addInputConnector("fixed", Datum.IMG)
         self.addOutputConnector("moved", Datum.IMG)
-        self.autoserialise = ('showSrc', 'showDest', 'src', 'dest', 'translate')
+
+        # IMPORTANT NOTE - this uses a mixture of plain params and Complex TaggedAggregate Serialisation.
+        # All parameters except src and dest (point lists) are used directly. THe src and dest lists
+        # are kept in the node, and processed using CTAS.
+
+        self.params = TaggedDictType(
+            showSrc=("Show source points", bool, True),
+            showDest=("Show destination points", bool, True),
+            translate=("Translate only - no other transform. Uses a single point.", bool, False),
+            src=("Source points", taggedPointListType),
+            dest=("Destination points", taggedPointListType)
+        )
 
     def init(self, node):
         node.img = None     # this is one of the few nodes which does store .img in the node
         node.imagemode = IMAGEMODE_SOURCE
-        node.showSrc = True
-        node.showDest = True
         node.canvimg = None
-        node.translate = False
 
-        # source and destination points - there is a 1:1 mapping between the two
-        node.src = []  # ditto
-        node.dest = []  # list of (x,y) points
+        node.src = []
+        node.dest = []
+
         # index of selected points
         node.selIdx = None
         # is the selected point (if any) in the dest list (or the source list)?
         node.selIsDest = False
+
+    def serialise(self, node):
+        node.params.src = taggedPointListType.create()
+        node.params.dest = taggedPointListType.create()
+
+        for p in node.src:
+            dd = taggedPointType.create()
+            dd.set(*p)
+            node.params.src.append(dd)
+        for p in node.dest:
+            dd = taggedPointType.create()
+            dd.set(*p)
+            node.params.dest.append(dd)
+
+    def nodeDataFromParams(self, node):
+        node.src = []
+        for p in node.params.src:
+            node.src.append(p.get())
+        node.dest = []
+        for p in node.params.dest:
+            node.dest.append(p.get())
 
     def uichange(self, node):
         node.timesPerformed += 1
@@ -127,6 +157,8 @@ class XFormManualRegister(XFormType):
         """Perform node. When called from uichange(), doApply will be False. Normally it's true."""
         movingImg = node.getInput(0, Datum.IMG)
         fixedImg = node.getInput(1, Datum.IMG)
+
+        params = node.params
 
         if fixedImg is None or movingImg is None:
             node.img = None  # output image (i.e. warped)
@@ -156,12 +188,12 @@ class XFormManualRegister(XFormType):
 
                 # now draw the points
 
-                if node.showSrc:
+                if params.showSrc:
                     issel = node.selIdx if not node.selIsDest else None
-                    drawpoints(canvimg, node.src, node.translate, issel, (1, 1, 0))
-                if node.showDest:
+                    drawpoints(canvimg, node.src, params.translate, issel, (1, 1, 0))
+                if params.showDest:
                     issel = node.selIdx if node.selIsDest else None
-                    drawpoints(canvimg, node.dest, node.translate, issel, (0, 1, 1))
+                    drawpoints(canvimg, node.dest, params.translate, issel, (0, 1, 1))
 
                 # grey, but 3 channels so I can draw on it!
                 node.canvimg = ImageCube(canvimg, node.mapping, None)
@@ -195,7 +227,7 @@ class XFormManualRegister(XFormType):
     def addPoint(n, x, y, dest):
         lst = n.dest if dest else n.src
         # translate mode changes the first point, or adds a point if there isn't one.
-        if len(lst) == 0 or not n.translate:
+        if len(lst) == 0 or not n.params.translate:
             lst.append((x, y))
         else:
             lst[0] = (x, y)
@@ -203,12 +235,12 @@ class XFormManualRegister(XFormType):
     @staticmethod
     def selPoint(n, x, y):
         if n.showSrc:
-            pt = findInList(n.src, x, y, n.translate)
+            pt = findInList(n.src, x, y, n.params.translate)
             if pt is not None:
                 n.selIdx = pt
                 n.selIsDest = False
         if pt is None and n.showDest:
-            pt = findInList(n.dest, x, y, n.translate)
+            pt = findInList(n.dest, x, y, n.params.translate)
             if pt is not None:
                 n.selIdx = pt
                 n.selIsDest = True
@@ -219,7 +251,7 @@ class XFormManualRegister(XFormType):
         if len(n.src) != len(n.dest):
             n.setError(XFormException('DATA', "Number of source and dest points must be the same"))
             return
-        if n.translate:
+        if n.params.translate:
             if len(n.src) < 1:
                 n.setError(XFormException('DATA', "There must be a reference point in translate mode"))
                 return
@@ -288,17 +320,17 @@ class TabManualReg(pcot.ui.tabs.Tab):
 
     def checkBoxDestToggled(self):
         self.mark()
-        self.node.showDest = self.w.checkBoxDest.isChecked()
+        self.node.params.showDest = self.w.checkBoxDest.isChecked()
         self.changed(uiOnly=True)
 
     def checkBoxSrcToggled(self):
         self.mark()
-        self.node.showSrc = self.w.checkBoxSrc.isChecked()
+        self.node.params.showSrc = self.w.checkBoxSrc.isChecked()
         self.changed(uiOnly=True)
 
     def translateToggled(self):
         self.mark()
-        self.node.translate = self.w.translate.isChecked()
+        self.node.params.translate = self.w.translate.isChecked()
         self.changed()
 
     def onNodeChanged(self):
@@ -307,9 +339,9 @@ class TabManualReg(pcot.ui.tabs.Tab):
         self.w.radioDest.setChecked(self.node.imagemode == IMAGEMODE_DEST)
         self.w.radioResult.setChecked(self.node.imagemode == IMAGEMODE_RESULT)
 
-        self.w.checkBoxSrc.setChecked(self.node.showSrc)
-        self.w.checkBoxDest.setChecked(self.node.showDest)
-        self.w.translate.setChecked(self.node.translate)
+        self.w.checkBoxSrc.setChecked(self.node.params.showSrc)
+        self.w.checkBoxDest.setChecked(self.node.params.showDest)
+        self.w.translate.setChecked(self.node.params.translate)
 
         # displaying a premapped image
         self.w.canvas.display(self.node.canvimg, self.node.canvimg, self.node)
@@ -323,11 +355,11 @@ class TabManualReg(pcot.ui.tabs.Tab):
             self.changed()
         elif k == Qt.Key_S:
             self.mark()
-            self.node.showSrc = not self.node.showSrc
+            self.node.params.showSrc = not self.node.params.showSrc
             self.changed()
         elif k == Qt.Key_D:
             self.mark()
-            self.node.showDest = not self.node.showDest
+            self.node.params.showDest = not self.node.params.showDest
             self.changed()
         elif k == Qt.Key_Delete:
             self.mark()
@@ -344,7 +376,7 @@ class TabManualReg(pcot.ui.tabs.Tab):
         self.mark()
         if e.modifiers() & (Qt.ShiftModifier | Qt.ControlModifier):
             # modifiers = we're adding
-            if self.node.showSrc and self.node.showDest:
+            if self.node.params.showSrc and self.node.params.showDest:
                 # if both are shown, distinguish with modifier
                 if e.modifiers() & Qt.ShiftModifier:  # shift = source
                     self.node.type.addPoint(self.node, x, y, False)
@@ -353,9 +385,9 @@ class TabManualReg(pcot.ui.tabs.Tab):
             else:
                 # otherwise which sort we are adding can be determined from which sort
                 # we are showing.
-                if self.node.showSrc:
+                if self.node.params.showSrc:
                     self.node.type.addPoint(self.node, x, y, False)
-                elif self.node.showDest:
+                elif self.node.params.showDest:
                     self.node.type.addPoint(self.node, x, y, True)
         else:
             # no modifiers, just select.

@@ -9,7 +9,7 @@ from pcot import ui
 from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.imagecube import ImageCube
-from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType
+from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType, taggedPointListType
 from pcot.rois import ROICircle
 from pcot.utils import text
 from pcot.utils.annotations import Annotation, annotDrawText, annotFont, IndexedPointAnnotation
@@ -57,12 +57,6 @@ class CrossCalibPointAnnotation(Annotation):
         p.setPen(pen)
 
         p.drawEllipse(self.x - self.r, self.y - self.r, self.r * 2, self.r * 2)
-
-
-taggedPointListType = TaggedListType("list of points",
-                                     TaggedDictType(
-                                         x=('X coordinate', int, 0),
-                                         y=('Y coordinate', int, 0)).setOrdered(), 0)
 
 
 @xformtype

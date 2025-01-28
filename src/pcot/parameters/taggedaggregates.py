@@ -785,3 +785,10 @@ def taggedRectType(x, y, w, h):
                            w=("The width of the rectangle", int, int(w)),
                            h=("The height of the rectangle", int, int(h))
                            ).setOrdered()
+
+
+taggedPointType = TaggedDictType(x=("X coordinate", int, 0),
+                                 y=("Y coordinate", int, 0)).setOrdered()
+
+taggedPointListType = TaggedListType("list of points", taggedPointType, 0)
+
