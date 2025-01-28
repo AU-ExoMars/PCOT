@@ -492,12 +492,14 @@ class TabScalarTest(pcot.ui.tabs.Tab):
 
     def setButtonClicked(self):
         if (v := self.node.getInput(0, Datum.NUMBER)) is not None:
-            self.mark()
-            # make sure the types are serialisable
-            self.node.params.n = float(v.n)
-            self.node.params.u = float(v.u)
-            self.node.params.dq = int(v.dq)
-            self.changed()
+            if v.isscalar():
+                self.mark()
+                self.node.params.n = float(v.n)
+                self.node.params.u = float(v.u)
+                self.node.params.dq = int(v.dq)
+                self.changed()
+            else:
+                self.node.setError(XFormException("DATA","Input is not scalar"))
 
     def dqButtonClicked(self):
         def done():

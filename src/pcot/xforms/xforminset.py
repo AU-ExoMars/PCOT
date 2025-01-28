@@ -1,9 +1,11 @@
 import cv2 as cv
+from PySide2.QtWidgets import QMessageBox
 
 from pcot.datum import Datum
 import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
+from pcot.parameters.taggedaggregates import Maybe, taggedRectType, TaggedDictType, taggedColourType
 from pcot.sources import MultiBandSource
 from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.xform import xformtype, XFormType
@@ -21,6 +23,11 @@ class XformInset(XFormType):
     there is no RGB mapping in the canvas for the tab - RGB mappings should be set in
     the input nodes.
 
+    The rectangle can be set either from an ROI or from a rectangle which can be drawn on
+    the canvas. If neither is set, no insetting will be done and only the background will
+    be shown. The rectangle can be cleared by clicking "Clear rect" in the tab, but any ROI
+    takes priority.
+
     **Ignores DQ and uncertainty**
     """
 
@@ -30,19 +37,23 @@ class XformInset(XFormType):
         self.addInputConnector("inset", Datum.IMG)
         self.addInputConnector("roi", Datum.ROI)
         self.addOutputConnector("", Datum.IMG)
-        self.autoserialise = ('insetrect', 'caption', 'captiontop',
-                              'fontsize', 'thickness', 'colour')
+
+        self.params = TaggedDictType(
+            # We don't use Maybe here, because batch files can't create the underlying TaggedDict, just modify
+            # any existing one. Instead, we set the width and height to negative.
+            insetrect=("The rectangle in which to inset the image", taggedRectType(0,0,-1,-1)),
+            caption=("Caption to put on the inset", str, ''),
+            captiontop=("Put the caption at the top of the inset", bool, False),
+            fontsize=("Font size for the caption", int, 10),
+            thickness=("Thickness of the border", int, 2),
+            colour=("Colour of the border and caption", taggedColourType(1,1,0), None)
+        )
 
     def createTab(self, n, w):
         return TabInset(n, w)
 
     def init(self, node):
-        node.insetrect = None
-        node.caption = ''
-        node.captiontop = False
-        node.fontsize = 10
-        node.thickness = 2
-        node.colour = (1, 1, 0)
+        pass
 
     def perform(self, node):
         image = node.getInput(0, Datum.IMG)  # this is the main image
@@ -51,9 +62,18 @@ class XformInset(XFormType):
 
         inrect = None if roi is None else roi.bb()  # get rect from ROI
 
-        # if there is no input rect we use the rubberbanded one set by the tab
+        p = node.params
+
+        # if there is no input rect we use the rubberbanded one set by the tab, and that defaults to negative
+        # size meaning it doesn't exist.
         if inrect is None:
-            inrect = node.insetrect
+            inrect = p.insetrect
+            # if the rectangle's size is negative, it's not set - so set it to None.
+            if inrect.w < 0:
+                inrect = None
+            else:
+                # otherwise create a tuple from the TaggedDict rectangle
+                inrect = inrect.get()
 
         if inrect is None:
             # neither rects are set, just dupe the input as RGB
@@ -88,13 +108,13 @@ class XformInset(XFormType):
                 # build sources - these will be bandwise unions of inset and background
                 src = MultiBandSource.createBandwiseUnion([image.rgbSources(), inset.rgbSources()])
 
-            for i in range(node.thickness):
-                cv.rectangle(out, (x - i - 1, y - i - 1), (x + w + i, y + h + i), node.colour, thickness=1)
+            for i in range(p.thickness):
+                cv.rectangle(out, (x - i - 1, y - i - 1), (x + w + i, y + h + i), p.colour, thickness=1)
             # add in the caption
-            if node.caption != '':
-                ty = y if node.captiontop else y + h
-                pcot.utils.text.write(out, node.caption, x, ty, node.captiontop, node.fontsize,
-                                      node.thickness, node.colour)
+            if p.caption != '':
+                ty = y if p.captiontop else y + h
+                pcot.utils.text.write(out, p.caption, x, ty, p.captiontop, p.fontsize,
+                                      p.thickness, p.colour)
 
         # build output image
         if out is None:
@@ -113,6 +133,7 @@ class TabInset(pcot.ui.tabs.Tab):
         self.w.thickness.valueChanged.connect(self.thicknessChanged)
         self.w.caption.textChanged.connect(self.textChanged)
         self.w.colourButton.pressed.connect(self.colourPressed)
+        self.w.clearRectButton.pressed.connect(self.clearRectPressed)
         self.w.captionTop.toggled.connect(self.topChanged)
         self.w.canvas.setGraph(node.graph)
         self.w.canvas.hideMapping()
@@ -124,17 +145,17 @@ class TabInset(pcot.ui.tabs.Tab):
 
     def topChanged(self, checked):
         self.mark()
-        self.node.captiontop = checked
+        self.node.params.captiontop = checked
         self.changed()
 
     def fontSizeChanged(self, i):
         self.mark()
-        self.node.fontsize = i
+        self.node.params.fontsize = i
         self.changed()
 
     def textChanged(self, t):
         self.mark()
-        self.node.caption = t
+        self.node.params.caption = t
         # this will cause perform, which will cause onNodeChanged, which will
         # set the text again. We set a flag to stop the text being reset.
         self.dontSetText = True
@@ -143,14 +164,21 @@ class TabInset(pcot.ui.tabs.Tab):
 
     def thicknessChanged(self, i):
         self.mark()
-        self.node.thickness = i
+        self.node.params.thickness = i
         self.changed()
 
     def colourPressed(self):
-        col = pcot.utils.colour.colDialog(self.node.colour)
+        col = pcot.utils.colour.colDialog(self.node.params.colour)
         if col is not None:
             self.mark()
-            self.node.colour = col
+            self.node.params.colour = col
+            self.changed()
+
+    def clearRectPressed(self):
+        if QMessageBox.question(self.window, "Clear rectangle", "Are you sure?",
+                                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+            self.mark()
+            self.node.params.insetrect.set(0, 0, -1, -1)
             self.changed()
 
     # causes the tab to update itself from the node
@@ -164,35 +192,33 @@ class TabInset(pcot.ui.tabs.Tab):
             img.mapping = ChannelMapping(0,1,2)
             self.w.canvas.display(img)
         if not self.dontSetText:
-            self.w.caption.setText(self.node.caption)
-        self.w.fontsize.setValue(self.node.fontsize)
-        self.w.thickness.setValue(self.node.thickness)
-        self.w.captionTop.setChecked(self.node.captiontop)
+            self.w.caption.setText(self.node.params.caption)
+        self.w.fontsize.setValue(self.node.params.fontsize)
+        self.w.thickness.setValue(self.node.params.thickness)
+        self.w.captionTop.setChecked(self.node.params.captiontop)
 
-        r, g, b = [x * 255 for x in self.node.colour]
+        r, g, b = [x * 255 for x in self.node.params.colour]
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b))
 
     def canvasMouseMoveEvent(self, x2, y2, e):
         if self.mouseDown:
-            p = e.pos()
-            x, y, w, h = self.node.insetrect
+            x, y, w, h = self.node.params.insetrect.get()
             w = x2 - x
             h = y2 - y
             if w < 10:
                 w = 10
             if h < 10:
                 h = 10
-            self.node.insetrect = (x, y, w, h)
+            self.node.params.insetrect.set(x, y, w, h)
             self.changed()
         self.w.canvas.update()
 
     def canvasMousePressEvent(self, x, y, e):
-        p = e.pos()
         w = 10  # min crop size
         h = 10
         self.mark()
         self.mouseDown = True
-        self.node.insetrect = (x, y, w, h)
+        self.node.params.insetrect.set(x, y, w, h)
         self.changed()
         self.w.canvas.update()
 
