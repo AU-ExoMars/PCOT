@@ -8,6 +8,7 @@ from skimage.transform import warp
 
 from pcot.datum import Datum
 import pcot.ui.tabs
+from pcot.dq import NODATA, NOUNCERTAINTY
 from pcot.imagecube import ImageCube
 from pcot.parameters.taggedaggregates import TaggedDictType, taggedPointListType, taggedPointType
 from pcot.utils import text, image
@@ -18,6 +19,14 @@ IMAGEMODE_DEST = 1
 IMAGEMODE_RESULT = 2
 
 IMAGEMODE_CT = 3
+
+# These are the available homographies (see node doc), in the same order as they appear in the combobox.
+homographies = [
+    "euclidean",
+    "similarity",
+    "affine",
+    "projective",
+]
 
 
 # channel-agnostic RGB of an image
@@ -70,7 +79,7 @@ def findInList(lst, x, y, translate):
 @xformtype
 class XFormManualRegister(XFormType):
     """
-    Perform manual registration of two images. The output is a version of the 'moving' image with a projective
+    Perform manual registration of two images. The output is a version of the 'moving' image with a
     transform applied to map points onto corresponding points in the 'fixed' image.
 
     The canvas view can show the moving input (also referred to as the "source"), the fixed image (also referred
@@ -80,6 +89,13 @@ class XFormManualRegister(XFormType):
     The transform will map a set of points in the moving image onto a set in the fixed image. Both sets of
     points can be changed, or a single set. Points are mapped onto the correspondingly numbered point. In "translate"
     mode only a single point is required (and only a single point will be shown from each set).
+
+    The transform used is one of the following homographies:
+
+    * Euclidean - translation and rotation only
+    * Similarity - translation, rotation, and scaling; angles are preserved
+    * Affine - translation, rotation, scaling, and shearing; parallel lines are preserved
+    * Projective - translation, rotation, scaling, shearing, and perspective; straight lines are preserved
 
     Points are added to the source (moving) image by clicking with shift.
     Points are adding to the dest (fixed) image by clicking with ctrl.
@@ -112,7 +128,8 @@ class XFormManualRegister(XFormType):
             showDest=("Show destination points", bool, True),
             translate=("Translate only - no other transform. Uses a single point.", bool, False),
             src=("Source points", taggedPointListType),
-            dest=("Destination points", taggedPointListType)
+            dest=("Destination points", taggedPointListType),
+            transform=("Transform type", str, homographies[0], homographies),
         )
 
     def init(self, node):
@@ -205,20 +222,20 @@ class XFormManualRegister(XFormType):
     @staticmethod
     def delSelPoint(n):
         if n.selIdx is not None:
-            if n.showSrc and not n.selIsDest:
+            if n.params.showSrc and not n.selIsDest:
                 del n.src[n.selIdx]
                 n.selIdx = None
-            elif n.showDest and n.selIsDest:
+            elif n.params.showDest and n.selIsDest:
                 del n.dest[n.selIdx]
                 n.selIdx = None
 
     @staticmethod
     def moveSelPoint(n, x, y):
         if n.selIdx is not None:
-            if n.showSrc and not n.selIsDest:
+            if n.params.showSrc and not n.selIsDest:
                 n.src[n.selIdx] = (x, y)
                 return True
-            elif n.showDest and n.selIsDest:
+            elif n.params.showDest and n.selIsDest:
                 n.dest[n.selIdx] = (x, y)
                 return True
         return False
@@ -263,14 +280,24 @@ class XFormManualRegister(XFormType):
             if len(n.src) < 3:
                 n.setError(XFormException('DATA', "There must be at least three points"))
                 return
-            tform = transform.ProjectiveTransform()
+            if n.params.transform == "euclidean":
+                tform = transform.EuclideanTransform()
+            elif n.params.transform == "similarity":
+                tform = transform.SimilarityTransform()
+            elif n.params.transform == "affine":
+                tform = transform.AffineTransform()
+            elif n.params.transform == "projective":
+                tform = transform.ProjectiveTransform()
+            else:
+                n.setError(XFormException('DATA', "Unknown transform type"))
+                return
             tform.estimate(np.array(n.dest), np.array(n.src))
 
         if n.movingImg is not None:
             img = warp(n.movingImg.img, tform, preserve_range=True).astype(np.float32)
             unc = warp(n.movingImg.img, tform, preserve_range=True).astype(np.float32)
-            # DQ warp is nearest neighbour (order=0)
-            dq = warp(n.movingImg.dq, tform, order=0, preserve_range=True).astype(np.uint16)
+            # DQ warp is nearest neighbour (order=0). Make sure we fill absent areas with NODATA.
+            dq = warp(n.movingImg.dq, tform, order=0, preserve_range=True, cval=NODATA|NOUNCERTAINTY, mode='constant').astype(np.uint16)
             n.img = ImageCube(img, n.movingImg.mapping, n.movingImg.sources, uncertainty=unc, dq=dq)
 
     def createTab(self, n, w):
@@ -296,8 +323,14 @@ class TabManualReg(pcot.ui.tabs.Tab):
 
         self.w.checkBoxDest.toggled.connect(self.checkBoxDestToggled)
         self.w.checkBoxSrc.toggled.connect(self.checkBoxSrcToggled)
+        self.w.transformCombo.currentIndexChanged.connect(self.transformChanged)
 
         self.w.clearButton.clicked.connect(self.clearClicked)
+
+    def transformChanged(self, i):
+        self.mark()
+        self.node.params.transform = homographies[i]
+        self.changed()
 
     def clearClicked(self):
         if QMessageBox.question(self.window, "Clear all points", "Are you sure?",
@@ -342,6 +375,7 @@ class TabManualReg(pcot.ui.tabs.Tab):
         self.w.checkBoxSrc.setChecked(self.node.params.showSrc)
         self.w.checkBoxDest.setChecked(self.node.params.showDest)
         self.w.translate.setChecked(self.node.params.translate)
+        self.w.transformCombo.setCurrentIndex(homographies.index(self.node.params.transform))
 
         # displaying a premapped image
         self.w.canvas.display(self.node.canvimg, self.node.canvimg, self.node)

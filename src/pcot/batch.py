@@ -31,3 +31,7 @@ def main():
 
     runner = Runner(Path(args.doc), jinja_env)
     runner.run(Path(args.file))
+
+
+if __name__ == "__main__":
+    main()
