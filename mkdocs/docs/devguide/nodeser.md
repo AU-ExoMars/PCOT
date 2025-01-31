@@ -139,12 +139,12 @@ def serialise(self, node):
     return None
 ```
 
-Instead of a `deserialise` method we should write `nodeDataToParams`. This
+Instead of a `deserialise` method we should write `nodeDataFromParams`. This
 takes a node, and uses its `params` field (a TaggedDict) to set the
 node's internal data:
 
 ```python
-def nodeDataToParams(self, node):
+def nodeDataFromParams(self, node):
     # convert some data in node.params into our own private data
     our_data = some_function_of(node.params.foo, node.params.bar)
 ```
