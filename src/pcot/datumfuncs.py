@@ -571,7 +571,7 @@ def testimg(index):
     Load a test image
     @param index : number : the index of the image to load
     """
-    fileList = ("marsRGB.png", "gradRGB.png", "corrib.png")
+    fileList = ("marsRGB.png", "gradRGB.png", "corrib.png", "tstreg1.png", "tstreg2.png")
     n = int(index.get(Datum.NUMBER).n)
     if n < 0:
         raise XFormException('DATA', 'negative test file index')

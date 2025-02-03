@@ -80,7 +80,7 @@
        <item row="2" column="0" colspan="2">
         <widget class="TableView" name="tableView">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+          <sizepolicy hsizetype="Minimum" vsizetype="MinimumExpanding">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
@@ -157,7 +157,8 @@
             </sizepolicy>
            </property>
            <property name="text">
-            <string>Set Test From Pixels</string>
+            <string>Set Test
+From Pixels</string>
            </property>
           </widget>
          </item>
@@ -170,7 +171,22 @@
             </sizepolicy>
            </property>
            <property name="text">
-            <string>Create random test per channel</string>
+            <string>Create random
+test per channel</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="dupAllButton">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Maximum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Duplicate all tests
+across all channels</string>
            </property>
           </widget>
          </item>

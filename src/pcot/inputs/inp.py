@@ -28,7 +28,7 @@ class Input:
     DIRECT = 6
 
     def __init__(self, mgr, idx):
-        """this will intialise an Input from scratch, typically when
+        """this will initialise an Input from scratch, typically when
         you're creating a new main graph. The input will be initialised
         to use the null method."""
         from .parc import PARCInputMethod

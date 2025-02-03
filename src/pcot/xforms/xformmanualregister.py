@@ -135,6 +135,7 @@ class XFormManualRegister(XFormType):
         )
 
     def init(self, node):
+        # these are stored in the node because they need to survive a uichange when doApply is False.
         node.movingOut = None
         node.fixedOut = None
         node.imagemode = IMAGEMODE_SOURCE
@@ -180,11 +181,11 @@ class XFormManualRegister(XFormType):
 
         params = node.params
 
-        movingOut, fixedOut = None, None
-
         if fixedImg and movingImg:
             if doApply:
-                movingOut, fixedOut = self.apply(node, fixedImg, movingImg)
+                # only change these when apply happens - they should survive a uichange
+                # when doApply is False.
+                self.apply(node, fixedImg, movingImg)
 
             # this gets the appropriate image and also manipulates it.
             # Generally we convert RGB to grey; otherwise we'd have to store
@@ -194,9 +195,9 @@ class XFormManualRegister(XFormType):
             elif node.imagemode == IMAGEMODE_SOURCE:
                 canvimg = convertToRGB(movingImg)
             elif node.imagemode == IMAGEMODE_RESULTSOURCE:
-                canvimg = None if movingOut is None else movingOut
+                canvimg = None if node.movingOut is None else convertToRGB(node.movingOut)
             else:
-                canvimg = None if fixedOut is None else fixedOut
+                canvimg = None if node.fixedOut is None else convertToRGB(node.fixedOut)
 
             if canvimg is not None:
                 # create a new image for the canvas; we'll draw on it.
@@ -214,10 +215,10 @@ class XFormManualRegister(XFormType):
                 # grey, but 3 channels so I can draw on it!
                 node.canvimg = ImageCube(canvimg, node.mapping, None)
             else:
-                node.canvimg = None
+                node.canvimg = None     # redundant, but helps with debugging.
 
-        node.setOutput(0, Datum(Datum.IMG, movingOut))
-        node.setOutput(0, Datum(Datum.IMG, fixedOut))
+        node.setOutput(0, Datum(Datum.IMG, node.movingOut))
+        node.setOutput(1, Datum(Datum.IMG, node.fixedOut))
 
     @staticmethod
     def delSelPoint(n):
@@ -251,12 +252,12 @@ class XFormManualRegister(XFormType):
 
     @staticmethod
     def selPoint(n, x, y):
-        if n.showSrc:
+        if n.params.showSrc:
             pt = findInList(n.src, x, y, n.params.translate)
             if pt is not None:
                 n.selIdx = pt
                 n.selIsDest = False
-        if pt is None and n.showDest:
+        if pt is None and n.params.showDest:
             pt = findInList(n.dest, x, y, n.params.translate)
             if pt is not None:
                 n.selIdx = pt
@@ -335,7 +336,7 @@ class XFormManualRegister(XFormType):
                       output_shape=(output_height,output_width),
                       cval=NODATA|NOUNCERTAINTY, mode='constant').astype(np.uint16)
 
-            movingOut = ImageCube(img, movingImg.mapping, movingImg.sources, uncertainty=unc, dq=dq)
+            n.movingOut = ImageCube(img, movingImg.mapping, movingImg.sources, uncertainty=unc, dq=dq)
 
             # apply only the translation to the fixed image
             img = warp(fixedImg.img, translation, preserve_range=True,
@@ -347,14 +348,11 @@ class XFormManualRegister(XFormType):
                         output_shape=(output_height,output_width),
                         cval=NODATA|NOUNCERTAINTY, mode='constant').astype(np.uint16)
 
-            fixedOut = ImageCube(img, fixedImg.mapping, fixedImg.sources, uncertainty=unc, dq=dq)
-
-            return movingOut, fixedOut
+            n.fixedOut = ImageCube(img, fixedImg.mapping, fixedImg.sources, uncertainty=unc, dq=dq)
 
         except XFormException as e:
             # handle any errors by setting the node error and returning no images
             n.setError(e)
-            return None, None
 
     def createTab(self, n, w):
         return TabManualReg(n, w)

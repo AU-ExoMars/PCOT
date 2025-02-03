@@ -218,6 +218,7 @@ class TabPixTest(pcot.ui.tabs.Tab):
         self.w.rightButton.clicked.connect(self.rightClicked)
         self.w.addButton.clicked.connect(self.addClicked)
         self.w.dupButton.clicked.connect(self.dupClicked)
+        self.w.dupAllButton.clicked.connect(self.dupAllClicked)
         self.w.setFromPixelsButton.clicked.connect(self.setFromPixelsClicked)
         self.w.deleteButton.clicked.connect(self.deleteClicked)
         self.w.tableView.delete.connect(self.deleteClicked)
@@ -275,6 +276,21 @@ class TabPixTest(pcot.ui.tabs.Tab):
         if (col := self.w.tableView.get_selected_item()) is not None:
             col = self.model.add_item(col)
             self.w.tableView.selectItem(col)
+
+    def dupAllClicked(self):
+        # duplicate all items - I think they get added at the end so
+        # this should be OK!
+
+        for i in range(0, len(self.model.d)):
+            t = self.model.d[i]
+            for band in range(0, self.node.img.channels):
+                # add new item only if the band is not the current band
+                if t.band != band:
+                    newidx = self.model.add_item(i)
+                    # and chnage the band of the new item
+                    self.model.d[newidx].band = band
+        self.changed()
+
 
     def deleteClicked(self):
         if (col := self.w.tableView.get_selected_item()) is not None:
