@@ -168,9 +168,16 @@
          </widget>
         </item>
         <item>
-         <widget class="QRadioButton" name="radioResult">
+         <widget class="QRadioButton" name="radioResultDest">
           <property name="text">
-           <string>Result</string>
+           <string>Moving result</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="radioResultSrc">
+          <property name="text">
+           <string>Fixed result</string>
           </property>
          </widget>
         </item>

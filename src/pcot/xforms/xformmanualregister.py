@@ -4,7 +4,7 @@ from PySide2.QtCore import Qt
 from PySide2.QtGui import QKeyEvent
 from PySide2.QtWidgets import QMessageBox
 from skimage import transform
-from skimage.transform import warp
+from skimage.transform import warp, AffineTransform
 
 from pcot.datum import Datum
 import pcot.ui.tabs
@@ -16,9 +16,10 @@ from pcot.xform import XFormType, xformtype, XFormException
 
 IMAGEMODE_SOURCE = 0
 IMAGEMODE_DEST = 1
-IMAGEMODE_RESULT = 2
+IMAGEMODE_RESULTSOURCE = 2
+IMAGEMODE_RESULTDEST = 3
 
-IMAGEMODE_CT = 3
+IMAGEMODE_CT = 4
 
 # These are the available homographies (see node doc), in the same order as they appear in the combobox.
 homographies = [
@@ -30,7 +31,7 @@ homographies = [
 
 
 # channel-agnostic RGB of an image
-def prep(img: ImageCube) -> np.array:
+def convertToRGB(img: ImageCube) -> np.array:
     mat = np.array([1 / img.channels] * img.channels).reshape((1, img.channels))
     canvimg = cv.transform(img.img, mat)
     mn = np.min(canvimg)
@@ -117,7 +118,8 @@ class XFormManualRegister(XFormType):
         super().__init__("manual register", "processing", "0.0.0")
         self.addInputConnector("moving", Datum.IMG)
         self.addInputConnector("fixed", Datum.IMG)
-        self.addOutputConnector("moved", Datum.IMG)
+        self.addOutputConnector("moving", Datum.IMG)
+        self.addOutputConnector("fixed", Datum.IMG)
 
         # IMPORTANT NOTE - this uses a mixture of plain params and Complex TaggedAggregate Serialisation.
         # All parameters except src and dest (point lists) are used directly. THe src and dest lists
@@ -133,7 +135,8 @@ class XFormManualRegister(XFormType):
         )
 
     def init(self, node):
-        node.img = None     # this is one of the few nodes which does store .img in the node
+        node.movingOut = None
+        node.fixedOut = None
         node.imagemode = IMAGEMODE_SOURCE
         node.canvimg = None
 
@@ -177,31 +180,27 @@ class XFormManualRegister(XFormType):
 
         params = node.params
 
-        if fixedImg is None or movingImg is None:
-            node.img = None  # output image (i.e. warped)
-            node.movingImg = None  # image we are moving
-        else:
+        movingOut, fixedOut = None, None
+
+        if fixedImg and movingImg:
             if doApply:
-                self.apply(node)
+                movingOut, fixedOut = self.apply(node, fixedImg, movingImg)
 
             # this gets the appropriate image and also manipulates it.
             # Generally we convert RGB to grey; otherwise we'd have to store
             # quite a few mappings.
             if node.imagemode == IMAGEMODE_DEST:
-                img = prep(fixedImg)
+                canvimg = convertToRGB(fixedImg)
             elif node.imagemode == IMAGEMODE_SOURCE:
-                img = prep(movingImg)
+                canvimg = convertToRGB(movingImg)
+            elif node.imagemode == IMAGEMODE_RESULTSOURCE:
+                canvimg = None if movingOut is None else movingOut
             else:
-                if node.img is not None:
-                    img = prep(node.img)
-                else:
-                    img = None
+                canvimg = None if fixedOut is None else fixedOut
 
-            node.movingImg = movingImg
-
-            if img is not None:
+            if canvimg is not None:
                 # create a new image for the canvas; we'll draw on it.
-                canvimg = image.imgmerge([img, img, img])
+                canvimg = image.imgmerge([canvimg, canvimg, canvimg])
 
                 # now draw the points
 
@@ -217,7 +216,8 @@ class XFormManualRegister(XFormType):
             else:
                 node.canvimg = None
 
-        node.setOutput(0, Datum(Datum.IMG, node.img))
+        node.setOutput(0, Datum(Datum.IMG, movingOut))
+        node.setOutput(0, Datum(Datum.IMG, fixedOut))
 
     @staticmethod
     def delSelPoint(n):
@@ -263,42 +263,98 @@ class XFormManualRegister(XFormType):
                 n.selIsDest = True
 
     @staticmethod
-    def apply(n):
-        # errors here must not be thrown, we need later stuff to run.
-        if len(n.src) != len(n.dest):
-            n.setError(XFormException('DATA', "Number of source and dest points must be the same"))
-            return
-        if n.params.translate:
-            if len(n.src) < 1:
-                n.setError(XFormException('DATA', "There must be a reference point in translate mode"))
-                return
-            src = n.src[0]
-            dest = n.dest[0]
-            d = (src[0]-dest[0], src[1]-dest[1])
-            tform = transform.EuclideanTransform(translation=(d[0], d[1]))
-        else:
-            if len(n.src) < 3:
-                n.setError(XFormException('DATA', "There must be at least three points"))
-                return
-            if n.params.transform == "euclidean":
-                tform = transform.EuclideanTransform()
-            elif n.params.transform == "similarity":
-                tform = transform.SimilarityTransform()
-            elif n.params.transform == "affine":
-                tform = transform.AffineTransform()
-            elif n.params.transform == "projective":
-                tform = transform.ProjectiveTransform()
+    def apply(n, fixedImg, movingImg):
+        # errors here must not be thrown, we need later stuff to run - we'll raise the exception and catch it
+        # later.
+        try:
+            if len(n.src) != len(n.dest):
+                raise XFormException('DATA', "Number of source and dest points must be the same")
+            if n.params.translate:
+                if len(n.src) < 1:
+                    raise XFormException('DATA', "There must be a reference point in translate mode")
+                src = n.src[0]
+                dest = n.dest[0]
+                d = (src[0]-dest[0], src[1]-dest[1])
+                tform = transform.EuclideanTransform(translation=(d[0], d[1]))
             else:
-                n.setError(XFormException('DATA', "Unknown transform type"))
-                return
-            tform.estimate(np.array(n.dest), np.array(n.src))
+                if len(n.src) < 3:
+                    raise XFormException('DATA', "There must be at least three points")
+                if n.params.transform == "euclidean":
+                    tform = transform.EuclideanTransform()
+                elif n.params.transform == "similarity":
+                    tform = transform.SimilarityTransform()
+                elif n.params.transform == "affine":
+                    tform = transform.AffineTransform()
+                elif n.params.transform == "projective":
+                    tform = transform.ProjectiveTransform()
+                else:
+                    raise XFormException('DATA', "Unknown transform type")
+                tform.estimate(np.array(n.dest), np.array(n.src))
 
-        if n.movingImg is not None:
-            img = warp(n.movingImg.img, tform, preserve_range=True).astype(np.float32)
-            unc = warp(n.movingImg.img, tform, preserve_range=True).astype(np.float32)
+            # we now have our transform, and it is assumed we have images. We will move the 'moving' image into the
+            # coordinate system of the "fixed" image, but we may also move the "fixed" image into a new basis which
+            # differs from the original by a translation alone.
+
+            # work out the bounding box of the transformed moving image
+            maxy,maxx = movingImg.h-1, movingImg.w-1
+            corners = np.array([[0,0], [0,maxy], [maxx,0], [maxx,maxy]])
+            # transform the corners by the inverse transform - I'm really not at all sure why this needs to be inverted.
+            transformed_corners = tform.inverse(corners)
+
+            # Get the min and max coordinates for the bounding box of the transformed corners
+            # of the moving image
+            min_x1, min_y1 = transformed_corners.min(axis=0)
+            max_x1, max_y1 = transformed_corners.max(axis=0)
+
+            # now use this to calculate the COMBINED bb - this is the MOVING BB intersected with
+            # the FIXED BB (which is just (0,0),(maxw,maxh) for that image).
+
+            min_combined_x = min(min_x1, 0)
+            min_combined_y = min(min_y1, 0)
+            max_combined_x = max(max_x1, fixedImg.w - 1)
+            max_combined_y = max(max_y1, fixedImg.h - 1)
+
+            # Calculate the output shape, ensuring both images will fit
+            output_height = int(np.ceil(max_combined_y - min_combined_y))
+            output_width = int(np.ceil(max_combined_x - min_combined_x))
+
+            # Make a translation that will be applied to both fixed and moving image to get
+            # them into the same coordinate system. Also make the final transform for the moving image,
+            # that needs to be applied before the translation.
+            # Again, I sort of feel that these should be negative...
+            translation = AffineTransform(translation=(min_combined_x, min_combined_y))
+            moving_xform = translation + tform
+
+            # apply the transformation to the moving image
+            img = warp(movingImg.img, moving_xform, preserve_range=True,
+                       output_shape=(output_height,output_width)).astype(np.float32)
+            unc = warp(movingImg.uncertainty, moving_xform, preserve_range=True,
+                       output_shape=(output_height,output_width)).astype(np.float32)
             # DQ warp is nearest neighbour (order=0). Make sure we fill absent areas with NODATA.
-            dq = warp(n.movingImg.dq, tform, order=0, preserve_range=True, cval=NODATA|NOUNCERTAINTY, mode='constant').astype(np.uint16)
-            n.img = ImageCube(img, n.movingImg.mapping, n.movingImg.sources, uncertainty=unc, dq=dq)
+            dq = warp(movingImg.dq, moving_xform, order=0, preserve_range=True,
+                      output_shape=(output_height,output_width),
+                      cval=NODATA|NOUNCERTAINTY, mode='constant').astype(np.uint16)
+
+            movingOut = ImageCube(img, movingImg.mapping, movingImg.sources, uncertainty=unc, dq=dq)
+
+            # apply only the translation to the fixed image
+            img = warp(fixedImg.img, translation, preserve_range=True,
+                          output_shape=(output_height,output_width)).astype(np.float32)
+            unc = warp(fixedImg.uncertainty, translation, preserve_range=True,
+                            output_shape=(output_height,output_width)).astype(np.float32)
+            # DQ warp is nearest neighbour (order=0). Make sure we fill absent areas with NODATA.
+            dq = warp(fixedImg.dq, translation, order=0, preserve_range=True,
+                        output_shape=(output_height,output_width),
+                        cval=NODATA|NOUNCERTAINTY, mode='constant').astype(np.uint16)
+
+            fixedOut = ImageCube(img, fixedImg.mapping, fixedImg.sources, uncertainty=unc, dq=dq)
+
+            return movingOut, fixedOut
+
+        except XFormException as e:
+            # handle any errors by setting the node error and returning no images
+            n.setError(e)
+            return None, None
 
     def createTab(self, n, w):
         return TabManualReg(n, w)
@@ -318,7 +374,8 @@ class TabManualReg(pcot.ui.tabs.Tab):
 
         self.w.radioSource.toggled.connect(self.radioViewToggled)
         self.w.radioDest.toggled.connect(self.radioViewToggled)
-        self.w.radioResult.toggled.connect(self.radioViewToggled)
+        self.w.radioResultSrc.toggled.connect(self.radioViewToggled)
+        self.w.radioResultDest.toggled.connect(self.radioViewToggled)
         self.w.translate.toggled.connect(self.translateToggled)
 
         self.w.checkBoxDest.toggled.connect(self.checkBoxDestToggled)
@@ -347,8 +404,10 @@ class TabManualReg(pcot.ui.tabs.Tab):
             self.node.imagemode = IMAGEMODE_SOURCE
         elif self.w.radioDest.isChecked():
             self.node.imagemode = IMAGEMODE_DEST
-        elif self.w.radioResult.isChecked():
-            self.node.imagemode = IMAGEMODE_RESULT
+        elif self.w.radioResultSrc.isChecked():
+            self.node.imagemode = IMAGEMODE_RESULTSOURCE
+        elif self.w.radioResultDest.isChecked():
+            self.node.imagemode = IMAGEMODE_RESULTDEST
         self.changed(uiOnly=True)
 
     def checkBoxDestToggled(self):
@@ -370,7 +429,8 @@ class TabManualReg(pcot.ui.tabs.Tab):
         self.w.canvas.setNode(self.node)
         self.w.radioSource.setChecked(self.node.imagemode == IMAGEMODE_SOURCE)
         self.w.radioDest.setChecked(self.node.imagemode == IMAGEMODE_DEST)
-        self.w.radioResult.setChecked(self.node.imagemode == IMAGEMODE_RESULT)
+        self.w.radioResultSrc.setChecked(self.node.imagemode == IMAGEMODE_RESULTSOURCE)
+        self.w.radioResultDest.setChecked(self.node.imagemode == IMAGEMODE_RESULTDEST)
 
         self.w.checkBoxSrc.setChecked(self.node.params.showSrc)
         self.w.checkBoxDest.setChecked(self.node.params.showDest)
