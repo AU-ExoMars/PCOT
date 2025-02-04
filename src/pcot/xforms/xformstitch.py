@@ -9,6 +9,7 @@ from PySide2.QtGui import QKeyEvent
 from pcot import dq
 from pcot.datum import Datum
 from pcot.imagecube import ImageCube
+from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType, taggedPointListType
 from pcot.sources import MultiBandSource, nullSource
 from pcot.ui.tabs import Tab
 from pcot.xform import XFormType, xformtype, XFormException
@@ -43,13 +44,31 @@ class XFormStitch(XFormType):
         for i in range(NUMINPUTS):
             self.addInputConnector(str(i), Datum.IMG, desc="Input image {}".format(i))
         self.addOutputConnector("", Datum.IMG, desc="Output image")
-        self.autoserialise = ('offsets', 'order', 'showImage')
+
+        self.params = TaggedDictType(
+            order=("Order of images", TaggedListType("", int, list(range(NUMINPUTS)), 0)),
+            showImage=("Show image", bool, True),
+            offsets=("Offsets of images", taggedPointListType, None))
+
+    def serialise(self, node):
+        """Do CTAS (Complex Tagged Aggregate Serialisation) on the node into the existing parameters field"""
+        node.params.offsets.clear()  # remove old offsets from the tagged list
+        # add the actual offsets to the tagged list
+        for i in range(NUMINPUTS):
+            p = node.params.offsets.append_default()
+            p.x, p.y = node.offsets[i]
+
+    def nodeDataFromParams(self, node):
+        """CTAS from the tagged aggregate back into the node"""
+        node.offsets = []
+        for p in node.params.offsets:
+            node.offsets.append((p.x, p.y))
 
     def createTab(self, n, w):
         return TabStitch(n, w)
 
     def init(self, node):
-        # these are the image offsets
+        # these are the image offsets we really use.
         node.offsets = [(i * 50, i * 50 - 200) for i in range(NUMINPUTS)]
         # and the default ordering - this maps from run order to input number
         node.order = [i for i in range(NUMINPUTS)]
