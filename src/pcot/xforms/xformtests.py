@@ -152,6 +152,9 @@ class XFormPixTest(XFormType):
         super().__init__("pixtest", "testing", "0.0.0")
         self.addInputConnector("", Datum.IMG)
         self.addOutputConnector("results", Datum.TESTRESULT)
+        # This serialises as a list of tuples, so it's a bit of a mess to parameterize and keep the old tests.
+        # So we won't; I'm not sure it's required.
+        self.params = TaggedDictType()  # no parameters for now
 
     def init(self, node):
         node.tests = []

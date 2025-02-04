@@ -1,6 +1,7 @@
 from pcot.datum import Datum
 import pcot.operations as operations
 import pcot.ui.tabs
+from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.xform import xformtype, XFormType
 
 
@@ -14,18 +15,21 @@ class XformNormImage(XFormType):
         super().__init__("normimage", "processing", "0.0.0")
         self.addInputConnector("", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
-        self.autoserialise = ('mode',)
+
+        self.params = TaggedDictType(
+            mode=("Mode - nonzero means clamp, zero means normalise", int, 0)
+        )
 
     def createTab(self, n, w):
         return TabNorm(n, w)
 
     def init(self, node):
-        node.mode = 0
+        pass
 
     def perform(self, node):
         # this uses the performOp function to wrap the "norm" operation function so that
         # it works in a node.
-        operations.performOp(node, operations.norm.norm, clamp=node.mode)
+        operations.performOp(node, operations.norm.norm, clamp=node.params.mode)
 
 
 class TabNorm(pcot.ui.tabs.Tab):
@@ -36,10 +40,10 @@ class TabNorm(pcot.ui.tabs.Tab):
 
     def modeChanged(self, i):
         self.mark()
-        self.node.mode = i
+        self.node.params.mode = i
         self.changed()
 
     def onNodeChanged(self):
         self.w.canvas.setNode(self.node)
-        self.w.mode.setCurrentIndex(self.node.mode)
+        self.w.mode.setCurrentIndex(self.node.params.mode)
         self.w.canvas.display(self.node.getOutput(0, Datum.IMG))

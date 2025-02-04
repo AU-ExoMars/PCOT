@@ -257,7 +257,7 @@ def create_test_image2():
 
     # offset to get uncertainties
     offset = doc.graph.create("offset")
-    offset.x, offset.y = 1, 1
+    offset.params.x, offset.params.y = 1, 1
     offset.connect(0, mult200, 0)
     # combine the two with an expression
     expr = doc.graph.create("expr")

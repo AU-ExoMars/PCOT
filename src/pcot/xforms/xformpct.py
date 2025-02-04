@@ -9,6 +9,7 @@ from PySide2.QtCore import Qt, QPoint
 from PySide2.QtGui import QColor, QPainter, QPolygon, QFont
 from PySide2.QtWidgets import QMessageBox
 from pcot.calib import pct
+from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.rois import getRadiusFromSlider, ROIPainted
 from pcot.utils.annotations import pixels2painter
 from pcot.utils.deb import Timer
@@ -52,6 +53,7 @@ class XformPCT(XFormType):
     def __init__(self):
         super().__init__("pct", "calibration", "0.0.0")
         self.addInputConnector("img", Datum.IMG)
+        self.params = TaggedDictType()   # no parameters; it's pointless because the ROIs are painted.
         self.autoserialise = ('brushSize', 'pctPoints', 'drawMode')
         # No output as yet.
 

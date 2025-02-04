@@ -644,6 +644,7 @@ class TaggedList(TaggedAggregate):
         """Append a default value to a list. If you want to append a specific value, use append.
         Returns the appended value."""
         self._values.append(self.create_default())
+        return self._values[-1]
 
     def restore_to_original(self):
         """Restore the object to the original state"""
