@@ -631,16 +631,19 @@ class TaggedList(TaggedAggregate):
         self._check_value(value)
         self._values.append(value)
 
+    def create_default(self):
+        """Create the default item for a list."""
+        if isinstance(self._type.tag.type, TaggedAggregateType):
+            return self._type.tag.type.create()
+        elif self._type.deflt_append is not None:
+            return self._type.deflt_append
+        else:
+            raise ValueError("Default append not provided for non-TaggedAggregateType list")
+
     def append_default(self):
         """Append a default value to a list. If you want to append a specific value, use append.
         Returns the appended value."""
-        if isinstance(self._type.tag.type, TaggedAggregateType):
-            self._values.append(self._type.tag.type.create())
-        elif self._type.deflt_append is not None:
-            self._values.append(self._type.deflt_append)
-        else:
-            raise ValueError("Default append not provided for non-TaggedAggregateType list")
-        return self._values[-1]
+        self._values.append(self.create_default())
 
     def restore_to_original(self):
         """Restore the object to the original state"""

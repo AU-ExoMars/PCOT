@@ -172,7 +172,7 @@ From Pixels</string>
            </property>
            <property name="text">
             <string>Create random
-test per channel</string>
+test per band</string>
            </property>
           </widget>
          </item>
@@ -186,7 +186,21 @@ test per channel</string>
            </property>
            <property name="text">
             <string>Duplicate all tests
-across all channels</string>
+across all bands</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="clearNonZeroButton">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Maximum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Clear all tests on
+non-zero bands</string>
            </property>
           </widget>
          </item>

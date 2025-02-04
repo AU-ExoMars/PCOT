@@ -24,8 +24,8 @@ from pcot.xforms.tabdata import TabData
 
 logger = logging.getLogger(__name__)
 
-
 COLOURS = ['red', 'green', 'blue', 'yellow', 'cyan', 'magenta', 'black', 'white']
+
 
 @dataclass
 class PixTest:
@@ -138,7 +138,15 @@ class Model(TableModelDataClass):
 class XFormPixTest(XFormType):
     """Used in testing, but may be useful for running automated tests for users. Contains
     a table of pixel positions and values and checks them in the input image, flagging
-    any errors. The output is numeric, and is the number of failing tests."""
+    any errors. The output is numeric, and is the number of failing tests.
+
+    Typical setup:
+
+    * add a set of points for band zero at important places (band zero is the default), using the spectrum
+    view in the canvas if necessary
+    * use the "duplicate all tests across all bands" to make all the tests
+    * use the "set from pixels" button to set the N, U and DQ values to the values in the image
+    """
 
     def __init__(self):
         super().__init__("pixtest", "testing", "0.0.0")
@@ -219,6 +227,7 @@ class TabPixTest(pcot.ui.tabs.Tab):
         self.w.addButton.clicked.connect(self.addClicked)
         self.w.dupButton.clicked.connect(self.dupClicked)
         self.w.dupAllButton.clicked.connect(self.dupAllClicked)
+        self.w.clearNonZeroButton.clicked.connect(self.clearNonZeroClicked)
         self.w.setFromPixelsButton.clicked.connect(self.setFromPixelsClicked)
         self.w.deleteButton.clicked.connect(self.deleteClicked)
         self.w.tableView.delete.connect(self.deleteClicked)
@@ -252,8 +261,8 @@ class TabPixTest(pcot.ui.tabs.Tab):
                 self.node.type.setFromPixels(self.node)
                 # and we need to tell the table about the test changes; the best(?) way to do this
                 # is to just make a new model.
-#                self.model = Model(self, self.node.tests)
-#                self.w.tableView.setModel(self.model)
+                #                self.model = Model(self, self.node.tests)
+                #                self.w.tableView.setModel(self.model)
                 self.changed()
 
     def leftClicked(self):
@@ -291,16 +300,34 @@ class TabPixTest(pcot.ui.tabs.Tab):
                     self.model.d[newidx].band = band
         self.changed()
 
+    def clearNonZeroClicked(self):
+        # we build a list of bands to delete and then run through it in reverse, to avoid
+        # changing the indices of the items we are deleting.
+        if QMessageBox.question(self.window, "Delete test", "Are you sure?",
+                                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+            to_delete = []
+            for i in range(0, len(self.model.d)):
+                t = self.model.d[i]
+                if t.band != 0:
+                    to_delete.append(i)
+            if len(to_delete) > 0:
+                self.mark()
+                for i in reversed(to_delete):
+                    self.model.delete_item(i, emit=False)  # suppress the emit
+                self.model.changed.emit() # but do it here explicitly
+                self.changed()
 
     def deleteClicked(self):
         if (col := self.w.tableView.get_selected_item()) is not None:
             if QMessageBox.question(self.window, "Delete test", "Are you sure?",
                                     QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                self.mark()
                 self.model.delete_item(col)
 
     def randClicked(self):
         self.mark()
         self.model.add_random(self.node.img.channels, self.node.img.w, self.node.img.h)
+        self.changed()
 
     def testsChanged(self):
         """Tests have been changed in the UI, not programatically"""
@@ -322,6 +349,7 @@ class TabPixTest(pcot.ui.tabs.Tab):
 
     def canvasMouseReleaseEvent(self, x, y, e):
         pass
+
 
 ################################
 # Scalar tests
@@ -515,7 +543,7 @@ class TabScalarTest(pcot.ui.tabs.Tab):
                 self.node.params.dq = int(v.dq)
                 self.changed()
             else:
-                self.node.setError(XFormException("DATA","Input is not scalar"))
+                self.node.setError(XFormException("DATA", "Input is not scalar"))
 
     def dqButtonClicked(self):
         def done():
@@ -643,6 +671,7 @@ class TabStringTest(pcot.ui.tabs.Tab):
 class XFormErrorTest(XFormType):
     """Check that a node produces an error. This node will run after all other nodes, but before its children.
     It checks that the string is the error code (e.g. 'DATA') """
+
     def __init__(self):
         super().__init__("errortest", "testing", "0.0.0")
         self.addInputConnector("", Datum.ANY)

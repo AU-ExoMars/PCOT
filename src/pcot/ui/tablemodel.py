@@ -286,8 +286,9 @@ class TableModel(QAbstractTableModel):
         """
         del self.d[n]
 
-    def delete_item(self, n):
-        """Remove a given channeldata"""
+    def delete_item(self, n, emit=True):
+        """Remove a given channeldata. It can be useful to suppress the emit if we're deleting a lot of data,
+        but you should remember to call .changed.emit() on the model afterwards"""
         if n < len(self.d):
             if self.columnItems:
                 self.beginRemoveColumns(QModelIndex(), n, n)
@@ -298,7 +299,8 @@ class TableModel(QAbstractTableModel):
                 self.endRemoveColumns()
             else:
                 self.endRemoveRows()
-            self.changed.emit()
+            if emit:    # we can suppress emit if we're deleting lots of items
+                self.changed.emit()
 
     def flags(self, index: QModelIndex) -> QtCore.Qt.ItemFlags:
         return QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled
@@ -364,9 +366,9 @@ class TableModelTaggedAggregate(TableModel):
 
         try:
             if fieldType == int:
-                value = int(value)
+                value = int(value) if value != "" else 0
             elif fieldType == float:
-                value = float(value)
+                value = float(value) if value != "" else 0.0
         except ValueError as e:
             raise ValueError(f"Value must be a number for field {fieldName} in this table") from e
         self.d[item][field] = value
@@ -380,7 +382,7 @@ class TableModelTaggedAggregate(TableModel):
         self.d[a], self.d[b] = self.d[b], self.d[a]
 
     def _create_item(self):
-        return self.d.append_default()
+        return self.d.create_default()
 
     def _clone_item(self, n):
         return self.d[n].clone()

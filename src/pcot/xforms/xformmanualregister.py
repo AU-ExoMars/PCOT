@@ -14,10 +14,10 @@ from pcot.parameters.taggedaggregates import TaggedDictType, taggedPointListType
 from pcot.utils import text, image
 from pcot.xform import XFormType, xformtype, XFormException
 
-IMAGEMODE_SOURCE = 0
-IMAGEMODE_DEST = 1
-IMAGEMODE_RESULTSOURCE = 2
-IMAGEMODE_RESULTDEST = 3
+IMAGEMODE_MOVING = 0
+IMAGEMODE_FIXED = 1
+IMAGEMODE_RESULTMOVING = 2
+IMAGEMODE_RESULTFIXED = 3
 
 IMAGEMODE_CT = 4
 
@@ -80,16 +80,18 @@ def findInList(lst, x, y, translate):
 @xformtype
 class XFormManualRegister(XFormType):
     """
-    Perform manual registration of two images. The output is a version of the 'moving' image with a
-    transform applied to map points onto corresponding points in the 'fixed' image.
+    Perform manual registration of two images. One input image is designated as "fixed", the other as "moving".
 
-    The canvas view can show the moving input (also referred to as the "source"), the fixed image (also referred
-    to as the "destination"), a blend of the two, or the result. All images are shown as greyscale (since the
-    fixed and moving images will likely have different frequency bands).
+    The node will find a transform that maps the moving image onto the fixed image, and a translation that
+    will ensure that both images remain uncropped. The fixed image will be translated only, the moving image
+    will be transformed and then translated. Both transformed images are output and can then be merged or overlaid
+    in a separate node.
 
-    The transform will map a set of points in the moving image onto a set in the fixed image. Both sets of
-    points can be changed, or a single set. Points are mapped onto the correspondingly numbered point. In "translate"
-    mode only a single point is required (and only a single point will be shown from each set).
+    The transform is found by designating points in each image which correspond to each other. The number of points
+    must be the same in each image, and at least three (unless "translate only" is selected).
+
+    The canvas view can show the moving input, the fixed image, the transformed moving image, or the transformed fixed
+    image. All images are shown as greyscale (since the input images will likely have different frequency bands).
 
     The transform used is one of the following homographies:
 
@@ -98,13 +100,13 @@ class XFormManualRegister(XFormType):
     * Affine - translation, rotation, scaling, and shearing; parallel lines are preserved
     * Projective - translation, rotation, scaling, shearing, and perspective; straight lines are preserved
 
-    Points are added to the source (moving) image by clicking with shift.
-    Points are adding to the dest (fixed) image by clicking with ctrl.
+    Points are added to the moving image by clicking with ctrl.
+    Points are adding to the fixed image by clicking with shift.
+
+    If only the moving or fixed points are shown, either shift- or ctrl-clicking will add to the appropriate
+    point set. The selected point can be deleted with the Delete key (but this will modify the numbering!)
 
     **Note that this node does not currently display DQ or uncertainty data in its canvas**
-
-    If only the source or dest points are shown, either shift- or ctrl-clicking will add to the appropriate
-    point set. The selected point can be deleted with the Delete key (but this will modify the numbering!)
 
     A point can be selected and dragged by clicking on it. This may be slow because the warping operation will
     take place every update; disabling 'auto-run on change' is a good idea!
@@ -122,15 +124,15 @@ class XFormManualRegister(XFormType):
         self.addOutputConnector("fixed", Datum.IMG)
 
         # IMPORTANT NOTE - this uses a mixture of plain params and Complex TaggedAggregate Serialisation.
-        # All parameters except src and dest (point lists) are used directly. THe src and dest lists
+        # All parameters except moving and fixed (point lists) are used directly. THe moving and fixed lists
         # are kept in the node, and processed using CTAS.
 
         self.params = TaggedDictType(
-            showSrc=("Show source points", bool, True),
-            showDest=("Show destination points", bool, True),
+            showMoving=("Show moving points", bool, True),
+            showFixed=("Show fixed points", bool, True),
             translate=("Translate only - no other transform. Uses a single point.", bool, False),
-            src=("Source points", taggedPointListType),
-            dest=("Destination points", taggedPointListType),
+            moving=("Moving points", taggedPointListType),
+            fixed=("Fixed points", taggedPointListType),
             transform=("Transform type", str, homographies[0], homographies),
         )
 
@@ -138,37 +140,37 @@ class XFormManualRegister(XFormType):
         # these are stored in the node because they need to survive a uichange when doApply is False.
         node.movingOut = None
         node.fixedOut = None
-        node.imagemode = IMAGEMODE_SOURCE
+        node.imagemode = IMAGEMODE_MOVING
         node.canvimg = None
 
-        node.src = []
-        node.dest = []
+        node.moving = []
+        node.fixed = []
 
         # index of selected points
         node.selIdx = None
-        # is the selected point (if any) in the dest list (or the source list)?
-        node.selIsDest = False
+        # is the selected point (if any) in the fixed list (or the moving list)?
+        node.selIsFixed = False
 
     def serialise(self, node):
-        node.params.src = taggedPointListType.create()
-        node.params.dest = taggedPointListType.create()
+        node.params.moving = taggedPointListType.create()
+        node.params.fixed = taggedPointListType.create()
 
-        for p in node.src:
+        for p in node.moving:
             dd = taggedPointType.create()
             dd.set(*p)
-            node.params.src.append(dd)
-        for p in node.dest:
+            node.params.moving.append(dd)
+        for p in node.fixed:
             dd = taggedPointType.create()
             dd.set(*p)
-            node.params.dest.append(dd)
+            node.params.fixed.append(dd)
 
     def nodeDataFromParams(self, node):
-        node.src = []
-        for p in node.params.src:
-            node.src.append(p.get())
-        node.dest = []
-        for p in node.params.dest:
-            node.dest.append(p.get())
+        node.moving = []
+        for p in node.params.moving:
+            node.moving.append(p.get())
+        node.fixed = []
+        for p in node.params.fixed:
+            node.fixed.append(p.get())
 
     def uichange(self, node):
         node.timesPerformed += 1
@@ -190,11 +192,11 @@ class XFormManualRegister(XFormType):
             # this gets the appropriate image and also manipulates it.
             # Generally we convert RGB to grey; otherwise we'd have to store
             # quite a few mappings.
-            if node.imagemode == IMAGEMODE_DEST:
+            if node.imagemode == IMAGEMODE_FIXED:
                 canvimg = convertToRGB(fixedImg)
-            elif node.imagemode == IMAGEMODE_SOURCE:
+            elif node.imagemode == IMAGEMODE_MOVING:
                 canvimg = convertToRGB(movingImg)
-            elif node.imagemode == IMAGEMODE_RESULTSOURCE:
+            elif node.imagemode == IMAGEMODE_RESULTMOVING:
                 canvimg = None if node.movingOut is None else convertToRGB(node.movingOut)
             else:
                 canvimg = None if node.fixedOut is None else convertToRGB(node.fixedOut)
@@ -205,12 +207,12 @@ class XFormManualRegister(XFormType):
 
                 # now draw the points
 
-                if params.showSrc:
-                    issel = node.selIdx if not node.selIsDest else None
-                    drawpoints(canvimg, node.src, params.translate, issel, (1, 1, 0))
-                if params.showDest:
-                    issel = node.selIdx if node.selIsDest else None
-                    drawpoints(canvimg, node.dest, params.translate, issel, (0, 1, 1))
+                if params.showMoving:
+                    issel = node.selIdx if not node.selIsFixed else None
+                    drawpoints(canvimg, node.moving, params.translate, issel, (1, 1, 0))
+                if params.showFixed:
+                    issel = node.selIdx if node.selIsFixed else None
+                    drawpoints(canvimg, node.fixed, params.translate, issel, (0, 1, 1))
 
                 # grey, but 3 channels so I can draw on it!
                 node.canvimg = ImageCube(canvimg, node.mapping, None)
@@ -223,27 +225,27 @@ class XFormManualRegister(XFormType):
     @staticmethod
     def delSelPoint(n):
         if n.selIdx is not None:
-            if n.params.showSrc and not n.selIsDest:
-                del n.src[n.selIdx]
+            if n.params.showMoving and not n.selIsFixed:
+                del n.moving[n.selIdx]
                 n.selIdx = None
-            elif n.params.showDest and n.selIsDest:
-                del n.dest[n.selIdx]
+            elif n.params.showFixed and n.selIsFixed:
+                del n.fixed[n.selIdx]
                 n.selIdx = None
 
     @staticmethod
     def moveSelPoint(n, x, y):
         if n.selIdx is not None:
-            if n.params.showSrc and not n.selIsDest:
-                n.src[n.selIdx] = (x, y)
+            if n.params.showMoving and not n.selIsFixed:
+                n.moving[n.selIdx] = (x, y)
                 return True
-            elif n.params.showDest and n.selIsDest:
-                n.dest[n.selIdx] = (x, y)
+            elif n.params.showFixed and n.selIsFixed:
+                n.fixed[n.selIdx] = (x, y)
                 return True
         return False
 
     @staticmethod
-    def addPoint(n, x, y, dest):
-        lst = n.dest if dest else n.src
+    def addPoint(n, x, y, fixed):
+        lst = n.fixed if fixed else n.moving
         # translate mode changes the first point, or adds a point if there isn't one.
         if len(lst) == 0 or not n.params.translate:
             lst.append((x, y))
@@ -252,33 +254,34 @@ class XFormManualRegister(XFormType):
 
     @staticmethod
     def selPoint(n, x, y):
-        if n.params.showSrc:
-            pt = findInList(n.src, x, y, n.params.translate)
+        pt = None
+        if n.params.showMoving:
+            pt = findInList(n.moving, x, y, n.params.translate)
             if pt is not None:
                 n.selIdx = pt
-                n.selIsDest = False
-        if pt is None and n.params.showDest:
-            pt = findInList(n.dest, x, y, n.params.translate)
+                n.selIsFixed = False
+        if pt is None and n.params.showFixed:
+            pt = findInList(n.fixed, x, y, n.params.translate)
             if pt is not None:
                 n.selIdx = pt
-                n.selIsDest = True
+                n.selIsFixed = True
 
     @staticmethod
     def apply(n, fixedImg, movingImg):
         # errors here must not be thrown, we need later stuff to run - we'll raise the exception and catch it
         # later.
         try:
-            if len(n.src) != len(n.dest):
-                raise XFormException('DATA', "Number of source and dest points must be the same")
+            if len(n.moving) != len(n.fixed):
+                raise XFormException('DATA', "Number of moving and fixed points must be the same")
             if n.params.translate:
-                if len(n.src) < 1:
+                if len(n.moving) < 1:
                     raise XFormException('DATA', "There must be a reference point in translate mode")
-                src = n.src[0]
-                dest = n.dest[0]
-                d = (src[0]-dest[0], src[1]-dest[1])
+                moving = n.moving[0]
+                fixed = n.fixed[0]
+                d = (moving[0]-fixed[0], moving[1]-fixed[1])
                 tform = transform.EuclideanTransform(translation=(d[0], d[1]))
             else:
-                if len(n.src) < 3:
+                if len(n.moving) < 3:
                     raise XFormException('DATA', "There must be at least three points")
                 if n.params.transform == "euclidean":
                     tform = transform.EuclideanTransform()
@@ -290,7 +293,7 @@ class XFormManualRegister(XFormType):
                     tform = transform.ProjectiveTransform()
                 else:
                     raise XFormException('DATA', "Unknown transform type")
-                tform.estimate(np.array(n.dest), np.array(n.src))
+                tform.estimate(np.array(n.fixed), np.array(n.moving))
 
             # we now have our transform, and it is assumed we have images. We will move the 'moving' image into the
             # coordinate system of the "fixed" image, but we may also move the "fixed" image into a new basis which
@@ -370,14 +373,14 @@ class TabManualReg(pcot.ui.tabs.Tab):
 
         self.nodeChanged()  # doing this FIRST so signals don't go to slots during setup.
 
-        self.w.radioSource.toggled.connect(self.radioViewToggled)
-        self.w.radioDest.toggled.connect(self.radioViewToggled)
-        self.w.radioResultSrc.toggled.connect(self.radioViewToggled)
-        self.w.radioResultDest.toggled.connect(self.radioViewToggled)
+        self.w.radioMoving.toggled.connect(self.radioViewToggled)
+        self.w.radioFixed.toggled.connect(self.radioViewToggled)
+        self.w.radioResultMoving.toggled.connect(self.radioViewToggled)
+        self.w.radioResultFixed.toggled.connect(self.radioViewToggled)
         self.w.translate.toggled.connect(self.translateToggled)
 
-        self.w.checkBoxDest.toggled.connect(self.checkBoxDestToggled)
-        self.w.checkBoxSrc.toggled.connect(self.checkBoxSrcToggled)
+        self.w.checkBoxFixed.toggled.connect(self.checkBoxFixedToggled)
+        self.w.checkBoxMoving.toggled.connect(self.checkBoxMovingToggled)
         self.w.transformCombo.currentIndexChanged.connect(self.transformChanged)
 
         self.w.clearButton.clicked.connect(self.clearClicked)
@@ -391,31 +394,31 @@ class TabManualReg(pcot.ui.tabs.Tab):
         if QMessageBox.question(self.window, "Clear all points", "Are you sure?",
                                 QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
             self.mark()
-            self.node.dest = []
-            self.node.src = []
+            self.node.fixed = []
+            self.node.moving = []
             self.node.selIdx = None
             self.changed()
 
     def radioViewToggled(self):
         self.mark()
-        if self.w.radioSource.isChecked():
-            self.node.imagemode = IMAGEMODE_SOURCE
-        elif self.w.radioDest.isChecked():
-            self.node.imagemode = IMAGEMODE_DEST
-        elif self.w.radioResultSrc.isChecked():
-            self.node.imagemode = IMAGEMODE_RESULTSOURCE
-        elif self.w.radioResultDest.isChecked():
-            self.node.imagemode = IMAGEMODE_RESULTDEST
+        if self.w.radioMoving.isChecked():
+            self.node.imagemode = IMAGEMODE_MOVING
+        elif self.w.radioFixed.isChecked():
+            self.node.imagemode = IMAGEMODE_FIXED
+        elif self.w.radioResultMoving.isChecked():
+            self.node.imagemode = IMAGEMODE_RESULTMOVING
+        elif self.w.radioResultFixed.isChecked():
+            self.node.imagemode = IMAGEMODE_RESULTFIXED
         self.changed(uiOnly=True)
 
-    def checkBoxDestToggled(self):
+    def checkBoxFixedToggled(self):
         self.mark()
-        self.node.params.showDest = self.w.checkBoxDest.isChecked()
+        self.node.params.showFixed = self.w.checkBoxFixed.isChecked()
         self.changed(uiOnly=True)
 
-    def checkBoxSrcToggled(self):
+    def checkBoxMovingToggled(self):
         self.mark()
-        self.node.params.showSrc = self.w.checkBoxSrc.isChecked()
+        self.node.params.showMoving = self.w.checkBoxMoving.isChecked()
         self.changed(uiOnly=True)
 
     def translateToggled(self):
@@ -425,13 +428,13 @@ class TabManualReg(pcot.ui.tabs.Tab):
 
     def onNodeChanged(self):
         self.w.canvas.setNode(self.node)
-        self.w.radioSource.setChecked(self.node.imagemode == IMAGEMODE_SOURCE)
-        self.w.radioDest.setChecked(self.node.imagemode == IMAGEMODE_DEST)
-        self.w.radioResultSrc.setChecked(self.node.imagemode == IMAGEMODE_RESULTSOURCE)
-        self.w.radioResultDest.setChecked(self.node.imagemode == IMAGEMODE_RESULTDEST)
+        self.w.radioMoving.setChecked(self.node.imagemode == IMAGEMODE_MOVING)
+        self.w.radioFixed.setChecked(self.node.imagemode == IMAGEMODE_FIXED)
+        self.w.radioResultMoving.setChecked(self.node.imagemode == IMAGEMODE_RESULTMOVING)
+        self.w.radioResultFixed.setChecked(self.node.imagemode == IMAGEMODE_RESULTFIXED)
 
-        self.w.checkBoxSrc.setChecked(self.node.params.showSrc)
-        self.w.checkBoxDest.setChecked(self.node.params.showDest)
+        self.w.checkBoxMoving.setChecked(self.node.params.showMoving)
+        self.w.checkBoxFixed.setChecked(self.node.params.showFixed)
         self.w.translate.setChecked(self.node.params.translate)
         self.w.transformCombo.setCurrentIndex(homographies.index(self.node.params.transform))
 
@@ -440,20 +443,20 @@ class TabManualReg(pcot.ui.tabs.Tab):
 
     def canvasKeyPressEvent(self, e: QKeyEvent):
         k = e.key()
-        if k == Qt.Key_M:
+        if k == Qt.Key_D:   # image display mode change
             self.mark()
             self.node.imagemode += 1
             self.node.imagemode %= IMAGEMODE_CT
             self.changed()
-        elif k == Qt.Key_S:
+        elif k == Qt.Key_M:  # show moving points toggle
             self.mark()
-            self.node.params.showSrc = not self.node.params.showSrc
+            self.node.params.showMoving = not self.node.params.showMoving
             self.changed()
-        elif k == Qt.Key_D:
+        elif k == Qt.Key_F:  # show fixed points toggle
             self.mark()
-            self.node.params.showDest = not self.node.params.showDest
+            self.node.params.showFixed = not self.node.params.showFixed
             self.changed()
-        elif k == Qt.Key_Delete:
+        elif k == Qt.Key_Delete:    # delete point
             self.mark()
             self.node.type.delSelPoint(self.node)
             self.changed()
@@ -468,18 +471,18 @@ class TabManualReg(pcot.ui.tabs.Tab):
         self.mark()
         if e.modifiers() & (Qt.ShiftModifier | Qt.ControlModifier):
             # modifiers = we're adding
-            if self.node.params.showSrc and self.node.params.showDest:
+            if self.node.params.showMoving and self.node.params.showFixed:
                 # if both are shown, distinguish with modifier
-                if e.modifiers() & Qt.ShiftModifier:  # shift = source
+                if e.modifiers() & Qt.ControlModifier:  # ctrl = moving
                     self.node.type.addPoint(self.node, x, y, False)
-                elif e.modifiers() & Qt.ControlModifier:  # ctrl = dest
+                elif e.modifiers() & Qt.ShiftModifier:  # shift = fixed
                     self.node.type.addPoint(self.node, x, y, True)
             else:
                 # otherwise which sort we are adding can be determined from which sort
                 # we are showing.
-                if self.node.params.showSrc:
+                if self.node.params.showMoving:
                     self.node.type.addPoint(self.node, x, y, False)
-                elif self.node.params.showDest:
+                elif self.node.params.showFixed:
                     self.node.type.addPoint(self.node, x, y, True)
         else:
             # no modifiers, just select.

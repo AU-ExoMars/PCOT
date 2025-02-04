@@ -215,6 +215,10 @@ def merge(img1, *remainingargs):
 
     # check sizes of all images are the same
     imgargs = [x.get(Datum.IMG) for x in args if x.isImage()]
+
+    if any([x is None for x in imgargs]):
+        raise XFormException('EXPR', 'argument is not an image for merge')
+
     if len(set([(i.w, i.h) for i in imgargs])) != 1:
         raise XFormException('EXPR', 'all images in merge must be the same size')
     # get image size

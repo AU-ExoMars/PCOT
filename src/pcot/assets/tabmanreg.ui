@@ -60,16 +60,16 @@
          <enum>QLayout::SetDefaultConstraint</enum>
         </property>
         <item>
-         <widget class="QCheckBox" name="checkBoxSrc">
+         <widget class="QCheckBox" name="checkBoxMoving">
           <property name="text">
-           <string>Show src pts (S)</string>
+           <string>Show moving pts (M)</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QCheckBox" name="checkBoxDest">
+         <widget class="QCheckBox" name="checkBoxFixed">
           <property name="text">
-           <string>Show dest pts (D)</string>
+           <string>Showfixed pts (F)</string>
           </property>
          </widget>
         </item>
@@ -144,7 +144,7 @@
         </size>
        </property>
        <property name="title">
-        <string>Show image (M)</string>
+        <string>Display image (D)</string>
        </property>
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <property name="spacing">
@@ -154,30 +154,30 @@
          <enum>QLayout::SetDefaultConstraint</enum>
         </property>
         <item>
-         <widget class="QRadioButton" name="radioSource">
+         <widget class="QRadioButton" name="radioFixed">
           <property name="text">
-           <string>Source (moving)</string>
+           <string>Fixed</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QRadioButton" name="radioDest">
+         <widget class="QRadioButton" name="radioMoving">
           <property name="text">
-           <string>Dest (fixed)</string>
+           <string>Moving</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QRadioButton" name="radioResultDest">
-          <property name="text">
-           <string>Moving result</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QRadioButton" name="radioResultSrc">
+         <widget class="QRadioButton" name="radioResultFixed">
           <property name="text">
            <string>Fixed result</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="radioResultMoving">
+          <property name="text">
+           <string>Moving result</string>
           </property>
          </widget>
         </item>
@@ -215,7 +215,7 @@
         <enum>Qt::LeftToRight</enum>
        </property>
        <property name="text">
-        <string>Shift-click to add source points, Ctrl-click for dest points.</string>
+        <string>Canvas MUST BE SELECTED for keys to work. Shift-click to add fixed  points, Ctrl-click for moving  points.</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
