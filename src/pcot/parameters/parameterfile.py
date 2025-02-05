@@ -135,7 +135,11 @@ class SetValue(Change):
                 tp = tag.type.type_if_exists
             if isinstance(tp, TaggedAggregateType):
                 # attempt to initialise the aggregate from the JSON value we just got
-                element[self.key] = tp.deserialise(self.value)
+                try:
+                    element[self.key] = tp.deserialise(self.value)
+                except ValueError as e:
+                    # reraise as a plain exception to avoid what the except handler on the outer code does..
+                    raise Exception(str(e))
             elif tp is int:
                 element[self.key] = int(self.value)
             elif tp is float or tag.type is Number:

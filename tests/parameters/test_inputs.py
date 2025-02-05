@@ -4,15 +4,15 @@ Test modifications to inputs by parameter files
 import tempfile
 from pathlib import Path
 
-import direct.test_image_load_pds4
+import tests.direct.test_image_load_pds4
 import pcot
-from fixtures import *
+from tests.fixtures import *
 from pcot.datum import Datum
 from pcot.document import Document
 from pcot.parameters.inputs import processParameterFileForInputsTest
 from pcot.parameters.parameterfile import ParameterFile
 from pcot.value import Value
-from pds4data import get_pds4_test_data_dir
+from tests.pds4data import get_pds4_test_data_dir
 
 
 def test_no_items():
@@ -190,7 +190,7 @@ def test_multifile_raw_preset():
 
     from pcot.inputs.multifile import presetModel
     from pcot.dataformats.raw import RawLoader
-    from direct.test_image_load_raw import create_dir_of_raw2, create_raw_uint8
+    from tests.direct.test_image_load_raw import create_dir_of_raw2, create_raw_uint8
 
     pcot.setup()
 
@@ -240,7 +240,7 @@ def test_multifile_raw_nopreset():
     """Here we're going to test a raw file with no preset - we'll
     set all the parameters we need to by hand"""
 
-    from direct.test_image_load_raw import create_dir_of_raw2, create_raw_float32
+    from tests.direct.test_image_load_raw import create_dir_of_raw2, create_raw_float32
 
     pcot.setup()
 
@@ -292,7 +292,7 @@ def test_multifile_raw_somepreset():
 
     from pcot.inputs.multifile import presetModel
     from pcot.dataformats.raw import RawLoader
-    from direct.test_image_load_raw import create_dir_of_raw2, create_raw_uint8
+    from tests.direct.test_image_load_raw import create_dir_of_raw2, create_raw_uint8
 
     pcot.setup()
 
@@ -362,4 +362,4 @@ def test_pds4():
     img = d.getOutput(0, Datum.IMG)
 
     # test the output
-    direct.test_image_load_pds4.check_data(img, 0)
+    tests.direct.test_image_load_pds4.check_data(img, 0)

@@ -1,4 +1,4 @@
-from gen_envi import gen_envi
+from tests.gen_envi import gen_envi
 from pcot import dq
 from pcot.imagecube import ImageCube, ChannelMapping
 

@@ -6,7 +6,7 @@ import tempfile
 import datetime
 
 import pcot
-from fixtures import *
+from tests.fixtures import *
 from pcot.datum import Datum
 from pcot.document import Document
 from pcot.parameters.runner import Runner

@@ -2,7 +2,7 @@ import pytest
 
 from pcot.parameters.parameterfile import ParameterFile, ApplyException
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType, TaggedVariantDictType, \
-    Maybe
+    Maybe, taggedPointListType, taggedPointType
 
 base_tagged_dict_type = TaggedDictType(
     a=("a desc", int, 10),
@@ -585,4 +585,35 @@ def test_reset_dict_in_variant_dict():
     assert td.lst[0].get().g.i == 200
 
 
+pointInDictType = TaggedDictType(
+    p=("point", taggedPointType, None)
+)
 
+def test_list_shorthand_in_ordered_dict():
+    """Check the notation a.b.c = [1,2,3] where the thing we are setting is an ordered dict"""
+
+    d = pointInDictType.create()
+
+    f = ParameterFile().parse("foo.p = [10,20]")
+    f.apply({"foo": d})
+
+    assert d.p.x == 10
+    assert d.p.y == 20
+
+
+def test_list_shorthand_in_ordered_dict_too_long():
+
+    d = pointInDictType.create()
+    f = ParameterFile().parse("foo.p = [1,2,3]")
+    with pytest.raises(ApplyException) as e:
+       f.apply({"foo": d})
+    assert "Too many" in str(e.value)
+
+
+def test_list_shorthand_in_ordered_dict_bad_format():
+
+    d = pointInDictType.create()
+    f = ParameterFile().parse("foo.p = 1,2,3")
+    with pytest.raises(ApplyException) as e:
+       f.apply({"foo": d})
+    assert "Invalid format for data" in str(e.value)
