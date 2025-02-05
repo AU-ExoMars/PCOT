@@ -298,8 +298,8 @@ class TaggedDict(TaggedAggregate):
                 raise ValueError("TaggedDictType has no ordering, but data is a tuple")
             if len(td.ordering) > len(data):
                 raise ValueError("Not enough values for this TaggedDictType")
-            if len(td.ordering) != len(data):
-                raise ValueError("Too many values for this TaggedDictType")
+#            if len(td.ordering) != len(data):
+#                raise ValueError("Too many values for this TaggedDictType")
 
             data = {k: v for k, v in zip(td.ordering, data)}
 

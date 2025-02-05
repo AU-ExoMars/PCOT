@@ -9,7 +9,7 @@ from pcot.dataformats.pds4 import PDS4External, ProductList
 from pcot.datum import Datum
 from proctools.products import ProductDepot
 
-from tests.pds4data import get_pds4_test_data_dir
+from pds4data import get_pds4_test_data_dir
 
 
 def check_data(img, inpidx=None):

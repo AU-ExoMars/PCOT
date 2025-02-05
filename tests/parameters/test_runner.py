@@ -9,7 +9,7 @@ import tempfile
 import pcot
 from pcot.parameters.runner import Runner
 
-from tests.fixtures import *
+from fixtures import *
 
 def test_create_runner(globaldatadir):
     pcot.setup()
