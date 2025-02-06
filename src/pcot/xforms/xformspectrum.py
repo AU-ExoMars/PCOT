@@ -13,6 +13,7 @@ from pcot.filters import wav2RGB, Filter
 from pcot.sources import SourceSet
 from pcot.ui import uiloader
 from pcot.ui.tabs import Tab
+from pcot.utils import SignalBlocker
 from pcot.utils.spectrum import Spectrum, SpectrumSet
 from pcot.utils.table import Table
 from pcot.value import Value
@@ -51,7 +52,7 @@ def processData(legend, data, spec):
 
     # add them to the data set, which is indexed by legend (ROI or image name).
     if legend not in data:
-        data[legend] = []   # make a new list if there isn't one
+        data[legend] = []  # make a new list if there isn't one
     data[legend] += dp
 
     # you end up with a dict of ROI/image data e.g.
@@ -62,20 +63,14 @@ def processData(legend, data, spec):
 # number of inputs on the node
 NUMINPUTS = 8
 
-# enums for error bar modes used in the dialog
-ERRORBARMODE_NONE = 0
-ERRORBARMODE_STDERROR = 1
-ERRORBARMODE_STDDEV = 2
+# short names for error bar modes used in the dialog, in the same order as they appear there
+errorBarModes = ["none", "stderror", "stddev"]
 
-# enums for colour modes used in the dialog
-COLOUR_FROMROIS = 0
-COLOUR_SCHEME1 = 1
-COLOUR_SCHEME2 = 2
+# short names for colour modes used in the dialog
+colourModes = ["fromROIs", "scheme1", "scheme2"]
 
-# enums for bandwidth modes used in the dialog
-BANDWIDTHMODE_NONE = 0
-BANDWIDTHMODE_ERRORBAR = 1
-BANDWIDTHMODE_VERTBAR = 2
+# short names for bandwidth modes used in the dialog
+bandwidthModes = ["none", "errorbar", "vertbar"]
 
 
 def fixSortList(node):
@@ -128,7 +123,7 @@ class XFormSpectrum(XFormType):
                               'bottomSpace', 'colourmode', 'rightSpace',
                               # these have defaults because they were developed later.
                               ('ignorePixSD', False),
-                              ('bandwidthmode', BANDWIDTHMODE_NONE),
+                              ('bandwidthmode', "none"),
                               )
         for i in range(NUMINPUTS):
             self.addInputConnector(str(i), Datum.IMG, "a single line in the plot")
@@ -138,10 +133,21 @@ class XFormSpectrum(XFormType):
         pcot.ui.msg("creating a tab with a plot widget takes time...")
         return TabSpectrum(n, window)
 
+    def deserialise(self, n, d):
+        # if certain parameters are integer, convert to index - due to LEGACY CODE.
+        def conv(name, dd):
+            if hasattr(n,name):
+                v = getattr(n,name)
+                if isinstance(v, int):
+                    setattr(n, name, dd[v])
+        conv('errorbarmode', errorBarModes)
+        conv('colourmode', colourModes)
+        conv('bandwidthmode', bandwidthModes)
+
     def init(self, node):
-        node.errorbarmode = ERRORBARMODE_STDDEV
-        node.colourmode = COLOUR_FROMROIS
-        node.bandwidthmode = BANDWIDTHMODE_NONE
+        node.errorbarmode = "stddev"
+        node.colourmode = "fromROIs"
+        node.bandwidthmode = "none"
         node.legendFontSize = 8
         node.axisFontSize = 8
         node.labelFontSize = 12
@@ -253,7 +259,7 @@ class TabSpectrum(ui.tabs.Tab):
 
         # pick a colour scheme for multiple plots if we're not getting the colour
         # from the ROIs
-        if self.node.colourmode == COLOUR_SCHEME2:
+        if self.node.colourmode == "scheme2":
             cols = matplotlib.cm.get_cmap('tab10').colors
         else:
             cols = matplotlib.cm.get_cmap('Dark2').colors
@@ -295,7 +301,7 @@ class TabSpectrum(ui.tabs.Tab):
             sds = [a.v.u for a in values]
             pixcounts = [a.pixels for a in values]
 
-            if self.node.colourmode == COLOUR_FROMROIS:
+            if self.node.colourmode == 'fromROIs':
                 col = self.node.data.getColour(legend)
             else:
                 col = cols[colidx % len(cols)]
@@ -306,27 +312,27 @@ class TabSpectrum(ui.tabs.Tab):
             ax.plot(wavelengths, means, c=col, label=legend)
             ax.scatter(wavelengths, means, c=[wav2RGB(x) for x in wavelengths], s=0)
 
-            if self.node.errorbarmode != ERRORBARMODE_NONE:
+            if self.node.errorbarmode != 'none':
                 # calculate standard errors from standard deviations
                 stderrs = [std / math.sqrt(pixels) for std, pixels in zip(sds, pixcounts)]
                 ax.errorbar(wavelengths, means,
-                            stderrs if self.node.errorbarmode == ERRORBARMODE_STDERROR else sds,
+                            stderrs if self.node.errorbarmode == 'stderror' else sds,
                             # only show the x error bar if we are in the correct bandwidth mode
-                            xerr=[x.fwhm / 2 for x in filters] if self.node.bandwidthmode == BANDWIDTHMODE_ERRORBAR else None,
+                            xerr=[x.fwhm / 2 for x in filters] if self.node.bandwidthmode == 'errorbar' else None,
                             ls="None", capsize=4, c=col)
             colidx += 1
             # subtraction to make the plots stack the same way as the legend!
             stackpos -= self.node.stackSep
 
             # now show the bandwidth as a vertical span if we are in the correct mode
-            if self.node.bandwidthmode == BANDWIDTHMODE_VERTBAR:
+            if self.node.bandwidthmode == 'vertbar':
                 for f in filters:
                     ax.axvspan(f.cwl - f.fwhm / 2, f.cwl + f.fwhm / 2, color=col, alpha=0.1)
 
         ax.legend(fontsize=self.node.legendFontSize)
         ymin, ymax = ax.get_ylim()
         ymin = ymin - self.node.bottomSpace / 10
-        if ymax-ymin < 0.01:  # if the y range is too small, expand it
+        if ymax - ymin < 0.01:  # if the y range is too small, expand it
             ymin -= 0.01
             ymax += 0.01
         ax.set_ylim(ymin, ymax)
@@ -358,17 +364,17 @@ class TabSpectrum(ui.tabs.Tab):
 
     def errorbarmodeChanged(self, mode):
         self.mark()
-        self.node.errorbarmode = mode
+        self.node.errorbarmode = errorBarModes[mode]
         self.changed()
 
     def bandwidthmodeChanged(self, mode):
         self.mark()
-        self.node.bandwidthmode = mode
+        self.node.bandwidthmode = bandwidthModes[mode]
         self.changed()
 
     def colourmodeChanged(self, mode):
         self.mark()
-        self.node.colourmode = mode
+        self.node.colourmode = colourModes[mode]
         self.changed()
 
     def bottomSpaceChanged(self, val):
@@ -415,13 +421,17 @@ class TabSpectrum(ui.tabs.Tab):
         # this is done in replot - the user replots this node manually because it takes
         # a while to run. But we do make the replot button red!
         self.markReplotReady()
-        # these will each cause the widget's changed slot to get called and lots of calls to mark()
-        self.w.errorbarmode.setCurrentIndex(self.node.errorbarmode)
-        self.w.bandwidthmode.setCurrentIndex(self.node.bandwidthmode)
-        self.w.colourmode.setCurrentIndex(self.node.colourmode)
-        self.w.stackSepSpin.setValue(self.node.stackSep)
-        self.w.bottomSpaceSpin.setValue(self.node.bottomSpace)
-        self.w.rightSpaceSpin.setValue(self.node.rightSpace)
-        self.w.legendFontSpin.setValue(self.node.legendFontSize)
-        self.w.axisFontSpin.setValue(self.node.axisFontSize)
-        self.w.labelFontSpin.setValue(self.node.labelFontSize)
+        # these could each cause the widget's changed slot to get called and lots of calls to mark();
+        # hopefully the signal blocking will prevent that.
+        with SignalBlocker(self.w.errorbarmode, self.w.bandwidthmode, self.w.colourmode,
+                           self.w.stackSepSpin, self.w.bottomSpaceSpin, self.w.rightSpaceSpin,
+                           self.w.legendFontSpin, self.w.axisFontSpin, self.w.labelFontSpin):
+            self.w.errorbarmode.setCurrentIndex(errorBarModes.index(self.node.errorbarmode))
+            self.w.bandwidthmode.setCurrentIndex(bandwidthModes.index(self.node.bandwidthmode))
+            self.w.colourmode.setCurrentIndex(colourModes.index(self.node.colourmode))
+            self.w.stackSepSpin.setValue(self.node.stackSep)
+            self.w.bottomSpaceSpin.setValue(self.node.bottomSpace)
+            self.w.rightSpaceSpin.setValue(self.node.rightSpace)
+            self.w.legendFontSpin.setValue(self.node.legendFontSize)
+            self.w.axisFontSpin.setValue(self.node.axisFontSize)
+            self.w.labelFontSpin.setValue(self.node.labelFontSize)
