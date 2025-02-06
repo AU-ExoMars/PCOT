@@ -2,6 +2,7 @@ import dataclasses
 import numbers
 from abc import ABC, abstractmethod
 from copy import copy
+from html import escape
 from numbers import Number
 from typing import Any, Dict, Union, List, Tuple, Optional
 
@@ -582,7 +583,7 @@ class TaggedList(TaggedAggregate):
                 # otherwise just use the data as is
                 for v in data:
                     if not is_value_of_type(v, tt):
-                        raise ValueError(f"Value {v} is not of type {tt}")
+                        raise ValueError(f"Value {v} is not of type {escape(str(tt))}")
                 self._values = data
         else:
             # we are creating from defaults
@@ -601,6 +602,11 @@ class TaggedList(TaggedAggregate):
 
     def get(self) -> List[Any]:
         return self._values
+
+    def set(self, vs: List[Any]):
+        for v in vs:
+            self._check_value(v)
+        self._values = vs
 
     aslist = get
 

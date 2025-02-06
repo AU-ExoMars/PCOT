@@ -10,6 +10,7 @@ import pcot
 import pcot.ui as ui
 from pcot.datum import Datum
 from pcot.filters import wav2RGB, Filter
+from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType
 from pcot.sources import SourceSet
 from pcot.ui import uiloader
 from pcot.ui.tabs import Tab
@@ -78,11 +79,13 @@ def fixSortList(node):
     # and that all of them are present. This list is used to "stack" items in the plot,
     # and nowhere else (it doesn't order items in the tabular output, for example).
     if node.data is not None:
+        sl = node.params.sortlist.get()
         legends = node.data.keys()
         # filter out items that aren't in the data
-        node.sortlist = [x for x in node.sortlist if x in legends]
+        sl = [x for x in sl if x in legends]
         # add new items
-        node.sortlist.extend([x for x in legends if x not in node.sortlist])
+        sl.extend([x for x in legends if x not in sl])
+        node.params.sortlist.set(sl)
 
 
 @xformtype
@@ -119,12 +122,21 @@ class XFormSpectrum(XFormType):
 
     def __init__(self):
         super().__init__("spectrum", "data", "0.0.0")
-        self.autoserialise = ('sortlist', 'errorbarmode', 'legendFontSize', 'axisFontSize', 'stackSep', 'labelFontSize',
-                              'bottomSpace', 'colourmode', 'rightSpace',
-                              # these have defaults because they were developed later.
-                              ('ignorePixSD', False),
-                              ('bandwidthmode', "none"),
-                              )
+
+        self.params = TaggedDictType(
+            sortlist=("List of inputs to sort by", TaggedListType("", str, [], '')),
+            legendFontSize=("Legend font size", int, 8),
+            axisFontSize=("Axis font size", int, 8),
+            labelFontSize=("Label font size", int, 12),
+            bottomSpace=("Bottom space", int, 0),
+            rightSpace=("Right space", int, 0),
+            stackSep=("Stack separation", int, 0),
+            errorbarmode=("Error bar mode", str, "stddev", errorBarModes),
+            colourmode=("Colour mode", str, "fromROIs", colourModes),
+            bandwidthmode=("Bandwidth mode", str, "none", bandwidthModes),
+            ignorePixSD=("Ignore pixel standard deviation", bool, False),
+        )
+
         for i in range(NUMINPUTS):
             self.addInputConnector(str(i), Datum.IMG, "a single line in the plot")
         self.addOutputConnector("data", Datum.DATA, "a CSV output (use 'dump' or 'sink' to read it)")
@@ -145,17 +157,6 @@ class XFormSpectrum(XFormType):
         conv('bandwidthmode', bandwidthModes)
 
     def init(self, node):
-        node.errorbarmode = "stddev"
-        node.colourmode = "fromROIs"
-        node.bandwidthmode = "none"
-        node.legendFontSize = 8
-        node.axisFontSize = 8
-        node.labelFontSize = 12
-        node.bottomSpace = 0
-        node.rightSpace = 0
-        node.stackSep = 0
-        node.ignorePixSD = self.getAutoserialiseDefault('ignorePixSD')
-        node.sortlist = []  # list of legends (ROI names) - the order in which spectra should be stacked.
         node.data = None
 
     def perform(self, node):
@@ -166,7 +167,7 @@ class XFormSpectrum(XFormType):
         # filter out null inputs
         inputDict = {k: v for k, v in inputDict.items() if v is not None}
         # and construct the SpectrumSet
-        node.data = SpectrumSet(inputDict, ignorePixSD=node.ignorePixSD)
+        node.data = SpectrumSet(inputDict, ignorePixSD=node.params.ignorePixSD)
         fixSortList(node)
         node.setOutput(0, Datum(Datum.DATA, node.data.table(), sources=node.data.getSources()))
 
@@ -182,7 +183,7 @@ class ReorderDialog(QDialog):
         self.listWidget.itemClicked.connect(self.itemClicked)
         self.node = node
         # add the items (we're using an item-based system rather than model-based, it's easier)
-        for i in node.sortlist:
+        for i in node.params.sortlist:
             QtWidgets.QListWidgetItem(i, self.listWidget)
 
         self.fixUpDown()
@@ -193,7 +194,7 @@ class ReorderDialog(QDialog):
             self.downButton.setEnabled(False)
         else:
             self.upButton.setEnabled(self.listWidget.currentRow() > 0)
-            self.downButton.setEnabled(self.listWidget.currentRow() < len(self.node.sortlist) - 1)
+            self.downButton.setEnabled(self.listWidget.currentRow() < len(self.node.params.sortlist) - 1)
 
     def itemClicked(self):
         self.fixUpDown()
@@ -259,25 +260,25 @@ class TabSpectrum(ui.tabs.Tab):
 
         # pick a colour scheme for multiple plots if we're not getting the colour
         # from the ROIs
-        if self.node.colourmode == "scheme2":
+        if self.node.params.colourmode == "scheme2":
             cols = matplotlib.cm.get_cmap('tab10').colors
         else:
             cols = matplotlib.cm.get_cmap('Dark2').colors
 
         # the dict consists of a list of channel data tuples for each image/roi.
         colidx = 0
-        stackSep = self.node.stackSep / 20
+        stackSep = self.node.params.stackSep / 20
 
         if stackSep != 0:  # turn off tick labels if we are stacking; the Y values would be deceptive.
             ax.set_yticklabels('')
 
-        ax.tick_params(axis='both', labelsize=self.node.axisFontSize)
-        ax.set_xlabel('wavelength', fontsize=self.node.labelFontSize)
+        ax.tick_params(axis='both', labelsize=self.node.params.axisFontSize)
+        ax.set_xlabel('wavelength', fontsize=self.node.params.labelFontSize)
         ax.set_ylabel('reflectance' if stackSep == 0 else 'stacked reflectance',
-                      fontsize=self.node.labelFontSize)
+                      fontsize=self.node.params.labelFontSize)
 
         stackpos = 0
-        for legend in self.node.sortlist:
+        for legend in self.node.params.sortlist:
             unfiltered = self.node.data[legend]
 
             # filter out any "masked" means - those are from regions which are entirely DQ BAD in a channel.
@@ -301,7 +302,7 @@ class TabSpectrum(ui.tabs.Tab):
             sds = [a.v.u for a in values]
             pixcounts = [a.pixels for a in values]
 
-            if self.node.colourmode == 'fromROIs':
+            if self.node.params.colourmode == 'fromROIs':
                 col = self.node.data.getColour(legend)
             else:
                 col = cols[colidx % len(cols)]
@@ -312,34 +313,34 @@ class TabSpectrum(ui.tabs.Tab):
             ax.plot(wavelengths, means, c=col, label=legend)
             ax.scatter(wavelengths, means, c=[wav2RGB(x) for x in wavelengths], s=0)
 
-            if self.node.errorbarmode != 'none':
+            if self.node.params.errorbarmode != 'none':
                 # calculate standard errors from standard deviations
                 stderrs = [std / math.sqrt(pixels) for std, pixels in zip(sds, pixcounts)]
                 ax.errorbar(wavelengths, means,
-                            stderrs if self.node.errorbarmode == 'stderror' else sds,
+                            stderrs if self.node.params.errorbarmode == 'stderror' else sds,
                             # only show the x error bar if we are in the correct bandwidth mode
-                            xerr=[x.fwhm / 2 for x in filters] if self.node.bandwidthmode == 'errorbar' else None,
+                            xerr=[x.fwhm / 2 for x in filters] if self.node.params.bandwidthmode == 'errorbar' else None,
                             ls="None", capsize=4, c=col)
             colidx += 1
             # subtraction to make the plots stack the same way as the legend!
-            stackpos -= self.node.stackSep
+            stackpos -= self.node.params.stackSep
 
             # now show the bandwidth as a vertical span if we are in the correct mode
-            if self.node.bandwidthmode == 'vertbar':
+            if self.node.params.bandwidthmode == 'vertbar':
                 for f in filters:
                     ax.axvspan(f.cwl - f.fwhm / 2, f.cwl + f.fwhm / 2, color=col, alpha=0.1)
 
-        ax.legend(fontsize=self.node.legendFontSize)
+        ax.legend(fontsize=self.node.params.legendFontSize)
         ymin, ymax = ax.get_ylim()
-        ymin = ymin - self.node.bottomSpace / 10
+        ymin = ymin - self.node.params.bottomSpace / 10
         if ymax - ymin < 0.01:  # if the y range is too small, expand it
             ymin -= 0.01
             ymax += 0.01
         ax.set_ylim(ymin, ymax)
         xmin, xmax = ax.get_xlim()
-        ax.set_xlim(xmin, xmax + self.node.rightSpace * 100)
+        ax.set_xlim(xmin, xmax + self.node.params.rightSpace * 100)
 
-        if self.node.stackSep == 0:  # only remove negative ticks if we're labelling the ticks.
+        if self.node.params.stackSep == 0:  # only remove negative ticks if we're labelling the ticks.
             ax.set_yticks([x for x in ax.get_yticks() if x >= 0])
 
         self.w.mpl.draw()
@@ -359,58 +360,58 @@ class TabSpectrum(ui.tabs.Tab):
 
     def ignorePixSDChanged(self, state):
         self.mark()
-        self.node.ignorePixSD = state == QtCore.Qt.Checked
+        self.node.params.ignorePixSD = state == QtCore.Qt.Checked
         self.changed()
 
     def errorbarmodeChanged(self, mode):
         self.mark()
-        self.node.errorbarmode = errorBarModes[mode]
+        self.node.params.errorbarmode = errorBarModes[mode]
         self.changed()
 
     def bandwidthmodeChanged(self, mode):
         self.mark()
-        self.node.bandwidthmode = bandwidthModes[mode]
+        self.node.params.bandwidthmode = bandwidthModes[mode]
         self.changed()
 
     def colourmodeChanged(self, mode):
         self.mark()
-        self.node.colourmode = colourModes[mode]
+        self.node.params.colourmode = colourModes[mode]
         self.changed()
 
     def bottomSpaceChanged(self, val):
         self.mark()
-        self.node.bottomSpace = val
+        self.node.params.bottomSpace = val
         self.changed()
 
     def rightSpaceChanged(self, val):
         self.mark()
-        self.node.rightSpace = val
+        self.node.params.rightSpace = val
         self.changed()
 
     def legendFontSizeChanged(self, val):
         self.mark()
-        self.node.legendFontSize = val
+        self.node.params.legendFontSize = val
         self.changed()
 
     def axisFontSizeChanged(self, val):
         self.mark()
-        self.node.axisFontSize = val
+        self.node.params.axisFontSize = val
         self.changed()
 
     def labelFontSizeChanged(self, val):
         self.mark()
-        self.node.labelFontSize = val
+        self.node.params.labelFontSize = val
         self.changed()
 
     def stackSepChanged(self, val):
         self.mark()
-        self.node.stackSep = val
+        self.node.params.stackSep = val
         self.changed()
 
     def openReorder(self):
         reorderDialog = ReorderDialog(self, self.node)
         if reorderDialog.exec():
-            self.node.sortlist = reorderDialog.getNewList()
+            self.node.params.sortlist.set(reorderDialog.getNewList())
             self.markReplotReady()
 
     def markReplotReady(self):
@@ -425,13 +426,15 @@ class TabSpectrum(ui.tabs.Tab):
         # hopefully the signal blocking will prevent that.
         with SignalBlocker(self.w.errorbarmode, self.w.bandwidthmode, self.w.colourmode,
                            self.w.stackSepSpin, self.w.bottomSpaceSpin, self.w.rightSpaceSpin,
-                           self.w.legendFontSpin, self.w.axisFontSpin, self.w.labelFontSpin):
-            self.w.errorbarmode.setCurrentIndex(errorBarModes.index(self.node.errorbarmode))
-            self.w.bandwidthmode.setCurrentIndex(bandwidthModes.index(self.node.bandwidthmode))
-            self.w.colourmode.setCurrentIndex(colourModes.index(self.node.colourmode))
-            self.w.stackSepSpin.setValue(self.node.stackSep)
-            self.w.bottomSpaceSpin.setValue(self.node.bottomSpace)
-            self.w.rightSpaceSpin.setValue(self.node.rightSpace)
-            self.w.legendFontSpin.setValue(self.node.legendFontSize)
-            self.w.axisFontSpin.setValue(self.node.axisFontSize)
-            self.w.labelFontSpin.setValue(self.node.labelFontSize)
+                           self.w.legendFontSpin, self.w.axisFontSpin, self.w.labelFontSpin,
+                           self.w.ignorePixSD):
+            self.w.errorbarmode.setCurrentIndex(errorBarModes.index(self.node.params.errorbarmode))
+            self.w.bandwidthmode.setCurrentIndex(bandwidthModes.index(self.node.params.bandwidthmode))
+            self.w.colourmode.setCurrentIndex(colourModes.index(self.node.params.colourmode))
+            self.w.stackSepSpin.setValue(self.node.params.stackSep)
+            self.w.bottomSpaceSpin.setValue(self.node.params.bottomSpace)
+            self.w.rightSpaceSpin.setValue(self.node.params.rightSpace)
+            self.w.legendFontSpin.setValue(self.node.params.legendFontSize)
+            self.w.axisFontSpin.setValue(self.node.params.axisFontSize)
+            self.w.labelFontSpin.setValue(self.node.params.labelFontSize)
+            self.w.ignorePixSD.setChecked(self.node.params.ignorePixSD)
