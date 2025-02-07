@@ -259,7 +259,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     @staticmethod
     def rebuildPalettes():
         for w in MainUI.windows:
-            print(f"Rebuilding window {w}")
+            logger.info(f"Rebuilding window {w}")
             w.palette.populate()
 
     ## rebuild the graphics in all main windows and also all the tab titles

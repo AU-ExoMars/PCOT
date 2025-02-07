@@ -56,6 +56,18 @@ def process_numeric_type(value, tp):
     return value
 
 
+def get_type_name(t):
+    """return the name of a type in a way that can be printed in an HTML document or not, and makes sense to users"""
+    if isinstance(t,Maybe):
+        return f"Maybe({get_type_name(t.type_if_exists)})"
+    elif isinstance(t, TaggedAggregateType):
+        return t.__class__.__name__
+    elif isinstance(t, type):
+        return t.__name__
+    else:
+        return str(t)
+
+
 class TaggedAggregateType(ABC):
     """This is the base class for tagged aggregate type objects. These define what types the values in the aggregate
     should have. Each TaggedAggregate has a ref to one of these *of the appropriate type*, so a TaggedDict will have
@@ -138,7 +150,7 @@ class Tag:
                 return
             if t is Number or t is type(None):
                 return
-            raise ValueError(f"Type {t} is neither a JSON-serialisable type nor a TaggedAggregateType")
+            raise ValueError(f"Type {get_type_name(t)} is neither a JSON-serialisable type nor a TaggedAggregateType")
 
         if isinstance(self.type, Maybe):
             # check the type is valid
@@ -148,7 +160,8 @@ class Tag:
 
     def get_primitive_type_desc(self):
         """Only really valid for tags which are primitive types, this returns a descriptive string
-        which holds the type name and extra details such as valid strings and defaults"""
+        which holds the type name and extra details such as valid strings and defaults. It could be written
+        using get_type_name but it does slightly different things, and is used to generate autodocs."""
         tp = self.type.type_if_exists if isinstance(self.type, Maybe) else self.type
         deflt = self.deflt
         if tp == str:
@@ -246,10 +259,10 @@ class TaggedDictType(TaggedAggregateType):
             # if type is a TaggedAggregate the default has to be None
             if isinstance(v.type, TaggedAggregateType):
                 if v.deflt is not None:
-                    raise ValueError(f"Type {v.type} is a TaggedAggregateType, so default must be None")
+                    raise ValueError(f"Type {get_type_name(v.type)} is a TaggedAggregateType, so default must be None")
             # otherwise the default has to be of the correct type
             elif not is_value_of_type(v.deflt, v.type):
-                raise ValueError(f"Default {v.deflt} is not of type {v.type}")
+                raise ValueError(f"Default {v.deflt} is not of type {get_type_name(v.type)}")
 
     def get_tag(self, key):
         """Return the tag for a given key - raises a key error on failure"""
@@ -326,7 +339,7 @@ class TaggedDict(TaggedAggregate):
                         self._values[k] = v.type.type_if_exists.deserialise(d)
                     elif not is_value_of_type(d, v.type.type_if_exists):
                         # then the "normal" case.
-                        raise ValueError(f"TaggedDict key {k}: Value {d} is not of type {v.type.type_if_exists}")
+                        raise ValueError(f"TaggedDict key {k}: Value {d} is not of type {get_type_name(v.type.type_if_exists)}")
                     else:
                         self._values[k] = d
                 else:
@@ -334,7 +347,7 @@ class TaggedDict(TaggedAggregate):
                     # handle int->float promotion
                     d = process_numeric_type(d, v.type)
                     if not is_value_of_type(d, v.type):
-                        raise ValueError(f"TaggedDict key {k}: Value {d} is not of type {v.type}")
+                        raise ValueError(f"TaggedDict key {k}: Value {d} is not of type {get_type_name(v.type)}")
                     self._values[k] = d
             else:
                 # we are creating from defaults
@@ -399,12 +412,12 @@ class TaggedDict(TaggedAggregate):
         if isinstance(correct_type, TaggedAggregateType):
             # if the type is a tagged aggregate, make sure it's the right type
             if not isinstance(value, TaggedAggregate):
-                raise ValueError(f"TaggedDict key {key}: Value {value} is not a TaggedAggregate, is a {type(value)}")
+                raise ValueError(f"TaggedDict key {key}: Value {value} is not a TaggedAggregate, is a {get_type_name(type(value))}")
             if correct_type != value._type:
-                raise ValueError(f"TaggedDict key {key}: Value {value} is not a TaggedAggregate of type {correct_type}, is a {type(value)}")
+                raise ValueError(f"TaggedDict key {key}: Value {value} is not a TaggedAggregate of type {get_type_name(correct_type)}, is a {get_type_name(type(value))}")
         elif not is_value_of_type(value, correct_type):
             # otherwise check the type
-            raise ValueError(f"TaggedDict key {key}: Value {value} is not of type {correct_type}, is a {type(value)}")
+            raise ValueError(f"TaggedDict key {key}: Value {value} is not of type {get_type_name(correct_type)}, is a {get_type_name(type(value))}")
         # check string validity
         if correct_type == str:
             vstrs = tp.tags[key].valid_strings
@@ -533,7 +546,7 @@ class TaggedListType(TaggedAggregateType):
         if isinstance(self.tag.type, TaggedAggregateType):
             if not isinstance(self.tag.deflt, int):
                 raise ValueError(
-                    f"TaggedListType: Type {self.tag.type.__class__.__name__} is a TaggedAggregateType, so default must be integer (number of items)")
+                    f"TaggedListType: Type {get_type_name(self.tag.type)} is a TaggedAggregateType, so default must be integer (number of items)")
             if deflt_append is not None:
                 raise ValueError("A deflt_append value should not be provided for a list of tagged aggregates")
         else:
@@ -544,11 +557,11 @@ class TaggedListType(TaggedAggregateType):
             self.tag.deflt = [process_numeric_type(i, self.tag.type) for i in self.tag.deflt]
             for i in self.tag.deflt:
                 if not is_value_of_type(i, self.tag.type):
-                    raise ValueError(f"Default {self.tag.deflt} contains an item {i} that is not of type {self.tag.type}")
+                    raise ValueError(f"Default {self.tag.deflt} contains an item {i} that is not of type {get_type_name(self.tag.type)}")
             if self.deflt_append is None:
                 raise ValueError("Default append not provided for non-TaggedAggregateType list")
             if not is_value_of_type(self.deflt_append, self.tag.type):
-                raise ValueError(f"Default append value {self.deflt_append} is not of type {self.tag.type}")
+                raise ValueError(f"Default append value {self.deflt_append} is not of type {get_type_name(self.tag.type)}")
 
     def create(self):
         """Create a the appropriate default values"""
@@ -583,7 +596,7 @@ class TaggedList(TaggedAggregate):
                 # otherwise just use the data as is
                 for v in data:
                     if not is_value_of_type(v, tt):
-                        raise ValueError(f"Value {v} is not of type {escape(str(tt))}")
+                        raise ValueError(f"Value {v} is not of type {get_type_name(tt)}")
                 self._values = data
         else:
             # we are creating from defaults

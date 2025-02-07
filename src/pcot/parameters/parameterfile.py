@@ -24,6 +24,7 @@ import logging
 
 from pcot.parameters.taggedaggregates import TaggedAggregate, TaggedAggregateType, Maybe, TaggedListType, \
     TaggedVariantDictType, TaggedVariantDict, TaggedList
+from pcot.parameters.taggedaggregates import get_type_name
 
 logger = logging.getLogger(__name__)
 
@@ -150,9 +151,9 @@ class SetValue(Change):
                 c = self.value.lower()[0]
                 element[self.key] = (c == 't') or (c == 'y')  # just check the first character, upper or lower
             else:
-                raise Exception(f"unparameterisable {tag.type} for {str(self)}")
+                raise Exception(f"unparameterisable {get_type_name(tag.type)} for {str(self)}")
         except ValueError as e:
-            raise ValueError(f"{str(self)}: expected {tag.type}, got {type(self.value)} ({self.value})") from e
+            raise ValueError(f"{str(self)}: expected {get_type_name(tag.type)}, got {get_type_name(type(self.value))} ({self.value})") from e
 
     def __repr__(self):
         return f"SetValue({self.line}, root={self.root_name} path={'.'.join(self.path)} key={self.key}) val={self.value}"

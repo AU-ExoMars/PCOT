@@ -13,6 +13,7 @@ import logging
 import sys
 import uuid
 from collections import deque
+from html import escape
 from io import BytesIO
 from typing import List, Dict, Tuple, ClassVar, Optional, TYPE_CHECKING, Callable, Union, Any
 
@@ -694,7 +695,12 @@ class XForm:
         # deserialise parameters
         if self.type.params is not None:
             # this will replace the defaults.
-            self.params = self.type.params.deserialise(d)
+            try:
+                self.params = self.type.params.deserialise(d)
+            except ValueError as e:
+                logger.critical(f"Error deserialising parameters for node {self.displayName}: {str(e)}")
+                ui.log(f'  <font color="red"><b>Error deserialising parameters for node {self.displayName}</b></font>')
+                ui.log(f'  <font color="red"><b>{str(e)}</b></font>')
         # finally do any extra deserialisation tasks, such as deserialising things which
         # can't be autoserialised and such as converting self.params into data
         self.type.deserialise(self, d)

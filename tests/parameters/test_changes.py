@@ -96,8 +96,9 @@ def test_changes_base_dict():
 
     # check that invalid values raise an error
     f = ParameterFile().parse("foo.a = bar")
-    with pytest.raises(ApplyException):
+    with pytest.raises(ApplyException) as e:
         f.apply({"foo": td})
+    assert "expected int" in str(e)
 
     # check that invalid keys raise an error
     f = ParameterFile().parse("foo.d = 11")
