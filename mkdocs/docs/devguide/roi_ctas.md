@@ -76,7 +76,7 @@ class XFormMultidot(XFormType):
                                             "circle": ROICircle.TAGGEDDICT
                                         })
 
-    TAGGEDLIST = TaggedListType("rois", TAGGEDVDICT, 0)
+    TAGGEDLIST = TaggedListType(TAGGEDVDICT, 0)
 ```
 Here is the `serialise` method:
 ```python

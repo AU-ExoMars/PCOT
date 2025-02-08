@@ -33,7 +33,7 @@ to define field in the dict types, because the variant wrapper will add it autom
 
 We can now create a list of these variants:
 ```python
-    tl = TaggedListType("stuff", tvdt, 0)
+    tl = TaggedListType(tvdt, 0)
     lst = tl.create()
 ```
 create a "type 1" dict:

@@ -66,7 +66,7 @@ taggedThingType = TaggedDictType(
 ```
 which we could then form into a list:
 ```python
-listOfThingsType = TaggedListType("list of things",taggedThingType,0)  # default zero means empty list
+listOfThingsType = TaggedListType(taggedThingType,0)  # default zero means empty list
 ```
 We could then create a new list and add things like this:
 ```python
