@@ -124,7 +124,7 @@ class XFormSpectrum(XFormType):
         super().__init__("spectrum", "data", "0.0.0")
 
         self.params = TaggedDictType(
-            sortlist=("List of inputs to sort by", TaggedListType("", str, [], '')),
+            sortlist=("List of inputs to sort by", TaggedListType(str, [], '')),
             legendFontSize=("Legend font size", int, 8),
             axisFontSize=("Axis font size", int, 8),
             labelFontSize=("Label font size", int, 12),

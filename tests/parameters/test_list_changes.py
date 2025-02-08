@@ -13,8 +13,8 @@ basetdt = TaggedDictType(
 
 tdt = TaggedDictType(
     bar=("bar", basetdt, None), # just a dict
-    lst=("list", TaggedListType("list of dicts", basetdt, 0), None),   # list with no items
-    lst2=("list of int", TaggedListType("list of ints", int, [], 23), None)   # list with no items
+    lst=("list", TaggedListType(basetdt, 0), None),   # list with no items
+    lst2=("list of int", TaggedListType(int, [], 23), None)   # list with no items
 )
 
 

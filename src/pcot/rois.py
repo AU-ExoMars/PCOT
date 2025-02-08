@@ -943,7 +943,7 @@ class ROIPoly(ROI):
     pointType = TaggedDictType(x=("x", Number, 0.0),
                                y=("y", Number, 0.0)).setOrdered()
 
-    listOfPointsType = TaggedListType("", pointType, 0)
+    listOfPointsType = TaggedListType(pointType, 0)
 
     TAGGEDDICTDEFINITION = BASEROIFIELDS + [
         ('points', ('list of points', listOfPointsType)),

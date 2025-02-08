@@ -46,7 +46,7 @@ class XFormStitch(XFormType):
         self.addOutputConnector("", Datum.IMG, desc="Output image")
 
         self.params = TaggedDictType(
-            order=("Order of images", TaggedListType("", int, list(range(NUMINPUTS)), 0)),
+            order=("Order of images", TaggedListType(int, list(range(NUMINPUTS)), 0)),
             showImage=("Show image", bool, True),
             offsets=("Offsets of images", taggedPointListType, None))
 

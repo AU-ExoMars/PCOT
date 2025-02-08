@@ -10,18 +10,17 @@ base_tagged_dict_type = TaggedDictType(
     c=("c desc", float, 3.14),
 )
 
-base_tagged_list_type = TaggedListType(
-    "base list", int, [10, 20, 30], -1
+base_tagged_list_type = TaggedListType(int, [10, 20, 30], -1
 )
 
 base_tagged_ordered_dict_type = TaggedDictType(
     d=("dee", float, 3.24),
     e=("eee", int, 11),
     f=("eff", str, "dog"),
-    g=("d desc", TaggedListType("embedded list", int, [1, 2, 3, 4, 5, 6], 48))
+    g=("d desc", TaggedListType(int, [1, 2, 3, 4, 5, 6], 48))
 ).setOrdered()
 
-list_of_ordered_dicts_type = TaggedListType("list of ODs", base_tagged_ordered_dict_type, 0)
+list_of_ordered_dicts_type = TaggedListType(base_tagged_ordered_dict_type, 0)
 
 tagged_dict_type = TaggedDictType(
     base=("a base tagged dict", base_tagged_dict_type, None),
@@ -55,7 +54,7 @@ tagged_variant_dict_in_dict_type = TaggedDictType(
     base=("an ordinary tagged dict", base_tagged_dict_type, None),
     bloon=("a bloon", str, "bloon"),
     lst=("a list of variant dicts",
-         TaggedListType("list of variant dicts", tagged_variant_dict_type, 0), None)
+         TaggedListType(tagged_variant_dict_type, 0), None)
 )
 
 
@@ -153,7 +152,7 @@ def test_list_add_non_ta():
 def test_list_add_non_ta_nodefault():
     """You have to provide a default append item for non-TA lists if you ever want to append to them"""
     with pytest.raises(ValueError) as info:
-        tlt = TaggedListType("base list", int, [10])  # no default append
+        tlt = TaggedListType(int, [10])  # no default append
     assert "Default append not provided" in str(info.value)
 
 
@@ -283,7 +282,7 @@ def test_modify_variant_dict_list():
 
 def test_maybe_list_in_dict():
     """Test we can add to a Maybe(list) in a dict"""
-    tlt = TaggedListType("list", int, [], 0)
+    tlt = TaggedListType(int, [], 0)
     tdt = TaggedDictType(
         base=("an ordinary tagged dict", base_tagged_dict_type, None),
         bloon=("a bloon", str, "bloon"),

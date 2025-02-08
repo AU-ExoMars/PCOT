@@ -29,7 +29,7 @@ multifileDictType = TaggedDictType(
     directory=("directory to load from", Maybe(str), None),  # if not present, we are inactive
     # either filenames or wildcard can be set, but not both. If filenames is non-zero length we use it.
     filenames=("list of filenames or filename patterns to match. All files matching each pattern will be added, sorted by name within each pattern.",
-               TaggedListType("", str, [], '')),
+               TaggedListType(str, [], '')),
     filter_pattern=("pattern for filter identification", str, r".*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*"),
     filter_set=("name of filter set to use", str, "PANCAM"),
     bit_depth=("number of bits used in the image (default is all bits)", Maybe(int), None),
@@ -51,7 +51,7 @@ multifileDictType = TaggedDictType(
 PDS4DictType = TaggedDictType(
     directory=("directory to load from", Maybe(str), None),  # if not present, we are inactive
     filenames=("list of filenames or filename patterns to match. All files matching each pattern will be added, sorted by name within each pattern.",
-               TaggedListType("", str, [], ''))
+               TaggedListType(str, [], ''))
 )
 
 # PARC - PCOT datum archive file

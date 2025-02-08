@@ -288,8 +288,7 @@ def _normAndGetRange(subimage):
 TAGGEDDICT = TaggedDictType(
     # We only use this structure for serialisation and deserialisation - the actual gradient
     # is a Gradient object.
-    gradient=('gradient', TaggedListType("gradient",
-                                         TaggedDictType(
+    gradient=('gradient', TaggedListType(TaggedDictType(
                                              x=('x', float, 0.0),
                                              colour=('colour', taggedColourType(0.0, 0.0, 0.0), None)
                                          ).setOrdered(), 0),
