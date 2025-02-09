@@ -58,8 +58,16 @@ class XFormStitch(XFormType):
             p = node.params.offsets.append_default()
             p.x, p.y = node.offsets[i]
 
+        node.params.order.clear()
+        for v in node.order:
+            node.params.order.append(v)
+
+
     def nodeDataFromParams(self, node):
         """CTAS from the tagged aggregate back into the node"""
+        # convert order to plain list in node
+        node.order = node.params.order.get()
+        # convert offsets to list of x,y tuples in node
         node.offsets = []
         for p in node.params.offsets:
             node.offsets.append((p.x, p.y))
