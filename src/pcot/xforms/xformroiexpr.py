@@ -62,7 +62,7 @@ class XFormROIExpr(XFormType):
                                             "rect": ROIRect.TAGGEDDICT
                                         })
 
-    TAGGEDLIST = TaggedListType("", TAGGEDVDICT, 0)
+    TAGGEDLIST = TaggedListType(TAGGEDVDICT, 0)
 
     def __init__(self):
         super().__init__("roiexpr", "regions", "0.0.0")

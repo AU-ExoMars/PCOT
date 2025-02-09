@@ -38,7 +38,7 @@ TAGGEDDICTCHANNEL = TaggedDictType(
 TAGGEDDICT = TaggedDictType(
     imgwidth=("Width of the image", int, DEFAULTSIZE),
     imgheight=("Height of the image", int, DEFAULTSIZE),
-    chans=("Data for each channel", TaggedListType("Channel data", TAGGEDDICTCHANNEL, 0))
+    chans=("Data for each channel", TaggedListType(TAGGEDDICTCHANNEL, 0))
 )
 
 

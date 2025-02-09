@@ -50,9 +50,7 @@ def test_taggeddict():
 
 
 def test_cant_set_with_plain_aggregate():
-    tlt = TaggedListType(
-        "a", int, [10, 20, 30], 0
-    )
+    tlt = TaggedListType(int, [10, 20, 30], 0)
     tdt = TaggedDictType(
         b=("b", tlt),
     )
@@ -65,9 +63,7 @@ def test_cant_set_with_plain_aggregate():
 
 
 def test_taggedlist():
-    tlt = TaggedListType(
-        "a", int, [10, 20, 30], 0
-    )
+    tlt = TaggedListType(int, [10, 20, 30], 0)
 
     tl = tlt.create()
     assert tl[0] == 10
@@ -90,9 +86,7 @@ def test_taggedlist():
 
 
 def test_list_delete():
-    tlt = TaggedListType(
-        "a", int, [10, 20, 30], 0
-    )
+    tlt = TaggedListType(int, [10, 20, 30], 0)
 
     tl = tlt.create()
     del tl[1]
@@ -108,7 +102,7 @@ def test_list_delete():
 def test_dict_of_lists():
     tdt = TaggedDictType(
         a=("a", int, 10),
-        b=("b", TaggedListType("b", int, [10, 20, 30], 0), None),
+        b=("b", TaggedListType(int, [10, 20, 30], 0), None),
         c=("c", float, 3.14)
     )
 
@@ -152,9 +146,7 @@ def test_dict_serialise():
 
 
 def test_list_serialise():
-    ttt = TaggedListType(
-        "a", int, [10, 20, 30], 0
-    )
+    ttt = TaggedListType(int, [10, 20, 30], 0)
     tl = ttt.create()
     serial = tl.serialise()
     assert serial == [10, 20, 30]
@@ -165,25 +157,24 @@ def test_ser_complex():
     # a more complex structure made up of lists, dicts and tuples
     tdt = TaggedDictType(
         a=("a", int, 10),
-        b=("b", TaggedListType("b", TaggedDictType(
+        b=("b", TaggedListType(TaggedDictType(
             a=("a", int, 10),
             b=("b", str, "foo"),
             c=("c", float, 3.14)).setOrdered(), 2)),
         c=("c", float, 3.14),
         # a list of 4 identical dicts
-        d=("d", TaggedListType("d", TaggedDictType(
+        d=("d", TaggedListType(TaggedDictType(
             a=("a", int, 10),
             b=("b", str, "foo"),
             c=("c", float, 3.14)), 4)),
         # a list of 2 identical dicts, each with a tuple and a list inside
-        e=("e", TaggedListType("e",
-                               TaggedDictType(foo=("foo",
+        e=("e", TaggedListType(TaggedDictType(foo=("foo",
                                                    TaggedDictType(a=("a", int, 10),
                                                                    b=("ith", str, "blungle"),
                                                                    c=("c", float, 123.4)).setOrdered()
                                                    ),
                                               bar=("bar",
-                                                   TaggedListType("none", int, [10, 20, 30], 0)
+                                                   TaggedListType(int, [10, 20, 30], 0)
                                                    )
                                               )
                                , 2)
@@ -226,9 +217,7 @@ def test_dict_ser_deser():
 
 
 def test_list_ser_deser():
-    tlt = TaggedListType(
-        "a", int, [0, 0, 0], 0
-    )
+    tlt = TaggedListType(int, [0, 0, 0], 0)
     serial = [10, 20, 30]
 
     tl2 = tlt.deserialise(serial)
@@ -239,9 +228,7 @@ def test_list_ser_deser():
 
 
 def test_list_iter():
-    tlt = TaggedListType(
-        "a", int, [0, 0, 0], 0
-    )
+    tlt = TaggedListType(int, [0, 0, 0], 0)
     serial = [10, 20, 30]
 
     tl2 = tlt.deserialise(serial)
@@ -292,24 +279,23 @@ def test_complex_ser_deser():
     # a more complex structure made up of lists, dicts and tuples
     tdt = TaggedDictType(
         a=("a", int, 0),
-        b=("b", TaggedListType("b", TaggedDictType(
+        b=("b", TaggedListType(TaggedDictType(
             a=("a", int, 0),
             b=("b", str, ""),
             c=("c", float, 0.0)).setOrdered(), 2)),
         c=("c", float, 0.0),
         # a list of 4 identical dicts
-        d=("d", TaggedListType("d", TaggedDictType(
+        d=("d", TaggedListType(TaggedDictType(
             a=("a", int, 0),
             b=("b", str, ""),
             c=("c", float, 0.0)), 4)),
         # a list of 2 identical dicts, each with a tuple and a list inside
-        e=("e", TaggedListType("e",
-                               TaggedDictType(foo=("foo",
+        e=("e", TaggedListType(TaggedDictType(foo=("foo",
                                                    TaggedDictType(a=("a", int, 0),
                                                                    b=("ith", str, ""),
                                                                    c=("c", float, 0.0)).setOrdered()),
                                               bar=("bar",
-                                                   TaggedListType("none", int, [], 0)
+                                                   TaggedListType(int, [], 0)
                                                    )
                                               )
                                , 3)
@@ -394,18 +380,12 @@ def test_typing():
         )
 
     with pytest.raises(ValueError):
-        TaggedListType(
-            "a", int, [10, 20, "cat"], 0
-        )
+        TaggedListType(int, [10, 20, "cat"], 0)
 
-    TaggedListType(
-        "a", int, [10, 20, 30], 0
-    )
+    TaggedListType(int, [10, 20, 30], 0)
 
     with pytest.raises(ValueError):
-        TaggedListType(
-            "a", int, [10, 20, 30], "cat"
-        )
+        TaggedListType(int, [10, 20, 30], "cat")
 
     # now test the optional type - this is fine
     TaggedDictType(
@@ -447,9 +427,7 @@ def test_typing():
 
 
 def test_optional_aggregates():
-    tlt = TaggedListType(
-        "a", Maybe(int), [10, 20, 30], 0
-    )
+    tlt = TaggedListType(Maybe(int), [10, 20, 30], 0)
 
     tdt = TaggedDictType(
         a=("a", tlt),
@@ -468,9 +446,7 @@ def test_optional_aggregates():
 
 
 def test_optional_ser():
-    tlt = TaggedListType(
-        "a", Maybe(int), [10, 20, 30], 0
-    )
+    tlt = TaggedListType(Maybe(int), [10, 20, 30], 0)
 
     tdt = TaggedDictType(
         a=("a", tlt),
@@ -508,7 +484,7 @@ def test_tagged_variant_dict():
                                     })
 
     # type for a list of variant dicts, where the underlying dicts are either type1 or type2.
-    tl = TaggedListType("stuff", tvdt, 0)
+    tl = TaggedListType(tvdt, 0)
     # create the list
     ll = tl.create()
 

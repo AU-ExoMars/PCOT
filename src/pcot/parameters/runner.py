@@ -86,7 +86,7 @@ outputDictType = TaggedDictType(
 )
 
 # we have a list of outputs
-outputListType = TaggedListType("output list", outputDictType, 0)
+outputListType = TaggedListType(outputDictType, 0)
 
 
 class Runner:
