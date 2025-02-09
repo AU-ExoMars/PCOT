@@ -600,7 +600,6 @@ def test_list_shorthand_in_ordered_dict():
     assert d.p.x == 10
     assert d.p.y == 20
 
-
 # leaving this for now for backcompat.
 @pytest.mark.xfail
 def test_list_shorthand_in_ordered_dict_too_long():
@@ -612,9 +611,37 @@ def test_list_shorthand_in_ordered_dict_too_long():
 
 
 def test_list_shorthand_in_ordered_dict_bad_format():
-
     d = pointInDictType.create()
     f = ParameterFile().parse("foo.p = 1,2,3")
     with pytest.raises(ApplyException) as e:
        f.apply({"foo": d})
     assert "Invalid format for data" in str(e.value)
+
+
+def test_list_shorthand_for_lists():
+    """Check that we can do things like a.b = [1,2,3] where a.b is a TaggedList."""
+    tdt = TaggedDictType(
+        a=("a list", TaggedListType(int,[], 0))
+    )
+
+    td = tdt.create()
+    g = td.a.get()
+    assert len(g) == 0
+
+    # change the list to be 1,2,3
+    f = ParameterFile().parse("a.a = [1,2,3]")
+    f.apply({"a": td})
+
+    # the OLD list will still be empty, because we're not writing to it - we're replacing it in the containing
+    # TaggedDict
+    assert len(g) == 0
+
+    # so we have to get it again to check
+    g = td.a.get()
+    assert len(g) == 3
+
+    # check the typechecking still works
+    f = ParameterFile().parse('a.a = [1,"zog",3]')
+    with pytest.raises(ApplyException) as e:
+        f.apply({"a": td})
+    assert "zog is not of type int" in str(e.value)
