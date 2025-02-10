@@ -14,7 +14,6 @@ examples and reading the source code!
 * [Writing PCOT plugins](plugins.md)
 * [Node serialisation](nodeser.md)
 
-
 ## Miscellaneous
 
 

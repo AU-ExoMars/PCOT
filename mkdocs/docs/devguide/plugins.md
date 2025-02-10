@@ -225,7 +225,7 @@ follows "favour composition over inheritance" and saves messiness elsewhere.
 
 Here is an example which does edge detection with OpenCV:
 
-```
+```python
 import cv2 as cv
 import numpy as np
 

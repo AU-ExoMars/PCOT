@@ -4,36 +4,24 @@ This page discusses how to serialise the parameters for
 node types. If you don't know what that means, you're either in the wrong
 place or haven't read [Writing PCOT plugins](plugins.md).
 
-Nodes typically store parameters and data as attributes of their `XForm`
-objects. It's not really "polite" programming, but this is the kind of thing
-you can do with Python. For example, the *expr* node contains a string also
-called *expr*, which is the expression to be run. These values are initialised in
-the constructor for the node's `XFormType`.
+Most nodes need to store some data. Sometimes this data can just be stored directly, as attributes of the `XForm` object (i.e. the node).  It's not really "polite" programming, but this is the kind of thing you can do with Python.
 
-When you write nodes you will probably need to save and load some of these values,
-both to files and so that the undo mechanism will work.
+However, often "parameter" data controlling how the node operates needs to be saved inside the PCOT document file, and loaded when we reopen the file. For example, the *expr* node needs to store a string: the expression to be run. Parameters for some nodes can be  complicated: *multidot* needs to be able to store a list of circular regions of interest, for example.
 
-This process - converting node data into data which can be saved to archives -
-is called **serialisation**, and there no less than four different mechanisms
-for doing it. This is largely for historical reasons, but also because the
-different mechanisms serve different needs:
+We also need to do this to handle undo operations - every time a change is made, the entire document is "saved" into an archive in memory so it can be undone.
+
+This process - converting node data into data which can be saved to archives - is called **serialisation**, and there no less than four different mechanisms for doing it. This is largely for historical reasons, but also because the different mechanisms serve different needs:
 
 In order of preference, with the best at the top:
 
-* **TaggedAggregate serialisation** - the data is JSON-serialisable but we want to make it possible to
-edit it from a batch/parameter file (see [batch mode](/userguide/batch)). **Probably the best choice if you can.**
-* **complex serialisation via TaggedAggregate** - the data is not serialisable, but we want to
-edit it from a parameter file. **Probably the second-best.**
-* **autoserialisation** - for when your data is already JSON-serialisable and you 
-don't need to edit it from a parameter file. It is very simple to implement.
-* **complex serialisation** - for when your data is not directly JSON-serialisable (for example,
-regions of interest) and you don't need to edit it from a parameter file.
+* **TaggedAggregate serialisation** - the data is JSON-serialisable but we want to make it possible to edit it from a batch/parameter file (see [batch mode](/userguide/batch)). **Probably the best choice if you can.**
+* **complex serialisation via TaggedAggregate** - the data is not serialisable, but we want to edit it from a parameter file. **Probably the second-best** and suitable where simple TA-serialisation can't handle the more complex data involved.
+* **autoserialisation** - for when your data is already JSON-serialisable and you don't need to edit it from a parameter file. It is very simple to implement, but doesn't allow editing from a batch file and doesn't document itself automatically. Used only in legacy nodes.
+* **complex serialisation** - for when your data is not directly JSON-serialisable (for example, regions of interest) and you don't need to edit it from a parameter file because it makes no sense (such as painted ROIs)
 
 ## TaggedAggregate serialisation
 
-This is the method we use when we want to be able to edit the parameters of nodes in batch mode,
-using parameter files (see [batch mode](/userguide/batch)). It is probably the best method
-to use because of this, but it is rather more complicated.
+This is the method we use when we want to be able to edit the parameters of nodes in batch mode, using parameter files (see [batch mode](/userguide/batch)). It is probably the best method to use because of this, but it is rather more complicated.
 
 We make use of **tagged aggregate structures**, which can be found in
 `pcot.utils.taggedaggregate`. These are dictionaries and lists, but
@@ -41,9 +29,27 @@ each has a formal, typed structure with "tags" giving the names of the
 members, their types, and default values. Each is described by a type
 singleton object
 
-For example, here is a `TaggedDictType` definition for a rectangle. 
-This is for an ordered dict, so it will be serialised
-to a tuple. Hopefully it is self-explanatory:
+### TaggedDictType
+The main type used is `TaggedDictType`, which describes the format of a set of key/value pairs. Bear in mind that the `TaggedDictType` is a singleton - each individual set of keys and values is a `TaggedDict`.
+
+The `TaggedDictType` constructor takes a set of keyword arguments. Each key is the same of an element in the dict, and each value describes that element as a tuple of:
+* a description used in the documentation
+* a type: either a primitive type such as int or str, or another `TaggedAggregateType` subclass for nested structures
+* a default value (must be `None` for aggregates, which provide their own defaults)
+* for string values, an optional list of acceptable strings
+
+If you call `setOrdered` on the constructed type object you will get an "ordered dict" - this will be serialised as a tuple with the contained data having an implicit ordering.
+
+@@@info
+You might wonder why we don't make all tagged dicts ordered, so they
+are all serialised as tuples. The answer is that doing that would make
+it harder to implement backcompatibility - if we serialise as a tuple,
+adding and removing fields in the future becomes difficult. Only 
+use ordered dicts for things where we are very unlikely
+to change the structure. One advantage is that it is possible to set all values in an ordered dict in one line inside a batch file.
+@@@
+
+For example, here is a `TaggedDictType` definition for a rectangle:
 
 ```python
 taggedRectType = TaggedDictType(
@@ -52,43 +58,48 @@ taggedRectType = TaggedDictType(
     w=("The width of the rectangle", Number, 10),
     h=("The height of the rectangle", Number, 10)).setOrdered()
 ```
+We are using `Number` here to indicate that either ints or floats are acceptable.
+
 @@@info
 Bear in mind that there are functions for generating rectangle and colour type object in
 pcot.utils.taggedaggregates: taggedColourType and taggedRectType. You probably shouldn't
 create a rectangle type yourself.
 @@@
 
-This could then be embedded in a `TaggedDictType`:
+We can also specify that a parameter is another `TaggedDict`, allowing us to build complex nested structures. Here we nest the `taggedRectType` we defined above in another dict type:
 ```python
 taggedThingType = TaggedDictType(
     rect=("The rectangle", taggedRectType),
     somenumber=("Some numerical value",Number,0))
 ```
-which we could then form into a list:
+
+### TaggedListType
+There is also a `TaggedListType`, so we can have a list inside our dict:
+
 ```python
-listOfThingsType = TaggedListType(taggedThingType,0)  # default zero means empty list
+taggedThingType = TaggedDictType(
+    main=("The main rectangle", taggedRectType),
+    others=("Some other rectangles", TaggedListType(taggedRectType,0)),
+    somenumber=("Some numerical value",Number,0))
 ```
-We could then create a new list and add things like this:
+
+`TaggedListType` objects describe lists, and have these parameters:
+* Type of item (must be a TaggedAggregateType subclass or a primitive type (int, str, etc.)
+* Default length (if a list of aggregates) or default list (if a list of primitives)
+* Optional default value to append when a new item is created, ignored for lists of aggregates which will create their own default item
+
+We can then create our parameters and add a new default rect to the list:
 ```python
-listOfThings = TaggedListType.create()
-listOfThings.append_default()
+thing = taggedThingType.create()
+listOfThings.others.append_default()
 ```    
 We can then access these items:
 ```python
-print(listOfThings[0].rect.x)
+print(taggedThingType.others.[0].x)
 ```
 For more details on how to use these structures, read the tests in `tests/test_taggedaggs.py`.
 
-@@@info
-You might wonder why we don't make all tagged dicts ordered, so they
-are all serialised as tuples. The answer is that doing that would make
-it harder to implement backcompatibility - if we serialise as a tuple,
-adding and removing fields in the future becomes difficult. Only 
-use ordered dicts for things like rectangles, where we are very unlikely
-to change the structure. In fact, I'm only doing it for legacy support.
-@@@
-
-You'll note that all the elements of a TaggedAggregate structure are JSON-serialisable, although
+You'll note that all the elements of a TaggedAggregate structure are JSON-serialisable[^1], although
 some can be numpy arrays. However, the nature of the structure allows defaults - and documentation -
 to be generated automatically.
 
@@ -102,7 +113,7 @@ it to the `params` member of the `XFormType` in the constructor. For example:
             add=("additive constant (done last)", float, 0.0))
 ```
 When a new node is created, a default structure will be created from this type and stored in the
-node's `params` field where it can be accessed:
+node's `params` field where it can be accessed from the `perform` method:
 ```python
 output = node.params.add + node.params.mul * node.getInput(0, Datum.IMG)
 ```
@@ -116,21 +127,13 @@ do something similar to the complex serialisation method described above but
 going through a TaggedAggregate: we set the TaggedAggregate from our complex
 data, and then PCOT will serialise that.
 
-To do this, we create a `params` in the type as we did in the previous
-section, containing a TaggedDictType which we will build from our actual data.
-
-Now we write `serialise` as before, but building a TaggedDict from the
-data and storing it in the node's `params`. It should return None, because we're not using a standard Python
-dict for serialisation. Here's an example:
+To do this, we write code as before to store the data in a `TaggedDict` in `node.params`, and we store any simple data we have in that structure. Then we write a `serialise` method containing code which converts our more complex data into a simpler form and stores it in `node.params` so it can be serialised. Here's an example:
 
 ```python
 def serialise(self, node):
-    node.params = self.params.create()
-    
     # fill in the node.params with data
     node.params.foo = some_data_or_other
     node.params.bar = some_data_or_other
-    
 
     # we don't return anything, because node.params will have been set to
     # represent our data; we don't need to add anything directly to the
@@ -139,9 +142,9 @@ def serialise(self, node):
     return None
 ```
 
-Instead of a `deserialise` method we should write `nodeDataFromParams`. This
-takes a node, and uses its `params` field (a TaggedDict) to set the
-node's internal data:
+This method is also used by the legacy serialisation mechanism, where it would return a JSON dict directly. Here we need to return None instead.
+
+We must also write a `nodeDataFromParams` method. This takes a node, and uses its `params` field (which will be a TaggedDict, of course) to set the node's internal data:
 
 ```python
 def nodeDataFromParams(self, node):
@@ -201,6 +204,8 @@ data when set from a [parameter file](/userguide/batch).
 
 ## Autoserialisation
 
+This is the serialisation method used for a few legacy nodes and nodes which don't require batch editing, like *comment*. 
+
 In the simplest case, the data stored in the `XForm` object for a particular
 node is already JSON-serialisable: that is, it is either a Python
 primitive type (number, string, tuple, list or dict) or a Numpy array
@@ -208,7 +213,7 @@ primitive type (number, string, tuple, list or dict) or a Numpy array
 list the names of the attributes in a tuple called `autoserialise` in the `XFormType`,
 along with some defaults which are used in case the items are not found in the saved data.
 
-For example, the constructor for `XFormSpectrum` looks like this:
+For example, the constructor for `XFormSpectrum` could look like this (not any more, because it now uses TA-serialisation):
 
 ```python
         super().__init__("spectrum", "data", "0.0.0")
@@ -231,8 +236,7 @@ do the reverse when it deserialises a node (i.e. load it from an archive).
 
 ## Complex serialisation
 
-In this case, we have data which isn't JSON-serialisable. We have to provide code to do this.
-This is done by adding `serialise` and `deserialise` methods to the `XFormType` to 
+In this case, we have data which isn't JSON-serialisable, and where it doesn't make any sense to have the parameters editable outside the PCOT user interface. Here, we add `serialise` and `deserialise` methods to the `XFormType` to 
 convert our data to and from data
 which is JSON-serialisable. The `serialise` method will take the node and return a dict
 (which is JSON-serialisable), while the `deserialise` method will take the node and the dict
@@ -280,3 +284,4 @@ def deserialise(self, node, d):
     node.foo_list = [Foo.deserialise(x) for x in d['foolist']]
 ```    
 
+[^1]: i.e. they can be turned directly into JSON - they are primitive types (int, float, str etc.), dicts, lists, or tuples.
