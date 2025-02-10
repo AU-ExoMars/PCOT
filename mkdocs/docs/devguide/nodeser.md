@@ -26,11 +26,12 @@ This is the method we use when we want to be able to edit the parameters of node
 We make use of **tagged aggregate structures**, which can be found in
 `pcot.utils.taggedaggregate`. These are dictionaries and lists, but
 each has a formal, typed structure with "tags" giving the names of the
-members, their types, and default values. Each is described by a type
-singleton object
+members, their types, and default values.
+
+Each is described by a type singleton object which provides descriptions of its elements (these are the "tags" in the name). Calling `create()` on the singleton builds an instance of the structure with all the values filled in with defaults.
 
 ### TaggedDictType
-The main type used is `TaggedDictType`, which describes the format of a set of key/value pairs. Bear in mind that the `TaggedDictType` is a singleton - each individual set of keys and values is a `TaggedDict`.
+The main type used is `TaggedDictType`, which describes the format of a set of key/value pairs. Calling `create()` on one of these objects builds a `TaggedDict` object containing the default values.
 
 The `TaggedDictType` constructor takes a set of keyword arguments. Each key is the same of an element in the dict, and each value describes that element as a tuple of:
 
@@ -59,7 +60,13 @@ taggedRectType = TaggedDictType(
     w=("The width of the rectangle", Number, 10),
     h=("The height of the rectangle", Number, 10)).setOrdered()
 ```
-We are using `Number` here to indicate that either ints or floats are acceptable.
+We are using `Number` here to indicate that either ints or floats are acceptable. We can then create a rectangle `TaggedDict` and access its values:
+```python
+r = taggedRectType.create()            # create TaggedDict from type
+print(f"Rectangle at {r.x}, {r.y}")    # show values
+r.w = 20                               # set values
+r.h = 30
+```
 
 @@@info
 Bear in mind that there are functions for generating rectangle and colour type object in
@@ -75,7 +82,9 @@ taggedThingType = TaggedDictType(
 ```
 
 ### TaggedListType
-There is also a `TaggedListType`, so we can have a list inside our dict:
+These objects describe lists, and calling `create()` on them generates a `TaggedList` item. This is rarely done directly - it's more usual for a `TaggedDictType` to specify that one of its values is a list, in which case the list object is created when the containing `TaggedDict` is created.
+
+Here's an example where the dict contains both our rectangle type and a list of rectangles:
 
 ```python
 taggedThingType = TaggedDictType(
@@ -83,12 +92,6 @@ taggedThingType = TaggedDictType(
     others=("Some other rectangles", TaggedListType(taggedRectType,0)),
     somenumber=("Some numerical value",Number,0))
 ```
-
-`TaggedListType` objects describe lists, and have these parameters:
-
-* Type of item (must be a TaggedAggregateType subclass or a primitive type (int, str, etc.)
-* Default length (if a list of aggregates) or default list (if a list of primitives)
-* Optional default value to append when a new item is created, ignored for lists of aggregates which will create their own default item
 
 We can then create our parameters and add a new default rect to the list:
 ```python
@@ -99,6 +102,13 @@ We can then access these items:
 ```python
 print(taggedThingType.others.[0].x)
 ```
+
+The `TaggedListType` constructor takes the following arguments:
+
+* Type of item (must be a TaggedAggregateType subclass or a primitive type  - int, str, etc.)
+* Default length (if a list of aggregates) or default list (if a list of primitives)
+* Optional default value to append when a new item is created, ignored for lists of aggregates which will create their own default item
+
 For more details on how to use these structures, read the tests in `tests/test_taggedaggs.py`.
 
 You'll note that all the elements of a TaggedAggregate structure are JSON-serialisable[^1], although
