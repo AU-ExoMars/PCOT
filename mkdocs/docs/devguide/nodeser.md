@@ -33,6 +33,7 @@ singleton object
 The main type used is `TaggedDictType`, which describes the format of a set of key/value pairs. Bear in mind that the `TaggedDictType` is a singleton - each individual set of keys and values is a `TaggedDict`.
 
 The `TaggedDictType` constructor takes a set of keyword arguments. Each key is the same of an element in the dict, and each value describes that element as a tuple of:
+
 * a description used in the documentation
 * a type: either a primitive type such as int or str, or another `TaggedAggregateType` subclass for nested structures
 * a default value (must be `None` for aggregates, which provide their own defaults)
@@ -84,6 +85,7 @@ taggedThingType = TaggedDictType(
 ```
 
 `TaggedListType` objects describe lists, and have these parameters:
+
 * Type of item (must be a TaggedAggregateType subclass or a primitive type (int, str, etc.)
 * Default length (if a list of aggregates) or default list (if a list of primitives)
 * Optional default value to append when a new item is created, ignored for lists of aggregates which will create their own default item
