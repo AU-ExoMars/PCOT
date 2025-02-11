@@ -265,7 +265,7 @@ class Document:
         self.undoRedoStore.unmark()
         self.showUndoStatus()
 
-    def replaceData(self, data):
+    def replaceDataForUndo(self, data):
         """Completely restore the document from a memento.
         In actuality only the graph changes and the document is actually the same, but
         the windows should all use the new graph."""
@@ -273,7 +273,7 @@ class Document:
         # we don't delete any old tabs here.
         self.deserialise(data, internal=True, closetabs=False)
         for w in MainUI.getWindowsForDocument(self):
-            w.replaceDocument(self)  # and this must repatch the tabs we didn't delete
+            w.replaceDocumentForUndo(self)  # and this must repatch the tabs we didn't delete
         self.showUndoStatus()
 
     def nodeAdded(self, node):
@@ -302,13 +302,13 @@ class Document:
     def undo(self):
         if self.canUndo():
             data = self.undoRedoStore.undo(self.serialise(internal=True))
-            self.replaceData(data)
+            self.replaceDataForUndo(data)
         self.showUndoStatus()
 
     def redo(self):
         if self.canRedo():
             data = self.undoRedoStore.redo(self.serialise(internal=True))
-            self.replaceData(data)
+            self.replaceDataForUndo(data)
         self.showUndoStatus()
 
     def clearUndo(self):

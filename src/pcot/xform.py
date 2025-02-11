@@ -1242,19 +1242,22 @@ class XFormGraph:
         for n in self.nodes:
             n.runTime = None
 
-    def changed(self, node=None, runAll=False, uiOnly=False, forceRunDisabled=False):
-        """Called when a control in a node has changed, and the node needs to rerun (as do all its children recursively).
+    def changed(self, node=None, runAll=False, uiOnly=False, forceRunDisabled=False, invalidateInputs=True):
+        """Called when a control in a node has changed, and the node needs to rerun (as do all its+ children recursively).
         If called on a normal graph, will perform the graph or a single node within it,
         and all dependent nodes; called on a macro will do the same thing in instances, starting at the
         counterpart node for that in the macro prototype.
 
         If forceRunDisabled is true, any disabled nodes will be temporarily activated.
         This allows scripts with disabled nodes to run correctly.
+
+        We don't want to invalidate inputs and force a reload when doing undo/redo. This is because
+        the data may have gone away (issue #58). So we have a flag to avoid this.
         """
 
         self.forceRunDisabled = forceRunDisabled
         if (not uiOnly) and (XFormGraph.autoRun or runAll):
-            if runAll:
+            if runAll and invalidateInputs:
                 self.doc.inputMgr.invalidate()
             if self.isMacro:
                 # distribute changes in macro prototype to instances.

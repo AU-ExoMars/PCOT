@@ -564,17 +564,18 @@ class MainUI(ui.tabs.DockableTabWindow):
             self.macroPrototype.renameType(newname)
 
     ## perform all in the graph
-    def runAll(self):
+    def runAll(self, invalidateInputs=True):
         if self.graph is not None:
-            # pass in true, indicating we want to ignore autorun
-            self.graph.changed(runAll=True)
+            # pass in true, indicating we want to ignore autorun. We may not
+            # want to invalidate inputs to avoid issue #58.
+            self.graph.changed(runAll=True, invalidateInputs=invalidateInputs)
             self.retitleTabs()  # error states may have changed
 
-    ## After an undo/redo, a whole new document may have been deserialised.
-    # Set this new graph, and make sure the window's tabs point to nodes
-    # in the new graph rather than the old one.
+    def replaceDocumentForUndo(self, d):
+        """After an undo/redo, a whole new document may have been deserialised.
+        Set this new graph, and make sure the window's tabs point to nodes
+        in the new graph rather than the old one."""
 
-    def replaceDocument(self, d):
         # construct a dict of uid -> node for the new graph
         newGraphDict = {n.name: n for n in d.graph.nodes}
 
@@ -598,7 +599,8 @@ class MainUI(ui.tabs.DockableTabWindow):
             else:
                 self.closeTab(tab)
 
-        self.runAll()  # refresh everything (yes, slow)
+        # we don't want to reload the inputs! (Issue #58)
+        self.runAll(invalidateInputs=False)  # refresh everything (yes, slow)
 
     def showUndoStatus(self):
         import gc

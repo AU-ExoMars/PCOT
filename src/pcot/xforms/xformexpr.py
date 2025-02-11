@@ -192,6 +192,7 @@ class XFormExpr(XFormType):
 
         try:
             expr = node.params.expr.strip()
+            node.displayName = expr.replace('\r', '').replace('\n', '').replace('\t', '')
             if len(expr) > 0:
                 # get the previous number of channels (or None if the result is not an image)
                 oldChans = None if node.img is None else node.img.channels
