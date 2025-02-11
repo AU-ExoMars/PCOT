@@ -111,11 +111,17 @@ class XFormStitch(XFormType):
         maxx = max([p[0] + img.w for p, img in zip(activeInputOffsets, activeInputImages)])
         maxy = max([p[1] + img.h for p, img in zip(activeInputOffsets, activeInputImages)])
 
-        # create an image of that size to compose the images into
+        # create an image of that size to compose the images into. We have to deal with the fact that
+        # 1-band images are (h,w) while multiband images are (h,w,n).
         chans = activeInputImages[0].channels
-        img = np.zeros((maxy - miny, maxx - minx, chans), dtype=np.float32)
-        unc = np.zeros((maxy - miny, maxx - minx, chans), dtype=np.float32)
-        dqs = np.full((maxy - miny, maxx - minx, chans), dq.NODATA | dq.NOUNCERTAINTY, dtype=np.uint16)
+        if chans == 1:
+            img = np.zeros((maxy - miny, maxx - minx), dtype=np.float32)
+            unc = np.zeros((maxy - miny, maxx - minx), dtype=np.float32)
+            dqs = np.full((maxy - miny, maxx - minx), dq.NODATA | dq.NOUNCERTAINTY, dtype=np.uint16)
+        else:
+            img = np.zeros((maxy - miny, maxx - minx, chans), dtype=np.float32)
+            unc = np.zeros((maxy - miny, maxx - minx, chans), dtype=np.float32)
+            dqs = np.full((maxy - miny, maxx - minx, chans), dq.NODATA | dq.NOUNCERTAINTY, dtype=np.uint16)
 
         # compose the sources - this is a channel-wise union of all the sources
         # in all the images.

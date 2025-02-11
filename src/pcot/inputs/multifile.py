@@ -240,6 +240,7 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
 
         self.filelist.setMinimumWidth(300)
         self.setMinimumSize(1000, 500)
+        pcot.ui.decorateSplitter(self.splitter, 1)
 
         with SignalBlocker(self.filtSetCombo):
             self.filtSetCombo.addItems(getFilterSetNames())
