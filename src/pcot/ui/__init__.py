@@ -53,8 +53,18 @@ def log(s, toStdout=True, timestamp=True, loglevel=logging.INFO):
         logger.log(loglevel, s)
 
 
-## show error on status bar, and log in red; will dump traceback to stdout if requested.
+def snark(s):
+    """This is a high-priority temporary debugging message - we can hunt and delete them later
+    (Carroll, L. & Holiday, H. (1902) The Hunting of the Snark, an Agony, in Eight Fits . New York, The Macmillan company."""
+    if application is not None:
+        s = f"{datetime.now().strftime('%H:%M:%S')} {s}"
+        for x in mainwindow.MainUI.windows:
+            x.logText.append(f'<font color="purple">{s}</font>')
+    logger.debug(f"LOG snark {s}")
+
+
 def error(s, tb=True):
+    """show error on status bar, and log in red; will dump traceback to stdout if requested."""
     if application is not None:
         m = f'<font color="red">Error: </font> {s}'
         for x in mainwindow.MainUI.windows:
@@ -64,8 +74,9 @@ def error(s, tb=True):
     msg("ERROR: {}".format(s))
 
 
-## show a warning dialog 
+
 def warn(s):
+    """show a warning dialog"""
     if app() is not None:
         application.beep()
         QtWidgets.QMessageBox.warning(None, 'WARNING', s)

@@ -362,17 +362,27 @@ class XFormType:
         else:
             return node.getOutputDatum(0)
 
-    @staticmethod
-    def buildText(n):
+    def getDisplayName(self, n):
+        """Return the display text. Usually this is the displayName field but it can be overriden (which is why
+        it's in the type class, not the node class"""
+        return n.displayName
+
+    def buildTextWithFont(self, n, font):
+        """Used to build the text for the rectangle in buildText. None for the font means use default"""
+        x, y = n.xy
+        nam = self.getDisplayName(n)
+        text = graphscene.GText(n.rect, nam, n)
+        text.setPos(x + graphscene.XTEXTOFFSET, y + graphscene.YTEXTOFFSET + graphscene.CONNECTORHEIGHT)
+        text.setFont(font if font else graphscene.mainFont)
+        return text
+
+    def buildText(self, n):
         """build the text element of the graph scene object for the node.
         By default, this will just create static text, but can be overridden.
+        The text will be in bold if the node has been renamed.
         """
-        x, y = n.xy
-        text = graphscene.GText(n.rect, n.displayName, n)
-        text.setPos(x + graphscene.XTEXTOFFSET, y + graphscene.YTEXTOFFSET + graphscene.CONNECTORHEIGHT)
-        text.setFont(graphscene.mainFont)
-
-        return text
+        f = None if n.displayName == self.name else graphscene.boldMainFont
+        return self.buildTextWithFont(n, f)
 
     def resizeDone(self, n):
         """The node's onscreen box has been resized"""
@@ -577,6 +587,11 @@ class XForm:
         """clear the error state and rect text"""
         self.error = None
         self.rectText = None
+
+    def getDisplayName(self):
+        """Return the display text. Usually this is the displayName field but it can be overriden, e.g.
+        by expr where the expression is displayed if the name is "expr" """
+        return self.type.getDisplayName(self)
 
     def clearOutputsAndTempData(self):
         """
@@ -1445,7 +1460,7 @@ class XFormGraph:
     def getByDisplayName(self, name, single=False):
         """Return a list of nodes which have this display name. if single is True, return
         the first one only and ensure there is only one item."""
-        x = [x for x in self.nodes if x.displayName == name]
+        x = [x for x in self.nodes if x.getDisplayName() == name]
         if single:
             if len(x) == 1:
                 return x[0]

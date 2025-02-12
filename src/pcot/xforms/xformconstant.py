@@ -78,8 +78,7 @@ class XFormConstant(XFormType):
             val=("The value of the constant", float, 0.0)
         )
 
-    @staticmethod
-    def buildText(n):
+    def buildText(self, n):
         """Build the text object for the constant node."""
         x, y = n.xy
         n.text = GNumberText(n.rect, n)

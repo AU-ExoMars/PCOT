@@ -134,7 +134,7 @@ class Runner:
         # nodes with the same display name - later nodes will overwrite earlier ones.
         for node in self.doc.graph.nodes:
             # we even do this if the node has no parameters so we can check for that.
-            self.paramdict[node.displayName] = node.params
+            self.paramdict[node.getDisplayName()] = node.params
 
         # create the 'originals' which will be used to reset the parameters with
         # the "reset" commands
@@ -202,8 +202,8 @@ class Runner:
                 if len(error_nodes) > 0:
                     error_msg = ""
                     for node in error_nodes:
-                        logger.error(f"Error in node {node.displayName} - {node.error}")
-                        error_msg += f" {node.displayName} - {node.error}\n"
+                        logger.error(f"Error in node {node.getDisplayName()} - {node.error}")
+                        error_msg += f" {node.getDisplayName()} - {node.error}\n"
                     raise ValueError(f"Errors in run ({len(error_nodes)} nodes failed):\n{error_msg}")
 
                 # write the outputs

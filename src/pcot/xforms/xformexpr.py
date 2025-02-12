@@ -1,4 +1,5 @@
 import traceback
+import logging
 
 from pcot import ui
 from pcot.datum import Datum
@@ -8,6 +9,8 @@ from pcot.imagecube import ChannelMapping
 from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.utils import SignalBlocker
 from pcot.xform import XFormType, xformtype, XFormException, XForm
+
+logger = logging.getLogger(__name__)
 
 
 def getvar(d):
@@ -181,6 +184,18 @@ class XFormExpr(XFormType):
         node.resultStr = ""
         node.w = -1
 
+    def getDisplayName(self, n):
+        """Custom text - if displayName is not the same as the type name, use that. Otherwise use
+        the expression."""
+        if n.displayName != "expr":
+            # the user has changed the name, so use that
+            return n.displayName
+        else:
+            # The node still has the default display name "expr".
+            # get the expression and build a string for it, but say NONE if the expression isn't set yet
+            e = n.params.expr
+            return "NONE" if e == '' else e.replace('\r', '').replace('\n', '').replace('\t', '')
+
     def perform(self, node: XForm):
         # we register the input vars here because we have to, they are temporary and apply to
         # this run only. To register other things, go to expression/eval.py.
@@ -192,7 +207,6 @@ class XFormExpr(XFormType):
 
         try:
             expr = node.params.expr.strip()
-            node.displayName = expr.replace('\r', '').replace('\n', '').replace('\t', '')
             if len(expr) > 0:
                 # get the previous number of channels (or None if the result is not an image)
                 oldChans = None if node.img is None else node.img.channels
@@ -236,10 +250,13 @@ class TabExpr(pcot.ui.tabs.Tab):
         self.nodeChanged()
 
     def exprChanged(self):
+        # we set the temporary expression and don't call changed because this gets called whenever the text
+        # changes. The user has to click RUN for the text to get copied into the live expression and the node
+        # run
         self.node.tmpexpr = self.w.expr.toPlainText()
-#        self.node.displayName = self.node.expr.replace('\r', '').replace('\n', '').replace('\t', '')
-        self.node.displayName = self.node.tmpexpr.replace('\r', '').replace('\n', '').replace('\t', '')
-        # don't call changed() or we'll run the expr on every key press!
+        # set a red background to show the user that they have to click run
+        self.w.run.setStyleSheet("background-color:rgb(255,100,100)")
+        # again, we don't call changed() or we'll run the expr on every key press!
 
     def run(self):
         self.mark()
@@ -247,6 +264,8 @@ class TabExpr(pcot.ui.tabs.Tab):
         # difficulty marking undo points.
         self.node.params.expr = self.node.tmpexpr
         self.node.rect.setSizeToText()
+        # clear the RUN button's red background
+        self.w.run.setStyleSheet("")
         self.changed()
 
     def onNodeChanged(self):

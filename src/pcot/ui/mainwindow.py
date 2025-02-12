@@ -296,7 +296,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     def autoLayoutButton(self):
         self.graph.constructScene(True)
         self.view.setScene(self.graph.scene)
-        self.rebuildPalettes()      # snark
+        self.rebuildPalettes()
         self.rebuildPalettes()
         self.rebuildPalettes()
 

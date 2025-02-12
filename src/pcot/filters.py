@@ -54,7 +54,7 @@ class Filter:
 
     @classmethod
     def deserialise(cls, d):
-        if isinstance(d, str):  # snark
+        if isinstance(d, str):
             ui.error("Oops - old style file contains filter name, not filter data. Using dummy, please 'Run All'.")
             return Filter(2000, 1.0, 1.0, "dummypos", "dummyname", 0)
         try:

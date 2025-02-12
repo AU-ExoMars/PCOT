@@ -118,7 +118,7 @@ class InputMethod(ABC):
     @abstractmethod
     def getName(self):
         """to override - returns the name for display purposes"""
-        return 'override-getDisplayName!'
+        return 'override-getName!'
 
     @abstractmethod
     def createWidget(self):

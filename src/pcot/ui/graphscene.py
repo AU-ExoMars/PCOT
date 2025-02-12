@@ -54,6 +54,12 @@ mainFont = QFont()
 mainFont.setFamily('Sans Serif')
 mainFont.setPixelSize(10)
 
+# bold version of the above
+boldMainFont = QFont()
+boldMainFont.setFamily('Sans Serif')
+boldMainFont.setPixelSize(10)
+boldMainFont.setBold(True)
+
 # the font for error codes
 errorFont = QFont()
 errorFont.setFamily('Sans Serif')
@@ -239,6 +245,7 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
         """context menu event on nodes"""
         m = QtWidgets.QMenu()
         rename = m.addAction("Rename")
+        resetname = m.addAction("Reset name")
         if self.node.type.hasEnable:
             togact = m.addAction("Disable" if self.node.enabled else "Enable")
         else:
@@ -264,6 +271,9 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
                 if changed:
                     self.node.rename(newname)
                     ui.mainwindow.MainUI.rebuildAll()
+            elif action == resetname:
+                self.node.rename(self.node.type.name)
+                ui.mainwindow.MainUI.rebuildAll()
             elif action == helpact:
                 w.openHelp(self.node.type, node=self.node)
             elif action == valignact:

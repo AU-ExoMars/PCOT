@@ -84,8 +84,7 @@ class XFormComment(XFormType):
 
     ## build the text element of the graph scene object for the node. By default, this
     # will just create static text, but can be overridden.
-    @staticmethod
-    def buildText(n):
+    def buildText(self, n):
         x, y = n.xy
         text = GStringText(n.rect, n)
         text.setPos(x + ui.graphscene.XTEXTOFFSET, y + ui.graphscene.YTEXTOFFSET + ui.graphscene.CONNECTORHEIGHT)
