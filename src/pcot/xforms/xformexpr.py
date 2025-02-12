@@ -176,7 +176,6 @@ class XFormExpr(XFormType):
         return TabExpr(n, w)
 
     def init(self, node):
-        node.tmpexpr = ""
         # used when we have an image on the output. We keep this unlike a lot of other nodes so
         # we can see when the channel count changes.
         node.img = None
@@ -250,19 +249,13 @@ class TabExpr(pcot.ui.tabs.Tab):
         self.nodeChanged()
 
     def exprChanged(self):
-        # we set the temporary expression and don't call changed because this gets called whenever the text
-        # changes. The user has to click RUN for the text to get copied into the live expression and the node
-        # run
-        self.node.tmpexpr = self.w.expr.toPlainText()
         # set a red background to show the user that they have to click run
         self.w.run.setStyleSheet("background-color:rgb(255,100,100)")
-        # again, we don't call changed() or we'll run the expr on every key press!
+        # we don't call changed() or we'll run the expr on every key press!
 
     def run(self):
         self.mark()
-        # note that we use a temporary expression, so that the expression isn't constantly changing and we have
-        # difficulty marking undo points.
-        self.node.params.expr = self.node.tmpexpr
+        self.node.params.expr = self.w.expr.toPlainText()
         self.node.rect.setSizeToText()
         # clear the RUN button's red background
         self.w.run.setStyleSheet("")
