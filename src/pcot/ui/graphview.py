@@ -4,7 +4,9 @@ represents a graph (graphscene).
 from PySide2 import QtWidgets, QtCore, QtGui
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QMenu
+import logging
 
+logger = logging.getLogger(__name__)
 
 class GraphView(QtWidgets.QGraphicsView):
     """The graphical view widget for the graph"""
@@ -82,10 +84,14 @@ class GraphView(QtWidgets.QGraphicsView):
         name = stream.readQString()
         # now we need to make one of those and add it to the graph!
         self.scene().mark()
-        x = self.scene().graph.create(name)
+        node = self.scene().graph.create(name)
         # we have to fudge up a position for this, it will have been given a default position.
         pos = self.mapToScene(e.pos())
-        x.xy = (pos.x(), pos.y())
+        # we use the default width and height because the actual width and height haven't yet been calculated
+        w = node.type.defaultWidth
+        h = node.type.defaultHeight
+        logger.debug(f"Drop event at {pos.x()},{pos.y()}, node size {w},{h}")
+        node.xy = (pos.x() - w/2, pos.y() - h/2)
         # and build the scene with the new objects
         self.scene().rebuild()
 

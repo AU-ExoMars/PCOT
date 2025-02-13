@@ -661,8 +661,8 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     y1 += n1.h
                     compat = datum.isCompatibleConnection(outtype, intype)
 
-#                    if not compat:
-#                        ui.log(f"incompatible: {n1} -> {n2} / {outtype} -> {intype}")
+                    #                    if not compat:
+                    #                        ui.log(f"incompatible: {n1} -> {n2} / {outtype} -> {intype}")
 
                     arrowItem = GArrow(x1, y1, x2, y2, n1, output, n2,
                                        inputIdx, compat=compat)
@@ -846,7 +846,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         """Vertically align selected nodes"""
         # find average X coordinate of node centres
         if len(self.selection) < 2:
-            return   # nothing to do
+            return  # nothing to do
 
         x = sum([n.xy[0] + n.w / 2 for n in self.selection]) / len(self.selection)
 

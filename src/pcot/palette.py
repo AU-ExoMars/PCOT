@@ -70,10 +70,11 @@ class PaletteButton(QtWidgets.QPushButton):
             self.mousePos = event.pos()  # save click position for dragging
 
     def mouseMoveEvent(self, event):
-        """handle mouse move for dragging with RMB"""
+        """handle mouse move for dragging with LMB.
+        Note that the node is actually created when the box is dropped in GraphView.dropEvent.
+        """
         if event.buttons() != QtCore.Qt.LeftButton:
             return
-        logger.info("Creating dragger")
         mimeData = QtCore.QMimeData()
         # create a byte array and a stream that is used to write into
         byteArray = QtCore.QByteArray()
@@ -87,7 +88,6 @@ class PaletteButton(QtWidgets.QPushButton):
         # set the hotspot according to the mouse press position
         drag.setHotSpot(self.mousePos - self.rect().topLeft())
         drag.exec_(Qt.MoveAction)
-        logger.info("Dragger OK")
 
     def click(self):
         """handle a single LMB click"""
