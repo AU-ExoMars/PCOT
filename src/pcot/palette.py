@@ -10,6 +10,10 @@ from pcot.ui.collapser import Collapser
 from pcot.xform import XFormType, XFormException
 import pcot.ui as ui
 
+import logging 
+
+logger = logging.getLogger(__name__)
+
 view = None
 
 # The groups into which the buttons are sorted - it's a constant.
@@ -63,14 +67,13 @@ class PaletteButton(QtWidgets.QPushButton):
         """handle a mouse down event"""
         super().mousePressEvent(event)
         if event.button() == Qt.LeftButton:
-            self.click()
-        elif event.button() == Qt.RightButton:
             self.mousePos = event.pos()  # save click position for dragging
 
     def mouseMoveEvent(self, event):
         """handle mouse move for dragging with RMB"""
-        if event.buttons() != QtCore.Qt.RightButton:
+        if event.buttons() != QtCore.Qt.LeftButton:
             return
+        logger.info("Creating dragger")
         mimeData = QtCore.QMimeData()
         # create a byte array and a stream that is used to write into
         byteArray = QtCore.QByteArray()
@@ -84,6 +87,7 @@ class PaletteButton(QtWidgets.QPushButton):
         # set the hotspot according to the mouse press position
         drag.setHotSpot(self.mousePos - self.rect().topLeft())
         drag.exec_(Qt.MoveAction)
+        logger.info("Dragger OK")
 
     def click(self):
         """handle a single LMB click"""
