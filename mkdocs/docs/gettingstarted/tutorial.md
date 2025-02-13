@@ -56,8 +56,7 @@ you can undock by double-clicking on the tab at the top of the view.
 the document and their connections. A new document always has an *input 0* node,
 which brings input 0 into the graph.
 * To the right of the graph is the **palette**, which consists of a number
-of sections which can be expanded or hidden. Clicking on a button in
-the palette will add a node of the given type to the graph. 
+of sections which can be expanded or hidden. Each section a set of buttons, one for each node type. Drag a button onto the graph to create a new node of that type.
 * At the bottom is the **log area**, the **status bar**, and a set of
 [global controls](../userguide/globalcontrols.md).
 
@@ -83,6 +82,9 @@ calculated (see below).
 or the annotation given to a region of interest.
 * Currently nodes without a display text also show the number of times they have been calculated as a debugging aid.
 
+### Creating new nodes
+
+This is done by **clicking a node type button in the palette and dragging the button onto the graph.** 
 
 
 ### Selecting and opening graph nodes
@@ -111,15 +113,6 @@ is tinted green in the graph.
 The view for this particular node - *input 0* - shows what external input is currently being
 read into PCOT on the input numbered 0. In
 this case it shows "None" because there is currently no input. 
-
-### Creating a new node
-
-This can be done in two ways:
-
-* **Clicking on a node type in the palette** will create a new instance of
-that type in the graph, hopefully somewhere sensible.
-* **Right-clicking a node type from the palette and dragging onto the graph** will create a node
-where you wish.
 
 ### "Undocking" a node's view
 
@@ -231,7 +224,7 @@ the Input 0 button, selecting RGB and double-clicking on an image file.
 * ==Double-click on the *input 0* node in the graph== - instances of this node
 bring input 0 into the graph.
 * ==Open the *maths* section in the palette== by clicking on it.
-* ==Click on *expr* in the maths section== to create an expression
+* ==Drag *expr* in the maths section onto the graph== to create an expression
 evaluation node.
 * ==Drag a connection from the output of *input 0* to the *a* input
 of *expr*.==

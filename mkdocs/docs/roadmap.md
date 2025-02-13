@@ -9,7 +9,7 @@ This is a rough guide, and things may change!
     both in the "help" window and in the on-line documentation
     * provides better type and range checking when the node is modified in code
     * provides support for batch files
-    
+* You now create nodes by dragging from the palette with the left mouse button*
 * batch runner
     * allows a PCOT file to be loaded and its parameters (i.e. node settings,
     inputs and outputs) to be modifed with a "batch file" before running. The
