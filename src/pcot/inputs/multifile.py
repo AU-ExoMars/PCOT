@@ -245,6 +245,8 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         with SignalBlocker(self.filtSetCombo):
             self.filtSetCombo.addItems(getFilterSetNames())
 
+        # if the method doesn't have a directory, reset to the default.
+
         if self.method.dir is None or len(self.method.dir) == 0:
             self.method.dir = pcot.config.getDefaultDir('images')
         self.onInputChanged()
@@ -323,9 +325,9 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
                                                          os.path.expanduser(d),
                                                          options=pcot.config.getFileDialogOptions())
         if res != '':
-            self.selectDir(res)
+            self.selectDir(res, True)
 
-    def selectDir(self, dr):
+    def selectDir(self, dr, setDefaultDir=False):
         # called when we want to load a new directory, or when the node has changed (on loading)
         if self.method.dir != dr:  # if the directory has changed reset the selected file list
             self.method.files = []
@@ -337,7 +339,10 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
                                     and IMAGETYPERE.match(f) is not None])
             # using the absolute, real path
             self.method.dir = os.path.realpath(dr)
-            pcot.config.setDefaultDir('images', self.method.dir)
+            # only set the default directory for images when this is called "manually" - typically in response
+            # to the "get directory" button.
+            if setDefaultDir:
+                pcot.config.setDefaultDir('images', self.method.dir)
         except Exception as e:
             # some kind of file system error
             e = str(e)
