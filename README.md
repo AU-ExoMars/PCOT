@@ -120,7 +120,7 @@ are using a shall of some sort:
 environment
 * **conda env remove -n pcot** will delete the old environment
 * **conda create -n pcot python=3.11 poetry** will create a new environment -
-replace "3.11" with the correct new version
+replace "3.11" with the correct new version (currently 3.9 will work too)
 * **poetry install** will reinstall all the packages.
 * You will probably need to refer to the instructions below on **Running PCOT inside Pycharm**
 to update the interpreter to the new version.
@@ -165,7 +165,7 @@ are testing a custom node.
     * Open PyCharm and open the PCOT directory as an existing project.
     * Open **File/Settings..** (Ctrl+Alt+S)
     * Select **Project:PCOT / Python Interpreter**
-    * If the Python Interpreter is not already Python 3.10 with something like **anaconda3/envs/pcot/bin/python**
+    * If the Python Interpreter is not already Python with something like **anaconda3/envs/pcot/bin/python**
         * Select the cogwheel to the right of the Python Interpreter dropdown and then select  **Add**.
         * Select **Conda Environment**.
         * Select **Existing Environment**.
