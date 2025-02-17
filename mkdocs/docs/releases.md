@@ -8,6 +8,26 @@ None
 
 ## Alpha releases
 
+## 0.9.0-alpha 2025-02-17 GODOLPHIN HILL
+
+I'll miss Fenton Saurus, that was a great name.
+
+* New system for node parameters - the TaggedAggregate system. All nodes
+updated to this where it makes sense.
+* Batch runner (`pcotbatch`) first draft, which allows a graph to be run
+from the command line with inputs and nodes able to be modified with a
+text file, and outputs able to be captured and saved.
+* Complete rewrite of `manual register` node
+* "PARC" input and output file format - allows multispectral images with
+uncertainty to be stored (and other data types too)
+* Various bits of refactoring
+* Issue fixes
+* Yet more tests
+* Nodes are now created by left-click dragging from the palette
+* Nodes which have been renamed from their defaults have their name text
+shown in bold
+* Forced to downgrade minimum Python version to 3.9 temporarily
+
 ### 0.8.0-alpha 2024-07-25 FENTON SAURUS
 
 Yes, really: [Fenton Saurus](https://www.megalithic.co.uk/article.php?sid=8106)

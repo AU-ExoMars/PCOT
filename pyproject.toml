@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pcot"
-version = "0.8.0-alpha"
+version = "0.9.0-alpha"
 description = "PanCam Operations Toolkit"
 authors = ["Jim Finnis <jcf12@aber.ac.uk>"]
 license = "MIT"
@@ -18,7 +18,7 @@ classifiers = [
 "Bug Tracker" = "https://github.com/AU-ExoMars/PCOT/issues"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.11"
+python = ">=3.9,<3.11"
 PySide2 = "^5.15.2"
 opencv-python-headless = "4.10.0.84"
 scikit-image = "^0.21.0"
