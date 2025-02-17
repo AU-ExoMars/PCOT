@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
     <head>
     
         <meta charset="utf-8">
@@ -16,20 +15,23 @@
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/font-awesome.min.css" rel="stylesheet">
         <link href="../../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
     <link rel="stylesheet" href="../../css/lightbox.min.css">
     <link rel="stylesheet" href="../../css/site.css">
 
     
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-        <script>hljs.highlightAll();</script>
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
     <script src="../../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
 
     <body>
         <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
-            <div class="container">
+            <div class="container ">
                 <a class="navbar-brand" href="../..">PCOT Documentation</a>
                 <!-- Expander button -->
                 <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
@@ -82,7 +84,7 @@
 </li>
                                     
 <li>
-    <a href="./" class="dropdown-item active">The Canvas</a>
+    <a href="./" class="dropdown-item active" aria-current="page">The Canvas</a>
 </li>
                                     
 <li>
@@ -95,6 +97,10 @@
                                     
 <li>
     <a href="../expr/" class="dropdown-item">The "expr" node for mathematical expressions</a>
+</li>
+                                    
+<li>
+    <a href="../batch/" class="dropdown-item">Batch mode</a>
 </li>
                                     
 <li>
@@ -116,6 +122,10 @@
                                     
 <li>
     <a href="../../devguide/plugins/" class="dropdown-item">Writing PCOT plugins</a>
+</li>
+                                    
+<li>
+    <a href="../../devguide/nodeser/" class="dropdown-item">Node serialisation</a>
 </li>
                                 </ul>
                             </li>
@@ -148,30 +158,30 @@
             </div>
         </div>
 
-        <div class="container">
+        <div class="container ">
             <div class="row">
-                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
     <div class="navbar-header">
-        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
             <span class="fa fa-angle-down"></span>
         </button>
     </div>
 
     
-    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-level="1"><a href="#the-canvas-and-its-optional-views" class="nav-link">The Canvas and its optional views</a>
+            <li class="nav-item" data-bs-level="1"><a href="#the-canvas-and-its-optional-views" class="nav-link">The Canvas and its optional views</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-level="2"><a href="#data-section" class="nav-link">Data section</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-level="2"><a href="#normalisation-section" class="nav-link">Normalisation section</a>
+            <li class="nav-item" data-bs-level="2"><a href="#data-section" class="nav-link">Data section</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-level="2"><a href="#data-quality-layers" class="nav-link">Data quality layers</a>
+            <li class="nav-item" data-bs-level="2"><a href="#normalisation-section" class="nav-link">Normalisation section</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#data-quality-layers" class="nav-link">Data quality layers</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -214,11 +224,11 @@ it.</li>
 <li><strong>Show spectrum</strong> opens a side pane, and dragging the cursor across the
 image will plot the spectrum of the pixel under the cursor in this pane. If
 no filter wavelengths are available, a list of the values for each band is shown.
-The show spectrum pane looks like this:
-<figure class="text-center"><a data-lightbox="canvasspec.png" href="../canvasspec.png" name="canvasspec"><img alt="The &quot;show spectrum&quot; pane on an input node's canvas" src="../canvasspec.png" />
-The screenshot isn't showing the cursor, unfortunately, but the spectrum is for
-the pixel under the cursor.</a><figcaption class="figure-caption text-center">Figure: The "show spectrum" pane on an input node's canvas. Click on image to expand.</figcaption></figure></li>
+The show spectrum pane looks like this:</li>
 </ul>
+<p><figure class="text-center"><a data-lightbox="canvasspec.png" href="../canvasspec.png" name="canvasspec"><img alt="The &quot;show spectrum&quot; pane on an input node's canvas" src="../canvasspec.png" /></a><figcaption class="figure-caption text-center">Figure: The "show spectrum" pane on an input node's canvas. Click on image to expand.</figcaption></figure></p>
+<p>The screenshot isn't showing the cursor, unfortunately, but the spectrum is for
+the pixel under the cursor.</p>
 <p>When a spectrum view is opened the image pane can be tiny - to fix this you
 can resize the PCOT window (or undocked node window), or drag the separator
 between the image and the spectrum (the two vertical bars). Each dot is shown
@@ -281,22 +291,20 @@ uncertainty is below a threshold (see below).</li>
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
-        <script src="../../js/jquery-3.6.0.min.js"></script>
-        <script src="../../js/bootstrap.min.js"></script>
         <script>
             var base_url = "../..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../../js/base.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
-        <script src="../../search/main.js"></script>
+        <script src="../../js/base.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
+        <script src="../../search/main.js" defer></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h4 class="modal-title" id="searchModalLabel">Search</h4>
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>From here you can search these documents. Enter your search terms below.</p>
@@ -316,7 +324,7 @@ uncertainty is below a threshold (see below).</li>
         <div class="modal-content">
             <div class="modal-header">
                 <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
               <table class="table">

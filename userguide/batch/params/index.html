@@ -1,0 +1,515 @@
+<!DOCTYPE html><html lang="en">
+    <head>
+    
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../../img/favicon.ico">
+    <meta name="robots" content="noindex,nofollow">
+
+        <title>Parameter file format - PCOT Documentation</title>
+    
+        <link href="../../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+    <link rel="stylesheet" href="../../../css/lightbox.min.css">
+    <link rel="stylesheet" href="../../../css/site.css">
+
+    
+
+        <script src="../../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
+    <script src="../../../js/lightbox-plus-jquery.min.js"></script>
+ 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container ">
+                <a class="navbar-brand" href="../../..">PCOT Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Getting Started <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../../gettingstarted/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../../gettingstarted/installrun/" class="dropdown-item">Installing and running</a>
+</li>
+                                    
+<li>
+    <a href="../../../gettingstarted/concepts/" class="dropdown-item">PCOT concepts</a>
+</li>
+                                    
+<li>
+    <a href="../../../gettingstarted/tutorial/" class="dropdown-item">Tutorial</a>
+</li>
+                                    
+<li>
+    <a href="../../../gettingstarted/inputs/" class="dropdown-item">Loading other image formats</a>
+</li>
+                                    
+<li>
+    <a href="../../../gettingstarted/help/" class="dropdown-item">Getting help</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../principles/" class="dropdown-item">Operating principles</a>
+</li>
+                                    
+<li>
+    <a href="../../canvas/" class="dropdown-item">The Canvas</a>
+</li>
+                                    
+<li>
+    <a href="../../globalcontrols/" class="dropdown-item">Global Controls</a>
+</li>
+                                    
+<li>
+    <a href="../../multifile/" class="dropdown-item">Reading images from multiple files</a>
+</li>
+                                    
+<li>
+    <a href="../../expr/" class="dropdown-item">The "expr" node for mathematical expressions</a>
+</li>
+                                    
+<li>
+    <a href="../" class="dropdown-item">Batch mode</a>
+</li>
+                                    
+<li>
+    <a href="../../../autodocs/" class="dropdown-item">Autodocs</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer's Guide <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../../devguide/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../../devguide/library/" class="dropdown-item">Using PCOT as a library</a>
+</li>
+                                    
+<li>
+    <a href="../../../devguide/plugins/" class="dropdown-item">Writing PCOT plugins</a>
+</li>
+                                    
+<li>
+    <a href="../../../devguide/nodeser/" class="dropdown-item">Node serialisation</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="navitem">
+                                <a href="../../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../../../gettingstarted/issues/" class="nav-link">Known issues</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container ">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#parameter-file-format" class="nav-link">Parameter file format</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#the-basics" class="nav-link">The basics</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#lists" class="nav-link">Lists</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#relative-paths" class="nav-link">Relative paths</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#path-setters" class="nav-link">Path setters</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#inputs-outputs-and-nodes" class="nav-link">Inputs, outputs and nodes</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="parameter-file-format">Parameter file format</h1>
+<h2 id="the-basics">The basics</h2>
+<p>Parameter files are just lists of changes to be made 
+to a structure. This structure contains information about the document's
+inputs and nodes, and how the system should output the resulting data
+once the document has run.</p>
+<p>Each line in the file changes an element in the structure. For example,</p>
+<pre><code class="language-txt">inputs.0.rgb.file = mydata/foo.png
+</code></pre>
+<p>tells the system to change input 0's RGB loading method that it should
+load the file <code>mydata/foo.png</code>. Only one loader can be active for each
+input, and this change will "activate" input 0's RGB loader.</p>
+<p>Another change could be:</p>
+<pre><code class="language-txt">k.val = 2
+</code></pre>
+<p>which assumes that there is a node called <code>k</code>, whose parameter <code>val</code>
+we now set to 2 (this is probably a <a href="/autodocs/constant">constant</a> node).</p>
+<h2 id="lists">Lists</h2>
+<p>Some of the elements in the parameter structure file are lists. We
+can add to lists by putting a <code>+</code> in the path. For example, there
+is a list of filenames to load inside each input's multifile loader.
+We can add elements to it like this:</p>
+<pre><code class="language-txt">inputs.0.multifile.directory = mydata/multi
+inputs.0.multifile.filter_pattern = *Filter(?P&lt;lens&gt;L|R)(?P&lt;n&gt;[0-9][0-9]).*
+inputs.0.multifile.filenames.+ = FilterL02.png
+inputs.0.multifile.filenames.+ = TestFilterL01image.png
+inputs.0.multifile.filenames.+ = FilterR10.png
+</code></pre>
+<p>This tells the multifile loader where the files are (the <code>directory</code>
+element), how to decode the names to get a filter (the <code>filter_pattern</code>
+element) and finally adds three filenames to the filename list.</p>
+<p>What the <code>+</code> element actually does is create a new item at the end of
+the list and start modifying that item. In the example above each item
+is just a string, but they could be structures. Adding a new structure
+to a list creates a default structure and adds it, and we can then
+immediately modify it.</p>
+<p>For example, we can add a new output like this:</p>
+<pre><code class="language-txt">outputs.+.file = out.csv
+outputs.0.clobber = y
+outputs.0.node = spectrum
+</code></pre>
+<p>The first line creates a new default output element in the outputs and
+sets its <code>file</code> to <code>out.csv</code>. The next two lines modify other values within
+that same output, which is the first output (numbered zero).</p>
+<p>We can write this more concisely using a relative path.</p>
+<h2 id="relative-paths">Relative paths</h2>
+<p>The left-hand side of each line is called the "path" because
+it describes how to get to each item we need to change. 
+You'll notice from the above example that there can be a lot of repetition in
+paths as we change a lot of elements at the same level within the
+structure. So far we have seen <em>absolute</em> paths describing route in full,
+but if we start a path with a <code>.</code> - making a <em>relative</em> path - we 
+are assumed to be at the same place as the last change.</p>
+<p>We can change the previous output example to this:</p>
+<pre><code class="language-txt">outputs.+.file = out.csv
+.clobber = y
+.node = spectrum
+</code></pre>
+<p>The first line creates a new output element and sets its <code>file</code> to "out.csv".
+The next two lines modify that output element, because the last thing we set
+was <code>output.0.file</code>, inside <code>output.0</code>. </p>
+<p>We can also modify the input example the same way:</p>
+<pre><code class="language-txt">inputs.0.multifile.directory = {globaldatadir}/multi
+.filter_pattern = *Filter(?P&lt;lens&gt;L|R)(?P&lt;n&gt;[0-9][0-9]).*
+.filenames.+ = FilterL02.png
+.+ = TestFilterL01image.png
+.+ = FilterR10.png
+</code></pre>
+<p>The leading <code>.</code> means "stay at the same level," which in this case is
+<code>inputs.0.multifile</code>.</p>
+<h2 id="path-setters">Path setters</h2>
+<p>If we write a path without setting a value, it just sets the current path for
+the next items - this kind of line is called a <strong>path setter</strong>. 
+We could also write the output example like this:</p>
+<pre><code class="language-txt">outputs.+
+.node = spectrum
+.file = out.csv
+.clobber = y
+</code></pre>
+<p>The first line creates a new output and sets the path. The next
+three lines modify the structure at that path - the output just created.</p>
+<h3 id="going-up-levels-with-multiple-dots">Going up levels with multiple dots</h3>
+<p>In the example above we add an output and then modify it. We could add another output
+by adding an extra set of lines, like this:</p>
+<pre><code class="language-txt">outputs.+.file = out.csv
+.clobber = y
+.node = spectrum
+
+outputs.+.file = out2.csv
+.node = spectrum2
+</code></pre>
+<p>But we can also do this:</p>
+<pre><code class="language-txt">outputs.+.file = out.csv
+.clobber = y
+.node = spectrum
+
+..+.file = out2.csv
+.node = spectrum2
+</code></pre>
+<p>That's because after the first output, our path is set to <code>output.0.</code>. Using two dots
+lets us go back up the path one level, to <code>output.</code>, so we can now add a new output.</p>
+<h3 id="list-notation-for-ordered-parameters">List notation for ordered parameters</h3>
+<p>Some parameters have an implicit ordering. These are marked in the documentation as
+"(ordered)". For example, the <em>circle</em> node type <a href="/autodocs/circle/">autodocs</a> contain
+this:</p>
+<table border='1' style='border-collapse: collapse;'>
+<tr><td rowspan="3" style="border-right: none;">croi</td><td rowspan="3" style="border-left: none;">circle definition (ordered)</td><td rowspan="1" style="border-right: none;">x: integer (default 0)</td><td rowspan="1" style="border-left: none;">Centre x coordinate</td></tr>
+<tr><td rowspan="1" style="border-right: none;">y: integer (default 0)</td><td rowspan="1" style="border-left: none;">Centre y coordinate</td></tr>
+<tr><td rowspan="1" style="border-right: none;">r: integer (default -1)</td><td rowspan="1" style="border-left: none;">Radius</td></tr></table>
+
+<p>That means that while you can set the region of interest within a <em>circle</em> node with this:</p>
+<pre><code class="language-txt">circle.croi.x = 100
+.y = 100
+.r = 20
+</code></pre>
+<p>you can also use a list, and the values will be assigned from the list with the order given
+in the documentation:</p>
+<pre><code class="language-txt">circle.croi = [100,100,20]
+</code></pre>
+<h3 id="the-run-directive-running-multiple-times">The 'run' directive - running multiple times</h3>
+<p>If the file contains a line with just the word <code>run</code> (excluding comments), PCOT will
+run with the parameters as they stand at the current point in the file. That means you can
+write things like this:</p>
+<pre><code class="language-txt">outputs.+.file = double.csv
+expr.expr = a*2
+run
+
+outputs.0.file = triple.csv
+expr.expr = a*3
+run
+
+outputs.0.file = quad.csv
+expr.expr = a*4
+run
+</code></pre>
+<p>Here we are running the same graph three times, with three different expressions in the
+node called <code>expr</code>. Each time we are modifying the first (and only) output filename. Note
+that we need to create output for the first run,
+and then we modify its filename for subsequent runs.</p>
+<h3 id="using-jinja2-templates">Using Jinja2 templates</h3>
+<p>Before they are run, each parameter file is processed using the
+<a href="https://jinja.palletsprojects.com/en/stable/templates/">Jinja2 templating engine</a>, more typically
+used to create websites (as is obvious from its documentation).</p>
+<p>Here is an example of a file written to make use of this facility. It performs some
+manipulations on an image, writing the results to a single PARC (PCOT archive) file.
+It will generate four images.</p>
+<pre><code class="language-txt">outputs.+.file = output.parc
+.annotations = n    # annotations not supported in PARC
+.node = striproi(a,1)
+.name = main   # the name the output will have in the PARC file
+.description = Primary output image     # description in the PARC
+run
+
+# now we run a loop for values 1,2,3 using Jinja2
+
+{% for i in range(1,4) %}
+    # just one output, keep the same file and settings but append.
+    outputs.0.append = y    # we are now appending to the PARC
+    .node = test{{i}}       # get output from node1, node2 or node3.
+    .name = testimg{{i}}    # call it testimg1, testimg2 or testimg3
+    .description = Test image {{i}}
+    run
+{% endfor %}
+# normally a &quot;run&quot; is silently appended to the end of a parameter file,
+# but this won't happen if the previous command was also a &quot;run&quot;, which
+# it will be here.
+</code></pre>
+<p>PCOT automatically sets up the following Jinja2 variables for you to use:</p>
+<table>
+<thead>
+<tr>
+<th>variable name</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>{{docpath}}</td>
+<td>the path to the document (with backslashes replaced by forward slashes)</td>
+</tr>
+<tr>
+<td>{{docfile}}</td>
+<td>the name of the document file (i.e. the final part of the path)</td>
+</tr>
+<tr>
+<td>{{datetime}}</td>
+<td>the current date and time in ISO 8601 format</td>
+</tr>
+<tr>
+<td>{{date}}</td>
+<td>the current date in ISO 8601 format</td>
+</tr>
+<tr>
+<td>{{count}}</td>
+<td>the number of times the document has been run (useful in loops)</td>
+</tr>
+<tr>
+<td>{{parampath}}</td>
+<td>the path to the parameter file (if one is used, it is "NoFile" otherwise)</td>
+</tr>
+<tr>
+<td>{{paramfile}}</td>
+<td>the name of the parameter file (if one is used, it is "NoFile" otherwise)</td>
+</tr>
+</tbody>
+</table>
+<p>We also set up some Jinja2 "filters" to manipulate filenames, etc.:</p>
+<table>
+<thead>
+<tr>
+<th>filter</th>
+<th>action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>basename</td>
+<td>return the last part of a file path: "foo/bar.png" becomes "bar.png"</td>
+</tr>
+<tr>
+<td>dirname</td>
+<td>return the directory part of a file path: "foo/bar.png" becomes "foo"</td>
+</tr>
+<tr>
+<td>stripext</td>
+<td>remove extension: "foo.bar" becomes "foo"</td>
+</tr>
+<tr>
+<td>extension</td>
+<td>get extension: "foo.bar" becomes ".bar"</td>
+</tr>
+</tbody>
+</table>
+<p>This lets us do things like this, which will add the parameter file name
+as a prefix to any text output, but strip off any directory elements:</p>
+<pre><code class="language-txt">output.0.prefix = {{paramfile | basename}}
+</code></pre>
+<div class="alert alert-danger" role="alert">
+<p>Not yet written below here</p>
+</div>
+<h2 id="inputs-outputs-and-nodes">Inputs, outputs and nodes</h2>
+<div class="alert alert-info" role="alert">
+<p>How inputs work is complicated. There's a structure that you fill in
+that modifies the inputs as they are in the document.</p>
+</div></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = "../../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../../js/base.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
+        <script src="../../../search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

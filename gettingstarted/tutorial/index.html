@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
     <head>
     
         <meta charset="utf-8">
@@ -16,20 +15,23 @@
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/font-awesome.min.css" rel="stylesheet">
         <link href="../../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
     <link rel="stylesheet" href="../../css/lightbox.min.css">
     <link rel="stylesheet" href="../../css/site.css">
 
     
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-        <script>hljs.highlightAll();</script>
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
     <script src="../../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
 
     <body>
         <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
-            <div class="container">
+            <div class="container ">
                 <a class="navbar-brand" href="../..">PCOT Documentation</a>
                 <!-- Expander button -->
                 <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
@@ -57,7 +59,7 @@
 </li>
                                     
 <li>
-    <a href="./" class="dropdown-item active">Tutorial</a>
+    <a href="./" class="dropdown-item active" aria-current="page">Tutorial</a>
 </li>
                                     
 <li>
@@ -98,6 +100,10 @@
 </li>
                                     
 <li>
+    <a href="../../userguide/batch/" class="dropdown-item">Batch mode</a>
+</li>
+                                    
+<li>
     <a href="../../autodocs/" class="dropdown-item">Autodocs</a>
 </li>
                                 </ul>
@@ -116,6 +122,10 @@
                                     
 <li>
     <a href="../../devguide/plugins/" class="dropdown-item">Writing PCOT plugins</a>
+</li>
+                                    
+<li>
+    <a href="../../devguide/nodeser/" class="dropdown-item">Node serialisation</a>
 </li>
                                 </ul>
                             </li>
@@ -148,38 +158,38 @@
             </div>
         </div>
 
-        <div class="container">
+        <div class="container ">
             <div class="row">
-                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
     <div class="navbar-header">
-        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
             <span class="fa fa-angle-down"></span>
         </button>
     </div>
 
     
-    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-level="1"><a href="#a-first-tutorial" class="nav-link">A first tutorial</a>
+            <li class="nav-item" data-bs-level="1"><a href="#a-first-tutorial" class="nav-link">A first tutorial</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-level="2"><a href="#preparation" class="nav-link">Preparation</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-level="2"><a href="#introduction-to-the-user-interface" class="nav-link">Introduction to the user interface</a>
+            <li class="nav-item" data-bs-level="2"><a href="#preparation" class="nav-link">Preparation</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-level="2"><a href="#working-with-graph-nodes" class="nav-link">Working with graph nodes</a>
+            <li class="nav-item" data-bs-level="2"><a href="#introduction-to-the-user-interface" class="nav-link">Introduction to the user interface</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-level="2"><a href="#loading-an-image" class="nav-link">Loading an image</a>
+            <li class="nav-item" data-bs-level="2"><a href="#working-with-graph-nodes" class="nav-link">Working with graph nodes</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-level="2"><a href="#manipulating-an-image-obtaining-a-spectral-parameter-map" class="nav-link">Manipulating an image: obtaining a spectral parameter map</a>
+            <li class="nav-item" data-bs-level="2"><a href="#loading-an-image" class="nav-link">Loading an image</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#manipulating-an-image-obtaining-a-spectral-parameter-map" class="nav-link">Manipulating an image: obtaining a spectral parameter map</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -234,8 +244,7 @@ you can undock by double-clicking on the tab at the top of the view.</li>
 the document and their connections. A new document always has an <em>input 0</em> node,
 which brings input 0 into the graph.</li>
 <li>To the right of the graph is the <strong>palette</strong>, which consists of a number
-of sections which can be expanded or hidden. Clicking on a button in
-the palette will add a node of the given type to the graph. </li>
+of sections which can be expanded or hidden. Each section a set of buttons, one for each node type. Drag a button onto the graph to create a new node of that type.</li>
 <li>At the bottom is the <strong>log area</strong>, the <strong>status bar</strong>, and a set of
 <a href="../../userguide/globalcontrols/">global controls</a>.</li>
 </ul>
@@ -258,6 +267,8 @@ calculated (see below).</li>
 or the annotation given to a region of interest.</li>
 <li>Currently nodes without a display text also show the number of times they have been calculated as a debugging aid.</li>
 </ul>
+<h3 id="creating-new-nodes">Creating new nodes</h3>
+<p>This is done by <strong>clicking a node type button in the palette and dragging the button onto the graph.</strong> </p>
 <h3 id="selecting-and-opening-graph-nodes">Selecting and opening graph nodes</h3>
 <ul>
 <li>You can <strong>select a node</strong> in the graph
@@ -283,14 +294,6 @@ is tinted green in the graph.</li>
 <p>The view for this particular node - <em>input 0</em> - shows what external input is currently being
 read into PCOT on the input numbered 0. In
 this case it shows "None" because there is currently no input. </p>
-<h3 id="creating-a-new-node">Creating a new node</h3>
-<p>This can be done in two ways:</p>
-<ul>
-<li><strong>Clicking on a node type in the palette</strong> will create a new instance of
-that type in the graph, hopefully somewhere sensible.</li>
-<li><strong>Right-clicking a node type from the palette and dragging onto the graph</strong> will create a node
-where you wish.</li>
-</ul>
 <h3 id="undocking-a-nodes-view">"Undocking" a node's view</h3>
 <p><img src="../tab.png" style="float: left; margin-right:20px">
 Sometimes it is useful to see several node views at the same time.
@@ -379,7 +382,7 @@ the Input 0 button, selecting RGB and double-clicking on an image file.</li>
 <li><mark>Double-click on the <em>input 0</em> node in the graph</mark> - instances of this node
 bring input 0 into the graph.</li>
 <li><mark>Open the <em>maths</em> section in the palette</mark> by clicking on it.</li>
-<li><mark>Click on <em>expr</em> in the maths section</mark> to create an expression
+<li><mark>Drag <em>expr</em> in the maths section onto the graph</mark> to create an expression
 evaluation node.</li>
 <li><mark>Drag a connection from the output of <em>input 0</em> to the <em>a</em> input
 of <em>expr</em>.</mark></li>
@@ -478,22 +481,20 @@ remote sensing payload."</a>
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
-        <script src="../../js/jquery-3.6.0.min.js"></script>
-        <script src="../../js/bootstrap.min.js"></script>
         <script>
             var base_url = "../..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../../js/base.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
-        <script src="../../search/main.js"></script>
+        <script src="../../js/base.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
+        <script src="../../search/main.js" defer></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h4 class="modal-title" id="searchModalLabel">Search</h4>
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>From here you can search these documents. Enter your search terms below.</p>
@@ -513,7 +514,7 @@ remote sensing payload."</a>
         <div class="modal-content">
             <div class="modal-header">
                 <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
               <table class="table">

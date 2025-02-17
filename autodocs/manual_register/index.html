@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
     <head>
     
         <meta charset="utf-8">
@@ -16,20 +15,23 @@
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/font-awesome.min.css" rel="stylesheet">
         <link href="../../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
     <link rel="stylesheet" href="../../css/lightbox.min.css">
     <link rel="stylesheet" href="../../css/site.css">
 
     
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-        <script>hljs.highlightAll();</script>
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
     <script src="../../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
 
     <body>
         <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
-            <div class="container">
+            <div class="container wide">
                 <a class="navbar-brand" href="../..">PCOT Documentation</a>
                 <!-- Expander button -->
                 <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
@@ -98,6 +100,10 @@
 </li>
                                     
 <li>
+    <a href="../../userguide/batch/" class="dropdown-item">Batch mode</a>
+</li>
+                                    
+<li>
     <a href="../" class="dropdown-item">Autodocs</a>
 </li>
                                 </ul>
@@ -116,6 +122,10 @@
                                     
 <li>
     <a href="../../devguide/plugins/" class="dropdown-item">Writing PCOT plugins</a>
+</li>
+                                    
+<li>
+    <a href="../../devguide/nodeser/" class="dropdown-item">Node serialisation</a>
 </li>
                                 </ul>
                             </li>
@@ -138,26 +148,26 @@
             </div>
         </div>
 
-        <div class="container">
+        <div class="container wide">
             <div class="row">
-                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
     <div class="navbar-header">
-        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
             <span class="fa fa-angle-down"></span>
         </button>
     </div>
 
     
-    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-level="1"><a href="#manual-register" class="nav-link">manual register</a>
+            <li class="nav-item" data-bs-level="1"><a href="#manual-register" class="nav-link">manual register</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-level="2"><a href="#description" class="nav-link">Description</a>
+            <li class="nav-item" data-bs-level="2"><a href="#description" class="nav-link">Description</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-level="2"><a href="#connections" class="nav-link">Connections</a>
+            <li class="nav-item" data-bs-level="2"><a href="#connections" class="nav-link">Connections</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -170,19 +180,27 @@
 
 <h1 id="manual-register">manual register</h1>
 <h2 id="description">Description</h2>
-<p>Perform manual registration of two images. The output is a version of the 'moving' image with a projective
-transform applied to map points onto corresponding points in the 'fixed' image.</p>
-<p>The canvas view can show the moving input (also referred to as the "source"), the fixed image (also referred
-to as the "destination"), a blend of the two, or the result. All images are shown as greyscale (since the
-fixed and moving images will likely have different frequency bands).</p>
-<p>The transform will map a set of points in the moving image onto a set in the fixed image. Both sets of
-points can be changed, or a single set. Points are mapped onto the correspondingly numbered point. In "translate"
-mode only a single point is required (and only a single point will be shown from each set).</p>
-<p>Points are added to the source (moving) image by clicking with shift.
-Points are adding to the dest (fixed) image by clicking with ctrl.</p>
-<p><strong>Note that this node does not currently display DQ or uncertainty data in its canvas</strong></p>
-<p>If only the source or dest points are shown, either shift- or ctrl-clicking will add to the appropriate
+<p>Perform manual registration of two images. One input image is designated as "fixed", the other as "moving".</p>
+<p>The node will find a transform that maps the moving image onto the fixed image, and a translation that
+will ensure that both images remain uncropped. The fixed image will be translated only, the moving image
+will be transformed and then translated. Both transformed images are output and can then be merged or overlaid
+in a separate node.</p>
+<p>The transform is found by designating points in each image which correspond to each other. The number of points
+must be the same in each image, and at least three (unless "translate only" is selected).</p>
+<p>The canvas view can show the moving input, the fixed image, the transformed moving image, or the transformed fixed
+image. All images are shown as greyscale (since the input images will likely have different frequency bands).</p>
+<p>The transform used is one of the following homographies:</p>
+<ul>
+<li>Euclidean - translation and rotation only</li>
+<li>Similarity - translation, rotation, and scaling; angles are preserved</li>
+<li>Affine - translation, rotation, scaling, and shearing; parallel lines are preserved</li>
+<li>Projective - translation, rotation, scaling, shearing, and perspective; straight lines are preserved</li>
+</ul>
+<p>Points are added to the moving image by clicking with ctrl.
+Points are adding to the fixed image by clicking with shift.</p>
+<p>If only the moving or fixed points are shown, either shift- or ctrl-clicking will add to the appropriate
 point set. The selected point can be deleted with the Delete key (but this will modify the numbering!)</p>
+<p><strong>Note that this node does not currently display DQ or uncertainty data in its canvas</strong></p>
 <p>A point can be selected and dragged by clicking on it. This may be slow because the warping operation will
 take place every update; disabling 'auto-run on change' is a good idea!</p>
 <p>Uncertainty is warped along with the original image, as is DQ using nearest-neighbour (<strong>which may not be
@@ -228,12 +246,24 @@ sufficient</strong>).</p>
 <tbody>
 <tr>
 <td>0</td>
-<td>moved</td>
+<td>moving</td>
+<td>img</td>
+<td>(none)</td>
+</tr>
+<tr>
+<td>1</td>
+<td>fixed</td>
 <td>img</td>
 <td>(none)</td>
 </tr>
 </tbody>
-</table></div>
+</table>
+<h3 id="parameters">Parameters</h3>
+<table border='1' style='border-collapse: collapse;'><tr><td rowspan="8" style="border-right: none;">manual register</td><td rowspan="1" style="border-right: none;">showMoving: boolean (default True)</td><td rowspan="1" style="border-left: none;">Show moving points</td></tr><tr><td rowspan="1" style="border-right: none;">showFixed: boolean (default True)</td><td rowspan="1" style="border-left: none;">Show fixed points</td></tr><tr><td rowspan="1" style="border-right: none;">translate: boolean (default False)</td><td rowspan="1" style="border-left: none;">Translate only - no other transform. Uses a single point.</td></tr><tr><td rowspan="2" style="border-right: none;">moving: list</td><td rowspan="2" style="border-left: none;"> (ordered)</td><td rowspan="1" style="border-right: none;">x: integer (default 0)</td><td rowspan="1" style="border-left: none;">X coordinate</td></tr><tr><td rowspan="1" style="border-right: none;">y: integer (default 0)</td><td rowspan="1" style="border-left: none;">Y coordinate</td></tr><tr><td rowspan="2" style="border-right: none;">fixed: list</td><td rowspan="2" style="border-left: none;"> (ordered)</td><td rowspan="1" style="border-right: none;">x: integer (default 0)</td><td rowspan="1" style="border-left: none;">X coordinate</td></tr><tr><td rowspan="1" style="border-right: none;">y: integer (default 0)</td><td rowspan="1" style="border-left: none;">Y coordinate</td></tr><tr><td rowspan="1" style="border-right: none;">transform: string (euclidean, similarity, affine, projective) (default 'euclidean')</td><td rowspan="1" style="border-left: none;">Transform type</td></tr></table>
+
+<hr />
+<p>Automatically generated by generate_autodocs.py</p>
+<p>Date: 2025-02-17T16:09:18.986731</p></div>
             </div>
         </div>
 
@@ -241,22 +271,20 @@ sufficient</strong>).</p>
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
-        <script src="../../js/jquery-3.6.0.min.js"></script>
-        <script src="../../js/bootstrap.min.js"></script>
         <script>
             var base_url = "../..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../../js/base.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
-        <script src="../../search/main.js"></script>
+        <script src="../../js/base.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
+        <script src="../../search/main.js" defer></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h4 class="modal-title" id="searchModalLabel">Search</h4>
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>From here you can search these documents. Enter your search terms below.</p>
@@ -276,7 +304,7 @@ sufficient</strong>).</p>
         <div class="modal-content">
             <div class="modal-header">
                 <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
               <table class="table">

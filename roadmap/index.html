@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
     <head>
     
         <meta charset="utf-8">
@@ -16,20 +15,23 @@
         <link href="../css/bootstrap.min.css" rel="stylesheet">
         <link href="../css/font-awesome.min.css" rel="stylesheet">
         <link href="../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
     <link rel="stylesheet" href="../css/lightbox.min.css">
     <link rel="stylesheet" href="../css/site.css">
 
     
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-        <script>hljs.highlightAll();</script>
+
+        <script src="../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
     <script src="../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
 
     <body>
         <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
-            <div class="container">
+            <div class="container ">
                 <a class="navbar-brand" href="..">PCOT Documentation</a>
                 <!-- Expander button -->
                 <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
@@ -98,6 +100,10 @@
 </li>
                                     
 <li>
+    <a href="../userguide/batch/" class="dropdown-item">Batch mode</a>
+</li>
+                                    
+<li>
     <a href="../autodocs/" class="dropdown-item">Autodocs</a>
 </li>
                                 </ul>
@@ -117,6 +123,10 @@
 <li>
     <a href="../devguide/plugins/" class="dropdown-item">Writing PCOT plugins</a>
 </li>
+                                    
+<li>
+    <a href="../devguide/nodeser/" class="dropdown-item">Node serialisation</a>
+</li>
                                 </ul>
                             </li>
                             <li class="navitem active">
@@ -134,7 +144,7 @@
                             </a>
                         </li>
                             <li class="nav-item">
-                                <a rel="prev" href="../devguide/plugins/" class="nav-link">
+                                <a rel="prev" href="../devguide/nodeser/" class="nav-link">
                                     <i class="fa fa-arrow-left"></i> Previous
                                 </a>
                             </li>
@@ -148,26 +158,30 @@
             </div>
         </div>
 
-        <div class="container">
+        <div class="container ">
             <div class="row">
-                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
     <div class="navbar-header">
-        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
             <span class="fa fa-angle-down"></span>
         </button>
     </div>
 
     
-    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-level="1"><a href="#development-roadmap" class="nav-link">Development roadmap</a>
+            <li class="nav-item" data-bs-level="1"><a href="#development-roadmap" class="nav-link">Development roadmap</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-level="2"><a href="#next-major-release-090" class="nav-link">Next major release: 0.9.0</a>
+            <li class="nav-item" data-bs-level="2"><a href="#next-major-release-090" class="nav-link">Next major release: 0.9.0</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-level="2"><a href="#future-releases" class="nav-link">Future releases</a>
+            <li class="nav-item" data-bs-level="2"><a href="#release-0100" class="nav-link">Release 0.10.0</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#future-releases" class="nav-link">Future releases</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -181,20 +195,36 @@
 <h1 id="development-roadmap">Development roadmap</h1>
 <p>This is a rough guide, and things may change!</p>
 <h2 id="next-major-release-090">Next major release: 0.9.0</h2>
-<h2 id="future-releases">Future releases</h2>
 <ul>
-<li>Reorganise the node palette</li>
-<li>Obtain user stories and feedback</li>
-<li>
-<p>Documentation</p>
-<ul>
-<li>User guide<ul>
-<li>Page on <em>expr</em> nodes</li>
-<li>documentation for properties of nodes for library use (e.g. <em>expr</em> nodes have ".expr")</li>
-<li>How-to for common tasks (the "cookbook")</li>
+<li>New node parameter system:<ul>
+<li>makes the node self-documenting (node parameters appear as a table,
+both in the "help" window and in the on-line documentation</li>
+<li>provides better type and range checking when the node is modified in code</li>
+<li>provides support for batch files</li>
+</ul>
+</li>
+<li>You now create nodes by dragging from the palette with the left mouse button</li>
+<li>batch runner<ul>
+<li>allows a PCOT file to be loaded and its parameters (i.e. node settings,
+inputs and outputs) to be modifed with a "batch file" before running. The
+outputs can be saved to files. </li>
+<li>Batch files have a simple but flexible and powerful language for
+describing the changes to nodes and inputs, and how the results should
+be written to files.</li>
 </ul>
 </li>
 </ul>
+<h2 id="release-0100">Release 0.10.0</h2>
+<ul>
+<li>"Camera pack" files which hold filter and calibration data for particular
+setups in an extensible format</li>
+<li>Flatfield calibration code</li>
+</ul>
+<h2 id="future-releases">Future releases</h2>
+<ul>
+<li>Reorganise the node palette</li>
+<li>
+<p>Obtain user stories and feedback</p>
 </li>
 <li>
 <p>Calibration: the PCT detection node is fine, but does nothing!</p>
@@ -220,22 +250,20 @@ get messy, as these are likely to be time series)</p>
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
-        <script src="../js/jquery-3.6.0.min.js"></script>
-        <script src="../js/bootstrap.min.js"></script>
         <script>
             var base_url = "..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../js/base.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
-        <script src="../search/main.js"></script>
+        <script src="../js/base.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
+        <script src="../search/main.js" defer></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h4 class="modal-title" id="searchModalLabel">Search</h4>
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>From here you can search these documents. Enter your search terms below.</p>
@@ -255,7 +283,7 @@ get messy, as these are likely to be time series)</p>
         <div class="modal-content">
             <div class="modal-header">
                 <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
               <table class="table">

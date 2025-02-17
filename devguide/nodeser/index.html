@@ -1,0 +1,512 @@
+<!DOCTYPE html><html lang="en">
+    <head>
+    
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="robots" content="noindex,nofollow">
+
+        <title>Node serialisation - PCOT Documentation</title>
+    
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+    <link rel="stylesheet" href="../../css/lightbox.min.css">
+    <link rel="stylesheet" href="../../css/site.css">
+
+    
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
+    <script src="../../js/lightbox-plus-jquery.min.js"></script>
+ 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container ">
+                <a class="navbar-brand" href="../..">PCOT Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Getting Started <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../gettingstarted/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/installrun/" class="dropdown-item">Installing and running</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/concepts/" class="dropdown-item">PCOT concepts</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/tutorial/" class="dropdown-item">Tutorial</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/inputs/" class="dropdown-item">Loading other image formats</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/help/" class="dropdown-item">Getting help</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../userguide/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/principles/" class="dropdown-item">Operating principles</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/canvas/" class="dropdown-item">The Canvas</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/globalcontrols/" class="dropdown-item">Global Controls</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/multifile/" class="dropdown-item">Reading images from multiple files</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/expr/" class="dropdown-item">The "expr" node for mathematical expressions</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/batch/" class="dropdown-item">Batch mode</a>
+</li>
+                                    
+<li>
+    <a href="../../autodocs/" class="dropdown-item">Autodocs</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown active">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer's Guide <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../library/" class="dropdown-item">Using PCOT as a library</a>
+</li>
+                                    
+<li>
+    <a href="../plugins/" class="dropdown-item">Writing PCOT plugins</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">Node serialisation</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="navitem">
+                                <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../../gettingstarted/issues/" class="nav-link">Known issues</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../plugins/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../../roadmap/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container ">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#node-serialisation" class="nav-link">Node serialisation</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#taggedaggregate-serialisation" class="nav-link">TaggedAggregate serialisation</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#using-taggedaggregates-to-serialise-nodes" class="nav-link">Using TaggedAggregates to serialise nodes</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#complex-taggedaggregate-serialisation-ctas" class="nav-link">complex TaggedAggregate serialisation (CTAS)</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#autoserialisation" class="nav-link">Autoserialisation</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#complex-serialisation" class="nav-link">Complex serialisation</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="node-serialisation">Node serialisation</h1>
+<p>This page discusses how to serialise the parameters for 
+node types. If you don't know what that means, you're either in the wrong
+place or haven't read <a href="../plugins/">Writing PCOT plugins</a>.</p>
+<p>Most nodes need to store some data. Sometimes this data can just be stored directly, as attributes of the <code>XForm</code> object (i.e. the node).  It's not really "polite" programming, but this is the kind of thing you can do with Python.</p>
+<p>However, often "parameter" data controlling how the node operates needs to be saved inside the PCOT document file, and loaded when we reopen the file. For example, the <em>expr</em> node needs to store a string: the expression to be run. Parameters for some nodes can be  complicated: <em>multidot</em> needs to be able to store a list of circular regions of interest, for example.</p>
+<p>We also need to do this to handle undo operations - every time a change is made, the entire document is "saved" into an archive in memory so it can be undone.</p>
+<p>This process - converting node data into data which can be saved to archives - is called <strong>serialisation</strong>, and there no less than four different mechanisms for doing it. This is largely for historical reasons, but also because the different mechanisms serve different needs:</p>
+<p>In order of preference, with the best at the top:</p>
+<ul>
+<li><strong>TaggedAggregate serialisation</strong> - the data is JSON-serialisable but we want to make it possible to edit it from a batch/parameter file (see <a href="/userguide/batch">batch mode</a>). <strong>Probably the best choice if you can.</strong></li>
+<li><strong>complex serialisation via TaggedAggregate</strong> - the data is not serialisable, but we want to edit it from a parameter file. <strong>Probably the second-best</strong> and suitable where simple TA-serialisation can't handle the more complex data involved.</li>
+<li><strong>autoserialisation</strong> - for when your data is already JSON-serialisable and you don't need to edit it from a parameter file. It is very simple to implement, but doesn't allow editing from a batch file and doesn't document itself automatically. Used only in legacy nodes.</li>
+<li><strong>complex serialisation</strong> - for when your data is not directly JSON-serialisable (for example, regions of interest) and you don't need to edit it from a parameter file because it makes no sense (such as painted ROIs)</li>
+</ul>
+<h2 id="taggedaggregate-serialisation">TaggedAggregate serialisation</h2>
+<p>This is the method we use when we want to be able to edit the parameters of nodes in batch mode, using parameter files (see <a href="/userguide/batch">batch mode</a>). It is probably the best method to use because of this, but it is rather more complicated.</p>
+<p>We make use of <strong>tagged aggregate structures</strong>, which can be found in
+<code>pcot.utils.taggedaggregate</code>. These are dictionaries and lists, but
+each has a formal, typed structure with "tags" giving the names of the
+members, their types, and default values.</p>
+<p>Each is described by a type singleton object which provides descriptions of its elements (these are the "tags" in the name). Calling <code>create()</code> on the singleton builds an instance of the structure with all the values filled in with defaults.</p>
+<h3 id="taggeddicttype">TaggedDictType</h3>
+<p>The main type used is <code>TaggedDictType</code>, which describes the format of a set of key/value pairs. Calling <code>create()</code> on one of these objects builds a <code>TaggedDict</code> object containing the default values.</p>
+<p>The <code>TaggedDictType</code> constructor takes a set of keyword arguments. Each key is the same of an element in the dict, and each value describes that element as a tuple of:</p>
+<ul>
+<li>a description used in the documentation</li>
+<li>a type: either a primitive type such as int or str, or another <code>TaggedAggregateType</code> subclass for nested structures</li>
+<li>a default value (must be <code>None</code> for aggregates, which provide their own defaults)</li>
+<li>for string values, an optional list of acceptable strings</li>
+</ul>
+<p>If you call <code>setOrdered</code> on the constructed type object you will get an "ordered dict" - this will be serialised as a tuple with the contained data having an implicit ordering.</p>
+<div class="alert alert-info" role="alert">
+<p>You might wonder why we don't make all tagged dicts ordered, so they
+are all serialised as tuples. The answer is that doing that would make
+it harder to implement backcompatibility - if we serialise as a tuple,
+adding and removing fields in the future becomes difficult. Only 
+use ordered dicts for things where we are very unlikely
+to change the structure. One advantage is that it is possible to set all values in an ordered dict in one line inside a batch file.</p>
+</div>
+<p>For example, here is a <code>TaggedDictType</code> definition for a rectangle:</p>
+<pre><code class="language-python">taggedRectType = TaggedDictType(
+    x=(&quot;The x coordinate of the top left corner&quot;, Number, 0),
+    y=(&quot;The y coordinate of the top left corner&quot;, Number, 0),
+    w=(&quot;The width of the rectangle&quot;, Number, 10),
+    h=(&quot;The height of the rectangle&quot;, Number, 10)).setOrdered()
+</code></pre>
+<p>We are using <code>Number</code> here to indicate that either ints or floats are acceptable. We can then create a rectangle <code>TaggedDict</code> and access its values:</p>
+<pre><code class="language-python">r = taggedRectType.create()            # create TaggedDict from type
+print(f&quot;Rectangle at {r.x}, {r.y}&quot;)    # show values
+r.w = 20                               # set values
+r.h = 30
+</code></pre>
+<div class="alert alert-info" role="alert">
+<p>Bear in mind that there are functions for generating rectangle and colour type object in
+pcot.utils.taggedaggregates: taggedColourType and taggedRectType. You probably shouldn't
+create a rectangle type yourself.</p>
+</div>
+<p>We can also specify that a parameter is another <code>TaggedDict</code>, allowing us to build complex nested structures. Here we nest the <code>taggedRectType</code> we defined above in another dict type:</p>
+<pre><code class="language-python">taggedThingType = TaggedDictType(
+    rect=(&quot;The rectangle&quot;, taggedRectType),
+    somenumber=(&quot;Some numerical value&quot;,Number,0))
+</code></pre>
+<h3 id="taggedlisttype">TaggedListType</h3>
+<p>These objects describe lists, and calling <code>create()</code> on them generates a <code>TaggedList</code> item. This is rarely done directly - it's more usual for a <code>TaggedDictType</code> to specify that one of its values is a list, in which case the list object is created when the containing <code>TaggedDict</code> is created.</p>
+<p>Here's an example where the dict contains both our rectangle type and a list of rectangles:</p>
+<pre><code class="language-python">taggedThingType = TaggedDictType(
+    main=(&quot;The main rectangle&quot;, taggedRectType),
+    others=(&quot;Some other rectangles&quot;, TaggedListType(taggedRectType,0)),
+    somenumber=(&quot;Some numerical value&quot;,Number,0))
+</code></pre>
+<p>We can then create our parameters and add a new default rect to the list:</p>
+<pre><code class="language-python">thing = taggedThingType.create()
+listOfThings.others.append_default()
+</code></pre>
+<p>We can then access these items:</p>
+<pre><code class="language-python">print(taggedThingType.others.[0].x)
+</code></pre>
+<p>The <code>TaggedListType</code> constructor takes the following arguments:</p>
+<ul>
+<li>Type of item (must be a TaggedAggregateType subclass or a primitive type  - int, str, etc.)</li>
+<li>Default length (if a list of aggregates) or default list (if a list of primitives)</li>
+<li>Optional default value to append when a new item is created, ignored for lists of aggregates which will create their own default item</li>
+</ul>
+<p>For more details on how to use these structures, read the tests in <code>tests/test_taggedaggs.py</code>.</p>
+<p>You'll note that all the elements of a TaggedAggregate structure are JSON-serialisable<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup>, although
+some can be numpy arrays. However, the nature of the structure allows defaults - and documentation -
+to be generated automatically.</p>
+<h2 id="using-taggedaggregates-to-serialise-nodes">Using TaggedAggregates to serialise nodes</h2>
+<p>To use a TaggedAggregate to serialise node data, create a <code>TaggedDictType</code> and assign
+it to the <code>params</code> member of the <code>XFormType</code> in the constructor. For example:</p>
+<pre><code class="language-python">        self.params = TaggedDictType(
+            mul=(&quot;multiplicative factor (done first)&quot;, float, 1.0),
+            add=(&quot;additive constant (done last)&quot;, float, 0.0))
+</code></pre>
+<p>When a new node is created, a default structure will be created from this type and stored in the
+node's <code>params</code> field where it can be accessed from the <code>perform</code> method:</p>
+<pre><code class="language-python">output = node.params.add + node.params.mul * node.getInput(0, Datum.IMG)
+</code></pre>
+<p>When the node is serialised, the structure will be serialised.</p>
+<h2 id="complex-taggedaggregate-serialisation-ctas">complex TaggedAggregate serialisation (CTAS)</h2>
+<p>The previous method dealt with data which can be JSON-serialised directly. If
+we need to modify non-JSON-serialisable data with parameter files, we need to
+do something similar to the complex serialisation method described above but
+going through a TaggedAggregate: we set the TaggedAggregate from our complex
+data, and then PCOT will serialise that.</p>
+<p>To do this, we write code as before to store the data in a <code>TaggedDict</code> in <code>node.params</code>, and we store any simple data we have in that structure. Then we write a <code>serialise</code> method containing code which converts our more complex data into a simpler form and stores it in <code>node.params</code> so it can be serialised. Here's an example:</p>
+<pre><code class="language-python">def serialise(self, node):
+    # fill in the node.params with data
+    node.params.foo = some_data_or_other
+    node.params.bar = some_data_or_other
+
+    # we don't return anything, because node.params will have been set to
+    # represent our data; we don't need to add anything directly to the
+    # JSON-serialisable dict.
+
+    return None
+</code></pre>
+<p>This method is also used by the legacy serialisation mechanism, where it would return a JSON dict directly. Here we need to return None instead.</p>
+<p>We must also write a <code>nodeDataFromParams</code> method. This takes a node, and uses its <code>params</code> field (which will be a TaggedDict, of course) to set the node's internal data:</p>
+<pre><code class="language-python">def nodeDataFromParams(self, node):
+    # convert some data in node.params into our own private data
+    our_data = some_function_of(node.params.foo, node.params.bar)
+</code></pre>
+<p><strong>Maybe</strong></p>
+<p>Types and TaggedAggregate type objects can be "wrapped" in <code>Maybe</code> objects if they might be null:</p>
+<pre><code class="language-python">    tdt = TaggedDictType(
+        a=(&quot;a&quot;, int, 10),
+        b=(&quot;b&quot;, Maybe(str), &quot;foo&quot;),        # string or null
+        c=(&quot;c&quot;, float, 3.14)
+    )
+    td = tdt.create()           # create new dict
+    td.b = &quot;hello&quot;              # this is fine
+    td.b = None                 # and so is this
+</code></pre>
+<div class="alert alert-info" role="alert">
+<p>Note: I would have used Optional from the typing package, but that can only take actual types -
+not the type objects we use here.</p>
+</div>
+<div class="alert alert-danger" role="alert">
+<p>Avoid using Maybe for tagged aggregates etc., because you can't
+<em>create</em> a new one using a parameter file, just modify values in an
+existing one.</p>
+</div>
+<p><strong>TaggedVariantDicts</strong></p>
+<p>Sometimes it is necessary to store different kinds of object in a list. We can do this with
+TaggedAggregates, provided the objects are all TaggedDicts and there is a field in all the dicts
+which tells us which type it is - a "discriminator". </p>
+<p><a href="../taggedvardicts/">You can find more details on TVDs here</a></p>
+<div class="alert alert-info" role="alert">
+<p><strong>Where to find examples</strong></p>
+<p>Probably the most complex but straightforward example of CTAS is the <em>gradient</em> node. This
+converts a monochrome image to a false colour RGB gradient based on a set of gradient colours. This
+exists as a pcot.utils.gradient.Gradient object which is a wrapper around a list of (x,(r,g,b)) tuples
+defining the colour <em>r,g,b</em> at value <em>x</em>. </p>
+<p>The CTAS methods are responsible for converting tagged aggregate data and this
+Gradient object. They also handle a <em>preset</em> string which can override the
+data when set from a <a href="/userguide/batch">parameter file</a>.</p>
+<p><a href="../roi_ctas/">Regions of interest are a rather more complex example...</a></p>
+</div>
+<h2 id="autoserialisation">Autoserialisation</h2>
+<p>This is the serialisation method used for a few legacy nodes and nodes which don't require batch editing, like <em>comment</em>. </p>
+<p>In the simplest case, the data stored in the <code>XForm</code> object for a particular
+node is already JSON-serialisable: that is, it is either a Python
+primitive type (number, string, tuple, list or dict) or a Numpy array
+(PCOT handles serialising these automatically). In this case you can simply
+list the names of the attributes in a tuple called <code>autoserialise</code> in the <code>XFormType</code>,
+along with some defaults which are used in case the items are not found in the saved data.</p>
+<p>For example, the constructor for <code>XFormSpectrum</code> could look like this (not any more, because it now uses TA-serialisation):</p>
+<pre><code class="language-python">        super().__init__(&quot;spectrum&quot;, &quot;data&quot;, &quot;0.0.0&quot;)
+        self.autoserialise = ('sortlist', 'errorbarmode', 'legendFontSize', 'axisFontSize', 'stackSep', 'labelFontSize',
+                              'bottomSpace', 'colourmode', 'rightSpace',
+                              # these have defaults because they were developed later.
+                              ('ignorePixSD', False),
+                              ('bandwidthmode', BANDWIDTHMODE_NONE),
+                              )
+        for i in range(NUMINPUTS):
+            self.addInputConnector(str(i), Datum.IMG, &quot;a single line in the plot&quot;)
+        self.addOutputConnector(&quot;data&quot;, Datum.DATA, &quot;a CSV output (use 'dump' or 'sink' to read it)&quot;)
+</code></pre>
+<p>Note that the default values are optional - if you don't specify a default you can just
+use the attribute name rather than a <code>(name, default)</code> tuple, but you will get an error if
+you try to load from data which doesn't have that attribute stored.</p>
+<p>When the system serialises the node it will read the named fields from the node, and it will
+do the reverse when it deserialises a node (i.e. load it from an archive).</p>
+<h2 id="complex-serialisation">Complex serialisation</h2>
+<p>In this case, we have data which isn't JSON-serialisable, and where it doesn't make any sense to have the parameters editable outside the PCOT user interface. Here, we add <code>serialise</code> and <code>deserialise</code> methods to the <code>XFormType</code> to 
+convert our data to and from data
+which is JSON-serialisable. The <code>serialise</code> method will take the node and return a dict
+(which is JSON-serialisable), while the <code>deserialise</code> method will take the node and the dict
+and set the appropriate values a newly created node. The dict returned by <code>serialise</code> will be merged
+with the dict generated by autoserialisation and other, general node data (e.g. canvas data). 
+Make sure you use unique names and not any of:</p>
+<pre><code class="language-txt">canvas, displayName, inputTypes, ins, outs, mapping, md5, type, ver, w, xy, outputTypes
+</code></pre>
+<p>An example: imagine our node stores a list of objects of some class
+<code>Foo</code>. We could write our methods thus:</p>
+<pre><code class="language-python">def serialise(self, node):
+    return {'foolist': [(x.a, x.b) for x in node.foo_list]}
+
+def deserialise(self, node, d):
+    node.foo_list = [Foo(a, b) for a, b in d['foolist']]
+</code></pre>
+<p>In this case we are converting the Foo objects into tuples to serialise them,
+and constructing them from the tuples when we deserialise. It would probably be
+better to write <code>Foo</code> so that it can serialise itself and has a deserialise constructor:</p>
+<pre><code>class Foo:
+    def __init__(self...):
+        ...
+
+    def serialise(self)-&gt;dict:
+        return ...
+
+    @staticmethod
+    def deserialise(d: dict):
+        return Foo(...)
+</code></pre>
+<p>and</p>
+<pre><code class="language-python">def serialise(self, node):
+    return {'foolist': [x.serialise() for x in node.foo_list]}
+
+def deserialise(self, node, d):
+    node.foo_list = [Foo.deserialise(x) for x in d['foolist']]
+</code></pre>
+<div class="footnote">
+<hr />
+<ol>
+<li id="fn:1">
+<p>i.e. they can be turned directly into JSON - they are primitive types (int, float, str etc.), dicts, lists, or tuples.&#160;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+</li>
+</ol>
+</div></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
+        <script src="../../search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

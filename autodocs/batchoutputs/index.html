@@ -1,0 +1,279 @@
+<!DOCTYPE html><html lang="en">
+    <head>
+    
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="robots" content="noindex,nofollow">
+
+        <title>Output parameters - PCOT Documentation</title>
+    
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+    <link rel="stylesheet" href="../../css/lightbox.min.css">
+    <link rel="stylesheet" href="../../css/site.css">
+
+    
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
+    <script src="../../js/lightbox-plus-jquery.min.js"></script>
+ 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container wide">
+                <a class="navbar-brand" href="../..">PCOT Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Getting Started <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../gettingstarted/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/installrun/" class="dropdown-item">Installing and running</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/concepts/" class="dropdown-item">PCOT concepts</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/tutorial/" class="dropdown-item">Tutorial</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/inputs/" class="dropdown-item">Loading other image formats</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/help/" class="dropdown-item">Getting help</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../userguide/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/principles/" class="dropdown-item">Operating principles</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/canvas/" class="dropdown-item">The Canvas</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/globalcontrols/" class="dropdown-item">Global Controls</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/multifile/" class="dropdown-item">Reading images from multiple files</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/expr/" class="dropdown-item">The "expr" node for mathematical expressions</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/batch/" class="dropdown-item">Batch mode</a>
+</li>
+                                    
+<li>
+    <a href="../" class="dropdown-item">Autodocs</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer's Guide <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../devguide/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../devguide/library/" class="dropdown-item">Using PCOT as a library</a>
+</li>
+                                    
+<li>
+    <a href="../../devguide/plugins/" class="dropdown-item">Writing PCOT plugins</a>
+</li>
+                                    
+<li>
+    <a href="../../devguide/nodeser/" class="dropdown-item">Node serialisation</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="navitem">
+                                <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../../gettingstarted/issues/" class="nav-link">Known issues</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container wide">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#output-parameters" class="nav-link">Output parameters</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#example" class="nav-link">Example</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#parameter-table" class="nav-link">Parameter table</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="output-parameters">Output parameters</h1>
+<p>Below is the full description for all the parameters controlling an output
+in batch processing. You need to add at least one output and set its
+parameters.</p>
+<h2 id="example">Example</h2>
+<pre><code class="language-txt">outputs.+.node = sink       # create a new output, have it use the node called 'sink'
+.file = foo.pdf             # it will write to foo.pdf
+.clobber = y                # existing foo.pdf will be overwritten
+.annotations = y            # annotations will be output
+
+.outputs.+.node = expr      # new output, using the 'expr' node
+.file = foo.txt             # output to foo.txt
+.prefix = Result of expr :  # some text to prefix with
+.clobber = y                # existing file overwritten
+</code></pre>
+<h2 id="parameter-table">Parameter table</h2>
+<table border='1' style='border-collapse: collapse;'><tr><td rowspan="11" style="border-right: none;">outputs</td><td rowspan="1" style="border-right: none;">node: string (default None)</td><td rowspan="1" style="border-left: none;">node name</td></tr><tr><td rowspan="1" style="border-right: none;">output: integer (default None)</td><td rowspan="1" style="border-left: none;">node output connection (or None for the default)</td></tr><tr><td rowspan="1" style="border-right: none;">file: string (default None)</td><td rowspan="1" style="border-left: none;">output filename - if not provided, use previous output's value (see 'append')</td></tr><tr><td rowspan="1" style="border-right: none;">clobber: boolean (default False)</td><td rowspan="1" style="border-left: none;">overwrite the file if it exists (else raise an exception)</td></tr><tr><td rowspan="1" style="border-right: none;">format: string (txt, csv, pdf, svg, png, jpg, jpeg, bmp, tiff, parc) (default None)</td><td rowspan="1" style="border-left: none;">output format for image in lowercase (will determine from extension if not given)</td></tr><tr><td rowspan="1" style="border-right: none;">annotations: boolean (default None)</td><td rowspan="1" style="border-left: none;">draw ROIs/annotations on the image (must be false for PARC). If not provided, use previous output's value (or false if first output)</td></tr><tr><td rowspan="1" style="border-right: none;">name: string (default None)</td><td rowspan="1" style="border-left: none;">name of the datum (if a PARC is being written) - 'main' if not given</td></tr><tr><td rowspan="1" style="border-right: none;">description: string (default None)</td><td rowspan="1" style="border-left: none;">description of the data (if a PARC is being written)</td></tr><tr><td rowspan="1" style="border-right: none;">width: integer (default 1000)</td><td rowspan="1" style="border-left: none;">width of output image when exporting to raster formats (in pixels) if annotations is true. If annotations is false or width is negative, no resizing is done.</td></tr><tr><td rowspan="1" style="border-right: none;">append: boolean (default None)</td><td rowspan="1" style="border-left: none;">append to a PARC or text file if it exists. If not provided, use previous output's value (or false if first output)</td></tr><tr><td rowspan="1" style="border-right: none;">prefix: string (default None)</td><td rowspan="1" style="border-left: none;">prefix for the output (text outputs only)</td></tr></table>
+
+<hr />
+<p>Automatically generated by generate_autodocs.py</p>
+<p>Date: 2025-02-17T16:09:18.986731</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
+        <script src="../../search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
     <head>
     
         <meta charset="utf-8">
@@ -16,20 +15,23 @@
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/font-awesome.min.css" rel="stylesheet">
         <link href="../../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
     <link rel="stylesheet" href="../../css/lightbox.min.css">
     <link rel="stylesheet" href="../../css/site.css">
 
     
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-        <script>hljs.highlightAll();</script>
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
     <script src="../../js/lightbox-plus-jquery.min.js"></script>
  
     </head>
 
     <body>
         <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
-            <div class="container">
+            <div class="container ">
                 <a class="navbar-brand" href="../..">PCOT Documentation</a>
                 <!-- Expander button -->
                 <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
@@ -98,6 +100,10 @@
 </li>
                                     
 <li>
+    <a href="../../userguide/batch/" class="dropdown-item">Batch mode</a>
+</li>
+                                    
+<li>
     <a href="../../autodocs/" class="dropdown-item">Autodocs</a>
 </li>
                                 </ul>
@@ -115,7 +121,11 @@
 </li>
                                     
 <li>
-    <a href="./" class="dropdown-item active">Writing PCOT plugins</a>
+    <a href="./" class="dropdown-item active" aria-current="page">Writing PCOT plugins</a>
+</li>
+                                    
+<li>
+    <a href="../nodeser/" class="dropdown-item">Node serialisation</a>
 </li>
                                 </ul>
                             </li>
@@ -139,7 +149,7 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a rel="next" href="../../roadmap/" class="nav-link">
+                                <a rel="next" href="../nodeser/" class="nav-link">
                                     Next <i class="fa fa-arrow-right"></i>
                                 </a>
                             </li>
@@ -148,38 +158,38 @@
             </div>
         </div>
 
-        <div class="container">
+        <div class="container ">
             <div class="row">
-                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
     <div class="navbar-header">
-        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
             <span class="fa fa-angle-down"></span>
         </button>
     </div>
 
     
-    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-level="1"><a href="#writing-pcot-plugins" class="nav-link">Writing PCOT plugins</a>
+            <li class="nav-item" data-bs-level="1"><a href="#writing-pcot-plugins" class="nav-link">Writing PCOT plugins</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-level="2"><a href="#the-plugin-path" class="nav-link">The plugin path</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-level="2"><a href="#adding-new-types" class="nav-link">Adding new types</a>
+            <li class="nav-item" data-bs-level="2"><a href="#the-plugin-path" class="nav-link">The plugin path</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-level="2"><a href="#adding-new-datum-functions-for-use-in-expr-and-python-code" class="nav-link">Adding new Datum functions (for use in expr and Python code)</a>
+            <li class="nav-item" data-bs-level="2"><a href="#adding-new-types" class="nav-link">Adding new types</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-level="2"><a href="#adding-new-menu-items" class="nav-link">Adding new menu items</a>
+            <li class="nav-item" data-bs-level="2"><a href="#adding-new-datum-functions-for-use-in-expr-and-python-code" class="nav-link">Adding new Datum functions (for use in expr and Python code)</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-level="2"><a href="#adding-new-node-types" class="nav-link">Adding new node types</a>
+            <li class="nav-item" data-bs-level="2"><a href="#adding-new-menu-items" class="nav-link">Adding new menu items</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#adding-new-node-types" class="nav-link">Adding new node types</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -362,7 +372,7 @@ pcot.config.addMainWindowHook(addMenus)
 (Nodes themselves are of type <code>XForm</code>, which stands for <em>transform</em> for
 historical reasons). Developing new <code>XFormType</code> subclasses is largely
 beyond the scope of this document, but you can learn a lot from looking at the
-<code>pcot.xforms</code> package and the modules therein.</p>
+<code>pcot.xforms</code> package and the modules therein. A commented example node can be found in <code>xforms/xformexample.py</code>.</p>
 <p>To create a new node type, declare a new subclass of <code>XFormType</code> and decorate
 it with the <code>@xformtype</code> decorator. This will make the type autoregister:
 the singleton will be constructed and added to the internal type registry.</p>
@@ -384,7 +394,7 @@ nodes are of type <code>XForm</code>, and they link to an <code>XFormType</code>
 tell them how to behave. This might seem a really odd way to do things, but it
 follows "favour composition over inheritance" and saves messiness elsewhere.</p>
 <p>Here is an example which does edge detection with OpenCV:</p>
-<pre><code>import cv2 as cv
+<pre><code class="language-python">import cv2 as cv
 import numpy as np
 
 from pcot.sources import SourceSet
@@ -491,7 +501,18 @@ created from a previously archived version in memory. This means that the <code>
 Because of this, your tab <strong>must not</strong> store references to objects inside the node, because after
 an undo those references will be stale. Instead, always use <code>self.node...</code> to access data.</p>
 <p>It is OK to use the tab to store UI-only data which is not persisted (saved to a file or to the
-undo mechanism).</p></div>
+undo mechanism).</p>
+<h3 id="node-parameters-serialisation-and-deserialisation">Node parameters: serialisation and deserialisation</h3>
+<p>Your node may have parameters which need to be saved to .pcot files or saved
+into the undo data. To do this, PCOT needs to convert them into data
+which is "JSON-serialisable" - convertable to text in the JSON format.
+PCOT refers to the process of conversion into JSON-serialisable data
+as "serialisation," even though it's really only the first step. It's just
+that the JSON library takes care of the rest of the process.</p>
+<p>JSON-serialisable data consists of built-in Python types: strings, numbers,
+lists, dicts and tuples.</p>
+<p>PCOT has no less than four mechanisms for converting node data into JSON:
+<a href="../nodeser/">read more about them here</a>.</p></div>
             </div>
         </div>
 
@@ -499,22 +520,20 @@ undo mechanism).</p></div>
             <hr>
             <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
         </footer>
-        <script src="../../js/jquery-3.6.0.min.js"></script>
-        <script src="../../js/bootstrap.min.js"></script>
         <script>
             var base_url = "../..",
                 shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
         </script>
-        <script src="../../js/base.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
-        <script src="../../search/main.js"></script>
+        <script src="../../js/base.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
+        <script src="../../search/main.js" defer></script>
 
         <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h4 class="modal-title" id="searchModalLabel">Search</h4>
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>From here you can search these documents. Enter your search terms below.</p>
@@ -534,7 +553,7 @@ undo mechanism).</p></div>
         <div class="modal-content">
             <div class="modal-header">
                 <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
               <table class="table">

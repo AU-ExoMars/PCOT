@@ -1,0 +1,300 @@
+<!DOCTYPE html><html lang="en">
+    <head>
+    
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="robots" content="noindex,nofollow">
+
+        <title>Input parameters - PCOT Documentation</title>
+    
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+    <link rel="stylesheet" href="../../css/lightbox.min.css">
+    <link rel="stylesheet" href="../../css/site.css">
+
+    
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
+    <script src="../../js/lightbox-plus-jquery.min.js"></script>
+ 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container wide">
+                <a class="navbar-brand" href="../..">PCOT Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Getting Started <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../gettingstarted/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/installrun/" class="dropdown-item">Installing and running</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/concepts/" class="dropdown-item">PCOT concepts</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/tutorial/" class="dropdown-item">Tutorial</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/inputs/" class="dropdown-item">Loading other image formats</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/help/" class="dropdown-item">Getting help</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../userguide/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/principles/" class="dropdown-item">Operating principles</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/canvas/" class="dropdown-item">The Canvas</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/globalcontrols/" class="dropdown-item">Global Controls</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/multifile/" class="dropdown-item">Reading images from multiple files</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/expr/" class="dropdown-item">The "expr" node for mathematical expressions</a>
+</li>
+                                    
+<li>
+    <a href="../../userguide/batch/" class="dropdown-item">Batch mode</a>
+</li>
+                                    
+<li>
+    <a href="../" class="dropdown-item">Autodocs</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer's Guide <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../devguide/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../devguide/library/" class="dropdown-item">Using PCOT as a library</a>
+</li>
+                                    
+<li>
+    <a href="../../devguide/plugins/" class="dropdown-item">Writing PCOT plugins</a>
+</li>
+                                    
+<li>
+    <a href="../../devguide/nodeser/" class="dropdown-item">Node serialisation</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="navitem">
+                                <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../../gettingstarted/issues/" class="nav-link">Known issues</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container wide">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#input-parameters" class="nav-link">Input parameters</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#example" class="nav-link">Example</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#parameter-table" class="nav-link">Parameter table</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="input-parameters">Input parameters</h1>
+<p>Below is the full description for all the parameters controlling inputs
+that can be modified from a batch file. There are four duplicate
+entries, one for each input, so it's rather long. </p>
+<p>Each input has an entry for each input method, and which input method
+is active is controlled by which parameters are set:</p>
+<ul>
+<li>If you want to use RGB, make sure to set at least <code>.rgb.filename</code></li>
+<li>If you want to use ENVI, make sure to set at least <code>.envi.filename</code></li>
+<li>If you want to use PARC, make sure to set at least <code>.parc.filename</code></li>
+<li>If you want to use multifile, make sure to set at least at least
+<code>.multifile.directory</code> and add at least one file by adding to
+<code>.multifile.files</code></li>
+<li>If you want to use PDS4, make sure to set at least at least
+<code>.pds4.directory</code> and add at least one file by adding to
+<code>.pds4.files</code></li>
+</ul>
+<h2 id="example">Example</h2>
+<pre><code class="language-txt"># input 0 is an RGB file called foo.png
+
+inputs.0.rgb.filename = foo.png
+
+# input 1 is a multifile - the images are in ../test_data/images
+# and they 
+
+inputs.1.multifile.directory = ../test_data/images
+
+# all .bin files called foo0..foo9 are to be added
+.filenames.+ = foo[0-9].bin
+
+# and all .bins called bar0..bar9
+.+ = bar[0-9].bin
+
+
+
+</code></pre>
+<h2 id="parameter-table">Parameter table</h2>
+<table border='1' style='border-collapse: collapse;'><tr><td rowspan="84" style="border-right: none;">inputs</td><td rowspan="21" style="border-right: none;">0</td><td rowspan="21" style="border-left: none;">inputs by index</td><td rowspan="1" style="border-right: none;">rgb</td><td rowspan="1" style="border-left: none;">RGB input method</td><td rowspan="1" style="border-right: none;">filename: string (default None)</td><td rowspan="1" style="border-left: none;">filename</td></tr><tr><td rowspan="1" style="border-right: none;">envi</td><td rowspan="1" style="border-left: none;">ENVI input method</td><td rowspan="1" style="border-right: none;">filename: string (default None)</td><td rowspan="1" style="border-left: none;">filename (without extension)</td></tr><tr><td rowspan="14" style="border-right: none;">multifile</td><td rowspan="14" style="border-left: none;">Multifile input method</td><td rowspan="1" style="border-right: none;">directory: string (default None)</td><td rowspan="1" style="border-left: none;">directory to load from</td></tr><tr><td rowspan="1" style="border-right: none;">filenames: list of string (default '[]')</td><td rowspan="1" style="border-left: none;">list of filenames or filename patterns to match. All files matching each pattern will be added, sorted by name within each pattern.</td></tr><tr><td rowspan="1" style="border-right: none;">filter_pattern: string (default '.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*')</td><td rowspan="1" style="border-left: none;">pattern for filter identification</td></tr><tr><td rowspan="1" style="border-right: none;">filter_set: string (default 'PANCAM')</td><td rowspan="1" style="border-left: none;">name of filter set to use</td></tr><tr><td rowspan="1" style="border-right: none;">bit_depth: integer (default None)</td><td rowspan="1" style="border-left: none;">number of bits used in the image (default is all bits)</td></tr><tr><td rowspan="1" style="border-right: none;">preset: string (default None)</td><td rowspan="1" style="border-left: none;">preset name for some params (can be overridden by other params)</td></tr><tr><td rowspan="8" style="border-right: none;">raw</td><td rowspan="8" style="border-left: none;">parameters for loading raw data</td><td rowspan="1" style="border-right: none;">format: string (default 'u16')</td><td rowspan="1" style="border-left: none;">integer format (u16 u8 or f32)</td></tr><tr><td rowspan="1" style="border-right: none;">width: integer (default 1024)</td><td rowspan="1" style="border-left: none;">image width</td></tr><tr><td rowspan="1" style="border-right: none;">height: integer (default 1024)</td><td rowspan="1" style="border-left: none;">image height</td></tr><tr><td rowspan="1" style="border-right: none;">bigendian: boolean (default False)</td><td rowspan="1" style="border-left: none;">whether the data is big-endian</td></tr><tr><td rowspan="1" style="border-right: none;">offset: integer (default 0)</td><td rowspan="1" style="border-left: none;">size of the header in bytes (this is skipped)</td></tr><tr><td rowspan="1" style="border-right: none;">rot: integer (default 0)</td><td rowspan="1" style="border-left: none;">counter-clockwise rotation of the image in degrees (must be multiple of 90)</td></tr><tr><td rowspan="1" style="border-right: none;">horzflip: boolean (default False)</td><td rowspan="1" style="border-left: none;">whether the image is flipped horizontally (after rotation)</td></tr><tr><td rowspan="1" style="border-right: none;">vertflip: boolean (default False)</td><td rowspan="1" style="border-left: none;">whether the image is flipped vertically (after rotation)</td></tr><tr><td rowspan="2" style="border-right: none;">pds4</td><td rowspan="2" style="border-left: none;">PDS4 input method</td><td rowspan="1" style="border-right: none;">directory: string (default None)</td><td rowspan="1" style="border-left: none;">directory to load from</td></tr><tr><td rowspan="1" style="border-right: none;">filenames: list of string (default '[]')</td><td rowspan="1" style="border-left: none;">list of filenames or filename patterns to match. All files matching each pattern will be added, sorted by name within each pattern.</td></tr><tr><td rowspan="2" style="border-right: none;">parc</td><td rowspan="2" style="border-left: none;">PCOT datum archive input method</td><td rowspan="1" style="border-right: none;">filename: string (default None)</td><td rowspan="1" style="border-left: none;">filename</td></tr><tr><td rowspan="1" style="border-right: none;">itemname: string (default 'main')</td><td rowspan="1" style="border-left: none;">name of the item in the archive</td></tr><tr><td rowspan="1" style="border-right: none;">direct</td><td rowspan="1" style="border-left: none;">Direct input method</td><td rowspan="1" style="border-right: none;">filename: string (default None)</td><td rowspan="1" style="border-left: none;">filename</td></tr><tr><td rowspan="21" style="border-right: none;">1</td><td rowspan="21" style="border-left: none;">inputs by index</td><td rowspan="1" style="border-right: none;">rgb</td><td rowspan="1" style="border-left: none;">RGB input method</td><td rowspan="1" style="border-right: none;">filename: string (default None)</td><td rowspan="1" style="border-left: none;">filename</td></tr><tr><td rowspan="1" style="border-right: none;">envi</td><td rowspan="1" style="border-left: none;">ENVI input method</td><td rowspan="1" style="border-right: none;">filename: string (default None)</td><td rowspan="1" style="border-left: none;">filename (without extension)</td></tr><tr><td rowspan="14" style="border-right: none;">multifile</td><td rowspan="14" style="border-left: none;">Multifile input method</td><td rowspan="1" style="border-right: none;">directory: string (default None)</td><td rowspan="1" style="border-left: none;">directory to load from</td></tr><tr><td rowspan="1" style="border-right: none;">filenames: list of string (default '[]')</td><td rowspan="1" style="border-left: none;">list of filenames or filename patterns to match. All files matching each pattern will be added, sorted by name within each pattern.</td></tr><tr><td rowspan="1" style="border-right: none;">filter_pattern: string (default '.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*')</td><td rowspan="1" style="border-left: none;">pattern for filter identification</td></tr><tr><td rowspan="1" style="border-right: none;">filter_set: string (default 'PANCAM')</td><td rowspan="1" style="border-left: none;">name of filter set to use</td></tr><tr><td rowspan="1" style="border-right: none;">bit_depth: integer (default None)</td><td rowspan="1" style="border-left: none;">number of bits used in the image (default is all bits)</td></tr><tr><td rowspan="1" style="border-right: none;">preset: string (default None)</td><td rowspan="1" style="border-left: none;">preset name for some params (can be overridden by other params)</td></tr><tr><td rowspan="8" style="border-right: none;">raw</td><td rowspan="8" style="border-left: none;">parameters for loading raw data</td><td rowspan="1" style="border-right: none;">format: string (default 'u16')</td><td rowspan="1" style="border-left: none;">integer format (u16 u8 or f32)</td></tr><tr><td rowspan="1" style="border-right: none;">width: integer (default 1024)</td><td rowspan="1" style="border-left: none;">image width</td></tr><tr><td rowspan="1" style="border-right: none;">height: integer (default 1024)</td><td rowspan="1" style="border-left: none;">image height</td></tr><tr><td rowspan="1" style="border-right: none;">bigendian: boolean (default False)</td><td rowspan="1" style="border-left: none;">whether the data is big-endian</td></tr><tr><td rowspan="1" style="border-right: none;">offset: integer (default 0)</td><td rowspan="1" style="border-left: none;">size of the header in bytes (this is skipped)</td></tr><tr><td rowspan="1" style="border-right: none;">rot: integer (default 0)</td><td rowspan="1" style="border-left: none;">counter-clockwise rotation of the image in degrees (must be multiple of 90)</td></tr><tr><td rowspan="1" style="border-right: none;">horzflip: boolean (default False)</td><td rowspan="1" style="border-left: none;">whether the image is flipped horizontally (after rotation)</td></tr><tr><td rowspan="1" style="border-right: none;">vertflip: boolean (default False)</td><td rowspan="1" style="border-left: none;">whether the image is flipped vertically (after rotation)</td></tr><tr><td rowspan="2" style="border-right: none;">pds4</td><td rowspan="2" style="border-left: none;">PDS4 input method</td><td rowspan="1" style="border-right: none;">directory: string (default None)</td><td rowspan="1" style="border-left: none;">directory to load from</td></tr><tr><td rowspan="1" style="border-right: none;">filenames: list of string (default '[]')</td><td rowspan="1" style="border-left: none;">list of filenames or filename patterns to match. All files matching each pattern will be added, sorted by name within each pattern.</td></tr><tr><td rowspan="2" style="border-right: none;">parc</td><td rowspan="2" style="border-left: none;">PCOT datum archive input method</td><td rowspan="1" style="border-right: none;">filename: string (default None)</td><td rowspan="1" style="border-left: none;">filename</td></tr><tr><td rowspan="1" style="border-right: none;">itemname: string (default 'main')</td><td rowspan="1" style="border-left: none;">name of the item in the archive</td></tr><tr><td rowspan="1" style="border-right: none;">direct</td><td rowspan="1" style="border-left: none;">Direct input method</td><td rowspan="1" style="border-right: none;">filename: string (default None)</td><td rowspan="1" style="border-left: none;">filename</td></tr><tr><td rowspan="21" style="border-right: none;">2</td><td rowspan="21" style="border-left: none;">inputs by index</td><td rowspan="1" style="border-right: none;">rgb</td><td rowspan="1" style="border-left: none;">RGB input method</td><td rowspan="1" style="border-right: none;">filename: string (default None)</td><td rowspan="1" style="border-left: none;">filename</td></tr><tr><td rowspan="1" style="border-right: none;">envi</td><td rowspan="1" style="border-left: none;">ENVI input method</td><td rowspan="1" style="border-right: none;">filename: string (default None)</td><td rowspan="1" style="border-left: none;">filename (without extension)</td></tr><tr><td rowspan="14" style="border-right: none;">multifile</td><td rowspan="14" style="border-left: none;">Multifile input method</td><td rowspan="1" style="border-right: none;">directory: string (default None)</td><td rowspan="1" style="border-left: none;">directory to load from</td></tr><tr><td rowspan="1" style="border-right: none;">filenames: list of string (default '[]')</td><td rowspan="1" style="border-left: none;">list of filenames or filename patterns to match. All files matching each pattern will be added, sorted by name within each pattern.</td></tr><tr><td rowspan="1" style="border-right: none;">filter_pattern: string (default '.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*')</td><td rowspan="1" style="border-left: none;">pattern for filter identification</td></tr><tr><td rowspan="1" style="border-right: none;">filter_set: string (default 'PANCAM')</td><td rowspan="1" style="border-left: none;">name of filter set to use</td></tr><tr><td rowspan="1" style="border-right: none;">bit_depth: integer (default None)</td><td rowspan="1" style="border-left: none;">number of bits used in the image (default is all bits)</td></tr><tr><td rowspan="1" style="border-right: none;">preset: string (default None)</td><td rowspan="1" style="border-left: none;">preset name for some params (can be overridden by other params)</td></tr><tr><td rowspan="8" style="border-right: none;">raw</td><td rowspan="8" style="border-left: none;">parameters for loading raw data</td><td rowspan="1" style="border-right: none;">format: string (default 'u16')</td><td rowspan="1" style="border-left: none;">integer format (u16 u8 or f32)</td></tr><tr><td rowspan="1" style="border-right: none;">width: integer (default 1024)</td><td rowspan="1" style="border-left: none;">image width</td></tr><tr><td rowspan="1" style="border-right: none;">height: integer (default 1024)</td><td rowspan="1" style="border-left: none;">image height</td></tr><tr><td rowspan="1" style="border-right: none;">bigendian: boolean (default False)</td><td rowspan="1" style="border-left: none;">whether the data is big-endian</td></tr><tr><td rowspan="1" style="border-right: none;">offset: integer (default 0)</td><td rowspan="1" style="border-left: none;">size of the header in bytes (this is skipped)</td></tr><tr><td rowspan="1" style="border-right: none;">rot: integer (default 0)</td><td rowspan="1" style="border-left: none;">counter-clockwise rotation of the image in degrees (must be multiple of 90)</td></tr><tr><td rowspan="1" style="border-right: none;">horzflip: boolean (default False)</td><td rowspan="1" style="border-left: none;">whether the image is flipped horizontally (after rotation)</td></tr><tr><td rowspan="1" style="border-right: none;">vertflip: boolean (default False)</td><td rowspan="1" style="border-left: none;">whether the image is flipped vertically (after rotation)</td></tr><tr><td rowspan="2" style="border-right: none;">pds4</td><td rowspan="2" style="border-left: none;">PDS4 input method</td><td rowspan="1" style="border-right: none;">directory: string (default None)</td><td rowspan="1" style="border-left: none;">directory to load from</td></tr><tr><td rowspan="1" style="border-right: none;">filenames: list of string (default '[]')</td><td rowspan="1" style="border-left: none;">list of filenames or filename patterns to match. All files matching each pattern will be added, sorted by name within each pattern.</td></tr><tr><td rowspan="2" style="border-right: none;">parc</td><td rowspan="2" style="border-left: none;">PCOT datum archive input method</td><td rowspan="1" style="border-right: none;">filename: string (default None)</td><td rowspan="1" style="border-left: none;">filename</td></tr><tr><td rowspan="1" style="border-right: none;">itemname: string (default 'main')</td><td rowspan="1" style="border-left: none;">name of the item in the archive</td></tr><tr><td rowspan="1" style="border-right: none;">direct</td><td rowspan="1" style="border-left: none;">Direct input method</td><td rowspan="1" style="border-right: none;">filename: string (default None)</td><td rowspan="1" style="border-left: none;">filename</td></tr><tr><td rowspan="21" style="border-right: none;">3</td><td rowspan="21" style="border-left: none;">inputs by index</td><td rowspan="1" style="border-right: none;">rgb</td><td rowspan="1" style="border-left: none;">RGB input method</td><td rowspan="1" style="border-right: none;">filename: string (default None)</td><td rowspan="1" style="border-left: none;">filename</td></tr><tr><td rowspan="1" style="border-right: none;">envi</td><td rowspan="1" style="border-left: none;">ENVI input method</td><td rowspan="1" style="border-right: none;">filename: string (default None)</td><td rowspan="1" style="border-left: none;">filename (without extension)</td></tr><tr><td rowspan="14" style="border-right: none;">multifile</td><td rowspan="14" style="border-left: none;">Multifile input method</td><td rowspan="1" style="border-right: none;">directory: string (default None)</td><td rowspan="1" style="border-left: none;">directory to load from</td></tr><tr><td rowspan="1" style="border-right: none;">filenames: list of string (default '[]')</td><td rowspan="1" style="border-left: none;">list of filenames or filename patterns to match. All files matching each pattern will be added, sorted by name within each pattern.</td></tr><tr><td rowspan="1" style="border-right: none;">filter_pattern: string (default '.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*')</td><td rowspan="1" style="border-left: none;">pattern for filter identification</td></tr><tr><td rowspan="1" style="border-right: none;">filter_set: string (default 'PANCAM')</td><td rowspan="1" style="border-left: none;">name of filter set to use</td></tr><tr><td rowspan="1" style="border-right: none;">bit_depth: integer (default None)</td><td rowspan="1" style="border-left: none;">number of bits used in the image (default is all bits)</td></tr><tr><td rowspan="1" style="border-right: none;">preset: string (default None)</td><td rowspan="1" style="border-left: none;">preset name for some params (can be overridden by other params)</td></tr><tr><td rowspan="8" style="border-right: none;">raw</td><td rowspan="8" style="border-left: none;">parameters for loading raw data</td><td rowspan="1" style="border-right: none;">format: string (default 'u16')</td><td rowspan="1" style="border-left: none;">integer format (u16 u8 or f32)</td></tr><tr><td rowspan="1" style="border-right: none;">width: integer (default 1024)</td><td rowspan="1" style="border-left: none;">image width</td></tr><tr><td rowspan="1" style="border-right: none;">height: integer (default 1024)</td><td rowspan="1" style="border-left: none;">image height</td></tr><tr><td rowspan="1" style="border-right: none;">bigendian: boolean (default False)</td><td rowspan="1" style="border-left: none;">whether the data is big-endian</td></tr><tr><td rowspan="1" style="border-right: none;">offset: integer (default 0)</td><td rowspan="1" style="border-left: none;">size of the header in bytes (this is skipped)</td></tr><tr><td rowspan="1" style="border-right: none;">rot: integer (default 0)</td><td rowspan="1" style="border-left: none;">counter-clockwise rotation of the image in degrees (must be multiple of 90)</td></tr><tr><td rowspan="1" style="border-right: none;">horzflip: boolean (default False)</td><td rowspan="1" style="border-left: none;">whether the image is flipped horizontally (after rotation)</td></tr><tr><td rowspan="1" style="border-right: none;">vertflip: boolean (default False)</td><td rowspan="1" style="border-left: none;">whether the image is flipped vertically (after rotation)</td></tr><tr><td rowspan="2" style="border-right: none;">pds4</td><td rowspan="2" style="border-left: none;">PDS4 input method</td><td rowspan="1" style="border-right: none;">directory: string (default None)</td><td rowspan="1" style="border-left: none;">directory to load from</td></tr><tr><td rowspan="1" style="border-right: none;">filenames: list of string (default '[]')</td><td rowspan="1" style="border-left: none;">list of filenames or filename patterns to match. All files matching each pattern will be added, sorted by name within each pattern.</td></tr><tr><td rowspan="2" style="border-right: none;">parc</td><td rowspan="2" style="border-left: none;">PCOT datum archive input method</td><td rowspan="1" style="border-right: none;">filename: string (default None)</td><td rowspan="1" style="border-left: none;">filename</td></tr><tr><td rowspan="1" style="border-right: none;">itemname: string (default 'main')</td><td rowspan="1" style="border-left: none;">name of the item in the archive</td></tr><tr><td rowspan="1" style="border-right: none;">direct</td><td rowspan="1" style="border-left: none;">Direct input method</td><td rowspan="1" style="border-right: none;">filename: string (default None)</td><td rowspan="1" style="border-left: none;">filename</td></tr></table>
+
+<hr />
+<p>Automatically generated by generate_autodocs.py</p>
+<p>Date: 2025-02-17T16:09:18.986731</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
+        <script src="../../search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
