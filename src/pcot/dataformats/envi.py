@@ -27,9 +27,8 @@ from typing import List
 import numpy as np
 
 import pcot.ui as ui
-from pcot.filters import Filter
-from pcot.imagecube import ChannelMapping, ImageCube
-from pcot.sources import MultiBandSource, Source, External, StringExternal
+from pcot.cameras.filters import Filter
+from pcot.imagecube import ImageCube
 
 
 def parseHeader(lines):

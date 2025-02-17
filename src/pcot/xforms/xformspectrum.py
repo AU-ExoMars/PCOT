@@ -9,16 +9,14 @@ from PySide2.QtWidgets import QDialog
 import pcot
 import pcot.ui as ui
 from pcot.datum import Datum
-from pcot.filters import wav2RGB, Filter
+from pcot.cameras.filters import wav2RGB, Filter
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType
-from pcot.sources import SourceSet
 from pcot.ui import uiloader
 from pcot.ui.tabs import Tab
 from pcot.utils import SignalBlocker
-from pcot.utils.spectrum import Spectrum, SpectrumSet
-from pcot.utils.table import Table
+from pcot.utils.spectrum import SpectrumSet
 from pcot.value import Value
-from pcot.xform import XFormType, xformtype, XFormException
+from pcot.xform import XFormType, xformtype
 
 
 def processData(legend, data, spec):

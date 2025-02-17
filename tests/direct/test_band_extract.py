@@ -6,7 +6,7 @@ import pytest
 from fixtures import genrgb
 from pcot.datum import Datum
 from pcot.expressions.ops import OperatorException
-from pcot.filters import Filter
+from pcot.cameras.filters import Filter
 from pcot.rois import ROIRect
 from pcot.sources import Source, MultiBandSource, nullSourceSet
 from pcot.value import Value

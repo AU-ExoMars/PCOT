@@ -1,5 +1,5 @@
 import builtins
-from typing import Optional, List, Callable
+from typing import Callable
 
 import cv2 as cv
 import numpy as np
@@ -12,7 +12,7 @@ from pcot.datum import Datum
 from pcot.dq import NODATA
 from pcot.expressions.register import datumfunc
 from pcot.expressions.ops import combineImageWithNumberSources
-from pcot.filters import Filter
+from pcot.cameras.filters import Filter
 from pcot.imagecube import ImageCube
 from pcot.rois import ROI
 from pcot.sources import MultiBandSource, SourceSet, Source
@@ -20,7 +20,7 @@ from pcot.utils import image
 from pcot.utils.deb import Timer
 from pcot.utils.geom import Rect
 from pcot.utils.maths import pooled_sd
-from pcot.value import Value, add_sub_unc_list
+from pcot.value import Value
 from pcot.xform import XFormException
 
 logger = logging.getLogger(__name__)

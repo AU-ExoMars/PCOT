@@ -6,9 +6,8 @@ from PySide2.QtWidgets import QMessageBox
 import cv2 as cv
 
 import pcot.ui.tabs
-from pcot import ui
 from pcot.datum import Datum
-from pcot.filters import Filter
+from pcot.cameras.filters import Filter
 from pcot.imagecube import ImageCube
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType
 from pcot.sources import MultiBandSource, Source, StringExternal

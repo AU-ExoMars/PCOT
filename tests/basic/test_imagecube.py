@@ -1,8 +1,8 @@
 """Tests on basic imagecube operations"""
 import pcot
 from pcot.document import Document
-from pcot.filters import Filter
-from pcot.sources import Source, SourceSet, MultiBandSource
+from pcot.cameras.filters import Filter
+from pcot.sources import SourceSet
 import pcot.utils.image as image
 
 from fixtures import *

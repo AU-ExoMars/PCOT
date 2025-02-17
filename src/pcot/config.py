@@ -127,7 +127,7 @@ def getFileDialogOptions():
 def loadFilters():
     """Load the default filter sets from the resource directory, followed by user filters
     as specified in the .ini file."""
-    from pcot.filters import loadFilterSet
+    from pcot.cameras.filters import loadFilterSet
     from pathlib import Path
 
     # these can be overridden by the data in the config file

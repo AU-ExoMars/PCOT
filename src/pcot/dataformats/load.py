@@ -10,7 +10,7 @@ from pcot import ui
 from pcot.dataformats.pds4 import ProductList
 from pcot.dataformats.raw import RawLoader
 from pcot.datum import Datum
-from pcot.filters import getFilter
+from pcot.cameras.filters import getFilter
 from pcot.imagecube import ChannelMapping, ImageCube, load_rgb_image
 from pcot.sources import StringExternal, MultiBandSource, Source
 from pcot.ui.presetmgr import PresetOwner

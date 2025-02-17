@@ -1,13 +1,11 @@
 ## the Multifile input method, inputting several greyscale images
 # into a single image
-import fnmatch
 import logging
 import os
 import re
 from typing import Any, Dict
 
 import PySide2
-import numpy as np
 from PySide2 import QtWidgets, QtGui
 from PySide2.QtCore import Qt
 
@@ -19,7 +17,7 @@ from .inputmethod import InputMethod
 from .. import ui
 from ..dataformats import load
 from ..dataformats.raw import RawLoader
-from ..filters import getFilterSetNames
+from pcot.cameras.filters import getFilterSetNames
 from ..parameters.taggedaggregates import TaggedDict
 from ..ui import uiloader
 from ..ui.presetmgr import PresetModel, PresetDialog, PresetOwner

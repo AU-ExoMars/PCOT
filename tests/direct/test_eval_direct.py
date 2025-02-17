@@ -2,14 +2,12 @@
 Test "direct" use of the expression evaluator, outside an expr node
 """
 import numpy as np
-import pytest
 
 import pcot
 from pcot import dq
 from pcot.datum import Datum
 from pcot.expressions import ExpressionEvaluator
-from pcot.filters import Filter
-from pcot.sources import nullSourceSet, Source, MultiBandSource
+from pcot.sources import nullSourceSet
 from pcot.value import Value
 from fixtures import genrgb
 

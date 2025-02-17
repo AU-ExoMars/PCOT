@@ -8,7 +8,7 @@ from typing import Dict, Optional, Tuple, List
 import numpy as np
 
 from pcot.dq import BAD
-from pcot.filters import Filter
+from pcot.cameras.filters import Filter
 from pcot.imagecube import ImageCube
 from pcot.rois import ROI
 from pcot.sources import SourceSet, SourcesObtainable

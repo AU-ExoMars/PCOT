@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, List, Set, SupportsFloat, Union, Iterable, Any, Tuple, Dict
 
 from pcot.documentsettings import DocumentSettings
-from pcot.filters import Filter
+from pcot.cameras.filters import Filter
 
 
 class SourcesObtainable(ABC):
