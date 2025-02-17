@@ -78,7 +78,7 @@ def test_greyscale_sources_expr(envi_image_1):
 
     inputNode = doc.graph.create("input 0")
     exprNode = doc.graph.create("expr")
-    exprNode.expr = "grey(a,0)"
+    exprNode.params.expr = "grey(a,0)"
     # connect input 0 on self to output 0 in the input node
     exprNode.connect(0, inputNode, 0)
 
@@ -117,7 +117,7 @@ def test_extract_sources(envi_image_1):
 
     inputNode = doc.graph.create("input 0")
     exprNode = doc.graph.create("expr")
-    exprNode.expr = "a$640"
+    exprNode.params.expr = "a$640"
     # connect input 0 on self to output 0 in the input node
     exprNode.connect(0, inputNode, 0)
 
@@ -137,11 +137,11 @@ def test_extract_by_band():
 
     pcot.setup()
     doc = Document()
-    img = genrgb(50, 50, 0.1, 0.2, 0.3, doc=doc, inpidx=0)
+    img = genrgb(50, 50, 0.1, 0.2, 0.3, inpidx=0)
     assert doc.setInputDirectImage(0, img) is None
     inp = doc.graph.create("input 0")
     expr = doc.graph.create("expr")
-    expr.expr = "a$_0"
+    expr.params.expr = "a$_0"
     expr.connect(0,inp,0)
     doc.run()
 
@@ -149,7 +149,7 @@ def test_extract_by_band():
     assert img is not None
     assert np.allclose(img.img[0][0], 0.1)
 
-    expr.expr = "a$_4"
+    expr.params.expr = "a$_4"
     doc.run()
     img = expr.getOutputDatum(0)
     assert img is Datum.null
@@ -167,7 +167,7 @@ def test_binop_2images(envi_image_1, envi_image_2):
     inputNode1 = doc.graph.create("input 0")
     inputNode2 = doc.graph.create("input 1")
     exprNode = doc.graph.create("expr")
-    exprNode.expr = "a+b"
+    exprNode.params.expr = "a+b"
     exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
     exprNode.connect(1, inputNode2, 0)  # expr:1 <- input2:0
 
@@ -200,7 +200,7 @@ def test_binop_vector_and_vector_img_derived(envi_image_1, envi_image_2):
     inputNode1 = doc.graph.create("input 0")
     inputNode2 = doc.graph.create("input 1")
     exprNode = doc.graph.create("expr")
-    exprNode.expr = "mean(a)*mean(b)"  # multiply mean of image A by the mean of image B
+    exprNode.params.expr = "mean(a)*mean(b)"  # multiply mean of image A by the mean of image B
     exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
     exprNode.connect(1, inputNode2, 0)  # expr:1 <- input2:0
 
@@ -228,7 +228,7 @@ def test_binop_image_and_vector_img_derived(envi_image_1, envi_image_2):
     inputNode1 = doc.graph.create("input 0")
     inputNode2 = doc.graph.create("input 1")
     exprNode = doc.graph.create("expr")
-    exprNode.expr = "a*mean(b)"  # multiply image A by the mean of image B
+    exprNode.params.expr = "a*mean(b)"  # multiply image A by the mean of image B
     exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
     exprNode.connect(1, inputNode2, 0)  # expr:1 <- input2:0
 
@@ -257,7 +257,7 @@ def test_binop_image_and_number2(envi_image_1, envi_image_2):
     inputNode1 = doc.graph.create("input 0")
     inputNode2 = doc.graph.create("input 1")
     exprNode = doc.graph.create("expr")
-    exprNode.expr = "mean(a)-b"  # subtract image B from the mean of image A
+    exprNode.params.expr = "mean(a)-b"  # subtract image B from the mean of image A
     exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
     exprNode.connect(1, inputNode2, 0)  # expr:1 <- input2:0
 
@@ -284,7 +284,7 @@ def test_binop_image_and_number_literal(envi_image_1, envi_image_2):
 
     inputNode1 = doc.graph.create("input 0")
     exprNode = doc.graph.create("expr")
-    exprNode.expr = "a-20"  # subtract literal 20 from the mean of image A
+    exprNode.params.expr = "a-20"  # subtract literal 20 from the mean of image A
     exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
 
     doc.run()
@@ -314,7 +314,7 @@ def test_unop_image(envi_image_1):
 
     inputNode1 = doc.graph.create("input 0")
     exprNode = doc.graph.create("expr")
-    exprNode.expr = "-a"  # negate image
+    exprNode.params.expr = "-a"  # negate image
     exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
 
     doc.run()
@@ -338,7 +338,7 @@ def test_unop_number_from_image(envi_image_1):
 
     inputNode1 = doc.graph.create("input 0")
     exprNode = doc.graph.create("expr")
-    exprNode.expr = "-mean(a)"  # negate image mean
+    exprNode.params.expr = "-mean(a)"  # negate image mean
     exprNode.connect(0, inputNode1, 0)  # expr:0 <- input1:0
 
     doc.run()

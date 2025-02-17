@@ -3,9 +3,9 @@
 import logging
 import os
 import re
+from typing import Any, Dict
 
 import PySide2
-import numpy as np
 from PySide2 import QtWidgets, QtGui
 from PySide2.QtCore import Qt
 
@@ -17,7 +17,8 @@ from .inputmethod import InputMethod
 from .. import ui
 from ..dataformats import load
 from ..dataformats.raw import RawLoader
-from ..filters import getFilterSetNames
+from pcot.cameras.filters import getFilterSetNames
+from ..parameters.taggedaggregates import TaggedDict
 from ..ui import uiloader
 from ..ui.presetmgr import PresetModel, PresetDialog, PresetOwner
 from ..utils import SignalBlocker
@@ -63,7 +64,7 @@ class MultifileInputMethod(InputMethod):
 
     def compileRegex(self):
         # compile the regexp that gets the filter ID out.
-        logger.info(f"Compiling RE: {self.filterpat}")
+        logger.debug(f"Compiling RE: {self.filterpat}")
         try:
             self.filterre = re.compile(self.filterpat)
         except re.error:
@@ -75,14 +76,14 @@ class MultifileInputMethod(InputMethod):
         self.mapping.red = -1
 
         img = load.multifile(self.dir, self.files,
-                              filterpat=self.filterpat,
-                              bitdepth=self.bitdepth,
-                              inpidx=self.input.idx,
-                              mapping=self.mapping,
-                              cache=self.cachedFiles,
-                              rawloader=self.rawLoader,
-                              filterset=self.filterset)
-        logger.info(f"------------ Image loaded: {img} from {len(self.files)} files, mapping is {self.mapping}")
+                             filterpat=self.filterpat,
+                             bitdepth=self.bitdepth,
+                             inpidx=self.input.idx,
+                             mapping=self.mapping,
+                             cache=self.cachedFiles,
+                             rawloader=self.rawLoader,
+                             filterset=self.filterset)
+        logger.debug(f"------------ Image loaded: {img} from {len(self.files)} files, mapping is {self.mapping}")
         return img
 
     def getName(self):
@@ -108,13 +109,13 @@ class MultifileInputMethod(InputMethod):
 
     def serialise(self, internal):
         x = {
-             'dir': self.dir,
-             'files': self.files,
-             'bitdepth': self.bitdepth,
-             'filterpat': self.filterpat,
-             'filterset': self.filterset,
-             'rawloader': self.rawLoader.serialise(),
-             }
+            'dir': self.dir,
+            'files': self.files,
+            'bitdepth': self.bitdepth,
+            'filterpat': self.filterpat,
+            'filterset': self.filterset,
+            'rawloader': self.rawLoader.serialise(),
+        }
         if internal:
             x['cache'] = self.cachedFiles
 
@@ -139,9 +140,75 @@ class MultifileInputMethod(InputMethod):
 
         Canvas.deserialise(self, data)
 
+    def modifyWithParameterDict(self, d: TaggedDict) -> bool:
+        m = d.multifile
+        if m.directory is None:
+            return False  # no change to this input (directory must be provided)
 
-# Then the UI class..
+        # attempt to load presets
+        if m.preset is not None:
+            class Preset(PresetOwner):
+                """This owns presets for when we modify with a parameter dict. It sort
+                of works the same way as the RawPresets in dataformats.load."""
 
+                def __init__(self):
+                    self.filterset = None
+                    self.filterpat = None
+                    self.bitdepth = None
+                    self.rawloader = None
+
+                def applyPreset(self, preset: Dict[str, Any]):
+                    self.filterset = preset['filterset']
+                    self.rawloader = RawLoader()
+                    self.rawloader.deserialise(preset['rawloader'])
+                    self.filterpat = preset['filterpat']
+                    self.bitdepth = preset.get('bitdepth', None)
+
+            preset = Preset()
+            # will throw if we can't find the preset. Otherwise it will apply the loaded
+            # preset to the object we just created.
+            preset.applyPreset(presetModel.presets[m.preset])
+            # now initialise things with the data we just loaded. Some of these may get
+            # overriden further down.
+            self.filterset = preset.filterset
+            self.filterpat = preset.filterpat
+            self.bitdepth = preset.bitdepth
+            self.rawLoader = preset.rawloader
+
+        # get the files
+        self._getFilesFromParameterDict(m)
+
+        # other parameters, which may override the preset IF they have been changed from their default values
+        if m.isNotDefault('filter_pattern'):
+            self.filterpat = m.filter_pattern
+            self.compileRegex()
+        if m.isNotDefault('filter_set'):
+            self.filterset = m.filter_set
+        if m.isNotDefault('bit_depth'):
+            self.bitdepth = m.bit_depth
+        # and the raw parameters block. Ugly, but comprehensible.
+        if m.raw is not None:
+            p = m.raw
+            if p.isNotDefault('format'):
+                self.rawLoader.format = RawLoader.formatByName(p.format)
+            if p.isNotDefault('width'):
+                self.rawLoader.width = p.width
+            if p.isNotDefault('height'):
+                self.rawLoader.height = p.height
+            if p.isNotDefault('bigendian'):
+                self.rawLoader.bigendian = p.bigendian
+            if p.isNotDefault('offset'):
+                self.rawLoader.offset = p.offset
+            if p.isNotDefault('rot'):
+                self.rawLoader.rot = p.rot
+            if p.isNotDefault('horzflip'):
+                self.rawLoader.horzflip = p.horzflip
+            if p.isNotDefault('vertflip'):
+                self.rawLoader.vertflip = p.vertflip
+        return True
+
+
+# Then the UI class...
 
 IMAGETYPERE = re.compile(r".*\.(?i:jpg|bmp|png|ppm|tga|tif|raw|bin)")
 
@@ -164,7 +231,6 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         self.filtSetCombo.currentIndexChanged.connect(self.filterSetChanged)
         self.loaderSettingsButton.clicked.connect(self.loaderSettings)
         self.loaderSettingsText.setText(str(self.method.rawLoader))
-        self.canvas.setMapping(m.mapping)
         self.presetButton.pressed.connect(self.presetPressed)
         # self.canvas.hideMapping()  # because we're showing greyscale for each image
         self.canvas.setGraph(self.method.input.mgr.doc.graph)
@@ -172,9 +238,12 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
 
         self.filelist.setMinimumWidth(300)
         self.setMinimumSize(1000, 500)
+        pcot.ui.decorateSplitter(self.splitter, 1)
 
         with SignalBlocker(self.filtSetCombo):
             self.filtSetCombo.addItems(getFilterSetNames())
+
+        # if the method doesn't have a directory, reset to the default.
 
         if self.method.dir is None or len(self.method.dir) == 0:
             self.method.dir = pcot.config.getDefaultDir('images')
@@ -254,9 +323,9 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
                                                          os.path.expanduser(d),
                                                          options=pcot.config.getFileDialogOptions())
         if res != '':
-            self.selectDir(res)
+            self.selectDir(res, True)
 
-    def selectDir(self, dr):
+    def selectDir(self, dr, setDefaultDir=False):
         # called when we want to load a new directory, or when the node has changed (on loading)
         if self.method.dir != dr:  # if the directory has changed reset the selected file list
             self.method.files = []
@@ -268,7 +337,10 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
                                     and IMAGETYPERE.match(f) is not None])
             # using the absolute, real path
             self.method.dir = os.path.realpath(dr)
-            pcot.config.setDefaultDir('images', self.method.dir)
+            # only set the default directory for images when this is called "manually" - typically in response
+            # to the "get directory" button.
+            if setDefaultDir:
+                pcot.config.setDefaultDir('images', self.method.dir)
         except Exception as e:
             # some kind of file system error
             e = str(e)
@@ -322,7 +394,8 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
             img = ImageCube(arr, self.method.mapping)
         else:
             # otherwise load it with the ImageCube RGB loader
-            img = ImageCube.load(path, self.method.mapping, None, bitdepth=self.method.bitdepth)  # RGB image, null sources
+            img = ImageCube.load(path, self.method.mapping, None,
+                                 bitdepth=self.method.bitdepth)  # RGB image, null sources
 
         self.activatedImagePath = path
         self.activatedImage = img

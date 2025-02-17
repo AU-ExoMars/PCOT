@@ -54,7 +54,7 @@ def test_graph_files(graphname):
 
     comments = doc.graph.getByDisplayName("comment")
     for n in comments:
-        if n.string.startswith("DOC"):
+        if n.params.string.startswith("DOC"):
             commentFound = True
 
     if not commentFound:

@@ -53,7 +53,7 @@ def test_funcwrapper(t: FuncTest):
     doc.setInputDirect(0, Datum(Datum.NUMBER, inp, nullSource))
 
     e = doc.graph.create("expr")
-    e.expr = t.expr
+    e.params.expr = t.expr
     e.connect(0, i, 0)
 
     doc.run()

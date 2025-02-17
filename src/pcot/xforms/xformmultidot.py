@@ -1,4 +1,3 @@
-import copy
 import logging
 import random
 from functools import partial
@@ -16,6 +15,7 @@ from pcot.datum import Datum
 from pcot.rois import ROICircle, ROIPainted, ROI
 from pcot.ui.variantwidget import VariantWidget
 from pcot.utils.flood import FloodFillParams
+from pcot.parameters.taggedaggregates import TaggedVariantDictType, TaggedListType, TaggedDictType, TaggedDict
 from pcot.xform import xformtype, XFormType
 
 logger = logging.getLogger(__name__)
@@ -105,10 +105,20 @@ class XFormMultiDot(XFormType):
     OUT_IMG = 0
     IN_IMG = 0
 
+    TAGGEDVDICT = TaggedVariantDictType("type",
+                                        {
+                                            "painted": ROIPainted.TAGGEDDICT,
+                                            "circle": ROICircle.TAGGEDDICT
+                                        })
+
+    TAGGEDLIST = TaggedListType( TAGGEDVDICT, 0)
+
     def __init__(self):
         super().__init__("multidot", "regions", "0.0.0")
         self.addInputConnector("input", Datum.IMG)
         self.addOutputConnector("img", Datum.IMG, "image with ROIs")
+        # leave these as autoserialise; they control editing rather than things we
+        # might want to tweak in parameter files
         self.autoserialise = (
             ('dotSize', 10),
             ('fontsize', 10),
@@ -119,6 +129,8 @@ class XFormMultiDot(XFormType):
             ('drawbg', True),
             ('createMode', ModeWidget.BRUSH),
         )
+
+        self.params = TaggedDictType(rois=("List of ROIs", self.TAGGEDLIST))
 
     def createTab(self, n, w):
         return TabMultiDot(n, w)
@@ -201,16 +213,30 @@ class XFormMultiDot(XFormType):
         node.setOutput(self.OUT_IMG, Datum(Datum.IMG, outImg))  # output image and ROI
 
     def serialise(self, node):
-        """We serialise the ROIs - this will store their type too"""
-        return {'rois': [r.serialise() for r in node.rois]}
+        # create the list of ROI data
+        lst = self.TAGGEDLIST.create()
+        for r in node.rois:
+            # for each ROI, convert to a TaggedDict
+            d = r.to_tagged_dict()
+            # wrap it in a TaggedVariantDict and store it in the list
+            dv = self.TAGGEDVDICT.create().set(d)
+            lst.append(dv)
 
-    def deserialise(self, node, d):
-        # run through the ROIs, deserialising them
-        for r in d['rois']:
-            if 'type' not in r:
-                # add the missing type field for old files
-                r['type'] = 'circle'
-        rs = [ROI.fromSerialised(x) for x in d['rois']]
+        node.params = TaggedDict(self.params)
+        node.params.rois = lst
+        # and don't return anything, because we've stored the data in node.params.
+        return None
+
+    def nodeDataFromParams(self, node):
+        """CTAS deserialisation"""
+        lst = node.params.rois
+
+        rs = []
+        for x in lst:
+            d = x.get()
+            roi = ROI.new_from_tagged_dict(d)
+            rs.append(roi)
+
         # filter out any zero-radius circles
         node.rois = [r for r in rs if isinstance(r, ROIPainted) or r.r > 0]
 

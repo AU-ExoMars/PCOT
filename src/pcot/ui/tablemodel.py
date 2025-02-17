@@ -7,6 +7,7 @@ from PySide2.QtCore import QAbstractTableModel, Signal, QModelIndex, Qt
 from PySide2.QtGui import QKeyEvent, QBrush, QColor
 from PySide2.QtWidgets import QTableView, QStyledItemDelegate, QComboBox, QDialog, QGridLayout, QPushButton
 
+from pcot.parameters.taggedaggregates import TaggedListType, TaggedList, TaggedDictType
 from pcot.ui.dqwidget import DQWidget
 
 
@@ -82,7 +83,7 @@ class DQDelegate(QStyledItemDelegate):
 
     def createEditor(self, parent, option, index):
         i = index.column()
-        dialog = DQDialog(self.model.d[i].dq, parent)
+        dialog = DQDialog(self.model.tags[i].dq, parent)
         dialog.open()
         return dialog
 
@@ -137,26 +138,25 @@ class TableView(QTableView):
 
 
 class TableModel(QAbstractTableModel):
-    """This is a model which acts between a list of dataclass items a  table view.
-    You must write setData() in any subclass."""
+    """This is a model which acts between a list of dataclass or taggeddict items
+    and a table view. Subclasses are TableModelDataClass and TableModelTaggedAggregate.
+    You must write setData() in any subclass of TableModelDataClass."""
 
     # custom signal used when we change data
     changed = Signal()
 
-    def __init__(self, tab, dataClass: Any, _data: List, columnItems: bool):
-        """Takes the containing a tab, a dataclass, a list of whatever the item dataclass is, and whether items
-        are columns and rows are fields (as in pixtest)"""
+    def __init__(self, tab, columnItems: bool):
+        """Takes the containing tab and whether items are columns and rows are fields (as in pixtest)"""
         QAbstractTableModel.__init__(self)
-        self.dataClass = dataClass
-        self.header = dataClass.getHeader()  # get headers from static method
         self.tab = tab  # the tab we're part of
-        self.d = _data  # the list of data which is our model
         self.columnItems = columnItems
+        self.header = None  # subclass must provide
 
     def setData(self, index: QModelIndex, value: Any, role: int) -> bool:
         """Here we modify data in the underlying model in response to the tableview
         or any item delegates. No shortcuts here because each item needs to
-        be treated differently for validation, etc. YOU NEED TO IMPLEMENT THIS."""
+        be treated differently for validation, etc. YOU NEED TO IMPLEMENT THIS if you subclass
+        TableModelDataClass, but it should just work in TableModelTaggedAggregate"""
         pass
 
     def isFailed(self, item):
@@ -182,7 +182,12 @@ class TableModel(QAbstractTableModel):
 
         if role != QtCore.Qt.DisplayRole:
             return None
-        return dataclasses.astuple(self.d[item])[field]
+        return self._get_data(item, field)
+
+    def _get_data(self, item:int, field:int):
+        """Given item and field indices, return the field in the item
+        the immediate subclasses for dataclass and tagged dict override this"""
+        pass
 
     def headerData(self, section: int, orientation: QtCore.Qt.Orientation, role: int = ...) -> Any:
         if role == QtCore.Qt.DisplayRole:
@@ -198,8 +203,12 @@ class TableModel(QAbstractTableModel):
                     return str(section)
                 elif orientation == QtCore.Qt.Horizontal:
                     return self.header[section]
-
         return None
+
+    def itemCount(self):
+        """Return the number of items in the model -
+        the immediate subclasses for dataclass and tagged dict override this"""
+        pass
 
     def rowCount(self, parent: QModelIndex) -> int:
         return len(self.header) if self.columnItems else len(self.d)
@@ -207,14 +216,19 @@ class TableModel(QAbstractTableModel):
     def columnCount(self, parent: QModelIndex) -> int:
         return len(self.d) if self.columnItems else len(self.header)
 
+    def _item_swap(self, a: int, b: int):
+        """Internals of moving an item. Swaps two items.
+        the immediate subclasses for dataclass and tagged dict override this"""
+        pass
+
     def move_left(self, n):
         """Move an item to the left, or up if not columnItems. This stuff is messy."""
-        if 0 < n < len(self.d):
+        if 0 < n < self.itemCount():
             if self.columnItems:
                 self.beginMoveColumns(QModelIndex(), n, n, QModelIndex(), n - 1)
             else:
                 self.beginMoveRows(QModelIndex(), n, n, QModelIndex(), n - 1)
-            self.d[n], self.d[n - 1] = self.d[n - 1], self.d[n]
+            self._item_swap(n-1, n)
             if self.columnItems:
                 self.endMoveColumns()
             else:
@@ -228,12 +242,22 @@ class TableModel(QAbstractTableModel):
                 self.beginMoveColumns(QModelIndex(), n, n, QModelIndex(), n + 2)
             else:
                 self.beginMoveRows(QModelIndex(), n, n, QModelIndex(), n + 2)
-            self.d[n], self.d[n + 1] = self.d[n + 1], self.d[n]
+            self._item_swap(n, n + 1)
             if self.columnItems:
                 self.endMoveColumns()
             else:
                 self.endMoveRows()
             self.changed.emit()
+
+    def _create_item(self):
+        """create a new item
+        the immediate subclasses for dataclass and tagged dict override this"""
+        pass
+
+    def _clone_item(self, n):
+        """clone an item
+        the immediate subclasses for dataclass and tagged dict override this"""
+        pass
 
     def add_item(self, sourceIndex=None):
         """Add a new channeldata to the end of the list - could be copy of existing item"""
@@ -243,9 +267,9 @@ class TableModel(QAbstractTableModel):
         else:
             self.beginInsertRows(QModelIndex(), n, n)
         if sourceIndex is None:
-            new = self.dataClass()
+            new = self._create_item()
         else:
-            new = dataclasses.replace(self.d[sourceIndex])  # weird idiom, this. Does a clone and optionally modifies.
+            new = self._clone_item(sourceIndex)
         self.d.append(new)
         if self.columnItems:
             self.endInsertColumns()
@@ -254,19 +278,112 @@ class TableModel(QAbstractTableModel):
         self.changed.emit()
         return n
 
-    def delete_item(self, n):
-        """Remove a given channeldata"""
+    def _delete_item_internal(self, n):
+        """
+        Does the actual item deletion.
+        The immediate subclasses for dataclass and tagged dict override this if required,
+        but frankly this should work.
+        """
+        del self.d[n]
+
+    def delete_item(self, n, emit=True):
+        """Remove a given channeldata. It can be useful to suppress the emit if we're deleting a lot of data,
+        but you should remember to call .changed.emit() on the model afterwards"""
         if n < len(self.d):
             if self.columnItems:
                 self.beginRemoveColumns(QModelIndex(), n, n)
             else:
                 self.beginRemoveRows(QModelIndex(), n, n)
-            del self.d[n]
+            self._delete_item_internal(n)
             if self.columnItems:
                 self.endRemoveColumns()
             else:
                 self.endRemoveRows()
-            self.changed.emit()
+            if emit:    # we can suppress emit if we're deleting lots of items
+                self.changed.emit()
 
     def flags(self, index: QModelIndex) -> QtCore.Qt.ItemFlags:
         return QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled
+
+
+class TableModelDataClass(TableModel):
+    def __init__(self, tab, dataClass, _data: List, columnItems: bool):
+        super().__init__(tab, columnItems)
+        self.dataClass = dataClass
+        self.d = _data  # the list of data which is our model
+
+        self.header = dataClass.getHeader()  # get headers from static method
+
+    def _get_data(self, item, field):
+        return dataclasses.astuple(self.d[item])[field]
+
+    def itemCount(self):
+        return len(self.d)
+
+    def _item_swap(self, a, b):
+        self.d[a], self.d[b] = self.d[b], self.d[a]
+
+    def _create_item(self):
+        return self.dataClass()
+
+    def _clone_item(self, n):
+        # weird idiom, this. Does a clone and optionally modifies.
+        return dataclasses.replace(self.d[n])
+
+
+class TableModelTaggedAggregate(TableModel):
+    """
+    This is a table model that works with a TaggedList of ordered TaggedDicts - see xformgen.py for an example
+    """
+    def __init__(self, tab, _data: TaggedList, columnItems: bool):
+        super().__init__(tab, columnItems)
+        self.listType = _data.type
+        self.d = _data  # the list of data which is our model
+        # we have to check that the list is of TaggedDicts
+        tt = self.listType.tag.type
+        if not isinstance(tt, TaggedDictType):
+            raise ValueError("TableModelTaggedAggregate requires a TaggedList of ordered TaggedDicts")
+        self.header = tt.getHeader()  # get headers from static method
+
+    def _get_data(self, item, field):
+        # get the nth item in list
+        item = self.d[item]
+        # and the field in that item
+        return item[field]
+
+    def setData(self, index: QModelIndex, value: Any, role: int) -> bool:
+        item, field = self.getItemAndField(index)
+
+        # we need to make sure the value is of the right type - or at least that it's a string
+        # or numeric appropriately. We could make the process_numeric_type method in TaggedDict
+        # class handle this, but I don't want to attempt to promote strings (although int/float
+        # conversion is OK) so I handle it here.
+
+        # get the type of the field
+        dictType = self.listType.tag.type
+        fieldName = dictType.ordering[field]
+        fieldType = dictType.tags[fieldName].type
+
+        try:
+            if fieldType == int:
+                value = int(value) if value != "" else 0
+            elif fieldType == float:
+                value = float(value) if value != "" else 0.0
+        except ValueError as e:
+            raise ValueError(f"Value must be a number for field {fieldName} in this table") from e
+        self.d[item][field] = value
+        self.changed.emit()
+        return True
+
+    def itemCount(self):
+        return len(self.d)
+
+    def _item_swap(self, a, b):
+        self.d[a], self.d[b] = self.d[b], self.d[a]
+
+    def _create_item(self):
+        return self.d.create_default()
+
+    def _clone_item(self, n):
+        return self.d[n].clone()
+

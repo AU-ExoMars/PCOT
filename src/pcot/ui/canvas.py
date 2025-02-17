@@ -17,7 +17,7 @@ from PySide2.QtWidgets import QCheckBox, QMessageBox, QMenu
 
 import pcot
 import pcot.ui as ui
-from pcot import imageexport, canvasnormalise, dq
+from pcot import canvasnormalise, dq
 from pcot.datum import Datum
 from pcot.ui import canvasdq
 from pcot.ui.canvasdq import CanvasDQSpec
@@ -393,7 +393,7 @@ class InnerCanvas(QtWidgets.QWidget):
                             data = (data - mn) / rng
                         else:
                             data = np.zeros(data.shape, dtype=float)
-
+                    mask = data > 0     # we'll need to mask the bits where there's a value present for later.
                 elif d.data > 0:
                     # otherwise it's a DQ bit (or BAD dq bits), so cut that out
                     data = self.imgCube.dq[cuty:cuty + cuth, cutx:cutx + cutw]
@@ -416,13 +416,17 @@ class InnerCanvas(QtWidgets.QWidget):
                     # now convert that to float, setting nonzero to 1 and zero to 0.
                     data = mask.astype(np.float32)
                     t.mark("tofloat")
+                else:
+                    data = None
+                    mask = None
+
                 # expand the data to RGB, but in different ways depending on the colour!
                 r, g, b, flash = canvasdq.colours[d.col]
                 if flash:
                     self.redrawOnTick = True
                 # avoiding the creating of new arrays where we can.
 
-                if not flash or self.flashCycle:
+                if (not flash or self.flashCycle) and data is not None:
                     zeroes = np.zeros(data.shape, dtype=float)
                     data = data ** 2*d.contrast
                     t.mark("contrast")
@@ -438,10 +442,16 @@ class InnerCanvas(QtWidgets.QWidget):
                     t.mark("stack")
                     # additive or "normal" blending
                     if d.additive:
+                        # if additive:
+                        #   if showing uncertainty we add the colour to the image value
+                        #   if showing DQ we add the colour to the image value when DQ bit is set
                         np.add(data, img, out=data)
                         t.mark("add")
                     else:
-                        mask = np.dstack([mask, mask, mask]).astype(np.bool)
+                        # if we're not additive:
+                        #   if showing uncertainty we replace the image value when unc>0
+                        #   if showing DQ we replace the image value when DQ bit is set
+                        mask = np.dstack([mask, mask, mask]).astype(np.bool8)
                         # img is the original image. Mask so only the bits we want to set get changed.
                         img = np.ma.masked_array(img, ~mask)
                         img *= d.trans
@@ -589,12 +599,6 @@ class Canvas(QtWidgets.QWidget):
     # the graph of which I am a part. Not really optional, but I have to set it after construction.
     graph: Optional['XFormGraph']
 
-    ## @var mapping
-    # the mapping we are editing, and using to display/generate the RGB representation. Unless we're in 'alreadyRGBMapped'
-    # in which case it's just a mapping we are editing - we display an image mapped elsewhere. Again, not actually
-    # optional - we have to set it in the containing window's init.
-    mapping: Optional['ChannelMapping']
-
     ## @var previmg
     # previous image, so we can avoid redisplay.
     previmg: Optional['ImageCube']
@@ -701,9 +705,6 @@ class Canvas(QtWidgets.QWidget):
         layout.addWidget(self.resetButton, 1, 1)
         self.resetButton.clicked.connect(self.reset)
 
-        # the mapping we are using - the image owns this, we just get a ref. when
-        # the tab is created
-        self.mapping = None
         # previous image (in case mapping changes and we need to redisplay the old image with a new mapping)
         self.previmg = None
         self.isPremapped = False
@@ -908,14 +909,10 @@ class Canvas(QtWidgets.QWidget):
         super().contextMenuEvent(ev)   # run the super's menu, which will run any item's menu
         if not ev.isAccepted():        # if the event wasn't accepted, run our menu
             menu = QMenu()
-            export = menu.addAction("Export as PDF, PNG or SVG")
-            save = menu.addAction("Save as DatumArchive")
+            save = menu.addAction("Save as image, PDF, SVG or PARC")
             a = menu.exec_(ev.globalPos())
-
-            if a == export:
-                self.exportAction()
-            elif a == save:
-                self.saveAction()
+            if a == save:
+              self.saveAction()
 
 
     def ensureDQValid(self):
@@ -1082,11 +1079,6 @@ class Canvas(QtWidgets.QWidget):
         if not hasattr(o, 'persist'):
             o.canvaspersist = PersistBlock()
 
-    # these sets a reference to the mapping this canvas is using - bear in mind this class can mutate
-    # that mapping!
-    def setMapping(self, mapping):
-        self.mapping = mapping
-
     def resetMapButtonClicked(self):
         if self.previmg is not None:
             self.previmg.defaultMapping = None  # force a guess even if there is a default mat
@@ -1100,18 +1092,24 @@ class Canvas(QtWidgets.QWidget):
 
     def redIndexChanged(self, i):
         logger.debug(f"RED CHANGED TO {i}")
-        self.mapping.red = i
-        self.redisplay()
+        # this shouldn't happen if there is no image because the combo will be empty
+        if self.previmg:
+            self.previmg.mapping.red = i
+            self.redisplay()
 
     def greenIndexChanged(self, i):
         logger.debug(f"GREEN CHANGED TO {i}")
-        self.mapping.green = i
-        self.redisplay()
+        # this shouldn't happen if there is no image because the combo will be empty
+        if self.previmg:
+            self.previmg.mapping.green = i
+            self.redisplay()
 
     def blueIndexChanged(self, i):
         logger.debug(f"GREEN CHANGED TO {i}")
-        self.mapping.blue = i
-        self.redisplay()
+        # this shouldn't happen if there is no image because the combo will be empty
+        if self.previmg:
+            self.previmg.mapping.blue = i
+            self.redisplay()
 
     def roiToggleChanged(self, v):
         # can only work when a persister is there; if there isn't, will crash.
@@ -1134,76 +1132,54 @@ class Canvas(QtWidgets.QWidget):
             x.setVisible(not self.isDQHidden)
         self.redisplay()
 
-    def exportAction(self):
+    def saveAction(self):
         if self.previmg is None:
             return
+
+        fileTypes = (
+            'PNG files (*.png)',
+            'PDF files (*.pdf)',
+            'SVG files (*.svg)',
+            'PARC files (*.parc)',
+        )
+        fileTypes = " ;; ".join(fileTypes)
+
         res = QtWidgets.QFileDialog.getSaveFileName(self,
-                                                    'Save RGB image as PNG (without annotations)',
+                                                    'Save RGB image (with or without annotations)',
                                                     os.path.expanduser(pcot.config.getDefaultDir('savedimages')),
-                                                    "PDF files (*.pdf) ;; PNG files (*.png)  ;; SVG files (*.svg)",
+                                                    fileTypes,
                                                     options=pcot.config.getFileDialogOptions()
                                                     )
         if res[0] != '':
             path, filt = res
             (_, ext) = os.path.splitext(path)
             pcot.config.setDefaultDir('savedimages', os.path.split(path)[0])
-            ext = ext.lower()
             if ext == '':
-                QMessageBox.critical(self, 'Error', "Filename should have an extension.")
-            elif ext == '.png':
-                r = QMessageBox.question(self, "Export to PNG", "Save with annotations?",
+                # no extension provided - we need to extract the extension from the filter string.
+                # Assuming the filter string is in the form "PNG files (*.png)"
+                ext = filt.split('(')[1].split(')')[0].split('.')[1].lower()
+                path += '.' + ext
+            else:
+                ext = ext[1:].lower()
+
+            if ext == 'parc':
+                annotations = False
+                desc, ok = QtWidgets.QInputDialog.getText(self, "Description",
+                                                          "Enter text description (optional):",
+                                                          QtWidgets.QLineEdit.Normal,
+                                                          "")
+                if not ok:
+                    desc = ''
+            else:
+                r = QMessageBox.question(self, "Save", "Save with annotations?",
                                          QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
-                if r == QMessageBox.No:
-                    self.previmg.rgbWrite(path)
-                    ui.log(f"Image written to {path}")
-                elif r == QMessageBox.Yes:
-                    imageexport.exportRaster(self.previmg, path)
-                else:
-                    ui.log("Export cancelled")
-            elif ext == '.pdf':
-                imageexport.exportPDF(self.previmg, path)
-                ui.log(f"Image and annotations exported to {path}")
-            elif ext == '.svg':
-                imageexport.exportSVG(self.previmg, path)
-            else:
-                QMessageBox.critical(self, 'Error', "Filename has a strange extension.")
-                ui.log(ext)
-
-    def saveAction(self):
-        """Save to a PARC file - a DatumStore with only one item in it."""
-        if self.previmg is None:
-            return
-        res = QtWidgets.QFileDialog.getSaveFileName(self,
-                                                    'Save as PARC',
-                                                    os.path.expanduser(pcot.config.getDefaultDir('savedimages')),
-                                                    "Datum Archive files (*.parc)",
-                                                    options=pcot.config.getFileDialogOptions()
-                                                    )
-        if res[0] != '':
-
-            desc, ok = QtWidgets.QInputDialog.getText(self,"Description",
-                                                     "Enter text description (optional):",
-                                                     QtWidgets.QLineEdit.Normal,
-                                                     "")
-            if not ok:
+                if r == QMessageBox.Cancel:
+                    ui.log("export cancelled")
+                    return
+                annotations = (r == QMessageBox.Yes)
                 desc = ''
-            path, filt = res
-            (root, ext) = os.path.splitext(path)
-            pcot.config.setDefaultDir('savedimages', os.path.split(path)[0])
-            ext = ext.lower()
-            if ext == '':
-                ext = '.parc'
-            if ext == '.parc':
-                from pcot.utils.archive import FileArchive
-                from pcot.utils.datumstore import DatumStore
 
-                path = root + ext
-                with FileArchive(path, "w") as a, DatumStore(a) as ds:
-                    datum = Datum(Datum.IMG, self.previmg)
-                    ds.writeDatum("main", datum, description=desc)
-            else:
-                QMessageBox.critical(self, 'Error', "Filename has a strange extension.")
-                ui.log(ext)
+            self.previmg.save(path, annotations=annotations, description=desc)
 
     ## this initialises a combo box, setting the possible values to be the channels in the image
     # input
@@ -1234,16 +1210,13 @@ class Canvas(QtWidgets.QWidget):
 
         if isinstance(img, Datum):
             img = img.get(Datum.IMG)  # if we are given a Datum, "unwrap" it
-        if self.mapping is None:
-            raise Exception(
-                "Mapping not set in ui.canvas.Canvas.display() - should be done in tab's ctor with setMapping()")
         if self.graph is None:
             raise Exception(
                 "Graph not set in ui.canvas.Canvas.display() - should be done in tab's ctor with setGraph()")
         if img is not None:
             # ensure there is a valid mapping (only do this if not already mapped)
             if alreadyRGBMappedImageSource is None:
-                self.mapping.ensureValid(img)
+                img.mapping.ensureValid(img)
             # now make the combo box options match the sources in the image
             # and finally make the selection each each box match the actual channel assignment
             self.blockSignalsOnComboBoxes(True)  # temporarily disable signals to avoid indexChanged calls
@@ -1252,9 +1225,9 @@ class Canvas(QtWidgets.QWidget):
             self.setCombosToImageChannels(alreadyRGBMappedImageSource
                                           if alreadyRGBMappedImageSource is not None
                                           else img)
-            self.redChanCombo.setCurrentIndex(self.mapping.red)
-            self.greenChanCombo.setCurrentIndex(self.mapping.green)
-            self.blueChanCombo.setCurrentIndex(self.mapping.blue)
+            self.redChanCombo.setCurrentIndex(img.mapping.red)
+            self.greenChanCombo.setCurrentIndex(img.mapping.green)
+            self.blueChanCombo.setCurrentIndex(img.mapping.blue)
             self.blockSignalsOnComboBoxes(False)  # and enable signals again
             self.setScrollBarsFromCanvas()
         # cache the image in case the mapping changes, and also for redisplay itself
@@ -1270,11 +1243,12 @@ class Canvas(QtWidgets.QWidget):
 
     def updateChannelSelections(self):
         # update the channel selections in the combo boxes if they've been changed in code
-        self.blockSignalsOnComboBoxes(True)  # temporarily disable signals to avoid indexChanged calls
-        self.redChanCombo.setCurrentIndex(self.mapping.red)
-        self.greenChanCombo.setCurrentIndex(self.mapping.green)
-        self.blueChanCombo.setCurrentIndex(self.mapping.blue)
-        self.blockSignalsOnComboBoxes(False)  # and enable signals again
+        if self.previmg:
+            self.blockSignalsOnComboBoxes(True)  # temporarily disable signals to avoid indexChanged calls
+            self.redChanCombo.setCurrentIndex(self.previmg.mapping.red)
+            self.greenChanCombo.setCurrentIndex(self.previmg.mapping.green)
+            self.blueChanCombo.setCurrentIndex(self.previmg.mapping.blue)
+            self.blockSignalsOnComboBoxes(False)  # and enable signals again
 
     def redisplay(self):
         # similar to the below; avoid redisplay when we haven't displayed anything yet!
@@ -1284,7 +1258,6 @@ class Canvas(QtWidgets.QWidget):
         # updatetabs -> onNodeChanged -> display -> redisplay -> updatetabs...
         # This is the simplest way to avoid it.
 
-        print(f"REDISPLAY of {self.previmg} with mapping {self.mapping}")
         if not self.recursing:
             self.recursing = True
             n = self.nodeToUIChange
@@ -1431,9 +1404,8 @@ class Canvas(QtWidgets.QWidget):
     def setNode(self, node):
         """This links fields in the canvas to fields in the node. We can't just have a `node` reference, because
         sometimes canvasses don't have nodes (inputs for example). And sometimes we only want to do part of this
-        process, so the three different operations are available separately. But we have to do this in nodes before
+        process, so the different operations are available separately. But we have to do this in nodes before
         every redisplay, because the node may have been replaced by an undo operation."""
 
-        self.setMapping(node.mapping)       # tell the canvas to use the node's RGB mapping
         self.setGraph(node.graph)           # tell the canvas what the graph is
         self.setPersister(node)             # and where it should store its data (ugly, yes).

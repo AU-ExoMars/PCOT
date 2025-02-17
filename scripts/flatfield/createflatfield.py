@@ -3,7 +3,7 @@
 """
 Each directory contains images for a single filter. The images we are
 interested in for creating flat fields are those captured at 80% saturation,
-of which there are 10. 
+of which there are 10.
 
 These are averaged into a single image per band, and these are then composed
 into a single multiband image. If any pixel in any of the input images 
@@ -34,8 +34,8 @@ import pcot.datumfuncs as df
 
 pcot.setup()
 
-# this is the training set of filters, filter wheel 1 (geometry)
-pcot.filters.loadFilterSet("training-geom","training1.csv")
+# this is the training set of filters, filter wheel 1 (geology)
+pcot.filters.loadFilterSet("training-geol","training1.csv")
 
 # set up a raw loader
 loader = RawLoader(format=RawLoader.UINT16,width=1024,height=1024,bigendian=True,
@@ -107,7 +107,7 @@ def process(pos, dir, lst):
     if len(pos)==2:
         pos = pos[0]+"0"+pos[1]
 
-    filter = getFilter("training-geom",pos,search="pos")
+    filter = getFilter("training-geol",pos,search="pos")
     if filter.cwl == 0:
         raise Exception(f"cannot find filter {pos}")
 
@@ -116,13 +116,13 @@ def process(pos, dir, lst):
     img = load.multifile(dir,lst,
         filterpat=".*/[0-9]{6}_[0-9]{6}_Training Model-(?P<lens>(L|R))(?P<n>[0-9]+).*",
         bitdepth=10,
-        filterset="training-geom",
+        filterset="training-geol",
         rawloader=loader)
         
     # now we want to set the SAT bit on all saturated pixels
     cube = img.get(Datum.IMG)
     # clear all the NOUNC bits
-    cube.dq &= ~dq.NOUNCERTAINTY
+    cube.dq &= ~dq.NOUNC
     bitsToChange = np.where(cube.img == 1.0, dq.SAT, 0).astype(np.uint16)
     print(f"   {np.count_nonzero(bitsToChange)} pixels are saturated")
     cube.dq |= bitsToChange

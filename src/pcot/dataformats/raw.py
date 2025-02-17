@@ -19,6 +19,11 @@ class RawLoader:
     UINT8 = 2
     FORMAT_NAMES = ['f32', 'u16', 'u8']
 
+    @staticmethod
+    def formatByName(s: str) -> int:
+        """Get the format by name."""
+        return RawLoader.FORMAT_NAMES.index(s)
+
     # we currently assume that the image is a single channel, but this could be extended to multiple channels.
     # We'd have to add depth and interleaving parameters to the constructor.
 
@@ -90,9 +95,10 @@ class RawLoader:
 
         # convert to float32 if necessary, dividing down to the range 0-1
         if dtype != np.float32:
-            logger.info(f"Loading data, currently the range is {data.min()} to {data.max()}, format is {dtype}")
+            logger.debug(f"Loading data, currently the range is {data.min()} to {data.max()}, format is {dtype}")
             data = data.astype(np.float32) * scale
-            logger.info(f"Loaded as F32. Range is now {data.min()} to {data.max()}")
+            logger.debug(f"Loaded as F32. Range is now {data.min()} to {data.max()}")
+        logger.info(f"Image loaded into multifile - size is {data.shape}")
         return data
 
     @staticmethod

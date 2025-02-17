@@ -11,6 +11,7 @@ from typing import List, Optional, OrderedDict, ClassVar, Dict
 
 import markdown
 from PySide2 import QtWidgets
+from PySide2.QtCore import Qt
 from PySide2.QtGui import QTextCursor
 from PySide2.QtWidgets import QAction, QMessageBox, QDialog, QMenu
 
@@ -98,7 +99,8 @@ class MainUI(ui.tabs.DockableTabWindow):
         uiloader.loadUi('main.ui', self)
         # connect buttons etc.
         self.autolayoutButton.clicked.connect(self.autoLayoutButton)
-        self.dumpButton.clicked.connect(lambda: self.graph.dump())
+        # self.dumpButton.clicked.connect(lambda: self.graph.dump())
+        self.fitButton.clicked.connect(self.fitClicked)
         self.capCombo.currentIndexChanged.connect(self.captionChanged)
         self.annotalphaSlider.sliderReleased.connect(self.annotalphaChanged)
 
@@ -222,6 +224,9 @@ class MainUI(ui.tabs.DockableTabWindow):
     def getWindowsForDocument(cls, d):
         return [w for w in cls.windows if w.doc == d]
 
+    def fitClicked(self):
+        self.view.fitInView(self.graph.scene.sceneRect(), Qt.KeepAspectRatio)
+
     def rebuildRecents(self):
         # add recent files to menu, removing old ones first. Note that recent files must be at the end
         # of the menu for this to work!
@@ -254,7 +259,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     @staticmethod
     def rebuildPalettes():
         for w in MainUI.windows:
-            print(f"Rebuilding window {w}")
+            logger.info(f"Rebuilding window {w}")
             w.palette.populate()
 
     ## rebuild the graphics in all main windows and also all the tab titles
@@ -291,7 +296,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     def autoLayoutButton(self):
         self.graph.constructScene(True)
         self.view.setScene(self.graph.scene)
-        self.rebuildPalettes()      # snark
+        self.rebuildPalettes()
         self.rebuildPalettes()
         self.rebuildPalettes()
 
@@ -339,7 +344,7 @@ class MainUI(ui.tabs.DockableTabWindow):
                                                     os.path.expanduser(pcot.config.getDefaultDir('pcotfiles')),
                                                     "PCOT files (*.pcot)",
                                                     options=pcot.config.getFileDialogOptions())
-        logger.info(f"Dialog result: {res[0]}")
+        logger.debug(f"Dialog result: {res[0]}")
         if res[0] != '':
             path = res[0]
             (root, ext) = os.path.splitext(path)
@@ -347,7 +352,7 @@ class MainUI(ui.tabs.DockableTabWindow):
                 ext += '.pcot'
             path = root + ext
 
-            logger.info(f"Save file name: {res[0]}")
+            logger.info(f"saving: {res[0]}")
             self.save(path, saveInputs=saveInputs)
             self.saveFileName = path
             ui.log("Document written to " + path)
@@ -559,17 +564,18 @@ class MainUI(ui.tabs.DockableTabWindow):
             self.macroPrototype.renameType(newname)
 
     ## perform all in the graph
-    def runAll(self):
+    def runAll(self, invalidateInputs=True):
         if self.graph is not None:
-            # pass in true, indicating we want to ignore autorun
-            self.graph.changed(runAll=True)
+            # pass in true, indicating we want to ignore autorun. We may not
+            # want to invalidate inputs to avoid issue #58.
+            self.graph.changed(runAll=True, invalidateInputs=invalidateInputs)
             self.retitleTabs()  # error states may have changed
 
-    ## After an undo/redo, a whole new document may have been deserialised.
-    # Set this new graph, and make sure the window's tabs point to nodes
-    # in the new graph rather than the old one.
+    def replaceDocumentForUndo(self, d):
+        """After an undo/redo, a whole new document may have been deserialised.
+        Set this new graph, and make sure the window's tabs point to nodes
+        in the new graph rather than the old one."""
 
-    def replaceDocument(self, d):
         # construct a dict of uid -> node for the new graph
         newGraphDict = {n.name: n for n in d.graph.nodes}
 
@@ -593,7 +599,8 @@ class MainUI(ui.tabs.DockableTabWindow):
             else:
                 self.closeTab(tab)
 
-        self.runAll()  # refresh everything (yes, slow)
+        # we don't want to reload the inputs! (Issue #58)
+        self.runAll(invalidateInputs=False)  # refresh everything (yes, slow)
 
     def showUndoStatus(self):
         import gc

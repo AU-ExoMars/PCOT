@@ -1,3 +1,5 @@
+import warnings
+
 import pcot
 from pcot.datum import Datum
 from pcot.document import Document
@@ -217,11 +219,11 @@ def test_marksat_masked():
 
     # create a node which brings in that same image
     node1 = doc.graph.create("expr")
-    node1.expr = "testimg(1)"
+    node1.params.expr = "testimg(1)"
 
     # create a node which marksat's the image as a quick check
     node2 = doc.graph.create("expr")
-    node2.expr = "marksat(a)"
+    node2.params.expr = "marksat(a)"
     node2.connect(0, node1, 0)
 
     doc.run()
@@ -245,13 +247,13 @@ def test_marksat_masked():
 
     node4 = doc.graph.create("dqmod")
     node4.connect(0, node3, 0)
+    params = node4.params
     # we're going to set DQ in band zero if the nominal value is >= -1
-    node4.band = None  # All bands
-    node4.mod = "Set"  # set DQ bits
-    node4.data = "Nominal"
-    node4.test = "Greater than or equal to"
-    node4.value = -1
-    node4.dq = dq.DIVZERO  # an arbitrary "BAD" bit to set
+    params.band = None  # All bands
+    params.mod = "set"  # set DQ bits
+    params.data = "nominal"
+    params.test = "ge"
+    params.dq = dq.DIVZERO  # an arbitrary "BAD" bit to set
 
     # pass that into a node to strip the ROIs
     node5 = doc.graph.create("striproi")
@@ -407,8 +409,10 @@ def test_clamp_multiply():
     # and compare with the original image - at 50,50 the new image should be double the original.
     pixb = b.get(Datum.IMG)[50, 50]
     pixr = r.get(Datum.IMG)[50, 50]
-    rat = [x.n / y.n for x, y in zip(pixb, pixr)]
-    urat = [x.u / y.u for x, y in zip(pixb, pixr)]
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=RuntimeWarning)  # ignore the divide by zero
+        rat = [x.n / y.n for x, y in zip(pixb, pixr)]
+        urat = [x.u / y.u for x, y in zip(pixb, pixr)]
     # just look at RG because B will be zero and we'd get a divide by zero
     assert np.allclose(rat[:2], [2, 2])
     assert np.allclose(urat[:2], [2, 2])

@@ -1,11 +1,16 @@
 import traceback
+import logging
 
 from pcot import ui
 from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.expressions import ExpressionEvaluator
 from pcot.imagecube import ChannelMapping
+from pcot.parameters.taggedaggregates import TaggedDictType
+from pcot.utils import SignalBlocker
 from pcot.xform import XFormType, xformtype, XFormException, XForm
+
+logger = logging.getLogger(__name__)
 
 
 def getvar(d):
@@ -163,20 +168,32 @@ class XFormExpr(XFormType):
         self.addInputConnector("c", Datum.ANY)
         self.addInputConnector("d", Datum.ANY)
         self.addOutputConnector("", Datum.NONE)   # this changes type dynamically
-        self.autoserialise = ('expr',)
+        self.params = TaggedDictType(
+            expr=("Expression to evaluate", str, "")
+        )
 
     def createTab(self, n, w):
         return TabExpr(n, w)
 
     def init(self, node):
-        node.tmpexpr = ""
-        node.expr = ""
         # used when we have an image on the output. We keep this unlike a lot of other nodes so
         # we can see when the channel count changes.
         node.img = None
         # a string to display the image
         node.resultStr = ""
         node.w = -1
+
+    def getDisplayName(self, n):
+        """Custom text - if displayName is not the same as the type name, use that. Otherwise use
+        the expression."""
+        if n.displayName != "expr":
+            # the user has changed the name, so use that
+            return n.displayName
+        else:
+            # The node still has the default display name "expr".
+            # get the expression and build a string for it, but say NONE if the expression isn't set yet
+            e = n.params.expr
+            return "NONE" if e == '' else e.replace('\r', '').replace('\n', '').replace('\t', '')
 
     def perform(self, node: XForm):
         # we register the input vars here because we have to, they are temporary and apply to
@@ -188,11 +205,12 @@ class XFormExpr(XFormType):
         self.parser.registerVar('d', 'value of input d', lambda: getvar(node.getInput(3)))
 
         try:
-            if len(node.expr.strip()) > 0:
+            expr = node.params.expr.strip()
+            if len(expr) > 0:
                 # get the previous number of channels (or None if the result is not an image)
                 oldChans = None if node.img is None else node.img.channels
                 # run the expression
-                res = self.parser.run(node.expr)
+                res = self.parser.run(expr)
                 node.setOutput(0, res)
                 if res is not None:   # should never be None, but I'll leave this in
                     node.img = None
@@ -231,21 +249,21 @@ class TabExpr(pcot.ui.tabs.Tab):
         self.nodeChanged()
 
     def exprChanged(self):
-        self.node.tmpexpr = self.w.expr.toPlainText()
-#        self.node.displayName = self.node.expr.replace('\r', '').replace('\n', '').replace('\t', '')
-        self.node.displayName = self.node.tmpexpr.replace('\r', '').replace('\n', '').replace('\t', '')
-        # don't call changed() or we'll run the expr on every key press!
+        # set a red background to show the user that they have to click run
+        self.w.run.setStyleSheet("background-color:rgb(255,100,100)")
+        # we don't call changed() or we'll run the expr on every key press!
 
     def run(self):
         self.mark()
-        # note that we use a temporary expression, so that the expression isn't constantly changing and we have
-        # difficulty marking undo points.
-        self.node.expr = self.node.tmpexpr
+        self.node.params.expr = self.w.expr.toPlainText()
         self.node.rect.setSizeToText()
+        # clear the RUN button's red background
+        self.w.run.setStyleSheet("")
         self.changed()
 
     def onNodeChanged(self):
         self.w.data.canvas.setNode(self.node)
-        self.w.expr.setPlainText(self.node.expr)
+        with SignalBlocker(self.w.expr):
+            self.w.expr.setPlainText(self.node.params.expr)
         d = self.node.getOutputDatum(0)
         self.w.data.display(d)

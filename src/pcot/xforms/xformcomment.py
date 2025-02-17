@@ -4,13 +4,15 @@ from PySide2 import QtGui, QtWidgets, QtCore
 from PySide2.QtGui import QColor, QFont, QPen
 
 from pcot import ui
+from pcot.parameters.taggedaggregates import TaggedDictType, taggedColourType
 from pcot.ui.tabs import Tab
+from pcot.utils.colour import colDialog
 from pcot.xform import xformtype, XFormType
 
 
 class GStringText(QtWidgets.QGraphicsTextItem):
     def __init__(self, parent, node):
-        super().__init__(node.string, parent=parent)
+        super().__init__(node.params.string, parent=parent)
         self.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
         self.setTextWidth(50)
         self.setTabChangesFocus(True)
@@ -19,7 +21,7 @@ class GStringText(QtWidgets.QGraphicsTextItem):
 
         font = QFont()
         font.setFamily('Sans Serif')
-        font.setPixelSize(node.fontSize)
+        font.setPixelSize(node.params.fontSize)
         self.setFont(font)
 
     def contextMenuEvent(self, event: 'QGraphicsSceneContextMenuEvent') -> None:
@@ -30,7 +32,7 @@ class GStringText(QtWidgets.QGraphicsTextItem):
 
     def editDone(self):
         self.node.mark()
-        self.node.string = self.toPlainText()
+        self.node.params.string = self.toPlainText()
 
     def focusOutEvent(self, event: QtGui.QFocusEvent) -> None:
         self.editDone()
@@ -63,18 +65,26 @@ class XFormComment(XFormType):
         super().__init__("comment", "utility", "0.0.0")
         self.resizable = True
         self.showPerformedCount = False
-        self.autoserialise = ('string', 'boxColour', 'textColour', 'fontSize')
+        self.params = TaggedDictType(
+            string=("comment text", str, "comment"),
+            boxColour=("box colour", taggedColourType(1,1,1), None),
+            textColour=("text colour", taggedColourType(0,0,0), None),
+            fontSize=("font size", int, 12)
+        )
 
     def init(self, node):
-        node.string = "comment"
-        node.boxColour = (255, 255, 255)
-        node.textColour = (0, 0, 0)
-        node.fontSize = 12
+        pass
+
+    def nodeDataFromParams(self, node):
+        # in older files, colour will be 0-255. Detect and cope.
+        if node.params.boxColour[0] > 1:
+            node.params.boxColour.set(*[x/255 for x in node.params.boxColour])
+        if node.params.textColour[0] > 1:
+            node.params.textColour.set(*[x/255 for x in node.params.textColour])
 
     ## build the text element of the graph scene object for the node. By default, this
     # will just create static text, but can be overridden.
-    @staticmethod
-    def buildText(n):
+    def buildText(self, n):
         x, y = n.xy
         text = GStringText(n.rect, n)
         text.setPos(x + ui.graphscene.XTEXTOFFSET, y + ui.graphscene.YTEXTOFFSET + ui.graphscene.CONNECTORHEIGHT)
@@ -82,10 +92,10 @@ class XFormComment(XFormType):
         return text
 
     def getDefaultRectColour(self, n):
-        return n.boxColour
+        return [x*255 for x in n.params.boxColour]
 
     def getTextColour(self, n):
-        return n.textColour
+        return [x*255 for x in n.params.textColour]
 
     def resizeDone(self, n):
         t = n.rect.text
@@ -103,20 +113,12 @@ class XFormComment(XFormType):
 
 def setButtonColour(b, col):
     b.setAutoFillBackground(True)
-    r1, g1, b1 = col
+    r1, g1, b1 = [x*255 for x in col.get()]
+
     t = 255 if r1 + g1 + b1 < (128 * 3) else 0
     s = f"background-color: rgb({r1},{g1},{b1}); color: rgb({t},{t},{t})"
     b.setStyleSheet(s)
 
-
-def colourDialog(col: Tuple[int, int, int]):
-    r, g, b = col
-    col = QColor(r, g, b)
-    col = QtWidgets.QColorDialog.getColor(col, None)
-    if col.isValid():
-        return col.red(), col.green(), col.blue()
-    else:
-        return r, g, b
 
 
 class TabComment(Tab):
@@ -130,26 +132,26 @@ class TabComment(Tab):
         self.nodeChanged()
 
     def textChanged(self):
-        self.node.string = self.w.text.toPlainText()
+        self.node.params.string = self.w.text.toPlainText()
         # editing done button will change what it looks like in the graph (other things might too)
 
     def editDoneClicked(self):
         self.changed()
 
     def boxColourClicked(self):
-        self.node.boxColour = colourDialog(self.node.boxColour)
+        self.node.params.boxColour.set(*colDialog(self.node.params.boxColour))
         self.changed()
 
     def textColourClicked(self):
-        self.node.textColour = colourDialog(self.node.textColour)
+        self.node.params.textColour.set(*colDialog(self.node.params.textColour))
         self.changed()
 
     def fontSizeChanged(self, s):
-        self.node.fontSize = int(s)
+        self.node.params.fontSize = int(s)
         self.changed()
 
     def onNodeChanged(self):
-        setButtonColour(self.w.boxColourButton, self.node.boxColour)
-        setButtonColour(self.w.textColourButton, self.node.textColour)
-        self.w.text.setPlainText(self.node.string)
-        self.w.fontSizeCombo.setCurrentText(str(self.node.fontSize))
+        setButtonColour(self.w.boxColourButton, self.node.params.boxColour)
+        setButtonColour(self.w.textColourButton, self.node.params.textColour)
+        self.w.text.setPlainText(self.node.params.string)
+        self.w.fontSizeCombo.setCurrentText(str(self.node.params.fontSize))

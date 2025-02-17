@@ -54,7 +54,7 @@ class Filter:
 
     @classmethod
     def deserialise(cls, d):
-        if isinstance(d, str):  # snark
+        if isinstance(d, str):
             ui.error("Oops - old style file contains filter name, not filter data. Using dummy, please 'Run All'.")
             return Filter(2000, 1.0, 1.0, "dummypos", "dummyname", 0)
         try:
@@ -148,7 +148,6 @@ def wav2RGB(wavelength, scale=1.0):
 
 
 _filterSets = {}
-logger.critical(f"Filters cleared")
 
 
 def loadFilterSet(name: str, path: Path):
@@ -172,7 +171,7 @@ def loadFilterSet(name: str, path: Path):
             filters.append(f)
     # and store that in a dictionary of filter set name -> filter list
     _filterSets[name] = filters
-    logger.critical(f"Loaded filter set {name} from {path}")
+    logger.info(f"Loaded filter set {name} from {path}")
 
 
 def saveFilters(path: str, filters: List[Filter]):

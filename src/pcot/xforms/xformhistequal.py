@@ -1,6 +1,7 @@
 import numpy as np
 
 from pcot.datum import Datum
+from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.utils import image
 from pcot.xform import xformtype, XFormType
 from pcot.xforms.tabdata import TabData
@@ -55,6 +56,7 @@ class XformHistEqual(XFormType):
         super().__init__("histequal", "processing", "0.0.0", hasEnable=True)
         self.addInputConnector("", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
+        self.params = TaggedDictType()  # no parameters
 
     def createTab(self, n, w):
         return TabData(n, w)

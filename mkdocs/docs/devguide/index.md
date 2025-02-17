@@ -12,7 +12,7 @@ examples and reading the source code!
 * [Important classes](classes.md) - probably read this first.
 * [Using PCOT as a library](library.md)
 * [Writing PCOT plugins](plugins.md)
-
+* [Node serialisation](nodeser.md)
 
 ## Miscellaneous
 

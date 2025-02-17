@@ -4,6 +4,7 @@ from PySide2.QtWidgets import QComboBox
 import pcot
 from pcot import dq
 from pcot.datum import Datum
+from pcot.parameters.taggedaggregates import taggedColourType, TaggedDictType
 from pcot.rois import ROIPainted
 from pcot.sources import nullSourceSet
 from pcot.utils import SignalBlocker
@@ -14,6 +15,13 @@ conditions = ["When all present",  # 0
               "When all absent",  # 2
               "When some absent"  # 3
               ]
+
+conditionShortNames = {
+    "allpresent": 0,
+    "somepresent": 1,
+    "allabsent": 2,
+    "someabsent": 3
+}
 
 
 @xformtype
@@ -34,34 +42,25 @@ class XFormROIDQ(XFormType):
         self.addInputConnector("", Datum.IMG)
         self.addOutputConnector("img", Datum.IMG)
         self.addOutputConnector("roi", Datum.ROI)
-
-        self.autoserialise = (
-            ('caption', 'unknown'),
-            ('captiontop', False),
-            ('fontsize', 10),
-            ('thickness', 2),
-            ('colour', (1, 1, 0)),
-            ('drawbg', True),
-            ('chan', -2),
-            ('dq', int(dq.BAD)),
-            ('condition', 1)
+        
+        self.params = TaggedDictType(
+            caption=("Caption", str, "unknown"),
+            captiontop=("Caption goes on top?", bool, False),
+            fontsize=("Font size", int, 10),
+            thickness=("Line thickness", int, 2),
+            colour=("Colour", taggedColourType(1, 1, 0), None),
+            drawbg=("Draw background?", bool, True),
+            band=("Band (-2 for all, -1 for any)", int, -2),
+            dq=("DQ bits (as characters, e.g. su for SAT+NODATA)", str, dq.chars(dq.BAD)),
+            condition=("Condition", str, "somepresent", list(conditionShortNames.keys()))
         )
 
     def createTab(self, n, w):
         return TabROIDQ(n, w)
 
     def init(self, node):
-        node.caption = ''
-        node.captiontop = False
-        node.fontsize = 10
-        node.drawbg = True
-        node.thickness = 0
-        node.colour = (1, 1, 0)
-
-        node.chan = -2  # ALL bands (-1 is ANY)
-        node.dq = 0  # bits we're dealing with
-        node.condition = 0
-
+        pass
+    
     def perform(self, node):
         img = node.getInput(0, Datum.IMG)
         if img is not None:
@@ -69,37 +68,40 @@ class XFormROIDQ(XFormType):
             # We don't want to filter BAD bits out, either
             subimg = img.subimage()
             dqs = subimg.maskedDQ()
+            p = node.params
 
             # now we have that data, we need to convert into a single band.
 
             if img.channels > 1:
-                if node.chan == -2:  # ANY bands, so we OR them all together
+                if p.band == -2:  # ANY bands, so we OR them all together
                     dqs = np.bitwise_or.reduce(dqs, axis=2)
                     sources = img.sources.getSources()  # source for ROI is all bands
-                elif node.chan == -1:  # ALL bands, so we AND them together
+                elif p.band == -1:  # ALL bands, so we AND them together
                     dqs = np.bitwise_and.reduce(dqs, axis=2)
                     sources = img.sources.getSources()  # source for ROI is all bands
                 else:  # otherwise it's just some band
-                    dqs = dqs[:, :, node.chan]
-                    sources = img.sources.sourceSets[node.chan]  # source for ROI is just one band
+                    dqs = dqs[:, :, p.band]
+                    sources = img.sources.sourceSets[p.band]  # source for ROI is just one band
             else:
                 # leave dqs as it is for a 1-channel image
                 sources = img.sources.getSources()  # source for ROI is all bands
+                
+            dqrequired = pcot.dq.fromChars(p.dq)
 
             # now we perform the actual action
-            if node.condition == 0:  # when all bits present
+            if p.condition == "allpresent":  # when all bits present
                 # Here, we want to the result to be True when each pixel DQ ANDed with the node DQ is the same as the
                 # node DQ. We AND to extract the relevant bits.
-                res = (dqs & node.dq) == node.dq
+                res = (dqs & dqrequired) == dqrequired
             elif node.condition == 1:  # when some bits present
                 # The result should be True when the relevant bits associated with the pixel are non zero
-                res = (dqs & node.dq) != 0
+                res = (dqs & dqrequired) != 0
             elif node.condition == 2:  # when all bits absent
                 # The result should be True when the relevant bits are zero
-                res = (dqs & node.dq) == 0
+                res = (dqs & dqrequired) == 0
             elif node.condition == 3:  # when some bits absent
                 # The result should be True when the relevant bits are not the same as the requested bits (the node DQ)
-                res = (dqs & node.dq) != node.dq
+                res = (dqs & dqrequired) != dqrequired
             else:
                 raise XFormException('INTR', f"bad condition in roidq: {node.cond}")
 
@@ -117,7 +119,11 @@ class XFormROIDQ(XFormType):
                 roi.bbrect.x += subimg.bb.x
                 roi.bbrect.y += subimg.bb.y
 
-            roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.thickness, node.drawbg)
+            roi.captiontop = p.captiontop
+            roi.colour = p.colour.get()
+            roi.fontsize = p.fontsize
+            roi.thickness = p.thickness
+            roi.drawbg = p.drawbg
 
             img = img.copy()
             img.rois = [roi]
@@ -163,37 +169,37 @@ class TabROIDQ(pcot.ui.tabs.Tab):
 
     def chanChanged(self, i):
         self.mark()
-        self.node.chan = self.w.chanCombo.currentData()
+        self.node.params.band = int(self.w.chanCombo.currentData())
         self.changed()
 
     def whenChanged(self, i):
         self.mark()
-        self.node.condition = i
+        self.node.params.condition = conditionShortNames[i]
         self.changed()
 
     def dqChanged(self):
         self.mark()
-        self.node.dq = self.w.dqbits.bits
+        self.node.params.dq = pcot.dq.chars(self.w.dqbits.bits)
         self.changed()
 
     def drawbgChanged(self, val):
         self.mark()
-        self.node.drawbg = (val != 0)
+        self.node.params.drawbg = (val != 0)
         self.changed()
 
     def topChanged(self, checked):
         self.mark()
-        self.node.captiontop = checked
+        self.node.params.captiontop = checked
         self.changed()
 
     def fontSizeChanged(self, i):
         self.mark()
-        self.node.fontsize = i
+        self.node.params.fontsize = i
         self.changed()
 
     def textChanged(self, t):
         self.mark()
-        self.node.caption = t
+        self.node.params.caption = t
         # this will cause perform, which will cause onNodeChanged, which will
         # set the text again. We set a flag to stop the text being reset.
         self.dontSetText = True
@@ -202,14 +208,14 @@ class TabROIDQ(pcot.ui.tabs.Tab):
 
     def thicknessChanged(self, i):
         self.mark()
-        self.node.thickness = i
+        self.node.params.thickness = i
         self.changed()
 
     def colourPressed(self):
         col = pcot.utils.colour.colDialog(self.node.colour)
         if col is not None:
             self.mark()
-            self.node.colour = col
+            self.node.params.colour = col
             self.changed()
 
     def populateBandList(self):
@@ -232,20 +238,22 @@ class TabROIDQ(pcot.ui.tabs.Tab):
         self.w.canvas.setROINode(self.node)
         self.w.canvas.display(self.node.getOutput(0, Datum.IMG))
 
+        p = self.node.params
         if not self.dontSetText:
-            self.w.caption.setText(self.node.caption)
+            self.w.caption.setText(p.caption)
 
-        self.w.fontsize.setValue(self.node.fontsize)
-        self.w.thickness.setValue(self.node.thickness)
-        self.w.captionTop.setChecked(self.node.captiontop)
-        self.w.drawbg.setChecked(self.node.drawbg)
-        r, g, b = [x * 255 for x in self.node.colour]
+        self.w.fontsize.setValue(p.fontsize)
+        self.w.thickness.setValue(p.thickness)
+        self.w.captionTop.setChecked(p.captiontop)
+        self.w.drawbg.setChecked(p.drawbg)
+        r, g, b = [x * 255 for x in p.colour]
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b))
 
         self.populateBandList()
 
-        self.w.dqbits.bits = self.node.dq
+        self.w.dqbits.bits = pcot.dq.fromChars(p.dq)
         self.w.dqbits.setChecksToBits()
         with SignalBlocker(self.w.chanCombo, self.w.whenCombo):
-            self.w.chanCombo.setCurrentIndex(self.w.chanCombo.findData(self.node.chan))
-            self.w.whenCombo.setCurrentIndex(self.node.condition)
+            self.w.chanCombo.setCurrentIndex(self.w.chanCombo.findData(p.band))
+            cond = conditionShortNames[p.condition]
+            self.w.whenCombo.setCurrentIndex(cond)

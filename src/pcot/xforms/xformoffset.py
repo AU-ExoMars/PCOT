@@ -4,6 +4,7 @@ from pcot import dq
 from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.imagecube import ImageCube
+from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.xform import xformtype, XFormType
 
 
@@ -17,28 +18,31 @@ class XFormOffset(XFormType):
         super().__init__("offset", "processing", "0.0.0")
         self.addInputConnector("", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
-        self.autoserialise = ('x', 'y')
+        self.params = TaggedDictType(
+            x=("X offset", int, 0),
+            y=("Y offset", int, 0)
+        )
 
     def createTab(self, n, w):
         return TabOffset(n, w)
 
     def init(self, node):
-        node.x = 0
-        node.y = 0
+        pass
 
     def perform(self, node):
         img = node.getInput(0, Datum.IMG)
         if img is None:
             out = None
         else:
+            p = node.params
             # make new image, new unc and new DQ
             newimg = np.zeros(img.img.shape, dtype=np.float32)
             newunc = np.zeros(img.img.shape, dtype=np.float32)
             newdq = np.full(img.img.shape, dq.NOUNCERTAINTY | dq.NODATA, dtype=np.uint16)
-            xs = -min(node.x, 0)  # offset into source image
-            ys = -min(node.y, 0)  # offset into source image
-            xd = max(node.x, 0)  # offset into dest
-            yd = max(node.y, 0)  # offset into dest
+            xs = -min(p.x, 0)  # offset into source image
+            ys = -min(p.y, 0)  # offset into source image
+            xd = max(p.x, 0)  # offset into dest
+            yd = max(p.y, 0)  # offset into dest
             # size of region to copy
             w = img.w - max(abs(xd), abs(xs))
             h = img.h - max(abs(yd), abs(ys))
@@ -62,16 +66,16 @@ class TabOffset(pcot.ui.tabs.Tab):
 
     def xChanged(self):
         self.mark()
-        self.node.x = int(self.w.xoff.text())
+        self.node.params.x = int(self.w.xoff.text())
         self.changed()
 
     def yChanged(self):
         self.mark()
-        self.node.y = int(self.w.yoff.text())
+        self.node.params.y = int(self.w.yoff.text())
         self.changed()
 
     def onNodeChanged(self):
         self.w.canvas.setNode(self.node)
-        self.w.xoff.setText(str(self.node.x))
-        self.w.yoff.setText(str(self.node.y))
-        self.w.canvas.display(self.node.getOutput(0,Datum.IMG))
+        self.w.xoff.setText(str(self.node.params.x))
+        self.w.yoff.setText(str(self.node.params.y))
+        self.w.canvas.display(self.node.getOutput(0, Datum.IMG))

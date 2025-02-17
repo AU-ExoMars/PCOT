@@ -1,3 +1,4 @@
+from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.xform import XFormType, xformtype
 
 
@@ -8,6 +9,7 @@ class XFormDummy(XFormType):
     an older PCOT version and is now deprecated, or it's part of a plugin?"""
     def __init__(self):
         super().__init__("dummy", "hidden", "0.0.0")
+        self.params = TaggedDictType()  # no parameters
 
     def createTab(self, n, w):
         pass

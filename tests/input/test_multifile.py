@@ -3,7 +3,6 @@ import pcot
 from pcot.datum import Datum
 from pcot.document import Document
 from fixtures import *
-from pcot.filters import Filter
 
 
 def test_multifile_load_with_default_pattern(globaldatadir):

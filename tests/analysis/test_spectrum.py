@@ -10,7 +10,6 @@ from pcot.document import Document
 from pcot.rois import ROICircle, ROIRect, ROI
 from pcot.utils.spectrum import Spectrum, SpectrumSet, NameResolver
 from pcot.value import Value
-from pcot.xforms.xformgen import ChannelData
 from fixtures import globaldatadir
 
 
@@ -25,15 +24,13 @@ def create_test_image1():
     doc = Document()
 
     node = doc.graph.create("gen")
-    node.imgwidth, node.imgheight = 256, 256
-    node.imgchannels = [
-        # n, u, wavelength, mode. For all these modes, N and U don't mean N and U; check
-        # the gen node documentation for details. But basically we're creating two
-        # stepped gradients and a checkerboard pattern in the different channels.
-        ChannelData(2, 10, 100, "gradient-x"),
-        ChannelData(3, 20, 200, "gradient-y"),
-        ChannelData(25, 0, 300, "checkx")
-    ]
+    node.params.imgwidth, node.params.imgheight = 256, 256
+
+    # some cleverness here because each TaggedDict we create inside the chans TaggedList is ordered.
+    node.params.chans.append_default().set(2, 10, 100, "gradient-x")
+    node.params.chans.append_default().set(3, 20, 200, "gradient-y")
+    node.params.chans.append_default().set(25, 0, 300, "checkx")
+
     doc.run()
     img = node.getOutput(0, Datum.IMG)
     assert img.channels == 3  # just to be sure
@@ -249,24 +246,22 @@ def create_test_image2():
 
     # generates the nominal values
     gen = doc.graph.create("gen")
-    gen.imgwidth, gen.imgheight = 256, 256
-    gen.imgchannels = [
-        ChannelData(2, 10, 100, "gradient-x"),
-        ChannelData(2, 20, 200, "gradient-y")
-    ]
+    gen.params.imgwidth, gen.params.imgheight = 256, 256
+    gen.params.chans.append_default().set(2, 10, 100, "gradient-x")
+    gen.params.chans.append_default().set(2, 20, 200, "gradient-y")
 
     # we want the 200 channel to be multiplied
     mult200 = doc.graph.create("expr")
-    mult200.expr = "merge(a$100,a$200*0.5)"
+    mult200.params.expr = "merge(a$100,a$200*0.5)"
     mult200.connect(0, gen, 0)
 
     # offset to get uncertainties
     offset = doc.graph.create("offset")
-    offset.x, offset.y = 1, 1
+    offset.params.x, offset.params.y = 1, 1
     offset.connect(0, mult200, 0)
     # combine the two with an expression
     expr = doc.graph.create("expr")
-    expr.expr = "v(a*0.5+0.3,b*0.2+0.1)"
+    expr.params.expr = "v(a*0.5+0.3,b*0.2+0.1)"
     expr.connect(0, mult200, 0)
     expr.connect(1, offset, 0)
 
@@ -353,7 +348,9 @@ def test_spectrum_table(globaldatadir):
     md3img = doc.graph.getByDisplayName("multidot 3", single=True).getOutput(0, Datum.IMG)
 
     # get desired results; strip and convert crlf to lf. This deals with platform differences.
-    res1 = doc.graph.getByDisplayName("stringtest 1", single=True).string.strip().replace('\r\n', '\n')
+    # This is really ugly because we need to rummage around inside the node!
+
+    res1 = doc.graph.getByDisplayName("stringtest 1", single=True).params.string.strip().replace('\r\n', '\n')
 
     # create the spectrum sets and tables for the gen1/md1 set (look at the graph, you can see that
     # gen1 and md1 connect to inputs 0 and 4 on the spectrum node).
@@ -362,13 +359,13 @@ def test_spectrum_table(globaldatadir):
     assert t == res1
 
     # same with md2
-    res2 = doc.graph.getByDisplayName("stringtest 2", single=True).string.strip().replace('\r\n', '\n')
+    res2 = doc.graph.getByDisplayName("stringtest 2", single=True).params.string.strip().replace('\r\n', '\n')
     ss2 = SpectrumSet({"in0": md2img})
     t = str(ss2.table()).strip().replace('\r\n', '\n')
     assert t == res2
 
     # and finally the complex test with md3
-    res3 = doc.graph.getByDisplayName("stringtest 3", single=True).string.strip().replace('\r\n', '\n')
+    res3 = doc.graph.getByDisplayName("stringtest 3", single=True).params.string.strip().replace('\r\n', '\n')
     ss3 = SpectrumSet({
         "in0": gen1img,
         "in1": md1img,

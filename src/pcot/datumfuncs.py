@@ -1,5 +1,5 @@
 import builtins
-from typing import Optional, List, Callable
+from typing import Callable
 
 import cv2 as cv
 import numpy as np
@@ -10,9 +10,10 @@ import pcot.dq
 from pcot import rois, operations, dq
 from pcot.config import getAssetPath
 from pcot.datum import Datum
+from pcot.dq import NODATA
 from pcot.expressions.register import datumfunc
 from pcot.expressions.ops import combineImageWithNumberSources
-from pcot.filters import Filter
+from pcot.cameras.filters import Filter
 from pcot.imagecube import ImageCube
 from pcot.rois import ROI
 from pcot.sources import MultiBandSource, SourceSet, Source
@@ -20,7 +21,7 @@ from pcot.utils import image
 from pcot.utils.deb import Timer
 from pcot.utils.geom import Rect
 from pcot.utils.maths import pooled_sd
-from pcot.value import Value, add_sub_unc_list
+from pcot.value import Value
 from pcot.xform import XFormException
 
 logger = logging.getLogger(__name__)
@@ -215,6 +216,10 @@ def merge(img1, *remainingargs):
 
     # check sizes of all images are the same
     imgargs = [x.get(Datum.IMG) for x in args if x.isImage()]
+
+    if any([x is None for x in imgargs]):
+        raise XFormException('EXPR', 'argument is not an image for merge')
+
     if len(set([(i.w, i.h) for i in imgargs])) != 1:
         raise XFormException('EXPR', 'all images in merge must be the same size')
     # get image size
@@ -571,7 +576,7 @@ def testimg(index):
     Load a test image
     @param index : number : the index of the image to load
     """
-    fileList = ("marsRGB.png", "gradRGB.png", "corrib.png")
+    fileList = ("marsRGB.png", "gradRGB.png", "corrib.png", "tstreg1.png", "tstreg2.png")
     n = int(index.get(Datum.NUMBER).n)
     if n < 0:
         raise XFormException('DATA', 'negative test file index')
@@ -787,16 +792,20 @@ def rotate(img, angle):
 
 
 @datumfunc
-def striproi(img):
+def striproi(img, stripannots=0):
     """
     Strip all regions of interest from an image
     @param img:img:image to strip
+    @param stripannots:number:if nonzero, also strip annotations (e.g. gradient legends) (default is 0)
     """
+
     img: ImageCube = img.get(Datum.IMG)
     if img is None:
         return None
     img = img.shallowCopy()
     img.rois = []
+    if stripannots.get(Datum.NUMBER).n:
+        img.annotations = []
     return Datum(Datum.IMG, img)
 
 
@@ -960,4 +969,40 @@ def interp(img, factor, w=-1):
     # construct the new imagecube
     img = ImageCube(outimg, None, img.sources, uncertainty=None, dq=None)
 
+    return Datum(Datum.IMG, img)
+
+
+@datumfunc
+def overlay(img1, img2):
+    """Given a pair of images of the same dimensions and band count, replace all pixels in the first
+    image with the second EXCEPT where the second image has the NODATA bit set. This is useful for
+    combining two images where one image has "holes" (e.g. registration).
+
+    @param img1:img:the image to overlay
+    @param img2:img:the overlay image with NODATA bits
+
+    """
+
+    img1 = img1.get(Datum.IMG)
+    img2 = img2.get(Datum.IMG)
+    if img1 is None or img2 is None:
+        return None
+
+    if img1.w != img2.w or img1.h != img2.h or img1.channels != img2.channels:
+        raise XFormException('DATA', 'images must have the same dimensions and band count to overlay')
+
+    # combine the source sets
+    ss = MultiBandSource.createBandwiseUnion([img1.sources, img2.sources])
+
+    # mask out the NODATA bits
+    mask = img2.dq & pcot.dq.NODATA
+    # make an image copy and put the combined data into it
+    img = img1.copy()
+    img.img = np.where(mask, img1.img, img2.img)
+    img.uncertainty = np.where(mask, img1.uncertainty, img2.uncertainty)
+    # DQ is a bit messier. We want the ORed DQ bits, but we only want NODATA
+    # where it's set in BOTH images.
+    dq = (img1.dq | img2.dq) & ~NODATA   # remove NODATA from the ORed DQ
+    dq |= mask & img1.dq  # add NODATA from img1 where it's set in img2
+    img.dq = dq
     return Datum(Datum.IMG, img)

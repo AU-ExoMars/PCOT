@@ -18,8 +18,9 @@ to install and run PCOT and give you a tutorial covering the basics.
 * [Updating PCOT](update.md)
 * [Using the multifile input to read multispectral data from BMP, PNG etc.](multifile)
 * [Using the *expr* node to perform mathematical operations](expr.md)
-
+* [Batch mode](batch/index.md) - controlling PCOT with parameter files for batch operations
 
 ### Autodocs
-* [Automatically generated documentation](autodocs) for nodes, expression functions and
-expression properties.
+
+* [Automatically generated documentation](/autodocs) for nodes, expression
+functions and properties, and inputs/outputs in batch files.

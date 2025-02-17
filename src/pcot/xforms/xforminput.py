@@ -1,5 +1,6 @@
 from pcot.datum import Datum
 import pcot.inputs
+from pcot.parameters.taggedaggregates import TaggedDictType
 
 from pcot.xform import xformtype, XFormType, XFormException
 from pcot.xforms.tabdata import TabData
@@ -10,6 +11,7 @@ class XFormInput(XFormType):
     def __init__(self, idx):
         super().__init__("input " + str(idx), "source", "0.0.0")
         self.addOutputConnector("", Datum.NONE)   # this changes type dynamically
+        self.params = TaggedDictType()  # no parameters
         self.idx = idx
 
     def createTab(self, n, w):

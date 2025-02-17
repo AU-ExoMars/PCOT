@@ -1,4 +1,5 @@
 from pcot.datum import Datum
+from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.xform import xformtype, XFormType
 from pcot.xforms.tabdata import TabData
 
@@ -15,6 +16,8 @@ class XformStripROI(XFormType):
         self.addInputConnector("", Datum.IMG)
         # it has a single output, which is unnamed and is an image
         self.addOutputConnector("", Datum.IMG)
+        # it has no parameters, so we create an empty TaggedDictType
+        self.params = TaggedDictType()
 
     def createTab(self, n, w):
         # it doesn't use a custom tab - just the standard tab for

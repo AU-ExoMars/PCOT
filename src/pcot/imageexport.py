@@ -8,7 +8,7 @@ from PySide2.QtSvg import QSvgGenerator
 EXPORT_UNIT_WIDTH = 10000.0  # size of an image and its borders in internal units.
 
 
-def export(imgcube, prepfunction):
+def export(imgcube, prepfunction, annotations=True, margin=0.2):
     """A bit functional. The drawing process consists of a lot of prep which creates a QPainter drawing
     on some backing object - such as a QPdfWriter or a QImage. So here we calculate all the things necessary
     to do the drawing and to create that backing object, and call a 'prepfunction' to create said object and
@@ -26,10 +26,10 @@ def export(imgcube, prepfunction):
     # these are "pseudomargins" in inches; we can draw inside them so we aren't using
     # actual margins.
 
-    marginTop = 0.2  # these are all minima
-    marginBottom = 0.2
-    marginLeft = 0.2
-    marginRight = 0.2
+    marginTop = margin  # these are all minima
+    marginBottom = margin
+    marginLeft = margin
+    marginRight = margin
 
     # and then expand the margins if annotations require it
     for ann in imgcube.annotations + imgcube.rois:
@@ -79,16 +79,16 @@ def export(imgcube, prepfunction):
     p.drawImage(0, 0, qimg)
     imgcube.tmpimage = None
 
-    # draw the annotations - this is the same method the canvas calls.
-    imgcube.drawAnnotationsAndROIs(p, inPDF=False)
+    if annotations:
+        # draw the annotations - this is the same method the canvas calls.
+        imgcube.drawAnnotationsAndROIs(p, inPDF=False)
+        # this removes the margin and puts us back into our coord space where w=10000
+        p.restore()
+        # and draw the annotations calling the annotatePDF methods this time.
+        imgcube.drawAnnotationsAndROIs(p, inPDF=True)
 
-    # this removes the margin and puts us back into our coord space where w=10000
-    p.restore()
-    # and draw the annotations calling the annotatePDF methods this time.
-    imgcube.drawAnnotationsAndROIs(p, inPDF=True)
 
-
-def exportPDF(imgcube, path):
+def exportPDF(imgcube, path, annotations=True):
     # have to create a PDF writer in the outer scope or things crash; it looks like QPainter
     # doesn't store a backreference, so when prepfunc exits, a QPdfWriter created inside
     # will go away.
@@ -104,10 +104,10 @@ def exportPDF(imgcube, path):
         pdf.setPageSizeMM(QSizeF(win * 25.4, hin * 25.4))
         return QPainter(pdf)
 
-    export(imgcube, prepfunc)
+    export(imgcube, prepfunc, annotations)
 
 
-def exportRaster(imgcube, path, pixelWidth=1000, transparentBackground=False):
+def exportRaster(imgcube, path, pixelWidth, transparentBackground=False, annotations=True):
     """Export an image to a PNG, JPG, GIF, PBM, PPM, BMP... Gets the format from
     the extension (see https://doc.qt.io/qt-6/qimage.html#reading-and-writing-image-files)
     Params:
@@ -118,11 +118,14 @@ def exportRaster(imgcube, path, pixelWidth=1000, transparentBackground=False):
 
     outputImage = None   # see note on exportPDF
 
+    if pixelWidth < 0:
+        pixelWidth = imgcube.w
+
     def prepfunc(win, hin):
         # now calculate image size. That's THREE coordinate systems: pixels, nominal "inches", and "units" (required because
         # too many things take ints so we can't use inches)
 
-        pixelHeight = pixelWidth * (hin / win)
+        pixelHeight = round(pixelWidth * (hin / win))
 
         # create an image in memory - 32bit ARGB if we need a transparent background, 24bit RGB if we don't
         nonlocal outputImage
@@ -134,14 +137,14 @@ def exportRaster(imgcube, path, pixelWidth=1000, transparentBackground=False):
         # and now paint on it.
         return QPainter(outputImage)
 
-    export(imgcube, prepfunc)
+    export(imgcube, prepfunc, annotations, margin=0)
 
     # and save the image. Ignore the error here; outputImage is a reference to
     # None but that changes in the callback.
     outputImage.save(path)
 
 
-def exportSVG(imgcube, path):
+def exportSVG(imgcube, path, annotations=True):
     svg = QSvgGenerator()
     svg.setFileName(path)
 
@@ -156,4 +159,4 @@ def exportSVG(imgcube, path):
         svg.setViewBox(QRect(0, 0, w, h))
         return QPainter(svg)
 
-    export(imgcube, prepfunc)
+    export(imgcube, prepfunc, annotations)

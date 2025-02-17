@@ -1,0 +1,18 @@
+inputs.0.parc.filename = {{globaldatadir}}/parc/multi.parc
+.itemname = image0
+
+outputs.+.file = {{out}}      # first file, specify the filename. Append will be false.
+.node = meanchans
+.prefix = "meanchans="      # will get prepended, but JSON-processed first.
+
+..+.node = mean             # second file, just specify the node. Set append to true.
+.append = y
+.prefix = chans{{count}}=            # will get prepended with no JSON-processing
+
+..+.node = meanchansimage   # third file, just specify the node. Append will be same as last time
+.prefix = "mean chans image at {{date}} for {{docfile}} with {{paramfile}}\n" # will get prepended, but JSON-processed first.
+
+..+.node = meanimage        # fourth file, just specify the node. Append will be same as last time
+.prefix = "mean image for {{count}}   " # Note trailing space
+
+k.val = 2                   # change the value of the constant node k

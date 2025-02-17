@@ -26,7 +26,7 @@ def test_roi(allblack):
 
     # and we'll first test using roi() in an expression node
     exprNode = doc.graph.create("expr")
-    exprNode.expr = "roi(a)"  # will add 4 to the value and clip to 1.
+    exprNode.params.expr = "roi(a)"  # will add 4 to the value and clip to 1.
     exprNode.connect(0, roiNode, 0)
 
     # now we'll run the graph

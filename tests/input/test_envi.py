@@ -1,13 +1,9 @@
 """Tests of the ENVI input method"""
 
-import pytest
-
 import pcot
 from pcot.datum import Datum
 from pcot.document import Document
 from fixtures import *
-from pcot.filters import Filter
-from pcot.inputs.envimethod import ENVIInputMethod
 
 
 def test_envi_load(envi_image_1):

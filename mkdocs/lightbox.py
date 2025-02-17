@@ -19,7 +19,6 @@ from markdown.treeprocessors import Treeprocessor
 import xml.etree.ElementTree as etree
 import re
 
-
 class ImagesTreeprocessor(Treeprocessor):
     def __init__(self, config, md):
         Treeprocessor.__init__(self, md) 
@@ -35,9 +34,25 @@ class ImagesTreeprocessor(Treeprocessor):
         for image in images:
             desc = image.attrib["alt"]
             if self.re.match(desc):
+                # We can have description, description|anchor, or
+                # description|anchor|a=1,b=2.." where those k,v pairs
+                # get assigned as attributes to the image. For a null anchor,
+                # use desc||a=1,b=2..
                 desc = desc.lstrip("!")
                 if '|' in desc:
-                    desc,anchor = desc.split('|',2)
+                    desc,anchor = desc.split('|',1)
+                    if '|' in anchor:
+                        anchor,options = anchor.split('|',1)
+                        if len(anchor) == 0:
+                            anchor = None
+                        print(f"Desc = {desc}")
+                        print(f"Anchor = {anchor}")
+                        print(f"Options = {options}")
+                        
+                        for opt in options.split(","):
+                            k,v = [x.strip() for x in opt.split("=")]
+                            image.set(k.strip(),v)
+                            print(f"Option: {k} = {v}")
                 else:
                     anchor = None
                 image.set("alt", desc)

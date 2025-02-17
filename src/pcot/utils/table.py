@@ -81,7 +81,7 @@ class Table:
     def __str__(self):
         """Convert entire table to a string"""
         s = io.StringIO()
-        w = csv.writer(s)
+        w = csv.writer(s,lineterminator='\n')
         w.writerow(self._keys)  # headers
         for r in self:
             r = [self._printable(v) for v in r]

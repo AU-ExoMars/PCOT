@@ -1,25 +1,21 @@
 import errno
+import logging
 import os
 from typing import List, Tuple, Optional, Union, Dict, Any
 
 import numpy as np
-import logging
-from dateutil import parser
 from proctools.products import DataProduct
 
 from pcot import ui
-from pcot.dataformats.pds4 import PDS4Product, PDS4ImageProduct, ProductList
+from pcot.dataformats.pds4 import ProductList
 from pcot.dataformats.raw import RawLoader
 from pcot.datum import Datum
-from pcot.filters import getFilter, Filter
+from pcot.cameras.filters import getFilter
 from pcot.imagecube import ChannelMapping, ImageCube, load_rgb_image
-from pcot.inputs.multifile import presetModel
-from pcot.sources import StringExternal, MultiBandSource, Source, SourceSet
+from pcot.sources import StringExternal, MultiBandSource, Source
 from pcot.ui.presetmgr import PresetOwner
-
 from pcot.utils import image
-from pcot.utils.archive import FileArchive
-from pcot.utils.datumstore import DatumStore
+from pcot.utils.datumstore import readParc
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +123,8 @@ def multifile(directory: str,
 
     """
 
+    from pcot.inputs.multifile import presetModel
+    logger.debug(f"Multifile load from directory {directory}")
     if rawloader is None:
         class RawPresets(PresetOwner):
             """
@@ -162,7 +160,7 @@ def multifile(directory: str,
         filterpat = r.filterpat or r'.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*'
         filterset = r.filterset or 'PANCAM'
         rawloader = r.rawloader
-
+        
     def getFilterSearchParam(p) -> Tuple[Optional[Union[str, int]], Optional[str]]:
         """Returns the thing to search for to match a filter to a path and the type of the search"""
         if filterre is None:
@@ -170,7 +168,9 @@ def multifile(directory: str,
         else:
             m = filterre.match(p)
             if m is None:
+                logger.critical(f"NO MATCH FOUND FOR path {p}, regex {filterre}")
                 return None, None
+        
             m = m.groupdict()
             if '<lens>' in filterpat:
                 if '<n>' not in filterpat:
@@ -313,62 +313,21 @@ def pds4(inputlist: Union[ProductList, List[Union[DataProduct, str]]],
     return inputlist.toDatum(multValue=multValue, mapping=mapping, selection=selection, inpidx=inpidx)
 
 
-def datumarchive(fname: str, itemname: str, inpidx: int = None) -> Optional[Datum]:
-    """Load a Datum from a Datum archive file.
+def parc(fname: str, itemname: str, inpidx: int = None) -> Optional[Datum]:
+    """Load a Datum from a PCOT datum archive (PARC) file. We also patch the sources, overwriting the source data
+    in the archive because we want the data to look like it came from the archive and not whatever
+    the archive was created from. This may seem a bit rude - and that we're losing a record of something
+    that might be important - but otherwise we could get bogged down with references to data on other systems.
+    # Later we may revise this to avoid lossy source loading for (say) PDS4 products.
 
     - fname: the name of the archive file
     - itemname: the name of the item in the archive
     - inpidx: the input index to use or None if not connected to a graph input
     """
 
-    if fname is not None and itemname is not None:
-        fa = FileArchive(fname)
-        ds = DatumStore(fa)
-        datum = ds.get(itemname, None)
-    else:
-        return None
-
-    if datum is None:
-        return None
-
-    # patch the sources, because we want data loaded from a DatumArchive to look like it came from
-    # the archive and not whatever that archive was created from. This may seem a bit rude - and that we're losing
-    # a record of something that might be important - but otherwise we could get bogged down with references to
-    # data on other systems.
-    #
-    # Later we may revise this to avoid lossy source loading for (say) PDS4 products.
-
-    e = StringExternal("PARC", f"{fname}:{itemname}")   # the label we'll attach
-
-    def patchSource(s):
-        if isinstance(s, SourceSet):
-            # take all the sources in a sources set and patch them. Then merge any duplicates.
-            return SourceSet(set([patchSource(ss) for ss in s]))
-        elif isinstance(s, MultiBandSource):
-            # perform the patch operation on all bands in a MultiBandSource
-            return MultiBandSource([patchSource(ss) for ss in s])
-        elif isinstance(s, Source):
-            # for each root source, we create a new source with our new external (giving the name of the archive)
-            # and the input index. Keep the band data (which will be a filter or a band name).
-            return Source().setExternal(e).setBand(s.band).setInputIdx(inpidx)
-
-    datum.val.sources = patchSource(datum.val.sources)
-
-
-    #
-    # if isinstance(datum.val.sources, MultiBandSource):
-    #     sources = []
-    #     # for each band, we make a new source with the same bands and the same external
-    #     for s in datum.val.sources:
-    #         # get the original sources; there may be more than one for each band
-    #         ss = s.getSources()
-    #         # flatten them down into a single set of bands
-    #         bands = set([s.band for s in ss])
-    #         # create sources from those bands
-    #         ss = SourceSet([Source().setBand(b).setExternal(e).setInputIdx(inpidx) for b in bands])
-    #         sources.append(ss)
-    #     ms = MultiBandSource(sources)
-    #     datum.val.sources = ms
-
-    return datum
+    try:
+        return readParc(fname, itemname, inpidx)    # delegated to the datumstore module
+    except FileNotFoundError as e:
+        # we throw this to be consistent with the other methods
+        raise Exception(f"Cannot read file {fname}") from e
 

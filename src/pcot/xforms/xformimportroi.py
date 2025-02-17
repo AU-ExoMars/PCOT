@@ -1,6 +1,7 @@
 from copy import copy
 
 from pcot.datum import Datum
+from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.xform import xformtype, XFormType, XFormException
 from pcot.xforms.tabdata import TabData
 
@@ -24,6 +25,7 @@ class XformImportROI(XFormType):
         self.addInputConnector("", Datum.IMG)
         self.addInputConnector("roi", Datum.ANY)
         self.addOutputConnector("", Datum.IMG)
+        self.params = TaggedDictType()  # no parameters
 
     def createTab(self, n, w):
         return TabData(n, w)

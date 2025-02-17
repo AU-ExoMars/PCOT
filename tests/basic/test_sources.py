@@ -3,14 +3,11 @@ Test low-level source operations. Higher level operations, such as combining in 
 are tested in test_source_principles.py
 """
 
-from typing import Optional
-
 import pytest
 
 import pcot
-from pcot.document import Document
 from pcot.documentsettings import DocumentSettings
-from pcot.filters import Filter
+from pcot.cameras.filters import Filter
 from pcot.sources import SourceSet, Source, nullSource, MultiBandSource, StringExternal
 
 # define some sources; these are immutable so it should be OK to keep them for multiple tests

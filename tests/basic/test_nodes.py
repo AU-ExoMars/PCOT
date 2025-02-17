@@ -45,10 +45,8 @@ def test_node_output_none():
                 except BadTypeException:
                     pytest.fail("Spectrum should output Datum.DATA even when not connected")
             elif x == 'gen':
-                try:
-                    assert node.getOutput(0, Datum.IMG) is not None, f"Gen should return an image with default args"
-                except BadTypeException:
-                    pytest.fail("Gen should return an image")
+                if node.getOutput(0, Datum.NONE) is not None:
+                    pytest.fail("Gen should return None with no args")
             elif x == 'pixtest':
                 try:
                     out = node.getOutput(0, Datum.TESTRESULT)
@@ -146,9 +144,9 @@ def test_simple_node():
 
     # create two constant nodes set to output 1 and 30.
     const0 = doc.graph.create("constant")
-    const0.val = 1
+    const0.params.val = 1.0
     const1 = doc.graph.create("constant")
-    const1.val = 30
+    const1.params.val = 30.0
 
     # connect them to the inputs of the testtype node.
     node.connect(0, const0, 0)

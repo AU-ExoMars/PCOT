@@ -78,7 +78,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="dumpButton">
+            <widget class="QPushButton" name="fitButton">
              <property name="sizePolicy">
               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                <horstretch>1</horstretch>
@@ -86,7 +86,7 @@
               </sizepolicy>
              </property>
              <property name="text">
-              <string>Dump</string>
+              <string>Zoom to Fit</string>
              </property>
             </widget>
            </item>

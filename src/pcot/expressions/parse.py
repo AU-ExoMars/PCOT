@@ -472,6 +472,7 @@ class InstIndex(Instruction):
 def execute(seq: List[Instruction], stack: Stack) -> float:
     """Execute a list of instructions on a given stack"""
     for inst in seq:
+        logger.debug(f"EXECUTING {inst}")
         inst.exec(stack)
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f"EXECUTED {inst}, STACK NOW (top shown last):")

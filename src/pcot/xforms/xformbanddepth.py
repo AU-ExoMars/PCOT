@@ -8,6 +8,7 @@ from pcot.datum import Datum
 import pcot.operations as operations
 import pcot.ui.tabs
 from pcot.imagecube import ImageCube
+from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.sources import MultiBandSource, SourceSet
 from pcot.utils import SignalBlocker
 from pcot.value import Value
@@ -25,6 +26,7 @@ class XformBandDepth(XFormType):
 
     Issues:
 
+    * Ignores ROIs - calculation occurs over the entire image; no ROI support.
     * Ignores FWHM (bandwidth) of all bands.
     * can't do weird stuff like Figs. 7c and 7d in the Viviano et al.
 
@@ -34,13 +36,14 @@ class XformBandDepth(XFormType):
         super().__init__("banddepth", "processing", "0.0.0")
         self.addInputConnector("", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
-        self.autoserialise = ('bandidx',)
+        self.params = TaggedDictType(
+            bandidx=("Index of the band to calculate band depth for", int, -1)
+        )
 
     def createTab(self, n, w):
         return TabBandDepth(n, w)
 
     def init(self, node):
-        node.bandidx = -1
         node.cwls = []  # tuple of (cwl, index, description) generated in perform
 
     def perform(self, node):
@@ -61,13 +64,15 @@ class XformBandDepth(XFormType):
             # this will be a list of (wavelength, index, desc) tuples
             node.cwls.sort(key=lambda tt: tt[0])  # sort by wavelen
 
-            if node.bandidx != -1:
-                if node.bandidx == 0 or node.bandidx == len(node.cwls) - 1:
+            bandidx = node.params.bandidx
+
+            if bandidx != -1:
+                if bandidx == 0 or bandidx == len(node.cwls) - 1:
                     raise XFormException('DATA', "cannot find band depth of first or last band")
                 else:
-                    lC, cidx, _ = node.cwls[node.bandidx]  # center wavelength
-                    lS, sidx, _ = node.cwls[node.bandidx - 1]  # shorter wavelength
-                    lL, lidx, _ = node.cwls[node.bandidx + 1]  # longer wavelength
+                    lC, cidx, _ = node.cwls[bandidx]  # center wavelength
+                    lS, sidx, _ = node.cwls[bandidx - 1]  # shorter wavelength
+                    lL, lidx, _ = node.cwls[bandidx + 1]  # longer wavelength
 
                     # the parameter t is the interpolation weight - it's 0 if C=S, 1 if C=L, and 0.5 if we're halfway.
                     t = (lC - lS) / (lL - lS)
@@ -110,7 +115,7 @@ class TabBandDepth(pcot.ui.tabs.Tab):
 
     def bandChanged(self, i):
         self.mark()
-        self.node.bandidx = i
+        self.node.params.bandidx = i
         self.changed()
 
     def onNodeChanged(self):
@@ -124,8 +129,8 @@ class TabBandDepth(pcot.ui.tabs.Tab):
             for (_, _, s) in self.node.cwls:
                 self.w.bandCombo.addItem(s)
 
-        if self.node.bandidx >= 0:
-            self.w.bandCombo.setCurrentIndex(self.node.bandidx)
+        if self.node.params.bandidx >= 0:
+            self.w.bandCombo.setCurrentIndex(self.node.params.bandidx)
 
         self.w.canvas.setNode(self.node)
         img = self.node.getOutput(0, Datum.IMG)

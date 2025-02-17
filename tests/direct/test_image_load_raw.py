@@ -470,7 +470,6 @@ def test_preset_raw():
     preset = {
         'rawloader': loader.serialise(),
         'filterpat': '.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-        'mult': 1,
         'filterset': 'AUPE'
     }
     presetModel.addPreset("testpreset", preset)

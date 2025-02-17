@@ -25,4 +25,3 @@ class NullInputMethod(InputMethod):
 
     def deserialise(self, data, internal):
         pass
-

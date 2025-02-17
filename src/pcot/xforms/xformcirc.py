@@ -1,13 +1,11 @@
-import math
-
-from PySide2.QtCore import Qt
-from PySide2.QtGui import QIntValidator, QMouseEvent
+from PySide2.QtGui import QIntValidator
 
 import pcot.ui.tabs
 import pcot.utils.colour
 import pcot.utils.text
 from pcot.rois import ROICircle
 from pcot.ui.roiedit import CircleEditor
+from pcot.parameters.taggedaggregates import TaggedDictType, TaggedDict
 from pcot.xform import xformtype, XFormROIType
 
 
@@ -31,34 +29,38 @@ class XformCirc(XFormROIType):
 
     def __init__(self):
         super().__init__("circle", "regions", "0.0.0")
+        # see XFormRect for this.
+        t = [(k, v) for k, v in ROICircle.TAGGEDDICTDEFINITION if k != "type"]
+        self.params = TaggedDictType(*t)
 
     def createTab(self, n, w):
         return TabCirc(n, w)
 
     def init(self, node):
         node.croprect = None  # would be (x,y,w,h) tuple
-        node.caption = ''
-        node.captiontop = False
-        node.fontsize = 10
-        node.drawbg = True
-        node.thickness = 0
-        node.colour = (1, 1, 0)
         node.roi = ROICircle()
-        node.roi.drawEdge = True
 
     def serialise(self, node):
-        return node.roi.serialise()
+        node.params = TaggedDict(self.params)
+        # serialise the ROI into a TaggedDict, and copy fields from that into the node.params we just made.
+        # See Rect for why we do this nonsense (it's because we're storing the fields of the ROI
+        # in the same dictionary as the node's parameters, and they both have a "type" field.)
+        rser = node.roi.to_tagged_dict()
+        for k in node.params.keys():
+            node.params[k] = rser[k]
+        # the caller will use node.params.
+        return None
 
-    def deserialise(self, node, d):
-        node.roi.deserialise(d)
+    def nodeDataFromParams(self, node):
+        """We're using "CTAS" - complex tagged aggregate serialisation. Build the object's data from
+        tagged dict."""
+        node.roi.from_tagged_dict(node.params)
 
     def setProps(self, node, img):
         node.roi.setContainingImageDimensions(img.w, img.h)
-        node.roi.setDrawProps(node.captiontop, node.colour, node.fontsize, node.thickness, node.drawbg)
 
     def getMyROIs(self, node):
         return [node.roi]
-
 
 
 class TabCirc(pcot.ui.tabs.Tab):
@@ -89,22 +91,22 @@ class TabCirc(pcot.ui.tabs.Tab):
 
     def drawbgChanged(self, val):
         self.mark()
-        self.node.drawbg = (val != 0)
+        self.node.roi.drawbg = (val != 0)
         self.changed()
 
     def topChanged(self, checked):
         self.mark()
-        self.node.captiontop = checked
+        self.node.roi.labeltop = checked
         self.changed()
 
     def fontSizeChanged(self, i):
         self.mark()
-        self.node.fontsize = i
+        self.node.roi.fontsize = i
         self.changed()
 
     def textChanged(self, t):
         self.mark()
-        self.node.caption = t
+        self.node.roi.label = t
         # this will cause perform, which will cause onNodeChanged, which will
         # set the text again. We set a flag to stop the text being reset.
         self.dontSetText = True
@@ -113,14 +115,14 @@ class TabCirc(pcot.ui.tabs.Tab):
 
     def thicknessChanged(self, i):
         self.mark()
-        self.node.thickness = i
+        self.node.roi.thickness = i
         self.changed()
 
     def colourPressed(self):
-        col = pcot.utils.colour.colDialog(self.node.colour)
+        col = pcot.utils.colour.colDialog(self.node.roi.colour)
         if col is not None:
             self.mark()
-            self.node.colour = col
+            self.node.roi.colour = col
             self.changed()
 
     def roiSet(self, x, y, r):
@@ -151,15 +153,16 @@ class TabCirc(pcot.ui.tabs.Tab):
         self.w.canvas.setNode(self.node)
         self.w.canvas.setROINode(self.node)
         self.w.canvas.display(self.node.getOutput(XFormROIType.OUT_IMG))
+        roi = self.node.roi
         if not self.dontSetText:
-            self.w.caption.setText(self.node.caption)
-        self.w.fontsize.setValue(self.node.fontsize)
-        self.w.thickness.setValue(self.node.thickness)
-        self.w.captionTop.setChecked(self.node.captiontop)
-        self.w.drawbg.setChecked(self.node.drawbg)
-        r, g, b = [x * 255 for x in self.node.colour]
+            self.w.caption.setText(roi.label)
+        self.w.fontsize.setValue(roi.fontsize)
+        self.w.thickness.setValue(roi.thickness)
+        self.w.captionTop.setChecked(roi.labeltop)
+        self.w.drawbg.setChecked(roi.drawbg)
+        r, g, b = [x * 255 for x in roi.colour]
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
-        c = self.node.roi.get()
+        c = roi.get()
         if c is not None:
             x, y, r = [str(x) for x in c]
             self.w.XEdit.setText(x)

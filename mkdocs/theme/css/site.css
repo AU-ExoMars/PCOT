@@ -1,3 +1,7 @@
 li > p {
     margin-bottom: 0;
 }
+
+.wide {
+    max-width: 1440px;
+}    

@@ -1,7 +1,8 @@
 from pcot.datum import Datum
 import pcot.operations as operations
 import pcot.ui.tabs
-from pcot.operations.curve import curve, genLut, lutxcoords
+from pcot.operations.curve import genLut, lutxcoords
+from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.xform import xformtype, XFormType
 
 
@@ -19,18 +20,21 @@ class XformCurve(XFormType):
         super().__init__("curve", "processing", "0.0.0", hasEnable=True)
         self.addInputConnector("", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
-        self.autoserialise = ('add', 'mul')
+
+        self.params = TaggedDictType(
+            mul=("multiplicative factor (done first)", float, 1.0),
+            add=("additive constant (done last)", float, 0.0))
 
     def createTab(self, n, w):
         pcot.ui.msg("creating a tab with a plot widget takes time...")
         return TabCurve(n, w)
 
     def init(self, node):
-        node.add = 0
-        node.mul = 1
+        pass
 
     def perform(self, node):
-        operations.performOp(node, operations.curve.curve, add=node.add, mul=node.mul)
+        operations.performOp(node, operations.curve.curve,
+                             add=node.params.add, mul=node.params.mul)
 
 
 class TabCurve(pcot.ui.tabs.Tab):
@@ -45,12 +49,12 @@ class TabCurve(pcot.ui.tabs.Tab):
 
     def setAdd(self, v):
         # when a control changes, update node and perform
-        self.node.add = v
+        self.node.params.add = v
         self.changed()
 
     def setMul(self, v):
         # when a control changes, update node and perform
-        self.node.mul = v
+        self.node.params.mul = v
         self.changed()
 
     # causes the tab to update itself from the node
@@ -58,9 +62,11 @@ class TabCurve(pcot.ui.tabs.Tab):
         # have to do canvas set up here to handle extreme undo events which change the graph and nodes
         self.w.canvas.setNode(self.node)
 
-        self.w.addSpin.setValue(self.node.add)
-        self.w.mulSpin.setValue(self.node.mul)
-        lut = genLut(self.node.mul, self.node.add)
+        p = self.node.params
+
+        self.w.addSpin.setValue(p.add)
+        self.w.mulSpin.setValue(p.mul)
+        lut = genLut(p.mul, p.add)
         if self.plot is None:
             # set up the initial plot
             # doing stuff without pyplot is weird!

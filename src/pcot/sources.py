@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, List, Set, SupportsFloat, Union, Iterable, Any, Tuple, Dict
 
 from pcot.documentsettings import DocumentSettings
-from pcot.filters import Filter
+from pcot.cameras.filters import Filter
 
 
 class SourcesObtainable(ABC):
@@ -119,7 +119,7 @@ class Source(SourcesObtainable):
         self.external = e
         return self
 
-    def setInputIdx(self, i: int):
+    def setInputIdx(self, i: Optional[int]):
         """Set the input index"""
         self.inputIdx = i
         return self

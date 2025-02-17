@@ -1,5 +1,5 @@
 """
-The input method for Datum archives (items saved using the DatumStore/FileArchive
+The input method for PCOT Datum archives (items saved using the DatumStore/FileArchive
 mechanism). These should have a MANIFEST file.
 """
 import logging
@@ -14,17 +14,17 @@ from pcot.dataformats import load
 from pcot.datum import Datum
 from pcot.imagecube import ChannelMapping
 from pcot.inputs.inputmethod import InputMethod
-from pcot.sources import nullSource, nullSourceSet
+from pcot.parameters.taggedaggregates import TaggedDict
 from pcot.ui import uiloader
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
 from pcot.utils.archive import FileArchive
-from pcot.utils.datumstore import DatumStore
+from pcot.utils.datumstore import DatumStore, Metadata
 
 logger = logging.getLogger(__name__)
 
 
-class DatumArchiveInputMethod(InputMethod):
+class PARCInputMethod(InputMethod):
     datum: Optional[Datum]
     fname: Optional[str]
     itemname: Optional[str]
@@ -40,6 +40,12 @@ class DatumArchiveInputMethod(InputMethod):
         self.manifest = {}
         self.mapping = ChannelMapping()
 
+    def setFileAndItem(self, fname, itemname='main'):
+        self.fname = fname
+        self.itemname = itemname
+        self.mapping = ChannelMapping()
+        return self
+
     def loadManifest(self):
         if self.fname is not None:
             a = DatumStore(FileArchive(self.fname))
@@ -48,11 +54,11 @@ class DatumArchiveInputMethod(InputMethod):
             self.manifest = {}
 
     def readData(self):
-        self.datum = load.datumarchive(self.fname, self.itemname, self.input.idx)
+        self.datum = load.parc(self.fname, self.itemname, self.input.idx)
         return self.datum
 
     def getName(self):
-        return "DatumArchive"
+        return "PARC"
 
     def serialise(self, internal):
         x = {'fname': self.fname, 'itemname': self.itemname}
@@ -75,8 +81,15 @@ class DatumArchiveInputMethod(InputMethod):
             self.itemname = None
             self.datum = None
 
+    def modifyWithParameterDict(self, d: TaggedDict) -> bool:
+        if d.parc.filename is not None:
+            self.fname = d.parc.filename
+            self.itemname = d.parc.itemname   # this will be defaulted to 'main' by the PARCDictType
+            return True
+        return False
+
     def createWidget(self):
-        return DatumArchiveMethodWidget(self)
+        return PARCMethodWidget(self)
 
 
 class Model(QtCore.QAbstractTableModel):
@@ -97,24 +110,24 @@ class Model(QtCore.QAbstractTableModel):
             # get a sorted list of the manifest keys
             keys = sorted(list(self.manifest.keys()))
             # and return the appropriate item
-            item = self.manifest[keys[index.row()]]
+            item: Metadata = self.manifest[keys[index.row()]]
             print(item)
             if index.column() == 0:
                 return keys[index.row()]            # column zero is the key
             else:
-                return item[index.column() - 1]     # columns 1-3 are elements of the tuple in the manifest
+                tmp = [item.description, item.datumtype, item.created.strftime('%Y-%m-%d %H:%M:%S')]
+                return tmp[index.column()-1]         # columns 1, 2, 3 are the size, type, date
 
 
-class DatumArchiveMethodWidget(MethodWidget):
+class PARCMethodWidget(MethodWidget):
     def __init__(self, m):
         super().__init__(m)
-        uiloader.loadUi("inputdatum.ui", self)
+        uiloader.loadUi("inputparc.ui", self)
         self.openButton.clicked.connect(self.openFile)
         self.tableView.doubleClicked.connect(self.itemSelected)
         self.tableView.setModel(Model(self, m.manifest))
         self.tableView.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
 
-        self.data.canvas.setMapping(m.mapping)
         # the canvas gets its "caption display" setting from the graph, so
         # we need to get it from the document, which is stored in the manager,
         # which we get from the input, which we get from the method. Ugh.

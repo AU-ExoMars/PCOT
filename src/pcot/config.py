@@ -10,7 +10,6 @@ from collections import deque
 from PySide2 import QtWidgets
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
 
 
 def getAssetAsString(fn, package="pcot.assets"):
@@ -37,8 +36,6 @@ def getUserName():
         return getpass.getuser()
 
 
-data = None
-
 data = configparser.ConfigParser()
 data.read_file(getAssetAsFile('defaults.ini'))
 data.read(['site.cfg', os.path.expanduser('~/.pcot.ini')], encoding='utf_8')
@@ -58,47 +55,47 @@ def getDef(key, fallback='nofallback'):
 
 
 class Recents:
-    paths = deque()
-    COUNT = 5
+    def __init__(self, count):
+        self.paths = deque()
+        self.count = count
 
-    @classmethod
-    def add(cls, path):
+    def add(self, path):
         path = os.path.realpath(path)
-        if path in cls.paths:
-            cls.paths.remove(path)
-        cls.paths.appendleft(path)
-        while len(cls.paths) > cls.COUNT:
-            cls.paths.pop()
+        if path in self.paths:
+            self.paths.remove(path)
+        self.paths.appendleft(path)
+        while len(self.paths) > self.count:
+            self.paths.pop()
 
-    @classmethod
-    def fetch(cls):
-        for i in range(cls.COUNT):
+    def fetch(self,config_data):
+        for i in range(self.count):
             name = "Recent{}".format(i)
             if name in data['Default']:
-                cls.paths.append(data['Default'][name])
+                self.paths.append(config_data['Default'][name])
 
-    @classmethod
-    def store(cls):
-        for i in range(len(cls.paths)):
+    def store(self, config_data):
+        for i in range(len(self.paths)):
             name = "Recent{}".format(i)
-            data['Default'][name] = cls.paths[i]
+            config_data['Default'][name] = self.paths[i]
+
+
+# create and load the recent files singleton
+_recents = Recents(5)
+_recents.fetch(data)
 
 
 def getRecents():
-    return Recents.paths
-
-
-Recents.fetch()
+    return _recents.paths
 
 
 def save():
-    Recents.store()
+    _recents.store(data)
     with open(os.path.expanduser('~/.pcot.ini'), 'w') as f:
         data.write(f)
 
 
 def setDefaultDir(kind, directory):
-    logger.info(f"Setting default dir for {kind} to {directory}")
+    logger.debug(f"Setting default dir for {kind} to {directory}")
     directory = os.path.realpath(directory)
     data['Locations'][kind] = directory
     save()
@@ -112,7 +109,7 @@ def getDefaultDir(kind):
 
 def addRecent(fn):
     fn = os.path.realpath(os.path.expanduser(fn))  # just make sure.
-    Recents.add(fn)
+    _recents.add(fn)
     setDefaultDir('pcotfiles', os.path.dirname(fn))
     save()
 
@@ -130,7 +127,7 @@ def getFileDialogOptions():
 def loadFilters():
     """Load the default filter sets from the resource directory, followed by user filters
     as specified in the .ini file."""
-    from pcot.filters import loadFilterSet
+    from pcot.cameras.filters import loadFilterSet
     from pathlib import Path
 
     # these can be overridden by the data in the config file
@@ -167,7 +164,7 @@ def addExprFuncHook(x):
     """Call this function with another function. This function is called with a Parser argument, and can add
     new functions, operators and properties. Consider using the @parserhook decorator instead - it does the
     same thing."""
-    logger.info(f"Adding parser hook {x}")
+    logger.debug(f"Adding parser hook {x}")
     exprFuncHooks.append(x)
 
 

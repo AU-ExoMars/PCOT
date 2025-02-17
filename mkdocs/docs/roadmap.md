@@ -3,16 +3,32 @@
 This is a rough guide, and things may change!
 
 ## Next major release: 0.9.0
-        
+
+* New node parameter system:
+    * makes the node self-documenting (node parameters appear as a table,
+    both in the "help" window and in the on-line documentation
+    * provides better type and range checking when the node is modified in code
+    * provides support for batch files
+* You now create nodes by dragging from the palette with the left mouse button
+* batch runner
+    * allows a PCOT file to be loaded and its parameters (i.e. node settings,
+    inputs and outputs) to be modifed with a "batch file" before running. The
+    outputs can be saved to files. 
+    * Batch files have a simple but flexible and powerful language for
+    describing the changes to nodes and inputs, and how the results should
+    be written to files.
+    
+## Release 0.10.0
+
+* "Camera pack" files which hold filter and calibration data for particular
+setups in an extensible format
+* Flatfield calibration code
+
+
 ## Future releases
 
 * Reorganise the node palette
 * Obtain user stories and feedback
-* Documentation
-    * User guide
-        * Page on *expr* nodes
-        * documentation for properties of nodes for library use (e.g. *expr* nodes have ".expr")
-        * How-to for common tasks (the "cookbook")
 
 * Calibration: the PCT detection node is fine, but does nothing!
 

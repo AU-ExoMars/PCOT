@@ -13,6 +13,7 @@ import logging
 import sys
 import uuid
 from collections import deque
+from html import escape
 from io import BytesIO
 from typing import List, Dict, Tuple, ClassVar, Optional, TYPE_CHECKING, Callable, Union, Any
 
@@ -197,6 +198,15 @@ class XFormType:
         # parent node threw an exception.
         self.alwaysRunAfter = False
 
+        # If this is not None, then this type has a set of parameters which can be
+        # edited in a parameter file. These will be serialised using a different
+        # mechanism. This field will contain information about those parameters as
+        # TaggedAggregateType objects (typically a structure with a TaggedDictType at the root).
+        # Within each node, a mirror of that structure containing the actual data will
+        # exist, such as a TaggedDict.
+
+        self.params = None
+
     def md5(self):
         """returns a checksum of the sourcecode for the module defining the type, MD5 hash, used to check versions"""
         return self._md5
@@ -309,21 +319,29 @@ class XFormType:
 
     def serialise(self, xform):
         """maybe override - return a dict of all values belonging to the node which should be saved.
+        If you're doing "complex TaggedAggregate serialisation" this should also build a params field
+        in the node containing a TaggedDict of the appropriate type.
             This happens in addition to autoserialisation/deserialisation
         """
         pass
 
     def deserialise(self, xform, d):
-        """maybe override - given a dictionary, set the values in the node from the dictionary
+        """maybe override - given a dictionary, set the values in the node from the dictionary.
+        If you are doing "complex TaggedAggregate serialisation" you should probably leave this
+        alone and instead write a nodeDataFromParams() method.
             This happens in addition to autoserialisation/deserialisation
         """
+        pass
+
+    def nodeDataFromParams(self, xform):
+        """override if you are doing "complex TaggedAggregate serialisation - build the node's data
+        from the node's .params field."""
         pass
 
     def createTab(self, xform, window):
         """usually override this - create a tab connected to this xform, parented to a main window.
             Might return none, if this xform doesn't have a meaningful UI.
             """
-
         return None
 
     def clearData(self, xform):
@@ -332,18 +350,39 @@ class XFormType:
         """
         pass
 
+    def getBatchOutputValue(self, node):
+        """
+        Similarly, some nodes generate output values which can be saved by a runner, but don't necessarily
+        have an actual output. We can get that behaviour here. By default, this will return the first output,
+        but nodes like "sink" which don't have an output can override it. It will also throw an error if there
+        is no first output.
+        """
+        if len(self.outputConnectors) == 0:
+            raise Exception(f"Node type {self.name} has no output connectors")
+        else:
+            return node.getOutputDatum(0)
 
-    @staticmethod
-    def buildText(n):
+    def getDisplayName(self, n):
+        """Return the display text. Usually this is the displayName field but it can be overriden (which is why
+        it's in the type class, not the node class"""
+        return n.displayName
+
+    def buildTextWithFont(self, n, font):
+        """Used to build the text for the rectangle in buildText. None for the font means use default"""
+        x, y = n.xy
+        nam = self.getDisplayName(n)
+        text = graphscene.GText(n.rect, nam, n)
+        text.setPos(x + graphscene.XTEXTOFFSET, y + graphscene.YTEXTOFFSET + graphscene.CONNECTORHEIGHT)
+        text.setFont(font if font else graphscene.mainFont)
+        return text
+
+    def buildText(self, n):
         """build the text element of the graph scene object for the node.
         By default, this will just create static text, but can be overridden.
+        The text will be in bold if the node has been renamed.
         """
-        x, y = n.xy
-        text = graphscene.GText(n.rect, n.displayName, n)
-        text.setPos(x + graphscene.XTEXTOFFSET, y + graphscene.YTEXTOFFSET + graphscene.CONNECTORHEIGHT)
-        text.setFont(graphscene.mainFont)
-
-        return text
+        f = None if n.displayName == self.name else graphscene.boldMainFont
+        return self.buildTextWithFont(n, f)
 
     def resizeDone(self, n):
         """The node's onscreen box has been resized"""
@@ -471,6 +510,9 @@ class XForm:
     # recursion avoidance
     inUIChange: bool
 
+    # the serialised parameters in a TaggedAggregate, or None. Usually it's TaggedDict.
+    params: Optional['TaggedAggregate']
+
     def __init__(self, tp, dispname):
         """constructor, takes type and displayname"""
         self.instance = None
@@ -497,6 +539,9 @@ class XForm:
         self.runTime = 0
         self.timesPerformed = 0  # used for debugging/optimising
         self.rebuildTabsAfterPerform = False
+
+        # create default parameter data
+        self.params = None if tp.params is None else tp.params.create()
 
         # UI-DEPENDENT DATA DOWN HERE
 
@@ -542,6 +587,11 @@ class XForm:
         """clear the error state and rect text"""
         self.error = None
         self.rectText = None
+
+    def getDisplayName(self):
+        """Return the display text. Usually this is the displayName field but it can be overriden, e.g.
+        by expr where the expression is displayed if the name is "expr" """
+        return self.type.getDisplayName(self)
 
     def clearOutputsAndTempData(self):
         """
@@ -610,12 +660,25 @@ class XForm:
 
         # add autoserialised data
         d.update(self.type.doAutoserialise(self))
-        # and run the additional serialisation method
+        # and run the additional serialisation tasks, serialising things which
+        # can't be autoserialised (because they aren't JSON-serialisable) and
+        # perhaps converting data into self.params fields.
         d2 = self.type.serialise(self)
         if d2 is not None:
             # avoids a type check problem
             d.update(d2 or {})
+
         Canvas.serialise(self, d)
+
+        # serialise the parameters into the same dict
+        if self.params is not None:
+            # but flag an error if there are keys which already exist because that will cause problems
+            # when deserialising.
+            d2 = self.params.serialise()
+            intersect = set(d.keys()).intersection(set(d2.keys()))
+            if len(intersect) > 0:
+                raise Exception(f"Parameter keys already exist in serialised node data: {intersect} (are you using both TaggedAggregate and autoserialise?)")
+            d.update(d2)
         return d
 
     def deserialise(self, d):
@@ -642,8 +705,21 @@ class XForm:
 
         # autoserialised data
         self.type.doAutodeserialise(self, d)
-        # run the additional deserialisation method
+        # deserialise parameter data which need to be processed another way, not via
+        # self.type.params and self.params
+        # deserialise parameters
+        if self.type.params is not None:
+            # this will replace the defaults.
+            try:
+                self.params = self.type.params.deserialise(d)
+            except ValueError as e:
+                logger.critical(f"Error deserialising parameters for node {self.displayName}: {str(e)}")
+                ui.log(f'  <font color="red"><b>Error deserialising parameters for node {self.displayName}</b></font>')
+                ui.log(f'  <font color="red"><b>{str(e)}</b></font>')
+        # finally do any extra deserialisation tasks, such as deserialising things which
+        # can't be autoserialised and such as converting self.params into data
         self.type.deserialise(self, d)
+        self.type.nodeDataFromParams(self)
 
     def getOutputType(self, i) -> Optional['pcot.datumtypes.Type']:
         """return the actual type of an output, taking account of overrides (node outputTypes).
@@ -679,7 +755,10 @@ class XForm:
 
     def getOutputDatum(self, i):
         """Get a 'raw' output as just a datum"""
-        return self.outputs[i]  # may raise IndexError
+        try:
+            return self.outputs[i]  # may raise IndexError
+        except IndexError as e:
+            raise IndexError(f"Node '{self.displayName}' has no output {i}") from e
 
     def getOutput(self, i, tp=None):
         """get an output, raising an exception if the type is incorrect or the index is output range
@@ -1140,7 +1219,7 @@ class XFormGraph:
                 for x in node.tabs:
                     x.nodeDeleted()
             self.nodes.remove(node)
-            print(f"DELETE {node.name}")
+            logger.debug(f"DELETE {node.name} {node.type.name}")
             del self.nodeDict[node.name]
 
             # having deleted the node try to call all the children. That might seem a bit
@@ -1178,19 +1257,22 @@ class XFormGraph:
         for n in self.nodes:
             n.runTime = None
 
-    def changed(self, node=None, runAll=False, uiOnly=False, forceRunDisabled=False):
-        """Called when a control in a node has changed, and the node needs to rerun (as do all its children recursively).
+    def changed(self, node=None, runAll=False, uiOnly=False, forceRunDisabled=False, invalidateInputs=True):
+        """Called when a control in a node has changed, and the node needs to rerun (as do all its+ children recursively).
         If called on a normal graph, will perform the graph or a single node within it,
         and all dependent nodes; called on a macro will do the same thing in instances, starting at the
         counterpart node for that in the macro prototype.
 
         If forceRunDisabled is true, any disabled nodes will be temporarily activated.
         This allows scripts with disabled nodes to run correctly.
+
+        We don't want to invalidate inputs and force a reload when doing undo/redo. This is because
+        the data may have gone away (issue #58). So we have a flag to avoid this.
         """
 
         self.forceRunDisabled = forceRunDisabled
         if (not uiOnly) and (XFormGraph.autoRun or runAll):
-            if runAll:
+            if runAll and invalidateInputs:
                 self.doc.inputMgr.invalidate()
             if self.isMacro:
                 # distribute changes in macro prototype to instances.
@@ -1378,7 +1460,7 @@ class XFormGraph:
     def getByDisplayName(self, name, single=False):
         """Return a list of nodes which have this display name. if single is True, return
         the first one only and ensure there is only one item."""
-        x = [x for x in self.nodes if x.displayName == name]
+        x = [x for x in self.nodes if x.getDisplayName() == name]
         if single:
             if len(x) == 1:
                 return x[0]
@@ -1439,6 +1521,17 @@ class XFormGraph:
         """If this node creates an ROI or ROIs, return it/them as a list, otherwise None (not an empty list)"""
         return None
 
+    def nodeDataFromParams(self):
+        """Used in the parameter file runner to set the node data from parameters which have been
+        modified since the node was created. This does mean this gets called at least twice - once
+        when the node is created, and once when the node is modified."""
+        for n in self.nodes:
+            n.type.nodeDataFromParams(n)
+
+    def getAnyErrors(self) -> List[XForm]:
+        """Return a list of all nodes which have errors in the graph - used in batch files after a run"""
+        return [x for x in self.nodes if x.error is not None]
+
 
 class XFormROIType(XFormType):
     """Class for handling ROI xform types, does most of the heavy lifting of the node's perform
@@ -1456,15 +1549,6 @@ class XFormROIType(XFormType):
         self.addOutputConnector("img", Datum.IMG, "image with ROI")  # image+roi
         self.addOutputConnector("roi", Datum.ROI, "the region of interest")
 
-        self.autoserialise = (
-            ('caption', 'unknown'),
-            ('captiontop', False),
-            ('fontsize', 10),
-            ('thickness', 2),
-            ('colour', (1, 1, 0)),
-            ('drawbg', True)
-        )
-
     def setProps(self, node, img):
         """Set properties in the node and ROI attached to the node. Assumes img is a valid
         imagecube, and node.roi is the ROI"""
@@ -1473,8 +1557,7 @@ class XFormROIType(XFormType):
     def perform(self, node):
         img = node.getInput(self.IN_IMG, Datum.IMG)
         # label the ROI
-        node.roi.label = node.caption
-        node.setRectText(node.caption)
+        node.setRectText(node.roi.label)
 
         if img is None:
             # no image

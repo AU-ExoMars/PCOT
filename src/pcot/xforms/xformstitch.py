@@ -9,6 +9,7 @@ from PySide2.QtGui import QKeyEvent
 from pcot import dq
 from pcot.datum import Datum
 from pcot.imagecube import ImageCube
+from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType, taggedPointListType
 from pcot.sources import MultiBandSource, nullSource
 from pcot.ui.tabs import Tab
 from pcot.xform import XFormType, xformtype, XFormException
@@ -43,13 +44,39 @@ class XFormStitch(XFormType):
         for i in range(NUMINPUTS):
             self.addInputConnector(str(i), Datum.IMG, desc="Input image {}".format(i))
         self.addOutputConnector("", Datum.IMG, desc="Output image")
-        self.autoserialise = ('offsets', 'order', 'showImage')
+
+        self.params = TaggedDictType(
+            order=("Order of images", TaggedListType(int, list(range(NUMINPUTS)), 0)),
+            showImage=("Show image", bool, True),
+            offsets=("Offsets of images", taggedPointListType, None))
+
+    def serialise(self, node):
+        """Do CTAS (Complex Tagged Aggregate Serialisation) on the node into the existing parameters field"""
+        node.params.offsets.clear()  # remove old offsets from the tagged list
+        # add the actual offsets to the tagged list
+        for i in range(NUMINPUTS):
+            p = node.params.offsets.append_default()
+            p.x, p.y = node.offsets[i]
+
+        node.params.order.clear()
+        for v in node.order:
+            node.params.order.append(v)
+
+
+    def nodeDataFromParams(self, node):
+        """CTAS from the tagged aggregate back into the node"""
+        # convert order to plain list in node
+        node.order = node.params.order.get()
+        # convert offsets to list of x,y tuples in node
+        node.offsets = []
+        for p in node.params.offsets:
+            node.offsets.append((p.x, p.y))
 
     def createTab(self, n, w):
         return TabStitch(n, w)
 
     def init(self, node):
-        # these are the image offsets
+        # these are the image offsets we really use.
         node.offsets = [(i * 50, i * 50 - 200) for i in range(NUMINPUTS)]
         # and the default ordering - this maps from run order to input number
         node.order = [i for i in range(NUMINPUTS)]
@@ -84,11 +111,17 @@ class XFormStitch(XFormType):
         maxx = max([p[0] + img.w for p, img in zip(activeInputOffsets, activeInputImages)])
         maxy = max([p[1] + img.h for p, img in zip(activeInputOffsets, activeInputImages)])
 
-        # create an image of that size to compose the images into
+        # create an image of that size to compose the images into. We have to deal with the fact that
+        # 1-band images are (h,w) while multiband images are (h,w,n).
         chans = activeInputImages[0].channels
-        img = np.zeros((maxy - miny, maxx - minx, chans), dtype=np.float32)
-        unc = np.zeros((maxy - miny, maxx - minx, chans), dtype=np.float32)
-        dqs = np.full((maxy - miny, maxx - minx, chans), dq.NODATA | dq.NOUNCERTAINTY, dtype=np.uint16)
+        if chans == 1:
+            img = np.zeros((maxy - miny, maxx - minx), dtype=np.float32)
+            unc = np.zeros((maxy - miny, maxx - minx), dtype=np.float32)
+            dqs = np.full((maxy - miny, maxx - minx), dq.NODATA | dq.NOUNCERTAINTY, dtype=np.uint16)
+        else:
+            img = np.zeros((maxy - miny, maxx - minx, chans), dtype=np.float32)
+            unc = np.zeros((maxy - miny, maxx - minx, chans), dtype=np.float32)
+            dqs = np.full((maxy - miny, maxx - minx, chans), dq.NODATA | dq.NOUNCERTAINTY, dtype=np.uint16)
 
         # compose the sources - this is a channel-wise union of all the sources
         # in all the images.

@@ -1,9 +1,8 @@
 from PySide2 import QtWidgets, QtCore
-from PySide2.QtCore import QPointF, QPoint
+from PySide2.QtCore import QPointF
 from PySide2.QtGui import QPaintEvent, QPainter, QPen, QColor, QBrush
 
-from pcot import ui
-from pcot.filters import wav2RGB
+from pcot.cameras.filters import wav2RGB
 
 
 class SpectrumWidget(QtWidgets.QWidget):

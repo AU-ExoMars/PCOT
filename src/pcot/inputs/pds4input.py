@@ -1,5 +1,7 @@
+import fnmatch
 import logging
 import os
+import re
 from pathlib import Path
 from typing import Optional, List
 
@@ -16,6 +18,7 @@ from pcot.dataformats.pds4 import PDS4ImageProduct, ProductList
 from pcot.datum import Datum
 from pcot.imagecube import ChannelMapping
 from pcot.inputs.inputmethod import InputMethod
+from pcot.parameters.taggedaggregates import TaggedDict
 from pcot.ui import uiloader
 from pcot.ui.canvas import Canvas
 from pcot.ui.help import HelpWindow
@@ -169,6 +172,16 @@ class PDS4InputMethod(InputMethod):
         except KeyError as e:
             ui.error(f"can't read '{e}' from serialised PDS4 input data")
 
+    def modifyWithParameterDict(self, d: TaggedDict) -> bool:
+        m = d.pds4
+        if m.directory is None:
+            return False  # no change to this input (directory must be provided)
+
+        self._getFilesFromParameterDict(m)
+
+        plist = [DataProduct.from_file(Path(os.path.join(self.dir, f))) for f in self.files]
+        self.setProducts(plist)
+        return True
 
 class ImageMarkerItem(QtWidgets.QGraphicsRectItem):
     """Marker for images"""
@@ -215,7 +228,6 @@ class PDS4ImageMethodWidget(MethodWidget):
 
         self.recurseBox.setCheckState(Qt.Checked if self.method.recurse else Qt.Unchecked)
 
-        self.canvas.setMapping(m.mapping)
         self.canvas.setGraph(self.method.input.mgr.doc.graph)
         self.canvas.setPersister(m)
 

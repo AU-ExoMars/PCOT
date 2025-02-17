@@ -1,4 +1,5 @@
 from pcot.datum import Datum
+from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.xform import xformtype, XFormType
 from pcot.xforms.tabdata import TabData
 
@@ -18,6 +19,7 @@ class XformSink(XFormType):
         # set up a single input which takes an datum of any type. The connector could have
         # a name in more complex node types, but here we just have an empty string.
         self.addInputConnector("", Datum.ANY)
+        self.params = TaggedDictType()  # no parameters
 
     # this creates a tab when we want to control or view a node of this type. This uses
     # the built-in TabImage, which contains an OpenCV image viewer.
@@ -52,3 +54,8 @@ class XformSink(XFormType):
     def clearData(self, node):
         node.data = None
         node.setRectText("")
+
+    def getBatchOutputValue(self, node):
+        """This is the value which will be used in a batch file - a parameter file - as
+        an output value"""
+        return node.data

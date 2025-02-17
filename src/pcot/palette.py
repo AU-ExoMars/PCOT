@@ -10,6 +10,10 @@ from pcot.ui.collapser import Collapser
 from pcot.xform import XFormType, XFormException
 import pcot.ui as ui
 
+import logging 
+
+logger = logging.getLogger(__name__)
+
 view = None
 
 # The groups into which the buttons are sorted - it's a constant.
@@ -63,13 +67,13 @@ class PaletteButton(QtWidgets.QPushButton):
         """handle a mouse down event"""
         super().mousePressEvent(event)
         if event.button() == Qt.LeftButton:
-            self.click()
-        elif event.button() == Qt.RightButton:
             self.mousePos = event.pos()  # save click position for dragging
 
     def mouseMoveEvent(self, event):
-        """handle mouse move for dragging with RMB"""
-        if event.buttons() != QtCore.Qt.RightButton:
+        """handle mouse move for dragging with LMB.
+        Note that the node is actually created when the box is dropped in GraphView.dropEvent.
+        """
+        if event.buttons() != QtCore.Qt.LeftButton:
             return
         mimeData = QtCore.QMimeData()
         # create a byte array and a stream that is used to write into

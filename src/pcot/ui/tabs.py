@@ -292,8 +292,8 @@ class Tab(QtWidgets.QWidget):
 
     def retitle(self):
         """force update of tab title and return new title"""
-        t = self.node.displayName
-        if self.node.displayName != self.node.type.name:
+        t = self.node.type.getDisplayName(self.node)
+        if t != self.node.type.name:
             t += f" ({self.node.type.name})"
         # removing the display of error states in the title because (a) they can be extremely long and (b) they
         # are very difficult to update. The error state is displayed in the graph and the lower widget.

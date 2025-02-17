@@ -6,7 +6,9 @@ import numpy as np
 from pcot.utils.table import Table
 
 DQs = dict()  # dictionary of name->poweroftwo gets created by calls to reg
+
 defs = dict()  # poweroftwo->data
+charmap = dict() # character -> data
 
 NUMBITS = 16
 
@@ -18,14 +20,15 @@ class DQDefinition:
     char: str
 
 
-def reg(name, bit, char, desc):
+def reg(name, poweroftwo, char, desc):
     global DQs, defs
-    b = np.uint16(1 << bit)
+    b = np.uint16(1 << poweroftwo)
 
     d = DQDefinition(name, b, desc, char)
 
     DQs[name] = b
     defs[b] = d
+    charmap[char] = d
     return b        # return bit value
 
 
@@ -50,6 +53,15 @@ def chars(bits, shownone=False):
         b = 1 << i
         if (b & bits) != 0:
             out += defs[b].char if b in defs else f"|{b}|"
+    return out
+
+
+def fromChars(s):
+    """Inverse of chars: given a string of characters, return the corresponding bit field"""
+    out = 0
+    for c in s:
+        if c in charmap:
+            out |= charmap[c].bit
     return out
 
 

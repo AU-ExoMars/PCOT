@@ -1,14 +1,13 @@
 import json
-import os
-import shutil
-import tempfile
-from typing import Callable
+from pathlib import Path
+from typing import Callable, Union
 
 import numpy as np
 import zipfile
 from io import BytesIO
 
-import pcot.ui as ui
+import logging
+logger = logging.getLogger(__name__)
 
 
 class Archive:
@@ -54,11 +53,23 @@ class Archive:
         self.zip = None
         self.progressCallback = progressCallback
 
-    def __enter__(self):
+    def open(self):
+        """Must open the zip, setting self.zip to the zipfile.ZipFile object"""
         pass
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def close(self):
+        """Must close the zip file and set self.zip to None"""
         pass
+
+    def __enter__(self):
+        self.open()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def is_writable(self):
+        return self.mode in ['w', 'a']
 
     def is_open(self):
         return self.zip is not None
@@ -68,8 +79,12 @@ class Archive:
             raise Exception("Archive is not open for reading")
 
     def assert_write(self):
-        if self.mode != 'w':
+        if not self.is_writable():
             raise Exception("Archive is not open for writing")
+
+    def assert_unique_name(self, name):
+        if name in self.zip.namelist():
+            raise Exception(f"Name {name} is already in the archive")
 
     def progress(self, s):
         if self.progressCallback:
@@ -81,6 +96,7 @@ class Archive:
         self.assert_write()
         b = BytesIO()
         np.save(b, a)
+        self.assert_unique_name(name)
         self.zip.writestr(name, b.getvalue())
 
     def writeArrayAndGenerateName(self, a: np.ndarray):
@@ -89,11 +105,13 @@ class Archive:
         self.arrayct += 1
         return name
 
-    def writeStr(self, name: str, string: str):
+    def writeStr(self, name: str, string: str, permit_replace=False):
         if self.zip is None:
             raise Exception("Archive is not open")
         self.assert_write()
-        print(f"Writing to {name}")
+        logger.debug(f"Writing to {name} in {str(self)}")
+        if not permit_replace:
+            self.assert_unique_name(name)
         # I'm aware it'll do the encoding anyway, but I wanted to make it explicit
         self.zip.writestr(name, string.encode('utf-8'))
 
@@ -144,12 +162,19 @@ class Archive:
         else:
             return d
 
-    def writeJson(self, name, d):
+    def writeJson(self, name, d, permit_replace=False):
+        """Write a JSON-serisalisable object. If permit_replace is true, we can replace
+        an item with the same name. Otherwise we'll get an exception. This will be raised
+        before the converted arrays get written.
+        """
         if self.zip is None:
             raise Exception("Archive is not open")
+        if not permit_replace:
+            # do this BEFORE we convert the arrays to tags. It gets done in writeStr too!
+            self.assert_unique_name(name)
         d = self.convertArraysToTags(d)
         s = json.dumps(d, sort_keys=True, indent=4)
-        self.writeStr(name, s)
+        self.writeStr(name, s, permit_replace=permit_replace)
 
     def readJson(self, name):
         if self.zip is None:
@@ -159,39 +184,41 @@ class Archive:
         d = self.convertTagsToArrays(d)
         return d
 
+    def getNames(self):
+        return self.zip.namelist()
+
 
 class FileArchive(Archive):
     """
     Used for ZIP files on disk.
     """
 
-    def __init__(self, name, mode='r',  progressCallback: Callable[[str], None] = None):
-        """Open a Zip archive on disk."""
+    def __init__(self, path: Union[Path,str], mode='r',  progressCallback: Callable[[str], None] = None):
+        """Open a Zip archive on disk.
+        The mode is 'r' for read, 'w' for write, and 'a' for append.
+        """
+        assert mode in ['r', 'w', 'a']
         super().__init__(mode, progressCallback=progressCallback)
-        self.name = name
-        self.tempdir = None
-        self.tempfilename = None
-        self.arrayct = 0
+        self.path = path
 
-    def __enter__(self):
-        if self.mode == 'w':
-            self.tempdir = tempfile.mkdtemp()
-            self.tempfilename = os.path.join(self.tempdir, 'temp.pcot')
-            self.zip = zipfile.ZipFile(self.tempfilename, self.mode, compression=zipfile.ZIP_DEFLATED)
-        else:
-            self.zip = zipfile.ZipFile(self.name, self.mode, compression=zipfile.ZIP_DEFLATED)
-        return self
+    def open(self):
+        self.zip = zipfile.ZipFile(self.path, self.mode.lower(), compression=zipfile.ZIP_DEFLATED)
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.mode.lower() == 'a':
+            # if we're doing append, now the file is open we should try to work out
+            # the next array number.
+            array_items = [x[5:] for x in self.zip.namelist() if x.startswith("ARAE-")]
+            if len(array_items) > 0:
+                self.arrayct = max([int(x) for x in array_items]) + 1
+        logger.debug(f"Opened {self}")
+
+    def close(self):
         if self.zip is not None:
             self.zip.close()
             self.zip = None
-            if self.mode == 'w':
-                if exc_type is None:  # we ONLY write the destination archive if there were no exceptions!
-                    shutil.move(self.tempfilename, self.name)
-                else:
-                    ui.warn("File did not save due to an exception.")
-                shutil.rmtree(self.tempdir)
+
+    def __str__(self):
+        return f"FileArchive({self.path, self.mode})"
 
 
 class MemoryArchive(Archive):
@@ -200,6 +227,7 @@ class MemoryArchive(Archive):
     """
 
     mode: bool      # 'r' or 'w', set by subclass
+    id: int = 0     # unique ID for each archive
 
     def __init__(self, data=None, progressCallback=None):
         if data is None:
@@ -210,16 +238,20 @@ class MemoryArchive(Archive):
             mode = 'r'
         super().__init__(mode, progressCallback=progressCallback)
         self.data = data
+        self.id = MemoryArchive.id
+        MemoryArchive.id += 1
 
-    def __enter__(self):
+    def open(self):
         self.zip = zipfile.ZipFile(self.data, self.mode, compression=zipfile.ZIP_DEFLATED)
-        return self
+        logger.debug(f"Opened {self}")
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def close(self):
         if self.zip is not None:
-            print("CLosing archive")
             self.zip.close()
             self.zip = None
 
     def get(self) -> BytesIO:
         return self.data
+
+    def __str__(self):
+        return f"MemoryArchive(id={self.id}, {self.mode})"

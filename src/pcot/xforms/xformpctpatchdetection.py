@@ -18,16 +18,17 @@ from PySide2.QtGui import QImage, QPixmap
 from PySide2.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QMessageBox
 
 from pcot.datum import Datum
+from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.rois import ROICircle
 from pcot.ui.tabs import Tab
 from pcot.xform import xformtype, XFormType
 
 # Set the default values for object detection parameters
 # definitions of these parameters found in parameter description button on node
-DP = 1
-MINDISTANCE = 27
-CANNYHIGHPARAM = 55
-CANNYLOWPARAM = 24
+DP = 1.0
+MINDISTANCE = 27.0
+CANNYHIGHPARAM = 55.0
+CANNYLOWPARAM = 24.0
 MINRADIUS = 8
 MAXRADIUS = 24
 
@@ -39,6 +40,17 @@ def createInterpolatedROI(x, y, r, label):
     r = ROICircle(x, y, r, label=label)
     r.colour = (0, 1, 1)
     return r
+
+
+def toPair(x):
+    """
+    If the input is not a coordinate pair (x,y) but an ROICircle, convert to pair.
+    Ugly.
+    """
+    if isinstance(x, ROICircle):
+        return x.x, x.y
+    else:
+        return x
 
 
 # This class defines the back-end functionality of the node
@@ -60,9 +72,18 @@ class XformPCTPatchDetection(XFormType):
         self.addInputConnector("img", Datum.IMG)
         self.addOutputConnector("img+rois", Datum.IMG)
         # set following node variables to be serialised when required, which is needed for saving and the undo stack
-        self.autoserialise = ("dp", "minDist", "cannyHighParam",
-                              "cannyLowParam", "minRadius", "maxRadius",
-                              "parametersLocked")
+        self.autoserialise = ("parametersLocked",)  # this is kept as autoserialise but not a parameter
+
+        # register parameters for the OpenCV HoughCircles detection
+        # these should match the default values of the parameter sliders and be within slider limits
+        self.params = TaggedDictType(
+            dp=("Inverse ratio of the accumulator resolution to the image resolution for Hough detections", float, DP),
+            minDist=("Minimum distance between the centers of the detected circles", float, MINDISTANCE),
+            cannyHighParam=("Higher of the two Canny edge detection parameters", float, CANNYHIGHPARAM),
+            cannyLowParam=("Lower of the two CAnny edge detection parameters", float, CANNYLOWPARAM),
+            minRadius=("Minimum circle radius for patch detection (pixels)", int, MINRADIUS),
+            maxRadius=("Maximum circle radius for patch detection (pixels)", int, MAXRADIUS),
+        )
 
     def createTab(self, node, window):
         """
@@ -79,15 +100,6 @@ class XformPCTPatchDetection(XFormType):
         node.inputImg = None
         # the detections Datum
         node.detections = None
-
-        # register parameters for the OpenCV HoughCircles detection
-        # these should match the default values of the parameter sliders and be within slider limits
-        node.dp = DP
-        node.minDist = MINDISTANCE
-        node.cannyHighParam = CANNYHIGHPARAM
-        node.cannyLowParam = CANNYLOWPARAM
-        node.minRadius = MINRADIUS
-        node.maxRadius = MAXRADIUS
 
         # additionally create a variable to hold the state of the paramater lock checkbox
         # this needs to be held as a variable in the node to allow it to use the undo stack and saving
@@ -183,12 +195,14 @@ class XformPCTPatchDetection(XFormType):
 
                 # now try to detect flippage and modify the detections if required
                 self.detectFlippage(node)
+                node.detections.labelROIs()
 
                 # create image showing patch detections and identities to the user
                 self.plotDetections(node, finalCirclesList, workingImg)
                 # set the ROIs on the input image (which is a copy of the actual input) - this
                 # replaces any ROIs already there!
-                node.inputImg.rois = [x for x in node.detections.toROIList() if x is not None]
+                roisList = node.detections.toROIList()
+                node.inputImg.rois = [x for x in roisList if x is not None]
                 # and that will be the output image
                 node.setOutput(0, Datum(Datum.IMG, node.inputImg, node.inputImg.sources))
             else:
@@ -226,15 +240,15 @@ class XformPCTPatchDetection(XFormType):
             workingImg = workingImg[node.detectionExtremities[2]:node.detectionExtremities[3],
                          node.detectionExtremities[0]:node.detectionExtremities[1]]
             # additionally, cache some parameters that will be later changed
-            cachedParam1 = node.cannyHighParam
-            cachedParam2 = node.cannyLowParam
+            cachedParam1 = node.params.cannyHighParam
+            cachedParam2 = node.params.cannyLowParam
             # and alter the parameters temporarily for looser detections, limiting by slider minimums
-            node.cannyHighParam = max(node.cannyHighParam - 32, 20)
+            node.params.cannyHighParam = max(node.params.cannyHighParam - 32, 20)
             # two levels of looser detections depending on current detection state
             if looseDetectionsLevel == 1:
-                node.cannyLowParam = max(node.cannyLowParam - 5, 10)
+                node.params.cannyLowParam = max(node.params.cannyLowParam - 5, 10)
             elif looseDetectionsLevel == 2:
-                node.cannyLowParam = max(node.cannyLowParam - 8, 10)
+                node.params.cannyLowParam = max(node.params.cannyLowParam - 8, 10)
 
         # apply large kernel low blurs to smooth large sections like sand
         blurredWorkingImg = cv.GaussianBlur(workingImg, (17, 17), 1.5)
@@ -246,18 +260,18 @@ class XformPCTPatchDetection(XFormType):
         # https://docs.opencv.org/4.x/dd/d1a/group__imgproc__feature.html#ga47849c3be0d0406ad3ca45db65a25d2d
         circlesList = cv.HoughCircles(blurredWorkingImg,
                                       cv.HOUGH_GRADIENT,
-                                      dp=node.dp,
-                                      minDist=node.minDist,
-                                      param1=node.cannyHighParam,
-                                      param2=node.cannyLowParam,
-                                      minRadius=node.minRadius,
-                                      maxRadius=node.maxRadius)
+                                      dp=node.params.dp,
+                                      minDist=node.params.minDist,
+                                      param1=node.params.cannyHighParam,
+                                      param2=node.params.cannyLowParam,
+                                      minRadius=node.params.minRadius,
+                                      maxRadius=node.params.maxRadius)
 
         # post-processing if detections were loose on just PCT area:
         if looseDetectionsLevel != 0:
             # reset parameters to cached versions as they were changed
-            node.cannyHighParam = cachedParam1
-            node.cannyLowParam = cachedParam2
+            node.params.cannyHighParam = cachedParam1
+            node.params.cannyLowParam = cachedParam2
             # and index the detection coordinates to the original image
 
         if circlesList is not None:
@@ -663,9 +677,10 @@ class XformPCTPatchDetection(XFormType):
 
             if d.RG610 is None:
                 # RG610 Rule 2: If OG515 identified, RG610 = 1.8 x mean(Pyroceram, WCT-2065) > OG515 translation
-                meanLargePatchCoordinates = [int((d.Pyroceram[0] + d.WCT2065[0]) / 2),
-                                             int((d.Pyroceram[1] + d.WCT2065[1]) / 2)]
-                d.RG610, existingDetections = self.interpolationTranslation(node, "RG610", meanLargePatchCoordinates,
+                meanLargePatchCoordinates = [int((d.Pyroceram.x + d.WCT2065.x) / 2),
+                                             int((d.Pyroceram.y + d.WCT2065.y) / 2)]
+                d.RG610, existingDetections = self.interpolationTranslation(node, "RG610",
+                                                                            meanLargePatchCoordinates,
                                                                             d.OG515, 0.8,
                                                                             existingDetections)
 
@@ -704,9 +719,10 @@ class XformPCTPatchDetection(XFormType):
 
             if d.OG515 is None:
                 # OG515 Rule 2: If RG610 identified, OG515 = 0.56 x mean(Pyroceram, WCT-2065) > RG610 translation
-                meanLargePatchCoordinates = [int((d.Pyroceram[0] + d.WCT2065[0]) / 2),
-                                             int((d.Pyroceram[1] + d.WCT2065[1]) / 2)]
+                meanLargePatchCoordinates = [int((d.Pyroceram.x + d.WCT2065.x) / 2),
+                                             int((d.Pyroceram.y + d.WCT2065.y) / 2)]
                 d.OG515, existingDetections = self.interpolationTranslation(node, "OG515",
+                                                                            meanLargePatchCoordinates,
                                                                             d.RG610, -0.44,
                                                                             existingDetections)
 
@@ -756,6 +772,9 @@ class XformPCTPatchDetection(XFormType):
         """
         # check the translation components are not null
         if None not in (patchOne, patchTwo):
+            patchOne = toPair(patchOne)
+            patchTwo = toPair(patchTwo)
+
             predictedXY = [int((patchOne[0] + patchTwo[0]) / 2),
                            int((patchOne[1] + patchTwo[1]) / 2)]
             # check if any exiting detections closely match the coordinates and use those instead if so
@@ -777,10 +796,14 @@ class XformPCTPatchDetection(XFormType):
         """
         # check the translation components are not null
         if None not in (translationSource, translationDestination):
-            predictedXY = [translationDestination.x + int(
-                translationMagnitude * (translationDestination.x - translationSource.x)),
-                           translationDestination.y + int(
-                               translationMagnitude * (translationDestination.y - translationSource.y))]
+            # this is a bit bloody unpleasant because the two positions can be either ROIs or tuples/lists!
+            translationSource = toPair(translationSource)
+            translationDestination = toPair(translationDestination)
+
+            predictedXY = [translationDestination[0] + int(
+                translationMagnitude * (translationDestination[0] - translationSource[0])),
+                           translationDestination[1] + int(
+                               translationMagnitude * (translationDestination[1] - translationSource[1]))]
             # check if any exiting detections closely match the coordinates and use those instead if so
             predictedXY, replaced = self.checkExistingDetections(predictedXY, existingDetections)
             # if the predicted coordinates were a new detection, add to the detections array with a tag that it was a interpolated detection
@@ -799,8 +822,12 @@ class XformPCTPatchDetection(XFormType):
         """
         # check the parallelogram corners are not null
         if None not in (leftCorner, oppositeCorner, rightCorner):
-            predictedX = leftCorner.x + (rightCorner.x - oppositeCorner.x)
-            predictedY = leftCorner.y + (rightCorner.y - oppositeCorner.y)
+            leftCorner = toPair(leftCorner)
+            oppositeCorner = toPair(oppositeCorner)
+            rightCorner = toPair(rightCorner)
+
+            predictedX = leftCorner[0] + (rightCorner[0] - oppositeCorner[0])
+            predictedY = leftCorner[1] + (rightCorner[1] - oppositeCorner[1])
             predictedXY = [predictedX, predictedY]
             # check if any exiting detections closely match the coordinates and use those instead if so
             predictedXY, replaced = self.checkExistingDetections(predictedXY, existingDetections)
@@ -827,7 +854,7 @@ class XformPCTPatchDetection(XFormType):
 
         def getAngle(cc, p):
             """Find the angle between the centroid and a patch"""
-            if cc is None:
+            if cc is None or p is None:
                 return None
             cx, cy = cc
             return math.atan2(p.y - cy, p.x - cx)
@@ -1015,37 +1042,37 @@ class TabPCTPatchDetection(Tab):
     def changeDPValue(self):
         """Links dp slider to node instance variable"""
         self.mark()
-        self.node.dp = self.w.dpSlider.value()
+        self.node.params.dp = float(self.w.dpSlider.value())
         self.changed()
 
     def changeMinDistValue(self):
         """Links minDist slider to node instance variable"""
         self.mark()
-        self.node.minDist = self.w.minDistSlider.value()
+        self.node.params.minDist = float(self.w.minDistSlider.value())
         self.changed()
 
     def changeCannyHighValue(self):
         """Links cannyHighParam slider to node instance variable"""
         self.mark()
-        self.node.cannyHighParam = self.w.cannyHighSlider.value()
+        self.node.params.cannyHighParam = float(self.w.cannyHighSlider.value())
         self.changed()
 
     def changeCannyLowValue(self):
         """Links cannyLowParam slider to node instance variable"""
         self.mark()
-        self.node.cannyLowParam = self.w.cannyLowSlider.value()
+        self.node.params.cannyLowParam = float(self.w.cannyLowSlider.value())
         self.changed()
 
     def changeMinRadiusValue(self):
         """Links minRadius slider to node instance variable"""
         self.mark()
-        self.node.minRadius = self.w.minRadiusSlider.value()
+        self.node.params.minRadius = self.w.minRadiusSlider.value()
         self.changed()
 
     def changeMaxRadiusValue(self):
         """Links maxRadius slider to node instance variable"""
         self.mark()
-        self.node.maxRadius = self.w.maxRadiusSlider.value()
+        self.node.params.maxRadius = self.w.maxRadiusSlider.value()
         self.changed()
 
     def showParameterDescriptionsPopup(self):
@@ -1081,12 +1108,12 @@ More information can be found under the HoughCircles() method documentation <a h
         This function runs each time changed() is called and updates the visual states of the node
         """
         # backwards connection from detector parameters to sliders - needed for undo stack
-        self.w.dpSlider.setValue(self.node.dp)
-        self.w.minDistSlider.setValue(self.node.minDist)
-        self.w.cannyHighSlider.setValue(self.node.cannyHighParam)
-        self.w.cannyLowSlider.setValue(self.node.cannyLowParam)
-        self.w.minRadiusSlider.setValue(self.node.minRadius)
-        self.w.maxRadiusSlider.setValue(self.node.maxRadius)
+        self.w.dpSlider.setValue(self.node.params.dp)
+        self.w.minDistSlider.setValue(self.node.params.minDist)
+        self.w.cannyHighSlider.setValue(self.node.params.cannyHighParam)
+        self.w.cannyLowSlider.setValue(self.node.params.cannyLowParam)
+        self.w.minRadiusSlider.setValue(self.node.params.minRadius)
+        self.w.maxRadiusSlider.setValue(self.node.params.maxRadius)
 
         # update paramater lock checkbox
         self.w.lockParametersCheckBox.setChecked(self.node.parametersLocked)
@@ -1118,12 +1145,12 @@ More information can be found under the HoughCircles() method documentation <a h
         self.w.detectionsPlot.setScene(detectionsPlotScene)
 
         # update paramater slider labels to the current value in the node
-        self.w.dpValueLabel.setText(str(self.node.dp))
-        self.w.minDistValueLabel.setText(str(self.node.minDist))
-        self.w.cannyHighValueLabel.setText(str(self.node.cannyHighParam))
-        self.w.cannyLowValueLabel.setText(str(self.node.cannyLowParam))
-        self.w.minRadiusValueLabel.setText(str(self.node.minRadius))
-        self.w.maxRadiusValueLabel.setText(str(self.node.maxRadius))
+        self.w.dpValueLabel.setText(str(self.node.params.dp))
+        self.w.minDistValueLabel.setText(str(self.node.params.minDist))
+        self.w.cannyHighValueLabel.setText(str(self.node.params.cannyHighParam))
+        self.w.cannyLowValueLabel.setText(str(self.node.params.cannyLowParam))
+        self.w.minRadiusValueLabel.setText(str(self.node.params.minRadius))
+        self.w.maxRadiusValueLabel.setText(str(self.node.params.maxRadius))
 
 
 ####################################################################################################
@@ -1167,6 +1194,7 @@ class PCTPatchData:
             return r
 
         # build the ROIs from the patches
+        # We label these with tentative labels - the real labels will be set later because they could get "flipped".
         self.NG4 = patch2circ(NG4, "NG4")
         self.RG610 = patch2circ(RG610, "RG610")
         self.BG3 = patch2circ(BG3, "BG3")
@@ -1232,6 +1260,13 @@ class PCTPatchData:
             self.complete = True
         else:
             self.complete = False
+
+    def labelROIs(self):
+        """Label the ROIs with the correct patch names; they may have been flipped"""
+        for name in self.PATCHNAMES:
+            patch = getattr(self, name)
+            if patch is not None:
+                patch.label = name
 
     def toROIList(self):
         """return a list of the patches in the order of the patch names"""

@@ -19,6 +19,7 @@ for x in pathlib.Path(args.dir).rglob("*.pcot"):
     with FileArchive(x,'r') as a:
         graph = a.readJson("JSON")['GRAPH']
         nodeTypes = [x['type'] for x in graph.values()]
+#        print(x,nodeTypes)
         if args.node in nodeTypes:
             print(x)
         if args.func:

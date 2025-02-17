@@ -1,6 +1,5 @@
-
-
 # lookup by name for serialisation
+import os
 from copy import copy
 
 import numpy as np
@@ -45,7 +44,8 @@ class Type:
         return self.name
 
     def getSize(self, v):
-        """Get the size of the value in bytes. This is used to manage the cache in the DatumArchive.
+        """Get the size of the value in bytes. This is used to manage the cache in a DatumStore (which is used to
+        implement the PARC format).
         By default, items have negligible size. Override this method for types that have a significant size."""
         return 0
 
@@ -68,6 +68,36 @@ class Type:
         """Get the uncertainty of the datum as Datum of the same type. For example, an image will return an image of
         uncertainties. A vector will return a scalar."""
         raise pcot.datumexceptions.NoUncertainty(self.name)
+
+    def writeBatchOutputFile(self, d, outputDescription: 'TaggedDict'):
+        """Write to a file - this is the default implementation which just writes the
+        string representation of the value to a file followed by a newline.
+        The TaggedDict is of OutputDictType, and can be found in parameters/runner.py"""
+        from pcot.parameters.runner import VALID_IMAGE_OUTPUT_FORMATS
+
+        # get the extension
+        if outputDescription.file is None:
+            raise ValueError("No file specified for output")
+        extension = os.path.splitext(outputDescription.file)[1]
+        if len(extension)>0:
+            extension = extension[1:]   # strip the initial dot if there is an extension
+
+        if outputDescription.format is not None:
+            raise ValueError("Cannot specify format for text output")
+
+        # note that append implies clobber
+
+        if not (outputDescription.append or outputDescription.clobber) and os.path.exists(outputDescription.file):
+            raise FileExistsError(f"File {outputDescription.file} already exists")
+        if extension == 'parc':
+            raise ValueError("Cannot write default format (text) data to a PARC file")
+        elif extension in VALID_IMAGE_OUTPUT_FORMATS:
+            raise ValueError("Cannot write non-image data to an image file")
+        with open(outputDescription.file, "a" if outputDescription.append else "w") as f:
+            if outputDescription.prefix is not None:
+                f.write(outputDescription.prefix)
+            s = str(d.val)
+            f.write(s+"\n")
 
 
 # Built-in datum types
@@ -115,6 +145,26 @@ class ImgType(Type):
     def getSize(self, d):
         v = d.val
         return v.img.nbytes + v.uncertainty.nbytes + v.dq.nbytes
+
+    def writeBatchOutputFile(self, d, output: 'TaggedDict'):
+        if not (output.append or output.clobber) and os.path.exists(output.file):
+            raise FileExistsError(f"File {output.file} already exists and clobber is not set")
+        if output.prefix is not None:
+            raise ValueError("Cannot specify prefix text for image output")
+
+        # format is processed inside save, and if format is not provided it is generated
+        # from the extension of the file name.
+
+        # Description is also processed inside save, only being valid if the format is PARC.
+
+        img: pcot.imagecube.ImageCube = d.val
+        img.save(output.file,
+                 annotations=output.annotations,
+                 format=output.format,
+                 name=output.name,
+                 description=output.description,
+                 pixelWidth=output.width,
+                 append=output.append)
 
 
 class RoiType(Type):

@@ -54,6 +54,9 @@ def getHelpMarkdown(xt, errorState: XFormException = None, inApp=False):
     """generate Markdown help for both converting into in-app HTML display and
      generating external help files, given an XFormType and any error message. If inApp is true,
      the formatting may be slightly different."""
+     
+    from pcot.parameters.autodoc import generate_node_documentation
+    
 
     if xt.__doc__ is None:
         h = '**No help text is available**'
@@ -89,6 +92,9 @@ def getHelpMarkdown(xt, errorState: XFormException = None, inApp=False):
             t.add('Type', tp.name)
             t.add('Desc', "(none)" if desc == "" else desc)
         s += t.markdown() + '\n\n'
+        
+    s += "\n### Parameters\n"
+    s += generate_node_documentation(xt.name)
 
     if errorState is not None:
         s += f"# ERROR: [{errorState.code}] {errorState.message}"

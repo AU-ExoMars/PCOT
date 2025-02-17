@@ -39,7 +39,7 @@ def msg(t):
         logger.debug(f"LOG ui.msg {t}")
 
 
-def log(s, toStdout=True, timestamp=True):
+def log(s, toStdout=True, timestamp=True, loglevel=logging.INFO):
     """show a message in all window logs"""
 
     # add timestamp, just HMS will do.
@@ -50,11 +50,21 @@ def log(s, toStdout=True, timestamp=True):
         for x in mainwindow.MainUI.windows:
             x.logText.append(s)
     if toStdout:
-        logger.info(f"LOG ui.log {s}")
+        logger.log(loglevel, s)
 
 
-## show error on status bar, and log in red; will dump traceback to stdout if requested.
+def snark(s):
+    """This is a high-priority temporary debugging message - we can hunt and delete them later
+    (Carroll, L. & Holiday, H. (1902) The Hunting of the Snark, an Agony, in Eight Fits . New York, The Macmillan company."""
+    if application is not None:
+        s = f"{datetime.now().strftime('%H:%M:%S')} {s}"
+        for x in mainwindow.MainUI.windows:
+            x.logText.append(f'<font color="purple">{s}</font>')
+    logger.debug(f"LOG snark {s}")
+
+
 def error(s, tb=True):
+    """show error on status bar, and log in red; will dump traceback to stdout if requested."""
     if application is not None:
         m = f'<font color="red">Error: </font> {s}'
         for x in mainwindow.MainUI.windows:
@@ -64,8 +74,9 @@ def error(s, tb=True):
     msg("ERROR: {}".format(s))
 
 
-## show a warning dialog 
+
 def warn(s):
+    """show a warning dialog"""
     if app() is not None:
         application.beep()
         QtWidgets.QMessageBox.warning(None, 'WARNING', s)
@@ -84,11 +95,11 @@ def logXFormException(node, e):
 def versionWarn(n):
     if app() is not None:
         log('<font color="red">Version clash</font> in node \'{}\', type \'{}\'. Current: {}, file: {}'
-            .format(n.name, n.type.name, n.type.ver, n.savedver))
-        log('<font color="blue">Current MD5 hash: </font> {}'.format(n.type.md5()))
-        log('<font color="blue">MD5 hash in file:</font> {}'.format(n.savedmd5))
+            .format(n.name, n.type.name, n.type.ver, n.savedver), loglevel=logging.WARN)
+        log('<font color="blue">Current MD5 hash: </font> {}'.format(n.type.md5()), loglevel=logging.WARN)
+        log('<font color="blue">MD5 hash in file:</font> {}'.format(n.savedmd5), loglevel=logging.WARN)
 
-        log("WARNING DIALOG DISABLED")
+        log("WARNING DIALOG DISABLED", loglevel=logging.WARN)
         return
 
         warn(
@@ -102,9 +113,9 @@ def versionWarn(n):
                 .format(n.name, n.type.name, n.type.ver, n.savedver))
     else:
         log('Version clash in node \'{}\', type \'{}\'. Current: {}, file: {}'
-            .format(n.name, n.type.name, n.type.ver, n.savedver))
-        log('Current MD5 hash: {}'.format(n.type.md5()))
-        log('MD5 hash in file: {}'.format(n.savedmd5))
+            .format(n.name, n.type.name, n.type.ver, n.savedver), loglevel=logging.WARN)
+        log('Current MD5 hash: {}'.format(n.type.md5()), loglevel=logging.WARN)
+        log('MD5 hash in file: {}'.format(n.savedmd5), loglevel=logging.WARN)
 
 
 def decorateSplitter(splitter: QtWidgets.QSplitter, index: int):

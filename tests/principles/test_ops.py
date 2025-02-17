@@ -42,7 +42,7 @@ def test_scalar_ops(e, expected):
     pcot.setup()
     doc = Document()
     expr = doc.graph.create("expr")
-    expr.expr = e
+    expr.params.expr = e
     doc.run()
     n = expr.getOutput(0, Datum.NUMBER).n
     assert n == expected
@@ -69,12 +69,12 @@ def test_image_scalar_ops(e, expected):
 
     doc = Document()
 
-    greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # dark green
+    greenimg = genrgb(50, 50, 0, 0.5, 0, inpidx=0)  # dark green
     assert doc.setInputDirectImage(0, greenimg) is None
     green = doc.graph.create("input 0", displayName="GREEN input")
 
     expr = doc.graph.create("expr")
-    expr.expr = e
+    expr.params.expr = e
     expr.connect(0, green, 0, autoPerform=False)
 
     doc.run()
@@ -102,15 +102,15 @@ def test_image_image_ops(e, expected):
     pcot.setup()
     doc = Document()
 
-    greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # dark green
+    greenimg = genrgb(50, 50, 0, 0.5, 0, inpidx=0)  # dark green
     doc.setInputDirectImage(0, greenimg)
-    redimg = genrgb(50, 50, 2, 0, 0, doc=doc, inpidx=1)  # oversaturated red
+    redimg = genrgb(50, 50, 2, 0, 0, inpidx=1)  # oversaturated red
     doc.setInputDirectImage(1, redimg)
     green = doc.graph.create("input 0")
     red = doc.graph.create("input 1")
 
     expr = doc.graph.create("expr")
-    expr.expr = e
+    expr.params.expr = e
     expr.connect(0, green, 0, autoPerform=False)
     expr.connect(1, red, 0, autoPerform=False)
 
@@ -129,7 +129,7 @@ def test_scalar_div_zero():
     pcot.setup()
     doc = Document()
     expr = doc.graph.create("expr")
-    expr.expr = "1/0"
+    expr.params.expr = "1/0"
     doc.run()
     d = expr.getOutputDatum(0)
     assert d.val == Value(0, 0, dq.DIVZERO)
@@ -139,11 +139,11 @@ def test_image_division_by_scalar_zero():
     """Test of dividing an image by scalar zero. Also checks that 0/0 comes out as undefined and divzero."""
     pcot.setup()
     doc = Document()
-    greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # dark green
+    greenimg = genrgb(50, 50, 0, 0.5, 0, inpidx=0)  # dark green
     assert doc.setInputDirectImage(0, greenimg) is None
     green = doc.graph.create("input 0")
     expr = doc.graph.create("expr")
-    expr.expr = "a/0"
+    expr.params.expr = "a/0"
     expr.connect(0, green, 0)
     doc.run()
     d = expr.getOutput(0, Datum.IMG)
@@ -159,11 +159,11 @@ def test_scalar_divide_by_zero_image():
     lead to errors in those bands."""
     pcot.setup()
     doc = Document()
-    greenimg = genrgb(50, 50, 0, 0.5, 0, doc=doc, inpidx=0)  # must have zeroes in it!
+    greenimg = genrgb(50, 50, 0, 0.5, 0, inpidx=0)  # must have zeroes in it!
     assert doc.setInputDirectImage(0, greenimg) is None
     green = doc.graph.create("input 0")
     expr = doc.graph.create("expr")
-    expr.expr = "1/a"
+    expr.params.expr = "1/a"
     expr.connect(0, green, 0)
     doc.run()
     d = expr.getOutput(0, Datum.IMG)
@@ -176,7 +176,7 @@ def test_scalar_divide_by_zero_image():
 
     # now check 0/0
 
-    expr.expr = "0/a"
+    expr.params.expr = "0/a"
     doc.run()
     d = expr.getOutput(0, Datum.IMG)
 
@@ -194,7 +194,7 @@ def test_pixel_indexing_rgb():
     inputimg = genrgb(50, 50,
                       4, 5, 6,  # rgb
                       u=(7, 8, 9),
-                      doc=doc, inpidx=0)  # must have zeroes in it!
+                      inpidx=0)  # must have zeroes in it!
     inputimg.dq[0, 0, 0] = dq.SAT  # set 0,0 by hand
 
     assert doc.setInputDirectImage(0, inputimg) is None
@@ -228,11 +228,11 @@ def test_greyscale_simple():
     inputimg = genrgb(50, 50,
                       4, 5, 6,  # rgb
                       u=(7, 8, 9),
-                      doc=doc, inpidx=0)  # must have zeroes in it!
+                      inpidx=0)  # must have zeroes in it!
     assert doc.setInputDirectImage(0, inputimg) is None
     inpnode = doc.graph.create("input 0")
     expr = doc.graph.create("expr")
-    expr.expr = "grey(a)"
+    expr.params.expr = "grey(a)"
     expr.connect(0, inpnode, 0)
     doc.run()
     x = expr.getOutput(0, Datum.IMG)
@@ -242,7 +242,7 @@ def test_greyscale_simple():
     assert p.approxeq(Value(5, 8.082904))
 
     # and with an explicit false argument
-    expr.expr = "grey(a,0)"
+    expr.params.expr = "grey(a,0)"
     doc.run()
     x = expr.getOutput(0, Datum.IMG)
     p = x[0, 0]
@@ -256,11 +256,11 @@ def test_greyscale_human():
     inputimg = genrgb(50, 50,
                       4, 5, 6,  # rgb
                       u=(7, 8, 9),
-                      doc=doc, inpidx=0)  # must have zeroes in it!
+                      inpidx=0)  # must have zeroes in it!
     assert doc.setInputDirectImage(0, inputimg) is None
     inpnode = doc.graph.create("input 0")
     expr = doc.graph.create("expr")
-    expr.expr = "grey(a,1)"
+    expr.params.expr = "grey(a,1)"
     expr.connect(0, inpnode, 0)
     doc.run()
     x = expr.getOutput(0, Datum.IMG)
@@ -283,7 +283,7 @@ def test_all_expr_inputs():
 
     # create four images, four input nodes, connect them to the expr node inputs A-D.
     for i, (r, g, b) in enumerate(cols):
-        image = genrgb(50, 50, r, g, b, doc=doc, inpidx=i)
+        image = genrgb(50, 50, r, g, b, inpidx=i)
         doc.setInputDirectImage(i, image)
         inputnode = doc.graph.create(f"input {i}")
         expr.connect(i, inputnode, 0)
@@ -291,7 +291,7 @@ def test_all_expr_inputs():
     # change the expr to read each input in turn, run the graph each time and make sure the
     # output image is the right colour for that input
     for i, var in zip(range(4), ("a", "b", "c", "d")):
-        expr.expr = var
+        expr.params.expr = var
         doc.run()
         img = expr.getOutput(0, Datum.IMG)
         assert img is not None
@@ -307,7 +307,7 @@ def test_unconnected_input_binop():
         doc = Document()
 
         expr = doc.graph.create("expr")  # unconnected input
-        expr.expr = s
+        expr.params.expr = s
 
         doc.run()
         out = expr.getOutputDatum(0)
@@ -328,7 +328,7 @@ def test_null_datum_input_binop():
         inpB = doc.graph.create("input 1")  # inputs created but not set; they'll be None (but not images)
 
         expr = doc.graph.create("expr")
-        expr.expr = s
+        expr.params.expr = s
         expr.connect(0, inpA, 0)
         expr.connect(1, inpB, 0)
 
@@ -353,7 +353,7 @@ def test_null_image_input_binop():
         doc.setInputDirectImage(1, None)
 
         expr = doc.graph.create("expr")
-        expr.expr = s
+        expr.params.expr = s
         expr.connect(0, inpA, 0)
         expr.connect(1, inpB, 0)
 

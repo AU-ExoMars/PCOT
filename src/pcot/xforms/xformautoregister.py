@@ -1,5 +1,6 @@
 from pcot.datum import Datum
 from pcot.imagecube import ImageCube
+from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.utils import image
 from pcot.xform import xformtype, XFormType
 import cv2 as cv
@@ -25,6 +26,7 @@ class XFormAutoRegister(XFormType):
 
     def __init__(self):
         super().__init__("tvl1 autoreg", "processing", "0.0.0", hasEnable=True)
+        self.params = TaggedDictType()  # no parameters
         self.addInputConnector("moving", Datum.IMG)
         self.addInputConnector("fixed", Datum.IMG)
         self.addOutputConnector("moved", Datum.IMG)

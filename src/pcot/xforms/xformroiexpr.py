@@ -7,7 +7,7 @@ from PySide2.QtCore import QModelIndex, Signal, QAbstractTableModel, Qt
 from PySide2.QtGui import QPainter
 from PySide2.QtWidgets import QInputDialog, QMessageBox
 
-import pcot.rois
+from pcot.rois import ROICircle, ROIPainted, ROIPoly, ROIRect, ROI
 import pcot.ui
 from pcot import ui
 from pcot.datum import Datum
@@ -15,6 +15,7 @@ from pcot.expressions import ExpressionEvaluator
 from pcot.imagecube import ImageCube
 from pcot.sources import nullSourceSet
 from pcot.ui.tabs import Tab
+from pcot.parameters.taggedaggregates import TaggedVariantDictType, TaggedListType, TaggedDictType, TaggedDict
 from pcot.xform import xformtype, XFormType, XFormException
 
 
@@ -53,6 +54,16 @@ class XFormROIExpr(XFormType):
 
     """
 
+    TAGGEDVDICT = TaggedVariantDictType("type",
+                                        {
+                                            "painted": ROIPainted.TAGGEDDICT,
+                                            "circle": ROICircle.TAGGEDDICT,
+                                            "poly": ROIPoly.TAGGEDDICT,
+                                            "rect": ROIRect.TAGGEDDICT
+                                        })
+
+    TAGGEDLIST = TaggedListType(TAGGEDVDICT, 0)
+
     def __init__(self):
         super().__init__("roiexpr", "regions", "0.0.0")
         self.addInputConnector("", Datum.IMG, "Image input")
@@ -61,14 +72,19 @@ class XFormROIExpr(XFormType):
         self.addInputConnector("r", Datum.ROI, "ROI which appears as 'r' in expression")
         self.addOutputConnector("", Datum.IMG, "Output image with ROI from expression result imposed")
         self.addOutputConnector("", Datum.ROI, "The ROI generated from the expression")
-        self.autoserialise += ('expr',)
+
+        # quite a lot of parameters still use the old system, which can't be modified by parameter files.
+        self.autoserialise = ('selColour', 'unselColour', 'outColour', 'hideROIs', 'previewRadius',
+                              ('imgROIColour', (1, 0, 1)))
+
+        self.params = TaggedDictType(rois=("List of ROIs, assigned to a,b,c,d.. in the expression", self.TAGGEDLIST),
+                                     expr=("Expression", str, ""))
 
     def createTab(self, n, w):
         return TabROIExpr(n, w)
 
     def init(self, node):
         node.rois = []
-        node.expr = ""
         node.canvimg = None
         node.selColour = (0, 1, 0)  # colour of selected ROI
         node.unselColour = (0, 1, 1)  # colour of unselected ROI
@@ -79,14 +95,28 @@ class XFormROIExpr(XFormType):
         node.brushSize = 20  # scale of 0-99 i.e. a slider value. Converted to pixel radius in getRadiusFromSlider()
         node.previewRadius = None  # see xformpainted.
 
-        self.autoserialise = ('selColour', 'unselColour', 'outColour', 'expr', 'hideROIs', 'previewRadius',
-                              ('imgROIColour', (1,0,1)))
+        # create the parameter TaggedDict structure we'll be working with
+        node.params = TaggedDict(self.params)
 
     def serialise(self, node):
-        return {'rois': [(r.tpname, r.serialise()) for r in node.rois]}
+        # create the list of ROI data
+        lst = self.TAGGEDLIST.create()
+        for r in node.rois:
+            # for each ROI, convert to a TaggedDict
+            d = r.to_tagged_dict()
+            # wrap it in a TaggedVariantDict and store it in the list
+            dv = self.TAGGEDVDICT.create().set(d)
+            lst.append(dv)
 
-    def deserialise(self, node, d):
-        node.rois = [pcot.rois.deserialise(r, dat) for r, dat in d['rois']]
+        # store the ROIs in the params
+        node.params.rois = lst
+        # and don't return anything, because we've stored the data in node.params.
+        return None
+
+    def nodeDataFromParams(self, node):
+        # here, we do extra work to retrieve parameters from the .params structure.
+        # for more detail, see how multidot's deserialise does it!
+        node.rois = [ROI.new_from_tagged_dict(x.get()) for x in node.params.rois]
 
     def perform(self, node):
         img: ImageCube = node.getInput(0, Datum.IMG)
@@ -161,9 +191,9 @@ class XFormROIExpr(XFormType):
             parser.registerVar("q", "ROI input q", lambda: inROIq)
             parser.registerVar("r", "ROI input r", lambda: inROIr)
 
-            if len(node.expr.strip()) > 0:
+            if len(node.params.expr.strip()) > 0:
                 # now execute the expression and get it back as an ROI
-                res = parser.run(node.expr)
+                res = parser.run(node.params.expr)
                 node.roi = res.get(Datum.ROI)
                 node.roi.drawBox = False
                 # set its colour
@@ -333,7 +363,7 @@ class TabROIExpr(Tab):
         self.w.canvas.display(node.canvimg)
         self.w.tableView.dataChanged(QModelIndex(), QModelIndex())
 
-        self.w.exprEdit.setText(node.expr)
+        self.w.exprEdit.setText(node.params.expr)
         self.w.hideCheck.setChecked(node.hideROIs)
         self.w.brushSize.setValue(node.brushSize)
         setColourButton(self.w.outColButton, node.outColour)
@@ -389,7 +419,7 @@ class TabROIExpr(Tab):
 
     def exprChanged(self):
         self.mark()
-        self.node.expr = self.w.exprEdit.text()
+        self.node.params.expr = self.w.exprEdit.text()
         self.changed()
 
     def hideCheckChanged(self, t):

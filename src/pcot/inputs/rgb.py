@@ -8,6 +8,7 @@ from pcot.ui.inputs import TreeMethodWidget
 from .inputmethod import InputMethod
 from ..dataformats import load
 from ..datum import Datum
+from ..parameters.taggedaggregates import TaggedDict
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ class RGBInputMethod(InputMethod):
 
     def loadImg(self):
         # will throw exception if load failed
-        logger.info("RGB PERFORMING FILE READ")
+        logger.debug("RGB PERFORMING FILE READ")
         self.img = load.rgb(self.fname,
                             self.input.idx if self.input else None,
                             self.mapping)
@@ -64,6 +65,12 @@ class RGBInputMethod(InputMethod):
         else:
             self.img = None   # ensure image is reloaded
         Canvas.deserialise(self, data)
+
+    def modifyWithParameterDict(self, d: TaggedDict) -> bool:
+        if d.rgb.filename is not None:
+            self.fname = d.rgb.filename
+            return True
+        return False
 
 
 class RGBMethodWidget(TreeMethodWidget):

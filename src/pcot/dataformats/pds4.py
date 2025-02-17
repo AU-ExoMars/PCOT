@@ -1,4 +1,3 @@
-import dataclasses
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Union
@@ -11,7 +10,7 @@ import pcot
 import pcot.dq
 
 from pcot.datum import Datum
-from pcot.filters import Filter
+from pcot.cameras.filters import Filter
 from pcot.imagecube import ImageCube, ChannelMapping
 from pcot.sources import External, MultiBandSource, Source
 

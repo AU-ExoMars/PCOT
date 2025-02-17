@@ -199,11 +199,12 @@ Node types are represented by singletons of subclasses of ```XFormType```
 (Nodes themselves are of type ```XForm```, which stands for *transform* for
 historical reasons). Developing new ```XFormType``` subclasses is largely
 beyond the scope of this document, but you can learn a lot from looking at the
-```pcot.xforms``` package and the modules therein.
+```pcot.xforms``` package and the modules therein. A commented example node can be found in `xforms/xformexample.py`.
 
 To create a new node type, declare a new subclass of ```XFormType``` and decorate
 it with the ```@xformtype``` decorator. This will make the type autoregister:
 the singleton will be constructed and added to the internal type registry.
+
 
 You will need to write the following methods in your subclass:
 
@@ -225,7 +226,7 @@ follows "favour composition over inheritance" and saves messiness elsewhere.
 
 Here is an example which does edge detection with OpenCV:
 
-```
+```python
 import cv2 as cv
 import numpy as np
 
@@ -346,3 +347,18 @@ an undo those references will be stale. Instead, always use `self.node...` to ac
 
 It is OK to use the tab to store UI-only data which is not persisted (saved to a file or to the
 undo mechanism).
+
+### Node parameters: serialisation and deserialisation
+
+Your node may have parameters which need to be saved to .pcot files or saved
+into the undo data. To do this, PCOT needs to convert them into data
+which is "JSON-serialisable" - convertable to text in the JSON format.
+PCOT refers to the process of conversion into JSON-serialisable data
+as "serialisation," even though it's really only the first step. It's just
+that the JSON library takes care of the rest of the process.
+
+JSON-serialisable data consists of built-in Python types: strings, numbers,
+lists, dicts and tuples.
+
+PCOT has no less than four mechanisms for converting node data into JSON:
+[read more about them here](nodeser.md).

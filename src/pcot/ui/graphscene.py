@@ -54,6 +54,12 @@ mainFont = QFont()
 mainFont.setFamily('Sans Serif')
 mainFont.setPixelSize(10)
 
+# bold version of the above
+boldMainFont = QFont()
+boldMainFont.setFamily('Sans Serif')
+boldMainFont.setPixelSize(10)
+boldMainFont.setBold(True)
+
 # the font for error codes
 errorFont = QFont()
 errorFont.setFamily('Sans Serif')
@@ -239,6 +245,7 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
         """context menu event on nodes"""
         m = QtWidgets.QMenu()
         rename = m.addAction("Rename")
+        resetname = m.addAction("Reset name")
         if self.node.type.hasEnable:
             togact = m.addAction("Disable" if self.node.enabled else "Enable")
         else:
@@ -264,6 +271,9 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
                 if changed:
                     self.node.rename(newname)
                     ui.mainwindow.MainUI.rebuildAll()
+            elif action == resetname:
+                self.node.rename(self.node.type.name)
+                ui.mainwindow.MainUI.rebuildAll()
             elif action == helpact:
                 w.openHelp(self.node.type, node=self.node)
             elif action == valignact:
@@ -651,8 +661,8 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     y1 += n1.h
                     compat = datum.isCompatibleConnection(outtype, intype)
 
-#                    if not compat:
-#                        ui.log(f"incompatible: {n1} -> {n2} / {outtype} -> {intype}")
+                    #                    if not compat:
+                    #                        ui.log(f"incompatible: {n1} -> {n2} / {outtype} -> {intype}")
 
                     arrowItem = GArrow(x1, y1, x2, y2, n1, output, n2,
                                        inputIdx, compat=compat)
@@ -693,7 +703,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         if self.checkSelChange:
             items = self.selectedItems()
             self.selection = []
-            logger.info("selChanged")
+            logger.debug("selChanged")
             for n in self.graph.nodes:
                 if n.rect in items:
                     self.selection.append(n)
@@ -810,7 +820,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
             x, y = n.xy
             n.xy = (x + PASTEOFFSET, y + PASTEOFFSET)
         self.rebuild()  # rebuild all nodes
-        logger.info("paste")
+        logger.debug("paste")
         # colour selected nodes
         self.setColourToState()
         self.graph.changed()
@@ -824,7 +834,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         self.graph.copy(self.selection)
         for n in self.selection:
             self.graph.remove(n)
-        logger.info("cut")
+        logger.debug("cut")
         self.selection = []
         self.rebuild()
 
@@ -836,7 +846,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         """Vertically align selected nodes"""
         # find average X coordinate of node centres
         if len(self.selection) < 2:
-            return   # nothing to do
+            return  # nothing to do
 
         x = sum([n.xy[0] + n.w / 2 for n in self.selection]) / len(self.selection)
 

@@ -29,10 +29,10 @@ def numberWithUncNode(doc, v, u, dqv=0):
     node and string manipulation on its expr, but this feels better somehow"""
     nodeV = doc.graph.create("constant")
     nodeU = doc.graph.create("constant")
-    nodeV.val = v
-    nodeU.val = u
+    nodeV.params.val = float(v)
+    nodeU.params.val = float(u)
     expr = doc.graph.create("expr")
-    expr.expr = f"v(a,b,{dqv})"
+    expr.params.expr = f"v(a,b,{dqv})"
     expr.connect(0, nodeV, 0, autoPerform=False)
     expr.connect(1, nodeU, 0, autoPerform=False)
     return expr
@@ -89,7 +89,7 @@ def check_op_test(doc, t, expr, origimg):
             dqtest = dqv == edq
 
             if not (ntest and utest and dqtest):
-                logger.error(f"Error in binop test at pixel {x},{y} for expression {expr.expr}")
+                logger.error(f"Error in binop test at pixel {x},{y} for expression {expr.params.expr}")
                 if not ntest:
                     logger.error(f"N expected {en} got {n}")
                 if not utest:
@@ -146,7 +146,7 @@ def test_number_unops(t):
     doc = Document()
     node = numberWithUncNode(doc, t.n, t.u, t.dq)
     expr = doc.graph.create("expr")
-    expr.expr = t.e
+    expr.params.expr = t.e
     expr.connect(0, node, 0, autoPerform=False)
     doc.run()
     n = expr.getOutput(0, Datum.NUMBER)
@@ -175,7 +175,7 @@ def test_image_unops(t):
     rect.connect(0, nodeA, 0, autoPerform=False)
     # and connect an expression node to the rect.
     expr = doc.graph.create("expr")
-    expr.expr = t.e
+    expr.params.expr = t.e
     # this is where the connections are reversed.
     expr.connect(0, rect, 0, autoPerform=False)
     # now run the test
@@ -261,7 +261,7 @@ def test_number_number_binops(t):
     nodeA = numberWithUncNode(doc, t.a, t.ua)
     nodeB = numberWithUncNode(doc, t.b, t.ub)
     expr = doc.graph.create("expr")
-    expr.expr = t.e
+    expr.params.expr = t.e
     expr.connect(0, nodeA, 0, autoPerform=False)
     expr.connect(1, nodeB, 0, autoPerform=False)
 
@@ -295,7 +295,7 @@ def test_number_image_binops(t):
     rect.connect(0, nodeB, 0, autoPerform=False)
     # and connect an expression node to nodeA and rect.
     expr = doc.graph.create("expr")
-    expr.expr = t.e
+    expr.params.expr = t.e
     expr.connect(0, nodeA, 0, autoPerform=False)
     expr.connect(1, rect, 0, autoPerform=False)
 
@@ -324,7 +324,7 @@ def test_image_number_binops(t):
     nodeB = numberWithUncNode(doc, t.b, t.ub)
     # and connect an expression node to rect and nodeB.
     expr = doc.graph.create("expr")
-    expr.expr = t.e
+    expr.params.expr = t.e
     # this is where the connections are reversed.
     expr.connect(0, rect, 0, autoPerform=False)
     expr.connect(1, nodeB, 0, autoPerform=False)
@@ -354,7 +354,7 @@ def test_image_image_binops(t):
     nodeB = doc.graph.create("input 1")
     # and connect an expression node to rect and nodeB.
     expr = doc.graph.create("expr")
-    expr.expr = t.e
+    expr.params.expr = t.e
     # this is where the connections are reversed.
     expr.connect(0, rect, 0, autoPerform=False)
     expr.connect(1, nodeB, 0, autoPerform=False)
@@ -384,7 +384,7 @@ def test_image_image_binops_noroi(t):
 
     # and connect an expression node to rect and nodeB.
     expr = doc.graph.create("expr")
-    expr.expr = t.e
+    expr.params.expr = t.e
     # this is where the connections are reversed.
     expr.connect(0, nodeA, 0, autoPerform=False)
     expr.connect(1, nodeB, 0, autoPerform=False)
@@ -410,7 +410,7 @@ def test_image_image_binops_noroi(t):
             dqtest = dqv == edq
 
             if not (ntest and utest and dqtest):
-                logger.error(f"Error in binop test at pixel {x},{y} for expression {expr.expr}")
+                logger.error(f"Error in binop test at pixel {x},{y} for expression {expr.params.expr}")
                 if not ntest:
                     logger.error(f"N expected {expected_n} got {n}")
                 if not utest:
@@ -486,7 +486,7 @@ def test_dq_propagation_images(t):
     doc = Document()
     if t.a_scalar:
         nodeA = doc.graph.create("expr")
-        nodeA.expr = f"v({t.a},{t.ua},{t.dqa})"
+        nodeA.params.expr = f"v({t.a},{t.ua},{t.dqa})"
     else:
         # node A is a 20x20 2-band image with 2±0.1 in band 0 and the given values in band 1.
         imgA = gen_2b_unc(2, 0.1, t.a, t.ua, dq0=0, dq1=t.dqa)
@@ -495,7 +495,7 @@ def test_dq_propagation_images(t):
 
     if t.b_scalar:
         nodeB = doc.graph.create("expr")
-        nodeB.expr = f"v({t.b},{t.ub},{t.dqb})"
+        nodeB.params.expr = f"v({t.b},{t.ub},{t.dqb})"
     else:
         # node B is a 20x20 2-band image with 3±0.2 in band 0 and the given values in band 1.
         imgB = gen_2b_unc(3, 0.2, t.b, t.ub, dq0=0, dq1=t.dqb)
@@ -504,7 +504,7 @@ def test_dq_propagation_images(t):
 
     # and connect an expression node to rect and nodeB.
     expr = doc.graph.create("expr")
-    expr.expr = t.e
+    expr.params.expr = t.e
     # this is where the connections are reversed.
     expr.connect(0, nodeA, 0, autoPerform=False)
     expr.connect(1, nodeB, 0, autoPerform=False)
@@ -535,7 +535,7 @@ def test_dq_propagation_images(t):
                 dqtest = dqv == t.expected_dq
 
                 if not (ntest and utest and dqtest):
-                    logger.error(f"Error in binop test at pixel {x},{y} for expression {expr.expr}")
+                    logger.error(f"Error in binop test at pixel {x},{y} for expression {expr.params.expr}")
                     if not ntest:
                         logger.error(f"N expected {expected_n} got {n}")
                     if not utest:

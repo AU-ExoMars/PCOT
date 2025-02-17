@@ -2,6 +2,7 @@ import numpy as np
 
 from pcot import ui
 from pcot.datum import Datum
+from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.sources import SourceSet
 from pcot.ui.tabs import Tab
 from pcot.utils import image
@@ -32,7 +33,9 @@ class XFormHistogram(XFormType):
 
     def __init__(self):
         super().__init__("histogram", "data", "0.0.0")
-        self.autoserialise = ('bincount',)
+        self.params = TaggedDictType(
+            bincount = ("Number of bins in the histogram", int, 16)
+        )
         self.addInputConnector("", Datum.IMG)
         self.addOutputConnector("data", Datum.DATA, "a CSV output (use 'dump' or 'sink' to read it)")
 
@@ -43,7 +46,6 @@ class XFormHistogram(XFormType):
     def init(self, node):
         # the histogram data
         node.hists = None
-        node.bincount = 256
 
     def perform(self, node):
         img = node.getInput(0, Datum.IMG)
@@ -56,7 +58,7 @@ class XFormHistogram(XFormType):
             # generate a list of labels, one for each channel
             labels = [s.brief(node.graph.doc.settings.captionType) for s in img.sources.sourceSets]
             # generate a (data,bins) tuple for each channel taking account of the weight for that channel.
-            hists = [gethistogram(chan, weights[:, :, i], node.bincount) for i, chan in
+            hists = [gethistogram(chan, weights[:, :, i], node.params.bincount) for i, chan in
                      enumerate(image.imgsplit(subimg.img))]
             # they must be the same size
             assert (len(labels) == len(hists))
@@ -88,7 +90,7 @@ class TabHistogram(Tab):
 
     def replot(self):
         # set up the plot
-        self.w.bins.setValue(self.node.bincount)
+        self.w.bins.setValue(self.node.params.bincount)
         if self.node.hists is not None:
             # self.w.mpl.fig.suptitle("TODO")  # TODO? Do we need a title?
             self.w.mpl.ax.cla()  # clear any previous plot
@@ -110,11 +112,11 @@ class TabHistogram(Tab):
 
     def binsChanged(self):
         self.mark()
-        self.node.bincount = self.w.bins.value()
+        self.node.params.bincount = self.w.bins.value()
         self.changed()
 
     def onNodeChanged(self):
         # this is done in replot - the user replots this node manually because it takes
         # a while to run. But we do make the replot button red!
         self.w.replot.setStyleSheet("background-color:rgb(255,100,100)")
-        self.w.bins.setValue(self.node.bincount)
+        self.w.bins.setValue(self.node.params.bincount)

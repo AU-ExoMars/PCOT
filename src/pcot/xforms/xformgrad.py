@@ -1,5 +1,6 @@
 from functools import partial
 from typing import Tuple
+import logging
 
 import numpy as np
 from PySide2.QtCore import Qt, QPoint, QRectF
@@ -9,12 +10,16 @@ from PySide2.QtWidgets import QInputDialog
 from pcot.datum import Datum
 import pcot.ui.tabs
 from pcot.imagecube import ImageCube
+from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType, taggedColourType, taggedRectType, Maybe
 from pcot.rois import ROI
 from pcot.sources import MultiBandSource
 from pcot.utils.annotations import Annotation, annotFont, pixels2painter
 from pcot.utils.colour import colDialog, rgb2qcol
 from pcot.utils.gradient import Gradient
 from pcot.xform import xformtype, XFormType, XFormException
+
+logger = logging.getLogger(__name__)
+
 
 LEFT_MARGIN = "Left margin"
 RIGHT_MARGIN = "Right margin"
@@ -191,14 +196,14 @@ class GradientLegend(Annotation):
         else:
             return 0, 0, 0, 0
 
-    def _doAnnotate(self, p: QPainter, alpha, inPDF):
+    def _doAnnotate(self, p: QPainter, alpha, inVectorFormat):
         """Core annotation method"""
         # if we're doing a margin annotation we override many of the values passed in
         i2u = self.inchesToUnits
         heightUnits = p.window().height()
         textGap = 0
 
-        if inPDF:
+        if inVectorFormat:
             textGap = i2u * 0.1  # gap between text and bar
             fontscale = i2u * 0.2
             barThickness = i2u * 0.3
@@ -264,7 +269,7 @@ class GradientLegend(Annotation):
 
     def annotatePDF(self, p: QPainter, img):
         if self.legendpos != IN_IMAGE and self.legendpos != NONE and self.legendpos is not None:
-            self._doAnnotate(p, True)
+            self._doAnnotate(p, True, True)
 
     def annotate(self, p: QPainter, img, alpha):
         if self.legendpos == IN_IMAGE:
@@ -278,6 +283,29 @@ def _normAndGetRange(subimage):
     if maxval == minval:
         raise XFormException('DATA', 'Data is uniform, cannot normalize for gradient')
     return minval, maxval, (masked - minval) / (maxval - minval)
+
+
+TAGGEDDICT = TaggedDictType(
+    # We only use this structure for serialisation and deserialisation - the actual gradient
+    # is a Gradient object.
+    gradient=('gradient', TaggedListType(TaggedDictType(
+                                             x=('x', float, 0.0),
+                                             colour=('colour', taggedColourType(0.0, 0.0, 0.0), None)
+                                         ).setOrdered(), 0),
+              None),
+    # this is only really used when we use parameter files to set from presets.
+    preset=('preset', Maybe(str), None, presetGradients.keys()),
+    # other params are normal
+    colour=('legend colour', taggedColourType(1.0, 1.0, 0.0), None),
+    legendrect=('legend rectangle if in image', taggedRectType(0, 0, 100, 20), None),
+    vertical=('is legend vertical?', bool, False),
+    fontscale=('size of legend font', float, 10),
+    thickness=('thickness of legend border', float, 1),
+    legendPos=('legend location', str, IN_IMAGE,
+               [LEFT_MARGIN, RIGHT_MARGIN, TOP_MARGIN, BOTTOM_MARGIN, IN_IMAGE, NONE]),
+    normbackground=('normalise background', bool, False),
+    sigfigs=('significant figures', int, 6),
+)
 
 
 @xformtype
@@ -315,29 +343,49 @@ class XformGradient(XFormType):
         self.addInputConnector("mono", Datum.IMG)
         self.addInputConnector("background", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
-        self.autoserialise = ('colour', 'legendrect', 'vertical', 'thickness', 'fontscale', 'legendPos',
-                              ('normbackground', False),
-                              ('sigfigs', 6))
+        self.params = TAGGEDDICT
 
     def serialise(self, node):
-        return {'gradient': node.gradient.data}
+        # clear the node parameter's gradient list
+        node.params.gradient.clear()
+        # and then add the gradient data to it
+        for x, (r, g, b) in node.gradient.data:
+            p = node.params.gradient.append_default()
+            p.x = x
+            p.colour.set(r, g, b)
+        # just to make sure, we clear the "preset" field. This is only used when a parameter file
+        # runs the node, and we don't want to save it.
+        node.params.preset = None
 
-    def deserialise(self, node, d):
-        node.gradient = Gradient(d['gradient'])
+        # we don't return anything because node.params represents our
+        # data.
+        return None
+
+    def nodeDataFromParams(self, node):
+        # We're ignoring the actual dict and building from the params structure that's already been processed
+        # into the node.
+
+        if node.params.preset is None:
+            # no preset provided - the usual case - so build a gradient from the list in the
+            # parameters.
+            node.gradient.data = []
+            # run through the elements in the TaggedList and add them to the gradient
+            for x in node.params.gradient:
+                node.gradient.data.append((x.x, x.colour))
+        else:
+            # a preset has been given from a parameter file (usually) so set node.gradient from that
+            if node.params.preset in presetGradients:
+                node.gradient = presetGradients[node.params.preset]
+            else:
+                raise XFormException('DATA', f"Unknown gradient preset {node.params.preset}")
 
     def createTab(self, n, w):
         return TabGradient(n, w)
 
     def init(self, node):
         node.gradient = presetGradients['viridis']
-        node.colour = (1, 1, 0)
-        node.legendrect = (0, 0, 100, 20)
-        node.vertical = False
-        node.fontscale = 10
-        node.sigfigs = 6
-        node.thickness = 1
-        node.legendPos = IN_IMAGE
-        node.normbackground = False
+        node.minval = 0.0
+        node.maxval = 1.0
 
     def perform(self, node):
         mono = node.getInput(0, Datum.IMG)
@@ -373,7 +421,7 @@ class XformGradient(XFormType):
             # this time we get the RGB from the background input
             # and we need to normalise the rgb first
             rgb = rgb.rgb()
-            if node.normbackground:
+            if node.params.normbackground:
                 mx = np.max(rgb)
                 mn = np.min(rgb)
                 rgb = (rgb - mn) / (mx - mn)
@@ -390,15 +438,15 @@ class XformGradient(XFormType):
                 subimage.setROI(outimg, roiUnion)
             out = outimg.modifyWithSub(subimage, newsubimg, keepMapping=True)
 
-        fs = "{:." + str(node.sigfigs) + "}"
+        fs = "{:." + str(node.params.sigfigs) + "}"
         if out is not None:
             out.annotations.append(GradientLegend(node.gradient,
-                                                  node.legendPos,
-                                                  node.legendrect,
-                                                  node.vertical,
-                                                  node.colour,
-                                                  node.fontscale,
-                                                  node.thickness,
+                                                  node.params.legendPos,
+                                                  node.params.legendrect,
+                                                  node.params.vertical,
+                                                  node.params.colour,
+                                                  node.params.fontscale,
+                                                  node.params.thickness,
                                                   (fs.format(node.minval), fs.format(node.maxval))
                                                   ))
 
@@ -447,42 +495,42 @@ class TabGradient(pcot.ui.tabs.Tab):
 
     def legendPosChanged(self, string):
         self.mark()
-        self.node.legendPos = string
+        self.node.params.legendPos = string
         self.changed()
 
     def normChanged(self, val):
         self.mark()
-        self.node.normbackground = val
+        self.node.params.normbackground = val
         self.changed()
 
     def fontChanged(self, val):
         self.mark()
-        self.node.fontscale = val
+        self.node.params.fontscale = val
         self.changed()
 
     def rectChanged(self):
         self.mark()
-        self.node.legendrect = [
+        self.node.params.legendrect.set(
             self.w.xSpin.value(),
             self.w.ySpin.value(),
             self.w.wSpin.value(),
             self.w.hSpin.value()
-        ]
+        )
         self.changed()
 
     def thicknessChanged(self, val):
         self.mark()
-        self.node.thickness = val
+        self.node.params.thickness = val
         self.changed()
 
     def sigFigsChanged(self, val):
         self.mark()
-        self.node.sigfigs = val
+        self.node.params.sigfigs = val
         self.changed()
 
     def orientChanged(self, val):
         self.mark()
-        self.node.vertical = (val == 'Vertical')
+        self.node.params.vertical = (val == 'Vertical')
         self.changed()
 
     def loadPreset(self):
@@ -510,7 +558,7 @@ class TabGradient(pcot.ui.tabs.Tab):
         col = colDialog(self.node.colour)
         if col is not None:
             self.mark()
-            self.node.colour = col
+            self.node.params.colour = col
             self.changed()
 
     def onNodeChanged(self):
@@ -519,16 +567,16 @@ class TabGradient(pcot.ui.tabs.Tab):
         s = f"Min:{self.node.minval:.6g}\nMax:{self.node.maxval:.6g}"
         self.w.rangeLabel.setText(s)
 
-        self.w.legendPos.setCurrentText(self.node.legendPos)
-        self.w.fontSpin.setValue(self.node.fontscale)
-        self.w.sigFigs.setValue(self.node.sigfigs)
-        x, y, w, h = self.node.legendrect
+        self.w.legendPos.setCurrentText(self.node.params.legendPos)
+        self.w.fontSpin.setValue(self.node.params.fontscale)
+        self.w.sigFigs.setValue(self.node.params.sigfigs)
+        x, y, w, h = self.node.params.legendrect
         self.w.xSpin.setValue(x)
         self.w.ySpin.setValue(y)
         self.w.wSpin.setValue(w)
         self.w.hSpin.setValue(h)
-        self.w.orientCombo.setCurrentText('Vertical' if self.node.vertical else 'Horizontal')
-        r, g, b = [x * 255 for x in self.node.colour]
+        self.w.orientCombo.setCurrentText('Vertical' if self.node.params.vertical else 'Horizontal')
+        r, g, b = [x * 255 for x in self.node.params.colour]
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
 
         img = self.node.getOutput(0)
