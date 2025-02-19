@@ -559,3 +559,20 @@ def test_valid_strings():
         td['a'] = xx  #  this are all OK because they are in the list of valid strings
 
     td['b'] = 'wibble'  # not one of the valid strings, but this is OK because it's not specified with a valid list
+
+
+def test_incomplete_serialisation():
+    """Test that we can still deserialise if the data we are provided with is incomplete. This is useful when
+    new fields are added to a TaggedDict and old data is deserialised."""
+
+    tdt = TaggedDictType(
+        a=("a", int, 10),
+        b=("b", str, "foo"),
+        c=("c", float, 3.14)
+    )
+
+    s = {'a': 20, 'b': 'bar'}
+    td2 = tdt.deserialise(s)
+    assert td2['a'] == 20
+    assert td2['b'] == 'bar'
+    assert td2['c'] == 3.14     # default used for this new item
