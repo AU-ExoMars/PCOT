@@ -351,7 +351,7 @@ class SourceSet(SourcesObtainable):
         return [x.serialise() for x in self.sourceSet]
 
     @classmethod
-    def deserialise(cls, lst, document) -> 'SourceSet':
+    def deserialise(cls, lst) -> 'SourceSet':
         ss = [Source.deserialise(x) for x in lst]
         return cls(ss)
 
@@ -455,8 +455,8 @@ class MultiBandSource(SourcesObtainable):
         return [x.serialise() for x in self.sourceSets]
 
     @classmethod
-    def deserialise(cls, lst, document):
-        lst = [SourceSet.deserialise(x, document) for x in lst]
+    def deserialise(cls, lst):
+        lst = [SourceSet.deserialise(x) for x in lst]
         return cls(lst)
 
     def __len__(self):

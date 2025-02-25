@@ -129,7 +129,7 @@ class Datum(SourcesObtainable):
         return self.tp.copy(self)
 
     @classmethod
-    def deserialise(cls, data, document):
+    def deserialise(cls, data):
         """inverse of serialise for serialised data 'd' - requires document so that sources can be
         reconstructed for images"""
 
@@ -141,7 +141,7 @@ class Datum(SourcesObtainable):
             raise UnknownDatumTypeException(tp)
 
         # and run the deserialisation
-        return t.deserialise(d, document)
+        return t.deserialise(d)
 
     def uncertainty(self):
         """Get the uncertainty of the datum as Datum of the same type. For example, an image will return an image of

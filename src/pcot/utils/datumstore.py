@@ -179,7 +179,7 @@ class DatumStore:
         """Get the entire menifest of metadata objects"""
         return self.manifest
 
-    def get(self, name, doc: Optional[Document]) -> Optional[Datum]:
+    def get(self, name) -> Optional[Datum]:
         """
         Get an item from the archive. If it's already in the cache, return it from there. Otherwise, read it from
         the archive and return it. If it's not in the archive, return None. We need the document so that the
@@ -200,7 +200,7 @@ class DatumStore:
                 if (item := a.readJson(name)) is None:
                     return None
                 # and deserialise it
-                datum = Datum.deserialise(item, doc)
+                datum = Datum.deserialise(item)
                 size = datum.getSize()
                 # we may need to make room in the cache. Total the size to find out.
                 while self.total_size() + size > self.size:
@@ -244,7 +244,7 @@ def readParc(fname: str, itemname: str = 'main', inpidx: int = None) -> Optional
     if fname is not None and itemname is not None:
         fa = FileArchive(fname)
         ds = DatumStore(fa)
-        datum = ds.get(itemname, None)
+        datum = ds.get(itemname)
     else:
         return None
 

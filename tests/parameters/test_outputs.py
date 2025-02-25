@@ -233,7 +233,7 @@ def test_parc_image_write(globaldatadir):
 
         # now get the image - we need a document so that we can reconstruct image sources
         doc = Document()
-        imgd = s.get("main", doc)
+        imgd = s.get("main")
         assert imgd is not None
         assert isinstance(imgd, Datum)
         img = imgd.get(Datum.IMG)
@@ -288,9 +288,7 @@ def test_parc_multi(globaldatadir):
 
         assert(len(s.getManifest()) == 4)   # there are four lights! Sorry, files!
 
-        doc = Document()        # need a document as context
-
-        imgd = s.get("main", doc)
+        imgd = s.get("main")
         img = imgd.get(Datum.IMG)
         assert img is not None
         assert img.w == 256
@@ -303,7 +301,7 @@ def test_parc_multi(globaldatadir):
         # test2 mean is [0.4557±0.15167, 0.095353±0.027633, 0.47621±0.13479]
         # test3 mean is [0.4557±0.15167, 0.47677±0.13817, 0.23811±0.067394, 0.93246±0.27525]
 
-        imgd = s.get("testimg1", doc)
+        imgd = s.get("testimg1")
         assert s.getMetadata("testimg1").description == "Test image 1"
         img = imgd.get(Datum.IMG)
         assert img is not None
@@ -311,7 +309,7 @@ def test_parc_multi(globaldatadir):
         mean = df.mean(imgd).get(Datum.NUMBER)
         assert str(mean) == "[0.31899±0.10617, 0.47677±0.13817, 0.47621±0.13479]"
 
-        imgd = s.get("testimg2", doc)
+        imgd = s.get("testimg2")
         assert s.getMetadata("testimg2").description == "Test image 2"
         img = imgd.get(Datum.IMG)
         assert img is not None
@@ -319,7 +317,7 @@ def test_parc_multi(globaldatadir):
         mean = df.mean(imgd).get(Datum.NUMBER)
         assert str(mean) == "[0.4557±0.15167, 0.095353±0.027633, 0.47621±0.13479]"
 
-        imgd = s.get("testimg3", doc)
+        imgd = s.get("testimg3")
         assert s.getMetadata("testimg3").description == "Test image 3, with 4 channels"
         img = imgd.get(Datum.IMG)
         assert img is not None
@@ -366,12 +364,10 @@ def test_parc_multi_jinja_multi_run(globaldatadir):
         s = DatumStore(FileArchive(out))
         assert(len(s.getManifest()) == 4)
 
-        doc = Document()        # need a document as context
-
         # now do essentially the same tests as we did in the previous test, with a slight change for
         # test 3 because the description is different.
 
-        imgd = s.get("main", doc)
+        imgd = s.get("main")
         img = imgd.get(Datum.IMG)
         assert img is not None
         assert img.w == 256
@@ -384,7 +380,7 @@ def test_parc_multi_jinja_multi_run(globaldatadir):
         # test2 mean is [0.4557±0.15167, 0.095353±0.027633, 0.47621±0.13479]
         # test3 mean is [0.4557±0.15167, 0.47677±0.13817, 0.23811±0.067394, 0.93246±0.27525]
 
-        imgd = s.get("testimg1", doc)
+        imgd = s.get("testimg1")
         assert s.getMetadata("testimg1").description == "Test image 1"
         img = imgd.get(Datum.IMG)
         assert img is not None
@@ -392,7 +388,7 @@ def test_parc_multi_jinja_multi_run(globaldatadir):
         mean = df.mean(imgd).get(Datum.NUMBER)
         assert str(mean) == "[0.31899±0.10617, 0.47677±0.13817, 0.47621±0.13479]"
 
-        imgd = s.get("testimg2", doc)
+        imgd = s.get("testimg2")
         assert s.getMetadata("testimg2").description == "Test image 2"
         img = imgd.get(Datum.IMG)
         assert img is not None
@@ -400,7 +396,7 @@ def test_parc_multi_jinja_multi_run(globaldatadir):
         mean = df.mean(imgd).get(Datum.NUMBER)
         assert str(mean) == "[0.4557±0.15167, 0.095353±0.027633, 0.47621±0.13479]"
 
-        imgd = s.get("testimg3", doc)
+        imgd = s.get("testimg3")
         assert s.getMetadata("testimg3").description == "Test image 3"
         img = imgd.get(Datum.IMG)
         assert img is not None

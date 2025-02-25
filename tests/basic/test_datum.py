@@ -46,7 +46,7 @@ def test_datum_can_create_and_serialise_img(bwimage):
 
     # deserialise - note that we deserialise the data dictionary,
     # not the tuple that comes out of serialise.
-    img = ImageCube.deserialise(datadict, doc)
+    img = ImageCube.deserialise(datadict)
     assert img.channels == 3
     assert img.h == 32
     assert img.w == 32

@@ -808,7 +808,7 @@ class ImageCube(SourcesObtainable):
         }
 
     @classmethod
-    def deserialise(cls, d, document):
+    def deserialise(cls, d):
         """Inverse of serialise(), requires a document to get the inputs"""
 
         def decodeArrayValue(tup):
@@ -820,7 +820,7 @@ class ImageCube(SourcesObtainable):
         data = d['data']  # should already have been converted into an ndarray
         mapping = ChannelMapping.deserialise(d['mapping'])
         defmapping = None if d['defmapping'] is None else ChannelMapping.deserialise(d['defmapping'])
-        sources = MultiBandSource.deserialise(d['sources'], document)
+        sources = MultiBandSource.deserialise(d['sources'])
 
         dq = decodeArrayValue(d['dq']) if 'dq' in d else None
         uncertainty = decodeArrayValue(d['uncertainty']) if 'uncertainty' in d else None

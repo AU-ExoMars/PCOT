@@ -128,13 +128,14 @@ class Input:
                }
         return out
 
-    ## rebuild this input from given data structure produced by serialise().
-    # This will deserialise the input methods into the existing method objects,
-    # to avoid problems with undo/redo leaving stale objects with widgets linked to
-    # them.
     def deserialise(self, d, internal):
         """Rebuild this input from the data structure produced by serialise(). Set 'internal' if
         this is for undo/redo purposes (it will store image data too, to speed things up)."""
+
+        # This will deserialise the input methods into the existing method objects,
+        # to avoid problems with undo/redo leaving stale objects with widgets linked to
+        # them.
+
         # old way, where we recreate the method objects rather than just
         # putting new data into them.
         # self.methods = [self.createMethod(name, data) for name, data in d['methods']]
@@ -151,8 +152,8 @@ class Input:
         if 'activeData' in d and d['activeData'] is not None:
             # if this was an external save, there will be an actual Datum here we can use - until
             # a method changes!
-            data = Datum.deserialise(d['activeData'], self.mgr.doc)
-            # and set this datuerm in the active method
+            data = Datum.deserialise(d['activeData'])
+            # and set this datum in the active method
             self.methods[self.activeMethod].data = data
 
     def createMethod(self, name, data=None):

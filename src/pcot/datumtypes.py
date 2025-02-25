@@ -57,7 +57,7 @@ class Type:
     def serialise(self, d: 'Datum'):
         raise pcot.datumexceptions.CannotSerialiseDatumType(self.name)
 
-    def deserialise(self, d, document: 'Document') -> 'Datum':
+    def deserialise(self, d) -> 'Datum':
         raise pcot.datumexceptions.CannotSerialiseDatumType(self.name)
 
     def copy(self, d):
@@ -132,8 +132,8 @@ class ImgType(Type):
     def serialise(self, d):
         return self.name, d.val.serialise()
 
-    def deserialise(self, d, document):
-        img = pcot.imagecube.ImageCube.deserialise(d, document)
+    def deserialise(self, d):
+        img = pcot.imagecube.ImageCube.deserialise(d)
         return pcot.datum.Datum(self, img)
 
     def copy(self, d):
@@ -177,9 +177,9 @@ class RoiType(Type):
         return self.name, (v.tpname, v.serialise(),
                            v.getSources().serialise())
 
-    def deserialise(self, d, document):
+    def deserialise(self, d):
         roitype, roidata, s = d
-        s = pcot.sources.SourceSet.deserialise(s, document)
+        s = pcot.sources.SourceSet.deserialise(s)
         r = pcot.rois.deserialise(self.name, roidata)
         return pcot.datum.Datum(self, r, s)
 
@@ -206,10 +206,10 @@ class NumberType(Type):
         return self.name, (d.val.serialise(),
                            d.getSources().serialise())
 
-    def deserialise(self, d, document):
+    def deserialise(self, d):
         n, s = d
         n = pcot.value.Value.deserialise(n)
-        s = pcot.sources.SourceSet.deserialise(s, document)
+        s = pcot.sources.SourceSet.deserialise(s)
         return pcot.datum.Datum(self, n, s)
 
     def copy(self, d):
@@ -287,7 +287,7 @@ class NoneType(Type):
     def serialise(self, d):
         return self.name, None
 
-    def deserialise(self, document, d):
+    def deserialise(self, d):
         from pcot.datum import Datum
         return Datum.null
 

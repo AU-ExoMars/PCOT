@@ -44,7 +44,7 @@ class DirectInputMethod(InputMethod):
 
     def deserialise(self, data, internal):
         if 'd' in data and data['d'] is not None:
-            self.datum = Datum.deserialise(data['d'], self.input.mgr.doc)
+            self.datum = Datum.deserialise(data['d'])
         else:
             self.datum = Datum.null  # could happen in legacy files
 

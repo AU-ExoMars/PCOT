@@ -30,9 +30,9 @@ def test_create():
         # open for reading, must be outside a context manager
         a = DatumStore(FileArchive(fn), 1000)
 
-        d = a.get("test", None)
+        d = a.get("test")
         assert Value(10, 0.2, dq.TEST) == d.get(Datum.NUMBER)
-        d = a.get("test2", None)
+        d = a.get("test2")
         assert Value(11, 0.7, dq.TEST) == d.get(Datum.NUMBER)
 
 
@@ -55,35 +55,35 @@ def test_cache():
         # open for reading, must be outside a context manager
         a = DatumStore(FileArchive(fn), 1000)
 
-        d = a.get("test", None)
+        d = a.get("test")
         assert Value(10, 0.2, dq.TEST) == d.get(Datum.NUMBER)
         assert a.read_count == 1
 
-        d = a.get("test", None)
+        d = a.get("test")
         assert Value(10, 0.2, dq.TEST) == d.get(Datum.NUMBER)
         assert a.read_count == 1
 
-        d = a.get("test2", None)
+        d = a.get("test2")
         assert Value(11, 0.7, dq.TEST) == d.get(Datum.NUMBER)
         assert a.read_count == 2
 
-        d = a.get("test2", None)
+        d = a.get("test2")
         assert Value(11, 0.7, dq.TEST) == d.get(Datum.NUMBER)
         assert a.read_count == 2
 
-        d = a.get("test", None)
+        d = a.get("test")
         assert Value(10, 0.2, dq.TEST) == d.get(Datum.NUMBER)
         assert a.read_count == 2
 
-        d = a.get("test", None)
+        d = a.get("test")
         assert Value(10, 0.2, dq.TEST) == d.get(Datum.NUMBER)
         assert a.read_count == 2
 
-        d = a.get("test2", None)
+        d = a.get("test2")
         assert Value(11, 0.7, dq.TEST) == d.get(Datum.NUMBER)
         assert a.read_count == 2
 
-        d = a.get("test2", None)
+        d = a.get("test2")
         assert Value(11, 0.7, dq.TEST) == d.get(Datum.NUMBER)
         assert a.read_count == 2
 
@@ -93,7 +93,6 @@ def test_image():
     Test we can store and get images
     """
     pcot.setup()
-    doc = Document()
 
     img = genrgb(10, 10, 0, 1, 0)
     d = Datum(Datum.IMG, img)
@@ -113,15 +112,15 @@ def test_image():
         # open for reading, must be outside a context manager
         a = DatumStore(FileArchive(fn), 7000)
 
-        d = a.get("test", doc)
+        d = a.get("test")
         img = d.get(Datum.IMG)
         assert img[0, 0] == (Value(0), Value(1), Value(0))
 
-        d = a.get("test2", doc)
+        d = a.get("test2")
         img = d.get(Datum.IMG)
         assert img[0, 0] == (Value(0), Value(1), Value(1))
 
-        d = a.get("test", doc)
+        d = a.get("test")
         img = d.get(Datum.IMG)
         assert img[0, 0] == (Value(0), Value(1), Value(0))
 
@@ -133,7 +132,6 @@ def test_cache_discard():
     Test we can store and get images, and that we can drop old images from the cache
     """
     pcot.setup()
-    doc = Document()
 
     img = genrgb(10, 10, 0, 1, 0)
     d = Datum(Datum.IMG, img)
@@ -157,19 +155,19 @@ def test_cache_discard():
         # open for reading, must be outside a context manager
         a = DatumStore(FileArchive(fn), 7000)     # cache size enough for 2 items?
 
-        d = a.get("test", doc)
+        d = a.get("test")
         img = d.get(Datum.IMG)
         assert img[0, 0] == (Value(0), Value(1), Value(0))
 
-        d = a.get("test2", doc)
+        d = a.get("test2")
         img = d.get(Datum.IMG)
         assert img[0, 0] == (Value(0), Value(1), Value(1))
 
-        d = a.get("test2", doc)
+        d = a.get("test2")
         img = d.get(Datum.IMG)
         assert img[0, 0] == (Value(0), Value(1), Value(1))
 
-        d = a.get("test", doc)
+        d = a.get("test")
         img = d.get(Datum.IMG)
         assert img[0, 0] == (Value(0), Value(1), Value(0))
 
@@ -177,13 +175,13 @@ def test_cache_discard():
         snark = a.total_size()
 
         # reading another image should cause a discard
-        d = a.get("test3", doc)
+        d = a.get("test3")
         img = d.get(Datum.IMG)
         assert img[0, 0] == (Value(1), Value(0), Value(1))
         assert a.read_count == 3
 
         # but "test" should be OK because it's still recent
-        d = a.get("test", doc)
+        d = a.get("test")
         img = d.get(Datum.IMG)
         assert img[0, 0] == (Value(0), Value(1), Value(0))
         assert a.read_count == 3
@@ -191,7 +189,6 @@ def test_cache_discard():
 
 def test_vector_and_cache():
     pcot.setup()
-    doc = Document()
 
     with tempfile.TemporaryDirectory() as td:
         fn = td + "/eek.parc"
@@ -214,21 +211,21 @@ def test_vector_and_cache():
             print(d.getSize())
 
         a = DatumStore(FileArchive(fn), 20000)  # enough for two of the vectors
-        d = a.get("test0", doc)
+        d = a.get("test0")
         assert np.allclose(d.get(Datum.NUMBER).n, np.linspace(0, 1, 1000))
         assert np.allclose(d.get(Datum.NUMBER).u, 0.1)
         assert d.get(Datum.NUMBER).u.shape == (1000,)
 
-        d = a.get("test1", doc)
+        d = a.get("test1")
         assert np.allclose(d.get(Datum.NUMBER).n, np.linspace(1, 10, 1000))
 
-        d = a.get("test2", doc)
+        d = a.get("test2")
         assert np.allclose(d.get(Datum.NUMBER).n, np.linspace(2, 100, 1000))
 
-        a.get("test1", doc)  # should not require a read
+        a.get("test1")  # should not require a read
         assert a.read_count == 3
 
-        a.get("test0", doc)  # will require a read, will no longer be cached
+        a.get("test0")  # will require a read, will no longer be cached
         assert a.read_count == 4
 
 
@@ -246,8 +243,8 @@ def test_datumstore_append(globaldatadir):
         # is created, so the DatumStore opens the FileArchive.
 
         a = DatumStore(FileArchive(newarchive, 'r'))
-        img1 = a.get("image0", None)
-        img2 = a.get("image1", None)
+        img1 = a.get("image0")
+        img2 = a.get("image1")
 
         # combine those images into a third
         img3 = img1 + img2
@@ -264,8 +261,8 @@ def test_datumstore_append(globaldatadir):
 
         # that done, open for reading.
         a = DatumStore(FileArchive(newarchive, 'r'))
-        img3 = a.get("combined", None)
-        means = a.get("combinedmeans", None)
+        img3 = a.get("combined")
+        means = a.get("combinedmeans")
         assert img3.tp == Datum.IMG
         assert means.tp == Datum.NUMBER
         img = img3.get(Datum.IMG)
