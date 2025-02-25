@@ -10,7 +10,6 @@ import logging
 from typing import Any, Optional
 
 from pcot.dq import NOUNCERTAINTY
-from pcot.rois import ROI
 from pcot.sources import SourcesObtainable, nullSource, nullSourceSet
 import pcot.datumtypes
 
@@ -48,7 +47,7 @@ class Datum(SourcesObtainable):
         IDENT := pcot.datumtypes.IdentType(),
         STRING := pcot.datumtypes.StringType(),
         FUNC := pcot.datumtypes.FuncType(),
-        NONE := pcot.datumtypes.NoneType()  # for neither connections nor the stack - a null value
+        NONE := pcot.datumtypes.NoneType(),  # for neither connections nor the stack - a null value
     ]
 
     @classmethod

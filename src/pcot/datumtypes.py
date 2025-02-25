@@ -10,7 +10,6 @@ import pcot.imagecube
 import pcot.sources
 import pcot.value
 import pcot.datum
-import pcot.sources
 
 typesByName = dict()
 
@@ -293,4 +292,3 @@ class NoneType(Type):
 
     def copy(self, d):
         return d    # this type is immutable
-
