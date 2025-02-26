@@ -96,9 +96,19 @@ class CameraData:
             raise Exception(f"Camera data file {fileName} contains invalid camera parameters")
 
     @classmethod
-    def write(self, fileName):
+    def write(self, fileName, params: CameraParams):
         """To avoid writing a weird init, we construct a new DatumStore archive here and write a CameraParams
-        datum to it. We return the store  so we can write flatfields etc. later."""
+        datum to it. We return the store  so we can write flatfields etc. later. Remember to close the archive!
+
+        The init would be 'weird' because it would have to set up a read/write archive with an LRU cache, and
+        that's not a thing that makes a great deal of sense here."""
 
         from pcot.utils.archive import FileArchive
         from pcot.utils.datumstore import DatumStore
+
+        archive = FileArchive(fileName, "w")
+        archive.open()
+        da = DatumStore(archive)
+        da.writeDatum("params", Datum(Datum.CAMERAPARAMS, params))
+
+        return da
