@@ -180,7 +180,7 @@ class XFormGen(XFormType):
             us = np.dstack(us).astype(np.float32)
 
             # construct Filter only sources - these don't have input data but do have a filter.
-            sources = [Source().setBand(Filter(chan.cwl, 30, 1.0, idx=i))
+            sources = [Source().setBand(Filter(chan.cwl, 30, 1.0))
                             .setExternal(StringExternal("gen", node.displayName))
                        for i, chan in enumerate(node.params.chans)]
             # make and output the image

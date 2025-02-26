@@ -644,7 +644,7 @@ def setcwl(img, cwl):
     if img.channels != 1:
         raise XFormException('EXPR', 'setcwl must take a single channel image')
     img = img.copy()
-    img.sources = MultiBandSource([Source().setBand(Filter(float(cwl), 30, 1.0, idx=0))])
+    img.sources = MultiBandSource([Source().setBand(Filter(float(cwl), 30, 1.0))])
     return Datum(Datum.IMG, img)
 
 

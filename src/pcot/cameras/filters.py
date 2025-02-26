@@ -29,7 +29,7 @@ class Filter:
     # name of filter (e.g. G01 for "geology 1") (if not given, will be str(cwl))
     name: str
 
-    def __init__(self, cwl, fwhm, transmission=1.0, position=None, name=None, idx=0):
+    def __init__(self, cwl, fwhm, transmission=1.0, position=None, name=None):
         """constructor"""
         self.cwl = cwl
         self.fwhm = fwhm
@@ -56,12 +56,12 @@ class Filter:
     def deserialise(cls, d):
         if isinstance(d, str):
             ui.error("Oops - old style file contains filter name, not filter data. Using dummy, please 'Run All'.")
-            return Filter(2000, 1.0, 1.0, "dummypos", "dummyname", 0)
+            return Filter(2000, 1.0, 1.0, "dummypos", "dummyname")
         try:
             cwl, fwhm, trans, pos, name = d
         except ValueError:
             ui.error("Oops - old style file wrong number of filter data. Using dummy, please 'Run All'.")
-            return Filter(2000, 1.0, 1.0, "dummypos", "dummyname", 0)
+            return Filter(2000, 1.0, 1.0, "dummypos", "dummyname")
 
         cwl, fwhm, trans, pos, name = d
         return Filter(cwl, fwhm, trans, pos, name)

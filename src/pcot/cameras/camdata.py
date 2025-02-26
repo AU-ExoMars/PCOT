@@ -1,4 +1,5 @@
 import pcot.datumtypes
+from pcot.cameras.filters import Filter
 from pcot.datum import Datum
 from pcot.datumtypes import Type
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedListType
@@ -11,8 +12,9 @@ FILTERDICT = TaggedDictType(
     name=("Name of filter", Maybe(str), None),
 )
 
+FILTERLIST = TaggedListType(FILTERDICT, 0)
 CAMDICT = TaggedDictType(
-    filters=("List of filters", TaggedListType(FILTERDICT,0))
+    filters=("List of filters", FILTERLIST),
 )
 
 
@@ -21,29 +23,43 @@ class CameraParams:
     isn't large data, like flatfields). It is, as such, only part of the camera data - it's
     created from a datum store and is contained in CameraData"""
 
-    def __init__(self, fileName):
-        from pcot.utils.archive import FileArchive
-        from pcot.utils.datumstore import DatumStore
-
-        self.fileName = fileName
-        self.archive = DatumStore(FileArchive(fileName))
-
-    def serialise(self):
-        raise NotImplementedError("CameraParams cannot be serialised")
+    def __init__(self):
+        """Used when creating an entirely new CameraParams object"""
+        self.params = CAMDICT.create()
+        self.filters = {}
 
     @classmethod
     def deserialise(cls, d) -> 'CameraParams':
-        raise NotImplementedError("CameraParams cannot be deserialised")
+        self = cls()
+        # deserialise the main TaggedDict, and also the TaggedList of filters in their TD form.
+        self.params = CAMDICT.deserialise(d)
+        # Now convert the TaggedDict filters into a dictionary of Filter objects
+        # note that this isn't how filters deserialise themselves (their method is different - legacy)
+        self.filters = {f.name: Filter(f.cwl, f.fhwm, f.transmission, f.position, f.name)
+                        for f in self.params['filters']}
+
+    def serialise(self):
+        # make sure the filters TaggedAggregate is correct by creating it anew from the Filter objects.
+        # There is almost certainly a nicer way to do this.
+        self.params.filters.clear()
+        for k, v in self.filters.items():
+            e = self.params.filters.append_default()
+            for attr in ('cwl', 'fwhm', 'transmission', 'position', 'name'):
+                e[attr] = getattr(v, attr)
+
+        # now we have a fully populated TA and can just serialise everything
+        return self.params.serialise()
 
 
 class CameraParamsType(Type):
     """Holds camera parameters, including filter sets (basically anything that
     isn't large data, like flatfields)"""
+
     def __init__(self):
         super().__init__('cameradata', valid={CameraParams, type(None)})
 
     def copy(self, d):
-        return d    # this type is immutable
+        return d  # this type is immutable
 
     def serialise(self, d):
         return self.name, d.val.serialise()
@@ -59,3 +75,30 @@ class CameraParamsType(Type):
 Datum.registerType(ct := CameraParamsType())
 Datum.CAMERAPARAMS = ct
 
+
+class CameraData:
+    """All camera data for a particular camera"""
+
+    def __init__(self, fileName=None):
+        """Load the CameraParams object from an archive, and embed it in our new CameraData object. Also store
+        the filename of the archive and the archive itself, because we are going to be loading other data (e.g.
+        flatfields) when we need them."""
+        from pcot.utils.archive import FileArchive
+        from pcot.utils.datumstore import DatumStore
+
+        self.fileName = fileName
+        self.archive = DatumStore(FileArchive(fileName))
+
+        self.params = self.archive.get("params")
+        if self.params is None:
+            raise Exception(f"Camera data file {fileName} does not contain camera parameters")
+        if self.params.tp != Datum.CAMERAPARAMS:
+            raise Exception(f"Camera data file {fileName} contains invalid camera parameters")
+
+    @classmethod
+    def write(self, fileName):
+        """To avoid writing a weird init, we construct a new DatumStore archive here and write a CameraParams
+        datum to it. We return the store  so we can write flatfields etc. later."""
+
+        from pcot.utils.archive import FileArchive
+        from pcot.utils.datumstore import DatumStore
