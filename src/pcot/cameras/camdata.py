@@ -1,6 +1,6 @@
 import pcot.datumtypes
 from pcot.cameras.filters import Filter
-from pcot.datum import Datum
+from pcot.datum import Datum, nullSourceSet
 from pcot.datumtypes import Type
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedListType
 
@@ -23,10 +23,13 @@ class CameraParams:
     isn't large data, like flatfields). It is, as such, only part of the camera data - it's
     created from a datum store and is contained in CameraData"""
 
-    def __init__(self):
+    def __init__(self, filters=None):
         """Used when creating an entirely new CameraParams object"""
         self.params = CAMDICT.create()
-        self.filters = {}
+        if filters:
+            self.filters = filters[:] # make a copy
+        else:
+            self.filters = {}
 
     @classmethod
     def deserialise(cls, d) -> 'CameraParams':
@@ -109,6 +112,6 @@ class CameraData:
         archive = FileArchive(fileName, "w")
         archive.open()
         da = DatumStore(archive)
-        da.writeDatum("params", Datum(Datum.CAMERAPARAMS, params))
+        da.writeDatum("params", Datum(Datum.CAMERAPARAMS, params, nullSourceSet))
 
         return da
