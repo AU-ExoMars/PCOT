@@ -118,6 +118,9 @@ class DatumStore:
                 raise Exception("archive must be open for writing if it is open when passed to a DatumStore constructor (don't use a context manager for the archive in read mode)")
             self.manifest = {}
             self.write_mode = True
+            
+    def close(self):
+        self.archive.close()
 
     def readManifest(self, archive):
         names = archive.getNames()
