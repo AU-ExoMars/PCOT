@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 DESC="""
 Given camera data in the current directory, create a .parc file
 from that data for use as camera parameter data.
