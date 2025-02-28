@@ -1,0 +1,42 @@
+filters:
+  C01R:
+    cwl: 640
+    fwhm: 100
+    position: R01
+    transmission: 0.993
+  C02R:
+    cwl: 540
+    fwhm: 80
+    position: R02
+    transmission: 0.988
+  C03L:
+    cwl: 440
+    fwhm: 120
+    position: R03
+    transmission: 0.983
+  G02:
+    cwl: 500
+    fwhm: 20
+    position: R08
+    transmission: 0.966
+  S01:
+    cwl: 925
+    fwhm: 5
+    position: R06
+    transmission: 5.52e-07
+  S02:
+    cwl: 935
+    fwhm: 5
+    position: R07
+    transmission: 8.54e-07
+  S03:
+    cwl: 450
+    fwhm: 5
+    position: R04
+    transmission: 1.356e-06
+  S04:
+    cwl: 670
+    fwhm: 5
+    position: R05
+    transmission: 9.22e-07
+

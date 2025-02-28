@@ -24,10 +24,13 @@ class CameraParams:
     created from a datum store and is contained in CameraData"""
 
     def __init__(self, filters=None):
-        """Used when creating an entirely new CameraParams object"""
+        """Used when creating an entirely new CameraParams object. The input is:
+
+        * filters: a dict of filter objects {name:data}
+        """
         self.params = CAMDICT.create()
         if filters:
-            self.filters = filters[:] # make a copy
+            self.filters = filters.copy()
         else:
             self.filters = {}
 
@@ -99,7 +102,7 @@ class CameraData:
             raise Exception(f"Camera data file {fileName} contains invalid camera parameters")
 
     @classmethod
-    def write(self, fileName, params: CameraParams):
+    def openStoreAndWrite(self, fileName, params: CameraParams):
         """To avoid writing a weird init, we construct a new DatumStore archive here and write a CameraParams
         datum to it. We return the store  so we can write flatfields etc. later. Remember to close the archive!
 
@@ -111,7 +114,6 @@ class CameraData:
 
         archive = FileArchive(fileName, "w")
         archive.open()
-        da = DatumStore(archive)
-        da.writeDatum("params", Datum(Datum.CAMERAPARAMS, params, nullSourceSet))
-
-        return da
+        ds = DatumStore(archive)
+        ds.writeDatum("params", Datum(Datum.CAMERAPARAMS, params, nullSourceSet))
+        return ds
