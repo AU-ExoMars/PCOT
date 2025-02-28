@@ -89,21 +89,5 @@ def main():
     pcot.config.save()
 
 
-def maintest():
-    global app
-    app = QtWidgets.QApplication(sys.argv)
-    app.setApplicationVersion(pcot.__fullversion__)  # this comes from the VERSION.txt file
-    app.setApplicationName("PCOT")
-    app.setOrganizationName('Aberystwyth University')
-    app.setOrganizationDomain('aber.ac.uk')
-    pcot.ui.setApp(app)
-
-    w = collapser.test()
-
-    w.show()
-
-    app.exec_()
-
-
 if __name__ == "__main__":
     main()
