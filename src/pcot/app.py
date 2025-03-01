@@ -26,8 +26,9 @@ def checkApp():
 
 
 def run(args):
-    """the main function: parses command line, loads any files specified,
-    opens a mainwindow and runs its code."""
+    """the main function: loads any file specified, opens a mainwindow and runs its code.
+    Command line parsing is done in main, which calls this."""
+    
     global app
 
     # note that we don't use Qt to process the args. This is just so Qt could
