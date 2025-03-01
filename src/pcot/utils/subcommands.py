@@ -16,22 +16,24 @@ import logging
 subcommand_parser = ArgumentParser()
 subparsers = subcommand_parser.add_subparsers(dest="subcommand")
 subcommands = {}
-mainparser = None
+main_command = None
 mainfunc = None
 
-# add logger args
+# This parser parses the common arguments to both main and subcommands
+# We don't want to add a help argument to avoid the common parser parsing
+# it and exiting early.
+common_parser = ArgumentParser(add_help=False)
 
-def addLoggerArgs(p):
-    p.set_defaults(loglevel=logging.WARNING)
-    p.add_argument('--debug','-d',help="set log level to debug",
-        action="store_const",dest="loglevel",const=logging.DEBUG) 
-    p.add_argument('--verbose','-v',help="set log level to verbose (i.e. INFO)",
-        action="store_const",dest="loglevel",const=logging.INFO) 
+def set_common_args(args,**kwargs):
+    """Provide common arguments and defaults (the latter as keyword args
+    like set_defaults() in argparse"""
+    for arg in args:
+        common_parser.add_argument(*arg[0], **arg[1])
+    common_parser.set_defaults(**kwargs)
 
-addLoggerArgs(subcommand_parser)
 
 @dataclass
-class SubcommandInfo:
+class CommandInfo:
     parser: ArgumentParser
     shortdesc: str
     
@@ -45,30 +47,36 @@ def argument(*name_or_flags, **kwargs):
     
 def subcommand(args=[], shortdesc="", parent=subparsers):
     """Decorator to define a new subcommand in a sanity-preserving way.
-    The function will be stored in the ``func`` variable when the parser
-    parses arguments so that it can be called directly like so::
-
-        args = subcommand_parser.parse_args()
-        args.func(args)
 
     Usage example::
+
+        # set up a common argument and default for it - these come before the subcommand,
+        # e.g. prog -d mysubcommand foo
+        #   * prog is main program
+        #   * -d is a common argument
+        #   * mysubcommand is a subcommand
+        *   * foo is an argument to that subcommand        
+ 
+        set_common_args([
+            argument('--debug','-d',help="set log level to debug",action="store_const",
+                dest="loglevel",const=logging.DEBUG)],
+            loglevel=logging.WARNING)
     
         @maincommand([argument("zog", help="Argument for main command",type=str)])
         def mainfunc(args):
             print(args.zog)
 
         @subcommand([argument("-d", help="Enable debug mode", action="store_true")],"does a thing")
-        def subcommand(args):
+        def mysubcommand(args):
             print(args)
-
-    Then on the command line::
-
-        $ python cli.py subcommand -d
-        
-    Or
-        $ python cli.py myzogstring
-
-    to run the "main command"
+            
+        def main():
+            # get the function to run and arguments to parse
+            func, args = process()
+            # process the common args (an example)
+            logger.setLevel(args.loglevel)
+            # run the function
+            func(args)
     """
     
     def decorator(func):
@@ -76,7 +84,7 @@ def subcommand(args=[], shortdesc="", parent=subparsers):
         for arg in args:
             parser.add_argument(*arg[0], **arg[1])
         parser.set_defaults(func=func)
-        subcommands[func.__name__] = SubcommandInfo(parser,shortdesc)
+        subcommands[func.__name__] = CommandInfo(parser,shortdesc)
     return decorator
     
 
@@ -155,34 +163,58 @@ class MainArgumentParser(ArgumentParser):
     
 def maincommand(args=[]):
     def decorator(func):
-        global mainparser
+        global main_command
         global mainfunc
-        mainparser = MainArgumentParser()
-        addLoggerArgs(mainparser)
+        p = MainArgumentParser()
+        p.description = func.__doc__
+        main_command = CommandInfo(p, func.__doc__)
         mainfunc = func
         for arg in args:
-            mainparser.add_argument(*arg[0], **arg[1])
+            main_command.parser.add_argument(*arg[0], **arg[1])
     return decorator
-            
+
+def update_args(args,args_to_add):
+    # add the args_to_add to the args Namespace
+    for k,v in vars(args_to_add).items():
+        setattr(args,k,v)            
 
 
 def process():
+    """Process the arguments.
+    Return value: a tuple of
+        * command function to call
+        * argument list for the function (with common arguments merged in)
+    This is so that we can process the common args in a common way before calling the
+    function."""
+            
     import sys
     global subcommand_help
     logger = logging.getLogger("pcot")
     
-    # make a copy of the arg list with the "-" arguments stripped
-    lst = [x for x in sys.argv[1:] if x[0]!="-"]
-    # if the first non-dash argument is not a command, and there a main function,
+    # parse the common arguments and get the remaining args
+    # return value is remaining args, args namespace.
+    
+    (common_args, argv) = common_parser.parse_known_args()
+    # if the first non-dash argument is a command, and there a main function,
     # use that.
+    
+    lst = [x for x in argv if x[0]!='-']
+    
     if mainfunc and (len(lst)<1 or lst[0] not in subcommands):
-        args = mainparser.parse_args()
-        logger.setLevel(args.loglevel)
-        mainfunc(args)
+        # parse main program args
+        args = main_command.parser.parse_args(argv)
+        # merge in the common args
+        update_args(args,common_args)
+        func = mainfunc
     else:
-        args = subcommand_parser.parse_args()
-        logger.setLevel(args.loglevel)
-        if args.subcommand is None:
+        # parse common args
+        args = subcommand_parser.parse_args(argv)
+        # merge in the common args
+        update_args(args,common_args)
+        if args.subcommand is None:     # ???? WHY MIGHT THIS HAPPEN
+            print("Null subcommand")
             subcommand_parser.print_help()
         else:
-            args.func(args)
+            func = args.func
+            
+    return func,args
