@@ -130,6 +130,9 @@ def loadFilters():
     from pcot.cameras.filters import loadFilterSet
     from pathlib import Path
 
+    print("Loading filters currently in progress!!!!")
+    return
+
     # these can be overridden by the data in the config file
     loadFilterSet('AUPE', getAssetPath('aupe.csv'))
     loadFilterSet('PANCAM', getAssetPath('pancam.csv'))

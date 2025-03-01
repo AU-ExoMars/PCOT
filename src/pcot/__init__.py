@@ -78,7 +78,7 @@ def setup():
     config.loadFilters()
 
     # If we run without a GUI, we still need an application. This will provide that.
-    from pcot.main import checkApp
+    from pcot.app import checkApp
     checkApp()
 
 
