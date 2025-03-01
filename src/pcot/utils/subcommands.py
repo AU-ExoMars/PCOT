@@ -9,7 +9,7 @@ and (b) information on the subcommands is given in usage and help.
 
 """
 
-from argparse import ArgumentParser, HelpFormatter
+from argparse import ArgumentParser
 from dataclasses import dataclass
 import logging
 
@@ -24,7 +24,8 @@ mainfunc = None
 # it and exiting early.
 common_parser = ArgumentParser(add_help=False)
 
-def set_common_args(args,**kwargs):
+
+def set_common_args(args, **kwargs):
     """Provide common arguments and defaults (the latter as keyword args
     like set_defaults() in argparse"""
     for arg in args:
@@ -36,16 +37,17 @@ def set_common_args(args,**kwargs):
 class CommandInfo:
     parser: ArgumentParser
     shortdesc: str
-    
+
 
 def argument(*name_or_flags, **kwargs):
     """Convenience function to properly format arguments to pass to the
     subcommand decorator.
 
     """
-    return (list(name_or_flags), kwargs)
-    
-def subcommand(args=[], shortdesc="", parent=subparsers):
+    return list(name_or_flags), kwargs
+
+
+def subcommand(args=None, shortdesc="", parent=subparsers):
     """Decorator to define a new subcommand in a sanity-preserving way.
 
     Usage example::
@@ -78,52 +80,52 @@ def subcommand(args=[], shortdesc="", parent=subparsers):
             # run the function
             func(args)
     """
-    
+
     def decorator(func):
         parser = parent.add_parser(func.__name__, description=func.__doc__)
-        for arg in args:
-            parser.add_argument(*arg[0], **arg[1])
+        if args:
+            for arg in args:
+                parser.add_argument(*arg[0], **arg[1])
         parser.set_defaults(func=func)
-        subcommands[func.__name__] = CommandInfo(parser,shortdesc)
+        subcommands[func.__name__] = CommandInfo(parser, shortdesc)
+
     return decorator
-    
+
 
 class MainArgumentParser(ArgumentParser):
     """
     This is pretty grim. It overrides the formatting code to add information on
     subcommands, and it does so using a lot of argparse internals."""
-    
-    def __init__(self,*args,**kwargs):
-        super().__init__(*args,**kwargs)
 
-    def add_subcommand_info(self,formatter):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def add_subcommand_info(self, formatter):
         formatter.start_section("The following subcommands also exist")
         # first, assemble pairs of strings that will be put into columns
         columns = []
-        for k,i in subcommands.items():
+        for k, i in subcommands.items():
             p = i.parser
             # nasty hackery to get the usage string out of the subcommand
             ff = i.parser._get_formatter()
             ff._prog = f"{self.prog} {k}"
-            ff.add_usage(p.usage,p._actions,p._mutually_exclusive_groups,"")
+            ff.add_usage(p.usage, p._actions, p._mutually_exclusive_groups, "")
             ss = ff.format_help().strip()
             # first column is usage, second is shortdescription
-            columns.append((ss,i.shortdesc))
+            columns.append((ss, i.shortdesc))
         # find the maximum width of the first column            
         maxw = max([len(x[0]) for x in columns])
         # now output
-        
-        for x,y in columns:
+
+        for x, y in columns:
             # we add the columns to the formatter, but we pass it through
             # an identity function to format it so no wrapping or filling
             # will happen.
             ss = f"{x.ljust(maxw)}   :   {y}\n"
-            formatter._add_item((lambda x: x),(ss,))
-            
-            
+            formatter._add_item((lambda x: x), (ss,))
+
         formatter.end_section()
-        
-        
+
     def format_usage(self):
         formatter = self._get_formatter()
         formatter.add_usage(self.usage, self._actions,
@@ -131,7 +133,7 @@ class MainArgumentParser(ArgumentParser):
         self.add_subcommand_info(formatter)
 
         return formatter.format_help()
-    
+
     def format_help(self):
         formatter = self._get_formatter()
 
@@ -149,7 +151,7 @@ class MainArgumentParser(ArgumentParser):
             formatter.add_arguments(action_group._group_actions)
             formatter.end_section()
 
-        # epilog
+            # epilog
             formatter.add_text(self.epilog)
 
         # jcf - add subcommand data
@@ -157,10 +159,8 @@ class MainArgumentParser(ArgumentParser):
 
         # determine help from format above
         return formatter.format_help()
-    
-    
 
-    
+
 def maincommand(args=[]):
     def decorator(func):
         global main_command
@@ -171,12 +171,14 @@ def maincommand(args=[]):
         mainfunc = func
         for arg in args:
             main_command.parser.add_argument(*arg[0], **arg[1])
+
     return decorator
 
-def update_args(args,args_to_add):
+
+def update_args(args, args_to_add):
     # add the args_to_add to the args Namespace
-    for k,v in vars(args_to_add).items():
-        setattr(args,k,v)            
+    for k, v in vars(args_to_add).items():
+        setattr(args, k, v)
 
 
 def process():
@@ -186,35 +188,35 @@ def process():
         * argument list for the function (with common arguments merged in)
     This is so that we can process the common args in a common way before calling the
     function."""
-            
+
     import sys
     global subcommand_help
     logger = logging.getLogger("pcot")
-    
+
     # parse the common arguments and get the remaining args
     # return value is remaining args, args namespace.
-    
+
     (common_args, argv) = common_parser.parse_known_args()
     # if the first non-dash argument is a command, and there a main function,
     # use that.
-    
-    lst = [x for x in argv if x[0]!='-']
-    
-    if mainfunc and (len(lst)<1 or lst[0] not in subcommands):
+
+    lst = [x for x in argv if x[0] != '-']
+
+    if mainfunc and (len(lst) < 1 or lst[0] not in subcommands):
         # parse main program args
         args = main_command.parser.parse_args(argv)
         # merge in the common args
-        update_args(args,common_args)
+        update_args(args, common_args)
         func = mainfunc
     else:
         # parse common args
         args = subcommand_parser.parse_args(argv)
         # merge in the common args
-        update_args(args,common_args)
-        if args.subcommand is None:     # ???? WHY MIGHT THIS HAPPEN
+        update_args(args, common_args)
+        if args.subcommand is None:  # ???? WHY MIGHT THIS HAPPEN
             print("Null subcommand")
             subcommand_parser.print_help()
         else:
             func = args.func
-            
-    return func,args
+
+    return func, args

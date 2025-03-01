@@ -1,6 +1,7 @@
 """
 This is the file which creates and runs the PCOT user interface
 """
+import os
 
 from PySide2 import QtWidgets
 from PySide2.QtCore import QCommandLineParser, QCommandLineOption
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 app = None
 
+
 def checkApp():
     """Makes sure an app exists - we can't run certain code without one, and we often
     won't have one if we're not using a GUI. Note that the UI package also stores this
@@ -28,7 +30,7 @@ def checkApp():
 def run(args):
     """the main function: loads any file specified, opens a mainwindow and runs its code.
     Command line parsing is done in main, which calls this."""
-    
+
     global app
 
     # note that we don't use Qt to process the args. This is just so Qt could
@@ -41,7 +43,7 @@ def run(args):
     pcot.ui.setApp(app)
 
     pcot.setup()
-    
+
     # create a document either ab initio or from a file, depending on args and config.
     if args.file is not None:
         doc = Document(args.file)
@@ -61,4 +63,3 @@ def run(args):
     app.exec_()
     logger.info("Leaving app")
     pcot.config.save()
-
