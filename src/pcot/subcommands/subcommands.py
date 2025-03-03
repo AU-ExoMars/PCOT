@@ -1,12 +1,17 @@
-"""Code from https://gist.github.com/mivade/384c2c41c3a29c637cb6c603d4197f9f
+"""
+This is the subcommand processing system.
+
+Code from https://gist.github.com/mivade/384c2c41c3a29c637cb6c603d4197f9f
 
 which was released into the public domain.
 
 This wraps the argparse code with some nice decorators. I've also made some 
-nasty modifications so that (a) the null subcommand exists (i.e. no subcommand given)
-and (b) information on the subcommands is given in usage and help.
+nasty modifications so that 
 
-
+(a) the null subcommand exists (i.e. no subcommand given)
+(b) information on the subcommands is given in usage and help
+(c) a set of common options is present, which is added to the help
+    for both the main and subcommands.
 """
 
 from argparse import ArgumentParser

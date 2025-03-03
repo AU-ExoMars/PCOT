@@ -1,8 +1,15 @@
 # The main function with command line parsing, setting up the UI.
 # Run from both __main__ and from the "pcot" entry point script.
 
-from pcot.utils.subcommands import \
+# this will import the subcommands, or at least their top-level funcs -
+# this function may itself just import another package when run to avoid
+# excessive startup imports.
+
+import pcot.subcommands
+
+from pcot.subcommands.subcommands import \
     maincommand, subcommand, argument, process, set_common_args
+    
 import logging
 
 import sys
@@ -34,19 +41,6 @@ def mainfunc(args):
     import pcot.app
     pcot.app.run(args)
 
-
-#
-# This is a test command.
-#
-
-@subcommand([
-    argument("n", metavar="INT", help="an integer", type=int),
-    argument("-q", "--quick", help="some kind of flag", action="store_true")],
-    shortdesc="A test command")
-def test(args):
-    """Does testy things"""
-    print(f"Test subcommand: {args.n} {args.quick}")
-    logging.getLogger(__name__).debug("foo")
 
 
 #
