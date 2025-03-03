@@ -13,7 +13,57 @@ from argparse import ArgumentParser
 from dataclasses import dataclass
 import logging
 
-subcommand_parser = ArgumentParser()
+class SubArgumentParser(ArgumentParser):
+    """This is a parser which also adds the common arguments to each help/usage output"""
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def _getacts(self):
+        return common_parser._actions + self._actions
+        
+    def _getactgroups(self):
+        return common_parser._action_groups+self._action_groups
+        
+    def add_subcommand_info(self,formatter):
+        """Optionally add info on ALL subcommands; only done in the main parser"""
+        pass
+        
+    def format_usage(self):
+        formatter = self._get_formatter()
+        formatter.add_usage(self.usage, self._getacts(),
+                            self._mutually_exclusive_groups)
+        self.add_subcommand_info(formatter)
+        return formatter.format_help()
+
+    def format_help(self):
+        formatter = self._get_formatter()
+        
+        # usage
+        formatter.add_usage(self.usage, self._getacts(),
+                            self._mutually_exclusive_groups)
+
+        # description
+        formatter.add_text(self.description)
+
+        # positionals, optionals and user-defined groups
+        for action_group in self._getactgroups():
+            formatter.start_section(action_group.title)
+            formatter.add_text(action_group.description)
+            formatter.add_arguments(action_group._group_actions)
+            formatter.end_section()
+
+            # epilog
+            formatter.add_text(self.epilog)
+
+        self.add_subcommand_info(formatter)
+
+        # determine help from format above
+        return formatter.format_help()
+    
+
+
+subcommand_parser = SubArgumentParser()
 subparsers = subcommand_parser.add_subparsers(dest="subcommand")
 subcommands = {}
 main_command = None
@@ -92,7 +142,7 @@ def subcommand(args=None, shortdesc="", parent=subparsers):
     return decorator
 
 
-class MainArgumentParser(ArgumentParser):
+class MainArgumentParser(SubArgumentParser):
     """
     This is pretty grim. It overrides the formatting code to add information on
     subcommands, and it does so using a lot of argparse internals."""
@@ -109,7 +159,7 @@ class MainArgumentParser(ArgumentParser):
             # nasty hackery to get the usage string out of the subcommand
             ff = i.parser._get_formatter()
             ff._prog = f"{self.prog} {k}"
-            ff.add_usage(p.usage, p._actions, p._mutually_exclusive_groups, "")
+            ff.add_usage(p.usage, common_parser._actions+p._actions, p._mutually_exclusive_groups, "")
             ss = ff.format_help().strip()
             # first column is usage, second is shortdescription
             columns.append((ss, i.shortdesc))
@@ -125,40 +175,6 @@ class MainArgumentParser(ArgumentParser):
             formatter._add_item((lambda x: x), (ss,))
 
         formatter.end_section()
-
-    def format_usage(self):
-        formatter = self._get_formatter()
-        formatter.add_usage(self.usage, self._actions,
-                            self._mutually_exclusive_groups)
-        self.add_subcommand_info(formatter)
-
-        return formatter.format_help()
-
-    def format_help(self):
-        formatter = self._get_formatter()
-
-        # usage
-        formatter.add_usage(self.usage, self._actions,
-                            self._mutually_exclusive_groups)
-
-        # description
-        formatter.add_text(self.description)
-
-        # positionals, optionals and user-defined groups
-        for action_group in self._action_groups:
-            formatter.start_section(action_group.title)
-            formatter.add_text(action_group.description)
-            formatter.add_arguments(action_group._group_actions)
-            formatter.end_section()
-
-            # epilog
-            formatter.add_text(self.epilog)
-
-        # jcf - add subcommand data
-        self.add_subcommand_info(formatter)
-
-        # determine help from format above
-        return formatter.format_help()
 
 
 def maincommand(args=[]):
