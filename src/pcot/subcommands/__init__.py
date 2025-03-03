@@ -7,6 +7,7 @@ is imported on demand when their function runs.
 from pcot.subcommands.subcommands import \
     maincommand, subcommand, argument, process, set_common_args
 
+import logging
 
 #
 # This is a test command.
