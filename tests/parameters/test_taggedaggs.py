@@ -49,6 +49,21 @@ def test_taggeddict():
         td['d'] = 12
 
 
+def test_taggeddict_iterator():
+    tdt = TaggedDictType(
+        a=("a", int, 10),
+        b=("b", str, "foo"),
+        c=("c", float, 3.14)
+    )
+
+    td = tdt.create()
+    size = 0
+    for k, v in td.items():
+        assert v == td[k]
+        size += 1
+    assert size == 3
+
+
 def test_cant_set_with_plain_aggregate():
     tlt = TaggedListType(int, [10, 20, 30], 0)
     tdt = TaggedDictType(
@@ -151,6 +166,18 @@ def test_list_serialise():
     serial = tl.serialise()
     assert serial == [10, 20, 30]
     assert serial != [30, 20, 10]
+
+
+def test_taggedlist_iterate():
+    base_list = [10, 20, 30]
+    tlt = TaggedListType(int, base_list, 0)
+    tl = tlt.create()
+    size = 0
+    for i, v in enumerate(tl):
+        assert v == tl[i]
+        assert v == base_list[i]
+        size += 1
+    assert size == 3
 
 
 def test_ser_complex():

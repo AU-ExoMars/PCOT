@@ -9,11 +9,10 @@ import pcot.subcommands
 
 from pcot.subcommands.subcommands import \
     maincommand, subcommand, argument, process, set_common_args
-    
+
 import logging
 
 import sys
-
 
 # This command line system specifies the "main command", which you get if you
 # just give "pcot" on the command line. If the next item is a recognised subcommand
@@ -42,7 +41,6 @@ def mainfunc(args):
     pcot.app.run(args)
 
 
-
 #
 # The main function which just runs process() in the subcommands module. This
 # will parse the command line and run the appropriate function - either the maincommand
@@ -62,7 +60,6 @@ def main():
 
         sys.meta_path.insert(0, ImportMonitor())
 
-    
     # run the function
     func(args)
 

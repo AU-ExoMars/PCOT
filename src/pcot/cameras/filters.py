@@ -28,14 +28,17 @@ class Filter:
     position: str
     # name of filter (e.g. G01 for "geology 1") (if not given, will be str(cwl))
     name: str
+    # backpointer to the camera parameter set, if one exists (i.e. filter created from a CameraParams object)
+    params: 'CameraParams'
 
-    def __init__(self, cwl, fwhm, transmission=1.0, position=None, name=None):
+    def __init__(self, cwl, fwhm, transmission=1.0, position=None, name=None, params=None):
         """constructor"""
         self.cwl = cwl
         self.fwhm = fwhm
         self.transmission = transmission
         self.name = name if name is not None else str(cwl)
         self.position = position
+        self.params = params
 
     def __hash__(self):
         """The hash of a filter is its name. This is here because we want to be able to
@@ -145,72 +148,6 @@ def wav2RGB(wavelength, scale=1.0):
     SSS *= scale
 
     return [(SSS * R), (SSS * G), (SSS * B)]
-
-
-_filterSets = {}
-
-
-def loadFilterSet(name: str, path: Path):
-    """Load a filter set from a file and store in the internal dict"""
-
-    def decomment(csvfile):  # comments are like those in Python
-        for row in csvfile:
-            raw = row.split('#')[0].strip()
-            if raw:
-                yield raw
-
-    # build a list of filters
-    filters = []
-    with open(os.path.expanduser(path)) as file:
-        for r in csv.DictReader(decomment(file)):
-            f = Filter(int(r['cwl']),
-                       int(r['fwhm']),
-                       float(r['transmission']),
-                       r['position'],
-                       r['name'])
-            filters.append(f)
-    # and store that in a dictionary of filter set name -> filter list
-    _filterSets[name] = filters
-    logger.info(f"Loaded filter set {name} from {path}")
-
-
-def saveFilters(path: str, filters: List[Filter]):
-    """save a filter set - used in debugging and development"""
-    fields = ('cwl', 'fwhm', 'transmission', 'position', 'name')
-    with open(path, "w", newline='') as file:
-        w = csv.DictWriter(file, fields)
-        w.writeheader()
-        for f in filters:
-            # extract the fields from the filter objects
-            d = {k: getattr(f, k) for k in fields}
-            # get a bit more precision on the floats
-            d = {k: format(v, ".6g") if isinstance(v, float) else v for k, v in d.items()}
-            w.writerow(d)
-
-
-def getFilter(filterset, target, search='name'):
-    if filterset not in _filterSets:
-        raise Exception(f"cannot find filter set {filterset}")
-
-    # a simple linear search is plenty fast enough here. We can search on name, pos or cwl.
-    if search == 'name':
-        for x in _filterSets[filterset]:
-            if x.name == target:
-                return x
-    elif search == 'pos':
-        for x in _filterSets[filterset]:
-            if x.position == target:
-                return x
-    elif search == 'cwl':
-        for x in _filterSets[filterset]:
-            if x.cwl == target:
-                return x
-    return DUMMY_FILTER
-
-
-def getFilterSetNames():
-    """return the names of all the filter sets we know about"""
-    return _filterSets.keys()
 
 
 ## dummy filter for when we have trouble finding the value

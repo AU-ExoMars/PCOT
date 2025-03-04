@@ -37,6 +37,8 @@ def getUserName():
 
 
 data = configparser.ConfigParser()
+data.optionxform = str   # make it case sensitive
+
 data.read_file(getAssetAsFile('defaults.ini'))
 data.read(['site.cfg', os.path.expanduser('~/.pcot.ini')], encoding='utf_8')
 
@@ -69,13 +71,13 @@ class Recents:
 
     def fetch(self,config_data):
         for i in range(self.count):
-            name = "Recent{}".format(i)
+            name = "recent{}".format(i)
             if name in data['Default']:
                 self.paths.append(config_data['Default'][name])
 
     def store(self, config_data):
         for i in range(len(self.paths)):
-            name = "Recent{}".format(i)
+            name = "recent{}".format(i)
             config_data['Default'][name] = self.paths[i]
 
 
@@ -102,7 +104,7 @@ def setDefaultDir(kind, directory):
 
 
 def getDefaultDir(kind):
-    directory = data['Locations'][kind]
+    directory = data['Locations'].get(kind, None)
     logger.debug(f"Retrieving default dir for {kind} as {directory}")
     return directory
 
@@ -124,23 +126,15 @@ def getFileDialogOptions():
         return QtWidgets.QFileDialog.Options()
 
 
-def loadFilters():
-    """Load the default filter sets from the resource directory, followed by user filters
-    as specified in the .ini file."""
-    from pcot.cameras.filters import loadFilterSet
-    from pathlib import Path
+def loadCameras():
+    """Load the camera data from the archive"""
 
-    print("Loading filters currently in progress!!!!")
-    return
+    from pcot import cameras
 
-    # these can be overridden by the data in the config file
-    loadFilterSet('AUPE', getAssetPath('aupe.csv'))
-    loadFilterSet('PANCAM', getAssetPath('pancam.csv'))
-
-    if 'filters' in data:
-        for name in data['filters']:
-            file = data['filters'][name]
-            loadFilterSet(name, Path(file))
+    if 'cameras' in data['Locations']:
+        path = getDefaultDir('cameras')
+        if path:
+            cameras.loadAllCameras(path)
 
 
 # These are used to add plugins: main window hooks run when a main window is opened,

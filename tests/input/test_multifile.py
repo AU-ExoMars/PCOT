@@ -138,9 +138,9 @@ def test_multifile_load_with_cwl(globaldatadir):
     doc = Document()
 
     # This looks for a wavelength
-    filenames = ["F440.png", "F540.png", "F640.png"]
+    names = ["F740.png", "F780.png", "F840.png"]
     assert doc.setInputMulti(0, str(globaldatadir / "multi"),
-                             filenames,
+                             names,
                              filterpat=r'.*F(?P<cwl>[0-9]+).*') is None
 
     node = doc.graph.create("input 0")
@@ -153,17 +153,13 @@ def test_multifile_load_with_cwl(globaldatadir):
     assert img.h == 30
     assert np.allclose(img.img[0][0], (0, 1, 32768 / 65535))
 
-    path = str(globaldatadir / "multi")
-    filenames = ", ".join([f"{i}: {s}" for i, s in enumerate(filenames)])
-
-    for sourceSet, pos, name, cwl, fwhm, trans, fn in zip(img.sources,
-                                                        ('L06', 'L08', 'L07'),
-                                                        ('G01', 'C02L', 'C01L'),
-                                                        (440, 540, 640),
-                                                        (25, 80, 100),
-                                                        (0.987, 0.988, 0.993),
-                                                        filenames,
-                                                      ):
+    for sourceSet, pos, name, cwl, fwhm, trans in zip(img.sources,                  # PANCAM filter set:
+                                                          ('R03', 'R02', 'R01'),        # positions
+                                                          ('G07', 'G08', 'G09'),      # names
+                                                          (740, 780, 840),              # cwls
+                                                          (15, 20, 25),                # fwhms
+                                                          (0.983, 0.981, 0.989),        # transmission ratios
+                                                          ):
         #  First, make sure each band has a source set of a single source
         assert len(sourceSet) == 1
         s = sourceSet.getOnlyItem()

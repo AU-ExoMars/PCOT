@@ -1,3 +1,12 @@
+name: TRAINING_RGB
+date: 2025-03-04
+author: Jim Finnis <jcf12@aber.ac.uk>
+
+description: |
+    The training PanCam instrument as it was on 4th March 2025.
+    This is the RGB/Solar set.
+    This is a minimal data set with filters only.
+
 filters:
   C01R:
     cwl: 640

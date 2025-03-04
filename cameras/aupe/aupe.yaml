@@ -1,3 +1,11 @@
+name: AUPE
+date: 2025-03-04
+author: Jim Finnis <jcf12@aber.ac.uk>
+
+description: |
+    The Aberystwyth University PANCAM Emulator
+    This dataset represents AUPE as it was on 4th March 2025.
+
 filters:
   C01L:
     cwl: 640

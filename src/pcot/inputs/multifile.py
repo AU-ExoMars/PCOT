@@ -15,9 +15,9 @@ from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import MethodWidget
 from .inputmethod import InputMethod
 from .. import ui
+from ..cameras import getCameraNames
 from ..dataformats import load
 from ..dataformats.raw import RawLoader
-from pcot.cameras.filters import getFilterSetNames
 from ..parameters.taggedaggregates import TaggedDict
 from ..ui import uiloader
 from ..ui.presetmgr import PresetModel, PresetDialog, PresetOwner
@@ -51,7 +51,7 @@ class MultifileInputMethod(InputMethod):
         # are used, set this to 10. The data will then by divided by 1023 (2^10-1) rather than 65535 (2^16-1).
         # If it is None, the data is always divided by 65535 for 16 bit data, 255 for 8 bit.
         self.bitdepth = None
-        self.filterset = "PANCAM"
+        self.camera = "PANCAM"
         self.filterpat = r'.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*'
         self.filterre = None
         self.rawLoader = RawLoader(offset=0, bigendian=False)
@@ -82,7 +82,7 @@ class MultifileInputMethod(InputMethod):
                              mapping=self.mapping,
                              cache=self.cachedFiles,
                              rawloader=self.rawLoader,
-                             filterset=self.filterset)
+                             camera=self.camera)
         logger.debug(f"------------ Image loaded: {img} from {len(self.files)} files, mapping is {self.mapping}")
         return img
 
@@ -90,15 +90,15 @@ class MultifileInputMethod(InputMethod):
         return "Multifile"
 
     # used from external code. Filterpat == none means leave unchanged.
-    def setFileNames(self, directory, fnames, filterpat=None, filterset="PANCAM") -> InputMethod:
+    def setFileNames(self, directory, fnames, filterpat=None, camera="PANCAM") -> InputMethod:
         """This is used in scripts to set the input method to a read a set of files. It also
-        takes a filter set name (e.g. PANCAM) and a filter pattern. The filter pattern is a regular
+        takes a camera name (e.g. PANCAM) and a filter pattern. The filter pattern is a regular
         expression that is used to extract the filter name from the filename. See the class documentation
         for more information."""
 
         self.dir = directory
         self.files = fnames
-        self.filterset = filterset
+        self.camera = camera
         if filterpat is not None:
             self.filterpat = filterpat
         self.mapping = ChannelMapping()
@@ -113,7 +113,7 @@ class MultifileInputMethod(InputMethod):
             'files': self.files,
             'bitdepth': self.bitdepth,
             'filterpat': self.filterpat,
-            'filterset': self.filterset,
+            'camera': self.camera,
             'rawloader': self.rawLoader.serialise(),
         }
         if internal:
@@ -130,11 +130,12 @@ class MultifileInputMethod(InputMethod):
         if 'rawloader' in data:
             self.rawLoader.deserialise(data['rawloader'])
 
-        # deal with legacy files where "filterset" is called "camera"
+        # due to names changing a lot, the camera is called "camera" in old and new data,
+        # and "camera" in the middle period!
         if 'filterset' in data:
-            self.filterset = data['filterset']
+            self.camera = data['filterset']
         else:
-            self.filterset = data['camera']
+            self.camera = data['camera']
         if internal:
             self.cachedFiles = data['cache']
 
@@ -152,13 +153,13 @@ class MultifileInputMethod(InputMethod):
                 of works the same way as the RawPresets in dataformats.load."""
 
                 def __init__(self):
-                    self.filterset = None
+                    self.camera = None
                     self.filterpat = None
                     self.bitdepth = None
                     self.rawloader = None
 
                 def applyPreset(self, preset: Dict[str, Any]):
-                    self.filterset = preset['filterset']
+                    self.camera = preset['camera'] if 'camera' in preset else preset['filterset']  # legacy issue
                     self.rawloader = RawLoader()
                     self.rawloader.deserialise(preset['rawloader'])
                     self.filterpat = preset['filterpat']
@@ -170,7 +171,7 @@ class MultifileInputMethod(InputMethod):
             preset.applyPreset(presetModel.presets[m.preset])
             # now initialise things with the data we just loaded. Some of these may get
             # overriden further down.
-            self.filterset = preset.filterset
+            self.camera = preset.camera
             self.filterpat = preset.filterpat
             self.bitdepth = preset.bitdepth
             self.rawLoader = preset.rawloader
@@ -182,8 +183,8 @@ class MultifileInputMethod(InputMethod):
         if m.isNotDefault('filter_pattern'):
             self.filterpat = m.filter_pattern
             self.compileRegex()
-        if m.isNotDefault('filter_set'):
-            self.filterset = m.filter_set
+        if m.isNotDefault('camera'):
+            self.camera = m.camera
         if m.isNotDefault('bit_depth'):
             self.bitdepth = m.bit_depth
         # and the raw parameters block. Ugly, but comprehensible.
@@ -221,14 +222,14 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         # all the files in the current directory (which match the filters)
         self.allFiles = []
         # these record the image last clicked on - we need to do that so we can
-        # regenerate it with new sources if the filter set is changed
+        # regenerate it with new sources if the camera is changed
         self.activatedImagePath = None
         self.activatedImage = None
         self.getinitial.clicked.connect(self.getInitial)
         self.filelist.activated.connect(self.itemActivated)
         self.filterpat.editingFinished.connect(self.patChanged)
         self.bitdepth.currentTextChanged.connect(self.bitdepthChanged)
-        self.filtSetCombo.currentIndexChanged.connect(self.filterSetChanged)
+        self.cameraCombo.currentIndexChanged.connect(self.cameraChanged)
         self.loaderSettingsButton.clicked.connect(self.loaderSettings)
         self.loaderSettingsText.setText(str(self.method.rawLoader))
         self.presetButton.pressed.connect(self.presetPressed)
@@ -240,8 +241,8 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
         self.setMinimumSize(1000, 500)
         pcot.ui.decorateSplitter(self.splitter, 1)
 
-        with SignalBlocker(self.filtSetCombo):
-            self.filtSetCombo.addItems(getFilterSetNames())
+        with SignalBlocker(self.cameraCombo):
+            self.cameraCombo.addItems(getCameraNames())
 
         # if the method doesn't have a directory, reset to the default.
 
@@ -251,7 +252,7 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
 
     def applyPreset(self, preset):
         # see comments in presetPressed for why this is here and not in the input method
-        self.method.filterset = preset['filterset']
+        self.method.camera = preset['camera']
         self.method.rawLoader.deserialise(preset['rawloader'])
         self.method.filterpat = preset['filterpat']
         self.method.bitdepth = preset.get('bitdepth', None)
@@ -260,14 +261,14 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
     def fetchPreset(self):
         # see comments in presetPressed for why this is here and not in the input method
         return {
-            "filterset": self.method.filterset,
+            "camera": self.method.camera,
             "rawloader": self.method.rawLoader.serialise(),
             "filterpat": self.method.filterpat,
             "bitdepth": self.method.bitdepth
         }
 
-    def filterSetChanged(self, i):
-        self.method.filterset = self.filtSetCombo.currentText()
+    def cameraChanged(self, i):
+        self.method.camera = self.cameraCombo.currentText()
         self.onInputChanged()
 
     def presetPressed(self):
@@ -299,8 +300,8 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
             i = 0
         self.bitdepth.setCurrentIndex(i)
         self.filterpat.setText(self.method.filterpat)
-        # this won't work if the filter set isn't in the combobox.
-        self.filtSetCombo.setCurrentText(self.method.filterset)
+        # this won't work if the camera isn't in the combobox.
+        self.cameraCombo.setCurrentText(self.method.camera)
         self.displayActivatedImage()
         # we don't do this when the window is opening, otherwise it happens a lot!
         if not self.method.openingWindow:

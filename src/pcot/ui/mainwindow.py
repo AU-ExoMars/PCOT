@@ -219,6 +219,26 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.graph.constructScene(doAutoLayout)
         self.view.setScene(self.graph.scene)
         self.doc.clearUndo()
+        self.checkCameraDataPresent()
+
+    def checkCameraDataPresent(self):
+        from pcot.cameras import getCameraNames
+        while len(getCameraNames()) == 0:
+            res = QMessageBox.question(self, "No camera data", "No camera data found. Would you like to set a directory?",
+                                      QMessageBox.Yes | QMessageBox.No)
+            if res == QMessageBox.No:
+                break
+
+            # pop up a file dialog asking for a camera directory
+            dir = pcot.config.getDefaultDir('cameras') or "~"
+            res = QtWidgets.QFileDialog.getExistingDirectory(self, "Select camera data directory",dir)
+            logger.info(f"Selected {res}")
+            if res != '':
+                logger.info(f"Setting camera data directory to {res}")
+                pcot.config.setDefaultDir('cameras', res)
+                pcot.config.save()
+                pcot.config.loadCameras()
+
 
     @classmethod
     def getWindowsForDocument(cls, d):

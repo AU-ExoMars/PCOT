@@ -7,10 +7,10 @@ import numpy as np
 from proctools.products import DataProduct
 
 from pcot import ui
+from pcot.cameras import getFilter
 from pcot.dataformats.pds4 import ProductList
 from pcot.dataformats.raw import RawLoader
 from pcot.datum import Datum
-from pcot.cameras.filters import getFilter
 from pcot.imagecube import ChannelMapping, ImageCube, load_rgb_image
 from pcot.sources import StringExternal, MultiBandSource, Source
 from pcot.ui.presetmgr import PresetOwner
@@ -73,7 +73,7 @@ def multifile(directory: str,
               preset: Optional[str] = None,
               filterpat: str = None,
               bitdepth: int = None,
-              filterset: str = None,
+              camera: str = None,
               rawloader: Optional[RawLoader] = None,
               inpidx: int = None,
               mapping: ChannelMapping = None,
@@ -97,7 +97,7 @@ def multifile(directory: str,
         we use the "nominal" depth (8 or 16).
     - inpidx: the input index to use or None if not connected to a graph input
     - mapping: the channel mapping to use or None if the default
-    - filterset: the name of the filter set to use for filter name lookup
+    - camera: the name of the camera to use for filter name lookup etc.
     - rawloader: a RawLoader object to use for loading raw files (unused if we're not loading raw files)
     - cache: a dictionary of cached data to avoid loading the same file multiple times.
       The key is the filename and the value is a tuple of the image data and the time it was loaded.
@@ -134,7 +134,7 @@ def multifile(directory: str,
             """
             def __init__(self):
                 # initialise with the settings passed into the containing function
-                self.filterset = filterset
+                self.camera = camera
                 self.filterpat = filterpat
                 self.bitdepth = bitdepth
                 self.rawloader = rawloader
@@ -142,7 +142,7 @@ def multifile(directory: str,
             def applyPreset(self, d: Dict[str, Any]):
                 # override the values with the ones from the preset file, but
                 # only if they haven't been set already
-                self.filterset = self.filterset or d['filterset']
+                self.camera = self.camera or d['camera']
                 self.filterpat = self.filterpat or d['filterpat']
                 self.bitdepth = self.bitdepth or (None if d is None else d.get('bitdepth', None))
                 if self.rawloader is None:
@@ -158,7 +158,7 @@ def multifile(directory: str,
             r.applyPreset(presetModel.loadPresetByName(r, preset))
         # now we can use the settings in r
         filterpat = r.filterpat or r'.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*'
-        filterset = r.filterset or 'PANCAM'
+        camera = r.camera or 'PANCAM'
         rawloader = r.rawloader
         
     def getFilterSearchParam(p) -> Tuple[Optional[Union[str, int]], Optional[str]]:
@@ -248,7 +248,7 @@ def multifile(directory: str,
 
             # build source data for this image
             filtpos, searchtype = getFilterSearchParam(path)
-            filt = getFilter(filterset, filtpos, searchtype)
+            filt = getFilter(camera, filtpos, searchtype)
             # img /= filt.transmission
 
             ext = StringExternal("Multi", os.path.abspath(path))

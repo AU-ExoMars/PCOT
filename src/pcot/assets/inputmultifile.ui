@@ -48,12 +48,12 @@ for output)</string>
        <item row="7" column="0">
         <widget class="QLabel" name="camlabel">
          <property name="text">
-          <string>Filter set</string>
+          <string>Camera</string>
          </property>
         </widget>
        </item>
        <item row="7" column="1">
-        <widget class="QComboBox" name="filtSetCombo">
+        <widget class="QComboBox" name="cameraCombo">
          <property name="minimumSize">
           <size>
            <width>120</width>

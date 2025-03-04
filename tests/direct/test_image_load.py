@@ -155,10 +155,11 @@ def test_direct_load_multifile(globaldatadir):
 
 def test_direct_load_multifile_cwl(globaldatadir):
     """Test direct input of an image cube using the dataformats.load.multifile method
-    with the filter pattern using the CWL from the filename"""
+    with the filter pattern using the CWL from the filename.
+    """
 
     pcot.setup()
-    names = ["F440.png", "F540.png", "F640.png"]
+    names = ["F740.png", "F780.png", "F840.png"]
     datum = load.multifile(globaldatadir / "multi",
                            names,
                            filterpat=r'.*F(?P<cwl>[0-9]+).*')
@@ -171,12 +172,12 @@ def test_direct_load_multifile_cwl(globaldatadir):
     assert img.h == 30
     assert np.allclose(img.img[0][0], (0, 1, 32768 / 65535))
 
-    for sourceSet, pos, name, cwl, fwhm, trans, fn in zip(img.sources,
-                                                          ('L06', 'L08', 'L07'),
-                                                          ('G01', 'C02L', 'C01L'),
-                                                          (440, 540, 640),
-                                                          (25, 80, 100),
-                                                          (0.987, 0.988, 0.993),
+    for sourceSet, pos, name, cwl, fwhm, trans, fn in zip(img.sources,                  # PANCAM filter set:
+                                                          ('R03', 'R02', 'R01'),        # positions
+                                                          ('G07', 'G08', 'G09'),      # names
+                                                          (740, 780, 840),              # cwls
+                                                          (15, 20, 25),                # fwhms
+                                                          (0.983, 0.981, 0.989),        # transmission ratios
                                                           names,
                                                           ):
         #  First, make sure each band has a source set of a single source
@@ -195,3 +196,15 @@ def test_direct_load_multifile_cwl(globaldatadir):
         assert s.long() == f"none: wavelength {cwl}, fwhm {fwhm} {path / fn}"
 
 
+def test_direct_load_multifile_cwl_multiple_matches(globaldatadir):
+    """Test direct input of an image cube using the dataformats.load.multifile method
+    with the filter pattern using the CWL from the filename.
+    """
+
+    pcot.setup()
+    names = ["F440.png", "F780.png", "F840.png"]
+    with pytest.raises(ValueError) as info:
+        datum = load.multifile(globaldatadir / "multi",
+                               names,
+                               filterpat=r'.*F(?P<cwl>[0-9]+).*')
+    assert "Multiple matches for cwl=440" in str(info.value)
