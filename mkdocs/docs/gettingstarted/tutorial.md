@@ -35,6 +35,19 @@ of data. It is a subset of a larger image used in testing, and is shown below as
 
 Now you have this image you can ==start PCOT==.
 
+## Setting up the camera directory
+
+Your data may come from a number of different cameras, and different
+cameras have different parameters and filter sets. PCOT needs to be able
+to find the files which describe these cameras. It does this when it starts
+up.
+
+When it can't find these files, PCOT will pop up a dialog box asking
+if you want to set a camera directory. You should select either the 
+camera directory provided by your team, or the default camera directory -
+this will be the `cameras` directory inside the main PCOT directory.
+
+
 ## Introduction to the user interface
 
 The image below shows the PCOT interface when the program has just been started,
