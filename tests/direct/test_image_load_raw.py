@@ -124,7 +124,7 @@ def test_offset_correct():
 def test_raw_uint16_bigend():
     """Try to load a raw file"""
 
-    pcot.setup()  # filterset can't be found without this
+    pcot.setup()  # camera can't be found without this
 
     with tempfile.TemporaryDirectory() as d:
         create_dir_of_raw(create_raw_uint16, d, 0, True)
@@ -132,7 +132,7 @@ def test_raw_uint16_bigend():
                            horzflip=False, vertflip=False)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             filterset='AUPE',
+                             camera='AUPE',
                              rawloader=loader
                              )
 
@@ -151,7 +151,7 @@ def test_raw_uint16_bigend():
 def test_raw_uint16_littleend():
     """Try to load a raw file"""
 
-    pcot.setup()  # filterset can't be found without this
+    pcot.setup()  # camera can't be found without this
 
     with tempfile.TemporaryDirectory() as d:
         create_dir_of_raw(create_raw_uint16, d, 0, False)
@@ -159,7 +159,7 @@ def test_raw_uint16_littleend():
                            horzflip=False, vertflip=False)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             filterset='AUPE',
+                             camera='AUPE',
                              rawloader=loader
                              )
 
@@ -174,7 +174,7 @@ def test_raw_uint16_littleend():
 def test_raw_uint16_littleend_offset():
     """Try to load a raw file"""
 
-    pcot.setup()  # filterset can't be found without this
+    pcot.setup()  # camera can't be found without this
 
     with tempfile.TemporaryDirectory() as d:
         create_dir_of_raw(create_raw_uint16, d, 10, False)
@@ -182,7 +182,7 @@ def test_raw_uint16_littleend_offset():
                            horzflip=False, vertflip=False)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             filterset='AUPE',
+                             camera='AUPE',
                              rawloader=loader
                              )
 
@@ -198,7 +198,7 @@ def test_raw_uint16_littleend_offset():
 
 def test_raw_uint16_littleend_rotate():
     """Try rotating on load. We're also testing some defaults here (bigendian false, offset 0 and no flips)"""
-    pcot.setup()  # filterset can't be found without this
+    pcot.setup()  # camera can't be found without this
 
     with tempfile.TemporaryDirectory() as d:
         create_dir_of_raw(create_raw_uint16, d, 0, False)
@@ -206,7 +206,7 @@ def test_raw_uint16_littleend_rotate():
         loader = RawLoader(format=RawLoader.UINT16, width=16, height=32, rot=90)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             filterset='AUPE',
+                             camera='AUPE',
                              rawloader=loader
                              )
 
@@ -224,7 +224,7 @@ def test_raw_uint16_littleend_rotate():
 
 
 def test_raw_uint16_littleend_rotate270():
-    pcot.setup()  # filterset can't be found without this
+    pcot.setup()  # camera can't be found without this
 
     with tempfile.TemporaryDirectory() as d:
         create_dir_of_raw(create_raw_uint16, d, 0, False)
@@ -232,7 +232,7 @@ def test_raw_uint16_littleend_rotate270():
         loader = RawLoader(format=RawLoader.UINT16, width=16, height=32, rot=270)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             filterset='AUPE',
+                             camera='AUPE',
                              rawloader=loader
                              )
 
@@ -250,7 +250,7 @@ def test_raw_uint16_littleend_rotate270():
 
 
 def test_raw_uint16_littleend_flipv():
-    pcot.setup()  # filterset can't be found without this
+    pcot.setup()  # camera can't be found without this
 
     with tempfile.TemporaryDirectory() as d:
         create_dir_of_raw(create_raw_uint16, d, 0, False)
@@ -258,7 +258,7 @@ def test_raw_uint16_littleend_flipv():
         loader = RawLoader(format=RawLoader.UINT16, width=16, height=32, vertflip=True)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             filterset='AUPE',
+                             camera='AUPE',
                              rawloader=loader
                              )
 
@@ -276,7 +276,7 @@ def test_raw_uint16_littleend_flipv():
 
 
 def test_raw_uint16_littleend_fliph():
-    pcot.setup()  # filterset can't be found without this
+    pcot.setup()  # camera can't be found without this
 
     with tempfile.TemporaryDirectory() as d:
         create_dir_of_raw(create_raw_uint16, d, 0, False)
@@ -284,7 +284,7 @@ def test_raw_uint16_littleend_fliph():
         loader = RawLoader(format=RawLoader.UINT16, width=16, height=32, horzflip=True)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             filterset='AUPE',
+                             camera='AUPE',
                              rawloader=loader
                              )
 
@@ -302,7 +302,7 @@ def test_raw_uint16_littleend_fliph():
 
 
 def test_raw_uint16_littleend_flipboth():
-    pcot.setup()  # filterset can't be found without this
+    pcot.setup()  # camera can't be found without this
 
     with tempfile.TemporaryDirectory() as d:
         create_dir_of_raw(create_raw_uint16, d, 0, False)
@@ -310,7 +310,7 @@ def test_raw_uint16_littleend_flipboth():
         loader = RawLoader(format=RawLoader.UINT16, width=16, height=32, horzflip=True, vertflip=True)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             filterset='AUPE',
+                             camera='AUPE',
                              rawloader=loader
                              )
 
@@ -330,7 +330,7 @@ def test_raw_uint16_littleend_flipboth():
 def test_raw_float32_bigend():
     """Try to load a raw file"""
 
-    pcot.setup()  # filterset can't be found without this
+    pcot.setup()  # camera can't be found without this
 
     with tempfile.TemporaryDirectory() as d:
         create_dir_of_raw(create_raw_float32, d, 0, True)
@@ -338,7 +338,7 @@ def test_raw_float32_bigend():
                            horzflip=False, vertflip=False)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             filterset='AUPE',
+                             camera='AUPE',
                              rawloader=loader
                              )
 
@@ -357,7 +357,7 @@ def test_raw_float32_bigend():
 def test_raw_float32_littleend_offset():
     """Try to load a raw file"""
 
-    pcot.setup()  # filterset can't be found without this
+    pcot.setup()  # camera can't be found without this
 
     with tempfile.TemporaryDirectory() as d:
         create_dir_of_raw(create_raw_float32, d, 32, False)
@@ -365,7 +365,7 @@ def test_raw_float32_littleend_offset():
                            horzflip=False, vertflip=False)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             filterset='AUPE',
+                             camera='AUPE',
                              rawloader=loader
                              )
 
@@ -394,7 +394,7 @@ def create_dir_of_raw2(fn, dir, offset, bigendian):
 def test_raw_byte_offset():
     """Try to load a raw 8-bit file"""
 
-    pcot.setup()  # filterset can't be found without this
+    pcot.setup()  # camera can't be found without this
 
     with tempfile.TemporaryDirectory() as d:
         create_dir_of_raw2(create_raw_uint8, d, 12, False)
@@ -402,7 +402,7 @@ def test_raw_byte_offset():
                            horzflip=False, vertflip=False)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             filterset='AUPE',
+                             camera='AUPE',
                              rawloader=loader
                              )
 
@@ -426,7 +426,7 @@ def test_raw_byte_offset_rot90_vflip():
     This is a 90 degree rotate followed by a vertical flip - essentially a transpose.
     """
 
-    pcot.setup()  # filterset can't be found without this
+    pcot.setup()  # camera can't be found without this
 
     with tempfile.TemporaryDirectory() as d:
         create_dir_of_raw2(create_raw_uint8, d, 12, False)
@@ -434,7 +434,7 @@ def test_raw_byte_offset_rot90_vflip():
                            vertflip=True)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
                              filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             filterset='AUPE',
+                             camera='AUPE',
                              rawloader=loader
                              )
 
@@ -470,7 +470,7 @@ def test_preset_raw():
     preset = {
         'rawloader': loader.serialise(),
         'filterpat': '.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-        'filterset': 'AUPE'
+        'camera': 'AUPE'
     }
     presetModel.addPreset("testpreset", preset)
 

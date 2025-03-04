@@ -201,7 +201,7 @@ def test_multifile_raw_preset():
     preset = {
         'rawloader': loader.serialise(),
         'filterpat': '.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-        'filterset': 'AUPE'
+        'camera': 'AUPE'
     }
     presetModel.addPreset("testpreset", preset)
 
@@ -257,7 +257,7 @@ def test_multifile_raw_nopreset():
         .offset = 50
         .rot = 180
         ..filter_pattern = .*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*
-        .filter_set = AUPE
+        .camera = AUPE
 
         .filenames.+ = Test-L01.raw
         .+ = Test-L02.raw
@@ -303,7 +303,7 @@ def test_multifile_raw_somepreset():
     preset = {
         'rawloader': loader.serialise(),
         'filterpat': '.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-        'filterset': 'AUPE'
+        'camera': 'AUPE'
     }
     presetModel.addPreset("testpreset", preset)
 
