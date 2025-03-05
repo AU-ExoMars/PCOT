@@ -2,8 +2,9 @@ name: AUPE
 date: 2025-03-04
 author: Jim Finnis <jcf12@aber.ac.uk>
 
+short: The WACs on the Aberystwyth University PanCam Emulator
 description: |
-    The Aberystwyth University PANCAM Emulator
+    The Aberystwyth University PanCam Emulator, WACs only.
     This dataset represents AUPE as it was on 4th March 2025.
 
 filters:

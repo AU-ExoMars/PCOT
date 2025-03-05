@@ -2,9 +2,10 @@ name: TRAINING_GEOLOGY
 date: 2025-03-04
 author: Jim Finnis <jcf12@aber.ac.uk>
 
+short: The Geology filter set for the training model PANCAM WAC
 description: |
     The training PanCam instrument as it was on 4th March 2025.
-    This is the GEOLOGY set.
+    This is the GEOLOGY set for the WAC.
     This is a minimal data set with filters only.
 
 

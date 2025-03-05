@@ -2,8 +2,9 @@ name: PANCAM
 date: 2025-03-04
 author: Jim Finnis <jcf12@aber.ac.uk>
 
+short: The flight model PanCam WACs
 description: |
-    The flight PanCam instrument as it was on 4th March 2025.
+    The flight PanCam WAC instruments as they were on 4th March 2025.
     This is a minimal data set with filters only.
     
 filters:
