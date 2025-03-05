@@ -1,6 +1,7 @@
 """
 Handling how parameter files can modify inputs.
 """
+import pcot.config
 from pcot.document import Document
 from pcot.inputs.inp import NUMINPUTS, Input
 from pcot.parameters.parameterfile import ParameterFile
@@ -31,7 +32,7 @@ multifileDictType = TaggedDictType(
     filenames=("list of filenames or filename patterns to match. All files matching each pattern will be added, sorted by name within each pattern.",
                TaggedListType(str, [], '')),
     filter_pattern=("pattern for filter identification", str, r".*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*"),
-    camera=("name of camera to use", str, "PANCAM"),
+    camera=("name of camera to use", Maybe(str), pcot.config.default_camera),
     bit_depth=("number of bits used in the image (default is all bits)", Maybe(int), None),
     preset=("preset name for some params (can be overridden by other params)", Maybe(str), None),
     raw=("parameters for loading raw data", TaggedDictType(

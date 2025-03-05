@@ -51,7 +51,7 @@ class MultifileInputMethod(InputMethod):
         # are used, set this to 10. The data will then by divided by 1023 (2^10-1) rather than 65535 (2^16-1).
         # If it is None, the data is always divided by 65535 for 16 bit data, 255 for 8 bit.
         self.bitdepth = None
-        self.camera = "PANCAM"
+        self.camera = pcot.config.default_camera
         self.filterpat = r'.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*'
         self.filterre = None
         self.rawLoader = RawLoader(offset=0, bigendian=False)
@@ -90,7 +90,7 @@ class MultifileInputMethod(InputMethod):
         return "Multifile"
 
     # used from external code. Filterpat == none means leave unchanged.
-    def setFileNames(self, directory, fnames, filterpat=None, camera="PANCAM") -> InputMethod:
+    def setFileNames(self, directory, fnames, filterpat=None, camera=None) -> InputMethod:
         """This is used in scripts to set the input method to a read a set of files. It also
         takes a camera name (e.g. PANCAM) and a filter pattern. The filter pattern is a regular
         expression that is used to extract the filter name from the filename. See the class documentation

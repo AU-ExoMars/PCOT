@@ -6,6 +6,7 @@ from typing import List, Tuple, Optional, Union, Dict, Any
 import numpy as np
 from proctools.products import DataProduct
 
+import pcot.config
 from pcot import ui
 from pcot.cameras import getFilter
 from pcot.dataformats.pds4 import ProductList
@@ -158,7 +159,7 @@ def multifile(directory: str,
             r.applyPreset(presetModel.loadPresetByName(r, preset))
         # now we can use the settings in r
         filterpat = r.filterpat or r'.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*'
-        camera = r.camera or 'PANCAM'
+        camera = r.camera or pcot.config.default_camera
         rawloader = r.rawloader
         
     def getFilterSearchParam(p) -> Tuple[Optional[Union[str, int]], Optional[str]]:

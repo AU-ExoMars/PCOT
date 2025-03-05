@@ -59,6 +59,9 @@ def setconfig(args):
     if section not in pcot.config.data:
         raise ValueError(f"Section '{section}' is not in the config file")
     if key not in pcot.config.data[section]:
-        raise ValueError(f"Key {key} is not in the config file in section '{section}'")
+        print(f"Adding {section}.{key} = {args.value}")
+    else:
+        print(f"Setting {section}.{key} = {args.value}")
+
     pcot.config.data[section][key] = args.value
     pcot.config.save()

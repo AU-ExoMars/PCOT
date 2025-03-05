@@ -180,3 +180,5 @@ def executeParserHooks(p):
 
 # significant figures to display for Values
 sigfigs = int(getDef('sigfigs', '5'))
+
+default_camera = getDef('camera', 'PANCAM')

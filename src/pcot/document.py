@@ -228,8 +228,9 @@ class Document:
         """set graph's input to RGB"""
         return self.setInputData(inputidx, inputs.Input.RGB, lambda method: method.setFileName(fname))
 
-    def setInputMulti(self, inputidx, directory, fnames, filterpat=None, camname="PANCAM"):
+    def setInputMulti(self, inputidx, directory, fnames, filterpat=None, camname=None):
         """set graph's input to multiple files"""
+        camname = camname or pcot.config.default_camera
         return self.setInputData(inputidx, inputs.Input.MULTIFILE,
                                  lambda method: method.setFileNames(directory, fnames, filterpat, camname))
 
