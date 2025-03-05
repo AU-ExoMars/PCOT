@@ -90,7 +90,7 @@ logger.setLevel(logging.INFO)
 logging.getLogger('matplotlib.font_manager').disabled = True
 
 
-logger.info("Starting PCOT")
+logger.debug("Starting PCOT")
 
 # get version data, which consists of something like
 #   0.0.0  ISO-DATE RAINBOW CODE NAME

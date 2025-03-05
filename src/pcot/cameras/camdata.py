@@ -17,6 +17,7 @@ CAMDICT = TaggedDictType(
     date=("Date of camera data", Maybe(str), None),
     author=("Author of camera data", Maybe(str), None),
     description=("Description of camera data", Maybe(str), None),
+    short=("Short description of camera data", Maybe(str), None),
     filters=("List of filters", FILTERLIST),
 )
 

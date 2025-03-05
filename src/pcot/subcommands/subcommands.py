@@ -125,6 +125,7 @@ def subcommand(args=None, shortdesc="", parent=subparsers):
 
         @subcommand([argument("-d", help="Enable debug mode", action="store_true")],"does a thing")
         def mysubcommand(args):
+            # insert a longer description in triple-quotes here!
             print(args)
             
         def main():

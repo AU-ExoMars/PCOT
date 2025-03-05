@@ -1,39 +1,64 @@
 """
-This package contains subcommands and the functions they run - if these 
-are of any size, the bulk of the code should be in a separate module which
-is imported on demand when their function runs.
+This package contains subcommands and the functions they run - if these are of any size,
+put them into a separate module and please use local imports within the function (see lscams for details).
 """
 
 from pcot.subcommands.subcommands import \
     maincommand, subcommand, argument, process, set_common_args
 
-import logging
-
-#
-# This is a test command.
-#
-
-@subcommand([
-    argument("n", metavar="INT", help="an integer", type=int),
-    argument("-q", "--quick", help="some kind of flag", action="store_true")],
-    shortdesc="A test command")
-def test(args):
-    """Does testy things"""
-    print(f"Test subcommand: {args.n} {args.quick}")
-    logging.getLogger(__name__).debug("foo")
+# import the subcommand modules - these should only import from other modules locally.
+import pcot.subcommands.lscams
+import pcot.subcommands.gencam
 
 
 @subcommand([
-    argument('params',type=str,metavar='YAML_FILENAME',help="Input YAML file with parameters"),
-    argument('output', type=str, metavar='PARC_FILENAME', help="Output PARC filename")
+    argument("key", metavar="KEY", help="Name of config item to get", nargs="?"),
     ],
-    shortdesc="Process a YAML camera file into a PARC file")
-    
-def gencam(args):
-    from .gencam import run
-    run(args)
-    
-    
-    
-    
-    
+    shortdesc="Get a value (or all values) from the config file.")
+def getconfig(args):
+    """
+    Get a value from the config file. If no key is given, all values are shown. Values will be shown as
+    section.key = value (which isn't quite how they appear in the .ini file).
+    """
+    import pcot.config
+    if args.key is None:
+        for section in pcot.config.data:
+            for key in pcot.config.data[section]:
+                print(f"{section}.{key} = {pcot.config.data[section][key]}")
+    else:
+        # we want to show all sections, so split the key into sections and key
+        if '.' in args.key:
+            section, key = args.key.split('.', 1)
+        else:
+            section, key = 'Default', args.key
+        if section not in pcot.config.data:
+            raise ValueError(f"Section '{section}' is not in the config file")
+        if key not in pcot.config.data[section]:
+            raise ValueError(f"Key {key} is not in the config file in section '{section}'")
+        print(f"{section}.{key} = {pcot.config.data[section][key]}")
+
+
+@subcommand([
+    argument("key", metavar="KEY", help="Name of config item to set"),
+    argument("value", metavar="VALUE", help="Value to set the config item to"),
+    ],
+    shortdesc="Set a value in the config file")
+def setconfig(args):
+    """
+    Set a value in the config file. This is a simple key-value store for the application.
+    You can also edit the config file directly - it will be called .pcot.ini in your home
+    directory. The key is in the form section.key, where section is the section in the .ini file.
+    If the section is Default, you can omit it. See "pcot getconfig -h" to see the current values.
+    """
+    import pcot.config
+    # we want to show all sections, so split the key into sections and key
+    if '.' in args.key:
+        section, key = args.key.split('.', 1)
+    else:
+        section, key = 'Default', args.key
+    if section not in pcot.config.data:
+        raise ValueError(f"Section '{section}' is not in the config file")
+    if key not in pcot.config.data[section]:
+        raise ValueError(f"Key {key} is not in the config file in section '{section}'")
+    pcot.config.data[section][key] = args.value
+    pcot.config.save()

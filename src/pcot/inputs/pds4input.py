@@ -394,11 +394,6 @@ class PDS4ImageMethodWidget(MethodWidget):
             self.method.selected = sel
             self.showSelectedItems(tableOnly=True)
 
-    def cameraChanged(self, i):
-        self.method.camera = "PANCAM" if i == 0 else "AUPE"
-        # not really necessary here because it only affects what happens when we scan
-        self.onInputChanged()
-
     def multChanged(self, i):
         self.method.multValue = self.multCombo.currentData()
         self.readClicked()

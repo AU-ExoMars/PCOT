@@ -1,18 +1,23 @@
 # The main function with command line parsing, setting up the UI.
 # Run from both __main__ and from the "pcot" entry point script.
 
-# this will import the subcommands, or at least their top-level funcs -
-# this function may itself just import another package when run to avoid
-# excessive startup imports.
+import logging
+import sys
 
-import pcot.subcommands
+def install_import_monitor():
+    print("adding import monitor")
+    class ImportMonitor:
+        def find_spec(self, fullname, path, target=None):
+            print(f"Loading module: {fullname}")
+            return None  # Continue normal import process
+    sys.meta_path.insert(0, ImportMonitor())
+# uncomment this if you want to see every import from startup - but it's better to call
+# this from the command line with --show-imports, although that will miss some early imports.
+# install_import_monitor()
+
 
 from pcot.subcommands.subcommands import \
-    maincommand, subcommand, argument, process, set_common_args
-
-import logging
-
-import sys
+    maincommand, argument, process, set_common_args
 
 # This command line system specifies the "main command", which you get if you
 # just give "pcot" on the command line. If the next item is a recognised subcommand
@@ -26,7 +31,7 @@ set_common_args([
              dest="loglevel", const=logging.INFO),
     argument("--log-level", dest="loglevel", help='set log level',
              choices=["ERROR", "WARN", "INFO", "DEBUG", "CRITICAL"]),
-    argument("--import-monitor", action="store_true", help="show module imports for debugging")],
+    argument("--show-imports", action="store_true", help="show module imports for debugging")],
     loglevel=logging.WARNING)
 
 
@@ -52,7 +57,9 @@ def main():
     func, args = process()
     # process the common ags
     logger.setLevel(args.loglevel)
-    if args.import_monitor:
+    if args.show_imports:
+        print("adding import monitor")
+
         class ImportMonitor:
             def find_spec(self, fullname, path, target=None):
                 print(f"Loading module: {fullname}")
