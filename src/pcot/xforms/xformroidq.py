@@ -93,17 +93,17 @@ class XFormROIDQ(XFormType):
                 # Here, we want to the result to be True when each pixel DQ ANDed with the node DQ is the same as the
                 # node DQ. We AND to extract the relevant bits.
                 res = (dqs & dqrequired) == dqrequired
-            elif node.condition == 1:  # when some bits present
+            elif p.condition == "somepresent":  # when some bits present
                 # The result should be True when the relevant bits associated with the pixel are non zero
                 res = (dqs & dqrequired) != 0
-            elif node.condition == 2:  # when all bits absent
+            elif p.condition == "allabsent":  # when all bits absent
                 # The result should be True when the relevant bits are zero
                 res = (dqs & dqrequired) == 0
-            elif node.condition == 3:  # when some bits absent
+            elif p.condition == "someabsent":  # when some bits absent
                 # The result should be True when the relevant bits are not the same as the requested bits (the node DQ)
                 res = (dqs & dqrequired) != dqrequired
             else:
-                raise XFormException('INTR', f"bad condition in roidq: {node.cond}")
+                raise XFormException('INTR', f"bad condition in roidq: {p.condition}")
 
             # now we have a result we need to turn it into an ROI
             roi = ROIPainted(mask=res)
