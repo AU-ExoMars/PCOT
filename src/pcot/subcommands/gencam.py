@@ -25,8 +25,6 @@ def gencam(args):
         p.params.short = d["short"]
         store = camdata.CameraData.openStoreAndWrite(args.output, p)
 
-        # add more data here
-
         store.close()
 
 

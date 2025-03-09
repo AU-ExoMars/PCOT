@@ -56,10 +56,10 @@ class CanvasDQSpec:
         # all dq bits are uint16, which isn't serialisable, or int. So we just force to int. showBad sets this.
         self.data = d.get('data', int(dq.BAD) if showBad else dq.NONE)
         self.col = d.get('col', 'mag')
-        self.trans = d.get('trans', 0.5)  # transparency
-        self.contrast = d.get('contrast', 0.5)   # 'contrast' for continuous values
+        self.trans = d.get('trans', 0.0)  # transparency
+        self.contrast = d.get('contrast', 1.0)   # 'contrast' for continuous values
         self.thresh = d.get('thresh', 1.0)
-        self.additive = d.get("additive", True)
+        self.additive = d.get("additive", False)
 
     def serialise(self):
         return {
