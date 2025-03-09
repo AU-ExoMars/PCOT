@@ -1,165 +1,114 @@
-#!/usr/bin/env python
-
 """
-Each directory contains images for a single filter. The images we are
-interested in for creating flat fields are those captured at 80% saturation,
-of which there are 10.
-
-These are averaged into a single image per band, and these are then composed
-into a single multiband image. If any pixel in any of the input images 
-is saturated, the output pixel is marked as saturated in that band. If the
-uncertainty of that pixel is zero, all the input images had a saturated
-pixel.
-
+New version of flatfield generator
 """
 
-
-import re
-from typing import Dict,List
-from os import listdir
-from os.path import isfile, isdir, join
-import numpy as np
+import argparse
+import glob
+import os
 
 import pcot
-from pcot import dq
-from pcot.datum import Datum
-from pcot.filters import Filter,getFilter,loadFilterSet
-from pcot.sources import MultiBandSource, Source, StringExternal
-from pcot.utils.archive import FileArchive
-from pcot.utils.datumstore import DatumStore
 from pcot.dataformats import load
 from pcot.dataformats.raw import RawLoader
-from pcot.dataformats import envi
-import pcot.datumfuncs as df
+from pcot.datum import Datum
+from pcot.imagecube import ImageCube
+from pcot import dq
+import numpy as np
 
-pcot.setup()
+parser = argparse.ArgumentParser(description="Create flatfields from collated data directories")
 
-# this is the training set of filters, filter wheel 1 (geology)
-pcot.filters.loadFilterSet("training-geol","training1.csv")
+parser.add_argument("input",metavar="INPUT_DIRECTORY",type=str,help="Directory output by collate_flats")
+parser.add_argument("camera",metavar="CAMERA",type=str,help="Name of camera")
+
+args = parser.parse_args()
+
+
+format=".bin"
 
 # set up a raw loader
 loader = RawLoader(format=RawLoader.UINT16,width=1024,height=1024,bigendian=True,
     rot=90,offset=48)
+
+
+
+
+# Do this first so we can load the camera
+pcot.setup()
+
+
+def get_files_for_filter(camera_name, filter, directory):
+    """Load the files for a particular filter we need to process"""
+    images = []
+    dirpath = os.path.join(directory,filter.position)
+    files = glob.glob(os.path.join(dirpath,f"*{format}"))
+    list_of_files = [os.path.basename(x) for x in files]
+    print(list_of_files)
+
+    # load all the files. We're not concerned about filter here, so set that to a "don't care"
+    # value.
     
-
-OUTPUT = "flatfield.parc"
-
-
-
-# Step 1 - create the file lists, one for each filter. These are keyed by
-# filter position e.g. "R3"
-
-def gen_file_lists() -> Dict[str,List]:
-    """Find image directories, and find 10 files with the same exposure in each."""
-    out = {}
-    
-    regex = re.compile(r"[0-9]{8}_[0-9]{6}_WAC.*_(?P<pos>(L|R)[0-9]+)_.*")
-    for f in listdir("."):
-         if isdir(f):
-            m = regex.match(f)
-            if m is not None:
-                # we have a directory name that matches; now get the files therein.
-                pos = m['pos']
-                # store a tuple of dir and files
-                out[pos] = (f,get_file_list(f,pos))
-
-    return out                
-                
-
-def get_file_list(dir,pos)-> List[str]:
-    """Given a directory, return a list of the files we should process. There should be 10 at the same exposure."""
-    
-    # we go through the files, keeping a dict of time->fileswiththattime
-    filesbytime = {}
-    # annoyingly the date and position formats are different from in the directory names!
-    regex = re.compile(r"[0-9]{6}_[0-9]{6}_Training Model-(?P<pos>(L|R)[0-9]+)_\+[0-9]{3}_(?P<time>[0-9\.]+)m?s.*.bin")
-    for f in listdir(dir):
-        m = regex.match(f)
-        if m is not None:
-            t = m['time']
-            pos2 = m['pos']
-            # check the pos is the same
-            if pos2[0] != pos[0] or int(pos2[1:]) != int(pos[1:]):
-                raise Exception(f"Position {pos2} does not agree with {pos} given in the directory")
-            if t not in filesbytime:
-                filesbytime[t] = []
-            filesbytime[t].append(f)
-    
-    # now return the list of files which has 10 entries
-    for v in filesbytime.values():
-        if len(v)==10:
-            return v
-            
-    for k,v in filesbytime.items():
-        print(k,len(v))
-
-    raise Exception("cannot find a set of files with 10 exposures")
-    return files
-    
-
-def process(pos, dir, lst):
-    """For a position, process a list of files"""
-    band_images = []
-    print(f"{pos} has {len(lst)} filters")
-    
-    # irritatingly, the filters are named R1, R2, and not R01, R02..
-    
-    if len(pos)==2:
-        pos = pos[0]+"0"+pos[1]
-
-    filter = getFilter("training-geol",pos,search="pos")
-    if filter.cwl == 0:
-        raise Exception(f"cannot find filter {pos}")
-
-    # load the files into one big image, getting the filters right
-    print(lst)        
-    img = load.multifile(dir,lst,
-        filterpat=".*/[0-9]{6}_[0-9]{6}_Training Model-(?P<lens>(L|R))(?P<n>[0-9]+).*",
-        bitdepth=10,
-        filterset="training-geol",
-        rawloader=loader)
+    cube = load.multifile(dirpath,list_of_files,bitdepth=10,filterpat=".*",
+        camera=camera_name,
+        rawloader=loader).get(Datum.IMG)
+    print(cube.channels)
+    return cube
         
-    # now we want to set the SAT bit on all saturated pixels
-    cube = img.get(Datum.IMG)
-    # clear all the NOUNC bits
-    cube.dq &= ~dq.NOUNC
-    bitsToChange = np.where(cube.img == 1.0, dq.SAT, 0).astype(np.uint16)
-    print(f"   {np.count_nonzero(bitsToChange)} pixels are saturated")
-    cube.dq |= bitsToChange
-
-    
-    # greyscale that image - find the mean across all pixels -  which will aggregate uncertainties
-    img = df.grey(img)
-
-    print(f"Wavelength {img.get(Datum.IMG).wavelength(0)}")
-    print(f"  As read: range({df.min(img)},{df.max(img)}), mean={df.mean(img)},sd={df.sd(img)}")
-
-
-    # now divide the new 1-band image by the mean of all its pixels
-    img = img/df.mean(img)
-    
-    print(f"  Result after div by mean range({df.min(img)},{df.max(img)}), mean={df.mean(img)},sd={df.sd(img)}")
-    return img
         
+def process_filters(camera_name, directory):
+    """Process each filter in the camera, given the name of the camera and 
+    the top level directory (as passed to collate_flats)"""
+    
+    camera = pcot.cameras.getCamera(camera_name)
+    for k,filt in camera.params.filters.items():
+        print(f"Loading files for {k}/{filt.position}")
 
-# run the process on every band
-bands = []
-for pos,v in gen_file_lists().items():
-    if len(pos)==2:
-        pos = pos[0]+"0"+pos[1]
-    directory,lst = v
-    bands.append(process(pos,directory,lst))
+        # load the files into a single big ImageCube
+        cube = get_files_for_filter(camera_name,filt,directory)
+
+        # clear all the NOUNCERTAINTY bits
+        cube.dq &= ~dq.NOUNCERTAINTY
         
-# merge all the images
+        # find the saturated pixels        
+        satPixels = cube.img == 1.0
+        min = np.min(cube.img)
+        max = np.max(cube.img)
+        print(f"{np.count_nonzero(satPixels)} saturated pixels, range {min}-{max}")
+        
+        # create a masked array, without the saturated pixels
+        masked = np.ma.masked_array(cube.img, satPixels)
+        min = np.min(masked)
+        max = np.max(masked)
+        print(f"masked range {min}-{max}")
+        
+        # find the mean across the different images, disregarding saturated pixels.
+        # When the pixels were saturated across all input images there's absolutely
+        # nothing we can do. In this case set them to zero and set SAT in the result DQ.
+        
+        mean = masked.mean(axis=2).filled(np.nan)
+        nans = np.count_nonzero(np.isnan(mean))
+        
+        # combine all the band DQ together - will likely result in zero because there
+        # should be no DQ bits set yet.
+        dqs = np.bitwise_or.reduce(cube.dq,axis=2,dtype=np.uint16)
+        
+        # OR in a SAT bit for each saturated pixel
+        dqs |= np.where(np.isnan(mean),dq.SAT,0).astype(np.uint16)
+        
+        # reset that saturated pixel to zero.
+        mean = np.nan_to_num(mean,nan=0).astype(np.float32)
+        print(f"Sat DQs = {np.count_nonzero(dqs&dq.SAT)}")
+        
+        # now we have to process uncertainty. There is no uncertainty in each input channel,
+        # so we just need to calculate the SD across the input pixels for the masked
+        # data. If all the bands were saturated we set this to zero.
+        sd = masked.std(axis=2).filled(0).astype(np.float32)
+        
+        # build the resulting image
+        res = Datum(Datum.IMG, ImageCube(mean, uncertainty=sd, dq=dqs))
+        
+    
 
-img = df.merge(*bands)
+process_filters(args.camera,args.input)
+    
 
-# and write to a PARC
 
-with FileArchive(OUTPUT,"w") as fa, DatumStore(fa) as a:
-    a.writeDatum("main",img,description="Flat/darkfield data")
 
-# and an ENVI (without uncertainty)
-
-envi.write("flatfield_n.envi",img.get(Datum.IMG),"RWAC")
-envi.write("flatfield_u.envi",df.uncertainty(img).get(Datum.IMG),"RWAC")

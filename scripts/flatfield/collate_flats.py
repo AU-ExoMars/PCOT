@@ -26,11 +26,19 @@ from typing import Dict,List
 import os
 import glob
 import shutil
+import argparse
 from pathlib import Path
 from dataclasses import dataclass
 
+parser = argparse.ArgumentParser(description="Collate images by filter for processing")
+parser.add_argument("input",metavar="INPUT_DIRECTORY",type=str,help="All files below this will be scanned")
+parser.add_argument("output",metavar="OUTPUT_DIRECTORY",type=str,help="This directory will be created if needed")
+
+args = parser.parse_args()
+
 # This is the file format we want
-format= ".png"
+format= ".bin"
+
 
 # This regular expression is used both match image files, and also get the filter position
 # and exposure time.
@@ -47,7 +55,6 @@ def gen_file_lists(directory) -> Dict[str,List]:
     """Find all the images and return them as File objects."""
     files = []
 
-    dir = os.path.join(directory,"*.bin")    
     for path in glob.glob(os.path.join(directory,f"**/*{format}"),recursive=True):
         m = regex.match(os.path.basename(path))
         if m is not None:
@@ -86,7 +93,7 @@ def build_file_sets_with_most_exposures(files):
         fs = find_files_with_largest_exposure(files,pos)
         
         # create a directory for the filter
-        path = Path(os.path.join("OUTPUT",pos))
+        path = Path(os.path.join(args.output,pos))
         path.mkdir(parents=True,exist_ok=True)
         
         # and copy the files into it
@@ -96,7 +103,7 @@ def build_file_sets_with_most_exposures(files):
 
     
 # Get all the image files in (and below) the directory
-files = gen_file_lists("/media/sf_PancamData/PanCamFlatField")
+files = gen_file_lists(args.input)
 
 build_file_sets_with_most_exposures(files)
 
