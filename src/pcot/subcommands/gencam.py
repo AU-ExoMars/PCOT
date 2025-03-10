@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class FlatFileData:
     """Data class to hold various common parameters as we chuck them down the stack."""
 
-    params: 'CameraParams'
+    camera_name: str
     directory: str
     extension: str
     preset: str
@@ -51,7 +51,7 @@ def gencam(args):
         # get information about any flats from the YAML
         if "flats" in d:
             flatd = d["flats"]
-            data = FlatFileData(p, flatd["directory"], flatd["extension"],
+            data = FlatFileData(p.params.name, flatd["directory"], flatd["extension"],
                                 flatd.get("preset", None), flatd.get("bitdepth", None))
             process_flats(store, data)
 
@@ -93,9 +93,13 @@ def process_flats(store, data: FlatFileData):
         # create the minimal preset owner, the thing which has presets applied to it
         preset = Preset()
         # pull the preset from the model and apply it to the preset owner
-        preset.applyPreset(presetModel.presets[data.preset])
+        try:
+            preset.applyPreset(presetModel.presets[data.preset])
+            rawloader = preset.rawloader
+        except KeyError:
+            raise ValueError(f"Preset {data.preset} not found - use multifile input to make one, or get one from another user")
     else:
-        preset = None
+        rawloader = None
 
     # process the filter directories, providing a callback to save the images
     def save_image(img, camera_name, filt):
@@ -105,7 +109,7 @@ def process_flats(store, data: FlatFileData):
         desc = f"Flatfield for {filt.name} filter, position {filt.position} in camera {camera_name}"
         store.writeDatum(name, dat, desc)
 
-    process_filters_for_flats(save_image, preset.rawloader, data)
+    process_filters_for_flats(save_image, rawloader, data)
 
 
 def get_files_for_filter(filt, rawloader, data):
@@ -113,8 +117,8 @@ def get_files_for_filter(filt, rawloader, data):
     from pcot.datum import Datum
     from pcot.dataformats import load
 
-    camname = data.params.params.name
-    dirpath = os.path.join(os.path.expanduser(data.directory), filt.position)
+    camname = data.camera_name
+    dirpath = str(os.path.join(os.path.expanduser(data.directory), filt.position))
     globpath = os.path.join(dirpath, f"*.{data.extension}")
     logger.debug(f"Camera {camname}, filter {filt.name}/{filt.position}")
     logger.debug(f"Looking for files in {globpath}")
@@ -143,8 +147,7 @@ def process_filters_for_flats(callback, rawloader, data: FlatFileData):
     from pcot import dq
     from pcot.imagecube import ImageCube
 
-    camera_name = data.params.params.name
-    camera = pcot.cameras.getCamera(camera_name)
+    camera = pcot.cameras.getCamera(data.camera_name)
     for k, filt in camera.params.filters.items():
         logger.info(f"Loading files for {k}/{filt.position}")
 
@@ -191,4 +194,4 @@ def process_filters_for_flats(callback, rawloader, data: FlatFileData):
         # build the resulting image
         res = ImageCube(mean, uncertainty=sd, dq=dqs)
 
-        callback(res, camera_name, filt)
+        callback(res, data.camera_name, filt)
