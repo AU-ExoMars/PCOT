@@ -33,16 +33,16 @@ from dataclasses import dataclass
 parser = argparse.ArgumentParser(description="Collate images by filter for processing")
 parser.add_argument("input",metavar="INPUT_DIRECTORY",type=str,help="All files below this will be scanned")
 parser.add_argument("output",metavar="OUTPUT_DIRECTORY",type=str,help="This directory will be created if needed")
+parser.add_argument("extension",metavar="EXTENSION",type=str,help="Filename extension to match - typically bin or png")
 
 args = parser.parse_args()
 
-# This is the file format we want
-format= ".bin"
-
-
 # This regular expression is used both match image files, and also get the filter position
-# and exposure time.
-regex = re.compile(r"[0-9]{6}_[0-9]{6}_Training Model-(?P<pos>(L|R)[0-9]+)_\+[0-9]{3}_(?P<exp>[0-9\.]+)m?s.*"+format)
+# and exposure time. You'll need to get these named groups:
+#   "pos" should match positions, like L01 or R11.
+#   "exp" should match exposure times, typically seconds.
+
+regex = re.compile(r"[0-9]{6}_[0-9]{6}_Training Model-(?P<pos>(L|R)[0-9]+)_\+[0-9]{3}_(?P<exp>[0-9\.]+)m?s.*"+args.extension)
 
 @dataclass
 class ImageFile:
@@ -55,7 +55,7 @@ def gen_file_lists(directory) -> Dict[str,List]:
     """Find all the images and return them as File objects."""
     files = []
 
-    for path in glob.glob(os.path.join(directory,f"**/*{format}"),recursive=True):
+    for path in glob.glob(os.path.join(directory,f"**/*.{args.extension}"),recursive=True):
         m = regex.match(os.path.basename(path))
         if m is not None:
             files.append(ImageFile(path,m['exp'],m['pos']))

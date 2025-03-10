@@ -125,7 +125,7 @@ def multifile(directory: str,
     """
 
     from pcot.inputs.multifile import presetModel
-    logger.debug(f"Multifile load from directory {directory}")
+    logger.debug(f"Multifile load from directory {directory} at bitdepth {bitdepth}")
     if rawloader is None:
         class RawPresets(PresetOwner):
             """
@@ -143,6 +143,7 @@ def multifile(directory: str,
             def applyPreset(self, d: Dict[str, Any]):
                 # override the values with the ones from the preset file, but
                 # only if they haven't been set already
+                logger.debug(f"Applying preset: {d}")
                 self.camera = self.camera or d['camera']
                 self.filterpat = self.filterpat or d['filterpat']
                 self.bitdepth = self.bitdepth or (None if d is None else d.get('bitdepth', None))
@@ -220,6 +221,7 @@ def multifile(directory: str,
                         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
 
             def load(path: str) -> np.ndarray:
+                logger.debug(f"Loading {path} at bitdepth {bitdepth}")
                 if rawloader is not None and rawloader.is_raw_file(path):
                     return rawloader.load(path, bitdepth=bitdepth)
                 else:

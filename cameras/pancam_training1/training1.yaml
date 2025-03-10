@@ -12,7 +12,7 @@ description: |
 
 flats:
     directory: ~/PCOT/scripts/flatfield/out
-    extension: bin
+    extension: png
     preset: pancamraw
 
 
