@@ -53,7 +53,7 @@ def gencam(args):
             flatd = d["flats"]
             data = FlatFileData(p, flatd["directory"], flatd["extension"],
                                 flatd.get("preset", None), flatd.get("bitdepth", None))
-            process_flats(p, store, data)
+            process_flats(store, data)
 
 
 def createFilters(filter_dicts):
@@ -73,7 +73,7 @@ def createFilters(filter_dicts):
     return fs
 
 
-def process_flats(params, store, data: FlatFileData):
+def process_flats(store, data: FlatFileData):
     """
     Given the flatfield data in the YAML file, process the flatfield images and store the results in the store.
 
@@ -105,17 +105,18 @@ def process_flats(params, store, data: FlatFileData):
         desc = f"Flatfield for {filt.name} filter, position {filt.position} in camera {camera_name}"
         store.writeDatum(name, dat, desc)
 
-    process_filters_for_flats(params.params.name, save_image, preset.rawloader, data)
+    process_filters_for_flats(save_image, preset.rawloader, data)
 
 
-def get_files_for_filter(camera_name, filt, rawloader, data):
+def get_files_for_filter(filt, rawloader, data):
     """Load the files for a particular filter we need to process"""
     from pcot.datum import Datum
     from pcot.dataformats import load
 
+    camname = data.params.params.name
     dirpath = os.path.join(os.path.expanduser(data.directory), filt.position)
     globpath = os.path.join(dirpath, f"*.{data.extension}")
-    logger.debug(f"Camera {camera_name}, filter {filt.name}/{filt.position}")
+    logger.debug(f"Camera {camname}, filter {filt.name}/{filt.position}")
     logger.debug(f"Looking for files in {globpath}")
     files = glob.glob(globpath)
     list_of_files = [os.path.basename(x) for x in files]
@@ -125,14 +126,14 @@ def get_files_for_filter(camera_name, filt, rawloader, data):
     # value.
 
     cube = load.multifile(dirpath, list_of_files, bitdepth=data.bitdepth, filterpat=".*",
-                          camera=camera_name,
+                          camera=camname,
                           rawloader=rawloader).get(Datum.IMG)
     if cube is None:
         raise ValueError(f"Failed to load files from {dirpath}: {list_of_files}")
     return cube
 
 
-def process_filters_for_flats(camera_name, callback, loader, data: FlatFileData):
+def process_filters_for_flats(callback, rawloader, data: FlatFileData):
     """Process each filter in the camera, given the name of the camera and
     the top level directory (as passed to collate_flats). Then call
     the callback function with the created image and filter."""
@@ -142,12 +143,13 @@ def process_filters_for_flats(camera_name, callback, loader, data: FlatFileData)
     from pcot import dq
     from pcot.imagecube import ImageCube
 
+    camera_name = data.params.params.name
     camera = pcot.cameras.getCamera(camera_name)
     for k, filt in camera.params.filters.items():
         logger.info(f"Loading files for {k}/{filt.position}")
 
         # load the files into a single big ImageCube
-        cube = get_files_for_filter(camera_name, filt, loader, data)
+        cube = get_files_for_filter(filt, rawloader, data)
 
         # clear all the NOUNCERTAINTY bits
         cube.dq &= ~dq.NOUNCERTAINTY
