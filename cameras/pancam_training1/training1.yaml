@@ -7,6 +7,13 @@ description: |
     The training PanCam instrument as it was on 4th March 2025.
     This is the GEOLOGY set for the WAC.
     This is a minimal data set with filters only.
+    
+# Flatfield data
+
+flats:
+    directory: ~/PCOT/scripts/flatfield/out
+    extension: bin
+    preset: pancamraw
 
 
 filters:
