@@ -16,6 +16,7 @@ class FlatFileData:
     extension: str
     preset: str
     bitdepth: int
+    filters: dict   # filtername -> Filter
 
 
 @subcommand([
@@ -48,12 +49,17 @@ def gencam(args):
         # Write the parameter data to the output file.
         store = camdata.CameraData.openStoreAndWrite(args.output, p)
 
-        # get information about any flats from the YAML
+        # get information about any flats from the YAML. We can have the data in the YAML but disabled,
+        # so flats aren't generated, but setting the "disabled" key.
         if "flats" in d:
             flatd = d["flats"]
-            data = FlatFileData(p.params.name, flatd["directory"], flatd["extension"],
-                                flatd.get("preset", None), flatd.get("bitdepth", None))
-            process_flats(store, data)
+            if "disabled" in flatd and flatd["disabled"]:
+                logger.info("Flats processing disabled")
+            else:
+                data = FlatFileData(p.params.name, flatd["directory"], flatd["extension"],
+                                    flatd.get("preset", None), flatd.get("bitdepth", None),
+                                    fs)
+                process_flats(store, data)
 
 
 def createFilters(filter_dicts):
@@ -130,7 +136,7 @@ def get_files_for_filter(filt, rawloader, data):
     # value.
 
     cube = load.multifile(dirpath, list_of_files, bitdepth=data.bitdepth, filterpat=".*",
-                          camera=camname,
+                          camera=None,
                           rawloader=rawloader).get(Datum.IMG)
     if cube is None:
         raise ValueError(f"Failed to load files from {dirpath}: {list_of_files}")
@@ -143,12 +149,10 @@ def process_filters_for_flats(callback, rawloader, data: FlatFileData):
     the callback function with the created image and filter."""
 
     import numpy as np
-    import pcot
     from pcot import dq
     from pcot.imagecube import ImageCube
 
-    camera = pcot.cameras.getCamera(data.camera_name)
-    for k, filt in camera.params.filters.items():
+    for k, filt in data.filters.items():
         logger.info(f"Loading files for {k}/{filt.position}")
 
         # load the files into a single big ImageCube
@@ -186,10 +190,20 @@ def process_filters_for_flats(callback, rawloader, data: FlatFileData):
         mean = np.nan_to_num(mean, nan=0).astype(np.float32)
         print(f"{filt.position} has {np.count_nonzero(dqs & dq.SAT)} pixels saturated in all images")
 
+        # normalise the image, but only at the top end (i.e. divide by the maximum value)
+        # First get the maximum value in the mean array
+        mx = np.max(mean)
+        if mx > 0:
+            mean /= mx
+        else:
+            logger.warning(f"Filter {filt.position} has no non-saturated or non-zero pixels")
+
         # now we have to process uncertainty. There is no uncertainty in each input channel,
         # so we just need to calculate the SD across the input pixels for the masked
         # data. If all the bands were saturated we set this to zero.
         sd = masked.std(axis=2).filled(0).astype(np.float32)
+        # and we'll need to divide the SD by the maximum value in the mean array too to normalise it.
+        sd /= mx
 
         # build the resulting image
         res = ImageCube(mean, uncertainty=sd, dq=dqs)
