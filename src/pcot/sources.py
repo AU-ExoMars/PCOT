@@ -342,6 +342,10 @@ class SourceSet(SourcesObtainable):
         e, = self.sourceSet
         return e
 
+    def getFilters(self):
+        """Return a set of all the filters used by this sourceSet"""
+        return {x.band for x in self.sourceSet if isinstance(x.band, Filter)}
+
     def getSources(self):
         """implements SourcesObtainable"""
         return self
@@ -450,6 +454,10 @@ class MultiBandSource(SourcesObtainable):
         """Merge all the bands' source sets into a single set (used in, for example, making a greyscale
         image, or any calculation where all bands have input)"""
         return SourceSet(set().union(*[s.sourceSet for s in self.sourceSets]))
+
+    def getFiltersByBand(self):
+        """Return a list of sets of filters for each band"""
+        return [x.getFilters() for x in self.sourceSets]
 
     def serialise(self):
         return [x.serialise() for x in self.sourceSets]

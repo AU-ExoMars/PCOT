@@ -52,6 +52,7 @@ class Archive:
         self.arrayct = 0
         self.zip = None
         self.progressCallback = progressCallback
+        self.path = "(memory?)"
 
     def open(self):
         """Must open the zip, setting self.zip to the zipfile.ZipFile object"""
