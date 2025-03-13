@@ -201,7 +201,7 @@ class Source(SourcesObtainable):
         if self.band is None:
             s = f"{inptxt}:"
         elif isinstance(self.band, Filter):
-            s = f"{inptxt}: wavelength {int(self.band.cwl)}, fwhm {int(self.band.fwhm)}"
+            s = f"{inptxt}: {self.band.sourceDesc()}"
         else:
             s = f"{inptxt}: band {self.band}"
         if self.external is not None:

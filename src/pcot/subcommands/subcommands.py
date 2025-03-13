@@ -18,22 +18,23 @@ from argparse import ArgumentParser
 from dataclasses import dataclass
 import logging
 
+
 class SubArgumentParser(ArgumentParser):
     """This is a parser which also adds the common arguments to each help/usage output"""
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def _getacts(self):
         return common_parser._actions + self._actions
-        
+
     def _getactgroups(self):
-        return common_parser._action_groups+self._action_groups
-        
-    def add_subcommand_info(self,formatter):
+        return common_parser._action_groups + self._action_groups
+
+    def add_subcommand_info(self, formatter):
         """Optionally add info on ALL subcommands; only done in the main parser"""
         pass
-        
+
     def format_usage(self):
         formatter = self._get_formatter()
         formatter.add_usage(self.usage, self._getacts(),
@@ -43,7 +44,7 @@ class SubArgumentParser(ArgumentParser):
 
     def format_help(self):
         formatter = self._get_formatter()
-        
+
         # usage
         formatter.add_usage(self.usage, self._getacts(),
                             self._mutually_exclusive_groups)
@@ -65,7 +66,6 @@ class SubArgumentParser(ArgumentParser):
 
         # determine help from format above
         return formatter.format_help()
-    
 
 
 subcommand_parser = SubArgumentParser()
@@ -165,7 +165,7 @@ class MainArgumentParser(SubArgumentParser):
             # nasty hackery to get the usage string out of the subcommand
             ff = i.parser._get_formatter()
             ff._prog = f"{self.prog} {k}"
-            ff.add_usage(p.usage, common_parser._actions+p._actions, p._mutually_exclusive_groups, "")
+            ff.add_usage(p.usage, common_parser._actions + p._actions, p._mutually_exclusive_groups, "")
             ss = ff.format_help().strip()
             # first column is usage, second is shortdescription
             columns.append((ss, i.shortdesc))
