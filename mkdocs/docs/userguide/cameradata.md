@@ -50,6 +50,7 @@ filters:
     fwhm: 100               # full-width at half-maximum
     position: L03           # position in camera (e.g. L03 for left wheel, number 3)
     transmission: 1.0       # transmission ratio
+    description: 
   C01R:
     cwl: 640
     fwhm: 100
