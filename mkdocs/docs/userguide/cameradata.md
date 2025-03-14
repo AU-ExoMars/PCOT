@@ -42,7 +42,7 @@ description: |
     The Aberystwyth University PANCAM Emulator
     This dataset represents AUPE as it was on 4th March 2025.
 
-# filters organised thus:
+# Filters organised thus:
 
 filters:
   C01L:                     # filter name
@@ -50,14 +50,65 @@ filters:
     fwhm: 100               # full-width at half-maximum
     position: L03           # position in camera (e.g. L03 for left wheel, number 3)
     transmission: 1.0       # transmission ratio
-    description: 
-  C01R:
-    cwl: 640
-    fwhm: 100
-    position: R03
+    description: "Red broadband"    # short phrase describing the filter
+  C02L:
+    cwl: 540
+    fwhm: 80
+    position: L02
     transmission: 1.0
+    description: "Green broadband"
 (and so on)
 ```
+
+## Flatfield data
+
+The `gencam` command will build flatfield data from a large number of images captured for
+each filter. These images should be stored in a directory for each filter, named for the filter
+name. For example:
+
+```text
+filters
+|-- C01L
+|   |-- 001.png
+|   |-- 002.png
+|   |-- 003.png
+|   |-- 004.png
+|   `-- 005.png
+`-- C02L
+    |-- 001.png
+    |-- 002.png
+    |-- 003.png
+    |-- 004.png
+    `-- 005.png
+```
+The number and names of the files within the directories is unimportant, but they must be
+monochrome images of the same format and size.
+
+The YAML file should contain a `flats` section like this:
+
+```yaml
+flats:
+    enabled: yes        # can be switched to "no" if you need to save space and not store flats
+    directory: foo/filters  # the path to the directory, e.g. "filters" in example above
+    extension: png      # extension of image files (png or bin)
+    bitdepth: 10        # how many bits are used in the data
+    preset: AUPE        # a multifile loader preset for binary (bin) files (see below)
+        
+```
+See the [multifile docs](/userguide/multifile.md) for more details on presets for loading binary
+files. You do not need to specify a preset if PNGs are used.
+
+The files are processed as follows:
+
+* All files are loaded in and processed into floating point data in the range $[0,1]$.
+* The files are scanned for saturated data (data equal to 1) and these pixels are masked out.
+* The mean is found of each pixel, disregarding saturated pixels, and the results stored in
+a single image.
+* The uncertainty is calculated as the std. dev. of the pixels used.
+* If all bits for a pixel were saturated, the DQ SAT bit for that pixel is set and its
+value is set to zero.
+* The resulting is divided by the mean pixel value (i.e. a scalar).
+
 
 ## To be determined
 
