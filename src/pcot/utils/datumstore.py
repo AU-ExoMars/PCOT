@@ -1,14 +1,15 @@
 import dataclasses
 import sys
 import time
+import logging
 from datetime import datetime
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 
 from pcot.datum import Datum
-from pcot.document import Document
 from pcot.utils.archive import Archive, FileArchive
 from pcot.sources import StringExternal, SourceSet, MultiBandSource, Source
 
+logger = logging.getLogger(__name__)
 
 @dataclasses.dataclass
 class Metadata:
@@ -200,6 +201,7 @@ class DatumStore:
         if name not in self.cache:
             # read the item first - we need to know how big it is.
             with self.archive as a:
+                logger.info(f"Reading {name} from archive {self.archive.path}")
                 if (item := a.readJson(name)) is None:
                     return None
                 # and deserialise it

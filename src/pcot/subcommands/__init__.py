@@ -65,3 +65,25 @@ def setconfig(args):
 
     pcot.config.data[section][key] = args.value
     pcot.config.save()
+
+
+@subcommand(
+    [argument("filename", metavar="FILENAME", help="Name of the PARC file to list")],
+    shortdesc="List the contents of a PARC file"
+)
+def lsparc(args):
+    """
+    List the contents of a PARC file.
+    """
+    from pcot.utils.archive import FileArchive
+    from pcot.utils.datumstore import DatumStore
+    import datetime
+
+    a = FileArchive(args.filename)
+    ds = DatumStore(a)
+    manifest = ds.getManifest()
+    for k in manifest:
+        meta = manifest[k]
+        created = meta.created.strftime("%Y-%m-%d")
+
+        print(f"{k:>20} : {meta.datumtype:12} {created:11} {meta.description}")

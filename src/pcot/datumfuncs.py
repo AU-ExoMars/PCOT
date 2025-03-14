@@ -1006,3 +1006,53 @@ def overlay(img1, img2):
     dq |= mask & img1.dq  # add NODATA from img1 where it's set in img2
     img.dq = dq
     return Datum(Datum.IMG, img)
+
+
+@datumfunc
+def getflats(img):
+    """
+    Given an image with single-channel bands from a known camera, return the flatfield images for each band
+    as another image with the same band assignments as the input. The flats will come from the camera data
+    for the camera.
+
+    @param img:img:the image to get flats for
+    """
+    import builtins     # ugh. because I override max above.
+    import pcot.cameras
+
+    img = img.get(Datum.IMG)
+
+    # for each band, get a set of filters for the sources of that band, and make sure each band
+    # only uses one filter
+    filters = img.sources.getFiltersByBand()
+
+    if len(filters) == 0:
+        raise XFormException('DATA', 'image must have filter data to get flats')
+    if builtins.max([len(x) for x in filters]) != 1:
+        raise XFormException('DATA', 'each band must have exactly one filter to get flats')
+
+    # and now just turn into a list of filters by band
+    filters = [next(iter(x)) for x in filters]   # ugly idiom for getting only item in set
+    logger.debug(f"getflats: Filters are {[x.name for x in filters]}")
+
+    # get the cameras from the camera system. Yes, different bands could conceivably come from
+    # different cameras.
+
+    cameras = [x.camera_name for x in filters]
+    if any([x is None for x in cameras]):
+        raise XFormException('DATA', 'filters must have camera data to get flats')
+    logger.debug(f"getflats: Cameras are {cameras}")
+
+    # now we can get the camera objects - will raise exception if not found
+    # and we can get the flats - which should be images.
+    flats = [pcot.cameras.getCamera(x.camera_name).getFlat(x.name) for x in filters]
+
+    # these should all be single-channel images; we can check that.
+    if any([x is None for x in flats]):
+        raise XFormException('DATA', 'could not find flatfield images for all bands')
+    if any([x.get(Datum.IMG) is None for x in flats]):
+        raise XFormException('DATA', 'flatfield images must be images')
+    if any([x.get(Datum.IMG).channels != 1 for x in flats]):
+        raise XFormException('DATA', 'flatfield images must be single-channel')
+
+    return merge(*flats)

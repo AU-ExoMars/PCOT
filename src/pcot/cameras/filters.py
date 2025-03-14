@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import List
 
 import numpy as np
+from skimage.data import camera
 
 from pcot import ui
 from pcot.documentsettings import DocumentSettings
@@ -28,17 +29,21 @@ class Filter:
     position: str
     # name of filter (e.g. G01 for "geology 1") (if not given, will be str(cwl))
     name: str
-    # backpointer to the camera parameter set, if one exists (i.e. filter created from a CameraParams object)
-    params: 'CameraParams'
+    # camera name
+    camera_name: str
+    # description of the camera - a short phrase
+    description: str
 
-    def __init__(self, cwl, fwhm, transmission=1.0, position=None, name=None, params=None):
+
+    def __init__(self, cwl, fwhm, transmission=1.0, position=None, name=None, camera_name=None, description=None):
         """constructor"""
         self.cwl = cwl
         self.fwhm = fwhm
         self.transmission = transmission
         self.name = name if name is not None else str(cwl)
         self.position = position
-        self.params = params
+        self.camera_name = camera_name
+        self.description = description
 
     def __hash__(self):
         """The hash of a filter is its name. This is here because we want to be able to
@@ -53,21 +58,21 @@ class Filter:
 
     def serialise(self):
         return self.cwl, self.fwhm, self.transmission, self.position, \
-               self.name
+               self.name, self.camera_name
 
     @classmethod
     def deserialise(cls, d):
+        # various legacy tests here.
         if isinstance(d, str):
             ui.error("Oops - old style file contains filter name, not filter data. Using dummy, please 'Run All'.")
-            return Filter(2000, 1.0, 1.0, "dummypos", "dummyname")
-        try:
-            cwl, fwhm, trans, pos, name = d
-        except ValueError:
-            ui.error("Oops - old style file wrong number of filter data. Using dummy, please 'Run All'.")
-            return Filter(2000, 1.0, 1.0, "dummypos", "dummyname")
+            return Filter(2000, 1.0, 1.0, "dummypos", "dummyname", "dummycam",
+                          "dummydesc")
 
-        cwl, fwhm, trans, pos, name = d
-        return Filter(cwl, fwhm, trans, pos, name)
+        # we might have to deserialise a truncated tuple for legacy code
+        defaults = [None, None, 1.0, "unknown pos", "no name", "unknown camera", "no description"]
+        d = d + defaults[len(d):]
+        cwl, fwhm, trans, pos, name, camname, desc = d
+        return Filter(cwl, fwhm, trans, pos, name, camname, desc)
 
     @staticmethod
     def _gaussian(x, mu, fwhm):
@@ -94,6 +99,10 @@ class Filter:
         else:
             cap = f"CAPBUG-{captionType}"  # if this appears captionType is out of range.
         return cap
+
+    def sourceDesc(self):
+        """Description used in Source long descriptions"""
+        return f"{self.name}({self.cwl}nm)"
 
     def __repr__(self):
         return f"Filter({self.name},{self.cwl}@{self.fwhm}, {self.position}, t={self.transmission})"

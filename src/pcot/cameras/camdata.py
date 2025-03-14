@@ -49,6 +49,8 @@ class CameraParams:
 
     @classmethod
     def deserialise(cls, d) -> 'CameraParams':
+        # this deserialisation is only done as part of the CameraParams load from the camera
+        # data archive.
         from pcot.cameras.filters import Filter
         p = cls()
         # deserialise the main TaggedDict, and also the TaggedList of filters in their TD form.
@@ -60,7 +62,9 @@ class CameraParams:
 
         # Now convert the TaggedDict filters into a dictionary of Filter objects
         # note that this isn't how filters deserialise themselves (their method is different - legacy)
-        p.filters = {f.name: Filter(f.cwl, f.fwhm, f.transmission, f.position, f.name, params=p)
+        # UGLY - we have to patch the camera name into the filters "upstairs" in CameraData, because
+        # we can't get it here.
+        p.filters = {f.name: Filter(f.cwl, f.fwhm, f.transmission, f.position, f.name)
                      for f in p.params['filters']}
         return p
 
@@ -126,11 +130,12 @@ class CameraData:
 
         # resolve the Datum object
         self.params = self.params.val
-
         # set up the backpointer so CameraParams and Filter can get the archive if we need to load
         # more data
         self.params.camera_data = self
-
+        # now we need to patch the filters so they have the camera name
+        for x in self.params.filters.values():
+            x.camera_name = self.params.params.name
 
     @classmethod
     def openStoreAndWrite(self, fileName, params: CameraParams):
@@ -174,3 +179,7 @@ class CameraData:
             return get_match(self.params, 'cwl', target)
         else:
             return DUMMY_FILTER
+
+    def getFlat(self, filtname) -> Datum:
+        """Get the flatfield for the given filter and position."""
+        return self.archive.get(f"flat_{filtname}")
