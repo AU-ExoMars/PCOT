@@ -8,12 +8,21 @@ These are in PCOT's archive format and so have the PARC extension.
 
 Initial version of the files are stored in the PCOT repository with
 PCOT itself, in the `cameras` directory. For example, a file for PANCAM
-can be found in `PCOT/cameras/pancam.parc`.
+can be found in `PCOT/cameras/pancam.parc`. Currently these files hold
+no calibration data, just the filter information.
+
+@@@primary
+Later you will be able to download camera files containing full
+data for AUPE and PanCam
+from the [pcot.aber.ac.uk](pcot.aber.ac.uk) site.
+@@@
 
 When you start PCOT for the first time 
 you will need to tell it where to find these files. PCOT will load all
 the camera files from the provided directory, storing them under
 the names given in the camera parameter file (see below).
+
+
 
 ## Creating camera files
 
@@ -81,8 +90,12 @@ filters
     |-- 004.png
     `-- 005.png
 ```
+The name of the directory should be the name or position of the filter according to the filters
+section of the file. Which is used depends on the `key` field (see below).
 The number and names of the files within the directories is unimportant, but they must be
 monochrome images of the same format and size.
+
+To prepare this data
 
 The YAML file should contain a `flats` section like this:
 
@@ -92,6 +105,7 @@ flats:
     directory: foo/filters  # the path to the directory, e.g. "filters" in example above
     extension: png      # extension of image files (png or bin)
     bitdepth: 10        # how many bits are used in the data
+    key: name           # "name" or "position" - the filter directories can be named for either
     preset: AUPE        # a multifile loader preset for binary (bin) files (see below)
         
 ```
@@ -107,13 +121,16 @@ a single image.
 * The uncertainty is calculated as the std. dev. of the pixels used.
 * If all bits for a pixel were saturated, the DQ SAT bit for that pixel is set and its
 value is set to zero.
-* The resulting is divided by the mean pixel value (i.e. a scalar).
 
+@@@warn
+The result is not divided by the mean or processed further in any way - later this may
+be done when darkfields are implemented, but this can be done downstream for the moment.
+@@@
 
-## To be determined
+## Further work
 
-* Extra filter fields (aberration, etc)
+Later, more information will be added to the camera data files:
+
 * Extra data (darkfields, BRDF data etc)
+* Extra filter fields (aberration, etc)
 
-It's likely these latter will be added by putting filenames in the YAML file,
-telling `pcot gencam` to load large blocks of data and store them in the PARC.

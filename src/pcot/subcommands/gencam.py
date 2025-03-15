@@ -11,12 +11,13 @@ logger = logging.getLogger(__name__)
 class FlatFileData:
     """Data class to hold various common parameters as we chuck them down the stack."""
 
-    camera_name: str
-    directory: str
-    extension: str
-    preset: str
-    bitdepth: int
-    filters: dict   # filtername -> Filter
+    camera_name: str        # camera name
+    directory: str          # directory to find the files
+    extension: str          # png/bin typically
+    key: str                # either "name" or "position" - used to look up which filter we are adding data for
+    preset: str             # if loading raw binary files, the multifile loader preset to use
+    bitdepth: int           # how many bits are used; we scale the data according to this
+    filters: dict           # a dictionary of filtername -> Filter object.
 
 
 @subcommand([
@@ -56,8 +57,12 @@ def gencam(args):
             if "disabled" in flatd and flatd["disabled"]:
                 logger.info("Flats processing disabled")
             else:
-                data = FlatFileData(p.params.name, flatd["directory"], flatd["extension"],
-                                    flatd.get("preset", None), flatd.get("bitdepth", None),
+                data = FlatFileData(p.params.name, 
+                                    flatd["directory"], 
+                                    flatd["extension"],
+                                    flatd["key"],
+                                    flatd.get("preset", None), 
+                                    flatd.get("bitdepth", None),
                                     fs)
                 process_flats(store, data)
 
@@ -124,7 +129,11 @@ def get_files_for_filter(filt, rawloader, data):
     from pcot.dataformats import load
 
     camname = data.camera_name
-    dirpath = str(os.path.join(os.path.expanduser(data.directory), filt.position))
+    # files should be in a directory named for some attribute in Filter, pretty much
+    # always "name" or "position"
+    filter_dir_name = getattr(filt,data.key)
+    # build the full directory path
+    dirpath = str(os.path.join(os.path.expanduser(data.directory), filter_dir_name))
     globpath = os.path.join(dirpath, f"*.{data.extension}")
     logger.debug(f"Camera {camname}, filter {filt.name}/{filt.position}")
     logger.debug(f"Looking for files in {globpath}")
@@ -153,7 +162,8 @@ def process_filters_for_flats(callback, rawloader, data: FlatFileData):
     from pcot.imagecube import ImageCube
 
     for k, filt in data.filters.items():
-        logger.info(f"Loading files for {k}/{filt.position}")
+        debug_name = f"{k} (position {filt.position})"
+        logger.info(f"Loading files for {debug_name}")
 
         # load the files into a single big ImageCube
         cube = get_files_for_filter(filt, rawloader, data)
@@ -188,22 +198,28 @@ def process_filters_for_flats(callback, rawloader, data: FlatFileData):
 
         # reset that saturated pixel to zero.
         mean = np.nan_to_num(mean, nan=0).astype(np.float32)
-        print(f"{filt.position} has {np.count_nonzero(dqs & dq.SAT)} pixels saturated in all images")
+        logger.info(f"{filt.position} has {np.count_nonzero(dqs & dq.SAT)} pixels saturated in all images")
 
-        # normalise the image, but only at the top end (i.e. divide by the maximum value)
-        # First get the maximum value in the mean array
-        mx = np.max(mean)
-        if mx > 0:
-            mean /= mx
+        # Divide by the mean of the flatfield image
+        if False:
+            # Note - we're NOT doing this - it should be combined with the darkfield image;
+            # in any case we can do it downstream in a node.
+            mm = np.mean(mean)
+            logger.info(f"Flatfield mean is {mm}")
+            if mm > 0:
+                mean /= mm
+            else:
+                logger.warning(f"Filter {debug_name} has no non-saturated or non-zero pixels")
         else:
-            logger.warning(f"Filter {filt.position} has no non-saturated or non-zero pixels")
+            mm = 1.0
 
+        logger.info(f"Flatfield for {debug_name} range is {np.min(mean)}-{np.max(mean)}")
         # now we have to process uncertainty. There is no uncertainty in each input channel,
         # so we just need to calculate the SD across the input pixels for the masked
         # data. If all the bands were saturated we set this to zero.
         sd = masked.std(axis=2).filled(0).astype(np.float32)
-        # and we'll need to divide the SD by the maximum value in the mean array too to normalise it.
-        sd /= mx
+        # and we'll need to divide the SD by the mean too.
+        sd /= mm
 
         # build the resulting image
         res = ImageCube(mean, uncertainty=sd, dq=dqs)
