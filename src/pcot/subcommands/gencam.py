@@ -23,6 +23,9 @@ class FlatFileData:
 @subcommand([
     argument('params', type=str, metavar='YAML_FILENAME', help="Input YAML file with parameters"),
     argument('output', type=str, metavar='PARC_FILENAME', help="Output PARC filename"),
+    argument("--nocalib",
+             help="Do not store extra calibration data (flats, darks etc.) and add '_NOCALIB' to the camera name",
+             action="store_true")
 ],
     shortdesc="Process a YAML camera file into a PARC file")
 def gencam(args):
@@ -43,6 +46,8 @@ def gencam(args):
         p = camdata.CameraParams(fs)
         # Now fill in the rest of the data from the YAML file
         p.params.name = d["name"]
+        if args.nocalib:
+            p.params.name += "_NOCALIB"
         p.params.date = d["date"].strftime("%Y-%m-%d")
         p.params.author = d["author"]
         p.params.description = d["description"]
@@ -51,20 +56,23 @@ def gencam(args):
         store = camdata.CameraData.openStoreAndWrite(args.output, p)
 
         # get information about any flats from the YAML. We can have the data in the YAML but disabled,
-        # so flats aren't generated, but setting the "disabled" key.
-        if "flats" in d:
-            flatd = d["flats"]
-            if "disabled" in flatd and flatd["disabled"]:
-                logger.info("Flats processing disabled")
-            else:
-                data = FlatFileData(p.params.name, 
-                                    flatd["directory"], 
-                                    flatd["extension"],
-                                    flatd["key"],
-                                    flatd.get("preset", None), 
-                                    flatd.get("bitdepth", None),
-                                    fs)
-                process_flats(store, data)
+        # so flats aren't generated, but setting the "disabled" key. We can also do this by using the
+        # --nocalib option, which won't save calib data AND will add "_NOCALIB" to the camera name.
+
+        if not args.nocalib:
+            if "flats" in d:
+                flatd = d["flats"]
+                if "disabled" in flatd and flatd["disabled"]:
+                    logger.info("Flats processing disabled")
+                else:
+                    data = FlatFileData(p.params.name,
+                                        flatd["directory"],
+                                        flatd["extension"],
+                                        flatd["key"],
+                                        flatd.get("preset", None),
+                                        flatd.get("bitdepth", None),
+                                        fs)
+                    process_flats(store, data)
 
 
 def createFilters(filter_dicts):
@@ -79,7 +87,8 @@ def createFilters(filter_dicts):
             d["fwhm"],
             transmission=d.get("transmission", 1.0),
             name=k,
-            position=d.get("position", k))
+            position=d.get("position", k),
+            description=d.get("description","No description given"))
         fs[k] = f
     return fs
 

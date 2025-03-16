@@ -102,7 +102,7 @@ class Filter:
 
     def sourceDesc(self):
         """Description used in Source long descriptions"""
-        return f"{self.name}({self.cwl}nm)"
+        return f"Cam: {self.camera_name}, Filter: {self.name}({self.cwl}nm) pos {self.position}, {self.description}"
 
     def __repr__(self):
         return f"Filter({self.name},{self.cwl}@{self.fwhm}, {self.position}, t={self.transmission})"

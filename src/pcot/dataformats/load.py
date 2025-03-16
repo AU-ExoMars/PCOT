@@ -251,12 +251,16 @@ def multifile(directory: str,
 
             # build source data for this image
             filtpos, searchtype = getFilterSearchParam(path)
-            filt = getFilter(camera, filtpos, searchtype)
-            # img /= filt.transmission
-
             ext = StringExternal("Multi", os.path.abspath(path))
-            source = Source().setBand(filt).setInputIdx(inpidx).setExternal(ext)
+            if camera:
+                filt = getFilter(camera, filtpos, searchtype)
+                source = Source().setBand(filt).setInputIdx(inpidx).setExternal(ext)
+            else:
+                # sometimes we don't know what the camera is, so we can't get the filter.
+                # This can happen in gencam.
+                source = Source().setBand(f"{searchtype}={filtpos}").setInputIdx(inpidx).setExternal(ext)
 
+            # img /= filt.transmission
             imgs.append(img)
             sources.append(source)
 
