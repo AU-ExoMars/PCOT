@@ -106,6 +106,8 @@ The idea is that `lens` indicates either the left or right camera
 and `n` identifies a filter. They're separate because many early
 files used names like `LWAC02` or `LWideAngle02`, in which the
 two elements were separate.
+* `pos`: if this is found, it us used to match a filter position using the
+`pos` column - as such, it's a simpler version of the `lens`/`n` combination
 * `name`: if this is found, it is used to match a filter using the `name`
 column
 * `cwl`: if this is found, it is used to match a filter using the `cwl`
