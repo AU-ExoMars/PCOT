@@ -100,6 +100,11 @@ class CameraParamsType(Type):
 
     def getDisplayString(self, d: Datum, box=False):
         return f"Camera data from {d.val.fileName}"
+        
+    def view(self, d):
+        import json
+        return json.dumps(d.val.serialise(),indent=2)
+        
 
 
 # Create the type singleton and register the type
