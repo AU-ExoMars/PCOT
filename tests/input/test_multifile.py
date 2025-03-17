@@ -49,7 +49,7 @@ def test_multifile_load_with_default_pattern(globaldatadir):
         assert f.transmission == 1
         path = str(globaldatadir / "multi" / names[i])
         # starts with zero because this is for input 0
-        assert s.long() == f"0: wavelength 0, fwhm 0 {path}"
+        assert s.long() == f"0: Cam: None, Filter: ??(0nm) pos ??, None {path}"
 
 
 def test_multifile_load_with_bad_pattern(globaldatadir):
@@ -130,7 +130,7 @@ def test_multifile_load_with_good_pattern(globaldatadir):
         qq = s.long()
         # the long string here is a bit weird, in that it has the filenames for all the filters in always,
         # but that's because we're using the long string for the multifile input as a whole.
-        assert s.long() == f"0: wavelength {cwl}, fwhm {fwhm} {path / fn}"
+        assert s.long() == f"0: Cam: PANCAM, Filter: {name}({float(cwl)}nm) pos {pos}, None {path / fn}"
 
 
 def test_multifile_load_with_cwl(globaldatadir):

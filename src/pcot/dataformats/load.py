@@ -106,8 +106,9 @@ def multifile(directory: str,
     The regular expression works thus:
         - If the filterpat contains ?P<lens> and ?P<n>, then lens+n is used to look up the filter by position.
           For example lens=L and n=01 would look up L01 in the filter position
-        - Otherwise if the filterpat contains ?<name>, then name is used to look up the filter by name.
-        - Otherwise if the filterpat contains ?<cwl>, then cwl is used to look up the filter's wavelength.
+        - If the filterpat contains just ?P<pos>, then pos is used to look up the filter by position.
+        - Otherwise if the filterpat contains ?P<name>, then name is used to look up the filter by name.
+        - Otherwise if the filterpat contains ?P<cwl>, then cwl is used to look up the filter's wavelength.
         - If these all fail, a "dummy" filter is used.
 
     an example:
@@ -181,6 +182,8 @@ def multifile(directory: str,
                 lens = m.get('lens', '')
                 n = m.get('n', '')
                 return lens + n, 'pos'
+            elif '<pos>' in filterpat:
+                return m.get('pos', ''), 'pos'
             elif '<name>' in filterpat:
                 return m.get('name', ''), 'name'
             elif '<cwl>' in filterpat:

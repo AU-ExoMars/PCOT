@@ -129,12 +129,13 @@ def test_direct_load_multifile(globaldatadir):
     assert img.h == 30
     assert np.allclose(img.img[0][0], (32768 / 65535, 0, 1))
 
-    for sourceSet, pos, name, cwl, fwhm, trans, fn in zip(img.sources,
+    for sourceSet, pos, name, cwl, fwhm, trans, desc, fn in zip(img.sources,
                                                           ('L02', 'L01', 'R10'),
                                                           ('G03', 'G04', 'S03'),
                                                           (530, 570, 450),
                                                           (15, 12, 5),
                                                           (0.957, 0.989, 0.000001356),
+                                                          (None, None, None),
                                                           names,
                                                           ):
         #  First, make sure each band has a source set of a single source
@@ -147,10 +148,11 @@ def test_direct_load_multifile(globaldatadir):
         assert f.name == name
         assert f.position == pos
         assert f.transmission == trans
+        assert f.description == desc
         path = globaldatadir / "multi"
         # the long string here is a bit weird, in that it has the filenames for all the filters in always,
         # but that's because we're using the long string for the multifile input as a whole.
-        assert s.long() == f"none: wavelength {cwl}, fwhm {fwhm} {path / fn}"
+        assert s.long() == f"none: Cam: PANCAM, Filter: {name}({float(cwl)}nm) pos {pos}, {desc} {path / fn}"
 
 
 def test_direct_load_multifile_cwl(globaldatadir):
@@ -172,12 +174,13 @@ def test_direct_load_multifile_cwl(globaldatadir):
     assert img.h == 30
     assert np.allclose(img.img[0][0], (0, 1, 32768 / 65535))
 
-    for sourceSet, pos, name, cwl, fwhm, trans, fn in zip(img.sources,                  # PANCAM filter set:
+    for sourceSet, pos, name, cwl, fwhm, trans, desc, fn in zip(img.sources,                  # PANCAM filter set:
                                                           ('R03', 'R02', 'R01'),        # positions
                                                           ('G07', 'G08', 'G09'),      # names
                                                           (740, 780, 840),              # cwls
                                                           (15, 20, 25),                # fwhms
                                                           (0.983, 0.981, 0.989),        # transmission ratios
+                                                          (None, None, None),
                                                           names,
                                                           ):
         #  First, make sure each band has a source set of a single source
@@ -193,7 +196,7 @@ def test_direct_load_multifile_cwl(globaldatadir):
         path = globaldatadir / "multi"
         # the long string here is a bit weird, in that it has the filenames for all the filters in always,
         # but that's because we're using the long string for the multifile input as a whole.
-        assert s.long() == f"none: wavelength {cwl}, fwhm {fwhm} {path / fn}"
+        assert s.long() == f"none: Cam: PANCAM, Filter: {name}({float(cwl)}nm) pos {pos}, {desc} {path / fn}"
 
 
 def test_direct_load_multifile_cwl_multiple_matches(globaldatadir):

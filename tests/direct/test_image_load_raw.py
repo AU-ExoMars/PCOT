@@ -131,8 +131,8 @@ def test_raw_uint16_bigend():
         loader = RawLoader(format=RawLoader.UINT16, width=16, height=32, bigendian=True, offset=0, rot=0,
                            horzflip=False, vertflip=False)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
-                             filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             camera='AUPE',
+                             filterpat=r'.*Test-(L|R)(?P<pos>[0-9][0-9]).*',
+                             camera='AUPE_LEFT_NOCALIB',
                              rawloader=loader
                              )
 
@@ -158,8 +158,8 @@ def test_raw_uint16_littleend():
         loader = RawLoader(format=RawLoader.UINT16, width=16, height=32, bigendian=False, offset=0, rot=0,
                            horzflip=False, vertflip=False)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
-                             filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             camera='AUPE',
+                             filterpat=r'.*Test-(L|R)(?P<pos>[0-9][0-9]).*',
+                             camera='AUPE_LEFT_NOCALIB',
                              rawloader=loader
                              )
 
@@ -181,8 +181,8 @@ def test_raw_uint16_littleend_offset():
         loader = RawLoader(format=RawLoader.UINT16, width=16, height=32, bigendian=False, offset=10, rot=0,
                            horzflip=False, vertflip=False)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
-                             filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             camera='AUPE',
+                             filterpat=r'.*Test-(L|R)(?P<pos>[0-9][0-9]).*',
+                             camera='AUPE_LEFT_NOCALIB',
                              rawloader=loader
                              )
 
@@ -205,8 +205,8 @@ def test_raw_uint16_littleend_rotate():
         # now load with a 90 degree CCW rotation
         loader = RawLoader(format=RawLoader.UINT16, width=16, height=32, rot=90)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
-                             filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             camera='AUPE',
+                             filterpat=r'.*Test-(L|R)(?P<pos>[0-9][0-9]).*',
+                             camera='AUPE_LEFT_NOCALIB',
                              rawloader=loader
                              )
 
@@ -231,8 +231,8 @@ def test_raw_uint16_littleend_rotate270():
         # now load with a 90 degree CCW rotation
         loader = RawLoader(format=RawLoader.UINT16, width=16, height=32, rot=270)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
-                             filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             camera='AUPE',
+                             filterpat=r'.*Test-(L|R)(?P<pos>[0-9][0-9]).*',
+                             camera='AUPE_LEFT_NOCALIB',
                              rawloader=loader
                              )
 
@@ -257,8 +257,8 @@ def test_raw_uint16_littleend_flipv():
         # now load with a 90 degree CCW rotation
         loader = RawLoader(format=RawLoader.UINT16, width=16, height=32, vertflip=True)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
-                             filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             camera='AUPE',
+                             filterpat=r'.*Test-(L|R)(?P<pos>[0-9][0-9]).*',
+                             camera='AUPE_LEFT_NOCALIB',
                              rawloader=loader
                              )
 
@@ -283,8 +283,8 @@ def test_raw_uint16_littleend_fliph():
         # now load with a 90 degree CCW rotation
         loader = RawLoader(format=RawLoader.UINT16, width=16, height=32, horzflip=True)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
-                             filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             camera='AUPE',
+                             filterpat=r'.*Test-(L|R)(?P<pos>[0-9][0-9]).*',
+                             camera='AUPE_LEFT_NOCALIB',
                              rawloader=loader
                              )
 
@@ -309,8 +309,8 @@ def test_raw_uint16_littleend_flipboth():
         # now load with a 90 degree CCW rotation
         loader = RawLoader(format=RawLoader.UINT16, width=16, height=32, horzflip=True, vertflip=True)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
-                             filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             camera='AUPE',
+                             filterpat=r'.*Test-(L|R)(?P<pos>[0-9][0-9]).*',
+                             camera='AUPE_LEFT_NOCALIB',
                              rawloader=loader
                              )
 
@@ -337,8 +337,8 @@ def test_raw_float32_bigend():
         loader = RawLoader(format=RawLoader.FLOAT32, width=16, height=32, bigendian=True, offset=0, rot=0,
                            horzflip=False, vertflip=False)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
-                             filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             camera='AUPE',
+                             filterpat=r'.*Test-(L|R)(?P<pos>[0-9][0-9]).*',
+                             camera='AUPE_LEFT_NOCALIB',
                              rawloader=loader
                              )
 
@@ -364,8 +364,8 @@ def test_raw_float32_littleend_offset():
         loader = RawLoader(format=RawLoader.FLOAT32, width=16, height=32, bigendian=False, offset=32, rot=0,
                            horzflip=False, vertflip=False)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
-                             filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             camera='AUPE',
+                             filterpat=r'.*Test-(L|R)(?P<pos>[0-9][0-9]).*',
+                             camera='AUPE_LEFT_NOCALIB',
                              rawloader=loader
                              )
 
@@ -401,8 +401,8 @@ def test_raw_byte_offset():
         loader = RawLoader(format=RawLoader.UINT8, width=16, height=32, bigendian=False, offset=12, rot=0,
                            horzflip=False, vertflip=False)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
-                             filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             camera='AUPE',
+                             filterpat=r'.*Test-(L|R)(?P<pos>[0-9][0-9]).*',
+                             camera='AUPE_LEFT_NOCALIB',
                              rawloader=loader
                              )
 
@@ -433,8 +433,8 @@ def test_raw_byte_offset_rot90_vflip():
         loader = RawLoader(format=RawLoader.UINT8, width=16, height=32, bigendian=False, offset=12, rot=90,
                            vertflip=True)
         img = load.multifile(d, ["Test-L01.raw", "Test-L02.raw"],
-                             filterpat=r'.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-                             camera='AUPE',
+                             filterpat=r'.*Test-(L|R)(?P<pos>[0-9][0-9]).*',
+                             camera='AUPE_LEFT_NOCALIB',
                              rawloader=loader
                              )
 
@@ -469,8 +469,8 @@ def test_preset_raw():
     # The preset is stored as a dict
     preset = {
         'rawloader': loader.serialise(),
-        'filterpat': '.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-        'camera': 'AUPE'
+        'filterpat': '.*Test-(L|R)(?P<pos>[0-9][0-9]).*',
+        'camera': 'AUPE_LEFT_NOCALIB'
     }
     presetModel.addPreset("testpreset", preset)
 

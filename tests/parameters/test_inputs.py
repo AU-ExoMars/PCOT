@@ -200,8 +200,8 @@ def test_multifile_raw_preset():
     # The preset is stored as a dict
     preset = {
         'rawloader': loader.serialise(),
-        'filterpat': '.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-        'camera': 'AUPE'
+        'filterpat': '.*Test-(L|R)(?P<pos>[0-9][0-9]).*',
+        'camera': 'AUPE_LEFT_NOCALIB'
     }
     presetModel.addPreset("testpreset", preset)
 
@@ -256,8 +256,8 @@ def test_multifile_raw_nopreset():
         .bigendian = y      # alternate form!
         .offset = 50
         .rot = 180
-        ..filter_pattern = .*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*
-        .camera = AUPE
+        ..filter_pattern = .*Test-(L|R)(?P<pos>[0-9][0-9]).*
+        .camera = AUPE_LEFT_NOCALIB
 
         .filenames.+ = Test-L01.raw
         .+ = Test-L02.raw
@@ -302,8 +302,8 @@ def test_multifile_raw_somepreset():
     # The preset is stored as a dict
     preset = {
         'rawloader': loader.serialise(),
-        'filterpat': '.*Test-(?P<lens>L|R)(?P<n>[0-9][0-9]).*',
-        'camera': 'AUPE'
+        'filterpat': '.*Test-(L|R)(?P<pos>[0-9][0-9]).*',
+        'camera': 'AUPE_LEFT_NOCALIB'
     }
     presetModel.addPreset("testpreset", preset)
 

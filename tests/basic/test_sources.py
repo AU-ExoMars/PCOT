@@ -153,9 +153,9 @@ def test_inputsourcenames():
     pcot.setup()
 
     source = Source().setBand(
-        Filter(cwl=1000, fwhm=100, transmission=20, position="pos1", name="name1"))
+        Filter(cwl=1000, fwhm=100, transmission=20, position="pos1", name="name1", camera_name="cam1", description="desc1"))
 
-    assert source.long() == "none: wavelength 1000, fwhm 100"
+    assert source.long() == "none: Cam: cam1, Filter: name1(1000nm) pos pos1, desc1"
     assert source.brief() == "1000"  # default caption is wavelength
     assert source.brief(captionType=DocumentSettings.CAP_CWL) == "1000"
     assert source.brief(captionType=DocumentSettings.CAP_NAMES) == "name1"
@@ -205,7 +205,7 @@ def test_multibandsourcenameswithidxandextandlong():
     """Test that multiband source long() is correct when the index and ext is set """
     pcot.setup()
     sources = [Source().setBand(
-        Filter(cwl=(i + 1) * 1000, fwhm=100, transmission=20,
+        Filter(cwl=(i + 1) * 1000, fwhm=100, transmission=20, camera_name="cam1", description="desc",
                position=f"pos{i}", name=f"name{i}"))
                    .setInputIdx(i + 10)
                    .setExternal(StringExternal("ext" + str(i + 21), "extlong" + str(i + 21)))
@@ -213,7 +213,8 @@ def test_multibandsourcenameswithidxandextandlong():
 
     # check this kind of ctor works
     ms = MultiBandSource(sources)
-    assert ms.long() == '{\n0: SET[\n10: wavelength 1000, fwhm 100 extlong21\n]\n1: SET[\n11: wavelength 2000, fwhm 100 extlong22\n]\n2: SET[\n12: wavelength 3000, fwhm 100 extlong23\n]\n}\n'
+    foo = ms.long()
+    assert foo == '{\n0: SET[\n10: Cam: cam1, Filter: name0(1000nm) pos pos0, desc extlong21\n]\n1: SET[\n11: Cam: cam1, Filter: name1(2000nm) pos pos1, desc extlong22\n]\n2: SET[\n12: Cam: cam1, Filter: name2(3000nm) pos pos2, desc extlong23\n]\n}\n'
 
 def test_multibandsourcedunder():
     """Test that multibands act as an array of SourceSets"""
