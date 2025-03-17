@@ -58,6 +58,10 @@ class Type:
 
     def deserialise(self, d) -> 'Datum':
         raise pcot.datumexceptions.CannotSerialiseDatumType(self.name)
+        
+    def view(self, d) -> str:
+        """Used by the viewparc command to view to stdout the contents of a datum"""
+        return str(d.val)
 
     def copy(self, d):
         """create a copy of the Datum which is an independent piece of data and can be modified independently."""
