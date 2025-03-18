@@ -74,25 +74,30 @@ followed by `t`.
 
 The default pattern looks something like this:
 ```txt
-.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*
+.*[LR]WAC(?P<pos>[0-9][0-9]).*
 ```
 
 This means:
 
 * `.*` matches any number of any character, so there could be anything
-at the start of the filename
-* `L|R` means "either `L` or `R`" - but we have specified a "named match"
-with brackets and the `?P<..>` notation: `(?P<lens>L|R)`. This means 
-"either `L` or `R` and store the result under the name `lens`".
+at the start of the filename.
+* `[LR]` means "either `L` or `R`".
 * `WAC` means we must then have the sequence of letters `WAC`
-* `(?P<n>[0-9][0-9])` means we must now match two digits (`[0-9]`) and
-store them as `n`
+* `(?P<pos>[0-9][0-9])` means we must now match two digits (`[0-9]`). We've
+put them in brackets and preceded them with `?P<pos>` which means we should
+store the result under the name `pos`.
 * The final `.*` means that there can now be any number of any character again -
 so there could be anything at the end of the filename.
 
 The idea is that a filename like `/home/jim/files/DogBiscuitLWAC02Fish.jpg`
-will be matched, and will result in `L` being stored as `lens` and 
-`02` being stored as `n`.
+will be matched, and will result in `02` being stored as `pos`, which will
+then be used to look up the filter. 
+
+You can set the default pattern from the command line with
+```
+    pcot setconfig Default.multifile_pattern "your pattern here"
+```
+
 
 ### Named matches and how they are used
 
