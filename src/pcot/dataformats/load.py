@@ -113,6 +113,17 @@ def multifile(directory: str,
 
     an example:
 
+        `.*[LR]WAC(?P<pos>[0-9][0-9]).*`
+        - `.*` matches any characters
+        - `[LR]]` matches L or R
+        - `WAC` matches "WAC" (Wide Angle Camera)
+        - `(?P<pos>[0-9][0-9])` matches two digits and assigns them to the pos group
+        - `.*` matches any characters
+
+    So for a filename like "Set18_LWAC01.png", the filter position would be "01".
+
+    A second example where the position is split into "lens" and "n":
+
         `.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*`
 
         - `.*` matches any characters
@@ -121,7 +132,8 @@ def multifile(directory: str,
         - `(?P<n>[0-9][0-9])` matches two digits and assigns them to the n group
         - `.*` matches any characters
 
-        So for a filename like "Set18_LWAC01.png", the filter position would be "L01".
+    Here, for a filename like "Set18_LWAC01.png", the filter position would be "L01".
+
 
     """
 
@@ -160,7 +172,7 @@ def multifile(directory: str,
         if preset is not None:
             r.applyPreset(presetModel.loadPresetByName(r, preset))
         # now we can use the settings in r
-        filterpat = r.filterpat or r'.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*'
+        filterpat = r.filterpat or pcot.config.default_multifile_pattern
         camera = r.camera or pcot.config.default_camera
         rawloader = r.rawloader
         

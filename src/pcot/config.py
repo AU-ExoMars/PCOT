@@ -130,9 +130,10 @@ def loadCameras():
     """Load the camera data from the archive"""
 
     from pcot import cameras
-
+    logger.debug("Attempting to load cameras")
     if 'cameras' in data['Locations']:
         path = getDefaultDir('cameras')
+        logger.debug(f"Camera directory is {path}")
         if path:
             cameras.loadAllCameras(path)
 
@@ -182,3 +183,5 @@ def executeParserHooks(p):
 sigfigs = int(getDef('sigfigs', '5'))
 
 default_camera = getDef('camera', 'PANCAM')
+default_multifile_pattern = getDef("multifile_pattern", r".*[LR](?<pos>[0-9][0-9]).*")
+

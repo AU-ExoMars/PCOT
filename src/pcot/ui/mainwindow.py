@@ -228,7 +228,6 @@ class MainUI(ui.tabs.DockableTabWindow):
                                       QMessageBox.Yes | QMessageBox.No)
             if res == QMessageBox.No:
                 break
-
             # pop up a file dialog asking for a camera directory
             dir = pcot.config.getDefaultDir('cameras') or "~"
             res = QtWidgets.QFileDialog.getExistingDirectory(self, "Select camera data directory",dir)
@@ -238,6 +237,7 @@ class MainUI(ui.tabs.DockableTabWindow):
                 pcot.config.setDefaultDir('cameras', res)
                 pcot.config.save()
                 pcot.config.loadCameras()
+        ui.log(f"Cameras loaded: {','.join(getCameraNames())}")
 
 
     @classmethod

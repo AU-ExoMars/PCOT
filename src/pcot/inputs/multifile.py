@@ -52,7 +52,7 @@ class MultifileInputMethod(InputMethod):
         # If it is None, the data is always divided by 65535 for 16 bit data, 255 for 8 bit.
         self.bitdepth = None
         self.camera = pcot.config.default_camera
-        self.filterpat = r'.*(?P<lens>L|R)WAC(?P<n>[0-9][0-9]).*'
+        self.filterpat = pcot.config.default_multifile_pattern
         self.filterre = None
         self.rawLoader = RawLoader(offset=0, bigendian=False)
 
@@ -180,7 +180,7 @@ class MultifileInputMethod(InputMethod):
         self._getFilesFromParameterDict(m)
 
         # other parameters, which may override the preset IF they have been changed from their default values
-        if m.isNotDefault('filter_pattern'):
+        if m.isNotDefault('filter_pattern'):    # the default here is None, so we won't ever write None to the filterpat.
             self.filterpat = m.filter_pattern
             self.compileRegex()
         if m.isNotDefault('camera'):

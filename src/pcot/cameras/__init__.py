@@ -3,7 +3,7 @@ This package deals with camera data: filters, flatfield data and so on.
 """
 import logging
 import os.path
-from typing import Set
+from typing import Set, List
 
 logger = logging.getLogger(__name__)
 
@@ -18,9 +18,9 @@ def getCamera(name: str) -> 'CameraData':
     return _cameras[name]
 
 
-def getCameraNames() -> Set[str]:
+def getCameraNames() -> List[str]:
     """Return a list of the names of all the cameras"""
-    return set(_cameras.keys())
+    return sorted(_cameras.keys())
 
 
 def loadAllCameras(path: str):
@@ -29,6 +29,7 @@ def loadAllCameras(path: str):
     global _cameras
     from pcot.cameras.camdata import CameraData
     path = os.path.expanduser(path)
+    logger.debug(f"Loading camera data from {path}")
     for file in glob.glob(path + "/*.parc"):
         logger.debug(f"Loading camera data from {file}")
         data = CameraData(file)
