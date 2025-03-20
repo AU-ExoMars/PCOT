@@ -47,4 +47,22 @@ def fit(rho: List[float], signal: List[List[float]]):
     return m, c, sdm, sdc
 
 
+def old_fit(rho: List[float], signal: List[List[float]]):
+    """Original code used for comparison while fit() was developed. If the signal values have no uncertainties
+    it should produce the same results."""
+    a = sum([1 / np.var(ss) for ss in signal])
+    b = sum([(r * r) / np.var(ss) for ss, r in zip(signal, rho)])
+    e = sum([r / np.var(ss) for ss, r in zip(signal, rho)])
 
+    delta = a * b - e * e
+
+    d = sum([(r * np.mean(ss)) / np.var(ss) for ss, r in zip(signal, rho)])
+    f = sum([np.mean(ss) / np.var(ss) for ss in signal])
+
+    m = (a * d - e * f) / delta
+    c = (b * f - e * d) / delta
+
+    sdm = np.sqrt(a / delta)
+    sdc = np.sqrt(b / delta)
+
+    return m, c, sdm, sdc
