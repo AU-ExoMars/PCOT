@@ -29,14 +29,17 @@ def fit(rho: List[float], signal: List[List[float]]):
     # by using Chan's batch extension to Welford's algorithm, like this:
     # https://github.com/himbeles/pairwise-statistics
 
-    a = sum([1 / np.var(ss) for ss in signal])
-    b = sum([(r * r) / np.var(ss) for ss, r in zip(signal, rho)])
-    e = sum([r / np.var(ss) for ss, r in zip(signal, rho)])
+    # this version calculates the variances up front so we can pool them
+    variances = [np.var(ss) for ss in signal]
+
+    a = sum([1 / x for x in variances])
+    b = sum([(r * r) / v for v, r in zip(variances, rho)])
+    e = sum([r / v for v, r in zip(variances, rho)])
 
     delta = a * b - e * e
 
-    d = sum([(r * np.mean(ss)) / np.var(ss) for ss, r in zip(signal, rho)])
-    f = sum([np.mean(ss) / np.var(ss) for ss in signal])
+    d = sum([(r * np.mean(ss)) / v for ss, v, r in zip(signal, variances, rho)])
+    f = sum([np.mean(ss) / v for ss, v in zip(signal, variances)])
 
     m = (a * d - e * f) / delta
     c = (b * f - e * d) / delta

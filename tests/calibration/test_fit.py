@@ -40,3 +40,18 @@ def test_fit():
             assert abs(C-c) < 0.01          # and that the intercept is good
             assert SDM < 0.05               # and that the stddevs are small.
             assert SDC < 0.05
+
+
+def test_fit_agrees_with_old():
+    """Used to test that a version of fit that is modified agrees with the original version"""
+
+    from pcot.calib.fit import old_fit
+    for m in [1, 2, 3, 4, 5]:               # test at different slopes
+        for c in range(-10, 10):                 # and different intensities
+            rho, signal = generate_test_data(m, c)     # generate test data for that slope and intensity
+            M, C, SDM, SDC = fit(rho, signal)           # recover M, C and their stddevs
+            m2, c2, sdm2, sdc2 = old_fit(rho, signal)
+            assert abs(M - m2) < 0.0001
+            assert abs(C - c2) < 0.0001
+            assert abs(SDM - sdm2) < 0.0001
+            assert abs(SDC - sdc2) < 0.0001
