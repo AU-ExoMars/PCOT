@@ -4,11 +4,10 @@ from typing import Callable
 import cv2 as cv
 import numpy as np
 import logging
-import pytest
 
 import pcot.dq
 from pcot import rois, operations, dq
-from pcot.config import getAssetPath
+from pcot.assets import getAssetPath
 from pcot.datum import Datum
 from pcot.dq import NODATA
 from pcot.expressions.register import datumfunc

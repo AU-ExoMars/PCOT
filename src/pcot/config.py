@@ -1,31 +1,23 @@
 import configparser
 import getpass
-import importlib.resources
-import io
 import logging
 import os
-import pkgutil
 from collections import deque
-
 from PySide2 import QtWidgets
+
+from pcot.assets import getAssetAsFile
 
 logger = logging.getLogger(__name__)
 
 
-def getAssetAsString(fn, package="pcot.assets"):
-    s = pkgutil.get_data(package, fn)
-    if s is None:
-        raise ValueError(f'cannot find asset {fn}')
-    return s.decode('utf-8')
+# create the config parser
+data = configparser.ConfigParser()
+data.optionxform = str   # make it case sensitive
 
-
-def getAssetAsFile(fn, package="pcot.assets"):
-    return io.StringIO(getAssetAsString(fn, package=package))
-
-
-def getAssetPath(fn, package="pcot.assets"):
-    with importlib.resources.path(package, fn) as p:
-        return p
+# load the defaults.ini file first
+data.read_file(getAssetAsFile('defaults.ini'))
+# and then the site.cfg and user's .pcot.ini file, overriding the defaults
+data.read(['site.cfg', os.path.expanduser('~/.pcot.ini')], encoding='utf_8')
 
 
 def getUserName():
@@ -34,14 +26,6 @@ def getUserName():
         return os.environ['PCOT_USER']
     else:
         return getpass.getuser()
-
-
-data = configparser.ConfigParser()
-data.optionxform = str   # make it case sensitive
-
-data.read_file(getAssetAsFile('defaults.ini'))
-data.read(['site.cfg', os.path.expanduser('~/.pcot.ini')], encoding='utf_8')
-
 
 def str2bool(s):
     """intelligently (heh) convert a string to a bool - for use in config data"""
