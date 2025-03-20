@@ -9,15 +9,16 @@ from pcot.assets import getAssetAsFile
 
 logger = logging.getLogger(__name__)
 
-
 # create the config parser
 data = configparser.ConfigParser()
-data.optionxform = str   # make it case sensitive
+data.optionxform = str  # make it case sensitive
 
 # load the defaults.ini file first
 data.read_file(getAssetAsFile('defaults.ini'))
 # and then the site.cfg and user's .pcot.ini file, overriding the defaults
 data.read(['site.cfg', os.path.expanduser('~/.pcot.ini')], encoding='utf_8')
+
+xxx = data.get('Default', 'multifile_pattern')
 
 
 def getUserName():
@@ -27,17 +28,10 @@ def getUserName():
     else:
         return getpass.getuser()
 
+
 def str2bool(s):
     """intelligently (heh) convert a string to a bool - for use in config data"""
     return s.lower() in ["yes", "1", "y", "true", "t", "on"]
-
-
-def getDef(key, fallback='nofallback'):
-    """get a value from the Default section"""
-    if fallback == 'nofallback':
-        return data['Default'][key]
-    else:
-        return data['Default'].get(key, fallback=fallback)
 
 
 class Recents:
@@ -53,7 +47,7 @@ class Recents:
         while len(self.paths) > self.count:
             self.paths.pop()
 
-    def fetch(self,config_data):
+    def fetch(self, config_data):
         for i in range(self.count):
             name = "recent{}".format(i)
             if name in data['Default']:
@@ -163,9 +157,19 @@ def executeParserHooks(p):
         f(p)
 
 
-# significant figures to display for Values
-sigfigs = int(getDef('sigfigs', '5'))
+###### Handy getters for config data - we don't provide fallbacks, the default must be in defaults.ini
 
-default_camera = getDef('camera', 'PANCAM')
-default_multifile_pattern = getDef("multifile_pattern", r".*[LR](?<pos>[0-9][0-9]).*")
+def get(key, section='Default'):
+    return data.get(section, key)
 
+
+def getfloat(key, section='Default'):
+    return data.getfloat(section, key)
+
+
+def getint(key, section='Default'):
+    return data.getint(section, key)
+
+
+def getboolean(key, section='Default'):
+    return data.getboolean(section, key)

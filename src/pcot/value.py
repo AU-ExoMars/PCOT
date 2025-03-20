@@ -390,7 +390,7 @@ class Value:
         dqstr = dq.chars(d)
         return f"{n:.{sigfigs}g}±{u:.{sigfigs}g}{dqstr}"
 
-    def out(self, sigfigs=config.sigfigs):
+    def out(self, sigfigs=config.getint('sigfigs')):
         """a string representation to a given number of significant figures"""
         if np.isscalar(self.n):
             return self.scalar_out(self.n, self.u, self.dq, sigfigs)

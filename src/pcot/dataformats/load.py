@@ -172,8 +172,8 @@ def multifile(directory: str,
         if preset is not None:
             r.applyPreset(presetModel.loadPresetByName(r, preset))
         # now we can use the settings in r
-        filterpat = r.filterpat or pcot.config.default_multifile_pattern
-        camera = r.camera or pcot.config.default_camera
+        filterpat = r.filterpat or pcot.config.get('multifile_pattern')
+        camera = r.camera or pcot.config.get('default_camera')
         rawloader = r.rawloader
         
     def getFilterSearchParam(p) -> Tuple[Optional[Union[str, int]], Optional[str]]:

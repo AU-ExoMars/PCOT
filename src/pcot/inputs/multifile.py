@@ -51,8 +51,8 @@ class MultifileInputMethod(InputMethod):
         # are used, set this to 10. The data will then by divided by 1023 (2^10-1) rather than 65535 (2^16-1).
         # If it is None, the data is always divided by 65535 for 16 bit data, 255 for 8 bit.
         self.bitdepth = None
-        self.camera = pcot.config.default_camera
-        self.filterpat = pcot.config.default_multifile_pattern
+        self.camera = pcot.config.get('default_camera')
+        self.filterpat = pcot.config.get('multifile_pattern')
         self.filterre = None
         self.rawLoader = RawLoader(offset=0, bigendian=False)
 

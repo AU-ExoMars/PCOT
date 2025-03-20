@@ -32,7 +32,7 @@ multifileDictType = TaggedDictType(
     filenames=("list of filenames or filename patterns to match. All files matching each pattern will be added, sorted by name within each pattern.",
                TaggedListType(str, [], '')),
     filter_pattern=("pattern for filter identification", Maybe(str), None),
-    camera=("name of camera to use", Maybe(str), pcot.config.default_camera),
+    camera=("name of camera to use", Maybe(str), pcot.config.get('default_camera')),
     bit_depth=("number of bits used in the image (default is all bits)", Maybe(int), None),
     preset=("preset name for some params (can be overridden by other params)", Maybe(str), None),
     raw=("parameters for loading raw data", TaggedDictType(

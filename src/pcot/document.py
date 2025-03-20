@@ -230,7 +230,7 @@ class Document:
 
     def setInputMulti(self, inputidx, directory, fnames, filterpat=None, camname=None):
         """set graph's input to multiple files"""
-        camname = camname or pcot.config.default_camera
+        camname = camname or pcot.config.get('default_camera')
         return self.setInputData(inputidx, inputs.Input.MULTIFILE,
                                  lambda method: method.setFileNames(directory, fnames, filterpat, camname))
 

@@ -90,7 +90,7 @@ from io import StringIO
 from PySide2.QtCore import QMetaObject, QByteArray, QBuffer
 from PySide2.QtUiTools import QUiLoader
 
-import pcot.config
+import pcot.assets
 
 try:
     from pyside2uic import compileUi
@@ -247,7 +247,7 @@ def loadUi(uifile, baseinstance=None, workingDirectory=None):
     return the newly created instance of the user interface.
     """
     # opens a resource file and reads the string. This is the UI XML file.
-    s = pcot.config.getAssetAsString(uifile)
+    s = pcot.assets.getAssetAsString(uifile)
 
     # the loader expects a QIODevice, so we need to make one of those.
     data = QByteArray(s.encode('utf-8'))
