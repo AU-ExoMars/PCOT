@@ -167,3 +167,8 @@ def mean(val):
 ```
 and it will work on scalar Values, vector Values and images - in the latter case, producing a vector
 Value.
+
+The `pooled_sd` function will take the nominal and uncertainty arrays and pool their variation into
+a single value. This is done using the method in 
+Rudmin, J. W. (2010) "Calculating the exact pooled variance" arXiv preprint arXiv:1007.1012. We assume
+that each value in the array was obtained from sample sets of the same size.
