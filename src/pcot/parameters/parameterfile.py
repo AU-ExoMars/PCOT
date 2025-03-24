@@ -403,6 +403,8 @@ class ParameterFile:
             self._changes.append(DeleteValue(path, lineNo, key))
         elif line.startswith('reset'):
             line = line[5:].strip()
+            if line=='':
+                raise ValueError(f"Invalid reset command at line {lineNo}: must provide a value to reset")
             path, key = self._parse_path(lineNo, line)
             self._changes.append(ResetValue(path, lineNo, key))
         elif line.strip() == 'run':

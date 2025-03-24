@@ -32,13 +32,15 @@ class XFormReflectance(XFormType):
 
     def init(self, node):
         node.bandToPlot = 0     # no serialisation needed
-        pass
 
     def createTab(self, xform, window):
         return TabReflectance(xform, window)
 
     def perform(self, node):
-        pass
+        # read the image
+        img = node.getInput(0, Datum.IMG)
+        # ...more here...
+
 
 
 class TabReflectance(pcot.ui.tabs.Tab):

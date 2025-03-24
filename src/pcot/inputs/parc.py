@@ -33,7 +33,6 @@ class PARCInputMethod(InputMethod):
 
     def __init__(self, inp):
         super().__init__(inp)
-        self.img = None
         self.fname = None
         self.itemname = None
         self.datum = None

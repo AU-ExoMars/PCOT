@@ -20,20 +20,14 @@ class RGBInputMethod(InputMethod):
 
     def __init__(self, inp):
         super().__init__(inp)
-        self.img = None
         self.fname = None
         self.mapping = ChannelMapping()
 
-    def loadImg(self):
-        # will throw exception if load failed
-        logger.debug("RGB PERFORMING FILE READ")
+    def readData(self):
+        logger.debug(f"RGB readData fname={self.fname}")
         self.img = load.rgb(self.fname,
                             self.input.idx if self.input else None,
                             self.mapping)
-
-    def readData(self):
-        if self.img is None and self.fname is not None:
-            self.loadImg()
         return self.img
 
     def getName(self):

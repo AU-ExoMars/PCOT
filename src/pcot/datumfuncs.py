@@ -14,12 +14,13 @@ from pcot.expressions.register import datumfunc
 from pcot.expressions.ops import combineImageWithNumberSources
 from pcot.cameras.filters import Filter
 from pcot.imagecube import ImageCube
-from pcot.rois import ROI
+from pcot.rois import ROI, ROICircle
 from pcot.sources import MultiBandSource, SourceSet, Source
 from pcot.utils import image
 from pcot.utils.deb import Timer
 from pcot.utils.geom import Rect
 from pcot.utils.maths import pooled_sd
+from pcot.utils.table import Table
 from pcot.value import Value
 from pcot.xform import XFormException
 
@@ -974,6 +975,104 @@ def interp(img, factor, w=-1):
     img = ImageCube(outimg, None, img.sources, uncertainty=None, dq=None)
 
     return Datum(Datum.IMG, img)
+
+
+@datumfunc
+def reducecircles(img, thresh):
+    """
+    Given an image with a set of circular ROIs, reduce all the radii until the maximum of the pooled SDs of
+    the bands stops decreasing. The threshold value "thresh" is the value by which the SD must stop decreasing
+    before we stop reducing the radius.
+
+    This is useful for finding the smallest circle around a region of the same value.
+
+    @param img:img:the image to process
+    @param thresh:number:the pooled SD threshold
+    """
+
+    img1 = img.get(Datum.IMG)
+    thresh = thresh.get(Datum.NUMBER).n
+
+    if img1 is None:
+        return None
+
+    def getsd(img, r):
+        """get the maximum pooled SD of the pixels in an ROI across all bands"""
+        s = img.subimage(roi=r)
+        # split the image into bands
+        ns = image.imgsplit(s.masked(True))   # true = mask bad pixels
+        us = image.imgsplit(s.maskedUncertainty(True))
+        # calculate the pooled SD for each band
+        bandsds = [pooled_sd(nn, uu) for nn, uu in zip(ns, us)]
+        # and get the maximum across all bands
+        return np.max(bandsds)
+
+    # make a copy of the ROIs, we'll work on these
+    rs = [x.copy() for x in img1.rois]
+
+    # for each ROI, we reduce until the SD has stopped decreasing
+
+    for r in rs:
+        prevSD = None
+        if not isinstance(r, ROICircle):
+            raise XFormException('DATA', 'reducecircles: ROIs must be circles')
+        while True:
+            sd = getsd(img1, r)   # get SD of ROI
+            # we exit if the SD has stopped decreasing by n or we've hit the minimum radius
+            if prevSD is not None and (prevSD - sd < thresh or r.r == 1):
+                break
+            prevSD = sd
+            logger.debug(f"reducecircles: ROI {r.label}, {r.r} SD {sd}")
+            r.r -= 1
+
+    # OK, now output the image with the new ROIs
+    img1.rois = rs
+    return Datum(Datum.IMG, img1)
+
+
+@datumfunc
+def valuesbyfilter(img):
+    """
+    Rather like the spectrum node, this gathers together all the pixel values for an ROI. However, it just
+    outputs them in a table by filter, not by frequency. Useful for collating certain kinds of calibration
+    data.
+
+    @param img:img:the image to process
+    """
+    img = img.get(Datum.IMG)
+    if img is None:
+        return None
+
+    d = dict()  # the dictionary of roi -> {filtername -> (sd,mean)}
+    for r in img.rois:
+        subimg = img.subimage(roi=r)
+        ns = image.imgsplit(subimg.masked())
+        us = image.imgsplit(subimg.maskedUncertainty())
+        # there must be only 1 filter per source
+        for sourceSet, n, u in zip(img.sources.sourceSets, ns, us):
+            if len(sourceSet.sourceSet) != 1:
+                raise XFormException('DATA', 'valuesbyfilter: each band must have exactly one filter')
+            f = sourceSet.getOnlyItem().getFilter()
+            if f is None:
+                raise XFormException('DATA', 'valuesbyfilter: each band must have filter data')
+            if r.label not in d:
+                d[r.label] = dict()
+            if f.name not in d[r.label]:
+                d[r.label][f.name] = (np.mean(n), pooled_sd(n, u))
+            else:
+                raise XFormException('DATA', 'valuesbyfilter: filter appears twice in bands')
+
+    # now output as a table object
+    table = Table()
+    for k, filtdict in d.items():
+        for f, (n, u) in filtdict.items():
+            table.newRow()
+            table.add("ROI", k)
+            table.add("filter", f)
+            table.add("n",n)
+            table.add("u",u)
+
+    return Datum(Datum.DATA, table, sources=SourceSet(img.sources.getSources()))
 
 
 @datumfunc

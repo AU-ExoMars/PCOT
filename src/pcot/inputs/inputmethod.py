@@ -74,6 +74,7 @@ class InputMethod(ABC):
 
     def invalidate(self):
         """invalidates the method's cached data"""
+        logger.debug(f"{self.getName()} invalidate")
         self.data = Datum.null
 
     def setInputException(self, e: Optional[str]):
@@ -85,8 +86,9 @@ class InputMethod(ABC):
 
     def get(self) -> Datum:
         """returns cached data - if that's None, attempts to read data and cache it."""
+        logger.debug(f"get() called for {self.getName()}")
         if self.data is None:
-            raise Exception("input methods should not return None from readData(), ever.")
+            raise Exception(f"input method {self.getName()} should not return None from readData(), ever.")
         if self.data.isNone():   # data is none, try to read it and cache it
             self.setInputException(None)
             try:

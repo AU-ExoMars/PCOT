@@ -21,24 +21,14 @@ class ENVIInputMethod(InputMethod):
 
     def __init__(self, inp):
         super().__init__(inp)
-        self.img = None     # this is the datum of the loaded image, or None.
         self.fname = None
+        self.img = None
         self.mapping = ChannelMapping()
-
-    def loadImg(self):
-        logger.debug(f"Envi file read {self.fname}")
-        # try to load the image.
-        self.img = load.envi(self.fname, self.input.idx if self.input else None, self.mapping)
-        logger.debug(f"ENVI read {self.fname} loaded: {self.img}, mapping is {self.mapping}")
 
     def readData(self):
         # if the image is not loaded and the filename is set, then load it
-        if self.img is None and self.fname is not None:
-            self.loadImg()
-        # if the image didn't load or there was no filename, return null
-        if self.img is None:
-            return Datum.null
-        # otherwise, return the image
+        logger.debug(f"ENVI readData fname={self.fname}")
+        self.img = load.envi(self.fname, self.input.idx if self.input else None, self.mapping)
         return self.img
 
     def getName(self):
