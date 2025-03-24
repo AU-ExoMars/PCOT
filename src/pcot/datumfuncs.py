@@ -302,7 +302,9 @@ def grey(img, opencv=0):
 
             # to calculate the uncertainty, the pooled variance will be the variance of the means, plus the
             # mean of the variances. So first we'll find the variances of each channel (this is the "variance
-            # of the means").
+            # of the means"). We can't know the number of samples that went into each pixel, so we'll assume
+            # they're all the same.
+            # See Rudmin, J. W. (2010). Calculating the exact pooled variance. arXiv preprint arXiv:1007.1012
             varchans = np.var(img.img, axis=2)
             # then we calculate the mean of the variances - to do this, we need to square the uncertainty (to give
             # us variance) and calculate the mean per pixel.
@@ -667,7 +669,9 @@ def sd(val):
     """Find the SD of a Datum. This does different things depending on what kind of Datum we are dealing with.
     For a scalar, it just returns 0. For a vector or single-channel image, it returns a scalar. For an image, it returns a
     vector of the SDs of each channel. Because each individual value in the input set can have its own uncertainty, the
-    uncertainty is pooled (the pooled variance is the mean of the variances plus the variance of the means).
+    uncertainty is pooled - the pooled variance is the mean of the variances plus the variance of the means
+    (Rudmin, J. W. (2010). Calculating the exact pooled variance. arXiv preprint arXiv:1007.1012). For pooling, we make
+    the assumption that the number of items in each input subset (e.g. each pixel) is the same.
     Pixels with "bad" DQ bits will be ignored.
 
     @param val:img,number:the value to process
@@ -723,7 +727,8 @@ def sum(val):
     Find the sum of a Datum. For a multiband image, returns a vector of the sums of each band.
     For a single band image, a scalar, or a vector, returns a scalar.
     The uncertainty is pooled differently as this is a sum. The variance will be the variance of
-    the means plus the sum of the variances.
+    the means plus the sum of the variances (still following
+    Rudmin, J. W. (2010). Calculating the exact pooled variance. arXiv preprint arXiv:1007.1012).
 
     Pixels with "bad" DQ bits will be ignored.
 

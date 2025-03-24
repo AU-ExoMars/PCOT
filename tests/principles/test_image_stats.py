@@ -139,7 +139,8 @@ def test_sd_2halves():
 
 def test_sd_2halves_diffuncs():
     # SD of a tiny image of two colours with two different SDs.
-    # pooled variance = variance of means + mean of variances.
+    # pooled variance = variance of means + mean of variances, unweighted
+    # because we assume the sample sizes are the same.
 
     # Here, the numbers are 1+-4 and 2+-5 (a bit silly).
     # The variance of the means is 0.25.

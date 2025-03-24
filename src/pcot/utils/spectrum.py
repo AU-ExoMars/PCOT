@@ -57,6 +57,7 @@ def getMeanValue(chanImg, chanUnc, chanDQ, mask, ignorePixSD=False):
         # "Thus the variance of the pooled set is the mean of the variances plus the variance of the means."
         # by https://arxiv.org/ftp/arxiv/papers/1007/1007.1012.pdf
         # So we'll calculate the variance of the means added to the mean of the variances.
+        # The calculation assumes that the number of samples that went into each point is the same.
         # And then we'll need to root that variance to get back to SD.
 
         std = pooled_sd(a, np.ma.masked_array(data=chanUnc, mask=~mask))

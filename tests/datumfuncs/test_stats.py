@@ -32,7 +32,8 @@ def test_mean_image():
     assert r.get(Datum.NUMBER).n == np.mean(ns).astype(np.float32)
 
     # pooled variance is the mean of the variances of the individual samples
-    # plus the variance of the means of the individual samples.
+    # plus the variance of the means of the individual samples, but only works
+    # if the number of samples in each subset is the same.
 
     meanOfVariances = np.mean([x ** 2 for x in us])
     varianceOfMeans = np.var(ns)
@@ -47,7 +48,8 @@ def test_mean_image():
     r = df.mean(df.flat(*x))
     assert r.get(Datum.NUMBER).n == np.mean(seq).astype(np.float32)
     # pooled variance is the mean of the variances of the individual samples
-    # plus the variance of the means of the individual samples.
+    # plus the variance of the means of the individual samples, but only works
+    # if the number of samples in each subset is the same.
 
     meanOfVariances = np.mean([x.get(Datum.NUMBER).u ** 2 for x in x])
     varianceOfMeans = np.var([x.get(Datum.NUMBER).n for x in x])

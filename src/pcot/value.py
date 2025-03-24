@@ -430,7 +430,12 @@ class Value:
         return [Value(ni, ui, di) for ni, ui, di in zip(n, u, d)]
 
     def uncertainty(self):
-        """If a scalar, just return the uncertainty. If a vector, calculate the pooled SD."""
+        """If a scalar, just return the uncertainty. If a vector, calculate the pooled SD.
+        We have to assume that all the "subsets" in the input, each represented by a single
+        uncertainty value, were from the same number of samples so that pooled_sd doesn't
+        need to do a weighted calculation. The pooled_sd calculation is from
+        Rudmin, J. W. (2010). Calculating the exact pooled variance. arXiv preprint arXiv:1007.1012
+        """
         if self.isscalar():
             return self.u
         else:

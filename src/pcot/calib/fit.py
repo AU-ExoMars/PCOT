@@ -1,16 +1,23 @@
-import dataclasses
-from typing import List, Tuple
+from typing import List
 
 import numpy as np
 from numpy.typing import NDArray
 
 
-@dataclasses.dataclass
 class SimpleValue:
     """Rather than tote a full Value object around we'll use this "cutdown" version which
-    just has nominal and uncertainty values and no DQ, and is always an array."""
+    just has nominal and uncertainty values and no DQ, and is always an array. This will also
+    pool the variances into a single variance by Rudmin's method
+    Rudmin, J. W. (2010). Calculating the exact pooled variance. arXiv preprint arXiv:1007.1012"""
     nom: NDArray[np.float32]
     std: NDArray[np.float32]
+
+    def __init__(self, nom: NDArray[np.float32], std: NDArray[np.float32]):
+        self.nom = nom
+        self.std = std
+        # and pool the variances - the variance of the entire set of values is the mean of the variances
+        # of the individual values plus the variance of the means
+        self.var = np.mean(std ** 2) + np.var(nom)
 
 
 def fit_arrays(rho: List[float], signal: List[SimpleValue]):

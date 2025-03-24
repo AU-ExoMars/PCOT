@@ -44,7 +44,7 @@ def registerBuiltinProperties(p):
                        lambda d: d.uncertainty())
 
     p.registerProperty('u', Datum.NUMBER,
-                       "return the uncertainty of the scalar or vector (if vector, individual uncertainties will be pooled). DQ is ignored.",
+                       "return the uncertainty of the scalar or vector (if vector, individual uncertainties will be pooled using Rudmin 2010). DQ is ignored.",
                        lambda d: d.uncertainty())
 
     p.registerProperty('bands', Datum.IMG,

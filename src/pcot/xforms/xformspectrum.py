@@ -100,13 +100,15 @@ class XFormSpectrum(XFormType):
     the input number.
 
     Each pixel has its own variance, so the shown variance is the pooled variance of all the pixels in
-    the region. This is calculated as the variance of the means, plus the mean of the variances.
-    SpectrumSet handles this.
+    the region. This is calculated as the variance of the means, plus the mean of the variances
+    (Rudmin, J. W. (2010). Calculating the exact pooled variance. arXiv preprint arXiv:1007.1012). We
+    assume the number of samples that went into each pixel is the same.
+    For those who might want to work with a library, SpectrumSet handles this part of the operation.
 
     If a point has data with BAD DQ bits in a band, those pixels are ignored in that band. If there
     are no good points, the point is not plotted for that band.
 
-    A table of the values is also produced, and this output as CSV text. The table has one row per
+    A table of the values is also produced, and this output as a table datum. The table has one row per
     ROI or input, and the columns
 
     * name - the name of the ROI or input
