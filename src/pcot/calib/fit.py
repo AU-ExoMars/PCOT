@@ -3,7 +3,7 @@ from typing import List
 import numpy as np
 from numpy.typing import NDArray
 
-
+    
 class SimpleValue:
     """Rather than tote a full Value object around we'll use this "cutdown" version which
     just has nominal and uncertainty values and no DQ, and is always an array. This will also
