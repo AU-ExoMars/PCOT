@@ -9,18 +9,18 @@ class SimpleValue:
     just has nominal and uncertainty values and no DQ, and is always an array. This will also
     pool the variances into a single variance by Rudmin's method
     Rudmin, J. W. (2010). Calculating the exact pooled variance. arXiv preprint arXiv:1007.1012"""
-    nom: NDArray[np.float32]
-    std: NDArray[np.float32]
+    noms: NDArray[np.float32]
+    vars: NDArray[np.float32]
 
-    def __init__(self, nom: NDArray[np.float32], std: NDArray[np.float32]):
-        self.nom = nom
-        self.std = std
+    def __init__(self, noms: NDArray[np.float32], stds: NDArray[np.float32]):
+        self.noms = noms
+        self.vars = stds ** 2
         # and pool the variances - the variance of the entire set of values is the mean of the variances
         # of the individual values plus the variance of the means
-        self.var = np.mean(std ** 2) + np.var(nom)
+        self.var = np.mean(self.vars) + np.var(noms)
 
 
-def fit_arrays(rho: List[float], signal: List[SimpleValue]):
+def fit(rho: List[float], signals: List[SimpleValue]):
     """Function for fitting sets of points to a line using the method in Allender, Elyse J., et al.
     “The ExoMars spectral tool (ExoSpec): An image analysis tool for ExoMars 2020 PanCam imagery.”
     Image and Signal Processing for Remote Sensing XXIV. Vol. 10789.
@@ -33,8 +33,11 @@ def fit_arrays(rho: List[float], signal: List[SimpleValue]):
         - signal: for each patch, a set of W.m^2.sr.nm spectral radiance readings from the rover.
           In this implementation, this is a list of "simple value" objects, each of which contains two arrays:
             - the nominal value -  mean radiance for each pixel in the patch
-            - the uncertainty - the standard deviation of the radiance for each pixel in the patch
-            Bad pixels should be removed first.
+            - the uncertainty - the variance of the radiance for each pixel in the patch
+          It also contains the pooled variance of the entire set of values, which is calculated from the individual
+            variances and the mean values using Rudmin's method and assuming all the pixels were taken from the same
+            number of samples.
+          Bad pixels should be removed first.
 
     Returns m, c, sdm, sdc
 
@@ -46,13 +49,7 @@ def fit_arrays(rho: List[float], signal: List[SimpleValue]):
 
     """
 
-    # TODO deal with uncertainty!
-    # If variables are independent, this could be just aggregating the statistics for each pixel in the ROI
-    # by using Chan's batch extension to Welford's algorithm, like this:
-    # https://github.com/himbeles/pairwise-statistics
-
-    # this version calculates the variances up front so we can pool them
-    variances = [np.var(ss) for ss in signal]
+    variances = [x.var for x in signals]    # these are the pooled variance for each group of pixels.
 
     a = sum([1 / x for x in variances])
     b = sum([(r * r) / v for v, r in zip(variances, rho)])
@@ -60,8 +57,8 @@ def fit_arrays(rho: List[float], signal: List[SimpleValue]):
 
     delta = a * b - e * e
 
-    d = sum([(r * np.mean(ss)) / v for ss, v, r in zip(signal, variances, rho)])
-    f = sum([np.mean(ss) / v for ss, v in zip(signal, variances)])
+    d = sum([(r * np.mean(ss.noms)) / v for ss, v, r in zip(signals, variances, rho)])
+    f = sum([np.mean(ss.noms) / v for ss, v in zip(signals, variances)])
 
     m = (a * d - e * f) / delta
     c = (b * f - e * d) / delta
@@ -72,7 +69,7 @@ def fit_arrays(rho: List[float], signal: List[SimpleValue]):
     return m, c, sdm, sdc
 
 
-def fit(rho: List[float], signal: List[List[float]]):
+def old_fit(rho: List[float], signal: List[List[float]]):
     """Version using lists"""
     # this version calculates the variances up front so we can pool them
     variances = [np.var(ss) for ss in signal]
@@ -85,27 +82,6 @@ def fit(rho: List[float], signal: List[List[float]]):
 
     d = sum([(r * np.mean(ss)) / v for ss, v, r in zip(signal, variances, rho)])
     f = sum([np.mean(ss) / v for ss, v in zip(signal, variances)])
-
-    m = (a * d - e * f) / delta
-    c = (b * f - e * d) / delta
-
-    sdm = np.sqrt(a / delta)
-    sdc = np.sqrt(b / delta)
-
-    return m, c, sdm, sdc
-
-
-def old_fit(rho: List[float], signal: List[List[float]]):
-    """Original code used for comparison while fit() was developed. If the signal values have no uncertainties
-    it should produce the same results."""
-    a = sum([1 / np.var(ss) for ss in signal])
-    b = sum([(r * r) / np.var(ss) for ss, r in zip(signal, rho)])
-    e = sum([r / np.var(ss) for ss, r in zip(signal, rho)])
-
-    delta = a * b - e * e
-
-    d = sum([(r * np.mean(ss)) / np.var(ss) for ss, r in zip(signal, rho)])
-    f = sum([np.mean(ss) / np.var(ss) for ss in signal])
 
     m = (a * d - e * f) / delta
     c = (b * f - e * d) / delta

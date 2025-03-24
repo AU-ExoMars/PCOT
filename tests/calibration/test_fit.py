@@ -1,11 +1,12 @@
 """Tests of the basic calibration line-fitting technique"""
+from typing import List, Tuple
 
-from pcot.calib import fit
+from pcot.calib import fit, SimpleValue
 
 import numpy as np
 
 
-def generate_test_data(m, c):
+def generate_test_data(m, c) -> Tuple[List[float], List[SimpleValue]]:
     """Generate some test data. This consists of a tuple of the form [rho, signal].
     The rho list is a set of putative patch intensities.
     The signal is a set of lists - one for each patch - containing a bunch of data read from that patch.
@@ -23,7 +24,8 @@ def generate_test_data(m, c):
         # this is the basic relationship we are trying to recover
         y = m * x + c
         y = list(y + np.random.randn(1000) * 0.01)  # multiple values for each patch
-        signal.append(y)
+        u = list(np.random.randn(1000) * 0.01)  # uncertainties
+        signal.append(SimpleValue(np.array(y,dtype=np.float32), np.array(u,dtype=np.float32)))
     return rho, signal
 
 
@@ -33,6 +35,9 @@ def test_fit():
     for m in [1, 2, 3, 4, 5]:               # test at different slopes
         for c in range(-10, 10):                 # and different intensities
             rho, signal = generate_test_data(m, c)     # generate test data for that slope and intensity
+
+            ## this test code just checks the fit is OK with the original algorithm which doesn't
+            # handle uncertainty in the input data
             M, C, SDM, SDC = fit(rho, signal)           # recover M, C and their stddevs
             ratio = M/m                                 # how wrong is the slope?
             # print("m={} outm={}, ratio={}, c={}, sdm={}, sdc={}".format(m, M, M / m, C, SDM, SDC))
@@ -50,8 +55,11 @@ def test_fit_agrees_with_old():
         for c in range(-10, 10):                 # and different intensities
             rho, signal = generate_test_data(m, c)     # generate test data for that slope and intensity
             M, C, SDM, SDC = fit(rho, signal)           # recover M, C and their stddevs
-            m2, c2, sdm2, sdc2 = old_fit(rho, signal)
+            m2, c2, sdm2, sdc2 = old_fit(rho, [list(s.noms) for s in signal])
             assert abs(M - m2) < 0.0001
             assert abs(C - c2) < 0.0001
-            assert abs(SDM - sdm2) < 0.0001
-            assert abs(SDC - sdc2) < 0.0001
+
+            # here we just assert for now that the uncertainties are different, given that
+            # the new method uses the pooled variance and the old method doesn't.
+            assert abs(SDM - sdm2) > 0.0001
+            assert abs(SDC - sdc2) > 0.0001
