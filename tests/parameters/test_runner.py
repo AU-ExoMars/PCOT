@@ -7,6 +7,7 @@ import datetime
 import inspect
 import tempfile
 import pcot
+from pcot.parameters.parameterfile import ApplyException
 from pcot.parameters.runner import Runner
 
 from fixtures import *
@@ -103,8 +104,9 @@ def test_noclobber(globaldatadir):
         """
         r.run(None, test)           # should run fine
 
-        with pytest.raises(FileExistsError):
+        with pytest.raises(ApplyException) as e:
             r.run(None, test)       # should fail
+        assert "already exists" in str(e.value)
 
         test = f"""
         inputs.0.parc.filename = {globaldatadir / 'parc/multi.parc'}
@@ -555,7 +557,7 @@ def test_error_check(globaldatadir):
         """
 
         # this will fail because we're now using a tiny image into which the ROI doesn't fit
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(ApplyException) as e:
             r.run(None, test)
         assert "Errors in run (2 nodes failed)" in str(e.value)
         assert "ROI is out of bounds" in str(e.value)

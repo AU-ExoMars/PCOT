@@ -66,8 +66,8 @@ def get_element_to_modify(data: TaggedAggregate, path: List[str]):
     return data
 
 
-class Change:
-    """The parameter file defines changes to parameters. All parameters have the following:
+class Operation:
+    """The parameter file defines changes to parameters and other actions. All parameters have the following:
     * root_name: the top level of the path is the name of the tagged aggregate in the dict passed to the ParameterFile
     * path: the path to the parameter within the tagged aggregate, which is the remainder of the path passed to the ctor
     * key: the key of the parameter within the tagged aggregate, from the last element of the path
@@ -102,18 +102,31 @@ class Change:
         else:
             return f"{self.root_name}.{self.key}"
 
-    def apply(self, data: TaggedAggregate):
+    def apply(self, roots: dict[str, TaggedAggregate]):
+        """This takes the dictionary of roots. Most operations will call "getdata" to get the TaggedDict
+        on which they should act. Others - like RunCallback and Print - don't do this because they don't
+        operate directly on data."""
         pass
 
+    def getroot(self, roots) -> TaggedAggregate:
+        """Used by actual changes, this will return the root of the change - the TaggedAggregate we're
+        trying to modify."""
 
-class SetValue(Change):
+        if self.root_name in roots:
+            return roots[self.root_name]
+        else:
+            raise KeyError(f"Cannot find '{self.root_name}' in the possible top-level parameter sets: {roots.keys()}")
+
+
+class SetValue(Operation):
     """A change to set a value."""
 
     def __init__(self, path: List[str], line: int, key: str, value: str):
         super().__init__(path, line, key)
         self.value = value
 
-    def apply(self, data: TaggedAggregate):
+    def apply(self, roots):
+        data = self.getroot(roots)
         logger.debug(f"Setting {self.show()} to {self.value}")
         # walk down the path to get the element we want to change (well, its parent - the last item in the path)
         element = get_element_to_modify(data, self.path)
@@ -159,13 +172,14 @@ class SetValue(Change):
         return f"SetValue({self.line}, root={self.root_name} path={'.'.join(self.path)} key={self.key}) val={self.value}"
 
 
-class DeleteValue(Change):
+class DeleteValue(Operation):
     """A change to delete a value."""
 
     def __init__(self, path: List[str], line: int, key: str):
         super().__init__(path, line, key)
 
-    def apply(self, data: TaggedAggregate):
+    def apply(self, roots):
+        data = self.getroot(roots)
         logger.debug(f"Deleting {self.path + [self.key]}")
         raise NotImplementedError(repr(self))
 
@@ -180,7 +194,7 @@ class AddToNonListException(ValueError):
         super().__init__(msg)
 
 
-class Add(Change):
+class Add(Operation):
     """Add to the list at the given path+key. It may be that we are adding to a list of variant dicts, in
     which case we should specify the type of the variant."""
 
@@ -196,7 +210,8 @@ class Add(Change):
         else:
             return f"Add({self.line}, root={self.root_name} path={'.'.join(self.path)} key={self.key})"
 
-    def apply(self, data: TaggedAggregate):
+    def apply(self, roots):
+        data = self.getroot(roots)
         logger.debug(f"Adding to {self.path + [self.key]}")
         # then get the tag for the item we want to append to. If the key is
         # None, we're trying to append to a list at the root.
@@ -248,14 +263,15 @@ class Add(Change):
             list_to_append_to.append_default()
 
 
-class ResetValue(Change):
+class ResetValue(Operation):
     """A change to reset a value to its original. We require that the original structure is still in place,
     stored in the "original" field of the TaggedAggregate"""
 
     def __init__(self, path: List[str], line: int, key: str):
         super().__init__(path, line, key)
 
-    def apply(self, data: TaggedAggregate):
+    def apply(self, roots):
+        data = self.getroot(roots)
         logger.debug(f"Resetting {self.path + [self.key]}")
 
         # trying to reset a root node
@@ -284,7 +300,7 @@ class ResetValue(Change):
         return f"ResetValue({self.line}, root={self.root_name} path={'.'.join(self.path)} key={self.key})"
 
 
-class RunCallback(Change):
+class RunCallback(Operation):
     """A change, but not really - it tells the file to run its callback (actually use the modified parameter
     data)."""
 
@@ -294,7 +310,7 @@ class RunCallback(Change):
         self.run_func = run_func
         self.line = line
 
-    def apply(self, data: TaggedAggregate):
+    def apply(self, _):
         logger.debug(f"Running callback at line {self.line}!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         self.run_func()
 
@@ -302,12 +318,22 @@ class RunCallback(Change):
         return f"RunCallback({self.line})"
 
 
+class Print(Operation):
+    """Again, not really a change - prints out a message when processes"""
+    def __init__(self, msg: str, lineNo: int):
+        super().__init__([], lineNo, '')
+        self.msg = msg
+
+    def apply(self, _):
+        print(self.msg)
+
+
 class ParameterFile:
     """Represents a parameter file: a set of changes which can be applied to a graph as it is loaded.
     This class knows nothing about TaggedAggregates, it just deals with the file format."""
 
     _path: List[str]  # the path to the parent of the last parameter we set
-    _changes: List[Change]  # the changes to be applied
+    _changes: List[Operation]  # the changes to be applied
     path: str  # either the path to the file or "(no path)"
 
     def __init__(self, jinja_env: Optional[Environment] = None, run_func: Optional[Callable] = None):
@@ -369,38 +395,22 @@ class ParameterFile:
         data within the aggregate and change it."""
 
         for c in self._changes:
-            # if the root name is in the data, or it's RunCallback, apply the change.
-            if isinstance(c, RunCallback):
-                # RunCallback is an anomaly because it's not really a change. It doesn't
-                # take any data. We also skip over the exception rethrow here.
-                c.apply(None)
-            elif c.root_name in data:
-                try:
-                    c.apply(data[c.root_name])
-                except Exception as e:
-                    raise ApplyException(
-                        f"Error applying change line {c.line}: {c.lineText}, change is {c}. Error: {e} ") from e
-            else:
-                raise ApplyException(f"Cannot find '{c.root_name}' in the possible top-level parameter sets: {data.keys()}")
+            try:
+                c.apply(data)
+            except Exception as e:
+                raise ApplyException(
+                    f"Error applying change line {c.line}: {c.lineText}, change is {c}. Error: {e} ") from e
 
     def _parse(self, line: str, lineNo: int = 0):
         """Process each line, adding Change objects to the list of changes if required"""
         logger.info(f"Processing line {lineNo}: {line}")
-        if '=' in line:
-            parts = [x.strip() for x in line.split('=', 1)]
-            path, key = self._parse_path(lineNo, parts[0], False)  # may append an Add change
-            # this is where the processing has to get a bit weird. We take the value, and if it begins
-            # and ends with a quote we assume it's a JSON-serialisable value and decode it. That lets us
-            # put whitespace and escaped characters in it.
-            v = parts[1]
-            vstrip = v.strip()
-            if (vstrip[0] == '"' and vstrip[-1] == '"') or (vstrip[0] == "[" and vstrip[-1] == "]"):
-                v = json.loads(v)
-            self._changes.append(SetValue(path, lineNo, key, v))
-        elif line.startswith('del'):
+        if line.startswith('del'):
             line = line[3:].strip()
             path, key = self._parse_path(lineNo, line)  # may append an Add change
             self._changes.append(DeleteValue(path, lineNo, key))
+        elif line.startswith('print'):
+            line = line[5:].strip()
+            self._changes.append(Print(line, lineNo))
         elif line.startswith('reset'):
             line = line[5:].strip()
             if line=='':
@@ -411,6 +421,17 @@ class ParameterFile:
             if self._run:
                 # don't bother if there's no runner callback
                 self._changes.append(RunCallback(lineNo, self._run))
+        elif '=' in line:
+            parts = [x.strip() for x in line.split('=', 1)]
+            path, key = self._parse_path(lineNo, parts[0], False)  # may append an Add change
+            # this is where the processing has to get a bit weird. We take the value, and if it begins
+            # and ends with a quote we assume it's a JSON-serialisable value and decode it. That lets us
+            # put whitespace and escaped characters in it.
+            v = parts[1]
+            vstrip = v.strip()
+            if (vstrip[0] == '"' and vstrip[-1] == '"') or (vstrip[0] == "[" and vstrip[-1] == "]"):
+                v = json.loads(v)
+            self._changes.append(SetValue(path, lineNo, key, v))
         else:
             # don't create a change, we're just changing the path
             self._parse_path(lineNo, line, True)

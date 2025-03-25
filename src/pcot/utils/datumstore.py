@@ -225,6 +225,8 @@ class DatumStore:
                 # soon so there's no point calling time().
                 self.cache[name] = DatumStore.CachedItem(datum.getSize(), 0, datum)
                 self.read_count += 1
+        else:
+            logger.debug(f"Cache hit for {name}")
 
         self.cache[name].time = time.perf_counter()  # set timestamp of access
         return self.cache[name].datum  # and return

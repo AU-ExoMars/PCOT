@@ -158,8 +158,10 @@ class Document:
 
     def saveToMemoryArchive(self):
         """Save the document to a memory archive, returning the compressed data."""
+        logger.debug("saving doc to memory archive")
         with archive.MemoryArchive() as arc:
             arc.writeJson("JSON", self.serialise())
+        logger.debug("save done")
         return arc.get()  # return the raw data
 
     def loadFromMemoryArchive(self, compressed_data):

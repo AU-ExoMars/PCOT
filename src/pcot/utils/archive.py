@@ -101,9 +101,11 @@ class Archive:
         self.zip.writestr(name, b.getvalue())
 
     def writeArrayAndGenerateName(self, a: np.ndarray):
+        logger.debug(f"Writing array to archive {str(self)}, size {a.shape}")
         name = "ARAE-{}".format(self.arrayct)
         self.writeArray(name, a)
         self.arrayct += 1
+        logger.debug("Write done")
         return name
 
     def writeStr(self, name: str, string: str, permit_replace=False):
@@ -180,6 +182,7 @@ class Archive:
     def readJson(self, name):
         if self.zip is None:
             raise Exception("Archive is not open")
+        logger.debug(f"Reading {name} from {str(self)}")
         s = self.readStr(name)
         d = json.loads(s)
         d = self.convertTagsToArrays(d)

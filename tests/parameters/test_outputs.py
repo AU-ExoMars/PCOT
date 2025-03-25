@@ -9,6 +9,7 @@ import pcot
 from fixtures import *
 from pcot.datum import Datum
 from pcot.document import Document
+from pcot.parameters.parameterfile import ApplyException
 from pcot.parameters.runner import Runner
 from pcot.utils.archive import FileArchive
 from pcot.utils.datumstore import DatumStore
@@ -28,7 +29,7 @@ def test_cannot_write_text_number_to_image_filename(globaldatadir):
         .node = mean(a)
         """
 
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(ApplyException) as e:
             r.run(None, test)
         assert "Cannot write non-image data to an image file" in str(e)
 
@@ -49,7 +50,7 @@ def test_cannot_write_number_to_parc(globaldatadir):
         .node = mean(a)
         """
 
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(ApplyException) as e:
             r.run(None, test)
         assert "Cannot write default format (text) data to a PARC file" in str(e)
 
@@ -70,7 +71,7 @@ def test_cannot_write_image_to_txt(globaldatadir):
         .node = gradient
         """
 
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(ApplyException) as e:
             r.run(None, test)
         assert "Unsupported file format for image save: txt" in str(e)
 
@@ -90,7 +91,7 @@ def test_desc_must_be_none_for_nonparc_text(globaldatadir):
         .node = gradient
         """
 
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(ApplyException) as e:
             r.run(None, test)
         assert "Description is not supported for image formats other than PARC" in str(e)
 
@@ -110,7 +111,7 @@ def test_desc_must_be_none_for_nonparc_image(globaldatadir):
         .node = gradient
         """
 
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(ApplyException) as e:
             r.run(None, test)
         assert "Description is not supported for image formats other than PARC" in str(e)
 
@@ -130,7 +131,7 @@ def test_cannot_append_non_parc_images(globaldatadir):
         .append = y # second run should fail
         """
 
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(ApplyException) as e:
             r.run(None, test)
         assert "Append is not supported for image formats other than PARC" in str(e)
 
@@ -148,7 +149,7 @@ def test_format_or_extension_provided_for_images(globaldatadir):
         .node = gradient
         """
 
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(ApplyException) as e:
             r.run(None, test)
         assert "No extension provided in filename" in str(e)
 
@@ -191,7 +192,7 @@ def test_cannot_specify_format_on_nonimage(globaldatadir):
         .format = png
         """
 
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(ApplyException) as e:
             r.run(None, test)
         assert "Cannot specify format for text output" in str(e)
 

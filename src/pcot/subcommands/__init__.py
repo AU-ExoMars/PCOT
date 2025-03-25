@@ -11,4 +11,5 @@ import pcot.subcommands.lscams
 import pcot.subcommands.gencam
 import pcot.subcommands.parcutils
 import pcot.subcommands.config
+import pcot.subcommands.batch
 

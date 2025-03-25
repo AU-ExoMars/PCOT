@@ -25,6 +25,8 @@ def main():
     args = parser.parse_args()
     logging.getLogger("pcot").setLevel(args.log.upper())
 
+    logger.critical("Deprecated - please use the 'pcot batch' subcommand in future, although this will work for now.")
+
     pcot.setup()
     jinja_env = jinja2.Environment()
     jinja_env.globals['vars'] = args.vars
