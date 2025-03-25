@@ -47,6 +47,17 @@ outputs.+.node=gradient
 The inputs will keep their settings (e.g. raw loader parameters and filter)
 but new files will be used.
 
+## Running the graph with a batch file
+
+We can then run the graph with a batch file using the `pcot batch`
+subcommand:
+
+```
+pcot batch mygraph.pcot mybatchfile.batch ...
+```
+Any extra arguments will be set inside the Jinja2 templating engine
+used by the batch runner as `var[0]`, `var[1]` etc.
+
 If we want to do this several times, we can either write multiple batch
 files, or we can run the graph several times in one file, changing it
 each time. Here's an example that runs the graph twice:
@@ -86,7 +97,7 @@ Here, we are running the graph once as above and then making some changes:
 
 @@@todo
 Write more on how the inputs work - intro here, more in params.md or
-elsewhere. Write more in general. Note [autodocs](/autodocs).
+elsewhere. Write more in general. Note [autodocs](/autodocs/).
 
 Finish.
 @@@

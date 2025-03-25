@@ -178,6 +178,23 @@ node called `expr`. Each time we are modifying the first (and only) output filen
 that we need to create output for the first run,
 and then we modify its filename for subsequent runs.
 
+### Printing messages
+
+The `print` directive allows messages to be printed during the run:
+
+```txt
+outputs.+.file = double.csv
+print doubling some data...
+expr.expr = a*2
+run
+
+outputs.0.file = triple.csv
+print trebling some data...
+expr.expr = a*3
+run
+```
+This is particularly useful when using templates, as we will see below.
+
 ### Using Jinja2 templates
 
 Before they are run, each parameter file is processed using the
@@ -204,6 +221,7 @@ run
     .node = test{{i}}       # get output from node1, node2 or node3.
     .name = testimg{{i}}    # call it testimg1, testimg2 or testimg3
     .description = Test image {{i}}
+    print processing {{i}}  # print a message
     run
 {% endfor %}
 # normally a "run" is silently appended to the end of a parameter file,
@@ -220,6 +238,7 @@ PCOT automatically sets up the following Jinja2 variables for you to use:
 |{{datetime}}|the current date and time in ISO 8601 format|
 |{{date}}|the current date in ISO 8601 format|
 |{{count}}|the number of times the document has been run (useful in loops)|
+|{{vars}}|an array of any extra arguments passed on the command line|
 |{{parampath}}|the path to the parameter file (if one is used, it is "NoFile" otherwise)|
 |{{paramfile}}|the name of the parameter file (if one is used, it is "NoFile" otherwise)|
 
@@ -238,6 +257,42 @@ as a prefix to any text output, but strip off any directory elements:
 output.0.prefix = {{paramfile | basename}}
 ```
 
+### Using outputs (and other lists) in a loop
+
+A common use case is writing multiple output files. You may be tempted
+to do something like this:
+
+```
+{{ for i in range(0,10) }}                  # loop over 10 items
+inputs.0.envi.filename = input{{i}}.hdr     # change input 0 
+outputs.0.node = sink                       # set the output
+.clobber = y                                # can overwrite files
+.filename = output{{i}}.png                 # and change the filename
+{{ endfor }}
+```
+That won't work, because output 0 doesn't exist yet. You may try to
+fix it like this:
+```
+{{ for i in range(0,10) }}                  # loop over 10 items
+inputs.0.envi.filename = input{{i}}.hdr     # change input 0 
+outputs.+.node = sink                       # create new output!
+.clobber = y                                # can overwrite files
+.filename = output{{i}}.png                 # and change the filename
+{{ endfor }}
+```
+but while that will run it will create a new output each time it goes around
+the loop!
+The right way to do it is to create the output and set it up
+before the loop, only changing the bits you need to:
+```
+outputs.+.node = sink                       # create new output!
+.clobber = y                                # can overwrite files
+
+{{ for i in range(0,10) }}                  # loop over 10 items
+inputs.0.envi.filename = input{{i}}.hdr     # change input 0 
+outputs.0.filename = output{{i}}.png        # and change the output filename
+{{ endfor }}
+```
 
 
 
