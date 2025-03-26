@@ -5,19 +5,21 @@ import os
 from pcot.subcommands import subcommand, argument
 from dataclasses import dataclass
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class FlatFileData:
     """Data class to hold various common parameters as we chuck them down the stack."""
 
-    camera_name: str        # camera name
-    directory: str          # directory to find the files
-    extension: str          # png/bin typically
-    key: str                # either "name" or "position" - used to look up which filter we are adding data for
-    preset: str             # if loading raw binary files, the multifile loader preset to use
-    bitdepth: int           # how many bits are used; we scale the data according to this
-    filters: dict           # a dictionary of filtername -> Filter object.
+    camera_name: str  # camera name
+    directory: str  # directory to find the files
+    extension: str  # png/bin typically
+    key: str  # either "name" or "position" - used to look up which filter we are adding data for
+    preset: str  # if loading raw binary files, the multifile loader preset to use
+    bitdepth: int  # how many bits are used; we scale the data according to this
+    filters: dict  # a dictionary of filtername -> Filter object.
 
 
 @subcommand([
@@ -55,6 +57,12 @@ def gencam(args):
         # Write the parameter data to the output file.
         store = camdata.CameraData.openStoreAndWrite(args.output, p)
 
+        if "reflectance" in d:
+            # there may be a section on reflectances - this will be a dictionary of calibration
+            # target names to filenames holding the reflectances for that target.
+            for target, filename in d["reflectance"].items():
+                process_reflectance(store, target, filename)
+
         # get information about any flats from the YAML. We can have the data in the YAML but disabled,
         # so flats aren't generated, but setting the "disabled" key. We can also do this by using the
         # --nocalib option, which won't save calib data AND will add "_NOCALIB" to the camera name.
@@ -88,7 +96,7 @@ def createFilters(filter_dicts):
             transmission=d.get("transmission", 1.0),
             name=k,
             position=d.get("position", k),
-            description=d.get("description","No description given"))
+            description=d.get("description", "No description given"))
         fs[k] = f
     return fs
 
@@ -107,9 +115,11 @@ def process_flats(store, data: FlatFileData):
 
         class Preset(PresetOwner):
             """Minimal preset owner class to hold the rawloader preset"""
+
             def applyPreset(self, preset):
                 self.rawloader = RawLoader()
                 self.rawloader.deserialise(preset['rawloader'])
+
         # create the minimal preset owner, the thing which has presets applied to it
         preset = Preset()
         # pull the preset from the model and apply it to the preset owner
@@ -117,7 +127,8 @@ def process_flats(store, data: FlatFileData):
             preset.applyPreset(presetModel.presets[data.preset])
             rawloader = preset.rawloader
         except KeyError:
-            raise ValueError(f"Preset {data.preset} not found - use multifile input to make one, or get one from another user")
+            raise ValueError(
+                f"Preset {data.preset} not found - use multifile input to make one, or get one from another user")
     else:
         rawloader = None
 
@@ -140,7 +151,7 @@ def get_files_for_filter(filt, rawloader, data):
     camname = data.camera_name
     # files should be in a directory named for some attribute in Filter, pretty much
     # always "name" or "position"
-    filter_dir_name = getattr(filt,data.key)
+    filter_dir_name = getattr(filt, data.key)
     # build the full directory path
     dirpath = str(os.path.join(os.path.expanduser(data.directory), filter_dir_name))
     globpath = os.path.join(dirpath, f"*.{data.extension}")
@@ -234,3 +245,10 @@ def process_filters_for_flats(callback, rawloader, data: FlatFileData):
         res = ImageCube(mean, uncertainty=sd, dq=dqs)
 
         callback(res, data.camera_name, filt)
+
+
+def process_reflectance(store, target, filename):
+    """Process the reflectance data for a particular calibration target, given the filename of the data."""
+
+    with open(filename) as f:
+        pass
