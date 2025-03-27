@@ -42,6 +42,7 @@ def run(args):
     app.setOrganizationDomain('aber.ac.uk')
     pcot.ui.setApp(app)
 
+    pcot.config.main_app_running = True
     pcot.setup()
 
     # create a document either ab initio or from a file, depending on args and config.

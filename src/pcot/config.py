@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 data = configparser.ConfigParser()
 data.optionxform = str  # make it case sensitive
 
+main_app_running = False        # set when we are actually running the GUI
+
 # load the defaults.ini file first
 data.read_file(getAssetAsFile('defaults.ini'))
 # and then the site.cfg and user's .pcot.ini file, overriding the defaults
@@ -75,10 +77,11 @@ def save():
 
 
 def setDefaultDir(kind, directory):
-    logger.debug(f"Setting default dir for {kind} to {directory}")
-    directory = os.path.realpath(directory)
-    data['Locations'][kind] = directory
-    save()
+    if main_app_running:
+        logger.debug(f"Setting default dir for {kind} to {directory}")
+        directory = os.path.realpath(directory)
+        data['Locations'][kind] = directory
+        save()
 
 
 def getDefaultDir(kind):
@@ -88,10 +91,12 @@ def getDefaultDir(kind):
 
 
 def addRecent(fn):
-    fn = os.path.realpath(os.path.expanduser(fn))  # just make sure.
-    _recents.add(fn)
-    setDefaultDir('pcotfiles', os.path.dirname(fn))
-    save()
+    """Add a file to the list of recent files. We don't do this outside the main app!"""
+    if main_app_running:
+        fn = os.path.realpath(os.path.expanduser(fn))  # just make sure.
+        _recents.add(fn)
+        setDefaultDir('pcotfiles', os.path.dirname(fn))
+        save()
 
 
 def getFileDialogOptions():

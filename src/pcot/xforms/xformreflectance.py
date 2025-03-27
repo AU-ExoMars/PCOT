@@ -4,7 +4,7 @@ import logging
 import numpy as np
 
 import pcot.ui.tabs
-from pcot import config, cameras
+from pcot import config, cameras, ui
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe
 from pcot.utils import SignalBlocker, image
@@ -47,6 +47,7 @@ def collectCameraData(node, img):
     node.reflectance_data = camera.getReflectances()
     node.calib_targets = list(node.reflectance_data.keys()) if node.reflectance_data else []
     node.filters = filters
+    node.filter_names = [f.name for f in filters]
 
     if node.params.target and node.params.target not in node.calib_targets:
         raise XFormException('DATA', 'target not in calibration data')
@@ -143,10 +144,13 @@ class XFormReflectance(XFormType):
                     # and find the mean and pooled SD of that
                     logger.debug(
                         f"Band {band_index} has measured {measured_mean}±{measured_std}, known {known_mean}±{known_std}")
-                    point = (known_mean, known_std, measured_mean, measured_std)
+                    point = (known_mean, known_std, measured_mean, measured_std, patch)
                     if filter_name not in node.points_per_filter:
                         node.points_per_filter[filter_name] = []
                     node.points_per_filter[filter_name].append(point)
+        if len(node.points_per_filter) == 0:
+            raise XFormException('DATA', 'no points - perhaps no patches found in image?')
+
 
 
 class TabReflectance(pcot.ui.tabs.Tab):
@@ -181,8 +185,14 @@ class TabReflectance(pcot.ui.tabs.Tab):
         # populate the filter combo box with the filters from the image
         with SignalBlocker(self.w.filterCombo):
             self.w.filterCombo.clear()
-            self.w.filterCombo.addItems([x.name for x in self.node.filters])
-            self.w.filterCombo.setCurrentIndex(self.node.filters.index(self.node.filter_to_plot))
+            self.w.filterCombo.addItems(self.node.filter_names)
+            try:
+                self.w.filterCombo.setCurrentIndex(self.node.filter_names.index(self.node.filter_to_plot))
+            except ValueError:
+                # this filter is not in the image?
+                ui.log(f"Filter {self.node.filter_to_plot} not in image, using first filter")
+                self.w.filterCombo.setCurrentIndex(0)
+                self.node.filter_to_plot = self.w.filterCombo.currentText()
 
     def markReplotReady(self):
         """make the replot button red"""
@@ -191,15 +201,21 @@ class TabReflectance(pcot.ui.tabs.Tab):
     def replot(self):
         # this will be (known_mean, known_std, measured_mean, measured_std)
         band = self.node.filter_to_plot
-        points = self.node.points_per_filter.get(band, [[], [], [], []])
+        points = self.node.points_per_filter.get(band, None)
+
+        if points is None:
+            ui.log(f"No data for filter {band}")
+            return
 
         # separate out the data
-        known, known_std, measured, measured_std = zip(*points)
+        known, known_std, measured, measured_std, patches = zip(*points)
 
         ax = self.w.mpl.ax
         ax.cla()
         ax.set_xlabel("Known reflectance (nm)")
         ax.set_ylabel("Measured reflectance (nm)")
-        ax.plot(known, measured, '+-r')
+        ax.plot(known, measured, '+r')
+        for i, patch in enumerate(patches):
+            ax.annotate(patch, (known[i], measured[i]), fontsize=8)
         self.w.mpl.draw()
         self.w.replot.setStyleSheet("")

@@ -997,7 +997,7 @@ def reducecircles(img, thresh):
         """get the maximum pooled SD of the pixels in an ROI across all bands"""
         s = img.subimage(roi=r)
         # split the image into bands
-        ns, us, _ = s.masked_all(maskBadPixels=True, noDQ=True)
+        ns, us = s.masked_all(maskBadPixels=True, noDQ=True)
         ns = image.imgsplit(ns)   # true = mask bad pixels
         us = image.imgsplit(us)
         # calculate the pooled SD for each band
@@ -1044,7 +1044,7 @@ def valuesbyfilter(img):
     d = dict()  # the dictionary of roi -> {filtername -> (sd,mean)}
     for r in img.rois:
         subimg = img.subimage(roi=r)
-        ns, us, _ = subimg.masked_all(True, True)
+        ns, us = subimg.masked_all(True, True)
         ns = image.imgsplit(ns)
         us = image.imgsplit(us)
         # there must be only 1 filter per source
