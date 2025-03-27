@@ -80,7 +80,7 @@ class XFormReflectance(XFormType):
 
     def init(self, node):
         # no serialisation needed for this data.
-        node.filter_to_plot = 0
+        node.filter_to_plot = None
         node.calib_targets = []
         # For each filter, there will be a list of points to plot. Each point will have
         # the known reflectance and the measured reflectance.
@@ -167,7 +167,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
 
     def filterChanged(self, i):
         self.mark()
-        self.node.filter_to_plot = i
+        self.node.filter_to_plot = self.w.filterCombo.currentText()
         self.changed()
 
     def onNodeChanged(self):
@@ -182,7 +182,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
         with SignalBlocker(self.w.filterCombo):
             self.w.filterCombo.clear()
             self.w.filterCombo.addItems([x.name for x in self.node.filters])
-            self.w.filterCombo.setCurrentIndex(self.node.filter_to_plot)
+            self.w.filterCombo.setCurrentIndex(self.node.filters.index(self.node.filter_to_plot))
 
     def markReplotReady(self):
         """make the replot button red"""
@@ -190,7 +190,8 @@ class TabReflectance(pcot.ui.tabs.Tab):
 
     def replot(self):
         # this will be (known_mean, known_std, measured_mean, measured_std)
-        points = self.node.points_per_filter.get(self.w.targetCombo.currentText(), [[], [], [], []])
+        band = self.node.filter_to_plot
+        points = self.node.points_per_filter.get(band, [[], [], [], []])
 
         # separate out the data
         known, known_std, measured, measured_std = zip(*points)
