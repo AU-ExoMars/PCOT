@@ -176,7 +176,7 @@ def stats_wrapper(val, func):
         # and mask out the bad pixels
         subimage = img.subimage()
         # I was making a copy, but I don't think it's needed.
-        imgn_masked, imgu_masked, imgd_masked = subimage.masked_all(True, True)
+        imgn_masked, imgu_masked, imgd_masked = subimage.masked_all(True)
 
         if img.channels == 1:
             # mono image
