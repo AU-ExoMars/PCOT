@@ -41,7 +41,7 @@ class SubImageCube:
       should be manipulated.
     """
 
-    def __init__(self, img, imgToUse=None, roi=None, clip=True):
+    def __init__(self, img, imgToUse=None, roi: Optional[ROI] = None, clip=True):
         """
         img - the image in which we are finding the subimage
         imgToUse - used if we are actually getting the ROIs from another image
@@ -130,16 +130,32 @@ class SubImageCube:
             return mask & ~badmask
         return mask
 
+    def masked_all(self, maskBadPixels=False, noDQ=False):
+        """Return all the data masked by the ROI. This is a tuple of three masked arrays:
+        the means (i.e. the image), the uncertainty and the DQ. The mask is the same for all three.
+        If noDQ is set, only means and uncertainty are returned.
+        """
+        mask = self.fullmask(maskBadPixels)
+        if noDQ:
+            return (np.ma.masked_array(self.img, mask=~mask),
+                    np.ma.masked_array(self.uncertainty, mask=~mask)
+                    )
+        else:
+            return (np.ma.masked_array(self.img, mask=~mask),
+                    np.ma.masked_array(self.uncertainty, mask=~mask),
+                    np.ma.masked_array(self.dq, mask=~mask)
+                    )
+
     def masked(self, maskBadPixels=False):
-        """get the masked image as a numpy masked array"""
+        """get the masked image as a numpy masked array (see also masked_all)"""
         return np.ma.masked_array(self.img, mask=~self.fullmask(maskBadPixels=maskBadPixels))
 
     def maskedDQ(self, maskBadPixels=False):
-        """get the masked DQ as a numpy masked array"""
+        """get the masked DQ as a numpy masked array (see also masked_all)"""
         return np.ma.masked_array(self.dq, mask=~self.fullmask(maskBadPixels=maskBadPixels))
 
     def maskedUncertainty(self, maskBadPixels=False):
-        """get the masked uncertainty as a numpy masked array"""
+        """get the masked uncertainty as a numpy masked array (see also masked_all)"""
         return np.ma.masked_array(self.uncertainty, mask=~self.fullmask(maskBadPixels=maskBadPixels))
 
     def cropother(self, img2):
@@ -1016,8 +1032,15 @@ class ImageCube(SourcesObtainable):
             raise Exception("bands property: Not all bands have a filter")
         return d
 
+    def getROIByLabel(self, label):
+        """Return an ROI given its label, or None if not found"""
+        for r in self.rois:
+            if r.label == label:
+                return r
+        return None
+
     def save(self, filename, annotations=False, format: str = None,
-             name: str = None, description: str = "", append: bool=False,
+             name: str = None, description: str = "", append: bool = False,
              pixelWidth=None):
         """Write the image to a file, with or without annotations. If format is provided, it will be used
         otherwise the format will be inferred from the filename extension. Note that this will always clobber -
@@ -1072,7 +1095,7 @@ class ImageCube(SourcesObtainable):
                 raise ValueError("PARC format does not support annotations")
             else:
                 with FileArchive(filename, "a" if append else "w") as a:
-                    from pcot.datum import Datum    # late import otherwise cyclic fun
+                    from pcot.datum import Datum  # late import otherwise cyclic fun
                     ds = DatumStore(a)
                     ds.writeDatum(name, Datum(Datum.IMG, self), description)
         else:

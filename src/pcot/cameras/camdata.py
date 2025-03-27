@@ -31,6 +31,10 @@ class CameraParams:
     It also itself forms the "params" field of a CameraData object, so we get "amusing" little chains like
     camera.params.params.name. Sorry.
 
+    However, the reflectance data is stored as just a dictionary - it's not in a TA, although it is
+    serialised and deserialised as part of the CameraParams object. This makes things a lot simpler.
+    At the moment, the structure of that dictionary is {patchname: {filtername: (mean, std)}}
+
     """
 
     def __init__(self, filters=None):
@@ -46,6 +50,11 @@ class CameraParams:
 
         # backpointer to the CameraData object so we can get the archive; will be set by CameraData
         self.camera_data = None
+
+        # there may be reflectance data - if so, each will be a dictionary of patch name to
+        # dictionaries of filter name to reflectance values as tuples of (mean, std):
+        # {target: {patchname: {filtername: (mean, std)}}}
+        self.reflectances = {}
 
     @classmethod
     def deserialise(cls, d) -> 'CameraParams':
@@ -66,6 +75,11 @@ class CameraParams:
         # we can't get it here.
         p.filters = {f.name: Filter(f.cwl, f.fwhm, f.transmission, f.position, f.name)
                      for f in p.params['filters']}
+
+        # if there is reflectance data in the incoming dict, just copy it over.
+        if 'reflectances' in d:
+            p.reflectances = d['reflectances']
+
         return p
 
     def serialise(self):
@@ -78,7 +92,11 @@ class CameraParams:
                 e[attr] = getattr(v, attr)
 
         # now we have a fully populated TA and can just serialise everything
-        return self.params.serialise()
+        d = self.params.serialise()
+        # and put the reflectances in if they are there
+        if self.reflectances:
+            d['reflectances'] = self.reflectances
+        return d
 
 
 class CameraParamsType(Type):
@@ -105,7 +123,6 @@ class CameraParamsType(Type):
         import json
         return json.dumps(d.val.serialise(),indent=2)
         
-
 
 # Create the type singleton and register the type
 Datum.registerType(ct := CameraParamsType())
@@ -188,3 +205,7 @@ class CameraData:
     def getFlat(self, filtname) -> Datum:
         """Get the flatfield for the given filter and position."""
         return self.archive.get(f"flat_{filtname}")
+
+    def getReflectances(self):
+        """Get the reflectance dict or None. The structure of the dict is {target: {patch: {filter: (mean, std)}}}"""
+        return self.params.reflectances

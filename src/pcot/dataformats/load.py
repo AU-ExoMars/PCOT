@@ -183,7 +183,7 @@ def multifile(directory: str,
         else:
             m = filterre.match(p)
             if m is None:
-                logger.critical(f"NO MATCH FOUND FOR path {p}, regex {filterre}")
+                ui.error(f"Multifile loader pattern: NO MATCH FOUND FOR path {p}, regex {filterre}")
                 return None, None
         
             m = m.groupdict()
@@ -201,6 +201,7 @@ def multifile(directory: str,
             elif '<cwl>' in filterpat:
                 return int(m.get('cwl', '0')), 'cwl'
             else:
+                ui.error(f"Multifile loader pattern: bad pattern {filterre}")
                 return None, None
 
     # first compile the regex
@@ -208,7 +209,7 @@ def multifile(directory: str,
     try:
         filterre = re.compile(filterpat)
     except re.error as e:
-        logger.error(f"Error in filter pattern: {e}")
+        ui.error(f"Error in filter pattern: {e}")
         filterre = None
 
     sources = []  # array of source sets for each image

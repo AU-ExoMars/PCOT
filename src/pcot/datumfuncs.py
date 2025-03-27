@@ -175,11 +175,8 @@ def stats_wrapper(val, func):
         # get the subimage (i.e. only the part covered by ROIs if there are any)
         # and mask out the bad pixels
         subimage = img.subimage()
-        mask = subimage.fullmask(maskBadPixels=True)
         # I was making a copy, but I don't think it's needed.
-        imgn_masked = np.ma.masked_array(subimage.img, mask=~mask)
-        imgu_masked = np.ma.masked_array(subimage.uncertainty, mask=~mask)
-        imgd_masked = np.ma.masked_array(subimage.dq, mask=~mask)
+        imgn_masked, imgu_masked, imgd_masked = subimage.masked_all(True, True)
 
         if img.channels == 1:
             # mono image
@@ -1000,8 +997,9 @@ def reducecircles(img, thresh):
         """get the maximum pooled SD of the pixels in an ROI across all bands"""
         s = img.subimage(roi=r)
         # split the image into bands
-        ns = image.imgsplit(s.masked(True))   # true = mask bad pixels
-        us = image.imgsplit(s.maskedUncertainty(True))
+        ns, us, _ = s.masked_all(maskBadPixels=True, noDQ=True)
+        ns = image.imgsplit(ns)   # true = mask bad pixels
+        us = image.imgsplit(us)
         # calculate the pooled SD for each band
         bandsds = [pooled_sd(nn, uu) for nn, uu in zip(ns, us)]
         # and get the maximum across all bands
@@ -1046,8 +1044,9 @@ def valuesbyfilter(img):
     d = dict()  # the dictionary of roi -> {filtername -> (sd,mean)}
     for r in img.rois:
         subimg = img.subimage(roi=r)
-        ns = image.imgsplit(subimg.masked())
-        us = image.imgsplit(subimg.maskedUncertainty())
+        ns, us, _ = subimg.masked_all(True, True)
+        ns = image.imgsplit(ns)
+        us = image.imgsplit(us)
         # there must be only 1 filter per source
         for sourceSet, n, u in zip(img.sources.sourceSets, ns, us):
             if len(sourceSet.sourceSet) != 1:

@@ -28,7 +28,10 @@ class ENVIInputMethod(InputMethod):
     def readData(self):
         # if the image is not loaded and the filename is set, then load it
         logger.debug(f"ENVI readData fname={self.fname}")
-        self.img = load.envi(self.fname, self.input.idx if self.input else None, self.mapping)
+        if self.fname is None:
+            self.img = Datum.null
+        else:
+            self.img = load.envi(self.fname, self.input.idx if self.input else None, self.mapping)
         return self.img
 
     def getName(self):

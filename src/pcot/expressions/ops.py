@@ -176,8 +176,11 @@ def imageBinop(dx: Datum, dy: Datum, f: Callable[[Value, Value], Value]) -> Datu
     subimga = imga.subimage(None if ahasroi else imgb)
     subimgb = imgb.subimage(None if bhasroi else imga)
 
-    a = Value(subimga.masked(), subimga.maskedUncertainty(), subimga.maskedDQ())
-    b = Value(subimgb.masked(), subimgb.maskedUncertainty(), subimgb.maskedDQ())
+    n,u,dq = subimga.masked_all()
+    a = Value(n, u, dq)
+    n,u,dq = subimgb.masked_all()
+    b = Value(n, u, dq)
+
     # perform calculation and get result subimage
     r = f(a, b)  # will generate a value
     # splice that back into a copy of image A replacing uncertainty and DQ too.
@@ -197,7 +200,8 @@ def numberImageBinop(dx: Datum, dy: Datum, f: Callable[[Value, Value], Value]) -
     # create a subimage
     subimg = img.subimage()
     # get the uncertainty-aware forms of the operands
-    b = Value(subimg.masked(), subimg.maskedUncertainty(), subimg.maskedDQ())
+    n,u,dq = subimg.masked_all()
+    b = Value(n, u, dq)
     # perform the operation
     r = f(dx.val, b)
     # put the result back into the image
@@ -212,7 +216,8 @@ def imageNumberBinop(dx: Datum, dy: Datum, f: Callable[[Value, Value], Value]) -
     """This wraps binary operations imagecube x number"""
     img = dx.val  # Datum.IMG
     subimg = img.subimage()
-    a = Value(subimg.masked(), subimg.maskedUncertainty(), subimg.maskedDQ())
+    n,u,dq = subimg.masked_all()
+    a = Value(n, u, dq)
     r = f(a, dy.val)
     img = img.modifyWithSub(subimg, r.n, uncertainty=r.u, dqv=r.dq)
     img.rois = dx.val.rois.copy()

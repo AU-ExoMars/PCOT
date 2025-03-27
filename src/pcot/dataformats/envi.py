@@ -143,6 +143,9 @@ class ENVIHeader:
 
 def load(fn):
     """Takes the ENVI header name. Actually loads the envi, returning a tuple of (header, ndarray)"""
+
+    if not fn:
+        raise Exception("No filename given in ENVI load!")
     with open(fn) as f:
         h = ENVIHeader(f)
 

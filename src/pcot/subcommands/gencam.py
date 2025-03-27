@@ -54,14 +54,25 @@ def gencam(args):
         p.params.author = d["author"]
         p.params.description = d["description"]
         p.params.short = d["short"]
+
+        # Sometimes the reflectance data refers to filters by other names. We deal with that here
+        # by providing a dictionary of aliases to filter names.
+        filter_aliases = {}
+        if "filter_aliases" in d:
+            for alias, filtername in d["filter_aliases"].items():
+                filter_aliases[alias] = filtername
+
+        # there may be a section on reflectances - this will be a dictionary of calibration
+        # target names to filenames holding the reflectances for that target.
+        p.reflectances = {}
+        if "reflectance" in d:
+            for target, filename in d["reflectance"].items():
+                # we pass in the filters so we can check they exist when referred to in the reflectance data.
+                # We store the resulting dict in the CameraParams object.
+                p.reflectances[target] = process_reflectance(filename, fs, filter_aliases)
+
         # Write the parameter data to the output file.
         store = camdata.CameraData.openStoreAndWrite(args.output, p)
-
-        if "reflectance" in d:
-            # there may be a section on reflectances - this will be a dictionary of calibration
-            # target names to filenames holding the reflectances for that target.
-            for target, filename in d["reflectance"].items():
-                process_reflectance(store, target, filename)
 
         # get information about any flats from the YAML. We can have the data in the YAML but disabled,
         # so flats aren't generated, but setting the "disabled" key. We can also do this by using the
@@ -76,7 +87,7 @@ def gencam(args):
                     data = FlatFileData(p.params.name,
                                         flatd["directory"],
                                         flatd["extension"],
-                                        flatd["key"],
+                                        flatd["key"],       # "name" or "position"
                                         flatd.get("preset", None),
                                         flatd.get("bitdepth", None),
                                         fs)
@@ -247,8 +258,28 @@ def process_filters_for_flats(callback, rawloader, data: FlatFileData):
         callback(res, data.camera_name, filt)
 
 
-def process_reflectance(store, target, filename):
+def process_reflectance(filename, filters: dict, filter_aliases: dict):
     """Process the reflectance data for a particular calibration target, given the filename of the data."""
 
     with open(filename) as f:
-        pass
+        # this is a CSV file with four fields: patch, filter, reflectance, uncertainty.
+        # We'll read this in and create a dictionary of filter -> reflectance data.
+        import csv
+        reader = csv.DictReader(f)
+        data = {}
+        for row in reader:
+            patch = row["ROI"]
+            filt = row["filter"]
+            if filt not in filters:
+                # if the filter isn't in the filters dictionary, we may have an alias for it
+                if filt in filter_aliases:
+                    filt = filter_aliases[filt]
+                else:
+                    raise ValueError(f"In reflectance file {filename}: '{filt}' not found in filter list and no alias found")
+            refl = float(row["n"])
+            unc = float(row["u"])
+            if patch not in data:
+                data[patch] = {}
+            data[patch][filt] = (refl, unc)
+
+    return data

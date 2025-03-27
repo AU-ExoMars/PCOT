@@ -21,6 +21,7 @@ class RGBInputMethod(InputMethod):
     def __init__(self, inp):
         super().__init__(inp)
         self.fname = None
+        self.img = None         # we keep this around to speed up internal ser/deser
         self.mapping = ChannelMapping()
 
     def readData(self):
