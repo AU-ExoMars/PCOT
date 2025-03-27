@@ -1,11 +1,17 @@
 import builtins
+import logging
+
+import numpy as np
 
 import pcot.ui.tabs
 from pcot import config, cameras
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe
-from pcot.utils import SignalBlocker
+from pcot.utils import SignalBlocker, image
+from pcot.utils.maths import pooled_sd
 from pcot.xform import XFormType, xformtype, XFormException
+
+logger = logging.getLogger(__name__)
 
 
 def collectCameraData(node, img):
@@ -60,6 +66,7 @@ class XFormReflectance(XFormType):
     must have filter information including nominal reflectances for each
     patch on that target.
     """
+
     def __init__(self):
         super().__init__("reflectance", "calibration", "0.0.0")
         self.addInputConnector("img", Datum.IMG)
@@ -77,7 +84,7 @@ class XFormReflectance(XFormType):
         node.calib_targets = []
         # For each filter, there will be a list of points to plot. Each point will have
         # the known reflectance and the measured reflectance.
-        node.points_per_filter = []
+        node.points_per_filter = {}
 
     def createTab(self, xform, window):
         return TabReflectance(xform, window)
@@ -91,35 +98,55 @@ class XFormReflectance(XFormType):
         # collect reflectance data and check the image is valid (throws exception if not)
         collectCameraData(node, img)
 
+        if len(node.calib_targets) == 0:
+            raise XFormException('DATA', 'no calibration targets available')
+        elif len(node.calib_targets) == 1 or node.params.target is None:
+            # there's only one target available, use it. Or there's no target set, so use the first one.
+            node.params.target = node.calib_targets[0]
+
         # collect the known reflectance values from the calibration data
         if node.params.target not in node.reflectance_data:
             raise XFormException('DATA', f"target '{node.params.target}' not in calibration data")
         # data will be {patchname: {filtername: (mean, std)}}. This is annoying, but makes sense.
         data = node.reflectance_data[node.params.target]
 
-        # we're going to produce a dictionary of filter: [(known, measured)] where each tuple is a patch.
+        # we're going to store the points we need to fit in a list for each filter.
+        node.points_per_filter = {}
 
         for patch, filter_dicts in data.items():
             # We need to extract the patch from the image. It will be one of the ROIs, and if it
             # isn't there we must disregard it - it may be that the calibration target detection is
             # not perfect. We can warn, though.
-            roi = img.rois.getROIByLabel(patch)
+            roi = img.getROIByLabel(patch)
+
             if roi:
-                subimg = img.subimage(roi)  # get the part of the image covered by ROI
+                subimg = img.subimage(roi=roi)  # get the part of the image covered by ROI
                 # get the masked data itself from the ROI
                 means, stds = subimg.masked_all(maskBadPixels=True, noDQ=True)
-                # split the data into bands
+                # split the data into bands - we need to work separately on each band.
+                means = image.imgsplit(means)
+                stds = image.imgsplit(stds)
 
-                # get the known reflectance for each filter along with the filter..
+                # get the known reflectance for each filter along with the filter, and
+                # then the measured reflectance for each band.
                 for filter_name, (known_mean, known_std) in filter_dicts.items():
-                    # now we need to get the measured reflectance for this filter
-                    pass #todo
-
-
-
-
-
-
+                    # get the band index for this filter - we have Filter items in node.filters
+                    for band_index, band in enumerate(node.filters):
+                        if band.name == filter_name:
+                            break
+                    else:
+                        # this filter is not in the image
+                        continue
+                    # get the data for this band
+                    measured_mean = np.mean(means[band_index])
+                    measured_std = pooled_sd(means[band_index], stds[band_index])
+                    # and find the mean and pooled SD of that
+                    logger.debug(
+                        f"Band {band_index} has measured {measured_mean}±{measured_std}, known {known_mean}±{known_std}")
+                    point = (known_mean, known_std, measured_mean, measured_std)
+                    if filter_name not in node.points_per_filter:
+                        node.points_per_filter[filter_name] = []
+                    node.points_per_filter[filter_name].append(point)
 
 
 class TabReflectance(pcot.ui.tabs.Tab):
@@ -162,10 +189,16 @@ class TabReflectance(pcot.ui.tabs.Tab):
         self.w.replot.setStyleSheet("background-color:rgb(255,100,100)")
 
     def replot(self):
+        # this will be (known_mean, known_std, measured_mean, measured_std)
+        points = self.node.points_per_filter.get(self.w.targetCombo.currentText(), [[], [], [], []])
+
+        # separate out the data
+        known, known_std, measured, measured_std = zip(*points)
+
         ax = self.w.mpl.ax
         ax.cla()
         ax.set_xlabel("Known reflectance (nm)")
         ax.set_ylabel("Measured reflectance (nm)")
-        ax.plot([0, 1], [0, 1], '+-r')
+        ax.plot(known, measured, '+-r')
         self.w.mpl.draw()
         self.w.replot.setStyleSheet("")
