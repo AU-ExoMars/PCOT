@@ -20,20 +20,20 @@ class Patch(NamedTuple):
     x: float  # x coordinate of centre in mm
     y: float  # y coordinate of centre in mm
     r: float  # radius in mm
-    name: str  # name
+    name: str  # name (e.g. "NG4")
+    desc: str  # description (a colour)
     col: Tuple[float, float, float]
 
 
 patches = [
-    Patch(12.50, 11, 9.5, "NG4/dkgrey", (0.4, 0.4, 0.4)),
-    Patch(33.50, 11, 9.5, "RG610/red", (1, 0, 0)),
-    Patch(54.50, 11, 9.5, "BG3/blue", (0, 0, 1)),
-    Patch(12.50, 32, 9.5, "NG11/ltgrey", (0.7, 0.7, 0.7)),
-    Patch(33.50, 32, 9.5, "OG515/yellow", (1, 1, 0)),
-    Patch(54.50, 32, 9.5, "BG18/cyan", (0, 1, 1)),
-
-    Patch(17, 59, 15.5, "Pyro/white", (1, 1, 1)),
-    Patch(50, 59, 15.5, "WCT-2065/pink", (1, 0.7, 0.7))
+    Patch(12.50, 11, 9.5, "NG4", "dkgrey", (0.4, 0.4, 0.4)),
+    Patch(33.50, 11, 9.5, "RG610", "red", (1, 0, 0)),
+    Patch(54.50, 11, 9.5, "BG3", "blue", (0, 0, 1)),
+    Patch(12.50, 32, 9.5, "NG11", "ltgrey", (0.7, 0.7, 0.7)),
+    Patch(33.50, 32, 9.5, "OG515", "yellow", (1, 1, 0)),
+    Patch(54.50, 32, 9.5, "BG18", "cyan", (0, 1, 1)),
+    Patch(17, 59, 15.5, "Pyroceram", "white", (1, 1, 1)),
+    Patch(50, 59, 15.5, "WCT2065", "pink", (1, 0.7, 0.7))
 ]
 
 # positions of the three large screws (not the corner holes)

@@ -20,10 +20,11 @@ from pcot.xform import xformtype, XFormType
 BRUSHSCALE = 0.1
 
 
-def createPatchROI(n, x, y, radius):
+def createPatchROI(img, x, y, radius):
     """Create a ROIPainted which encompasses the coords x,y. The patch has
     a given radius in mm, which we use to determine the min and max number
-    of pixels acceptable."""
+    of pixels acceptable. This works using a floodfill on the image, so it is
+    *destructive*"""
 
     # first step - create a bool mask the same size as the image, all zeroes.
 
@@ -34,7 +35,7 @@ def createPatchROI(n, x, y, radius):
     # get minimum and maximum pixel sizes (empirically determined from radius of patch)
     maxPix = radius ** 2 * 4
     minPix = 0  # probably best to not have a min pixel count
-    ff = MeanFloodFiller(n.img, FloodFillParams(minPix, maxPix, threshold=0.005))
+    ff = MeanFloodFiller(img, FloodFillParams(minPix, maxPix, threshold=0.005))
 
     # perform a flood fill and get a region out. This may return None if the
     # number of pixels is too low or too high.
@@ -44,21 +45,17 @@ def createPatchROI(n, x, y, radius):
 
 @xformtype
 class XformPCT(XFormType):
-    """Locates the PCT and generates calibration coefficients
-
-    **Very incomplete at the moment**
-
-    """
+    """Locates the PCT by hand and creates ROIs"""
 
     def __init__(self):
         super().__init__("pct", "calibration", "0.0.0")
         self.addInputConnector("img", Datum.IMG)
+        self.addOutputConnector("", Datum.IMG)
         self.params = TaggedDictType()   # no parameters; it's pointless because the ROIs are painted.
         self.autoserialise = ('brushSize', 'pctPoints', 'drawMode')
-        # No output as yet.
+
 
     def createTab(self, n, w):
-        pcot.ui.msg("creating a tab with a plot widget takes time...")
         return TabPCT(n, w)
 
     def serialise(self, n):
@@ -83,16 +80,17 @@ class XformPCT(XFormType):
         # (x,y) tuples for screen positions of screws; a deque so we can rotate
         node.pctPoints = []
         node.selPoint = -1  # selected point to move
+        node.selPoint = -1  # selected point to move
         node.rois = []  # list of ROIs (ROIPainted); if none then we're editing points.
         node.selROI = None  # selected ROI index or None
         node.showStdDevs = False  # show stddevs on canvas
 
     def perform(self, node):
-        img = node.getInput(0, Datum.IMG)
+        img_in = node.getInput(0, Datum.IMG)
         # the perform for this node mainly draws ROIs once they are generated. The PCT outline is drawn
         # in the canvas draw hook.
-        if img is not None:
-            img = img.shallowCopy() # Issue 56!
+        if img_in is not None:
+            img = img_in.shallowCopy()  # Issue 56!
             node.previewRadius = getRadiusFromSlider(node.brushSize, img.w, img.h, scale=BRUSHSCALE)
             img.setMapping(node.mapping)
 
@@ -109,12 +107,22 @@ class XformPCT(XFormType):
                 for i, r in enumerate(node.rois):
                     if r is not None:
                         p = pct.patches[i]
-                        r.setDrawProps(True, p.col, 0, 1,  # font size zero
-                                       True)
+                        r.label = p.name
+                        r.labeltop = True
+                        r.colour = p.col
+                        r.fontsize = 8
+                        r.thickness = 0
+                        r.drawbg = True
                         r.drawEdge = (node.drawMode == 'Edge')
                         r.drawBox = (i == node.selROI)
                         node.rgbImage.annotations.append(r)
-        node.img = img
+
+            img.rois = node.rois
+            node.img = img
+            # also add the ROIs to that
+            node.setOutput(0, Datum(Datum.IMG, img))
+        else:
+            node.setOutput(0, Datum.null)
 
     def clearData(self, xform):
         xform.img = None
@@ -152,11 +160,12 @@ class XformPCT(XFormType):
         # ROIs must be indexed the same as patches in pct.patches
 
         timer = Timer("flood")
+        tmpimg = n.img.copy()   # temp copy to work on
         for p in pct.patches:
             # get patch centre, convert to image space, get xy coords.
             pp = np.float32([[[p.x, p.y]]])
             x, y = cv.transform(pp, M).ravel().tolist()
-            roi = createPatchROI(n, x, y, p.r * maxScale)
+            roi = createPatchROI(tmpimg, x, y, p.r * maxScale)
             n.rois.append(roi)
         timer.mark("done")
 
@@ -287,10 +296,11 @@ class TabPCT(pcot.ui.tabs.Tab):
                 patch = pct.patches[idx]
                 if roi is not None:
                     std = self.node.type.stddev(self.node, idx)
+                    name = f"{patch.name}/{patch.desc}"
                     if std == masked:
-                        s = "{}\t\tno data".format(patch.name, std)
+                        s = "{}\t\tno data".format(name, std)
                     else:
-                        s = "{}\t\t{:.3f}".format(patch.name, std)
+                        s = "{}\t\t{:.3f}".format(name, std)
                 else:
                     s = "{}\t\t---".format(patch.name)
                 p.drawText(0, (idx + 1) * fontsize, s)
