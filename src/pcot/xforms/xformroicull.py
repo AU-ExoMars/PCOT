@@ -18,7 +18,8 @@ class ROICull(XFormType):
         self.addOutputConnector("", Datum.IMG)
 
         self.params = TaggedDictType(
-            rois=("ROIs to Cull", TaggedListType(str, [], ''))
+            rois=("ROIs to Cull", TaggedListType(str, [], '')),
+            cullbad=("Cull bad ROIs (ROIs with all pixels BAD in any band)", bool, False),
         )
 
     def init(self, node):
@@ -31,16 +32,20 @@ class ROICull(XFormType):
     def perform(self, node):
         # Get the input image
         img = node.getInput(0, Datum.IMG)
-        # we make a copy of the input image's ROIs so we don't lose them
-        # when we delete them from the image!
-        node.rois = img.rois.copy() if img else []
+        node.rois = []
 
         if img is not None:
+            # get the ROIs from the input image, filtering out the bad ones if needed
+            img_rois = img.filterBadROIs() if node.params.cullbad else img.rois
             # our output is the input image with the ROIs removed.
             img = img.shallowCopy()
             rois_to_cull = node.params.rois
+            # we make a copy of the input image's ROIs so we don't lose them
+            # when we delete them from the image! This is the set used by the UI.
+            node.rois = img_rois.copy()
+            # remove the ROIs which are in the list of ROIs to cull
             img.rois = [
-                roi for roi in img.rois if roi.label not in rois_to_cull
+                roi for roi in img_rois if roi.label not in rois_to_cull
             ]
             node.setOutput(0, Datum(Datum.IMG, img))
         else:
@@ -53,6 +58,7 @@ class TabROICull(Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabroicull.ui')
         self.w.roiList.itemChanged.connect(self.onROIListItemChanged)
+        self.w.checkCullBad.stateChanged.connect(self.onCullBadStateChanged)
         self.w.canvas.setNode(node)
         self.nodeChanged()
 
@@ -64,6 +70,7 @@ class TabROICull(Tab):
             item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
             item.setCheckState(Qt.CheckState.Checked if roi.label in selected_rois else Qt.Unchecked)
             self.w.roiList.addItem(item)
+        self.w.checkCullBad.setChecked(self.node.params.cullbad)
         self.w.canvas.setNode(self.node)
         self.w.canvas.display(self.node.img)
 
@@ -72,5 +79,9 @@ class TabROICull(Tab):
             self.node.params.rois.append(item.text())
         else:
             self.node.params.rois.remove(item.text())
+        self.changed()
+
+    def onCullBadStateChanged(self):
+        self.node.params.cullbad = self.w.checkCullBad.isChecked()
         self.changed()
 

@@ -926,7 +926,7 @@ class ImageCube(SourcesObtainable):
         # get the subimage - this should be a slice so it's reasonably cheap!
         subimg = self.subimage(roi=roi)
         # get the mask, with bad pixels masked off. Remember that in our system,
-        # the fullmask is true where the pixels are OK.
+        # the fullmask is true where the pixels are OK, so we need to negate to get the masked pixels.
         mask = ~subimg.fullmask(maskBadPixels=True)
         # return true if the mask is zero-sized or any bands have all pixels masked
         _all = np.all(mask, axis=(0, 1))

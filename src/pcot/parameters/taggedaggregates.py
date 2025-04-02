@@ -655,6 +655,10 @@ class TaggedList(TaggedAggregate):
         self._check_value(value)
         self._values.append(value)
 
+    def remove(self, value):
+        """Remove the item 'value' from the list"""
+        self._values.remove(value)
+
     def create_default(self):
         """Create the default item for a list."""
         if isinstance(self._type.tag.type, TaggedAggregateType):

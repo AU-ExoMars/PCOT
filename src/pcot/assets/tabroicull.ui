@@ -37,6 +37,14 @@
        <item row="1" column="0">
         <widget class="QListWidget" name="roiList"/>
        </item>
+       <item row="2" column="0">
+        <widget class="QCheckBox" name="checkCullBad">
+         <property name="text">
+          <string>Cull ROIs which have any
+band entirely BAD</string>
+         </property>
+        </widget>
+       </item>
        <item row="0" column="0">
         <widget class="QLabel" name="label">
          <property name="text">
