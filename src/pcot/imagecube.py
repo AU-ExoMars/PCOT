@@ -39,6 +39,8 @@ class SubImageCube:
     * uncertainty and DQ too
     * a boolean mask the same size as the BB, True for pixels contained in the ROIs and which
       should be manipulated.
+
+    Remember that these will be slices into the original imagecube.
     """
 
     def __init__(self, img, imgToUse=None, roi: Optional[ROI] = None, clip=True):
@@ -47,6 +49,7 @@ class SubImageCube:
         imgToUse - used if we are actually getting the ROIs from another image
         roi - used if we are getting the subimage for an arbitrary ROI
         clip - used if we should clip the ROI to the image; alternative is ROIBoundsException
+        dqOnly - if true, don't get image and uncertainty, just the DQ data.
 
         Note that ROIBoundsException can still occur if the ROI is entirely outside the image!
         """
@@ -86,18 +89,22 @@ class SubImageCube:
                         raise ROIBoundsException()
 
                 x, y, w, h = self.bb  # this works even though self.bb is Rect
+
+                # create views into the array
                 self.img = img.img[y:y + h, x:x + w]
-                self.dq = img.dq[y:y + h, x:x + w]
                 self.uncertainty = img.uncertainty[y:y + h, x:x + w]
+                self.dq = img.dq[y:y + h, x:x + w]
 
                 if self.img.shape[:2] != self.mask.shape:
                     raise Exception("Internal error: shape still incorrect after clip")
 
         if genFullImage:
             # here we just make a copy of the image
-            self.img = np.copy(img.img)  # make a copy to avoid descendant nodes changing their input nodes' outputs
-            self.dq = np.copy(img.dq)
-            self.uncertainty = np.copy(img.uncertainty)
+            # WARNING - these were originally copies, but as noted above we actually make slices into
+            # the original array so we might as well do that here. Careful not to modify directly.
+            self.img = img.img
+            self.dq = img.dq
+            self.uncertainty = img.uncertainty
             self.bb = Rect(0, 0, img.w, img.h)  # whole image
             self.mask = np.full((img.h, img.w), True)  # full mask
 
@@ -909,6 +916,12 @@ class ImageCube(SourcesObtainable):
         else:
             rois = [onlyROI]
         return rois
+
+    def isROIBad(self,roi:ROI):
+        """Given a region of interest, are all the pixels in any of the bands all BAD? I.e. is any band entirely
+        BAD? (see dq.BAD for the definition of BAD)."""
+        # get the subimage - this should be a slice
+        subimg = self.subimage(roi=roi)
 
     def drawAnnotationsAndROIs(self, p: QPainter,
                                onlyROI: Union[ROI, Sequence] = None,
