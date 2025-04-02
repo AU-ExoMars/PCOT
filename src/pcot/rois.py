@@ -559,8 +559,8 @@ class ROIRect(ROI):
             if rect is None:
                 self.x = 0
                 self.y = 0
-                self.w = 0
-                self.h = 0
+                self.w = -1
+                self.h = -1
             else:
                 self.x, self.y, self.w, self.h = rect
         else:
@@ -569,7 +569,7 @@ class ROIRect(ROI):
             self.x, self.y, self.w, self.h = sourceROI.x, sourceROI.y, sourceROI.w, sourceROI.h
 
     def bb(self):
-        if self.w > 0:
+        if self.w >= 0:     # -ve means unset.
             return Rect(self.x, self.y, self.w, self.h)
         else:
             return None

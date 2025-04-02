@@ -41,6 +41,11 @@ class Rect:
         else:
             raise IndexError()
 
+    def size(self):
+        """return how many pixels are in the ROI bounding box"""
+        return self.w*self.h
+
+
     def intersection(self, other: 'Rect') -> Optional['Rect']:
         """Given two rectangles find the intersection. Returns
         None if they do not intersect."""
@@ -57,7 +62,8 @@ class Rect:
         y2 = min(max(ay1, ay2), max(by1, by2))
         if x1 < x2 and y1 < y2:
             return Rect(x1, y1, x2 - x1, y2 - y1)
-        # return None
+        else:
+            return None
 
     def astuple(self):
         return self.x, self.y, self.w, self.h

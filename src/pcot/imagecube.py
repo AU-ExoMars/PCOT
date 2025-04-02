@@ -920,6 +920,9 @@ class ImageCube(SourcesObtainable):
     def isROIBad(self, roi: ROI) -> bool:
         """Given a region of interest, are all the pixels in any of the bands all BAD? I.e. is any band entirely
         BAD? (see dq.BAD for the definition of BAD). Also returns true if the ROI is zero in size."""
+
+        if roi.bb().size() == 0:    # check the BB size
+            return True
         # get the subimage - this should be a slice so it's reasonably cheap!
         subimg = self.subimage(roi=roi)
         # get the mask, with bad pixels masked off. Remember that in our system,
@@ -929,7 +932,7 @@ class ImageCube(SourcesObtainable):
         _all = np.all(mask, axis=(0, 1))
         _any = np.any(_all)
         print(f"ROI {roi} mask size {mask.size} all {_all} any {_any}")
-        return mask.size == 0 or np.any(np.all(mask, axis=(0, 1)))
+        return np.any(np.all(mask, axis=(0, 1)))
 
     def filterBadROIs(self) -> List[ROI]:
         """Returns the ROIs filtered for those which do not have bands filled entirely with BAD pixels and are
