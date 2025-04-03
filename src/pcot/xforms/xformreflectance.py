@@ -7,11 +7,12 @@ import numpy as np
 
 import pcot.ui.tabs
 from pcot import config, cameras, ui
-from pcot.calib import SimpleValue, fit
+import pcot.calib
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe
 from pcot.utils import SignalBlocker, image
 from pcot.utils.maths import pooled_sd
+from pcot.value import Value
 from pcot.xform import XFormType, xformtype, XFormException
 
 logger = logging.getLogger(__name__)
@@ -51,6 +52,7 @@ def collectCameraData(node, img):
     node.calib_targets = list(node.reflectance_data.keys()) if node.reflectance_data else []
     node.filters = filters
     node.filter_names = [f.name for f in filters]
+    node.filter_index_by_name = {f.name: i for i, f in enumerate(filters)}
 
     if node.params.target and node.params.target not in node.calib_targets:
         raise XFormException('DATA', 'target not in calibration data')
@@ -63,7 +65,7 @@ class ReflectancePoint:
     known_sd: float
     measured: float
     measured_sd: float
-    point: SimpleValue  # this is all the measured data for the point - every pixel
+    point: pcot.calib.SimpleValue  # this is all the measured data for the point - every pixel
     patch: str
 
 
@@ -158,11 +160,10 @@ class XFormReflectance(XFormType):
                 # then the measured reflectance for each band.
                 for filter_name, (known_mean, known_std) in filter_dicts.items():
                     # get the band index for this filter - we have Filter items in node.filters
-                    for band_index, band in enumerate(node.filters):
-                        if band.name == filter_name:
-                            break
-                    else:
-                        # this filter is not in the image
+                    band_index = node.filter_index_by_name.get(filter_name, None)
+                    if band_index is None:
+                        # this filter is not in the image, so skip it
+                        logger.debug(f"Filter {filter_name} not in image, skipping")
                         continue
 
                     if bad_bands[band_index]:
@@ -186,10 +187,15 @@ class XFormReflectance(XFormType):
                     logger.debug(
                         f"Band {band_index} has measured {measured_mean}±{measured_std}, known {known_mean}±{known_std}")
 
+                    if measured_std == 0:
+                        # this band has no variance, so skip it
+                        logger.debug(f"Band {band_index} has no variance, skipping")
+                        continue
+
                     # create a data point for this filter / patch pairing
 
                     point = ReflectancePoint(known_mean, known_std, measured_mean, measured_std,
-                                             SimpleValue(band_means, band_stds),
+                                             pcot.calib.SimpleValue(band_means, band_stds),
                                              patch)
 
                     if filter_name not in points_per_filter:
@@ -199,6 +205,8 @@ class XFormReflectance(XFormType):
         if len(points_per_filter) == 0:
             raise XFormException('DATA', 'no points - perhaps no patches found in image?')
 
+        node.points_per_filter = points_per_filter   # stash for the UI
+
         # now we can do the fit on a per-filter basis.
 
         node.fits = {}
@@ -206,11 +214,24 @@ class XFormReflectance(XFormType):
             point_list = [x.point for x in points]
             known_list = [x.known for x in points]
             # warning a bit weird here - point_list is a List[SimpleValue] and any warning is a lie.
-            f = fit(known_list, point_list)
-            node.fits[filter_name] = f
+            f = pcot.calib.fit(known_list, point_list)
+            node.fits[filter_name] = f  # store the fit data so we can use it in the UI
             logger.debug(f"Filter {filter_name} has fit {f.m}±{f.sdm}x + {f.c}±{f.sdc}")
 
-        node.points_per_filter = points_per_filter
+        # assemble the output
+        add_out_n = []
+        add_out_u = []
+        mul_out_n = []
+        mul_out_u = []
+        for f in node.filters:
+            fit = node.fits[f.name]
+            add_out_n.append(fit.c)
+            add_out_u.append(fit.sdc)
+            mul_out_n.append(fit.m)
+            mul_out_u.append(fit.sdm)
+        # and set the output
+        node.setOutput(0, Datum(Datum.NUMBER, Value(np.array(mul_out_n), np.array(mul_out_u)),sources=img.getSources()))
+        node.setOutput(1, Datum(Datum.NUMBER, Value(np.array(add_out_n), np.array(add_out_u)),sources=img.getSources()))
 
 
 class TabReflectance(pcot.ui.tabs.Tab):
@@ -265,7 +286,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
         fit = self.node.fits.get(band,None)
 
         if points is None:
-            ui.log(f"No points data for filter {band}")
+            ui.log(f"No points of data for filter {band}")
             return
         if fit is None:
             ui.log(f"No fit data for filter {band}")
@@ -285,6 +306,6 @@ class TabReflectance(pcot.ui.tabs.Tab):
         ax.set_ylim(bottom=0)
         ax.set_xlim(left=0)
         for i, patch in enumerate(patches):
-            ax.annotate(f"{patch}\n{measured[i]:.2f}", (known[i], measured[i]), fontsize=8)
+            ax.annotate(f"{patch}\n{measured[i]:.2f}±{measured_std[i]:.2f}", (known[i], measured[i]), fontsize=8)
         self.w.mpl.draw()
         self.w.replot.setStyleSheet("")
