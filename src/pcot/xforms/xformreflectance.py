@@ -187,6 +187,7 @@ class XFormReflectance(XFormType):
                         f"Band {band_index} has measured {measured_mean}±{measured_std}, known {known_mean}±{known_std}")
 
                     # create a data point for this filter / patch pairing
+
                     point = ReflectancePoint(known_mean, known_std, measured_mean, measured_std,
                                              SimpleValue(band_means, band_stds),
                                              patch)
@@ -204,8 +205,10 @@ class XFormReflectance(XFormType):
         for filter_name, points in points_per_filter.items():
             point_list = [x.point for x in points]
             known_list = [x.known for x in points]
-            # warning a bit weird here - point_list is a List[SimpleValue] and the warning is a lie.
-            node.fits[filter_name] = fit(known_list, point_list)
+            # warning a bit weird here - point_list is a List[SimpleValue] and any warning is a lie.
+            f = fit(known_list, point_list)
+            node.fits[filter_name] = f
+            logger.debug(f"Filter {filter_name} has fit {f.m}±{f.sdm}x + {f.c}±{f.sdc}")
 
         node.points_per_filter = points_per_filter
 
@@ -262,7 +265,10 @@ class TabReflectance(pcot.ui.tabs.Tab):
         fit = self.node.fits.get(band,None)
 
         if points is None:
-            ui.log(f"No data for filter {band}")
+            ui.log(f"No points data for filter {band}")
+            return
+        if fit is None:
+            ui.log(f"No fit data for filter {band}")
             return
 
         # separate out the data
