@@ -1,3 +1,4 @@
+import dataclasses
 from typing import List
 
 import numpy as np
@@ -20,7 +21,16 @@ class SimpleValue:
         self.var = np.mean(self.vars) + np.var(noms)
 
 
-def fit(rho: List[float], signals: List[SimpleValue]):
+@dataclasses.dataclass
+class Fit:
+    """The result of a fit. This is a dataclass to make it easier to pass around."""
+    m: float
+    c: float
+    sdm: float
+    sdc: float
+
+
+def fit(rho: List[float], signals: List[SimpleValue]) -> Fit:
     """Function for fitting sets of points to a line using the method in Allender, Elyse J., et al.
     “The ExoMars spectral tool (ExoSpec): An image analysis tool for ExoMars 2020 PanCam imagery.”
     Image and Signal Processing for Remote Sensing XXIV. Vol. 10789.
@@ -66,7 +76,7 @@ def fit(rho: List[float], signals: List[SimpleValue]):
     sdm = np.sqrt(a / delta)
     sdc = np.sqrt(b / delta)
 
-    return m, c, sdm, sdc
+    return Fit(m, c, sdm, sdc)
 
 
 def old_fit(rho: List[float], signal: List[List[float]]):

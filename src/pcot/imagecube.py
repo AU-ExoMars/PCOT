@@ -917,22 +917,25 @@ class ImageCube(SourcesObtainable):
             rois = [onlyROI]
         return rois
 
-    def isROIBad(self, roi: ROI) -> bool:
-        """Given a region of interest, are all the pixels in any of the bands all BAD? I.e. is any band entirely
-        BAD? (see dq.BAD for the definition of BAD). Also returns true if the ROI is zero in size."""
-
-        if roi.bb().size() == 0:    # check the BB size
-            return True
+    def getROIBadBands(self, roi: ROI) -> List[bool]:
+        """Given a region of interest, return a bool for each band indicating whether the pixels in that
+        band are all BAD or not (i.e. all have one of the dq.BAD bits set). Will return true for all bands
+        if the ROI is zero in size."""
+        if roi.bb().size() == 0:
+            return [True] * self.channels
         # get the subimage - this should be a slice so it's reasonably cheap!
         subimg = self.subimage(roi=roi)
         # get the mask, with bad pixels masked off. Remember that in our system,
         # the fullmask is true where the pixels are OK, so we need to negate to get the masked pixels.
         mask = ~subimg.fullmask(maskBadPixels=True)
-        # return true if the mask is zero-sized or any bands have all pixels masked
-        _all = np.all(mask, axis=(0, 1))
-        _any = np.any(_all)
-        print(f"ROI {roi} mask size {mask.size} all {_all} any {_any}")
-        return np.any(np.all(mask, axis=(0, 1)))
+        # return true if the mask is zero-sized or any bands have all pixels masked. We convert to Python
+        # bools from the numpy bool_ type using the latter's item() method.
+        return [x.item() for x in np.all(mask, axis=(0, 1))]
+
+    def isROIBad(self, roi: ROI) -> bool:
+        """Given a region of interest, are all the pixels in any of the bands all BAD? I.e. is any band entirely
+        BAD? (see dq.BAD for the definition of BAD). Also returns true if the ROI is zero in size."""
+        return any(self.getROIBadBands(roi))
 
     def filterBadROIs(self) -> List[ROI]:
         """Returns the ROIs filtered for those which do not have bands filled entirely with BAD pixels and are

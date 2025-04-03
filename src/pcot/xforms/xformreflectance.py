@@ -1,10 +1,13 @@
 import builtins
 import logging
+import dataclasses
+from typing import Tuple, List, Dict
 
 import numpy as np
 
 import pcot.ui.tabs
 from pcot import config, cameras, ui
+from pcot.calib import SimpleValue, fit
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe
 from pcot.utils import SignalBlocker, image
@@ -53,6 +56,17 @@ def collectCameraData(node, img):
         raise XFormException('DATA', 'target not in calibration data')
 
 
+@dataclasses.dataclass
+class ReflectancePoint:
+    """A point on the reflectance plot. This is a tuple of (known, known_sd, measured, measured_sd)"""
+    known: float
+    known_sd: float
+    measured: float
+    measured_sd: float
+    point: SimpleValue  # this is all the measured data for the point - every pixel
+    patch: str
+
+
 @xformtype
 class XFormReflectance(XFormType):
     """
@@ -86,6 +100,8 @@ class XFormReflectance(XFormType):
         # For each filter, there will be a list of points to plot. Each point will have
         # the known reflectance and the measured reflectance.
         node.points_per_filter = {}
+        # there will also be the final fit - a dict of filtername to Fit object
+        node.fits = {}
 
     def createTab(self, xform, window):
         return TabReflectance(xform, window)
@@ -112,7 +128,12 @@ class XFormReflectance(XFormType):
         data = node.reflectance_data[node.params.target]
 
         # we're going to store the points we need to fit in a list for each filter.
-        node.points_per_filter = {}
+        points_per_filter: Dict[str, List[ReflectancePoint]] = {}
+
+        # The way this works is slightly messy - when preparing the data, we iterate over ROIs (patches) and
+        # then filters inside that. That means we only need to collect the ROI subimage once.
+        # When we actually do the fit, we need to do the filters in the outer loop, with the patches collected
+        # for each filter.
 
         for patch, filter_dicts in data.items():
             # We need to extract the patch from the image. It will be one of the ROIs, and if it
@@ -120,8 +141,13 @@ class XFormReflectance(XFormType):
             # not perfect. We can warn, though.
             roi = img.getROIByLabel(patch)
 
-            if roi:
+            if roi and roi.bb().size() > 0:  # only consider an ROI if it's non-zero in size
                 subimg = img.subimage(roi=roi)  # get the part of the image covered by ROI
+                # see ImageCube.getROIBadBands for how this works - it gets the bands in an image
+                # for which all pixels have a BAD bit set.
+                mask = ~subimg.fullmask(maskBadPixels=True)
+                bad_bands = np.all(mask, axis=(0, 1))  # vector of booleans giving bad bands
+
                 # get the masked data itself from the ROI
                 means, stds = subimg.masked_all(maskBadPixels=True, noDQ=True)
                 # split the data into bands - we need to work separately on each band.
@@ -138,19 +164,50 @@ class XFormReflectance(XFormType):
                     else:
                         # this filter is not in the image
                         continue
-                    # get the data for this band
-                    measured_mean = np.mean(means[band_index])
-                    measured_std = pooled_sd(means[band_index], stds[band_index])
-                    # and find the mean and pooled SD of that
+
+                    if bad_bands[band_index]:
+                        # this band is bad for this ROI, so skip it
+                        logger.debug(f"Band {band_index} is bad, skipping")
+                        continue
+
+                    # flatten the means and sds and remove the masked pixels (we shouldn't really
+                    # need to do this but it aids debugging)
+                    band_means = means[band_index].compressed().flatten()
+                    band_stds = stds[band_index].compressed().flatten()
+
+                    # sanity check for no good pixels
+                    if len(band_means) == 0:
+                        logger.debug(f"Band {band_index} has no good pixels, skipping")
+                        continue
+
+                    # now prepare plotting data
+                    measured_mean = np.mean(band_means)
+                    measured_std = pooled_sd(band_means, band_stds)
                     logger.debug(
                         f"Band {band_index} has measured {measured_mean}±{measured_std}, known {known_mean}±{known_std}")
-                    point = (known_mean, known_std, measured_mean, measured_std, patch)
-                    if filter_name not in node.points_per_filter:
-                        node.points_per_filter[filter_name] = []
-                    node.points_per_filter[filter_name].append(point)
-        if len(node.points_per_filter) == 0:
+
+                    # create a data point for this filter / patch pairing
+                    point = ReflectancePoint(known_mean, known_std, measured_mean, measured_std,
+                                             SimpleValue(band_means, band_stds),
+                                             patch)
+
+                    if filter_name not in points_per_filter:
+                        points_per_filter[filter_name] = []
+                    points_per_filter[filter_name].append(point)
+
+        if len(points_per_filter) == 0:
             raise XFormException('DATA', 'no points - perhaps no patches found in image?')
 
+        # now we can do the fit on a per-filter basis.
+
+        node.fits = {}
+        for filter_name, points in points_per_filter.items():
+            point_list = [x.point for x in points]
+            known_list = [x.known for x in points]
+            # warning a bit weird here - point_list is a List[SimpleValue] and the warning is a lie.
+            node.fits[filter_name] = fit(known_list, point_list)
+
+        node.points_per_filter = points_per_filter
 
 
 class TabReflectance(pcot.ui.tabs.Tab):
@@ -202,20 +259,26 @@ class TabReflectance(pcot.ui.tabs.Tab):
         # this will be (known_mean, known_std, measured_mean, measured_std)
         band = self.node.filter_to_plot
         points = self.node.points_per_filter.get(band, None)
+        fit = self.node.fits.get(band,None)
 
         if points is None:
             ui.log(f"No data for filter {band}")
             return
 
         # separate out the data
-        known, known_std, measured, measured_std, patches = zip(*points)
+        points = [dataclasses.astuple(p) for p in points]
+        known, known_std, measured, measured_std, _, patches = zip(*points)
 
         ax = self.w.mpl.ax
         ax.cla()
         ax.set_xlabel("Known reflectance (nm)")
         ax.set_ylabel("Measured reflectance (nm)")
+        if fit:
+            ax.axline((0, fit.c), slope=fit.m, color='blue', label='fit')
         ax.plot(known, measured, '+r')
+        ax.set_ylim(bottom=0)
+        ax.set_xlim(left=0)
         for i, patch in enumerate(patches):
-            ax.annotate(patch, (known[i], measured[i]), fontsize=8)
+            ax.annotate(f"{patch}\n{measured[i]:.2f}", (known[i], measured[i]), fontsize=8)
         self.w.mpl.draw()
         self.w.replot.setStyleSheet("")

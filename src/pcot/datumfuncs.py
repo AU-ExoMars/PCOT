@@ -975,16 +975,18 @@ def interp(img, factor, w=-1):
 
 
 @datumfunc
-def reducecircles(img, thresh):
+def reducecircles(img, thresh, useratio=0):
     """
     Given an image with a set of circular ROIs, reduce all the radii until the maximum of the pooled SDs of
     the bands stops decreasing. The threshold value "thresh" is the value by which the SD must stop decreasing
-    before we stop reducing the radius.
+    before we stop reducing the radius. This is useful for finding the smallest circle around a region of the same value.
 
-    This is useful for finding the smallest circle around a region of the same value.
+
+    Alternatively, if an optional boolean is set, we just reduce every circle by a given ratio.
 
     @param img:img:the image to process
-    @param thresh:number:the pooled SD threshold
+    @param thresh:number:the pooled SD threshold, or the ratio if the useratio flag is set
+    @param useratio:number:if non-zero use the max of the means rather than the max of pooled SDs
     """
 
     img1 = img.get(Datum.IMG)
@@ -993,12 +995,14 @@ def reducecircles(img, thresh):
     if img1 is None:
         return None
 
+    useratio = useratio.get(Datum.NUMBER).n > 0.1   # ignore warning due to wrappers
+
     def getsd(img, r):
         """get the maximum pooled SD of the pixels in an ROI across all bands"""
         s = img.subimage(roi=r)
         # split the image into bands
         ns, us = s.masked_all(maskBadPixels=True, noDQ=True)
-        ns = image.imgsplit(ns)   # true = mask bad pixels
+        ns = image.imgsplit(ns)
         us = image.imgsplit(us)
         # calculate the pooled SD for each band
         bandsds = [pooled_sd(nn, uu) for nn, uu in zip(ns, us)]
@@ -1011,17 +1015,24 @@ def reducecircles(img, thresh):
     # for each ROI, we reduce until the SD has stopped decreasing
 
     for r in rs:
-        prevSD = None
         if not isinstance(r, ROICircle):
             raise XFormException('DATA', 'reducecircles: ROIs must be circles')
-        while True:
-            sd = getsd(img1, r)   # get SD of ROI
-            # we exit if the SD has stopped decreasing by n or we've hit the minimum radius
-            if prevSD is not None and (prevSD - sd < thresh or r.r == 1):
-                break
-            prevSD = sd
-            logger.debug(f"reducecircles: ROI {r.label}, {r.r} SD {sd}")
-            r.r -= 1
+
+        if useratio:
+            # we want to reduce the radius by a ratio
+            r.r = int(r.r * thresh)
+            if r.r < 1:
+                r.r = 1
+        else:
+            prev = None
+            while True:
+                current = getsd(img1, r)   # get SD of ROI
+                # we exit if the SD has stopped decreasing by n or we've hit the minimum radius
+                if prev is not None and (prev - current < thresh or r.r == 1):
+                    break
+                prev = current
+                logger.debug(f"reducecircles: ROI {r.label}, {r.r} SD/mean {current}")
+                r.r -= 1
 
     # OK, now output the image with the new ROIs
     img1.rois = rs
