@@ -4,10 +4,12 @@ import dataclasses
 from typing import Tuple, List, Dict
 
 import numpy as np
+from PySide2.QtCore import Qt
 
 import pcot.ui.tabs
 from pcot import config, cameras, ui
 import pcot.calib
+from pcot.calib import SimpleValue
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe
 from pcot.utils import SignalBlocker, image
@@ -92,7 +94,9 @@ class XFormReflectance(XFormType):
 
         self.params = TaggedDictType(
             # there might not be a calibration target because it's not valid for this image (or there's no image)
-            target=("The calibration target to use", Maybe(str))
+            target=("The calibration target to use", Maybe(str)),
+            zero_fudge=("Add an extra zero point", bool, False),
+            simpler_data_fudge=("Force all points to have same number of pixels and same SD", bool, False),
         )
 
     def init(self, node):
@@ -213,10 +217,30 @@ class XFormReflectance(XFormType):
         for filter_name, points in points_per_filter.items():
             point_list = [x.point for x in points]
             known_list = [x.known for x in points]
+
+            # FUDGE = set the SDs and means of all points in point_list to the same value
+            if node.params.simpler_data_fudge:
+                for x in point_list:
+                    x.sds = np.full(1, 0.0001, dtype=np.float32)
+                    x.var = 0.0001
+                    mean = np.mean(x.noms)
+                    x.noms = np.full(1, mean, dtype=np.float32)
+
+            # FUDGE = make sure it goes through zero.
+            if node.params.zero_fudge:
+                known_list.append(np.float32(0.0))
+                z = SimpleValue(np.zeros(10, dtype=np.float32), np.full(10, 0.001, dtype=np.float32))
+                point_list.append(z)  # add a dummy zero point to the end of the list
+
+
             # warning a bit weird here - point_list is a List[SimpleValue] and any warning is a lie.
             f = pcot.calib.fit(known_list, point_list)
             node.fits[filter_name] = f  # store the fit data so we can use it in the UI
             logger.debug(f"Filter {filter_name} has fit {f.m}±{f.sdm}x + {f.c}±{f.sdc}")
+
+        # preset the outputs to a null (error)
+        node.setOutput(0, Datum.null)
+        node.setOutput(1, Datum.null)
 
         # assemble the output
         add_out_n = []
@@ -224,7 +248,12 @@ class XFormReflectance(XFormType):
         mul_out_n = []
         mul_out_u = []
         for f in node.filters:
-            fit = node.fits[f.name]
+            try:
+                fit = node.fits[f.name]
+            except KeyError:
+                # this filter has no fit data, so skip it
+                ui.log(f"Filter {f.name} has no fit data!")
+                return
             add_out_n.append(fit.c)
             add_out_u.append(fit.sdc)
             mul_out_n.append(fit.m)
@@ -243,6 +272,9 @@ class TabReflectance(pcot.ui.tabs.Tab):
         # populating the filter combo box with filters from the input image is done
         # in the nodeChanged method
         self.w.replot.clicked.connect(self.replot)
+
+        self.w.zeroFudgeBox.stateChanged.connect(self.zeroFudgeStateChanged)
+        self.w.simplifyFudgeBox.stateChanged.connect(self.simplifyFudgeStateChanged)
         self.nodeChanged()
 
     def targetChanged(self, i):
@@ -253,6 +285,16 @@ class TabReflectance(pcot.ui.tabs.Tab):
     def filterChanged(self, i):
         self.mark()
         self.node.filter_to_plot = self.w.filterCombo.currentText()
+        self.changed()
+
+    def zeroFudgeStateChanged(self, state):
+        self.mark()
+        self.node.params.zero_fudge = state == Qt.Checked
+        self.changed()
+
+    def simplifyFudgeStateChanged(self, state):
+        self.mark()
+        self.node.params.simpler_data_fudge = state == Qt.Checked
         self.changed()
 
     def onNodeChanged(self):
@@ -274,6 +316,9 @@ class TabReflectance(pcot.ui.tabs.Tab):
                 ui.log(f"Filter {self.node.filter_to_plot} not in image, using first filter")
                 self.w.filterCombo.setCurrentIndex(0)
                 self.node.filter_to_plot = self.w.filterCombo.currentText()
+
+        self.w.zeroFudgeBox.setChecked(self.node.params.zero_fudge)
+        self.w.simplifyFudgeBox.setChecked(self.node.params.simpler_data_fudge)
 
     def markReplotReady(self):
         """make the replot button red"""
