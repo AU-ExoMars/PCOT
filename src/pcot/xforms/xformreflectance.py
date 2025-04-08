@@ -12,6 +12,7 @@ import pcot.calib
 from pcot.calib import SimpleValue
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe
+from pcot.sources import nullSourceSet
 from pcot.utils import SignalBlocker, image
 from pcot.utils.maths import pooled_sd
 from pcot.value import Value
@@ -84,13 +85,17 @@ class XFormReflectance(XFormType):
     The image must know what camera and filters it came from, and the camera
     must have filter information including nominal reflectances for each
     patch on that target.
+
+    The outputs are the gradient and intercept of the fit for each filter. All source
+    data is removed, so it does not obscure image data in subsequent operations. The
+    next operation should be an expr node performing out=(in-c)/m.
     """
 
     def __init__(self):
         super().__init__("reflectance", "calibration", "0.0.0")
         self.addInputConnector("img", Datum.IMG)
-        self.addOutputConnector("mul", Datum.NUMBER)
-        self.addOutputConnector("add", Datum.NUMBER)
+        self.addOutputConnector("m", Datum.NUMBER)
+        self.addOutputConnector("c", Datum.NUMBER)
 
         self.params = TaggedDictType(
             # there might not be a calibration target because it's not valid for this image (or there's no image)
@@ -258,9 +263,9 @@ class XFormReflectance(XFormType):
             add_out_u.append(fit.sdc)
             mul_out_n.append(fit.m)
             mul_out_u.append(fit.sdm)
-        # and set the output
-        node.setOutput(0, Datum(Datum.NUMBER, Value(np.array(mul_out_n), np.array(mul_out_u)),sources=img.getSources()))
-        node.setOutput(1, Datum(Datum.NUMBER, Value(np.array(add_out_n), np.array(add_out_u)),sources=img.getSources()))
+        # and set the output.
+        node.setOutput(0, Datum(Datum.NUMBER, Value(np.array(mul_out_n), np.array(mul_out_u)),sources=nullSourceSet))
+        node.setOutput(1, Datum(Datum.NUMBER, Value(np.array(add_out_n), np.array(add_out_u)),sources=nullSourceSet))
 
 
 class TabReflectance(pcot.ui.tabs.Tab):

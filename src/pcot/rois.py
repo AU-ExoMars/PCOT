@@ -104,9 +104,14 @@ class ROI(SourcesObtainable, Annotation):
         # by default, the source of an ROI is null.
         # The only time this might not be true is if the ROI is derived somehow from an actual data source.
         self.sources = nullSourceSet if sourceROI is None else sourceROI.sources
+        # Now we get the containing image dimensions. This can be passed in, or extracted
+        # from the sourceROI (e.g. when converting circles to painted in multidot).
         # Usually None, but set when we are creating ROIs in a roiexpr node - or
         # propagating them down in operations (see Intersection and Union ops below)
-        self.containingImageDimensions = containingImageDimensions
+        if containingImageDimensions is None and sourceROI is not None:
+            self.containingImageDimensions = sourceROI.containingImageDimensions
+        else:
+            self.containingImageDimensions = containingImageDimensions
 
     def setContainingImageDimensions(self, w, h):
         """This is used when in a roiexpr node - we set the size of the containing image so that we can subtract
