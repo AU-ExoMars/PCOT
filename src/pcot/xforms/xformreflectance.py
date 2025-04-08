@@ -257,7 +257,7 @@ class XFormReflectance(XFormType):
                 fit = node.fits[f.name]
             except KeyError:
                 # this filter has no fit data, so skip it
-                ui.log(f"Filter {f.name} has no fit data!")
+                ui.log(f"Filter {f.name} has no fit data! Is it correctly labelled in the source image and is it in the calibration data?")
                 return
             add_out_n.append(fit.c)
             add_out_u.append(fit.sdc)
@@ -272,10 +272,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
     def __init__(self, node, window):
         super().__init__(window, node, 'tabreflectance.ui')
         self.w.targetCombo.currentIndexChanged.connect(self.targetChanged)
-        # populate the target combo box
         self.w.filterCombo.currentIndexChanged.connect(self.filterChanged)
-        # populating the filter combo box with filters from the input image is done
-        # in the nodeChanged method
         self.w.replot.clicked.connect(self.replot)
 
         self.w.zeroFudgeBox.stateChanged.connect(self.zeroFudgeStateChanged)
@@ -288,9 +285,8 @@ class TabReflectance(pcot.ui.tabs.Tab):
         self.changed()
 
     def filterChanged(self, i):
-        self.mark()
         self.node.filter_to_plot = self.w.filterCombo.currentText()
-        self.changed()
+        self.markReplotReady()
 
     def zeroFudgeStateChanged(self, state):
         self.mark()
@@ -313,12 +309,14 @@ class TabReflectance(pcot.ui.tabs.Tab):
         # populate the filter combo box with the filters from the image
         with SignalBlocker(self.w.filterCombo):
             self.w.filterCombo.clear()
+            self.w.filterCombo.addItem("ALL")
             self.w.filterCombo.addItems(self.node.filter_names)
             try:
-                self.w.filterCombo.setCurrentIndex(self.node.filter_names.index(self.node.filter_to_plot))
+                # +1 here because of the ALL value
+                self.w.filterCombo.setCurrentIndex(self.node.filter_names.index(self.node.filter_to_plot)+1)
             except ValueError:
                 # this filter is not in the image?
-                ui.log(f"Filter {self.node.filter_to_plot} not in image, using first filter")
+                ui.log(f"Filter {self.node.filter_to_plot} not in image, using ALL")
                 self.w.filterCombo.setCurrentIndex(0)
                 self.node.filter_to_plot = self.w.filterCombo.currentText()
 
@@ -330,32 +328,58 @@ class TabReflectance(pcot.ui.tabs.Tab):
         self.w.replot.setStyleSheet("background-color:rgb(255,100,100)")
 
     def replot(self):
-        # this will be (known_mean, known_std, measured_mean, measured_std)
-        band = self.node.filter_to_plot
-        points = self.node.points_per_filter.get(band, None)
-        fit = self.node.fits.get(band,None)
-
-        if points is None:
-            ui.log(f"No points of data for filter {band}")
-            return
-        if fit is None:
-            ui.log(f"No fit data for filter {band}")
-            return
-
-        # separate out the data
-        points = [dataclasses.astuple(p) for p in points]
-        known, known_std, measured, measured_std, _, patches = zip(*points)
-
         ax = self.w.mpl.ax
         ax.cla()
-        ax.set_xlabel("Known reflectance (nm)")
-        ax.set_ylabel("Measured reflectance (nm)")
-        if fit:
-            ax.axline((0, fit.c), slope=fit.m, color='blue', label='fit')
-        ax.plot(known, measured, '+r')
-        ax.set_ylim(bottom=0)
-        ax.set_xlim(left=0)
-        for i, patch in enumerate(patches):
-            ax.annotate(f"{patch}\n{measured[i]:.2f}±{measured_std[i]:.2f}", (known[i], measured[i]), fontsize=8)
+        ax.set_xlabel("Known reflectance")
+        ax.set_ylabel("Measured reflectance")
+
+        # we don't generally do this.
+        # ax.set_ylim(bottom=0)
+        # ax.set_xlim(left=0)
+
+        # move the axes to pass through the origin
+        ax.spines['left'].set_position('zero')
+        ax.spines['right'].set_color('none')
+        ax.yaxis.tick_left()
+        ax.spines['bottom'].set_position('zero')
+        ax.spines['top'].set_color('none')
+        ax.xaxis.tick_bottom()
+
+        if self.node.filter_to_plot is None or self.node.filter_to_plot == "ALL":
+            bands = self.node.filter_names
+        else:
+            bands = [self.node.filter_to_plot]
+
+        col = 0     # colour index
+        for band in bands:
+            # this will be (known_mean, known_std, measured_mean, measured_std)
+            points = self.node.points_per_filter.get(band, None)
+            fit = self.node.fits.get(band,None)
+
+            if points is None:
+                ui.log(f"No points of data for filter {band}")
+                return
+            if fit is None:
+                ui.log(f"No fit data for filter {band}")
+                return
+            # separate out the data
+            points = [dataclasses.astuple(p) for p in points]
+            known, known_std, measured, measured_std, _, patches = zip(*points)
+
+            # plot
+            colname = f"C{col}"
+            col += 1
+            if fit:
+                ax.axline((0, fit.c), slope=fit.m, color=colname)
+            ax.plot(known, measured, '+', color=colname, label=band)
+
+            if len(bands) == 1:  # point labelling: don't do this if we're plotting all bands.
+                ax.set_title(f"Fit for {band}: m={fit.m:0.3f}, c={fit.c:0.3f}")
+                for i, patch in enumerate(patches):
+                    ax.annotate(f"{patch}\n{measured[i]:.2f}±{measured_std[i]:.2f}", (known[i], measured[i]), fontsize=8)
+
+        if len(bands)>1:
+            ax.legend(loc="lower right")
+
         self.w.mpl.draw()
         self.w.replot.setStyleSheet("")
