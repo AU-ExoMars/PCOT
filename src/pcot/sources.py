@@ -95,10 +95,11 @@ class Source(SourcesObtainable):
         "R" for red)
     - external: if the source is from outside PCOT, this object has a getstr() method to describe it.
     - inputIdx: if the source is an input, this is the index of the input.
-    - purpose: if not None, this is a secondary source which will not match(), so won't interfere with searches
+    - secondary_name: if not None, this is a secondary source which will not match(), so won't interfere with searches
         for name or wavelength. For example, we could have a single main source (where this is None) and lots
         of others used for calibration, but the main source would still be considered the only source for a band
-        most of the time (e.g. ImageCube's filter() method and methods that rely on it, and SourceSet's getOnlyItem)
+        most of the time (e.g. ImageCube's filter() method and methods that rely on it, and SourceSet's getOnlyItem).
+        This should be set to the purpose of the source - e.g. "reflectance target"
 
     If all of these are None, it's a "null source" often used for dummy data.
     """
@@ -106,23 +107,24 @@ class Source(SourcesObtainable):
     band: Union[Filter, None, str]  # if an image this could be either a filter or a band name (e.g. "R" for red)
     external: Optional[External]  # an external source object (file or pds4 product) or None
     inputIdx: Optional[int]  # the index of the input, if this is an input source
-    purpose: Optional[str]    # the purpose of the source (see the docstring) - usually None
+    secondary_name: Optional[str]    # if a secondary, the purpose of the source (see the docstring) - usually None
 
     def __init__(self):
         """Initialise to a null source"""
         self.band = None
         self.external = None
         self.inputIdx = None
-        self.purpose = None
+        self.secondary_name = None
 
     def isMain(self):
         """Returns true if this is a main source - i.e. not a secondary source"""
-        return self.purpose is None
+        return self.secondary_name is None
 
-    def setSecondaryPurpose(self, s):
-        """Set the purpose of the source. This is used to indicate that this source is not the main source for a band,
-        but is still useful for calibration or other purposes. The purpose is not used in matches() or brief()"""
-        self.purpose = s
+    def setSecondaryName(self, s):
+        """Set the name (purpose) of a secondary source. This is used to indicate that this source is not the main source
+        for a band, but is still useful for calibration or other purposes. The purpose is not used in
+        matches() or brief()"""
+        self.secondary_name = s
         return self
 
     # fluent setters
@@ -146,14 +148,14 @@ class Source(SourcesObtainable):
         return Source().setBand(self.band) \
             .setExternal(self.external) \
             .setInputIdx(self.inputIdx) \
-            .setSecondaryPurpose(self.purpose)
+            .setSecondaryName(self.secondary_name)
 
     def matches(self, inp, bandNameOrCWL, hasBand):
         """Returns true if the input index matches this source (if not None) and the band matches this source (if not none).
         None values are ignored, so passing "inp" of None will mean the input index is not checked.
         """
-        if self.purpose:
-            # don't match if the purpose is set - it's a secondary source
+        if self.secondary_name:
+            # don't match if the secondary_name is set - it's a secondary source
             return False
         if hasBand is not None:
             if hasBand and not self.band:
@@ -218,7 +220,7 @@ class Source(SourcesObtainable):
 
     def long(self) -> Optional[str]:
         """Return a longer text, possibly with line breaks"""
-        s = f"{self.purpose} " if self.purpose else ""
+        s = f"{self.secondary_name} " if self.secondary_name else ""
 
         inptxt = f"{self.inputIdx}" if self.inputIdx is not None else "none"
         if self.band is None:
@@ -237,7 +239,7 @@ class Source(SourcesObtainable):
             'band': self.band.serialise() if isinstance(self.band, Filter) else self.band,
             'external': self.external.serialise() if self.external else None,
             'inputIdx': self.inputIdx,
-            'purpose': self.purpose
+            'secondary_name': self.secondary_name
         }
 
     @staticmethod
@@ -251,15 +253,15 @@ class Source(SourcesObtainable):
 
         b = Filter.deserialise(d['band']) if isinstance(d['band'], list) else d['band']
         e = External.deserialise(d['external']) if d['external'] else None
-        p = d.get('purpose', None)
+        p = d.get('secondary_name', None)
         i = d['inputIdx']
-        return Source().setBand(b).setExternal(e).setInputIdx(i).setSecondaryPurpose(p)
+        return Source().setBand(b).setExternal(e).setInputIdx(i).setSecondaryName(p)
 
     def __eq__(self, other):
         if not isinstance(other, Source):
             return False
         return self.band == other.band and self.external == other.external and self.inputIdx == other.inputIdx and \
-            self.purpose == other.purpose
+            self.secondary_name == other.secondary_name
 
     def __hash__(self):
         return hash(self.long())

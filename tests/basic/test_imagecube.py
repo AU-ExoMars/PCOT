@@ -20,7 +20,7 @@ MS_HEIGHT = 50
 # this is a fake set of calibration sources we add to check it's ignored appropriately
 calib = SourceSet([Source().setBand(
     Filter(cwl=700 + i, fwhm=20, transmission=0.9, position=f"calib{i}", name=f"calib{i}"))
-                  .setSecondaryPurpose("calib") for i in range(3)])
+                  .setSecondaryName("calib") for i in range(3)])
 
 
 @pytest.fixture

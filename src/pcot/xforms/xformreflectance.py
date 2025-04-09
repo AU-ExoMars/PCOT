@@ -269,7 +269,7 @@ class XFormReflectance(XFormType):
 
         sources = img.sources.copy().visit(
             lambda sourceSet: sourceSet.visit(
-                lambda source: source.setSecondaryPurpose("reflectance target")
+                lambda source: source.setSecondaryName("reflectance target")
         ))
 
         node.setOutput(0, Datum(Datum.NUMBER, Value(np.array(mul_out_n), np.array(mul_out_u)),sources=sources))

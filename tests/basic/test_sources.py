@@ -18,9 +18,9 @@ s4 = Source().setExternal(StringExternal("four", "four")).setInputIdx(3)
 s5 = Source().setExternal(StringExternal("five", "five")).setInputIdx(4)
 
 calibSource1 = Source().setExternal(StringExternal("calib source1", "calib source1")).setInputIdx(0) \
-    .setSecondaryPurpose("calib")
+    .setSecondaryName("calib")
 calibSource2 = Source().setExternal(StringExternal("calib source2", "calib source2")).setInputIdx(1) \
-    .setSecondaryPurpose("calib")
+    .setSecondaryName("calib")
 
 calibSet = SourceSet([calibSource1, calibSource2])
 
@@ -181,7 +181,7 @@ def test_inputsourcenamescalib():
     pcot.setup()
     source = Source().setBand(
         Filter(cwl=1000, fwhm=100, transmission=20, position="pos1", name="name1", camera_name="cam1", description="desc1"))
-    source.setSecondaryPurpose("calib")
+    source.setSecondaryName("calib")
 
     assert source.long() == "calib none: Cam: cam1, Filter: name1(1000nm) pos pos1, desc1"
     assert source.brief() == "1000"  # default caption is wavelength
@@ -273,7 +273,7 @@ def test_secondaries_ignored():
 
     calibs = SourceSet([Source().setBand(
         Filter(cwl=(i + 1) * 1000, fwhm=100, transmission=20,
-               position=f"pos{i}", name=f"name{i}")).setSecondaryPurpose("calib") for i in range(3)])
+               position=f"pos{i}", name=f"name{i}")).setSecondaryName("calib") for i in range(3)])
 
     # make an array of sources
     sources = [Source().setBand(

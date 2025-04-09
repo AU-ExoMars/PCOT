@@ -35,9 +35,9 @@ def test_datum_can_create_and_serialise_img(bwimage):
     assert datadict['mapping'] == [0, 1, 2]
     assert datadict['defmapping'] is None
     expected_sources = [
-        [{'external': None, 'band': 'R', 'inputIdx': None, 'purpose': None}],
-        [{'external': None, 'band': 'G', 'inputIdx': None, 'purpose': None}],
-        [{'external': None, 'band': 'B', 'inputIdx': None, 'purpose': None}]
+        [{'external': None, 'band': 'R', 'inputIdx': None, 'secondary_name': None}],
+        [{'external': None, 'band': 'G', 'inputIdx': None, 'secondary_name': None}],
+        [{'external': None, 'band': 'B', 'inputIdx': None, 'secondary_name': None}]
     ]
     assert datadict['sources'] == expected_sources
     assert type(datadict['data']) == numpy.ndarray
