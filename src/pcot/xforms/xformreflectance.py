@@ -265,9 +265,15 @@ class XFormReflectance(XFormType):
             add_out_u.append(fit.sdc)
             mul_out_n.append(fit.m)
             mul_out_u.append(fit.sdm)
-        # and set the output.
-        node.setOutput(0, Datum(Datum.NUMBER, Value(np.array(mul_out_n), np.array(mul_out_u)),sources=nullSourceSet))
-        node.setOutput(1, Datum(Datum.NUMBER, Value(np.array(add_out_n), np.array(add_out_u)),sources=nullSourceSet))
+        # and set the output. We add the sources from the image, but modified as secondary.
+
+        sources = img.sources.copy().visit(
+            lambda sourceSet: sourceSet.visit(
+                lambda source: source.setSecondaryPurpose("reflectance target")
+        ))
+
+        node.setOutput(0, Datum(Datum.NUMBER, Value(np.array(mul_out_n), np.array(mul_out_u)),sources=sources))
+        node.setOutput(1, Datum(Datum.NUMBER, Value(np.array(add_out_n), np.array(add_out_u)),sources=sources))
 
 
 class TabReflectance(pcot.ui.tabs.Tab):

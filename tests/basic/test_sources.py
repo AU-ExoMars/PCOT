@@ -17,13 +17,22 @@ s3 = Source().setExternal(StringExternal("three", "three")).setInputIdx(2)
 s4 = Source().setExternal(StringExternal("four", "four")).setInputIdx(3)
 s5 = Source().setExternal(StringExternal("five", "five")).setInputIdx(4)
 
+calibSource1 = Source().setExternal(StringExternal("calib source1", "calib source1")).setInputIdx(0) \
+    .setSecondaryPurpose("calib")
+calibSource2 = Source().setExternal(StringExternal("calib source2", "calib source2")).setInputIdx(1) \
+    .setSecondaryPurpose("calib")
+
+calibSet = SourceSet([calibSource1, calibSource2])
+
 # should give three results
 sourceset1 = SourceSet([s1, s2, s3])
 # this should produce FIVE results when unioned with the above; note the overlap with s1
 sourceset2 = SourceSet([s4, s5, s1])
 sourceset1withnulls = SourceSet([s1, s2, s3, nullSource])
+sourceset1withnulls_and_calib = SourceSet([s1, s2, s3, nullSource]).add(calibSet)
 # should have five sources.
 sourcesetunion = SourceSet([sourceset1, sourceset2])
+
 
 
 def test_sourcesetctor():
@@ -68,6 +77,11 @@ def test_getonlyitem():
     ss = SourceSet([s1, s2])
     with pytest.raises(AssertionError):
         _ = ss.getOnlyItem()
+
+
+def test_getonlyitemwithcalib():
+    ss = SourceSet([s1, calibSource1, calibSource2])
+    assert ss.getOnlyItem() == s1
 
 
 def test_sourcesetdunder():
@@ -162,6 +176,21 @@ def test_inputsourcenames():
     assert source.brief(captionType=DocumentSettings.CAP_POSITIONS) == "pos1"
 
 
+def test_inputsourcenamescalib():
+    """Test that input source brief() and long() are correct"""
+    pcot.setup()
+    source = Source().setBand(
+        Filter(cwl=1000, fwhm=100, transmission=20, position="pos1", name="name1", camera_name="cam1", description="desc1"))
+    source.setSecondaryPurpose("calib")
+
+    assert source.long() == "calib none: Cam: cam1, Filter: name1(1000nm) pos pos1, desc1"
+    assert source.brief() == "1000"  # default caption is wavelength
+    assert source.brief(captionType=DocumentSettings.CAP_CWL) == "1000"
+    assert source.brief(captionType=DocumentSettings.CAP_NAMES) == "name1"
+    assert source.brief(captionType=DocumentSettings.CAP_POSITIONS) == "pos1"
+
+
+
 def test_multibandsourcenames():
     """Test that multiband source brief() is correct"""
     pcot.setup()
@@ -235,3 +264,45 @@ def test_multibandsourcedunder():
 
     # check we can get the Nth item
     assert ms[1].getOnlyItem().getFilter().cwl == 2000
+
+
+def test_secondaries_ignored():
+    """Make sure secondaries are ignored in matches"""
+
+    pcot.setup()
+
+    calibs = SourceSet([Source().setBand(
+        Filter(cwl=(i + 1) * 1000, fwhm=100, transmission=20,
+               position=f"pos{i}", name=f"name{i}")).setSecondaryPurpose("calib") for i in range(3)])
+
+    # make an array of sources
+    sources = [Source().setBand(
+        Filter(cwl=(i + 1) * 1000, fwhm=100, transmission=20,
+               position=f"pos{i}", name=f"name{i}")) for i in range(3)]
+
+    # merge in the calibs
+    ms = MultiBandSource(sources).addSetToAllBands(calibs)
+    # get filters by band
+    filters = ms.getFiltersByBand()
+    assert len(filters) == 3
+
+    f = list(filters[0])
+    assert len(f) == 1
+    assert f[0].cwl == 1000
+
+    f = list(filters[1])
+    assert len(f) == 1
+    assert f[0].cwl == 2000
+
+    f = list(filters[2])
+    assert len(f) == 1
+    assert f[0].cwl == 3000
+
+    # now do the check using getOnlyItem, which should also ignore secondaries
+    assert ms[0].getOnlyItem().getFilter().cwl == 1000
+    assert ms[1].getOnlyItem().getFilter().cwl == 2000
+    assert ms[2].getOnlyItem().getFilter().cwl == 3000
+
+
+
+

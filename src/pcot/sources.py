@@ -4,10 +4,11 @@ and each input will know how to generate useful information from that source.
 """
 import math
 from abc import ABC, abstractmethod
-from typing import Optional, List, Set, SupportsFloat, Union, Iterable, Any, Tuple, Dict
+from typing import Optional, List, Set, SupportsFloat, Union, Iterable, Any, Tuple, Dict, Callable
 
 from pcot.documentsettings import DocumentSettings
 from pcot.cameras.filters import Filter
+from pcot.parameters.taggedaggregates import Maybe
 
 
 class SourcesObtainable(ABC):
@@ -94,6 +95,10 @@ class Source(SourcesObtainable):
         "R" for red)
     - external: if the source is from outside PCOT, this object has a getstr() method to describe it.
     - inputIdx: if the source is an input, this is the index of the input.
+    - purpose: if not None, this is a secondary source which will not match(), so won't interfere with searches
+        for name or wavelength. For example, we could have a single main source (where this is None) and lots
+        of others used for calibration, but the main source would still be considered the only source for a band
+        most of the time (e.g. ImageCube's filter() method and methods that rely on it, and SourceSet's getOnlyItem)
 
     If all of these are None, it's a "null source" often used for dummy data.
     """
@@ -101,12 +106,24 @@ class Source(SourcesObtainable):
     band: Union[Filter, None, str]  # if an image this could be either a filter or a band name (e.g. "R" for red)
     external: Optional[External]  # an external source object (file or pds4 product) or None
     inputIdx: Optional[int]  # the index of the input, if this is an input source
+    purpose: Optional[str]    # the purpose of the source (see the docstring) - usually None
 
     def __init__(self):
         """Initialise to a null source"""
         self.band = None
         self.external = None
         self.inputIdx = None
+        self.purpose = None
+
+    def isMain(self):
+        """Returns true if this is a main source - i.e. not a secondary source"""
+        return self.purpose is None
+
+    def setSecondaryPurpose(self, s):
+        """Set the purpose of the source. This is used to indicate that this source is not the main source for a band,
+        but is still useful for calibration or other purposes. The purpose is not used in matches() or brief()"""
+        self.purpose = s
+        return self
 
     # fluent setters
     def setBand(self, b: Union[Filter, str, None]):
@@ -128,12 +145,16 @@ class Source(SourcesObtainable):
         """Return a reasonably deep copy of the source"""
         return Source().setBand(self.band) \
             .setExternal(self.external) \
-            .setInputIdx(self.inputIdx)
+            .setInputIdx(self.inputIdx) \
+            .setSecondaryPurpose(self.purpose)
 
     def matches(self, inp, bandNameOrCWL, hasBand):
         """Returns true if the input index matches this source (if not None) and the band matches this source (if not none).
         None values are ignored, so passing "inp" of None will mean the input index is not checked.
         """
+        if self.purpose:
+            # don't match if the purpose is set - it's a secondary source
+            return False
         if hasBand is not None:
             if hasBand and not self.band:
                 return False
@@ -197,13 +218,15 @@ class Source(SourcesObtainable):
 
     def long(self) -> Optional[str]:
         """Return a longer text, possibly with line breaks"""
+        s = f"{self.purpose} " if self.purpose else ""
+
         inptxt = f"{self.inputIdx}" if self.inputIdx is not None else "none"
         if self.band is None:
-            s = f"{inptxt}:"
+            s += f"{inptxt}:"
         elif isinstance(self.band, Filter):
-            s = f"{inptxt}: {self.band.sourceDesc()}"
+            s += f"{inptxt}: {self.band.sourceDesc()}"
         else:
-            s = f"{inptxt}: band {self.band}"
+            s += f"{inptxt}: band {self.band}"
         if self.external is not None:
             s += f" {self.external.long()}"
         return s
@@ -213,7 +236,8 @@ class Source(SourcesObtainable):
         return {
             'band': self.band.serialise() if isinstance(self.band, Filter) else self.band,
             'external': self.external.serialise() if self.external else None,
-            'inputIdx': self.inputIdx
+            'inputIdx': self.inputIdx,
+            'purpose': self.purpose
         }
 
     @staticmethod
@@ -227,13 +251,15 @@ class Source(SourcesObtainable):
 
         b = Filter.deserialise(d['band']) if isinstance(d['band'], list) else d['band']
         e = External.deserialise(d['external']) if d['external'] else None
+        p = d.get('purpose', None)
         i = d['inputIdx']
-        return Source().setBand(b).setExternal(e).setInputIdx(i)
+        return Source().setBand(b).setExternal(e).setInputIdx(i).setSecondaryPurpose(p)
 
     def __eq__(self, other):
         if not isinstance(other, Source):
             return False
-        return self.band == other.band and self.external == other.external and self.inputIdx == other.inputIdx
+        return self.band == other.band and self.external == other.external and self.inputIdx == other.inputIdx and \
+            self.purpose == other.purpose
 
     def __hash__(self):
         return hash(self.long())
@@ -243,7 +269,7 @@ class SourceSet(SourcesObtainable):
     """This is a combination of sources which have produced a single-band datum - could be a band of an
     image or some other type"""
 
-    sourceSet: Set[Source]  # the underlying set of sources
+    sourceSet: Set[Source]      # the underlying set of sources
 
     def __init__(self, ss: Union[Source, 'SourceSet', Iterable[Union[Source, 'SourceSet', SourcesObtainable]]] = ()):
         """The constructor takes a collection of sources and source sets, or just one, and generates a new source
@@ -277,7 +303,14 @@ class SourceSet(SourcesObtainable):
         self.stripNullSources()
         return self
 
+    def visit(self, f: Callable[[Source], None]):
+        """Apply a function to each source in the set"""
+        for s in self.sourceSet:
+            f(s)
+        return self
+
     def copy(self):
+        """return a new set with a copy of all sources"""
         return SourceSet([x.copy() for x in self.sourceSet])
 
     def __str__(self):
@@ -302,7 +335,7 @@ class SourceSet(SourcesObtainable):
         return f"SET[\n{lst}\n]"
 
     def matches(self, inp=None, filterNameOrCWL=None, single=False, hasFilter=None, all_match=False):
-        """Returns true if ANY source in the set matches ALL the criteria; or if all_match is true if ALL
+        """Returns true if ANY main source in the set matches ALL the criteria; or if all_match is true if ALL
         sources match the criteria:
         inp: input index
         filterNameOrCWL: either a filter name or a centre wavelength
@@ -310,11 +343,12 @@ class SourceSet(SourcesObtainable):
         hasFilter: set must have a filter
         all_match: all items in set must match
         """
-        if single and len(self.sourceSet) > 1:  # if required, ignore this set if it's not from a single source
+        mains = [x for x in self.sourceSet if x.isMain()]
+        if single and len(mains) > 1:  # if required, ignore this set if it's not from a single source
             return False
-        if len(self.sourceSet) == 0:  # if there isn't an item there can't be a match (note: all([]) == True, dammit)
+        if len(mains) == 0:  # if there isn't an item there can't be a match (note: all([]) == True, dammit)
             return False
-        smatches = [x.matches(inp, filterNameOrCWL, hasFilter) for x in self.sourceSet]
+        smatches = [x.matches(inp, filterNameOrCWL, hasFilter) for x in mains]
 
         if all_match:
             return all(smatches)
@@ -337,14 +371,15 @@ class SourceSet(SourcesObtainable):
         return self.sourceSet == other.sourceSet
 
     def getOnlyItem(self):
-        """return singleton item"""
-        assert len(self.sourceSet) == 1
-        e, = self.sourceSet
+        """return singleton item, excluding secondary sources"""
+        x = [x for x in self.sourceSet if x.isMain()]
+        assert len(x) == 1
+        e, = x
         return e
 
     def getFilters(self):
-        """Return a set of all the filters used by this sourceSet"""
-        return {x.band for x in self.sourceSet if isinstance(x.band, Filter)}
+        """Return a set of all the filters used by this sourceSet in main sources"""
+        return {x.band for x in self.sourceSet if isinstance(x.band, Filter) and x.isMain()}
 
     def getSources(self):
         """implements SourcesObtainable"""
@@ -408,6 +443,12 @@ class MultiBandSource(SourcesObtainable):
     def copy(self):
         """Make a fairly deep copy of the source sets"""
         return MultiBandSource([ss.copy() for ss in self.sourceSets])
+
+    def visit(self, f: Callable[[SourceSet], None]):
+        """Apply a function to each source set"""
+        for ss in self.sourceSets:
+            f(ss)
+        return self
 
     def search(self, filterNameOrCWL=None, inp=None, single=False, hasFilter=None):
         """Given some criteria, returns a list of indices of bands whose source sets contain a member which matches
