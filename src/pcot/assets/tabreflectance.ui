@@ -118,6 +118,13 @@
       <item row="3" column="1">
        <widget class="QComboBox" name="filterCombo"/>
       </item>
+      <item row="4" column="0" colspan="2">
+       <widget class="QCheckBox" name="showPatchesBox">
+        <property name="text">
+         <string>Show patch names</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>

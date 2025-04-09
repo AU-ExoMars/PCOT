@@ -100,6 +100,9 @@ class XFormReflectance(XFormType):
         self.params = TaggedDictType(
             # there might not be a calibration target because it's not valid for this image (or there's no image)
             target=("The calibration target to use", Maybe(str)),
+            show_patches=("Show the patch names on the plot", bool, True),
+
+            # fudges; will probably remove
             zero_fudge=("Add an extra zero point", bool, False),
             simpler_data_fudge=("Force all points to have same number of pixels and same SD", bool, False),
         )
@@ -237,7 +240,6 @@ class XFormReflectance(XFormType):
                 z = SimpleValue(np.zeros(10, dtype=np.float32), np.full(10, 0.001, dtype=np.float32))
                 point_list.append(z)  # add a dummy zero point to the end of the list
 
-
             # warning a bit weird here - point_list is a List[SimpleValue] and any warning is a lie.
             f = pcot.calib.fit(known_list, point_list)
             node.fits[filter_name] = f  # store the fit data so we can use it in the UI
@@ -274,6 +276,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
         self.w.targetCombo.currentIndexChanged.connect(self.targetChanged)
         self.w.filterCombo.currentIndexChanged.connect(self.filterChanged)
         self.w.replot.clicked.connect(self.replot)
+        self.w.showPatchesBox.stateChanged.connect(self.showPatchesStateChanged)
 
         self.w.zeroFudgeBox.stateChanged.connect(self.zeroFudgeStateChanged)
         self.w.simplifyFudgeBox.stateChanged.connect(self.simplifyFudgeStateChanged)
@@ -285,7 +288,13 @@ class TabReflectance(pcot.ui.tabs.Tab):
         self.changed()
 
     def filterChanged(self, i):
+        # data unchanged, no need to mark or call changed().
         self.node.filter_to_plot = self.w.filterCombo.currentText()
+        self.markReplotReady()
+
+    def showPatchesStateChanged(self, state):
+        # data unchanged, no need to mark or call changed().
+        self.node.params.show_patches = state == Qt.Checked
         self.markReplotReady()
 
     def zeroFudgeStateChanged(self, state):
@@ -319,6 +328,8 @@ class TabReflectance(pcot.ui.tabs.Tab):
                 ui.log(f"Filter {self.node.filter_to_plot} not in image, using ALL")
                 self.w.filterCombo.setCurrentIndex(0)
                 self.node.filter_to_plot = self.w.filterCombo.currentText()
+
+        self.w.showPatchesBox.setChecked(self.node.params.show_patches)
 
         self.w.zeroFudgeBox.setChecked(self.node.params.zero_fudge)
         self.w.simplifyFudgeBox.setChecked(self.node.params.simpler_data_fudge)
@@ -371,9 +382,11 @@ class TabReflectance(pcot.ui.tabs.Tab):
             col += 1
             if fit:
                 ax.axline((0, fit.c), slope=fit.m, color=colname)
-            ax.plot(known, measured, '+', color=colname, label=band)
+            # ax.plot(known, measured, '+', color=colname, label=band)
+            ax.errorbar(known, measured, yerr=measured_std, xerr=known_std, label=band, fmt='x', color=colname)
 
-            if len(bands) == 1:  # point labelling: don't do this if we're plotting all bands.
+            # point labelling: don't do this if we're plotting all bands or it's turned off
+            if len(bands) == 1 and self.node.params.show_patches:
                 ax.set_title(f"Fit for {band}: m={fit.m:0.3f}, c={fit.c:0.3f}")
                 for i, patch in enumerate(patches):
                     ax.annotate(f"{patch}\n{measured[i]:.2f}±{measured_std[i]:.2f}", (known[i], measured[i]), fontsize=8)
