@@ -176,7 +176,7 @@ class CameraData:
         ds.writeDatum("params", Datum(Datum.CAMERAPARAMS, params, nullSourceSet))
         return ds
 
-    def getFilter(self, target, search):
+    def getFilter(self, target, search='name'):
         """Get the filter from the camera data. The search parameter is one of 'name', 'pos' or 'cwl'."""
 
         def get_match(params, key, value):

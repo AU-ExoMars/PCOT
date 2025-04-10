@@ -522,3 +522,17 @@ def test_resize():
     assert result[0,255][1] == Value(7, 6.0, dq.NONE)
     assert result[255,255][1] == Value(7, 6.0, dq.NONE)
 
+    # let's just make sure we can do a 4-channel image; we're using OpenCV and that's unusual in that milieu.
+    img = np.full((32, 32, 4), 1.0, dtype=np.float32)
+    unc = np.full((32 ,32, 4), 0.1, dtype=np.float32)
+    sources = MultiBandSource([Source().setBand(f"B{i}") for i in range(4)])
+    img = ImageCube(img, None, sources, uncertainty=unc)
+    d = Datum(Datum.IMG, img)
+    result = df.resize(d, 256, 256, "nearest").get(Datum.IMG)
+    assert result.shape == (256, 256, 4)
+    assert result[0,0][0] == Value(1, 0.1, dq.NONE)
+    assert result[255,0][0] == Value(1, 0.1, dq.NONE)
+    assert result[0,0][1] == Value(1, 0.1, dq.NONE)
+    assert result[255,0][1] == Value(1, 0.1, dq.NONE)
+
+
