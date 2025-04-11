@@ -38,28 +38,10 @@ def test_fit():
 
             ## this test code just checks the fit is OK with the original algorithm which doesn't
             # handle uncertainty in the input data
-            M, C, SDM, SDC = fit(rho, signal)           # recover M, C and their stddevs
-            ratio = M/m                                 # how wrong is the slope?
+            f = fit(rho, signal)
+            ratio = f.m/m                                 # how wrong is the slope?
             # print("m={} outm={}, ratio={}, c={}, sdm={}, sdc={}".format(m, M, M / m, C, SDM, SDC))
             assert abs(ratio-1) < 0.01      # make sure the slope isn't too wrong
-            assert abs(C-c) < 0.01          # and that the intercept is good
-            assert SDM < 0.05               # and that the stddevs are small.
-            assert SDC < 0.05
-
-
-def test_fit_agrees_with_old():
-    """Used to test that a version of fit that is modified agrees with the original version"""
-
-    from pcot.calib.fit import old_fit
-    for m in [1, 2, 3, 4, 5]:               # test at different slopes
-        for c in range(-10, 10):                 # and different intensities
-            rho, signal = generate_test_data(m, c)     # generate test data for that slope and intensity
-            M, C, SDM, SDC = fit(rho, signal)           # recover M, C and their stddevs
-            m2, c2, sdm2, sdc2 = old_fit(rho, [list(s.noms) for s in signal])
-            assert abs(M - m2) < 0.0001
-            assert abs(C - c2) < 0.0001
-
-            # here we just assert for now that the uncertainties are different, given that
-            # the new method uses the pooled variance and the old method doesn't.
-            assert abs(SDM - sdm2) > 0.0001
-            assert abs(SDC - sdc2) > 0.0001
+            assert abs(f.c-c) < 0.01          # and that the intercept is good
+            assert f.sdm < 0.05               # and that the stddevs are small.
+            assert f.sdc < 0.05
