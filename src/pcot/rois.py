@@ -858,7 +858,7 @@ class ROIPainted(ROI):
                 r = int(getRadiusFromSlider(brushSize, imgw, imgh))
             else:
                 r = int(brushSize)
-            self.cropDownWithDraw(draw=lambda fullsize: cv.circle(fullsize, (x, y), r, 0 if delete else 255, -1))
+            self.cropDownWithDraw(draw=lambda fullsize: cv.circle(fullsize, (int(x), int(y)), r, 0 if delete else 255, -1))
         # store this so that when we select an ROI in the multidot editor we can set the brush size
         self.r = brushSize
 

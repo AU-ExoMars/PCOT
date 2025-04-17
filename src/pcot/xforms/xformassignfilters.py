@@ -192,4 +192,5 @@ class TabAssignFilters(Tab):
 
     def onNodeChanged(self):
         self.model.maxitems = self.node.channels
+        self.w.cameraCombo.setCurrentText(self.node.params.camera)
         self.w.table.viewport().update()

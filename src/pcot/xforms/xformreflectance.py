@@ -110,6 +110,8 @@ class XFormReflectance(XFormType):
     def init(self, node):
         # no serialisation needed for this data.
         node.filter_to_plot = None
+        node.filter_names = None
+        node.reflectance_data = None
         node.calib_targets = []
         # For each filter, there will be a list of points to plot. Each point will have
         # the known reflectance and the measured reflectance.
@@ -324,16 +326,17 @@ class TabReflectance(pcot.ui.tabs.Tab):
         # populate the filter combo box with the filters from the image
         with SignalBlocker(self.w.filterCombo):
             self.w.filterCombo.clear()
-            self.w.filterCombo.addItem("ALL")
-            self.w.filterCombo.addItems(self.node.filter_names)
-            try:
-                # +1 here because of the ALL value
-                self.w.filterCombo.setCurrentIndex(self.node.filter_names.index(self.node.filter_to_plot)+1)
-            except ValueError:
-                # this filter is not in the image?
-                ui.log(f"Filter {self.node.filter_to_plot} not in image, using ALL")
-                self.w.filterCombo.setCurrentIndex(0)
-                self.node.filter_to_plot = self.w.filterCombo.currentText()
+            if self.node.filter_names:
+                self.w.filterCombo.addItem("ALL")
+                self.w.filterCombo.addItems(self.node.filter_names)
+                try:
+                    # +1 here because of the ALL value
+                    self.w.filterCombo.setCurrentIndex(self.node.filter_names.index(self.node.filter_to_plot)+1)
+                except ValueError:
+                    # this filter is not in the image?
+                    ui.log(f"Filter {self.node.filter_to_plot} not in image, using ALL")
+                    self.w.filterCombo.setCurrentIndex(0)
+                    self.node.filter_to_plot = self.w.filterCombo.currentText()
 
         self.w.showPatchesBox.setChecked(self.node.params.show_patches)
 

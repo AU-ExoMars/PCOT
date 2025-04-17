@@ -49,6 +49,7 @@ def gencam(args):
         # Now fill in the rest of the data from the YAML file
         p.params.name = d["name"]
         if args.nocalib:
+            logger.info("Adding _NOCALIB to camera name")
             p.params.name += "_NOCALIB"
         p.params.date = d["date"].strftime("%Y-%m-%d")
         p.params.author = d["author"]
@@ -59,6 +60,7 @@ def gencam(args):
         # by providing a dictionary of aliases to filter names.
         filter_aliases = {}
         if "filter_aliases" in d:
+            logger.info("Filter aliases found")
             for alias, filtername in d["filter_aliases"].items():
                 filter_aliases[alias] = filtername
 
@@ -66,23 +68,28 @@ def gencam(args):
         # target names to filenames holding the reflectances for that target.
         p.reflectances = {}
         if "reflectance" in d:
+            logger.info("reflectance section found")
             for target, filename in d["reflectance"].items():
+                logger.info(f"Processing reflectance data for {target}")
                 # we pass in the filters so we can check they exist when referred to in the reflectance data.
                 # We store the resulting dict in the CameraParams object.
                 p.reflectances[target] = process_reflectance(filename, fs, filter_aliases)
+                logger.info(f"Reflectance data for {target} is {p.reflectances[target]}")
 
         # Write the parameter data to the output file.
         store = camdata.CameraData.openStoreAndWrite(args.output, p)
+        logger.info(f"camera data written to {args.output}")
 
         # get information about any flats from the YAML. We can have the data in the YAML but disabled,
         # so flats aren't generated, but setting the "disabled" key. We can also do this by using the
         # --nocalib option, which won't save calib data AND will add "_NOCALIB" to the camera name.
 
         if not args.nocalib:
+            logger.info("Flats section found")
             if "flats" in d:
                 flatd = d["flats"]
                 if "disabled" in flatd and flatd["disabled"]:
-                    logger.info("Flats processing disabled")
+                    logger.info("Flats processing disabled by 'disabled' option in YAML file")
                 else:
                     data = FlatFileData(p.params.name,
                                         flatd["directory"],
@@ -92,6 +99,9 @@ def gencam(args):
                                         flatd.get("bitdepth", None),
                                         fs)
                     process_flats(store, data)
+                    logger.info("Flats processing complete")
+        else:
+            logger.info("Flats processing disabled by --nocalib option")
 
 
 def createFilters(filter_dicts):
@@ -176,7 +186,7 @@ def get_files_for_filter(filt, rawloader, data):
     # value.
 
     cube = load.multifile(dirpath, list_of_files, bitdepth=data.bitdepth, filterpat=".*",
-                          camera=None,
+                          camera=None, really_no_camera=True,
                           rawloader=rawloader).get(Datum.IMG)
     if cube is None:
         raise ValueError(f"Failed to load files from {dirpath}: {list_of_files}")

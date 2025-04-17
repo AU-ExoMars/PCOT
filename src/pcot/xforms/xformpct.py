@@ -38,8 +38,14 @@ def createPatchROI(img, x, y, radius):
     ff = MeanFloodFiller(img, FloodFillParams(minPix, maxPix, threshold=0.005))
 
     # perform a flood fill and get a region out. This may return None if the
-    # number of pixels is too low or too high.
+    # number of pixels is too low or too high. If so, we just fill a small region around
+    # the point.
     roi = ff.fillToPaintedRegion(int(x), int(y))
+    if roi is None:
+        roi = ROIPainted()
+        roi.setContainingImageDimensions(img.w, img.h)
+        roi.setCircle(x,y, radius/4)
+        roi.cropDownWithDraw()
     return roi
 
 
