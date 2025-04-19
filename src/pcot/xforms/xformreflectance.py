@@ -47,6 +47,8 @@ def collectCameraData(node, img):
         raise XFormException('DATA', 'all bands must come from the same camera')
     # get the only member of that set
     camera = next(iter(cameraset))
+    if camera is None:
+        raise XFormException('DATA', 'image in "reflectance" appears to have no camera filters assigned')
     # and try to get the actual camera data
     camera = cameras.getCamera(camera)
 

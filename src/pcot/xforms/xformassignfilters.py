@@ -12,7 +12,7 @@ from pcot.sources import Source
 from pcot.ui.tablemodel import TableModel
 from pcot.ui.tabs import Tab
 from pcot.utils import SignalBlocker
-from pcot.xform import XFormType, xformtype
+from pcot.xform import XFormType, xformtype, XFormException
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +41,7 @@ class XFormAssignFilters(XFormType):
 
     def init(self, node):
         node.channels = 0   # number of channels to be mapped
+        node.wavelengths_in_image = []  # wavelengths in the image
 
     def perform(self, node):
         img = node.getInput(0, Datum.IMG)
@@ -70,6 +71,10 @@ class XFormAssignFilters(XFormType):
         for f in cam_filters:
             if f not in node.params.filters:
                 node.params.filters.append(f)
+
+        # iterate over the image bands and store the wavelengths
+        node.wavelengths_in_image = [img.wavelength(i) for i in range(0,img.channels)]
+
 
         # get the filters by name and build a multiband source
         for i, f in enumerate(node.params.filters):
@@ -163,6 +168,7 @@ class TabAssignFilters(Tab):
         self.w.cameraCombo.currentIndexChanged.connect(self.cameraChanged)
         self.w.up.pressed.connect(self.upPressed)
         self.w.down.pressed.connect(self.downPressed)
+        self.w.guessButton.pressed.connect(self.guessPressed)
         self.nodeChanged()
 
     def cameraChanged(self, i):
@@ -171,6 +177,25 @@ class TabAssignFilters(Tab):
 
     def getSelected(self):
         return [mi.row() for mi in self.w.table.selectionModel().selectedRows()]
+
+    def guessPressed(self):
+        self.mark()
+        out = []
+        # get the camera by name
+        camera = getCamera(self.node.params.camera)
+        if camera is None:
+            ui.log(f"Camera {self.node.params.camera} not found")
+            return
+        # for each band in the image, get its wavelength and try to find a matching filter
+        for i in self.node.wavelengths_in_image:
+            # find the filter with the closest wavelength
+            f = camera.getFilter(i, search='cwl')
+            if f is not None:
+                out.append(f.name)
+            else:
+                raise XFormException("DATA", "No filter found for wavelength {}".format(i))
+        self.node.params.filters._values = out
+        self.changed()
 
     def upPressed(self):
         self.mark()
