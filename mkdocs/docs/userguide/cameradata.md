@@ -1,28 +1,29 @@
 # Camera data
 
 Each camera used with PCOT has different filters and other associated data.
-PCOT needs to know about these. PCOT uses camera data files to store these.
+PCOT needs to know about these, and stores them in camera data files.
 These are in PCOT's archive format and so have the PARC extension.
+
+When you start PCOT for the first time 
+you will need to tell it where to find these files. PCOT will load all
+the camera files from the provided directory, storing them under
+names given in the files themselves.
 
 ## Obtaining camera files
 
 Initial version of the files are stored in the PCOT repository with
 PCOT itself, in the `cameras` directory. For example, a file for PANCAM
 can be found in `PCOT/cameras/pancam.parc`. Currently these files hold
-no calibration data, just the filter information.
+very little calibration data, just the filter information.
 
-@@@primary
-Later you will be able to download camera files containing full
+You should be able to download camera files containing full
 data for AUPE and PanCam
-from the [pcot.aber.ac.uk](pcot.aber.ac.uk) site.
-@@@
-
-When you start PCOT for the first time 
-you will need to tell it where to find these files. PCOT will load all
-the camera files from the provided directory, storing them under
-the names given in the camera parameter file (see below).
+from the [PCOT Cookbook](pcot.aber.ac.uk) site. Data will be added
+to this server when it becomes available.
 
 
+The rest of this page describes how to make your own data files if you
+are working with a new camera.
 
 ## Creating camera files
 

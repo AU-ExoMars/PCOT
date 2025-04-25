@@ -47,6 +47,10 @@ if you want to set a camera directory. You should select either the
 camera directory provided by your team, or the default camera directory -
 this will be the `cameras` directory inside the main PCOT directory.
 
+More cameras can be downloaded from the 
+[PCOT Cookbook site](http://pcot.aber.ac.uk/), which also contains
+useful "recipes" for doing common operations.
+
 
 ## Introduction to the user interface
 
