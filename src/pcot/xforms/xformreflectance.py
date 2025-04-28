@@ -230,7 +230,8 @@ class XFormReflectance(XFormType):
             point_list = [x.point for x in points]
             known_list = [x.known for x in points]
 
-            # FUDGE = set the SDs and means of all points in point_list to the same value
+            # FUDGE = set the SDs and means of all points in point_list to the same value. We can't
+            # set SD to zero because the maths blows up.
             if node.params.simpler_data_fudge:
                 for x in point_list:
                     x.sds = np.full(1, 0.0001, dtype=np.float32)
@@ -240,7 +241,8 @@ class XFormReflectance(XFormType):
 
             # FUDGE = make sure it goes through zero.
             if node.params.zero_fudge:
-                known_list.append(np.float32(0.0))
+                known_list.append(np.float32(0.0))  # zero known value
+                # 10 measured pixels with sd=0.001.
                 z = SimpleValue(np.zeros(10, dtype=np.float32), np.full(10, 0.001, dtype=np.float32))
                 point_list.append(z)  # add a dummy zero point to the end of the list
 
@@ -287,10 +289,14 @@ class TabReflectance(pcot.ui.tabs.Tab):
         self.w.filterCombo.currentIndexChanged.connect(self.filterChanged)
         self.w.replot.clicked.connect(self.replot)
         self.w.showPatchesBox.stateChanged.connect(self.showPatchesStateChanged)
+        self.w.saveButton.clicked.connect(self.save)
 
         self.w.zeroFudgeBox.stateChanged.connect(self.zeroFudgeStateChanged)
         self.w.simplifyFudgeBox.stateChanged.connect(self.simplifyFudgeStateChanged)
         self.nodeChanged()
+
+    def save(self):
+        self.w.mpl.save()
 
     def targetChanged(self, i):
         self.mark()
