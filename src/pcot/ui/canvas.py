@@ -640,6 +640,7 @@ class Canvas(QtWidgets.QWidget):
         self.graph = None
         self.nodeToUIChange = None
         self.ROInode = None
+        self.mapping = None  # mapping used in either the image, or the image we are rendering a "premapped" RGB of
         self.isDQHidden = False  # does not persist!
         self.recursing = False  # An ugly hack to avoid recursion in ROI nodes
         self.dqSourceCache = [None for i in range(NUMDQS)]  # source name cache for each channel
@@ -1094,21 +1095,21 @@ class Canvas(QtWidgets.QWidget):
         logger.debug(f"RED CHANGED TO {i}")
         # this shouldn't happen if there is no image because the combo will be empty
         if self.previmg:
-            self.previmg.mapping.red = i
+            self.mapping.red = i
             self.redisplay()
 
     def greenIndexChanged(self, i):
         logger.debug(f"GREEN CHANGED TO {i}")
         # this shouldn't happen if there is no image because the combo will be empty
         if self.previmg:
-            self.previmg.mapping.green = i
+            self.mapping.green = i
             self.redisplay()
 
     def blueIndexChanged(self, i):
         logger.debug(f"GREEN CHANGED TO {i}")
         # this shouldn't happen if there is no image because the combo will be empty
         if self.previmg:
-            self.previmg.mapping.blue = i
+            self.mapping.blue = i
             self.redisplay()
 
     def roiToggleChanged(self, v):
@@ -1208,26 +1209,29 @@ class Canvas(QtWidgets.QWidget):
     def display(self, img: Union[Datum, 'ImageCube'], alreadyRGBMappedImageSource=None, nodeToUIChange=None):
         self.firstDisplayDone = True
 
+        # the mapping we are showing and changing comes from either the image we draw or some other image
+        # if we are using a "premapped" image.
+        mapSourceImg = alreadyRGBMappedImageSource if alreadyRGBMappedImageSource is not None else img
+        self.mapping = mapSourceImg.mapping     # this is a reference
+
         if isinstance(img, Datum):
             img = img.get(Datum.IMG)  # if we are given a Datum, "unwrap" it
         if self.graph is None:
             raise Exception(
                 "Graph not set in ui.canvas.Canvas.display() - should be done in tab's ctor with setGraph()")
         if img is not None:
-            # ensure there is a valid mapping (only do this if not already mapped)
-            if alreadyRGBMappedImageSource is None:
-                img.mapping.ensureValid(img)
+            # ensure there is a valid mapping
+            self.mapping.ensureValid(mapSourceImg)
             # now make the combo box options match the sources in the image
             # and finally make the selection each each box match the actual channel assignment
             self.blockSignalsOnComboBoxes(True)  # temporarily disable signals to avoid indexChanged calls
             # is this a premapped image? We need to remember that for redisplay()
             self.isPremapped = alreadyRGBMappedImageSource is not None
-            self.setCombosToImageChannels(alreadyRGBMappedImageSource
-                                          if alreadyRGBMappedImageSource is not None
-                                          else img)
-            self.redChanCombo.setCurrentIndex(img.mapping.red)
-            self.greenChanCombo.setCurrentIndex(img.mapping.green)
-            self.blueChanCombo.setCurrentIndex(img.mapping.blue)
+
+            self.setCombosToImageChannels(mapSourceImg)
+            self.redChanCombo.setCurrentIndex(self.mapping.red)
+            self.greenChanCombo.setCurrentIndex(self.mapping.green)
+            self.blueChanCombo.setCurrentIndex(self.mapping.blue)
             self.blockSignalsOnComboBoxes(False)  # and enable signals again
             self.setScrollBarsFromCanvas()
         # cache the image in case the mapping changes, and also for redisplay itself
@@ -1245,9 +1249,9 @@ class Canvas(QtWidgets.QWidget):
         # update the channel selections in the combo boxes if they've been changed in code
         if self.previmg:
             self.blockSignalsOnComboBoxes(True)  # temporarily disable signals to avoid indexChanged calls
-            self.redChanCombo.setCurrentIndex(self.previmg.mapping.red)
-            self.greenChanCombo.setCurrentIndex(self.previmg.mapping.green)
-            self.blueChanCombo.setCurrentIndex(self.previmg.mapping.blue)
+            self.redChanCombo.setCurrentIndex(self.mapping.red)
+            self.greenChanCombo.setCurrentIndex(self.mapping.green)
+            self.blueChanCombo.setCurrentIndex(self.mapping.blue)
             self.blockSignalsOnComboBoxes(False)  # and enable signals again
 
     def redisplay(self):

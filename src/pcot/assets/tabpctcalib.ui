@@ -124,10 +124,10 @@
         <property name="bottomMargin">
          <number>6</number>
         </property>
-        <item row="0" column="0">
-         <widget class="QPushButton" name="rotateButton">
+        <item row="1" column="0">
+         <widget class="QPushButton" name="genButton">
           <property name="text">
-           <string>Rotate</string>
+           <string>Generate ROIs</string>
           </property>
          </widget>
         </item>
@@ -138,10 +138,10 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
-         <widget class="QPushButton" name="genButton">
+        <item row="0" column="0">
+         <widget class="QPushButton" name="rotateButton">
           <property name="text">
-           <string>Generate ROIs</string>
+           <string>Rotate</string>
           </property>
          </widget>
         </item>
@@ -149,6 +149,26 @@
          <widget class="QCheckBox" name="stddevsBox">
           <property name="text">
            <string>Show ROI stddevs</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="label">
+          <property name="text">
+           <string>ROI radius generator scale</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QDoubleSpinBox" name="radiusScale">
+          <property name="minimum">
+           <double>0.200000000000000</double>
+          </property>
+          <property name="maximum">
+           <double>3.000000000000000</double>
+          </property>
+          <property name="value">
+           <double>1.000000000000000</double>
           </property>
          </widget>
         </item>
