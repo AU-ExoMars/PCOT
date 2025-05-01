@@ -50,7 +50,9 @@ def collectCameraData(node, img):
     if camera is None:
         raise XFormException('DATA', 'image in "reflectance" appears to have no camera filters assigned')
     # and try to get the actual camera data
+    
     camera = cameras.getCamera(camera)
+    
 
     # now we can store the calibration targets this camera knows about
     node.reflectance_data = camera.getReflectances()
@@ -131,7 +133,13 @@ class XFormReflectance(XFormType):
             raise XFormException('DATA', 'no image data')
 
         # collect reflectance data and check the image is valid (throws exception if not)
-        collectCameraData(node, img)
+        try:
+            collectCameraData(node, img)
+        except cameras.CameraNotFoundException as e:
+            ui.error(str(e))
+            node.setOutput(0,Datum.null)
+            node.setOutput(1,Datum.null)
+            raise XFormException('DATA',str(e))
 
         if len(node.calib_targets) == 0:
             raise XFormException('DATA', 'no calibration targets available')
