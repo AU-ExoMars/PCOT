@@ -1206,16 +1206,18 @@ class Canvas(QtWidgets.QWidget):
     # In the normal case (where the Canvas does the RGB mapping) just call with the image.
     # In the premapped case, call with the premapped RGB image, the source image, and the node.
 
-    def display(self, img: Union[Datum, 'ImageCube'], alreadyRGBMappedImageSource=None, nodeToUIChange=None):
+    def display(self, img: Union[Datum, 'ImageCube'], alreadyRGBMappedImageSource:'ImageCube'=None, nodeToUIChange=None):
         self.firstDisplayDone = True
+
+        if isinstance(img, Datum):
+            img = img.get(Datum.IMG)  # if we are given a Datum, "unwrap" it
 
         # the mapping we are showing and changing comes from either the image we draw or some other image
         # if we are using a "premapped" image.
         mapSourceImg = alreadyRGBMappedImageSource if alreadyRGBMappedImageSource is not None else img
-        self.mapping = mapSourceImg.mapping     # this is a reference
+        if mapSourceImg:
+            self.mapping = mapSourceImg.mapping     # this is a reference
 
-        if isinstance(img, Datum):
-            img = img.get(Datum.IMG)  # if we are given a Datum, "unwrap" it
         if self.graph is None:
             raise Exception(
                 "Graph not set in ui.canvas.Canvas.display() - should be done in tab's ctor with setGraph()")

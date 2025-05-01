@@ -6,14 +6,15 @@ target = Target(
     height=693,
 
     regpoints=(
-        # positions of three of the corners (CV's getAffineTransform takes a triangle)
+        # positions of corners
         (0, 0),  # top left corner
         (1040, 0),  # top right corner
         (0, 693),  # bottom left corner
+        (1040, 693),  # bottom right corner
     ),
-    instructions1="Click on three corners of the ColorChecker in the following order: top left, " \
-                  "top right, bottom left",
-    instructions2="adjust the image of the ColorChecker by dragging the three corner points " \
+    instructions1="Click on the corners of the ColorChecker in the following order: top left, " \
+                  "top right, bottom left, bottom right. ",
+    instructions2="adjust the image of the ColorChecker by dragging the corner points " \
                   "or clicking 'rotate'. Then click 'generate ROIs'",
 
     patches=()  # we'll set these up below
