@@ -1,20 +1,21 @@
 import numpy as np
 from numpy.ma import masked
 
+from pcot.calib.target import CircularPatch
 from pcot.datum import Datum
 import cv2 as cv
 
-import pcot
 from PySide2.QtCore import Qt, QPoint
 from PySide2.QtGui import QColor, QPainter, QPolygon, QFont
 from PySide2.QtWidgets import QMessageBox
-from pcot.calib import pct
+import pcot.calib.pct
+import pcot.calib.colorchecker_classic
 from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.rois import getRadiusFromSlider, ROIPainted
 from pcot.utils.annotations import pixels2painter
 from pcot.utils.deb import Timer
 from pcot.utils.flood import MeanFloodFiller, FloodFillParams
-from pcot.xform import xformtype, XFormType
+from pcot.xform import xformtype, XFormType, XFormException
 
 # scale of editing brush
 BRUSHSCALE = 0.1
@@ -38,22 +39,27 @@ def createPatchROI(img, x, y, radius):
     ff = MeanFloodFiller(img, FloodFillParams(minPix, maxPix, threshold=0.005))
 
     # perform a flood fill and get a region out. This may return None if the
-    # number of pixels is too low or too high.
+    # number of pixels is too low or too high. If so, we just fill a small region around
+    # the point.
     roi = ff.fillToPaintedRegion(int(x), int(y))
+    if roi is None:
+        roi = ROIPainted()
+        roi.setContainingImageDimensions(img.w, img.h)
+        roi.setCircle(x, y, radius / 4)
+        roi.cropDownWithDraw()
     return roi
 
 
-@xformtype
-class XformPCT(XFormType):
+class CalibrationTargetBase(XFormType):
     """Locates the PCT by hand and creates ROIs"""
 
-    def __init__(self):
-        super().__init__("pct", "calibration", "0.0.0")
+    def __init__(self, name, group, ver, target):
+        super().__init__(name, group, ver)
         self.addInputConnector("img", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
-        self.params = TaggedDictType()   # no parameters; it's pointless because the ROIs are painted.
-        self.autoserialise = ('brushSize', 'pctPoints', 'drawMode')
-
+        self.params = TaggedDictType()  # no parameters; it's pointless because the ROIs are painted.
+        self.autoserialise = ('brushSize', 'pctPoints', 'drawMode', ('radiusScale', 1.0))
+        self.target = target
 
     def createTab(self, n, w):
         return TabPCT(n, w)
@@ -76,6 +82,7 @@ class XformPCT(XFormType):
         node.rgbImage = None
         node.previewRadius = None  # previewing needs the image, but that's awkward - so we stash this data in perform()
         node.brushSize = 10
+        node.radiusScale = 1.0
         node.drawMode = 'Fill'
         # (x,y) tuples for screen positions of screws; a deque so we can rotate
         node.pctPoints = []
@@ -99,14 +106,18 @@ class XformPCT(XFormType):
                     r.setContainingImageDimensions(img.w, img.h)
 
             # get the RGB image we are going to draw the ROIs onto. Will only draw if there are ROIs!
+            # make sure we respect the canvas mapping, which is written into the node.
 
-            node.rgbImage = img.rgbImage()
+            # This will "premap" the image - it will use the image's map to generate RGB. We need to
+            # make sure this map is set by the node.
+
+            node.rgbImage = img.rgbImage()  # this is the image we draw the PREVIEW rois into, I think.
 
             # add the annotations to it.
             if node.drawMode != 'None':
                 for i, r in enumerate(node.rois):
                     if r is not None:
-                        p = pct.patches[i]
+                        p = self.target.patches[i]
                         r.label = p.name
                         r.labeltop = True
                         r.colour = p.col
@@ -149,10 +160,13 @@ class XformPCT(XFormType):
         stored in a list in the same order as in pct.patches."""
 
         # We need to get from PCT space to image space
-        pts1 = np.float32(pct.screws)
+        pts1 = np.float32(self.target.regpoints)
         pts2 = np.float32(n.pctPoints)
         # get affine transform
-        M = cv.getAffineTransform(pts1, pts2)
+        if len(n.pctPoints) == 4:
+            M = cv.getPerspectiveTransform(pts1, pts2)
+        else:
+            M = cv.getAffineTransform(pts1, pts2)
         #  max scale factor
         maxScale = np.max(M[:2, :2])
 
@@ -160,25 +174,30 @@ class XformPCT(XFormType):
         # ROIs must be indexed the same as patches in pct.patches
 
         timer = Timer("flood")
-        tmpimg = n.img.copy()   # temp copy to work on
-        for p in pct.patches:
+        tmpimg = n.img.copy()  # temp copy to work on
+        for p in self.target.patches:
             # get patch centre, convert to image space, get xy coords.
             pp = np.float32([[[p.x, p.y]]])
-            x, y = cv.transform(pp, M).ravel().tolist()
-            roi = createPatchROI(tmpimg, x, y, p.r * maxScale)
+            if len(n.pctPoints) == 4:
+                # we have a perspective transform
+                pp = cv.perspectiveTransform(pp, M)
+            else:
+                pp = cv.transform(pp, M)
+            x, y = pp.ravel().tolist()
+            roi = createPatchROI(tmpimg, x, y, p.r * maxScale * n.radiusScale)
             n.rois.append(roi)
         timer.mark("done")
 
 
 def transformPoints(points, matrix):
-    """Use cv.transform to transform a list of points [[x,y],[x,y]...] with a 2x3 affine transform
-    as generated by cv.affineTransform etc."""
-    # first, put the data into a numpy array with a format cv.transform likes
-    # with a pointless extra dimension
+    """Transform the points - the matrix is either 2x3 or 3x3. These methods expect and produce point
+    arrays in the form [n,1,2] and we are working in [n,2] so some reshaping is necessary"""
     points = np.float32(points).reshape(-1, 1, 2)
-    # then transform and reshape losing that dimension
-    points = cv.transform(points, matrix).reshape(-1, 2)
-    return points
+    if matrix.shape == (3,3):
+        points = cv.perspectiveTransform(points,matrix)
+    else:
+        points = cv.transform(points, matrix)
+    return points.reshape(-1, 2)
 
 
 def drawCircle(cx, cy, r, matrix, painter, canvas):
@@ -203,11 +222,17 @@ class TabPCT(pcot.ui.tabs.Tab):
         self.w.genButton.clicked.connect(self.genPressed)
         self.w.drawMode.currentIndexChanged.connect(self.drawModeChanged)
         self.w.stddevsBox.stateChanged.connect(self.stddevsBoxChanged)
+        self.w.radiusScale.valueChanged.connect(self.radiusScaleChanged)
         self.w.canvas.canvas.setMouseTracking(True)
+        self.target = node.type.target
         self.mousePos = None
         self.mouseDown = False
         # sync tab with node
         self.nodeChanged()
+
+    def radiusScaleChanged(self, val):
+        self.node.radiusScale = val
+        self.changed()
 
     def drawModeChanged(self, val):
         self.node.drawMode = self.w.drawMode.currentText()
@@ -225,12 +250,15 @@ class TabPCT(pcot.ui.tabs.Tab):
         if QMessageBox.question(self.window, "Clear points", "Are you sure?",
                                 QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
             self.mark()
-            self.node.pctPoints.clear()
-            self.node.rois = []
+            # if we have ROIs, we just clear them. On the second press - no ROIs, but points, we clear points.
+            if self.node.rois:
+                self.node.rois = []
+            elif len(self.node.pctPoints) > 0:
+                self.node.pctPoints.clear()
             self.changed()
 
     def rotatePressed(self):
-        if len(self.node.pctPoints) == 3:
+        if len(self.node.pctPoints) == len(self.target.regpoints):
             self.mark()
             p = self.node.pctPoints
             p = p[1:] + p[:1]  # could do this with a deque, but they can't serialise.
@@ -238,26 +266,24 @@ class TabPCT(pcot.ui.tabs.Tab):
             self.changed()
 
     def genPressed(self):
-        if len(self.node.pctPoints) == 3:
+        if len(self.node.pctPoints) == len(self.target.regpoints):
             self.mark()
             self.node.type.generateROIs(self.node)
-            self.node.pctPoints.clear()
             self.changed()
 
     # causes the tab to update itself from the node
     def onNodeChanged(self):
         # some buttons are disabled in some modes
         if not self.node.rois:  # empty ROI list
-            rotateEnabled = len(self.node.pctPoints) == 3
-            genEnabled = len(self.node.pctPoints) == 3
+            readyToGen = len(self.node.pctPoints) == len(self.target.regpoints)
             clearEnabled = len(self.node.pctPoints) > 0
         else:
-            rotateEnabled = False
-            genEnabled = False
+            readyToGen = False
             clearEnabled = True
         self.w.clearButton.setEnabled(clearEnabled)
-        self.w.genButton.setEnabled(genEnabled)
-        self.w.rotateButton.setEnabled(rotateEnabled)
+        self.w.radiusScale.setValue(self.node.radiusScale)
+        self.w.genButton.setEnabled(readyToGen)
+        self.w.rotateButton.setEnabled(readyToGen)
         self.w.drawMode.setCurrentIndex(self.w.drawMode.findText(self.node.drawMode))
 
         self.w.canvas.setNode(self.node)
@@ -269,12 +295,10 @@ class TabPCT(pcot.ui.tabs.Tab):
         self.w.brushSize.setValue(self.node.brushSize)
         self.w.stddevsBox.setCheckState(Qt.Checked if self.node.showStdDevs else Qt.Unchecked)
         if len(self.node.rois) < 1:
-            if rotateEnabled:
-                t = "adjust the image of the PCT by dragging the three control points " \
-                    "or clicking 'rotate'. Then click 'generate ROIs'"
+            if readyToGen:
+                t = self.target.instructions2
             else:
-                t = "Click on the PCT mounting screws in the following order: right, " \
-                    "left, top (assuming the two large patches are at the top)"
+                t = self.target.instructions1
         else:
             t = "Ctrl-Click to select an ROI, then Click to paint extra pixels or Shift-Click " \
                 "to remove them"
@@ -286,21 +310,21 @@ class TabPCT(pcot.ui.tabs.Tab):
             prevfont = p.font()
             p.setPen(Qt.black)
             p.setBrush(Qt.black)
-            p.drawRect(0, 0, 300, 180)
+            p.drawRect(0, 0, 400, 20*len(self.node.rois)+40)
             font = QFont("Consolas")
             fontsize = pixels2painter(FONTSIZE, p)
             font.setPixelSize(fontsize)
             p.setFont(font)
             p.setPen(Qt.white)
             for idx, roi in enumerate(self.node.rois):
-                patch = pct.patches[idx]
+                patch = self.target.patches[idx]
                 if roi is not None:
                     std = self.node.type.stddev(self.node, idx)
                     name = f"{patch.name}/{patch.desc}"
                     if std == masked:
-                        s = "{}\t\tno data".format(name, std)
+                        s = f"{name:20}\t\tno data"
                     else:
-                        s = "{}\t\t{:.3f}".format(name, std)
+                        s = f"{name:20}\t\t{std:.3f}"
                 else:
                     s = "{}\t\t---".format(patch.name)
                 p.drawText(0, (idx + 1) * fontsize, s)
@@ -326,25 +350,30 @@ class TabPCT(pcot.ui.tabs.Tab):
                 x, y = c.getCanvasCoords(*pt)
                 p.drawEllipse(x - 5, y - 5, 10, 10)
 
-            if len(n.pctPoints) == 3:
+            if len(n.pctPoints) == len(self.target.regpoints):
                 # we have enough points to perform the mapping!
                 # we want to go from PCT into image space
-                pts1 = np.float32(pct.screws)
+                pts1 = np.float32(self.target.regpoints)
                 pts2 = np.float32(n.pctPoints)
-                # get affine transform
-                M = cv.getAffineTransform(pts1, pts2)
+                # get transform
+                if len(n.pctPoints) == 4:
+                    M = cv.getPerspectiveTransform(pts1, pts2)
+                elif len(n.pctPoints) == 3:
+                    M = cv.getAffineTransform(pts1, pts2)
+                else:
+                    raise XFormException('DATA', "unsupported number of points to generate transform")
 
                 # draw the surrounding rect by passing in points in PCT-space
                 # and converting to image space
 
                 points = [
-                    [0, 0],  # note the extra level!
-                    [pct.width, 0],
-                    [pct.width, pct.height],
-                    [0, pct.height]
+                    [0, 0],
+                    [self.target.width, 0],
+                    [self.target.width, self.target.height],
+                    [0, self.target.height]
                 ]
 
-                # transform points with affine transform
+                # transform points with transform
                 points = transformPoints(points, M)
                 # also impose the image->canvas transform
                 points = [c.getCanvasCoords(*p) for p in points]
@@ -353,8 +382,11 @@ class TabPCT(pcot.ui.tabs.Tab):
                 p.drawPolygon(QPolygon([QPoint(*p) for p in points]))
 
                 # now draw the patches
-                for patch in pct.patches:
-                    drawCircle(patch.x, patch.y, patch.r, M, p, c)
+                for patch in self.target.patches:
+                    if isinstance(patch, CircularPatch):
+                        drawCircle(patch.x, patch.y, patch.r, M, p, c)
+                    else:
+                        raise XFormException('DATA', f"unsupported patch type {patch.__class__.__name__}")
         else:
             # we are editing ROIS; draw the preview circle
             if self.mousePos is not None and n.previewRadius is not None and n.selROI is not None:
@@ -371,10 +403,12 @@ class TabPCT(pcot.ui.tabs.Tab):
         if self.mouseDown:
             if not n.rois:
                 if n.selPoint >= 0:
+                    # dragging a point; this is just a UI change
                     n.pctPoints[n.selPoint] = (x, y)
-                    self.changed()
+                    self.changed(uiOnly=True)
             else:
                 if n.selROI is not None:
+                    # actually
                     self.doSet(x, y, e)
                     self.changed()
         self.w.canvas.update()
@@ -410,7 +444,7 @@ class TabPCT(pcot.ui.tabs.Tab):
                     mindist = dsq
                     changed = True
             # if no selected point, and we can do it, create a new point
-            if mindist is None and len(n.pctPoints) < 3:
+            if mindist is None and len(n.pctPoints) < len(self.target.regpoints):
                 n.pctPoints.append((x, y))
                 changed = True
         else:
@@ -435,3 +469,20 @@ class TabPCT(pcot.ui.tabs.Tab):
 
     def canvasMouseReleaseEvent(self, x, y, e):
         self.mouseDown = False
+
+
+@xformtype
+class XFormPCT(CalibrationTargetBase):
+    """Allows the user to locate the PANCAM Calibration Target in an image by specifying control points,
+    move those control points, and generate ROIs for each patch by floodfill."""
+    def __init__(self):
+        super().__init__("pct", "calibration", "0.0.0",
+                         pcot.calib.pct.target)
+
+@xformtype
+class XFormColorCheckerClassic(CalibrationTargetBase):
+    """Allows the user to locate a GretagMacbeth ColorChecker Classic in an image by specifying
+    control points, move those control points, and generate ROIs for each patch by floodfill."""
+    def __init__(self):
+        super().__init__("colorchecker", "calibration", "0.0.0",
+                         pcot.calib.colorchecker_classic.target)

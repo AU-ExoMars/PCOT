@@ -1,0 +1,34 @@
+name: TEST
+author: Jim Finnis <jcf12@aber.ac.uk>
+date: 2025-04-10
+short: A fake RGB camera to add to testimg() products
+description: |
+    A fake RGB camera which is added to testimg() products in some
+    internal tests by setting the optional second argument to that
+    datumfunc to nonzero. It doesn't mean anything in the real world.
+    
+
+filters:
+    RED:
+        cwl: 640
+        fwhm: 50
+        position: T1
+        transmission: 1.0
+        description: Fake red
+    GREEN:
+        cwl: 540
+        fwhm: 50
+        position: T2
+        transmission: 1.0
+        description: Fake green
+    BLUE:
+        cwl: 440
+        fwhm: 50
+        position: T3
+        transmission: 1.0
+        description: Fake blue
+        
+reflectance:
+    PCT: test_reflectance.csv
+    
+

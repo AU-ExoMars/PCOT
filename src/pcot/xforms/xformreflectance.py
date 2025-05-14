@@ -4,12 +4,15 @@ import dataclasses
 from typing import Tuple, List, Dict
 
 import numpy as np
+from PySide2.QtCore import Qt
 
 import pcot.ui.tabs
 from pcot import config, cameras, ui
 import pcot.calib
+from pcot.calib import SimpleValue
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe
+from pcot.sources import nullSourceSet
 from pcot.utils import SignalBlocker, image
 from pcot.utils.maths import pooled_sd
 from pcot.value import Value
@@ -44,8 +47,12 @@ def collectCameraData(node, img):
         raise XFormException('DATA', 'all bands must come from the same camera')
     # get the only member of that set
     camera = next(iter(cameraset))
+    if camera is None:
+        raise XFormException('DATA', 'image in "reflectance" appears to have no camera filters assigned')
     # and try to get the actual camera data
+    
     camera = cameras.getCamera(camera)
+    
 
     # now we can store the calibration targets this camera knows about
     node.reflectance_data = camera.getReflectances()
@@ -82,22 +89,33 @@ class XFormReflectance(XFormType):
     The image must know what camera and filters it came from, and the camera
     must have filter information including nominal reflectances for each
     patch on that target.
+
+    The outputs are the gradient and intercept of the fit for each filter. All source
+    data is removed, so it does not obscure image data in subsequent operations. The
+    next operation should be an expr node performing out=(in-c)/m.
     """
 
     def __init__(self):
         super().__init__("reflectance", "calibration", "0.0.0")
         self.addInputConnector("img", Datum.IMG)
-        self.addOutputConnector("mul", Datum.NUMBER)
-        self.addOutputConnector("add", Datum.NUMBER)
+        self.addOutputConnector("m", Datum.NUMBER)
+        self.addOutputConnector("c", Datum.NUMBER)
 
         self.params = TaggedDictType(
             # there might not be a calibration target because it's not valid for this image (or there's no image)
-            target=("The calibration target to use", Maybe(str))
+            target=("The calibration target to use", Maybe(str)),
+            show_patches=("Show the patch names on the plot", bool, True),
+
+            # fudges; will probably remove
+            zero_fudge=("Add an extra zero point", bool, False),
+            simpler_data_fudge=("Force all points to have same number of pixels and same SD", bool, False),
         )
 
     def init(self, node):
         # no serialisation needed for this data.
         node.filter_to_plot = None
+        node.filter_names = None
+        node.reflectance_data = None
         node.calib_targets = []
         # For each filter, there will be a list of points to plot. Each point will have
         # the known reflectance and the measured reflectance.
@@ -115,7 +133,13 @@ class XFormReflectance(XFormType):
             raise XFormException('DATA', 'no image data')
 
         # collect reflectance data and check the image is valid (throws exception if not)
-        collectCameraData(node, img)
+        try:
+            collectCameraData(node, img)
+        except cameras.CameraNotFoundException as e:
+            ui.error(str(e))
+            node.setOutput(0,Datum.null)
+            node.setOutput(1,Datum.null)
+            raise XFormException('DATA',str(e))
 
         if len(node.calib_targets) == 0:
             raise XFormException('DATA', 'no calibration targets available')
@@ -213,10 +237,31 @@ class XFormReflectance(XFormType):
         for filter_name, points in points_per_filter.items():
             point_list = [x.point for x in points]
             known_list = [x.known for x in points]
+
+            # FUDGE = set the SDs and means of all points in point_list to the same value. We can't
+            # set SD to zero because the maths blows up.
+            if node.params.simpler_data_fudge:
+                for x in point_list:
+                    x.sds = np.full(1, 0.0001, dtype=np.float32)
+                    x.var = 0.0001
+                    mean = np.mean(x.noms)
+                    x.noms = np.full(1, mean, dtype=np.float32)
+
+            # FUDGE = make sure it goes through zero.
+            if node.params.zero_fudge:
+                known_list.append(np.float32(0.0))  # zero known value
+                # 10 measured pixels with sd=0.001.
+                z = SimpleValue(np.zeros(10, dtype=np.float32), np.full(10, 0.001, dtype=np.float32))
+                point_list.append(z)  # add a dummy zero point to the end of the list
+
             # warning a bit weird here - point_list is a List[SimpleValue] and any warning is a lie.
             f = pcot.calib.fit(known_list, point_list)
             node.fits[filter_name] = f  # store the fit data so we can use it in the UI
             logger.debug(f"Filter {filter_name} has fit {f.m}±{f.sdm}x + {f.c}±{f.sdc}")
+
+        # preset the outputs to a null (error)
+        node.setOutput(0, Datum.null)
+        node.setOutput(1, Datum.null)
 
         # assemble the output
         add_out_n = []
@@ -224,26 +269,42 @@ class XFormReflectance(XFormType):
         mul_out_n = []
         mul_out_u = []
         for f in node.filters:
-            fit = node.fits[f.name]
+            try:
+                fit = node.fits[f.name]
+            except KeyError:
+                # this filter has no fit data, so skip it
+                ui.log(f"Filter {f.name} has no fit data! Is it correctly labelled in the source image and is it in the calibration data?")
+                return
             add_out_n.append(fit.c)
             add_out_u.append(fit.sdc)
             mul_out_n.append(fit.m)
             mul_out_u.append(fit.sdm)
-        # and set the output
-        node.setOutput(0, Datum(Datum.NUMBER, Value(np.array(mul_out_n), np.array(mul_out_u)),sources=img.getSources()))
-        node.setOutput(1, Datum(Datum.NUMBER, Value(np.array(add_out_n), np.array(add_out_u)),sources=img.getSources()))
+        # and set the output. We add the sources from the image, but modified as secondary.
+
+        sources = img.sources.copy().visit(
+            lambda sourceSet: sourceSet.visit(
+                lambda source: source.setSecondaryName("reflectance target")
+        ))
+
+        node.setOutput(0, Datum(Datum.NUMBER, Value(np.array(mul_out_n), np.array(mul_out_u)),sources=sources))
+        node.setOutput(1, Datum(Datum.NUMBER, Value(np.array(add_out_n), np.array(add_out_u)),sources=sources))
 
 
 class TabReflectance(pcot.ui.tabs.Tab):
     def __init__(self, node, window):
         super().__init__(window, node, 'tabreflectance.ui')
         self.w.targetCombo.currentIndexChanged.connect(self.targetChanged)
-        # populate the target combo box
         self.w.filterCombo.currentIndexChanged.connect(self.filterChanged)
-        # populating the filter combo box with filters from the input image is done
-        # in the nodeChanged method
         self.w.replot.clicked.connect(self.replot)
+        self.w.showPatchesBox.stateChanged.connect(self.showPatchesStateChanged)
+        self.w.saveButton.clicked.connect(self.save)
+
+        self.w.zeroFudgeBox.stateChanged.connect(self.zeroFudgeStateChanged)
+        self.w.simplifyFudgeBox.stateChanged.connect(self.simplifyFudgeStateChanged)
         self.nodeChanged()
+
+    def save(self):
+        self.w.mpl.save()
 
     def targetChanged(self, i):
         self.mark()
@@ -251,8 +312,23 @@ class TabReflectance(pcot.ui.tabs.Tab):
         self.changed()
 
     def filterChanged(self, i):
-        self.mark()
+        # data unchanged, no need to mark or call changed().
         self.node.filter_to_plot = self.w.filterCombo.currentText()
+        self.markReplotReady()
+
+    def showPatchesStateChanged(self, state):
+        # data unchanged, no need to mark or call changed().
+        self.node.params.show_patches = state == Qt.Checked
+        self.markReplotReady()
+
+    def zeroFudgeStateChanged(self, state):
+        self.mark()
+        self.node.params.zero_fudge = state == Qt.Checked
+        self.changed()
+
+    def simplifyFudgeStateChanged(self, state):
+        self.mark()
+        self.node.params.simpler_data_fudge = state == Qt.Checked
         self.changed()
 
     def onNodeChanged(self):
@@ -266,46 +342,82 @@ class TabReflectance(pcot.ui.tabs.Tab):
         # populate the filter combo box with the filters from the image
         with SignalBlocker(self.w.filterCombo):
             self.w.filterCombo.clear()
-            self.w.filterCombo.addItems(self.node.filter_names)
-            try:
-                self.w.filterCombo.setCurrentIndex(self.node.filter_names.index(self.node.filter_to_plot))
-            except ValueError:
-                # this filter is not in the image?
-                ui.log(f"Filter {self.node.filter_to_plot} not in image, using first filter")
-                self.w.filterCombo.setCurrentIndex(0)
-                self.node.filter_to_plot = self.w.filterCombo.currentText()
+            if self.node.filter_names:
+                self.w.filterCombo.addItem("ALL")
+                self.w.filterCombo.addItems(self.node.filter_names)
+                try:
+                    # +1 here because of the ALL value
+                    self.w.filterCombo.setCurrentIndex(self.node.filter_names.index(self.node.filter_to_plot)+1)
+                except ValueError:
+                    # this filter is not in the image?
+                    ui.log(f"Filter {self.node.filter_to_plot} not in image, using ALL")
+                    self.w.filterCombo.setCurrentIndex(0)
+                    self.node.filter_to_plot = self.w.filterCombo.currentText()
+
+        self.w.showPatchesBox.setChecked(self.node.params.show_patches)
+
+        self.w.zeroFudgeBox.setChecked(self.node.params.zero_fudge)
+        self.w.simplifyFudgeBox.setChecked(self.node.params.simpler_data_fudge)
 
     def markReplotReady(self):
         """make the replot button red"""
         self.w.replot.setStyleSheet("background-color:rgb(255,100,100)")
 
     def replot(self):
-        # this will be (known_mean, known_std, measured_mean, measured_std)
-        band = self.node.filter_to_plot
-        points = self.node.points_per_filter.get(band, None)
-        fit = self.node.fits.get(band,None)
-
-        if points is None:
-            ui.log(f"No points of data for filter {band}")
-            return
-        if fit is None:
-            ui.log(f"No fit data for filter {band}")
-            return
-
-        # separate out the data
-        points = [dataclasses.astuple(p) for p in points]
-        known, known_std, measured, measured_std, _, patches = zip(*points)
-
         ax = self.w.mpl.ax
         ax.cla()
-        ax.set_xlabel("Known reflectance (nm)")
-        ax.set_ylabel("Measured reflectance (nm)")
-        if fit:
-            ax.axline((0, fit.c), slope=fit.m, color='blue', label='fit')
-        ax.plot(known, measured, '+r')
-        ax.set_ylim(bottom=0)
-        ax.set_xlim(left=0)
-        for i, patch in enumerate(patches):
-            ax.annotate(f"{patch}\n{measured[i]:.2f}±{measured_std[i]:.2f}", (known[i], measured[i]), fontsize=8)
+        ax.set_xlabel("Known reflectance")
+        ax.set_ylabel("Measured reflectance")
+
+        # we don't generally do this.
+        # ax.set_ylim(bottom=0)
+        # ax.set_xlim(left=0)
+
+        # move the axes to pass through the origin
+        ax.spines['left'].set_position('zero')
+        ax.spines['right'].set_color('none')
+        ax.yaxis.tick_left()
+        ax.spines['bottom'].set_position('zero')
+        ax.spines['top'].set_color('none')
+        ax.xaxis.tick_bottom()
+
+        if self.node.filter_to_plot is None or self.node.filter_to_plot == "ALL":
+            bands = self.node.filter_names
+        else:
+            bands = [self.node.filter_to_plot]
+
+        col = 0     # colour index
+        for band in bands:
+            # this will be (known_mean, known_std, measured_mean, measured_std)
+            points = self.node.points_per_filter.get(band, None)
+            fit = self.node.fits.get(band,None)
+
+            if points is None:
+                ui.log(f"No points of data for filter {band}")
+                return
+            if fit is None:
+                ui.log(f"No fit data for filter {band}")
+                return
+            # separate out the data
+            points = [dataclasses.astuple(p) for p in points]
+            known, known_std, measured, measured_std, _, patches = zip(*points)
+
+            # plot
+            colname = f"C{col}"
+            col += 1
+            if fit:
+                ax.axline((0, fit.c), slope=fit.m, color=colname)
+            # ax.plot(known, measured, '+', color=colname, label=band)
+            ax.errorbar(known, measured, yerr=measured_std, xerr=known_std, label=band, fmt='x', color=colname)
+
+            # point labelling: don't do this if we're plotting all bands or it's turned off
+            if len(bands) == 1 and self.node.params.show_patches:
+                ax.set_title(f"Fit for {band}: m={fit.m:0.3f}, c={fit.c:0.3f}")
+                for i, patch in enumerate(patches):
+                    ax.annotate(f"{patch}\n{measured[i]:.2f}±{measured_std[i]:.2f}", (known[i], measured[i]), fontsize=8)
+
+        if len(bands)>1:
+            ax.legend(loc="lower right")
+
         self.w.mpl.draw()
         self.w.replot.setStyleSheet("")

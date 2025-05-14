@@ -2,7 +2,7 @@
 
 This is a rough guide, and things may change!
 
-## Next major release: 0.9.0
+## Current release 0.9.0
 
 * New node parameter system:
     * makes the node self-documenting (node parameters appear as a table,
@@ -18,19 +18,18 @@ This is a rough guide, and things may change!
     describing the changes to nodes and inputs, and how the results should
     be written to files.
     
-## Release 0.10.0
+## Next major release: 0.10.0
 
 * "Camera pack" files which hold filter and calibration data for particular
 setups in an extensible format
 * Flatfield calibration code
+* Reflectance calibration code
 
 
 ## Future releases
 
 * Reorganise the node palette
 * Obtain user stories and feedback
-
-* Calibration: the PCT detection node is fine, but does nothing!
 
 * Filter aberration
     * Filter aberration parameters need to be obtained and added to config

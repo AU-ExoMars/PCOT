@@ -857,7 +857,7 @@ class ImageCube(SourcesObtainable):
         # get the SourceSet
         sources = self.sources.sourceSets[channelNumber]
         # all sources in this channel should have a filter
-        sources = [s for s in sources.sourceSet if s.getFilter()]
+        sources = [s for s in sources.sourceSet if s.getFilter() and s.isMain()]
         # all the sources in this channel should have the same filter
         filters = set([s.getFilter() for s in sources])
         if len(filters) != 1:

@@ -77,26 +77,3 @@ def fit(rho: List[float], signals: List[SimpleValue]) -> Fit:
     sdc = np.sqrt(b / delta)
 
     return Fit(m, c, sdm, sdc)
-
-
-def old_fit(rho: List[float], signal: List[List[float]]):
-    """Version using lists"""
-    # this version calculates the variances up front so we can pool them
-    variances = [np.var(ss) for ss in signal]
-
-    a = sum([1 / x for x in variances])
-    b = sum([(r * r) / v for v, r in zip(variances, rho)])
-    e = sum([r / v for v, r in zip(variances, rho)])
-
-    delta = a * b - e * e
-
-    d = sum([(r * np.mean(ss)) / v for ss, v, r in zip(signal, variances, rho)])
-    f = sum([np.mean(ss) / v for ss, v in zip(signal, variances)])
-
-    m = (a * d - e * f) / delta
-    c = (b * f - e * d) / delta
-
-    sdm = np.sqrt(a / delta)
-    sdc = np.sqrt(b / delta)
-
-    return m, c, sdm, sdc
