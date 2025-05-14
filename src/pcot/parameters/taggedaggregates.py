@@ -689,6 +689,9 @@ class TaggedList(TaggedAggregate):
         """Clear the list"""
         self._values = []
 
+    def __call__(self, *args, **kwargs):
+        raise NotImplementedError("TaggedList does not support __call__")
+
     def serialise(self):
         """Serialise the structure rooted here into a JSON-serialisable list. We don't need to record what the
         types are, because that information will be stored in the type object when we deserialise.

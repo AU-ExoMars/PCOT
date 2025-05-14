@@ -10,11 +10,18 @@ logger = logging.getLogger(__name__)
 # dictionary of CameraData
 _cameras = dict()
 
+class CameraNotFoundException(Exception):
+    name: str
+    def __init__(self, name):
+        self.name = name
+        super().__init__(f"Camera not found: {name}")
+        
+
 
 def getCamera(name: str) -> 'CameraData':
     """Get the CameraData object for the given camera name"""
     if name not in _cameras:
-        raise ValueError(f"Camera {name} not found")
+        raise CameraNotFoundException(name)
     return _cameras[name]
 
 

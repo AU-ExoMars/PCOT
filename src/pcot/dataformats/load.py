@@ -78,7 +78,8 @@ def multifile(directory: str,
               rawloader: Optional[RawLoader] = None,
               inpidx: int = None,
               mapping: ChannelMapping = None,
-              cache: Dict[str, Tuple[np.ndarray, float]] = None) -> Datum:
+              cache: Dict[str, Tuple[np.ndarray, float]] = None,
+              really_no_camera: bool = False) -> Datum:
     """Load an imagecube from multiple files (e.g. a directory of .png files),
     where each file is a monochrome image of a different band. The names of
     the filters for each band are derived from the filenames using the filterpat
@@ -98,10 +99,12 @@ def multifile(directory: str,
         we use the "nominal" depth (8 or 16).
     - inpidx: the input index to use or None if not connected to a graph input
     - mapping: the channel mapping to use or None if the default
-    - camera: the name of the camera to use for filter name lookup etc.
+    - camera: the name of the camera to use for filter name lookup etc. If not set or None, default camera is used
+      (but see really_no_camera)
     - rawloader: a RawLoader object to use for loading raw files (unused if we're not loading raw files)
     - cache: a dictionary of cached data to avoid loading the same file multiple times.
       The key is the filename and the value is a tuple of the image data and the time it was loaded.
+    - really_no_camera: really set the camera to None! This is used when we are just loading images with no regard to band etc.
 
     The regular expression works thus:
         - If the filterpat contains ?P<lens> and ?P<n>, then lens+n is used to look up the filter by position.
@@ -173,12 +176,16 @@ def multifile(directory: str,
             r.applyPreset(presetModel.loadPresetByName(r, preset))
         # now we can use the settings in r
         filterpat = r.filterpat or pcot.config.get('multifile_pattern')
-        camera = r.camera or pcot.config.get('default_camera')
+        if really_no_camera:
+            camera = None
+        else:
+            camera = r.camera or pcot.config.get('default_camera')
         rawloader = r.rawloader
-        
+
     def getFilterSearchParam(p) -> Tuple[Optional[Union[str, int]], Optional[str]]:
         """Returns the thing to search for to match a filter to a path and the type of the search"""
-        if filterre is None:
+
+        if filterre is None or camera is None:
             return None, None
         else:
             m = filterre.match(p)
@@ -201,7 +208,7 @@ def multifile(directory: str,
             elif '<cwl>' in filterpat:
                 return int(m.get('cwl', '0')), 'cwl'
             else:
-                ui.error(f"Multifile loader pattern: bad pattern {filterre}")
+                ui.error(f"Multifile loader pattern: bad pattern {camera} {filterre}, need at least one of <name>, <pos>, <cwl>")
                 return None, None
 
     # first compile the regex

@@ -15,7 +15,7 @@ from pcot.expressions.ops import combineImageWithNumberSources
 from pcot.cameras.filters import Filter
 from pcot.imagecube import ImageCube
 from pcot.rois import ROI, ROICircle
-from pcot.sources import MultiBandSource, SourceSet, Source
+from pcot.sources import MultiBandSource, SourceSet, Source, StringExternal
 from pcot.utils import image
 from pcot.utils.deb import Timer
 from pcot.utils.geom import Rect
@@ -25,6 +25,7 @@ from pcot.value import Value
 from pcot.xform import XFormException
 
 logger = logging.getLogger(__name__)
+
 
 @datumfunc
 def flat(val, *args):
@@ -570,27 +571,44 @@ testImageCache = {}
 
 
 @datumfunc
-def testimg(index):
+def testimg(index, usetestfilters=0):
     """
-    Load a test image
+    Load a test image.
     @param index : number : the index of the image to load
+    @param usetestfilters : number : if nonzero, a set of test filter sources for the TEST camera will be created. Default 0.
     """
-    fileList = ("marsRGB.png", "gradRGB.png", "corrib.png", "tstreg1.png", "tstreg2.png")
+    fileList = ("marsRGB.png", "gradRGB.png", "corrib.png", "tstreg1.png", "tstreg2.png", "simpct.png")
     n = int(index.get(Datum.NUMBER).n)
     if n < 0:
         raise XFormException('DATA', 'negative test file index')
     n %= len(fileList)
 
+    usetestfilters = int(usetestfilters.get(Datum.NUMBER).n)
     global testImageCache
-    if n in testImageCache:
-        img = testImageCache[n]
+    name_for_cache = f"{n}_{usetestfilters}"        # we keep different entries for usetestfilters and not.
+    if name_for_cache in testImageCache:
+        img = testImageCache[name_for_cache]
     else:
         try:
             p = getAssetPath(fileList[n])
         except FileNotFoundError as e:
             raise XFormException('DATA', f"cannot find test image{fileList[n]}")
-        img = ImageCube.load(p, None, None)
-        testImageCache[n] = img
+
+        # create fake sources
+        if usetestfilters != 0:
+            # you'll need the "test" camera in your cameras to get the filters
+            from pcot.cameras import getCamera
+            ext = StringExternal(f"T{n}", f"Test Image {n}")
+            cam = getCamera("TEST")
+            rs = Source().setBand(cam.getFilter("RED")).setExternal(ext)
+            gs = Source().setBand(cam.getFilter("GREEN")).setExternal(ext)
+            bs = Source().setBand(cam.getFilter("BLUE")).setExternal(ext)
+            sources = MultiBandSource([rs, gs, bs])
+        else:
+            sources = None
+
+        img = ImageCube.load(p, None, sources)
+        testImageCache[name_for_cache] = img
 
     return Datum(Datum.IMG, img)
 
@@ -690,6 +708,7 @@ def minmax(f, n, u, d):
         idx = np.unravel_index(f(n), n.shape)
         return n[idx], u[idx], d[idx]
 
+
 @datumfunc
 def min(val):
     """
@@ -742,7 +761,7 @@ def sum(val):
         return np.sqrt(varianceOfMeans + sumOfVariances)
 
     rr = stats_wrapper(val,
-                       lambda n, u, d: (np.sum(n), sum_of_variances(n,u), pcot.dq.NOUNCERTAINTY))
+                       lambda n, u, d: (np.sum(n), sum_of_variances(n, u), pcot.dq.NOUNCERTAINTY))
     return rr
 
 
@@ -995,7 +1014,7 @@ def reducecircles(img, thresh, useratio=0):
     if img1 is None:
         return None
 
-    useratio = useratio.get(Datum.NUMBER).n > 0.1   # ignore warning due to wrappers
+    useratio = useratio.get(Datum.NUMBER).n > 0.1  # ignore warning due to wrappers
 
     def getsd(img, r):
         """get the maximum pooled SD of the pixels in an ROI across all bands"""
@@ -1026,7 +1045,7 @@ def reducecircles(img, thresh, useratio=0):
         else:
             prev = None
             while True:
-                current = getsd(img1, r)   # get SD of ROI
+                current = getsd(img1, r)  # get SD of ROI
                 # we exit if the SD has stopped decreasing by n or we've hit the minimum radius
                 if prev is not None and (prev - current < thresh or r.r == 1):
                     break
@@ -1079,8 +1098,8 @@ def valuesbyfilter(img):
             table.newRow()
             table.add("ROI", k)
             table.add("filter", f)
-            table.add("n",n)
-            table.add("u",u)
+            table.add("n", n)
+            table.add("u", u)
 
     return Datum(Datum.DATA, table, sources=SourceSet(img.sources.getSources()))
 
@@ -1115,7 +1134,7 @@ def overlay(img1, img2):
     img.uncertainty = np.where(mask, img1.uncertainty, img2.uncertainty)
     # DQ is a bit messier. We want the ORed DQ bits, but we only want NODATA
     # where it's set in BOTH images.
-    dq = (img1.dq | img2.dq) & ~NODATA   # remove NODATA from the ORed DQ
+    dq = (img1.dq | img2.dq) & ~NODATA  # remove NODATA from the ORed DQ
     dq |= mask & img1.dq  # add NODATA from img1 where it's set in img2
     img.dq = dq
     return Datum(Datum.IMG, img)
@@ -1130,7 +1149,7 @@ def getflats(img):
 
     @param img:img:the image to get flats for
     """
-    import builtins     # ugh. because I override max above.
+    import builtins  # ugh. because I override max above.
     import pcot.cameras
 
     img = img.get(Datum.IMG)
@@ -1145,7 +1164,7 @@ def getflats(img):
         raise XFormException('DATA', 'each band must have exactly one filter to get flats')
 
     # and now just turn into a list of filters by band
-    filters = [next(iter(x)) for x in filters]   # ugly idiom for getting only item in set
+    filters = [next(iter(x)) for x in filters]  # ugly idiom for getting only item in set
     logger.debug(f"getflats: Filters are {[x.name for x in filters]}")
 
     # get the cameras from the camera system. Yes, different bands could conceivably come from

@@ -17,10 +17,16 @@ MS_NUMCHANS = len(MS_CHANS)
 MS_WIDTH = 100
 MS_HEIGHT = 50
 
+# this is a fake set of calibration sources we add to check it's ignored appropriately
+calib = SourceSet([Source().setBand(
+    Filter(cwl=700 + i, fwhm=20, transmission=0.9, position=f"calib{i}", name=f"calib{i}"))
+                  .setSecondaryName("calib") for i in range(3)])
+
 
 @pytest.fixture
 def multispecimage():
-    """Fixture to generate a multispectral image with some fudged-up filter data"""
+    """Fixture to generate a multispectral image with some fudged-up filter data. We also add a set of
+    calibration secondary sources to each band which should be ignored by most functions"""
     # fake document
     doc = Document()
     # first let's fake some sources. I don't want the filter bands in linear order, though.
@@ -29,7 +35,9 @@ def multispecimage():
                transmission=20 + i * 5,
                position=f"pos{i}",
                name=f"name{i}")) for i in range(MS_NUMCHANS)]
-    sources = MultiBandSource(sources)
+
+    sources = MultiBandSource(sources).addSetToAllBands(calib)
+
     # and some image data, which is the channel index * 0.1 (if there are 10 channels).
     bands = np.stack([np.full((MS_HEIGHT, MS_WIDTH), i / MS_NUMCHANS) for i in range(MS_NUMCHANS)], axis=-1).astype(
         np.float32)
@@ -133,7 +141,7 @@ def test_wavelength():
     ]
     count = len(sources)
 
-    sources = MultiBandSource(sources)
+    sources = MultiBandSource(sources).addSetToAllBands(calib)
     # and some image data, which is the channel index * 0.1 (if there are 10 channels).
     bands = np.stack([np.full((MS_HEIGHT, MS_WIDTH), i / count) for i in range(count)], axis=-1).astype(
         np.float32)
@@ -169,7 +177,7 @@ def test_wavelength_widest():
         makesource(doc, 15, 640, 5)
     ]
     count = len(sources)
-    sources = MultiBandSource(sources)
+    sources = MultiBandSource(sources).addSetToAllBands(calib)
     bands = np.stack([np.full((MS_HEIGHT, MS_WIDTH), i / count) for i in range(count)], axis=-1).astype(
         np.float32)
     img = ImageCube(bands, ChannelMapping(), sources, defaultMapping=None)

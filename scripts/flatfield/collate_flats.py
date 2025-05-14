@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 This is an example script to show how you might possibly 
 arrange and collect flatfield files into groups for processing.
@@ -14,11 +15,13 @@ This script:
       can but they must all be the same exposure.
     * Copy the files into a directory for each filter.
     
-We still need to do the actual processing into single flatfield images for each filter:
+We still need to do the actual processing into single flatfield images for each filter - this
+is done in gencam:
     * for each image, set saturated bits in the DQ
     * if any (or all?) images are saturated at a particular pixel, mark uncertainty as zero
     * OR all the DQ bits together across all images
-    * average the images nominal values and process uncertainty too (should be done automatically)
+    * average the images nominal values and process uncertainty too (should be done automatically
+      but may be done at a later stage, e.g. with darks)
 """
 
 import re
@@ -42,7 +45,11 @@ args = parser.parse_args()
 #   "pos" should match positions, like L01 or R11.
 #   "exp" should match exposure times, typically seconds.
 
-regex = re.compile(r"[0-9]{6}_[0-9]{6}_Training Model-(?P<pos>(L|R)[0-9]+)_\+[0-9]{3}_(?P<exp>[0-9\.]+)m?s.*"+args.extension)
+# This regex is for AUPE calibration
+regex = re.compile(r"[lr]-flat-h-e(?P<exp>[0-9]{2})-i40_[lr]wac_F(?P<pos>[0-9]{2})_[0-9]{3}")
+
+# This regex is for training model calibration
+# regex = re.compile(r"[0-9]{6}_[0-9]{6}_Training Model-(?P<pos>(L|R)[0-9]+)_\+[0-9]{3}_(?P<exp>[0-9\.]+)m?s.*"+args.extension)
 
 @dataclass
 class ImageFile:

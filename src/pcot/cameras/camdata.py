@@ -176,13 +176,31 @@ class CameraData:
         ds.writeDatum("params", Datum(Datum.CAMERAPARAMS, params, nullSourceSet))
         return ds
 
-    def getFilter(self, target, search):
+    def getFilter(self, target, search='name'):
         """Get the filter from the camera data. The search parameter is one of 'name', 'pos' or 'cwl'."""
 
         def get_match(params, key, value):
             matches = []
+            target_is_numeric = False
+            if key == 'position':
+                # position matches are numeric IF the target we are looking for is a valid integer
+                # Otherwise they are string matches. This makes sure that "2" = "02" but that "L03" also
+                # works as a target
+                try:
+                    value = int(value)
+                    target_is_numeric = True
+                except ValueError:
+                    pass
+
             for x in params.filters.values():
-                if getattr(x, key) == value:
+                v_in_filter = getattr(x, key)
+                # position matches are numeric!
+                if key == 'position' and target_is_numeric:
+                    try:
+                        v_in_filter = float(v_in_filter)
+                    except ValueError:
+                        v_in_filter = -100  # make sure it won't match if it's not a float
+                if v_in_filter == value:
                     matches.append(x)
             if len(matches) > 1:
                 raise ValueError(f"Multiple matches for {key}={value}")
