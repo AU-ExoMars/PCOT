@@ -75,7 +75,7 @@ class MeanFloodFiller(FloodFillerBase):
         maxpix = self.params.maxpix
         threshold = self.params.threshold
         # build a 1D mask for the image - this will be the output
-        mask = np.zeros(size, dtype=np.bool)
+        mask = np.zeros(size, dtype=bool)
 
         queue = deque([x + y * w])
         while queue:
