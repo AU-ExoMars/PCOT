@@ -43,7 +43,7 @@ def gencam(args):
     with open(args.params) as f:
         # load the YAML file and process the filter information in the "filters" key
         d = yaml.safe_load(f)
-        fs = createFilters(d["filters"])
+        fs = createFilters(d["filters"], d.get("filter_positions"))
         # create a new Params object and pass in the filter.
         p = camdata.CameraParams(fs)
         # Now fill in the rest of the data from the YAML file
@@ -104,19 +104,40 @@ def gencam(args):
             logger.info("Flats processing disabled by --nocalib option")
 
 
-def createFilters(filter_dicts):
+def createFilters(filter_dict, position_dict=None):
     """
     Given the filter data in the YAML file, create a dictionary of Filter objects keyed by the filter name.
+    Position data can be specified either by a "position: name" in an optional "filter_positions" dict, or
+    directly in the filter (for legacy). If the position dict is present, the filter dict must not contain
+    position entries. If there are position entries, there must be no position dict.
     """
     from pcot.cameras import filters
-    fs = {}
-    for k, d in filter_dicts.items():
+
+    # we need to reverse the position dictionary from position:name to name:position
+    if position_dict is not None:
+        # check that the filter_dict does not contain position entries
+        for k, d in filter_dict.items():
+            if "position" in d:
+                raise ValueError(f"Filter {k} has a position entry but position_dict is also provided")
+        # reverse the position dict
+        position_dict = {v: k for k, v in position_dict.items()}
+    fs = {}  # the output dictionary of Filter objects
+    for k, d in filter_dict.items():
+        if position_dict:
+            # if we have a position dict, use that to get the position
+            if k not in position_dict:
+                raise ValueError(f"Filter {k} not found in position dictionary")
+            pos = position_dict[k]
+        elif "position" in d:
+            pos = d["position"]
+        else:
+            raise ValueError(f"Filter {k} does not have a position, and no position dictionary was provided")
         f = filters.Filter(
             d["cwl"],
             d["fwhm"],
             transmission=d.get("transmission", 1.0),
             name=k,
-            position=d.get("position", k),
+            position=pos,
             description=d.get("description", "No description given"))
         fs[k] = f
     return fs
