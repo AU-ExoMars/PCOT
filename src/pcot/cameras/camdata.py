@@ -20,6 +20,8 @@ CAMDICT = TaggedDictType(
     description=("Description of camera data", Maybe(str), None),
     short=("Short description of camera data", Maybe(str), None),
     source_filename=("Name of YAML file from which data was generated", Maybe(str), None),
+    has_flats=("Does this camera have flatfields?", bool, False),       # for information only, not used in the code
+    has_reflectances=("Does this camera have reflectance data?", bool, False), # for information only, not used in the code
     filters=("List of filters", FILTERLIST),
 )
 

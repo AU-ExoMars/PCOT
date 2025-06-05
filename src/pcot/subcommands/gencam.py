@@ -74,6 +74,7 @@ def gencam(args):
         p.reflectances = {}
         if "reflectance" in d:
             logger.info("reflectance section found")
+            p.params.has_reflectances = True
             for target, filename in d["reflectance"].items():
                 logger.info(f"Processing reflectance data for {target}")
                 # we pass in the filters so we can check they exist when referred to in the reflectance data.
@@ -81,30 +82,40 @@ def gencam(args):
                 p.reflectances[target] = process_reflectance(filename, fs, filter_aliases)
                 logger.info(f"Reflectance data for {target} is {p.reflectances[target]}")
 
-        # Write the parameter data to the output file.
-        store = camdata.CameraData.openStoreAndWrite(args.output, p)
-        logger.info(f"camera data written to {args.output}")
-
         # get information about any flats from the YAML. We can have the data in the YAML but disabled,
         # so flats aren't generated, but setting the "disabled" key. We can also do this by using the
         # --nocalib option, which won't save calib data AND will add "_NOCALIB" to the camera name.
 
+        p.params.has_flats = False
         if not args.nocalib:
-            logger.info("Flats section found")
             if "flats" in d:
-                flatd = d["flats"]
-                if "disabled" in flatd and flatd["disabled"]:
+                logger.info("Flats section found")
+                if "disabled" in d["flats"] and d["flats"]["disabled"]:
                     logger.info("Flats processing disabled by 'disabled' option in YAML file")
                 else:
-                    data = FlatFileData(p.params.name,
-                                        flatd["directory"],
-                                        flatd["extension"],
-                                        flatd["key"],       # "name" or "position"
-                                        flatd.get("preset", None),
-                                        flatd.get("bitdepth", None),
-                                        fs)
-                    process_flats(store, data)
-                    logger.info("Flats processing complete")
+                    p.params.has_flats = True
+        else:
+            logger.info("Flats processing disabled by --nocalib option")
+
+        # Write the parameter data to the output file.
+        store = camdata.CameraData.openStoreAndWrite(args.output, p)
+        logger.info(f"camera data written to {args.output}")
+
+        # Now we can process the flats, if they are enabled and present. We have to do this after opening
+        # the store and writing the initial data.
+
+        if p.params.has_flats:
+            logger.info("Processing flats")
+            flatd = d["flats"]
+            data = FlatFileData(p.params.name,
+                                flatd["directory"],
+                                flatd["extension"],
+                                flatd["key"],       # "name" or "position"
+                                flatd.get("preset", None),
+                                flatd.get("bitdepth", None),
+                                fs)
+            process_flats(store, data)
+            logger.info("Flats processing complete")
         else:
             logger.info("Flats processing disabled by --nocalib option")
 
