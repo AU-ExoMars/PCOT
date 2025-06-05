@@ -15,9 +15,11 @@ FILTERLIST = TaggedListType(FILTERDICT, 0)
 CAMDICT = TaggedDictType(
     name=("Name of camera", Maybe(str), None),
     date=("Date of camera data", Maybe(str), None),
+    compilation_time=("Date and time of camera data compilation", Maybe(str), None),
     author=("Author of camera data", Maybe(str), None),
     description=("Description of camera data", Maybe(str), None),
     short=("Short description of camera data", Maybe(str), None),
+    source_filename=("Name of YAML file from which data was generated", Maybe(str), None),
     filters=("List of filters", FILTERLIST),
 )
 

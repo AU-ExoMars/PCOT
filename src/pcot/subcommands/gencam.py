@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import datetime
 import glob
 import os
 
@@ -51,10 +52,14 @@ def gencam(args):
         if args.nocalib:
             logger.info("Adding _NOCALIB to camera name")
             p.params.name += "_NOCALIB"
+        # this is the date that the author writes in the YAML file
         p.params.date = d["date"].strftime("%Y-%m-%d")
+        # record the time that the file was compiled
+        p.params.compilation_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         p.params.author = d["author"]
         p.params.description = d["description"]
         p.params.short = d["short"]
+        p.params.source_filename = args.params
 
         # Sometimes the reflectance data refers to filters by other names. We deal with that here
         # by providing a dictionary of aliases to filter names.

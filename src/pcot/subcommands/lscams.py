@@ -46,6 +46,8 @@ def show(camera, args):
     print(f"{camera.params.params.name:20} {base_file_name}: {camera.params.params.short}")
     if args.long:
         print(f"{camera.params.params.description}")
+        print(f" Date from YAML file: {camera.params.params.date or 'No date provided'}")
+        print(f" Compilation date: {camera.params.params.compilation_time or 'No date provided (earlier than 05/06/2025'}")
     if args.filters:
         print(f"  Filters:")
         print(f"    {'Name':<5} {'Pos':<5} {'CWL':<5} {'FWHM':<5} {'transmission':14}")
