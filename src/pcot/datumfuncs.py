@@ -15,7 +15,7 @@ from pcot.expressions.ops import combineImageWithNumberSources
 from pcot.cameras.filters import Filter
 from pcot.imagecube import ImageCube
 from pcot.rois import ROI, ROICircle
-from pcot.sources import MultiBandSource, SourceSet, Source, StringExternal
+from pcot.sources import MultiBandSource, SourceSet, Source, StringExternal, nullSourceSet
 from pcot.utils import image
 from pcot.utils.deb import Timer
 from pcot.utils.geom import Rect
@@ -1188,3 +1188,26 @@ def getflats(img):
         raise XFormException('DATA', 'flatfield images must be single-channel')
 
     return merge(*flats)
+
+
+@datumfunc
+def stripsources(d):
+    """
+    Strip all sources from a datum, leaving the data intact. This is sometimes necessary in certain
+    processing pipelines e.g. to avoid bands with multiple sources in spectrum nodes.
+
+    @param d:img,number:the data to strip sources from
+    """
+    if d.tp == Datum.IMG:
+        img = d.get(Datum.IMG)
+        if img is None:
+            return None
+        img = img.shallowCopy()
+        img.sources = MultiBandSource()
+        return Datum(Datum.IMG, img)
+    else:
+        # we assume it's a number, and just return it as is
+        n = d.get(Datum.NUMBER)
+        if n is None:
+            return None
+        return Datum(Datum.NUMBER, n, sources=nullSourceSet)
