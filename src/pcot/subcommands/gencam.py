@@ -22,6 +22,11 @@ class FlatFileData:
     bitdepth: int  # how many bits are used; we scale the data according to this
     filters: dict  # a dictionary of filtername -> Filter object.
 
+    # Each filter has a directory, which is usually named after the filter name or position.
+    # This optional directory maps each filter onto the name of its directory, from either
+    # the filter name or position depending on the key.
+    directory_map: dict
+
 
 @subcommand([
     argument('params', type=str, metavar='YAML_FILENAME', help="Input YAML file with parameters"),
@@ -113,7 +118,8 @@ def gencam(args):
                                 flatd["key"],       # "name" or "position"
                                 flatd.get("preset", None),
                                 flatd.get("bitdepth", None),
-                                fs)
+                                fs,
+                                flatd.get("directory_map", None))
             process_flats(store, data)
             logger.info("Flats processing complete")
         else:
@@ -208,8 +214,19 @@ def get_files_for_filter(filt, rawloader, data):
 
     camname = data.camera_name
     # files should be in a directory named for some attribute in Filter, pretty much
-    # always "name" or "position"
-    filter_dir_name = getattr(filt, data.key)
+    # always "name" or "position"; for example if we are using the position key, you
+    # might have directories called "01", "02", "03" etc. for each filter in the camera.
+
+    # It could be that this directory is remapped by the filter_remap dictionary, so we'll sort
+    # that out first.
+
+    filter_dir_name = getattr(filt, data.key)   # get the position/name of the filter
+    if data.directory_map is not None:
+        # if the filter is remapped, use the remapped name as the directory name
+        if filter_dir_name not in data.directory_map:
+            raise ValueError(f"Filter {filter_dir_name} not found in filter_remap dictionary")
+        filter_dir_name = data.directory_map[filter_dir_name]
+
     # build the full directory path
     dirpath = str(os.path.join(os.path.expanduser(data.directory), filter_dir_name))
     globpath = os.path.join(dirpath, f"*.{data.extension}")
