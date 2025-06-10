@@ -5,7 +5,10 @@ import numpy as np
 
 def imgsplit(img):
     """Does the same as cv.split, effectively, but is guaranteed to work on >3 channels. Who knows if CV will
-    always do that."""
+    always do that. Will also split a single band image into a single channel."""
+    if img.ndim == 2:
+        # single band image, return as a list with one element
+        return [img]
     return [np.reshape(x, img.shape[:2]) for x in np.dsplit(img, img.shape[-1])]
 
 

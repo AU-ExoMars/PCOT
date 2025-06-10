@@ -12,8 +12,8 @@ from pcot.xform import xformtype, XFormType
 from matplotlib import cm
 
 
-def gethistogram(chan, weights, bincount):
-    r = np.histogram(chan, bincount, range=(0, 1), weights=weights)
+def gethistogram(chan, weights, bincount, range):
+    r = np.histogram(chan, bincount, range=range, weights=weights)
     return r  # split out for debugging
 
 
@@ -58,8 +58,13 @@ class XFormHistogram(XFormType):
             # generate a list of labels, one for each channel
             labels = [s.brief(node.graph.doc.settings.captionType) for s in img.sources.sourceSets]
             # generate a (data,bins) tuple for each channel taking account of the weight for that channel.
-            hists = [gethistogram(chan, weights[:, :, i], node.params.bincount) for i, chan in
-                     enumerate(image.imgsplit(subimg.img))]
+            range = (subimg.img.min(), subimg.img.max())
+            if subimg.img.ndim == 2:
+                # single band image
+                hists = [gethistogram(subimg.img, weights[:, :], node.params.bincount, range=range)]
+            else:
+                hists = [gethistogram(chan, weights[:, :, i], node.params.bincount, range=range) for i, chan in
+                         enumerate(image.imgsplit(subimg.img))]
             # they must be the same size
             assert (len(labels) == len(hists))
             # unzips the (data,bins) tuple list into two lists of data and bins

@@ -78,6 +78,12 @@ class Table:
         else:
             return str(v).strip()
 
+    def rowAsStrings(self, i):
+        """Return row i as list of strings"""
+        if i < 0 or i >= len(self.rows):
+            raise IndexError("Row index out of range")
+        return [self._printable(self.rows[self._keys[i]][k]) for k in self._keys]
+
     def __str__(self):
         """Convert entire table to a string"""
         s = io.StringIO()

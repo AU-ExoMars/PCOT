@@ -1,20 +1,22 @@
 import builtins
 import logging
 import dataclasses
-from typing import Tuple, List, Dict
+from typing import List, Dict
 
 import numpy as np
 from PySide2.QtCore import Qt
+from PySide2 import QtWidgets
 
 import pcot.ui.tabs
-from pcot import config, cameras, ui
+from pcot import cameras, ui
 import pcot.calib
 from pcot.calib import SimpleValue
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe
-from pcot.sources import nullSourceSet
+from pcot.ui.tabledialog import TableDialog
 from pcot.utils import SignalBlocker, image
 from pcot.utils.maths import pooled_sd
+from pcot.utils.table import Table
 from pcot.value import Value
 from pcot.xform import XFormType, xformtype, XFormException
 
@@ -298,6 +300,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
         self.w.replot.clicked.connect(self.replot)
         self.w.showPatchesBox.stateChanged.connect(self.showPatchesStateChanged)
         self.w.saveButton.clicked.connect(self.save)
+        self.w.showMCButton.clicked.connect(self.showMCClicked)
 
         self.w.zeroFudgeBox.stateChanged.connect(self.zeroFudgeStateChanged)
         self.w.simplifyFudgeBox.stateChanged.connect(self.simplifyFudgeStateChanged)
@@ -305,6 +308,27 @@ class TabReflectance(pcot.ui.tabs.Tab):
 
     def save(self):
         self.w.mpl.save()
+
+    def showMCClicked(self):
+        # open a dialog containing a single text edit box with the gradient and intercept values
+
+        m = self.node.getOutput(0, Datum.NUMBER)
+        c = self.node.getOutput(1, Datum.NUMBER)
+        # construct a Table and pass it to a TableDialog
+        if m is not None and c is not None:
+            table = Table()
+            for i, f in enumerate(self.node.filters):
+                table.newRow(f.name)
+                table.add("Filter", f.name)
+                table.add("Gradient", m[i])
+                table.add("Intercept", c[i])
+
+            dialog = TableDialog("Gradients and intercepts", table)
+            dialog.exec_()
+
+
+
+
 
     def targetChanged(self, i):
         self.mark()
