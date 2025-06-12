@@ -146,8 +146,8 @@ EPSILON = 0.00001
 
 
 class Value:
-    """Wraps a value with uncertainty and data quality. This can be either an array or a scalar, but they
-    have to match."""
+    """Wraps a value with uncertainty and data quality. This can be either an array or a scalar,
+    but they have to match."""
 
     # each of these is either a scalar or an array
     n: Union[NDArray[np.float32], np.float32]
