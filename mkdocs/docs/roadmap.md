@@ -9,7 +9,7 @@ setups in an extensible format
 * Flatfield calibration code
 * Reflectance calibration code
 
-## Previous elease 0.9.0
+## Previous release 0.9.0
 
 * New node parameter system:
     * makes the node self-documenting (node parameters appear as a table,
