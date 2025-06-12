@@ -11,7 +11,8 @@ def test_rgb_load(globaldatadir):
     pcot.setup()
     doc = Document()
     # having created a document, set an input. Try one that doesn't exist first.
-    assert doc.setInputRGB(0, "thisfiledoesntexist234234") == 'Cannot read file thisfiledoesntexist234234'
+    assert doc.setInputRGB(0, "thisfiledoesntexist234234.png") == 'Cannot load image thisfiledoesntexist234234.png'
+    assert doc.setInputRGB(0, "thisfiledoesntexist234234") == 'Cannot load image thisfiledoesntexist234234 - not a valid raster format'
     assert doc.setInputRGB(0, str(globaldatadir / "basn0g01.png")) is None  # now try the right one
     # create a document with just an input node in it, to bring that input into the document's graph
     node = doc.graph.create("input 0")

@@ -53,7 +53,7 @@ def show(camera, args):
     if args.long:
         print(f"{p.description}")
         print(f" Date from YAML file: {p.date or 'No date provided'}")
-        print(f" Compilation date: {p.compilation_time or 'No date provided (earlier than 05/06/2025'}")
+        print(f" Compilation date: {p.compilation_time or 'No date provided (earlier than 05/06/2025)'}")
         print(f" Compiled from: {p.source_filename or 'No source file provided'}")
         if p.has_reflectances:
             print(f" Reflectances supported: {', '.join(camera.getReflectances().keys())}")

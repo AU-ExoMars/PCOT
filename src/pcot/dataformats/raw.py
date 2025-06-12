@@ -64,6 +64,16 @@ class RawLoader:
     def deserialise(self, d: dict):
         for k, v in self.SERIALISE:
             setattr(self, k, d.get(k, v))
+        if isinstance(self.format, str):
+            self.format = RawLoader.formatByName(self.format)
+        return self
+
+    def dump(self):
+        """Dump the loader parameters to a string."""
+        return f"format={self.FORMAT_NAMES[self.format]}, " \
+               f"width={self.width}, height={self.height}, " \
+               f"bigendian={self.bigendian}, offset={self.offset}, " \
+               f"rot={self.rot}, horzflip={self.horzflip}, vertflip={self.vertflip}"
 
     def load(self, filename: str, bitdepth=None) -> np.ndarray:
         """Loads the raw file and returns an array object."""

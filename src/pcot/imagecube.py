@@ -13,7 +13,6 @@ from typing import List, Optional, Tuple, Sequence, Union
 import cv2 as cv
 import numpy as np
 from PySide2.QtGui import QPainter
-from tifffile.geodb import Datum
 
 import pcot
 from pcot import dq, ui
@@ -29,6 +28,10 @@ import pcot.dq
 from pcot.value import Value
 
 logger = logging.getLogger(__name__)
+
+# these are files we can load directly - not PARC or Raw. They are used by the ImageCube.load() method,
+# and also provide a list of raster types we can export.
+VALID_RASTER_FORMATS = ('png', 'jpg', 'jpeg', 'bmp', 'tiff')
 
 
 class SubImageCube:
@@ -303,6 +306,19 @@ class ChannelMapping:
         return "ChannelMapping-{} r{} g{} b{}".format(id(self), self.red, self.green, self.blue)
 
 
+class CannotLoadImageException(Exception):
+    """This is raised when an image cannot be loaded for an unknown reason"""
+    def __init__(self, fname, reason=None):
+        super().__init__(f"Cannot load image {fname}{' - ' + reason if reason else ''}")
+        self.fname = fname
+
+
+class CannotLoadImageBadFormatException(CannotLoadImageException):
+    """This is raised when an image cannot be loaded because it is not a valid raster format"""
+    def __init__(self, fname):
+        super().__init__(fname, "not a valid raster format")
+
+
 def load_rgb_image(fname, bitdepth=None) -> np.ndarray:
     """This is used by ImageCube to load its image data. It's a function because it's
     also used by the multifile loader."""
@@ -311,7 +327,11 @@ def load_rgb_image(fname, bitdepth=None) -> np.ndarray:
     # number of channels
     img = cv.imread(fname, -1)
     if img is None:
-        raise Exception(f'Cannot read file {fname}')
+        # get the extension of the file
+        ext = os.path.splitext(fname)[1].lower()
+        if len(ext)==0 or ext[1:] not in VALID_RASTER_FORMATS:  # extensions still have the dot after splitext!
+            raise CannotLoadImageBadFormatException(fname)
+        raise CannotLoadImageException(fname)
     if len(img.shape) == 2:  # expand to RGB. Annoyingly we cut it down later sometimes.
         img = image.imgmerge((img, img, img))
     # get the scaling factor, which depends on the bitdepth if one is provided, or will be the full bitdepth of
@@ -1109,7 +1129,7 @@ class ImageCube(SourcesObtainable):
             imageexport.exportPDF(self, filename, annotations=annotations)
         elif format == 'svg':
             imageexport.exportSVG(self, filename, annotations=annotations)
-        elif format in ('png', 'jpg', 'jpeg', 'bmp', 'tiff'):
+        elif format in VALID_RASTER_FORMATS:
             if annotations:
                 imageexport.exportRaster(self, filename, annotations=annotations, pixelWidth=pixelWidth)
             else:

@@ -3,6 +3,7 @@ import datetime
 import glob
 import os
 
+from pcot.imagecube import CannotLoadImageBadFormatException
 from pcot.subcommands import subcommand, argument
 from dataclasses import dataclass
 import logging
@@ -26,6 +27,44 @@ class FlatFileData:
     # This optional directory maps each filter onto the name of its directory, from either
     # the filter name or position depending on the key.
     directory_map: dict
+    rawloader: object   # it's a RawLoader or None
+
+
+def get_raw_loader(d):
+    """This gets a RawLoader, or None. It can either build a raw loader from a preset
+    or from values in the dict"""
+    from pcot.dataformats.raw import RawLoader
+
+    # all raw loader data is in 'rawloder' - this can be either 'preset' or
+    # all the individual preset data elements.
+    if 'rawloader' not in d:
+        return None
+
+    d = d['rawloader']
+
+    if 'preset' in d:
+        from pcot.inputs.multifile import presetModel
+        from pcot.ui.presetmgr import PresetOwner
+        preset_name = d['preset']
+        class Preset(PresetOwner):
+            """Minimal preset owner class to hold the rawloader preset"""
+            def applyPreset(self, preset):
+                self.rawloader = RawLoader()
+                self.rawloader.deserialise(preset['rawloader'])
+        preset = Preset()
+        try:
+            preset.applyPreset(presetModel.presets[preset_name])
+            rawloader = preset.rawloader    # pretty sure that variable IS used, despite the warning.
+            logger.info("Using rawloader preset '%s'", preset_name)
+        except KeyError:
+            raise ValueError(
+                f"Preset {preset_name} not found - use multifile input to make one, get one from another user, or set the rawloader directly")
+    else:
+        # otherwise we're using the individual elements
+        rawloader = RawLoader().deserialise(d)
+        logger.info("Using rawloader with parameters: %s", rawloader.dump())
+
+    return rawloader
 
 
 @subcommand([
@@ -112,6 +151,7 @@ def gencam(args):
         if p.params.has_flats:
             logger.info("Processing flats")
             flatd = d["flats"]
+
             data = FlatFileData(p.params.name,
                                 flatd["directory"],
                                 flatd["extension"],
@@ -119,7 +159,8 @@ def gencam(args):
                                 flatd.get("preset", None),
                                 flatd.get("bitdepth", None),
                                 fs,
-                                flatd.get("directory_map", None))
+                                flatd.get("directory_map", None),
+                                get_raw_loader(flatd))
             process_flats(store, data)
             logger.info("Flats processing complete")
         else:
@@ -168,33 +209,7 @@ def createFilters(filter_dict, position_dict=None):
 def process_flats(store, data: FlatFileData):
     """
     Given the flatfield data in the YAML file, process the flatfield images and store the results in the store.
-
     """
-
-    # first, if there is a flat preset, load it
-    if data.preset is not None:
-        from pcot.inputs.multifile import presetModel
-        from pcot.ui.presetmgr import PresetOwner
-        from pcot.dataformats.raw import RawLoader
-
-        class Preset(PresetOwner):
-            """Minimal preset owner class to hold the rawloader preset"""
-
-            def applyPreset(self, preset):
-                self.rawloader = RawLoader()
-                self.rawloader.deserialise(preset['rawloader'])
-
-        # create the minimal preset owner, the thing which has presets applied to it
-        preset = Preset()
-        # pull the preset from the model and apply it to the preset owner
-        try:
-            preset.applyPreset(presetModel.presets[data.preset])
-            rawloader = preset.rawloader
-        except KeyError:
-            raise ValueError(
-                f"Preset {data.preset} not found - use multifile input to make one, or get one from another user")
-    else:
-        rawloader = None
 
     # process the filter directories, providing a callback to save the images
     def save_image(img, camera_name, filt):
@@ -204,10 +219,10 @@ def process_flats(store, data: FlatFileData):
         desc = f"Flatfield for {filt.name} filter, position {filt.position} in camera {camera_name}"
         store.writeDatum(name, dat, desc)
 
-    process_filters_for_flats(save_image, rawloader, data)
+    process_filters_for_flats(save_image, data)
 
 
-def get_files_for_filter(filt, rawloader, data):
+def get_files_for_filter(filt, data):
     """Load the files for a particular filter we need to process"""
     from pcot.datum import Datum
     from pcot.dataformats import load
@@ -239,15 +254,19 @@ def get_files_for_filter(filt, rawloader, data):
     # load all the files. We're not concerned about filter here, so set that to a "don't care"
     # value.
 
-    cube = load.multifile(dirpath, list_of_files, bitdepth=data.bitdepth, filterpat=".*",
-                          camera=None, really_no_camera=True,
-                          rawloader=rawloader).get(Datum.IMG)
+    try:
+        cube = load.multifile(dirpath, list_of_files, bitdepth=data.bitdepth, filterpat=".*",
+                              camera=None, really_no_camera=True,
+                              rawloader=data.rawloader).get(Datum.IMG)
+    except CannotLoadImageBadFormatException as e:
+        raise Exception(f"Cannot load an image due to a bad format extension - should you be using a rawloader?")
+
     if cube is None:
         raise ValueError(f"Failed to load files from {dirpath}: {list_of_files}")
     return cube
 
 
-def process_filters_for_flats(callback, rawloader, data: FlatFileData):
+def process_filters_for_flats(callback, data: FlatFileData):
     """Process each filter in the camera, given the name of the camera and
     the top level directory (as passed to collate_flats). Then call
     the callback function with the created image and filter."""
@@ -261,7 +280,7 @@ def process_filters_for_flats(callback, rawloader, data: FlatFileData):
         logger.info(f"Loading files for {debug_name}")
 
         # load the files into a single big ImageCube
-        cube = get_files_for_filter(filt, rawloader, data)
+        cube = get_files_for_filter(filt, data)
 
         # clear all the NOUNCERTAINTY bits
         cube.dq &= ~dq.NOUNCERTAINTY
