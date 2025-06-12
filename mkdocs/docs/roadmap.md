@@ -2,7 +2,14 @@
 
 This is a rough guide, and things may change!
 
-## Current release 0.9.0
+## Current release: 0.10.0
+
+* "Camera pack" files which hold filter and calibration data for particular
+setups in an extensible format
+* Flatfield calibration code
+* Reflectance calibration code
+
+## Previous elease 0.9.0
 
 * New node parameter system:
     * makes the node self-documenting (node parameters appear as a table,
@@ -18,13 +25,6 @@ This is a rough guide, and things may change!
     describing the changes to nodes and inputs, and how the results should
     be written to files.
     
-## Next major release: 0.10.0
-
-* "Camera pack" files which hold filter and calibration data for particular
-setups in an extensible format
-* Flatfield calibration code
-* Reflectance calibration code
-
 
 ## Future releases
 
