@@ -23,6 +23,7 @@ import pcot.ui as ui
 import pcot.ui.namedialog as namedialog
 import pcot.ui.tabs as tabs
 import pcot.xform as xform
+import pcot.assets
 from pcot.ui.help import HelpWindow
 from pcot.utils import SignalBlocker
 
@@ -448,9 +449,9 @@ class MainUI(ui.tabs.DockableTabWindow):
     def aboutAction(self):
         dialog = QDialog(self)
         uiloader.loadUi('about.ui', dialog)
-        txt = Template(pcot.config.getAssetAsString('about.md')).substitute(version=pcot.__fullversion__)
+        txt = Template(pcot.assets.getAssetAsString('about.md')).substitute(version=pcot.__fullversion__)
         doc = dialog.textEdit.document()
-        doc.setDefaultStyleSheet(pcot.config.getAssetAsString('about.css'))
+        doc.setDefaultStyleSheet(pcot.assets.getAssetAsString('about.css'))
         txt = markdown.markdown(txt)
         doc.setHtml(txt)
         dialog.textEdit.moveCursor(QTextCursor.Start)
