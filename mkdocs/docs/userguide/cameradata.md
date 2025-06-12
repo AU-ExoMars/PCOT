@@ -230,6 +230,14 @@ There are more options:
 * `-l` (long) will list the full description of the camera and whether it has flats and reflectance data
 * `-F` (file) will take a camera data filename rather than a camera name
 
+For example, to show filters and full details for `AUPE_LEFT` we could
+run
+
+```commandline
+pcot lscams -fl AUPE_LEFT
+```
+
+
 ## Further work
 
 Later, more information will be added to the camera data files:
