@@ -173,6 +173,10 @@
             
             <li class="nav-item" data-bs-level="1"><a href="#batch-mode" class="nav-link">Batch mode</a>
               <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#running-the-graph-with-a-batch-file" class="nav-link">Running the graph with a batch file</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -218,6 +222,13 @@ outputs.+.node=gradient
 </code></pre>
 <p>The inputs will keep their settings (e.g. raw loader parameters and filter)
 but new files will be used.</p>
+<h2 id="running-the-graph-with-a-batch-file">Running the graph with a batch file</h2>
+<p>We can then run the graph with a batch file using the <code>pcot batch</code>
+subcommand:</p>
+<pre><code>pcot batch mygraph.pcot mybatchfile.batch ...
+</code></pre>
+<p>Any extra arguments will be set inside the Jinja2 templating engine
+used by the batch runner as <code>var[0]</code>, <code>var[1]</code> etc.</p>
 <p>If we want to do this several times, we can either write multiple batch
 files, or we can run the graph several times in one file, changing it
 each time. Here's an example that runs the graph twice:</p>
@@ -255,7 +266,7 @@ run
 </ul>
 <div class="alert alert-danger fw-bold" role="alert">
 <p>Write more on how the inputs work - intro here, more in params.md or
-elsewhere. Write more in general. Note <a href="/autodocs">autodocs</a>.</p>
+elsewhere. Write more in general. Note <a href="/autodocs/">autodocs</a>.</p>
 <p>Finish.</p>
 </div>
 <ul>

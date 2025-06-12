@@ -329,6 +329,19 @@ run
 node called <code>expr</code>. Each time we are modifying the first (and only) output filename. Note
 that we need to create output for the first run,
 and then we modify its filename for subsequent runs.</p>
+<h3 id="printing-messages">Printing messages</h3>
+<p>The <code>print</code> directive allows messages to be printed during the run:</p>
+<pre><code class="language-txt">outputs.+.file = double.csv
+print doubling some data...
+expr.expr = a*2
+run
+
+outputs.0.file = triple.csv
+print trebling some data...
+expr.expr = a*3
+run
+</code></pre>
+<p>This is particularly useful when using templates, as we will see below.</p>
 <h3 id="using-jinja2-templates">Using Jinja2 templates</h3>
 <p>Before they are run, each parameter file is processed using the
 <a href="https://jinja.palletsprojects.com/en/stable/templates/">Jinja2 templating engine</a>, more typically
@@ -351,6 +364,7 @@ run
     .node = test{{i}}       # get output from node1, node2 or node3.
     .name = testimg{{i}}    # call it testimg1, testimg2 or testimg3
     .description = Test image {{i}}
+    print processing {{i}}  # print a message
     run
 {% endfor %}
 # normally a &quot;run&quot; is silently appended to the end of a parameter file,
@@ -385,6 +399,10 @@ run
 <tr>
 <td>{{count}}</td>
 <td>the number of times the document has been run (useful in loops)</td>
+</tr>
+<tr>
+<td>{{vars}}</td>
+<td>an array of any extra arguments passed on the command line</td>
 </tr>
 <tr>
 <td>{{parampath}}</td>
@@ -426,6 +444,37 @@ run
 <p>This lets us do things like this, which will add the parameter file name
 as a prefix to any text output, but strip off any directory elements:</p>
 <pre><code class="language-txt">output.0.prefix = {{paramfile | basename}}
+</code></pre>
+<h3 id="using-outputs-and-other-lists-in-a-loop">Using outputs (and other lists) in a loop</h3>
+<p>A common use case is writing multiple output files. You may be tempted
+to do something like this:</p>
+<pre><code>{{ for i in range(0,10) }}                  # loop over 10 items
+inputs.0.envi.filename = input{{i}}.hdr     # change input 0 
+outputs.0.node = sink                       # set the output
+.clobber = y                                # can overwrite files
+.filename = output{{i}}.png                 # and change the filename
+{{ endfor }}
+</code></pre>
+<p>That won't work, because output 0 doesn't exist yet. You may try to
+fix it like this:</p>
+<pre><code>{{ for i in range(0,10) }}                  # loop over 10 items
+inputs.0.envi.filename = input{{i}}.hdr     # change input 0 
+outputs.+.node = sink                       # create new output!
+.clobber = y                                # can overwrite files
+.filename = output{{i}}.png                 # and change the filename
+{{ endfor }}
+</code></pre>
+<p>but while that will run it will create a new output each time it goes around
+the loop!
+The right way to do it is to create the output and set it up
+before the loop, only changing the bits you need to:</p>
+<pre><code>outputs.+.node = sink                       # create new output!
+.clobber = y                                # can overwrite files
+
+{{ for i in range(0,10) }}                  # loop over 10 items
+inputs.0.envi.filename = input{{i}}.hdr     # change input 0 
+outputs.0.filename = output{{i}}.png        # and change the output filename
+{{ endfor }}
 </code></pre>
 <div class="alert alert-danger" role="alert">
 <p>Not yet written below here</p>

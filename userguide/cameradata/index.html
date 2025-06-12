@@ -1,0 +1,481 @@
+<!DOCTYPE html><html lang="en">
+    <head>
+    
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="robots" content="noindex,nofollow">
+
+        <title>Camera data - PCOT Documentation</title>
+    
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css">
+    <link rel="stylesheet" href="../../css/lightbox.min.css">
+    <link rel="stylesheet" href="../../css/site.css">
+
+    
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
+    <script src="../../js/lightbox-plus-jquery.min.js"></script>
+ 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container ">
+                <a class="navbar-brand" href="../..">PCOT Documentation</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Getting Started <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../gettingstarted/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/installrun/" class="dropdown-item">Installing and running</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/concepts/" class="dropdown-item">PCOT concepts</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/tutorial/" class="dropdown-item">Tutorial</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/inputs/" class="dropdown-item">Loading other image formats</a>
+</li>
+                                    
+<li>
+    <a href="../../gettingstarted/help/" class="dropdown-item">Getting help</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../principles/" class="dropdown-item">Operating principles</a>
+</li>
+                                    
+<li>
+    <a href="../canvas/" class="dropdown-item">The Canvas</a>
+</li>
+                                    
+<li>
+    <a href="../globalcontrols/" class="dropdown-item">Global Controls</a>
+</li>
+                                    
+<li>
+    <a href="../multifile/" class="dropdown-item">Reading images from multiple files</a>
+</li>
+                                    
+<li>
+    <a href="../expr/" class="dropdown-item">The "expr" node for mathematical expressions</a>
+</li>
+                                    
+<li>
+    <a href="../batch/" class="dropdown-item">Batch mode</a>
+</li>
+                                    
+<li>
+    <a href="../../autodocs/" class="dropdown-item">Autodocs</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer's Guide <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../devguide/" class="dropdown-item">Overview</a>
+</li>
+                                    
+<li>
+    <a href="../../devguide/library/" class="dropdown-item">Using PCOT as a library</a>
+</li>
+                                    
+<li>
+    <a href="../../devguide/plugins/" class="dropdown-item">Writing PCOT plugins</a>
+</li>
+                                    
+<li>
+    <a href="../../devguide/nodeser/" class="dropdown-item">Node serialisation</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="navitem">
+                                <a href="../../roadmap/" class="nav-link">Roadmap</a>
+                            </li>
+                            <li class="navitem">
+                                <a href="../../gettingstarted/issues/" class="nav-link">Known issues</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container ">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#camera-data" class="nav-link">Camera data</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#obtaining-camera-files" class="nav-link">Obtaining camera files</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#creating-camera-files" class="nav-link">Creating camera files</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#format-of-the-yaml-file" class="nav-link">Format of the YAML file</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#flatfield-data" class="nav-link">Flatfield data</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#reflectance-data" class="nav-link">Reflectance data</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#listing-camera-data-using-pcot" class="nav-link">Listing camera data using PCOT</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#further-work" class="nav-link">Further work</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="camera-data">Camera data</h1>
+<p>Each camera used with PCOT has different filters and other associated data.
+PCOT needs to know about these, and stores them in camera data files.
+These are in PCOT's archive format and so have the PARC extension.</p>
+<p>When you start PCOT for the first time 
+you will need to tell it where to find these files. PCOT will load all
+the camera files from the provided directory, storing them under
+names given in the files themselves.</p>
+<h2 id="obtaining-camera-files">Obtaining camera files</h2>
+<p>Initial version of the files are stored in the PCOT repository with
+PCOT itself, in the <code>cameras</code> directory. For example, a file for PANCAM
+can be found in <code>PCOT/cameras/pancam.parc</code>. Currently these files hold
+very little calibration data, just the filter information.</p>
+<p>You should be able to download camera files containing full
+data for AUPE and PanCam
+from the <a href="pcot.aber.ac.uk">PCOT Cookbook</a> site. Data will be added
+to this server when it becomes available.</p>
+<p>The rest of this page describes how to make your own data files if you
+are working with a new camera.</p>
+<h2 id="creating-camera-files">Creating camera files</h2>
+<p>Camera data is generated from a YAML parameter file (and possibly extra data)
+and stored in a PARC file.</p>
+<p>To create a camera data file, run the <code>pcot gencam</code> command:</p>
+<pre><code>pcot gencam cameraname.yaml cameraname.parc
+</code></pre>
+<h2 id="format-of-the-yaml-file">Format of the YAML file</h2>
+<p>The camera parameter file should have the following form at minimum:</p>
+<pre><code class="language-yaml">name: AUPE                  # short name of the camera
+date: 2025-03-04            # date of the camera data in YYYY-MM-DD format (ISO 8601)
+author: Jim Finnis &lt;jcf12@aber.ac.uk&gt;       # author of the camera data
+# short description of the camera, much less than 80 chars
+short: The left WAC on the Aberystwyth University PanCam Emulator
+
+# longer description of the camera
+
+description: |
+    The Aberystwyth University PANCAM Emulator
+    This dataset represents AUPE as it was on 4th March 2025.
+
+# Filters organised thus:
+
+filters:
+  C01L:                     # filter name
+    cwl: 640                # centre wavelength
+    fwhm: 100               # full-width at half-maximum
+    position: L03           # position in camera (e.g. L03 for left wheel, number 3)
+    transmission: 1.0       # transmission ratio
+    description: &quot;Red broadband&quot;    # short phrase describing the filter
+  C02L:
+    cwl: 540
+    fwhm: 80
+    position: L02
+    transmission: 1.0
+    description: &quot;Green broadband&quot;
+(and so on)
+</code></pre>
+<h2 id="flatfield-data">Flatfield data</h2>
+<p>The <code>gencam</code> command will build flatfield data from a large number of images captured for
+each filter. These images should be stored in a directory for each filter, named for the filter
+name. For example:</p>
+<pre><code class="language-text">filters
+|-- C01L
+|   |-- 001.png
+|   |-- 002.png
+|   |-- 003.png
+|   |-- 004.png
+|   `-- 005.png
+`-- C02L
+    |-- 001.png
+    |-- 002.png
+    |-- 003.png
+    |-- 004.png
+    `-- 005.png
+</code></pre>
+<p>The name of the directory should be the name or position of the filter according to the filters
+section of the file. Which is used depends on the <code>key</code> field (see below).
+The number and names of the files within the directories is unimportant, but they must be
+monochrome images of the same format and size.</p>
+<p>The files are processed as follows:</p>
+<ul>
+<li>All files are loaded in and processed into floating point data in the range <span class="arithmatex"><span class="MathJax_Preview">[0,1]</span><script type="math/tex">[0,1]</script></span>.</li>
+<li>The files are scanned for saturated data (data equal to 1) and these pixels are masked out.</li>
+<li>The mean is found of each pixel, disregarding saturated pixels, and the results stored in
+a single image.</li>
+<li>The uncertainty is calculated as the std. dev. of the pixels used.</li>
+<li>If all bits for a pixel were saturated, the DQ SAT bit for that pixel is set and its
+value is set to zero.</li>
+</ul>
+<div class="alert alert-danger" role="alert">
+<p>The result is not divided by the mean or processed further in any way - later this may
+be done when darkfields are implemented, but this can be done downstream for the moment.</p>
+</div>
+<p>For flats to be included the YAML file should contain a <code>flats</code> section like this:</p>
+<pre><code class="language-yaml">flats:
+    # enabled: yes      # uncomment this line to avoid saving flatfield data (to save space)
+    directory: foo/filters  # the path to the directory, e.g. &quot;filters&quot; in example above
+    extension: png      # extension of image files (png or bin)
+    bitdepth: 10        # how many bits are used in the data - this is 16bit data but only 
+                        # the lower 10 bits are used - data will be multiplied up
+    key: name           # &quot;name&quot; or &quot;position&quot; - the filter directories can be named for either        
+</code></pre>
+<p>If you are creating the data from raw files - and this is typically the case - you will need to
+specify how those files should be loaded. This can be done with the <code>rawloader</code> subsection, which consists of a
+full specification for the raw loader (recommended) or a preset. You do not need to specify a preset if PNGs are used.
+To specify the raw loader fully use the following format:</p>
+<pre><code class="language-yaml">flats:
+    directory: flats
+    key: position         # the subdirectories are named for the filter position
+    extension: bin        # loading raw files
+    bitdepth: 10
+    rawloader: # u16, 1024x1024, 48-bit offset, bigendian, rotate 90 CCW
+        # preset: pancamraw   
+        format: u16     # 16-bit unsigned integer data; others are f32, u8
+        width: 1024
+        height: 1024
+        bigendian: true
+        offset: 48      # offset in bytes to the start of the data
+        rot: 90         # rotate the data 90 degrees counter-clockwise
+        horzflip: false # horizontal flip? No.
+        vertflip: false # vertical flip? No.
+</code></pre>
+<p>To use a preset instead, you can use the following format:</p>
+<pre><code class="language-yaml">flats:
+    # ... other fields as above
+    rawloader: 
+      preset: pancam-rawloader  # use this multifile preset for loading PANCAM files
+</code></pre>
+<p>where the preset has been created in the multifile input. However, It's best to specify the data fully rather than risk another user not having the preset when
+trying to reconstruct the data. See the <a href="/userguide/multifile.md">multifile docs</a> for more details on presets for loading binary
+files. </p>
+<h3 id="remapping-filter-names-in-flatfield-data">Remapping filter names in flatfield data</h3>
+<p>Sometimes the directory names are not the same as the filter names or positions. In
+this case you can use a <code>directory_map</code> dictionary inside the <code>flats</code> section, like this:</p>
+<pre><code class="language-yaml">flats:
+    # ... other fields as above
+
+    directory_map:
+        # Each key below is a filter position, the value is the directory in which to find that filter.
+        &quot;01&quot;: &quot;01&quot;
+        &quot;02&quot;: &quot;02&quot;
+        &quot;03&quot;: &quot;some_other_dir&quot;  # e.g. if filter 03 is in a different directory
+        &quot;04&quot;: &quot;yet_another_dir&quot;  # e.g. if filter 04 is in a different directory
+        # ... and so on.
+</code></pre>
+<p>Note that every filter position must be listed in the <code>directory_map</code> dictionary, even if the value is the same as the key.</p>
+<h2 id="reflectance-data">Reflectance data</h2>
+<div class="alert alert-danger" role="alert">
+<p>This section is likely to change in the future as reflectance data becomes more complex!</p>
+</div>
+<p>You can store the reflectance data for each filter in the camera data file for a given calibration target.
+To do this, you need to add a <code>reflectance</code> section to the YAML file, like this:</p>
+<pre><code class="language-yaml">reflectance:
+
+  # PCT Colourimetry data from this directory:
+  # ABU-Exomars - Colourimetry\2023-11-21_colour_targets\pct\*-full-br\*BS* images
+
+  PCT: lwac_from_colourimetry_pct.csv
+
+  # reflectance data from the Babelcolour ColourChecker dataset
+  # https://babelcolor.com/colorchecker-2.htm#CCP2_data
+
+  macbeth: lwac_from_babelcolour_colorchecker.csv
+</code></pre>
+<p>The CSV files contain the reflectance per filter for each patch in the target, with the
+following columns:</p>
+<ul>
+<li><code>ROI</code>: (region of interest) the name of the patch in the target</li>
+<li><code>filter</code>: the name of the filter</li>
+<li><code>n</code>: the mean of the reflectance for that patch in that filter</li>
+<li><code>u</code>: the uncertainty in the reflectance for that patch in that filter</li>
+</ul>
+<p>Here are the first few lines of the <code>lwac_from_colourimetry_pct.csv</code> file:</p>
+<pre><code class="language-csv">ROI,filter,n,u
+NG4,C03L,0.07009,0.0052
+NG4,C02L,0.07165,0.00442
+NG4,C01L,0.07126,0.00565
+NG4,G0a,0.07174,0.0043
+NG4,G0b,0.06581,0.00508
+NG4,G0c,0.07276,0.00456
+...
+</code></pre>
+<h2 id="listing-camera-data-using-pcot">Listing camera data using PCOT</h2>
+<p>You can find out which cameras are available and what data they have using the <code>lscams</code> subcommand:</p>
+<pre><code class="language-commandline">pcot lscams
+</code></pre>
+<p>The basic command will just list the cameras, the filename they are stored in, and their short description.
+Given a camera name, it will only give data for that camera.
+There are more options:</p>
+<ul>
+<li><code>-f</code> will list the filters </li>
+<li><code>-l</code> (long) will list the full description of the camera and whether it has flats and reflectance data</li>
+<li><code>-F</code> (file) will take a camera data filename rather than a camera name</li>
+</ul>
+<p>For example, to show filters and full details for <code>AUPE_LEFT</code> we could
+run</p>
+<pre><code class="language-commandline">pcot lscams -fl AUPE_LEFT
+</code></pre>
+<h2 id="further-work">Further work</h2>
+<p>Later, more information will be added to the camera data files:</p>
+<ul>
+<li>Extra data (darkfields, BRDF data etc)</li>
+<li>Extra filter fields (aberration, etc)</li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
+        <script src="../../search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

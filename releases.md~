@@ -26,7 +26,7 @@ uncertainty to be stored (and other data types too)
 * Nodes are now created by left-click dragging from the palette
 * Nodes which have been renamed from their defaults have their name text
 shown in bold
-* Forced to downgrade to Python 3.9 temporarily
+* Forced to downgrade minimum Python version to 3.9 temporarily
 
 ### 0.8.0-alpha 2024-07-25 FENTON SAURUS
 

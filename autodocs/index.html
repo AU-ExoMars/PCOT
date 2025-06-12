@@ -207,8 +207,10 @@ script in the mkdocs directory.</p>
 inputs from various sources and manipulating them in various ways.</p>
 <ul>
 <li><a href="PCT_Patch_Detection">PCT Patch Detection</a></li>
+<li><a href="assignfilters">assignfilters</a></li>
 <li><a href="banddepth">banddepth</a></li>
 <li><a href="circle">circle</a></li>
+<li><a href="colorchecker">colorchecker</a></li>
 <li><a href="comment">comment</a></li>
 <li><a href="constant">constant</a></li>
 <li><a href="contrast_stretch">contrast stretch</a></li>
@@ -244,6 +246,8 @@ inputs from various sources and manipulating them in various ways.</p>
 <li><a href="pixtest">pixtest</a></li>
 <li><a href="poly">poly</a></li>
 <li><a href="rect">rect</a></li>
+<li><a href="reflectance">reflectance</a></li>
+<li><a href="roicull">roicull</a></li>
 <li><a href="roidq">roidq</a></li>
 <li><a href="roiexpr">roiexpr</a></li>
 <li><a href="scalartest">scalartest</a></li>
@@ -328,6 +332,12 @@ node, <a href="expr">expr</a>.</p>
 <td>Flip an image vertically</td>
 </tr>
 <tr>
+<td>getflats</td>
+<td>img</td>
+<td></td>
+<td>Given an image with single-channel bands from a known camera, return the flatfield images for each band as another image with the same band assignments as the input. The flats will come from the camera data for the camera.</td>
+</tr>
+<tr>
 <td>grey</td>
 <td>img</td>
 <td>opencv (0)</td>
@@ -338,6 +348,12 @@ node, <a href="expr">expr</a>.</p>
 <td>img,factor</td>
 <td>w (-1)</td>
 <td>Using trilinear interpolation, generate an image by interpolating between the bands of an existing image. If an ROI is attached, the image generated will be interpolated from the pixels in the ROI. The width of the image will be either given in an optional parameter, or will be the same as the input image.  WARNING - IS VERY SLOW</td>
+</tr>
+<tr>
+<td>makeunc</td>
+<td>v1,u1,v2,u2</td>
+<td></td>
+<td></td>
 </tr>
 <tr>
 <td>marksat</td>
@@ -388,6 +404,12 @@ node, <a href="expr">expr</a>.</p>
 <td>Given a pair of images of the same dimensions and band count, replace all pixels in the first image with the second EXCEPT where the second image has the NODATA bit set. This is useful for combining two images where one image has "holes" (e.g. registration).</td>
 </tr>
 <tr>
+<td>reducecircles</td>
+<td>img,thresh</td>
+<td>useratio (0)</td>
+<td>Given an image with a set of circular ROIs, reduce all the radii until the maximum of the pooled SDs of the bands stops decreasing. The threshold value "thresh" is the value by which the SD must stop decreasing before we stop reducing the radius. This is useful for finding the smallest circle around a region of the same value.   Alternatively, if an optional boolean is set, we just reduce every circle by a given ratio.</td>
+</tr>
+<tr>
 <td>resize</td>
 <td>img,width,height</td>
 <td>method (linear)</td>
@@ -415,7 +437,7 @@ node, <a href="expr">expr</a>.</p>
 <td>sd</td>
 <td>val</td>
 <td></td>
-<td>Find the SD of a Datum. This does different things depending on what kind of Datum we are dealing with. For a scalar, it just returns 0. For a vector or single-channel image, it returns a scalar. For an image, it returns a vector of the SDs of each channel. Because each individual value in the input set can have its own uncertainty, the uncertainty is pooled (the pooled variance is the mean of the variances plus the variance of the means). Pixels with "bad" DQ bits will be ignored.</td>
+<td>Find the SD of a Datum. This does different things depending on what kind of Datum we are dealing with. For a scalar, it just returns 0. For a vector or single-channel image, it returns a scalar. For an image, it returns a vector of the SDs of each channel. Because each individual value in the input set can have its own uncertainty, the uncertainty is pooled - the pooled variance is the mean of the variances plus the variance of the means (Rudmin, J. W. (2010). Calculating the exact pooled variance. arXiv preprint arXiv:1007.1012). For pooling, we make the assumption that the number of items in each input subset (e.g. each pixel) is the same. Pixels with "bad" DQ bits will be ignored.</td>
 </tr>
 <tr>
 <td>setcwl</td>
@@ -442,10 +464,16 @@ node, <a href="expr">expr</a>.</p>
 <td>Strip all regions of interest from an image</td>
 </tr>
 <tr>
+<td>stripsources</td>
+<td>d</td>
+<td></td>
+<td>Strip all sources from a datum, leaving the data intact. This is sometimes necessary in certain processing pipelines e.g. to avoid bands with multiple sources in spectrum nodes.</td>
+</tr>
+<tr>
 <td>sum</td>
 <td>val</td>
 <td></td>
-<td>Find the sum of a Datum. For a multiband image, returns a vector of the sums of each band. For a single band image, a scalar, or a vector, returns a scalar. The uncertainty is pooled differently as this is a sum. The variance will be the variance of the means plus the sum of the variances.  Pixels with "bad" DQ bits will be ignored.</td>
+<td>Find the sum of a Datum. For a multiband image, returns a vector of the sums of each band. For a single band image, a scalar, or a vector, returns a scalar. The uncertainty is pooled differently as this is a sum. The variance will be the variance of the means plus the sum of the variances (still following Rudmin, J. W. (2010). Calculating the exact pooled variance. arXiv preprint arXiv:1007.1012).  Pixels with "bad" DQ bits will be ignored.</td>
 </tr>
 <tr>
 <td>tan</td>
@@ -468,8 +496,8 @@ node, <a href="expr">expr</a>.</p>
 <tr>
 <td>testimg</td>
 <td>index</td>
-<td></td>
-<td>Load a test image</td>
+<td>usetestfilters (0)</td>
+<td>Load a test image.</td>
 </tr>
 <tr>
 <td>uncertainty</td>
@@ -482,6 +510,12 @@ node, <a href="expr">expr</a>.</p>
 <td>n,u</td>
 <td>dqbits (0)</td>
 <td>create a new value with uncertainty by combining two values. These can be either numbers or images. " Ignores and discards ROIs.</td>
+</tr>
+<tr>
+<td>valuesbyfilter</td>
+<td>img</td>
+<td></td>
+<td>Rather like the spectrum node, this gathers together all the pixel values for an ROI. However, it just outputs them in a table by filter, not by frequency. Useful for collating certain kinds of calibration data.</td>
 </tr>
 <tr>
 <td>vec</td>
@@ -549,7 +583,7 @@ image <em>a</em>.</p>
 <tr>
 <td>x.u</td>
 <td>number</td>
-<td>return the uncertainty of the scalar or vector (if vector, individual uncertainties will be pooled). DQ is ignored.</td>
+<td>return the uncertainty of the scalar or vector (if vector, individual uncertainties will be pooled using Rudmin 2010). DQ is ignored.</td>
 </tr>
 <tr>
 <td>x.bands</td>
@@ -567,7 +601,7 @@ in batch files. See <a href="/userguide/batch">batch mode</a> for more details.<
 </ul>
 <hr />
 <p>Automatically generated by generate_autodocs.py</p>
-<p>Date: 2025-02-17T16:09:18.986731</p></div>
+<p>Date: 2025-06-12T17:28:29.051109</p></div>
             </div>
         </div>
 
