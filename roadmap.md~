@@ -31,8 +31,6 @@ setups in an extensible format
 * Reorganise the node palette
 * Obtain user stories and feedback
 
-* Calibration: the PCT detection node is fine, but does nothing!
-
 * Filter aberration
     * Filter aberration parameters need to be obtained and added to config
     * Node (or func??) to convert aberration to image
