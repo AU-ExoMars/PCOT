@@ -5,8 +5,10 @@ from pcot.calib import fit, SimpleValue
 
 import numpy as np
 
+from pcot.utils.maths import pooled_sd
 
-def generate_test_data(m, c) -> Tuple[List[float], List[SimpleValue]]:
+
+def generate_test_data(m, c) -> Tuple[List[SimpleValue], List[SimpleValue]]:
     """Generate some test data. This consists of a tuple of the form [rho, signal].
     The rho list is a set of putative patch intensities.
     The signal is a set of lists - one for each patch - containing a bunch of data read from that patch.
@@ -17,15 +19,19 @@ def generate_test_data(m, c) -> Tuple[List[float], List[SimpleValue]]:
     So the output is a list of patch intensities, and a set of signals for each patch. We are trying to recover
     the linear between the patch intensity and the mean signal."""
 
-    rho = [0.2, 0.4, 0.5, 0.6, 0.8]  # one value for each patch
+    rho = [SimpleValue(np.float32(x), np.float32(0.0)) for x in [0.2, 0.4, 0.5, 0.6, 0.8]]  # one value for each patch
 
     signal = []
     for x in rho:
         # this is the basic relationship we are trying to recover
-        y = m * x + c
-        y = list(y + np.random.randn(1000) * 0.01)  # multiple values for each patch
-        u = list(np.random.randn(1000) * 0.01)  # uncertainties
-        signal.append(SimpleValue(np.array(y,dtype=np.float32), np.array(u,dtype=np.float32)))
+        y = m * x.mean + c
+        y = np.array(y + np.random.randn(1000) * 0.01,dtype=np.float32)  # multiple values for each patch
+        u = np.array(np.random.randn(1000) * 0.01,dtype=np.float32)  # uncertainties
+
+        mean = np.mean(y)  # mean of the signal for this patch
+        std = pooled_sd(np.array(y), np.array(u))
+
+        signal.append(SimpleValue(mean=mean, std=std))
     return rho, signal
 
 
