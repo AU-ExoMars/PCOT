@@ -177,6 +177,10 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#finding-out-about-camera-data-with-lscams" class="nav-link">Finding out about camera data with lscams</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#setting-a-camera" class="nav-link">Setting a camera</a>
               <ul class="nav flex-column">
               </ul>
@@ -225,6 +229,24 @@ flat/dark fields because that data is very large, but hopefully you
 will not need them - that stage of processing will take place
 upstream in the ROC. Other camera data files can be downloaded
 from the <a href="http://pcot.aber.ac.uk/">PCOT Cookbook</a>.</p>
+<h2 id="finding-out-about-camera-data-with-lscams">Finding out about camera data with lscams</h2>
+<div class="alert alert-info" role="alert">
+<p>Some of this information is duplicated in <a href="/userguide/cameradata#listing-camera-data-using-pcot">the camera data docs</a></p>
+</div>
+<p>You can find out about the camera data installed on your system
+with <code>pcot lscams</code> (list cameras). Alone, this will list the cameras
+with their short descriptions.</p>
+<p>You can get a list of the filters for a camera by using the 
+command <code>pcot lscams -f</code>. Alone, this will list all cameras and their
+filters, but you can specify a camera: <code>pcot lscams -f TRAINING_GEOLOGY</code>
+will list all filters for the geology filter wheel on the training model,
+for example (if you have that camera data file installed).</p>
+<p>Each filter has a name and a position, as well as other data like centre
+wavelength, FWHM and so on. Filters may also have reflectance and 
+flat/darkfield data - you can see if this is the case from the 
+<code>pcot lscams -l</code> command: if a camera has flats, you'll see "Has flats" in
+the description; if it has reflectance data, you'll see a list of 
+supported reflectance calibration targets.</p>
 <h2 id="setting-a-camera">Setting a camera</h2>
 <p>Once you know what camera was used, and you have installed a data
 file for that camera, you can set it in the multifile input
@@ -271,17 +293,18 @@ then be used to look up the filter. </p>
 <ul>
 <li><code>lens</code> and <code>n</code>: if these are found, they are joined together
 to form a filter position which is looked up in the filter set (by
-the <code>position</code> column).
+the position "Pos" field).
 The idea is that <code>lens</code> indicates either the left or right camera
 and <code>n</code> identifies a filter. They're separate because many early
 files used names like <code>LWAC02</code> or <code>LWideAngle02</code>, in which the
-two elements were separate.</li>
+two elements were separate. In many cases you'll want to use the <code>pos</code>
+option below.</li>
 <li><code>pos</code>: if this is found, it us used to match a filter position using the
-<code>pos</code> column - as such, it's a simpler version of the <code>lens</code>/<code>n</code> combination</li>
-<li><code>name</code>: if this is found, it is used to match a filter using the <code>name</code>
-column</li>
-<li><code>cwl</code>: if this is found, it is used to match a filter using the <code>cwl</code>
-(wavelength) column</li>
+position field - as such, it's a simpler version of the <code>lens</code>/<code>n</code> combination</li>
+<li><code>name</code>: if this is found, it is used to match a filter using the filter's
+name</li>
+<li><code>cwl</code>: if this is found, it is used to match a filter using the CWL
+(wavelength) field</li>
 </ul>
 <p>If you need assistance, or this isn't flexible enough, contact us - or
 maybe use the <em>assignfilters</em> node.</p>
