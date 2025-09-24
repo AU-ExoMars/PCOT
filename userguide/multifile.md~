@@ -121,8 +121,8 @@ two elements were separate. In many cases you'll want to use the `pos`
 option below.
 * `pos`: if this is found, it us used to match a filter position using the
 position field - as such, it's a simpler version of the `lens`/`n` combination
-* `name`: if this is found, it is used to match a filter using the `name`
-field
+* `name`: if this is found, it is used to match a filter using the filter's
+name
 * `cwl`: if this is found, it is used to match a filter using the CWL
 (wavelength) field
 
@@ -136,6 +136,12 @@ You can assign filters in a camera to bands in an image manually
 using the *assignfilters* node (in the "utility" group). This is 
 fairly self-explanatory: feed in an image, select a camera, and assign
 the bands using the move up and down buttons.
+
+@@@danger
+Make very sure that you do this immediately after the *input* node,
+and make all connections from the *assignfilters* and not directly
+from the *input*.
+@@@
 
 ## Reading raw binary files
 

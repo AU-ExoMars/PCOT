@@ -189,6 +189,10 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#assigning-filters-manually" class="nav-link">Assigning filters manually</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#reading-raw-binary-files" class="nav-link">Reading raw binary files</a>
               <ul class="nav flex-column">
               </ul>
@@ -308,11 +312,18 @@ name</li>
 </ul>
 <p>If you need assistance, or this isn't flexible enough, contact us - or
 maybe use the <em>assignfilters</em> node.</p>
-<h3 id="an-alternative-assignfilters">An alternative: assignfilters</h3>
-<p>You can assign filters in a camera to bands in an image manually
+<h2 id="assigning-filters-manually">Assigning filters manually</h2>
+<p>Sometimes it's difficult to write a filter pattern to infer the
+filters automatically from the filename. In this case, 
+you can assign filters in a camera to bands in an image manually
 using the <em>assignfilters</em> node (in the "utility" group). This is 
 fairly self-explanatory: feed in an image, select a camera, and assign
 the bands using the move up and down buttons.</p>
+<div class="alert alert-danger" role="alert">
+<p>Make very sure that you do this immediately after the <em>input</em> node,
+and make all connections from the <em>assignfilters</em> and not directly
+from the <em>input</em>.</p>
+</div>
 <h2 id="reading-raw-binary-files">Reading raw binary files</h2>
 <p>Data is often provided "as is" from the camera, in a raw binary format.
 Reading these files requires a little more information in advance:</p>
