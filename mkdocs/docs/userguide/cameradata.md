@@ -218,6 +218,11 @@ NG4,G0c,0.07276,0.00456
 ```
 
 ## Listing camera data using PCOT
+
+@@@info
+Some of this information is duplicated in [the multifile input docs ](/userguide/multifile/)
+@@@
+
 You can find out which cameras are available and what data they have using the `lscams` subcommand:
 ```commandline
 pcot lscams
@@ -229,6 +234,12 @@ There are more options:
 * `-f` will list the filters 
 * `-l` (long) will list the full description of the camera and whether it has flats and reflectance data
 * `-F` (file) will take a camera data filename rather than a camera name
+
+As with all commands you can get a help text with
+
+```commandline
+pcot lscams -h
+```
 
 For example, to show filters and full details for `AUPE_LEFT` we could
 run
