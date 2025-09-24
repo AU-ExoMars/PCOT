@@ -1,7 +1,7 @@
 import builtins
 import logging
 import dataclasses
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 import numpy as np
 from PySide2.QtCore import Qt
@@ -69,12 +69,11 @@ def collectCameraData(node, img):
 
 @dataclasses.dataclass
 class ReflectancePoint:
-    """A point on the reflectance plot. This is a tuple of (known, known_sd, measured, measured_sd)"""
-    known: float
-    known_sd: float
-    measured: float
-    measured_sd: float
-    point: pcot.calib.SimpleValue  # this is all the measured data for the point - every pixel
+    """A point on the reflectance plot. This is a tuple of two values: the known reflectance and the measured
+    reflectance, both stored as SimpleValue objects. The patch name is also stored for labelling purposes.
+    """
+    known: SimpleValue
+    measured: SimpleValue
     patch: str
 
 
@@ -220,9 +219,10 @@ class XFormReflectance(XFormType):
 
                     # create a data point for this filter / patch pairing
 
-                    point = ReflectancePoint(known_mean, known_std, measured_mean, measured_std,
-                                             pcot.calib.SimpleValue(band_means, band_stds),
-                                             patch)
+                    point = ReflectancePoint(
+                        SimpleValue(known_mean, known_std),
+                        SimpleValue(measured_mean, measured_std),
+                        patch)
 
                     if filter_name not in points_per_filter:
                         points_per_filter[filter_name] = []
@@ -237,27 +237,19 @@ class XFormReflectance(XFormType):
 
         node.fits = {}
         for filter_name, points in points_per_filter.items():
-            point_list = [x.point for x in points]
+            measured_list = [x.measured for x in points]
             known_list = [x.known for x in points]
 
-            # FUDGE = set the SDs and means of all points in point_list to the same value. We can't
-            # set SD to zero because the maths blows up.
+            # FUDGE = Set the SD to a very small value. Can't set to zero because the maths blows up.
             if node.params.simpler_data_fudge:
-                for x in point_list:
-                    x.sds = np.full(1, 0.0001, dtype=np.float32)
-                    x.var = 0.0001
-                    mean = np.mean(x.noms)
-                    x.noms = np.full(1, mean, dtype=np.float32)
+                measured_list = [SimpleValue(m.mean, np.float32(0.0001)) for m in measured_list]
 
             # FUDGE = make sure it goes through zero.
             if node.params.zero_fudge:
-                known_list.append(np.float32(0.0))  # zero known value
-                # 10 measured pixels with sd=0.001.
-                z = SimpleValue(np.zeros(10, dtype=np.float32), np.full(10, 0.001, dtype=np.float32))
-                point_list.append(z)  # add a dummy zero point to the end of the list
+                known_list.append(SimpleValue(np.float32(0.0), np.float32(0.0)))
+                measured_list.append(SimpleValue(np.float32(0.0), np.float32(0.0001)))  # zero measured value
 
-            # warning a bit weird here - point_list is a List[SimpleValue] and any warning is a lie.
-            f = pcot.calib.fit(known_list, point_list)
+            f = pcot.calib.fit(known_list, measured_list)
             node.fits[filter_name] = f  # store the fit data so we can use it in the UI
             logger.debug(f"Filter {filter_name} has fit {f.m}±{f.sdm}x + {f.c}±{f.sdc}")
 
@@ -424,7 +416,12 @@ class TabReflectance(pcot.ui.tabs.Tab):
                 return
             # separate out the data
             points = [dataclasses.astuple(p) for p in points]
-            known, known_std, measured, measured_std, _, patches = zip(*points)
+            known, measured, patches = zip(*points)
+
+            known_mean = [x.mean for x in known]
+            measured_mean = [x.mean for x in measured]
+            known_std = [x.std for x in known]
+            measured_std = [x.std for x in measured]
 
             # plot
             colname = f"C{col}"
@@ -432,13 +429,15 @@ class TabReflectance(pcot.ui.tabs.Tab):
             if fit:
                 ax.axline((0, fit.c), slope=fit.m, color=colname)
             # ax.plot(known, measured, '+', color=colname, label=band)
-            ax.errorbar(known, measured, yerr=measured_std, xerr=known_std, label=band, fmt='x', color=colname)
+            ax.errorbar(known_mean, measured_mean, yerr=measured_std, xerr=known_std, label=band, fmt='x', color=colname)
 
             # point labelling: don't do this if we're plotting all bands or it's turned off
             if len(bands) == 1 and self.node.params.show_patches:
                 ax.set_title(f"Fit for {band}: m={fit.m:0.3f}, c={fit.c:0.3f}")
                 for i, patch in enumerate(patches):
-                    ax.annotate(f"{patch}\n{measured[i]:.2f}±{measured_std[i]:.2f}", (known[i], measured[i]), fontsize=8)
+                    # plot the patch name and the measured value at the point
+                    ax.annotate(f"{patch}\n{measured_mean[i]:.2f}±{measured_std[i]:.2f}",
+                                (known_mean[i], measured_mean[i]), fontsize=8)
 
         if len(bands)>1:
             ax.legend(loc="lower right")
