@@ -1,6 +1,6 @@
 #!/bin/sh
 
 export PYTHONPATH="../mkdocs"
-mkdocs gh-deploy
+conda run -n mkdocs --no-capture-output mkdocs gh-deploy --ignore-version
 
 #rsync -avLc site/ pale.org:docs.pale.org/pcot

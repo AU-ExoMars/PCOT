@@ -126,9 +126,14 @@ name
 * `cwl`: if this is found, it is used to match a filter using the CWL
 (wavelength) field
 
+## Missing filter data
 
-If you need assistance, or this isn't flexible enough, contact us - or
-maybe use the *assignfilters* node.
+When the system can't find suitable filters in the camera using this
+system, you'll get an error in the log, and also a warning in the canvas
+("Missing filter data").
+
+If you need assistance, or the pattern system isn't flexible enough, contact
+us - or maybe use the *assignfilters* node.
 
 ## Assigning filters manually
 
