@@ -34,7 +34,6 @@ class Filter:
     # description of the camera - a short phrase
     description: str
 
-
     def __init__(self, cwl, fwhm, transmission=1.0, position=None, name=None, camera_name=None, description=None):
         """constructor"""
         self.cwl = cwl
@@ -56,6 +55,10 @@ class Filter:
             return False
         return vars(self) == vars(other)
 
+    def hasMissingData(self):
+        """True if the filter has missing data (i.e. no cwl)"""
+        return self.cwl is None or self.cwl == 0
+
     def serialise(self):
         return self.cwl, self.fwhm, self.transmission, self.position, \
                self.name, self.camera_name
@@ -65,8 +68,7 @@ class Filter:
         # various legacy tests here.
         if isinstance(d, str):
             ui.error("Oops - old style file contains filter name, not filter data. Using dummy, please 'Run All'.")
-            return Filter(2000, 1.0, 1.0, "dummypos", "dummyname", "dummycam",
-                          "dummydesc")
+            return DUMMY_FILTER
 
         # we might have to deserialise a truncated tuple for legacy code
         defaults = [None, None, 1.0, "unknown pos", "no name", "unknown camera", "no description"]

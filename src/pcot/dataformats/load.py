@@ -190,7 +190,7 @@ def multifile(directory: str,
         else:
             m = filterre.match(p)
             if m is None:
-                ui.error(f"Multifile loader pattern: NO MATCH FOUND FOR path {p}, regex {filterre}")
+                ui.error(f"Multifile loader cannot get filter from pattern: {p}, regex {filterre.pattern}")
                 return None, None
         
             m = m.groupdict()

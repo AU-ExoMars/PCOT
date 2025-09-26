@@ -12,7 +12,7 @@ import cv2 as cv
 import numpy as np
 from PySide2 import QtWidgets, QtCore, QtGui
 from PySide2.QtCore import Qt, QSize, QTimer
-from PySide2.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent
+from PySide2.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent, QFont
 from PySide2.QtWidgets import QCheckBox, QMessageBox, QMenu
 
 import pcot
@@ -628,7 +628,12 @@ class Canvas(QtWidgets.QWidget):
     isDQHidden: bool
 
     # List of the DQ section widgets
-    dqSections: List[CollapserSection]
+    dqSections: List[CollapserSection]#
+
+    # warning to indicate the filter data is missing
+    missingFilterDataLabel: QtWidgets.QLabel
+    # bad pixels warning
+    badPixelsLabel: QtWidgets.QLabel
 
     ## constructor
     def __init__(self, parent):
@@ -721,6 +726,7 @@ class Canvas(QtWidgets.QWidget):
         self.hideablebuttons = QtWidgets.QWidget()
         self.hideablebuttons.setContentsMargins(0, 0, 0, 0)
 
+
         hideable = QtWidgets.QGridLayout()
         hideable.setContentsMargins(3, 10, 3, 10)  # LTRB
         # these are the actual widgets specifying which channel in the cube is viewed.
@@ -752,37 +758,50 @@ class Canvas(QtWidgets.QWidget):
         # add that layout to the collapser
         self.collapser.addSection("hideable", hideableLayout, isAlwaysOpen=True)
 
+        # section for warnings
+
+        layout = QtWidgets.QVBoxLayout()
+        self.missingFilterDataLabel = QtWidgets.QLabel("Missing filter data")
+        self.missingFilterDataLabel.setFont(QFont('Arial', 12, QFont.Bold))
+        self.missingFilterDataLabel.setStyleSheet("QLabel { background-color : white; color : red; }")
+        self.missingFilterDataLabel.setVisible(False)
+        layout.addWidget(self.missingFilterDataLabel)
+        # layout.setAlignment(self.missingFilterDataLabel, Qt.AlignHCenter)
+
+        self.badPixelsLabel = QtWidgets.QLabel('')
+        self.badPixelsLabel.setStyleSheet("QLabel { background-color : white; color : red; }")
+        self.badPixelsLabel.setVisible(False)
+        layout.addWidget(self.badPixelsLabel)
+        # layout.setAlignment(self.badPixelsLabel, Qt.AlignHCenter)
+
+        self.collapser.addSection("warnings", layout, isAlwaysOpen=True)
+
         # next section
 
         layout = QtWidgets.QGridLayout()
         layout.setContentsMargins(3, 10, 3, 10)  # LTRB
 
-        self.badpixels = QtWidgets.QLabel('')
-        self.badpixels.setStyleSheet("QLabel { background-color : white; color : red; }")
-        self.badpixels.setVisible(False)
-        layout.addWidget(self.badpixels, 1, 0, 1, 2)
-
         # self.roiToggle = TextToggleButton("ROIs", "ROIs")
         self.roiToggle = QCheckBox("ROIs")
-        layout.addWidget(self.roiToggle, 2, 0)
+        layout.addWidget(self.roiToggle, 0, 0)
         self.roiToggle.toggled.connect(self.roiToggleChanged)
 
         # self.spectrumToggle = TextToggleButton("Spectrum", "Spectrum")
         self.spectrumToggle = QCheckBox("spectrum")
-        layout.addWidget(self.spectrumToggle, 2, 1)
+        layout.addWidget(self.spectrumToggle, 1, 1)
         self.spectrumToggle.toggled.connect(self.spectrumToggleChanged)
 
         self.coordsText = QtWidgets.QLabel('')
-        layout.addWidget(self.coordsText, 3, 0, 1, 2)
+        layout.addWidget(self.coordsText, 2, 0, 1, 2)
 
         self.roiText = QtWidgets.QLabel('')
-        layout.addWidget(self.roiText, 4, 0, 1, 2)
+        layout.addWidget(self.roiText, 3, 0, 1, 2)
 
         self.dimensions = QtWidgets.QLabel('')
-        layout.addWidget(self.dimensions, 5, 0, 1, 2)
+        layout.addWidget(self.dimensions, 4, 0, 1, 2)
 
         self.hideDQ = QtWidgets.QCheckBox("hide DQ")
-        layout.addWidget(self.hideDQ, 6, 0, 1, 2)
+        layout.addWidget(self.hideDQ, 5, 0, 1, 2)
         self.hideDQ.toggled.connect(self.hideDQChanged)
 
         self.collapser.addSection("data", layout, isOpen=True)
@@ -1300,11 +1319,18 @@ class Canvas(QtWidgets.QWidget):
         # and bad pixels
         bp = 0 if self.previmg is None else self.previmg.countBadPixels()
         if bp > 0:
-            self.badpixels.setVisible(True)
-            self.badpixels.setText(f"{bp} BAD PIXELS")
+            self.badPixelsLabel.setVisible(True)
+            self.badPixelsLabel.setText(f"{bp} BAD PIXELS")
         else:
-            self.badpixels.setVisible(False)
-            self.badpixels.setText("")
+            self.badPixelsLabel.setVisible(False)
+            self.badPixelsLabel.setText("")
+
+        # check the filter data
+        if self.previmg is not None:
+            badfilterdata = self.previmg.sources.hasMissingFilterData()
+            self.missingFilterDataLabel.setVisible(badfilterdata)
+        else:
+            self.missingFilterDataLabel.setVisible(False)
 
         self.canvas.display(self.previmg, self.isPremapped)
         self.setDQWidgetState()

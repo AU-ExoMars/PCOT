@@ -218,6 +218,10 @@ class Source(SourcesObtainable):
         # and return the elements joined by colons
         return ":".join(lst)
 
+    def hasMissingFilterData(self):
+        """Returns true if this source has a filter with no data"""
+        return isinstance(self.band, Filter) and self.band.hasMissingData()
+
     def long(self) -> Optional[str]:
         """Return a longer text, possibly with line breaks"""
         s = f"{self.secondary_name} " if self.secondary_name else ""
@@ -396,6 +400,10 @@ class SourceSet(SourcesObtainable):
         ss = [Source.deserialise(x) for x in lst]
         return cls(ss)
 
+    def hasMissingFilterData(self):
+        """Returns true if any source has a filter with missing data"""
+        return any(s.hasMissingFilterData() for s in self.sourceSet)
+
 
 class MultiBandSource(SourcesObtainable):
     """This is an array of source sets for a single image with multiple bands; each set  is indexed by the band"""
@@ -504,6 +512,10 @@ class MultiBandSource(SourcesObtainable):
 
     def serialise(self):
         return [x.serialise() for x in self.sourceSets]
+
+    def hasMissingFilterData(self):
+        """Returns true if any source set has filters with no data"""
+        return self.getSources().hasMissingFilterData()
 
     @classmethod
     def deserialise(cls, lst):
