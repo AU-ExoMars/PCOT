@@ -788,20 +788,20 @@ class Canvas(QtWidgets.QWidget):
 
         # self.spectrumToggle = TextToggleButton("Spectrum", "Spectrum")
         self.spectrumToggle = QCheckBox("spectrum")
-        layout.addWidget(self.spectrumToggle, 1, 1)
+        layout.addWidget(self.spectrumToggle, 0, 1)
         self.spectrumToggle.toggled.connect(self.spectrumToggleChanged)
 
         self.coordsText = QtWidgets.QLabel('')
-        layout.addWidget(self.coordsText, 2, 0, 1, 2)
+        layout.addWidget(self.coordsText, 1, 0, 1, 2)
 
         self.roiText = QtWidgets.QLabel('')
-        layout.addWidget(self.roiText, 3, 0, 1, 2)
+        layout.addWidget(self.roiText, 2, 0, 1, 2)
 
         self.dimensions = QtWidgets.QLabel('')
-        layout.addWidget(self.dimensions, 4, 0, 1, 2)
+        layout.addWidget(self.dimensions, 3, 0, 1, 2)
 
         self.hideDQ = QtWidgets.QCheckBox("hide DQ")
-        layout.addWidget(self.hideDQ, 5, 0, 1, 2)
+        layout.addWidget(self.hideDQ, 4, 0, 1, 2)
         self.hideDQ.toggled.connect(self.hideDQChanged)
 
         self.collapser.addSection("data", layout, isOpen=True)

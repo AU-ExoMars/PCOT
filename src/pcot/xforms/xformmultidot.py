@@ -47,6 +47,11 @@ class XFormMultiDot(XFormType):
     - drag to move the centre of the circle
     - edit parameters like dot size, name, colour, etc. to change the current ROI or next created ROI
 
+    To delete an ROI:
+
+    - select the ROI
+    - use the Delete key (not backspace)
+
     To add and edit painted ROIs:
 
     - select "Painted" on the left-hand side

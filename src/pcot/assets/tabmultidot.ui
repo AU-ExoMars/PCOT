@@ -180,7 +180,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="page_3">
       <layout class="QGridLayout" name="gridLayout_2">
@@ -193,7 +193,7 @@
           </sizepolicy>
          </property>
          <property name="text">
-          <string>CIRCLE mode: Click to select, Shift-Click to add</string>
+          <string>CIRCLE mode: Click to select, Shift-Click to add, Delete to delete selected.</string>
          </property>
         </widget>
        </item>
@@ -210,7 +210,7 @@
           </sizepolicy>
          </property>
          <property name="text">
-          <string>PAINTED mode: Click to select, Shift+Click for create painted ROI, Alt+Click for unpaint, Ctrl+Click for add. Add/Create mode sets whether circle or flood is used.</string>
+          <string>PAINTED mode: Click to select, Shift+Click for create painted ROI, Alt+Click for unpaint, Ctrl+Click for add. Add/Create mode sets whether circle or flood is used. Del to delete selected.</string>
          </property>
          <property name="wordWrap">
           <bool>true</bool>
