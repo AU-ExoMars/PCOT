@@ -8,6 +8,7 @@ This is a rough guide, and things may change!
 setups in an extensible format
 * Flatfield calibration code
 * Reflectance calibration code
+* "gradient" renamed to "colourmap"
 
 ## Previous release 0.9.0
 
