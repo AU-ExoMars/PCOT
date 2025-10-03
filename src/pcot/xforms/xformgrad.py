@@ -1,3 +1,4 @@
+import copy
 from functools import partial
 from typing import Tuple
 import logging
@@ -206,7 +207,7 @@ class GradientLegend(Annotation):
         # if we're doing a margin annotation we override many of the values passed in
         i2u = self.inchesToUnits
         heightUnits = p.window().height()
-        textGap = 0
+        textGap = 2 # gap between text and bar in pixels to start with...
 
         if inVectorFormat:
             textGap = i2u * 0.1  # gap between text and bar
@@ -389,7 +390,7 @@ class XformColourMap(XFormType):
         return TabColourMap(n, w)
 
     def init(self, node):
-        node.gradient = presetGradients['viridis']
+        node.gradient = copy.deepcopy(presetGradients['viridis'])
         node.minval = 0.0
         node.maxval = 1.0
 

@@ -24,7 +24,10 @@ class Gradient:
         self.setData(d)
 
     def setData(self, d):
-        self.data = copy.deepcopy(d)       # just to make VERY sure we don't end up modifying presets
+        try:
+            self.data = copy.deepcopy(d)       # just to make VERY sure we don't end up modifying presets
+        except Exception as e:
+            raise Exception(f"error copying gradient data: {e}")
 
     def serialise(self):
         return self.data
