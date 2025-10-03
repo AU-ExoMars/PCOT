@@ -18,7 +18,7 @@ import pcot.datumfuncs as df
 
 def test_cannot_write_text_number_to_image_filename(globaldatadir):
     pcot.setup()
-    r = Runner(globaldatadir / "runner/gradient.pcot")
+    r = Runner(globaldatadir / "runner/colourmap.pcot")
 
     with tempfile.TemporaryDirectory() as td:
         out = os.path.join(td, "output1.png")
@@ -40,7 +40,7 @@ def test_cannot_write_number_to_parc(globaldatadir):
     in a script."""
 
     pcot.setup()
-    r = Runner(globaldatadir / "runner/gradient.pcot")
+    r = Runner(globaldatadir / "runner/colourmap.pcot")
 
     with tempfile.TemporaryDirectory() as td:
         out = os.path.join(td, "output1.parc")
@@ -61,14 +61,14 @@ def test_cannot_write_image_to_txt(globaldatadir):
     in a script."""
 
     pcot.setup()
-    r = Runner(globaldatadir / "runner/gradient.pcot")
+    r = Runner(globaldatadir / "runner/colourmap.pcot")
 
     with tempfile.TemporaryDirectory() as td:
         out = os.path.join(td, "output1.txt")
 
         test = f"""
         outputs.+.file = {out}
-        .node = gradient
+        .node = colourmap
         """
 
         with pytest.raises(ApplyException) as e:
@@ -80,7 +80,7 @@ def test_desc_must_be_none_for_nonparc_text(globaldatadir):
     """Cannot have a description on a non-PARC, and here it's a text anyway"""
 
     pcot.setup()
-    r = Runner(globaldatadir / "runner/gradient.pcot")
+    r = Runner(globaldatadir / "runner/colourmap.pcot")
 
     with tempfile.TemporaryDirectory() as td:
         out = os.path.join(td, "output1.txt")
@@ -88,7 +88,7 @@ def test_desc_must_be_none_for_nonparc_text(globaldatadir):
         test = f"""
         outputs.+.file = {out}
         .description = This is a description
-        .node = gradient
+        .node = colourmap
         """
 
         with pytest.raises(ApplyException) as e:
@@ -100,7 +100,7 @@ def test_desc_must_be_none_for_nonparc_image(globaldatadir):
     """Cannot have a description on a non-PARC image"""
 
     pcot.setup()
-    r = Runner(globaldatadir / "runner/gradient.pcot")
+    r = Runner(globaldatadir / "runner/colourmap.pcot")
 
     with tempfile.TemporaryDirectory() as td:
         out = os.path.join(td, "output1.png")
@@ -108,7 +108,7 @@ def test_desc_must_be_none_for_nonparc_image(globaldatadir):
         test = f"""
         outputs.+.file = {out}
         .description = This is a description
-        .node = gradient
+        .node = colourmap
         """
 
         with pytest.raises(ApplyException) as e:
@@ -118,14 +118,14 @@ def test_desc_must_be_none_for_nonparc_image(globaldatadir):
 
 def test_cannot_append_non_parc_images(globaldatadir):
     pcot.setup()
-    r = Runner(globaldatadir / "runner/gradient.pcot")
+    r = Runner(globaldatadir / "runner/colourmap.pcot")
 
     with tempfile.TemporaryDirectory() as td:
         out = os.path.join(td, "output1.png")
 
         test = f"""
         outputs.+.file = {out}
-        .node = gradient
+        .node = colourmap
         run         # first run
         outputs[0].file = {out}
         .append = y # second run should fail
@@ -139,14 +139,14 @@ def test_cannot_append_non_parc_images(globaldatadir):
 def test_format_or_extension_provided_for_images(globaldatadir):
     """Got to have a format or extension for images"""
     pcot.setup()
-    r = Runner(globaldatadir / "runner/gradient.pcot")
+    r = Runner(globaldatadir / "runner/colourmap.pcot")
 
     with tempfile.TemporaryDirectory() as td:
         out = os.path.join(td, "output1")
 
         test = f"""
         outputs.+.file = {out}
-        .node = gradient
+        .node = colourmap
         """
 
         with pytest.raises(ApplyException) as e:
@@ -158,14 +158,14 @@ def test_explicit_image_format(globaldatadir):
     """Can specify a format if an extension isn't given on an image; format will be added to the filename
     as a new extension"""
     pcot.setup()
-    r = Runner(globaldatadir / "runner/gradient.pcot")
+    r = Runner(globaldatadir / "runner/colourmap.pcot")
 
     with tempfile.TemporaryDirectory() as td:
         out = os.path.join(td, "output1")
 
         test = f"""
         outputs.+.file = {out}
-        .node = gradient
+        .node = colourmap
         .format = png
         """
 
@@ -181,7 +181,7 @@ def test_explicit_image_format(globaldatadir):
 
 def test_cannot_specify_format_on_nonimage(globaldatadir):
     pcot.setup()
-    r = Runner(globaldatadir / "runner/gradient.pcot")
+    r = Runner(globaldatadir / "runner/colourmap.pcot")
 
     with tempfile.TemporaryDirectory() as td:
         out = os.path.join(td, "output1")
@@ -200,7 +200,7 @@ def test_cannot_specify_format_on_nonimage(globaldatadir):
 def test_parc_image_write(globaldatadir):
     """Test we can write a single image to a PARC with a description"""
     pcot.setup()
-    r = Runner(globaldatadir / "runner/gradient.pcot")
+    r = Runner(globaldatadir / "runner/colourmap.pcot")
 
     with tempfile.TemporaryDirectory() as td:
         out = os.path.join(td, "output1.parc")
@@ -254,7 +254,7 @@ def test_parc_multi(globaldatadir):
     """Test we can add multiple images to a PARC file"""
 
     pcot.setup()
-    r = Runner(globaldatadir / "runner/gradient.pcot")
+    r = Runner(globaldatadir / "runner/colourmap.pcot")
 
     with tempfile.TemporaryDirectory() as td:
         out = os.path.join(td, "output1.parc")
@@ -333,7 +333,7 @@ def test_parc_multi_jinja_multi_run(globaldatadir):
     end-of-file run is not added."""
 
     pcot.setup()
-    r = Runner(globaldatadir / "runner/gradient.pcot")
+    r = Runner(globaldatadir / "runner/colourmap.pcot")
 
     with tempfile.TemporaryDirectory() as td:
         out = os.path.join(td, "output1.parc")

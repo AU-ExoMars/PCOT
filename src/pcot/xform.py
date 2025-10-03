@@ -15,7 +15,7 @@ import uuid
 from collections import deque
 from html import escape
 from io import BytesIO
-from typing import List, Dict, Tuple, ClassVar, Optional, TYPE_CHECKING, Callable, Union, Any
+from typing import List, Dict, Tuple, ClassVar, Optional, TYPE_CHECKING, Callable, Union, Any, Set
 
 import pyperclip
 
@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from macros import XFormMacro, MacroInstance
 
 from pcot.imagecube import ChannelMapping
+
 
 logger = logging.getLogger(__name__)
 
@@ -157,6 +158,10 @@ class XFormType:
     showPerformedCount: bool
     # callable to set parameters for QGraphicsRectItem; may be null
     setRectParams: Optional[Callable[['QGraphicsRectItem'], None]]
+    # sometimes a node's name gets changed - this happened with "gradient" being changed to "colourmap".
+    # When that happens we want to rename the node's type, and make sure the displayName is handled
+    # correctly. This is a set of the old names
+    oldNames: Set[str]
 
     def __init__(self, name, group, ver, hasEnable=False, startEnabled=True):
         """
@@ -172,6 +177,7 @@ class XFormType:
         self.ver = ver
         self.helpwin = None
         self.hasEnable = hasEnable
+        self.oldNames = set()  # set of old names, add the old names in the type constructor.
         self.startEnabled = startEnabled
         # this contains tuples of (name, connector type (a datum Type), desc).
         self.inputConnectors = []
@@ -1136,10 +1142,17 @@ class XFormGraph:
         elif typename in self.doc.macros:
             tp = self.doc.macros[typename]
         else:
-            if "dummy" not in allTypes:
-                raise Exception("Can't find the 'dummy' XFormType - looks like no types have been registered.")
-            ui.warn("Transformation type not found: " + typename)
-            return self.create("dummy")
+            # ugly search for name in all types' old names
+            for t in allTypes.values():
+                if typename in t.oldNames:
+                    tp = t
+                    break
+            else:
+                # this runs if we didn't break, i.e. we didn't find it
+                if "dummy" not in allTypes:
+                    raise Exception("Can't find the 'dummy' XFormType - looks like no types have been registered.")
+                ui.warn("Transformation type not found: " + typename)
+                return self.create("dummy")
 
         # first, try to make sure we aren't creating a macro inside itself
         if tp.cycleCheck(self):
@@ -1460,6 +1473,7 @@ class XFormGraph:
     def getByDisplayName(self, name, single=False):
         """Return a list of nodes which have this display name. if single is True, return
         the first one only and ensure there is only one item."""
+        name = name.strip()
         x = [x for x in self.nodes if x.getDisplayName() == name]
         if single:
             if len(x) == 1:
