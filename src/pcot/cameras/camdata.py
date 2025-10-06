@@ -52,9 +52,6 @@ class CameraParams:
         else:
             self.filters = {}
 
-        # backpointer to the CameraData object so we can get the archive; will be set by CameraData
-        self.camera_data = None
-
         # there may be reflectance data - if so, each will be a dictionary of patch name to
         # dictionaries of filter name to reflectance values as tuples of (mean, std):
         # {target: {patchname: {filtername: (mean, std)}}}
@@ -156,9 +153,6 @@ class CameraData:
 
         # resolve the Datum object
         self.params = self.params.val
-        # set up the backpointer so CameraParams and Filter can get the archive if we need to load
-        # more data
-        self.params.camera_data = self
         # now we need to patch the filters so they have the camera name
         for x in self.params.filters.values():
             x.camera_name = self.params.params.name
