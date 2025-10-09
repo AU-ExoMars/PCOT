@@ -196,7 +196,7 @@ def multifile(directory: str,
             m = m.groupdict()
             if '<lens>' in filterpat:
                 if '<n>' not in filterpat:
-                    raise Exception(f"A filter with <lens> must also have <n>")
+                    raise Exception(f"A filter pattern with 'lens' must also have 'n'")
                 # lens is either left or right
                 lens = m.get('lens', '')
                 n = m.get('n', '')

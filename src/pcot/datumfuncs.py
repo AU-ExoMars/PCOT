@@ -6,6 +6,7 @@ import numpy as np
 import logging
 
 import pcot.dq
+import ui
 from pcot import rois, operations, dq
 from pcot.assets import getAssetPath
 from pcot.datum import Datum
@@ -1211,3 +1212,72 @@ def stripsources(d):
         if n is None:
             return None
         return Datum(Datum.NUMBER, n, sources=nullSourceSet)
+
+
+@datumfunc
+def debayer(img, profile="gb", method="bilinear"):
+    """Debayer an image.
+    Profiles - BG, GB, RG, GR. See OpenCV for more details.
+
+    Methods -
+    * bilinear : the default bilinear interpolation
+    * EA : edge aware
+    * VNG: variable number of gradients
+
+    Malvar / He / Cutler not yet supported.
+
+    @param img:img:the image to debayer
+    @param profile:string:the profile
+    @param method:string:the method
+    """
+    img = img.get(Datum.IMG)
+    if img is None:
+        return None
+    method = method.get(Datum.STRING)
+    profile = profile.get(Datum.STRING)
+
+    m = None
+    profile = profile.lower()
+    if profile == 'bg':
+        if method=="bilinear":
+            m = cv.COLOR_BayerBG2RGB
+        elif method=="vng":
+            m = cv.COLOR_BayerBG2RGB_VNG
+        elif method=="ea":
+            m = cv.COLOR_BayerBG2RGB_EA
+    elif profile == 'gb':
+        if method=="bilinear":
+            m = cv.COLOR_BayerGB2RGB
+        elif method=="vng":
+            m = cv.COLOR_BayerGB2RGB_VNG
+        elif method=="ea":
+            m = cv.COLOR_BayerGB2RGB_EA
+    elif profile == 'rg':
+        if method=="bilinear":
+            m = cv.COLOR_BayerRG2RGB
+        elif method=="vng":
+            m = cv.COLOR_BayerRG2RGB_VNG
+        elif method=="ea":
+            m = cv.COLOR_BayerRG2RGB_EA
+    elif profile == 'gr':
+        if method=="bilinear":
+            m = cv.COLOR_BayerGR2RGB
+        elif method=="vng":
+            m = cv.COLOR_BayerGR2RGB_VNG
+        elif method=="ea":
+            m = cv.COLOR_BayerGR2RGB_EA
+
+    if img.channels != 1:
+        raise XFormException('DATA', 'debayering - image must be mono')
+
+    if not m:
+        raise XFormException('DATA', f'debayering - method {profile/method} not found')
+
+    out = (img.img * 65535.0).astype(np.uint16)
+    out = cv.demosaicing(out, m)
+    out = out.astype(np.float32) / 65535.0
+    ui.warn("DQ and UNC not yet processed in debayering.")
+    sources = img.getSources()
+    sources = MultiBandSource([sources, sources, sources])
+    img = ImageCube(out, sources=sources)
+    return Datum(Datum.IMG, img)
