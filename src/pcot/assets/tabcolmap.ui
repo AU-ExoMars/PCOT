@@ -308,7 +308,7 @@ Colour</string>
       <item>
        <widget class="QRadioButton" name="gradPageButton">
         <property name="text">
-         <string>Gradient</string>
+         <string>Colour map</string>
         </property>
        </widget>
       </item>

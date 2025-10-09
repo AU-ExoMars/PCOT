@@ -323,29 +323,29 @@ It can be hard to adjust the rectangle when you can't see what's happening in th
 on the tab, so you can edit
 the rectangle while the *expr* output is visible. ==Dock it again by closing the undocked window==.
 
-To make things more visible still, ==open the *data* section and add a *gradient* node after the *expr* node and view it==, clicking
+To make things more visible still, ==open the *data* section and add a *colourmap* node after the *expr* node and view it==, clicking
 making sure **Show ROIs** is enabled on its canvas (ROIs are typically retained on derived
 images):
 
-![!R671_438 with a rectangle and gradient|R671_438d](R671_438d.png)
+![!R671_438 with a rectangle and colourmap|R671_438d](R671_438d.png)
 
+The *colourmap* node creates a false colour image.
 There's not much to see because of the nature of the image, unfortunately! Note that there is a "legend"
 at top left, and this can be ==edited and placed by clicking on the Legend button==:
 
-![!R671_438 with a better gradient legend|R671_438da](R671_438da.png)
+![!R671_438 with a better colourmap legend|R671_438da](R671_438da.png)
 
-The colour palette for the gradient, incidentally, is the "viridis" palette which is helpful for people
+The colour palette for the colourmap, incidentally, is the "viridis" palette which is helpful for people
 with certain kinds of colour blindness[^2]. Other presets are available
-by clicking on the **Load Preset** button, or you can edit the gradient
+by clicking on the **Load Preset** button, or you can edit the colour "gradient"
 by hand: double-click to add or remove a point, drag to move a point.
 
-
-It is possible to "inset" the gradient into the RGB representation used in the *input* node by passing
-that to the *insetinto* input of the gradient:
+It is possible to "inset" the false colour image from *colourmap* into the RGB representation used in the *input* node by passing
+that to the *background* input of the *colourmap*:
 
 ![!R671_438 inset into source image RGB representation|R671_438e](R671_438e.png)
 
-If you ==switch to the Legend part of the *gradient* node== and
+If you ==switch to the Legend part of the *colourmap* node== and
 ==select *Left margin* for the **Legend** item==, when you ==export the image==
 with the canvas' Export Image button the legend will be in the margin:
 

@@ -1,3 +1,4 @@
+import copy
 from functools import partial
 from typing import Tuple
 import logging
@@ -17,6 +18,11 @@ from pcot.utils.annotations import Annotation, annotFont, pixels2painter
 from pcot.utils.colour import colDialog, rgb2qcol
 from pcot.utils.gradient import Gradient
 from pcot.xform import xformtype, XFormType, XFormException
+
+"""
+Node for generating a false colour RGB image from a mono image using a "gradient" colour map -
+a list of (position, (r,g,b)) tuples where position is in [0,1] and r,g,b are in [0,1].
+"""
 
 logger = logging.getLogger(__name__)
 
@@ -201,7 +207,7 @@ class GradientLegend(Annotation):
         # if we're doing a margin annotation we override many of the values passed in
         i2u = self.inchesToUnits
         heightUnits = p.window().height()
-        textGap = 0
+        textGap = 2 # gap between text and bar in pixels to start with...
 
         if inVectorFormat:
             textGap = i2u * 0.1  # gap between text and bar
@@ -309,16 +315,16 @@ TAGGEDDICT = TaggedDictType(
 
 
 @xformtype
-class XformGradient(XFormType):
+class XformColourMap(XFormType):
     """
-    Convert a mono image to an RGB gradient image for better visibility. If the "insetinto" input has an
+    Convert a mono image to an RGB false colour image for better visibility. If the "insetinto" input has an
     image AND there is a valid ROI in the mono image, the image will be inset into the RGB of the insetinto image.
     NOTE: if you change the "insetinto" image's RGB mapping you may need to "run all" to see the the change reflected.
 
     **Ignores DQ and uncertainty**
 
 
-    The gradient widget has the following behaviour:
+    The colour map widget has the following behaviour:
 
     * click and drag to move a colour point
     * doubleclick to delete an existing colour point
@@ -327,7 +333,7 @@ class XformGradient(XFormType):
 
     Node parameters:
 
-    * gradient: utils.Gradient object containing gradient info
+    * gradient: utils.Gradient object containing the colour map used
     * colour: (r,g,b) [0:1] colour of text and border for in-image legend
     * legendrect: (x,y,w,h) rectangle for in-image legend
     * vertical: true if vertical legend
@@ -339,11 +345,12 @@ class XformGradient(XFormType):
     """
 
     def __init__(self):
-        super().__init__("gradient", "data", "0.0.0")
+        super().__init__("colourmap", "data", "0.0.0")
         self.addInputConnector("mono", Datum.IMG)
         self.addInputConnector("background", Datum.IMG)
         self.addOutputConnector("", Datum.IMG)
         self.params = TAGGEDDICT
+        self.oldNames = {'gradient'}  # old name was 'gradient'
 
     def serialise(self, node):
         # clear the node parameter's gradient list
@@ -380,10 +387,10 @@ class XformGradient(XFormType):
                 raise XFormException('DATA', f"Unknown gradient preset {node.params.preset}")
 
     def createTab(self, n, w):
-        return TabGradient(n, w)
+        return TabColourMap(n, w)
 
     def init(self, node):
-        node.gradient = presetGradients['viridis']
+        node.gradient = copy.deepcopy(presetGradients['viridis'])
         node.minval = 0.0
         node.maxval = 1.0
 
@@ -456,9 +463,9 @@ class XformGradient(XFormType):
 removeSpaces = str.maketrans('', '', ' ')
 
 
-class TabGradient(pcot.ui.tabs.Tab):
+class TabColourMap(pcot.ui.tabs.Tab):
     def __init__(self, node, w):
-        super().__init__(w, node, 'tabgrad.ui')
+        super().__init__(w, node, 'tabcolmap.ui')
         self.w.gradient.gradientChanged.connect(self.gradientChanged)
         self.w.loadPreset.pressed.connect(self.loadPreset)
 

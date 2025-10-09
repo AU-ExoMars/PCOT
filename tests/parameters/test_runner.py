@@ -437,15 +437,15 @@ def test_run_modify_with_reset_node_run(globaldatadir):
         assert txt == "0.45332±0.19508\n"
 
 
-def test_gradient(globaldatadir):
-    """Here we look at the output of a gradient node on a small part of an image using two different
-    gradient presets. This tests:
-    - the gradient node and presets
+def test_colourmap(globaldatadir):
+    """Here we look at the output of a colourmap node on a small part of an image using two different
+    colourmap presets. This tests:
+    - the colourmap node and presets
     - the "run" directive which performs multiple runs of the same graph with different parameters
     - text file output to two separate files, one for each run
     """
     pcot.setup()
-    r = Runner(globaldatadir / "runner/gradient.pcot")
+    r = Runner(globaldatadir / "runner/colourmap.pcot")
 
     with tempfile.TemporaryDirectory() as td:
         # we'll get four outputs - two means, and two pngs.
@@ -458,11 +458,11 @@ def test_gradient(globaldatadir):
         outputs.+.file = {out1}
         .node = mean(a)
         outputs.+.file = {png1}
-        .node = gradient
+        .node = colourmap
         run
         
-        # now set the gradient from a preset and run it again
-        gradient.preset = magma
+        # now set the colourmap from a preset and run it again
+        colourmap.preset = magma
         outputs.0.file = {out2}
         outputs.1.file = {png2}
         """
@@ -494,7 +494,7 @@ def test_image_export_sizes(globaldatadir):
     - width=-1 will turn off resizing
     """
     pcot.setup()
-    r = Runner(globaldatadir / "runner/gradient.pcot")
+    r = Runner(globaldatadir / "runner/colourmap.pcot")
 
     from PIL import Image
     with tempfile.TemporaryDirectory() as td:
@@ -502,7 +502,7 @@ def test_image_export_sizes(globaldatadir):
         png = os.path.join(td, "output-annot-1000.png")
         test = f"""
         outputs.+.file = {png}
-        .node = gradient
+        .node = colourmap
         """
         r.run(None, test)
         with Image.open(png) as im:
@@ -512,7 +512,7 @@ def test_image_export_sizes(globaldatadir):
         png = os.path.join(td, "output-annot-500.png")
         test = f"""
         outputs.+.file = {png}
-        .node = gradient
+        .node = colourmap
         .width = 500
         """
         r.run(None, test)
@@ -523,7 +523,7 @@ def test_image_export_sizes(globaldatadir):
         png = os.path.join(td, "output-no-annot.png")
         test = f"""
         outputs.+.file = {png}
-        .node = gradient
+        .node = colourmap
         .annotations = n
         """
         r.run(None, test)
@@ -533,7 +533,7 @@ def test_image_export_sizes(globaldatadir):
         png = os.path.join(td, "output-annot-same.png")
         test = f"""
         outputs.+.file = {png}
-        .node = gradient
+        .node = colourmap
         .width = -1
         """
         r.run(None, test)

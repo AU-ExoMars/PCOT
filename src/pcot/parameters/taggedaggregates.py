@@ -105,6 +105,9 @@ class TaggedAggregate(ABC):
         self._type = tp
         self.original = None
 
+    def __deepcopy__(self, memo):
+        return self.clone()
+
     def clone(self):
         """Create a deep copy of this object with the exception of numpy arrays"""
         d = self.serialise()

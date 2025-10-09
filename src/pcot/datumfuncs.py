@@ -818,7 +818,7 @@ def striproi(img, stripannots=0):
     """
     Strip all regions of interest from an image
     @param img:img:image to strip
-    @param stripannots:number:if nonzero, also strip annotations (e.g. gradient legends) (default is 0)
+    @param stripannots:number:if nonzero, also strip annotations (e.g. colourmap legends) (default is 0)
     """
 
     img: ImageCube = img.get(Datum.IMG)

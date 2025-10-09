@@ -201,8 +201,8 @@ which tells us which type it is - a "discriminator".
 @@@info
 **Where to find examples**
 
-Probably the most complex but straightforward example of CTAS is the *gradient* node. This
-converts a monochrome image to a false colour RGB gradient based on a set of gradient colours. This
+Probably the most complex but straightforward example of CTAS is the *colourmap* node. This
+converts a monochrome image to a false colour RGB image based on a "gradient" of colours. This
 exists as a pcot.utils.gradient.Gradient object which is a wrapper around a list of (x,(r,g,b)) tuples
 defining the colour *r,g,b* at value *x*. 
 

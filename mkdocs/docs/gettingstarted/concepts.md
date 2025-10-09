@@ -32,8 +32,8 @@ has a direction, going from the output of one node to the input
 of another, and there can't be any loops.
 
 As an example, consider that we might want
-to overlay some kind of spectral parameter map, converted to a colour
-gradient, over an RGB image (note: I'm not a geologist, I'm a software
+to overlay some kind of spectral parameter map, converted to a false colour image
+and inset into an RGB image (note: I'm not a geologist, I'm a software
 engineer, so perhaps this is a very artificial example). One way to do it
 might be this:
 
@@ -60,7 +60,7 @@ calculates the result of a mathematical expression performed on each pixel. The 
 is running: ```a$671 / a$438```.
 This will read the bands whose wavelengths are 671nm and 438nm in the node's *a* input, and find their ratio for every pixel.
 The result will be a single-band image. *Expr* nodes can perform much more complex calculations than this.
-* The *gradient* node will convert a single-band image into an RGB image with a user-defined gradient and
+* The *colourmap* node will convert a single-band image into an RGB image with a user-defined "gradient" map and
 inset it into the RGB representation of another image - here we are insetting into the input image, using
 the RGB representation used by that node.
 
