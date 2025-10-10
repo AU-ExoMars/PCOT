@@ -57,7 +57,8 @@ def collectCameraData(node, img):
     
 
     # now we can store the calibration targets this camera knows about
-    node.reflectance_data = camera.getReflectances()
+#    node.reflectance_data = camera.getReflectances()
+    raise Exception("Reflectance data no longer stored in cameras - reflectance node need reworking")
     node.calib_targets = list(node.reflectance_data.keys()) if node.reflectance_data else []
     node.filters = filters
     node.filter_names = [f.name for f in filters]
