@@ -70,8 +70,11 @@ class RGBInputMethod(InputMethod):
 
 class RGBMethodWidget(TreeMethodWidget):
     def __init__(self, m):
-        super().__init__(m, 'inputfiletree.ui',
+        super().__init__(m, 'inputrgb.ui',
                          ["*.jpg", "*.png", "*.ppm", "*.tga", "*.tif"])
+
+        self.patternCombo.currentIndexChanged.connect(self.patternChanged)
+        self.algoCombo.currentIndexChanged.connect(self.algoChanged)
 
     def onInputChanged(self):
         # we don't do this when the window is opening, otherwise it happens a lot!
