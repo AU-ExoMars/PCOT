@@ -22,6 +22,8 @@ data.read(['site.cfg', os.path.expanduser('~/.pcot.ini')], encoding='utf_8')
 
 xxx = data.get('Default', 'multifile_pattern')
 
+defaultBayerPattern = "GB"
+
 
 def getUserName():
     """return the current username, whichis either obtained from the OS or from the PCOT_USER environment variable"""

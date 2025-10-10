@@ -6,7 +6,6 @@ import numpy as np
 import logging
 
 import pcot.dq
-import ui
 from pcot import rois, operations, dq
 from pcot.assets import getAssetPath
 from pcot.datum import Datum
@@ -17,7 +16,7 @@ from pcot.cameras.filters import Filter
 from pcot.imagecube import ImageCube
 from pcot.rois import ROI, ROICircle
 from pcot.sources import MultiBandSource, SourceSet, Source, StringExternal, nullSourceSet
-from pcot.utils import image
+from pcot.utils import image, debayering
 from pcot.utils.deb import Timer
 from pcot.utils.geom import Rect
 from pcot.utils.maths import pooled_sd
@@ -1215,68 +1214,75 @@ def stripsources(d):
 
 
 @datumfunc
-def debayer(img, profile="gb", method="bilinear"):
-    """Debayer an image.
-    Profiles - BG, GB, RG, GR. See OpenCV for more details.
+def rgb2hsv(img):
+    """Convert RGB to HSV colourspace. The result is H in [0:360), S in [0-1], V in [0-1].
+    @param img:img:The image to convert
+    """
+    img = img.get(Datum.IMG)
+    if img is None:
+        return None
 
-    Methods -
+    if img.channels!=3:
+        raise ValueError("Image needs 3 channels for RGB to HSV conversion")
+
+    hsv_image = cv.cvtColor(img.img, cv.COLOR_RGB2HSV_FULL)
+    sources = MultiBandSource([Source().setBand('H'),
+                               Source().setBand('S'),
+                               Source().setBand('V')])
+
+    return Datum(Datum.IMG,ImageCube(hsv_image, sources=sources))
+
+
+@datumfunc
+def hsv2rgb(img):
+    """Convert HSV to RGB colourspace. The result is H in [0:360), S in [0-1], V in [0-1].
+    @param img:img:The image to convert
+    """
+    img = img.get(Datum.IMG)
+    if img is None:
+        return None
+
+    if img.channels!=3:
+        raise ValueError("Image needs 3 channels for HSV to RGB conversion")
+
+    hsv_image = cv.cvtColor(img.img, cv.COLOR_HSV2RGB_FULL)
+    sources = MultiBandSource([Source().setBand('R'),
+                               Source().setBand('G'),
+                               Source().setBand('B')])
+
+    return Datum(Datum.IMG,ImageCube(hsv_image, sources=sources))
+
+
+@datumfunc
+def debayer(img, algorithm="bilinear", pattern="gb"):
+    """Debayer an image. Only the first band of a multi-band image will be used.
+
+    Algorithms -
     * bilinear : the default bilinear interpolation
     * EA : edge aware
     * VNG: variable number of gradients
 
     Malvar / He / Cutler not yet supported.
 
+    Patterns - BG, GB, RG, GR. See OpenCV for more details.
+
     @param img:img:the image to debayer
-    @param profile:string:the profile
-    @param method:string:the method
+    @param algorithm:string:the algorithm to use
+    @param pattern:string:the debayering pattern to use
     """
     img = img.get(Datum.IMG)
     if img is None:
         return None
-    method = method.get(Datum.STRING)
-    profile = profile.get(Datum.STRING)
-
-    m = None
-    profile = profile.lower()
-    if profile == 'bg':
-        if method=="bilinear":
-            m = cv.COLOR_BayerBG2RGB
-        elif method=="vng":
-            m = cv.COLOR_BayerBG2RGB_VNG
-        elif method=="ea":
-            m = cv.COLOR_BayerBG2RGB_EA
-    elif profile == 'gb':
-        if method=="bilinear":
-            m = cv.COLOR_BayerGB2RGB
-        elif method=="vng":
-            m = cv.COLOR_BayerGB2RGB_VNG
-        elif method=="ea":
-            m = cv.COLOR_BayerGB2RGB_EA
-    elif profile == 'rg':
-        if method=="bilinear":
-            m = cv.COLOR_BayerRG2RGB
-        elif method=="vng":
-            m = cv.COLOR_BayerRG2RGB_VNG
-        elif method=="ea":
-            m = cv.COLOR_BayerRG2RGB_EA
-    elif profile == 'gr':
-        if method=="bilinear":
-            m = cv.COLOR_BayerGR2RGB
-        elif method=="vng":
-            m = cv.COLOR_BayerGR2RGB_VNG
-        elif method=="ea":
-            m = cv.COLOR_BayerGR2RGB_EA
+    algorithm = algorithm.get(Datum.STRING)
+    pattern = pattern.get(Datum.STRING)
 
     if img.channels != 1:
         raise XFormException('DATA', 'debayering - image must be mono')
 
-    if not m:
-        raise XFormException('DATA', f'debayering - method {profile/method} not found')
-
     out = (img.img * 65535.0).astype(np.uint16)
-    out = cv.demosaicing(out, m)
+    out = debayering.debayer(out, algorithm, pattern)
     out = out.astype(np.float32) / 65535.0
-    ui.warn("DQ and UNC not yet processed in debayering.")
+    pcot.ui.warn("DQ and UNC not yet processed in debayering.")
     sources = img.getSources()
     sources = MultiBandSource([sources, sources, sources])
     img = ImageCube(out, sources=sources)

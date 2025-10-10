@@ -60,7 +60,7 @@ class XformDecorr(XFormType):
 def decorrstretch(A, mask):
     """
     Apply decorrelation stretch to image. Modified from here: https://github.com/lbrabec/decorrstretch
-    and heaven knows where they got it from.
+    and heaven knows where they got it from. There's clearly a problem; it's not very good!
 
     Arguments:
     A   -- image in cv2/numpy.array format

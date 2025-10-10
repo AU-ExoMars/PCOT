@@ -14,7 +14,11 @@ logger = logging.getLogger(__name__)
 
 # RGB inputs don't have much - just a filename.
 rgbDictType = TaggedDictType(
-    filename=("filename", Maybe(str), None)
+    filename=("filename", Maybe(str), None),
+    debayer_algo=("Debayering algorithm (or None if we're not debayering)", Maybe(str), 'None',
+                  ["ea","EA","vng","VNG","None","none","NONE","bilinear","Bilinear","BILINEAR"]),
+    debayer_pattern=("Bayer pattern (see OpenCV docs)", Maybe(str), pcot.config.defaultBayerPattern,
+                     ["GB","gb","BG","bg","RG","rg","GR","gr"]),
 )
 
 # ENVI files also just have a filename WITHOUT an extension (remember that ENVI
