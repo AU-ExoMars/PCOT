@@ -44,7 +44,7 @@ class CameraParams:
     def __init__(self, filters=None):
         """Used when creating an entirely new CameraParams object. The input is:
 
-        * filters: a dict of filter objects {name:data}
+        * filters: a dict of Filter objects {name:data}
         """
         self.params = CAMDICT.create()
         if filters:
@@ -101,8 +101,9 @@ class CameraParams:
 
 
 class CameraParamsType(Type):
-    """Holds camera parameters, including filter sets (basically anything that
-    isn't large data, like flatfields)"""
+    """To make life easier for serialisation, this is a DatumType. Holds camera parameters, including filter sets
+    (basically anything that isn't large data, like flatfields or filter profiles). The larger items are stored
+    in the CameraData object, which contains this one."""
 
     def __init__(self):
         super().__init__('cameradata', valid={CameraParams, type(None)})
@@ -161,6 +162,7 @@ class CameraData:
     def openStoreAndWrite(self, fileName, params: CameraParams):
         """To avoid writing a weird init, we construct a new DatumStore archive here and write a CameraParams
         datum to it. We return the store  so we can write flatfields etc. later. Remember to close the archive!
+        This is called from the gencam command.
 
         The init would be 'weird' because it would have to set up a read/write archive with an LRU cache, and
         that's not a thing that makes a great deal of sense here."""
@@ -221,7 +223,3 @@ class CameraData:
     def getFlat(self, filtname) -> Datum:
         """Get the flatfield for the given filter and position."""
         return self.archive.get(f"flat_{filtname}")
-
-    def getReflectances(self):
-        """Get the reflectance dict or None. The structure of the dict is {target: {patch: {filter: (mean, std)}}}"""
-        return self.params.reflectances

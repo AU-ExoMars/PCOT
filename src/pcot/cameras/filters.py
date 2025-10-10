@@ -33,8 +33,13 @@ class Filter:
     camera_name: str
     # description of the camera - a short phrase
     description: str
+    # filter response wavelengths, a numpy array of float32
+    wavelengths: np.ndarray
+    # filter response values, a numpy array of float32 of the same length as wavelengths
+    response: np.ndarray
 
-    def __init__(self, cwl, fwhm, transmission=1.0, position=None, name=None, camera_name=None, description=None):
+    def __init__(self, cwl, fwhm, transmission=1.0, position=None, name=None, camera_name=None, description=None,
+                 wavelengths=None, response=None):
         """constructor"""
         self.cwl = cwl
         self.fwhm = fwhm
@@ -43,6 +48,15 @@ class Filter:
         self.position = position
         self.camera_name = camera_name
         self.description = description
+        self.wavelengths = wavelengths
+        self.response = response
+        if self.wavelengths is not None or self.response is not None:
+            if self.wavelengths is None or self.response is None:
+                raise ValueError("Filter wavelengths and response arrays must both be present or both be absent")
+            if len(self.wavelengths) != len(self.response):
+                raise ValueError("Filter wavelengths and response arrays must be the same length")
+            if len(self.wavelengths) < 2:
+                raise ValueError("Filter wavelengths and response arrays must have at least 2 elements")
 
     def __hash__(self):
         """The hash of a filter is its name. This is here because we want to be able to
@@ -76,19 +90,20 @@ class Filter:
         cwl, fwhm, trans, pos, name, camname, desc = d
         return Filter(cwl, fwhm, trans, pos, name, camname, desc)
 
-    @staticmethod
-    def _gaussian(x, mu, fwhm):
-        """calculate the value of a normal distribution at x, where mu is the mean
-        and fwhm is full width at half max."""
+    def simulate(self, wavelengths: np.ndarray) -> np.ndarray:
+        """Simulate a Gaussian filter profile with the given centre wavelength, full-width at half-maximum
+        and transmission. Return the values at the given wavelengths."""
+        sigma = self.fwhm / (2 * np.sqrt(2 * np.log(2)))
+        values = self.transmission * np.exp(-0.5 * ((wavelengths - self.cwl) / sigma) ** 2)
+        return values
 
-        def fwhm_to_sigma(fwhm_):
-            return fwhm_ / (2 * math.sqrt(2 * math.log(2)))  # ~= 2.35482
-
-        return np.exp(-(x - mu) ** 2 / (2 * fwhm_to_sigma(fwhm) ** 2))
-
-    def response_over(self, x: np.ndarray):
-        """generate a response curve from an input array of frequencies (I think)"""
-        return self._gaussian(x, self.cwl, self.fwhm)
+    def getResponse(self, wavelengths: np.ndarray) -> np.ndarray:
+        """Get the filter response at the given wavelengths. If the filter has a response curve, use that,
+        otherwise simulate a Gaussian."""
+        if self.wavelengths is not None and self.response is not None:
+            return np.interp(wavelengths, self.wavelengths, self.response, left=0, right=0)
+        else:
+            return self.simulate(wavelengths)
 
     def getCaption(self, captionType=DocumentSettings.CAP_DEFAULT):
         """Format according to caption type"""

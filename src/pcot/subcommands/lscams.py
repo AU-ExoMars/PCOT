@@ -1,8 +1,12 @@
+import numpy as np
+
+from pcot.cameras.filters import Filter
 from pcot.subcommands import subcommand, argument
 
 
 @subcommand([
     argument("--long","-l", help="Show long descriptions", action="store_true"),
+    argument("--plot","-p", help="Plot the filter profiles (first camera only)", action="store_true"),
     argument("--filters","-f", help="Show filters", action="store_true"),
     argument("--file","-F", help="Read from a PARC file instead of the loaded PCOT cameras", action="store_true"),
     argument("camera", metavar="CAMERA_NAME", help="Camera name", nargs="?")
@@ -38,6 +42,10 @@ def lscams(args):
         else:
             for name in pcot.cameras.getCameraNames():
                 show(pcot.cameras.getCamera(name),args)
+                # this is a hack - we only want to show one camera if we're plotting, because
+                # otherwise we get a plot for each camera.
+                if args.plot:
+                    break
 
 
 def show(camera, args):
@@ -66,4 +74,19 @@ def show(camera, args):
         for _, f in camera.params.filters.items():
             print(f"    {f.name:<5} {f.position:<5} {int(f.cwl):<5} {int(f.fwhm):<5} {f.transmission:<14}")
 
-
+    if args.plot:
+        import matplotlib.pyplot as plt
+        for _, f in camera.params.filters.items():
+            # get the response for a range of wavelengths
+            wavelengths = np.arange(300, 1200)
+            if isinstance(f, Filter):
+                resp = f.getResponse(wavelengths)
+                label = f.name
+                if f.wavelengths is None:
+                    label += " (sim)"
+                plt.plot(wavelengths, resp, label=label)
+        plt.title(p.name)
+        plt.xlabel("Wavelength (nm)")
+        plt.ylabel("Transmission")
+        plt.legend()
+        plt.show()
