@@ -864,7 +864,8 @@ class ImageCube(SourcesObtainable):
     @classmethod
     def deserialise(cls, d):
         """Inverse of serialise(), requires a document to get the inputs"""
-
+        if d is None:
+            return None
         def decodeArrayValue(tup):
             isAllSame, v, shape, tp = tup
             if isAllSame:
