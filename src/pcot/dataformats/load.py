@@ -21,12 +21,17 @@ from pcot.utils.datumstore import readParc
 logger = logging.getLogger(__name__)
 
 
-def rgb(fname: str, inpidx: int = None, mapping: ChannelMapping = None) -> Datum:
+def rgb(fname: str, inpidx: int = None, mapping: ChannelMapping = None,
+        debayer_algo:str = 'NONE', debayer_pattern: str = None) -> Datum:
     """Load an imagecube from an RGB file (png, jpeg etc.)
 
     - fname: the filename
     - inpidx: the input index to use or None if not connected to a graph input
     - mapping: the channel mapping to use or None if the default
+    - debayer_algo: None, or "None" or a debayering algorithm (see the "pcot.utils.debayering" module). If
+      the image is multiband, only the first band will be used.
+    - debayer_pattern: the pattern of the pixels for debayering (see the OpenCV docs and "pcot.utils.debayering")
+
     """
 
     # might seem a bit wasteful having three of them, but seems more logical to me.
@@ -37,7 +42,8 @@ def rgb(fname: str, inpidx: int = None, mapping: ChannelMapping = None) -> Datum
         Source().setBand("B").setExternal(e).setInputIdx(inpidx),
     ])
 
-    img = ImageCube.load(fname, mapping, sources)  # this can throw an exception if the file is not found
+    # this can throw an exception if the file is not found
+    img = ImageCube.load(fname, mapping, sources, debayer_algo=debayer_algo, debayer_pattern=debayer_pattern)
     return Datum(Datum.IMG, img)
 
 
@@ -196,7 +202,7 @@ def multifile(directory: str,
             m = m.groupdict()
             if '<lens>' in filterpat:
                 if '<n>' not in filterpat:
-                    raise Exception(f"A filter with <lens> must also have <n>")
+                    raise Exception(f"A filter pattern with 'lens' must also have 'n'")
                 # lens is either left or right
                 lens = m.get('lens', '')
                 n = m.get('n', '')

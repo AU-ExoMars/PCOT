@@ -133,11 +133,14 @@ class ImgType(Type):
             return f"IMG[{d.val.channels}]"
 
     def serialise(self, d):
-        return self.name, d.val.serialise()
+        if d.val is None:   # this really shouldn't happen
+            return self.name, None
+        else:
+            return self.name, d.val.serialise()
 
     def deserialise(self, d):
         img = pcot.imagecube.ImageCube.deserialise(d)
-        return pcot.datum.Datum(self, img)
+        return pcot.datum.Datum.null if img is None else pcot.datum.Datum(self, img)
 
     def copy(self, d):
         return pcot.datum.Datum(pcot.datum.Datum.IMG, d.val.copy())

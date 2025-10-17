@@ -16,7 +16,7 @@ from pcot.cameras.filters import Filter
 from pcot.imagecube import ImageCube
 from pcot.rois import ROI, ROICircle
 from pcot.sources import MultiBandSource, SourceSet, Source, StringExternal, nullSourceSet
-from pcot.utils import image
+from pcot.utils import image, debayering
 from pcot.utils.deb import Timer
 from pcot.utils.geom import Rect
 from pcot.utils.maths import pooled_sd
@@ -1211,3 +1211,79 @@ def stripsources(d):
         if n is None:
             return None
         return Datum(Datum.NUMBER, n, sources=nullSourceSet)
+
+
+@datumfunc
+def rgb2hsv(img):
+    """Convert RGB to HSV colourspace. The result is H in [0:360), S in [0-1], V in [0-1].
+    @param img:img:The image to convert
+    """
+    img = img.get(Datum.IMG)
+    if img is None:
+        return None
+
+    if img.channels!=3:
+        raise ValueError("Image needs 3 channels for RGB to HSV conversion")
+
+    hsv_image = cv.cvtColor(img.img, cv.COLOR_RGB2HSV_FULL)
+    sources = MultiBandSource([Source().setBand('H'),
+                               Source().setBand('S'),
+                               Source().setBand('V')])
+
+    return Datum(Datum.IMG,ImageCube(hsv_image, sources=sources))
+
+
+@datumfunc
+def hsv2rgb(img):
+    """Convert HSV to RGB colourspace. The result is H in [0:360), S in [0-1], V in [0-1].
+    @param img:img:The image to convert
+    """
+    img = img.get(Datum.IMG)
+    if img is None:
+        return None
+
+    if img.channels!=3:
+        raise ValueError("Image needs 3 channels for HSV to RGB conversion")
+
+    hsv_image = cv.cvtColor(img.img, cv.COLOR_HSV2RGB_FULL)
+    sources = MultiBandSource([Source().setBand('R'),
+                               Source().setBand('G'),
+                               Source().setBand('B')])
+
+    return Datum(Datum.IMG,ImageCube(hsv_image, sources=sources))
+
+
+@datumfunc
+def debayer(img, algorithm="bilinear", pattern="gb"):
+    """Debayer an image. Only the first band of a multi-band image will be used.
+
+    Algorithms -
+    * bilinear : the default bilinear interpolation
+    * EA : edge aware
+    * VNG: variable number of gradients
+
+    Malvar / He / Cutler not yet supported.
+
+    Patterns - BG, GB, RG, GR. See OpenCV for more details.
+
+    @param img:img:the image to debayer
+    @param algorithm:string:the algorithm to use
+    @param pattern:string:the debayering pattern to use
+    """
+    img = img.get(Datum.IMG)
+    if img is None:
+        return None
+    algorithm = algorithm.get(Datum.STRING)
+    pattern = pattern.get(Datum.STRING)
+
+    if img.channels != 1:
+        raise XFormException('DATA', 'debayering - image must be mono')
+
+    out = (img.img * 65535.0).astype(np.uint16)
+    out = debayering.debayer(out, algorithm, pattern)
+    out = out.astype(np.float32) / 65535.0
+    pcot.ui.warn("DQ and UNC not yet processed in debayering.")
+    sources = img.getSources()
+    sources = MultiBandSource([sources, sources, sources])
+    img = ImageCube(out, sources=sources)
+    return Datum(Datum.IMG, img)

@@ -121,7 +121,7 @@ class datumfunc:
                     from pcot.datumtypes import typesByName
                     paramtypes[paramname] = tuple([typesByName[x] for x in paramtype.split(",")])
                 except KeyError:
-                    raise ValueError(f"Function {self.name} has a parameter {paramname} with an unknown type {paramtype}")
+                    raise ValueError(f"Function {func.__name__} has a parameter '{paramname}' with an unknown type '{paramtype}'")
         else:
             # if there are no @param lines, then the whole docstring is the function description
             self.description = docstring

@@ -19,7 +19,7 @@ from pcot import dq, ui
 from pcot.documentsettings import DocumentSettings
 from pcot.rois import ROI, ROIBoundsException
 from pcot.sources import MultiBandSource, SourcesObtainable, Source
-from pcot.utils import annotations
+from pcot.utils import annotations, debayering
 from pcot.utils.annotations import annotFont
 from pcot.utils import image
 from pcot.utils.archive import FileArchive
@@ -319,10 +319,13 @@ class CannotLoadImageBadFormatException(CannotLoadImageException):
         super().__init__(fname, "not a valid raster format")
 
 
-def load_rgb_image(fname, bitdepth=None) -> np.ndarray:
+def load_rgb_image(fname, bitdepth=None, debayer_algo=None, debayer_pattern=None) -> np.ndarray:
     """This is used by ImageCube to load its image data. It's a function because it's
-    also used by the multifile loader."""
+    also used by the multifile loader. Can also debayer given an algorithm and pattern. In this case only
+    the first band will be used (see pcot.utils.debayering)"""
     fname = str(fname)  # fname could potentially be some kind of Path object.
+    debayer_pattern = pcot.config.defaultBayerPattern if not debayer_pattern else debayer_pattern
+
     # imread with this argument will load any depth, any
     # number of channels
     img = cv.imread(fname, -1)
@@ -346,6 +349,12 @@ def load_rgb_image(fname, bitdepth=None) -> np.ndarray:
         scale = 1.0
     # convert from BGR to RGB (OpenCV is weird)
     img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+
+    # handle debayering
+    if debayer_algo and debayer_algo.upper() != 'NONE':
+        img = debayering.debayer(img, debayer_algo, debayer_pattern)
+
+
     # convert to floats (32 bit)
     img = img.astype(np.float32)
     # scale to 0..1
@@ -498,12 +507,14 @@ class ImageCube(SourcesObtainable):
             mapping.ensureValid(self)
         return self
 
-    ## class method for loading an image (using cv's imread)
-    # Always builds an RGB image. Sources must be provided.
     @classmethod
-    def load(cls, fname, mapping, sources, bitdepth=None):
+    def load(cls, fname, mapping, sources, bitdepth=None, debayer_algo='NONE', debayer_pattern=None):
+        """
+        Load an RGB image using opencv's imread. Can also debayer - see pcot.utils.debayering.
+        Sources must be provided.
+        """
         logger.info(f"ImageCube load: {fname}")
-        img = load_rgb_image(fname, bitdepth=bitdepth)
+        img = load_rgb_image(fname, bitdepth=bitdepth, debayer_algo=debayer_algo, debayer_pattern=debayer_pattern)
         # create sources if none given
         if sources is None:
             sources = MultiBandSource([Source().setBand('R'),
@@ -853,7 +864,8 @@ class ImageCube(SourcesObtainable):
     @classmethod
     def deserialise(cls, d):
         """Inverse of serialise(), requires a document to get the inputs"""
-
+        if d is None:
+            return None
         def decodeArrayValue(tup):
             isAllSame, v, shape, tp = tup
             if isAllSame:
