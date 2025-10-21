@@ -36,7 +36,7 @@ def createPatchROI(img, x, y, radius):
     # get minimum and maximum pixel sizes (empirically determined from radius of patch)
     maxPix = radius ** 2 * 4
     minPix = 0  # probably best to not have a min pixel count
-    ff = MeanFloodFiller(img, FloodFillParams(minPix, maxPix, threshold=0.005))
+    ff = MeanFloodFiller(img, FloodFillParams(minPix, maxPix, threshold=0.003))
 
     # perform a flood fill and get a region out. This may return None if the
     # number of pixels is too low or too high. If so, we just fill a small region around

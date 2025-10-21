@@ -58,7 +58,7 @@ class MplWidget(QtWidgets.QWidget):
 
     ## clear all drawings
     def clear(self):
-        self.ax.cla()
+        self.fig.clf()
 
     ## force redraw
     def draw(self):
