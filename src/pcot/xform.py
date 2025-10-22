@@ -502,7 +502,7 @@ class XForm:
     # is this the currently selected node?
     current: bool
     # the main rectangle for the node in the scene
-    rect: ['graphscene.GMainRect']
+    rect: 'graphscene.GMainRect'
     # input connector rectangles
     inrects: List[Optional['graphscene.GConnectRect']]
     # output connector rectangles
@@ -516,6 +516,9 @@ class XForm:
     # recursion avoidance
     inUIChange: bool
 
+    # actively performing? Actually in its type.perform()?
+    performing: bool
+
     # the serialised parameters in a TaggedAggregate, or None. Usually it's TaggedDict.
     params: Optional['TaggedAggregate']
 
@@ -525,6 +528,7 @@ class XForm:
         self.type = tp
         self.savedver = tp.ver
         self.savedmd5 = None
+        self.performing = False
         # we keep a dict of those nodes which get inputs from us, and how many. We can't
         # keep the actual output connections easily, because they are one->many.
         self.children = {}
@@ -959,7 +963,6 @@ class XForm:
         # only be called inside the graph's perform.
         if not self.graph.performingGraph:
             raise Exception("Do not call perform directly on a node!")
-        ui.msg("Performing {}".format(self.debugName()))
         self.timesPerformed += 1
         try:
             # must clear this with prePerform on the graph, or nodes will
@@ -980,7 +983,14 @@ class XForm:
                     # We also check the forceRunDisabled flag in the graph - this is set when we want to
                     # force all nodes - disabled or not - to run. Typically this is done from a script.
                     if self.enabled or self.graph.forceRunDisabled:
+                        ui.msg("Performing {}".format(self.debugName()))
+                        # before and after performing the node, we update the graphics and force an event loop
+                        # so the user sees progress.
+                        if self.graph.scene:
+                            self.graph.scene.performing(self)
                         self.type.perform(self)
+                        if self.graph.scene:
+                            self.graph.scene.performing(None)
                     else:
                         # this may end up being done twice, because we do it to all nodes before we run the graph
                         self.clearOutputsAndTempData()

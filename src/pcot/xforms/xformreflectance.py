@@ -170,66 +170,74 @@ class XFormReflectance(XFormType):
             # not perfect. We can warn, though.
             roi = img.getROIByLabel(patch)
 
-            if roi and roi.bb().size() > 0:  # only consider an ROI if it's non-zero in size
-                subimg = img.subimage(roi=roi)  # get the part of the image covered by ROI
-                # see ImageCube.getROIBadBands for how this works - it gets the bands in an image
-                # for which all pixels have a BAD bit set.
-                mask = ~subimg.fullmask(maskBadPixels=True)
-                bad_bands = np.all(mask, axis=(0, 1))  # vector of booleans giving bad bands
+            if roi is None:
+                continue
 
-                # get the masked data itself from the ROI
-                means, stds = subimg.masked_all(maskBadPixels=True, noDQ=True)
-                # split the data into bands - we need to work separately on each band.
-                means = image.imgsplit(means)
-                stds = image.imgsplit(stds)
+            if roi.bb() is None:
+                raise XFormException("DATA","ROI has no BB")
 
-                # get the known reflectance for each filter along with the filter, and
-                # then the measured reflectance for each band.
-                for filter_name, (known_mean, known_std) in filter_dicts.items():
-                    # get the band index for this filter - we have Filter items in node.filters
-                    band_index = node.filter_index_by_name.get(filter_name, None)
-                    if band_index is None:
-                        # this filter is not in the image, so skip it
-                        logger.debug(f"Filter {filter_name} not in image, skipping")
-                        continue
+            if roi.bb().size() == 0:
+                continue   # only consider an ROI if it's non-zero in size
 
-                    if bad_bands[band_index]:
-                        # this band is bad for this ROI, so skip it
-                        logger.debug(f"Band {band_index} is bad, skipping")
-                        continue
+            subimg = img.subimage(roi=roi)  # get the part of the image covered by ROI
+            # see ImageCube.getROIBadBands for how this works - it gets the bands in an image
+            # for which all pixels have a BAD bit set.
+            mask = ~subimg.fullmask(maskBadPixels=True)
+            bad_bands = np.all(mask, axis=(0, 1))  # vector of booleans giving bad bands
 
-                    # flatten the means and sds and remove the masked pixels (we shouldn't really
-                    # need to do this but it aids debugging)
-                    band_means = means[band_index].compressed().flatten()
-                    band_stds = stds[band_index].compressed().flatten()
+            # get the masked data itself from the ROI
+            means, stds = subimg.masked_all(maskBadPixels=True, noDQ=True)
+            # split the data into bands - we need to work separately on each band.
+            means = image.imgsplit(means)
+            stds = image.imgsplit(stds)
 
-                    # sanity check for no good pixels
-                    if len(band_means) == 0:
-                        logger.debug(f"Band {band_index} has no good pixels, skipping")
-                        continue
+            # get the known reflectance for each filter along with the filter, and
+            # then the measured reflectance for each band.
+            for filter_name, (known_mean, known_std) in filter_dicts.items():
+                # get the band index for this filter - we have Filter items in node.filters
+                band_index = node.filter_index_by_name.get(filter_name, None)
+                if band_index is None:
+                    # this filter is not in the image, so skip it
+                    logger.debug(f"Filter {filter_name} not in image, skipping")
+                    continue
 
-                    # now prepare plotting data
-                    measured_mean = np.mean(band_means)
-                    measured_std = pooled_sd(band_means, band_stds)
-                    logger.debug(
-                        f"Band {band_index} has measured {measured_mean}±{measured_std}, known {known_mean}±{known_std}")
+                if bad_bands[band_index]:
+                    # this band is bad for this ROI, so skip it
+                    logger.debug(f"Band {band_index} is bad, skipping")
+                    continue
 
-                    if measured_std == 0:
-                        # this band has no variance, so skip it - both because the data is probably duff,
-                        # and because it makes NaN in the maths.
-                        logger.debug(f"Band {band_index} has no variance, skipping")
-                        continue
+                # flatten the means and sds and remove the masked pixels (we shouldn't really
+                # need to do this but it aids debugging)
+                band_means = means[band_index].compressed().flatten()
+                band_stds = stds[band_index].compressed().flatten()
 
-                    # create a data point for this filter / patch pairing
+                # sanity check for no good pixels
+                if len(band_means) == 0:
+                    logger.debug(f"Band {band_index} has no good pixels, skipping")
+                    continue
 
-                    point = ReflectancePoint(
-                        SimpleValue(known_mean, known_std),
-                        SimpleValue(measured_mean, measured_std),
-                        patch)
+                # now prepare plotting data
+                measured_mean = np.mean(band_means)
+                measured_std = pooled_sd(band_means, band_stds)
+                logger.debug(
+                    f"Band {band_index} has measured {measured_mean}±{measured_std}, known {known_mean}±{known_std}")
 
-                    if filter_name not in points_per_filter:
-                        points_per_filter[filter_name] = []
-                    points_per_filter[filter_name].append(point)
+                if measured_std == 0:
+                    # this band has no variance, so skip it - both because the data is probably duff,
+                    # and because it makes NaN in the maths.
+                    logger.debug(f"Band {band_index} has no variance, skipping")
+                    continue
+
+                # create a data point for this filter / patch pairing
+
+                point = ReflectancePoint(
+                    SimpleValue(known_mean, known_std),
+                    SimpleValue(measured_mean, measured_std),
+                    patch)
+
+                if filter_name not in points_per_filter:
+                    points_per_filter[filter_name] = []
+                points_per_filter[filter_name].append(point)
 
         if len(points_per_filter) == 0:
             raise XFormException('DATA', 'no points - perhaps no patches found in image?')

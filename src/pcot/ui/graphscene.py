@@ -8,6 +8,7 @@ from typing import List, Optional
 from PySide2 import QtWidgets, QtGui
 from PySide2.QtCore import Qt, QPointF
 from PySide2.QtGui import QColor, QFont, QTransform, QPen, QBrush
+from PySide2.QtWidgets import QApplication
 
 import pcot.datum as datum
 import pcot.ui as ui
@@ -526,11 +527,14 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
     draggingArrow: Optional[GArrow]
     # delete keys are ignored and passed down to Items because we're editing text in a node
     lockDeleteKeys: bool
+    # performing this node right now
+    performing_node: Optional[XForm]
 
     def __init__(self, graph, doPlace):
         """initialise to a graph, and do autolayout if doPlace is true"""
         super().__init__()
         self.graph = graph
+        self.performing_node = None
         self.lockDeleteKeys = False
         self.selectionChanged.connect(self.selChanged)
         self.selection = []
@@ -542,6 +546,13 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
 
         # and make all the graphics
         self.rebuild()
+
+    def performing(self, n: Optional[XForm]):
+        """Used in XForm.perform, this marks the performing node (or none) and changes the rectangle
+        for that node. It then forces an immediate graphics update by processing events."""
+        self.performing_node = n
+        self.setColourToState()
+        QApplication.processEvents()  # this forces an immediate update of the scene so the redraw happens!
 
     def placeGrandalf(self):
         """try to autolayout a graph using Grandalf (or at least x,y coordinates inside the xforms)."""
@@ -690,6 +701,12 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 r = max(r, 10)
                 g = max(g, 10)
                 b = max(b, 10)
+                # if the node is actively performing, mark that. (see XForm.perform and the GMainRect
+                # show_start_perform and start_end_perform methods)
+                if self.performing_node and self.performing_node == n:
+                    ui.log(f"Performing {n.debugName()}")
+                    b = 100
+                    g = 100
                 n.rect.setBrush(QColor(r, g, b))
                 outlinecol = QColor(0, 0, 0) if n.enabled else QColor(255, 0, 0)
                 n.rect.setPen(QPen(outlinecol))
