@@ -22,10 +22,14 @@ from matplotlib.figure import Figure
 class MplCanvas(Canvas):
     def __init__(self):
         self.fig = Figure(figsize=(4, 2))
-        self.ax = self.fig.add_subplot(111)  # make new one
+        self.create_default_subplot()
         Canvas.__init__(self, self.fig)
         Canvas.setSizePolicy(self, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         Canvas.updateGeometry(self)
+
+    def create_default_subplot(self):
+        self.ax = self.fig.add_subplot(111)  # make new one
+
 
 
 ## the matplotlib widget proper.
@@ -38,7 +42,7 @@ class MplWidget(QtWidgets.QWidget):
         self.vbl.addWidget(self.canvas)
         self.setLayout(self.vbl)
         self.fig = self.canvas.fig  # convenience
-        self.ax = self.canvas.ax
+        self.ax = self.canvas.ax    # ditto
 
     ## called when we want to save a figure
     def save(self):
@@ -56,9 +60,11 @@ class MplWidget(QtWidgets.QWidget):
             self.fig.savefig(path)
             pcot.config.setDefaultDir('mplplots', os.path.dirname(os.path.realpath(path)))
 
-    ## clear all drawings
+    ## clear all drawings and recreate the default subplot
     def clear(self):
         self.fig.clf()
+        self.canvas.create_default_subplot()
+        self.ax = self.canvas.ax    # and reset convenience link
 
     ## force redraw
     def draw(self):

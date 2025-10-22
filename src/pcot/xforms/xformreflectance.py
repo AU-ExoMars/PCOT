@@ -455,10 +455,14 @@ class TabReflectance(pcot.ui.tabs.Tab):
         self.w.replot.setStyleSheet("")
 
     def replot(self):
-
+        # the MPL widget creates a default subplot, let's clear it...
+        self.w.mpl.fig.clf()
         if self.node.params.sep_plots:
             self.replot_sep_plots()
             return
+
+        # and here, reset the plot and recreate the subplot
+        self.w.mpl.clear()
 
         ax = self.w.mpl.ax
         self.set_axis_data(ax)
