@@ -561,13 +561,16 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
         for that node. It then forces an immediate graphics update by processing events."""
 
         self.performing_node = n
-        for nn in self.graph.nodes:
-            nn.outdated = False
+        # we also mark all child nodes (and us) as outdated.
         def mark_outdated(nn: XForm):
             nn.outdated = True
+            for child in nn.children:
+                mark_outdated(child)
         if n:
-            self.graph.visit(n, mark_outdated)
+            mark_outdated(n)
+            n.outdated = False  # and then clear the outdated flag for this node
         self.setColourToState()
+        self.performing_node = None
         QApplication.processEvents()  # this forces an immediate update of the scene so the redraw happens!
 
     def placeGrandalf(self):

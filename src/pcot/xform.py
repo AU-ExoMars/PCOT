@@ -516,8 +516,6 @@ class XForm:
     # recursion avoidance
     inUIChange: bool
 
-    # actively performing? Actually in its type.perform()?
-    performing: bool
     # child nodes of a parent which has not yet performed have this set so the graph can show them
     outdated: bool
 
@@ -530,7 +528,6 @@ class XForm:
         self.type = tp
         self.savedver = tp.ver
         self.savedmd5 = None
-        self.performing = False
         self.outdated = False
         # we keep a dict of those nodes which get inputs from us, and how many. We can't
         # keep the actual output connections easily, because they are one->many.
@@ -992,8 +989,6 @@ class XForm:
                         if self.graph.scene:
                             self.graph.scene.performing(self)
                         self.type.perform(self)
-                        if self.graph.scene:
-                            self.graph.scene.performing(None)
                     else:
                         # this may end up being done twice, because we do it to all nodes before we run the graph
                         self.clearOutputsAndTempData()
