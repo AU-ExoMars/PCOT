@@ -197,14 +197,23 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
 
     def mousePressEvent(self, event):
         # near a corner and the node is resizable? Start resizing. Otherwise, start moving.
-        p = event.pos()
-        if self.node.type.resizable and (p - self.rect().bottomRight()).manhattanLength() < 15:
-            self.resizing = True
-            self.resizeStartPosition = p
-            self.resizeStartRectangle = self.rect()
-        else:
+        # Also handle modified clicks - Ctrl-click runs a node (and its kids of autorun is set
+
+        if event.modifiers() & Qt.ControlModifier:
+            # running the performNodes will actually _delete_ this object, so we don't call
+            # the superclass handler in this case.
+            ui.log(f"Running node {self.node}, autorun={XFormGraph.autoRun}")
+            self.node.graph.performNodes(self.node)
             self.aboutToMove = True
-        super().mousePressEvent(event)
+        else:
+            p = event.pos()
+            if self.node.type.resizable and (p - self.rect().bottomRight()).manhattanLength() < 15:
+                self.resizing = True
+                self.resizeStartPosition = p
+                self.resizeStartRectangle = self.rect()
+            else:
+                self.aboutToMove = True
+            super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
         if self.resizing:
@@ -550,7 +559,14 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
     def performing(self, n: Optional[XForm]):
         """Used in XForm.perform, this marks the performing node (or none) and changes the rectangle
         for that node. It then forces an immediate graphics update by processing events."""
+
         self.performing_node = n
+        for nn in self.graph.nodes:
+            nn.outdated = False
+        def mark_outdated(nn: XForm):
+            nn.outdated = True
+        if n:
+            self.graph.visit(n, mark_outdated)
         self.setColourToState()
         QApplication.processEvents()  # this forces an immediate update of the scene so the redraw happens!
 
@@ -707,6 +723,8 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     ui.log(f"Performing {n.debugName()}")
                     b = 100
                     g = 100
+                elif n.outdated:    # child nodes of more recently run parents.
+                    b //= 2
                 n.rect.setBrush(QColor(r, g, b))
                 outlinecol = QColor(0, 0, 0) if n.enabled else QColor(255, 0, 0)
                 n.rect.setPen(QPen(outlinecol))

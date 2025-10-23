@@ -518,6 +518,8 @@ class XForm:
 
     # actively performing? Actually in its type.perform()?
     performing: bool
+    # child nodes of a parent which has not yet performed have this set so the graph can show them
+    outdated: bool
 
     # the serialised parameters in a TaggedAggregate, or None. Usually it's TaggedDict.
     params: Optional['TaggedAggregate']
@@ -529,6 +531,7 @@ class XForm:
         self.savedver = tp.ver
         self.savedmd5 = None
         self.performing = False
+        self.outdated = False
         # we keep a dict of those nodes which get inputs from us, and how many. We can't
         # keep the actual output connections easily, because they are one->many.
         self.children = {}
@@ -952,7 +955,7 @@ class XForm:
     ## perform the transformation; delegated to the type object - recurses down the children.
     # Also tells any tab open on a node that its node has changed.
     # DO NOT CALL DIRECTLY - called either from itself or from performNodes.
-    def perform(self, isAlwaysRunAfter=False):
+    def perform(self, isAlwaysRunAfter=False, run_children=True):
         global performDepth
 
         # don't run "always run after" special nodes unless we're allowed.
@@ -1002,15 +1005,16 @@ class XForm:
                 # tell the tab that this node has changed
                 self.updateTabs()
 
-                # this is a hack to let us guarantee the order children are processed,
-                # by sorting them by display name. Used in testing.
-                sorted_children = sorted(self.children.keys(), key=lambda xx: xx.displayName)
+                if run_children:
+                    # this is a hack to let us guarantee the order children are processed,
+                    # by sorting them by display name. Used in testing.
+                    sorted_children = sorted(self.children.keys(), key=lambda xx: xx.displayName)
 
-                # run each child (could turn off child processing?)
-                performDepth += 1
-                for n in sorted_children:
-                    n.perform()
-                performDepth -= 1
+                    # run each child (could turn off child processing?)
+                    performDepth += 1
+                    for n in sorted_children:
+                        n.perform()
+                    performDepth -= 1
         except Exception as e:
             traceback.print_exc()
             ui.logXFormException(self, e)
@@ -1340,8 +1344,8 @@ class XFormGraph:
         self.forceRunDisabled = False
 
     def performNodes(self, node=None):
-        """perform the entire graph, or all those nodes below a given node.
-            If the entire graph, performs a traversal from the root nodes.
+        """perform the entire graph, or all those nodes below a given node (if autorun is true).
+            If the entire graph, performs a traversal from the root nodes (and always runs children)
             """
         # if we are already running this method, exit. This
         # will be atomic because GIL. The use case here can
@@ -1365,7 +1369,7 @@ class XFormGraph:
                     n.perform(isAlwaysRunAfter=True)
         else:
             # we're running an explicit node
-            node.perform()
+            node.perform(run_children=XFormGraph.autoRun)
         self.performingGraph = False
 
         self.showPerformance()

@@ -202,7 +202,7 @@ class XFormMultiDot(XFormType):
                 # really be the size of the image we are actually in, so I'll set it here too.
                 r.setContainingImageDimensions(img.w, img.h)
             # filter out "unset" ROIs. This happens from time to time with captures and I don't know why.
-            node.rois = [x for x in node.rois if x.bbrect is not None]
+            node.rois = [x for x in node.rois if x.bb() is not None]
             # copy image and append ROIs to it
             img = img.copy()
             if node.captured:
@@ -250,7 +250,7 @@ class XFormMultiDot(XFormType):
         # filter out any zero-radius circles
         node.rois = [r for r in rs if isinstance(r, ROIPainted) or r.r > 0]
         # filter out unset ROIs
-        node.rois = [r for r in node.rois if r.bbrect is not None]
+        node.rois = [r for r in node.rois if r.bb() is not None]
 
     def setProps(self, node, img):
         node.previewRadius = node.dotSize
