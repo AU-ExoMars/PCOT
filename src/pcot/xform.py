@@ -1293,6 +1293,9 @@ class XFormGraph:
         """
 
         self.forceRunDisabled = forceRunDisabled
+        if node is not None:        # if autorun is on, that will clear the flag we are about to set
+            node.outdated = True
+            # ui.log(f"Autorun set on {node}")
         if (not uiOnly) and (XFormGraph.autoRun or runAll):
             if runAll and invalidateInputs:
                 self.doc.inputMgr.invalidate()
@@ -1317,7 +1320,7 @@ class XFormGraph:
                     inst.graph.performNodes(inst)
 
                 # and rebuild graphics in the prototype
-                self.rebuildGraphics()
+                # self.rebuildGraphics()
             else:
                 self.performNodes(node)
         elif node is not None:
@@ -1337,6 +1340,7 @@ class XFormGraph:
                 xx.setCaption(self.doc.settings.captionType)
 
         self.forceRunDisabled = False
+        self.rebuildGraphics()
 
     def performNodes(self, node=None):
         """perform the entire graph, or all those nodes below a given node (if autorun is true).

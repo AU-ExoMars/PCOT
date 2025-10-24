@@ -151,6 +151,15 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
                       QtWidgets.QGraphicsItem.ItemIsMovable |
                       QtWidgets.QGraphicsItem.ItemSendsGeometryChanges)
         self.node = node
+
+        self.outdatedWarning = QtWidgets.QGraphicsSimpleTextItem("!!!",parent=self)
+        self.outdatedWarning.setBrush(Qt.red)
+        self.outdatedWarning.setFont(errorFont)
+        self.outdatedWarning.setZValue(1)
+        self.outdatedWarning.setPos(x1+XTEXTOFFSET+w-23,
+                                    y1+YTEXTOFFSET+YERROROFFSET)
+        self.outdatedWarning.setVisible(False)
+
         # help "button" created when setSizeToText is called.
         self.helprect = None
         self.resizeStartRectangle = None
@@ -568,6 +577,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 mark_outdated(child)
         if n:
             mark_outdated(n)
+#            ui.log(f"Autorun cleared on {n}")
             n.outdated = False  # and then clear the outdated flag for this node
         self.setColourToState()
         self.performing_node = None
@@ -729,8 +739,11 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 elif n.outdated:    # child nodes of more recently run parents.
                     b //= 2
                 n.rect.setBrush(QColor(r, g, b))
-                outlinecol = QColor(0, 0, 0) if n.enabled else QColor(255, 0, 0)
-                n.rect.setPen(QPen(outlinecol))
+                r, g, b = (0, 0, 0) if n.enabled else (255, 0, 0)
+                rect_pen = QPen(QColor(r,g,b))
+                n.rect.setPen(rect_pen)
+
+                n.rect.outdatedWarning.setVisible(n.outdated)
 
                 r, g, b = n.type.getTextColour(n) if n.enabled else (255, 0, 0)
                 n.rect.text.setColour(QColor(r, g, b))
