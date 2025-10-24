@@ -351,6 +351,33 @@ with the canvas' Export Image button the legend will be in the margin:
 
 ![!Exported R671_438 (svg)|leg](leg.svg)
 
+## Viewing progress and handling slow nodes
+
+![Slow nodes](outdated.png){ align=left }
+You may see nodes briefly turning yellow and red when you change the
+graph or any node details. This happens as the graph runs: red nodes
+are currently processing, yellow nodes with "!!!" warnings
+are working on outdated data and need to be processed. This usually 
+happens automatically.
+
+However, some operations can be very slow because of the sheer number of
+calculations that need to be done, particularly for uncertainty propagation.
+To cope with this, you can stop PCOT from automatically running all the
+children of changed nodes by switching off "Auto-run on change" in the global
+controls at the bottom right of the PCOT window.
+
+When this is done, the nodes will not automatically run when they are changed.
+When you change a node, it and all nodes to which it feeds data (directly or
+indirectly) will become outdated. To run each
+node, you will need to Ctrl-click on it (i.e. click with the Ctrl key held
+down).
+
+This means you can edit a few nodes and then either run them by hand or
+click on "Run All" to rerun the graph. You can also turn autorun back on
+and ctrl-click on the first outdated node - this runs it and all its
+descendants.
+
+
 
 
 [^1]:

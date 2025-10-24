@@ -17,6 +17,8 @@ its action when it is changed (either an input has changed or one of the
 controls in its tab). This will also cause all nodes "downstream" of it
 in the graph to change. It is sometimes useful to turn this off when
 changing a node will trigger a very slow action.
+If you have done this, you can run a single node by clicking on it
+with the Ctrl key held down.
 * **Run all** will cause all root nodes (nodes without inputs) in the graph
 to run, thus causing all their downstream nodes to run. Effectively, it
 runs all the nodes in the graph in the correct order.
