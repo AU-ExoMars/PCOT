@@ -197,6 +197,10 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#viewing-progress-and-handling-slow-nodes" class="nav-link">Viewing progress and handling slow nodes</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -458,24 +462,46 @@ than those of the 671nm band.</p>
 <mark>try undocking the <em>rect</em> node and dragging it to a different part of the screen</mark> by double-clicking
 on the tab, so you can edit
 the rectangle while the <em>expr</em> output is visible. <mark>Dock it again by closing the undocked window</mark>.</p>
-<p>To make things more visible still, <mark>open the <em>data</em> section and add a <em>gradient</em> node after the <em>expr</em> node and view it</mark>, clicking
+<p>To make things more visible still, <mark>open the <em>data</em> section and add a <em>colourmap</em> node after the <em>expr</em> node and view it</mark>, clicking
 making sure <strong>Show ROIs</strong> is enabled on its canvas (ROIs are typically retained on derived
 images):</p>
-<p><figure class="text-center"><a data-lightbox="R671_438d.png" href="../R671_438d.png" name="R671_438d"><img alt="R671_438 with a rectangle and gradient" src="../R671_438d.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 with a rectangle and gradient. Click on image to expand.</figcaption></figure></p>
-<p>There's not much to see because of the nature of the image, unfortunately! Note that there is a "legend"
+<p><figure class="text-center"><a data-lightbox="R671_438d.png" href="../R671_438d.png" name="R671_438d"><img alt="R671_438 with a rectangle and colourmap" src="../R671_438d.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 with a rectangle and colourmap. Click on image to expand.</figcaption></figure></p>
+<p>The <em>colourmap</em> node creates a false colour image.
+There's not much to see because of the nature of the image, unfortunately! Note that there is a "legend"
 at top left, and this can be <mark>edited and placed by clicking on the Legend button</mark>:</p>
-<p><figure class="text-center"><a data-lightbox="R671_438da.png" href="../R671_438da.png" name="R671_438da"><img alt="R671_438 with a better gradient legend" src="../R671_438da.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 with a better gradient legend. Click on image to expand.</figcaption></figure></p>
-<p>The colour palette for the gradient, incidentally, is the "viridis" palette which is helpful for people
+<p><figure class="text-center"><a data-lightbox="R671_438da.png" href="../R671_438da.png" name="R671_438da"><img alt="R671_438 with a better colourmap legend" src="../R671_438da.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 with a better colourmap legend. Click on image to expand.</figcaption></figure></p>
+<p>The colour palette for the colourmap, incidentally, is the "viridis" palette which is helpful for people
 with certain kinds of colour blindness<sup id="fnref:2"><a class="footnote-ref" href="#fn:2">2</a></sup>. Other presets are available
-by clicking on the <strong>Load Preset</strong> button, or you can edit the gradient
+by clicking on the <strong>Load Preset</strong> button, or you can edit the colour "gradient"
 by hand: double-click to add or remove a point, drag to move a point.</p>
-<p>It is possible to "inset" the gradient into the RGB representation used in the <em>input</em> node by passing
-that to the <em>insetinto</em> input of the gradient:</p>
+<p>It is possible to "inset" the false colour image from <em>colourmap</em> into the RGB representation used in the <em>input</em> node by passing
+that to the <em>background</em> input of the <em>colourmap</em>:</p>
 <p><figure class="text-center"><a data-lightbox="R671_438e.png" href="../R671_438e.png" name="R671_438e"><img alt="R671_438 inset into source image RGB representation" src="../R671_438e.png" /></a><figcaption class="figure-caption text-center">Figure: R671_438 inset into source image RGB representation. Click on image to expand.</figcaption></figure></p>
-<p>If you <mark>switch to the Legend part of the <em>gradient</em> node</mark> and
+<p>If you <mark>switch to the Legend part of the <em>colourmap</em> node</mark> and
 <mark>select <em>Left margin</em> for the <strong>Legend</strong> item</mark>, when you <mark>export the image</mark>
 with the canvas' Export Image button the legend will be in the margin:</p>
 <p><figure class="text-center"><a data-lightbox="leg.svg" href="../leg.svg" name="leg"><img alt="Exported R671_438 (svg)" src="../leg.svg" /></a><figcaption class="figure-caption text-center">Figure: Exported R671_438 (svg). Click on image to expand.</figcaption></figure></p>
+<h2 id="viewing-progress-and-handling-slow-nodes">Viewing progress and handling slow nodes</h2>
+<p><img align="left" alt="Slow nodes" src="../outdated.png" />
+You may see nodes briefly turning yellow and red when you change the
+graph or any node details. This happens as the graph runs: red nodes
+are currently processing, yellow nodes with "!!!" warnings
+are working on outdated data and need to be processed. This usually 
+happens automatically.</p>
+<p>However, some operations can be very slow because of the sheer number of
+calculations that need to be done, particularly for uncertainty propagation.
+To cope with this, you can stop PCOT from automatically running all the
+children of changed nodes by switching off "Auto-run on change" in the global
+controls at the bottom right of the PCOT window.</p>
+<p>When this is done, the nodes will not automatically run when they are changed.
+When you change a node, it and all nodes to which it feeds data (directly or
+indirectly) will become outdated. To run each
+node, you will need to Ctrl-click on it (i.e. click with the Ctrl key held
+down).</p>
+<p>This means you can edit a few nodes and then either run them by hand or
+click on "Run All" to rerun the graph. You can also turn autorun back on
+and ctrl-click on the first outdated node - this runs it and all its
+descendants.</p>
 <div class="footnote">
 <hr />
 <ol>

@@ -10,7 +10,7 @@
         <link rel="shortcut icon" href="../../img/favicon.ico">
     <meta name="robots" content="noindex,nofollow">
 
-        <title>gradient - PCOT Documentation</title>
+        <title>colourmap - PCOT Documentation</title>
     
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/font-awesome.min.css" rel="stylesheet">
@@ -161,7 +161,7 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#gradient" class="nav-link">gradient</a>
+            <li class="nav-item" data-bs-level="1"><a href="#colourmap" class="nav-link">colourmap</a>
               <ul class="nav flex-column">
             <li class="nav-item" data-bs-level="2"><a href="#description" class="nav-link">Description</a>
               <ul class="nav flex-column">
@@ -178,13 +178,13 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="gradient">gradient</h1>
+<h1 id="colourmap">colourmap</h1>
 <h2 id="description">Description</h2>
-<p>Convert a mono image to an RGB gradient image for better visibility. If the "insetinto" input has an
+<p>Convert a mono image to an RGB false colour image for better visibility. If the "insetinto" input has an
 image AND there is a valid ROI in the mono image, the image will be inset into the RGB of the insetinto image.
 NOTE: if you change the "insetinto" image's RGB mapping you may need to "run all" to see the the change reflected.</p>
 <p><strong>Ignores DQ and uncertainty</strong></p>
-<p>The gradient widget has the following behaviour:</p>
+<p>The colour map widget has the following behaviour:</p>
 <ul>
 <li>click and drag to move a colour point</li>
 <li>doubleclick to delete an existing colour point</li>
@@ -193,7 +193,7 @@ NOTE: if you change the "insetinto" image's RGB mapping you may need to "run all
 </ul>
 <p>Node parameters:</p>
 <ul>
-<li>gradient: utils.Gradient object containing gradient info</li>
+<li>gradient: utils.Gradient object containing the colour map used</li>
 <li>colour: (r,g,b) [0:1] colour of text and border for in-image legend</li>
 <li>legendrect: (x,y,w,h) rectangle for in-image legend</li>
 <li>vertical: true if vertical legend</li>
@@ -253,11 +253,11 @@ These are also defined as constants LEFT_MARGIN... IN_IMAGE (and None)</li>
 </tbody>
 </table>
 <h3 id="parameters">Parameters</h3>
-<table border='1' style='border-collapse: collapse;'><tr><td rowspan="18" style="border-right: none;">gradient</td><td rowspan="4" style="border-right: none;">gradient: list</td><td rowspan="4" style="border-left: none;"> (ordered)</td><td rowspan="1" style="border-right: none;">x: float (default 0.0)</td><td rowspan="1" style="border-left: none;">x</td></tr><tr><td rowspan="3" style="border-right: none;">colour</td><td rowspan="3" style="border-left: none;">colour (ordered)</td><td rowspan="1" style="border-right: none;">r: int or float (default 0.0)</td><td rowspan="1" style="border-left: none;">The red component 0-1</td></tr><tr><td rowspan="1" style="border-right: none;">g: int or float (default 0.0)</td><td rowspan="1" style="border-left: none;">The green component 0-1</td></tr><tr><td rowspan="1" style="border-right: none;">b: int or float (default 0.0)</td><td rowspan="1" style="border-left: none;">The blue component 0-1</td></tr><tr><td rowspan="1" style="border-right: none;">preset: string (topo, grey, viridis, magma, plasma, inferno, cividis, mako, turbo, rocket) (default None)</td><td rowspan="1" style="border-left: none;">preset</td></tr><tr><td rowspan="3" style="border-right: none;">colour</td><td rowspan="3" style="border-left: none;">legend colour (ordered)</td><td rowspan="1" style="border-right: none;">r: int or float (default 1.0)</td><td rowspan="1" style="border-left: none;">The red component 0-1</td></tr><tr><td rowspan="1" style="border-right: none;">g: int or float (default 1.0)</td><td rowspan="1" style="border-left: none;">The green component 0-1</td></tr><tr><td rowspan="1" style="border-right: none;">b: int or float (default 0.0)</td><td rowspan="1" style="border-left: none;">The blue component 0-1</td></tr><tr><td rowspan="4" style="border-right: none;">legendrect</td><td rowspan="4" style="border-left: none;">legend rectangle if in image (ordered)</td><td rowspan="1" style="border-right: none;">x: integer (default 0)</td><td rowspan="1" style="border-left: none;">The x coordinate of the top left corner</td></tr><tr><td rowspan="1" style="border-right: none;">y: integer (default 0)</td><td rowspan="1" style="border-left: none;">The y coordinate of the top left corner</td></tr><tr><td rowspan="1" style="border-right: none;">w: integer (default 100)</td><td rowspan="1" style="border-left: none;">The width of the rectangle</td></tr><tr><td rowspan="1" style="border-right: none;">h: integer (default 20)</td><td rowspan="1" style="border-left: none;">The height of the rectangle</td></tr><tr><td rowspan="1" style="border-right: none;">vertical: boolean (default False)</td><td rowspan="1" style="border-left: none;">is legend vertical?</td></tr><tr><td rowspan="1" style="border-right: none;">fontscale: float (default 10.0)</td><td rowspan="1" style="border-left: none;">size of legend font</td></tr><tr><td rowspan="1" style="border-right: none;">thickness: float (default 1.0)</td><td rowspan="1" style="border-left: none;">thickness of legend border</td></tr><tr><td rowspan="1" style="border-right: none;">legendPos: string (Left margin, Right margin, Top margin, Bottom margin, In image, None) (default 'In image')</td><td rowspan="1" style="border-left: none;">legend location</td></tr><tr><td rowspan="1" style="border-right: none;">normbackground: boolean (default False)</td><td rowspan="1" style="border-left: none;">normalise background</td></tr><tr><td rowspan="1" style="border-right: none;">sigfigs: integer (default 6)</td><td rowspan="1" style="border-left: none;">significant figures</td></tr></table>
+<table border='1' style='border-collapse: collapse;'><tr><td rowspan="18" style="border-right: none;">colourmap</td><td rowspan="4" style="border-right: none;">gradient: list</td><td rowspan="4" style="border-left: none;"> (ordered)</td><td rowspan="1" style="border-right: none;">x: float (default 0.0)</td><td rowspan="1" style="border-left: none;">x</td></tr><tr><td rowspan="3" style="border-right: none;">colour</td><td rowspan="3" style="border-left: none;">colour (ordered)</td><td rowspan="1" style="border-right: none;">r: int or float (default 0.0)</td><td rowspan="1" style="border-left: none;">The red component 0-1</td></tr><tr><td rowspan="1" style="border-right: none;">g: int or float (default 0.0)</td><td rowspan="1" style="border-left: none;">The green component 0-1</td></tr><tr><td rowspan="1" style="border-right: none;">b: int or float (default 0.0)</td><td rowspan="1" style="border-left: none;">The blue component 0-1</td></tr><tr><td rowspan="1" style="border-right: none;">preset: string (topo, grey, viridis, magma, plasma, inferno, cividis, mako, turbo, rocket) (default None)</td><td rowspan="1" style="border-left: none;">preset</td></tr><tr><td rowspan="3" style="border-right: none;">colour</td><td rowspan="3" style="border-left: none;">legend colour (ordered)</td><td rowspan="1" style="border-right: none;">r: int or float (default 1.0)</td><td rowspan="1" style="border-left: none;">The red component 0-1</td></tr><tr><td rowspan="1" style="border-right: none;">g: int or float (default 1.0)</td><td rowspan="1" style="border-left: none;">The green component 0-1</td></tr><tr><td rowspan="1" style="border-right: none;">b: int or float (default 0.0)</td><td rowspan="1" style="border-left: none;">The blue component 0-1</td></tr><tr><td rowspan="4" style="border-right: none;">legendrect</td><td rowspan="4" style="border-left: none;">legend rectangle if in image (ordered)</td><td rowspan="1" style="border-right: none;">x: integer (default 0)</td><td rowspan="1" style="border-left: none;">The x coordinate of the top left corner</td></tr><tr><td rowspan="1" style="border-right: none;">y: integer (default 0)</td><td rowspan="1" style="border-left: none;">The y coordinate of the top left corner</td></tr><tr><td rowspan="1" style="border-right: none;">w: integer (default 100)</td><td rowspan="1" style="border-left: none;">The width of the rectangle</td></tr><tr><td rowspan="1" style="border-right: none;">h: integer (default 20)</td><td rowspan="1" style="border-left: none;">The height of the rectangle</td></tr><tr><td rowspan="1" style="border-right: none;">vertical: boolean (default False)</td><td rowspan="1" style="border-left: none;">is legend vertical?</td></tr><tr><td rowspan="1" style="border-right: none;">fontscale: float (default 10.0)</td><td rowspan="1" style="border-left: none;">size of legend font</td></tr><tr><td rowspan="1" style="border-right: none;">thickness: float (default 1.0)</td><td rowspan="1" style="border-left: none;">thickness of legend border</td></tr><tr><td rowspan="1" style="border-right: none;">legendPos: string (Left margin, Right margin, Top margin, Bottom margin, In image, None) (default 'In image')</td><td rowspan="1" style="border-left: none;">legend location</td></tr><tr><td rowspan="1" style="border-right: none;">normbackground: boolean (default False)</td><td rowspan="1" style="border-left: none;">normalise background</td></tr><tr><td rowspan="1" style="border-right: none;">sigfigs: integer (default 6)</td><td rowspan="1" style="border-left: none;">significant figures</td></tr></table>
 
 <hr />
 <p>Automatically generated by generate_autodocs.py</p>
-<p>Date: 2025-06-12T17:28:29.051109</p></div>
+<p>Date: 2025-10-24T15:30:01.755150</p></div>
             </div>
         </div>
 

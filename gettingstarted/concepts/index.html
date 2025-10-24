@@ -219,8 +219,8 @@ Technically speaking, this is a "directed acyclic graph": each connection
 has a direction, going from the output of one node to the input
 of another, and there can't be any loops.</p>
 <p>As an example, consider that we might want
-to overlay some kind of spectral parameter map, converted to a colour
-gradient, over an RGB image (note: I'm not a geologist, I'm a software
+to overlay some kind of spectral parameter map, converted to a false colour image
+and inset into an RGB image (note: I'm not a geologist, I'm a software
 engineer, so perhaps this is a very artificial example). One way to do it
 might be this:</p>
 <p><figure class="text-center"><a data-lightbox="671438grad.png" href="../671438grad.png"><img alt="An example graph" src="../671438grad.png" /></a><figcaption class="figure-caption text-center">Figure: An example graph. Click on image to expand.</figcaption></figure></p>
@@ -241,7 +241,7 @@ calculates the result of a mathematical expression performed on each pixel. The 
 is running: <code>a$671 / a$438</code>.
 This will read the bands whose wavelengths are 671nm and 438nm in the node's <em>a</em> input, and find their ratio for every pixel.
 The result will be a single-band image. <em>Expr</em> nodes can perform much more complex calculations than this.</li>
-<li>The <em>gradient</em> node will convert a single-band image into an RGB image with a user-defined gradient and
+<li>The <em>colourmap</em> node will convert a single-band image into an RGB image with a user-defined "gradient" map and
 inset it into the RGB representation of another image - here we are insetting into the input image, using
 the RGB representation used by that node.</li>
 </ul>

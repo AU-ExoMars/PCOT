@@ -173,7 +173,7 @@
 <h1 id="release-procedure">Release procedure</h1>
 <p>To make a new release, follow this checklist.</p>
 <ol>
-<li>Make sure the dev branch is merged into the master branch.</li>
+<li>Make sure you're on the dev branch and all features merged in.</li>
 <li>Create a new version number and codeword. For the version number, use   <a href="https://semver.org">semantic versioning</a>. This means:<ul>
 <li>Version number in MAJOR.MINOR.PATCH format</li>
 <li>append "-alpha" if we are still in alpha</li>
@@ -189,7 +189,6 @@
 <li>Edit <strong>PCOT/src/pcot/VERSION.txt</strong> to add the new version data, also specifying codename and the date (in ISO 8601, YYYY-MM-DD format).</li>
 <li>Edit <strong>PCOT/pyproject.toml</strong> to add the new version data (without the codename)</li>
 <li>Run <strong>poetry install</strong> on both Windows and Linux and check PCOT still runs (and that the title bar and About version data is correct)</li>
-<li>Run <strong>generate_autodocs.py</strong> in <strong>mkdocs</strong> to get up-to-date autodocs.</li>
 <li>Create a list of the changes by looking at the Git log and add this
 to <strong>PCOT/mkdocs/docs/releases.md</strong> under a new section for the new release.</li>
 <li>(pyinstaller only)<ol>
@@ -198,8 +197,10 @@ to <strong>PCOT/mkdocs/docs/releases.md</strong> under a new section for the new
 <li>Upload to the release repo (see below) (not done now we're not using PyInstaller)</li>
 </ol>
 </li>
-<li>Upload the docs to the documentation site.</li>
 <li>Commit with "version bump for release (VERSION NAME)" in the text</li>
+<li>Make sure the dev branch is merged into the master branch.</li>
+<li>Run <strong>generate_autodocs.py</strong> in <strong>mkdocs</strong> to get up-to-date autodocs.</li>
+<li>Upload the docs to the documentation site.</li>
 <li>Make a release tag in the repository, copying the change list from the documentation.</li>
 </ol></div>
             </div>

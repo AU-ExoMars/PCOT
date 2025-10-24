@@ -189,6 +189,10 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#missing-filter-data" class="nav-link">Missing filter data</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#assigning-filters-manually" class="nav-link">Assigning filters manually</a>
               <ul class="nav flex-column">
               </ul>
@@ -310,8 +314,12 @@ name</li>
 <li><code>cwl</code>: if this is found, it is used to match a filter using the CWL
 (wavelength) field</li>
 </ul>
-<p>If you need assistance, or this isn't flexible enough, contact us - or
-maybe use the <em>assignfilters</em> node.</p>
+<h2 id="missing-filter-data">Missing filter data</h2>
+<p>When the system can't find suitable filters in the camera using this
+system, you'll get an error in the log, and also a warning in the canvas
+("Missing filter data").</p>
+<p>If you need assistance, or the pattern system isn't flexible enough, contact
+us - or maybe use the <em>assignfilters</em> node.</p>
 <h2 id="assigning-filters-manually">Assigning filters manually</h2>
 <p>Sometimes it's difficult to write a filter pattern to infer the
 filters automatically from the filename. In this case, 

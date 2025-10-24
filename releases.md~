@@ -8,6 +8,20 @@ None
 
 ## Alpha releases
 
+## 0.10.0-alpha 2025-06-12 HALWYN ROUND
+
+I still miss Fenton Saurus. 
+
+* New system for storing camera data in PARC files
+* Subcommand system with special commands (lscams, gencam etc.)
+* Reflectance correction (given data from the camera and a calib target)
+* Various objects no longer require Documents for deserialisation
+* Colorchecker (i.e. Macbeth) calibration target locator
+* Some new nodes and functions (roicull, getflags, reflectance..)
+* Small changes to canvas DQ viewing
+* Staying at Python 3.9 for now
+
+
 ## 0.9.0-alpha 2025-02-17 GODOLPHIN HILL
 
 I'll miss Fenton Saurus, that was a great name.
