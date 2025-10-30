@@ -19,7 +19,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
-PySide2 = "^5.15.2"
+PySide6 = ">=6"
 opencv-python-headless = "4.10.0.84"
 scikit-image = "^0.21.0"
 numpy = "^1.21.5"
