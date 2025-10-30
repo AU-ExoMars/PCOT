@@ -616,7 +616,8 @@ class Parser:
                 ps += "..."
             t.add("params", ps)
             t.add("opt. params (default in brackets)", ",".join([f"{p.name} ({p.deflt})" for p in f.optParams]))
-            t.add("description", f.desc)
+            # remove newlines from the description, even though it breaks the markdown
+            t.add("description", " ".join(f.desc.split('\n')))
         return t.markdown()
 
     def out(self, inst: Instruction):

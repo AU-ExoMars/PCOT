@@ -621,7 +621,7 @@ def marksat(img, mn=0, mx=1.0):
     marked as BAD.
 
     @param img:img:image to mark
-    @param mn:number:minimum value - pixels below or equal to this will be marked as ERROR
+Datu    @param mn:number:minimum value - pixels below or equal to this will be marked as ZERO
     @param mx:number:maximum value - pixels above or equal to this will be marked as SAT
     """
     img = img.get(Datum.IMG)
@@ -1258,6 +1258,7 @@ def debayer(img, algorithm="bilinear", pattern="gb"):
     """Debayer an image. Only the first band of a multi-band image will be used.
 
     Algorithms -
+
     * bilinear : the default bilinear interpolation
     * EA : edge aware
     * VNG: variable number of gradients
@@ -1282,7 +1283,7 @@ def debayer(img, algorithm="bilinear", pattern="gb"):
     out = (img.img * 65535.0).astype(np.uint16)
     out = debayering.debayer(out, algorithm, pattern)
     out = out.astype(np.float32) / 65535.0
-    pcot.ui.warn("DQ and UNC not yet processed in debayering.")
+    pcot.ui.log("DQ and UNC not yet processed in debayering.")
     sources = img.getSources()
     sources = MultiBandSource([sources, sources, sources])
     img = ImageCube(out, sources=sources)
