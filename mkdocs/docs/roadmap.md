@@ -1,34 +1,11 @@
 # Development roadmap
 
-This is a rough guide, and things may change!
+This is a rough guide, and things may change! It's essentially
+a list of things that need to be done in approximate priority order.
 
-## Current release: 0.10.0
-
-* "Camera pack" files which hold filter and calibration data for particular
-setups in an extensible format
-* Flatfield calibration code
-* Reflectance calibration code
-* "gradient" renamed to "colourmap"
-
-## Previous release 0.9.0
-
-* New node parameter system:
-    * makes the node self-documenting (node parameters appear as a table,
-    both in the "help" window and in the on-line documentation
-    * provides better type and range checking when the node is modified in code
-    * provides support for batch files
-* You now create nodes by dragging from the palette with the left mouse button
-* batch runner
-    * allows a PCOT file to be loaded and its parameters (i.e. node settings,
-    inputs and outputs) to be modifed with a "batch file" before running. The
-    outputs can be saved to files. 
-    * Batch files have a simple but flexible and powerful language for
-    describing the changes to nodes and inputs, and how the results should
-    be written to files.
-    
-
-## Future releases
-
+* Store camera data separately from calibration target reflectances
+* Enhance the reflectance node to handle this data and also different angles
+* Cull nodes which can be *expr* functions
 * Reorganise the node palette
 * Obtain user stories and feedback
 

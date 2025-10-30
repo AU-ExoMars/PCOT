@@ -2,6 +2,8 @@
 
 <img src="https://github.com/AU-ExoMars/PCOT/blob/72e6f0a5920d82fcf7c3beb8faf26cc43ca96b2f/docs/pcotlogo.png" width="100px"/>
 
+**More documentation can be found [here](https://au-exomars.github.io/PCOT/)**
+
 This is an early version of the Pancam Operations Toolkit. This is
 a Python application and library primarily intended for 
 processing data from the Pancam
@@ -25,8 +27,6 @@ maths, splice images together, merge image channels, plot spectra). A PCOT
 document describes this graph, and we
 intend that documents are distributed along with the data they generate
 to help reproducibility.
-
-More documentation can be found [here](https://au-exomars.github.io/PCOT/)
 
 ## Installation
 
