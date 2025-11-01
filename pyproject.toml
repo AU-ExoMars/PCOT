@@ -1,45 +1,55 @@
-[tool.poetry]
+[project]
 name = "pcot"
 version = "0.11.0-alpha"
 description = "PanCam Operations Toolkit"
-authors = ["Jim Finnis <jcf12@aber.ac.uk>"]
+authors = [{ name = "Jim Finnis", email = "jcf12@aber.ac.uk" }]
+requires-python = ">=3.9,<3.11"
 license = "MIT"
-repository = "https://github.com/AU-ExoMars/PCOT"
-keywords = ["calibration", "processing", "image", "research"]
+keywords = [
+    "calibration",
+    "processing",
+    "image",
+    "research",
+]
 classifiers = [
-  "Programming Language :: Python :: 3",
-  "Operating System :: OS Independent",
-  "Development Status :: 3 - Alpha",
-  "Intended Audience :: Science/Research",
-  "Topic :: Scientific/Engineering",
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "PySide2",
+    "opencv-python-headless",
+    "scikit-image>=0.21.0,<0.22",
+    "numpy>=1.21.5,<2",
+    "matplotlib>=3.5.0,<4",
+    "pyperclip>=1.8.2,<2",
+    "pds4-tools~=1.2",
+    "markdown>=3.3.6,<4",
+    "mkdocs>=1.2.3,<2",
+    "pymdown-extensions>=9.1",
+    "proctools>=0.2.1,<0.3",
 ]
 
-[tool.poetry.urls]
+[project.urls]
+Repository = "https://github.com/AU-ExoMars/PCOT"
 "Bug Tracker" = "https://github.com/AU-ExoMars/PCOT/issues"
 
-[tool.poetry.dependencies]
-python = ">=3.9,<3.11"
-PySide2 = "^5.15.2"
-opencv-python-headless = "4.10.0.84"
-scikit-image = "^0.21.0"
-numpy = "^1.21.5"
-matplotlib = "^3.5.0"
-pyperclip = "^1.8.2"
-pds4-tools = "^1.2"
-markdown = "^3.3.6"
-mkdocs = "^1.2.3"
-pymdown-extensions = ">=9.1"
-# proctools = { path = "./dist/proctools", develop = true }
-proctools = "^0.2.1"
+[project.scripts]
+pcot = "pcot.main:main"
+pcotbatch = "pcot.batch:main"
 
+[dependency-groups]
+dev = [
+    "pytest>=3.5",
+    "black~=20.8b1",
+    "isort>=5.8.0,<6",
+]
 
-# Future:
-#passthrough = "0.3.2"
-
-[tool.poetry.dev-dependencies]
-pytest = ">=3.5"
-black = "^20.8b1"
-isort = "^5.8.0"
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 python_functions = "test_"
@@ -54,14 +64,6 @@ filterwarnings = [
     "ignore:cannot collect 'testfunc1' because it is not a function",
     "ignore:cannot collect 'testfunc2' because it is not a function"
 ]
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.scripts]
-pcot = 'pcot.main:main'
-pcotbatch = 'pcot.batch:main'
 
 [tool.black]
 line-length = 88
@@ -78,8 +80,7 @@ exclude = '''
 '''
 experimental-string-processing = true
 
-
-[tool.isort] # black compatibility
+[tool.isort]
 multi_line_output = 3
 include_trailing_comma = true
 force_grid_wrap = 0
