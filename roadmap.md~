@@ -1,9 +1,11 @@
 # Development roadmap
 
-This is a rough guide, and things may change!
+This is a rough guide, and things may change! It's essentially
+a list of things that need to be done in approximate priority order.
 
 * Store camera data separately from calibration target reflectances
 * Enhance the reflectance node to handle this data and also different angles
+* Cull nodes which can be *expr* functions
 * Reorganise the node palette
 * Obtain user stories and feedback
 
