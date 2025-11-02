@@ -14,7 +14,7 @@ from pcot.imagecube import ImageCube
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType, taggedColourType, taggedRectType, Maybe
 from pcot.rois import ROI
 from pcot.sources import MultiBandSource
-from pcot.utils.annotations import Annotation, annotFont, pixels2painter
+from pcot.utils.annotations import Annotation, annotFont
 from pcot.utils.colour import colDialog, rgb2qcol
 from pcot.utils.gradient import Gradient
 from pcot.xform import xformtype, XFormType, XFormException
@@ -245,7 +245,7 @@ class GradientLegend(Annotation):
             x, y, w, h = self.rect
             colour = self.colour
             vertical = self.vertical
-            fontscale = self.fontscale
+            fontscale = self.fontscale * 2
             borderThickness = self.thickness
             col = rgb2qcol(colour, alpha)
             barThickness = w
@@ -257,7 +257,9 @@ class GradientLegend(Annotation):
         p.setPen(pen)
         p.drawRect(int(x), int(y), int(w), int(h))
 
-        annotFont.setPixelSize(pixels2painter(fontscale, p))
+        # see commit 2/11/25
+        # fontsize = pixels2painter(fontscale, p)
+        annotFont.setPixelSize(fontscale)
         p.setFont(annotFont)
         metrics = QFontMetrics(annotFont)
 

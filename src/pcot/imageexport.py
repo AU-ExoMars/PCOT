@@ -118,7 +118,7 @@ def exportRaster(imgcube, path, pixelWidth, transparentBackground=False, annotat
 
     outputImage = None   # see note on exportPDF
 
-    if pixelWidth < 0:
+    if pixelWidth is None or pixelWidth < 0:
         pixelWidth = imgcube.w
 
     def prepfunc(win, hin):
