@@ -235,7 +235,6 @@ class InnerCanvas(QtWidgets.QWidget):
             #            if self.img is None or self.img.shape[:2] != img.shape[:2]:
             #                self.reset()
             self.rgb = rgb
-            ui.log("Redisplay")
         else:
             self.rgb = None
             self.reset()
@@ -970,7 +969,6 @@ class Canvas(QtWidgets.QWidget):
 
     def gammaChanged(self, v):
         self.canvaspersist.gamma = slider2gamma(v)
-        ui.log(v)
         self.gammaLabel.setText(f"{self.canvaspersist.gamma:.2f}")
         self.redisplay()
 
