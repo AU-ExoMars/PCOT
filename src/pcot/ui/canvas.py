@@ -213,7 +213,7 @@ class InnerCanvas(QtWidgets.QWidget):
     def getGraph(self):
         return self.canv.graph
 
-    def display(self, img: 'ImageCube', isPremapped: bool, gamma=1.0):
+    def display(self, img: 'ImageCube', isPremapped: bool):
         """display an image next time paintEvent happens, and update to cause that.
         Will also handle None (by doing nothing)"""
         self.imgCube = img
@@ -234,7 +234,7 @@ class InnerCanvas(QtWidgets.QWidget):
             # DISABLED so that image stitching is bearable.
             #            if self.img is None or self.img.shape[:2] != img.shape[:2]:
             #                self.reset()
-            self.rgb = rgb ** gamma if abs(gamma-1.0)>0.01 else rgb
+            self.rgb = rgb
             ui.log("Redisplay")
         else:
             self.rgb = None
@@ -303,6 +303,11 @@ class InnerCanvas(QtWidgets.QWidget):
                                                          self.canv.canvaspersist.normMode,
                                                          self.canv.canvaspersist.normToCropped,
                                                          (cutx, cuty, self.cutw, self.cuth))
+
+            # we now apply the canvas gamma, before we apply any kind of overlay or annotation
+            gamma = self.canv.canvaspersist.gamma
+            rgbcropped = rgbcropped ** gamma if abs(gamma - 1.0) > 0.01 else rgbcropped
+
             tt.mark("norm")
             # Here we draw the overlays and get any extra text required
             rgbcropped, dqtext = self.drawDQOverlays(rgbcropped, cutx, cuty, cutw, cuth)
@@ -597,7 +602,8 @@ def slider2gamma(x):
 
 
 def gamma2slider(x):
-    return (x - 1.0) * 100 + 50
+    x = (x - 1.0) * 100 + 50
+    return x
 
 
 class Canvas(QtWidgets.QWidget):
@@ -771,8 +777,8 @@ class Canvas(QtWidgets.QWidget):
         self.resetMapButton.clicked.connect(self.resetMapButtonClicked)
 
         hideable.addWidget(makesidebarLabel("gamma"), 4, 0)
-        self.gammaOutLabel = makesidebarLabel("1.1")
-        hideable.addWidget(self.gammaOutLabel, 4, 1)
+        self.gammaLabel = makesidebarLabel("1.1")
+        hideable.addWidget(self.gammaLabel, 4, 1)
 
         class GammaSlider(QtWidgets.QSlider):
             # subclass of a slider which zeroes on doubleclick
@@ -965,7 +971,7 @@ class Canvas(QtWidgets.QWidget):
     def gammaChanged(self, v):
         self.canvaspersist.gamma = slider2gamma(v)
         ui.log(v)
-        self.gammaOutLabel.setText(f"{self.canvaspersist.gamma:.2f}")
+        self.gammaLabel.setText(f"{self.canvaspersist.gamma:.2f}")
         self.redisplay()
 
     def contextMenuEvent(self, ev: QtGui.QContextMenuEvent) -> None:
@@ -1241,7 +1247,7 @@ class Canvas(QtWidgets.QWidget):
                 annotations = (r == QMessageBox.Yes)
                 desc = ''
 
-            self.previmg.save(path, annotations=annotations, description=desc)
+            self.previmg.save(path, annotations=annotations, description=desc, gamma=self.canvaspersist.gamma)
 
     ## this initialises a combo box, setting the possible values to be the channels in the image
     # input
@@ -1308,6 +1314,7 @@ class Canvas(QtWidgets.QWidget):
         self.nodeToUIChange = nodeToUIChange
         # set the gamma slider
         self.gammaSlider.setValue(gamma2slider(self.canvaspersist.gamma))
+        self.gammaLabel.setText(f"{self.canvaspersist.gamma:.2f}")
         # This will clear the screen if img is None
         self.redisplay()
 
@@ -1377,7 +1384,7 @@ class Canvas(QtWidgets.QWidget):
         else:
             self.missingFilterDataLabel.setVisible(False)
 
-        self.canvas.display(self.previmg, self.isPremapped, gamma=self.canvaspersist.gamma)
+        self.canvas.display(self.previmg, self.isPremapped)
         self.setDQWidgetState()
         self.showSpectrum()
 
