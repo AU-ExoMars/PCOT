@@ -12,7 +12,6 @@ import pcot.calib.pct
 import pcot.calib.colorchecker_classic
 from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.rois import getRadiusFromSlider, ROIPainted
-from pcot.utils.annotations import pixels2painter
 from pcot.utils.deb import Timer
 from pcot.utils.flood import MeanFloodFiller, FloodFillParams
 from pcot.xform import xformtype, XFormType, XFormException
@@ -312,7 +311,8 @@ class TabPCT(pcot.ui.tabs.Tab):
             p.setBrush(Qt.black)
             p.drawRect(0, 0, 400, 20*len(self.node.rois)+40)
             font = QFont("Consolas")
-            fontsize = pixels2painter(FONTSIZE, p)
+            # fontsize = pixels2painter(FONTSIZE, p)
+            fontsize = FONTSIZE
             font.setPixelSize(fontsize)
             p.setFont(font)
             p.setPen(Qt.white)

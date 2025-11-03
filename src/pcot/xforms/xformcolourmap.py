@@ -14,7 +14,7 @@ from pcot.imagecube import ImageCube
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType, taggedColourType, taggedRectType, Maybe
 from pcot.rois import ROI
 from pcot.sources import MultiBandSource
-from pcot.utils.annotations import Annotation, annotFont, pixels2painter
+from pcot.utils.annotations import Annotation, annotFont
 from pcot.utils.colour import colDialog, rgb2qcol
 from pcot.utils.gradient import Gradient
 from pcot.xform import xformtype, XFormType, XFormException
@@ -245,7 +245,7 @@ class GradientLegend(Annotation):
             x, y, w, h = self.rect
             colour = self.colour
             vertical = self.vertical
-            fontscale = self.fontscale
+            fontscale = self.fontscale * 2
             borderThickness = self.thickness
             col = rgb2qcol(colour, alpha)
             barThickness = w
@@ -257,7 +257,9 @@ class GradientLegend(Annotation):
         p.setPen(pen)
         p.drawRect(int(x), int(y), int(w), int(h))
 
-        annotFont.setPixelSize(pixels2painter(fontscale, p))
+        # see commit 2/11/25
+        # fontsize = pixels2painter(fontscale, p)
+        annotFont.setPixelSize(fontscale)
         p.setFont(annotFont)
         metrics = QFontMetrics(annotFont)
 
@@ -317,11 +319,14 @@ TAGGEDDICT = TaggedDictType(
 @xformtype
 class XformColourMap(XFormType):
     """
-    Convert a mono image to an RGB false colour image for better visibility. If the "insetinto" input has an
-    image AND there is a valid ROI in the mono image, the image will be inset into the RGB of the insetinto image.
-    NOTE: if you change the "insetinto" image's RGB mapping you may need to "run all" to see the the change reflected.
+    Convert a mono image to an RGB false colour image for better visibility. If the "background" input has an
+    image AND there is a valid ROI in the mono image, the image will be inset into the RGB of the background image.
+    NOTE: if you change the "background" image's RGB mapping you may need to "run all" to see the the change reflected.
+
+    When the canvas gamma changes, the node will perform itself again applying 1/gamma to the colourmap.
 
     **Ignores DQ and uncertainty**
+
 
 
     The colour map widget has the following behaviour:
@@ -394,9 +399,18 @@ class XformColourMap(XFormType):
         node.minval = 0.0
         node.maxval = 1.0
 
+    def uichange(self, n):
+        """Changing the canvas can change the gamma - the node should rerun"""
+        n.timesPerformed += 1
+        self.perform(n)
+
     def perform(self, node):
         mono = node.getInput(0, Datum.IMG)
         rgb = node.getInput(1, Datum.IMG)
+
+        # get the gamma value from the node's canvas persist data so we can invert the gamma for
+        # the colourmap.
+        gamma = node.canvaspersist.gamma if node.canvaspersist else 1.0
 
         node.minval = 0.0
         node.maxval = 1.0
@@ -411,6 +425,7 @@ class XformColourMap(XFormType):
             subimage = mono.subimage()
             node.minval, node.maxval, subimage.img = _normAndGetRange(subimage)
             newsubimg = node.gradient.apply(subimage.img, subimage.mask)
+            newsubimg **= 1.0/gamma
             # Here we make an RGB image from the input image. We then slap the gradient
             # onto the ROI. We use the default channel mapping, and the same source on each channel.
             source = mono.sources.getSources()
@@ -424,6 +439,7 @@ class XformColourMap(XFormType):
             subimage = mono.subimage()
             node.minval, node.maxval, subimage.img = _normAndGetRange(subimage)
             newsubimg = node.gradient.apply(subimage.img, subimage.mask)
+            newsubimg **= 1.0/gamma
             source = mono.sources.getSources()
             # this time we get the RGB from the background input
             # and we need to normalise the rgb first
@@ -587,7 +603,8 @@ class TabColourMap(pcot.ui.tabs.Tab):
         self.w.colourButton.setStyleSheet("background-color:rgb({},{},{})".format(r, g, b));
 
         img = self.node.getOutput(0)
-        self.w.canvas.display(img)
+        # hack here to ensure that uichange gets called when the canvas changes gamma
+        self.w.canvas.display(img, nodeToUIChange=self.node)
         if img is not None:
             self.w.xSpin.setMaximum(img.w)
             self.w.ySpin.setMaximum(img.h)
