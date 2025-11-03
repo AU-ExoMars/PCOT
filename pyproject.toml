@@ -30,6 +30,7 @@ dependencies = [
     "mkdocs>=1.2.3,<2",
     "pymdown-extensions>=9.1",
     "proctools>=0.2.1,<0.3",
+    "mkdocs-material"
 ]
 
 [project.urls]
