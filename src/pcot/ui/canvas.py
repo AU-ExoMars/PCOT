@@ -589,6 +589,10 @@ class InnerCanvas(QtWidgets.QWidget):
         self.cursorX, self.cursorY = self.getImgCoords(e.pos())
         self.update()
 
+    def __del__(self):
+        logger.debug(f"Cleaning up {self}")
+
+
 
 def makesidebarLabel(t):
     lab = QtWidgets.QLabel(t)
@@ -1494,5 +1498,8 @@ class Canvas(QtWidgets.QWidget):
         self.setPersister(node)  # and where it should store its data (ugly, yes).
 
     def onClose(self):
+        logger.debug(f"Closing canvas {self}")
         self.canvas.timer.stop()
+        self.canvas.timer = None
+        self.canvas = None  # MAYBE this will delete the damn thing
 

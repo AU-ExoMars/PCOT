@@ -125,6 +125,7 @@ class InputWindow(QtWidgets.QMainWindow):
         super().closeEvent(event)
         for w in self.widgets:
             w.onClose()
+            w.deleteLater()     # delete all the bloody widgets
         self.widgets = []
         event.accept()
 
