@@ -205,9 +205,10 @@ class InnerCanvas(QtWidgets.QWidget):
 
     def tick(self):
         """Timer tick"""
-        if self.redrawOnTick:
-            self.flashCycle = 1 - self.flashCycle
-            self.update()
+        if self.isVisible():
+            if self.redrawOnTick:
+                self.flashCycle = 1 - self.flashCycle
+                self.update()
 
     ## returns the graph this canvas is part of
     def getGraph(self):
@@ -1491,3 +1492,7 @@ class Canvas(QtWidgets.QWidget):
 
         self.setGraph(node.graph)  # tell the canvas what the graph is
         self.setPersister(node)  # and where it should store its data (ugly, yes).
+
+    def onClose(self):
+        self.canvas.timer.stop()
+

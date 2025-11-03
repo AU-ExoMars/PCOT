@@ -255,6 +255,10 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
             self.method.dir = pcot.config.getDefaultDir('images')
         self.onInputChanged()
 
+    def onClose(self):
+        super().onClose()
+        self.canvas.onClose()
+
     def applyPreset(self, preset):
         # see comments in presetPressed for why this is here and not in the input method
         self.method.camera = preset['camera']
