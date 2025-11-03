@@ -4,6 +4,9 @@ from .inputmethod import InputMethod
 from pcot.ui.inputs import InputWindow
 from ..datum import Datum
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class Input:
     """This is an input, of which there are (probably) 4 or so.
@@ -12,7 +15,7 @@ class Input:
     The data from the currently active input methods arrives in the graph through
     an XFormInput node.
     """
-    window: Optional['InputWindow']     # if not None, an open window
+    _window: Optional['InputWindow']     # if not None, an open window
     methods: List['InputMethod']        # list of methods
     activeMethod: int                   # index of active method in above array (see constants below)
     idx: int                            # index of input in the manager
@@ -43,7 +46,7 @@ class Input:
         self.idx = idx
         self.activeMethod = 0
         self.exception = None
-        self.window = None
+        self._window = None
         self.methods = [
             NullInputMethod(self),  # null method must be first
             RGBInputMethod(self),
@@ -74,8 +77,8 @@ class Input:
     def setActiveMethod(self, idx):
         """Set the active method: use the method index, see above - NULL, ENVI, etc..."""
         self.activeMethod = idx
-        if self.window is not None:
-            self.window.methodChanged()
+        if self._window is not None:
+            self._window.methodChanged()
 
     def selectMethod(self, method: InputMethod):
         """Given a method object, set the active method to that method"""
@@ -83,20 +86,21 @@ class Input:
 
     def openWindow(self):
         """Open the input window"""
-        if self.window is None:
-            self.window = InputWindow(self)
+        if self._window is None:
+            self._window = InputWindow(self)
         # raise window to front and give it focus
-        self.window.raise_()
-        self.window.setFocus()
+        self._window.raise_()
+        self._window.setFocus()
 
     def closeWindow(self):
         """Close the input window"""
-        if self.window is not None:
-            self.window.close()
+        if self._window is not None:
+            self._window.close()
 
     def onWindowClosed(self):
         """Called when the window is closed"""
-        self.window = None
+        logger.debug("Window closed")
+        self._window = None
 
     def performGraph(self):
         """Performs the entire graph associated with the input's document.
