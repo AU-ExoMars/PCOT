@@ -621,7 +621,7 @@ def marksat(img, mn=0, mx=1.0):
     marked as BAD.
 
     @param img:img:image to mark
-Datu    @param mn:number:minimum value - pixels below or equal to this will be marked as ZERO
+    @param mn:number:minimum value - pixels below or equal to this will be marked as ZERO
     @param mx:number:maximum value - pixels above or equal to this will be marked as SAT
     """
     img = img.get(Datum.IMG)
