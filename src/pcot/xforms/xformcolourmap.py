@@ -321,7 +321,9 @@ class XformColourMap(XFormType):
     """
     Convert a mono image to an RGB false colour image for better visibility. If the "background" input has an
     image AND there is a valid ROI in the mono image, the image will be inset into the RGB of the background image.
-    NOTE: if you change the "background" image's RGB mapping you may need to "run all" to see the the change reflected.
+
+    NOTE: if you change the "background" image's RGB mapping you will need to shift-click the node (rerunning it)
+    to see the change reflected.
 
     When the canvas gamma changes, the node will perform itself again applying 1/gamma to the colourmap.
 

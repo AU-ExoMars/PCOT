@@ -27,12 +27,17 @@ class XformCropROI(XFormType):
         if img is not None:
             # create a new image, set it to use this node's mapping
             img = img.cropROI()
-            # tell it to use the node's mapping so that the canvas
-            # will work correctly
-            img.mapping = node.mapping
+            # copying the image's default mapping into its mapping means that
+            # when ensureValid runs on the node mapping, it will get the image's mapping.
+            img.defaultMapping = img.mapping
             # and strip the ROIs
             img.rois = []
             out = Datum(Datum.IMG, img)
+            from pcot import ui
+            ui.log(img.mapping)
         else:
             out = None
         node.setOutput(0, out)
+
+    def uichange(self, node):
+        node.graph.performNodes(node)
