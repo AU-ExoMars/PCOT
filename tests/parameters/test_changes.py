@@ -162,7 +162,7 @@ def test_list_add_ta():
     f = ParameterFile().parse("foo.list2.+")
     f.apply({"foo": td})
     assert len(td.list2) == 1
-    assert td.list2[0].d == 3.24
+    assert td.list2[0].filternames == 3.24
     assert td.list2[0].e == 11
     assert td.list2[0].f == "dog"
 
@@ -178,8 +178,8 @@ def test_list_add_ta_cursor():
     f.dump()
     f.apply({"foo": td})
     assert len(td.list2) == 2
-    assert td.list2[0].d == 36
-    assert td.list2[1].d == 48
+    assert td.list2[0].filternames == 36
+    assert td.list2[1].filternames == 48
 
 
 def test_dict_in_dict():
@@ -262,7 +262,7 @@ def test_add_to_variant_dict_list():
 
     # look at members - you have to use get() to get the dict
     # from the variant
-    assert td.lst[1].get().d == 3.24
+    assert td.lst[1].get().filternames == 3.24
     assert td.lst[0].get().b == "foo"
 
 
@@ -330,7 +330,7 @@ def test_change_top_level_list():
     f.apply({"foo": tl})
 
     assert len(tl) == 1
-    assert tl[0].d == 3.24
+    assert tl[0].filternames == 3.24
 
     # here we create a fresh list, then add an item and modifythat item in a single step.
     tl = list_of_ordered_dicts_type.create()
@@ -338,7 +338,7 @@ def test_change_top_level_list():
     f.apply({"foo": tl})
 
     assert len(tl) == 1
-    assert tl[0].d == 12
+    assert tl[0].filternames == 12
 
     #on another fresh list:
     #  create a new item at the top level
@@ -457,42 +457,42 @@ def test_reset_dict_in_list():
 
     # check the values
     assert len(td.list2) == 1
-    assert td.list2[0].d == 36.1
+    assert td.list2[0].filternames == 36.1
     assert td.list2[0].f == "blart48"
 
     # now change them again
-    td.list2[0].d = 36.2
+    td.list2[0].filternames = 36.2
     td.list2[0].f = "blart49"
     # confirm the changes
-    assert td.list2[0].d == 36.2
+    assert td.list2[0].filternames == 36.2
     assert td.list2[0].f == "blart49"
     # reset
     f = ParameterFile().parse("reset foo.list2[0]")
     f.apply({"foo": td})
     # check that the values have been reset
-    assert td.list2[0].d == 36.1
+    assert td.list2[0].filternames == 36.1
     assert td.list2[0].f == "blart48"
 
     # change them back again
-    td.list2[0].d = 36.2
+    td.list2[0].filternames = 36.2
     td.list2[0].f = "blart49"
     # confirm the changes
-    assert td.list2[0].d == 36.2
+    assert td.list2[0].filternames == 36.2
     assert td.list2[0].f == "blart49"
 
     # now just reset one of those items.
     f = ParameterFile().parse("reset foo.list2[0].d")
     f.apply({"foo": td})
     # check that only that value has been reset
-    assert td.list2[0].d == 36.1
+    assert td.list2[0].filternames == 36.1
     assert td.list2[0].f == "blart49"
 
     # repeat that test with the alternate list index format
-    td.list2[0].d = 36.2
+    td.list2[0].filternames = 36.2
     td.list2[0].f = "blart49"
     f = ParameterFile().parse("reset foo.list2.0.d")
     f.apply({"foo": td})
-    assert td.list2[0].d == 36.1
+    assert td.list2[0].filternames == 36.1
     assert td.list2[0].f == "blart49"
 
 
@@ -551,7 +551,7 @@ def test_reset_dict_in_variant_dict():
     td.lst.append(v)
     # change stuff in the dict inside the variant dict and elsewhere
     td.bloon = "trampoline"
-    td.lst[0].get().d = 10.1
+    td.lst[0].get().filternames = 10.1
     td.lst[0].get().e = 20
     td.lst[0].get().f = "cat"
     # g is a dict, and is itself a member of the dict inside the variant dict
@@ -563,7 +563,7 @@ def test_reset_dict_in_variant_dict():
 
     # now make some changes
     td.bloon = "kelp"
-    td.lst[0].get().d = 10.5
+    td.lst[0].get().filternames = 10.5
     td.lst[0].get().e = 21
     td.lst[0].get().f = "cat or meringue"
     # g is a dict, and is itself a member of the dict inside the variant dict
@@ -577,7 +577,7 @@ def test_reset_dict_in_variant_dict():
     # check data is as it was just modified, except in the dict
     # inside the variant
     assert td.bloon == "kelp"
-    assert td.lst[0].get().d == 10.5
+    assert td.lst[0].get().filternames == 10.5
     assert td.lst[0].get().e == 21
     assert td.lst[0].get().f == "cat or meringue"
     # these will be changed back

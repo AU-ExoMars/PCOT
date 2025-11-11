@@ -25,7 +25,7 @@ def test_taggeddict():
     assert td.b == "foo"
     assert td.c == 3.14
     with pytest.raises(KeyError):
-        print(td.d)
+        print(td.filternames)
 
     assert len(td) == 3
 
