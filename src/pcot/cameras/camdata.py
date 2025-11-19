@@ -21,7 +21,6 @@ CAMDICT = TaggedDictType(
     short=("Short description of camera data", Maybe(str), None),
     source_filename=("Name of YAML file from which data was generated", Maybe(str), None),
     has_flats=("Does this camera have flatfields?", bool, False),       # for information only, not used in the code
-    has_reflectances=("Does this camera have reflectance data?", bool, False), # for information only, not used in the code
     filters=("List of filters", FILTERLIST),
 )
 
@@ -34,11 +33,6 @@ class CameraParams:
     This object has a "params" field, which is a TaggedDict and stores basic stuff (name, description etc).
     It also itself forms the "params" field of a CameraData object, so we get "amusing" little chains like
     camera.params.params.name. Sorry.
-
-    However, the reflectance data is stored as just a dictionary - it's not in a TA, although it is
-    serialised and deserialised as part of the CameraParams object. This makes things a lot simpler.
-    At the moment, the structure of that dictionary is {patchname: {filtername: (mean, std)}}
-
     """
 
     def __init__(self, filters=None):
@@ -51,11 +45,6 @@ class CameraParams:
             self.filters = filters.copy()
         else:
             self.filters = {}
-
-        # there may be reflectance data - if so, each will be a dictionary of patch name to
-        # dictionaries of filter name to reflectance values as tuples of (mean, std):
-        # {target: {patchname: {filtername: (mean, std)}}}
-        self.reflectances = {}
 
     @classmethod
     def deserialise(cls, d) -> 'CameraParams':
@@ -77,10 +66,6 @@ class CameraParams:
         p.filters = {f.name: Filter(f.cwl, f.fwhm, f.transmission, f.position, f.name)
                      for f in p.params['filters']}
 
-        # if there is reflectance data in the incoming dict, just copy it over.
-        if 'reflectances' in d:
-            p.reflectances = d['reflectances']
-
         return p
 
     def serialise(self):
@@ -94,9 +79,6 @@ class CameraParams:
 
         # now we have a fully populated TA and can just serialise everything
         d = self.params.serialise()
-        # and put the reflectances in if they are there
-        if self.reflectances:
-            d['reflectances'] = self.reflectances
         return d
 
 

@@ -6,6 +6,8 @@ This is typically in the form of a SortedInterpolatedDict for each patch.
 # See Notes on PCT Reflectance data in Obsidian
 
 from pathlib import Path
+from typing import Dict
+
 import numpy as np
 import logging
 
@@ -14,9 +16,9 @@ from pcot.utils.sortedinterpdict import SortedInterpolatedDict
 logger = logging.getLogger(__name__)
 
 
-class PCTReflectance:
+class Reflectance:
     """
-    PCT reflectance data, from Jack Langston's measurements. The phi angles measured are between 210-360 (0),
+    Reflectance data, from Jack Langston's measurements. The phi angles measured are between 210-360 (0),
     and the theta goes from -80 to 80. Incident is at 24 degrees; we assume that the PCT is around this angle
     from the camera. Load the data with deserialise() from a FileArchive, then use get_reflectances to get
     the wavelengths at a particular pair of angles for a particular patch.
@@ -36,22 +38,42 @@ class PCTReflectance:
     # in case someone (Jack) asks for the name in the data.
     rev_name_map = {v: k for k, v in name_map.items()}
 
+    # this data will be a dict of patch name (e.g. "NG4") to
+    # SortedInterpolatedDicts of phi to SortedInterpolatedDicts of theta to
+    # (wavelength,reflectance) tuples where wavelength and
+    # reflectance are 1D numpy arrays.
+    #
+    # A SortedInterpolatedDict keeps keys in order so that we can get
+    # the data around a given value.
+
+    data: Dict[str,SortedInterpolatedDict]
+
     def __init__(self, file: Path = None):
         """If a path is present, will load data in our format. Otherwise data
-        can be loaded from a set of text files as given by Jack Langston's data, Sept 2025"""
-
-        # this data will be a dict of patch name (e.g. "NG4") to
-        # SortedInterpolatedDicts of phi to SortedInterpolatedDicts of theta to
-        # (wavelength,reflectance) tuples where wavelength and
-        # reflectance are 1D numpy arrays.
-        #
-        # A SortedInterpolatedDict keeps keys in order so that we can get
-        # the data around a given value.
-
-        self._data = None
+        can be loaded from a set of text files as given by Jack Langston's data, Sept 2025.
+        Or from just a list of stuff.
+        You need a YAML file to say what's what, though."""
 
         if file:
-            raise Exception("Not yet implemented")
+            """
+            Deserialise from a FileArchive - this is how you load the data. Don't use load_jack, that's for
+            converting from Jack's measurements.
+            """
+
+            with archive.FileArchive("pctrefls.parc","r") as a:
+                logging.debug("Loading")
+                json = a.readJson("data")
+                outd = {}
+                for k, v in json.items():
+                    # we deserialise the outer layer
+                    t = SortedInterpolatedDict.deserialise(v)
+                    # and now the inner values
+                    for k2, v2 in t.dict.items():
+                        t.dict[k2] = SortedInterpolatedDict.deserialise(v2)
+                    outd[k] = t
+                self._data = outd
+        else:
+            self._data = {}     # default - no patches!
 
     def serialise(self):
         """
@@ -65,32 +87,6 @@ class PCTReflectance:
             # and this will serialise the inner SIDs
             t["values"] = [x.serialise() for x in t["values"]]
             out[k] = t
-        return out
-
-    @staticmethod
-    def deserialise(d):
-        """
-        Deserialise from a FileArchive - this is how you load the data. Don't use load_jack, that's for
-        converting from Jack's measurements.
-        ```
-        with archive.FileArchive("pctrefls.parc","r") as a:
-            logging.debug("Loading")
-            t = a.readJson("data")
-            d = PCTReflectance().deserialise(t)
-            logging.debug("Loaded")
-        ```
-
-        """
-        outd = {}
-        for k, v in d.items():
-            # we deserialise the outer layer
-            t = SortedInterpolatedDict.deserialise(v)
-            # and now the inner values
-            for k2, v2 in t.dict.items():
-                t.dict[k2] = SortedInterpolatedDict.deserialise(v2)
-            outd[k] = t
-        out = PCTReflectance()
-        out._data = outd
         return out
 
     @staticmethod
@@ -160,30 +156,27 @@ class PCTReflectance:
         vals = []
         logger.info(f"Loading patch from {p}")
         for i in [180, 210, 240, 270, 300, 330]:
-            r = PCTReflectance._load_data_for_phi(p, i)
+            r = Reflectance._load_jack_data_for_phi(p, i)
             if r:
                 phis.append(i)
                 vals.append(r)
 
         return SortedInterpolatedDict(phis, vals, period=360)
 
-    def load_jack(self, dir: Path):
-        """Loads all the data from Jack's measurements. Really you'll want to use
-        the serialise/deserialise with an archive.
+    def load_jack(self, patch, path: Path):
+        """Loads data from Jack's measurements into a single patch. Really you'll want to use
+        the serialise/deserialise with an archive that this class can write.
         These are in the form <patchname>/Phi_<angle>/<patchname>_<scannumber>.sed
         where
         -   <patchname> is the "Jack/Giselle" patch name (green,brown etc..)
         -   <angle> is the phi angle 00,30,60,210,240,270,300,330 (note that 0=00 here!)
         -   <scannumber> maps to theta, such that theta=scan*5-80.
+
+        Input:
+        -   patch is the patch name ("NG11")
+        -   path is the path from which to load it (e.g. "./grey")
         """
-
-        name_map = PCTReflectance.name_map
-        #        name_map = {"NG11":"grey"}           # DEBUGGING, just process one!
-
-        self._data = {}
-        for k, v in name_map.items():
-            path = dir / v
-            self._data[k] = self._load_data_for_patch(path)
+        self._data[patch] = self._load_jack_data_for_patch(path)
 
     def get_reflectances(self, patch, phi, theta, wavelength=None):
         """
@@ -195,9 +188,9 @@ class PCTReflectance:
         """
 
         if not patch in self._data:
-            if not patch in PCTReflectance.rev_name_map:
+            if not patch in Reflectance.rev_name_map:
                 raise Exception(f"patch {patch} not in reflectance data")
-            patch = PCTReflectance.rev_name_map[patch]
+            patch = Reflectance.rev_name_map[patch]
 
         # we've only recorded half the phi values, and it's a weird
         # half
@@ -272,7 +265,7 @@ if __name__ == "__main__":
 
     if False:
         # read Jack's data and convert
-        d = PCTReflectance()
+        d = Reflectance()
         d.load(Path("."))
         t = d.serialise()
 
@@ -282,7 +275,7 @@ if __name__ == "__main__":
     with archive.FileArchive("pctrefls.parc", "r") as a:
         logging.debug("Loading")
         t = a.readJson("data")
-        d = PCTReflectance().deserialise(t)
+        d = Reflectance(t)
         logging.debug("Loaded")
 
         import matplotlib.pyplot as plt

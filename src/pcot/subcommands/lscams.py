@@ -53,8 +53,6 @@ def show(camera, args):
     base_file_name = os.path.basename(camera.fileName)
     p = camera.params.params
     flag_string = ""
-    if p.has_reflectances:
-        flag_string += "R"
     if p.has_flats:
         flag_string += "F"
     print(f"{p.name:20} {base_file_name} {flag_string:>3}: {p.short}")
@@ -63,8 +61,6 @@ def show(camera, args):
         print(f" Date from YAML file: {p.date or 'No date provided'}")
         print(f" Compilation date: {p.compilation_time or 'No date provided (earlier than 05/06/2025)'}")
         print(f" Compiled from: {p.source_filename or 'No source file provided'}")
-        if p.has_reflectances:
-            print(f" Reflectances supported: {', '.join(camera.getReflectances().keys())}")
         if p.has_flats:
             print(" Has flats")
 
