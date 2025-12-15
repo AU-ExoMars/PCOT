@@ -26,6 +26,7 @@ import pcot.xform as xform
 import pcot.assets
 from pcot.ui.help import HelpWindow
 from pcot.utils import SignalBlocker
+from pcot.utils.table import Table
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +118,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.actionUndo.triggered.connect(self.undoAction)
         self.actionRedo.triggered.connect(self.redoAction)
         self.actionAbout.triggered.connect(self.aboutAction)
+        self.actionShow_Metadata.triggered.connect(self.showMetadataAction)
 
         self.runAllButton.clicked.connect(self.runAllAction)
         self.autoRun.toggled.connect(self.autorunChanged)
@@ -474,6 +476,29 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.menus[name] = m
         self.menubar.addMenu(m)
         return m
+
+    def showMetadataAction(self):
+        ui.log("Metadata", timestamp=False)
+        t = Table()
+        for k,v in self.doc.metadata.items():
+            if k!='history':
+                t.newRow()
+                t.add('key',k)
+                t.add('value',v)
+        ui.log(t.html(), timestamp=False)
+
+        if 'history' in self.doc.metadata and len(self.doc.metadata['history']) > 0:
+            ui.log("History", timestamp=False)
+            t = Table()
+            h = self.doc.metadata['history']
+            for item in h:
+                t.newRow()
+                t.add('date', item['date'])
+                t.add('author', item['author'])
+                t.add('pcot version', item['pcotversion'])
+
+            ui.log(t.html(), timestamp=False)
+
 
     ## this gets called from way down in the scene to open tabs for nodes
     def openTab(self, node):

@@ -97,7 +97,9 @@ class Table:
     def htmlObj(self):
         """convert to html object"""
         # first generate the headers
-        headerRow = HTML("tr", [HTML("th", Col('red', k)) for k in self._keys])
+#        headerRow = HTML("tr", [HTML("th", Col('red', k)) for k in self._keys])
+        # note- removed colour, it was hard to read!
+        headerRow = HTML("tr", [HTML("th", k) for k in self._keys])
         # now the rows
         rows = []
         for r in self:

@@ -103,6 +103,7 @@ class Document:
         self.undoRedoStore = UndoRedoStore()
         self.nodeInstances = {}
         self.fileName = None
+        self.metadata = {'author': 'unsaved', 'history': []}
 
         if fileName is not None:
             self.load(fileName)
@@ -182,6 +183,7 @@ class Document:
         with archive.FileArchive(fname, 'w', type=archive.ArchiveType.DOCUMENT,extrameta=m) as arc:
             arc.writeJson("JSON", self.serialise(saveInputs=saveInputs))
             pcot.config.addRecent(fname)
+            self.metadata = arc.metadata   # copy it out so we can view it
 
     def load(self, fname: Path):
         """Load data into this document - is used in ctor, can also be used on existing document.
@@ -191,6 +193,7 @@ class Document:
             dd = arc.readJson("JSON")
             self.deserialise(dd)
             pcot.config.addRecent(fname)
+            self.metadata = arc.metadata
             self.fileName = fname
             # here we add the previous author data to the history metadata. That old author data
             # will, of course, be overwritten when/if we write
@@ -199,7 +202,6 @@ class Document:
             new_row = {k:arc.metadata.get(k,'') for k in ['author','date','pcotversion']}
             # insert the new row into the history
             self.history.insert(0,new_row)
-            print(arc.metadata)
 
     ## generates a new unique name for a macro.
     def getUniqueUntitledMacroName(self):
