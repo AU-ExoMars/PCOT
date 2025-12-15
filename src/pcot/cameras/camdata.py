@@ -149,10 +149,10 @@ class CameraData:
         The init would be 'weird' because it would have to set up a read/write archive with an LRU cache, and
         that's not a thing that makes a great deal of sense here."""
 
-        from pcot.utils.archive import FileArchive
+        from pcot.utils.archive import FileArchive,ArchiveType
         from pcot.utils.datumstore import DatumStore
 
-        archive = FileArchive(fileName, "w")
+        archive = FileArchive(fileName, "w", type=ArchiveType.CAMERADATA)
         archive.open()
         ds = DatumStore(archive)
         ds.writeDatum("params", Datum(Datum.CAMERAPARAMS, params, nullSourceSet))

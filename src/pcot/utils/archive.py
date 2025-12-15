@@ -9,6 +9,52 @@ from io import BytesIO
 import logging
 logger = logging.getLogger(__name__)
 
+from enum import Enum
+
+class ArchiveType(Enum):
+    UNSPECIFIED = "unspecified"
+    UNKNOWN = "unknown (no metadata)"
+    DOCUMENT = "PCOT document"
+    CAMERADATA = "camera data"
+    IMAGECUBE = "imagecube"
+    
+
+# Basic serialisers/deserialisers. Numpy arrays are handled differently,
+# see the docstring for Archive.
+
+serialisers={}  # dict of name to (serialiser,deserialiser) lambdas
+
+
+def registerJsonSerialiser(name,ser,deser):
+    """Call this with a class/type name, serialiser and deserialiser.
+    Serialiser should take the object and turn it into JSON serialisable data
+    Deserialiser should take that data and turn it back into the object."""
+    serialisers[name]=(ser,deser)
+    
+def deserialiser(o):
+    """This is the 'object_hook' for the json.loads - it turns dicts (JSON objects) with the key '_type' 
+    into the original data."""
+    if '_type' in o:
+        tp = o['_type']
+        if tp in serialisers:
+            return serialisers[tp][1](o['val'])
+        raise TypeError(f"Unknown JSON serialisation: {tp}")
+    return o
+
+
+def serialiser(o):
+    """This is the 'default' for the json.dumps - it turns unserialisable types into JSON"""
+    tp = o.__class__.__name__
+    if tp in serialisers:
+        return {'_type': tp, 'val':serialisers[tp][0](o)}
+    raise TypeError
+
+
+registerJsonSerialiser("ArchiveType",
+    lambda x: x.value,
+    lambda x: ArchiveType(x)
+)
+
 
 class Archive:
     """
@@ -53,6 +99,7 @@ class Archive:
         self.zip = None
         self.progressCallback = progressCallback
         self.path = "(memory?)"
+        self.metadata = None
 
     def open(self):
         """Must open the zip, setting self.zip to the zipfile.ZipFile object"""
@@ -76,7 +123,9 @@ class Archive:
         return self.zip is not None
 
     def assert_read(self):
-        if self.mode != 'r':
+        if self.mode == 'w' or (self.mode == 'a' and self.metadata is not None):
+            # we can read from an appending file ONLY IF it's that
+            # first metadata read
             raise Exception("Archive is not open for reading")
 
     def assert_write(self):
@@ -176,7 +225,7 @@ class Archive:
             # do this BEFORE we convert the arrays to tags. It gets done in writeStr too!
             self.assert_unique_name(name)
         d = self.convertArraysToTags(d)
-        s = json.dumps(d, sort_keys=True, indent=4)
+        s = json.dumps(d, sort_keys=True, indent=4, default=serialiser)
         self.writeStr(name, s, permit_replace=permit_replace)
 
     def readJson(self, name):
@@ -184,7 +233,7 @@ class Archive:
             raise Exception("Archive is not open")
         logger.debug(f"Reading {name} from {str(self)}")
         s = self.readStr(name)
-        d = json.loads(s)
+        d = json.loads(s, object_hook=deserialiser)
         d = self.convertTagsToArrays(d)
         return d
 
@@ -197,23 +246,54 @@ class FileArchive(Archive):
     Used for ZIP files on disk.
     """
 
-    def __init__(self, path: Union[Path,str], mode='r',  progressCallback: Callable[[str], None] = None):
+    def __init__(self, path: Union[Path,str], mode='r', progressCallback: Callable[[str], None] = None,
+            type=None,extrameta={}):
         """Open a Zip archive on disk.
         The mode is 'r' for read, 'w' for write, and 'a' for append.
+        If "type" is set, add the type of the archive to the metadata for writing.
+        This is just a string; some are defined in ArchiveTypes. The default is "unspecified".
+        Metadata is only written when the archive is opened in write mode.
         """
         assert mode in ['r', 'w', 'a']
         super().__init__(mode, progressCallback=progressCallback)
+        if type is None:
+            type = ArchiveType.UNSPECIFIED
+        self.type = type
         self.path = path
+        self.extrameta = extrameta
 
     def open(self):
         self.zip = zipfile.ZipFile(self.path, self.mode.lower(), compression=zipfile.ZIP_DEFLATED)
+        
+        mode = self.mode.lower()
 
-        if self.mode.lower() == 'a':
+        if mode == 'a':
             # if we're doing append, now the file is open we should try to work out
             # the next array number.
             array_items = [x[5:] for x in self.zip.namelist() if x.startswith("ARAE-")]
             if len(array_items) > 0:
                 self.arrayct = max([int(x) for x in array_items]) + 1
+
+        # either read or write the metadata                
+        if mode == 'w':
+            import pcot
+            import getpass
+            from datetime import datetime
+            self.metadata = {
+                'type' : self.type,
+                'author': getpass.getuser(),
+                'date': datetime.now().isoformat(),
+                'pcotversion': pcot.__fullversion__,
+            }
+            self.metadata.update(self.extrameta)
+            self.writeJson("pcot_metadata",self.metadata)
+        elif "pcot_metadata" in self.getNames():
+            self.metadata = self.readJson("pcot_metadata")
+            self.type = self.metadata.get('type',ArchiveType.UNSPECIFIED)
+        else:
+            self.type = ArchiveType.UNKNOWN
+            self.metadata = {'type':self.type}
+            
         logger.debug(f"Opened {self}")
 
     def close(self):
