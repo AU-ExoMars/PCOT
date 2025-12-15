@@ -1105,7 +1105,7 @@ class ImageCube(SourcesObtainable):
 
     def save(self, filename, annotations=False, format: str = None,
              name: str = None, description: str = "", append: bool = False,
-             pixelWidth=None):
+             pixelWidth=None,gamma=1.0):
         """Write the image to a file, with or without annotations. If format is provided, it will be used
         otherwise the format will be inferred from the filename extension. Note that this will always clobber -
         determining if the file already exists must be handled by the caller.
@@ -1138,15 +1138,15 @@ class ImageCube(SourcesObtainable):
                 raise ValueError("Append is not supported for image formats other than PARC")
 
         if format == 'pdf':
-            imageexport.exportPDF(self, filename, annotations=annotations)
+            imageexport.exportPDF(self, filename, annotations=annotations, gamma=gamma)
         elif format == 'svg':
-            imageexport.exportSVG(self, filename, annotations=annotations)
+            imageexport.exportSVG(self, filename, annotations=annotations, gamma=gamma)
         elif format in VALID_RASTER_FORMATS:
             if annotations:
-                imageexport.exportRaster(self, filename, annotations=annotations, pixelWidth=pixelWidth)
+                imageexport.exportRaster(self, filename, annotations=annotations, pixelWidth=pixelWidth, gamma=gamma)
             else:
                 # direct write with imwrite - this used to be its own method, rgbWrite()
-                img = self.rgb()
+                img = self.rgb() ** gamma
                 # convert to 8-bit integer from 32-bit float
                 img8 = (img * 256).clip(max=255).astype(np.ubyte)
                 # and change endianness

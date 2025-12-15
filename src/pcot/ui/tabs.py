@@ -5,10 +5,9 @@ should inherit DockableTabWindow.
 from PySide2 import QtWidgets, QtCore
 from PySide2.QtCore import Qt
 import collections
+import logging
 
 from PySide2.QtWidgets import QMenu, QAction
-
-import pcot
 
 ## the main UI window class. Your application window should inherit from
 # this to use dockable tabs, and have a tabWidget tab container.
@@ -16,6 +15,9 @@ from PySide2.QtGui import QFont
 
 from pcot import ui
 from pcot.ui import uiloader
+from pcot.ui.canvas import Canvas
+
+logger = logging.getLogger(__name__)
 
 
 class DockableTabWindow(QtWidgets.QMainWindow):
@@ -72,8 +74,15 @@ class DockableTabWindow(QtWidgets.QMainWindow):
             if tab in tab.node.tabs:
                 tab.node.tabs.remove(tab)  # need to check because sometimes an error can mess this up
             tab.onClose()
+            logger.debug(f"Closing tab {self}")
+            # find all Canvases anywhere in the tab and notify them; this is to stop stale timers and
+            # hopefully make the damn things delete.
+            for c in tab.findChildren(Canvas):
+                c.onClose()
             self.tabWidget.removeTab(index)
             self.tabs = {k: v for k, v in self.tabs.items() if v != tab}
+            # removing the tab from the widget doesn't delete it - this will schedule a later deletion
+            tab.deleteLater()
 
     def closeTab(self, t):
         if t.expanded:

@@ -2,6 +2,8 @@
 
 <img src="https://github.com/AU-ExoMars/PCOT/blob/72e6f0a5920d82fcf7c3beb8faf26cc43ca96b2f/docs/pcotlogo.png" width="100px"/>
 
+**More documentation can be found [here](https://au-exomars.github.io/PCOT/)**
+
 This is an early version of the Pancam Operations Toolkit. This is
 a Python application and library primarily intended for 
 processing data from the Pancam
@@ -25,8 +27,6 @@ maths, splice images together, merge image channels, plot spectra). A PCOT
 document describes this graph, and we
 intend that documents are distributed along with the data they generate
 to help reproducibility.
-
-More documentation can be found [here](https://au-exomars.github.io/PCOT/)
 
 ## Installation
 
@@ -89,6 +89,35 @@ the Poetry dependency and packaging manager. It may take some time.
 * Now run **poetry install**. This will set up all the packages PCOT is
 dependent on and install PCOT.
 * You should now be able to run **pcot** to start the application.
+
+### Problems on modern Macs
+You may get an installation error where poetry can't install a component called **shiboken2**. This is because
+PCOT currently uses PySide2 to handle the user interface, which isn't entirely compatible with modern
+MacOS and Apple's new CPUs. We are working on moving to the more modern PySide6, but while we do that
+there is a workaround involving Rosetta - Apple's system for running code intended for Intel-based Macs on the newer
+ARM-based Macs. To do this, delete the old conda environment with
+
+```
+conda env remove -n pcot
+```
+
+and then recreate it and install PCOT with these steps:
+
+```
+conda create -n pcot -y
+conda activate pcot
+conda config --env --set subdir osx-64
+conda install python=3.9 poetry
+poetry install
+```
+
+That third line is the key one – it’s saying “make the environment you just created an osx-64 environment” 
+(i.e. an Intel one, with Rosetta translation).
+
+If it goes smoothly, you should be able to run PCOT with the “pcot” command.
+It may take a long time to start up, because this is where I think the Rosetta translation happens
+(turning Intel code into ARM code). But I think it only does that the first time.
+
 
 ### Installing on Windows
 Assuming you have successfully installed Anaconda and cloned or downloaded PCOT as above:

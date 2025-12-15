@@ -193,7 +193,7 @@ class NameResolver:
     """
     @staticmethod
     def getLabel(rr: ROI) -> str:
-        return rr.label if rr.label != "" else "no label"
+        return rr.label if rr.label is not None and rr.label != "" else "no label"
 
     def __init__(self, d: Dict[str, ImageCube]):
         self.nameDict = {}

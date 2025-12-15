@@ -23,6 +23,7 @@ class ROICull(XFormType):
         )
 
     def init(self, node):
+        node.rois = []
         pass
 
     def createTab(self, n, window):

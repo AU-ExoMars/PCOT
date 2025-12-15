@@ -8,6 +8,7 @@ from typing import List, Optional
 from PySide2 import QtWidgets, QtGui
 from PySide2.QtCore import Qt, QPointF
 from PySide2.QtGui import QColor, QFont, QTransform, QPen, QBrush
+from PySide2.QtWidgets import QApplication
 
 import pcot.datum as datum
 import pcot.ui as ui
@@ -150,6 +151,15 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
                       QtWidgets.QGraphicsItem.ItemIsMovable |
                       QtWidgets.QGraphicsItem.ItemSendsGeometryChanges)
         self.node = node
+
+        self.outdatedWarning = QtWidgets.QGraphicsSimpleTextItem("!!!",parent=self)
+        self.outdatedWarning.setBrush(Qt.red)
+        self.outdatedWarning.setFont(errorFont)
+        self.outdatedWarning.setZValue(1)
+        self.outdatedWarning.setPos(x1+XTEXTOFFSET+w-23,
+                                    y1+YTEXTOFFSET+YERROROFFSET)
+        self.outdatedWarning.setVisible(False)
+
         # help "button" created when setSizeToText is called.
         self.helprect = None
         self.resizeStartRectangle = None
@@ -196,14 +206,23 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
 
     def mousePressEvent(self, event):
         # near a corner and the node is resizable? Start resizing. Otherwise, start moving.
-        p = event.pos()
-        if self.node.type.resizable and (p - self.rect().bottomRight()).manhattanLength() < 15:
-            self.resizing = True
-            self.resizeStartPosition = p
-            self.resizeStartRectangle = self.rect()
-        else:
+        # Also handle modified clicks - Ctrl-click runs a node (and its kids of autorun is set
+
+        if event.modifiers() & Qt.ControlModifier:
+            # running the performNodes will actually _delete_ this object, so we don't call
+            # the superclass handler in this case.
+            ui.log(f"Running node {self.node}, autorun={XFormGraph.autoRun}")
+            self.node.graph.performNodes(self.node)
             self.aboutToMove = True
-        super().mousePressEvent(event)
+        else:
+            p = event.pos()
+            if self.node.type.resizable and (p - self.rect().bottomRight()).manhattanLength() < 15:
+                self.resizing = True
+                self.resizeStartPosition = p
+                self.resizeStartRectangle = self.rect()
+            else:
+                self.aboutToMove = True
+            super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
         if self.resizing:
@@ -526,11 +545,14 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
     draggingArrow: Optional[GArrow]
     # delete keys are ignored and passed down to Items because we're editing text in a node
     lockDeleteKeys: bool
+    # performing this node right now
+    performing_node: Optional[XForm]
 
     def __init__(self, graph, doPlace):
         """initialise to a graph, and do autolayout if doPlace is true"""
         super().__init__()
         self.graph = graph
+        self.performing_node = None
         self.lockDeleteKeys = False
         self.selectionChanged.connect(self.selChanged)
         self.selection = []
@@ -542,6 +564,24 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
 
         # and make all the graphics
         self.rebuild()
+
+    def performing(self, n: Optional[XForm]):
+        """Used in XForm.perform, this marks the performing node (or none) and changes the rectangle
+        for that node. It then forces an immediate graphics update by processing events."""
+
+        self.performing_node = n
+        # we also mark all child nodes (and us) as outdated.
+        def mark_outdated(nn: XForm):
+            nn.outdated = True
+            for child in nn.children:
+                mark_outdated(child)
+        if n:
+            mark_outdated(n)
+#            ui.log(f"Autorun cleared on {n}")
+            n.outdated = False  # and then clear the outdated flag for this node
+        self.setColourToState()
+        self.performing_node = None
+        QApplication.processEvents()  # this forces an immediate update of the scene so the redraw happens!
 
     def placeGrandalf(self):
         """try to autolayout a graph using Grandalf (or at least x,y coordinates inside the xforms)."""
@@ -690,9 +730,20 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 r = max(r, 10)
                 g = max(g, 10)
                 b = max(b, 10)
+                # if the node is actively performing, mark that. (see XForm.perform and the GMainRect
+                # show_start_perform and start_end_perform methods)
+                if self.performing_node and self.performing_node == n:
+                    ui.log(f"Performing {n.debugName()}")
+                    b = 100
+                    g = 100
+                elif n.outdated:    # child nodes of more recently run parents.
+                    b //= 2
                 n.rect.setBrush(QColor(r, g, b))
-                outlinecol = QColor(0, 0, 0) if n.enabled else QColor(255, 0, 0)
-                n.rect.setPen(QPen(outlinecol))
+                r, g, b = (0, 0, 0) if n.enabled else (255, 0, 0)
+                rect_pen = QPen(QColor(r,g,b))
+                n.rect.setPen(rect_pen)
+
+                n.rect.outdatedWarning.setVisible(n.outdated)
 
                 r, g, b = n.type.getTextColour(n) if n.enabled else (255, 0, 0)
                 n.rect.text.setColour(QColor(r, g, b))

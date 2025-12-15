@@ -8,7 +8,7 @@ from PySide2.QtSvg import QSvgGenerator
 EXPORT_UNIT_WIDTH = 10000.0  # size of an image and its borders in internal units.
 
 
-def export(imgcube, prepfunction, annotations=True, margin=0.2):
+def export(imgcube, prepfunction, annotations=True, margin=0.2, gamma=1.0):
     """A bit functional. The drawing process consists of a lot of prep which creates a QPainter drawing
     on some backing object - such as a QPdfWriter or a QImage. So here we calculate all the things necessary
     to do the drawing and to create that backing object, and call a 'prepfunction' to create said object and
@@ -64,6 +64,7 @@ def export(imgcube, prepfunction, annotations=True, margin=0.2):
     p.scale(sx, sy)
 
     img = imgcube.rgb()  # get numpy RGB image to draw
+    img **= gamma
 
     # Convert and draw the image
     # again, see other comments about problems with QImage using preset data.
@@ -88,7 +89,7 @@ def export(imgcube, prepfunction, annotations=True, margin=0.2):
         imgcube.drawAnnotationsAndROIs(p, inPDF=True)
 
 
-def exportPDF(imgcube, path, annotations=True):
+def exportPDF(imgcube, path, annotations=True, gamma=1.0):
     # have to create a PDF writer in the outer scope or things crash; it looks like QPainter
     # doesn't store a backreference, so when prepfunc exits, a QPdfWriter created inside
     # will go away.
@@ -104,10 +105,10 @@ def exportPDF(imgcube, path, annotations=True):
         pdf.setPageSizeMM(QSizeF(win * 25.4, hin * 25.4))
         return QPainter(pdf)
 
-    export(imgcube, prepfunc, annotations)
+    export(imgcube, prepfunc, annotations, gamma=gamma)
 
 
-def exportRaster(imgcube, path, pixelWidth, transparentBackground=False, annotations=True):
+def exportRaster(imgcube, path, pixelWidth, transparentBackground=False, annotations=True,gamma=1.0):
     """Export an image to a PNG, JPG, GIF, PBM, PPM, BMP... Gets the format from
     the extension (see https://doc.qt.io/qt-6/qimage.html#reading-and-writing-image-files)
     Params:
@@ -118,7 +119,7 @@ def exportRaster(imgcube, path, pixelWidth, transparentBackground=False, annotat
 
     outputImage = None   # see note on exportPDF
 
-    if pixelWidth < 0:
+    if pixelWidth is None or pixelWidth < 0:
         pixelWidth = imgcube.w
 
     def prepfunc(win, hin):
@@ -137,14 +138,14 @@ def exportRaster(imgcube, path, pixelWidth, transparentBackground=False, annotat
         # and now paint on it.
         return QPainter(outputImage)
 
-    export(imgcube, prepfunc, annotations, margin=0)
+    export(imgcube, prepfunc, annotations, margin=0, gamma=gamma)
 
     # and save the image. Ignore the error here; outputImage is a reference to
     # None but that changes in the callback.
     outputImage.save(path)
 
 
-def exportSVG(imgcube, path, annotations=True):
+def exportSVG(imgcube, path, annotations=True,gamma=1.0):
     svg = QSvgGenerator()
     svg.setFileName(path)
 
@@ -159,4 +160,4 @@ def exportSVG(imgcube, path, annotations=True):
         svg.setViewBox(QRect(0, 0, w, h))
         return QPainter(svg)
 
-    export(imgcube, prepfunc, annotations)
+    export(imgcube, prepfunc, annotations, gamma=gamma)

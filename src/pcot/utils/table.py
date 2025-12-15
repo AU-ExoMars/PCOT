@@ -115,5 +115,5 @@ class Table:
         out += "|" + ("|".join(["-----" for _ in self._keys])) + "|\n"
         for r in self:
             r = [self._printable(v) for v in r]
-            out += "|" + ("|".join(x for x in r)) + "|\n"
+            out += "|" + ("|".join(str(x) for x in r)) + "|\n"
         return out

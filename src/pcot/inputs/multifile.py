@@ -71,6 +71,11 @@ class MultifileInputMethod(InputMethod):
             self.filterre = None
             logger.error("Cannot compile RE!!!!")
 
+    def invalidate(self):
+        """Invalidates the internal cache for this method as well as clearing the output"""
+        self.cachedFiles = {}
+        super().invalidate()
+
     def readData(self):
         # we force the mapping to have to be "reguessed"
         self.mapping.red = -1
@@ -250,6 +255,10 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
             self.method.dir = pcot.config.getDefaultDir('images')
         self.onInputChanged()
 
+    def onClose(self):
+        super().onClose()
+        self.canvas.onClose()
+
     def applyPreset(self, preset):
         # see comments in presetPressed for why this is here and not in the input method
         self.method.camera = preset['camera']
@@ -281,7 +290,7 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
     def loaderSettings(self):
         self.method.rawLoader.edit(self)
         # clear the cache, we'll need to reload those files!
-        self.method.cachedFiles = {}
+        self.method.invalidate()
         self.loaderSettingsText.setText(str(self.method.rawLoader))
 
     def onInputChanged(self):

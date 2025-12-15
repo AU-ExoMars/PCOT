@@ -925,7 +925,7 @@ class ROIPainted(ROI):
 
     def _str(self, use_id):
         lab = "(no label)" if self.label is None else self.label
-        s = f"ROI-PAINTED{self.internalIdx}" if use_id else f"ROI-PAINTED:{lab}"
+        s = f"ROI-PAINTED{self.internalIdx}:{lab}" if use_id else f"ROI-PAINTED:{lab}"
         if self.bbrect:
             x, y, w, h = self.bb()
             s += f" {x} {y} {w}x{h}"

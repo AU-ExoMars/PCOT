@@ -1,3 +1,5 @@
+import logging
+
 from PySide2.QtCore import Qt, QRect, QPoint, QPointF
 from PySide2.QtGui import QPainter, QFont, QFontMetrics, QPen, QColor
 from typing import Callable, Tuple, Optional
@@ -6,13 +8,16 @@ from typing import Callable, Tuple, Optional
 from pcot import ui
 from pcot.utils.colour import rgb2qcol
 
+logger = logging.getLogger(__name__)
+
 annotFont = QFont()
 annotFont.setFamily('Sans Serif')
 
-
-def pixels2painter(v, p: QPainter):
+# I'm pretty sure this is now unecessary.
+def UNUSED_pixels2painter(v, p: QPainter):
     """Given a size value in pixels, get what the painter size should be (i.e. take account of scaling)"""
     sc = p.worldTransform().m11()
+    logger.info(f"Scale factor {sc}")
     return v/sc
 
 
@@ -28,7 +33,9 @@ def annotDrawText(p: QPainter,
     pen.setWidth(0)
     p.setPen(pen)
 
-    annotFont.setPixelSize(pixels2painter(fontsize*2, p))
+    # see commit 2/11/25
+    # annotFont.setPixelSize(pixels2painter(fontsize*2, p))
+    annotFont.setPixelSize(fontsize*2)
     p.setFont(annotFont)
     metrics = QFontMetrics(annotFont)
     vmargin = metrics.height() * 0.1  # top-bottom margin as factor of height
@@ -105,7 +112,7 @@ class IndexedPointAnnotation(Annotation):
 
         r = self.r
         if r is None:
-            r = pixels2painter(5, p)
+            r = 5
 
         p.drawEllipse(QPointF(x, y), r, r)
         if self.issel:
@@ -115,6 +122,8 @@ class IndexedPointAnnotation(Annotation):
             p.drawEllipse(QPointF(x, y), 0.7*r, 0.7*r)
 
         fontsize = 15   # font size in on-screen pixels
-        annotFont.setPixelSize(pixels2painter(fontsize, p))
+        # see commit 2/11/25
+        # annotFont.setPixelSize(pixels2painter(fontsize, p))
+        annotFont.setPixelSize(fontsize)
         p.setFont(annotFont)
         p.drawText(x+r*2, y+r*2, f"{self.idx}")

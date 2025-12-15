@@ -47,20 +47,31 @@ class PersistBlock:
         """sets default values, or perform the inverse of serialise(), turning the serialisable form into one
         of these objects"""
         if d is None:
-            self.showROIs = True
-            self.dqs = [CanvasDQSpec(showBad=(x == 0)) for x in range(NUMDQS)]  # 3 of these set to defaults
-            self.normToCropped = False
-            self.normMode = canvasnormalise.NormToImg
-        else:
+            d = {}  # create an empty dict to "deserialise" - we'll get the defaults.
+        if isinstance(d, list):
+            # deserialising legacy lists
             self.showROIs, self.normMode, self.normToCropped, dqs = d
-            self.normMode = int(self.normMode)  # deal with legacy files
-            self.normToCropped = bool(self.normToCropped)
             self.dqs = [CanvasDQSpec(d) for d in dqs]
+            self.gamma = 1.0
+        else:
+            self.showROIs = d.get('showROIs', True)
+            self.normMode = d.get('normMode', canvasnormalise.NormToImg)
+            self.normToCropped = d.get('normToCropped', False)
+            if 'dqs' in d:
+                self.dqs = [CanvasDQSpec(d) for d in d['dqs']]
+            else:
+                self.dqs = [CanvasDQSpec(showBad=(x == 0)) for x in range(NUMDQS)]
+            self.gamma = d.get('gamma', 1.0)
+        self.normMode = int(self.normMode)  # deal with legacy files
+        self.normToCropped = bool(self.normToCropped)
 
     def serialise(self):
         """return a version of this type which can be serialised into JSON"""
-        dqs = [d.serialise() for d in self.dqs]
-        return [self.showROIs, self.normMode, self.normToCropped, dqs]
+        return {'showROIs': self.showROIs,
+                'normMode': self.normMode,
+                'normToCropped': self.normToCropped,
+                'gamma': self.gamma,
+                'dqs': [d.serialise() for d in self.dqs]}
 
 
 # the actual drawing widget, contained within the Canvas widget
@@ -194,15 +205,16 @@ class InnerCanvas(QtWidgets.QWidget):
 
     def tick(self):
         """Timer tick"""
-        if self.redrawOnTick:
-            self.flashCycle = 1 - self.flashCycle
-            self.update()
+        if self.isVisible():
+            if self.redrawOnTick:
+                self.flashCycle = 1 - self.flashCycle
+                self.update()
 
     ## returns the graph this canvas is part of
     def getGraph(self):
         return self.canv.graph
 
-    def display(self, img: 'ImageCube', isPremapped: bool, ):
+    def display(self, img: 'ImageCube', isPremapped: bool):
         """display an image next time paintEvent happens, and update to cause that.
         Will also handle None (by doing nothing)"""
         self.imgCube = img
@@ -291,6 +303,11 @@ class InnerCanvas(QtWidgets.QWidget):
                                                          self.canv.canvaspersist.normMode,
                                                          self.canv.canvaspersist.normToCropped,
                                                          (cutx, cuty, self.cutw, self.cuth))
+
+            # we now apply the canvas gamma, before we apply any kind of overlay or annotation
+            gamma = self.canv.canvaspersist.gamma
+            rgbcropped = rgbcropped ** gamma if abs(gamma - 1.0) > 0.01 else rgbcropped
+
             tt.mark("norm")
             # Here we draw the overlays and get any extra text required
             rgbcropped, dqtext = self.drawDQOverlays(rgbcropped, cutx, cuty, cutw, cuth)
@@ -393,7 +410,7 @@ class InnerCanvas(QtWidgets.QWidget):
                             data = (data - mn) / rng
                         else:
                             data = np.zeros(data.shape, dtype=float)
-                    mask = data > 0     # we'll need to mask the bits where there's a value present for later.
+                    mask = data > 0  # we'll need to mask the bits where there's a value present for later.
                 elif d.data > 0:
                     # otherwise it's a DQ bit (or BAD dq bits), so cut that out
                     data = self.imgCube.dq[cuty:cuty + cuth, cutx:cutx + cutw]
@@ -428,7 +445,7 @@ class InnerCanvas(QtWidgets.QWidget):
 
                 if (not flash or self.flashCycle) and data is not None:
                     zeroes = np.zeros(data.shape, dtype=float)
-                    data = data ** 2*d.contrast
+                    data = data ** 2 * d.contrast
                     t.mark("contrast")
                     # set the data opacity
                     data *= 1 - d.trans
@@ -572,11 +589,25 @@ class InnerCanvas(QtWidgets.QWidget):
         self.cursorX, self.cursorY = self.getImgCoords(e.pos())
         self.update()
 
+    def __del__(self):
+        logger.debug(f"Cleaning up {self}")
+
+
 
 def makesidebarLabel(t):
     lab = QtWidgets.QLabel(t)
     lab.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
     return lab
+
+
+# gamma/slider conversions - assume a range of 0-99 for the slider.
+def slider2gamma(x):
+    return float(x - 50) / 100.0 + 1.0
+
+
+def gamma2slider(x):
+    x = (x - 1.0) * 100 + 50
+    return x
 
 
 class Canvas(QtWidgets.QWidget):
@@ -628,7 +659,7 @@ class Canvas(QtWidgets.QWidget):
     isDQHidden: bool
 
     # List of the DQ section widgets
-    dqSections: List[CollapserSection]#
+    dqSections: List[CollapserSection]  #
 
     # warning to indicate the filter data is missing
     missingFilterDataLabel: QtWidgets.QLabel
@@ -726,7 +757,6 @@ class Canvas(QtWidgets.QWidget):
         self.hideablebuttons = QtWidgets.QWidget()
         self.hideablebuttons.setContentsMargins(0, 0, 0, 0)
 
-
         hideable = QtWidgets.QGridLayout()
         hideable.setContentsMargins(3, 10, 3, 10)  # LTRB
         # these are the actual widgets specifying which channel in the cube is viewed.
@@ -749,6 +779,23 @@ class Canvas(QtWidgets.QWidget):
         self.resetMapButton = QtWidgets.QPushButton("Guess RGB")
         hideable.addWidget(self.resetMapButton, 3, 0, 1, 2)
         self.resetMapButton.clicked.connect(self.resetMapButtonClicked)
+
+        hideable.addWidget(makesidebarLabel("gamma"), 4, 0)
+        self.gammaLabel = makesidebarLabel("1.1")
+        hideable.addWidget(self.gammaLabel, 4, 1)
+
+        class GammaSlider(QtWidgets.QSlider):
+            # subclass of a slider which zeroes on doubleclick
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+            def mouseDoubleClickEvent(self, event):
+                self.setValue(50)
+                # If you call this, the slider gets a move event too and we end up at slightly off centre.
+                # super().mouseDoubleClickEvent(event)
+
+        self.gammaSlider = GammaSlider(Qt.Orientation.Horizontal)
+        hideable.addWidget(self.gammaSlider, 5, 0, 1, 2)
+        self.gammaSlider.valueChanged.connect(self.gammaChanged)
 
         self.hideablebuttons.setLayout(hideable)  # add layout to widget
         self.blueChanCombo.setMinimumWidth(100)
@@ -925,15 +972,19 @@ class Canvas(QtWidgets.QWidget):
             self.recursing = False
             self.redisplay()
 
+    def gammaChanged(self, v):
+        self.canvaspersist.gamma = slider2gamma(v)
+        self.gammaLabel.setText(f"{self.canvaspersist.gamma:.2f}")
+        self.redisplay()
+
     def contextMenuEvent(self, ev: QtGui.QContextMenuEvent) -> None:
-        super().contextMenuEvent(ev)   # run the super's menu, which will run any item's menu
-        if not ev.isAccepted():        # if the event wasn't accepted, run our menu
+        super().contextMenuEvent(ev)  # run the super's menu, which will run any item's menu
+        if not ev.isAccepted():  # if the event wasn't accepted, run our menu
             menu = QMenu()
             save = menu.addAction("Save as image, PDF, SVG or PARC")
             a = menu.exec_(ev.globalPos())
             if a == save:
-              self.saveAction()
-
+                self.saveAction()
 
     def ensureDQValid(self):
         """Make sure the DQ data is valid for the image if present; if not reset to None"""
@@ -1199,7 +1250,7 @@ class Canvas(QtWidgets.QWidget):
                 annotations = (r == QMessageBox.Yes)
                 desc = ''
 
-            self.previmg.save(path, annotations=annotations, description=desc)
+            self.previmg.save(path, annotations=annotations, description=desc, gamma=self.canvaspersist.gamma)
 
     ## this initialises a combo box, setting the possible values to be the channels in the image
     # input
@@ -1225,7 +1276,8 @@ class Canvas(QtWidgets.QWidget):
     # In the normal case (where the Canvas does the RGB mapping) just call with the image.
     # In the premapped case, call with the premapped RGB image, the source image, and the node.
 
-    def display(self, img: Union[Datum, 'ImageCube'], alreadyRGBMappedImageSource:'ImageCube'=None, nodeToUIChange=None):
+    def display(self, img: Union[Datum, 'ImageCube'], alreadyRGBMappedImageSource: 'ImageCube' = None,
+                nodeToUIChange=None):
         self.firstDisplayDone = True
 
         if isinstance(img, Datum):
@@ -1235,7 +1287,7 @@ class Canvas(QtWidgets.QWidget):
         # if we are using a "premapped" image.
         mapSourceImg = alreadyRGBMappedImageSource if alreadyRGBMappedImageSource is not None else img
         if mapSourceImg:
-            self.mapping = mapSourceImg.mapping     # this is a reference
+            self.mapping = mapSourceImg.mapping  # this is a reference
 
         if self.graph is None:
             raise Exception(
@@ -1263,6 +1315,9 @@ class Canvas(QtWidgets.QWidget):
         # when we change the mapping (which is why we would redisplay) it's the node code which regenerates
         # the remapped image.
         self.nodeToUIChange = nodeToUIChange
+        # set the gamma slider
+        self.gammaSlider.setValue(gamma2slider(self.canvaspersist.gamma))
+        self.gammaLabel.setText(f"{self.canvaspersist.gamma:.2f}")
         # This will clear the screen if img is None
         self.redisplay()
 
@@ -1439,5 +1494,12 @@ class Canvas(QtWidgets.QWidget):
         process, so the different operations are available separately. But we have to do this in nodes before
         every redisplay, because the node may have been replaced by an undo operation."""
 
-        self.setGraph(node.graph)           # tell the canvas what the graph is
-        self.setPersister(node)             # and where it should store its data (ugly, yes).
+        self.setGraph(node.graph)  # tell the canvas what the graph is
+        self.setPersister(node)  # and where it should store its data (ugly, yes).
+
+    def onClose(self):
+        logger.debug(f"Closing canvas {self}")
+        self.canvas.timer.stop()
+        self.canvas.timer = None
+        self.canvas = None  # MAYBE this will delete the damn thing
+

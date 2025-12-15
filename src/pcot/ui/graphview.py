@@ -125,3 +125,6 @@ class GraphView(QtWidgets.QGraphicsView):
         """Reset the view to fit the entire scene"""
         self.fitInView(self.scene().itemsBoundingRect(), Qt.KeepAspectRatio)
 
+    def repaint(self, *args, **kwargs):
+        logger.debug("Repaint forced")
+        super().repaint(*args,**kwargs)

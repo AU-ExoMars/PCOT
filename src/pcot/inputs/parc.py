@@ -136,6 +136,10 @@ class PARCMethodWidget(MethodWidget):
 
         self.onInputChanged()
 
+    def onClose(self):
+        super().onClose()
+        self.data.canvas.onClose()
+
     def onInputChanged(self):
         # we don't do this when the window is opening, otherwise it happens a lot!
         if not self.method.openingWindow:

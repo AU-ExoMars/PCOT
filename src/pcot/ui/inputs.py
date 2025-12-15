@@ -122,6 +122,11 @@ class InputWindow(QtWidgets.QMainWindow):
     def closeEvent(self, event):
         logger.debug("Closing input window")
         self.input.onWindowClosed()
+        super().closeEvent(event)
+        for w in self.widgets:
+            w.onClose()
+            w.deleteLater()     # delete all the bloody widgets
+        self.widgets = []
         event.accept()
 
     def methodChanged(self):
@@ -162,6 +167,9 @@ class MethodWidget(QtWidgets.QWidget):
     def invalidate(self):
         if self.method.isActive():
             self.method.invalidate()
+
+    def onClose(self):
+        pass
 
 
 class TreeMethodWidget(MethodWidget):
@@ -204,6 +212,10 @@ class TreeMethodWidget(MethodWidget):
         self.canvas.setPersister(m)
 
         self.onInputChanged()
+
+    def onClose(self):
+        super().onClose()
+        self.canvas.onClose()
 
     def goto(self, filename):
         """Filename could be a file or directory - we should scroll to it, and select it if it's a file"""

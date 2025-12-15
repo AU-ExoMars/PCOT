@@ -8,6 +8,18 @@ None
 
 ## Alpha releases
 
+## 0.11.0-alpha 2025-10-24 IGNIOC STONE
+
+Fenton, where are you?
+
+* Some UI changes and fixes
+* Various internal fixes to do with object deepcopy
+* Basic debayering in the RGB input method (just bilinear, edge-aware and variable number of gradients)
+* Separate plots in reflectance node to help check the line-fitting visually
+* Graph updates to show progress as it runs
+* Ctrl-click on a node to force recalculation
+* *gradient* node is now *colourmap*
+
 ## 0.10.0-alpha 2025-06-12 HALWYN ROUND
 
 I still miss Fenton Saurus. 

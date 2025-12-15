@@ -264,6 +264,10 @@ class PDS4ImageMethodWidget(MethodWidget):
         self.showSelectedItems()
         self.updateDisplay()
 
+    def onClose(self):
+        super().onClose()
+        self.canvas.onClose()
+
     def getProducts(self):
         """get the list of products from the method's ProductList.
         If there are none, return an empty list."""

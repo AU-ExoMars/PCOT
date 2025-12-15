@@ -35,7 +35,6 @@ if TYPE_CHECKING:
 
 from pcot.imagecube import ChannelMapping
 
-
 logger = logging.getLogger(__name__)
 
 ## dictionary of name -> transformation type (XFormType)
@@ -230,7 +229,7 @@ class XFormType:
     def getAutoserialiseDefault(self, name):
         """Really ugly because of the way autoserialise was developed. This gets a default, if there is one!"""
         for t in self.autoserialise:
-            if isinstance(t,tuple):
+            if isinstance(t, tuple):
                 n, d = t
                 if name == n:
                     return d
@@ -356,6 +355,11 @@ class XFormType:
         """
         pass
 
+    def mustRunOnOutputConnected(self, xform) -> bool:
+        """If this returns true, this node type must be rerun when a new connection is made to its output.
+        Otherwise it's sufficient to rerun the node to which the new connection was made."""
+        return False
+
     def getBatchOutputValue(self, node):
         """
         Similarly, some nodes generate output values which can be saved by a runner, but don't necessarily
@@ -420,6 +424,7 @@ class BadTypeException(Exception):
 
 
 performDepth = 0
+
 
 class XForm:
     """an actual instance of a transformation, often called a "node"."""
@@ -502,7 +507,7 @@ class XForm:
     # is this the currently selected node?
     current: bool
     # the main rectangle for the node in the scene
-    rect: ['graphscene.GMainRect']
+    rect: 'graphscene.GMainRect'
     # input connector rectangles
     inrects: List[Optional['graphscene.GConnectRect']]
     # output connector rectangles
@@ -516,6 +521,9 @@ class XForm:
     # recursion avoidance
     inUIChange: bool
 
+    # child nodes of a parent which has not yet performed have this set so the graph can show them
+    outdated: bool
+
     # the serialised parameters in a TaggedAggregate, or None. Usually it's TaggedDict.
     params: Optional['TaggedAggregate']
 
@@ -525,6 +533,7 @@ class XForm:
         self.type = tp
         self.savedver = tp.ver
         self.savedmd5 = None
+        self.outdated = False
         # we keep a dict of those nodes which get inputs from us, and how many. We can't
         # keep the actual output connections easily, because they are one->many.
         self.children = {}
@@ -683,7 +692,8 @@ class XForm:
             d2 = self.params.serialise()
             intersect = set(d.keys()).intersection(set(d2.keys()))
             if len(intersect) > 0:
-                raise Exception(f"Parameter keys already exist in serialised node data: {intersect} (are you using both TaggedAggregate and autoserialise?)")
+                raise Exception(
+                    f"Parameter keys already exist in serialised node data: {intersect} (are you using both TaggedAggregate and autoserialise?)")
             d.update(d2)
         return d
 
@@ -865,11 +875,15 @@ class XForm:
         if output < 0:
             raise XFormException('DATA', 'cannot connect to negative output')
         if inputIdx >= len(self.inputs):
-            ui.error(f"Input index out of range when connecting {other.debugName()}:{output} to {self.debugName()}:{inputIdx}", False)
+            ui.error(
+                f"Input index out of range when connecting {other.debugName()}:{output} to {self.debugName()}:{inputIdx}",
+                False)
             return
             # raise XFormException('DATA', 'input index out of range')
         if output >= len(other.type.outputConnectors):
-            ui.error(f"Output  index out of range when connecting {other.debugName()}:{output} to {self.debugName()}:{inputIdx}", False)
+            ui.error(
+                f"Output  index out of range when connecting {other.debugName()}:{output} to {self.debugName()}:{inputIdx}",
+                False)
             return
             # raise XFormException('DATA', 'output index out of range')
 
@@ -877,7 +891,12 @@ class XForm:
             self.inputs[inputIdx] = (other, output)
             other.increaseChildCount(self)
             if autoPerform:
-                other.graph.changed(other)  # perform the input node; the output should perform
+                # For most nodes, it's enough to run when a connection is made to their input.
+                # For some, it may be necessary to run when a connection is made to their output.
+                if other.type.mustRunOnOutputConnected(other):
+                    other.graph.changed(other)  # perform the node from which the connection comes - the INPUT node
+                else:
+                    self.graph.changed(self)  # otherwise perform the OUTPUT node
 
     def disconnect(self, inputIdx, perform=True):
         """disconnect an input"""
@@ -948,7 +967,7 @@ class XForm:
     ## perform the transformation; delegated to the type object - recurses down the children.
     # Also tells any tab open on a node that its node has changed.
     # DO NOT CALL DIRECTLY - called either from itself or from performNodes.
-    def perform(self, isAlwaysRunAfter=False):
+    def perform(self, isAlwaysRunAfter=False, run_children=True):
         global performDepth
 
         # don't run "always run after" special nodes unless we're allowed.
@@ -959,7 +978,6 @@ class XForm:
         # only be called inside the graph's perform.
         if not self.graph.performingGraph:
             raise Exception("Do not call perform directly on a node!")
-        ui.msg("Performing {}".format(self.debugName()))
         self.timesPerformed += 1
         try:
             # must clear this with prePerform on the graph, or nodes will
@@ -969,7 +987,7 @@ class XForm:
             elif not self.canRun():
                 logger.debug(f"----Skipping {self.debugName()}, it can't run (unset inputs)")
             else:
-                logger.debug(f"---------------------------------{'-'*performDepth}Performing {self.debugName()}")
+                logger.debug(f"---------------------------------{'-' * performDepth}Performing {self.debugName()}")
                 # now run the node, catching any XFormException
                 try:
                     st = time.perf_counter()
@@ -980,6 +998,11 @@ class XForm:
                     # We also check the forceRunDisabled flag in the graph - this is set when we want to
                     # force all nodes - disabled or not - to run. Typically this is done from a script.
                     if self.enabled or self.graph.forceRunDisabled:
+                        ui.msg("Performing {}".format(self.debugName()))
+                        # before and after performing the node, we update the graphics and force an event loop
+                        # so the user sees progress.
+                        if self.graph.scene:
+                            self.graph.scene.performing(self)
                         self.type.perform(self)
                     else:
                         # this may end up being done twice, because we do it to all nodes before we run the graph
@@ -992,15 +1015,16 @@ class XForm:
                 # tell the tab that this node has changed
                 self.updateTabs()
 
-                # this is a hack to let us guarantee the order children are processed,
-                # by sorting them by display name. Used in testing.
-                sorted_children = sorted(self.children.keys(), key=lambda xx: xx.displayName)
+                if run_children:
+                    # this is a hack to let us guarantee the order children are processed,
+                    # by sorting them by display name. Used in testing.
+                    sorted_children = sorted(self.children.keys(), key=lambda xx: xx.displayName)
 
-                # run each child (could turn off child processing?)
-                performDepth += 1
-                for n in sorted_children:
-                    n.perform()
-                performDepth -= 1
+                    # run each child (could turn off child processing?)
+                    performDepth += 1
+                    for n in sorted_children:
+                        n.perform()
+                    performDepth -= 1
         except Exception as e:
             traceback.print_exc()
             ui.logXFormException(self, e)
@@ -1164,7 +1188,7 @@ class XFormGraph:
         xy = (0, 0) if self.scene is None else self.scene.getNewPosition()
         # display name is just the type name to start with.
         xform = XForm(tp, tp.name)
-        xform.xy = xy   # now we can set the position
+        xform.xy = xy  # now we can set the position
         self.nodes.append(xform)
         self.doc.nodeAdded(xform)
         xform.graph = self
@@ -1284,6 +1308,9 @@ class XFormGraph:
         """
 
         self.forceRunDisabled = forceRunDisabled
+        if node is not None:  # if autorun is on, that will clear the flag we are about to set
+            node.outdated = True
+            # ui.log(f"Autorun set on {node}")
         if (not uiOnly) and (XFormGraph.autoRun or runAll):
             if runAll and invalidateInputs:
                 self.doc.inputMgr.invalidate()
@@ -1308,7 +1335,7 @@ class XFormGraph:
                     inst.graph.performNodes(inst)
 
                 # and rebuild graphics in the prototype
-                self.rebuildGraphics()
+                # self.rebuildGraphics()
             else:
                 self.performNodes(node)
         elif node is not None:
@@ -1328,10 +1355,11 @@ class XFormGraph:
                 xx.setCaption(self.doc.settings.captionType)
 
         self.forceRunDisabled = False
+        self.rebuildGraphics()
 
     def performNodes(self, node=None):
-        """perform the entire graph, or all those nodes below a given node.
-            If the entire graph, performs a traversal from the root nodes.
+        """perform the entire graph, or all those nodes below a given node (if autorun is true).
+            If the entire graph, performs a traversal from the root nodes (and always runs children)
             """
         # if we are already running this method, exit. This
         # will be atomic because GIL. The use case here can
@@ -1355,7 +1383,7 @@ class XFormGraph:
                     n.perform(isAlwaysRunAfter=True)
         else:
             # we're running an explicit node
-            node.perform()
+            node.perform(run_children=XFormGraph.autoRun)
         self.performingGraph = False
 
         self.showPerformance()

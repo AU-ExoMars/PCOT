@@ -12,7 +12,6 @@ import pcot.calib.pct
 import pcot.calib.colorchecker_classic
 from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.rois import getRadiusFromSlider, ROIPainted
-from pcot.utils.annotations import pixels2painter
 from pcot.utils.deb import Timer
 from pcot.utils.flood import MeanFloodFiller, FloodFillParams
 from pcot.xform import xformtype, XFormType, XFormException
@@ -36,7 +35,7 @@ def createPatchROI(img, x, y, radius):
     # get minimum and maximum pixel sizes (empirically determined from radius of patch)
     maxPix = radius ** 2 * 4
     minPix = 0  # probably best to not have a min pixel count
-    ff = MeanFloodFiller(img, FloodFillParams(minPix, maxPix, threshold=0.005))
+    ff = MeanFloodFiller(img, FloodFillParams(minPix, maxPix, threshold=0.003))
 
     # perform a flood fill and get a region out. This may return None if the
     # number of pixels is too low or too high. If so, we just fill a small region around
@@ -312,7 +311,8 @@ class TabPCT(pcot.ui.tabs.Tab):
             p.setBrush(Qt.black)
             p.drawRect(0, 0, 400, 20*len(self.node.rois)+40)
             font = QFont("Consolas")
-            fontsize = pixels2painter(FONTSIZE, p)
+            # fontsize = pixels2painter(FONTSIZE, p)
+            fontsize = FONTSIZE
             font.setPixelSize(fontsize)
             p.setFont(font)
             p.setPen(Qt.white)
