@@ -22,7 +22,7 @@ from pcot.sources import MultiBandSource, SourcesObtainable, Source
 from pcot.utils import annotations, debayering
 from pcot.utils.annotations import annotFont
 from pcot.utils import image
-from pcot.utils.archive import FileArchive
+from pcot.utils.archive import FileArchive,ArchiveType
 from pcot.utils.geom import Rect
 import pcot.dq
 from pcot.value import Value
@@ -1158,7 +1158,7 @@ class ImageCube(SourcesObtainable):
             if annotations:
                 raise ValueError("PARC format does not support annotations")
             else:
-                with FileArchive(filename, "a" if append else "w") as a:
+                with FileArchive(filename, "a" if append else "w", type=ArchiveType.IMAGECUBE) as a:
                     from pcot.datum import Datum  # late import otherwise cyclic fun
                     ds = DatumStore(a)
                     ds.writeDatum(name, Datum(Datum.IMG, self), description)
