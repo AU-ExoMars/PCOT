@@ -17,6 +17,10 @@ class ArchiveType(Enum):
     DOCUMENT = "PCOT document"
     CAMERADATA = "camera data"
     IMAGECUBE = "imagecube"
+    REFLDATA = "reflectance data"
+    
+    def __str__(self):
+        return self.value
     
 
 # Basic serialisers/deserialisers. Numpy arrays are handled differently,
@@ -299,8 +303,11 @@ class FileArchive(Archive):
 
             # move any existing metadata from the read in the constructor into the history
             history = self.metadata.get('history',[])
-            new_row = {k:self.metadata.get(k,'') for k in ['author','date','pcotversion']}
-            history.insert(0,new_row)
+            if 'date' in self.metadata:
+                # only do this if there was metadata to start with. If the archive is new,
+                # there won't be 'date' - it only gets created on write (a few lines below)
+                new_row = {k:self.metadata.get(k,'') for k in ['author','date','pcotversion']}
+                history.insert(0,new_row)
 
             newmeta = {
                 'author': getpass.getuser(),

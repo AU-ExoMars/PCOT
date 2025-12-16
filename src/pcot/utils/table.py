@@ -119,3 +119,31 @@ class Table:
             r = [self._printable(v) for v in r]
             out += "|" + ("|".join(str(x) for x in r)) + "|\n"
         return out
+    def text(self,titletext=None):
+        """output as columns of text, each wide enough for its widest item"""
+        # calculate column content widths
+        colwidths = { k: len(k) for k in self._keys }
+        for r in self:
+            for k,v in zip(self._keys,r):
+                colwidths[k] = max(colwidths[k],len(v))
+
+        # total width of all cols (adding the number of cols because there's a gap between each)
+        totalwidth = max(40,sum(colwidths.values())+len(colwidths)*3)
+
+        # output a list of strings, justified to colwidths
+        def colformat(lst):
+            outs = [v.ljust(colwidths[k]) for k,v in zip(self._keys,lst)]
+            return " | ".join(outs)
+
+        # output header
+        str = "="*totalwidth+"\n"
+        if titletext is not None:
+            titletext = "==="+titletext
+            str = titletext+str[len(titletext):]
+        str += colformat(self._keys)+"\n"
+        str += "="*totalwidth+"\n"
+
+        # and data
+        for r in self:
+            str += colformat(r)+"\n"
+        return str

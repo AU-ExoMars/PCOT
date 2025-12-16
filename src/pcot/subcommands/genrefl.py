@@ -38,6 +38,7 @@ def load_simple_format(out: reflectances.Reflectance, d:dict):
     file. Column headers: patch,wavelength,mean,sd
     I may well ignore sd...
     """
+    raise Exception("Not yet implemented")
 
 
 @subcommand([
@@ -64,7 +65,7 @@ def genrefl(args):
     # serialise the resulting reflectance object
     t = out.serialise()
 
-    with archive.FileArchive(args.output, "w") as a:
+    with archive.FileArchive(args.output, "w",type=archive.ArchiveType.REFLDATA) as a:
         a.writeJson("data", t)
 
 
