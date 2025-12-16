@@ -103,6 +103,7 @@ class Document:
         self.undoRedoStore = UndoRedoStore()
         self.nodeInstances = {}
         self.fileName = None
+        self.metadata = {'author': 'unsaved', 'history': []}
 
         if fileName is not None:
             self.load(fileName)
@@ -175,13 +176,10 @@ class Document:
     def save(self, fname, saveInputs=True):
         # note that the archive mechanism deals with numpy array saving and also
         # saves to a temp file before moving when it's all OK at the end.
-
-        # We add to the metadata here. This history item is created when old items are loaded;
-        # previous metadata is added to it. See load()
-        m = {'history': self.history}
-        with archive.FileArchive(fname, 'w', type=archive.ArchiveType.DOCUMENT,extrameta=m) as arc:
+        with archive.FileArchive(fname, 'w', type=archive.ArchiveType.DOCUMENT) as arc:
             arc.writeJson("JSON", self.serialise(saveInputs=saveInputs))
             pcot.config.addRecent(fname)
+            self.metadata = arc.metadata    # keep a ref to the metadata from the archive
 
     def load(self, fname: Path):
         """Load data into this document - is used in ctor, can also be used on existing document.
@@ -191,15 +189,8 @@ class Document:
             dd = arc.readJson("JSON")
             self.deserialise(dd)
             pcot.config.addRecent(fname)
+            self.metadata = arc.metadata    # keep a ref to the metadata from the archive
             self.fileName = fname
-            # here we add the previous author data to the history metadata. That old author data
-            # will, of course, be overwritten when/if we write
-            self.history = arc.metadata.get('history',[])  # get the previous history, or nothing
-            # create a new history row from the metadata stored in the archive we are loading
-            new_row = {k:arc.metadata.get(k,'') for k in ['author','date','pcotversion']}
-            # insert the new row into the history
-            self.history.insert(0,new_row)
-            print(arc.metadata)
 
     ## generates a new unique name for a macro.
     def getUniqueUntitledMacroName(self):
