@@ -256,11 +256,28 @@ class FileArchive(Archive):
         """
         assert mode in ['r', 'w', 'a']
         super().__init__(mode, progressCallback=progressCallback)
-        if type is None:
-            type = ArchiveType.UNSPECIFIED
-        self.type = type
+        path = path if isinstance(path, Path) else Path(path)  # sometimes they are strings
         self.path = path
+
+        # this will get merged in on write
         self.extrameta = extrameta
+
+        # default metadata is nearly empty, but can get loaded into below. But we do set up
+        # the type if one is given.
+        self.metadata = { 'type': ArchiveType.UNSPECIFIED if type is None else type}
+
+        # if the file exists, read the metadata that's in there
+        if path.is_file():
+            try:
+                with zipfile.ZipFile(path, 'r', compression=zipfile.ZIP_DEFLATED) as f:
+                    if 'pcot_metadata' in f.namelist():
+                        d = f.read('pcot_metadata').decode('utf-8')
+                        self.metadata = json.loads(d, object_hook=deserialiser)
+                    else:
+                        self.metadata = { 'type': ArchiveType.UNKNOWN }  # existing archive, but there was no metadata!
+            except Exception as e:
+                logger.error(f"Error reading metadata from {path}: {e}")
+
 
     def open(self):
         self.zip = zipfile.ZipFile(self.path, self.mode.lower(), compression=zipfile.ZIP_DEFLATED)
@@ -279,21 +296,22 @@ class FileArchive(Archive):
             import pcot
             import getpass
             from datetime import datetime
-            self.metadata = {
-                'type' : self.type,
+
+            # move any existing metadata from the read in the constructor into the history
+            history = self.metadata.get('history',[])
+            new_row = {k:self.metadata.get(k,'') for k in ['author','date','pcotversion']}
+            history.insert(0,new_row)
+
+            newmeta = {
                 'author': getpass.getuser(),
                 'date': datetime.now().isoformat(),
                 'pcotversion': pcot.__fullversion__,
+                'history': history
             }
+            self.metadata.update(newmeta)
             self.metadata.update(self.extrameta)
             self.writeJson("pcot_metadata",self.metadata)
-        elif "pcot_metadata" in self.getNames():
-            self.metadata = self.readJson("pcot_metadata")
-            self.type = self.metadata.get('type',ArchiveType.UNSPECIFIED)
-        else:
-            self.type = ArchiveType.UNKNOWN
-            self.metadata = {'type':self.type}
-            
+
         logger.debug(f"Opened {self}")
 
     def close(self):
