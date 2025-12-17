@@ -10,7 +10,7 @@ from pcot.utils import archive
 Code for creating reflectance data files
 """
 
-def load_jack_format(out: reflectances.Reflectance, d:dict):
+def load_jack_format(d:dict):
     """
     Load data for patches in Jack's format.
     out: the reflectance object into which we will load the data
@@ -26,19 +26,24 @@ def load_jack_format(out: reflectances.Reflectance, d:dict):
     an RS-3500 spectroradiometer.
     (See reflectances.Reflectance.load_jack() etc. for more details)
     """
+    out = reflectances.Reflectance()        # this is what we're building!
     patches = d['patches']
     for patch, val in patches.items():
         print(f"Jack format: processing patch {patch} from directory {val}")
         out.load_jack(patch, Path(val))
+    return out
 
 
-def load_simple_format(out: reflectances.Reflectance, d:dict):
+def load_simple_format(d:dict):
     """
     Load data in the "old" format. Here, the reflectances are in a single CSV
     file. Column headers: patch,wavelength,mean,sd
     I may well ignore sd...
     """
-    raise Exception("Not yet implemented")
+    file = d['file']
+    out = reflectances.SimpleReflectance()
+    out.load_simple_csv(Path(file))
+    return out
 
 
 @subcommand([
@@ -49,22 +54,29 @@ def load_simple_format(out: reflectances.Reflectance, d:dict):
 def genrefl(args):
     pcot.setup()
 
-    out = reflectances.Reflectance()        # this is what we're building!
     with open(args.input) as f:
         # load the YAML file. Produces a dict, of course.
         d = yaml.safe_load(f)
+
+        # get basic metadata fields
+        t = {k:d[k] for k in ('description','author','date','name','short')}
+        # turn the date into a string
+        t["date"] = t["date"].strftime("%Y-%m-%d")        
+
         # Get the style of data we have - it's the same for all patches.
         patch_format = d['format']
         if patch_format == 'jack':
-            load_jack_format(out, d)
+            out = load_jack_format(d)
         elif patch_format == 'simple':
-            load_simple_format(out, d)
+            
+            out = load_simple_format(d)
         else:
             raise Exception(f"Patch format {patch_format} unknown")
 
-    # serialise the resulting reflectance object
-    t = out.serialise()
+    # serialise the resulting reflectance object into the dict we already have
+    t["refls"]=out.serialise()
 
+    # and write to an archive
     with archive.FileArchive(args.output, "w",type=archive.ArchiveType.REFLDATA) as a:
         a.writeJson("data", t)
 

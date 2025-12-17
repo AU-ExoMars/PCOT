@@ -18,9 +18,114 @@ from pcot.utils import archive
 logger = logging.getLogger(__name__)
 
 
-class Reflectance:
+class ReflectanceBase:
     """
-    Reflectance data, from Jack Langston's measurements. The phi angles measured are between 210-360 (0),
+    Base for reflectances - both full reflectance measurements and angle-free data
+    (angles passed to get_reflectances will be ignored in that case).
+    """
+
+    def serialise(self):
+        """Used to serialise all kinds of Reflectance; the loader will check the
+        number of dimensions to see what kind of reflectance data this is"""
+        out = {}
+        for k,rgi in self._interpolators.items():
+            out[k] = {
+                "points": rgi.grid,
+                "values": rgi.values,
+                "method": rgi.method,
+            }
+        return out
+        
+    def get_patches(self):
+        """returns all the patch names"""
+        return self._interpolators.keys()
+    
+        
+    def get_range(self, patch:str):
+        """returns the ranges of each axis (phi,theta,wvls) as tuples of (min,max)"""
+        pass
+        
+    def get_reflectances(self, patch, phi, theta, wavelength=None):
+        """
+        Returns wavelengths and reflectances as np arrays, unless wavelength is set
+        in which case it will return the value at that wavelength
+        """
+        pass
+        
+    def _check_interpolators(self, expected_dims:int):
+        """In constructors, check the interpolators are valid for this reflectance"""
+        assert isinstance(self._interpolators,dict)
+        for v in self._interpolators.values():
+            assert isinstance(v,RegularGridInterpolator)
+            assert len(v.values.shape)==expected_dims
+        
+
+class SimpleReflectance(ReflectanceBase):
+    """This is reflectance data without any angular information: just wavelengths and
+    reflectances for each patch."""
+    
+    def __init__(self, interpolators=None):
+        """Initialise from interpolators, or create empty dict"""
+        self._interpolators = {} if interpolators is None else interpolators
+        # if interps were provided, make sure they are valid
+        self._check_interpolators(1)
+        
+    def load_simple_csv(self,csv:Path):
+        """Load data from a CSV file with the columns patch,wavelength,mean,sd"""
+        with open(csv) as f:
+            import csv
+            reader = csv.DictReader(f)
+            # read the data into a dict of patches, each of which has a
+            # dict of three lists: wvls, means, and sds
+            data = {}
+            for row in reader:
+                patch = row['patch']
+                wvl = row['wavelength']
+                mean = row['mean']
+                sd = row['sd']
+                if patch not in data:
+                    # we ignore SD for now
+                    data[patch]={'wvls':[], 'means':[], 'sds':[]}
+                data[patch]['wvls'].append(wvl)
+                data[patch]['means'].append(mean)
+                data[patch]['sds'].append(sd)
+            # convert the lists into arrays and create a regular grid interpolator for each.
+            # We're ignoring stddev for now.
+            for k,v in data.items():
+                x = np.array(v['wvls'],np.float32)
+                y = np.array(v['means'],np.float32)
+                i = RegularGridInterpolator((x,),y,bounds_error=False,fill_value=0)                
+                self._interpolators[k]=i
+        
+        
+    def get_range(self, patch:str):
+        """returns the ranges of each axis (phi,theta,wvls) as tuples of (min,max)"""
+        g = self._interpolators[patch].grid[0] # only one dimension here
+        # so the angles will have a (0,0) range
+        return [(0,0), (0,0), (np.min(g),np.max(g))]
+        
+    def get_reflectances(self, patch, phi, theta, wavelength=None):
+        """
+        Returns wavelengths and reflectances as np arrays, unless wavelength is set
+        in which case it will return the value at that wavelength
+        """
+        if not patch in self._interpolators:
+            raise Exception(f"patch {patch} not in reflectance data")
+        interp = self._interpolators[patch]
+        if wavelength is None:
+            wvls = interp.grid[-1] # last axis in grid is the wavelength list
+            refl = interp(input)
+            return wvls,refl
+        else:
+            return interp([wavelength,])[0] # ugly
+        
+
+
+
+class Reflectance(ReflectanceBase):
+    """
+    Reflectance data with a single stereo angle, and is assumed to be generated
+    from Jack Langston's measurements for the PCT. The phi angles measured are between 210-360 (0),
     and the theta goes from -80 to 80. Incident is at 24 degrees; we assume that the PCT is around this angle
     from the camera. Load the data with deserialise() from a FileArchive, then use get_reflectances to get
     the wavelengths at a particular pair of angles for a particular patch.
@@ -43,46 +148,13 @@ class Reflectance:
     # this is the thing that we get data from!
     _interpolators: Dict[str,RegularGridInterpolator]
 
-    def __init__(self, file: Path = None):
-        """If a path is present, will load data in our format. Otherwise data
-        can be loaded from a set of text files as given by Jack Langston's data, Sept 2025.
-        Or from just a list of stuff.
-        You need a YAML file to say what's what, though."""
-        
-        self._interpolators = {} # no interpolators!
+    def __init__(self, interpolators=None):
+        """Initialise from interpolators, or create empty dict"""
+        self._interpolators = {} if interpolators is None else interpolators
+        # if interps were provided, make sure they are valid
+        self._check_interpolators(3)
 
-        if file:
-            """
-            Deserialise from a FileArchive - this is how you load the data. Don't use load_jack, that's for
-            converting from Jack's measurements.
-            """
 
-            with archive.FileArchive(file,"r") as a:
-                logging.debug("Loading")
-                json = a.readJson("data")
-                for k, d in json.items():
-                    rgi = RegularGridInterpolator(
-                        d["points"],
-                        d["values"],
-                        method=d["method"],
-                        bounds_error=False,
-                        fill_value=0)
-                    self._interpolators[k] = rgi
-
-    def serialise(self):
-        """
-        Serialise to JSON/numpy arrays, such that we can save the result in a FileArchive.
-        """
-        out = {}
-        for k,rgi in self._interpolators.items():
-            out[k] = {
-                "points": rgi.grid,
-                "values": rgi.values,
-                "method": rgi.method,
-            }
-        return out
-
-        
     @staticmethod
     def _load_jack_data_for_phi(p: Path, phi):
         """Load the data for a single phi angle in a single patch directory in Jack's format.
@@ -214,6 +286,8 @@ class Reflectance:
         in which case it will return the value at that wavelength
         """
         if not patch in self._interpolators:
+            # this is a hack in case someone uses the weird Jack/Giselle names
+            # and won't work on a non-PCT
             if not patch in Reflectance.rev_name_map:
                 raise Exception(f"patch {patch} not in reflectance data")
             patch = Reflectance.rev_name_map[patch]
@@ -239,7 +313,40 @@ class Reflectance:
             return wvls,refl
         else:
             return interp((phi,theta,wavelength))
+            
+
+def load(file: Path):
+    """Will deserialise the interpolators and create the appropriate reflectance object"""
+
+    # load and create all the interpolators, making sure to record the number of dimensions
+    # and ensure they are the same for all.
+    dims = None
+    interps = {}
+    with archive.FileArchive(file,"r") as a:
+        logging.debug("Loading")
+        json = a.readJson("data")
+        for k, d in json["refls"].items():
+            rgi = RegularGridInterpolator(
+                d["points"],
+                d["values"],
+                method=d["method"],
+                bounds_error=False,
+                fill_value=0)
+            if dims is None:
+                dims = len(rgi.values.shape)
+            elif dims != len(rgi.values.shape):
+                raise Exception("Some patch interpolators have different dimensions")
+            interps[k] = rgi
+
+    # given the number of dimensions, create and return the appropriate reflectance object
+    if dims == 1:   # just wavelength
+        return SimpleReflectance(interps)
+    elif dims == 3: # wavelength and stereo angle
+        return Reflectance(interps)
+    else:
+        raise Exception(f"Bad number of dimensions for reflection interpolators: {dims}")
         
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
@@ -256,7 +363,7 @@ if __name__ == "__main__":
     with archive.FileArchive("pctrefls.parc", "r") as a:
         logging.debug("Loading")
         t = a.readJson("data")
-        d = Reflectance(t)
+        d = deserialise_reflectance(t)
         logging.debug("Loaded")
 
         import matplotlib.pyplot as plt
