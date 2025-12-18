@@ -19,29 +19,32 @@ def lsparc(args):
     import datetime
 
     a = FileArchive(args.filename)
-
+    
     if not args.nometa:
-        for k,v in a.metadata.items():
-            if k != "history":
-                print(f"{k:20} {v}")
+        if a.metadata.is_loaded():
+            for k in ['type','author','date','pcotversion']:
+                print(f"{k:20} {getattr(a.metadata,k)}")
                 
-    if args.history:
-        t = Table()
-        for e in a.metadata.get("history",[]):
-            t.newRow()
-            t.add('date',e.get('date',''))
-            for k,v in e.items():
-                if k != 'date':
-                    t.add(k,v)
-        print("\n"+t.text("HISTORY"))
+            if args.history:
+                t = Table()
+                for e in a.metadata.history:
+                    t.newRow()
+                    t.add('date',e.get('date',''))
+                    for k,v in e.items():
+                        if k != 'date':
+                            t.add(k,v)
+                print("\n"+t.text("HISTORY"))
+        else:
+            print("No metadata (old archive?)")
         
 
     if not args.meta:
         # show contents as well as metadata
+        print("Contents:")
         ds = DatumStore(a)
         manifest = ds.getManifest()
         if len(manifest)==0:
-            print(f"No datum items found; archive type is {a.metadata['type']}")
+            print(f"No datum items found; archive type is {a.metadata.type}")
         for k in manifest:
             meta = manifest[k]
             created = meta.created.strftime("%Y-%m-%d")

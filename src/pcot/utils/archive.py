@@ -1,6 +1,11 @@
 import json
+import datetime
+import dataclasses
+import getpass
 from pathlib import Path
 from typing import Callable, Union
+from dataclasses import dataclass
+from enum import Enum
 
 import numpy as np
 import zipfile
@@ -8,8 +13,6 @@ from io import BytesIO
 
 import logging
 logger = logging.getLogger(__name__)
-
-from enum import Enum
 
 class ArchiveType(Enum):
     UNSPECIFIED = "unspecified"
@@ -21,7 +24,73 @@ class ArchiveType(Enum):
     
     def __str__(self):
         return self.value
+        
+
+def _getpcotversion():
+    # ugly hack to deal with circular import
+    import pcot
+    return pcot.__fullversion__
     
+def _getdate():
+    return datetime.datetime.now().isoformat()
+
+
+@dataclasses.dataclass
+class Metadata:
+    """
+    Objects of this class hold common data to all PCOT archives.
+    
+    * metadata is created when the archive is initialised. Initially the date is unset.
+    * When the file is opened, any metadata is read, overwriting that initial
+      metadata (so the date will become set)
+    * The metadata is updated when the archive is written, adding date/author etc.
+    * We can check in `lsparc`etc. whether the file has metadata by checking that date field;
+      this is done with `is_loaded`.
+    """
+    type: ArchiveType = ArchiveType.UNSPECIFIED
+    
+    author: str = dataclasses.field(default_factory=getpass.getuser)
+
+    # written date in ISO format, or None if the metadata is "fresh" - not yet
+    # written to an archive. We use this to check whether we need to save this
+    # data to history when we write, and also to check whether there is "real"
+    # metadata in an archive.
+    date: str = None
+    
+    # ugly hack for circular import
+    pcotversion: str = dataclasses.field(default_factory=_getpcotversion)
+
+    # this is a list of some items (notably not type)
+    history: list[dict] = dataclasses.field(default_factory=list)
+    
+    def is_loaded(self):
+        """If the metadata is "fresh" data that's not yet written to an archive,
+        the date will not be set"""
+        return self.date is not None
+    
+    def serialise(self):
+        """Convert to a serialisable dict - note the type, though: we'll need to use
+        our serialisers to work with this."""
+        return dataclasses.asdict(self)
+        
+    @staticmethod
+    def deserialise(d):
+        """Create a metadata item from a dict; again this needs to have gone through
+        our deserialiser hook to make sure the ArchiveType is correct"""
+        return Metadata(**d)
+        
+    def save_history(self):
+        """adds some of the metadata's current data to the history list of dicts"""
+        new_row = {k:getattr(self,k) for k in ['author','date','pcotversion']}
+        self.history.insert(0,new_row)
+        
+    def update(self):
+        """Update some fields in the metadata for saving"""
+        import getpass
+        self.author = getpass.getuser()
+        self.date = _getdate()
+        self.pcotversion = _getpcotversion()
+
 
 # Basic serialisers/deserialisers. Numpy arrays are handled differently,
 # see the docstring for Archive.
@@ -54,9 +123,11 @@ def serialiser(o):
     raise TypeError
 
 
+# register specific serialisers here.
+
 registerJsonSerialiser("ArchiveType",
-    lambda x: x.value,
-    lambda x: ArchiveType(x)
+    lambda x: x.value,              # archive types are stored as their strings
+    lambda x: ArchiveType(x)        # and when we deserialise, are turned back into ArchiveType
 )
 
 
@@ -103,6 +174,8 @@ class Archive:
         self.zip = None
         self.progressCallback = progressCallback
         self.path = "(memory?)"
+        # no metadata to start with - when we open, one will either be created or loaded if this
+        # is a FileArchive - otherwise there may never be one.
         self.metadata = None
 
     def open(self):
@@ -251,7 +324,10 @@ class FileArchive(Archive):
     """
 
     def __init__(self, path: Union[Path,str], mode='r', progressCallback: Callable[[str], None] = None,
-            type=None,extrameta={}):
+            metadata:Metadata=None,                     # if supplied, type will not be used
+            type:ArchiveType=ArchiveType.UNSPECIFIED     # ignored if metadata is supplied (is used to build a metadata)
+        ):
+
         """Open a Zip archive on disk.
         The mode is 'r' for read, 'w' for write, and 'a' for append.
         If "type" is set, add the type of the archive to the metadata for writing.
@@ -263,22 +339,28 @@ class FileArchive(Archive):
         path = path if isinstance(path, Path) else Path(path)  # sometimes they are strings
         self.path = path
 
-        # this will get merged in on write
-        self.extrameta = extrameta
+        # either create a new metadata item, or use the one passed in. 
+        if metadata is None:
+            self.metadata = Metadata(type=type)
+        else:
+            self.metadata = metadata
 
-        # default metadata is nearly empty, but can get loaded into below. But we do set up
-        # the type if one is given.
-        self.metadata = { 'type': ArchiveType.UNSPECIFIED if type is None else type}
-
+        # we haven't actually loaded metadata, this is a new archive. This could
+        # change below. We use this to suppress adding a history row when metadata
+        # is written
+        
         # if the file exists, read the metadata that's in there
         if path.is_file():
             try:
                 with zipfile.ZipFile(path, 'r', compression=zipfile.ZIP_DEFLATED) as f:
                     if 'pcot_metadata' in f.namelist():
                         d = f.read('pcot_metadata').decode('utf-8')
-                        self.metadata = json.loads(d, object_hook=deserialiser)
+                        d = json.loads(d, object_hook=deserialiser)
+                        self.metadata = Metadata.deserialise(d)
                     else:
-                        self.metadata = { 'type': ArchiveType.UNKNOWN }  # existing archive, but there was no metadata!
+                        self.metadata = Metadata(type=ArchiveType.UNKNOWN)  # existing archive, but there was no metadata!
+                    # now we have loaded metadata, this will need to be added to history when
+                    # we write.
             except Exception as e:
                 logger.error(f"Error reading metadata from {path}: {e}")
 
@@ -295,29 +377,22 @@ class FileArchive(Archive):
             if len(array_items) > 0:
                 self.arrayct = max([int(x) for x in array_items]) + 1
 
-        # either read or write the metadata                
+        # if we are writing: write the metadata, adding a line to the history
+        # WE DON'T DO THIS WHEN APPENDING - it clutters the archive with dup names
+        # (since we can't delete from zips)
         if mode == 'w':
-            import pcot
-            import getpass
-            from datetime import datetime
 
-            # move any existing metadata from the read in the constructor into the history
-            history = self.metadata.get('history',[])
-            if 'date' in self.metadata:
-                # only do this if there was metadata to start with. If the archive is new,
-                # there won't be 'date' - it only gets created on write (a few lines below)
-                new_row = {k:self.metadata.get(k,'') for k in ['author','date','pcotversion']}
-                history.insert(0,new_row)
+            # move any existing metadata from the read in the constructor into the history.
+            # Only do this if there was loaded metadata - we create a new row
+            # in the history for that metadata, because we're about to set
+            # newer metadata. Loaded data (any data that's been written to a file) will
+            # have a date.
+            if self.metadata.date is not None:
+                self.metadata.save_history()
 
-            newmeta = {
-                'author': getpass.getuser(),
-                'date': datetime.now().isoformat(),
-                'pcotversion': pcot.__fullversion__,
-                'history': history
-            }
-            self.metadata.update(newmeta)
-            self.metadata.update(self.extrameta)
-            self.writeJson("pcot_metadata",self.metadata)
+            # update the metadata
+            self.metadata.update()
+            self.writeJson("pcot_metadata",self.metadata.serialise())
 
         logger.debug(f"Opened {self}")
 
