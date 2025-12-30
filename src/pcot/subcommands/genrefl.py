@@ -1,10 +1,14 @@
 from pathlib import Path
 import yaml
+import logging
 
 import pcot
 from pcot.cameras import reflectances
 from pcot.subcommands import subcommand, argument
 from pcot.utils import archive
+
+logger = logging.getLogger(__name__)
+
 
 """
 Code for creating reflectance data files
@@ -76,8 +80,18 @@ def genrefl(args):
     # serialise the resulting reflectance object into the dict we already have
     t["refls"]=out.serialise()
 
+    # get extra metadata that's in the dict; there's some kinda duplication here because the author and
+    # date stored in the metadata will be automatically generated from the system and won't be the values
+    # stored in the YAML file. I think that might be a good idea - the metadata on the archive is about
+    # the file, but the metadata in the data itself is about that data.
+    meta = archive.Metadata(type=archive.ArchiveType.REFLDATA,
+                            description=t['description'],
+                            short=t['short'])
+
+    logger.info(f"Metadata:\n{meta}")
+
     # and write to an archive
-    with archive.FileArchive(args.output, "w",type=archive.ArchiveType.REFLDATA) as a:
+    with archive.FileArchive(args.output, "w",metadata=meta) as a:
         a.writeJson("data", t)
 
 

@@ -149,10 +149,17 @@ class CameraData:
         The init would be 'weird' because it would have to set up a read/write archive with an LRU cache, and
         that's not a thing that makes a great deal of sense here."""
 
-        from pcot.utils.archive import FileArchive,ArchiveType
+        from pcot.utils.archive import FileArchive,ArchiveType,Metadata
         from pcot.utils.datumstore import DatumStore
 
-        archive = FileArchive(fileName, "w", type=ArchiveType.CAMERADATA)
+        # get extra metadata that's in the dict; there's some kinda duplication here because the author and
+        # date stored in the metadata will be automatically generated from the system and won't be the values
+        # stored in the YAML file. I think that might be a good idea - the metadata on the archive is about
+        # the file, but the metadata in the data itself is about that data.
+        meta = Metadata(type=ArchiveType.CAMERADATA,
+                                description=params.params.description,
+                                short=params.params.short)
+        archive = FileArchive(fileName, "w", metadata=meta)
         archive.open()
         ds = DatumStore(archive)
         ds.writeDatum("params", Datum(Datum.CAMERAPARAMS, params, nullSourceSet))

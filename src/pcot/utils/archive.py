@@ -62,6 +62,10 @@ class Metadata:
 
     # this is a list of some items (notably not type)
     history: list[dict] = dataclasses.field(default_factory=list)
+
+    # long and short descriptions of the data; often empty
+    description: str = ""
+    short: str = ""
     
     def is_loaded(self):
         """If the metadata is "fresh" data that's not yet written to an archive,
@@ -83,13 +87,21 @@ class Metadata:
         """adds some of the metadata's current data to the history list of dicts"""
         new_row = {k:getattr(self,k) for k in ['author','date','pcotversion']}
         self.history.insert(0,new_row)
-        
+
     def update(self):
         """Update some fields in the metadata for saving"""
         import getpass
         self.author = getpass.getuser()
         self.date = _getdate()
         self.pcotversion = _getpcotversion()
+
+    def update_from_provided(self, md):
+        """It may happen that we've loaded some metadata from an existing file and we're updating
+        the descriptions. Deal with that here."""
+        if md.description != "":
+            self.description = md.description
+        if md.short != "":
+            self.short = md.short
 
 
 # Basic serialisers/deserialisers. Numpy arrays are handled differently,
@@ -339,7 +351,7 @@ class FileArchive(Archive):
         path = path if isinstance(path, Path) else Path(path)  # sometimes they are strings
         self.path = path
 
-        # either create a new metadata item, or use the one passed in. 
+        # either create a new metadata item, or use the one passed in.
         if metadata is None:
             self.metadata = Metadata(type=type)
         else:
@@ -348,7 +360,7 @@ class FileArchive(Archive):
         # we haven't actually loaded metadata, this is a new archive. This could
         # change below. We use this to suppress adding a history row when metadata
         # is written
-        
+
         # if the file exists, read the metadata that's in there
         if path.is_file():
             try:
@@ -357,6 +369,13 @@ class FileArchive(Archive):
                         d = f.read('pcot_metadata').decode('utf-8')
                         d = json.loads(d, object_hook=deserialiser)
                         self.metadata = Metadata.deserialise(d)
+                        # we might be actually changing some items, such as descriptions. We need
+                        # to copy any new data over from the data passed into this constructor.
+                        # It might seem weird to do it this way, but trust me - right now it makes it a LOT easier
+                        # to handle the history. At this point the metadata will have the old author etc.,
+                        # which we need to save to the history later on at write time.
+                        if metadata is not None:
+                            self.metadata.update_from_provided(metadata)
                     else:
                         self.metadata = Metadata(type=ArchiveType.UNKNOWN)  # existing archive, but there was no metadata!
                     # now we have loaded metadata, this will need to be added to history when

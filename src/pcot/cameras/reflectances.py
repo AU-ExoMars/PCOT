@@ -351,43 +351,32 @@ def load(file: Path):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
-    if False:
-        # read Jack's data and convert
-        d = Reflectance()
-        d.load(Path("."))
-        t = d.serialise()
+    logging.debug("Loading")
+    d = load(Path("pct.parc"))
+    logging.debug("Loaded")
 
-        with archive.FileArchive("pctrefls.parc", "w") as a:
-            a.writeJson("data", t)
+    import matplotlib.pyplot as plt
 
-    with archive.FileArchive("pctrefls.parc", "r") as a:
-        logging.debug("Loading")
-        t = a.readJson("data")
-        d = deserialise_reflectance(t)
-        logging.debug("Loaded")
+    fig, ax = plt.subplots()
+    ax.set_xlabel("theta")
+    ax.set_ylabel("reflectance")
 
-        import matplotlib.pyplot as plt
+    # plot the reflectance at a certain wavelength for different
+    # thetas at a given phi (requires interpolation)
+    thetas = np.arange(-75, 65)
+    phis = np.arange(0, 180, 30)
+    for phi in phis:
+        vals_interpolated = []
+        for theta in thetas:
+            v = d.get_reflectances("NG11", phi, theta, wavelength=600)
+            vals_interpolated.append(v)
+        ax.plot(thetas, vals_interpolated, marker="x")
 
-        fig, ax = plt.subplots()
-        ax.set_xlabel("theta")
-        ax.set_ylabel("reflectance")
+    legend = ax.legend(loc="lower right",
+                       labels=[f"phi={x}" for x in phis])
 
-        # plot the reflectance at a certain wavelength for different
-        # thetas at a given phi (requires interpolation)
-        thetas = np.arange(-75, 65)
-        phis = np.arange(0, 180, 30)
-        for phi in phis:
-            vals_interpolated = []
-            for theta in thetas:
-                v = d.get_reflectances("NG11", phi, theta, wavelength=600)
-                vals_interpolated.append(v)
-            ax.plot(thetas, vals_interpolated, marker="x")
-
-        legend = ax.legend(loc="lower right",
-                           labels=[f"phi={x}" for x in phis])
-
-        plt.savefig("out.png")
-        plt.show()
+    plt.savefig("out.png")
+    plt.show()
 
 
 
