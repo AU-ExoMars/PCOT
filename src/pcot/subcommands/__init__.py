@@ -13,4 +13,5 @@ import pcot.subcommands.batch
 import pcot.subcommands.parcutils
 import pcot.subcommands.gencam
 import pcot.subcommands.genrefl
+import pcot.subcommands.lsrefls
 

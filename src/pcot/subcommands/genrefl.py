@@ -30,7 +30,7 @@ def load_jack_format(d:dict):
     an RS-3500 spectroradiometer.
     (See reflectances.Reflectance.load_jack() etc. for more details)
     """
-    out = reflectances.Reflectance()        # this is what we're building!
+    out = reflectances.PCTReflectance()        # this is what we're building!
     patches = d['patches']
     for patch, val in patches.items():
         print(f"Jack format: processing patch {patch} from directory {val}")
@@ -85,6 +85,7 @@ def genrefl(args):
     # stored in the YAML file. I think that might be a good idea - the metadata on the archive is about
     # the file, but the metadata in the data itself is about that data.
     meta = archive.Metadata(type=archive.ArchiveType.REFLDATA,
+                            name=t['name'],
                             description=t['description'],
                             short=t['short'])
 

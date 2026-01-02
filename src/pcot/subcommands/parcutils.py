@@ -22,7 +22,7 @@ def lsparc(args):
     
     if not args.nometa:
         if a.metadata.is_loaded():
-            for k in ['type','author','date','pcotversion','short']:
+            for k in ['name','type','author','date','pcotversion','short']:
                 print(f"{k:20} {getattr(a.metadata,k)}")
 
             desc = a.metadata.description

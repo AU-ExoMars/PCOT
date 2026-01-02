@@ -7,7 +7,7 @@ We're using scipy's RegularGridInterpolator to handle the
 
 from scipy.interpolate import RegularGridInterpolator
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 import numpy as np
 import logging
@@ -18,11 +18,26 @@ from pcot.utils import archive
 logger = logging.getLogger(__name__)
 
 
-class ReflectanceBase:
+class Reflectance:
     """
     Base for reflectances - both full reflectance measurements and angle-free data
     (angles passed to get_reflectances will be ignored in that case).
     """
+
+    # this starts out as null, but when we load data from an archive the archive
+    # metadata is stored here so we can show it.
+
+    metadata: 'Metadata'
+    path: Optional[Path]
+    typename: str
+
+    def __init__(self, typename, metadata, interpolators, expected_dims, path=None):
+        self.typename = typename
+        self.metadata = metadata
+        self._interpolators = {} if interpolators is None else interpolators
+        # if interpolators were provided check they have the right dimensions
+        self._check_interpolators(expected_dims)
+        self.path = path
 
     def serialise(self):
         """Used to serialise all kinds of Reflectance; the loader will check the
@@ -60,16 +75,14 @@ class ReflectanceBase:
             assert len(v.values.shape)==expected_dims
         
 
-class SimpleReflectance(ReflectanceBase):
+class SimpleReflectance(Reflectance):
     """This is reflectance data without any angular information: just wavelengths and
     reflectances for each patch."""
     
-    def __init__(self, interpolators=None):
+    def __init__(self, interpolators=None, metadata=None, path=None):
         """Initialise from interpolators, or create empty dict"""
-        self._interpolators = {} if interpolators is None else interpolators
-        # if interps were provided, make sure they are valid
-        self._check_interpolators(1)
-        
+        super().__init__("Simple reflectance", metadata, interpolators, 1, path)
+
     def load_simple_csv(self,csv:Path):
         """Load data from a CSV file with the columns patch,wavelength,mean,sd"""
         with open(csv) as f:
@@ -104,7 +117,7 @@ class SimpleReflectance(ReflectanceBase):
         # so the angles will have a (0,0) range
         return [(0,0), (0,0), (np.min(g),np.max(g))]
         
-    def get_reflectances(self, patch, phi, theta, wavelength=None):
+    def get_reflectances(self, patch, phi, theta, wavelength=None, clip=False):
         """
         Returns wavelengths and reflectances as np arrays, unless wavelength is set
         in which case it will return the value at that wavelength
@@ -114,15 +127,17 @@ class SimpleReflectance(ReflectanceBase):
         interp = self._interpolators[patch]
         if wavelength is None:
             wvls = interp.grid[-1] # last axis in grid is the wavelength list
-            refl = interp(input)
+            refl = interp(wvls)
             return wvls,refl
         else:
+            _, _, wavelength_range = self.get_range(patch)
+            wavelength = np.clip(wavelength, wavelength_range[0], wavelength_range[1])
             return interp([wavelength,])[0] # ugly
         
 
 
 
-class Reflectance(ReflectanceBase):
+class PCTReflectance(Reflectance):
     """
     Reflectance data with a single stereo angle, and is assumed to be generated
     from Jack Langston's measurements for the PCT. The phi angles measured are between 210-360 (0),
@@ -148,11 +163,9 @@ class Reflectance(ReflectanceBase):
     # this is the thing that we get data from!
     _interpolators: Dict[str,RegularGridInterpolator]
 
-    def __init__(self, interpolators=None):
+    def __init__(self, interpolators=None, metadata=None, path=None):
         """Initialise from interpolators, or create empty dict"""
-        self._interpolators = {} if interpolators is None else interpolators
-        # if interps were provided, make sure they are valid
-        self._check_interpolators(3)
+        super().__init__("BRDF for PCT", metadata, interpolators, 3, path)
 
 
     @staticmethod
@@ -250,7 +263,7 @@ class Reflectance(ReflectanceBase):
         data = []
         # try to load each possible phi angle's data
         for i in [180, 210, 240, 270, 300, 330]:
-            t,w,d = Reflectance._load_jack_data_for_phi(path, i)
+            t,w,d = PCTReflectance._load_jack_data_for_phi(path, i)
             # and make sure all the thetas and wavelengths are
             # the same!
             if thetas is None:
@@ -280,17 +293,18 @@ class Reflectance(ReflectanceBase):
         interp = self._interpolators[patch]
         return [(np.min(x),np.max(x)) for x in interp.grid]
         
-    def get_reflectances(self, patch, phi, theta, wavelength=None):
+    def get_reflectances(self, patch, phi, theta, wavelength=None, clip=False):
         """
         Returns wavelengths and reflectances as np arrays, unless wavelength is set
-        in which case it will return the value at that wavelength
+        in which case it will return the value at that wavelength.
+        If clip is false, out of range angles will be clipped - otherwise an error is raised.
         """
         if not patch in self._interpolators:
             # this is a hack in case someone uses the weird Jack/Giselle names
             # and won't work on a non-PCT
-            if not patch in Reflectance.rev_name_map:
+            if not patch in PCTReflectance.rev_name_map:
                 raise Exception(f"patch {patch} not in reflectance data")
-            patch = Reflectance.rev_name_map[patch]
+            patch = PCTReflectance.rev_name_map[patch]
         
         # we've only recorded half the phi values, and it's a weird
         # half
@@ -302,6 +316,14 @@ class Reflectance(ReflectanceBase):
 
         phi %= 360
 
+        phi_range, theta_range, wavelength_range = self.get_range(patch)
+        if clip:
+            # get the interpolator ranges
+            phi = np.clip(phi, phi_range[0], phi_range[1])
+            theta = np.clip(theta, theta_range[0], theta_range[1])
+        # wavelength is always clipped
+
+
         interp = self._interpolators[patch]
         if wavelength is None:
             wvls = interp.grid[-1] # last axis in grid is the wavelength list
@@ -312,6 +334,7 @@ class Reflectance(ReflectanceBase):
             refl = interp(input)
             return wvls,refl
         else:
+            wavelength = np.clip(wavelength, wavelength_range[0], wavelength_range[1])
             return interp((phi,theta,wavelength))
             
 
@@ -323,7 +346,8 @@ def load(file: Path):
     dims = None
     interps = {}
     with archive.FileArchive(file,"r") as a:
-        logging.debug("Loading")
+        metadata = a.metadata
+        logging.debug(f"Loading {metadata.name} from {file}")
         json = a.readJson("data")
         for k, d in json["refls"].items():
             rgi = RegularGridInterpolator(
@@ -335,16 +359,16 @@ def load(file: Path):
             if dims is None:
                 dims = len(rgi.values.shape)
             elif dims != len(rgi.values.shape):
-                raise Exception("Some patch interpolators have different dimensions")
+                raise Exception(f"Some patch interpolators have different dimensions in {file}")
             interps[k] = rgi
 
     # given the number of dimensions, create and return the appropriate reflectance object
     if dims == 1:   # just wavelength
-        return SimpleReflectance(interps)
+        return SimpleReflectance(interps, metadata=metadata,path=file)
     elif dims == 3: # wavelength and stereo angle
-        return Reflectance(interps)
+        return PCTReflectance(interps, metadata=metadata,path=file)
     else:
-        raise Exception(f"Bad number of dimensions for reflection interpolators: {dims}")
+        raise Exception(f"Bad number of dimensions for reflection interpolators in {file}: {dims}")
         
 
 

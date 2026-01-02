@@ -63,9 +63,16 @@ class Metadata:
     # this is a list of some items (notably not type)
     history: list[dict] = dataclasses.field(default_factory=list)
 
+    # name of the item (could be different from file name)
+    name: str = ""
+
     # long and short descriptions of the data; often empty
     description: str = ""
     short: str = ""
+
+    # If we are overwriting loaded metadata with new information (i.e. we are rewriting a file),
+    # these will need to be updated from the new data.
+    UPDATE_FROM_PROVIDED_ITEMS = ["name", "short", "description"]
     
     def is_loaded(self):
         """If the metadata is "fresh" data that's not yet written to an archive,
@@ -73,7 +80,7 @@ class Metadata:
         return self.date is not None
     
     def serialise(self):
-        """Convert to a serialisable dict - note the type, though: we'll need to use
+        """Convert to a serialisable dict - note the type:ArchiveType field, though: we'll need to use
         our serialisers to work with this."""
         return dataclasses.asdict(self)
         
@@ -98,10 +105,12 @@ class Metadata:
     def update_from_provided(self, md):
         """It may happen that we've loaded some metadata from an existing file and we're updating
         the descriptions. Deal with that here."""
-        if md.description != "":
-            self.description = md.description
-        if md.short != "":
-            self.short = md.short
+
+        for k in Metadata.UPDATE_FROM_PROVIDED_ITEMS:
+            # only overwrite if the new data - assumed to be string - is not blank (i.e. default)
+            a = getattr(md, k)
+            if a is not None and a != "":
+                setattr(self,k,a)
 
 
 # Basic serialisers/deserialisers. Numpy arrays are handled differently,

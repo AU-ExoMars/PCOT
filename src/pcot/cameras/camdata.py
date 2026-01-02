@@ -1,7 +1,11 @@
+import logging
+
 from pcot.cameras.filters import DUMMY_FILTER
 from pcot.datum import Datum, nullSourceSet
 from pcot.datumtypes import Type
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedListType
+
+logger = logging.getLogger(__name__)
 
 FILTERDICT = TaggedDictType(
     cwl=("Centre wavelength", Maybe(float), None),
@@ -120,12 +124,14 @@ class CameraData:
         """Load the CameraParams object from an archive, and embed it in our new CameraData object. Also store
         the filename of the archive and the archive itself, because we are going to be loading other data (e.g.
         flatfields) when we need them."""
-        from pcot.utils.archive import FileArchive
+        from pcot.utils.archive import FileArchive, ArchiveType
         from pcot.utils.datumstore import DatumStore
 
         try:
             self.fileName = fileName
             self.archive = DatumStore(FileArchive(fileName))
+            if self.archive.archive.metadata.type != ArchiveType.CAMERADATA:
+                logger.critical(f"{fileName} is not a camera archive (it is {self.archive.archive.metadata.type}), so shouldn't be in the cameras directory")
             self.params = self.archive.get("params")
             if self.params is None:
                 raise Exception(f"Camera data file {fileName} does not contain camera parameters")

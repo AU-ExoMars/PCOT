@@ -54,9 +54,15 @@ class Type:
         return self.name
 
     def serialise(self, d: 'Datum'):
+        """
+        The general pattern here is something like
+                return self.name, data
+        Often the second element is itself a tuple containing source data.
+        """
         raise pcot.datumexceptions.CannotSerialiseDatumType(self.name)
 
     def deserialise(self, d) -> 'Datum':
+        """This must take the second element of the tuple returned from serialise()"""
         raise pcot.datumexceptions.CannotSerialiseDatumType(self.name)
         
     def view(self, d) -> str:
