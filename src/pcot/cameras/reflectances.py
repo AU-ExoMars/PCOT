@@ -2,7 +2,6 @@
 This file handles reflectance spectra for calibration targets, in particular the PCT.
 We're using scipy's RegularGridInterpolator to handle the 
 """
-
 # See Notes on PCT Reflectance data in Obsidian
 
 from scipy.interpolate import RegularGridInterpolator
@@ -17,7 +16,6 @@ from pcot.utils import archive
 
 logger = logging.getLogger(__name__)
 
-
 class Reflectance:
     """
     Base for reflectances - both full reflectance measurements and angle-free data
@@ -30,6 +28,12 @@ class Reflectance:
     metadata: 'Metadata'
     path: Optional[Path]
     typename: str
+
+    # this is how the interpolators will handle out of bounds angles and wavelengths.
+    # We're specifying that we will always extrapolate from the gradient of the nearest
+    # in-bounds values.
+    BOUNDS_MODE = {'bounds_error':False, 'fill_value':None}
+
 
     def __init__(self, typename, metadata, interpolators, expected_dims, path=None):
         self.typename = typename
@@ -107,7 +111,7 @@ class SimpleReflectance(Reflectance):
             for k,v in data.items():
                 x = np.array(v['wvls'],np.float32)
                 y = np.array(v['means'],np.float32)
-                i = RegularGridInterpolator((x,),y,bounds_error=False,fill_value=0)                
+                i = RegularGridInterpolator((x,),y, **Reflectance.BOUNDS_MODE)
                 self._interpolators[k]=i
         
         
@@ -117,7 +121,7 @@ class SimpleReflectance(Reflectance):
         # so the angles will have a (0,0) range
         return [(0,0), (0,0), (np.min(g),np.max(g))]
         
-    def get_reflectances(self, patch, phi, theta, wavelength=None, clip=False):
+    def get_reflectances(self, patch, phi, theta, wavelength=None):
         """
         Returns wavelengths and reflectances as np arrays, unless wavelength is set
         in which case it will return the value at that wavelength
@@ -130,8 +134,6 @@ class SimpleReflectance(Reflectance):
             refl = interp(wvls)
             return wvls,refl
         else:
-            _, _, wavelength_range = self.get_range(patch)
-            wavelength = np.clip(wavelength, wavelength_range[0], wavelength_range[1])
             return interp([wavelength,])[0] # ugly
         
 
@@ -282,7 +284,7 @@ class PCTReflectance(Reflectance):
         data = np.stack(data,axis=0)
         points = [np.array(x,np.float32) for x in (phis,thetas,wvls)]
         # and the interpolator
-        self._interpolators[patch] = RegularGridInterpolator(points,data,bounds_error=False,fill_value=0)
+        self._interpolators[patch] = RegularGridInterpolator(points,data, **Reflectance.BOUNDS_MODE)
         
         
     def get_interpolator(self,patch: str):
@@ -293,17 +295,16 @@ class PCTReflectance(Reflectance):
         interp = self._interpolators[patch]
         return [(np.min(x),np.max(x)) for x in interp.grid]
         
-    def get_reflectances(self, patch, phi, theta, wavelength=None, clip=False):
+    def get_reflectances(self, patch, phi, theta, wavelength=None):
         """
         Returns wavelengths and reflectances as np arrays, unless wavelength is set
         in which case it will return the value at that wavelength.
-        If clip is false, out of range angles will be clipped - otherwise an error is raised.
         """
         if not patch in self._interpolators:
             # this is a hack in case someone uses the weird Jack/Giselle names
             # and won't work on a non-PCT
             if not patch in PCTReflectance.rev_name_map:
-                raise Exception(f"patch {patch} not in reflectance data")
+                raise KeyError(f"patch {patch} not in reflectance data")
             patch = PCTReflectance.rev_name_map[patch]
         
         # we've only recorded half the phi values, and it's a weird
@@ -316,14 +317,6 @@ class PCTReflectance(Reflectance):
 
         phi %= 360
 
-        phi_range, theta_range, wavelength_range = self.get_range(patch)
-        if clip:
-            # get the interpolator ranges
-            phi = np.clip(phi, phi_range[0], phi_range[1])
-            theta = np.clip(theta, theta_range[0], theta_range[1])
-        # wavelength is always clipped
-
-
         interp = self._interpolators[patch]
         if wavelength is None:
             wvls = interp.grid[-1] # last axis in grid is the wavelength list
@@ -334,7 +327,6 @@ class PCTReflectance(Reflectance):
             refl = interp(input)
             return wvls,refl
         else:
-            wavelength = np.clip(wavelength, wavelength_range[0], wavelength_range[1])
             return interp((phi,theta,wavelength))
             
 
@@ -354,8 +346,8 @@ def load(file: Path):
                 d["points"],
                 d["values"],
                 method=d["method"],
-                bounds_error=False,
-                fill_value=0)
+                **Reflectance.BOUNDS_MODE)
+            interps[k] = rgi
             if dims is None:
                 dims = len(rgi.values.shape)
             elif dims != len(rgi.values.shape):

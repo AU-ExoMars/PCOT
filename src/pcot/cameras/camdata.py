@@ -164,6 +164,7 @@ class CameraData:
         # the file, but the metadata in the data itself is about that data.
         meta = Metadata(type=ArchiveType.CAMERADATA,
                                 description=params.params.description,
+                                name=params.params.name,
                                 short=params.params.short)
         archive = FileArchive(fileName, "w", metadata=meta)
         archive.open()
