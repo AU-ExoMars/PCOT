@@ -78,7 +78,7 @@ def genrefl(args):
             raise Exception(f"Patch format {patch_format} unknown")
 
     # serialise the resulting reflectance object into the dict we already have
-    t["refls"]=out.serialise()
+    t["data"]=out.serialise()
 
     # get extra metadata that's in the dict; there's some kinda duplication here because the author and
     # date stored in the metadata will be automatically generated from the system and won't be the values

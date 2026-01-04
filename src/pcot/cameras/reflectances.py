@@ -1,12 +1,16 @@
 """
 This file handles reflectance spectra for calibration targets, in particular the PCT.
-We're using scipy's RegularGridInterpolator to handle the 
+We're using scipy's RegularGridInterpolator to handle the actual work.
+
+Reflectance data itself is only loaded on demand when any kind of data query is made, so
+having this loaded in startup isn't a problem.
+
 """
 # See Notes on PCT Reflectance data in Obsidian
 
 from scipy.interpolate import RegularGridInterpolator
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 
 import numpy as np
 import logging
@@ -35,28 +39,51 @@ class Reflectance:
     BOUNDS_MODE = {'bounds_error':False, 'fill_value':None}
 
 
-    def __init__(self, typename, metadata, interpolators, expected_dims, path=None):
+    def __init__(self, typename, metadata, interpolators=None, dimensions=100, path=None):
+        """
+        Set up a reflectance spectrum object, either from interpolators passed in or get
+        ready to load from a path. If a path is given we load lazily when the interpolation
+        is done.
+
+        Dimensions is the number of dimensions for each interpolator (which must match; _check_interpolators
+        checks this).
+
+        The object is a bunch of RegularGridInterpolator objects, one for each patch.
+        """
         self.typename = typename
         self.metadata = metadata
-        self._interpolators = {} if interpolators is None else interpolators
-        # if interpolators were provided check they have the right dimensions
-        self._check_interpolators(expected_dims)
         self.path = path
+        self._interpolators = interpolators or {}
+        # this will be large (100) if dimensions aren't specified, which typically happens when loading legacy data
+        self._dimensions = dimensions
+
+    def set_interpolators(self, interpolators):
+        """Set all the interpolators at once and check them"""
+        self._interpolators = interpolators
+        self._check_interpolators()
+
+    def set_interpolator(self, patch, interpolator):
+        """Set a single interpolator for a patch"""
+        self._interpolators[patch] = interpolator
+        # may as well check them all
+        self._check_interpolators()
 
     def serialise(self):
         """Used to serialise all kinds of Reflectance; the loader will check the
         number of dimensions to see what kind of reflectance data this is"""
-        out = {}
+        refls = {}
         for k,rgi in self._interpolators.items():
-            out[k] = {
+            refls[k] = {
                 "points": rgi.grid,
                 "values": rgi.values,
                 "method": rgi.method,
             }
+        out = {"dims": self._dimensions, "refls": refls}
         return out
         
     def get_patches(self):
         """returns all the patch names"""
+        self._load_interpolators()
         return self._interpolators.keys()
     
         
@@ -70,13 +97,44 @@ class Reflectance:
         in which case it will return the value at that wavelength
         """
         pass
+
+    def _load_interpolators(self):
+        """
+        Interpolators are loaded on demand by the superclass
+        """
+        if len(self._interpolators) == 0:
+            # only if we haven't loaded them already (or set them another way)
+            dims = None
+            interps = {}
+            with archive.FileArchive(self.path) as a:
+                metadata = a.metadata
+                logging.debug(f"Loading {metadata.name} from {self.path}")
+                # the format of the data can be found in the serialiser here and in genrefl code.
+                json = a.readJson("data") # "data" is the name of the file
+                for k, d in json["data"]["refls"].items():  # which contains a dict called "data", containing refls and dims.
+                    rgi = RegularGridInterpolator(
+                        d["points"],
+                        d["values"],
+                        method=d["method"],
+                        **Reflectance.BOUNDS_MODE)
+                    interps[k] = rgi
+                    if dims is None:
+                        dims = len(rgi.values.shape)
+                    elif dims != len(rgi.values.shape):
+                        raise Exception(f"Some patch interpolators have different dimensions in {self.path}")
+                    elif dims != self._dimensions:
+                        raise Exception(f"Some patch interpolators have incorrect for {self.__class__.__name__} dimensions in {self.path}")
+                    interps[k] = rgi
+                self.set_interpolators(interps)
+
         
-    def _check_interpolators(self, expected_dims:int):
-        """In constructors, check the interpolators are valid for this reflectance"""
+    def _check_interpolators(self):
+        """check the interpolators are valid for this reflectance"""
         assert isinstance(self._interpolators,dict)
         for v in self._interpolators.values():
             assert isinstance(v,RegularGridInterpolator)
-            assert len(v.values.shape)==expected_dims
+            assert len(v.values.shape)==self._dimensions
+
         
 
 class SimpleReflectance(Reflectance):
@@ -84,7 +142,6 @@ class SimpleReflectance(Reflectance):
     reflectances for each patch."""
     
     def __init__(self, interpolators=None, metadata=None, path=None):
-        """Initialise from interpolators, or create empty dict"""
         super().__init__("Simple reflectance", metadata, interpolators, 1, path)
 
     def load_simple_csv(self,csv:Path):
@@ -112,8 +169,8 @@ class SimpleReflectance(Reflectance):
                 x = np.array(v['wvls'],np.float32)
                 y = np.array(v['means'],np.float32)
                 i = RegularGridInterpolator((x,),y, **Reflectance.BOUNDS_MODE)
-                self._interpolators[k]=i
-        
+                self.set_interpolator(k,i)
+
         
     def get_range(self, patch:str):
         """returns the ranges of each axis (phi,theta,wvls) as tuples of (min,max)"""
@@ -288,11 +345,12 @@ class PCTReflectance(Reflectance):
         
         
     def get_interpolator(self,patch: str):
+        self._load_interpolators()
         return self._interpolators[patch]
         
     def get_range(self, patch:str):
         """returns the ranges of each axis (phi,theta,wvls) as tuples of (min,max)"""
-        interp = self._interpolators[patch]
+        interp = self.get_interpolator(patch)
         return [(np.min(x),np.max(x)) for x in interp.grid]
         
     def get_reflectances(self, patch, phi, theta, wavelength=None):
@@ -300,6 +358,7 @@ class PCTReflectance(Reflectance):
         Returns wavelengths and reflectances as np arrays, unless wavelength is set
         in which case it will return the value at that wavelength.
         """
+        self._load_interpolators()
         if not patch in self._interpolators:
             # this is a hack in case someone uses the weird Jack/Giselle names
             # and won't work on a non-PCT
@@ -331,34 +390,21 @@ class PCTReflectance(Reflectance):
             
 
 def load(file: Path):
-    """Will deserialise the interpolators and create the appropriate reflectance object"""
+    """Will create the appropriate kind of reflectance object. The actual data will be loaded
+    the first time get_reflectances is called."""
 
-    # load and create all the interpolators, making sure to record the number of dimensions
-    # and ensure they are the same for all.
-    dims = None
-    interps = {}
     with archive.FileArchive(file,"r") as a:
         metadata = a.metadata
         logging.debug(f"Loading {metadata.name} from {file}")
-        json = a.readJson("data")
-        for k, d in json["refls"].items():
-            rgi = RegularGridInterpolator(
-                d["points"],
-                d["values"],
-                method=d["method"],
-                **Reflectance.BOUNDS_MODE)
-            interps[k] = rgi
-            if dims is None:
-                dims = len(rgi.values.shape)
-            elif dims != len(rgi.values.shape):
-                raise Exception(f"Some patch interpolators have different dimensions in {file}")
-            interps[k] = rgi
+        json = a.readJson("data",load_arrays=False)
 
     # given the number of dimensions, create and return the appropriate reflectance object
+    data = json["data"] # get the data; it's saved under this key in genrefls
+    dims = data["dims"]
     if dims == 1:   # just wavelength
-        return SimpleReflectance(interps, metadata=metadata,path=file)
+        return SimpleReflectance(metadata=metadata,path=file)
     elif dims == 3: # wavelength and stereo angle
-        return PCTReflectance(interps, metadata=metadata,path=file)
+        return PCTReflectance(metadata=metadata,path=file)
     else:
         raise Exception(f"Bad number of dimensions for reflection interpolators in {file}: {dims}")
         

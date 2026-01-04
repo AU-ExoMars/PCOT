@@ -326,13 +326,17 @@ class Archive:
         s = json.dumps(d, sort_keys=True, indent=4, default=serialiser)
         self.writeStr(name, s, permit_replace=permit_replace)
 
-    def readJson(self, name):
+    def readJson(self, name, load_arrays=True):
+        """Read a JSON-serisalisable object. Special strings are used to name numpy arrays;
+        these will be loaded from the archive and converted into those arrays unless load_arrays
+        is false, in which case they will remain as strings."""
         if self.zip is None:
             raise Exception("Archive is not open")
         logger.debug(f"Reading {name} from {str(self)}")
         s = self.readStr(name)
         d = json.loads(s, object_hook=deserialiser)
-        d = self.convertTagsToArrays(d)
+        if load_arrays:
+            d = self.convertTagsToArrays(d)
         return d
 
     def getNames(self):

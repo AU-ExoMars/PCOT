@@ -10,7 +10,6 @@ from pcot.subcommands import argument, subcommand
 @subcommand([
     argument("--long","-l", help="Show long descriptions", action="store_true"),
     argument("--plot","-p", help="Plot the responses (first target only)", action="store_true"),
-    argument("--filters","-f", help="Show filters", action="store_true"),
     argument("--file","-F", help="Read from a PARC file instead of the loaded reflectances", action="store_true"),
     argument("reflectance", metavar="REFLECTANCE_TARGET_NAME", help="Reflectance target name", nargs="?")
     ],
@@ -22,7 +21,7 @@ def lsrefls(args):
     from pcot.cameras import reflectances
     if args.file:
         # we'll try to load a file directly here
-        refl = reflectances.load(args.file)
+        refl = reflectances.load(args.reflectance)
         show(refl, args)
     else:
         # otherwise we're looking at loaded reflectances.
