@@ -10,7 +10,7 @@ having this loaded in startup isn't a problem.
 
 from scipy.interpolate import RegularGridInterpolator
 from pathlib import Path
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, List, Set
 
 import numpy as np
 import logging
@@ -29,9 +29,10 @@ class Reflectance:
     # this starts out as null, but when we load data from an archive the archive
     # metadata is stored here so we can show it.
 
-    metadata: 'Metadata'
-    path: Optional[Path]
-    typename: str
+    metadata: 'Metadata'    # copied from the FileArchive from which it is loaded
+    path: Optional[Path]    # file path
+    typename: str           # what kind of reflectance data? Used for debugging/listing only.
+    patches: List[str]      # list of patches
 
     # this is how the interpolators will handle out of bounds angles and wavelengths.
     # We're specifying that we will always extrapolate from the gradient of the nearest
@@ -39,17 +40,35 @@ class Reflectance:
     BOUNDS_MODE = {'bounds_error':False, 'fill_value':None}
 
 
-    def __init__(self, typename, metadata, interpolators=None, dimensions=100, path=None):
+    def __init__(self, typename, metadata, interpolators=None, dimensions=100, path=None, patches=None):
         """
         Set up a reflectance spectrum object, either from interpolators passed in or get
         ready to load from a path. If a path is given we load lazily when the interpolation
         is done.
+
+        * typename - type of the object as a string, for debugging and output
+        * metadata - metadata from the file archive from which we are loaded
+        * interpolators - dict of interpolator objects or None if we are going to load lazily
+        * dimensions - dimensionality of the reflectance spectrum (e.g. 1 for a simple by-wavelength,
+          3 if it's theta,phi,wavelength
+        * path - path of the archive file
+        * patches - list of patches to use if no interpolators are given
 
         Dimensions is the number of dimensions for each interpolator (which must match; _check_interpolators
         checks this).
 
         The object is a bunch of RegularGridInterpolator objects, one for each patch.
         """
+
+        if interpolators is None:
+            if patches is not None:
+                self.patches = patches
+            else:
+                self.patches = []
+        else:
+            self.patches = sorted(interpolators.keys())
+
+        self.patches = patches
         self.typename = typename
         self.metadata = metadata
         self.path = path
@@ -60,11 +79,13 @@ class Reflectance:
     def set_interpolators(self, interpolators):
         """Set all the interpolators at once and check them"""
         self._interpolators = interpolators
+        self.patches = sorted(self._interpolators.keys())
         self._check_interpolators()
 
     def set_interpolator(self, patch, interpolator):
         """Set a single interpolator for a patch"""
         self._interpolators[patch] = interpolator
+        self.patches = sorted(self._interpolators.keys())
         # may as well check them all
         self._check_interpolators()
 
@@ -83,8 +104,7 @@ class Reflectance:
         
     def get_patches(self):
         """returns all the patch names"""
-        self._load_interpolators()
-        return self._interpolators.keys()
+        return self.patches
     
         
     def get_range(self, patch:str):
@@ -141,8 +161,8 @@ class SimpleReflectance(Reflectance):
     """This is reflectance data without any angular information: just wavelengths and
     reflectances for each patch."""
     
-    def __init__(self, interpolators=None, metadata=None, path=None):
-        super().__init__("Simple reflectance", metadata, interpolators, 1, path)
+    def __init__(self, interpolators=None, metadata=None, path=None, patches=None):
+        super().__init__("Simple reflectance", metadata, interpolators, 1, path, patches)
 
     def load_simple_csv(self,csv:Path):
         """Load data from a CSV file with the columns patch,wavelength,mean,sd"""
@@ -174,6 +194,7 @@ class SimpleReflectance(Reflectance):
         
     def get_range(self, patch:str):
         """returns the ranges of each axis (phi,theta,wvls) as tuples of (min,max)"""
+        self._load_interpolators() # ensure interpolators are loaded
         g = self._interpolators[patch].grid[0] # only one dimension here
         # so the angles will have a (0,0) range
         return [(0,0), (0,0), (np.min(g),np.max(g))]
@@ -222,9 +243,9 @@ class PCTReflectance(Reflectance):
     # this is the thing that we get data from!
     _interpolators: Dict[str,RegularGridInterpolator]
 
-    def __init__(self, interpolators=None, metadata=None, path=None):
+    def __init__(self, interpolators=None, metadata=None, path=None, patches=None):
         """Initialise from interpolators, or create empty dict"""
-        super().__init__("BRDF for PCT", metadata, interpolators, 3, path)
+        super().__init__("BRDF for PCT", metadata, interpolators, 3, path, patches)
 
 
     @staticmethod
@@ -401,10 +422,11 @@ def load(file: Path):
     # given the number of dimensions, create and return the appropriate reflectance object
     data = json["data"] # get the data; it's saved under this key in genrefls
     dims = data["dims"]
+    patches = data["refls"].keys()
     if dims == 1:   # just wavelength
-        return SimpleReflectance(metadata=metadata,path=file)
+        return SimpleReflectance(metadata=metadata,path=file,patches=patches)
     elif dims == 3: # wavelength and stereo angle
-        return PCTReflectance(metadata=metadata,path=file)
+        return PCTReflectance(metadata=metadata,path=file, patches=patches)
     else:
         raise Exception(f"Bad number of dimensions for reflection interpolators in {file}: {dims}")
         
