@@ -57,10 +57,13 @@ class XformDecorr(XFormType):
         node.setOutput(0, out)
 
 
-def decorrstretch(A, mask):
+def decorrstretch(A, mask, stretch=2.5):
     """
     Apply decorrelation stretch to image. Modified from here: https://github.com/lbrabec/decorrstretch
     and heaven knows where they got it from. There's clearly a problem; it's not very good!
+
+    Ah, it's actually a whitening transform. By changing the constant that generates the stretch constant
+    from 1, we add a stretch.
 
     Arguments:
     A   -- image in cv2/numpy.array format
@@ -93,7 +96,7 @@ def decorrstretch(A, mask):
     if min(abs(eigval)) < 0.00001:
         raise XFormException("DATA", "Eigenvalue too small for decorrelation stretch")
     # stretch matrix
-    S = np.diag(1 / np.sqrt(eigval))
+    S = np.diag(stretch / np.sqrt(eigval))
     # compute mean of each color in the masked area
     mean = np.ma.mean(maskedA, axis=0)
     # substract the mean from image
