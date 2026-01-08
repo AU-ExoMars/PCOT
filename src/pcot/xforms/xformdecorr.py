@@ -4,44 +4,62 @@ import pcot.dq
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.sources import MultiBandSource, SourceSet
+from pcot.ui.tabs import Tab
 from pcot.utils import image
 from pcot.xform import xformtype, XFormType, XFormException
-from pcot.xforms.tabdata import TabData
-
-from functools import reduce
 
 
 @xformtype
 class XformDecorr(XFormType):
     """
+    Perform a decorrelation stretch on an RGB image by applying a whitening transform
+    with stretch.
 
-    Perform a decorrelation stretch on an RGB image
+    This works by
+    * calculating the covariance matrix
+    * calculating a transform to a space in which the diagonals of the covariance matrix are 1 and the
+      other elements are minimised (i.e. the bands are decorrelated) - so this is a form of PCA
+    * applying that transform
+    * applying a stretch factor to increase those diagonal variances - the principal components
+    * apply the inverse transform
+    * restore original image scaling
+    * fix up the image mean
+    * normalise each band after clipping a given percentile of outliers
 
     **Ignores DQ and uncertainty**
 
     """
 
     def __init__(self):
-        super().__init__("decorr stretch", "processing", "0.0.0", hasEnable=True)
+        super().__init__("decorr stretch", "processing", "0.0.0", hasEnable=False)
         self.addInputConnector("rgb", Datum.IMG)
         self.addOutputConnector("rgb", Datum.IMG)
-        self.params = TaggedDictType()  # no parameters
+        self.params = TaggedDictType(
+            stretch=("stretch factor", float, 1.0),
+            clip=("percentile out outliers to clip in postprocessing", float, 5.0))
 
     def createTab(self, n, w):
-        return TabData(n, w)
+        return TabDecorr(n, w)
 
     def init(self, node):
         node.out = None
+        node.eigenvals = None
+        node.stddevs = None
 
     def perform(self, node):
         img = node.getInput(0, Datum.IMG)
         if img is None:
             out = None
+            eigvals = None
+            stddevs = None
         elif img.channels != 3:
             raise XFormException("DATA", "can only decorr stretch images with 3 channels")
         else:
+            from pcot.utils.decorr import decorrelation_stretch
             subimage = img.subimage()
-            newimg = decorrstretch(subimage.img, subimage.mask)
+            newimg, stddevs, eigvals = decorrelation_stretch(subimage.img, subimage.mask,
+                                                             node.params.stretch,
+                                                             node.params.clip)
             # in this case, all channels just come from the union of the sources
             sources = SourceSet(img.sources.getSources())
 
@@ -54,72 +72,35 @@ class XformDecorr(XFormType):
             out = img.modifyWithSub(subimage, newimg, sources=MultiBandSource([sources, sources, sources]), dqv=dq).setMapping(node.mapping)
             out = Datum(Datum.IMG, out)
 
+        node.eigenvals = eigvals
+        node.stddevs = stddevs
         node.setOutput(0, out)
 
+class TabDecorr(Tab):
+    def __init__(self, node, w):
+        super().__init__(w, node, "tabdecorr.ui")
+        self.w.stretchSpin.valueChanged.connect(self.stretchChanged)
+        self.w.clipSpin.valueChanged.connect(self.clipChanged)
 
-def decorrstretch(A, mask, stretch=2.5):
-    """
-    Apply decorrelation stretch to image. Modified from here: https://github.com/lbrabec/decorrstretch
-    and heaven knows where they got it from. There's clearly a problem; it's not very good!
+        self.nodeChanged()
 
-    Ah, it's actually a whitening transform. By changing the constant that generates the stretch constant
-    from 1, we add a stretch.
+    def stretchChanged(self, v):
+        self.node.params.stretch = v
+        self.changed()
 
-    Arguments:
-    A   -- image in cv2/numpy.array format
-    mask -- mask, pixels to be manipulated are True (unlike usual numpy setting)
-    """
+    def clipChanged(self, v):
+        self.node.params.clip = v
+        self.changed()
 
-    # save the original shape and image
-    orig = A
-    orig_shape = A.shape
+    def onNodeChanged(self):
+        self.w.canvas.setNode(self.node)
+        p = self.node.params
 
-    # reshape the image
-    #         B G R
-    # pixel 1 .
-    # pixel 2   .
-    #  . . .      .
-    A = A.reshape((-1, 3)).astype(np.float64)
-    # build a mask the same shape as the data
-    mask = mask.flatten()
-    mask = np.repeat(mask, 3).reshape(-1, 3)
-    # apply the mask
-    maskedA = np.ma.masked_array(data=A.copy(), mask=~mask)
-    # covariance matrix of A (only those pixels in the mask)
-    tt = np.ma.transpose(maskedA)
-    cov = np.ma.cov(tt)
-    # source and target sigma
-    sigma = np.diag(np.sqrt(cov.diagonal()))
-    # eigen decomposition of covariance matrix
-    eigval, V = np.linalg.eig(cov)
-    # fail if an eigenvalue is too small (monochrome image?)
-    if min(abs(eigval)) < 0.00001:
-        raise XFormException("DATA", "Eigenvalue too small for decorrelation stretch")
-    # stretch matrix
-    S = np.diag(stretch / np.sqrt(eigval))
-    # compute mean of each color in the masked area
-    mean = np.ma.mean(maskedA, axis=0)
-    # substract the mean from image
-    maskedA -= mean
-    # compute the transformation matrix
-    T = reduce(np.dot, [sigma, V, S, V.T])
-    # compute offset 
-    offset = mean - np.dot(mean, T)
-    # transform the image
-    maskedA = np.dot(maskedA, T)
-    # add the mean and offset
-    maskedA += mean + offset
-    # restore original shape
-    B = maskedA.reshape(orig_shape)
-    # for each color...
-    for b in range(3):
-        # ...normalize
-        B[:, :, b] = (B[:, :, b] - B[:, :, b].min()) / (B[:, :, b].max() - B[:, :, b].min())
-    # do any required conversion here
-    B = B.astype(np.float32)
-    # paste masked area into original subimage, we do this with flattened version
-    # of the images to match the flat mask we made.
-    orig = orig.flatten()
-    B = B.flatten()
-    np.putmask(orig, mask, B)
-    return orig.reshape(orig_shape)
+        self.w.stretchSpin.setValue(p.stretch)
+        self.w.clipSpin.setValue(p.clip)
+
+        self.w.stdDevsText.setText(str(self.node.stddevs))
+        self.w.eigenValsText.setText(str(self.node.eigenvals))
+
+
+        self.w.canvas.display(self.node.getOutput(0))
