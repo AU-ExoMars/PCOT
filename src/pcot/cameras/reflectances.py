@@ -10,11 +10,12 @@ having this loaded in startup isn't a problem.
 
 from scipy.interpolate import RegularGridInterpolator
 from pathlib import Path
-from typing import Dict, Optional, Any, List, Set
+from typing import Dict, Optional, Any, List, Set, Tuple
 
 import numpy as np
 import logging
 
+from pcot.cameras.filters import Filter
 from pcot.utils import archive
 
 
@@ -105,18 +106,40 @@ class Reflectance:
     def get_patches(self):
         """returns all the patch names"""
         return self.patches
-    
-        
+
+    def _get_interp(self, patch):
+        """Get the interpolator for a patch or raise an exception"""
+        self._load_interpolators()
+        try:
+            return self._interpolators[patch]
+        except KeyError:
+            raise KeyError(f"patch {patch} not in reflectance data")
+
     def get_range(self, patch:str):
         """returns the ranges of each axis (phi,theta,wvls) as tuples of (min,max)"""
         pass
-        
-    def get_reflectances(self, patch, phi, theta, wavelength=None):
+
+    def get_reflectances(self, patch, phi, theta) -> Tuple[np.ndarray, np.ndarray]:
         """
         Returns wavelengths and reflectances as np arrays, unless wavelength is set
         in which case it will return the value at that wavelength
         """
         pass
+
+    def get_reflectance(self, patch, phi, theta, wavelength) -> np.float32:
+        """
+        Return the reflectance at a single wavelength
+        """
+        pass
+
+    def get_known_reflectance_for_filter(self, f: Filter, patch, phi, theta):
+        """
+        This will multiply the reflectance at each known wavelength with the filter's transmission at
+        that wavelength, and total the result to give a total reflectance.
+        """
+        wvls, refls = self.get_reflectances(patch, phi, theta)
+        trans = f.getResponse(wvls)
+
 
     def _load_interpolators(self):
         """
@@ -198,22 +221,29 @@ class SimpleReflectance(Reflectance):
         g = self._interpolators[patch].grid[0] # only one dimension here
         # so the angles will have a (0,0) range
         return [(0,0), (0,0), (np.min(g),np.max(g))]
-        
-    def get_reflectances(self, patch, phi, theta, wavelength=None):
+
+    def get_reflectance(self, patch, phi, theta, wavelength):
         """
-        Returns wavelengths and reflectances as np arrays, unless wavelength is set
-        in which case it will return the value at that wavelength
+        Get reflectance at a single wavelength
         """
-        if not patch in self._interpolators:
-            raise Exception(f"patch {patch} not in reflectance data")
-        interp = self._interpolators[patch]
-        if wavelength is None:
+        # looks a bit weird. The call to _get_interp returns an interpolator, and we "call" that with the wavelengths.
+        # Then we get the first value that comes out of the 1-element array returned.
+        v = self._get_interp(patch)([wavelength, ])[0]
+        return np.clip(v,0,None)
+
+    def get_reflectances(self, patch, phi, theta, wavelengths=None):
+        """
+        Returns wavelengths and reflectances as np arrays
+        """
+        interp = self._get_interp(patch)
+        if wavelengths is None:
             wvls = interp.grid[-1] # last axis in grid is the wavelength list
             refl = interp(wvls)
+            refl = np.clip(refl,0,None)
             return wvls,refl
         else:
-            return interp([wavelength,])[0] # ugly
-        
+            return interp(wavelengths)
+
 
 
 
@@ -363,22 +393,8 @@ class PCTReflectance(Reflectance):
         points = [np.array(x,np.float32) for x in (phis,thetas,wvls)]
         # and the interpolator
         self._interpolators[patch] = RegularGridInterpolator(points,data, **Reflectance.BOUNDS_MODE)
-        
-        
-    def get_interpolator(self,patch: str):
-        self._load_interpolators()
-        return self._interpolators[patch]
-        
-    def get_range(self, patch:str):
-        """returns the ranges of each axis (phi,theta,wvls) as tuples of (min,max)"""
-        interp = self.get_interpolator(patch)
-        return [(np.min(x),np.max(x)) for x in interp.grid]
-        
-    def get_reflectances(self, patch, phi, theta, wavelength=None):
-        """
-        Returns wavelengths and reflectances as np arrays, unless wavelength is set
-        in which case it will return the value at that wavelength.
-        """
+
+    def _get_interp(self,patch: str):
         self._load_interpolators()
         if not patch in self._interpolators:
             # this is a hack in case someone uses the weird Jack/Giselle names
@@ -386,9 +402,17 @@ class PCTReflectance(Reflectance):
             if not patch in PCTReflectance.rev_name_map:
                 raise KeyError(f"patch {patch} not in reflectance data")
             patch = PCTReflectance.rev_name_map[patch]
-        
+        return super()._get_interp(patch)
+
+    def get_range(self, patch:str):
+        """returns the ranges of each axis (phi,theta,wvls) as tuples of (min,max)"""
+        interp = self._get_interp(patch)
+        return [(np.min(x),np.max(x)) for x in interp.grid]
+
+    @staticmethod
+    def _preprocess_angles(phi, theta):
         # we've only recorded half the phi values, and it's a weird
-        # half
+        # half. And we leave the possibility of changing theta if we need to
         while phi < 0:
             phi += 360
 
@@ -396,19 +420,38 @@ class PCTReflectance(Reflectance):
             phi = -phi
 
         phi %= 360
+        return phi, theta
 
-        interp = self._interpolators[patch]
-        if wavelength is None:
+        
+    def get_reflectances(self, patch, phi, theta, wavelengths=None):
+        """
+        Returns wavelengths and reflectances as np arrays, unless wavelength is set
+        in which case it will return the value at that wavelength.
+        """
+
+        phi, theta = PCTReflectance._preprocess_angles(phi, theta)
+        interp = self._get_interp(patch)
+        if wavelengths is None:
             wvls = interp.grid[-1] # last axis in grid is the wavelength list
+            # we want to get the value for a known phi and theta that are the same for all values
+            # so we fill a couple of rows with that data. We then fill the third row with the wavelengths,
+            # and interpolate.
             input = np.column_stack((
                 np.full(wvls.shape, phi),
                 np.full(wvls.shape, theta),
                 wvls))
             refl = interp(input)
+            refl = np.clip(refl,0,None)  # clip to zero
             return wvls,refl
         else:
-            return interp((phi,theta,wavelength))
-            
+            return interp((phi, theta, wavelengths))
+
+
+    def get_reflectance(self, patch, phi, theta, wavelength):
+        phi, theta = PCTReflectance._preprocess_angles(phi, theta)
+        interp = self._get_interp(patch)
+        r = interp((phi,theta,wavelength))
+        return np.clip(r, 0, None)
 
 def load(file: Path):
     """Will create the appropriate kind of reflectance object. The actual data will be loaded
@@ -431,8 +474,7 @@ def load(file: Path):
         raise Exception(f"Bad number of dimensions for reflection interpolators in {file}: {dims}")
         
 
-
-if __name__ == "__main__":
+def test():
     logging.basicConfig(level=logging.DEBUG)
 
     logging.debug("Loading")
@@ -452,7 +494,7 @@ if __name__ == "__main__":
     for phi in phis:
         vals_interpolated = []
         for theta in thetas:
-            v = d.get_reflectances("NG11", phi, theta, wavelength=600)
+            v = d.get_reflectances("NG11", phi, theta, 600)
             vals_interpolated.append(v)
         ax.plot(thetas, vals_interpolated, marker="x")
 
@@ -462,5 +504,6 @@ if __name__ == "__main__":
     plt.savefig("out.png")
     plt.show()
 
-
+if __name__ == "__main__":
+    test()
 
