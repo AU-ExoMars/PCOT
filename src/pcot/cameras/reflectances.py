@@ -137,8 +137,18 @@ class Reflectance:
         This will multiply the reflectance at each known wavelength with the filter's transmission at
         that wavelength, and total the result to give a total reflectance.
         """
+        # get wavelengths for this patch and the reflectances
         wvls, refls = self.get_reflectances(patch, phi, theta)
-        trans = f.getResponse(wvls)
+        # get the filter response from the filters for these wavelengths, interpolating if required
+        resp = f.getResponse(wvls)
+        # do the multiplication and adds
+        r = refls @ resp
+        # and divide by the sum of the responses - refls says how much light is reflected, resp tells you
+        # how much light gets through the filter at each wavelength. So the product at each wavelength
+        # is the effective reflected light at that wavelength after the filter. The sum will be the total
+        # reflected flux through the filter, but we need to divide by the amount of light which would pass
+        # through if the patch were perfectly reflective. So we divide by the sum of the filter responses.
+        return r / np.sum(resp)
 
 
     def _load_interpolators(self):

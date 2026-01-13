@@ -70,3 +70,11 @@ def test_pct_reflectance_get_subset_agree():
 
     wvls3 = np.array([refl.get_reflectance("NG11",180, 0, w) for w in [500,600,700]], dtype=np.float32)
     assert np.array_equal(wvls1, wvls3)
+
+def test_foo():
+    from pcot import cameras
+    import pcot
+    pcot.setup()
+    refl:Reflectance =load()
+    filt=cameras.getFilter("PANCAM","G07")
+    print(refl.get_known_reflectance_for_filter(filt,"NG11", 180, 0))
