@@ -7,6 +7,8 @@ import os.path
 from pathlib import Path
 from typing import Set, List
 
+from pcot.cameras.reflectances import Reflectance
+
 logger = logging.getLogger(__name__)
 
 # dictionary of CameraData
@@ -60,7 +62,7 @@ def getFilter(cameraName, target, search='name'):
     return cam.getFilter(target, search=search)
 
 
-def getReflectance(name: str) -> 'ReflectanceData':
+def getReflectance(name: str) -> Reflectance:
     """Get the object for the given reflectance target name"""
     if name not in _reflectances:
         raise ReflectanceNotFoundException(name)
