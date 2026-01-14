@@ -69,7 +69,7 @@ def show(r, args):
             phi_range, theta_range, wvl_range = r.get_range(p)
             theta = 0       # straight on
             phi = 270       # this is looking at the PCT along its vertical axis
-            wvls, data = r.get_reflectances(p, phi=phi, theta=theta, clip=True)
+            wvls, data = r.get_reflectances(p, phi=phi, theta=theta)
             plt.plot(wvls, data, label=p)
         plt.title(r.metadata.name)
         plt.xlabel("Wavelength (nm)")

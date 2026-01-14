@@ -322,6 +322,7 @@
     <addaction name="action_New"/>
     <addaction name="actionNew_Macro"/>
     <addaction name="actionShow_Metadata"/>
+    <addaction name="actionShowCamsAndRefls"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -434,6 +435,11 @@
   <action name="actionShow_Metadata">
    <property name="text">
     <string>Show Metadata</string>
+   </property>
+  </action>
+  <action name="actionShowCamsAndRefls">
+   <property name="text">
+    <string>Show Filter and Camera Data</string>
    </property>
   </action>
  </widget>

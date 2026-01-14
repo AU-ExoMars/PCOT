@@ -109,6 +109,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.action_New.triggered.connect(self.newAction)
         self.actionNew_Macro.triggered.connect(self.newMacroAction)
         self.actionSave.triggered.connect(self.saveAction)
+        self.actionShowCamsAndRefls.triggered.connect(self.showCamsAndReflsAction)
         self.actionSave_As.triggered.connect(lambda: self.saveAsAction(True))
         self.actionSave_As_without_inputs.triggered.connect(lambda: self.saveAsAction(False))
         self.actionOpen.triggered.connect(self.openAction)
@@ -433,6 +434,12 @@ class MainUI(ui.tabs.DockableTabWindow):
             fn = act.data()
             self.closeAllTabs()
             self.load(fn)
+
+    def showCamsAndReflsAction(self):
+        from pcot.cameras import show
+        w = show.Dialog(self)
+        w.show()
+
 
     ## "copy" menu/keypress
     def copyAction(self):
