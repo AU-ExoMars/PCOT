@@ -174,6 +174,12 @@ def createFilters(filter_dict, position_dict=None):
             pos = d["position"]
         else:
             raise ValueError(f"Filter {k} does not have a position, and no position dictionary was provided")
+
+        # do we have any response data?
+        if "response" in d:
+            # this can either be simple, or angular! We can tell when we load the csv, though.
+            response = FilterResponse.load(d["response"])
+
         f = filters.Filter(
             d["cwl"],
             d["fwhm"],
