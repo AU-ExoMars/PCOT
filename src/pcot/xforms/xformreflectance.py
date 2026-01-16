@@ -419,19 +419,20 @@ class TabReflectance(pcot.ui.tabs.Tab):
         # clear all figures
         self.w.mpl.fig.clf()
         self.w.mpl.fig.subplots_adjust(hspace=0.2)
-        for band in self.node.filter_names:
+        for filter in self.node.filters:
+            filter_name = filter.name
             ax = self.w.mpl.fig.add_subplot(3, 4, plotct)
             self.set_axis_data(ax,sep_plots=True)
             plotct += 1
 
-            points = self.node.points_per_filter.get(band, None)
-            fit = self.node.fits.get(band, None)
+            points = self.node.points_per_filter.get(filter_name, None)
+            fit = self.node.fits.get(filter_name, None)
 
             if points is None:
-                ui.log(f"No points of data for filter {band}")
+                ui.log(f"No points of data for filter {filter_name}")
                 continue
             if fit is None:
-                ui.log(f"No fit data for filter {band}")
+                ui.log(f"No fit data for filter {filter_name}")
                 continue
 
             # separate out the data
@@ -447,11 +448,11 @@ class TabReflectance(pcot.ui.tabs.Tab):
             if fit:
                 ax.axline((0, fit.c), slope=fit.m)
             # ax.plot(known, measured, '+', color=colname, label=band)
-            ax.errorbar(known_mean, measured_mean, yerr=measured_std, xerr=known_std, label=band, fmt='x')
+            ax.errorbar(known_mean, measured_mean, yerr=measured_std, xerr=known_std, label=filter_name, fmt='x')
 
             # point labelling: don't do this if we're plotting all bands or it's turned off
-            cwl = self.node.camera.getFilter(band).cwl
-            ax.set_title(f"Fit for {band} {int(cwl)}: m={fit.m:0.3f}, c={fit.c:0.3f}",fontsize=6)
+            cwl = self.node.camera.getFilter(filter_name).cwl
+            ax.set_title(f"Fit for {filter_name} {int(cwl)}: m={fit.m:0.3f}, c={fit.c:0.3f}",fontsize=6)
             for i, patch in enumerate(patches):
                 # plot the patch name and the measured value at the point
                 ax.annotate(f"{patch}\n{measured_mean[i]:.2f}±{measured_std[i]:.2f}",
