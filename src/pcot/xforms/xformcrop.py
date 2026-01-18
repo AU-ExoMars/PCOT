@@ -31,7 +31,7 @@ class XformCropROI(XFormType):
             # will work correctly
             img.mapping = node.mapping
             # and strip the ROIs
-            img.rois = []
+            # img.rois = []
             out = Datum(Datum.IMG, img)
         else:
             out = None

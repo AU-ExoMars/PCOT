@@ -118,13 +118,13 @@ class Filter:
         return self.cwl is None or self.cwl == 0
 
     def serialise(self):
-        """Serialise - but does NOT serialise the response object"""
+        """Serialise - including response data"""
         return self.cwl, self.fwhm, self.transmission, self.position, \
                self.name, self.camera_name
 
     @classmethod
     def deserialise(cls, d):
-        """Serialise - but does NOT deserialise the response object"""
+        """Serialise - including response data"""
         if isinstance(d, str):
             ui.error("Oops - old style file contains filter name, not filter data. Using dummy, please 'Run All'.")
             return DUMMY_FILTER

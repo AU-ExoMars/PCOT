@@ -135,6 +135,7 @@ class XFormSpectrum(XFormType):
             colourmode=("Colour mode", str, "fromROIs", colourModes),
             bandwidthmode=("Bandwidth mode", str, "none", bandwidthModes),
             ignorePixSD=("Ignore pixel standard deviation", bool, False),
+            fixedYAxis=("Y axis fixed to [0,1]", bool, False)
         )
 
         for i in range(NUMINPUTS):
@@ -247,6 +248,7 @@ class TabSpectrum(ui.tabs.Tab):
         self.w.rightSpaceSpin.valueChanged.connect(self.rightSpaceChanged)
         self.w.hideButton.clicked.connect(self.hideClicked)
         self.w.ignorePixSD.stateChanged.connect(self.ignorePixSDChanged)
+        self.w.fixedYBox.stateChanged.connect(self.fixedYAxisChanged)
         self.nodeChanged()
 
     def replot(self):
@@ -312,6 +314,8 @@ class TabSpectrum(ui.tabs.Tab):
 
             ax.plot(wavelengths, means, c=col, label=legend)
             ax.scatter(wavelengths, means, c=[wav2RGB(x) for x in wavelengths], s=0)
+            if self.node.params.fixedYAxis:
+                ax.set_ylim(0,1)
 
             if self.node.params.errorbarmode != 'none':
                 # calculate standard errors from standard deviations
@@ -361,6 +365,11 @@ class TabSpectrum(ui.tabs.Tab):
     def ignorePixSDChanged(self, state):
         self.mark()
         self.node.params.ignorePixSD = state == QtCore.Qt.Checked
+        self.changed()
+
+    def fixedYAxisChanged(self, state):
+        self.mark()
+        self.node.params.fixedYAxis = state == QtCore.Qt.Checked
         self.changed()
 
     def errorbarmodeChanged(self, mode):
@@ -427,7 +436,7 @@ class TabSpectrum(ui.tabs.Tab):
         with SignalBlocker(self.w.errorbarmode, self.w.bandwidthmode, self.w.colourmode,
                            self.w.stackSepSpin, self.w.bottomSpaceSpin, self.w.rightSpaceSpin,
                            self.w.legendFontSpin, self.w.axisFontSpin, self.w.labelFontSpin,
-                           self.w.ignorePixSD):
+                           self.w.ignorePixSD,self.w.fixedYBox):
             self.w.errorbarmode.setCurrentIndex(errorBarModes.index(self.node.params.errorbarmode))
             self.w.bandwidthmode.setCurrentIndex(bandwidthModes.index(self.node.params.bandwidthmode))
             self.w.colourmode.setCurrentIndex(colourModes.index(self.node.params.colourmode))
@@ -438,3 +447,4 @@ class TabSpectrum(ui.tabs.Tab):
             self.w.axisFontSpin.setValue(self.node.params.axisFontSize)
             self.w.labelFontSpin.setValue(self.node.params.labelFontSize)
             self.w.ignorePixSD.setChecked(self.node.params.ignorePixSD)
+            self.w.fixedYBox.setChecked(self.node.params.fixedYAxis)
