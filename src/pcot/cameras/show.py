@@ -47,13 +47,13 @@ class Dialog(QtWidgets.QDialog):
             for p in refl.get_patches():
                 self.patchBox.addItem(p)
 
-    def _init_plot(self):
+    def _init_plot(self, ylab):
         mpl = self.mpl_widget
         mpl.clear()
         ax = mpl.ax
         ax.cla()
-        ax.set_xlabel("Response")
-        ax.set_ylabel("Wavelength (nm)")
+        ax.set_xlabel("Wavelength (nm)")
+        ax.set_ylabel(ylab)
         return mpl, ax
 
     def _filter_plot(self):
@@ -62,7 +62,7 @@ class Dialog(QtWidgets.QDialog):
         filter_names = cam.params.filters
         selected = self.filterBox.currentText()
 
-        mpl, ax = self._init_plot()
+        mpl, ax = self._init_plot("response")
 
         not_filter = []
         wavelengths = np.linspace(300, 1200, 400)
@@ -90,7 +90,7 @@ class Dialog(QtWidgets.QDialog):
         refl = cameras.getReflectance(self.reflBox.currentText())
         selected = self.patchBox.currentText()
 
-        mpl, ax = self._init_plot()
+        mpl, ax = self._init_plot("reflectance")
 
         for n in refl.get_patches():
             if n==selected or selected == "ALL":
@@ -134,7 +134,7 @@ class Dialog(QtWidgets.QDialog):
         # and get the "known reflectance" total
         known = refl.get_known_reflectance_for_filter(filter, selected_patch, phi, theta)
 
-        mpl, ax = self._init_plot()
+        mpl, ax = self._init_plot("filtered refl.")
 
         # plot all three things
         ax.plot(wavelengths, refls, label=selected_patch)
