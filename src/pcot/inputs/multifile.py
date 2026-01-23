@@ -2,6 +2,7 @@
 # into a single image
 import logging
 import os
+import pathlib
 import re
 from typing import Any, Dict
 
@@ -356,6 +357,8 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
             e = str(e)
             self.method.input.exception = str(e)
             ui.error(e)
+            self.method.files= []
+            self.method.dir = str(pathlib.Path.home())
 
         # rebuild the model
         self.buildModel()
