@@ -357,6 +357,7 @@ class MainUI(ui.tabs.DockableTabWindow):
             ui.msg(f"Saving to {fname}")
             self.doc.save(fname, saveInputs=saveInputs)
             ui.msg(f"File saved to {fname}")
+            ui.log(f"File saved to {fname}")
             self.rebuildRecents()
         except Exception as e:
             traceback.print_exc()

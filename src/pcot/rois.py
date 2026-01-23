@@ -140,6 +140,10 @@ class ROI(SourcesObtainable, Annotation):
         else:
             return self.mask().sum()
 
+    def changed(self):
+        """Called from roiexpr when ROI is changed"""
+        pass
+
     def details(self):
         """Information string on this ROI. This default shows the extent."""
         bb = self.bb()
@@ -602,8 +606,8 @@ class ROIRect(ROI):
         self.w = w
         self.h = h
 
-    def changed(self):
-        raise NotImplementedError("ROIRect.changed")
+    #def changed(self):
+    #    raise NotImplementedError("ROIRect.changed")
 
     def to_tagged_dict(self):
         td = self.TAGGEDDICT.create()
