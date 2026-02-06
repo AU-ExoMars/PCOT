@@ -1,11 +1,13 @@
 """
 Filter response classes, which consist of interpolators
 
-1. SimpleFilterResponse encapsulates an interpolator wavelength->response value. These can be generated
+1. FilterResponseSimple encapsulates an interpolator wavelength->response value. These can be generated
    from cwl,fwhm and transmission by simulating a gaussian.
-2. FullFilterResponse encapsulates an interpolator (phi,theta,wavelength)->response value
+2. FullFilterResponse encapsulates a more complex interpolator; maybe (phi,theta,wavelength)->response value
+   Not sure we need it?
 """
-
+import re
+from typing import Optional
 
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
@@ -13,27 +15,26 @@ from scipy.interpolate import RegularGridInterpolator
 # the range for generating sinulated data
 SIMULATED_FILTER_WAVELENGTHS = np.arange(200, 3500)
 
-
 class FilterResponse:
-    """FilterResponses work on this interface - for simple filters the angle is ignored"""
-
-    def getResponse(self, wavelengths: np.ndarray, angle=0.0) -> np.ndarray:
-        """Get the filter response at the given wavelengths."""
-        raise Exception("Base type of FilterResponse created - deserialised a Filter without patching in a response?")
-
-
-class FilterResponseSimple(FilterResponse):
     _sim_cache = dict()  # cache for simulated responses
     """
     This describes the stored filter response for a filter where this has been measured (if it's not, the Filter
     class will simulate).
     """
 
-    def __init__(self, wavelengths: np.ndarray, values: np.ndarray):
-        self._interpolator = RegularGridInterpolator((wavelengths,), values,
+    _interpolator: RegularGridInterpolator
+
+    def __init__(self, interpolator: Optional[RegularGridInterpolator],
+                 wavelengths: Optional[np.ndarray]=None,
+                 values: Optional[np.ndarray]=None):
+        """If an interpolator is provided, use it. Otherwise create a simulated interpolator from wavelengths and values."""
+        if interpolator is None:
+            self._interpolator = RegularGridInterpolator((wavelengths,), values,
                                                      method="linear",
                                                      bounds_error=False,  # no error on out-of-bounds
                                                      fill_value=None)  # we extrapolate the data if out-of-bounds
+        else:
+            self._interpolator = interpolator
 
     @staticmethod
     def createSimulated(cwl: float, fwhm: float, transmission: float):
@@ -41,8 +42,8 @@ class FilterResponseSimple(FilterResponse):
         and transmission. Return the values at the given wavelengths. We keep a cache of these."""
 
         key = f"{cwl}/{fwhm}{transmission}"
-        if key in FilterResponseSimple._sim_cache:
-            return FilterResponseSimple._sim_cache[key]
+        if key in FilterResponse._sim_cache:
+            return FilterResponse._sim_cache[key]
 
         if cwl == 0:
             # handle the "dummy filter" response
@@ -50,15 +51,80 @@ class FilterResponseSimple(FilterResponse):
         else:
             sigma = fwhm / (2 * np.sqrt(2 * np.log(2)))
             values = transmission * np.exp(-0.5 * ((SIMULATED_FILTER_WAVELENGTHS - cwl) / sigma) ** 2)
-        res = FilterResponseSimple(SIMULATED_FILTER_WAVELENGTHS, values)
-        FilterResponseSimple._sim_cache[key] = res
+        res = FilterResponse(None, wavelengths=SIMULATED_FILTER_WAVELENGTHS, values=values)
+        FilterResponse._sim_cache[key] = res
         return res
 
     def getResponse(self, wavelengths: np.ndarray, angle=0.0) -> np.ndarray:
         return self._interpolator(wavelengths)
 
+    def serialise(self):
+        return {
+            "points": self._interpolator.grid,
+            "values": self._interpolator.values,
+            "method": self._interpolator.method,
+        }
+
+    @staticmethod
+    def deserialise(self, data):
+        return RegularGridInterpolator(data["points"], data["values"], method=data["method"],bounds_error=False,
+                                       fill_value=1.0)
 
 
-def load_filter_response(filename: str) -> FilterResponse:
-    """This is only called when we generate filter response data from files in gencam."""
-    raise NotImplementedError
+
+def load_filter_response(csv: str, response_percentage=True) -> FilterResponse:
+    """This is only called when we generate filter response data from files in gencam. It parses a filter
+    response. The first column is the wavelength, remaining columns are response - if there is more than
+    one remaining column, it is assumed to contain an angle (for looking through the filter aslant, as it were;
+    not the same angles as we deal with in reflectance!). Otherwise it's just the response at all angles."""
+
+    # We're not using the csv package, and we're opening with latin-1 because my data has a degree symbol!
+
+    NUMBER_RE = re.compile(r"-?\d+(?:\.\d+)?")      # regex for finding first valid number as a group
+
+    def extract_number(s: str):
+        m = NUMBER_RE.search(s)
+        return m.group(0) if m else None
+
+    with open(csv, encoding="latin-1") as f:
+        lines = f.readlines()
+        wavelengths = []
+        # get the angles if needed from the first line; assume the first column is "wavelength" or something
+        header = lines[0]
+        angles = [extract_number(x) for x in header.split(",")[1:]]
+        if len(angles) == 1:
+            # only one angle, and a non-number is OK (and expected) in that slot
+            angles = [0.0]
+        else:
+            # more than one angle, and they have to be numbers
+            if any(x is None for x in angles):
+                raise ValueError("A non-numeric angle is provided for a multiangle filter response")
+            angles = [float(x) for x in angles]
+        lines = lines[1:]  # strip headers
+        wavelengths = []
+        # each row in this array is data at each wavelength,
+        # and consists of values for each angle.
+        # In short, rows=wavelengths, cols=angles.
+        values_by_angle_by_wavelength = []
+
+        response_factor = 0.01 if response_percentage else 1.0
+        for line in lines:
+            line = line.strip().split(",")
+            wavelengths.append(float(line[0]))
+            # Note that the data is PERCENTAGES.
+            values = [float(x)*response_factor for x in line[1:]]
+            values_by_angle_by_wavelength.append(values)
+
+        values = np.array(values_by_angle_by_wavelength, dtype=np.float32)
+
+        # we have an array of responses, so create an interpolator.
+        data = np.stack(values, axis=0)
+        points = [np.array(x, np.float32) for x in (wavelengths, angles)]
+        interpolator = RegularGridInterpolator(points, data,
+                                               bounds_error=False,
+                                               fill_value=0.0
+                                               )
+        return FilterResponse(interpolator)
+
+
+

@@ -39,7 +39,8 @@ class Filter:
     wavelengths: Optional[np.ndarray]
 
     def __init__(self, cwl, fwhm, transmission=1.0, position=None, name=None, camera_name=None, description=None,
-                 response:FilterResponse = None):
+                 response:FilterResponse = None
+                 ):
         """constructor:
             If we don't pass in a FilterResponse object this class will create one that simulates the response
             based on cwl,fwhm,transmission.

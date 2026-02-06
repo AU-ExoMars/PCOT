@@ -178,8 +178,12 @@ def createFilters(filter_dict, position_dict=None):
 
         # do we have any response data?
         if "response" in d:
-            # this can either be simple, or angular! We can tell when we load the csv, though.
-            response = filtresponse.load_filter_response(d["response"])
+            # responses are usually percentage, but could be 0-1 if you specify false
+            # here.
+            response_percentage = d.get("response_percentage", True)
+            # load the filter response from a CSV file; that will determine what kind of filter response
+            # (potentially could be more complex than just wavelength,response).
+            response = filtresponse.load_filter_response(d["response"], response_percentage)
         else:
             response = None
 
