@@ -59,3 +59,6 @@ class FilterResponseSimple(FilterResponse):
 
 
 
+def load_filter_response(filename: str) -> FilterResponse:
+    """This is only called when we generate filter response data from files in gencam."""
+    raise NotImplementedError

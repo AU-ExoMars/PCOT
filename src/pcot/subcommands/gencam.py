@@ -3,6 +3,7 @@ import datetime
 import glob
 import os
 
+from pcot.cameras import filtresponse
 from pcot.imagecube import CannotLoadImageBadFormatException
 from pcot.subcommands import subcommand, argument
 from dataclasses import dataclass
@@ -35,7 +36,7 @@ def get_raw_loader(d):
     or from values in the dict"""
     from pcot.dataformats.raw import RawLoader
 
-    # all raw loader data is in 'rawloder' - this can be either 'preset' or
+    # all raw loader data is in 'rawloader' - this can be either 'preset' or
     # all the individual preset data elements.
     if 'rawloader' not in d:
         return None
@@ -178,13 +179,16 @@ def createFilters(filter_dict, position_dict=None):
         # do we have any response data?
         if "response" in d:
             # this can either be simple, or angular! We can tell when we load the csv, though.
-            response = FilterResponse.load(d["response"])
+            response = filtresponse.load_filter_response(d["response"])
+        else:
+            response = None
 
         f = filters.Filter(
             d["cwl"],
             d["fwhm"],
             transmission=d.get("transmission", 1.0),
             name=k,
+            response=response,
             position=pos,
             description=d.get("description", "No description given"))
         fs[k] = f
