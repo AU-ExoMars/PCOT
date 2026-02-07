@@ -10,7 +10,7 @@ from scipy.interpolate import RegularGridInterpolator
 from skimage.data import camera
 
 from pcot import ui
-from pcot.cameras.filtresponse import FilterResponse, FilterResponseSimple
+from pcot.cameras.filtresponse import FilterResponse
 from pcot.documentsettings import DocumentSettings
 import logging
 
@@ -54,9 +54,8 @@ class Filter:
         self.description = description
         if response is None:
             # create simulated filter if none provided
-            response = FilterResponseSimple.createSimulated(cwl, fwhm, transmission)
+            response = FilterResponse.createSimulated(cwl, fwhm, transmission)
         self.response = response
-        self.wavelengths = None
 
     def __hash__(self):
         """The hash of a filter is its name. This is here because we want to be able to
@@ -81,26 +80,56 @@ class Filter:
         return self.cwl is None or self.cwl == 0
 
     def serialise(self):
-        """Serialise - including response data"""
-        return self.cwl, self.fwhm, self.transmission, self.position, \
-               self.name, self.camera_name
+        """Serialise - including response data. The camera data files don't use this; it's handled in CameraData.
+        This is used for Source serialisation."""
+        resp = self.response.serialise()
+        logger.critical(f"SNARK - Filter Serialise {resp}")
+        # note that response.serialise() will return None for a simulated filter
+
+        # note new format; we still have to handle the old one.
+        return {
+            "cwl": self.cwl,
+            "fwhm": self.fwhm,
+            "transmission": self.transmission,
+            "position": self.position,
+            "name": self.name,
+            "camera_name": self.camera_name,
+            "description": self.description,
+            "response": resp
+        }
 
     @classmethod
     def deserialise(cls, d):
-        """Serialise - including response data"""
+        """Serialise - including response data. As above, used for Source deserialise, not camera filter data"""
         if isinstance(d, str):
             ui.error("Oops - old style file contains filter name, not filter data. Using dummy, please 'Run All'.")
             return DUMMY_FILTER
 
-        # we might have to deserialise a truncated tuple for legacy code
-        defaults = [None, None, 1.0, "unknown pos", "no name", "unknown camera", "no description"]
-        d = d + defaults[len(d):]
-        cwl, fwhm, trans, pos, name, camname, desc = d
-        # We get the filter response from the "response" field in the dict. If that's not there we simulate it.
-        if "response" in d:
+        # bugger; I wish I'd serialised as a dict and not a tuple.
+        if isinstance(d, dict):
+            cwl = d["cwl"]
+            fwhm = d["fwhm"]
+            trans = d["transmission"]
+            pos = d["position"]
+            name = d["name"]
+            camname = d["camera_name"]
+            resp = d["response"]
+            desc = d["description"]
+        elif isinstance(d, list):
+            # legacy stuff
+            # we might have to deserialise a truncated tuple for legacy code
+            defaults = [None, None, 1.0, "unknown pos", "no name", "unknown camera", "no description", None]
+            d = d + defaults[len(d):]
+            cwl, fwhm, trans, pos, name, camname, desc, resp = d
+            resp = None
+        else:
+            raise ValueError("filter serialisation format is not valid")
+
+        # We get the filter response from the "response" field in the list. If that's not there we simulate it.
+        if resp is not None:
             response = FilterResponse.deserialise(d["response"])
         else:
-            response = FilterResponseSimple.createSimulated(cwl,fwhm,trans)
+            response = FilterResponse.createSimulated(cwl,fwhm,trans)
         return Filter(cwl, fwhm, trans, pos, name, camname, desc, response=response)
 
     def getResponse(self, wavelengths: np.ndarray, angle=0) -> np.ndarray:
@@ -122,7 +151,7 @@ class Filter:
 
     def sourceDesc(self):
         """Description used in Source long descriptions"""
-        return f"Cam: {self.camera_name}, Filter: {self.name}({self.cwl}nm) pos {self.position}, {self.description}"
+        return f"Cam: {self.camera_name}, Filter: {self.name}({self.cwl}nm) pos={self.position} desc={self.description} resp={self.response}"
 
     def __repr__(self):
         return f"Filter({self.name},{self.cwl}@{self.fwhm}, {self.position}, t={self.transmission})"

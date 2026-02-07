@@ -18,6 +18,7 @@ class Dialog(QtWidgets.QDialog):
         self.cameraBox.currentIndexChanged.connect(self._camera_or_target_changed)
         self.reflBox.currentIndexChanged.connect(self._camera_or_target_changed)
         self.filterPlotButton.clicked.connect(self._filter_plot)
+        self.filterAngleSpin.valueChanged.connect(self._filter_plot)
         self.reflPlotButton.clicked.connect(self._refl_plot)
         self.filtReflPlotButton.clicked.connect(self._filt_refl_plot)
 
@@ -66,6 +67,7 @@ class Dialog(QtWidgets.QDialog):
 
         not_filter = []
         wavelengths = np.linspace(300, 1200, 400)
+        angle = self.filterAngleSpin.value()
         for n in filter_names:
             f = cam.getFilter(n)
             if not isinstance(f, Filter):
@@ -73,9 +75,9 @@ class Dialog(QtWidgets.QDialog):
                 continue
             if n == selected or selected == "ALL":
                 # get the response for a range of wavelengths
-                resp = f.getResponse(wavelengths)
+                resp = f.getResponse(wavelengths, angle)
                 label = f.name
-                if f.wavelengths is None:
+                if f.response.is_simulated:
                     label += " (sim)"
                 ax.plot(wavelengths, resp, label=label)
         if len(not_filter) > 0:

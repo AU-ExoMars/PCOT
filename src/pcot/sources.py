@@ -234,7 +234,7 @@ class Source(SourcesObtainable):
         else:
             s += f"{inptxt}: band {self.band}"
         if self.external is not None:
-            s += f" {self.external.long()}"
+            s += f" externalsource={self.external.long()}"
         return s
 
     def serialise(self) -> Dict[str, Any]:
@@ -255,7 +255,7 @@ class Source(SourcesObtainable):
             ui.log("Legacy format for sources not supported - please Run All to regenerate")
             return Source().setExternal(StringExternal("ERROR", "Legacy format for sources not supported"))
 
-        b = Filter.deserialise(d['band']) if isinstance(d['band'], list) else d['band']
+        b = Filter.deserialise(d['band']) if not isinstance(d['band'], str) else d['band']
         e = External.deserialise(d['external']) if d['external'] else None
         p = d.get('secondary_name', None)
         i = d['inputIdx']

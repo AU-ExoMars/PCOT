@@ -6,11 +6,14 @@ Filter response classes, which consist of interpolators
 2. FullFilterResponse encapsulates a more complex interpolator; maybe (phi,theta,wavelength)->response value
    Not sure we need it?
 """
+import logging
 import re
 from typing import Optional
 
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
+
+logger = logging.getLogger(__name__)
 
 # the range for generating sinulated data
 SIMULATED_FILTER_WAVELENGTHS = np.arange(200, 3500)
@@ -23,10 +26,12 @@ class FilterResponse:
     """
 
     _interpolator: RegularGridInterpolator
+    _is_simulated: bool  # essentially determines if this gets saved to the camera data file.
 
     def __init__(self, interpolator: Optional[RegularGridInterpolator],
                  wavelengths: Optional[np.ndarray]=None,
-                 values: Optional[np.ndarray]=None):
+                 values: Optional[np.ndarray]=None,
+                 is_simulated=False):
         """If an interpolator is provided, use it. Otherwise create a simulated interpolator from wavelengths and values."""
         if interpolator is None:
             self._interpolator = RegularGridInterpolator((wavelengths,), values,
@@ -35,6 +40,10 @@ class FilterResponse:
                                                      fill_value=None)  # we extrapolate the data if out-of-bounds
         else:
             self._interpolator = interpolator
+        self._is_simulated = is_simulated
+
+    def __str__(self):
+        return f"FilterResponse(sim={self.is_simulated}, interp={self._interpolator.values.shape})"
 
     @staticmethod
     def createSimulated(cwl: float, fwhm: float, transmission: float):
@@ -51,25 +60,41 @@ class FilterResponse:
         else:
             sigma = fwhm / (2 * np.sqrt(2 * np.log(2)))
             values = transmission * np.exp(-0.5 * ((SIMULATED_FILTER_WAVELENGTHS - cwl) / sigma) ** 2)
-        res = FilterResponse(None, wavelengths=SIMULATED_FILTER_WAVELENGTHS, values=values)
+        res = FilterResponse(None, wavelengths=SIMULATED_FILTER_WAVELENGTHS, values=values, is_simulated=True)
+        FilterResponse._sim_cache[key] = res
         FilterResponse._sim_cache[key] = res
         return res
 
     def getResponse(self, wavelengths: np.ndarray, angle=0.0) -> np.ndarray:
-        return self._interpolator(wavelengths)
+        dims = len(self._interpolator.values.shape)
+        if dims == 1:
+            return self._interpolator(wavelengths)
+        elif dims == 2:
+            return self._interpolator((wavelengths, angle))
+        else:
+            raise NotImplementedError(f"{dims}-dimensional interpolators not implemented")
 
     def serialise(self):
-        return {
-            "points": self._interpolator.grid,
-            "values": self._interpolator.values,
-            "method": self._interpolator.method,
-        }
+        if self._is_simulated:
+            # we return None if the filter is simulated - no point in saving that data.
+            return None
+        else:
+            return {
+                "points": self._interpolator.grid,
+                "values": self._interpolator.values,
+                "method": self._interpolator.method,
+            }
 
     @staticmethod
-    def deserialise(self, data):
-        return RegularGridInterpolator(data["points"], data["values"], method=data["method"],bounds_error=False,
-                                       fill_value=1.0)
+    def deserialise(data):
+        # this should only be called on a non-simulated filter, because of the check in serialise()
+        interp = RegularGridInterpolator(data["points"], data["values"], method=data["method"],
+                                         bounds_error=False, fill_value=0.0)
+        return FilterResponse(interp)
 
+    @property
+    def is_simulated(self):
+        return self._is_simulated
 
 
 def load_filter_response(csv: str, response_percentage=True) -> FilterResponse:

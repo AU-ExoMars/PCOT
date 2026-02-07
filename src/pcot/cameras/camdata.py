@@ -1,6 +1,7 @@
 import logging
 
 from pcot.cameras.filters import DUMMY_FILTER
+from pcot.cameras.filtresponse import FilterResponse
 from pcot.datum import Datum, nullSourceSet
 from pcot.datumtypes import Type
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedListType
@@ -13,6 +14,7 @@ FILTERDICT = TaggedDictType(
     transmission=("Transmission ratio", float, 1.0),
     position=("Position of filter in camera (e.g. 'L01')", Maybe(str), None),
     name=("Name of filter", Maybe(str), None),
+    response=("Filter response data", Maybe(dict), None),   # the dict is a serialised FilterResponse object
 )
 
 FILTERLIST = TaggedListType(FILTERDICT, 0)
@@ -67,7 +69,11 @@ class CameraParams:
         # note that this isn't how filters deserialise themselves (their method is different - legacy)
         # UGLY - we have to patch the camera name into the filters "upstairs" in CameraData, because
         # we can't get it here.
-        p.filters = {f.name: Filter(f.cwl, f.fwhm, f.transmission, f.position, f.name)
+        def deser_response(d):
+            return None if d is None else FilterResponse.deserialise(d)
+
+        p.filters = {f.name: Filter(f.cwl, f.fwhm, f.transmission, f.position, f.name,
+                                    None, response=deser_response(f.response))
                      for f in p.params['filters']}
 
         return p
@@ -80,6 +86,9 @@ class CameraParams:
             e = self.params.filters.append_default()
             for attr in ('cwl', 'fwhm', 'transmission', 'position', 'name'):
                 e[attr] = getattr(v, attr)
+            # save a serialised version of the filter response - this include nparrays, but that
+            # is still serialisable if we're saving to a FileArchive.
+            e['response'] = None if v.response is None or v.response.is_simulated else v.response.serialise()
 
         # now we have a fully populated TA and can just serialise everything
         d = self.params.serialise()
