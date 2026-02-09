@@ -146,7 +146,7 @@ def test_sourcesetbrief():
 
 def test_sourcesetlong():
     """Source set long description test"""
-    assert sourceset1withnulls.long() == 'SET[\n0: one\n1: two\n2: three\n]'
+    assert sourceset1withnulls.long() == 'SET[\n0: ext=one\n1: ext=two\n2: ext=three\n]'
 
 
 def test_sourcesetstr():
@@ -169,7 +169,7 @@ def test_inputsourcenames():
     source = Source().setBand(
         Filter(cwl=1000, fwhm=100, transmission=20, position="pos1", name="name1", camera_name="cam1", description="desc1"))
 
-    assert source.long() == "none: Cam: cam1, Filter: name1(1000nm) pos pos1, desc1"
+    assert source.long() == "none: Cam: cam1, Filter: name1(1000nm) pos=pos1 desc=desc1 resp=sim,3300"
     assert source.brief() == "1000"  # default caption is wavelength
     assert source.brief(captionType=DocumentSettings.CAP_CWL) == "1000"
     assert source.brief(captionType=DocumentSettings.CAP_NAMES) == "name1"
@@ -183,7 +183,7 @@ def test_inputsourcenamescalib():
         Filter(cwl=1000, fwhm=100, transmission=20, position="pos1", name="name1", camera_name="cam1", description="desc1"))
     source.setSecondaryName("calib")
 
-    assert source.long() == "calib none: Cam: cam1, Filter: name1(1000nm) pos pos1, desc1"
+    assert source.long() == "calib none: Cam: cam1, Filter: name1(1000nm) pos=pos1 desc=desc1 resp=sim,3300"
     assert source.brief() == "1000"  # default caption is wavelength
     assert source.brief(captionType=DocumentSettings.CAP_CWL) == "1000"
     assert source.brief(captionType=DocumentSettings.CAP_NAMES) == "name1"
@@ -243,7 +243,10 @@ def test_multibandsourcenameswithidxandextandlong():
     # check this kind of ctor works
     ms = MultiBandSource(sources)
     foo = ms.long()
-    assert foo == '{\n0: SET[\n10: Cam: cam1, Filter: name0(1000nm) pos pos0, desc extlong21\n]\n1: SET[\n11: Cam: cam1, Filter: name1(2000nm) pos pos1, desc extlong22\n]\n2: SET[\n12: Cam: cam1, Filter: name2(3000nm) pos pos2, desc extlong23\n]\n}\n'
+    # just got brackets around this to concat the string.
+    assert foo ==  ('{\n0: SET[\n10: Cam: cam1, Filter: name0(1000nm) pos=pos0 desc=desc resp=sim,3300 ext=extlong21\n]\n'
+                   '1: SET[\n11: Cam: cam1, Filter: name1(2000nm) pos=pos1 desc=desc resp=sim,3300 ext=extlong22\n]\n'
+                   '2: SET[\n12: Cam: cam1, Filter: name2(3000nm) pos=pos2 desc=desc resp=sim,3300 ext=extlong23\n]\n}\n')
 
 def test_multibandsourcedunder():
     """Test that multibands act as an array of SourceSets"""

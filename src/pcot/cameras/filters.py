@@ -37,6 +37,8 @@ class Filter:
     description: str
     # filter response wavelengths, a numpy array of float32
     wavelengths: Optional[np.ndarray]
+    # filter response data
+    response: FilterResponse
 
     def __init__(self, cwl, fwhm, transmission=1.0, position=None, name=None, camera_name=None, description=None,
                  response:FilterResponse = None
@@ -151,7 +153,7 @@ class Filter:
 
     def sourceDesc(self):
         """Description used in Source long descriptions"""
-        return f"Cam: {self.camera_name}, Filter: {self.name}({self.cwl}nm) pos={self.position} desc={self.description} resp={self.response}"
+        return f"Cam: {self.camera_name}, Filter: {self.name}({self.cwl}nm) pos={self.position} desc={self.description} resp={self.response.sourceDesc()}"
 
     def __repr__(self):
         return f"Filter({self.name},{self.cwl}@{self.fwhm}, {self.position}, t={self.transmission})"

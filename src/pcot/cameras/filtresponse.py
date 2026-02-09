@@ -43,7 +43,14 @@ class FilterResponse:
         self._is_simulated = is_simulated
 
     def __str__(self):
-        return f"FilterResponse(sim={self.is_simulated}, interp={self._interpolator.values.shape})"
+        """Used in debugging"""
+        dims = "x".join(map(str, self._interpolator.values.shape))
+        return f"FilterResponse(sim={self.is_simulated}, interp={dims})"
+
+    def sourceDesc(self):
+        """Used in Source descriptions"""
+        dims = "x".join(map(str, self._interpolator.values.shape))
+        return f"{'sim' if self._is_simulated else 'real'},{dims}"
 
     @staticmethod
     def createSimulated(cwl: float, fwhm: float, transmission: float):

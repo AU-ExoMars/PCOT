@@ -234,7 +234,7 @@ class Source(SourcesObtainable):
         else:
             s += f"{inptxt}: band {self.band}"
         if self.external is not None:
-            s += f" externalsource={self.external.long()}"
+            s += f" ext={self.external.long()}"
         return s
 
     def serialise(self) -> Dict[str, Any]:

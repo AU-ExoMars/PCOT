@@ -49,7 +49,7 @@ def test_multifile_load_with_default_pattern(globaldatadir):
         assert f.transmission == 1
         path = str(globaldatadir / "multi" / names[i])
         # starts with zero because this is for input 0
-        assert s.long() == f"0: Cam: None, Filter: ??(0nm) pos ??, None {path}"
+        assert s.long() == f"0: Cam: None, Filter: ??(0nm) pos=?? desc=None resp=sim,3300 ext={path}"
 
 
 def test_multifile_load_with_bad_pattern(globaldatadir):
