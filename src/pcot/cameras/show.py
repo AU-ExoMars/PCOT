@@ -19,6 +19,7 @@ class Dialog(QtWidgets.QDialog):
         self.reflBox.currentIndexChanged.connect(self._camera_or_target_changed)
         self.filterPlotButton.clicked.connect(self._filter_plot)
         self.filterAngleSpin.valueChanged.connect(self._filter_plot)
+        self.y01Box.stateChanged.connect(self._camera_or_target_changed)
         self.reflPlotButton.clicked.connect(self._refl_plot)
         self.filtReflPlotButton.clicked.connect(self._filt_refl_plot)
 
@@ -62,7 +63,6 @@ class Dialog(QtWidgets.QDialog):
         cam = cameras.getCamera(self.cameraBox.currentText())
         filter_names = cam.params.filters
         selected = self.filterBox.currentText()
-
         mpl, ax = self._init_plot("response")
 
         not_filter = []
@@ -79,10 +79,12 @@ class Dialog(QtWidgets.QDialog):
                 label = f.name
                 if f.response.is_simulated:
                     label += " (sim)"
-                ax.plot(wavelengths, resp, label=label)
+                ax.plot(wavelengths, resp, label=label )
         if len(not_filter) > 0:
             self.errorText.setText(f"Not true filters: {', '.join(not_filter)}")
         ax.legend()
+        if self.y01Box.isChecked():
+            ax.set_ylim([0, 1])
         mpl.draw()
 
     def _refl_plot(self):

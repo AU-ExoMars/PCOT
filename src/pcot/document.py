@@ -187,6 +187,9 @@ class Document:
         May throw exceptions, typically FileNotFoundError"""
         with archive.FileArchive(fname, progressCallback=lambda s: ui.msg(s)) as arc:
             dd = arc.readJson("JSON")
+            ver_ok = pcot.compatible_version_check(arc.metadata.pcotversion)
+            if not ver_ok:
+                raise ValueError(f"Cannot load document from {fname} - it is version {arc.metadata.pcotversion}, this PCOT can only load >{pcot.oldest_valid_version}")
             self.deserialise(dd)
             pcot.config.addRecent(fname)
             self.metadata = arc.metadata    # keep a ref to the metadata from the archive
