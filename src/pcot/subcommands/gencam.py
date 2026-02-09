@@ -4,6 +4,7 @@ import glob
 import os
 
 from pcot.cameras import filtresponse
+from pcot.cameras.filtresponse import FilterResponse
 from pcot.imagecube import CannotLoadImageBadFormatException
 from pcot.subcommands import subcommand, argument
 from dataclasses import dataclass
@@ -183,7 +184,7 @@ def createFilters(filter_dict, position_dict=None):
             response_percentage = d.get("response_percentage", True)
             # load the filter response from a CSV file; that will determine what kind of filter response
             # (potentially could be more complex than just wavelength,response).
-            response = filtresponse.load_filter_response(d["response"], response_percentage)
+            response = FilterResponse.load_from_csv(d["response"], response_percentage)
         else:
             response = None
 

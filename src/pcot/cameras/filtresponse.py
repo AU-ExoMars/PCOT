@@ -96,60 +96,60 @@ class FilterResponse:
     def is_simulated(self):
         return self._is_simulated
 
+    @staticmethod
+    def load_from_csv(csv: str, response_percentage=True) -> 'FilterResponse':
+        """This is only called when we generate filter response data from files in gencam. It parses a filter
+        response. The first column is the wavelength, remaining columns are response - if there is more than
+        one remaining column, it is assumed to contain an angle (for looking through the filter aslant, as it were;
+        not the same angles as we deal with in reflectance!). Otherwise it's just the response at all angles."""
 
-def load_filter_response(csv: str, response_percentage=True) -> FilterResponse:
-    """This is only called when we generate filter response data from files in gencam. It parses a filter
-    response. The first column is the wavelength, remaining columns are response - if there is more than
-    one remaining column, it is assumed to contain an angle (for looking through the filter aslant, as it were;
-    not the same angles as we deal with in reflectance!). Otherwise it's just the response at all angles."""
+        # We're not using the csv package, and we're opening with latin-1 because my data has a degree symbol!
 
-    # We're not using the csv package, and we're opening with latin-1 because my data has a degree symbol!
+        NUMBER_RE = re.compile(r"-?\d+(?:\.\d+)?")      # regex for finding first valid number as a group
 
-    NUMBER_RE = re.compile(r"-?\d+(?:\.\d+)?")      # regex for finding first valid number as a group
+        def extract_number(s: str):
+            m = NUMBER_RE.search(s)
+            return m.group(0) if m else None
 
-    def extract_number(s: str):
-        m = NUMBER_RE.search(s)
-        return m.group(0) if m else None
+        with open(csv, encoding="latin-1") as f:
+            lines = f.readlines()
+            wavelengths = []
+            # get the angles if needed from the first line; assume the first column is "wavelength" or something
+            header = lines[0]
+            angles = [extract_number(x) for x in header.split(",")[1:]]
+            if len(angles) == 1:
+                # only one angle, and a non-number is OK (and expected) in that slot
+                angles = [0.0]
+            else:
+                # more than one angle, and they have to be numbers
+                if any(x is None for x in angles):
+                    raise ValueError("A non-numeric angle is provided for a multiangle filter response")
+                angles = [float(x) for x in angles]
+            lines = lines[1:]  # strip headers
+            wavelengths = []
+            # each row in this array is data at each wavelength,
+            # and consists of values for each angle.
+            # In short, rows=wavelengths, cols=angles.
+            values_by_angle_by_wavelength = []
 
-    with open(csv, encoding="latin-1") as f:
-        lines = f.readlines()
-        wavelengths = []
-        # get the angles if needed from the first line; assume the first column is "wavelength" or something
-        header = lines[0]
-        angles = [extract_number(x) for x in header.split(",")[1:]]
-        if len(angles) == 1:
-            # only one angle, and a non-number is OK (and expected) in that slot
-            angles = [0.0]
-        else:
-            # more than one angle, and they have to be numbers
-            if any(x is None for x in angles):
-                raise ValueError("A non-numeric angle is provided for a multiangle filter response")
-            angles = [float(x) for x in angles]
-        lines = lines[1:]  # strip headers
-        wavelengths = []
-        # each row in this array is data at each wavelength,
-        # and consists of values for each angle.
-        # In short, rows=wavelengths, cols=angles.
-        values_by_angle_by_wavelength = []
+            response_factor = 0.01 if response_percentage else 1.0
+            for line in lines:
+                line = line.strip().split(",")
+                wavelengths.append(float(line[0]))
+                # Note that the data is PERCENTAGES.
+                values = [float(x)*response_factor for x in line[1:]]
+                values_by_angle_by_wavelength.append(values)
 
-        response_factor = 0.01 if response_percentage else 1.0
-        for line in lines:
-            line = line.strip().split(",")
-            wavelengths.append(float(line[0]))
-            # Note that the data is PERCENTAGES.
-            values = [float(x)*response_factor for x in line[1:]]
-            values_by_angle_by_wavelength.append(values)
+            values = np.array(values_by_angle_by_wavelength, dtype=np.float32)
 
-        values = np.array(values_by_angle_by_wavelength, dtype=np.float32)
-
-        # we have an array of responses, so create an interpolator.
-        data = np.stack(values, axis=0)
-        points = [np.array(x, np.float32) for x in (wavelengths, angles)]
-        interpolator = RegularGridInterpolator(points, data,
-                                               bounds_error=False,
-                                               fill_value=0.0
-                                               )
-        return FilterResponse(interpolator)
+            # we have an array of responses, so create an interpolator.
+            data = np.stack(values, axis=0)
+            points = [np.array(x, np.float32) for x in (wavelengths, angles)]
+            interpolator = RegularGridInterpolator(points, data,
+                                                   bounds_error=False,
+                                                   fill_value=0.0
+                                                   )
+            return FilterResponse(interpolator)
 
 
 
