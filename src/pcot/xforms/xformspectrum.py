@@ -140,7 +140,7 @@ class XFormSpectrum(XFormType):
 
         for i in range(NUMINPUTS):
             self.addInputConnector(str(i), Datum.IMG, "a single line in the plot")
-        self.addOutputConnector("data", Datum.DATA, "a CSV output (use 'dump' or 'sink' to read it)")
+        self.addOutputConnector("data", Datum.TABLE, "a CSV output (use 'dump' or 'sink' to read it)")
 
     def createTab(self, n, window):
         pcot.ui.msg("creating a tab with a plot widget takes time...")
@@ -170,7 +170,7 @@ class XFormSpectrum(XFormType):
         # and construct the SpectrumSet
         node.data = SpectrumSet(inputDict, ignorePixSD=node.params.ignorePixSD)
         fixSortList(node)
-        node.setOutput(0, Datum(Datum.DATA, node.data.table(), sources=node.data.getSources()))
+        node.setOutput(0, Datum(Datum.TABLE, node.data.table(), sources=node.data.getSources()))
 
 
 class ReorderDialog(QDialog):

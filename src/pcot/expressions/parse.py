@@ -451,23 +451,10 @@ class InstIndex(Instruction):
         for x in range(0, self.argcount):
             stack.pop()
         v = stack.pop()
-        if v.tp == Datum.IDENT:
-            raise ParseException("unknown function '{}' ".format(v.val))
-        elif v.tp == Datum.NUMBER:
-            if len(args) > 1:
-                raise ParseException("only 1D vectors supported")
-            idx = args[0]
-            if idx.tp != Datum.NUMBER or not idx.val.isscalar():
-                raise ParseException("indices must be scalars")
-            i = idx.get(Datum.NUMBER)
 
-            res = v.val[i.n]
-            sources = SourceSet([v.sources, idx.sources])
-            stack.append(Datum(Datum.NUMBER, res, sources))
-        else:
-            # if we do (say) "a()", we'll get "cannot call a (whatever input A is connected to)..."
-            raise ParseException("cannot get a value from a {} as if it were a vector".format(v.tp))
-
+        # the type should know how to do this.
+        r = v.tp.getByIndices(v, args)
+        stack.append(r)
 
 def execute(seq: List[Instruction], stack: Stack) -> float:
     """Execute a list of instructions on a given stack"""

@@ -130,7 +130,7 @@ def test_multifile_load_with_good_pattern(globaldatadir):
         qq = s.long()
         # the long string here is a bit weird, in that it has the filenames for all the filters in always,
         # but that's because we're using the long string for the multifile input as a whole.
-        assert s.long() == f"0: Cam: PANCAM, Filter: {name}({float(cwl)}nm) pos {pos}, None {path / fn}"
+        assert s.long() == f"0: Cam: PANCAM, Filter: {name}({float(cwl)}nm) pos={pos} desc=None resp=sim,3300 ext={path / fn}"
 
 
 def test_multifile_load_with_cwl(globaldatadir):

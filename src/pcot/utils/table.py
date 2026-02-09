@@ -4,6 +4,7 @@ from collections import OrderedDict
 
 import numpy as np
 
+from pcot.sources import nullSource
 from pcot.utils.html import HTML, Col
 
 
@@ -39,6 +40,46 @@ class Table:
         self._internalLabelCt = 0  # used for when we don't give a label to newRow
         self.NA = 'NA'
         self.sigfigs = 5
+
+    def getByIndices(self, args, sources):
+        """Given a list of Datum index objects, return a Datum for the item in the row and column indicated.
+        Row is first."""
+        from pcot.datum import Datum
+        from pcot.value import Value
+
+        def get(d: Datum, c: OrderedDict, txt):
+            if d.tp == Datum.NUMBER:
+                if not d.val.isscalar():
+                    raise ValueError("cannot use a vector as an index")
+                k = int(d.val.n)
+            elif d.tp == Datum.IDENT or d.tp == Datum.STRING:
+                k = d.val
+            else:
+                raise ValueError(f"cannot use a {d.tp.name} as an index")
+            # the key could be an integer or a string, but the dict keys are all strings
+            if k not in c:
+                k = str(k)
+                if k not in c:
+                    raise KeyError(f"key {k} not in the table {txt}")
+            return c[k]
+
+        row = get(args[0], self.rows, "rows")
+        sd = None
+        if len(args) > 1:
+            # if a third argument is given, this is used to get stddeviation!
+            # It's ignored if the value from the main column is not numeric
+            v = get(args[1], row, "columns")
+            if len(args) > 2:
+                sd = get(args[2], row, "columns")
+        else:
+            # if there is no column given, assume there is only one
+            k = next(iter(row.keys()))
+            v = row[k]
+        if isinstance(v, int) or isinstance(v, float) or isinstance(v, np.float32) or isinstance(v, np.float64):
+            return Datum(Datum.NUMBER, Value(v, sd), sources)
+        else:
+            return Datum(Datum.STRING, str(v), sources)
+
 
     def newRow(self, label=None):
         """Select a new row or an existing row - the label is internal use only. For a new unique row

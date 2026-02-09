@@ -262,7 +262,7 @@ def test_multiple_text_output_append_shorthand_from_file_jinja(globaldatadir):
 
 
 def test_spectrum(globaldatadir):
-    """Test a spectrum (just Datum.DATA) is output correctly, and that we can add a point
+    """Test a spectrum (just Datum.TABLE) is output correctly, and that we can add a point
     in the parameter file."""
 
     pcot.setup()
@@ -298,7 +298,7 @@ def test_spectrum(globaldatadir):
 
 
 def test_add_circle_to_multidot_using_list(globaldatadir):
-    """Test a spectrum (just Datum.DATA) is output correctly, and that we can add a point
+    """Test a spectrum (just Datum.TABLE) is output correctly, and that we can add a point
     in the parameter file using a list format for the .croi (circular ROI)"""
     pcot.setup()
     r = Runner(globaldatadir / "runner/test2.pcot")

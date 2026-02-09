@@ -108,6 +108,11 @@ class Type:
             s = str(d.val)
             f.write(s+"\n")
 
+    def getByIndices(self, d, args):
+        """Given that d is an Datum and args is a vector of Datum objects,
+        return what you would get with d[args0,args1...]"""
+        raise ValueError(f"Cannot index into datum type {self.name}")
+
 
 # Built-in datum types
 
@@ -236,6 +241,20 @@ class NumberType(Type):
         else:
             return d.val.n.nbytes + d.val.u.nbytes + d.val.dq.nbytes
 
+    def getByIndices(self, d, args):
+        from pcot.datum import Datum
+        from pcot.sources import SourceSet
+        if len(args) > 1:
+            raise ValueError("only 1D vectors supported")
+        idx = args[0]
+        if idx.tp != Datum.NUMBER or not idx.val.isscalar():
+            raise ValueError("indices must be scalars")
+        i = idx.get(Datum.NUMBER)
+
+        res = d.val[i.n]
+        sources = SourceSet([d.sources, idx.sources])
+        return Datum(Datum.NUMBER, res, sources)
+
 
 class VariantType(Type):
     def __init__(self):
@@ -251,6 +270,17 @@ class GenericDataType(Type):
 
     def copy(self, d):
         return d    # this type is immutable
+
+
+class TabularDataType(Type):
+    def __init__(self):
+        super().__init__('table', valid=None)
+
+    def copy(self, d):
+        return d    # this type is immutable
+
+    def getByIndices(self, d, args):
+        return d.val.getByIndices(args, d.sources)
 
 
 class TestResultType(Type):
@@ -274,6 +304,9 @@ class IdentType(Type):
 
     def copy(self, d):
         return d    # this type is immutable
+
+    def getByIndices(self, d, args):
+        raise ValueError("unknown function '{}' ".format(d.val))
 
 
 class StringType(Type):

@@ -91,8 +91,8 @@ class XFormExpr(XFormType):
     If an image is used in a binary operation with a vector on the other side, the vector must have the same number of
     elements as there are bands in the image. The operation will be performed on each band. Consider a 3-band image
     and the vector `[2,3,4]`. If we multiply them, the result will an image with the first band multiplied by 2,
-    the second band multiplied by 3, and the third band multiplied by 4. 
-    
+    the second band multiplied by 3, and the third band multiplied by 4.
+
     ### Operators on ROIs themselves (as opposed to images with ROIs)
 
     |operator    |description|
@@ -129,11 +129,19 @@ class XFormExpr(XFormType):
     ### Brackets
 
     Round brackets are used to group expressions as usual, but square brackets are used for indexing into a vector.
-    For example, **a[3]** will extract the fourth element of the vector **a**. However, square brackets cannot
-    (yet) create a vector. To do this, use the `vec` function - so `vec(1,2,3)[1]` will return 2.
+    For example, **a[3]** will extract the fourth element of the vector **a**. Square brackets can also create a vector,
+    so **[1,2,3]** will create a vector.
     
     Band extraction can also be performed with vectors provided the vector elements are numeric (i.e. wavelengths):
     `a $ vec(640,550,440)` is valid.
+
+    ### Extracting data from tables (e.g. spectra)
+
+    It's possible to use brackets to extract data from tables. In a spectrum, for example, the rows are
+    labelled by ROI and the columns by wavelength (prefixed by 'm' for mean, 's' for standard deviation).
+    We can extract a particular datum from such a table by using **a[row,column]**, e.g. `a[patchA, m440]`
+    would get the mean of the 440nm band for the roi "patchA". If two column names are given, a numeric value
+    made up of mean and standard deviation are extracted, e.g. `a[patchA, m440, s440]`.
     
 
     ### Properties
