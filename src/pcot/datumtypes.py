@@ -183,6 +183,21 @@ class ImgType(Type):
                  pixelWidth=output.width,
                  append=output.append)
 
+    def getByIndices(self, d, args):
+        # turn the arguments into a list of band wavelengths or names
+        from pcot.datum import Datum
+        bands = []
+        for x in args:
+            if x.tp != Datum.NUMBER and x.tp != Datum.IDENT:
+                raise ValueError(f"Invalid datatype {x.tp} for band index")
+            if x.tp == Datum.NUMBER:
+                if not x.val.isscalar():
+                    raise ValueError(f"band index into image must be scalar")
+                bands.append(x.val.n)
+            else:
+                bands.append(x.val)
+        return Datum(Datum.IMG, d.val.getChannelImageByFilter(bands))
+
 
 class RoiType(Type):
     def __init__(self):

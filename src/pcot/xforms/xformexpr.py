@@ -126,14 +126,35 @@ class XFormExpr(XFormType):
     | **(a+b)$G0** | **a$G0 + b$G0** |
     | **((a+b)/2)$780** | **(a$780+b$780)/2**  |
 
+    It's possible to **extract multiple bands from an image** using the square bracket notation (see below).
+    For example,
+    ```
+    a[640,550]
+    ```
+    will generate a single image from the 640nm and 550nm bands of the input. Names of filters can also be used, or
+    RGB names for images loaded by the RGB input:
+    ```
+    a[R,G]
+    ```
+    selects just the red and green channels from an RGB image.
+
     ### Brackets
 
     Round brackets are used to group expressions as usual, but square brackets are used for indexing into a vector.
     For example, **a[3]** will extract the fourth element of the vector **a**. Square brackets can also create a vector,
     so **[1,2,3]** will create a vector.
+
+    Band extraction can be performed by giving a list of values (either numbers or identifiers) to an image in square
+    brackets:
     
+    | expression | meaning |
+    |-----|------|
+    |**a[640,540]**|create an image from the 640nm and 540nm bands of input *a*|
+    |**a[R,G]**|create an 2-band image from the R,G bands of input *a* (an RGB image)|
+    |**a[R,R,R]**|create an RGB image consisting of only the red band of input *a*|
+
     Band extraction can also be performed with vectors provided the vector elements are numeric (i.e. wavelengths):
-    `a $ vec(640,550,440)` is valid.
+    `a $ [640,550,440]` is valid, but it's better to use the form `a[640,550,440]`.
 
     ### Extracting data from tables (e.g. spectra)
 
