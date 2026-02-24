@@ -31,6 +31,7 @@ class FilterResponse:
     def __init__(self, interpolator: Optional[RegularGridInterpolator],
                  wavelengths: Optional[np.ndarray]=None,
                  values: Optional[np.ndarray]=None,
+                 over_unity=False,      # if true, indicates some responses were >1 and were clipped
                  is_simulated=False):
         """If an interpolator is provided, use it. Otherwise create a simulated interpolator from wavelengths and values."""
         if interpolator is None:
@@ -41,6 +42,7 @@ class FilterResponse:
         else:
             self._interpolator = interpolator
         self._is_simulated = is_simulated
+        self.over_unity = over_unity
 
     def __str__(self):
         """Used in debugging"""
@@ -95,9 +97,14 @@ class FilterResponse:
     @staticmethod
     def deserialise(data):
         # this should only be called on a non-simulated filter, because of the check in serialise()
-        interp = RegularGridInterpolator(data["points"], data["values"], method=data["method"],
+        v = data["values"]
+        # there's really no better way of dealing with this without better data that doesn't produce
+        # filters that actually emit light. Dammit.
+        over_unity = np.any(v>1)
+        v = np.clip(v, 0, 1)
+        interp = RegularGridInterpolator(data["points"], v, method=data["method"],
                                          bounds_error=False, fill_value=0.0)
-        return FilterResponse(interp)
+        return FilterResponse(interp, over_unity=over_unity)
 
     @property
     def is_simulated(self):

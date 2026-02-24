@@ -32,22 +32,29 @@ class Dialog(QtWidgets.QDialog):
         self._camera_or_target_changed()
 
     def _camera_or_target_changed(self):
+        # get currently selected items
+        curPatch = self.patchBox.currentText()
+        curFilter = self.filterBox.currentText()
+
+        # add new items, starting by clearing and adding ALL
         self.patchBox.clear()
         self.filterBox.clear()
         self.patchBox.addItem("ALL")
         self.filterBox.addItem("ALL")
-
-        # get the currently selected camera's filters
+        # add the currently selected camera's filters
         cam = cameras.getCamera(self.cameraBox.currentText())
         for filter in cam.params.filters:
             self.filterBox.addItem(filter)
-
-        # and patches for the currently selected target
+        # add patches for the currently selected target
         rname = self.reflBox.currentText()
         if rname is not None and rname!="":
             refl = cameras.getReflectance(rname)
             for p in refl.get_patches():
                 self.patchBox.addItem(p)
+
+        # and try to set the previously selected items, which may fail (which is OK)
+        self.patchBox.setCurrentText(curPatch)
+        self.filterBox.setCurrentText(curFilter)
 
     def _init_plot(self, ylab):
         mpl = self.mpl_widget
