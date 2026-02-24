@@ -8,7 +8,7 @@ from pcot.utils import image, SignalBlocker
 from pcot.xform import xformtype, XFormType
 
 
-# performs contrast stretching on a single channel. The image is a (h,w) numpy array.
+# performs contrast stretching on a single channel. The image is a (h,w) numpy array. The tolerance is a percentage.
 # There is also a (h,w) array mask. We also set DQ saturation bits in the DQ array passed in.
 
 def contrast1(img, tol, mask, dqToSet):
@@ -21,7 +21,6 @@ def contrast1(img, tol, mask, dqToSet):
 
     # find lower and upper limit for contrast stretching, and set those in the
     # masked image
-    tol = 100 * tol   # convert to percent
     low, high = np.percentile(comp, tol), np.percentile(comp, 100 - tol)
 
     satlow = masked < low
@@ -30,8 +29,9 @@ def contrast1(img, tol, mask, dqToSet):
     masked[satlow] = low
     masked[sathigh] = high
 
-    dqToSet[satlow] |= dq.SAT
-    dqToSet[sathigh] |= dq.SAT
+    if dqToSet is not None:
+        dqToSet[satlow] |= dq.SAT
+        dqToSet[sathigh] |= dq.SAT
 
     # ...rescale the color values in the masked image to 0..1
     masked = (masked - masked.min()) / (masked.max() - masked.min())
@@ -50,7 +50,8 @@ def contrast1(img, tol, mask, dqToSet):
 class XformContrast(XFormType):
     """
     Perform a simple contrast stretch separately on each channel. The stretch is linear around the midpoint
-    and excessive values are clamped. The knob controls the amount of stretch applied. Uncertainty is discarded."""
+    and excessive values are clamped. Clamped values normally have the SAT DQ bit set (and so may appear magenta),
+    this can be disabled. Uncertainty is discarded."""
 
     # type constructor run once at startup
     def __init__(self):
@@ -64,7 +65,8 @@ class XformContrast(XFormType):
         # There is one data item which should be saved - the "tol" (tolerance) control value.
         # A TaggedDict in the node, also called "params," will be created from this template.
         self.params = TaggedDictType(
-            tol=("Contrast stretch tolerance (between 0 and 0.5 exclusive)", float, 0.2)
+            tol=("Contrast stretch tolerance (between 0% and 50%)", float, 0.2),
+            sat=("Set the saturated DQ bit on pixels outside the stretch range", bool, True)
         )
 
     # this creates a tab when we want to control a node. See below for the class definition.
@@ -90,16 +92,23 @@ class XformContrast(XFormType):
             # single channel, so use contrast1(). First, though, we need to extract the subimage
             # selected by the ROI (if any)
             subimage = img.subimage()
-            dqv = subimage.maskedDQ().copy()
+            # get the tolerance parameter
             tol = node.params.tol
+            # only get the DQ array if we're going to set the saturated bits in it, otherwise set to None
+            dqv = subimage.maskedDQ().copy() if node.params.sat else None
             if img.channels == 1:
                 # note use of the "params" TaggedDict here, with tol in it. This is the TaggedDict
                 # created from the "params" TaggedDictType in the type singleton.
                 newsubimg = contrast1(subimage.img, tol, subimage.mask, dqv)
             else:
                 imgs = image.imgsplit(subimage.img)
-                dqs = image.imgsplit(dqv)
-                newsubimg = image.imgmerge([contrast1(x, tol, subimage.mask, y) for x, y in zip(imgs, dqs)])
+                # we need to apply the operation separately to each band, and this requires two different cases -
+                # one for when we also need to handle the DQ arrays, and one for when we don't.
+                if node.params.sat:
+                    dqs = image.imgsplit(dqv)
+                    newsubimg = image.imgmerge([contrast1(x, tol, subimage.mask, y) for x, y in zip(imgs, dqs)])
+                else:
+                    newsubimg = image.imgmerge([contrast1(x, tol, subimage.mask, None) for x in imgs])
             # having got a modified subimage, we need to splice it in. No uncertainty is passed in, so the
             # uncertainty is discarded and the NOUNC bit set.
             out = img.modifyWithSub(subimage, newsubimg, dqv=dqv)
@@ -124,6 +133,10 @@ class TabContrast(pcot.ui.tabs.Tab):
         # into a subwidget called "w".
         self.w.spinBox.valueChanged.connect(self.setContrast)
 
+        # connect the radio button for setting the saturated DQ bit on pixels which become 0 and 1
+        # in the output
+        self.w.setSatButton.toggled.connect(self.setSatChanged)
+
         # we set this in setContrast so that calling changed(), which calls onNodeChanged(),
         # doesn't change the widget - because setContrast is called in response to a widget
         # change. Remove the check in onNodeChanged and type values into the box
@@ -141,6 +154,13 @@ class TabContrast(pcot.ui.tabs.Tab):
         self.changed()
         self.inSetContrast = False
 
+    def setSatChanged(self, v):
+        self.mark()
+        self.inSetContrast = True
+        self.node.params.sat = self.w.setSatButton.isChecked()
+        self.changed()
+        self.inSetContrast = False
+
     # This is called from the tab constructor and from the loading system: it updates the
     # tab's controls with the values in the node. In this case, it also displays the stored
     # image on the tab's canvas - this is a class in the ui package which can display OpenCV
@@ -151,4 +171,5 @@ class TabContrast(pcot.ui.tabs.Tab):
         if not self.inSetContrast:
             # see the constructor for why the check of inSetContrast is here
             self.w.spinBox.setValue(self.node.params.tol)
+            self.w.setSatButton.setChecked(self.node.params.sat)
         self.w.canvas.display(self.node.getOutput(0))
