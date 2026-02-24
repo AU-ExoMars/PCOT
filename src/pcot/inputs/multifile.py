@@ -372,6 +372,7 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
             # strings in the combobox are typically "10 bits" or "FulL"
             if s == "Full":
                 self.method.bitdepth = None
+                self.onInputChanged()
             else:
                 ll = s.split()
                 if len(ll) > 0:
