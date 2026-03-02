@@ -66,9 +66,17 @@ def show(camera, args):
 
     if args.filters:
         print(f"  Filters:")
-        print(f"    {'Name':<5} {'Pos':<5} {'CWL':<5} {'FWHM':<5} {'transmission':14}")
+        print(f"    {'Name':<5} {'Pos':<5} {'CWL':<5} {'FWHM':<5} {'transmission':14} {'more info':10}")
         for _, f in camera.params.filters.items():
-            print(f"    {f.name:<5} {f.position:<5} {int(f.cwl):<5} {int(f.fwhm):<5} {f.transmission:<14}")
+            if isinstance(f, Filter):
+                extra = ""
+                if f.response.is_simulated:
+                    extra += "(simulated)"
+                if f.response.clipped_to:
+                    extra += f"(clipped to {f.response.clipped_to}%)"
+                print(f"    {f.name:<5} {f.position:<5} {int(f.cwl):<5} {int(f.fwhm):<5} {f.transmission:<14} {extra:10}")
+            else:
+                print(f"    {f} (not a filter??)")
 
     if args.plot:
         import matplotlib.pyplot as plt
@@ -78,9 +86,19 @@ def show(camera, args):
             if isinstance(f, Filter):
                 resp = f.getResponse(wavelengths)
                 label = f.name
-                if f.wavelengths is None:
+                if f.response.is_simulated:
                     label += " (sim)"
+                elif f.response.clipped_to:
+                    label += f" (clipped {f.response.clipped_to}%)"
+
                 plt.plot(wavelengths, resp, label=label)
+                if f.response.clipped_to:
+                    # find the part of the response that is equal to the clipped level
+                    xs = np.where(np.abs(resp - f.response.clipped_to / 100) < 0.000001)[0]
+                    if len(xs) > 0:
+                        plt.hlines(f.response.clipped_to / 100, wavelengths[xs[0]], wavelengths[xs[-1]],
+                                  linewidth=3, color="r")
+
         plt.title(p.name)
         plt.xlabel("Wavelength (nm)")
         plt.ylabel("Transmission")

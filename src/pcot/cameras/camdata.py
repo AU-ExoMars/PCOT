@@ -78,8 +78,8 @@ class CameraParams:
 
         for f in p.filters.values():
             if isinstance(f, Filter) and f.response is not None:
-                if f.response.over_unity:
-                    logger.error(f"Camera data response for {f.name} is over unity and has been clipped")
+                if f.response.clipped_to:
+                    logger.error(f"Camera data response for {f.name} is over {f.response.clipped_to}% and has been clipped")
         return p
 
     def serialise(self):

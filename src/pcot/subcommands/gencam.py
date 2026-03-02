@@ -182,9 +182,14 @@ def createFilters(filter_dict, position_dict=None):
             # responses are usually percentage, but could be 0-1 if you specify false
             # here.
             response_percentage = d.get("response_percentage", True)
+            # Sometimes filters have spurious high readings (e.g. G12 in the training model geology filters)
+            # due to problems with the sensor switchover on certain spectrometers. To deal with this,
+            # we can specify a clip value. You'll get a warning when you clip if you provide this. If you
+            # don't, you'll get an error.
+            response_clip_percentage = d.get("response_clip_percentage", None)
             # load the filter response from a CSV file; that will determine what kind of filter response
             # (potentially could be more complex than just wavelength,response).
-            response = FilterResponse.load_from_csv(d["response"], response_percentage)
+            response = FilterResponse.load_from_csv(d["response"], response_percentage, response_clip_percentage)
         else:
             response = None
 

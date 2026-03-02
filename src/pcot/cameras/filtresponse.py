@@ -27,11 +27,12 @@ class FilterResponse:
 
     _interpolator: RegularGridInterpolator
     _is_simulated: bool  # essentially determines if this gets saved to the camera data file.
+    clipped_to: Optional[float]
 
     def __init__(self, interpolator: Optional[RegularGridInterpolator],
                  wavelengths: Optional[np.ndarray]=None,
                  values: Optional[np.ndarray]=None,
-                 over_unity=False,      # if true, indicates some responses were >1 and were clipped
+                 clipped_to: Optional[float]=None,
                  is_simulated=False):
         """If an interpolator is provided, use it. Otherwise create a simulated interpolator from wavelengths and values."""
         if interpolator is None:
@@ -42,7 +43,7 @@ class FilterResponse:
         else:
             self._interpolator = interpolator
         self._is_simulated = is_simulated
-        self.over_unity = over_unity
+        self.clipped_to = clipped_to   # the level to which this response has been clipped (percentage), or None
 
     def __str__(self):
         """Used in debugging"""
@@ -92,30 +93,33 @@ class FilterResponse:
                 "points": self._interpolator.grid,
                 "values": self._interpolator.values,
                 "method": self._interpolator.method,
+                "clipped_to": self.clipped_to,
             }
 
     @staticmethod
     def deserialise(data):
         # this should only be called on a non-simulated filter, because of the check in serialise()
         v = data["values"]
-        # there's really no better way of dealing with this without better data that doesn't produce
-        # filters that actually emit light. Dammit.
-        over_unity = np.any(v>1)
-        v = np.clip(v, 0, 1)
         interp = RegularGridInterpolator(data["points"], v, method=data["method"],
                                          bounds_error=False, fill_value=0.0)
-        return FilterResponse(interp, over_unity=over_unity)
+        return FilterResponse(interp, clipped_to=data.get("clipped_to",None))
 
     @property
     def is_simulated(self):
         return self._is_simulated
 
     @staticmethod
-    def load_from_csv(csv: str, response_percentage=True) -> 'FilterResponse':
+    def load_from_csv(csv: str, response_percentage=True, response_clip_percentage=None) -> 'FilterResponse':
         """This is only called when we generate filter response data from files in gencam. It parses a filter
         response. The first column is the wavelength, remaining columns are response - if there is more than
         one remaining column, it is assumed to contain an angle (for looking through the filter aslant, as it were;
-        not the same angles as we deal with in reflectance!). Otherwise it's just the response at all angles."""
+        not the same angles as we deal with in reflectance!). Otherwise it's just the response at all angles.
+
+        The response_clip_percentage gives a clipping level for responses (we might need this if we get overunity
+        responses for certain filters due to sensor mode switching problems). If it is not provided, you'll
+        get an error if the responses are over unity. If it is, clipping is done to this level and an error given
+        if it was necessary.
+        """
 
         # We're not using the csv package, and we're opening with latin-1 because my data has a degree symbol!
 
@@ -158,12 +162,24 @@ class FilterResponse:
 
             # we have an array of responses, so create an interpolator.
             data = np.stack(values, axis=0)
+
+            # clip the data if we need to
+            clipped_to = None
+            if response_clip_percentage is not None:
+                clip_value = response_clip_percentage/100.0
+                if np.any(data > clip_value):
+                    logger.warning(f"Some response values are over specified clip {response_clip_percentage}%")
+                    data = np.clip(data, 0, clip_value)
+                    clipped_to = response_clip_percentage
+            elif np.any(data > 1.0):
+                    raise ValueError("Some response values are over 1.0 and no response_clip_percentage is provided")
+
             points = [np.array(x, np.float32) for x in (wavelengths, angles)]
             interpolator = RegularGridInterpolator(points, data,
                                                    bounds_error=False,
                                                    fill_value=0.0
                                                    )
-            return FilterResponse(interpolator)
+            return FilterResponse(interpolator, clipped_to=clipped_to)
 
 
 

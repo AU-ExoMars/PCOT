@@ -86,7 +86,16 @@ class Dialog(QtWidgets.QDialog):
                 label = f.name
                 if f.response.is_simulated:
                     label += " (sim)"
+                if f.response.clipped_to:
+                    label += f" (clipped to {f.response.clipped_to}%)"
                 ax.plot(wavelengths, resp, label=label )
+                if f.response.clipped_to:
+                    # find the part of the response that is equal to the clipped level
+                    xs = np.where(np.abs(resp-f.response.clipped_to/100) < 0.000001)[0]
+                    if len(xs)>0:
+                        ax.hlines(f.response.clipped_to/100, wavelengths[xs[0]], wavelengths[xs[-1]],
+                                  linewidth=3, color="r")
+
         if len(not_filter) > 0:
             self.errorText.setText(f"Not true filters: {', '.join(not_filter)}")
         ax.legend()
