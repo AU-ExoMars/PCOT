@@ -50,7 +50,8 @@ class SpectrumCircleOverlay(QtWidgets.QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground)
 
     def set_radius(self, rad):
-        """Radius in widget coordinates"""
+        """Radius in widget coordinates. It's actually edge width + 1. For example, if the "radius" is 2,
+        we render a 5x5 square (2 each side of the centre)"""
         self.radius = rad
         self.update()
 
@@ -65,6 +66,7 @@ class SpectrumCircleOverlay(QtWidgets.QWidget):
         p.setPen(QPen(Qt.red, 2))
         x,y = self.center.toTuple()
         r = self.radius
+        p.drawEllipse(x, y, 2,2)
         p.drawRect(x-r,y-r, r*2,r*2)
 
 
@@ -531,7 +533,7 @@ class InnerCanvas(QtWidgets.QWidget):
         return img, txt
 
     def setOverlayRadius(self):
-        rad = self.canv.canvaspersist.specCursorSize / self.getScale()
+        rad = (self.canv.canvaspersist.specCursorSize+0.5) / self.getScale()
         self.specOverlay.set_radius(rad)
 
     def getScale(self):
@@ -806,12 +808,15 @@ class Canvas(QtWidgets.QWidget):
         specLayout.addWidget(self.spectrumWidget, 0, 0, 1, 2)
 
         # cursor size widgets
-        specLayout.addWidget(QLabel("Cursor size"), 1, 0, 1, 1)
-        self.specCursorSizeSpin = QtWidgets.QSpinBox(self.spectrumContainerWidget)
-        self.specCursorSizeSpin.setMinimum(0)
-        self.specCursorSizeSpin.setMaximum(10)
-        self.specCursorSizeSpin.valueChanged.connect(self.cursorSizeChanged)
-        specLayout.addWidget(self.specCursorSizeSpin, 1, 1, 1, 1)
+        specLayout.addWidget(QLabel("Spectrum region"), 1, 0, 1, 1)
+        self.specCursorSizeCombo = QtWidgets.QComboBox(self.spectrumContainerWidget)
+        for x in range(0,6):
+            width = x*2+1
+            self.specCursorSizeCombo.addItem(f"{width}x{width}")
+            self.specCursorSizeCombo.setItemData(x, x)
+
+        self.specCursorSizeCombo.currentTextChanged.connect(self.cursorSizeChanged)
+        specLayout.addWidget(self.specCursorSizeCombo, 1, 1, 1, 1)
 
         self.spectrumContainerWidget.setHidden(True)
         splitter.addWidget(self.spectrumContainerWidget)
@@ -1071,7 +1076,7 @@ class Canvas(QtWidgets.QWidget):
         self.redisplay()
 
     def cursorSizeChanged(self, v):
-        self.canvaspersist.specCursorSize = v
+        self.canvaspersist.specCursorSize = self.specCursorSizeCombo.itemData(self.specCursorSizeCombo.currentIndex())
         self.canvas.setOverlayRadius()
         self.redisplay()
 
@@ -1420,7 +1425,8 @@ class Canvas(QtWidgets.QWidget):
         self.gammaSlider.setValue(gamma2slider(self.canvaspersist.gamma))
         self.gammaLabel.setText(f"{self.canvaspersist.gamma:.2f}")
         # set the cursor size
-        self.specCursorSizeSpin.setValue(self.canvaspersist.specCursorSize)
+        idx = self.specCursorSizeCombo.findData(self.canvaspersist.specCursorSize)
+        self.specCursorSizeCombo.setCurrentIndex(idx)
         # This will clear the screen if img is None
         self.redisplay()
 
