@@ -289,6 +289,8 @@ class TabExpr(pcot.ui.tabs.Tab):
         # clear the RUN button's red background
         self.w.run.setStyleSheet("")
         self.changed()
+        # rebuild the tab titles.
+        ui.mainwindow.MainUI.rebuildAll(scene=False)
 
     def onNodeChanged(self):
         self.w.data.canvas.setNode(self.node)
