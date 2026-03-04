@@ -35,14 +35,22 @@ which calculations are performed. They also control the regions used
 for calculating spectra. Normally an ROI is only shown in the node which adds
 it.
 * **Show spectrum** opens a side pane, and dragging the cursor across the
-image will plot the spectrum of the pixel under the cursor in this pane. If
+image will plot the spectrum of the pixel (or area of pixels) under the cursor in this pane. If
 no filter wavelengths are available, a list of the values for each band is shown.
 The show spectrum pane looks like this:
 
 ![!The "show spectrum" pane on an input node's canvas|canvasspec](canvasspec.png)
 
-The screenshot isn't showing the cursor, unfortunately, but the spectrum is for
-the pixel under the cursor.
+The screenshot isn't showing the cursor, unfortunately, but the spectrum is
+for the pixel under the cursor. 
+
+With PCOT version 0.12 (JOANEY HOW) and later,
+it's possible to show the spectrum for an area of pixels shown by a red
+square. This is done by selecting a value that isn't "1x1" in the Spectrum
+Region combo box. The spectrum
+plotted will show the mean and pooled standard deviation (by Rudmin's
+method, in which the pooled variance is the variance of the mean plus
+the mean of the individual pixel variances).
 
 When a spectrum view is opened the image pane can be tiny - to fix this you
 can resize the PCOT window (or undocked node window), or drag the separator
