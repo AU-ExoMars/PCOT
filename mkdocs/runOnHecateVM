@@ -1,3 +1,8 @@
-#!/bin/sh
+#!/bin/bash
+
+ip=$(ip -o -4 addr show enp0s8 | awk '{print $4}' | cut -d/ -f1)
+
+echo Binding to $ip
+
 export PYTHONPATH="../mkdocs"
-conda run -n mkdocs --no-capture-output mkdocs serve -a 192.168.99.101:1313
+conda run -n mkdocs --no-capture-output mkdocs serve -a $ip:1313
