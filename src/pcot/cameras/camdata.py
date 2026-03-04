@@ -79,7 +79,7 @@ class CameraParams:
         for f in p.filters.values():
             if isinstance(f, Filter) and f.response is not None:
                 if f.response.clipped_to:
-                    logger.error(f"Camera data response for {f.name} is over {f.response.clipped_to}% and has been clipped")
+                    logger.warning(f"Camera data response for {f.name} is over {f.response.clipped_to}% and has been clipped")
         return p
 
     def serialise(self):
@@ -144,7 +144,7 @@ class CameraData:
             self.fileName = fileName
             self.archive = DatumStore(FileArchive(fileName))
             if self.archive.archive.metadata.type != ArchiveType.CAMERADATA:
-                logger.critical(f"{fileName} is not a camera archive (it is {self.archive.archive.metadata.type}), so shouldn't be in the cameras directory")
+                logger.warning(f"{fileName} is not a camera archive (type={self.archive.archive.metadata.type}) - is it legacy? Will try to load anyway.")
             self.params = self.archive.get("params")
             if self.params is None:
                 raise Exception(f"Camera data file {fileName} does not contain camera parameters")
