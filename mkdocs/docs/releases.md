@@ -4,7 +4,13 @@
 None
 
 ## Beta releases
-None
+
+## 0.12.0-beta 2026-03-04 JOANEY HOW
+
+I've had to go quite a long way north to get a name I liked; this one's in Somerset. There is a 
+minor backward compatibility issue (camera data) but I'll still make it a minor bump; most things
+will still work.
+
 
 ## Alpha releases
 
