@@ -41,9 +41,9 @@ def test_node_output_none():
                     raise AssertionError("Constant should output a Datum.NUMBER even when not connected")
             elif x == 'spectrum':
                 try:
-                    assert node.getOutput(0, Datum.DATA) is not None, f"Spectrum should return something always"
+                    assert node.getOutput(0, Datum.TABLE) is not None, f"Spectrum should return something always"
                 except BadTypeException:
-                    pytest.fail("Spectrum should output Datum.DATA even when not connected")
+                    pytest.fail("Spectrum should output Datum.TABLE even when not connected")
             elif x == 'gen':
                 if node.getOutput(0, Datum.NONE) is not None:
                     pytest.fail("Gen should return None with no args")

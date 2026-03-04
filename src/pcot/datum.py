@@ -38,7 +38,8 @@ class Datum(SourcesObtainable):
         # this special type means the node must have its output/input type specified
         # by the user. They don't appear on the graph until this has happened.
         VARIANT := pcot.datumtypes.VariantType(),
-        # generic data
+        # generic tabular
+        TABLE := pcot.datumtypes.TabularDataType(),
         DATA := pcot.datumtypes.GenericDataType(),
         # test results - this is a list of failing tests, or an empty list for all passed.
         TESTRESULT := pcot.datumtypes.TestResultType(),

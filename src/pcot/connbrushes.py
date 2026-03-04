@@ -36,7 +36,7 @@ def quickGrad(c1: QColor, c2: QColor, c3: QColor, finalC: QColor) -> QBrush:
 register(Datum.ANY, Qt.red)
 register(Datum.IMG, Qt.blue)
 register(Datum.ROI, Qt.cyan)
-register(Datum.DATA, Qt.darkMagenta)
+register(Datum.TABLE, Qt.darkMagenta)
 register(Datum.TESTRESULT, Qt.darkYellow)
 register(Datum.NUMBER, Qt.darkGreen)
 register(Datum.VARIANT, QBrush(Qt.black, Qt.DiagCrossPattern))

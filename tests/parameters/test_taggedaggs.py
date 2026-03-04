@@ -603,3 +603,17 @@ def test_incomplete_serialisation():
     assert td2['a'] == 20
     assert td2['b'] == 'bar'
     assert td2['c'] == 3.14     # default used for this new item
+
+
+def test_nparray_serialisation():
+    """We can store numpy arrays in a tagged agg, but they will serialise to themselves"""
+    tdt = TaggedDictType(
+        a=("a", int, 10),
+        b=("b", np.ndarray, np.array([1, 2, 3], dtype=np.float32)),
+        c=("c", float, 3.14)
+    )
+    td = tdt.create()
+    s = td.serialise()
+    assert s['a'] == 10
+    assert np.array_equal(td['b'], np.array([1, 2, 3], dtype=np.float32))
+    assert s['c'] == 3.14

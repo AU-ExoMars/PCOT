@@ -2,6 +2,7 @@
 # into a single image
 import logging
 import os
+import pathlib
 import re
 from typing import Any, Dict
 
@@ -356,6 +357,8 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
             e = str(e)
             self.method.input.exception = str(e)
             ui.error(e)
+            self.method.files= []
+            self.method.dir = str(pathlib.Path.home())
 
         # rebuild the model
         self.buildModel()
@@ -369,6 +372,7 @@ class MultifileMethodWidget(MethodWidget, PresetOwner):
             # strings in the combobox are typically "10 bits" or "FulL"
             if s == "Full":
                 self.method.bitdepth = None
+                self.onInputChanged()
             else:
                 ll = s.split()
                 if len(ll) > 0:

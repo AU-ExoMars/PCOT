@@ -113,7 +113,7 @@ class Input:
     def serialise(self, internal, saveInputs=True):
         """Generate a serialisable data structure for this input (ie. primitives only).
         Done by producing a dict of lists of two elements: input type and input data.
-        If 'internal' is set, images and cached images will also be stored - this is used
+        If 'internal' is unset, images and cached images will also be stored - this is used
         to speed up undo/redo operations; we don't want them reloading data."""
 
         # if we are saving to a file, actually save the input data too. We don't want to do

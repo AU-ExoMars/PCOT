@@ -109,6 +109,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.action_New.triggered.connect(self.newAction)
         self.actionNew_Macro.triggered.connect(self.newMacroAction)
         self.actionSave.triggered.connect(self.saveAction)
+        self.actionShowCamsAndRefls.triggered.connect(self.showCamsAndReflsAction)
         self.actionSave_As.triggered.connect(lambda: self.saveAsAction(True))
         self.actionSave_As_without_inputs.triggered.connect(lambda: self.saveAsAction(False))
         self.actionOpen.triggered.connect(self.openAction)
@@ -222,26 +223,50 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.graph.constructScene(doAutoLayout)
         self.view.setScene(self.graph.scene)
         self.doc.clearUndo()
-        self.checkCameraDataPresent()
+        self.checkCameraAndReflectanceDataPresent()
 
-    def checkCameraDataPresent(self):
-        from pcot.cameras import getCameraNames
-        while len(getCameraNames()) == 0:
-            res = QMessageBox.question(self, "No camera data", "No camera data found. Would you like to set a directory?",
-                                      QMessageBox.Yes | QMessageBox.No)
+    def _ensureDataPresent(self, getNamesFn, title, message, configKey, loadFn):
+        """Generic helper to ensure a dataset exists, prompting the user if not."""
+        while len(getNamesFn()) == 0:
+            res = QMessageBox.question(self, title, message, QMessageBox.Yes | QMessageBox.No)
             if res == QMessageBox.No:
                 break
-            # pop up a file dialog asking for a camera directory
-            dir = pcot.config.getDefaultDir('cameras') or "~"
-            res = QtWidgets.QFileDialog.getExistingDirectory(self, "Select camera data directory",dir)
-            logger.info(f"Selected {res}")
-            if res != '':
-                logger.info(f"Setting camera data directory to {res}")
-                pcot.config.setDefaultDir('cameras', res)
-                pcot.config.save()
-                pcot.config.loadCameras()
-        ui.log(f"Cameras loaded: {','.join(getCameraNames())}")
 
+            # Ask user for directory
+            defaultDir = pcot.config.getDefaultDir(configKey) or os.path.expanduser("~")
+            chosen = QtWidgets.QFileDialog.getExistingDirectory(
+                self, f"Select {configKey} directory", defaultDir
+            )
+            logger.info(f"Selected {chosen}")
+
+            if chosen:
+                logger.info(f"Setting {configKey} directory to {chosen}")
+                pcot.config.setDefaultDir(configKey, chosen)
+                pcot.config.save()
+                loadFn()
+
+        return getNamesFn()
+
+    def checkCameraAndReflectanceDataPresent(self):
+        from pcot.cameras import getCameraNames, getReflectanceNames
+
+        cams = self._ensureDataPresent(
+            getNamesFn=getCameraNames,
+            title="No camera data",
+            message="No camera data found. Would you like to set a directory?",
+            configKey="cameras",
+            loadFn=pcot.config.loadCameras
+        )
+        ui.log(f"Cameras loaded: {','.join(cams)}")
+
+        refl = self._ensureDataPresent(
+            getNamesFn=getReflectanceNames,
+            title="No reflectance data",
+            message="No reflectance target data found. Would you like to set a directory?",
+            configKey="reflectances",
+            loadFn=pcot.config.loadReflectances
+        )
+        ui.log(f"Reflectance targets loaded: {','.join(refl)}")
 
     @classmethod
     def getWindowsForDocument(cls, d):
@@ -332,6 +357,7 @@ class MainUI(ui.tabs.DockableTabWindow):
             ui.msg(f"Saving to {fname}")
             self.doc.save(fname, saveInputs=saveInputs)
             ui.msg(f"File saved to {fname}")
+            ui.log(f"File saved to {fname}")
             self.rebuildRecents()
         except Exception as e:
             traceback.print_exc()
@@ -409,6 +435,12 @@ class MainUI(ui.tabs.DockableTabWindow):
             fn = act.data()
             self.closeAllTabs()
             self.load(fn)
+
+    def showCamsAndReflsAction(self):
+        from pcot.cameras import show
+        w = show.Dialog(self)
+        w.show()
+
 
     ## "copy" menu/keypress
     def copyAction(self):

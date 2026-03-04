@@ -5,7 +5,6 @@ from typing import List, Dict, Tuple
 
 import numpy as np
 from PySide2.QtCore import Qt
-from PySide2 import QtWidgets
 
 import pcot.ui.tabs
 from pcot import cameras, ui
@@ -51,20 +50,12 @@ def collectCameraData(node, img):
     camera = next(iter(cameraset))
     if camera is None:
         raise XFormException('DATA', 'image in "reflectance" appears to have no camera filters assigned')
+
     # and try to get the actual camera data
-
     camera = cameras.getCamera(camera)
-
-    # now we can store the calibration targets this camera knows about
-    node.reflectance_data = camera.getReflectances()
-    node.calib_targets = list(node.reflectance_data.keys()) if node.reflectance_data else []
     node.filters = filters
-    node.filter_names = [f.name for f in filters]
     node.camera = camera
     node.filter_index_by_name = {f.name: i for i, f in enumerate(filters)}
-
-    if node.params.target and node.params.target not in node.calib_targets:
-        raise XFormException('DATA', 'target not in calibration data')
 
 
 @dataclasses.dataclass
@@ -116,10 +107,8 @@ class XFormReflectance(XFormType):
     def init(self, node):
         # no serialisation needed for this data.
         node.filter_to_plot = None
-        node.filter_names = None
+        node.filters = None
         node.camera = None
-        node.reflectance_data = None
-        node.calib_targets = []
         # For each filter, there will be a list of points to plot. Each point will have
         # the known reflectance and the measured reflectance.
         node.points_per_filter = {}
@@ -144,17 +133,15 @@ class XFormReflectance(XFormType):
             node.setOutput(1, Datum.null)
             raise XFormException('DATA', str(e))
 
-        if len(node.calib_targets) == 0:
-            raise XFormException('DATA', 'no calibration targets available')
-        elif len(node.calib_targets) == 1 or node.params.target is None:
-            # there's only one target available, use it. Or there's no target set, so use the first one.
-            node.params.target = node.calib_targets[0]
+        if node.params.target is None:
+            # select the default calibration target if possible
+            targets = cameras.getReflectanceNames()
+            if len(targets)==0:
+                raise XFormException('DATA', 'no calibration targets available')
+            node.params.target = targets[0]     # TODO - default reflectance target
 
-        # collect the known reflectance values from the calibration data
-        if node.params.target not in node.reflectance_data:
-            raise XFormException('DATA', f"target '{node.params.target}' not in calibration data")
-        # data will be {patchname: {filtername: (mean, std)}}. This is annoying, but makes sense.
-        data = node.reflectance_data[node.params.target]
+        # get the reflectance object; may throw an exception if the target isn't found on this system
+        reflectance = cameras.getReflectance(node.params.target)
 
         # we're going to store the points we need to fit in a list for each filter.
         points_per_filter: Dict[str, List[ReflectancePoint]] = {}
@@ -164,7 +151,7 @@ class XFormReflectance(XFormType):
         # When we actually do the fit, we need to do the filters in the outer loop, with the patches collected
         # for each filter.
 
-        for patch, filter_dicts in data.items():
+        for patch in reflectance.get_patches():
             # We need to extract the patch from the image. It will be one of the ROIs, and if it
             # isn't there we must disregard it - it may be that the calibration target detection is
             # not perfect. We can warn, though.
@@ -193,7 +180,8 @@ class XFormReflectance(XFormType):
 
             # get the known reflectance for each filter along with the filter, and
             # then the measured reflectance for each band.
-            for filter_name, (known_mean, known_std) in filter_dicts.items():
+            for filter in node.filters:
+                filter_name = filter.name
                 # get the band index for this filter - we have Filter items in node.filters
                 band_index = node.filter_index_by_name.get(filter_name, None)
                 if band_index is None:
@@ -219,14 +207,21 @@ class XFormReflectance(XFormType):
                 # now prepare plotting data
                 measured_mean = np.mean(band_means)
                 measured_std = pooled_sd(band_means, band_stds)
-                logger.debug(
-                    f"Band {band_index} has measured {measured_mean}±{measured_std}, known {known_mean}±{known_std}")
 
                 if measured_std == 0:
                     # this band has no variance, so skip it - both because the data is probably duff,
                     # and because it makes NaN in the maths.
                     logger.debug(f"Band {band_index} has no variance, skipping")
                     continue
+
+                # get the known data
+                phi = 270           # TODO get phi and theta
+                theta = 0
+                known_mean = reflectance.get_known_reflectance_for_filter(filter,patch,phi,theta)
+                known_std = 0       # TODO get the STD of the known reflectance
+
+                logger.debug(
+                    f"Band {band_index} has measured {measured_mean}±{measured_std}, known {known_mean}±{known_std}")
 
                 # create a data point for this filter / patch pairing
 
@@ -368,18 +363,20 @@ class TabReflectance(pcot.ui.tabs.Tab):
         # get the valid targets from the image - the camera data will have this.
         with SignalBlocker(self.w.targetCombo):
             self.w.targetCombo.clear()
-            self.w.targetCombo.addItems(self.node.calib_targets)
-            if self.node.params.target in self.node.calib_targets:
-                self.w.targetCombo.setCurrentIndex(self.node.calib_targets.index(self.node.params.target))
+            names = cameras.getReflectanceNames()
+            self.w.targetCombo.addItems(names)
+            if self.node.params.target in cameras.getReflectanceNames():
+                self.w.targetCombo.setCurrentIndex(names.index(self.node.params.target))
         # populate the filter combo box with the filters from the image
         with SignalBlocker(self.w.filterCombo):
             self.w.filterCombo.clear()
-            if self.node.filter_names:
+            if self.node.filters:
+                filter_names = [f.name for f in self.node.filters]
                 self.w.filterCombo.addItem("ALL")
-                self.w.filterCombo.addItems(self.node.filter_names)
+                self.w.filterCombo.addItems(filter_names)
                 try:
                     # +1 here because of the ALL value
-                    self.w.filterCombo.setCurrentIndex(self.node.filter_names.index(self.node.filter_to_plot) + 1)
+                    self.w.filterCombo.setCurrentIndex(filter_names.index(self.node.filter_to_plot) + 1)
                 except ValueError:
                     # this filter is not in the image?
                     ui.log(f"Filter {self.node.filter_to_plot} not in image, using ALL")
@@ -422,19 +419,20 @@ class TabReflectance(pcot.ui.tabs.Tab):
         # clear all figures
         self.w.mpl.fig.clf()
         self.w.mpl.fig.subplots_adjust(hspace=0.2)
-        for band in self.node.filter_names:
+        for filter in self.node.filters:
+            filter_name = filter.name
             ax = self.w.mpl.fig.add_subplot(3, 4, plotct)
             self.set_axis_data(ax,sep_plots=True)
             plotct += 1
 
-            points = self.node.points_per_filter.get(band, None)
-            fit = self.node.fits.get(band, None)
+            points = self.node.points_per_filter.get(filter_name, None)
+            fit = self.node.fits.get(filter_name, None)
 
             if points is None:
-                ui.log(f"No points of data for filter {band}")
+                ui.log(f"No points of data for filter {filter_name}")
                 continue
             if fit is None:
-                ui.log(f"No fit data for filter {band}")
+                ui.log(f"No fit data for filter {filter_name}")
                 continue
 
             # separate out the data
@@ -450,11 +448,11 @@ class TabReflectance(pcot.ui.tabs.Tab):
             if fit:
                 ax.axline((0, fit.c), slope=fit.m)
             # ax.plot(known, measured, '+', color=colname, label=band)
-            ax.errorbar(known_mean, measured_mean, yerr=measured_std, xerr=known_std, label=band, fmt='x')
+            ax.errorbar(known_mean, measured_mean, yerr=measured_std, xerr=known_std, label=filter_name, fmt='x')
 
             # point labelling: don't do this if we're plotting all bands or it's turned off
-            cwl = self.node.camera.getFilter(band).cwl
-            ax.set_title(f"Fit for {band} {int(cwl)}: m={fit.m:0.3f}, c={fit.c:0.3f}",fontsize=6)
+            cwl = self.node.camera.getFilter(filter_name).cwl
+            ax.set_title(f"Fit for {filter_name} {int(cwl)}: m={fit.m:0.3f}, c={fit.c:0.3f}",fontsize=6)
             for i, patch in enumerate(patches):
                 # plot the patch name and the measured value at the point
                 ax.annotate(f"{patch}\n{measured_mean[i]:.2f}±{measured_std[i]:.2f}",
@@ -476,7 +474,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
         self.set_axis_data(ax)
 
         if self.node.filter_to_plot is None or self.node.filter_to_plot == "ALL":
-            bands = self.node.filter_names
+            bands = [f.name for f in self.node.filters]
         else:
             bands = [self.node.filter_to_plot]
 

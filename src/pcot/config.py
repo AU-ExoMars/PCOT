@@ -20,8 +20,6 @@ data.read_file(getAssetAsFile('defaults.ini'))
 # and then the site.cfg and user's .pcot.ini file, overriding the defaults
 data.read(['site.cfg', os.path.expanduser('~/.pcot.ini')], encoding='utf_8')
 
-xxx = data.get('Default', 'multifile_pattern')
-
 defaultBayerPattern = "GB"
 
 
@@ -112,7 +110,7 @@ def getFileDialogOptions():
 
 
 def loadCameras():
-    """Load the camera data from the archive"""
+    """Load the camera data from the cameras directory"""
 
     from pcot import cameras
     logger.debug("Attempting to load cameras")
@@ -121,6 +119,21 @@ def loadCameras():
         logger.debug(f"Camera directory is {path}")
         if path:
             cameras.loadAllCameras(path)
+    else:
+        logger.critical("No cameras directory found")
+
+def loadReflectances():
+    """Load the reflectance target data  from the reflectances directory"""
+
+    from pcot import cameras
+    logger.debug("Attempting to load reflectances")
+    if 'reflectances' in data['Locations']:
+        path = getDefaultDir('reflectances')
+        logger.debug(f"Reflectances directory is {path}")
+        if path:
+            cameras.loadAllReflectances(path)
+    else:
+        logger.critical("No reflectances directory found")
 
 
 # These are used to add plugins: main window hooks run when a main window is opened,

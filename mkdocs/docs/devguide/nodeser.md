@@ -237,7 +237,7 @@ For example, the constructor for `XFormSpectrum` could look like this (not any m
                               )
         for i in range(NUMINPUTS):
             self.addInputConnector(str(i), Datum.IMG, "a single line in the plot")
-        self.addOutputConnector("data", Datum.DATA, "a CSV output (use 'dump' or 'sink' to read it)")
+        self.addOutputConnector("data", Datum.TABLE, "a CSV output (use 'dump' or 'sink' to read it)")
 ```
 Note that the default values are optional - if you don't specify a default you can just
 use the attribute name rather than a `(name, default)` tuple, but you will get an error if

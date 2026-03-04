@@ -11,9 +11,9 @@ from typing import TYPE_CHECKING, Optional, Union, List, Tuple, Dict
 import cv2 as cv
 import numpy as np
 from PySide2 import QtWidgets, QtCore, QtGui
-from PySide2.QtCore import Qt, QSize, QTimer
-from PySide2.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent, QFont
-from PySide2.QtWidgets import QCheckBox, QMessageBox, QMenu
+from PySide2.QtCore import Qt, QSize, QTimer, QPointF, QPoint
+from PySide2.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent, QFont, QResizeEvent
+from PySide2.QtWidgets import QCheckBox, QMessageBox, QMenu, QLabel
 
 import pcot
 import pcot.ui as ui
@@ -25,6 +25,7 @@ from pcot.ui.collapser import Collapser, CollapserSection
 from pcot.ui.spectrumwidget import SpectrumWidget
 import pcot.dq
 from pcot.utils.deb import Timer
+from pcot.utils.maths import pooled_sd
 
 if TYPE_CHECKING:
     from pcot.xform import XFormGraph, XForm
@@ -35,12 +36,47 @@ logger = logging.getLogger(__name__)
 NUMDQS = 3
 
 
+class SpectrumCircleOverlay(QtWidgets.QWidget):
+    """This widget overlays the inner canvas, and is forced to be
+    the same geometry. We use it to draw an overlay for the spectrum circle,
+    potentially we could use it for other stuff"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.radius = 10
+        self.center = QPoint(0, 0)
+
+        self.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WA_NoSystemBackground)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+
+    def set_radius(self, rad):
+        """Radius in widget coordinates. It's actually edge width + 1. For example, if the "radius" is 2,
+        we render a 5x5 square (2 each side of the centre)"""
+        self.radius = rad
+        self.update()
+
+    def set_center(self, pos):
+        """Pixel position in widget coordinates"""
+        self.center = pos
+        self.update()
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setPen(QPen(Qt.red, 2))
+        x,y = self.center.toTuple()
+        r = self.radius
+        p.drawEllipse(x, y, 2,2)
+        p.drawRect(x-r,y-r, r*2,r*2)
+
+
 class PersistBlock:
     """This is the block owned by a node which has a canvas, to store data which is persisted
     for the canvas only."""
     showROIs: bool  # should we show all ROIs and not just the ones defined in this node?
     normToCropped: bool  # boolean, should we normalise to only the visible part of the image?
     normMode: int  # normalisation mode e.g. NormToRGB, see canvasnormalise.py
+    specCursorSize: int # size of spectrum cursor
     dqs: List[CanvasDQSpec]  # settings for each DQ layer
 
     def __init__(self, d=None):
@@ -53,10 +89,12 @@ class PersistBlock:
             self.showROIs, self.normMode, self.normToCropped, dqs = d
             self.dqs = [CanvasDQSpec(d) for d in dqs]
             self.gamma = 1.0
+            self.specCursorSize = 0
         else:
             self.showROIs = d.get('showROIs', True)
             self.normMode = d.get('normMode', canvasnormalise.NormToImg)
             self.normToCropped = d.get('normToCropped', False)
+            self.specCursorSize = d.get('specCursorSize', 0)
             if 'dqs' in d:
                 self.dqs = [CanvasDQSpec(d) for d in d['dqs']]
             else:
@@ -70,6 +108,7 @@ class PersistBlock:
         return {'showROIs': self.showROIs,
                 'normMode': self.normMode,
                 'normToCropped': self.normToCropped,
+                'specCursorSize': self.specCursorSize,
                 'gamma': self.gamma,
                 'dqs': [d.serialise() for d in self.dqs]}
 
@@ -98,7 +137,7 @@ class InnerCanvas(QtWidgets.QWidget):
     cutw: int
     cuth: int
 
-    cursor = None  # custom cursor; created once on first use
+    cursor: QCursor = None
 
     def __init__(self, canv, parent=None):
         super().__init__(parent)
@@ -109,6 +148,7 @@ class InnerCanvas(QtWidgets.QWidget):
         self.scale = 1
         self.cursorX = 0  # coords of cursor in image space
         self.cursorY = 0
+        self.cursor = None  # getCursor makes (or replaces) this
 
         self.x = 0  # coords of top left of img in view
         self.y = 0
@@ -126,10 +166,15 @@ class InnerCanvas(QtWidgets.QWidget):
         self.timer.timeout.connect(self.tick)
         self.timer.start(300)  # flash rate
 
+        # create the circle overlay for spectrum area
+        self.specOverlay = SpectrumCircleOverlay(self)
+        self.specOverlay.setGeometry(self.rect())
+        self.specOverlay.setHidden(True)
+
         # needs to do this to get key events
         self.setFocusPolicy(QtCore.Qt.ClickFocus)
-        self.setCursor(InnerCanvas.getCursor())
         self.setMouseTracking(True)  # so we get move events with no button press
+        self.setCursor(InnerCanvas.getCursor())
         self.reset()
 
     def img2qimage(self, img):
@@ -152,46 +197,48 @@ class InnerCanvas(QtWidgets.QWidget):
 
     @classmethod
     def getCursor(cls):
-        """Get the custom cursor, creating it if necessary as a class attribute"""
-        if cls.cursor is None:
+        """Get the custom cursor"""
+        if cls.cursor is not None:
+            return cls.cursor
+
+        bm = QBitmap(32, 32)
+        CROSSHAIRLENTHICK = 4
+        CROSSHAIRLENTHIN = 10
+        bm.clear()
+        ptr = QPainter(bm)
+        p = QPen()
+        p.setWidth(3)
+        ptr.setPen(p)
+        ptr.drawLine(0, 16, CROSSHAIRLENTHICK, 16)
+        ptr.drawLine(31, 16, 31 - CROSSHAIRLENTHICK, 16)
+        ptr.drawLine(16, 0, 16, CROSSHAIRLENTHICK)
+        ptr.drawLine(16, 31, 16, 31 - CROSSHAIRLENTHICK)
+
+        p.setWidth(1)
+        ptr.setPen(p)
+        ptr.drawLine(0, 16, CROSSHAIRLENTHIN, 16)
+        ptr.drawLine(31, 16, 31 - CROSSHAIRLENTHIN, 16)
+        ptr.drawLine(16, 0, 16, CROSSHAIRLENTHIN)
+        ptr.drawLine(16, 31, 16, 31 - CROSSHAIRLENTHIN)
+        ptr.drawPoint(16, 16)
+
+        ptr.end()
+        # BM and MASK work like this:
+        # B=0 M=0 gives transparent
+        # B=0 M=1 gives white
+        # B=1 M=1 gives black
+        # B=1 M=0 is XOR under Windows, but undefined elsewhere!
+        if platform.system() == 'Windows':
+            # we want to use XOR under windows
+            mask = QBitmap(32, 32)
+            mask.clear()
+        else:
+            # on other platforms we want white on transparent.
+            mask = bm  # gives white
             bm = QBitmap(32, 32)
-            CROSSHAIRLENTHICK = 4
-            CROSSHAIRLENTHIN = 10
             bm.clear()
-            ptr = QPainter(bm)
-            p = QPen()
-            p.setWidth(3)
-            ptr.setPen(p)
-            ptr.drawLine(0, 16, CROSSHAIRLENTHICK, 16)
-            ptr.drawLine(31, 16, 31 - CROSSHAIRLENTHICK, 16)
-            ptr.drawLine(16, 0, 16, CROSSHAIRLENTHICK)
-            ptr.drawLine(16, 31, 16, 31 - CROSSHAIRLENTHICK)
 
-            p.setWidth(1)
-            ptr.setPen(p)
-            ptr.drawLine(0, 16, CROSSHAIRLENTHIN, 16)
-            ptr.drawLine(31, 16, 31 - CROSSHAIRLENTHIN, 16)
-            ptr.drawLine(16, 0, 16, CROSSHAIRLENTHIN)
-            ptr.drawLine(16, 31, 16, 31 - CROSSHAIRLENTHIN)
-            ptr.drawPoint(16, 16)
-
-            ptr.end()
-            # BM and MASK work like this:
-            # B=0 M=0 gives transparent
-            # B=0 M=1 gives white
-            # B=1 M=1 gives black
-            # B=1 M=0 is XOR under Windows, but undefined elsewhere!
-            if platform.system() == 'Windows':
-                # we want to use XOR under windows
-                mask = QBitmap(32, 32)
-                mask.clear()
-            else:
-                # on other platforms we want white on transparent.
-                mask = bm  # gives white
-                bm = QBitmap(32, 32)
-                bm.clear()
-
-            cls.cursor = QCursor(bm, mask, 16, 16)
+        cls.cursor = QCursor(bm, mask, 16, 16)
         return cls.cursor
 
     ## resets the canvas to zoom level 1, top left pan
@@ -239,6 +286,7 @@ class InnerCanvas(QtWidgets.QWidget):
         else:
             self.rgb = None
             self.reset()
+        self.setOverlayRadius()
         self.update()
 
     def drawCursor(self, img, cutx, cuty):
@@ -484,6 +532,10 @@ class InnerCanvas(QtWidgets.QWidget):
                     img = data
         return img, txt
 
+    def setOverlayRadius(self):
+        rad = (self.canv.canvaspersist.specCursorSize+0.5) / self.getScale()
+        self.specOverlay.set_radius(rad)
+
     def getScale(self):
         return self.scale * self.zoomscale
 
@@ -518,9 +570,15 @@ class InnerCanvas(QtWidgets.QWidget):
             self.canv.mouseHook.canvasMousePressEvent(x, y, e)
         return super().mousePressEvent(e)
 
+    def resizeEvent(self, e: QResizeEvent):
+        self.specOverlay.setGeometry(self.rect())
+        super().resizeEvent(e)
+
     ## mouse move handler, can delegate to a hook
     def mouseMoveEvent(self, e):
+
         x, y = self.getImgCoords(e.pos())
+        self.specOverlay.set_center(e.pos())
         self.cursorX, self.cursorY = x, y
         if self.panning:
             dx = x - self.panX
@@ -592,6 +650,12 @@ class InnerCanvas(QtWidgets.QWidget):
     def __del__(self):
         logger.debug(f"Cleaning up {self}")
 
+    def update(self):
+        super().update()
+        self.setOverlayRadius()
+        self.specOverlay.update()
+
+
 
 
 def makesidebarLabel(t):
@@ -608,6 +672,19 @@ def slider2gamma(x):
 def gamma2slider(x):
     x = (x - 1.0) * 100 + 50
     return x
+
+
+def collectData(imgarray, x, y, size):
+    """Collect the data for size pixels in a rectangle around x,y; e.g. size=2
+    collects [x-2:x+2][y-2:y+2]"""
+    height, width = imgarray.shape[:2]
+    minx = max(x-size, 0)
+    maxx = min(x+size+1, width)
+    miny = max(y-size, 0)
+    maxy = min(y+size+1, height)
+
+    return imgarray[miny:maxy, minx:maxx]  # returns (n,depth) array
+
 
 
 class Canvas(QtWidgets.QWidget):
@@ -702,6 +779,7 @@ class Canvas(QtWidgets.QWidget):
         self.createWidgets()
         self.collapser.end()
 
+        # splitter with main canvas and spectrum widget(s)
         splitter = QtWidgets.QSplitter()
         splitter.setHandleWidth(10)
         outerlayout.addWidget(splitter)
@@ -717,11 +795,31 @@ class Canvas(QtWidgets.QWidget):
         outerlayout.setContentsMargins(0, 0, 0, 0)
         layout.setContentsMargins(0, 0, 0, 0)
 
+        # spectrum stuff
+
+        self.spectrumContainerWidget = QtWidgets.QWidget()
+        specLayout = QtWidgets.QGridLayout()
+        self.spectrumContainerWidget.setLayout(specLayout)
+
+        # spectrum widget itself
         self.spectrumWidget = SpectrumWidget()
         self.spectrumWidget.setMinimumSize(300, 300)
         self.spectrumWidget.setMaximumWidth(600)
-        self.spectrumWidget.setHidden(True)
-        splitter.addWidget(self.spectrumWidget)
+        specLayout.addWidget(self.spectrumWidget, 0, 0, 1, 2)
+
+        # cursor size widgets
+        specLayout.addWidget(QLabel("Spectrum region"), 1, 0, 1, 1)
+        self.specCursorSizeCombo = QtWidgets.QComboBox(self.spectrumContainerWidget)
+        for x in range(0,6):
+            width = x*2+1
+            self.specCursorSizeCombo.addItem(f"{width}x{width}")
+            self.specCursorSizeCombo.setItemData(x, x)
+
+        self.specCursorSizeCombo.currentTextChanged.connect(self.cursorSizeChanged)
+        specLayout.addWidget(self.specCursorSizeCombo, 1, 1, 1, 1)
+
+        self.spectrumContainerWidget.setHidden(True)
+        splitter.addWidget(self.spectrumContainerWidget)
 
         ## now the canvas and scrollbars
 
@@ -977,6 +1075,11 @@ class Canvas(QtWidgets.QWidget):
         self.gammaLabel.setText(f"{self.canvaspersist.gamma:.2f}")
         self.redisplay()
 
+    def cursorSizeChanged(self, v):
+        self.canvaspersist.specCursorSize = self.specCursorSizeCombo.itemData(self.specCursorSizeCombo.currentIndex())
+        self.canvas.setOverlayRadius()
+        self.redisplay()
+
     def contextMenuEvent(self, ev: QtGui.QContextMenuEvent) -> None:
         super().contextMenuEvent(ev)  # run the super's menu, which will run any item's menu
         if not ev.isAccepted():  # if the event wasn't accepted, run our menu
@@ -1105,6 +1208,8 @@ class Canvas(QtWidgets.QWidget):
         self.ensureDQValid()
 
     def mouseMove(self, x, y, event):
+        """This is NOT an event handler; it's taking image coordinates and
+        not widget coordinates. It's called from the inner canvas' moveMoveEvent"""
         self.coordsText.setText(f"{x},{y}")
         self.showSpectrum()
         if self.mouseHook is not None:
@@ -1195,7 +1300,8 @@ class Canvas(QtWidgets.QWidget):
             self.redisplay()
 
     def spectrumToggleChanged(self, v):
-        self.spectrumWidget.setHidden(not v)
+        self.spectrumContainerWidget.setHidden(not v)
+        self.canvas.specOverlay.setHidden(not v)
 
     def hideDQChanged(self, v):
         self.isDQHidden = self.hideDQ.isChecked()
@@ -1318,6 +1424,9 @@ class Canvas(QtWidgets.QWidget):
         # set the gamma slider
         self.gammaSlider.setValue(gamma2slider(self.canvaspersist.gamma))
         self.gammaLabel.setText(f"{self.canvaspersist.gamma:.2f}")
+        # set the cursor size
+        idx = self.specCursorSizeCombo.findData(self.canvaspersist.specCursorSize)
+        self.specCursorSizeCombo.setCurrentIndex(idx)
         # This will clear the screen if img is None
         self.redisplay()
 
@@ -1440,22 +1549,46 @@ class Canvas(QtWidgets.QWidget):
         if self.previmg is None:
             self.spectrumWidget.set(None, "No image in canvas")
             return
+        size = self.canvaspersist.specCursorSize
         if self.previmg.channels < 2:
             if 0 <= x < self.previmg.w and 0 <= y < self.previmg.h:
-                val = self.previmg.img[y, x]
-                unc = self.previmg.uncertainty[y, x]
-                dqval = self.previmg.dq[y, x]
-                dq = pcot.dq.names(dqval)
-                self.spectrumWidget.set(None, f"Single channel:  {val:.3} +/- {unc:.3}. DQ:{dq} ({dqval})")
-            return
+                # get the values in a square around the centre
+                vals = collectData(self.previmg.img, x, y, size).flatten()
+                uncs = collectData(self.previmg.uncertainty, x, y, size).flatten()
+                dqvals = collectData(self.previmg.dq, x, y, size).flatten()
+
+                if vals.shape[0] > 0:
+                    val = np.mean(vals)
+                    # do variance pooling - the mean of the variances plus the variance of the means
+                    unc = pooled_sd(vals, uncs)
+                    # and or all the bits in the elements of dqvals together
+                    dqval = np.bitwise_or.reduce(dqvals, axis=None)
+                    dq = pcot.dq.names(dqval)
+                    self.spectrumWidget.set(None, f"Single channel:  {val:.3} +/- {unc:.3}. DQ:{dq} ({dqval})")
+            return  # early return
 
         # within the coords, and multichannel image present
 
         if 0 <= x < self.previmg.w and 0 <= y < self.previmg.h and self.previmg.channels > 1:
             img = self.previmg
-            pixel = img.img[y, x, :]  # get the pixel data
-            pixuncs = img.uncertainty[y, x, :]
-            pixdqs = img.dq[y, x, :]
+
+            pixels = collectData(img.img, x, y, size)
+            pixunc = collectData(img.uncertainty, x, y, size)
+            pixdqs = collectData(img.dq, x, y, size)
+
+            pixel = pixels.mean(axis=(0,1)) # get an array of shape (depth) of the means of each channel
+
+            # reshape(-1,c) turns a (h,w,c) array into a (h*w, c) array - flattening only the top
+            # two dimensions but leaving the individual multiband pixels alone
+            bandpixels = pixels.reshape(-1, img.channels)
+            banduncs = pixunc.reshape(-1, img.channels)
+
+            # pool the uncertainties of each band
+            pixuncs = [pooled_sd(bandpixels[:, i], banduncs[:, i]) for i in range(img.channels)]
+
+            # similarly collapse the pixel DQ bits and then do bitwise OR on each band
+            pixdqs = pixdqs.reshape(-1, img.channels)
+            pixdqs = np.bitwise_or.reduce(pixdqs, axis=0)
 
             # build text string
             text = ""

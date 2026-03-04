@@ -37,7 +37,7 @@ class XFormHistogram(XFormType):
             bincount = ("Number of bins in the histogram", int, 16)
         )
         self.addInputConnector("", Datum.IMG)
-        self.addOutputConnector("data", Datum.DATA, "a CSV output (use 'dump' or 'sink' to read it)")
+        self.addOutputConnector("data", Datum.TABLE, "a CSV output (use 'dump' or 'sink' to read it)")
 
     def createTab(self, n, w):
         ui.msg("creating a tab with a plot widget takes time...")
@@ -80,7 +80,7 @@ class XFormHistogram(XFormType):
                 for k, v in zip(bins, dat):
                     t.add(k, v)
 
-            node.setOutput(0, Datum(Datum.DATA, t, sources=SourceSet(img.sources.getSources())))
+            node.setOutput(0, Datum(Datum.TABLE, t, sources=SourceSet(img.sources.getSources())))
         else:
             node.setOutput(0, None)
 

@@ -1101,7 +1101,7 @@ def valuesbyfilter(img):
             table.add("n", n)
             table.add("u", u)
 
-    return Datum(Datum.DATA, table, sources=SourceSet(img.sources.getSources()))
+    return Datum(Datum.TABLE, table, sources=SourceSet(img.sources.getSources()))
 
 
 @datumfunc

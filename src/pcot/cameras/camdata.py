@@ -1,7 +1,12 @@
+import logging
+
 from pcot.cameras.filters import DUMMY_FILTER
+from pcot.cameras.filtresponse import FilterResponse
 from pcot.datum import Datum, nullSourceSet
 from pcot.datumtypes import Type
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedListType
+
+logger = logging.getLogger(__name__)
 
 FILTERDICT = TaggedDictType(
     cwl=("Centre wavelength", Maybe(float), None),
@@ -9,6 +14,7 @@ FILTERDICT = TaggedDictType(
     transmission=("Transmission ratio", float, 1.0),
     position=("Position of filter in camera (e.g. 'L01')", Maybe(str), None),
     name=("Name of filter", Maybe(str), None),
+    response=("Filter response data", Maybe(dict), None),   # the dict is a serialised FilterResponse object
 )
 
 FILTERLIST = TaggedListType(FILTERDICT, 0)
@@ -21,7 +27,6 @@ CAMDICT = TaggedDictType(
     short=("Short description of camera data", Maybe(str), None),
     source_filename=("Name of YAML file from which data was generated", Maybe(str), None),
     has_flats=("Does this camera have flatfields?", bool, False),       # for information only, not used in the code
-    has_reflectances=("Does this camera have reflectance data?", bool, False), # for information only, not used in the code
     filters=("List of filters", FILTERLIST),
 )
 
@@ -34,31 +39,18 @@ class CameraParams:
     This object has a "params" field, which is a TaggedDict and stores basic stuff (name, description etc).
     It also itself forms the "params" field of a CameraData object, so we get "amusing" little chains like
     camera.params.params.name. Sorry.
-
-    However, the reflectance data is stored as just a dictionary - it's not in a TA, although it is
-    serialised and deserialised as part of the CameraParams object. This makes things a lot simpler.
-    At the moment, the structure of that dictionary is {patchname: {filtername: (mean, std)}}
-
     """
 
     def __init__(self, filters=None):
         """Used when creating an entirely new CameraParams object. The input is:
 
-        * filters: a dict of filter objects {name:data}
+        * filters: a dict of Filter objects {name:data}
         """
         self.params = CAMDICT.create()
         if filters:
             self.filters = filters.copy()
         else:
             self.filters = {}
-
-        # backpointer to the CameraData object so we can get the archive; will be set by CameraData
-        self.camera_data = None
-
-        # there may be reflectance data - if so, each will be a dictionary of patch name to
-        # dictionaries of filter name to reflectance values as tuples of (mean, std):
-        # {target: {patchname: {filtername: (mean, std)}}}
-        self.reflectances = {}
 
     @classmethod
     def deserialise(cls, d) -> 'CameraParams':
@@ -77,13 +69,17 @@ class CameraParams:
         # note that this isn't how filters deserialise themselves (their method is different - legacy)
         # UGLY - we have to patch the camera name into the filters "upstairs" in CameraData, because
         # we can't get it here.
-        p.filters = {f.name: Filter(f.cwl, f.fwhm, f.transmission, f.position, f.name)
+        def deser_response(d):
+            return None if d is None else FilterResponse.deserialise(d)
+
+        p.filters = {f.name: Filter(f.cwl, f.fwhm, f.transmission, f.position, f.name,
+                                    None, response=deser_response(f.response))
                      for f in p.params['filters']}
 
-        # if there is reflectance data in the incoming dict, just copy it over.
-        if 'reflectances' in d:
-            p.reflectances = d['reflectances']
-
+        for f in p.filters.values():
+            if isinstance(f, Filter) and f.response is not None:
+                if f.response.clipped_to:
+                    logger.error(f"Camera data response for {f.name} is over {f.response.clipped_to}% and has been clipped")
         return p
 
     def serialise(self):
@@ -94,18 +90,19 @@ class CameraParams:
             e = self.params.filters.append_default()
             for attr in ('cwl', 'fwhm', 'transmission', 'position', 'name'):
                 e[attr] = getattr(v, attr)
+            # save a serialised version of the filter response - this include nparrays, but that
+            # is still serialisable if we're saving to a FileArchive.
+            e['response'] = None if v.response is None or v.response.is_simulated else v.response.serialise()
 
         # now we have a fully populated TA and can just serialise everything
         d = self.params.serialise()
-        # and put the reflectances in if they are there
-        if self.reflectances:
-            d['reflectances'] = self.reflectances
         return d
 
 
 class CameraParamsType(Type):
-    """Holds camera parameters, including filter sets (basically anything that
-    isn't large data, like flatfields)"""
+    """To make life easier for serialisation, this is a DatumType. Holds camera parameters, including filter sets
+    (basically anything that isn't large data, like flatfields or filter profiles). The larger items are stored
+    in the CameraData object, which contains this one."""
 
     def __init__(self):
         super().__init__('cameradata', valid={CameraParams, type(None)})
@@ -140,12 +137,14 @@ class CameraData:
         """Load the CameraParams object from an archive, and embed it in our new CameraData object. Also store
         the filename of the archive and the archive itself, because we are going to be loading other data (e.g.
         flatfields) when we need them."""
-        from pcot.utils.archive import FileArchive
+        from pcot.utils.archive import FileArchive, ArchiveType
         from pcot.utils.datumstore import DatumStore
 
         try:
             self.fileName = fileName
             self.archive = DatumStore(FileArchive(fileName))
+            if self.archive.archive.metadata.type != ArchiveType.CAMERADATA:
+                logger.critical(f"{fileName} is not a camera archive (it is {self.archive.archive.metadata.type}), so shouldn't be in the cameras directory")
             self.params = self.archive.get("params")
             if self.params is None:
                 raise Exception(f"Camera data file {fileName} does not contain camera parameters")
@@ -156,9 +155,6 @@ class CameraData:
 
         # resolve the Datum object
         self.params = self.params.val
-        # set up the backpointer so CameraParams and Filter can get the archive if we need to load
-        # more data
-        self.params.camera_data = self
         # now we need to patch the filters so they have the camera name
         for x in self.params.filters.values():
             x.camera_name = self.params.params.name
@@ -167,14 +163,23 @@ class CameraData:
     def openStoreAndWrite(self, fileName, params: CameraParams):
         """To avoid writing a weird init, we construct a new DatumStore archive here and write a CameraParams
         datum to it. We return the store  so we can write flatfields etc. later. Remember to close the archive!
+        This is called from the gencam command.
 
         The init would be 'weird' because it would have to set up a read/write archive with an LRU cache, and
         that's not a thing that makes a great deal of sense here."""
 
-        from pcot.utils.archive import FileArchive,ArchiveType
+        from pcot.utils.archive import FileArchive,ArchiveType,Metadata
         from pcot.utils.datumstore import DatumStore
 
-        archive = FileArchive(fileName, "w", type=ArchiveType.CAMERADATA)
+        # get extra metadata that's in the dict; there's some kinda duplication here because the author and
+        # date stored in the metadata will be automatically generated from the system and won't be the values
+        # stored in the YAML file. I think that might be a good idea - the metadata on the archive is about
+        # the file, but the metadata in the data itself is about that data.
+        meta = Metadata(type=ArchiveType.CAMERADATA,
+                                description=params.params.description,
+                                name=params.params.name,
+                                short=params.params.short)
+        archive = FileArchive(fileName, "w", metadata=meta)
         archive.open()
         ds = DatumStore(archive)
         ds.writeDatum("params", Datum(Datum.CAMERAPARAMS, params, nullSourceSet))
@@ -227,7 +232,3 @@ class CameraData:
     def getFlat(self, filtname) -> Datum:
         """Get the flatfield for the given filter and position."""
         return self.archive.get(f"flat_{filtname}")
-
-    def getReflectances(self):
-        """Get the reflectance dict or None. The structure of the dict is {target: {patch: {filter: (mean, std)}}}"""
-        return self.params.reflectances

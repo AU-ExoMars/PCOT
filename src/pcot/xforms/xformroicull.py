@@ -40,7 +40,9 @@ class ROICull(XFormType):
             img_rois = img.filterBadROIs() if node.params.cullbad else img.rois
             # our output is the input image with the ROIs removed.
             img = img.shallowCopy()
-            rois_to_cull = node.params.rois
+            # Unlabelled ROIs are stored as empty string in the params, but actually have a None label.
+            # Deal with this.
+            rois_to_cull = [None if x=='' else x for x in node.params.rois]
             # we make a copy of the input image's ROIs so we don't lose them
             # when we delete them from the image! This is the set used by the UI.
             node.rois = img_rois.copy()
