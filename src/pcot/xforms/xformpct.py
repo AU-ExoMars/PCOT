@@ -90,6 +90,7 @@ class CalibrationTargetBase(XFormType):
         node.rois = []  # list of ROIs (ROIPainted); if none then we're editing points.
         node.selROI = None  # selected ROI index or None
         node.showStdDevs = False  # show stddevs on canvas
+        node.roiLabelSize = 8  # roi label size 0-20
 
     def perform(self, node):
         img_in = node.getInput(0, Datum.IMG)
@@ -120,7 +121,7 @@ class CalibrationTargetBase(XFormType):
                         r.label = p.name
                         r.labeltop = True
                         r.colour = p.col
-                        r.fontsize = 8
+                        r.fontsize = node.roiLabelSize
                         r.thickness = 0
                         r.drawbg = True
                         r.drawEdge = (node.drawMode == 'Edge')
@@ -222,12 +223,17 @@ class TabPCT(pcot.ui.tabs.Tab):
         self.w.drawMode.currentIndexChanged.connect(self.drawModeChanged)
         self.w.stddevsBox.stateChanged.connect(self.stddevsBoxChanged)
         self.w.radiusScale.valueChanged.connect(self.radiusScaleChanged)
+        self.w.roiLabelSize.valueChanged.connect(self.roiLabelSizeChanged)
         self.w.canvas.canvas.setMouseTracking(True)
         self.target = node.type.target
         self.mousePos = None
         self.mouseDown = False
         # sync tab with node
         self.nodeChanged()
+
+    def roiLabelSizeChanged(self, val):
+        self.node.roiLabelSize = val
+        self.changed()
 
     def radiusScaleChanged(self, val):
         self.node.radiusScale = val
@@ -284,6 +290,7 @@ class TabPCT(pcot.ui.tabs.Tab):
         self.w.genButton.setEnabled(readyToGen)
         self.w.rotateButton.setEnabled(readyToGen)
         self.w.drawMode.setCurrentIndex(self.w.drawMode.findText(self.node.drawMode))
+        self.w.roiLabelSize.setValue(self.node.roiLabelSize)
 
         self.w.canvas.setNode(self.node)
         if self.node.img is not None:
