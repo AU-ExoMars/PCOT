@@ -180,13 +180,14 @@
 <li>increment the MAJOR number if backward incompatible changes are introduced</li>
 <li>increment the MINOR number if new, backward compatible changes are introduced OR if deprecating functionality.</li>
 <li>increment the PATCH number if backward compatible bug fixes are introduced</li>
-<li>The version codeword is a helpful mnemonic. We were  using a script to generate <a href="http://pale.org/rainbow.php">Rainbow codes</a>, but we've now moved on to <a href="https://m.megalithic.co.uk/asb_mapsquare.php">Megalithic sites in the UK</a> running through letters of the alphabet and roughly south to north, trying to stick with more memorable names. <ul>
+<li>The version codeword is a helpful mnemonic. We use <a href="https://m.megalithic.co.uk/asb_mapsquare.php">Megalithic sites in the UK</a> running through letters of the alphabet and roughly south to north, trying to stick with more memorable names. <ul>
 <li>Only increment the name letter for a major release - for example, DRIFT STONES had a minor change, so went to DYNAS COVE rather than (say) EATHORNE.</li>
 </ul>
 </li>
 </ul>
 </li>
-<li>Edit <strong>PCOT/src/pcot/VERSION.txt</strong> to add the new version data, also specifying codename and the date (in ISO 8601, YYYY-MM-DD format).</li>
+<li>Edit <strong>PCOT/src/pcot/VERSION.txt</strong> to add the new version data, also specifying codename and the date (in ISO 8601, YYYY-MM-DD format).
+You may also need to change the second line in this file, which specifies the oldest document versions we can load (i.e. the version of  PCOT which created that document).</li>
 <li>Edit <strong>PCOT/pyproject.toml</strong> to add the new version data (without the codename)</li>
 <li>Run <strong>poetry install</strong> on both Windows and Linux and check PCOT still runs (and that the title bar and About version data is correct)</li>
 <li>Create a list of the changes by looking at the Git log and add this

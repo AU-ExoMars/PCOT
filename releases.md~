@@ -4,9 +4,27 @@
 None
 
 ## Beta releases
-None
+
+## 0.12.0-beta 2026-03-04 JOANEY HOW
+
+I've had to go quite a long way north to get a name I liked; this one's in Somerset. There is a 
+minor backward compatibility issue (camera data) but I'll still make it a minor bump; most things
+will still work.
+
 
 ## Alpha releases
+
+## 0.11.0-alpha 2025-10-24 IGNIOC STONE
+
+Fenton, where are you?
+
+* Some UI changes and fixes
+* Various internal fixes to do with object deepcopy
+* Basic debayering in the RGB input method (just bilinear, edge-aware and variable number of gradients)
+* Separate plots in reflectance node to help check the line-fitting visually
+* Graph updates to show progress as it runs
+* Ctrl-click on a node to force recalculation
+* *gradient* node is now *colourmap*
 
 ## 0.10.0-alpha 2025-06-12 HALWYN ROUND
 

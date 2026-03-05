@@ -378,7 +378,7 @@ along with some defaults which are used in case the items are not found in the s
                               )
         for i in range(NUMINPUTS):
             self.addInputConnector(str(i), Datum.IMG, &quot;a single line in the plot&quot;)
-        self.addOutputConnector(&quot;data&quot;, Datum.DATA, &quot;a CSV output (use 'dump' or 'sink' to read it)&quot;)
+        self.addOutputConnector(&quot;data&quot;, Datum.TABLE, &quot;a CSV output (use 'dump' or 'sink' to read it)&quot;)
 </code></pre>
 <p>Note that the default values are optional - if you don't specify a default you can just
 use the attribute name rather than a <code>(name, default)</code> tuple, but you will get an error if

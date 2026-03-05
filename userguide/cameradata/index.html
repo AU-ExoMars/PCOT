@@ -10,7 +10,7 @@
         <link rel="shortcut icon" href="../../img/favicon.ico">
     <meta name="robots" content="noindex,nofollow">
 
-        <title>Camera data - PCOT Documentation</title>
+        <title>Camera and reflectance target data - PCOT Documentation</title>
     
         <link href="../../css/bootstrap.min.css" rel="stylesheet">
         <link href="../../css/font-awesome.min.css" rel="stylesheet">
@@ -161,9 +161,9 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#camera-data" class="nav-link">Camera data</a>
+            <li class="nav-item" data-bs-level="1"><a href="#camera-and-reflectance-target-data" class="nav-link">Camera and reflectance target data</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-bs-level="2"><a href="#obtaining-camera-files" class="nav-link">Obtaining camera files</a>
+            <li class="nav-item" data-bs-level="2"><a href="#obtaining-camera-and-reflectance-files" class="nav-link">Obtaining camera and reflectance files</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -172,6 +172,10 @@
               </ul>
             </li>
             <li class="nav-item" data-bs-level="2"><a href="#format-of-the-yaml-file" class="nav-link">Format of the YAML file</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#filter-response-data" class="nav-link">Filter response data</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -187,6 +191,10 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#listing-reflectance-data-using-pcot" class="nav-link">Listing reflectance data using PCOT</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#further-work" class="nav-link">Further work</a>
               <ul class="nav flex-column">
               </ul>
@@ -198,25 +206,24 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="camera-data">Camera data</h1>
+<h1 id="camera-and-reflectance-target-data">Camera and reflectance target data</h1>
 <p>Each camera used with PCOT has different filters and other associated data.
 PCOT needs to know about these, and stores them in camera data files.
 These are in PCOT's archive format and so have the PARC extension.</p>
+<p>Similarly, reflectance targets you calibrate against have data, such
+as spectra for each patch.</p>
 <p>When you start PCOT for the first time 
 you will need to tell it where to find these files. PCOT will load all
-the camera files from the provided directory, storing them under
-names given in the files themselves.</p>
-<h2 id="obtaining-camera-files">Obtaining camera files</h2>
-<p>Initial version of the files are stored in the PCOT repository with
-PCOT itself, in the <code>cameras</code> directory. For example, a file for PANCAM
-can be found in <code>PCOT/cameras/pancam.parc</code>. Currently these files hold
-very little calibration data, just the filter information.</p>
-<p>You should be able to download camera files containing full
-data for AUPE and PanCam
-from the <a href="pcot.aber.ac.uk">PCOT Cookbook</a> site. Data will be added
-to this server when it becomes available.</p>
+the camera and reflectance files from the provided directories,
+storing them under names given in the files themselves.</p>
+<h2 id="obtaining-camera-and-reflectance-files">Obtaining camera and reflectance files</h2>
+<p>You should be able to download camera and reflectance files containing full
+data for AUPE and PanCam from the <a href="pcot.aber.ac.uk">PCOT Cookbook</a> site.</p>
+<p>Store the camera files in a separate directory from the reflectances.
+In my own system, I've created <code>cameras</code> and <code>reflectances</code> directories
+in my PCOT install directory.</p>
 <p>The rest of this page describes how to make your own data files if you
-are working with a new camera.</p>
+are working with a new camera or target.</p>
 <h2 id="creating-camera-files">Creating camera files</h2>
 <p>Camera data is generated from a YAML parameter file (and possibly extra data)
 and stored in a PARC file.</p>
@@ -254,6 +261,41 @@ filters:
     description: &quot;Green broadband&quot;
 (and so on)
 </code></pre>
+<h2 id="filter-response-data">Filter response data</h2>
+<p>As well as the above parameters, filters typically have a CSV file containing filter response data
+at each wavelength.
+You should add a "response" field to the filter in this case, with the name of the file. For example:</p>
+<pre><code class="language-yaml">  G11:
+    cwl: 950
+    fwhm: 50
+    position: R10
+    transmission: 0.994
+    description: Medium band infrared
+    response: ../wac_filters/Geol 950_50.csv
+</code></pre>
+<p>In the CSV file, the lines can be in one of two forms. In simple data, it is just wavelength and response at that
+wavelength. For example:</p>
+<pre><code class="language-csv">wavelength,response
+200,0.0
+250,10.0
+</code></pre>
+<p>In more complex data each wavelength has a different response at different angles. Here, the first column is the wavelength
+and the remaining columns are the responses at different angles. The angles themselves are extracted from the header.
+For example:</p>
+<pre><code class="language-csv">Wavelength (nm),0degs,3degs,6degs,9degs,12degs,15degs,18degs,21degs,24degs,27degs,30degs
+761,0.0534,0.0581,0.0756,0.071,0.0838,0.1026,0.1114,0.1513,0.1563,0.1915,0.3277
+762,0.0539,0.0543,0.0718,0.0757,0.0995,0.0858,0.1162,0.1539,0.1599,0.1947,0.3684
+</code></pre>
+<p>The system will extract any numerical angles from the header, disregarding other text, but the
+angles must be in degrees.</p>
+<p>There are two other important fields that may be added to the filter definition:</p>
+<ul>
+<li><code>response_percentage</code> indicates that the filter responses are percentages. This is true by default,
+and setting it to false says that the responses are in the range 0-1.</li>
+<li><code>response_clip_percentage</code> tells the system how to deal with filter responses that are greater than 100%. 
+Usually this will cause an error. If this is set to a value, the responses will be clipped at this level.
+This will cause a warning when the data is loaded and will be visible in the Show Filters dialog.</li>
+</ul>
 <h2 id="flatfield-data">Flatfield data</h2>
 <p>The <code>gencam</code> command will build flatfield data from a large number of images captured for
 each filter. These images should be stored in a directory for each filter, named for the filter
@@ -344,41 +386,67 @@ this case you can use a <code>directory_map</code> dictionary inside the <code>f
 </code></pre>
 <p>Note that every filter position must be listed in the <code>directory_map</code> dictionary, even if the value is the same as the key.</p>
 <h2 id="reflectance-data">Reflectance data</h2>
-<div class="alert alert-danger" role="alert">
-<p>This section is likely to change in the future as reflectance data becomes more complex!</p>
-</div>
-<p>You can store the reflectance data for each filter in the camera data file for a given calibration target.
-To do this, you need to add a <code>reflectance</code> section to the YAML file, like this:</p>
-<pre><code class="language-yaml">reflectance:
+<p>Reflectance data is also stored in <code>.parc</code> files, and these are created by the <code>pcot genrefl</code> command in a similar
+manner, from a YAML file and some extra data.</p>
+<h3 id="simple-reflectances">Simple reflectances</h3>
+<p>Simple reflectance data records the spectrum of each patch at a single angle only. We typically use it
+for lab targets such as Spectralon patches or the Macbeth/Babel ColorChecker. The YAML file looks like this:</p>
+<pre><code class="language-yaml">name: Spectralon
+date: 2026-01-14
+author: Jim Finnis &lt;jcf12@aber.ac.uk&gt;
 
-  # PCT Colourimetry data from this directory:
-  # ABU-Exomars - Colourimetry\2023-11-21_colour_targets\pct\*-full-br\*BS* images
+short: Spectralon patches
+description: |
+  Data captured from spectralon patches
 
-  PCT: lwac_from_colourimetry_pct.csv
+format: simple
 
-  # reflectance data from the Babelcolour ColourChecker dataset
-  # https://babelcolor.com/colorchecker-2.htm#CCP2_data
-
-  macbeth: lwac_from_babelcolour_colorchecker.csv
+file: spectralon_refl.csv
 </code></pre>
-<p>The CSV files contain the reflectance per filter for each patch in the target, with the
-following columns:</p>
-<ul>
-<li><code>ROI</code>: (region of interest) the name of the patch in the target</li>
-<li><code>filter</code>: the name of the filter</li>
-<li><code>n</code>: the mean of the reflectance for that patch in that filter</li>
-<li><code>u</code>: the uncertainty in the reflectance for that patch in that filter</li>
-</ul>
-<p>Here are the first few lines of the <code>lwac_from_colourimetry_pct.csv</code> file:</p>
-<pre><code class="language-csv">ROI,filter,n,u
-NG4,C03L,0.07009,0.0052
-NG4,C02L,0.07165,0.00442
-NG4,C01L,0.07126,0.00565
-NG4,G0a,0.07174,0.0043
-NG4,G0b,0.06581,0.00508
-NG4,G0c,0.07276,0.00456
+<p>and the referenced CSV file like this:</p>
+<pre><code>patch,wavelength,mean,sd
+S20,250,0.2007,0.0
+S20,251,0.2004,0.0
+S20,252,0.2001,0.0
+S20,253,0.1996,0.0
 ...
+S99,250,0.9725,0.0
+S99,251,0.9723,0.0
+S99,252,0.9737,0.0
+S99,253,0.9742,0.0
+S99,254,0.9741,0.0
+S99,255,0.9745,0.0
 </code></pre>
+<p>with entries for each patch at every wavelength (and the same wavelengths for all patches). 
+The reflectances should in the range 0-1.</p>
+<h3 id="complex-reflectance-data">Complex reflectance data</h3>
+<p>This is data in which each patch has a different response at different angles, typically
+given as <span class="arithmatex"><span class="MathJax_Preview">(\phi,\theta)</span><script type="math/tex">(\phi,\theta)</script></span> where <span class="arithmatex"><span class="MathJax_Preview">\phi</span><script type="math/tex">\phi</script></span> is the azimuth and <span class="arithmatex"><span class="MathJax_Preview">\theta</span><script type="math/tex">\theta</script></span> is the polar angle.</p>
+<div class="alert alert-danger" role="alert">
+<p>This format is currently temporary; I refer to it as "Jack's format" because the data
+comes from processing Jack Langston's data as little as possible (there's a lot of it!)</p>
+</div>
+<p>Instead of a single <code>file</code> element, the YAML file has a <code>patches</code> map. This gives the directory
+in which the data for each patch is stored. Here's an example:</p>
+<pre><code class="language-yaml">patches:
+    NG4: black
+    Pyroceram: white
+    BG18: green
+    WCT2065: brown
+    NG11: grey
+    RG610: red
+    BG3: blue
+    OG515: yellow
+</code></pre>
+<p>The keys are the patch names, the values are the directories.</p>
+<p>Within each patch directory are subdirectories for each <span class="arithmatex"><span class="MathJax_Preview">\phi</span><script type="math/tex">\phi</script></span> angle. These have names in the form
+<code>Phi_angle</code> where <code>angle</code> is <code>00</code> for zero or some other angle in degrees (e.g. <code>Phi_00</code>, <code>Phi_90</code>, <code>Phi_210</code>).</p>
+<p>Within each of these <span class="arithmatex"><span class="MathJax_Preview">\phi</span><script type="math/tex">\phi</script></span> directories is a large number of <code>.sed</code> files, each named <code>*_scannumber.sed</code> (where
+<code>*</code> can be anything). The scan number maps onto <span class="arithmatex"><span class="MathJax_Preview">\theta</span><script type="math/tex">\theta</script></span>:
+$$
+\theta = 5n-80
+$$
+Each <code>.sed</code> file is directly taken from the RS-3500 instrument; we use the Reflect. (reflectance) percentage field.</p>
 <h2 id="listing-camera-data-using-pcot">Listing camera data using PCOT</h2>
 <div class="alert alert-info" role="alert">
 <p>Some of this information is duplicated in <a href="/userguide/multifile/">the multifile input docs </a></p>
@@ -401,6 +469,14 @@ There are more options:</p>
 run</p>
 <pre><code class="language-commandline">pcot lscams -fl AUPE_LEFT
 </code></pre>
+<h2 id="listing-reflectance-data-using-pcot">Listing reflectance data using PCOT</h2>
+<p>Similarly, the <code>lsrefls</code> command will show the reflectance data the system knows about. The basic command
+lists the reflectances, and providing an argument will show only that target. Options are:</p>
+<ul>
+<li><code>-l</code> will show a long-format result with all patch details and the angles stored</li>
+<li><code>-p</code> will plot the reflectances (at <span class="arithmatex"><span class="MathJax_Preview">\phi=0</span><script type="math/tex">\phi=0</script></span> and <span class="arithmatex"><span class="MathJax_Preview">\theta=0</span><script type="math/tex">\theta=0</script></span>)</li>
+<li><code>-F</code> will take a filename rather than a reflectance target name</li>
+</ul>
 <h2 id="further-work">Further work</h2>
 <p>Later, more information will be added to the camera data files:</p>
 <ul>
