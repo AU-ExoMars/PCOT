@@ -17,6 +17,7 @@ class XformDecorr(XFormType):
     with stretch.
 
     This works by
+
     * calculating the covariance matrix
     * calculating a transform to a space in which the diagonals of the covariance matrix are 1 and the
       other elements are minimised (i.e. the bands are decorrelated) - so this is a form of PCA
@@ -39,7 +40,7 @@ class XformDecorr(XFormType):
         self.addOutputConnector("sds", Datum.NUMBER)
         self.params = TaggedDictType(
             stretch=("stretch factor", float, 1.0),
-            clip=("percentile out outliers to clip in postprocessing", float, 5.0))
+            clip=("percentile outliers to clip in postprocessing", float, 5.0))
 
     def createTab(self, n, w):
         return TabDecorr(n, w)
