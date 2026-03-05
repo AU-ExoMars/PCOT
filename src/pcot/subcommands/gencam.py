@@ -86,6 +86,8 @@ def gencam(args):
     from pcot.cameras import camdata
     import yaml
 
+    print(f"PCOT gencam generating {args.output} from {args.params}")
+
     pcot.setup()
     with open(args.params) as f:
         # load the YAML file and process the filter information in the "filters" key
@@ -106,6 +108,11 @@ def gencam(args):
         p.params.description = d["description"]
         p.params.short = d["short"]
         p.params.source_filename = args.params
+
+        if "filter_aliases" in d:
+            logger.error("Filter aliases are provided, but these are no longer supported (it's part of the old reflectance system")
+        if "reflectance" in d:
+            logger.error("Reflectance data is provided, but reflectances are now handled separately")
 
         # get information about any flats from the YAML. We can have the data in the YAML but disabled,
         # so flats aren't generated, but setting the "disabled" key. We can also do this by using the

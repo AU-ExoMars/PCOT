@@ -112,6 +112,9 @@ class Metadata:
             if a is not None and a != "":
                 setattr(self,k,a)
 
+        if self.type == ArchiveType.UNSPECIFIED or self.type == ArchiveType.UNKNOWN:
+            self.type = md.type
+
 
 # Basic serialisers/deserialisers. Numpy arrays are handled differently,
 # see the docstring for Archive.
@@ -366,9 +369,8 @@ class FileArchive(Archive):
 
         # either create a new metadata item, or use the one passed in.
         if metadata is None:
-            self.metadata = Metadata(type=type)
-        else:
-            self.metadata = metadata
+            metadata = Metadata(type=type)
+        self.metadata = metadata
 
         # we haven't actually loaded metadata, this is a new archive. This could
         # change below. We use this to suppress adding a history row when metadata
