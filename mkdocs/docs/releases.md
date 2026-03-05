@@ -7,9 +7,24 @@ None
 
 ## 0.12.0-beta 2026-03-04 JOANEY HOW
 
-I've had to go quite a long way north to get a name I liked; this one's in Somerset. There is a 
-minor backward compatibility issue (camera data) but I'll still make it a minor bump; most things
-will still work.
+I've had to go quite a long way north to get a name I liked; this one's in
+Somerset. There is a minor backward compatibility issue (camera data) but I'll
+still make it a minor bump; most things will still work.
+
+* Separation of camera and reflectance data
+* *reflectance* node now calculates known reflectance from filter reponses
+and patch reflectances
+* measured filter and reflectance spectra supported (rather than simulated)
+* transmission angles and patch incident stereo angles supported
+* canvas spectrum widget has a variable area
+* DATA type (e.g. from *spectrum* node) is now TABLE
+* Better indexing operator for bands in *expr* allows e.g. `a[640,540]` or `a[R,G]`
+* *decorr stretch* much improved: outputs eigenvals and SDs, permits variable
+stretch, variable clipping of outliers (i.e. contrast stretch)
+* archives hold metadata: type, author, date and a history if files are overwritten
+* gamma correction on canvas
+* multifile cache handling improvements
+* many bug fixes
 
 
 ## Alpha releases

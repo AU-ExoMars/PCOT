@@ -6,6 +6,7 @@ because the (not as good) admonishment extension uses those.
 Format:
 
 @@@ tag
+DO NOT START WITH A BLANK LINE!!!!
 some blocks of text which will have their markdown parsed
 @@@
 
@@ -39,6 +40,7 @@ class AlertBlockProcessor(BlockProcessor):
         matches = re.match(self.RE_FENCE_START, blocks[0])
         name = matches.group(1)
         
+        # get the class, but default to the one for "danger"
         className = classNameDict.get(name,classNameDict['danger'])
         
         blocks[0] = re.sub(self.RE_FENCE_START, '', blocks[0])
