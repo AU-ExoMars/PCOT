@@ -124,6 +124,7 @@ class Dialog(QtWidgets.QDialog):
         """Here we multiply the filter response by the reflectance"""
         phi = self.phiSpin.value()
         theta = self.thetaSpin.value()
+        filt_angle = self.filterAngleSpin.value()
         refl = cameras.getReflectance(self.reflBox.currentText())
         selected_patch = self.patchBox.currentText()
         cam = cameras.getCamera(self.cameraBox.currentText())
@@ -147,12 +148,12 @@ class Dialog(QtWidgets.QDialog):
         wavelengths, refls = refl.get_reflectances(selected_patch, phi, theta)
 
         # get the filter responses at those wavelengths
-        resp = filter.getResponse(wavelengths)
+        resp = filter.getResponse(wavelengths,filt_angle)
 
         # multiply the two together at each wavelength
         res = refls * resp
         # and get the "known reflectance" total
-        known = refl.get_known_reflectance_for_filter(filter, selected_patch, phi, theta)
+        known = refl.get_known_reflectance_for_filter(filter, selected_patch, phi, theta, filt_angle)
 
         mpl, ax = self._init_plot("filtered refl.")
 

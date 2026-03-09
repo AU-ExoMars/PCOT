@@ -132,15 +132,15 @@ class Reflectance:
         """
         pass
 
-    def get_known_reflectance_for_filter(self, f: Filter, patch, phi, theta):
+    def get_known_reflectance_for_filter(self, f: Filter, patch, patch_phi, patch_theta, filt_angle):
         """
         This will multiply the reflectance at each known wavelength with the filter's transmission at
         that wavelength, and total the result to give a total reflectance.
         """
         # get wavelengths for this patch and the reflectances
-        wvls, refls = self.get_reflectances(patch, phi, theta)
+        wvls, refls = self.get_reflectances(patch, patch_phi, patch_theta)
         # get the filter response from the filters for these wavelengths, interpolating if required
-        resp = f.getResponse(wvls)
+        resp = f.getResponse(wvls, filt_angle)
         # do the multiplication and adds
         r = refls @ resp
         # and divide by the sum of the responses - refls says how much light is reflected, resp tells you

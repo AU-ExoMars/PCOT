@@ -82,6 +82,15 @@ class XFormReflectance(XFormType):
     must have filter information including nominal reflectances for each
     patch on that target.
 
+    The **target angles**  are the theta (polar) and phi (azimuth) angles for incident light on
+    the patch; the reflectance angle is fixed at 24 degrees theta and 0 degrees phi.
+
+    Phi is measured clockwise from 0 at a line running from the centre of the PCT
+    to the right, assuming the PCT is held with the two large patches at the top.
+
+    The **filter angle** is the angle of transmission through the filter, with 0=straight through.
+
+
     The outputs are the gradient and intercept of the fit for each filter. All source
     data is removed, so it does not obscure image data in subsequent operations. The
     next operation should be an expr node performing out=(in-c)/m.
@@ -98,6 +107,9 @@ class XFormReflectance(XFormType):
             target=("The calibration target to use", Maybe(str)),
             show_patches=("Show the patch names on the plot", bool, True),
             sep_plots=("Show the plots as separate small plots for each filter", bool, False),
+            theta_target=("Theta (polar) angle of target (degs)", float, 0.0),
+            phi_target=("Phi (azimuth) angle of target (degs)", float, 270.0),
+            filter_angle=("Filter transmission angle (degs)", float, 0.0),
 
             # fudges; will probably remove
             zero_fudge=("Add an extra zero point", bool, False),
@@ -215,9 +227,10 @@ class XFormReflectance(XFormType):
                     continue
 
                 # get the known data
-                phi = 270           # TODO get phi and theta
-                theta = 0
-                known_mean = reflectance.get_known_reflectance_for_filter(filter,patch,phi,theta)
+                known_mean = reflectance.get_known_reflectance_for_filter(filter,patch,
+                                                                          node.params.phi_target,
+                                                                          node.params.theta_target,
+                                                                          node.params.filter_angle)
                 known_std = 0       # TODO get the STD of the known reflectance
 
                 logger.debug(
@@ -305,6 +318,10 @@ class TabReflectance(pcot.ui.tabs.Tab):
         self.w.saveButton.clicked.connect(self.save)
         self.w.showMCButton.clicked.connect(self.showMCClicked)
 
+        self.w.phiSpin.valueChanged.connect(self.phiChanged)
+        self.w.thetaSpin.valueChanged.connect(self.thetaChanged)
+        self.w.filterAngleSpin.valueChanged.connect(self.filterAngleChanged)
+
         self.w.zeroFudgeBox.stateChanged.connect(self.zeroFudgeStateChanged)
         self.w.simplifyFudgeBox.stateChanged.connect(self.simplifyFudgeStateChanged)
         self.nodeChanged()
@@ -332,6 +349,21 @@ class TabReflectance(pcot.ui.tabs.Tab):
     def targetChanged(self, i):
         self.mark()
         self.node.params.target = self.w.targetCombo.currentText()
+        self.changed()
+
+    def phiChanged(self, i):
+        self.mark()
+        self.node.params.phi_target = self.w.phiSpin.value()
+        self.changed()
+
+    def thetaChanged(self, i):
+        self.mark()
+        self.node.params.theta_target = self.w.thetaSpin.value()
+        self.changed()
+
+    def filterAngleChanged(self, i):
+        self.mark()
+        self.node.params.filter_angle = self.w.filterAngleSpin.value()
         self.changed()
 
     def filterChanged(self, i):
@@ -388,6 +420,10 @@ class TabReflectance(pcot.ui.tabs.Tab):
 
         self.w.zeroFudgeBox.setChecked(self.node.params.zero_fudge)
         self.w.simplifyFudgeBox.setChecked(self.node.params.simpler_data_fudge)
+
+        self.w.phiSpin.setValue(self.node.params.phi_target)
+        self.w.thetaSpin.setValue(self.node.params.theta_target)
+        self.w.filterAngleSpin.setValue(self.node.params.filter_angle)
 
     def markReplotReady(self):
         """make the replot button red"""
