@@ -1,5 +1,15 @@
 # Releases
 
+Releases are named after 
+[Megalithic sites in the UK](https://m.megalithic.co.uk/asb_mapsquare.php)
+running through letters of the alphabet and roughly south to north, trying to
+stick with more memorable names. For a very minor release, we sometimes
+don't change the letter.
+
+For fun I've added Google Maps and NLS references to each site and a little
+bit of info. You can look them up on the Megalithic Portal for more.
+
+
 ## Production releases
 None
 
@@ -26,6 +36,12 @@ stretch, variable clipping of outliers (i.e. contrast stretch)
 * multifile cache handling improvements
 * many bug fixes
 
+Site
+
+* [Google maps](https://maps.app.goo.gl/qAyRYBYGGsFH9MbQ8)
+* [NLS map](https://maps.nls.uk/geo/explore/#zoom=17.9&lat=51.17402&lon=-3.56298&layers=173&b=osm&o=100&marker=51.173872,-3.563206)
+* One of three cairns on Dunkery Hill, near Minehead.
+
 
 ## Alpha releases
 
@@ -41,6 +57,14 @@ Fenton, where are you?
 * Ctrl-click on a node to force recalculation
 * *gradient* node is now *colourmap*
 
+Site
+
+* [Google maps](https://maps.app.goo.gl/LP64ezJdR6zuanhf9)
+* [NLS map](https://maps.nls.uk/geo/explore/#zoom=19.5&lat=50.25550&lon=-5.01631&layers=173&b=ESRIWorld&o=100&marker=50.255610,-5.016593)
+* An ancient stone cross, on which is written VITALI FILI TORRICI, in the village
+of St. Clement, near Truro.
+
+
 ## 0.10.0-alpha 2025-06-12 HALWYN ROUND
 
 I still miss Fenton Saurus. 
@@ -53,6 +77,14 @@ I still miss Fenton Saurus.
 * Some new nodes and functions (roicull, getflags, reflectance..)
 * Small changes to canvas DQ viewing
 * Staying at Python 3.9 for now
+
+Site
+
+* [Google maps](https://maps.app.goo.gl/McFRBkRP1fJBJhVw5)
+* [NLS map](https://maps.nls.uk/geo/explore/#zoom=17.2&lat=50.08069&lon=-5.55111&layers=173&b=LIDAR_DTM_1m&o=100&marker=50.080691,-5.551571)
+* Again, not much to see today, but the site of an ancient village near
+Mousehole (pronounced "Mowzel" as I'm sure you're aware), which was
+[revealed by cropmarks by the drought of 1976](https://www.megalithic.co.uk/article.php?sid=48151).
 
 
 ## 0.9.0-alpha 2025-02-17 GODOLPHIN HILL
@@ -74,6 +106,14 @@ uncertainty to be stored (and other data types too)
 * Nodes which have been renamed from their defaults have their name text
 shown in bold
 * Forced to downgrade minimum Python version to 3.9 temporarily
+
+Site
+
+* [Google maps](https://maps.app.goo.gl/cTNRrdoFFKnP3fzz8)
+* [NLS map](https://maps.nls.uk/geo/explore/#zoom=16.6&lat=50.13351&lon=-5.37000&layers=168&b=osm&o=100&marker=50.132610,-5.370510)
+* A stone age village, or rather the stones thereof, between
+Penzance and Helston. Oddly no reference
+to it on OS maps, [but it is real](https://www.megalithic.co.uk/article.php?sid=26603).
 
 ### 0.8.0-alpha 2024-07-25 FENTON SAURUS
 
@@ -103,6 +143,17 @@ the bands in `a` that are also in `b`, in the same order as in `b`.
 * Cookbook in progress, but not part of the main repository to allow it to be updated more frequently
 * First release for Zenodo
 
+Site
+
+* [Google maps](https://maps.app.goo.gl/gZNyVnhtnWJZD7gP6)
+* [NLS map](https://maps.nls.uk/geo/explore/#zoom=19.0&lat=50.18107&lon=-5.44429&layers=173&b=osm&o=100&marker=50.181070,-5.444292)
+* I can find very few references to this holy well in Lelant (near Hayle),
+no accurate maps - and that's a shame because
+it's an absolutely top-notch name.
+Honestly, I'm [not making this one up](https://palden.co.uk/shiningland/files/Shining-Land-AppendixOne-SitesList.pdf). *Fenton* is probably
+cognate with Welsh *ffynnon* (and English *fountain* for that matter).
+
+
 ### 0.7.0-alpha 2024-05-03 EAST PENTIRE
 
 * Very many more unit tests
@@ -131,6 +182,12 @@ functionality existed before, but was "ad-hoc"
 an output
 * Changes to multidot - doc improvements, UX and bug fixes
 
+Site
+
+* [Google maps](https://maps.app.goo.gl/z26XqeFk2d2qxQBA7)
+* [NLS map](https://maps.nls.uk/geo/explore/#zoom=19.0&lat=50.41242&lon=-5.12464&layers=173&b=osm&o=100&marker=50.412152,-5.124204)
+* Not much left of this barrow near Newquay due to erosion.
+
 ### 0.6.1-alpha 2023-10-04 DYNAS COVE (minor release)
 
 * Multifile input can accept BMP files
@@ -139,6 +196,14 @@ an output
 * PANCAM and AUPE filters are default filter sets loaded in
 * Others can be specified in a config file (and can override PANCAM and AUPE)
 * Filter set no longer required by PDS4 input
+
+Site
+
+* [Google maps](https://maps.app.goo.gl/Gi4JDQDmLVubr2Cu7)
+* [NLS map](https://maps.nls.uk/geo/explore/#zoom=17.9&lat=50.00484&lon=-5.10670&layers=173&b=osm&o=100&marker=50.004943,-5.106693)
+* [Historic England says it's dubious](https://www.heritagegateway.org.uk/Gateway/Results_Single.aspx?uid=426425&sort=2&type=promontory%20fort&rational=a&class1=None&period=None&county=None&district=None&parish=None&place=&recordsperpage=10&source=text&rtype=&rnumber=&p=5&move=n&nor=240&recfc=0&resourceID=19191#aRt), given everyone's just *assuming*
+there's a fort there because of the name (Cornish *dynas* is cognate with Welsh
+*dinas* which now means "city" but also means "hillfort.") On the Lizard.
 
 
 ### 0.6.0-alpha 2023-09-11 DRIFT STONES
@@ -162,6 +227,12 @@ an output
 * Crude band depth node (needs work)
 * A lot of bug fixes and regression fixes
 
+Site
+
+* [Google maps](https://maps.app.goo.gl/h3XQD2hbApq8NAng6)
+* [NLS map](https://maps.nls.uk/geo/explore/#zoom=17.8&lat=50.09982&lon=-5.58473&layers=173&b=osm&o=100&marker=50.099463,-5.585171)
+* A pair of nice standing stones near Penzance.
+
 
 ### 0.5.0-alpha 2023-03-08 CARLENNO ROUND
 
@@ -171,12 +242,24 @@ an output
 * Export to PDF, SVG and PNG with those hi-res annotations
 * *gradient* is much simpler, can overlay onto the image and can draw a legend
 
+Site
+
+* [Google maps](https://maps.app.goo.gl/E4dUxtzNa8YACXYd7)
+* [NLS map](https://maps.nls.uk/geo/explore/#zoom=17.0&lat=50.22751&lon=-5.35716&layers=173&b=LIDAR_DTM_1m&o=64&marker=50.227777,-5.357533)
+* An oval feature, site of a village, near Camborne.
+
 ### 0.4.0-alpha 2022-11-30 CAER BRAN
 
 * Annotation system entirely rewritten
 * PDF/PNG/SVG exporter
 * Gradient legend annotation
 * Doc updates
+
+Site
+
+* [Google maps](https://maps.app.goo.gl/R9WMNFJgoAnMmjg28)
+* [NLS map](https://maps.nls.uk/geo/explore/#zoom=15.0&lat=50.10463&lon=-5.62712&layers=6&b=ESRIWorld&o=100&marker=50.104626,-5.627117)
+* A small but perfectly formed circular hillfort west of Penzance.
 
 ### 0.3.0-alpha 2022-10-27 BEACON HUT
 
@@ -195,8 +278,15 @@ types to have operations defined on them
 * rect node can now be edited numerically
 * circle node can add circular ROIs, which can be edited numerically.
 
+Site
+
+* [Google maps](https://maps.app.goo.gl/ZJc6vgXuQ66AAg8W6)
+* [NLS map](https://maps.nls.uk/geo/explore/#zoom=17.8&lat=50.13336&lon=-5.22988&layers=6&b=ESRIWorld&o=100&marker=50.133545,-5.230464)
+* A chambered cairn, or it could possibly be a hut, between Helston and
+Falmouth.
 
 ### 0.2.0-alpha 2022-04-21 ANJARDEN SPRING
+
 
 * "pixel scanning" on canvases, shows spectrum of pixel when active
 * custom cursor, pixel under cursor highlighted at high zooms
@@ -217,7 +307,18 @@ on MacOS pyinstaller)
 * context menu on editable text caused a crash (bug in Qt). Workaround.
 * comment boxes
 
+Site
+
+* [Google maps](https://maps.app.goo.gl/cWShaVzuMTzHM2nz6)
+* [NLS map](https://maps.nls.uk/geo/explore/#zoom=19.0&lat=50.10180&lon=-5.61240&layers=173&b=ESRIWorld&o=100&marker=50.101840,-5.612444)
+* A rather boggy sacred spring near Penzance.
+
 ### 0.1.0-alpha 2022-03-02 ALSIA WELL
 
 * Initial alpha release outside Aberystwyth
 
+Site
+
+* [Google maps](https://maps.app.goo.gl/NarVjkFAhuqsHUL68)
+* [NLS map](https://maps.nls.uk/geo/explore/#zoom=17.3&lat=50.06951&lon=-5.64255&layers=173&b=ESRIWorld&o=100&marker=50.069042,-5.644670)
+* A holy well near Land's End, recently refurbed.
