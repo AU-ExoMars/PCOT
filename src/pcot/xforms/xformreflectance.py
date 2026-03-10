@@ -321,6 +321,7 @@ class TabReflectance(pcot.ui.tabs.Tab):
         self.w.phiSpin.valueChanged.connect(self.phiChanged)
         self.w.thetaSpin.valueChanged.connect(self.thetaChanged)
         self.w.filterAngleSpin.valueChanged.connect(self.filterAngleChanged)
+        self.w.recalcButton.clicked.connect(self.recalcButtonClicked)
 
         self.w.zeroFudgeBox.stateChanged.connect(self.zeroFudgeStateChanged)
         self.w.simplifyFudgeBox.stateChanged.connect(self.simplifyFudgeStateChanged)
@@ -328,6 +329,22 @@ class TabReflectance(pcot.ui.tabs.Tab):
 
     def save(self):
         self.w.mpl.save()
+
+    def changed(self):
+        # when the node change is run, we need to clear the recalc button's style.
+        super().changed()
+        self.w.recalcButton.setStyleSheet("")
+
+    def recalcButtonClicked(self):
+        # recalculate; call changed() so that the new values are copied into the node and the node runs,
+        # then replot the curves. In that order, or else the plot will be from the old data.
+        self.changed()
+        self.replot()
+
+    def mustRecalc(self):
+        # if an angle etc. changed we need to recalculate the node and all its children  - typically slow,
+        # so we make it a user action, indicating that necessity by making the recalc button red.
+        self.w.recalcButton.setStyleSheet("background-color:rgb(255,100,100)")
 
     def showMCClicked(self):
         # open a dialog containing a single text edit box with the gradient and intercept values
@@ -349,22 +366,22 @@ class TabReflectance(pcot.ui.tabs.Tab):
     def targetChanged(self, i):
         self.mark()
         self.node.params.target = self.w.targetCombo.currentText()
-        self.changed()
+        self.mustRecalc()
 
     def phiChanged(self, i):
         self.mark()
         self.node.params.phi_target = self.w.phiSpin.value()
-        self.changed()
+        self.mustRecalc()
 
     def thetaChanged(self, i):
         self.mark()
         self.node.params.theta_target = self.w.thetaSpin.value()
-        self.changed()
+        self.mustRecalc()
 
     def filterAngleChanged(self, i):
         self.mark()
         self.node.params.filter_angle = self.w.filterAngleSpin.value()
-        self.changed()
+        self.mustRecalc()
 
     def filterChanged(self, i):
         # data unchanged, no need to mark or call changed().
@@ -494,9 +511,9 @@ class TabReflectance(pcot.ui.tabs.Tab):
                 ax.annotate(f"{patch}\n{measured_mean[i]:.2f}±{measured_std[i]:.2f}",
                             (known_mean[i], measured_mean[i]), fontsize=5)
         self.w.mpl.draw()
-        self.w.replot.setStyleSheet("")
 
     def replot(self):
+        self.w.replot.setStyleSheet("")
         # the MPL widget creates a default subplot, let's clear it...
         self.w.mpl.fig.clf()
         if self.node.params.sep_plots:
