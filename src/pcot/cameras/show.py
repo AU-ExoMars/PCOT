@@ -17,11 +17,16 @@ class Dialog(QtWidgets.QDialog):
         uiloader.loadUi('showcamsrefls.ui', self)
         self.cameraBox.currentIndexChanged.connect(self._camera_or_target_changed)
         self.reflBox.currentIndexChanged.connect(self._camera_or_target_changed)
+        self.filterAngleSpin.valueChanged.connect(self._replot)
+        self.thetaSpin.valueChanged.connect(self._replot)
+        self.phiSpin.valueChanged.connect(self._replot)
+        self.y01Box.stateChanged.connect(self._replot)
+
         self.filterPlotButton.clicked.connect(self._filter_plot)
-        self.filterAngleSpin.valueChanged.connect(self._filter_plot)
-        self.y01Box.stateChanged.connect(self._camera_or_target_changed)
         self.reflPlotButton.clicked.connect(self._refl_plot)
         self.filtReflPlotButton.clicked.connect(self._filt_refl_plot)
+
+        self._current_plot_func = None
 
         # populate the boxes for the cameras
         for cname in cameras.getCameraNames():
@@ -30,6 +35,11 @@ class Dialog(QtWidgets.QDialog):
         for rname in cameras.getReflectanceNames():
             self.reflBox.addItem(rname)
         self._camera_or_target_changed()
+
+    def _replot(self):
+        """Do the same plot as was last done"""
+        if self._current_plot_func:
+            self._current_plot_func()
 
     def _camera_or_target_changed(self):
         # get currently selected items
@@ -67,6 +77,7 @@ class Dialog(QtWidgets.QDialog):
 
     def _filter_plot(self):
         self.errorText.setText("")
+        self._current_plot_func = self._filter_plot
         cam = cameras.getCamera(self.cameraBox.currentText())
         filter_names = cam.params.filters
         selected = self.filterBox.currentText()
@@ -105,6 +116,7 @@ class Dialog(QtWidgets.QDialog):
 
     def _refl_plot(self):
         self.errorText.setText("")
+        self._current_plot_func = self._refl_plot
         phi = self.phiSpin.value()
         theta = self.thetaSpin.value()
         refl = cameras.getReflectance(self.reflBox.currentText())
@@ -118,12 +130,15 @@ class Dialog(QtWidgets.QDialog):
                 ax.plot(wavelengths, r, label=n)
 
         ax.legend()
+        if self.y01Box.isChecked():
+            ax.set_ylim([0, 1])
         mpl.draw()
 
     def _filt_refl_plot(self):
         """Here we multiply the filter response by the reflectance"""
         phi = self.phiSpin.value()
         theta = self.thetaSpin.value()
+        self._current_plot_func = self._filt_refl_plot
         filt_angle = self.filterAngleSpin.value()
         refl = cameras.getReflectance(self.reflBox.currentText())
         selected_patch = self.patchBox.currentText()
@@ -156,6 +171,9 @@ class Dialog(QtWidgets.QDialog):
         known = refl.get_known_reflectance_for_filter(filter, selected_patch, phi, theta, filt_angle)
 
         mpl, ax = self._init_plot("filtered refl.")
+
+        if self.y01Box.isChecked():
+            ax.set_ylim([0, 1])
 
         # plot all three things
         ax.plot(wavelengths, refls, label=selected_patch)
