@@ -12,12 +12,13 @@ import cv2 as cv
 import numpy as np
 from PySide2 import QtWidgets, QtCore, QtGui
 from PySide2.QtCore import Qt, QSize, QTimer, QPointF, QPoint
-from PySide2.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent, QFont, QResizeEvent
+from PySide2.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent, QFont, QResizeEvent, QIcon
 from PySide2.QtWidgets import QCheckBox, QMessageBox, QMenu, QLabel
 
 import pcot
 import pcot.ui as ui
 from pcot import canvasnormalise, dq
+from pcot.assets import getAssetAsFile, getAssetPath
 from pcot.datum import Datum
 from pcot.ui import canvasdq
 from pcot.ui.canvasdq import CanvasDQSpec
@@ -835,7 +836,9 @@ class Canvas(QtWidgets.QWidget):
         self.scrollH.valueChanged.connect(self.horzScrollChanged)
         layout.addWidget(self.scrollH, 1, 0)
 
+        icon = QIcon(str(getAssetPath("canvas_reset.png")))
         self.resetButton = QtWidgets.QPushButton()
+        self.resetButton.setIcon(icon)
         self.resetButton.setMaximumWidth(20)
         layout.addWidget(self.resetButton, 1, 1)
         self.resetButton.clicked.connect(self.reset)
