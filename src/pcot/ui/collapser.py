@@ -19,9 +19,8 @@
         coll.end()
 """
 
-from PySide2 import QtWidgets, QtCore, QtGui
+from PySide2 import QtWidgets, QtCore
 from PySide2.QtCore import Qt
-
 
 class ContentArea(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -39,8 +38,9 @@ class CollapserSection(QtWidgets.QWidget):
 
         if isAlwaysOpen:
             isOpen = True
-        self.isAlwaysOpen = isAlwaysOpen
 
+        self.isAlwaysOpen = isAlwaysOpen
+        self.isNowOpen = isOpen
         self.contentArea = ContentArea()
 
         if not isAlwaysOpen:
@@ -82,6 +82,7 @@ class CollapserSection(QtWidgets.QWidget):
         # don't waste space
         mainLayout.setVerticalSpacing(0)
         mainLayout.setContentsMargins(0, 0, 0, 0)
+        mainLayout.setSizeConstraint(QtWidgets.QLayout.SetMinimumSize   )
 
         if isAlwaysOpen:
             mainLayout.addWidget(self.contentArea, 0, 0, 1, 3)
@@ -98,11 +99,21 @@ class CollapserSection(QtWidgets.QWidget):
             toggleButton.setArrowType(arrow_type)
             self.toggleAnimation.setDirection(direction)
             self.toggleAnimation.start()
+            self.isNowOpen = checked
 
         if not isAlwaysOpen:
             self.toggleButton.clicked.connect(start_animation)
             if isOpen:
                 start_animation(True)
+
+    def forceOpen(self):
+        if not self.isNowOpen:
+            self.toggleButton.click()
+
+    def forceClose(self):
+        if self.isNowOpen:
+            self.toggleButton.click()
+
 
     def setContentLayout(self, contentLayout):
         self.contentArea.destroy()
@@ -132,10 +143,10 @@ class Collapser(QtWidgets.QScrollArea):
         super().__init__(parent)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.animationDuration = animationDuration
-        self.secs = []
         self.margins = (lrmargins, topmargin, lrmargins, bottommargin)
         self.w = None
         self.layout = None
+        self.sectionsByName = {}
         self.clear()
 
     def clear(self):
@@ -153,11 +164,32 @@ class Collapser(QtWidgets.QScrollArea):
                                isOpen=isOpen,
                                isAlwaysOpen=isAlwaysOpen)
         self.layout.addWidget(sec)
-        self.secs.append(sec)
         sec.setContentLayout(layout)
+        self.sectionsByName[title] = sec
         return sec
+
+    def setSectionVisible(self, sec_name, visible):
+        self.sectionsByName[sec_name].setVisible(visible)
+
+    def forceOpen(self, sec_name):
+        self.sectionsByName[sec_name].forceOpen()
 
     def end(self):
         self.layout.addStretch(10)
         self.adjustSize()
         self.updateGeometry()
+
+    def shouldCollapseWhenButtonClicked(self):
+        # what would happen if we clicked the expandCollapse button?
+        # if any sections are open, collapse all. Otherwise expand all.
+        return any(x.isNowOpen for x in self.sectionsByName.values())
+
+    def collapseExpandAll(self):
+        collapse = self.shouldCollapseWhenButtonClicked()
+        for sec in self.sectionsByName.values():
+            if collapse:
+                sec.forceClose()
+            else:
+                sec.forceOpen()
+
+

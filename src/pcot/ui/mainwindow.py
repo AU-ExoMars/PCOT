@@ -12,7 +12,7 @@ from typing import List, Optional, OrderedDict, ClassVar, Dict
 import markdown
 from PySide2 import QtWidgets
 from PySide2.QtCore import Qt
-from PySide2.QtGui import QTextCursor
+from PySide2.QtGui import QTextCursor, QIcon
 from PySide2.QtWidgets import QAction, QMessageBox, QDialog, QMenu
 
 import pcot
@@ -161,7 +161,9 @@ class MainUI(ui.tabs.DockableTabWindow):
 
         # set up the scrolling palette and make the buttons therein. The paletteArea
         # is a Collapser created in Designer.
-        self.palette = palette.Palette(doc, self.paletteArea, self.view)
+        self.palette = palette.Palette(doc, self.paletteArea, self.paletteCollapseButton, self.view)
+        self.paletteSearch.textChanged.connect(self.palette.paletteSearchChanged)
+        self.paletteCollapseButton.clicked.connect(self.palette.paletteCollapseExpandAll)
 
         # and remove some things which don't apply to macro windows
         if macro is not None:

@@ -3,28 +3,25 @@ import logging
 import math
 import os
 import platform
-import sys
-import time
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional, Union, List, Tuple, Dict
 
 import cv2 as cv
 import numpy as np
 from PySide2 import QtWidgets, QtCore, QtGui
-from PySide2.QtCore import Qt, QSize, QTimer, QPointF, QPoint
-from PySide2.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent, QFont, QResizeEvent, QIcon
+from PySide2.QtCore import Qt, QTimer, QPoint
+from PySide2.QtGui import QImage, QPainter, QBitmap, QCursor, QPen, QKeyEvent, QFont, QResizeEvent
 from PySide2.QtWidgets import QCheckBox, QMessageBox, QMenu, QLabel
 
 import pcot
+import pcot.dq
 import pcot.ui as ui
 from pcot import canvasnormalise, dq
-from pcot.assets import getAssetAsFile, getAssetPath
+from pcot.assets import getAssetAsFile
 from pcot.datum import Datum
 from pcot.ui import canvasdq
 from pcot.ui.canvasdq import CanvasDQSpec
 from pcot.ui.collapser import Collapser, CollapserSection
 from pcot.ui.spectrumwidget import SpectrumWidget
-import pcot.dq
 from pcot.utils.deb import Timer
 from pcot.utils.maths import pooled_sd
 
@@ -836,7 +833,7 @@ class Canvas(QtWidgets.QWidget):
         self.scrollH.valueChanged.connect(self.horzScrollChanged)
         layout.addWidget(self.scrollH, 1, 0)
 
-        icon = QIcon(str(getAssetPath("canvas_reset.png")))
+        icon = pcot.assets.Icons.get("maximize-2.svg")
         self.resetButton = QtWidgets.QPushButton()
         self.resetButton.setIcon(icon)
         self.resetButton.setMaximumWidth(20)

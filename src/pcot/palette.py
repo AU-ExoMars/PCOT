@@ -3,8 +3,10 @@ nodes on the right hand side."""
 
 from PySide2 import QtWidgets, QtCore, QtGui
 from PySide2.QtCore import Qt
+from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QMessageBox, QSizePolicy, QAction
 
+import pcot.assets
 import pcot.macros as macros
 from pcot.ui.collapser import Collapser
 from pcot.xform import XFormType, XFormException
@@ -20,6 +22,7 @@ view = None
 groups = ["source", "macros", "maths", "processing", "calibration", "data", "regions", "ROI edit", "utility", "testing"]
 
 
+
 class PaletteButton(QtWidgets.QPushButton):
     """The palette items, which are buttons which can be either clicked or dragged (with RMB)"""
 
@@ -30,7 +33,7 @@ class PaletteButton(QtWidgets.QPushButton):
         self.view = view
         self.xformtype = xformtype
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
         self.customContextMenuRequested.connect(self.contextMenu)
 
     def contextMenu(self, e):
@@ -107,17 +110,20 @@ class PaletteButton(QtWidgets.QPushButton):
 class Palette:
     """the palette itself, which isn't a widget but a plain class containing all the necessary widgets etc."""
 
-    def __init__(self, doc, collapser: Collapser, vw):
+    def __init__(self, doc, collapser: Collapser, collapseButton: QtWidgets.QPushButton, vw):
         """set up the scrolling palette as part of view initialisation, will populate with initial data"""
         self.doc = doc
         self.view = vw
         self.collapser = collapser
+        self.collapseButton = collapseButton
+        self.namesByGroup = {}    # list of name per group
+        self.widgetsByName = {}     # actual widgets by name
         self.populate()
 
     def populate(self):
         """populate the palette with items"""
 
-        grouplists = {x: [] for x in groups}
+        self.namesByGroup = {x: [] for x in groups}
         # we want the keys in sorted order, and the keys come from both the global
         # types and the macros for this document. This is a dict merge - in 3.9+ we
         # could use the a|b syntax.
@@ -132,18 +138,49 @@ class Palette:
                 if v.group != 'hidden':
                     raise Exception("node '{}' not in any group defined in palette.py!".format(k))
             else:
-                grouplists[v.group].append(k)
+                self.namesByGroup[v.group].append(k)
 
         self.collapser.clear()
+        self.setCollapseButton()
+
 
         # add buttons and separators for each group
         for g in groups:
             layout = QtWidgets.QVBoxLayout()
             layout.setContentsMargins(2, 5, 2, 5)
-            for k in grouplists[g]:
+            for k in self.namesByGroup[g]:
                 b = PaletteButton(k, alltypes[k], self.view)
+                self.widgetsByName[k] = b
                 if g == 'macros':
                     b.setStyleSheet("background-color:rgb(220,220,140)")
                 layout.addWidget(b)
             self.collapser.addSection(g, layout)
         self.collapser.end()
+
+    def paletteSearchChanged(self, text):
+        # hide widgets which don't have the text, if there is one
+        is_vis = {}
+        for k,v in self.widgetsByName.items():
+            visible = text == "" or text in k
+            is_vis[k] = visible
+            v.setVisible(visible)
+
+        # if a group has no widgets, hide the group. If it does, expand the group.
+        for k,v in self.namesByGroup.items():
+            visible = any(is_vis[v] for v in v)
+            self.collapser.setSectionVisible(k, visible)
+            if visible:
+                    self.collapser.forceOpen(k)
+
+        self.collapser.update()
+
+    def paletteCollapseExpandAll(self):
+        self.collapser.collapseExpandAll()
+        self.setCollapseButton()
+
+    def setCollapseButton(self):
+        if self.collapser.shouldCollapseWhenButtonClicked():
+            icon = pcot.assets.Icons.get("chevrons-up.svg")
+        else:
+            icon = pcot.assets.Icons.get("chevrons-down.svg")
+        self.collapseButton.setIcon(icon)

@@ -5,6 +5,8 @@ import importlib
 import io
 import pkgutil
 
+from PySide2.QtGui import QIcon
+
 
 def getAssetAsString(fn, package="pcot.assets"):
     """Find a file in the assets package and return its contents as a string, assuming it is utf-8 encoded"""
@@ -25,4 +27,11 @@ def getAssetPath(fn, package="pcot.assets"):
         return p
 
 
-#
+class Icons:
+    icons = {}
+    @classmethod
+    def get(cls, name):
+        if name not in cls.icons:
+            icon = QIcon(str(getAssetPath(name)))
+            cls.icons[name] = icon
+        return cls.icons[name]
