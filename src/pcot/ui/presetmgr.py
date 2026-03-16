@@ -20,7 +20,7 @@ import os
 from typing import Any, Dict, List
 
 from PySide2 import QtWidgets
-from PySide2.QtCore import QAbstractListModel, QModelIndex
+from PySide2.QtCore import QAbstractListModel, QModelIndex, QItemSelection, QItemSelectionModel
 from PySide2.QtGui import Qt
 from PySide2.QtWidgets import QDialog, QMessageBox
 
@@ -82,6 +82,17 @@ class PresetModel(QAbstractListModel):
         else:
             self.presets = {}
             self.presetList = []
+
+    def importPresets(self, filename: str):
+        """Import the presets from the file, adding them to existing presets"""
+        if os.path.exists(self.filename):
+            with open(self.filename, 'r') as f:
+                new_presets, new_preset_list = json.load(f)
+                self.presets.update(new_presets)
+                # add presets, removing
+                [self.presetList.append(x) for x in new_preset_list if x not in self.presets]
+
+
 
     def addPreset(self, name, p: Dict):
         """This is generally used only in testing to add presets after the fact in a crude way.
@@ -169,6 +180,36 @@ class PresetModel(QAbstractListModel):
                 self.endRemoveRows()
         self.savePresetsToFile()
 
+    def _promote_demote(self, idxs, promote:bool):
+        if len(idxs) > 0:
+            lst = self.presetList
+            # we need to get the actual items, because the list will change between each swap, although
+            # it's quite likely we'll only allow single selection.
+            items = [lst[x.row()] for x in idxs]
+            for x in items:
+                # find the item
+                idx = lst.index(x)
+                # promote or demote it
+                if promote:
+                    if idx > 0:
+                        lst[idx-1],lst[idx] = lst[idx],lst[idx-1]
+                elif idx < len(lst)-1:
+                    lst[idx + 1], lst[idx] = lst[idx], lst[idx + 1]
+            self.presetList = lst
+            self.dataChanged.emit(QModelIndex(), QModelIndex())
+            # get new indices
+            idxs = [lst.index(x) for x in items]
+            self.savePresetsToFile()
+            return [self.createIndex(x,0) for x in idxs]     # to allow the caller to re-select
+        return None
+
+    def promote(self, idxs):
+        return self._promote_demote(idxs, True)
+
+    def demote(self, idxs):
+        return self._promote_demote(idxs, False)
+
+
 
 class PresetDialog(QDialog):
     """A dialog for managing presets. It's a simple list of presets, with buttons to load, save
@@ -192,10 +233,33 @@ class PresetDialog(QDialog):
         self.renameButton.pressed.connect(self.renamePreset)
         self.helpButton.pressed.connect(lambda: showHelpDialog(self, "Presets", HELPTEXT))
         self.listView.doubleClicked.connect(self.loadPreset)
+        self.upButton.clicked.connect(self.promotePreset)
+        self.downButton.clicked.connect(self.demotePreset)
+
+        from pcot.assets import Icons
+        self.upButton.setIcon(Icons.get("arrow-up.svg"))
+        self.downButton.setIcon(Icons.get("arrow-down.svg"))
 
         self.owner = owner
         self.model = model
         self.listView.setModel(self.model)
+
+    def _reselect(self, newSel):
+        # Used in promote and demote, which return a list of QModelIndex for the moved items.
+        # We then have to do this dance to move the selected items. Much simpler if we assume there's only
+        # one item selected, but we don't know that for sure.
+        if newSel is not None:
+            selmod = QItemSelection()
+            for x in newSel:
+                selmod.select(x, x)
+            self.listView.selectionModel().select(selmod, QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Select)
+
+
+    def promotePreset(self):
+        self._reselect(self.model.promote(self.listView.selectedIndexes()))
+
+    def demotePreset(self):
+        self._reselect(self.model.demote(self.listView.selectedIndexes()))
 
     def loadPreset(self):
         idxs = self.listView.selectedIndexes()
