@@ -16,6 +16,7 @@ def handleMenuEvent(self, ev):
     lfact = menu.addAction("List all functions")
     lpact = menu.addAction("List all properties")
     dqact = menu.addAction("List DQ bits")
+    clearact = menu.addAction("Clear all text")
 
     fhact = "dummy"
     if len(funcname) > 0:
@@ -27,7 +28,6 @@ def handleMenuEvent(self, ev):
     parser = allTypes['expr'].parser  # the eval node type owns the parser, which knows about funcs.
 
     a = menu.exec_(ev.globalPos())
-    txt = None
     if a == fhact:
         txt = "<h1>Help on {}</h1>".format(funcname)
         txt += markdownWrapper(parser.helpOnWord(funcname))
@@ -40,12 +40,15 @@ def handleMenuEvent(self, ev):
     elif a == dqact:
         txt = "<h1>List of Data Quality (DQ) bits</h1>"
         txt += markdownWrapper(dq.listBits())
+    elif a == clearact:
+        tc.document().clear()
+        return
     else:
         menu.exec_(ev.globalPos())
         return
 
     if txt is not None:
-        ui.log(txt, toStdout=False)
+        ui.log(txt, toStdout=False, timestamp=False)
 
 
 class PlainTextEditWithHelp(QPlainTextEdit):
