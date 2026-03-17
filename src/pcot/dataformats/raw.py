@@ -96,6 +96,12 @@ class RawLoader:
         data = np.fromfile(filename, dtype=dtype, offset=self.offset)
         if self.bigendian:
             data.byteswap(True)
+        if len(data)>self.width*self.height:
+            from pcot.ui import log
+            extra = len(data)-self.width*self.height
+            log(f"{filename} is too long by {extra} pixels.",logging.WARNING)
+            data = data[:self.width * self.height]      # crop if spurious data at the end
+
         data = data.reshape(self.height, self.width)
         data = np.rot90(data, int(self.rot / 90))
         if self.horzflip:
