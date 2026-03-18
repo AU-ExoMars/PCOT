@@ -699,7 +699,8 @@ class XForm:
 
     def deserialise(self, d):
         """deserialise a node from a python dict.
-        Some entries have already been already dealt with."""
+        Some entries have already been dealt with; but we MUST be operating on an already-created node
+        of the correct type"""
         self.xy = d['xy']
         self.w = d.get('w', self.type.defaultWidth)  # use 'get' to still be able to load early data
         self.h = d.get('h', self.type.defaultHeight)

@@ -96,6 +96,7 @@ class PaletteButton(QtWidgets.QPushButton):
 
     def click(self):
         # create node and rebuild the scene
+        # CURRENTLY DOES NOTHING; it seems I never get the signal.
         self.createNode()
         self.view.scene().rebuild()
 
@@ -191,7 +192,7 @@ class Palette:
             icon = pcot.assets.Icons.get("chevrons-down.svg")
         self.collapseButton.setIcon(icon)
 
-    def createNode(self, name):
+    def createNodeByName(self, name):
         w = self.widgetsByName[name]
         return w.createNode()
 

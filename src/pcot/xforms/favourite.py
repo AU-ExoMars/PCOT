@@ -10,3 +10,8 @@ class Favourite:
     def __init__(self, node:XForm):
         # capture the node state
         self.state = node.serialise()
+
+    def createNode(self, graph):
+        node = graph.createNode(self.state['type'])
+        node.deserialise(self.state)
+        return node

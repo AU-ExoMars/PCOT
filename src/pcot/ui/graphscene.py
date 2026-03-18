@@ -8,7 +8,7 @@ from typing import List, Optional
 from PySide2 import QtWidgets, QtGui
 from PySide2.QtCore import Qt, QPointF
 from PySide2.QtGui import QColor, QFont, QTransform, QPen, QBrush
-from PySide2.QtWidgets import QApplication
+from PySide2.QtWidgets import QApplication, QInputDialog
 
 import pcot.datum as datum
 import pcot.ui as ui
@@ -274,6 +274,9 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
         valignact = m.addAction("Align vertically")
         halignact = m.addAction("Align horizontally")
 
+        faveact = m.addAction("Save as favourite")
+        faveact.setToolTip("Save this node and its parameters as a favourite to drag from the palette")
+
         # only worth doing if there are menu items! Note that by now this is always true
         # but I'll leave the condition here.
         if not m.isEmpty():
@@ -305,6 +308,17 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
                 s = self.scene()
                 if isinstance(s, XFormGraphScene):
                     s.alignH()
+            elif action == faveact:
+                self.createFavourite()
+
+    def createFavourite(self):
+        from pcot.xforms.favourite import Favourite
+        # dialog to get name
+        str = QInputDialog.getText(self.window(), "Favourite", "Enter favourite name:",
+                                   QtWidgets.QLineEdit.Normal, "")
+        if str:
+            fav = Favourite(self.node)
+            ui.mainwindow.MainUI.addFavouriteToAllPalettes(str, fav)
 
 
 class GConnectRect(QtWidgets.QGraphicsRectItem):
