@@ -19,7 +19,10 @@ logger = logging.getLogger(__name__)
 view = None
 
 # The groups into which the buttons are sorted - it's a constant.
-groups = ["source", "macros", "maths", "processing", "calibration", "data", "regions", "ROI edit", "utility", "testing"]
+# IF we start using macros, the "macros" group should be added. Any group that
+# isn't in this list won't appear in the palette!
+
+groups = ["source", "maths", "processing", "calibration", "data", "regions", "ROI edit", "utility", "testing"]
 
 
 
