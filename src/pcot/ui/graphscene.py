@@ -314,11 +314,11 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
     def createFavourite(self):
         from pcot.xforms.favourite import Favourite
         # dialog to get name
-        str = QInputDialog.getText(self.window(), "Favourite", "Enter favourite name:",
+        name,ok  = QInputDialog.getText(self.window(), "Favourite", "Enter favourite name:",
                                    QtWidgets.QLineEdit.Normal, "")
-        if str:
+        if name and ok and len(name):
             fav = Favourite(self.node)
-            ui.mainwindow.MainUI.addFavouriteToAllPalettes(str, fav)
+            ui.mainwindow.MainUI.addFavouriteToAllPalettes(name, fav)
 
 
 class GConnectRect(QtWidgets.QGraphicsRectItem):

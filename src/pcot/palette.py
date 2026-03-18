@@ -5,13 +5,15 @@ import logging
 
 from PySide2 import QtWidgets, QtCore, QtGui
 from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QMessageBox, QSizePolicy, QAction
+from PySide2.QtWidgets import QMessageBox, QSizePolicy, QAction, QLabel
+from poetry.console.commands import self
 
 import pcot.assets
 import pcot.macros as macros
 import pcot.ui as ui
 from pcot.ui.collapser import Collapser
 from pcot.xform import XFormType, XFormException
+from pcot.xforms.favourite import Favourite
 
 logger = logging.getLogger(__name__)
 
@@ -23,46 +25,18 @@ view = None
 
 groups = ["source", "maths", "processing", "calibration", "data", "regions", "ROI edit", "utility", "testing"]
 
+class PaletteButtonBase(QtWidgets.QPushButton):
+    """Base class for palette buttons, including both XFormType (inc. macros) and favourites."""
 
+    helpAct = QAction("Help")
 
-class PaletteButton(QtWidgets.QPushButton):
-    """The palette items, which are buttons which can be either clicked or dragged (with RMB)"""
-
-    def __init__(self, name, xformtype, view):
-        """constructor, taking button name, xformtype, and view into which they should be inserted."""
-        super().__init__(name)
+    def __init__(self, name, view, parent):
+        super().__init__(name, parent=parent)
         self.name = name
         self.view = view
-        self.xformtype = xformtype
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
         self.customContextMenuRequested.connect(self.contextMenu)
-
-    def contextMenu(self, e):
-        menu = QtWidgets.QMenu()
-        # we only add some of these
-        openProtoAct = QAction("Open prototype")
-        deleteMacroAct = QAction("Delete macro")
-        helpAct = QAction("Help")
-
-        if isinstance(self.xformtype, macros.XFormMacro):
-            menu.addAction(openProtoAct)
-            menu.addAction(deleteMacroAct)
-        else:
-            menu.addAction(helpAct)
-
-        act = menu.exec_(self.mapToGlobal(e))
-        if act == helpAct:
-            self.view.window.openHelp(self.xformtype)
-        elif act == openProtoAct:
-            ui.mainwindow.MainUI(self.xformtype.doc,
-                                 macro=self.xformtype,
-                                 doAutoLayout=False)
-        elif act == deleteMacroAct:
-            if QMessageBox.question(self.parent(), "Delete macro", "Are you sure?",
-                                    QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
-                macros.XFormMacro.deleteMacro(self.xformtype)
-                ui.mainwindow.MainUI.rebuildPalettes()
 
     # drag handling: nabbed from
     # https://stackoverflow.com/questions/57224812/pyqt5-move-button-on-mainwindow-with-drag-drop
@@ -100,6 +74,41 @@ class PaletteButton(QtWidgets.QPushButton):
         self.createNode()
         self.view.scene().rebuild()
 
+
+class PaletteButton(PaletteButtonBase):
+    """The palette items, which are buttons which can be either clicked or dragged (with RMB)"""
+
+    openProtoAct = QAction("Open prototype")
+    deleteMacroAct = QAction("Delete macro")
+
+    def __init__(self, name, xformtype, view, parent=None):
+        """constructor, taking button name, xformtype, and view into which they should be inserted."""
+        super().__init__(name, view, parent=parent)
+        self.xformtype = xformtype
+
+    def contextMenu(self, e):
+        menu = QtWidgets.QMenu()
+        # we only add some of these
+
+        if isinstance(self.xformtype, macros.XFormMacro):
+            menu.addAction(self.openProtoAct)
+            menu.addAction(self.deleteMacroAct)
+        else:
+            menu.addAction(self.helpAct)
+
+        act = menu.exec_(self.mapToGlobal(e))
+        if act == self.helpAct:
+            self.view.window.openHelp(self.xformtype)
+        elif act == self.openProtoAct:
+            ui.mainwindow.MainUI(self.xformtype.doc,
+                                 macro=self.xformtype,
+                                 doAutoLayout=False)
+        elif act == self.deleteMacroAct:
+            if QMessageBox.question(self.parent(), "Delete macro", "Are you sure?",
+                                    QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                macros.XFormMacro.deleteMacro(self.xformtype)
+                ui.mainwindow.MainUI.rebuildPalettes()
+
     def createNode(self):
         """handle a single LMB click"""
         # create a new item at a position decided by the scene
@@ -107,6 +116,40 @@ class PaletteButton(QtWidgets.QPushButton):
             scene = self.view.scene()
             scene.mark()
             node = scene.graph.create(self.name)
+            # and perform the node to get initial data
+            node.graph.performNodes(node)
+            return node
+        except XFormException as e:
+            ui.error(e.message)
+
+
+class PaletteButtonFavourite(PaletteButtonBase):
+
+    removeAct = QAction("Remove from favourites")
+
+    def __init__(self, name, fav: Favourite, view, parent=None):
+        """constructor, taking button name, xformtype, and view into which they should be inserted."""
+        super().__init__(name, view, parent=parent)
+        self.setStyleSheet("background-color:rgb(220,220,140)")
+        self.fav = fav
+        self.name = name
+
+    def contextMenu(self, e):
+        menu = QtWidgets.QMenu()
+        menu.addAction(self.removeAct)
+        act = menu.exec_(self.mapToGlobal(e))
+        if act == self.removeAct:
+            ui.mainwindow.MainUI.removeFavouriteFromAllPalettes(self.name)
+        elif act == self.helpAct:
+            pcot.ui.help.HelpWindow(None, md="User-created favourite node", title="Help")
+
+    def createNode(self):
+        """handle a single LMB click"""
+        # create a new item at a position decided by the scene
+        try:
+            scene = self.view.scene()
+            scene.mark()
+            node = self.fav.createNode(scene.graph)
             # and perform the node to get initial data
             node.graph.performNodes(node)
             return node
@@ -147,9 +190,13 @@ class Palette:
             else:
                 self.namesByGroup[v.group].append(k)
 
-        self.collapser.clear()
         self.setCollapseButton()
+        self.collapser.clear()
 
+        layout = QtWidgets.QVBoxLayout()
+        self.favLayout = layout
+        self.collapser.addSection("faves", layout, isAlwaysOpen=True)
+        self.favLayout.addWidget(QLabel("faves"))
 
         # add buttons and separators for each group
         for g in groups:
@@ -163,6 +210,22 @@ class Palette:
                 layout.addWidget(b)
             self.collapser.addSection(g, layout)
         self.collapser.end()
+
+    def addFavourite(self, name, fav:Favourite):
+        """add a favourite to the palette"""
+        name = f"{fav.typename}:{name}"
+        if name in self.widgetsByName:
+            raise Exception(f"name '{name}' already exists!")
+        paletteButton = PaletteButtonFavourite(name, fav, self.view)
+        self.widgetsByName[name] = paletteButton
+        self.favLayout.addWidget(paletteButton)
+
+    def removeFavourite(self, name):
+        """remove a favourite from the palette"""
+        if name in self.widgetsByName:
+            self.favLayout.removeWidget(self.widgetsByName[name])
+            self.widgetsByName[name].deleteLater()
+            del self.widgetsByName[name]
 
     def paletteSearchChanged(self, text):
         # hide widgets which don't have the text, if there is one

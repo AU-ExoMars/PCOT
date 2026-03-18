@@ -42,6 +42,7 @@ class CollapserSection(QtWidgets.QWidget):
         self.isAlwaysOpen = isAlwaysOpen
         self.isNowOpen = isOpen
         self.contentArea = ContentArea()
+        self.contentLayout = None
 
         if not isAlwaysOpen:
             self.animationDuration = animationDuration
@@ -124,6 +125,7 @@ class CollapserSection(QtWidgets.QWidget):
         #        self.contentArea.updateGeometry()
 
         contentHeight = contentLayout.sizeHint().height()
+        self.contentLayout = contentLayout
 
         if not self.isAlwaysOpen:
             collapsedHeight = self.sizeHint().height() - self.contentArea.maximumHeight()
