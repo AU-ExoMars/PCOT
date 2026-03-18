@@ -58,8 +58,8 @@ class XformDecorr(XFormType):
             stddevs = None
             eigsout = Datum.null
             stdsout = Datum.null
-        elif img.channels != 3:
-            raise XFormException("DATA", "can only decorr stretch images with 3 channels")
+#        elif img.channels != 3:
+#            raise XFormException("DATA", "can only decorr stretch images with 3 channels")
         else:
             from pcot.utils.decorr import decorrelation_stretch
             subimage = img.subimage()
@@ -72,10 +72,10 @@ class XformDecorr(XFormType):
             # we build the new DQ by OR-ing all the bands' bits together
             dqval = np.bitwise_or.reduce(subimage.dq, axis=2)
             # and then using that for all new channels
-            dq = image.imgmerge((dqval, dqval, dqval))
+            dq = image.imgmerge([dqval]*img.channels)
             dq |= pcot.dq.NOUNCERTAINTY     # and we've lost all uncertainty data
 
-            out = img.modifyWithSub(subimage, newimg, sources=MultiBandSource([sources, sources, sources]), dqv=dq).setMapping(node.mapping)
+            out = img.modifyWithSub(subimage, newimg, sources=MultiBandSource([sources]*img.channels), dqv=dq).setMapping(node.mapping)
             out = Datum(Datum.IMG, out)
 
             # build the unc and dq values for the vector outputs, completely flattening the DQs into a single int

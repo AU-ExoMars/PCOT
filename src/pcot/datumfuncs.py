@@ -1317,8 +1317,8 @@ def decorrstretch(img, stretch=2.5, clip_percent=5):
     img = img.get(Datum.IMG)
     if img is None:
         return None
-    if img.channels != 3:
-        raise ValueError("image must have 3 bands for decorrstretch")
+#    if img.channels != 3:
+#        raise ValueError("image must have 3 bands for decorrstretch")
 
     stretch = stretch.get(Datum.NUMBER).n
     clip_percent = clip_percent.get(Datum.NUMBER).n
@@ -1336,6 +1336,6 @@ def decorrstretch(img, stretch=2.5, clip_percent=5):
     dq = image.imgmerge((dq, dq, dq))
     dq |= pcot.dq.NOUNCERTAINTY  # and we've lost all uncertainty data
 
-    out = img.modifyWithSub(subimage, newimg, sources=MultiBandSource([sources, sources, sources]), dqv=dq).setMapping(
+    out = img.modifyWithSub(subimage, newimg, sources=MultiBandSource([sources]*img.channels), dqv=dq).setMapping(
         img.mapping)
     return Datum(Datum.IMG, out)

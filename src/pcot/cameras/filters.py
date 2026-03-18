@@ -85,7 +85,7 @@ class Filter:
         """Serialise - including response data. The camera data files don't use this; it's handled in CameraData.
         This is used for Source serialisation."""
         resp = self.response.serialise()
-        logger.critical(f"SNARK - Filter Serialise {resp}")
+        # logger.critical(f"SNARK - Filter Serialise {resp}")
         # note that response.serialise() will return None for a simulated filter
 
         # note new format; we still have to handle the old one.

@@ -30,12 +30,12 @@ def decorrelation_stretch(A, mask, stretch_factor=1, clip_percent=5):
     # save the original shape and image
     orig = A
     orig_shape = A.shape
-
-    # flatten the image from a HxWx3 array into an (H*W)x3 array
-    A = A.reshape((-1, 3)).astype(np.float64)
+    H, W, B = A.shape
+    # flatten the image from a HxWxB array into an (H*W)xB array
+    A = A.reshape((-1, B)).astype(np.float64)
     # build a mask the same shape as the data
     mask = mask.flatten()
-    mask = np.repeat(mask, 3).reshape(-1, 3)
+    mask = np.repeat(mask, B).reshape(-1, B)
     # apply the mask
     maskedA = np.ma.masked_array(data=A.copy(), mask=~mask)
     # covariance matrix of A (only those pixels in the mask)
@@ -48,9 +48,15 @@ def decorrelation_stretch(A, mask, stretch_factor=1, clip_percent=5):
     sigma = np.diag(stddevs)
     # eigen decomposition of covariance matrix - get the eigenvalues and eigenvectors
     eigval, V = np.linalg.eig(cov)
+    # sort vecs and vals by descending eigenvalue (i.e. amount of variance)
+    idx = np.argsort(eigval)[::-1]
+    eigval = eigval[idx]
+    V = V[:, idx]
+    sigma = sigma[:, idx]
+
     # fail if an eigenvalue is too small (monochrome image?)
-    if min(abs(eigval)) < 0.00001:
-        raise XFormException("DATA", "Eigenvalue too small for decorrelation stretch")
+#    if min(abs(eigval)) < 0.00001:
+#        raise XFormException("DATA", "Eigenvalue too small for decorrelation stretch")
     # stretch matrix - each principal component has a variance equal to its eigenvalue. If we want to give each PC
     # a new variance k^2, we scale by k/sqrt(eigval).
     S = np.diag(stretch_factor / np.sqrt(eigval))
