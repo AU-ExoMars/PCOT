@@ -1,18 +1,17 @@
 """The palette widget module, which handles the palette of
 nodes on the right hand side."""
 
+import logging
+
 from PySide2 import QtWidgets, QtCore, QtGui
 from PySide2.QtCore import Qt
-from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QMessageBox, QSizePolicy, QAction
 
 import pcot.assets
 import pcot.macros as macros
+import pcot.ui as ui
 from pcot.ui.collapser import Collapser
 from pcot.xform import XFormType, XFormException
-import pcot.ui as ui
-
-import logging 
 
 logger = logging.getLogger(__name__)
 
@@ -96,16 +95,20 @@ class PaletteButton(QtWidgets.QPushButton):
         drag.exec_(Qt.MoveAction)
 
     def click(self):
+        # create node and rebuild the scene
+        self.createNode()
+        self.view.scene().rebuild()
+
+    def createNode(self):
         """handle a single LMB click"""
         # create a new item at a position decided by the scene
         try:
             scene = self.view.scene()
             scene.mark()
             node = scene.graph.create(self.name)
-            # rebuild the scene
-            scene.rebuild()
             # and perform the node to get initial data
             node.graph.performNodes(node)
+            return node
         except XFormException as e:
             ui.error(e.message)
 
@@ -187,3 +190,8 @@ class Palette:
         else:
             icon = pcot.assets.Icons.get("chevrons-down.svg")
         self.collapseButton.setIcon(icon)
+
+    def createNode(self, name):
+        w = self.widgetsByName[name]
+        return w.createNode()
+

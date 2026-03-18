@@ -84,7 +84,7 @@ class GraphView(QtWidgets.QGraphicsView):
         name = stream.readQString()
         # now we need to make one of those and add it to the graph!
         self.scene().mark()
-        node = self.scene().graph.create(name)
+        node = self.window.palette.createNode(name)
         # we have to fudge up a position for this, it will have been given a default position.
         pos = self.mapToScene(e.pos())
         # we use the default width and height because the actual width and height haven't yet been calculated
