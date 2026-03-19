@@ -30,7 +30,7 @@
     <item row="1" column="1">
      <widget class="QSplitter" name="mainSplit">
       <property name="orientation">
-       <enum>Qt::Orientation::Vertical</enum>
+       <enum>Qt::Vertical</enum>
       </property>
       <widget class="QSplitter" name="splitter">
        <property name="sizePolicy">
@@ -40,7 +40,7 @@
         </sizepolicy>
        </property>
        <property name="orientation">
-        <enum>Qt::Orientation::Horizontal</enum>
+        <enum>Qt::Horizontal</enum>
        </property>
        <widget class="QTabWidget" name="tabWidget">
         <property name="sizePolicy">
@@ -107,13 +107,16 @@
             </sizepolicy>
            </property>
            <property name="verticalScrollBarPolicy">
-            <enum>Qt::ScrollBarPolicy::ScrollBarAsNeeded</enum>
+            <enum>Qt::ScrollBarAsNeeded</enum>
            </property>
            <property name="horizontalScrollBarPolicy">
-            <enum>Qt::ScrollBarPolicy::ScrollBarAsNeeded</enum>
+            <enum>Qt::ScrollBarAsNeeded</enum>
+           </property>
+           <property name="renderHints">
+            <set>QPainter::Antialiasing|QPainter::HighQualityAntialiasing|QPainter::TextAntialiasing</set>
            </property>
            <property name="dragMode">
-            <enum>QGraphicsView::DragMode::RubberBandDrag</enum>
+            <enum>QGraphicsView::RubberBandDrag</enum>
            </property>
           </widget>
          </item>
@@ -179,7 +182,7 @@
        </property>
        <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,0">
         <property name="sizeConstraint">
-         <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
+         <enum>QLayout::SetDefaultConstraint</enum>
         </property>
         <item>
          <widget class="TextEditWithHelp" name="logText">
@@ -274,7 +277,7 @@
               <number>100</number>
              </property>
              <property name="orientation">
-              <enum>Qt::Orientation::Horizontal</enum>
+              <enum>Qt::Horizontal</enum>
              </property>
             </widget>
            </item>
@@ -329,7 +332,7 @@
      <x>0</x>
      <y>0</y>
      <width>1244</width>
-     <height>33</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -420,9 +423,6 @@
    <property name="text">
     <string>New Macro</string>
    </property>
-   <property name="visible">
-    <bool>false</bool>
-   </property>
   </action>
   <action name="actionUndo">
    <property name="text">
@@ -432,7 +432,7 @@
     <string>Ctrl+Z</string>
    </property>
    <property name="shortcutContext">
-    <enum>Qt::ShortcutContext::WindowShortcut</enum>
+    <enum>Qt::WindowShortcut</enum>
    </property>
   </action>
   <action name="actionRedo">
@@ -443,7 +443,7 @@
     <string>Ctrl+Y</string>
    </property>
    <property name="shortcutContext">
-    <enum>Qt::ShortcutContext::WindowShortcut</enum>
+    <enum>Qt::WindowShortcut</enum>
    </property>
   </action>
   <action name="actionAbout">

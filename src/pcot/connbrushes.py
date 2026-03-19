@@ -45,10 +45,10 @@ register(Datum.NONE, QBrush(Qt.red, Qt.BDiagPattern))
 _unknown = QBrush(Qt.magenta)
 
 
-def getBrush(typename):
-    """get a brush by name or magenta if no brush is found"""
-    if typename in brushDict:
-        return brushDict[typename]
+def getBrush(typeObject):
+    """get a brush by datumtypes.Type subclass instance or magenta if no brush is found"""
+    if typeObject in brushDict:
+        return brushDict[typeObject]
     else:
-        logger.error(f"Unknown type {typename}")
+        logger.error(f"Unknown type {typeObject}")
         return _unknown

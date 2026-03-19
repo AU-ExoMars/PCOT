@@ -35,7 +35,7 @@
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
        <item row="0" column="0">
-        <widget class="VariantWidget" name="variant" native="true"/>
+        <widget class="DatumTypeWidget" name="variant" native="true"/>
        </item>
       </layout>
      </widget>
@@ -51,7 +51,7 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>VariantWidget</class>
+   <class>DatumTypeWidget</class>
    <extends>QWidget</extends>
    <header>pcot.ui.variantwidget</header>
    <container>1</container>

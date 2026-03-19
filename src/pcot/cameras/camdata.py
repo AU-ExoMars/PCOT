@@ -105,7 +105,7 @@ class CameraParamsType(Type):
     in the CameraData object, which contains this one."""
 
     def __init__(self):
-        super().__init__('cameradata', valid={CameraParams, type(None)})
+        super().__init__('cameradata', valid={CameraParams, type(None)},internal=True)
 
     def copy(self, d):
         return d  # this type is immutable

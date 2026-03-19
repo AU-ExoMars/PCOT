@@ -23,7 +23,7 @@ view = None
 # IF we start using macros, the "macros" group should be added. Any group that
 # isn't in this list won't appear in the palette!
 
-groups = ["source", "maths", "processing", "calibration", "data", "regions", "ROI edit", "utility", "testing"]
+groups = ["source", "maths", "processing", "calibration", "data", "regions", "ROI edit", "utility", "testing", "macros"]
 
 class PaletteButtonBase(QtWidgets.QPushButton):
     """Base class for palette buttons, including both XFormType (inc. macros) and favourites."""
@@ -186,7 +186,7 @@ class Palette:
                 # "hidden" is a special group which doesn't appear in the palette, used for 
                 # things like macro connectors.
                 if v.group != 'hidden':
-                    raise Exception("node '{}' not in any group defined in palette.py!".format(k))
+                    raise Exception(f"node {k} is in {v.group}, which is not defined in palette.py!")
             else:
                 self.namesByGroup[v.group].append(k)
 
