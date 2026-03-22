@@ -20,8 +20,7 @@ logger = logging.getLogger(__name__)
 view = None
 
 # The groups into which the buttons are sorted - it's a constant.
-# IF we start using macros, the "macros" group should be added. Any group that
-# isn't in this list won't appear in the palette!
+# Any group that isn't in this list won't appear in the palette!
 
 groups = ["source", "maths", "processing", "calibration", "data", "regions", "ROI edit", "utility", "testing", "macros"]
 
@@ -170,6 +169,10 @@ class Palette:
         self.widgetsByName = {}     # actual widgets by name
         self.populate()
 
+    def hideMacrosAndFavouritesIfNone(self):
+        self.collapser.setSectionVisible("faves", self.favLayout.count()>1)
+        self.collapser.setSectionVisible("macros", len(self.namesByGroup["macros"])>0)
+
     def populate(self):
         """populate the palette with items"""
 
@@ -210,6 +213,7 @@ class Palette:
                 layout.addWidget(b)
             self.collapser.addSection(g, layout)
         self.collapser.end()
+        self.hideMacrosAndFavouritesIfNone()
 
     def addFavourite(self, name, fav:Favourite):
         """add a favourite to the palette"""
@@ -219,6 +223,8 @@ class Palette:
         paletteButton = PaletteButtonFavourite(name, fav, self.view)
         self.widgetsByName[name] = paletteButton
         self.favLayout.addWidget(paletteButton)
+        self.hideMacrosAndFavouritesIfNone()
+
 
     def removeFavourite(self, name):
         """remove a favourite from the palette"""
@@ -226,6 +232,8 @@ class Palette:
             self.favLayout.removeWidget(self.widgetsByName[name])
             self.widgetsByName[name].deleteLater()
             del self.widgetsByName[name]
+            self.collapser.setSectionVisible("faves", self.favLayout.count()>1)
+            self.hideMacrosAndFavouritesIfNone()
 
     def paletteSearchChanged(self, text):
         # hide widgets which don't have the text, if there is one
