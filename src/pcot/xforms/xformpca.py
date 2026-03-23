@@ -15,7 +15,7 @@ import pcot.dq
 import logging
 logger = logging.getLogger(__name__)
 
-def process(img, mask, whiten, clip_percent):
+def process(img, mask, whiten=False, normalize=False, clip_percent=5):
     # save the original shape and image
     orig = img
     orig_shape = img.shape
@@ -61,15 +61,18 @@ def process(img, mask, whiten, clip_percent):
         D_inv_sqrt = np.diag(1.0 / np.sqrt(eigvals+eps))
         pca = pca @ D_inv_sqrt
 
-    # put the mask back
-    pca = np.ma.masked_array(pca, mask=~mask)
-    valid = pca.compressed()    # get unmasked elements as a flat array; percentile doesn't work on masked arrays
-    lo = np.percentile(valid, clip_percent)
-    hi = np.percentile(valid, 100-clip_percent)
-    # normalise to that range
-    pca = (pca-lo)/(hi-lo)
-    # and clip the outliers, which are now outside
-    pca = np.clip(pca,0,1)
+
+    if normalize:
+        # put the mask back
+        pca = np.ma.masked_array(pca, mask=~mask)
+        pca = (pca - np.ma.min(pca)) / (np.ma.max(pca) - np.ma.min(pca))
+        valid = pca.compressed()    # get unmasked elements as a flat array; percentile doesn't work on masked arrays
+        lo = np.percentile(valid, clip_percent)
+        hi = np.percentile(valid, 100-clip_percent)
+        # normalise to that range
+        pca = (pca-lo)/(hi-lo)
+        # and clip the outliers, which are now outside
+        pca = np.clip(pca,0,1)
 
 
 
@@ -111,7 +114,8 @@ class XFormPCA(XFormType):
         self.params = TaggedDictType(
             rgbmapping = ("rgb mapping", TaggedListType(int,[0,1,2], 0)),
             whiten = ("whiten the result", bool, False),
-            clip=("percentile outliers to clip in postprocessing", float, 5.0)
+            clip=("percentile outliers to clip in postprocessing", float, 5.0),
+            normalize=("normalise and permit clipping", bool, False),
         )
 
 
@@ -132,9 +136,11 @@ class XFormPCA(XFormType):
             pca_out = Datum.null
         else:
             subimage = node.inimg.subimage()
+            band_count = node.inimg.channels
             newimg, stddevs, eigvals = process(subimage.img, subimage.mask,
-                                               node.params.whiten,
-                                               node.params.clip)
+                                               whiten=node.params.whiten,
+                                               normalize=node.params.normalize,
+                                               clip_percent=node.params.clip)
 
             # in this case, all channels just come from the union of the sources
             sources = SourceSet(node.inimg.sources.getSources())
@@ -159,9 +165,9 @@ class XFormPCA(XFormType):
             # then extract the bands we want from the PCA output
             bands = node.params.rgbmapping.get()
             # making sure they're in range
-            if any([x>=img.channels for x in bands]):
+            if any([x>=band_count for x in bands]):
                 ui.log(f"Some bands are out of range: {bands}")
-            bands = [min(x,img.channels-1) for x in bands]
+            bands = [min(x,band_count-1) for x in bands]
             newimg = newimg[:,:,bands]
 
             # and paste that in
@@ -192,16 +198,22 @@ class XFormPCA(XFormType):
 class TabPCA(Tab):
     def __init__(self, n, w):
         super().__init__(w, n, "tabPCA.ui")
-        self.w.whiten.toggled.connect(self.whitenChanged)
         self.w.red.currentIndexChanged.connect(lambda v: self.mappingChanged(0,v))
         self.w.green.currentIndexChanged.connect(lambda v: self.mappingChanged(1,v))
         self.w.blue.currentIndexChanged.connect(lambda v: self.mappingChanged(2,v))
         self.w.clip.valueChanged.connect(self.clipChanged)
+        self.w.whiten.toggled.connect(self.whitenChanged)
+        self.w.norm.toggled.connect(self.normChanged)
         self.onNodeChanged()
 
     def whitenChanged(self, state):
         self.mark()
         self.node.params.whiten = state
+        self.changed()
+
+    def normChanged(self, state):
+        self.mark()
+        self.node.params.normalize = state
         self.changed()
 
     def clipChanged(self, v):
@@ -236,6 +248,8 @@ class TabPCA(Tab):
 
         # other params
         self.w.whiten.setChecked(params.whiten)
+        self.w.norm.setChecked(params.normalize)
+        self.w.clip.setEnabled(params.normalize)
         self.w.clip.setValue(params.clip)
 
 
