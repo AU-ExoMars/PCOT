@@ -49,8 +49,8 @@ def decorrelation_stretch(A, mask, stretch_factor=1, clip_percent=5):
     # eigen decomposition of covariance matrix - get the eigenvalues and eigenvectors
     eigval, V = np.linalg.eig(cov)
     # fail if an eigenvalue is too small (monochrome image?)
-    if min(abs(eigval)) < 0.00001:
-        raise XFormException("DATA", "Eigenvalue too small for decorrelation stretch")
+#    if min(abs(eigval)) < 0.00001:
+#        raise XFormException("DATA", "Eigenvalue too small for decorrelation stretch")
     # stretch matrix - each principal component has a variance equal to its eigenvalue. If we want to give each PC
     # a new variance k^2, we scale by k/sqrt(eigval).
     S = np.diag(stretch_factor / np.sqrt(eigval))

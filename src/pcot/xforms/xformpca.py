@@ -54,7 +54,7 @@ def process(img, mask, postprocess=None, normalize=False, clip_percent=5, stretc
     stddevs = np.sqrt(cov.diagonal()) # we return these
 
     # eigen decomposition
-    eigvals, eigvecs = np.linalg.eigh(cov)
+    eigvals, eigvecs = np.linalg.eig(cov)
 
     # sort eigens descending (probably not required?)
     idx = np.argsort(eigvals)[::-1]
@@ -68,6 +68,8 @@ def process(img, mask, postprocess=None, normalize=False, clip_percent=5, stretc
         raise Exception("Eigenvectors have masked elements")
     eigvecs = np.ma.filled(eigvecs, 0)
     pca = A @ eigvecs
+
+    C_pca = np.cov(pca, rowvar=False)
 
     # DO OTHER STUFF HERE!!!
     if postprocess == "whiten":
@@ -83,13 +85,11 @@ def process(img, mask, postprocess=None, normalize=False, clip_percent=5, stretc
         # apply stretch and then invert the PCA we did
         pca = (pca @ S) @ eigvecs.T
 
-    if normalize:
-        # put the mask back
-        pca = np.ma.masked_array(pca, mask=~mask)
-        pca = (pca - np.ma.min(pca)) / (np.ma.max(pca) - np.ma.min(pca))
-
     if clip_percent > 0:
-        valid = pca.compressed()    # get unmasked elements as a flat array; percentile doesn't work on masked arrays
+        if isinstance(pca, np.ma.MaskedArray):
+            valid = pca.compressed()    # get unmasked elements as a flat array; percentile doesn't work on masked arrays
+        else:
+            valid = pca
         img_min = np.ma.min(img)
         img_max = np.ma.max(img)
         lo = np.percentile(valid, clip_percent)
@@ -100,8 +100,6 @@ def process(img, mask, postprocess=None, normalize=False, clip_percent=5, stretc
         pca = np.clip(pca,0,1)
         # and put back into the original range
         pca = pca*(img_max-img_min)+img_min
-
-
 
     # reshape back to image shape and type conversion
     pca = pca.astype(np.float32)
@@ -143,7 +141,7 @@ class XFormPCA(XFormType):
             postprocess = ("post-processing", str, "none",
                            ["none","whiten","decorr"]),
             clip=("percentile outliers to clip in postprocessing", float, 5.0),
-            normalize=("normalise and permit clipping", bool, False),
+            normalize=("normalise RGB output", bool, True),
             histequal=("apply histogram equalization to RGB output", bool, False),
         )
 
@@ -186,7 +184,8 @@ class XFormPCA(XFormType):
             out = img.modifyWithSub(subimage, newimg, sources=sources, dqv=dq).setMapping(node.mapping)
             pca_out = Datum(Datum.IMG, out)
 
-            # here we build and display the RGB output.
+            ##### Now construct the RGB output ############
+
             # Step one is getting the rgb-mapped input image
             img = node.inimg.rgbImage()
             # construct a subimage to modify
@@ -199,13 +198,22 @@ class XFormPCA(XFormType):
             bands = [min(x,band_count-1) for x in bands]
             newimg = newimg[:,:,bands]
 
-            # and paste that in, applying histequal if required
+            # construct sources and fixup the DQ bits to show there is no uncertainty
             sources = MultiBandSource([sources]*3)
             dq = image.imgmerge([dqval]*3)
             dq |= pcot.dq.NOUNCERTAINTY
+
+            # normalize and histequal if required
+            if node.params.normalize:
+                from pcot.operations.norm import _norm
+                bands = image.imgsplit(newimg)
+                bands = [_norm(x)[0] for x in bands]
+                newimg = image.imgmerge(bands)
             if node.params.histequal:
                 from pcot.xforms.xformhistequal import equalize
                 newimg = equalize(newimg, subimage.mask)
+
+            # and paste it into the masked area in the RGB image
             out = img.modifyWithSub(subimage, newimg, sources=sources, dqv=dq).setMapping(node.mapping)
             rgb_out = Datum(Datum.IMG, out)
 
@@ -288,7 +296,6 @@ class TabPCA(Tab):
         self.w.post.setCurrentText(params.postprocess)
         self.w.norm.setChecked(params.normalize)
         self.w.histequal.setChecked(params.histequal)
-        self.w.clip.setEnabled(params.normalize)
         self.w.clip.setValue(params.clip)
 
 
