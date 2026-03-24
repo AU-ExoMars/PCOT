@@ -15,7 +15,21 @@ import pcot.dq
 import logging
 logger = logging.getLogger(__name__)
 
-def process(img, mask, whiten=False, normalize=False, clip_percent=5):
+def process(img, mask, postprocess=None, normalize=False, clip_percent=5, stretch_factors=None):
+    """
+    PCA an image and optionally whiten or decorr stretch it. Then optionally normalize and clip a given
+    percentage of outliers.
+
+    img: the image to process
+    mask: a mask on the image (negated as per subimage use)
+    postprocess: a postprocessor to apply to the image
+        - whiten: apply a whitening transform to the image (divide each PC by its std dev.)
+        - decorr: apply decorrelation stretch to the image (stretch components, rotate back to original space - NOT pca)
+    normalize: whether to normalize the image
+    clip_percent: the percentile of outliers in the image to clip
+    stretch_factors: the stretch to apply to components when doing a decorr stretch; if not provided will
+                        stretch by equalising the variances
+    """
     # save the original shape and image
     orig = img
     orig_shape = img.shape
@@ -56,23 +70,36 @@ def process(img, mask, whiten=False, normalize=False, clip_percent=5):
     pca = A @ eigvecs
 
     # DO OTHER STUFF HERE!!!
-    if whiten:
+    if postprocess == "whiten":
         eps = 1e-12     # to avoid zeroes
         D_inv_sqrt = np.diag(1.0 / np.sqrt(eigvals+eps))
         pca = pca @ D_inv_sqrt
+    elif postprocess == "decorr":
+        if stretch_factors is None:
+            # if no stretch factors provided, use ones that equalise the variances.
+            stretch_factors = np.sqrt(eigvals.mean() / eigvals)
+        S = np.diag(stretch_factors)
 
+        # apply stretch and then invert the PCA we did
+        pca = (pca @ S) @ eigvecs.T
 
     if normalize:
         # put the mask back
         pca = np.ma.masked_array(pca, mask=~mask)
         pca = (pca - np.ma.min(pca)) / (np.ma.max(pca) - np.ma.min(pca))
+
+    if clip_percent > 0:
         valid = pca.compressed()    # get unmasked elements as a flat array; percentile doesn't work on masked arrays
+        img_min = np.ma.min(img)
+        img_max = np.ma.max(img)
         lo = np.percentile(valid, clip_percent)
         hi = np.percentile(valid, 100-clip_percent)
         # normalise to that range
         pca = (pca-lo)/(hi-lo)
         # and clip the outliers, which are now outside
         pca = np.clip(pca,0,1)
+        # and put back into the original range
+        pca = pca*(img_max-img_min)+img_min
 
 
 
@@ -113,9 +140,11 @@ class XFormPCA(XFormType):
         self.addOutputConnector("sds", Datum.NUMBER)
         self.params = TaggedDictType(
             rgbmapping = ("rgb mapping", TaggedListType(int,[0,1,2], 0)),
-            whiten = ("whiten the result", bool, False),
+            postprocess = ("post-processing", str, "none",
+                           ["none","whiten","decorr"]),
             clip=("percentile outliers to clip in postprocessing", float, 5.0),
             normalize=("normalise and permit clipping", bool, False),
+            histequal=("apply histogram equalization to RGB output", bool, False),
         )
 
 
@@ -138,7 +167,7 @@ class XFormPCA(XFormType):
             subimage = node.inimg.subimage()
             band_count = node.inimg.channels
             newimg, stddevs, eigvals = process(subimage.img, subimage.mask,
-                                               whiten=node.params.whiten,
+                                               postprocess=node.params.postprocess,
                                                normalize=node.params.normalize,
                                                clip_percent=node.params.clip)
 
@@ -170,10 +199,13 @@ class XFormPCA(XFormType):
             bands = [min(x,band_count-1) for x in bands]
             newimg = newimg[:,:,bands]
 
-            # and paste that in
+            # and paste that in, applying histequal if required
             sources = MultiBandSource([sources]*3)
             dq = image.imgmerge([dqval]*3)
             dq |= pcot.dq.NOUNCERTAINTY
+            if node.params.histequal:
+                from pcot.xforms.xformhistequal import equalize
+                newimg = equalize(newimg, subimage.mask)
             out = img.modifyWithSub(subimage, newimg, sources=sources, dqv=dq).setMapping(node.mapping)
             rgb_out = Datum(Datum.IMG, out)
 
@@ -202,13 +234,19 @@ class TabPCA(Tab):
         self.w.green.currentIndexChanged.connect(lambda v: self.mappingChanged(1,v))
         self.w.blue.currentIndexChanged.connect(lambda v: self.mappingChanged(2,v))
         self.w.clip.valueChanged.connect(self.clipChanged)
-        self.w.whiten.toggled.connect(self.whitenChanged)
+        self.w.post.currentTextChanged.connect(self.postChanged)
         self.w.norm.toggled.connect(self.normChanged)
+        self.w.histequal.toggled.connect(self.histEqualChanged)
         self.onNodeChanged()
 
-    def whitenChanged(self, state):
+    def histEqualChanged(self, state):
         self.mark()
-        self.node.params.whiten = state
+        self.node.params.histequal = state
+        self.changed()
+
+    def postChanged(self, t):
+        self.mark()
+        self.node.params.postprocess = t
         self.changed()
 
     def normChanged(self, state):
@@ -247,8 +285,9 @@ class TabPCA(Tab):
                 self.w.blue.setCurrentIndex(params.rgbmapping[2])
 
         # other params
-        self.w.whiten.setChecked(params.whiten)
+        self.w.post.setCurrentText(params.postprocess)
         self.w.norm.setChecked(params.normalize)
+        self.w.histequal.setChecked(params.histequal)
         self.w.clip.setEnabled(params.normalize)
         self.w.clip.setValue(params.clip)
 
