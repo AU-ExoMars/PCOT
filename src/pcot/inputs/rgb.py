@@ -4,7 +4,7 @@ from collections import OrderedDict
 from typing import Optional
 
 import pcot.config
-from pcot.imagecube import ChannelMapping
+from pcot.imagecube import ChannelMapping, VALID_RASTER_FORMATS
 from pcot.ui.canvas import Canvas
 from pcot.ui.inputs import TreeMethodWidget
 from .inputmethod import InputMethod
@@ -89,7 +89,7 @@ class RGBInputMethod(InputMethod):
 class RGBMethodWidget(TreeMethodWidget):
     def __init__(self, m):
         super().__init__(m, 'inputrgb.ui',
-                         ["*.jpg", "*.png", "*.ppm", "*.tga", "*.tif"])
+                         [f"*.{x}" for x in VALID_RASTER_FORMATS])
         self.treeView.setMinimumSize(300, 400)
         self.treeView.setMaximumHeight(700)
 

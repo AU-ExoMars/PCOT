@@ -76,6 +76,7 @@ def process(img, mask, postprocess=None, normalize=False, clip_percent=5, stretc
         eps = 1e-12     # to avoid zeroes
         D_inv_sqrt = np.diag(1.0 / np.sqrt(eigvals+eps))
         pca = pca @ D_inv_sqrt
+        cov = np.cov(pca, rowvar=False)
     elif postprocess == "decorr":
         if stretch_factors is None:
             # if no stretch factors provided, use ones that equalise the variances.
@@ -118,10 +119,42 @@ def process(img, mask, postprocess=None, normalize=False, clip_percent=5, stretc
 @xformtype
 class XFormPCA(XFormType):
     """
-    Perform a principal component analysis and optionally a whitening transform
+    Perform a principal component analysis and optionally a whitening transform or decorrelation
+    stretch.
 
     **Ignores DQ and uncertainty**
 
+    This node first performs a Principle Component Analysis (PCA) on all bands of an image.
+    The output image consists of the principal components, with the most significant first.
+    The RGB output - also shown in the canvas - is selected from these bands by the Component RGB Mapping,
+    and some further processing can take place on this (see below).
+
+    On the PCA image we optionally perform a whitening transform or decorrelation stretch.
+
+    * A **whitening transform** will divide each PC by its standard deviation (so that the
+      resulting data has an identity covariance matrix).
+    * A **decorrelation stretch** will apply a stretch factor to the PCs, (mean of eigenvalues / eigenvalue)
+      followed by a transformation back into the original colour space - this will expose more detail
+      in the resulting image, and is applied to all bands in our model.
+
+    Then a contrast stretch is done in which all outliers above and below a certain percentile
+    of the entire image are set to 0 or 1, and remaining values are stretched to fill the gaps.
+
+    The resulting image is sent to the PCA output before further processing.
+
+    The remaining steps only take place on the RGB representation of the image, whose bands
+    are selected by the "Component RGB mapping" boxes.
+
+    * **Normalize RGB** will normalise the RGB bands **separately** to the [0,1] range. This
+      is usually required because the PCA image bands have very different amplitudes.
+    * **Histogram equalisation** can be applied to the RGB image. This
+      redistributes the intensity values of an image so that they occupy the available dynamic
+      range more evenly. It works by computing the image’s histogram,
+      converting it into a cumulative distribution function (CDF), and then remapping each pixe
+      according to this CDF.
+
+    The standard deviations of the original input image and the eigenvalues (i.e. magnitudes)
+    of the principal components are also shown and output.
     """
 
     OUT_RGB = 0
@@ -131,11 +164,11 @@ class XFormPCA(XFormType):
 
     def __init__(self):
         super().__init__("PCA", "processing", "0.0.0", hasEnable=False)
-        self.addInputConnector("", Datum.IMG)
-        self.addOutputConnector("rgb", Datum.IMG)
-        self.addOutputConnector("PCA", Datum.IMG)
-        self.addOutputConnector("eigs", Datum.NUMBER)
-        self.addOutputConnector("sds", Datum.NUMBER)
+        self.addInputConnector("", Datum.IMG, "input image")
+        self.addOutputConnector("rgb", Datum.IMG, "RGB image selected by component mapping")
+        self.addOutputConnector("PCA", Datum.IMG, "PCA image")
+        self.addOutputConnector("eigs", Datum.NUMBER, "eigenvalues of principal components")
+        self.addOutputConnector("sds", Datum.NUMBER, "standard deviations of original image bands")
         self.params = TaggedDictType(
             rgbmapping = ("rgb mapping", TaggedListType(int,[0,1,2], 0)),
             postprocess = ("post-processing", str, "none",
