@@ -186,7 +186,8 @@ class CameraData:
         return ds
 
     def getFilter(self, target, search='name'):
-        """Get the filter from the camera data. The search parameter is one of 'name', 'pos' or 'cwl'."""
+        """Get the filter from the camera data. The search parameter is one of 'name', 'pos' or 'cwl'. On failure,
+        returns a dummy filter with a zero cwl."""
 
         def get_match(params, key, value):
             matches = []

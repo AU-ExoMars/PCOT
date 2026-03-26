@@ -1,6 +1,5 @@
 ## the RGB file input method
 import logging
-from collections import OrderedDict
 from typing import Optional
 
 import pcot.config
@@ -31,13 +30,14 @@ class RGBInputMethod(InputMethod):
         self.mapping = ChannelMapping()
         self.debayer_algo = "NONE"
         self.debayer_pattern = pcot.config.defaultBayerPattern
+        self.camera = "NONE"
 
     def readData(self):
         logger.debug(f"RGB readData fname={self.fname}")
         self.img = load.rgb(self.fname,
                             self.input.idx if self.input else None,
                             self.mapping,
-                            self.debayer_algo, self.debayer_pattern)
+                            self.debayer_algo, self.debayer_pattern, None if self.camera=="NONE" else self.camera)
         return self.img
 
     def getName(self):
@@ -56,7 +56,9 @@ class RGBInputMethod(InputMethod):
 
     def serialise(self, internal):
         x = {'fname': self.fname,
-             'debayer-algo': self.debayer_algo, 'debayer-pattern': self.debayer_pattern}
+             'debayer-algo': self.debayer_algo, 'debayer-pattern': self.debayer_pattern,
+             'camera' : self.camera
+             }
         if internal:
             x['image'] = self.img.get(Datum.IMG) if self.img is not None else None
         Canvas.serialise(self, x)
@@ -66,6 +68,7 @@ class RGBInputMethod(InputMethod):
         self.fname = data['fname']
         self.debayer_algo = data.get('debayer-algo', 'NONE')
         self.debayer_pattern = data.get('debayer-pattern', 'GB')
+        self.camera = data.get("camera", "NONE")
         if internal:
             x = data['image']
             self.img = Datum(Datum.IMG, x) if x is not None else None
@@ -82,6 +85,8 @@ class RGBInputMethod(InputMethod):
                 self.debayer_algo = d.rgb.debayer_algo.upper()
             if d.rgb.debayer_pattern is not None:
                 self.debayer_pattern = d.rgb.debayer_pattern.upper()
+            if d.rgb.camera is not None:
+                self.camera = d.rgb.camera
             return True
         return False
 
@@ -98,6 +103,12 @@ class RGBMethodWidget(TreeMethodWidget):
 
         self.patternCombo.currentIndexChanged.connect(self.patternChanged)
         self.algoCombo.currentIndexChanged.connect(self.algoChanged)
+        self.cameraCombo.currentTextChanged.connect(self.cameraChanged)
+
+        self.cameraCombo.clear()
+        from ..cameras import getCameraNames
+        self.cameraCombo.addItem("NONE")
+        self.cameraCombo.addItems(getCameraNames())
 
         self.onInputChanged()
 
@@ -117,6 +128,12 @@ class RGBMethodWidget(TreeMethodWidget):
 
     def algoChanged(self, i):
         self.method.debayer_algo = self.algoCombo.currentText()
+        self.onInputChanged()
+
+    def cameraChanged(self, text):
+        from pcot import ui
+        self.method.camera = text
+        ui.log(f"CAM {text}")
         self.onInputChanged()
 
 

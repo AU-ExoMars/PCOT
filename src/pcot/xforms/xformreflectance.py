@@ -36,9 +36,9 @@ def collectCameraData(node, img):
     # we need to get the filters from the image and make sure there's only one for each band
     filters = img.sources.getFiltersByBand()
     if len(filters) == 0:
-        raise XFormException('DATA', 'image must have filter data to get flats')
+        raise XFormException('DATA', 'image must have filter data to calibrate')
     if builtins.max([len(x) for x in filters]) != 1:
-        raise XFormException('DATA', 'each band must have exactly one filter')
+        raise XFormException('DATA', 'image must have a camera, and each band must have exactly one filter')
     # and get those single filters for each band
     filters = [next(iter(x)) for x in filters]
 
