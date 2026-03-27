@@ -77,4 +77,4 @@ def test_foo():
     pcot.setup()
     refl:Reflectance =load()
     filt=cameras.getFilter("PANCAM","G07")
-    print(refl.get_known_reflectance_for_filter(filt,"NG11", 180, 0))
+    print(refl.get_known_reflectance_for_filter(filt,"NG11", 180, 0, 0))

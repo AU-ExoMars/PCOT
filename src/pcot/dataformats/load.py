@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 def rgb(fname: str, inpidx: int = None, mapping: ChannelMapping = None,
-        debayer_algo:str = 'NONE', debayer_pattern: str = None) -> Datum:
+        debayer_algo:str = 'NONE', debayer_pattern: str = None, camera=None) -> Datum:
     """Load an imagecube from an RGB file (png, jpeg etc.)
 
     - fname: the filename
@@ -31,16 +31,32 @@ def rgb(fname: str, inpidx: int = None, mapping: ChannelMapping = None,
     - debayer_algo: None, or "None" or a debayering algorithm (see the "pcot.utils.debayering" module). If
       the image is multiband, only the first band will be used.
     - debayer_pattern: the pattern of the pixels for debayering (see the OpenCV docs and "pcot.utils.debayering")
+    - camera: the camera, which must have R, G and B filters.
 
     """
 
-    # might seem a bit wasteful having three of them, but seems more logical to me.
-    e = StringExternal("RGB", fname)
-    sources = MultiBandSource([
-        Source().setBand("R").setExternal(e).setInputIdx(inpidx),
-        Source().setBand("G").setExternal(e).setInputIdx(inpidx),
-        Source().setBand("B").setExternal(e).setInputIdx(inpidx),
-    ])
+    if camera is None:
+        e = StringExternal("RGB", fname)
+        sources = MultiBandSource([
+            Source().setBand("R").setExternal(e).setInputIdx(inpidx),
+            Source().setBand("G").setExternal(e).setInputIdx(inpidx),
+            Source().setBand("B").setExternal(e).setInputIdx(inpidx),
+        ])
+    else:
+        import pcot.cameras
+        cam = pcot.cameras.getCamera(camera)
+        r = cam.getFilter("R")
+        g = cam.getFilter("G")
+        b = cam.getFilter("B")
+        e = StringExternal(camera, fname)
+        sources = MultiBandSource([
+            Source().setBand(r).setExternal(e).setInputIdx(inpidx),
+            Source().setBand(g).setExternal(e).setInputIdx(inpidx),
+            Source().setBand(b).setExternal(e).setInputIdx(inpidx),
+        ])
+
+
+
 
     # this can throw an exception if the file is not found
     img = ImageCube.load(fname, mapping, sources, debayer_algo=debayer_algo, debayer_pattern=debayer_pattern)

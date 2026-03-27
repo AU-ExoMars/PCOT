@@ -1,8 +1,11 @@
 from PySide2 import QtWidgets
 from PySide2.QtCore import Signal
 
-from pcot import datum
 from pcot.datum import Datum
+from pcot import datumtypes
+
+import logging
+logger = logging.getLogger(__name__)
 
 
 class VariantWidget(QtWidgets.QGroupBox):
@@ -15,7 +18,7 @@ class VariantWidget(QtWidgets.QGroupBox):
         set(int) to set the value
     """
 
-    changed = Signal(int)
+    changed = Signal(datumtypes.Type)
 
     def __init__(self, title, options, parent):
         super().__init__(parent)
@@ -43,3 +46,25 @@ class VariantWidget(QtWidgets.QGroupBox):
     def set(self, i):
         self.buttons[i].setChecked(True)
 
+
+class DatumTypeWidget(VariantWidget):
+
+    # unlike the generic version, this emits a Datum type object.
+    changed = Signal(datumtypes.Type)
+
+    def __init__(self, parent):
+        self.options = [x.name for x in Datum.types]
+        super().__init__("Type", self.options, parent)
+
+    def set(self, t):
+        """This version takes a DatumType"""
+        i = self.options.index(t.name)
+        self.buttons[i].setChecked(True)
+
+    def buttonToggled(self, checked):
+        if checked:     # ignore button toggling off event
+            for b in self.buttons:
+                if b.isChecked():
+                    name = self.options[b.idx]
+                    obj = datumtypes.typesByName[name]
+                    self.changed.emit(obj)

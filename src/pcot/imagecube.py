@@ -111,6 +111,14 @@ class SubImageCube:
             self.bb = Rect(0, 0, img.w, img.h)  # whole image
             self.mask = np.full((img.h, img.w), True)  # full mask
 
+    def selectBands(self, bands:List[int]):
+        """
+        Make this subimage only have certain bands in it
+        """
+        self.img = self.img[:,:,bands]
+        self.dq = self.dq[:,:,bands]
+        self.uncertainty = self.uncertainty[:,:,bands]
+
     def fullmask(self, maskBadPixels=False):
         """the main mask is just a single channel - this will generate a mask
         of the same number of channels, so an x,y image will make an x,y mask
@@ -660,6 +668,31 @@ class ImageCube(SourcesObtainable):
             i.annotations = self.annotations.copy()
         return i
 
+    def _copybase(self, img: np.ndarray,
+                  uncs: np.ndarray,
+                  dq: np.ndarray,
+                  keepMapping=False, copyAnnotations=True):
+        """
+        Used to build "copies" of an image - real copies or ones with different data.
+        """
+        if self.mapping is None or keepMapping:
+            m = self.mapping
+        else:
+            m = self.mapping.copy()
+
+        srcs = self.sources.copy()
+
+        # we should be able to copy the default mapping reference OK, it won't change.
+        i = ImageCube(img, m, srcs, defaultMapping=self.defaultMapping,
+                      uncertainty=uncs,
+                      dq=dq)
+        i.rois = self.rois.copy()
+        if copyAnnotations:
+            i.annotations = self.annotations.copy()
+        return i
+
+
+
     def copy(self, keepMapping=False, copyAnnotations=True):
         """copy an image. If keepMapping is false, the image mapping will also be a copy. If true, the mapping
         is a reference to the same mapping as in the original image.
@@ -670,23 +703,20 @@ class ImageCube(SourcesObtainable):
         But it also might be because a child node is reading an image and changing its mapping to its own
         node mapping, which means that it also changes for the parent node - because the child node isn't making
         a copy of the image! If you want to make a shallow copy of the image, use shallowCopy.
-
         """
-        if self.mapping is None or keepMapping:
-            m = self.mapping
-        else:
-            m = self.mapping.copy()
 
-        srcs = self.sources.copy()
+        return self._copybase(self.img.copy(), self.uncertainty.copy(), self.dq.copy(),
+                              keepMapping = keepMapping, copyAnnotations = copyAnnotations)
 
-        # we should be able to copy the default mapping reference OK, it won't change.
-        i = ImageCube(self.img.copy(), m, srcs, defaultMapping=self.defaultMapping,
-                      uncertainty=self.uncertainty.copy(),
-                      dq=self.dq.copy())
-        i.rois = self.rois.copy()
-        if copyAnnotations:
-            i.annotations = self.annotations.copy()
-        return i
+    def zeros_like(self, keepMapping=False, copyAnnotations=True):
+        """
+        Rather like copy, but instead creates a zero image of the same dimensions.
+        """
+        return self._copybase(np.zeros_like(self.img.copy()),
+                              np.zeros_like(self.uncertainty.copy()),
+                              np.zeros_like(self.dq.copy()),
+                              keepMapping = keepMapping, copyAnnotations = copyAnnotations)
+
 
     def hasROI(self):
         return len(self.rois) > 0

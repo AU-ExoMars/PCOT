@@ -56,7 +56,8 @@ class XFormHistogram(XFormType):
             # not be counted.
             weights = subimg.fullmask(True).astype(float)  # ignore BAD pixels and convert to 0 or 1
             # generate a list of labels, one for each channel
-            labels = [s.brief(node.graph.doc.settings.captionType) for s in img.sources.sourceSets]
+            labels = [f"{i}: {s.brief(node.graph.doc.settings.captionType)}" \
+                      for i,s in enumerate(img.sources.sourceSets)]
             # generate a (data,bins) tuple for each channel taking account of the weight for that channel.
             range = (subimg.img.min(), subimg.img.max())
             if subimg.img.ndim == 2:

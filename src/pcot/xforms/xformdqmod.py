@@ -30,6 +30,8 @@ class XFormDQMod(XFormType):
     Modify DQ bits based on conditions in the existing nominal or uncertainty for all bands
     or just a single band.
 
+    It is also possible to test a condition on a single band and apply modifications to all bands.
+
     <blockquote style="background-color: #ffd0d0;">
     **WARNING**: This may set "bad" bits which will be masked in any calculation. For some settings,
     these bad bits can mask bands other than those from which they are derived. Calculations involving
@@ -50,7 +52,8 @@ class XFormDQMod(XFormType):
             mod=("Set or clear bits", str, 'set', ['set', 'clear']),
             test=("Test to perform", str, "le", list(TEST_COMBO_NAMES_TO_SHORT_NAMES.values())),
             data=("Data to test", str, 'nominal', ['nominal', 'uncertainty']),
-            band=("Band to test (or None for all)", Maybe(int), None)
+            band=("Band to test (or None for all)", Maybe(int), None),
+            allbands=("Set or clear the bit(s) in all bands, regardless of bands tested", bool, False)
         )
 
     def init(self, node):
@@ -99,10 +102,20 @@ class XFormDQMod(XFormType):
             else:
                 raise XFormException("CTRL", f"Unknown test in dqmod {params.test}")
 
+            # remember, dq is either identical to fulldq, or "points to" a slice into the full dq of the image.
+            # at this point, we might have *examined* a slice of the image (1 band) but we want
+            # to set a bit in all the bands. To do this, we'll need to expand the bits.
+            if params.band is not None and img.channels > 1 and params.allbands:
+                dq = fulldq
+                # OK. a[...,None] adds an axis to an array.
+                # Then we add the depth element to the tuple, and broadcast the existing elements to it.
+                bitsToChange = np.broadcast_to(bitsToChange[...,None], img.dq.shape)
+
             if params.mod == 'set':
                 dq |= bitsToChange
             else:
                 dq &= ~bitsToChange
+
 
             # put the data back in, preserving the uncertainty and not setting the NOUNC bit.
             img = img.modifyWithSub(subimg, None, dqv=fulldq, uncertainty=subimg.uncertainty)
@@ -123,6 +136,7 @@ class TabDQMod(ui.tabs.Tab):
         self.w.dataCombo.currentTextChanged.connect(self.dataChanged)
         self.w.testCombo.currentTextChanged.connect(self.testChanged)
         self.w.testEdit.textChanged.connect(self.testEditChanged)
+        self.w.allbands.toggled.connect(self.allBandsChanged)
         self.dontSetText = False
         self.nodeChanged()
 
@@ -145,6 +159,8 @@ class TabDQMod(ui.tabs.Tab):
         self.w.canvas.setNode(self.node)
         self.w.canvas.display(self.node.getOutput(0))
 
+        self.w.allbands.setChecked(params.allbands)
+
         if not self.dontSetText:
             self.w.dataCombo.setCurrentText(params.data)
             self.w.testCombo.setCurrentText(params.test)
@@ -156,6 +172,11 @@ class TabDQMod(ui.tabs.Tab):
     def DQChanged(self):
         self.mark()
         self.node.params.dq = self.w.dqbits.bits
+        self.changed()
+
+    def allBandsChanged(self,state):
+        self.mark()
+        self.node.params.allbands = state
         self.changed()
 
     def modChanged(self, s):

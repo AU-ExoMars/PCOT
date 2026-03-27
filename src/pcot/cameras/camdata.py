@@ -105,7 +105,7 @@ class CameraParamsType(Type):
     in the CameraData object, which contains this one."""
 
     def __init__(self):
-        super().__init__('cameradata', valid={CameraParams, type(None)})
+        super().__init__('cameradata', valid={CameraParams, type(None)},internal=True)
 
     def copy(self, d):
         return d  # this type is immutable
@@ -186,7 +186,8 @@ class CameraData:
         return ds
 
     def getFilter(self, target, search='name'):
-        """Get the filter from the camera data. The search parameter is one of 'name', 'pos' or 'cwl'."""
+        """Get the filter from the camera data. The search parameter is one of 'name', 'pos' or 'cwl'. On failure,
+        returns a dummy filter with a zero cwl."""
 
         def get_match(params, key, value):
             matches = []

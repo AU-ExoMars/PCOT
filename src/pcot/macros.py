@@ -344,8 +344,11 @@ class XFormMacro(XFormType):
         # and report (hopefully there will only be one!)
         for n in node.instance.graph.nodes:
             if n.type.name == "sink":
-                node.sinkimg = n.img.copy()
-                node.sinkimg.setMapping(node.mapping)
+                if n.data and n.data.tp == Datum.IMG:
+                    node.sinkimg = n.data.get(Datum.IMG)
+                    node.sinkimg.setMapping(node.mapping)
+                else:
+                    node.sinkimg = None
             if n.error is not None:
                 node.error = n.error
 

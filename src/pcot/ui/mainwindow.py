@@ -323,6 +323,18 @@ class MainUI(ui.tabs.DockableTabWindow):
             if tab:
                 w.retitleTabs()
 
+    ## add a new favourite to all the palettes - because all windows have their own palette
+    # because macros.
+    @staticmethod
+    def addFavouriteToAllPalettes(name, fav):
+        for w in MainUI.windows:
+            w.palette.addFavourite(name, fav)
+
+    @staticmethod
+    def removeFavouriteFromAllPalettes(name):
+        for w in MainUI.windows:
+            w.palette.removeFavourite(name)
+
     ## close event handler - close all windows on confirmation if this is a main window, otherwise it's a macro - don't
     # bother confirming, just close this window.
 
