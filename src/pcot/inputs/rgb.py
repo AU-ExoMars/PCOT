@@ -100,27 +100,27 @@ class RGBMethodWidget(TreeMethodWidget):
 
         self.patternCombo.addItems(DEBAYER_PATTERNS)
         self.algoCombo.addItems(DEBAYER_ALGOS)
+        from ..cameras import getCameraNames
+        self.cameraCombo.addItem("NONE")
+        self.cameraCombo.addItems(getCameraNames())
 
         self.patternCombo.currentIndexChanged.connect(self.patternChanged)
         self.algoCombo.currentIndexChanged.connect(self.algoChanged)
         self.cameraCombo.currentTextChanged.connect(self.cameraChanged)
 
-        self.cameraCombo.clear()
-        from ..cameras import getCameraNames
-        self.cameraCombo.addItem("NONE")
-        self.cameraCombo.addItems(getCameraNames())
 
         self.onInputChanged()
 
     def onInputChanged(self):
         self.patternCombo.setCurrentText(self.method.debayer_pattern)
         self.algoCombo.setCurrentText(self.method.debayer_algo)
+        self.cameraCombo.setCurrentText(self.method.camera)
 
         # we don't do this when the window is opening, otherwise it happens a lot!
         if not self.method.openingWindow:
             self.invalidate()  # input has changed, invalidate so the cache is dirtied
             self.method.input.performGraph()
-        self.canvas.display(self.method.img)
+        self.canvas.display(self.method.get())
 
     def patternChanged(self, i):
         self.method.debayer_pattern = self.patternCombo.currentText()
