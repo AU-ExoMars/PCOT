@@ -545,6 +545,7 @@ class ImageCube(SourcesObtainable):
                 mapping = self.mapping
             if mapping is None:
                 raise Exception("trying to get rgb of an imagecube with no mapping")
+            self.mapping.ensureValid(self)
             red = self.img[:, :, mapping.red]
             green = self.img[:, :, mapping.green]
             blue = self.img[:, :, mapping.blue]

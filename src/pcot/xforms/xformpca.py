@@ -15,7 +15,7 @@ import pcot.dq
 import logging
 logger = logging.getLogger(__name__)
 
-def process(img, mask, postprocess=None, normalize=False, clip_percent=5, stretch_factors=None):
+def process(img, mask, postprocess=None, normalize=False, clip_percent=5, stretch_factor=None):
     """
     PCA an image and optionally whiten or decorr stretch it. Then optionally normalize and clip a given
     percentage of outliers.
@@ -24,7 +24,9 @@ def process(img, mask, postprocess=None, normalize=False, clip_percent=5, stretc
     mask: a mask on the image (negated as per subimage use)
     postprocess: a postprocessor to apply to the image
         - whiten: apply a whitening transform to the image (divide each PC by its std dev.)
-        - decorr: apply decorrelation stretch to the image (stretch components, rotate back to original space - NOT pca)
+        - decorr: apply decorrelation stretch to the image (stretch components, rotate back to original space - NOT pca).
+          The stretch applied is the mean of the eigenvalues, so all PCs are scaled to the average variance of the PCs,
+          boosting weak PCs and reducing large PCs.
     normalize: whether to normalize the image
     clip_percent: the percentile of outliers in the image to clip
     stretch_factors: the stretch to apply to components when doing a decorr stretch; if not provided will
@@ -66,24 +68,27 @@ def process(img, mask, postprocess=None, normalize=False, clip_percent=5, stretc
     A = np.ma.filled(maskedA, 0)
     if np.ma.is_masked(eigvecs):
         raise Exception("Eigenvectors have masked elements")
-    eigvecs = np.ma.filled(eigvecs, 0)
+    eigvecs = np.ma.filled(eigvecs, 0) # this doesn't actually do anything but convert a filled masked array into a normal one
     pca = A @ eigvecs
 
-    C_pca = np.cov(pca, rowvar=False)
-
     # DO OTHER STUFF HERE!!!
+    epsilon = 1e-12  # to avoid zeroes
     if postprocess == "whiten":
-        eps = 1e-12     # to avoid zeroes
-        D_inv_sqrt = np.diag(1.0 / np.sqrt(eigvals+eps))
+        D_inv_sqrt = np.diag(1.0 / np.sqrt(eigvals+epsilon))
         pca = pca @ D_inv_sqrt
-        cov = np.cov(pca, rowvar=False)
     elif postprocess == "decorr":
-        if stretch_factors is None:
-            # if no stretch factors provided, use ones that equalise the variances.
-            stretch_factors = np.sqrt(eigvals.mean() / eigvals)
+        # If no stretch is provided, scale the PCs so that they all have the same variance as the mean PC. PCs with a small
+        # variance will get boosted, PCs with a large variance will be reduced.
+        stretch_factor = eigvals.mean() if stretch_factor is None else stretch_factor
+        # each PC has has variance equal to its eigenvalue. Here we divide by the root of that eigenvalue. Why the root?
+        # Each PC has a variance var(PC). That's the square of the standard deviation. But this is a vector, and we want to
+        # normalise it. Here, the variance is the mean *squared* magnitude of the vector - std dev is the actual length
+        # of the PC vector. So to normalise we divide by the root (the standard deviation). So we're normalising to
+        # some length.
+        stretch_factors = stretch_factor / np.sqrt(eigvals+epsilon)
         S = np.diag(stretch_factors)
 
-        # apply stretch and then invert the PCA we did
+        # apply stretch and then invert the PCA done at the start
         pca = (pca @ S) @ eigvecs.T
 
     if clip_percent > 0:
