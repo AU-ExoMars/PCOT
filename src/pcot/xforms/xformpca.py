@@ -54,7 +54,7 @@ def process(subimg: SubImageCube, postprocess=None, normalize=False, clip_percen
     stddevs = np.sqrt(cov.diagonal()) # we return these
 
     # eigen decomposition
-    eigvals, eigvecs = np.linalg.eig(cov)
+    eigvals, eigvecs = np.linalg.eigh(cov)
 
     # sort eigens descending (probably not required?)
     idx = np.argsort(eigvals)[::-1]
