@@ -3,6 +3,7 @@ from poetry.console.commands import self
 
 from pcot import ui
 from pcot.datum import Datum
+from pcot.imagecube import SubImageCube
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType
 from pcot.sources import MultiBandSource, SourceSet
 from pcot.ui.tabs import Tab
@@ -15,7 +16,7 @@ import pcot.dq
 import logging
 logger = logging.getLogger(__name__)
 
-def process(img, mask, postprocess=None, normalize=False, clip_percent=5, stretch_factor=None):
+def process(subimg: SubImageCube, postprocess=None, normalize=False, clip_percent=5, stretch_factor=None):
     """
     PCA an image and optionally whiten or decorr stretch it. Then optionally normalize and clip a given
     percentage of outliers.
@@ -33,23 +34,20 @@ def process(img, mask, postprocess=None, normalize=False, clip_percent=5, stretc
                         stretch by equalising the variances
     """
     # save the original shape and image
-    orig = img
-    orig_shape = img.shape
 
-    H,W,D = img.shape
+    orig = subimg.masked(maskBadPixels=True)
+    masked_img = orig.copy()
+
+    orig_shape = masked_img.shape
+    H,W,D = orig_shape
+
 
     # flatten from (H,W,D) to (H*W, D)
-    img = orig.reshape((-1, D)).astype(np.float64)
-
-    # make the 2D mask a 3D mask the shape of the data
-    mask = mask.flatten()
-    mask = np.repeat(mask, D).reshape(-1, D)
-    # and make a masked array from it, remembering that masks are negated in subimages
-    maskedA = np.ma.masked_array(data=img.copy(), mask=~mask)
+    masked_img = masked_img.reshape((-1, D)).astype(np.float64)
 
     # centre the masked data
-    mean = maskedA.mean()
-    maskedA = np.ma.subtract(maskedA, mean)
+    mean = masked_img.mean()
+    maskedA = np.ma.subtract(masked_img, mean)
 
     # covariance matrix of just the masked part of the array
     cov = np.ma.cov(maskedA, rowvar=False)
@@ -62,6 +60,9 @@ def process(img, mask, postprocess=None, normalize=False, clip_percent=5, stretc
     idx = np.argsort(eigvals)[::-1]
     eigvals = eigvals[idx]
     eigvecs = eigvecs[:, idx]
+
+    # save the mask
+    mask = masked_img.mask
 
     # PCA rotation
     # we need to remove the mask so the mat mul will work.
@@ -91,13 +92,14 @@ def process(img, mask, postprocess=None, normalize=False, clip_percent=5, stretc
         # apply stretch and then invert the PCA done at the start
         pca = (pca @ S) @ eigvecs.T
 
+    # reapply mask
+
+    pca = np.ma.masked_array(pca, mask=mask)
+
     if clip_percent > 0:
-        if isinstance(pca, np.ma.MaskedArray):
-            valid = pca.compressed()    # get unmasked elements as a flat array; percentile doesn't work on masked arrays
-        else:
-            valid = pca
-        img_min = np.ma.min(img)
-        img_max = np.ma.max(img)
+        valid = pca.compressed()    # get unmasked elements as a flat array; percentile doesn't work on masked arrays
+        img_min = np.ma.min(valid)
+        img_max = np.ma.max(valid)
         lo = np.percentile(valid, clip_percent)
         hi = np.percentile(valid, 100-clip_percent)
         # normalise to that range
@@ -113,7 +115,7 @@ def process(img, mask, postprocess=None, normalize=False, clip_percent=5, stretc
     # of the images to match the flat mask we made.
     orig = orig.flatten()
     pca = pca.flatten()
-    np.putmask(orig, mask, pca)
+    np.putmask(orig, ~mask, pca)
     return orig.reshape(orig_shape), stddevs, eigvals
 
 
@@ -202,7 +204,7 @@ class XFormPCA(XFormType):
         else:
             subimage = node.inimg.subimage()
             band_count = node.inimg.channels
-            newimg, stddevs, eigvals = process(subimage.img, subimage.mask,
+            newimg, stddevs, eigvals = process(subimage,
                                                postprocess=node.params.postprocess,
                                                normalize=node.params.normalize,
                                                clip_percent=node.params.clip)

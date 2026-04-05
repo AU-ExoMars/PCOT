@@ -34,10 +34,13 @@ class RGBInputMethod(InputMethod):
 
     def readData(self):
         logger.debug(f"RGB readData fname={self.fname}")
-        self.img = load.rgb(self.fname,
-                            self.input.idx if self.input else None,
-                            self.mapping,
-                            self.debayer_algo, self.debayer_pattern, None if self.camera=="NONE" else self.camera)
+        if self.fname is not None:
+            self.img = load.rgb(self.fname,
+                                self.input.idx if self.input else None,
+                                self.mapping,
+                                self.debayer_algo, self.debayer_pattern, None if self.camera=="NONE" else self.camera)
+        else:
+            self.img = Datum.null
         return self.img
 
     def getName(self):
