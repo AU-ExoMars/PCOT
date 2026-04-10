@@ -56,9 +56,13 @@ def getHelpMarkdown(xt, errorState: XFormException = None, inApp=False):
      the formatting may be slightly different."""
      
     from pcot.parameters.autodoc import generate_node_documentation
-    
+    from pcot.macros import XFormMacro
 
-    if xt.__doc__ is None:
+    is_macro = isinstance(xt, XFormMacro)
+
+    if is_macro:
+        h = xt.getHelpText()
+    elif xt.__doc__ is None:
         h = '**No help text is available**'
     else:
         h = xt.__doc__  # help doc comes from docstring
@@ -94,7 +98,8 @@ def getHelpMarkdown(xt, errorState: XFormException = None, inApp=False):
         s += t.markdown() + '\n\n'
         
     s += "\n### Parameters\n"
-    s += generate_node_documentation(xt.name)
+    if not is_macro:
+        s += generate_node_documentation(xt.name)
 
     if errorState is not None:
         s += f"# ERROR: [{errorState.code}] {errorState.message}"

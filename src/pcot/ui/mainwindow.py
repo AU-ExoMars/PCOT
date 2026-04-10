@@ -10,7 +10,7 @@ from string import Template
 from typing import List, Optional, OrderedDict, ClassVar, Dict
 
 import markdown
-from PySide2 import QtWidgets
+from PySide2 import QtWidgets, QtGui
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QTextCursor, QIcon
 from PySide2.QtWidgets import QAction, QMessageBox, QDialog, QMenu
@@ -120,6 +120,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.actionRedo.triggered.connect(self.redoAction)
         self.actionAbout.triggered.connect(self.aboutAction)
         self.actionShow_Metadata.triggered.connect(self.showMetadataAction)
+        self.actionImport.triggered.connect(self.importAction)
 
         self.runAllButton.clicked.connect(self.runAllAction)
         self.autoRun.toggled.connect(self.autorunChanged)
@@ -134,6 +135,14 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.menus = {}  # we need to use a dict because findChildren doesn't seem to work right.
 
         self._init(doc=doc, macro=macro, doAutoLayout=doAutoLayout,initial=True)
+
+    def setTitle(self):
+        if self.isMacro():
+            self.setWindowTitle(ui.app().applicationName() +
+                                ' ' + ui.app().applicationVersion() +
+                                " [MACRO {}]".format(self.graph.proto.name))
+        else:
+            self.setWindowTitle(ui.app().applicationName() + ' ' + ui.app().applicationVersion())
 
     def _init(self,
               doc,  # Document
@@ -156,7 +165,6 @@ class MainUI(ui.tabs.DockableTabWindow):
         with SignalBlocker(self.annotalphaSlider):
             self.annotalphaSlider.setValue(self.doc.settings.alpha)
 
-        self.setWindowTitle(ui.app().applicationName() + ' ' + ui.app().applicationVersion())
         self.rebuildRecents()
 
         # set up the scrolling palette and make the buttons therein. The paletteArea
@@ -188,9 +196,6 @@ class MainUI(ui.tabs.DockableTabWindow):
             self.extraCtrls.layout().addWidget(b, 0, 2)
 
             self.macroPrototype = macro
-            self.setWindowTitle(ui.app().applicationName() +
-                                ' ' + ui.app().applicationVersion() +
-                                " [MACRO {}]".format(self.graph.proto.name))
         else:
             # We are definitely a main window
             self.macroPrototype = None  # we are not a macro
@@ -211,6 +216,8 @@ class MainUI(ui.tabs.DockableTabWindow):
 
         if initial:
             pcot.config.executeWindowHooks(self)
+
+        self.setTitle()
 
         self.show()
         ui.msg("OK")
@@ -304,11 +311,10 @@ class MainUI(ui.tabs.DockableTabWindow):
     def scene(self):
         return self.graph.scene
 
-    ## run through all the palettes on all main windows,
-    # repopulating them. Done typically when macros are added and removed.
     @staticmethod
-    def rebuildPalettes():
-        for w in MainUI.windows:
+    def rebuildPalettes(doc=None):
+        """Rebuild all palettes, or just palettes for a particular document's windows"""
+        for w in MainUI.windows if doc is None else MainUI.getWindowsForDocument(doc):
             logger.info(f"Rebuilding window {w}")
             w.palette.populate()
 
@@ -322,18 +328,7 @@ class MainUI(ui.tabs.DockableTabWindow):
                     w.graph.scene.rebuild()
             if tab:
                 w.retitleTabs()
-
-    ## add a new favourite to all the palettes - because all windows have their own palette
-    # because macros.
-    @staticmethod
-    def addFavouriteToAllPalettes(name, fav):
-        for w in MainUI.windows:
-            w.palette.addFavourite(name, fav)
-
-    @staticmethod
-    def removeFavouriteFromAllPalettes(name):
-        for w in MainUI.windows:
-            w.palette.removeFavourite(name)
+            w.setTitle()    # macro renamed?
 
     ## close event handler - close all windows on confirmation if this is a main window, otherwise it's a macro - don't
     # bother confirming, just close this window.
@@ -505,6 +500,54 @@ class MainUI(ui.tabs.DockableTabWindow):
         dialog.textEdit.moveCursor(QTextCursor.Start)
         # print(dialog.textEdit.toHtml())
         dialog.show()
+
+    def importAction(self):
+        """Import macros and/or favourites from another document"""
+        from pcot import document
+        res = QtWidgets.QFileDialog.getOpenFileName(self,
+                                                    'Import from file',
+                                                    os.path.expanduser(pcot.config.getDefaultDir('pcotfiles')),
+                                                    "PCOT files (*.pcot)",
+                                                    options=pcot.config.getFileDialogOptions())
+        if res[0] != '':
+            dialog = QDialog(self)
+            uiloader.loadUi('import.ui', dialog)
+
+            # load the foreign document to import from and get the names of the macros and faves
+            doc = document.Document()
+            doc.load(res[0])
+            macs = doc.macros.keys()
+            favs = doc.favourites.keys()
+
+            favmod = QtGui.QStandardItemModel(dialog.favesList)
+            macmod = QtGui.QStandardItemModel(dialog.macrosList)
+
+            for x in favs:
+                item = QtGui.QStandardItem(x)
+                item.setCheckable(True)
+                favmod.appendRow(item)
+            dialog.favesList.setModel(favmod)
+
+            for x in macs:
+                item = QtGui.QStandardItem(x)
+                item.setCheckable(True)
+                macmod.appendRow(item)
+            dialog.macrosList.setModel(macmod)
+
+            dialog.exec_()
+
+            def getlist(mod):
+                out = []
+                for i in range(mod.rowCount()):
+                    item = mod.item(i)
+                    if item.checkState() == Qt.Checked:
+                        out.append(item.text())
+                return out
+
+            macstoimport = getlist(macmod)
+            favstoimport = getlist(favmod)
+
+            self.doc.importFrom(doc, macstoimport, favstoimport)
 
     def findOrAddMenu(self, name):
         """Find a menu or add a new one"""

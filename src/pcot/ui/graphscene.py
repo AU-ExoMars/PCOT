@@ -317,8 +317,13 @@ class GMainRect(QtWidgets.QGraphicsRectItem):
         name,ok  = QInputDialog.getText(self.window(), "Favourite", "Enter favourite name:",
                                    QtWidgets.QLineEdit.Normal, "")
         if name and ok and len(name):
-            fav = Favourite(self.node)
-            ui.mainwindow.MainUI.addFavouriteToAllPalettes(name, fav)
+            doc = self.scene().graph.doc
+            if name in doc.favourites:
+                ui.warn("Can't create favourites with duplicate names, sorry!")
+                return
+            fav = Favourite(name=name, node=self.node)
+            doc.favourites[name]=fav
+            ui.mainwindow.MainUI.rebuildPalettes(doc=doc)
 
 
 class GConnectRect(QtWidgets.QGraphicsRectItem):

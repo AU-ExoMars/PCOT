@@ -99,6 +99,7 @@ class Document:
         self.graph = XFormGraph(self, False)  # false - is not a macro
         self.inputMgr = InputManager(self)
         self.macros = {}
+        self.favourites = {}
         self.settings = DocumentSettings()
         self.undoRedoStore = UndoRedoStore()
         self.nodeInstances = {}
@@ -124,7 +125,8 @@ class Document:
                       'date': time.time()},
              'GRAPH': self.graph.serialise(),
              'INPUTS': self.inputMgr.serialise(internal, saveInputs=saveInputs),
-             'MACROS': macros
+             'MACROS': macros,
+             'FAVOURITES': {f.name: f.serialise() for f in self.favourites.values()}
              }
         return d
 
@@ -145,8 +147,12 @@ class Document:
         # deserialise macros before graph!
         if 'MACROS' in d:
             for k, v in d['MACROS'].items():
-                p = XFormMacro(self, k)  # will autoregister
+                p = XFormMacro(self, k)  # will autoregister, so it ends up in self.macros and the palette!
                 p.graph.deserialise(v, True)
+
+        if 'FAVOURITES' in d:
+            from pcot.xforms.favourite import Favourite
+            self.favourites = {x['name']: Favourite(json=x) for x in d['FAVOURITES'].values()}
 
         # True to delete existing nodes first
         # and we also might not want to delete any tabs (for undo)
@@ -340,3 +346,33 @@ class Document:
         if self.graph.scene is None:
             return []  # there's no scene, so no selection
         return self.graph.scene.selection
+
+    def importFrom(self, doc, macs=None, favs=None):
+        """Import macros and favourites from another document. If no lists are provided, all are imported."""
+        if macs is None:
+            macs = doc.macros.keys()
+        if favs is None:
+            favs = doc.favourites.keys()
+
+        # in both cases, we serialise/deserialise to do the import, to make sure nothing else of the source
+        # document gets copied over by mistake.
+        for name in macs:
+            if name in doc.macros:
+                if name in self.macros:
+                    ui.warn(f"Macro {name} already exists, skipping.")
+                    continue
+                s = doc.macros[name].graph.serialise()
+                p = XFormMacro(self, name)
+                p.graph.deserialise(s, True)
+
+        for name in favs:
+            from pcot.xforms.favourite import Favourite
+            if name in doc.favourites:
+                if name in self.favourites:
+                    ui.warn(f"Favourite {name} already exists, skipping.")
+                    continue
+                s = doc.favourites[name].serialise()
+                f = Favourite(json=s)
+                self.favourites[name] = f
+
+        ui.mainwindow.MainUI.rebuildPalettes(doc=self)
