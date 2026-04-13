@@ -25,6 +25,7 @@ import pcot.ui.tabs as tabs
 import pcot.xform as xform
 import pcot.assets
 from pcot.ui.help import HelpWindow
+from pcot.ui.importdialog import ImportDialog
 from pcot.utils import SignalBlocker
 from pcot.utils.table import Table
 
@@ -510,44 +511,13 @@ class MainUI(ui.tabs.DockableTabWindow):
                                                     "PCOT files (*.pcot)",
                                                     options=pcot.config.getFileDialogOptions())
         if res[0] != '':
-            dialog = QDialog(self)
-            uiloader.loadUi('import.ui', dialog)
-
             # load the foreign document to import from and get the names of the macros and faves
             doc = document.Document()
             doc.load(res[0])
-            macs = doc.macros.keys()
-            favs = doc.favourites.keys()
-
-            favmod = QtGui.QStandardItemModel(dialog.favesList)
-            macmod = QtGui.QStandardItemModel(dialog.macrosList)
-
-            for x in favs:
-                item = QtGui.QStandardItem(x)
-                item.setCheckable(True)
-                favmod.appendRow(item)
-            dialog.favesList.setModel(favmod)
-
-            for x in macs:
-                item = QtGui.QStandardItem(x)
-                item.setCheckable(True)
-                macmod.appendRow(item)
-            dialog.macrosList.setModel(macmod)
-
-            dialog.exec_()
-
-            def getlist(mod):
-                out = []
-                for i in range(mod.rowCount()):
-                    item = mod.item(i)
-                    if item.checkState() == Qt.Checked:
-                        out.append(item.text())
-                return out
-
-            macstoimport = getlist(macmod)
-            favstoimport = getlist(favmod)
-
-            self.doc.importFrom(doc, macstoimport, favstoimport)
+            # open the dialog
+            dlg = ImportDialog(doc)
+            dlg.exec_()
+            self.doc.importFrom(doc, dlg.macstoimport, dlg.favstoimport)
 
     def findOrAddMenu(self, name):
         """Find a menu or add a new one"""
