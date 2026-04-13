@@ -31,7 +31,8 @@ class CollapserSection(QtWidgets.QWidget):
     """This is a section within the collapsing list - the code comes from here: https://stackoverflow.com/a/56275050
     with a few modifications. We use setContentLayout to add layouts.
 
-    Don't use this directly - use Collapser. """
+    Don't use this directly - use Collapser. Actually, that's a lie
+    right now - ConfigDialog uses it."""
 
     def __init__(self, title, parent=None, animationDuration=100, isOpen=False, isAlwaysOpen=False):
         super(CollapserSection, self).__init__(parent=parent)

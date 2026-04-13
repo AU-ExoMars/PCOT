@@ -10,6 +10,13 @@ from PySide2.QtWidgets import QGridLayout, QDialog, QFormLayout, QDialogButtonBo
     QFrame, QGroupBox, QLabel
 
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedDict
+from pcot.ui.collapser import CollapserSection
+
+DUMMY = TaggedDictType(
+    aa=("Test string", str, "teststringdefault"),
+    ab=("Test string 2", str, "teststringdefault 2"),
+    ac=("Test integer", int, 3),
+).setOrdered()
 
 TESTCONFIG = TaggedDictType(
     a=("Test string", str, "teststringdefault"),
@@ -19,6 +26,7 @@ TESTCONFIG = TaggedDictType(
               TaggedDictType(
                 p=("Foo", str, "foo"),
                 q=("Bar", str, "bar"),
+                zz=("internal", DUMMY, None),
                 r=("Baz", int, 4)).setOrdered(),None)
 ).setOrdered()
 
@@ -35,15 +43,22 @@ class ConfigDialog(QDialog):
 
         self.d = d
         layout=QVBoxLayout(self)
+
         self.form=QGridLayout()
         layout.addLayout(self.form)
 
         self.layoutDict(self.form,[], d)
 
+        # add a stretch so that we don't centre the sections when they close
+        layout.addStretch(10)
+
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
+
+        self.adjustSize()
+        self.updateGeometry()
 
     def layoutDict(self, container:QGridLayout, path:List[str], d:TaggedDict):
         """Lays out a TaggedDict in a container, creating subframes for
@@ -54,12 +69,21 @@ class ConfigDialog(QDialog):
             if isinstance(v, TaggedDict):
                 # we're adding a sub-dictionary so we need to create a frame,
                 # add all the members to that.
-                group = QGroupBox(k)
-                layout = QGridLayout(group)
-                group.setLayout(layout)
-
+                if len(path)==0:
+                    # top level, new collapser section
+                    group = CollapserSection(k)
+                    layout = QGridLayout()
+                    self.layoutDict(layout, path+[k], v)
+                    group.setContentLayout(layout)
+                else:
+                    # lower levels, group box.
+                    group = QGroupBox(k)
+                    layout = QGridLayout()
+                    self.layoutDict(layout, path+[k], v)
+                    group.setLayout(layout)
                 container.addWidget(group,next(self.ct),0,1,2)
-                self.layoutDict(layout, path+[k], v)
+                self.adjustSize()
+                self.updateGeometry()
             else:
                 # just create label and line editor for simple values
                 editor = QLineEdit(str(v))
