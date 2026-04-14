@@ -647,16 +647,7 @@ class TaggedList(TaggedAggregate):
 
     def _check_value(self, value):
         """check an item before setting"""
-        tp = self._type.tag.type
-        if isinstance(tp, TaggedAggregateType):
-            # if the type is a tagged aggregate, make sure it's the right type
-            if not isinstance(value, TaggedAggregate):
-                raise ValueError(f"Value {value} is not a TaggedAggregate")
-            if tp != value._type:
-                raise ValueError(f"Value {value} is not a TaggedAggregate of type {tp}")
-        elif not is_value_of_type(value, tp):
-            # otherwise check the type
-            raise ValueError(f"Value {value} is not of type {tp}")
+        self._type.tag.check_value(value)
 
     def __setitem__(self, idx, value):
         """Set the value for a given index. Will raise ValueError if the value is not of the correct type."""
