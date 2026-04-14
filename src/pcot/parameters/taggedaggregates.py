@@ -367,6 +367,10 @@ class TaggedDict(TaggedAggregate):
                 if v.valid_strings is not None and self._values[k] not in v.valid_strings:
                     raise ValueError(f"TaggedDict key {k}: Value {self._values[k]} is not in the list of valid strings {v.valid_strings}")
 
+    def tag(self, k)->Tag :
+        """Return the tag object for the given key"""
+        return self._type.tags[k]
+
     def _intkey2str(self, key):
         """Convert an integer key to a string key"""
         if isinstance(key, int):

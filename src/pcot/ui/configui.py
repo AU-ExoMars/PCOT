@@ -1,32 +1,38 @@
 """
 Configuration management UI, using TaggedAggregate values.
 """
-import sys
 import itertools
+import sys
 from typing import List
 
 from PySide2 import QtWidgets
-from PySide2.QtWidgets import QGridLayout, QDialog, QFormLayout, QDialogButtonBox, QLineEdit, QVBoxLayout, \
-    QFrame, QGroupBox, QLabel
+from PySide2.QtWidgets import QGridLayout, QDialog, QDialogButtonBox, QLineEdit, QVBoxLayout, \
+    QGroupBox, QLabel, QScrollArea, QWidget, QSizePolicy
 
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedDict
 from pcot.ui.collapser import CollapserSection
 
+MINWIDTH = 400
+
 DUMMY = TaggedDictType(
     aa=("Test string", str, "teststringdefault"),
-    ab=("Test string 2", str, "teststringdefault 2"),
+    ab=("Test string 2", str, "teststringdefault 2 asdasd asd asd  asd "),
     ac=("Test integer", int, 3),
 ).setOrdered()
 
 TESTCONFIG = TaggedDictType(
     a=("Test string", str, "teststringdefault"),
-    b=("Test string 2", str, "teststringdefault 2"),
+    b=("Test string 2", str, "teststringdefault 2 asd asdasd asdasd"),
     c=("Test integer", int, 3),
     subdict1=("subdict",
               TaggedDictType(
                 p=("Foo", str, "foo"),
                 q=("Bar", str, "bar"),
                 zz=("internal", DUMMY, None),
+                zz2=("internal", DUMMY, None),
+                zz3=("internal", DUMMY, None),
+                zz4=("internal", DUMMY, None),
+                zz5=("internal", DUMMY, None),
                 r=("Baz", int, 4)).setOrdered(),None)
 ).setOrdered()
 
@@ -42,15 +48,24 @@ class ConfigDialog(QDialog):
         self.editors = []
 
         self.d = d
-        layout=QVBoxLayout(self)
+        layout=QVBoxLayout(self)        # overall layout containing scroll area and buttonbox
 
-        self.form=QGridLayout()
-        layout.addLayout(self.form)
+        scrollarea = QScrollArea()
+        scrollarea.setFixedHeight(400)
+        scrollarea.setMinimumWidth(MINWIDTH+100)
+        scrollarea.setWidgetResizable(True)
+        layout.addWidget(scrollarea)
 
-        self.layoutDict(self.form,[], d)
+        content = QWidget()             # container for items in the scroll area
+        scrollarea.setWidget(content)
 
-        # add a stretch so that we don't centre the sections when they close
-        layout.addStretch(10)
+        contentLayout=QGridLayout()     # layout for items inside the content of the scroll area
+        content.setLayout(contentLayout)
+
+        self.layoutDict(contentLayout,[], d)
+
+        # add a stretching row so that things aren't distributed through the box, but gather at the top
+        contentLayout.setRowStretch(next(self.ct),1)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.accept)
@@ -66,18 +81,24 @@ class ConfigDialog(QDialog):
         of dicts, with [] for the root.
         """
         for k,v in d.items():
+            desc = d.tag(k).description
             if isinstance(v, TaggedDict):
+
                 # we're adding a sub-dictionary so we need to create a frame,
                 # add all the members to that.
                 if len(path)==0:
                     # top level, new collapser section
-                    group = CollapserSection(k)
+                    group = CollapserSection(desc)
+                    group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
                     layout = QGridLayout()
+                    layout.setContentsMargins(20, 0, 0, 0)
                     self.layoutDict(layout, path+[k], v)
-                    group.setContentLayout(layout)
+                    group.setContentLayout(layout, stretch=True)
                 else:
-                    # lower levels, group box.
-                    group = QGroupBox(k)
+                    # lower levels, we create a group box.
+                    group = QGroupBox(desc)
+                    group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+                    group.setMinimumWidth(MINWIDTH)
                     layout = QGridLayout()
                     self.layoutDict(layout, path+[k], v)
                     group.setLayout(layout)
@@ -88,7 +109,7 @@ class ConfigDialog(QDialog):
                 # just create label and line editor for simple values
                 editor = QLineEdit(str(v))
                 row = next(self.ct)
-                container.addWidget(QLabel(str(k)), row, 0, 1, 1)
+                container.addWidget(QLabel(str(desc)), row, 0, 1, 1)
                 container.addWidget(editor,row,1,1,1)
                 self.editors.append((path+[k], editor))
 

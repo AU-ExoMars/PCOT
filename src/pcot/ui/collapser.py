@@ -84,7 +84,6 @@ class CollapserSection(QtWidgets.QWidget):
         # don't waste space
         mainLayout.setVerticalSpacing(0)
         mainLayout.setContentsMargins(0, 0, 0, 0)
-        mainLayout.setSizeConstraint(QtWidgets.QLayout.SetMinimumSize   )
 
         if isAlwaysOpen:
             mainLayout.addWidget(self.contentArea, 0, 0, 1, 3)
@@ -117,10 +116,12 @@ class CollapserSection(QtWidgets.QWidget):
             self.toggleButton.click()
 
 
-    def setContentLayout(self, contentLayout):
+    def setContentLayout(self, contentLayout, stretch=False):
+        """Used to set the layout of the collapser's content section. If stretch is true, the size policy
+        will expand contents horizontally. We don't do that for palettes, because the buttons should be small."""
         self.contentArea.destroy()
         self.contentArea.setLayout(contentLayout)
-        self.contentArea.setSizePolicy(QtWidgets.QSizePolicy.Maximum,
+        self.contentArea.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding if stretch else QtWidgets.QSizePolicy.Maximum,
                                        QtWidgets.QSizePolicy.MinimumExpanding)
         #        self.contentArea.adjustSize()
         #        self.contentArea.updateGeometry()
