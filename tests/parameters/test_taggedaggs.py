@@ -380,11 +380,16 @@ def test_setbydot():
     assert tt[0] == 20
 
 
-def test_typing():
+def test_typing_in_defaults():
     # checking that bad types throw errors
     with pytest.raises(ValueError):
         tdt = TaggedDictType(
             a=("a", int, "cat")
+        )
+
+    with pytest.raises(ValueError):
+        tdt = TaggedDictType(
+            a=("a", int, 4.4)
         )
 
     with pytest.raises(ValueError):
@@ -421,13 +426,6 @@ def test_typing():
         c=("c", float, 3.14)
     )
 
-    # and this
-    tdt = TaggedDictType(
-        a=("a", int, 10),
-        b=("b", Maybe(str), None),
-        c=("c", float, 3.14)
-    )
-
     # not this though!
     with pytest.raises(ValueError):
         TaggedDictType(
@@ -436,7 +434,47 @@ def test_typing():
             c=("c", float, 3.14)
         )
 
+def test_valid_choices_in_default():
+    # check validity of string choices - this is only done on creating a dict, dammit.
+    with pytest.raises(ValueError):
+        tdt = TaggedDictType(
+            a=("a", Maybe(str), "wob", ["foo","bar"]),        # WOB isn't in the list
+        )
+
+    tdt = TaggedDictType(
+        a=("a", Maybe(str), "foo", ["foo","bar"])
+    )
+    tdt = TaggedDictType(
+        a=("a", Maybe(str), None, ["foo","bar"])    # checking we handle None even though it's not in the list
+    )
+
+    tdt = TaggedDictType(
+        a=("a", float, 1.4, (1,2))      # should be fine, number is in range
+    )
+
+    tdt = TaggedDictType(
+        a=("a", float, 6, (1,20))      # should be fine, number is in range although it's stated as an int
+    )
+    with pytest.raises(ValueError):
+        tdt = TaggedDictType(
+            a=("a", float, 3, (1,2))      # out of range!
+        )
+
+    tdt = TaggedDictType(
+        a=("a", Maybe(float), None, (1,2))      # none value OK here
+    )
+
+
+def test_typing_in_set():
     # let's create an example of that TD with a None value for b
+
+    # this is fine
+    tdt = TaggedDictType(
+        a=("a", int, 10),
+        b=("b", Maybe(str), None),
+        c=("c", float, 3.14)
+    )
+
     td = tdt.create()
     assert td.a == 10
     assert td.b is None

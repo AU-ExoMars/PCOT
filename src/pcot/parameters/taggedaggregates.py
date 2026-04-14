@@ -138,7 +138,7 @@ class Tag:
     description: str
     type: Union[type, TaggedAggregateType]  # either a type or one of the TaggedAggregateType objects
     deflt: Any = None  # the default value is ignored (and none) if the type is a TaggedAggregateType
-    valid_strings: Union[List[str],None] = None # if the type is a string, these are the valid values (or any if none)
+    valid_choices: Union[List[str],Tuple[Number,Number],None] = None # if the type is a string, these are the valid values (or any if none)
 
     def assert_valid(self):
         """Check the tag is valid"""
@@ -161,6 +161,35 @@ class Tag:
         else:
             check_type(self.type)
 
+    def check_value(self, v):
+        """Check a value against the type and valid choices"""
+        def _check(t, v):
+            # strings and numbers require special checking
+            if t == str:
+                if not isinstance(v, str):
+                    raise ValueError(f"Value {v} is not a string, it's a {get_type_name(type(v))}")
+                if self.valid_choices:
+                    if v not in self.valid_choices:
+                        raise ValueError(f"Value {v} is not one of {self.valid_choices}")
+            elif t == int or t == float:
+                if not isinstance(v, t):
+                    raise ValueError(f"Value {v} is not a {get_type_name(t)}, it's a {get_type_name(type(v))}")
+                if self.valid_choices:
+                    mn, mx = self.valid_choices
+                    if v < mn or v > mx:
+                        raise ValueError(f"Value {v} is not in {self.valid_choices}")
+            elif not isinstance(v, t):
+                raise ValueError(f"Value {v} is not a {get_type_name(t)}")
+
+
+        # if this is a maybe, then check the underlying type if the value exists otherwise don't bother
+        if isinstance(self.type, Maybe):
+            # check the type is valid
+            if v is not None:
+                _check(self.type.type_if_exists, v)
+        else:
+            _check(self.type, v)
+
     def get_primitive_type_desc(self):
         """Only really valid for tags which are primitive types, this returns a descriptive string
         which holds the type name and extra details such as valid strings and defaults. It could be written
@@ -168,8 +197,8 @@ class Tag:
         tp = self.type.type_if_exists if isinstance(self.type, Maybe) else self.type
         deflt = self.deflt
         if tp == str:
-            if self.valid_strings is not None:
-                s = f"string ({', '.join(self.valid_strings)})"
+            if self.valid_choices is not None:
+                s = f"string ({', '.join(self.valid_choices)})"
             else:
                 s = "string"
             deflt = f"'{deflt}'" if deflt is not None else "None"
@@ -236,6 +265,9 @@ class TaggedDictType(TaggedAggregateType):
         For strings, you can optionally specify valid choices:
         (description, str, default, valid_strings) where valid_strings is a list of strings that are valid.
 
+        For floats and ints, you can specify a range:
+        (description, float or int, default, (min,max)))
+
         If the type is a TaggedAggregateType, then the default value is ignored and should be None or omitted (the
         create method for that type will create the correct default).
         Otherwise the default value should be of the correct type.
@@ -263,9 +295,12 @@ class TaggedDictType(TaggedAggregateType):
             if isinstance(v.type, TaggedAggregateType):
                 if v.deflt is not None:
                     raise ValueError(f"Type {get_type_name(v.type)} is a TaggedAggregateType, so default must be None")
-            # otherwise the default has to be of the correct type
-            elif not is_value_of_type(v.deflt, v.type):
-                raise ValueError(f"Default {v.deflt} is not of type {get_type_name(v.type)}")
+            else:
+                # otherwise the default has to be of the correct type
+                try:
+                    v.check_value(v.deflt)
+                except ValueError as e:
+                    raise ValueError(f"Error in setting '{k}' in a TaggedDictType default: {e}")
 
     def get_tag(self, key):
         """Return the tag for a given key - raises a key error on failure"""
@@ -362,11 +397,6 @@ class TaggedDict(TaggedAggregate):
                     # (it could, in rare cases, be a mutable object like a dict).
                     self._values[k] = copy(v.deflt)
 
-            if v.type == str:
-                # if the type is a string, check it's in the list of valid strings
-                if v.valid_strings is not None and self._values[k] not in v.valid_strings:
-                    raise ValueError(f"TaggedDict key {k}: Value {self._values[k]} is not in the list of valid strings {v.valid_strings}")
-
     def tag(self, k)->Tag :
         """Return the tag object for the given key"""
         return self._type.tags[k]
@@ -427,7 +457,7 @@ class TaggedDict(TaggedAggregate):
             raise ValueError(f"TaggedDict key {key}: Value {value} is not of type {get_type_name(correct_type)}, is a {get_type_name(type(value))}")
         # check string validity
         if correct_type == str:
-            vstrs = tp.tags[key].valid_strings
+            vstrs = tp.tags[key].valid_choices
             if vstrs is not None and value not in vstrs:
                 ss = ",".join(vstrs)
                 raise ValueError(f"TaggedDict key {key}: Value '{value}' is not in the list of valid strings {ss}")

@@ -9,7 +9,7 @@ from PySide2 import QtWidgets
 from PySide2.QtWidgets import QGridLayout, QDialog, QDialogButtonBox, QLineEdit, QVBoxLayout, \
     QGroupBox, QLabel, QScrollArea, QWidget, QSizePolicy
 
-from pcot.parameters.taggedaggregates import TaggedDictType, TaggedDict
+from pcot.parameters.taggedaggregates import TaggedDictType, TaggedDict, Tag
 from pcot.ui.collapser import CollapserSection
 
 MINWIDTH = 400
@@ -37,6 +37,16 @@ TESTCONFIG = TaggedDictType(
 ).setOrdered()
 
 config = TaggedDict(TESTCONFIG)
+
+
+def createEditor(tag: Tag):
+    if tag.type == str:
+        return QtWidgets.QLineEdit()
+    elif tag.type == int:
+        return QtWidgets.QSpinBox()
+    else:
+        raise TypeError
+
 
 
 class ConfigDialog(QDialog):
@@ -81,7 +91,8 @@ class ConfigDialog(QDialog):
         of dicts, with [] for the root.
         """
         for k,v in d.items():
-            desc = d.tag(k).description
+            tag = d.tag(k)
+            desc = tag.description
             if isinstance(v, TaggedDict):
 
                 # we're adding a sub-dictionary so we need to create a frame,
@@ -106,8 +117,8 @@ class ConfigDialog(QDialog):
                 self.adjustSize()
                 self.updateGeometry()
             else:
-                # just create label and line editor for simple values
-                editor = QLineEdit(str(v))
+                # create the correct kind of editor and add it
+                editor = createEditor(tag)
                 row = next(self.ct)
                 container.addWidget(QLabel(str(desc)), row, 0, 1, 1)
                 container.addWidget(editor,row,1,1,1)

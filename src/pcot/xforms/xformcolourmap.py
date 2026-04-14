@@ -302,7 +302,7 @@ TAGGEDDICT = TaggedDictType(
                                          ).setOrdered(), 0),
               None),
     # this is only really used when we use parameter files to set from presets.
-    preset=('preset', Maybe(str), None, presetGradients.keys()),
+    preset=('preset', Maybe(str), None, presetGradients.keys()), # none is a valid choice?
     # other params are normal
     colour=('legend colour', taggedColourType(1.0, 1.0, 0.0), None),
     legendrect=('legend rectangle if in image', taggedRectType(0, 0, 100, 20), None),
