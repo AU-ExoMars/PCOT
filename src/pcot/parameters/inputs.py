@@ -19,6 +19,7 @@ rgbDictType = TaggedDictType(
                   ["ea","EA","vng","VNG","None","none","NONE","bilinear","Bilinear","BILINEAR"]),
     debayer_pattern=("Bayer pattern (see OpenCV docs)", Maybe(str), pcot.config.defaultBayerPattern,
                      ["GB","gb","BG","bg","RG","rg","GR","gr"]),
+    camera=("name of camera to use", Maybe(str), None),
 )
 
 # ENVI files also just have a filename WITHOUT an extension (remember that ENVI
