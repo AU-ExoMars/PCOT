@@ -167,19 +167,25 @@ class Tag:
             # strings and numbers require special checking
             if t == str:
                 if not isinstance(v, str):
-                    raise ValueError(f"Value {v} is not a string, it's a {get_type_name(type(v))}")
+                    raise ValueError(f"Value '{v}' is not a string, it's a {get_type_name(type(v))}")
                 if self.valid_choices:
                     if v not in self.valid_choices:
-                        raise ValueError(f"Value {v} is not one of {self.valid_choices}")
+                        raise ValueError(f"Value '{v}' is not one of {self.valid_choices}")
             elif t == int or t == float:
                 if not isinstance(v, t):
-                    raise ValueError(f"Value {v} is not a {get_type_name(t)}, it's a {get_type_name(type(v))}")
+                    raise ValueError(f"Value '{v}' is not a {get_type_name(t)}, it's a {get_type_name(type(v))}")
                 if self.valid_choices:
                     mn, mx = self.valid_choices
                     if v < mn or v > mx:
-                        raise ValueError(f"Value {v} is not in {self.valid_choices}")
+                        raise ValueError(f"Value {v} is not in range [{mn},{mx}]")
+            elif isinstance(t, TaggedAggregateType):
+                if v.type != t:
+                    raise ValueError(f"Value {v} is not a {get_type_name(t)}")
+            elif not isinstance(t, type):
+                raise ValueError(f"Type {t} is not a type!")
             elif not isinstance(v, t):
                 raise ValueError(f"Value {v} is not a {get_type_name(t)}")
+
 
 
         # if this is a maybe, then check the underlying type if the value exists otherwise don't bother
@@ -375,17 +381,14 @@ class TaggedDict(TaggedAggregate):
                     elif isinstance(v.type.type_if_exists, TaggedAggregateType):
                         # it's not a null, so use the underlying type to deserialise - first the TA case
                         self._values[k] = v.type.type_if_exists.deserialise(d)
-                    elif not is_value_of_type(d, v.type.type_if_exists):
-                        # then the "normal" case.
-                        raise ValueError(f"TaggedDict key {k}: Value {d} is not of type {get_type_name(v.type.type_if_exists)}")
                     else:
-                        self._values[k] = d
+                        v.check_value(d)    # redundant, we do the check in the ctor of the type object
+                    self._values[k] = d
                 else:
                     # otherwise just use the data as is
                     # handle int->float promotion
                     d = process_numeric_type(d, v.type)
-                    if not is_value_of_type(d, v.type):
-                        raise ValueError(f"TaggedDict key {k}: Value {d} is not of type {get_type_name(v.type)}")
+                    v.check_value(d)  # redundant, we do the check in the ctor of the type object
                     self._values[k] = d
             else:
                 # we are creating from defaults
@@ -437,36 +440,18 @@ class TaggedDict(TaggedAggregate):
         key = self._intkey2str(key)
         if key not in tp.tags:
             raise KeyError(f"Key {key} not in tags")
-        correct_type = tp.tags[key].type
-        if isinstance(correct_type, Maybe):
-            if value is None:
-                self._values[key] = None
-                return
-            else:
-                correct_type = correct_type.type_if_exists
+        tag = tp.tags[key]
         # handle int->float promotion
-        value = process_numeric_type(value, correct_type)
-        if isinstance(correct_type, TaggedAggregateType):
+        value = process_numeric_type(value, tag.type)
+        if isinstance(tag.type, TaggedAggregateType):
             # if the type is a tagged aggregate, make sure it's the right type
             if not isinstance(value, TaggedAggregate):
                 raise ValueError(f"TaggedDict key {key}: Value {value} is not a TaggedAggregate, is a {get_type_name(type(value))}")
-            if correct_type != value._type:
-                raise ValueError(f"TaggedDict key {key}: Value {value} is not a TaggedAggregate of type {get_type_name(correct_type)}, is a {get_type_name(type(value))}")
-        elif not is_value_of_type(value, correct_type):
-            # otherwise check the type
-            raise ValueError(f"TaggedDict key {key}: Value {value} is not of type {get_type_name(correct_type)}, is a {get_type_name(type(value))}")
-        # check string validity
-        if correct_type == str:
-            vstrs = tp.tags[key].valid_choices
-            if vstrs is not None and value not in vstrs:
-                ss = ",".join(vstrs)
-                raise ValueError(f"TaggedDict key {key}: Value '{value}' is not in the list of valid strings {ss}")
+            if tag.type != value._type:
+                raise ValueError(f"TaggedDict key {key}: Value {value} is not a TaggedAggregate of type {get_type_name(tag.type)}, is a {get_type_name(type(value))}")
 
-        # this will convert the value to the exact type declared in the tag if possible
-        if correct_type in (int, float, str, bool):
-            self._values[key] = correct_type(value)
-        else:
-            self._values[key] = value
+        tag.check_value(value)
+        self._values[key] = value
 
     def set(self, *args) -> 'TaggedDict':
         """If there is an ordering, set the values in the order given. If fewer values are given than there are keys,

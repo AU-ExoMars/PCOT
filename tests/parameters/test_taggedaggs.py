@@ -42,7 +42,7 @@ def test_taggeddict():
         td['a'] = 3.14
     with pytest.raises(ValueError):
         td['b'] = 64
-    with pytest.raises(ValueError, match=r".*'wibble' is not in the list of valid strings foo,bar,baz"):
+    with pytest.raises(ValueError, match=r".*'wibble' is not one of \['foo', 'bar', 'baz'\]"):
         td['b'] = 'wibble'  # not one of the valid strings
 
     with pytest.raises(KeyError):
@@ -617,13 +617,32 @@ def test_valid_strings():
     td['a'] = "bar"
     assert td['a'] == "bar"
 
-    with pytest.raises(ValueError, match=r".*'wibble' is not in the list of valid strings foo,bar,baz"):
+    with pytest.raises(ValueError, match=r".*'wibble' is not one of \['foo', 'bar', 'baz'\]"):
         td['a'] = 'wibble'  # not one of the valid strings
 
     for xx in ["foo", "bar", "baz"]:
         td['a'] = xx  #  this are all OK because they are in the list of valid strings
 
     td['b'] = 'wibble'  # not one of the valid strings, but this is OK because it's not specified with a valid list
+
+
+def test_valid_numbers():
+    tdt = TaggedDictType(
+        a=("a", Maybe(int), 10, (1,20)),    # test above already handles the default test
+    )
+
+    td = tdt.create()
+
+    with pytest.raises(ValueError):
+        td.a = 30
+
+    td.a = 10
+    assert td.a == 10
+
+    td.a = None
+    assert td['a'] == None
+
+
 
 
 def test_incomplete_serialisation():
