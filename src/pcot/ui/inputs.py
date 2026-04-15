@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 from typing import List
 
 from PySide2 import QtWidgets, QtCore, QtGui
@@ -202,7 +203,13 @@ class TreeMethodWidget(MethodWidget):
         self.treeView.doubleClicked.connect(self.fileDoubleClickedAction)
         self.fileEdit.editingFinished.connect(self.lineToTree)
         self.treeView.clicked.connect(self.fileClickedAction)
-        self.goto(root)
+        try:
+            if self.method.fname and Path(self.method.fname).exists():
+                    self.goto(self.method.fname)
+            else:
+                self.goto(root)
+        except:     # if that path is weird...
+            self.goto(root)
 
         # the canvas gets its "caption display" setting from the graph, so
         # we need to get it from the document, which is stored in the manager,
