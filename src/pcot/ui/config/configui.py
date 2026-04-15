@@ -2,15 +2,18 @@
 Configuration management UI, using TaggedAggregate values.
 """
 import itertools
+import json
 import sys
+from pathlib import Path
 from typing import List
 
 from PySide2 import QtWidgets
-from PySide2.QtWidgets import QGridLayout, QDialog, QDialogButtonBox, QLineEdit, QVBoxLayout, \
+from PySide2.QtWidgets import QGridLayout, QDialog, QDialogButtonBox, QVBoxLayout, \
     QGroupBox, QLabel, QScrollArea, QWidget, QSizePolicy
 
-from pcot.parameters.taggedaggregates import TaggedDictType, TaggedDict, Tag
+from pcot.parameters.taggedaggregates import TaggedDictType, TaggedDict
 from pcot.ui.collapser import CollapserSection
+from pcot.ui.config.editors import createEditor
 
 MINWIDTH = 400
 
@@ -21,13 +24,20 @@ DUMMY = TaggedDictType(
 ).setOrdered()
 
 TESTCONFIG = TaggedDictType(
+    path=("File path", Path, None, "PCOT files (*.pcot *.jpg)"),
+    path2=("Any file path", Path, "d:/", None),
+    dir=("Dir path", Path, None, True),
+    aa=("Test string", str, "teststringdefault"),
     a=("Test string", str, "teststringdefault"),
     b=("Test string 2", str, "teststringdefault 2 asd asdasd asdasd"),
-    c=("Test integer", int, 3),
+    c=("Test integer", int, 3, (0,200)),
+    d =("Choices", str, "foo", ("foo", "bar", "baz")),
+    e=("Test string", str, "teststringdefault"),
     subdict1=("subdict",
               TaggedDictType(
                 p=("Foo", str, "foo"),
-                q=("Bar", str, "bar"),
+                q=("Bar", str, "bar", ["bing","bong","bar"]),
+                x=("File test", Path, Path()),
                 zz=("internal", DUMMY, None),
                 zz2=("internal", DUMMY, None),
                 zz3=("internal", DUMMY, None),
@@ -36,20 +46,15 @@ TESTCONFIG = TaggedDictType(
                 r=("Baz", int, 4)).setOrdered(),None)
 ).setOrdered()
 
+
 config = TaggedDict(TESTCONFIG)
 
 
-def createEditor(tag: Tag):
-    if tag.type == str:
-        return QtWidgets.QLineEdit()
-    elif tag.type == int:
-        return QtWidgets.QSpinBox()
-    else:
-        raise TypeError
-
-
-
 class ConfigDialog(QDialog):
+    """
+    Call this with a TaggedDict of data. If accepted, you can use the data() method to get the data out. If not
+    accepted this will be None.
+    """
     def __init__(self, d, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Configuration")
@@ -57,7 +62,8 @@ class ConfigDialog(QDialog):
 
         self.editors = []
 
-        self.d = d
+        self.d = d.clone()              # WE OPERATE ON A CLONE!
+        self._data = None
         layout=QVBoxLayout(self)        # overall layout containing scroll area and buttonbox
 
         scrollarea = QScrollArea()
@@ -72,7 +78,7 @@ class ConfigDialog(QDialog):
         contentLayout=QGridLayout()     # layout for items inside the content of the scroll area
         content.setLayout(contentLayout)
 
-        self.layoutDict(contentLayout,[], d)
+        self.layoutDict(contentLayout,[], self.d)   # make DAMN SURE we're working on the clone!
 
         # add a stretching row so that things aren't distributed through the box, but gather at the top
         contentLayout.setRowStretch(next(self.ct),1)
@@ -84,6 +90,9 @@ class ConfigDialog(QDialog):
 
         self.adjustSize()
         self.updateGeometry()
+
+    def data(self):
+        return self._data
 
     def layoutDict(self, container:QGridLayout, path:List[str], d:TaggedDict):
         """Lays out a TaggedDict in a container, creating subframes for
@@ -118,29 +127,22 @@ class ConfigDialog(QDialog):
                 self.updateGeometry()
             else:
                 # create the correct kind of editor and add it
-                editor = createEditor(tag)
+                editor = createEditor(self, tag, d, k)
                 row = next(self.ct)
-                container.addWidget(QLabel(str(desc)), row, 0, 1, 1)
-                container.addWidget(editor,row,1,1,1)
-                self.editors.append((path+[k], editor))
+                container.addWidget(QLabel(editor.label), row, 0, 1, 1)
+                container.addWidget(editor.widget,row,1,1,1)
+                self.editors.append((path+[k], editor.widget))
 
     def accept(self):
-        print("Accepted")
-        # just dump the editor paths for now.
-        for editor in self.editors:
-            path, e = editor
-            print(path)
         super().accept()
-
-
-
-def run():
-    dialog = ConfigDialog(config)
-    dialog.exec_()
+        self._data = self.d
 
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     dialog = ConfigDialog(config)
     dialog.exec_()
+    if dialog.data():
+        config = dialog.data()
+    print(json.dumps(config.serialise(),indent=4))
 

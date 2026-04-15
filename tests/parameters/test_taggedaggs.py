@@ -1,6 +1,8 @@
 """
 Tests for TaggedAggregates
 """
+import os.path
+
 import pytest
 
 from pcot.parameters.taggedaggregates import *
@@ -674,3 +676,27 @@ def test_nparray_serialisation():
     assert s['a'] == 10
     assert np.array_equal(td['b'], np.array([1, 2, 3], dtype=np.float32))
     assert s['c'] == 3.14
+
+
+def test_path():
+    tdt = TaggedDictType(
+        a=("a", int, 10),
+        b=("b", Path, Path(), True),
+    )
+    td = tdt.create()
+    td.b = Path(os.path.expanduser("~"))
+
+
+def test_path_serialisation():
+    tdt = TaggedDictType(
+        a=("a", int, 10),
+        b=("b", Path, Path(".")),
+    )
+    td = tdt.create()
+    s = td.serialise()
+    assert s['a'] == 10
+    assert s['b'] == "."
+
+    td = tdt.deserialise(s)
+    assert td['a'] == 10
+    assert td['b'] == Path(".")

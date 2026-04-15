@@ -2,11 +2,23 @@ import dataclasses
 import numbers
 from abc import ABC, abstractmethod
 from copy import copy
-from html import escape
 from numbers import Number
+from pathlib import Path
 from typing import Any, Dict, Union, List, Tuple, Optional
 
 import numpy as np
+
+"""
+A note on types within a TaggedAggregate "tag":
+    * str, float, int are all fine with int to float promotion done when required
+    * str can take a "valid_choices" argument: a list of valid choices
+    * int and float can also take a "valid_choices" argument: a tuple range (min,max)
+    * Path is weird, it can also take a "valid_choices" argument, which is True if only directories are allowed,
+      or a string like "Figures (*.png *.jpg) if only some types are allowed (i.e. a filter string, see 
+      https://doc.qt.io/qt-6/qfiledialog.html#getOpenFileName 
+      None or False permits any file.
+      This is only used in the graphical UI config.
+"""
 
 
 class Maybe:
@@ -47,12 +59,17 @@ def is_value_of_type(value, tp):
     return isinstance(value, tp)
 
 
-def process_numeric_type(value, tp):
+def type_convert(value, tp):
     """Handle int->float promotion"""
     if tp is float and isinstance(value, int):
         return float(value)
     elif tp is int and isinstance(value, numbers.Integral):
         return int(value)
+    elif tp is Path:
+        if value is None:
+            return Path().absolute()    # None as a default value is the full working dir.
+        elif isinstance(value, str):
+            return Path(value)  # could resolve(), but I won't.
     return value
 
 
@@ -138,7 +155,10 @@ class Tag:
     description: str
     type: Union[type, TaggedAggregateType]  # either a type or one of the TaggedAggregateType objects
     deflt: Any = None  # the default value is ignored (and none) if the type is a TaggedAggregateType
-    valid_choices: Union[List[str],Tuple[Number,Number],None] = None # if the type is a string, these are the valid values (or any if none)
+    # if the type is a string, these are the valid values (or any if none).
+    # For a number, it's a (min,max) range tuple or None.
+    # For a Path, it's None or False for any file, True for a dir, or a getOpenFileName filter string.
+    valid_choices: Union[List[str],Tuple[Number,Number],None,bool] = None
 
     def assert_valid(self):
         """Check the tag is valid"""
@@ -152,6 +172,8 @@ class Tag:
             if isinstance(t, TaggedAggregateType):
                 return
             if t is Number or t is type(None):
+                return
+            if t is Path:       # paths are permissible!
                 return
             raise ValueError(f"Type {get_type_name(t)} is neither a JSON-serialisable type nor a TaggedAggregateType")
 
@@ -216,6 +238,8 @@ class Tag:
             s = "boolean"
         elif tp == Number:
             s = "int or float"
+        elif tp == Path:
+            s = "directory path" if self.valid_choices else "path"
         else:
             s = tp.__name__
         s += f" (default {deflt})"
@@ -295,7 +319,7 @@ class TaggedDictType(TaggedAggregateType):
 
         for k, v in self.tags.items():
             v.assert_valid()
-            v.deflt = process_numeric_type(v.deflt, v.type)
+            v.deflt = type_convert(v.deflt, v.type)
             
             # if type is a TaggedAggregate the default has to be None
             if isinstance(v.type, TaggedAggregateType):
@@ -373,8 +397,8 @@ class TaggedDict(TaggedAggregate):
                     # if we have a tagged aggregate, create it from the data stored in the serialised dict
                     self._values[k] = v.type.deserialise(d)
                 elif isinstance(v.type, Maybe):
-                    # handle int->float promotion
-                    d = process_numeric_type(d, v.type.type_if_exists)
+                    # handle int->float promotion etc.
+                    d = type_convert(d, v.type.type_if_exists)
                     # if we have a maybe, we have to check null.
                     if d is None:
                         self._values[k] = None
@@ -386,8 +410,8 @@ class TaggedDict(TaggedAggregate):
                     self._values[k] = d
                 else:
                     # otherwise just use the data as is
-                    # handle int->float promotion
-                    d = process_numeric_type(d, v.type)
+                    # handle int->float promotion etc.
+                    d = type_convert(d, v.type)
                     v.check_value(d)  # redundant, we do the check in the ctor of the type object
                     self._values[k] = d
             else:
@@ -441,8 +465,8 @@ class TaggedDict(TaggedAggregate):
         if key not in tp.tags:
             raise KeyError(f"Key {key} not in tags")
         tag = tp.tags[key]
-        # handle int->float promotion
-        value = process_numeric_type(value, tag.type)
+        # handle int->float promotion etc.
+        value = type_convert(value, tag.type)
         if isinstance(tag.type, TaggedAggregateType):
             # if the type is a tagged aggregate, make sure it's the right type
             if not isinstance(value, TaggedAggregate):
@@ -521,6 +545,8 @@ class TaggedDict(TaggedAggregate):
                 # otherwise fall through with the underlying type, having assured the value isn't none.
             if isinstance(tp, TaggedAggregateType):
                 out[k] = v.serialise()
+            elif tp == Path:
+                out[k] = str(v)
             else:
                 out[k] = v
 
@@ -575,8 +601,8 @@ class TaggedListType(TaggedAggregateType):
             # otherwise the default has to be a list, and all items must be of the correct type
             if not isinstance(self.tag.deflt, list):
                 raise ValueError(f"Default {self.tag.deflt} is not a list")
-            # handle int->float promotion
-            self.tag.deflt = [process_numeric_type(i, self.tag.type) for i in self.tag.deflt]
+            # handle int->float promotion etc.
+            self.tag.deflt = [type_convert(i, self.tag.type) for i in self.tag.deflt]
             for i in self.tag.deflt:
                 if not is_value_of_type(i, self.tag.type):
                     raise ValueError(f"Default {self.tag.deflt} contains an item {i} that is not of type {get_type_name(self.tag.type)}")
@@ -613,8 +639,8 @@ class TaggedList(TaggedAggregate):
                 # if the type is a tagged aggregate, them from the data provided
                 self._values = [tt.deserialise(v) for v in data]
             else:
-                # handle int->float promotion
-                data = [process_numeric_type(v, tt) for v in data]
+                # handle int->float promotion etc.
+                data = [type_convert(v, tt) for v in data]
                 # otherwise just use the data as is
                 for v in data:
                     if not is_value_of_type(v, tt):
@@ -651,7 +677,7 @@ class TaggedList(TaggedAggregate):
 
     def __setitem__(self, idx, value):
         """Set the value for a given index. Will raise ValueError if the value is not of the correct type."""
-        value = process_numeric_type(value, self._type.tag.type)    # handle int->float promotion
+        value = type_convert(value, self._type.tag.type)    # handle int->float promotion
         self._check_value(value)
         try:
             idx = int(idx)  # make sure it's an int; it will probably arrive as a string.
