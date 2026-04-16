@@ -140,8 +140,10 @@ class TaggedAggregate(ABC):
         return self._type
 
     @abstractmethod
-    def serialise(self):
-        """Serialise the type into a JSON-serialisable structure"""
+    def serialise(self, forceUnordered=False):
+        """Serialise the type into a JSON-serialisable structure. If this is an ordered TaggedDict it will
+        normally be serialised into a list, but we can override that with forceUnordered. This can be useful
+        for saving data in a more human-readable format."""
         raise NotImplementedError("serialise not implemented")
 
     @abstractmethod
@@ -374,8 +376,8 @@ class TaggedDict(TaggedAggregate):
         self._values = {}
 
         if isinstance(data, list) or isinstance(data, tuple):
-            # we have legacy data that has been serialised as tuple or list. Deal with it by converting to a dict -
-            # we need to know what the ordering is.
+            # we may have data that has been serialised as tuple or list. Deal with it by converting to a dict -
+            # but we need to know what the ordering is.
             if not td.isOrdered:
                 raise ValueError("TaggedDictType has no ordering, but data is a tuple")
             if len(td.ordering) > len(data):
@@ -529,7 +531,7 @@ class TaggedDict(TaggedAggregate):
     def items(self):
         return self._values.items()
 
-    def serialise(self):
+    def serialise(self, forceUnordered=False):
         """Serialise the structure rooted here into a JSON-serialisable structure. We don't need to record what the
         types are, because that information will be stored in the type object when we deserialise.
         This assumes that the only items in the structure are JSON-serialisable or TaggedAggregate."""
@@ -544,13 +546,13 @@ class TaggedDict(TaggedAggregate):
                 tp = tp.type_if_exists
                 # otherwise fall through with the underlying type, having assured the value isn't none.
             if isinstance(tp, TaggedAggregateType):
-                out[k] = v.serialise()
+                out[k] = v.serialise(forceUnordered=forceUnordered)
             elif tp == Path:
                 out[k] = str(v)
             else:
                 out[k] = v
 
-        if self._type.isOrdered:
+        if self._type.isOrdered and not forceUnordered:
             # this is an ordered dict - we need to serialise as a tuple
             out = tuple([out[k] for k in self._type.ordering])
 
@@ -731,12 +733,12 @@ class TaggedList(TaggedAggregate):
     def __call__(self, *args, **kwargs):
         raise NotImplementedError("TaggedList does not support __call__")
 
-    def serialise(self):
+    def serialise(self, forceUnordered=False):
         """Serialise the structure rooted here into a JSON-serialisable list. We don't need to record what the
         types are, because that information will be stored in the type object when we deserialise.
         This assumes that the only items in the structure are JSON-serialisable or TaggedAggregate."""
 
-        return [v.serialise() if isinstance(v, TaggedAggregate) else v for v in self._values]
+        return [v.serialise(forceUnordered=forceUnordered) if isinstance(v, TaggedAggregate) else v for v in self._values]
 
 
 class TaggedVariantDictType(TaggedAggregateType):
@@ -823,13 +825,13 @@ class TaggedVariantDict(TaggedAggregate):
         """return the name of the underlying TaggedDict"""
         return self._type_name
 
-    def serialise(self):
+    def serialise(self, forceUnordered=False):
         """Serialise the structure rooted here into a JSON-serialisable structure. We don't need to record what the
         types are, because that information will be stored in the type object when we deserialise.
         This assumes that the only items in the structure are JSON-serialisable or TaggedAggregate."""
         if self._value is None:
             return None
-        out = self._value.serialise()
+        out = self._value.serialise(forceUnordered=forceUnordered)
         # make very sure that the discriminator is set
         out[self._type.discriminator_field] = self._type_name
         return out

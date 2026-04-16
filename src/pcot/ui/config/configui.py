@@ -144,5 +144,11 @@ if __name__ == "__main__":
     dialog.exec_()
     if dialog.data():
         config = dialog.data()
-    print(json.dumps(config.serialise(),indent=4))
+
+    import yaml
+    s = yaml.dump(config.serialise(forceUnordered=True))
+    s = yaml.safe_load(s)
+    config = TESTCONFIG.deserialise(s)
+    print(json.dumps(config.serialise(forceUnordered=True), indent=2))
+
 

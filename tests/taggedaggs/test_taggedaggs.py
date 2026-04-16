@@ -690,13 +690,72 @@ def test_path():
 def test_path_serialisation():
     tdt = TaggedDictType(
         a=("a", int, 10),
-        b=("b", Path, Path(".")),
+        b=("b", Path, Path("../taggedaggs")),
     )
     td = tdt.create()
     s = td.serialise()
     assert s['a'] == 10
-    assert s['b'] == "."
+    assert s['b'] == "..\\taggedaggs"
 
     td = tdt.deserialise(s)
     assert td['a'] == 10
-    assert td['b'] == Path(".")
+    assert td['b'] == Path("../taggedaggs")
+
+
+def test_ordered_dict_serialisation():
+    """Test that a dict serialised as a list when it's ordered, and a dict when it's not, and that we can force an
+    ordered dict to serialise as a dict for legibility"""
+
+    tlt = TaggedListType(Maybe(int), [10, 20, 30], 0)
+    unord = TaggedDictType(
+        a=("a", int, 10),
+        b=("b", str, "Hello"),
+        c=("c", tlt, None),
+    )
+
+    innertdt = TaggedDictType(
+        p=("p", int, 10),
+        q=("q", int, 20),
+        r=("r", tlt, None),
+    ).setOrdered()
+    tdt = TaggedDictType(
+        a=("a", int, 10),
+        b=("b", str, "Hello"),
+        c=("c", tlt, None),
+        inner=("d", innertdt, None),
+    ).setOrdered()
+
+    # test an unordered dict serialises as a dict qua dict
+    td = unord.create()
+    s = td.serialise()
+
+    serial = {
+        "a": 10,
+        "b": "Hello",
+        "c": [10, 20, 30],
+    }
+    assert s == serial
+
+    # test an ordered dict serialises as a tuple
+    td = tdt.create()
+    s = td.serialise()
+
+    serial = (
+        10, "Hello", [10, 20, 30], (10, 20, [10,20,30]),
+    )
+    assert s == serial
+
+    # but that we can force it to serialise in full; note that this dict contains another and the forceUnordered
+    # should be carried down into the recursion
+    s = td.serialise(forceUnordered=True)
+    serial = {
+        "a": 10,
+        "b": "Hello",
+        "c": [10, 20, 30],
+        "inner": {
+            "p": 10,
+            "q": 20,
+            "r": [10, 20, 30],
+        }
+    }
+    assert s == serial
