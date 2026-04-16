@@ -332,7 +332,7 @@ def load_rgb_image(fname, bitdepth=None, debayer_algo=None, debayer_pattern=None
     also used by the multifile loader. Can also debayer given an algorithm and pattern. In this case only
     the first band will be used (see pcot.utils.debayering)"""
     fname = str(fname)  # fname could potentially be some kind of Path object.
-    debayer_pattern = pcot.config.defaultBayerPattern if not debayer_pattern else debayer_pattern
+    debayer_pattern = pcot.config.data.defaultbayerpattern if not debayer_pattern else debayer_pattern
 
     # imread with this argument will load any depth, any
     # number of channels

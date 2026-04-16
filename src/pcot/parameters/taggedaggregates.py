@@ -61,6 +61,14 @@ def is_value_of_type(value, tp):
 
 def type_convert(value, tp):
     """Handle int->float promotion"""
+
+    if isinstance(tp, Maybe):
+        # process the underlying type
+        if value is not None:
+            return type_convert(value, tp.type_if_exists)
+        else:
+            return None
+
     if tp is float and isinstance(value, int):
         return float(value)
     elif tp is int and isinstance(value, numbers.Integral):

@@ -49,8 +49,8 @@ def run(args):
     if args.file is not None:
         doc = Document(args.file)
     else:
-        loadfile = pcot.config.get('loadfile')
-        if loadfile != "":
+        loadfile = pcot.config.data.loadfile
+        if loadfile and loadfile != "" and loadfile != ".": # "." because it's a Path which can't be empty
             doc = Document(os.path.expanduser(loadfile))
         else:
             doc = Document()

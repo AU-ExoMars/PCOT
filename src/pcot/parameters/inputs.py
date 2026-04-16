@@ -17,8 +17,9 @@ rgbDictType = TaggedDictType(
     filename=("filename", Maybe(str), None),
     debayer_algo=("Debayering algorithm (or None if we're not debayering)", Maybe(str), 'None',
                   ["ea","EA","vng","VNG","None","none","NONE","bilinear","Bilinear","BILINEAR"]),
-    debayer_pattern=("Bayer pattern (see OpenCV docs)", Maybe(str), pcot.config.defaultBayerPattern,
-                     ["GB","gb","BG","bg","RG","rg","GR","gr"]),
+    debayer_pattern=("Bayer pattern (see OpenCV docs)", Maybe(str),
+                     pcot.config.data.defaultbayerpattern,
+                     pcot.config.VALID_BAYER_PATTERNS),
     camera=("name of camera to use", Maybe(str), None),
 )
 
@@ -37,7 +38,7 @@ multifileDictType = TaggedDictType(
     filenames=("list of filenames or filename patterns to match. All files matching each pattern will be added, sorted by name within each pattern.",
                TaggedListType(str, [], '')),
     filter_pattern=("pattern for filter identification", Maybe(str), None),
-    camera=("name of camera to use", Maybe(str), pcot.config.get('default_camera')),
+    camera=("name of camera to use", Maybe(str), pcot.config.data.default_camera),
     bit_depth=("number of bits used in the image (default is all bits)", Maybe(int), None),
     preset=("preset name for some params (can be overridden by other params)", Maybe(str), None),
     raw=("parameters for loading raw data", TaggedDictType(

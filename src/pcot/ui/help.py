@@ -122,8 +122,9 @@ def replaceImageSourcesWithAssetPath(s):
     """
 
     def repl(m):
+        from pcot.assets import getAssetPath
         name = m.group(1)
-        path = pcot.config.getAssetPath(name)
+        path = getAssetPath(name)
         return f'<img src="{path}"/>'
 
     return re.sub(r"IMAGEASSET\[([\w\-._]+)]", repl, s)
