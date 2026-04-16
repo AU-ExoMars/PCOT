@@ -5,9 +5,8 @@ from pathlib import Path
 from typing import Tuple, Optional
 
 from PySide2 import QtWidgets
-from poetry.puzzle.solver import aggregate_package_nodes
 
-from pcot.parameters.taggedaggregates import Tag, TaggedList, TaggedDict
+from pcot.parameters.taggedaggregates import Tag, TaggedList, TaggedDict, Maybe
 from pcot.ui.filepathedit import FilePathEdit
 
 
@@ -85,15 +84,34 @@ class PathEditor(Editor):
         self.aggregate[self.key_or_index] = t
 
 
+class BoolEditor(Editor):
+    def __init__(self, tag, container:TaggedList|TaggedDict, key_or_index:int|str):
+        super().__init__(tag, container, key_or_index)
+        self.widget = QtWidgets.QCheckBox("")
+        self.widget.setChecked(container[key_or_index])
+        # can't connect to the method directly, because the class is not a QObject
+        self.widget.stateChanged.connect(lambda t: self.changed(t))
+
+    def changed(self, _):
+        print(f"Setting {self.aggregate}[{self.key_or_index}] to {self.widget.isChecked()}")
+        self.aggregate[self.key_or_index] = self.widget.isChecked()
+
+
 def createEditor(parent, tag: Tag, aggregate:TaggedList|TaggedDict, key_or_index:int|str):
-    if tag.type == str:
+    tp = tag.type
+    if isinstance(tp, Maybe):
+        tp = tp.type_if_exists
+
+    if tp == str:
         if tag.valid_choices:
             return ComboEditor(tag, aggregate, key_or_index)
         else:
             return TextEditor(tag, aggregate, key_or_index)
-    elif tag.type == int:
+    elif tp == int:
         return IntEditor(tag, aggregate, key_or_index, tag.valid_choices)
-    elif tag.type == Path:
+    elif tp == bool:
+        return BoolEditor(tag, aggregate, key_or_index)
+    elif tp == Path:
         return PathEditor(tag, aggregate, key_or_index)
     else:
-        raise TypeError
+        raise TypeError(f"Type has no editor: {tp}")

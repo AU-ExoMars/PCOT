@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 # location of the config file
 CONFIG_PATH = Path('~/pcot_config.yaml').expanduser()
 
-VALID_BAYER_PATTERNS = ["GB","gb","BG","bg","RG","rg","GR","gr"]
+VALID_BAYER_PATTERNS = ["GB","BG","RG","GR"]
 
 # This is the TaggedDictType for the configuration system. It doesn't contain
 # the recent files list; that's handled by storing it as a separate part
@@ -26,23 +26,23 @@ VALID_BAYER_PATTERNS = ["GB","gb","BG","bg","RG","rg","GR","gr"]
 # of the YAML.
 
 CONFIG_DICT_TYPE = TaggedDictType(
-    loadfile=("File to load by default at startup, or empty",Maybe(Path),None),
-    sigfigs=("Significant figures for numeric output",int, 5),
+    loadfile=("File to load by default at startup, or empty",Maybe(Path),None, True),
+    sigfigs=("Significant figures for numeric output",int, 5, (0,12)),
     multifile_pattern=("Regular expression for getting filter data from filenames in multifile loader", str, r".*[LR](?P<pos>[0-9][0-9]).*"),
     default_camera=("Default camera",str, "PANCAM"),
     nativefiledialog=("Use the native file dialog",bool,False),
-    defaultbayerpattern=("Bayer pattern (see OpenCV docs)", Maybe(str), None),
+    defaultbayerpattern=("Bayer pattern (see OpenCV docs)", str, "BG", VALID_BAYER_PATTERNS),
 
     locations=("Locations", TaggedDictType(
-        images=("Source image default location", Path, os.path.expanduser("~/Pictures")),
-        mplplots=("Matplotlib outputs default location", Path, os.path.expanduser("~")),
-        savedimages=("Default location for saving images", Path, os.path.expanduser("~/Pictures")),
+        images=("Source image default location", Path, os.path.expanduser("~/Pictures"), True),
+        mplplots=("Matplotlib outputs default location", Path, os.path.expanduser("~"), True),
+        savedimages=("Default location for saving images", Path, os.path.expanduser("~/Pictures"), True),
         pluginpath=("Locations for plugins (separated by semicolons)", str, os.path.expanduser("~/pcotplugins")),
-        cameras=("Location of camera files", Maybe(Path), None),        # will be initialised on load if not present
-        reflectances=("Location of reflectance files", Maybe(Path), None), # will be initialised on load if not present
+        cameras=("Location of camera files", Maybe(Path), None, True),        # will be initialised on load if not present
+        reflectances=("Location of reflectance files", Maybe(Path), None, True), # will be initialised on load if not present
     ).setOrdered(), None),
 
-    testpds4data=("Location of testpds4data files (testing only)",Maybe(Path),None),
+    testpds4data=("Location of testpds4data files (testing only)",Maybe(Path),None, True),
 
 ).setOrdered()
 
@@ -227,4 +227,4 @@ def executeParserHooks(p):
 if data is None:
     logger.info("Loading config data")
     load_config()
-    print(yaml.dump(data.serialise()))
+#    print(yaml.dump(data.serialise(forceUnordered=True)))

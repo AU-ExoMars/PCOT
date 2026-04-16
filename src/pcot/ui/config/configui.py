@@ -15,7 +15,7 @@ from pcot.parameters.taggedaggregates import TaggedDictType, TaggedDict
 from pcot.ui.collapser import CollapserSection
 from pcot.ui.config.editors import createEditor
 
-MINWIDTH = 400
+MINWIDTH = 700
 
 DUMMY = TaggedDictType(
     aa=("Test string", str, "teststringdefault"),
@@ -27,6 +27,7 @@ TESTCONFIG = TaggedDictType(
     path=("File path", Path, None, "PCOT files (*.pcot *.jpg)"),
     path2=("Any file path", Path, "d:/", None),
     dir=("Dir path", Path, None, True),
+    btest=("boolean", bool, False),
     aa=("Test string", str, "teststringdefault"),
     a=("Test string", str, "teststringdefault"),
     b=("Test string 2", str, "teststringdefault 2 asd asdasd asdasd"),
@@ -47,7 +48,7 @@ TESTCONFIG = TaggedDictType(
 ).setOrdered()
 
 
-config = TaggedDict(TESTCONFIG)
+testconfig = TaggedDict(TESTCONFIG)
 
 
 class ConfigDialog(QDialog):
@@ -139,10 +140,19 @@ class ConfigDialog(QDialog):
 
 
 if __name__ == "__main__":
+    import pcot.config
     app = QtWidgets.QApplication(sys.argv)
+
+    # change this in testing
+    if False:
+        config = testconfig
+    else:
+        config = pcot.config.data
+
     dialog = ConfigDialog(config)
     dialog.exec_()
     if dialog.data():
+        print("Accepted")
         config = dialog.data()
 
     import yaml
