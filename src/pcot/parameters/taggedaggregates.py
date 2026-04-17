@@ -748,7 +748,14 @@ class TaggedList(TaggedAggregate):
         types are, because that information will be stored in the type object when we deserialise.
         This assumes that the only items in the structure are JSON-serialisable or TaggedAggregate."""
 
-        return [v.serialise(forceUnordered=forceUnordered) if isinstance(v, TaggedAggregate) else v for v in self._values]
+        def convert_path_to_str(v):
+            if isinstance(v, Path):
+                return str(v)
+            else:
+                return v
+
+        return [v.serialise(forceUnordered=forceUnordered) if isinstance(v, TaggedAggregate) else \
+                    convert_path_to_str(v) for v in self._values]
 
 
 class TaggedVariantDictType(TaggedAggregateType):

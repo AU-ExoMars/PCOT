@@ -11,7 +11,7 @@ from PySide2 import QtWidgets
 from PySide2.QtWidgets import QGridLayout, QDialog, QDialogButtonBox, QVBoxLayout, \
     QGroupBox, QLabel, QScrollArea, QWidget, QSizePolicy
 
-from pcot.parameters.taggedaggregates import TaggedDictType, TaggedDict, Maybe
+from pcot.parameters.taggedaggregates import TaggedDictType, TaggedDict, Maybe, TaggedListType
 from pcot.ui.collapser import CollapserSection
 from pcot.ui.config.editors import createEditor
 
@@ -34,6 +34,7 @@ TESTCONFIG = TaggedDictType(
     nullable=("Nullable int", Maybe(int), 3, (0,200)),
     d =("Choices", Maybe(str), "foo", ("foo", "bar", "baz")),
     e=("Test string", str, "teststringdefault"),
+    lst=("List", TaggedListType(Maybe(Path),[Path(f"foo{i}") for i in range(20)],Path())),
     subdict1=("subdict",
               TaggedDictType(
                 p=("Foo", str, "foo"),
@@ -68,7 +69,6 @@ class ConfigDialog(QDialog):
         layout=QVBoxLayout(self)        # overall layout containing scroll area and buttonbox
 
         scrollarea = QScrollArea()
-        scrollarea.setFixedHeight(400)
         scrollarea.setMinimumWidth(MINWIDTH+100)
         scrollarea.setWidgetResizable(True)
         layout.addWidget(scrollarea)
@@ -156,7 +156,7 @@ def test():
     app = QtWidgets.QApplication(sys.argv)
 
     # change this in testing
-    if False:
+    if True:
         config = testconfig
     else:
         config = pcot.config.data

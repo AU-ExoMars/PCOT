@@ -2,22 +2,24 @@
 Editors for the config UI. These are widgets and tools to allow them to modify TaggedAggregate data.
 """
 import dataclasses
+from functools import partial
 from pathlib import Path
 from typing import Tuple, Optional
 
 from PySide2 import QtWidgets
-from PySide2.QtCore import Qt
+from PySide2.QtCore import Qt, QObject, QModelIndex
 
-from pcot.parameters.taggedaggregates import Tag, TaggedList, TaggedDict, Maybe
+from pcot.parameters.taggedaggregates import Tag, TaggedList, TaggedDict, Maybe, TaggedListType
 from pcot.ui.filepathedit import FilePathEdit
 
 
-class Editor:
-    def __init__(self, tag:Tag, aggregate:TaggedList|TaggedDict, key_or_index: int|str):
+class Editor(QObject):
+    def __init__(self, tag: Tag, aggregate: TaggedList | TaggedDict, key_or_index: int | str):
         """
         container - the thing containing what is to be edited; a TaggedList or a TaggedDict.
         key_or_index - for a TD, it's the key; for a TL, it's the index.
         """
+        super().__init__()
         self.aggregate = aggregate
         self.key_or_index = key_or_index
         self.label=tag.description
@@ -34,7 +36,6 @@ class TextEditor(Editor):
         self.widget.textChanged.connect(lambda t: self.changed(t))
 
     def changed(self, t):
-        print(f"Setting {self.aggregate}[{self.key_or_index}] to {t}")
         self.aggregate[self.key_or_index] = t
 
 
@@ -86,7 +87,6 @@ class PathEditor(Editor):
         self.widget.pathChanged.connect(lambda t: self.changed(t))
 
     def changed(self, t):
-        print("Data changed "+t)
         self.aggregate[self.key_or_index] = t
 
 
@@ -100,7 +100,6 @@ class BoolEditor(Editor):
         self.widget.stateChanged.connect(lambda t: self.changed(t))
 
     def changed(self, _):
-        print(f"Setting {self.aggregate}[{self.key_or_index}] to {self.widget.isChecked()}")
         self.aggregate[self.key_or_index] = self.widget.isChecked()
 
 
@@ -140,6 +139,75 @@ class MaybeEditor(Editor):
             self.editor.aggregate[self.key_or_index] = self.oldvalue
 
 
+class ListEditor(Editor):
+    def __init__(self, parent, tag, aggregate:TaggedList|TaggedDict, key_or_index:int|str):
+        super().__init__(tag, aggregate, key_or_index)
+        self.widget = QtWidgets.QListWidget()
+        self.lst = self.aggregate[self.key_or_index]
+        self.tag = tag
+        self.populate_list()
+
+
+    def populate_list(self):
+        self.widget.clear()
+        self.buts = []
+        for i,item in enumerate(self.lst):
+            # create subeditors using the tag inside the TaggedListType
+            e = createEditor(self.parent, self.tag.type.tag, self.lst, i)
+
+            # each editor is embedded inside a QListWidgetItem along with other things
+            # all of which are contained in a widget for each row
+
+            row_widget = QtWidgets.QWidget()
+            row_layout = QtWidgets.QHBoxLayout()
+            row_widget.setLayout(row_layout)
+
+            from pcot.assets import Icons
+            (up := QtWidgets.QToolButton()).setIcon(Icons.get("arrow-up.svg"))
+            row_layout.addWidget(up)
+            # use of partial here to avoid both the late-binding problem of lambdas, and
+            # also other weirdness possibly to do with weak references to things dying.
+            up.clicked.connect(partial(self.move, i, -1))
+            (down := QtWidgets.QToolButton()).setIcon(Icons.get("arrow-down.svg"))
+            row_layout.addWidget(down)
+            down.clicked.connect(partial(self.move, i, 1))
+
+            (delb := QtWidgets.QPushButton()).setIcon(Icons.get("x-circle.svg"))
+            row_layout.addWidget(delb)
+            delb.clicked.connect(partial(self.delete, i))
+            self.buts.append(delb)
+
+            row_layout.addWidget(e.widget)
+            row_layout.setSizeConstraint(QtWidgets.QLayout.SetMinimumSize) # otherwise they won't expand
+
+            itemwidget = QtWidgets.QListWidgetItem()
+            itemwidget.setSizeHint(row_widget.sizeHint()) # have to do this or the widget won't know how big it is (cheers, Copilot)
+            self.widget.addItem(itemwidget)
+            self.widget.setItemWidget(itemwidget, row_widget)
+
+    def scroll_to_item(self, idx):
+        item = self.widget.item(idx)
+        self.widget.scrollToItem(item)
+
+
+
+    def move(self, idx, delta):
+        print(idx,delta)
+
+        newidx = idx + delta
+        if newidx < 0 or newidx >= len(self.lst):
+            return
+        self.lst[idx], self.lst[newidx] = self.lst[newidx], self.lst[idx]
+
+        self.populate_list()
+        self.scroll_to_item(newidx)
+
+    def delete(self, idx):
+        print(idx)
+        del self.lst[idx]
+        self.populate_list()
+        self.scroll_to_item(idx)
+
 
 
 def createEditor(parent, tag: Tag, aggregate:TaggedList|TaggedDict, key_or_index:int|str):
@@ -154,6 +222,9 @@ def createEditor(parent, tag: Tag, aggregate:TaggedList|TaggedDict, key_or_index
         # and create the wrapper
         return MaybeEditor(tag, editor)
 
+    if isinstance(tp, TaggedListType):
+        return ListEditor(parent, tag, aggregate, key_or_index)
+
     if tp == str:
         if tag.valid_choices:
             return ComboEditor(tag, aggregate, key_or_index)
@@ -166,4 +237,4 @@ def createEditor(parent, tag: Tag, aggregate:TaggedList|TaggedDict, key_or_index
     elif tp == Path:
         return PathEditor(tag, aggregate, key_or_index)
     else:
-        raise TypeError(f"Type has no editor: {tp}")
+        raise TypeError(f"Bad type {tp}")
