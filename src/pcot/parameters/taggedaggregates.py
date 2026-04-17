@@ -75,6 +75,7 @@ def type_convert(value, tp):
         return int(value)
     elif tp is Path:
         if value is None:
+            print("Converting null path to cwd")
             return Path().absolute()    # None as a default value is the full working dir.
         elif isinstance(value, str):
             return Path(value)  # could resolve(), but I won't.
@@ -407,16 +408,17 @@ class TaggedDict(TaggedAggregate):
                     # if we have a tagged aggregate, create it from the data stored in the serialised dict
                     self._values[k] = v.type.deserialise(d)
                 elif isinstance(v.type, Maybe):
-                    # handle int->float promotion etc.
-                    d = type_convert(d, v.type.type_if_exists)
                     # if we have a maybe, we have to check null.
                     if d is None:
                         self._values[k] = None
-                    elif isinstance(v.type.type_if_exists, TaggedAggregateType):
-                        # it's not a null, so use the underlying type to deserialise - first the TA case
-                        self._values[k] = v.type.type_if_exists.deserialise(d)
                     else:
-                        v.check_value(d)    # redundant, we do the check in the ctor of the type object
+                        # handle int->float promotion etc.
+                        d = type_convert(d, v.type.type_if_exists)
+                        if isinstance(v.type.type_if_exists, TaggedAggregateType):
+                            # it's not a null, so use the underlying type to deserialise - first the TA case
+                            self._values[k] = v.type.type_if_exists.deserialise(d)
+                        else:
+                            v.check_value(d)    # redundant, we do the check in the ctor of the type object
                     self._values[k] = d
                 else:
                     # otherwise just use the data as is

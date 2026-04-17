@@ -11,28 +11,28 @@ from PySide2 import QtWidgets
 from PySide2.QtWidgets import QGridLayout, QDialog, QDialogButtonBox, QVBoxLayout, \
     QGroupBox, QLabel, QScrollArea, QWidget, QSizePolicy
 
-from pcot.parameters.taggedaggregates import TaggedDictType, TaggedDict
+from pcot.parameters.taggedaggregates import TaggedDictType, TaggedDict, Maybe
 from pcot.ui.collapser import CollapserSection
 from pcot.ui.config.editors import createEditor
 
 MINWIDTH = 700
 
 DUMMY = TaggedDictType(
-    aa=("Test string", str, "teststringdefault"),
-    ab=("Test string 2", str, "teststringdefault 2 asdasd asd asd  asd "),
-    ac=("Test integer", int, 3),
+    aa=("Test string", Maybe(str), "teststringdefault"),
+    ab=("Test string 2", Maybe(str), "teststringdefault 2 asdasd asd asd  asd "),
+    ac=("Nullable int", Maybe(int), 3),
 ).setOrdered()
 
 TESTCONFIG = TaggedDictType(
-    path=("File path", Path, None, "PCOT files (*.pcot *.jpg)"),
+    path=("File path", Maybe(Path), None, "PCOT files (*.pcot *.jpg)"),
     path2=("Any file path", Path, "d:/", None),
-    dir=("Dir path", Path, None, True),
-    btest=("boolean", bool, False),
+    dir=("Dir path", Maybe(Path), None, True),
+    btest=("boolean", Maybe(bool), False),
     aa=("Test string", str, "teststringdefault"),
     a=("Test string", str, "teststringdefault"),
     b=("Test string 2", str, "teststringdefault 2 asd asdasd asdasd"),
-    c=("Test integer", int, 3, (0,200)),
-    d =("Choices", str, "foo", ("foo", "bar", "baz")),
+    nullable=("Nullable int", Maybe(int), 3, (0,200)),
+    d =("Choices", Maybe(str), "foo", ("foo", "bar", "baz")),
     e=("Test string", str, "teststringdefault"),
     subdict1=("subdict",
               TaggedDictType(
@@ -139,7 +139,19 @@ class ConfigDialog(QDialog):
         self._data = self.d
 
 
-if __name__ == "__main__":
+def runConfigUI():
+    """This is the function that runs the configuration UI on the main config TaggedDict"""
+    import pcot
+    dialog = ConfigDialog(pcot.config.data)
+    dialog.exec_()  # it's modal
+    if dialog.data():
+        pcot.ui.log("Setting changes accepted")
+        pcot.config.data = dialog.data()
+        pcot.config.save()
+    else:
+        pcot.ui.log("Setting changes rejected")
+
+def test():
     import pcot.config
     app = QtWidgets.QApplication(sys.argv)
 
@@ -149,16 +161,22 @@ if __name__ == "__main__":
     else:
         config = pcot.config.data
 
-    dialog = ConfigDialog(config)
-    dialog.exec_()
-    if dialog.data():
-        print("Accepted")
-        config = dialog.data()
+    while True:
+        import yaml
+        dialog = ConfigDialog(config)
+        dialog.exec_()
+        if dialog.data():
+            print("Accepted")
+            config = dialog.data()
+        s = yaml.dump(config.serialise(forceUnordered=True))
+        s = yaml.safe_load(s)
+        config = TESTCONFIG.deserialise(s)
+        print(json.dumps(config.serialise(forceUnordered=True), indent=2))
+        if not dialog.data():
+            break
 
-    import yaml
-    s = yaml.dump(config.serialise(forceUnordered=True))
-    s = yaml.safe_load(s)
-    config = TESTCONFIG.deserialise(s)
-    print(json.dumps(config.serialise(forceUnordered=True), indent=2))
+if __name__ == "__main__":
+    test()
+
 
 

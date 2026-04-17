@@ -26,12 +26,11 @@ VALID_BAYER_PATTERNS = ["GB","BG","RG","GR"]
 # of the YAML.
 
 CONFIG_DICT_TYPE = TaggedDictType(
-    loadfile=("File to load by default at startup, or empty",Maybe(Path),None, True),
+    loadfile=("File to load by default at startup, or empty",Maybe(Path),None, False),
     sigfigs=("Significant figures for numeric output",int, 5, (0,12)),
-    multifile_pattern=("Regular expression for getting filter data from filenames in multifile loader", str, r".*[LR](?P<pos>[0-9][0-9]).*"),
+    multifile_pattern=("Default regex for getting filter data from filenames in multifile loader", str, r".*[LR](?P<pos>[0-9][0-9]).*"),
     default_camera=("Default camera",str, "PANCAM"),
-    nativefiledialog=("Use the native file dialog",bool,False),
-    defaultbayerpattern=("Bayer pattern (see OpenCV docs)", str, "BG", VALID_BAYER_PATTERNS),
+    defaultbayerpattern=("Default Bayer pattern (see OpenCV docs)", str, "BG", VALID_BAYER_PATTERNS),
 
     locations=("Locations", TaggedDictType(
         images=("Source image default location", Path, os.path.expanduser("~/Pictures"), True),
@@ -43,6 +42,7 @@ CONFIG_DICT_TYPE = TaggedDictType(
     ).setOrdered(), None),
 
     testpds4data=("Location of testpds4data files (testing only)",Maybe(Path),None, True),
+    nativefiledialog=("Use the native file dialog (best not)", bool, False),
 
 ).setOrdered()
 

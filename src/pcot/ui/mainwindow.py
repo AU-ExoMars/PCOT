@@ -122,6 +122,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.actionAbout.triggered.connect(self.aboutAction)
         self.actionShow_Metadata.triggered.connect(self.showMetadataAction)
         self.actionImport.triggered.connect(self.importAction)
+        self.actionSettings.triggered.connect(self.settingsAction)
 
         self.runAllButton.clicked.connect(self.runAllAction)
         self.autoRun.toggled.connect(self.autorunChanged)
@@ -472,6 +473,11 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     def redoAction(self):
         self.doc.redo()
+
+    def settingsAction(self):
+        # handle the settings menu
+        from pcot.ui.config import configui
+        configui.runConfigUI()
 
     ## "run all" action, typically used when you have auto-run turned off (editing a macro,
     # perhaps)
