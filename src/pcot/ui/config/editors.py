@@ -111,6 +111,7 @@ class MaybeEditor(Editor):
         self.editor = editor
         self.widget = QtWidgets.QWidget()
         self.layout = QtWidgets.QHBoxLayout()
+        self.layout.setContentsMargins(0,0,0,0)
         self.widget.setLayout(self.layout)
         self.oldvalue = self.editor.aggregate[self.editor.key_or_index]
 
