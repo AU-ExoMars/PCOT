@@ -1,5 +1,11 @@
+import sys
+
+from PySide2 import QtWidgets
+
 from pcot.parameters.taggedaggregates import TaggedDict, TaggedList
 from pcot.subcommands import subcommand,argument
+from pcot.ui.config.configui import ConfigDialog
+
 
 @subcommand([
     argument("key", metavar="KEY", help="Name of config item to get", nargs="?"),
@@ -99,4 +105,19 @@ def setconfig(args):
                 raise KeyError(f"Could not convert '{key}' to int at {'.'.join(keys[:i+1])}")
             current = current[key]
 
+
+@subcommand(args=[],
+    shortdesc="Run the configuration UI")
+def config(args):
+    import pcot.config
+    app = QtWidgets.QApplication(sys.argv)
+
+    dialog = ConfigDialog(pcot.config.data)
+    dialog.exec_()
+    if dialog.data():
+        pcot.config.data = dialog.data()
+        pcot.config.save()
+        print("Saved")
+    else:
+        print("You rejected the changes")
 
