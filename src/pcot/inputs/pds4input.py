@@ -107,7 +107,7 @@ class PDS4InputMethod(InputMethod):
 
             # generate a list of PDS4Product objects
             self.products = ProductList(products)
-            pcot.config.setDefaultDir('images', self.dir)
+            pcot.config.setDefaultDir('images', Path(self.dir))
             pcot.config.save()
 
     def setProducts(self, products: List[DataProduct]) -> InputMethod:
@@ -224,7 +224,7 @@ class PDS4ImageMethodWidget(MethodWidget):
             d = pcot.config.getDefaultDir('images')
             d = '.' if d is None or d == '' else d
             self.method.dir = d
-        self.fileEdit.setText(self.method.dir)
+        self.fileEdit.setText(str(self.method.dir))
 
         self.recurseBox.setCheckState(Qt.Checked if self.method.recurse else Qt.Unchecked)
 

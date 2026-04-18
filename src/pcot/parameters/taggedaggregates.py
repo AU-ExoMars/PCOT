@@ -577,7 +577,7 @@ class TaggedListType(TaggedAggregateType):
     deflt_append: Optional[Any]    # if a list of non-tagged-aggs, adding will append this.
     tag: Tag
 
-    def __init__(self, tp, deflt=None, deflt_append=None):
+    def __init__(self, tp, deflt=None, deflt_append=None, valid_choices=None):
         """Constructor for tagged list types.
 
         The deflt field specifies the initial value of the TaggedList that
@@ -598,7 +598,7 @@ class TaggedListType(TaggedAggregateType):
         The deflt_append value must be provided for non-tagged-aggregate lists.
         """
         super().__init__()
-        self.tag = Tag("", tp, deflt)       # descriptions are pointless; the containing TaggedDict will have one.
+        self.tag = Tag("", tp, deflt, valid_choices)       # descriptions are pointless; the containing TaggedDict will have one.
         self.tag.assert_valid()
         self.deflt_append = deflt_append   # not always valid to provide one; we check later.
         # if type is a TaggedAggregate the default has to be an int!
@@ -618,7 +618,7 @@ class TaggedListType(TaggedAggregateType):
             for i in self.tag.deflt:
                 if not is_value_of_type(i, self.tag.type):
                     raise ValueError(f"Default {self.tag.deflt} contains an item {i} that is not of type {get_type_name(self.tag.type)}")
-            if self.deflt_append is None:
+            if self.deflt_append is None and not isinstance(self.tag.type, Maybe) :
                 raise ValueError("Default append not provided for non-TaggedAggregateType list")
             if not is_value_of_type(self.deflt_append, self.tag.type):
                 raise ValueError(f"Default append value {self.deflt_append} is not of type {get_type_name(self.tag.type)}")
@@ -714,16 +714,22 @@ class TaggedList(TaggedAggregate):
         """Create the default item for a list."""
         if isinstance(self._type.tag.type, TaggedAggregateType):
             return self._type.tag.type.create()
-        elif self._type.deflt_append is not None:
-            return self._type.deflt_append
-        else:
+
+        if self._type.deflt_append is None and not isinstance(self._type.tag.type, Maybe):
             raise ValueError("Default append not provided for non-TaggedAggregateType list")
+        return self._type.deflt_append
 
     def append_default(self):
         """Append a default value to a list. If you want to append a specific value, use append.
         Returns the appended value."""
         self._values.append(self.create_default())
         return self._values[-1]
+
+    def prepend_default(self):
+        """Prepend a default value to a list."""
+        item = self.create_default()
+        self._values.insert(0, item)
+        return item
 
     def restore_to_original(self):
         """Restore the object to the original state"""

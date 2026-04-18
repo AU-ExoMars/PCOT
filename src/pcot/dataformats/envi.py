@@ -22,7 +22,8 @@
 
 import os
 import sys
-from typing import List
+from pathlib import Path
+from typing import List, Tuple
 
 import numpy as np
 
@@ -141,7 +142,7 @@ class ENVIHeader:
             self.ignoreValue = None
 
 
-def load(fn):
+def load(fn:Path|str) -> Tuple[ENVIHeader, np.ndarray]:
     """Takes the ENVI header name. Actually loads the envi, returning a tuple of (header, ndarray)"""
 
     if not fn:

@@ -8,6 +8,7 @@ from typing import Tuple, Optional
 
 from PySide2 import QtWidgets
 from PySide2.QtCore import Qt, QObject, QModelIndex
+from PySide2.QtWidgets import QListWidgetItem
 
 from pcot.parameters.taggedaggregates import Tag, TaggedList, TaggedDict, Maybe, TaggedListType
 from pcot.ui.filepathedit import FilePathEdit
@@ -147,10 +148,18 @@ class ListEditor(Editor):
         self.tag = tag
         self.populate_list()
 
+    def create_add_button(self, top:bool=False):
+        add_button = QtWidgets.QPushButton("Create new item here")
+        add_button.clicked.connect(partial(self.add, top))
+        wi = QListWidgetItem()
+        wi.setSizeHint(add_button.sizeHint())
+        self.widget.addItem(wi)
+        self.widget.setItemWidget(wi, add_button)
 
     def populate_list(self):
         self.widget.clear()
         self.buts = []
+        self.create_add_button(top=True)
         for i,item in enumerate(self.lst):
             # create subeditors using the tag inside the TaggedListType
             e = createEditor(self.parent, self.tag.type.tag, self.lst, i)
@@ -160,6 +169,7 @@ class ListEditor(Editor):
 
             row_widget = QtWidgets.QWidget()
             row_layout = QtWidgets.QHBoxLayout()
+            row_layout.setContentsMargins(0, 0, 0, 0)
             row_widget.setLayout(row_layout)
 
             from pcot.assets import Icons
@@ -184,12 +194,19 @@ class ListEditor(Editor):
             itemwidget.setSizeHint(row_widget.sizeHint()) # have to do this or the widget won't know how big it is (cheers, Copilot)
             self.widget.addItem(itemwidget)
             self.widget.setItemWidget(itemwidget, row_widget)
+        self.create_add_button(top=False)
 
     def scroll_to_item(self, idx):
         item = self.widget.item(idx)
         self.widget.scrollToItem(item)
 
-
+    def add(self, top:bool=False):
+        if top:
+            self.lst.prepend_default()
+        else:
+            self.lst.append_default()
+        self.populate_list()
+        self.scroll_to_item(0 if top else len(self.lst)-1)
 
     def move(self, idx, delta):
         print(idx,delta)

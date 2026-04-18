@@ -34,7 +34,7 @@ TESTCONFIG = TaggedDictType(
     nullable=("Nullable int", Maybe(int), 3, (0,200)),
     d =("Choices", Maybe(str), "foo", ("foo", "bar", "baz")),
     e=("Test string", str, "teststringdefault"),
-    lst=("List", TaggedListType(Maybe(Path),[Path(f"foo{i}") for i in range(20)],Path())),
+    lst=("List", TaggedListType(Maybe(Path),[Path(f"foo{i}") for i in range(20)],None)),
     subdict1=("subdict",
               TaggedDictType(
                 p=("Foo", str, "foo"),
@@ -70,6 +70,7 @@ class ConfigDialog(QDialog):
 
         scrollarea = QScrollArea()
         scrollarea.setMinimumWidth(MINWIDTH+100)
+        scrollarea.setMinimumHeight(800)
         scrollarea.setWidgetResizable(True)
         layout.addWidget(scrollarea)
 

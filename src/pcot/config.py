@@ -11,7 +11,7 @@ from typing import Optional, List
 import yaml
 from PySide2 import QtWidgets
 
-from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedDict
+from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedDict, TaggedListType
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +34,10 @@ CONFIG_DICT_TYPE = TaggedDictType(
 
     locations=("Locations", TaggedDictType(
         images=("Source image default location", Path, os.path.expanduser("~/Pictures"), True),
-        mplplots=("Matplotlib outputs default location", Path, os.path.expanduser("~"), True),
-        savedimages=("Default location for saving images", Path, os.path.expanduser("~/Pictures"), True),
-        pluginpath=("Locations for plugins (separated by semicolons)", str, os.path.expanduser("~/pcotplugins")),
+        mplplots=("Matplotlib outputs default location", Path, Path.home(), True),
+        savedimages=("Default location for saving images", Path, Path.home() / "Pictures", True),
+        pcotfiles=("Default location for PCOT documents", Path, Path.home(), True),
+        pluginpath=("Locations for plugins", TaggedListType(Path, [Path.home() / "pcotplugins"], deflt_append=Path(), valid_choices=True)),
         cameras=("Location of camera files", Maybe(Path), None, True),        # will be initialised on load if not present
         reflectances=("Location of reflectance files", Maybe(Path), None, True), # will be initialised on load if not present
     ).setOrdered(), None),
