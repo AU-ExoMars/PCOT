@@ -695,7 +695,7 @@ def test_path_serialisation():
     td = tdt.create()
     s = td.serialise()
     assert s['a'] == 10
-    assert s['b'] == "..\\taggedaggs"
+    assert s['b'] == str(Path("../taggedaggs"))
 
     td = tdt.deserialise(s)
     assert td['a'] == 10
