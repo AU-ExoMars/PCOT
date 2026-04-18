@@ -107,7 +107,7 @@ and then recreate it and install PCOT with these steps:
 conda create -n pcot -y
 conda activate pcot
 conda config --env --set subdir osx-64
-conda install python=3.9 poetry
+conda install python=3.10 poetry
 poetry install
 ```
 
@@ -148,8 +148,8 @@ are using a shall of some sort:
 * **conda deactivate pcot** will make sure you are not actively using the 
 environment
 * **conda env remove -n pcot** will delete the old environment
-* **conda create -n pcot python=3.11 poetry** will create a new environment -
-replace "3.11" with the correct new version (currently 3.9 will work too)
+* **conda create -n pcot python=3.10 poetry** will create a new environment -
+replace "3.10" with the correct new version (currently 3.9 will work too)
 * **poetry install** will reinstall all the packages.
 * You will probably need to refer to the instructions below on **Running PCOT inside Pycharm**
 to update the interpreter to the new version.
