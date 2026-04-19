@@ -26,7 +26,7 @@ VALID_BAYER_PATTERNS = ["GB","BG","RG","GR"]
 # of the YAML.
 
 CONFIG_DICT_TYPE = TaggedDictType(
-    loadfile=("File to load by default at startup, or empty",Maybe(Path),None, False),
+    loadfile=("File to load by default at startup, or empty",Maybe(Path),None, "*.pcot"),
     sigfigs=("Significant figures for numeric output",int, 5, (0,12)),
     multifile_pattern=("Default regex for getting filter data from filenames in multifile loader", str, r".*[LR](?P<pos>[0-9][0-9]).*"),
     default_camera=("Default camera",str, "PANCAM"),
@@ -40,6 +40,7 @@ CONFIG_DICT_TYPE = TaggedDictType(
         pluginpath=("Locations for plugins", TaggedListType(Path, [Path.home() / "pcotplugins"], deflt_append=Path(), valid_choices=True)),
         cameras=("Location of camera files", Maybe(Path), None, True),        # will be initialised on load if not present
         reflectances=("Location of reflectance files", Maybe(Path), None, True), # will be initialised on load if not present
+        macrosandfaves=("List of macro and favourites archives", TaggedListType(Path,[], deflt_append=Path.home()/"archive.pcot", valid_choices=False)),
     ).setOrdered(), None),
 
     testpds4data=("Location of testpds4data files (testing only)",Maybe(Path),None, True),

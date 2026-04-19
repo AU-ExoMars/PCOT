@@ -54,6 +54,7 @@ def run(args):
             doc = Document(os.path.expanduser(loadfile))
         else:
             doc = Document()
+            doc.importFromConfigArchives()  # import faves and macros from files in the config settings
 
     # Create an instance of a main window on that document
     # Autolayout not done by default - the user might have arranged things how they like.

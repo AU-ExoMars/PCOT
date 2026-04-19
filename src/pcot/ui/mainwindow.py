@@ -488,6 +488,7 @@ class MainUI(ui.tabs.DockableTabWindow):
     def newAction(self):
         import pcot.document
         d = pcot.document.Document()
+        d.importFromConfigArchives()    # import faves and macros from files in the config settings
         MainUI(d, doAutoLayout=True)  # create a new empty window
 
     ## "new macro" menu/keypress, will create a new macro prototype in this document
@@ -519,7 +520,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         if res[0] != '':
             # load the foreign document to import from and get the names of the macros and faves
             doc = document.Document()
-            doc.load(res[0])
+            doc.load(res[0], add_to_recents=False)
             # open the dialog
             dlg = ImportDialog(doc)
             dlg.exec_()

@@ -149,8 +149,8 @@ class ListEditor(Editor):
         self.tag = tag
         self.populate_list()
 
-    def create_add_button(self, top:bool=False):
-        add_button = QtWidgets.QPushButton("Create new item here")
+    def create_add_button(self, label:str, top:bool=False):
+        add_button = QtWidgets.QPushButton(label)
         add_button.clicked.connect(partial(self.add, top))
         wi = QListWidgetItem()
         wi.setSizeHint(add_button.sizeHint())
@@ -160,7 +160,10 @@ class ListEditor(Editor):
     def populate_list(self):
         self.widget.clear()
         self.buts = []
-        self.create_add_button(top=True)
+        if len(self.lst) > 0:
+            self.create_add_button("Create new item at start", top=True)
+        else:
+            self.create_add_button("Create new item")
         for i,item in enumerate(self.lst):
             # create subeditors using the tag inside the TaggedListType
             e = createEditor(self.parent, self.tag.type.tag, self.lst, i)
@@ -195,7 +198,8 @@ class ListEditor(Editor):
             itemwidget.setSizeHint(row_widget.sizeHint()) # have to do this or the widget won't know how big it is (cheers, Copilot)
             self.widget.addItem(itemwidget)
             self.widget.setItemWidget(itemwidget, row_widget)
-        self.create_add_button(top=False)
+        if len(self.buts) > 0:
+            self.create_add_button("Create new item at end", top=False)
 
     def scroll_to_item(self, idx):
         item = self.widget.item(idx)
