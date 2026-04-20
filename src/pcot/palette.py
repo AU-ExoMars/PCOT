@@ -190,7 +190,7 @@ class Palette:
             if v.group not in groups:
                 # "hidden" is a special group which doesn't appear in the palette, used for 
                 # things like macro connectors.
-                if v.group != 'hidden':
+                if v.group != 'hidden' and v.group != 'deprecated':
                     raise Exception(f"node {k} is in {v.group}, which is not defined in palette.py!")
             else:
                 self.namesByGroup[v.group].append(k)
