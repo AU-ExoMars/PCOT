@@ -33,7 +33,7 @@ class XformDecorr(XFormType):
     """
 
     def __init__(self):
-        super().__init__("decorr stretch", "processing", "0.0.0", hasEnable=False)
+        super().__init__("decorr stretch", "deprecated", "0.0.0", hasEnable=False)
         self.addInputConnector("rgb", Datum.IMG)
         self.addOutputConnector("rgb", Datum.IMG)
         self.addOutputConnector("eigs", Datum.NUMBER)

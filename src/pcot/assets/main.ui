@@ -156,8 +156,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>177</width>
-              <height>450</height>
+              <width>169</width>
+              <height>464</height>
              </rect>
             </property>
            </widget>
@@ -337,7 +337,7 @@
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
-     <string>File</string>
+     <string>&amp;File</string>
     </property>
     <addaction name="actionOpen"/>
     <addaction name="actionSave"/>

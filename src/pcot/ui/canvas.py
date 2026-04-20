@@ -714,6 +714,10 @@ class Canvas(QtWidgets.QWidget):
     # images it's the node that applies the mapping)
     nodeToUIChange: Optional['XForm']
 
+    # Node to do a full change if the RGB mapping has changed. Used if a node has an
+    # RGB output.
+    nodeToRerunIfMappingChanged: Optional['XForm']
+
     ## @var isPremapped
     # is this a premapped image?
     isPremapped: bool
@@ -750,6 +754,7 @@ class Canvas(QtWidgets.QWidget):
         self.keyHook = None
         self.graph = None
         self.nodeToUIChange = None
+        self.nodeToRerunIfMappingChanged = None
         self.ROInode = None
         self.mapping = None  # mapping used in either the image, or the image we are rendering a "premapped" RGB of
         self.isDQHidden = False  # does not persist!
@@ -1259,7 +1264,6 @@ class Canvas(QtWidgets.QWidget):
         if self.previmg is not None:
             self.previmg.defaultMapping = None  # force a guess even if there is a default mat
             self.previmg.mapping.generateMappingFromDefaultOrGuess(self.previmg)
-        self.redisplay()
         self.updateChannelSelections()
 
     # set the graph I'm part of
@@ -1271,21 +1275,21 @@ class Canvas(QtWidgets.QWidget):
         # this shouldn't happen if there is no image because the combo will be empty
         if self.previmg:
             self.mapping.red = i
-            self.redisplay()
+            self.mappingModified()
 
     def greenIndexChanged(self, i):
         logger.debug(f"GREEN CHANGED TO {i}")
         # this shouldn't happen if there is no image because the combo will be empty
         if self.previmg:
             self.mapping.green = i
-            self.redisplay()
+            self.mappingModified()
 
     def blueIndexChanged(self, i):
         logger.debug(f"GREEN CHANGED TO {i}")
         # this shouldn't happen if there is no image because the combo will be empty
         if self.previmg:
             self.mapping.blue = i
-            self.redisplay()
+            self.mappingModified()
 
     def roiToggleChanged(self, v):
         # can only work when a persister is there; if there isn't, will crash.
@@ -1438,6 +1442,14 @@ class Canvas(QtWidgets.QWidget):
             self.greenChanCombo.setCurrentIndex(self.mapping.green)
             self.blueChanCombo.setCurrentIndex(self.mapping.blue)
             self.blockSignalsOnComboBoxes(False)  # and enable signals again
+            self.mappingModified()
+
+    def mappingModified(self):
+        # the RGB mapping has been modified; redisplay and rerun if the node generates RGB output
+        if self.nodeToRerunIfMappingChanged:
+            n = self.nodeToRerunIfMappingChanged
+            n.graph.changed(n)
+        self.redisplay()
 
     def redisplay(self):
         # similar to the below; avoid redisplay when we haven't displayed anything yet!

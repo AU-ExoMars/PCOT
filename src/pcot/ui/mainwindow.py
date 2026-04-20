@@ -287,8 +287,9 @@ class MainUI(ui.tabs.DockableTabWindow):
 
         recents = pcot.config.getRecents()
         if len(recents) > 0:
-            for x in recents:
-                act = QAction(x, parent=self)
+            for i,x in enumerate(recents):
+
+                act = QAction(f"&{i+1}: {x}", parent=self)
                 act.setData(x)
                 self.menuFile.addAction(act)
                 act.triggered.connect(self.loadRecent)

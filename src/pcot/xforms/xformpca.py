@@ -1,4 +1,5 @@
 import numpy as np
+from PySide2 import QtCore
 from poetry.console.commands import self
 
 from pcot import ui
@@ -16,20 +17,20 @@ import pcot.dq
 import logging
 logger = logging.getLogger(__name__)
 
-def process(subimg: SubImageCube, postprocess=None, normalize=False, clip_percent=5, stretch_factor=None):
+def process(subimg: SubImageCube, mode, stretch, clip_percent=5, stretch_factor=None):
     """
     PCA an image and optionally whiten or decorr stretch it. Then optionally normalize and clip a given
     percentage of outliers.
 
     img: the image to process
     mask: a mask on the image (negated as per subimage use)
-    postprocess: a postprocessor to apply to the image
+    mode: "pca" or "decorr" - determines whether or rotate back into the original colour space
+    stretch: whether any "stretching" is applied to the image once it is in PCA space. If so, options are:
         - whiten: apply a whitening transform to the image (divide each PC by its std dev.)
-        - decorr: apply decorrelation stretch to the image (stretch components, rotate back to original space - NOT pca).
-          The stretch applied is the mean of the eigenvalues, so all PCs are scaled to the average variance of the PCs,
-          boosting weak PCs and reducing large PCs.
-    normalize: whether to normalize the image
-    clip_percent: the percentile of outliers in the image to clip
+        - stretch: divide each PC by the mean of the PCs, thus scaling each PC to the average variance, boosting weak
+          PCs and reducing large PCs.
+    normalize: whether to normalize the image afterwards
+    clip_percent: the percentile of outliers in the resulting image to clip
     stretch_factors: the stretch to apply to components when doing a decorr stretch; if not provided will
                         stretch by equalising the variances
     """
@@ -72,12 +73,11 @@ def process(subimg: SubImageCube, postprocess=None, normalize=False, clip_percen
     eigvecs = np.ma.filled(eigvecs, 0) # this doesn't actually do anything but convert a filled masked array into a normal one
     pca = A @ eigvecs
 
+    # WE ARE NOW IN PCA COORDINATES
     # DO OTHER STUFF HERE!!!
+
     epsilon = 1e-12  # to avoid zeroes
-    if postprocess == "whiten":
-        D_inv_sqrt = np.diag(1.0 / np.sqrt(eigvals+epsilon))
-        pca = pca @ D_inv_sqrt
-    elif postprocess == "decorr":
+    if stretch == "stretch":
         # If no stretch is provided, scale the PCs so that they all have the same variance as the mean PC. PCs with a small
         # variance will get boosted, PCs with a large variance will be reduced.
         stretch_factor = eigvals.mean() if stretch_factor is None else stretch_factor
@@ -87,10 +87,20 @@ def process(subimg: SubImageCube, postprocess=None, normalize=False, clip_percen
         # of the PC vector. So to normalise we divide by the root (the standard deviation). So we're normalising to
         # some length.
         stretch_factors = stretch_factor / np.sqrt(eigvals+epsilon)
-        S = np.diag(stretch_factors)
+    elif stretch == "whiten":
+        stretch_factors = 1.0 / np.sqrt(eigvals+epsilon)
+    elif stretch == "none":
+        stretch_factors = np.ones_like(eigvals)
+    else:
+        raise ValueError(f"Unknown stretch type: {stretch}")
 
-        # apply stretch and then invert the PCA done at the start
-        pca = (pca @ S) @ eigvecs.T
+    # apply the stretch
+    S = np.diag(stretch_factors)        # stretch transformation
+    pca = pca @ S
+
+    if mode == "decorr":
+        # rotate back after applying stretch
+        pca = pca @ eigvecs.T
 
     # reapply mask
 
@@ -131,18 +141,32 @@ class XFormPCA(XFormType):
 
     **Ignores DQ and uncertainty**
 
+    ## Standard recipe for **decorrelation stretch**:
+
+    * Mode = decorrelation stretch
+    * Stretch/whitening = stretch
+    * Clip outliers to around 2%
+    * Set both RGB normalisation and histogram equalisation
+
+    See below for what this actually does!
+
+    ## Details
+
     This node first performs a Principle Component Analysis (PCA) on all bands of an image.
     The output image consists of the principal components, with the most significant first.
     The RGB output - also shown in the canvas - is selected from these bands by the Component RGB Mapping,
     and some further processing can take place on this (see below).
 
-    On the PCA image we optionally perform a whitening transform or decorrelation stretch.
+    On the PCA image we optionally perform a whitening transform or a stretch.
 
     * A **whitening transform** will divide each PC by its standard deviation (so that the
       resulting data has an identity covariance matrix).
-    * A **decorrelation stretch** will apply a stretch factor to the PCs, (mean of eigenvalues / eigenvalue)
-      followed by a transformation back into the original colour space - this will expose more detail
-      in the resulting image, and is applied to all bands in our model.
+    * A **stretch** will apply a stretch factor to the PCs, (mean of eigenvalues / eigenvalue)
+
+    We then either leave the result in the PCA space, so that channel 0 holds the component
+    with the most variation, channel 1 holds the next most varying component etc., or we
+    transform the image back into the original colour space, so the node performs a **decorrelation
+    stretch**.
 
     Then a contrast stretch is done in which all outliers above and below a certain percentile
     of the entire image are set to 0 or 1, and remaining values are stretched to fill the gaps.
@@ -178,8 +202,8 @@ class XFormPCA(XFormType):
         self.addOutputConnector("sds", Datum.NUMBER, "standard deviations of original image bands")
         self.params = TaggedDictType(
             rgbmapping = ("rgb mapping", TaggedListType(int,[0,1,2], 0)),
-            postprocess = ("post-processing", str, "none",
-                           ["none","whiten","decorr"]),
+            mode = ("PCA or decorr stretch mode", str, "pca", ["pca","decorr"] ),
+            stretch = ("Stretch/decorr mode", str, "none", ["none","whiten","stretch"]),
             clip=("percentile outliers to clip in postprocessing", float, 5.0),
             normalize=("normalise RGB output", bool, True),
             histequal=("apply histogram equalization to RGB output", bool, False),
@@ -205,8 +229,8 @@ class XFormPCA(XFormType):
             subimage = node.inimg.subimage()
             band_count = node.inimg.channels
             newimg, stddevs, eigvals = process(subimage,
-                                               postprocess=node.params.postprocess,
-                                               normalize=node.params.normalize,
+                                               mode=node.params.mode,
+                                               stretch=node.params.stretch,
                                                clip_percent=node.params.clip)
 
             # in this case, all channels just come from the union of the sources
@@ -281,20 +305,36 @@ class TabPCA(Tab):
         self.w.red.currentIndexChanged.connect(lambda v: self.mappingChanged(0,v))
         self.w.green.currentIndexChanged.connect(lambda v: self.mappingChanged(1,v))
         self.w.blue.currentIndexChanged.connect(lambda v: self.mappingChanged(2,v))
+
+        # only need to connect one of the two buttons, since changing one will change the other.
+        self.w.radioDecorr.toggled.connect(self.modeChanged)
+        # self.w.radioPCA.toggled.connect(self.modeChanged)
+
+        self.w.stretch.currentTextChanged.connect(self.stretchChanged)
+
         self.w.clip.valueChanged.connect(self.clipChanged)
-        self.w.post.currentTextChanged.connect(self.postChanged)
         self.w.norm.toggled.connect(self.normChanged)
         self.w.histequal.toggled.connect(self.histEqualChanged)
+        self.w.canvas.nodeToRerunIfMappingChanged = n
         self.onNodeChanged()
+
+    def modeChanged(self,_):
+        self.mark()
+        if self.w.radioDecorr.isChecked():
+            self.node.params.mode = "decorr"
+        else:
+            self.node.params.mode = "pca"
+        self.changed()
+
+    def stretchChanged(self,t):
+        t = t.split()[0]
+        self.mark()
+        self.node.params.stretch = t
+        self.changed()
 
     def histEqualChanged(self, state):
         self.mark()
         self.node.params.histequal = state
-        self.changed()
-
-    def postChanged(self, t):
-        self.mark()
-        self.node.params.postprocess = t
         self.changed()
 
     def normChanged(self, state):
@@ -333,7 +373,14 @@ class TabPCA(Tab):
                 self.w.blue.setCurrentIndex(params.rgbmapping[2])
 
         # other params
-        self.w.post.setCurrentText(params.postprocess)
+        if params.mode == "decorr":
+            self.w.radioDecorr.setChecked(True)
+        else:
+            self.w.radioPCA.setChecked(True)
+
+        idx = self.w.stretch.findText(params.stretch, QtCore.Qt.MatchStartsWith)
+        self.w.stretch.setCurrentIndex(idx)
+
         self.w.norm.setChecked(params.normalize)
         self.w.histequal.setChecked(params.histequal)
         self.w.clip.setValue(params.clip)
