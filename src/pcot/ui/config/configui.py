@@ -85,7 +85,7 @@ class ConfigWidget(QWidget):
         self._data = None
 
         # Reasonable minimum size for the whole widget (dialog/window size)
-        self.setMinimumSize(900, 700)
+        self.setMinimumSize(MINWIDTH, MINHEIGHT)
 
         layout = QVBoxLayout(self)
 
@@ -133,7 +133,7 @@ class ConfigWidget(QWidget):
                 else:
                     group = QGroupBox(desc)
                     group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-                    group.setMinimumWidth(MINWIDTH)
+                    group.setMinimumWidth(MINWIDTH-100)
                     layout = QGridLayout()
                     self.layoutDict(layout, path + [k], v)
                     group.setLayout(layout)
