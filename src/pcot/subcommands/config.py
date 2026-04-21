@@ -4,7 +4,7 @@ from PySide2 import QtWidgets
 
 from pcot.parameters.taggedaggregates import TaggedDict, TaggedList
 from pcot.subcommands import subcommand,argument
-from pcot.ui.config.configui import ConfigDialog
+from pcot.ui.taggedaggregates.configui import ConfigDialog
 
 
 @subcommand([

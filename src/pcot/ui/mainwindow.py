@@ -477,7 +477,7 @@ class MainUI(ui.tabs.DockableTabWindow):
 
     def settingsAction(self):
         # handle the settings menu
-        from pcot.ui.config import configui
+        from pcot.ui.taggedaggregates import configui
         configui.runConfigUI()
 
     ## "run all" action, typically used when you have auto-run turned off (editing a macro,
