@@ -152,16 +152,6 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="label_2">
-         <property name="text">
-          <string>Stretch/whitening:</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-         </property>
-        </widget>
-       </item>
        <item row="4" column="0" colspan="4">
         <widget class="QComboBox" name="stretch">
          <item>
@@ -171,7 +161,7 @@
          </item>
          <item>
           <property name="text">
-           <string>whiten (1/sd(eigvals)</string>
+           <string>whiten (1/sd(eigvals))</string>
           </property>
          </item>
          <item>
@@ -179,6 +169,16 @@
            <string>stretch (mean(eigv)/sd(eigv))</string>
           </property>
          </item>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="4">
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>Stretch/whitening:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+         </property>
         </widget>
        </item>
       </layout>

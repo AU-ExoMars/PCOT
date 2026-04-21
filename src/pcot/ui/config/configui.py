@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import List
 
 from PySide2 import QtWidgets
+from PySide2.QtCore import QEvent, Qt
 from PySide2.QtWidgets import QGridLayout, QDialog, QDialogButtonBox, QVBoxLayout, \
     QGroupBox, QLabel, QScrollArea, QWidget, QSizePolicy
 
@@ -16,6 +17,7 @@ from pcot.ui.collapser import CollapserSection
 from pcot.ui.config.editors import createEditor
 
 MINWIDTH = 700
+MINHEIGHT = 500
 
 DUMMY = TaggedDictType(
     aa=("Test string", Maybe(str), "teststringdefault"),
@@ -51,93 +53,130 @@ TESTCONFIG = TaggedDictType(
 
 testconfig = TaggedDict(TESTCONFIG)
 
+class ScrollContent(QWidget):
+    """
+    A content widget whose sizeHint always reflects its layout,
+    and which notifies the scroll area when its size changes.
+    """
+    def sizeHint(self):
+        if self.layout() is not None:
+            return self.layout().sizeHint()
+        return super().sizeHint()
+
+    def event(self, e):
+        if e.type() == QEvent.LayoutRequest:
+            self.updateGeometry()
+        return super().event(e)
+
+
+
+class ConfigWidget(QWidget):
+    """
+    A reusable widget that lays out a TaggedDict for editing.
+    Can be embedded in dialogs or standalone windows.
+    """
+    def __init__(self, d, parent=None):
+        super().__init__(parent)
+
+        self.ct = itertools.count()
+        self.editors = []
+
+        self.d = d.clone()      # operate on a clone
+        self._data = None
+
+        # Reasonable minimum size for the whole widget (dialog/window size)
+        self.setMinimumSize(900, 700)
+
+        layout = QVBoxLayout(self)
+
+        # Scroll area
+        scrollarea = QScrollArea()
+        scrollarea.setWidgetResizable(True)
+        scrollarea.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        scrollarea.setAlignment(Qt.AlignTop)  # keep content pinned to top
+        layout.addWidget(scrollarea)
+
+        # Content inside scroll area
+        content = ScrollContent()
+        content.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        scrollarea.setWidget(content)
+
+        contentLayout = QGridLayout()
+        content.setLayout(contentLayout)
+
+        # Populate the layout
+        self.layoutDict(contentLayout, [], self.d)
+
+        # Stretch at bottom so items gather at the top *within* the content
+        contentLayout.setRowStretch(next(self.ct), 1)
+
+    def data(self):
+        return self.d
+
+    def layoutDict(self, container: QGridLayout, path: List[str], d):
+        """
+        Lays out a TaggedDict in a container, creating subframes for sub-dicts.
+        """
+        for k, v in d.items():
+            tag = d.tag(k)
+            desc = tag.description
+
+            if isinstance(v, type(d)):  # TaggedDict
+                # Sub-dictionary builds a CollapserSection, or GroupBox at top level
+                if len(path) == 0:
+                    group = CollapserSection(desc)
+                    group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+                    layout = QGridLayout()
+                    layout.setContentsMargins(20, 0, 0, 0)
+                    self.layoutDict(layout, path + [k], v)
+                    group.setContentLayout(layout, stretch=True)
+                else:
+                    group = QGroupBox(desc)
+                    group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+                    group.setMinimumWidth(MINWIDTH)
+                    layout = QGridLayout()
+                    self.layoutDict(layout, path + [k], v)
+                    group.setLayout(layout)
+
+                container.addWidget(group, next(self.ct), 0, 1, 2)
+
+            else:
+                # Leaf node builds an editor
+                editor = createEditor(self, tag, d, k)
+                row = next(self.ct)
+                container.addWidget(QLabel(editor.label), row, 0)
+                container.addWidget(editor.widget, row, 1)
+                self.editors.append((path + [k], editor.widget))
+
 
 class ConfigDialog(QDialog):
     """
-    Call this with a TaggedDict of data. If accepted, you can use the data() method to get the data out. If not
-    accepted this will be None.
+    A dialog wrapper around ConfigWidget.
     """
     def __init__(self, d, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Configuration")
-        self.ct = itertools.count()
 
-        self.editors = []
+        layout = QVBoxLayout(self)
 
-        self.d = d.clone()              # WE OPERATE ON A CLONE!
-        self._data = None
-        layout=QVBoxLayout(self)        # overall layout containing scroll area and buttonbox
+        # Embed the widget
+        self.widget = ConfigWidget(d, self)
+        layout.addWidget(self.widget)
 
-        scrollarea = QScrollArea()
-        scrollarea.setMinimumWidth(MINWIDTH+100)
-        scrollarea.setMinimumHeight(800)
-        scrollarea.setWidgetResizable(True)
-        layout.addWidget(scrollarea)
-
-        content = QWidget()             # container for items in the scroll area
-        scrollarea.setWidget(content)
-
-        contentLayout=QGridLayout()     # layout for items inside the content of the scroll area
-        content.setLayout(contentLayout)
-
-        self.layoutDict(contentLayout,[], self.d)   # make DAMN SURE we're working on the clone!
-
-        # add a stretching row so that things aren't distributed through the box, but gather at the top
-        contentLayout.setRowStretch(next(self.ct),1)
-
+        # OK/Cancel buttons
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
-        self.adjustSize()
-        self.updateGeometry()
+        self._data = None
+
+    def accept(self):
+        self._data = self.widget.data()
+        super().accept()
 
     def data(self):
         return self._data
-
-    def layoutDict(self, container:QGridLayout, path:List[str], d:TaggedDict):
-        """Lays out a TaggedDict in a container, creating subframes for
-        sub-dicts. The path is a list of strings giving the path inside the tree
-        of dicts, with [] for the root.
-        """
-        for k,v in d.items():
-            tag = d.tag(k)
-            desc = tag.description
-            if isinstance(v, TaggedDict):
-
-                # we're adding a sub-dictionary so we need to create a frame,
-                # add all the members to that.
-                if len(path)==0:
-                    # top level, new collapser section
-                    group = CollapserSection(desc)
-                    group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-                    layout = QGridLayout()
-                    layout.setContentsMargins(20, 0, 0, 0)
-                    self.layoutDict(layout, path+[k], v)
-                    group.setContentLayout(layout, stretch=True)
-                else:
-                    # lower levels, we create a group box.
-                    group = QGroupBox(desc)
-                    group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-                    group.setMinimumWidth(MINWIDTH)
-                    layout = QGridLayout()
-                    self.layoutDict(layout, path+[k], v)
-                    group.setLayout(layout)
-                container.addWidget(group,next(self.ct),0,1,2)
-                self.adjustSize()
-                self.updateGeometry()
-            else:
-                # create the correct kind of editor and add it
-                editor = createEditor(self, tag, d, k)
-                row = next(self.ct)
-                container.addWidget(QLabel(editor.label), row, 0, 1, 1)
-                container.addWidget(editor.widget,row,1,1,1)
-                self.editors.append((path+[k], editor.widget))
-
-    def accept(self):
-        super().accept()
-        self._data = self.d
 
 
 def runConfigUI():
@@ -152,7 +191,7 @@ def runConfigUI():
     else:
         pcot.ui.log("Setting changes rejected")
 
-def test():
+def runtest():
     import pcot.config
     app = QtWidgets.QApplication(sys.argv)
 
@@ -177,7 +216,7 @@ def test():
             break
 
 if __name__ == "__main__":
-    test()
+    runtest()
 
 
 
