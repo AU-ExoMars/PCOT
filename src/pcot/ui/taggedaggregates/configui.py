@@ -9,7 +9,7 @@ from PySide2 import QtWidgets
 from PySide2.QtWidgets import QDialog, QVBoxLayout, QDialogButtonBox
 
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedListType, TaggedDict
-from pcot.ui.taggedaggregates import ConfigWidget
+from pcot.ui.taggedaggregates import AggregateEditorWidget
 
 
 DUMMY = TaggedDictType(
@@ -60,7 +60,7 @@ class ConfigDialog(QDialog):
         layout = QVBoxLayout(self)
 
         # Embed the widget
-        self.widget = ConfigWidget(d, self)
+        self.widget = AggregateEditorWidget(d, self)
         layout.addWidget(self.widget)
 
         # OK/Cancel buttons
