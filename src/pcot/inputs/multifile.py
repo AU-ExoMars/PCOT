@@ -118,7 +118,7 @@ class MultifileInputMethod(InputMethod):
 
     def serialise(self, internal):
         x = {
-            'dir': self.dir,
+            'dir': str(self.dir),
             'files': self.files,
             'bitdepth': self.bitdepth,
             'filterpat': self.filterpat,
@@ -132,7 +132,7 @@ class MultifileInputMethod(InputMethod):
         return x
 
     def deserialise(self, data, internal):
-        self.dir = data['dir']
+        self.dir = Path(data['dir'])
         self.files = data['files']
         self.bitdepth = data.get('bitdepth', None)
         self.filterpat = data['filterpat']

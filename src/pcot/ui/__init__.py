@@ -144,7 +144,7 @@ def decorateSplitter(splitter: QtWidgets.QSplitter, index: int):
             layout.addWidget(line)
     else:
         layout.addStretch()
-        vbox = QtWidgets.QVBoxLayout();
+        vbox = QtWidgets.QVBoxLayout()
         for i in range(grips):
             line = QtWidgets.QFrame(handle)
             line.setMinimumSize(gripWidth, gripLength)

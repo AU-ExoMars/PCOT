@@ -32,14 +32,15 @@ class ScrollContent(QWidget):
 
 
 
-class ConfigWidget(QWidget):
+class AggregateEditorWidget(QWidget):
     """
     A reusable widget that lays out a TaggedDict for editing.
     Can be embedded in dialogs or standalone windows.
     """
-    def __init__(self, d, parent=None):
+    def __init__(self, d, handler=None, parent=None):
         super().__init__(parent)
 
+        self.handler = handler
         self.ct = itertools.count()
         self.editors = []
 
@@ -104,7 +105,7 @@ class ConfigWidget(QWidget):
 
             else:
                 # Leaf node builds an editor
-                editor = createEditor(self, tag, d, k)
+                editor = createEditor(self, tag, d, k, self.handler)
                 row = next(self.ct)
                 container.addWidget(QLabel(editor.label), row, 0)
                 container.addWidget(editor.widget, row, 1)

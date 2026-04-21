@@ -149,7 +149,7 @@ class PDS4InputMethod(InputMethod):
              'mult': self.multValue,
              'selected': self.selected,
              'products': self.products.serialise() if self.products is not None else None,
-             'dir': self.dir,
+             'dir': str(self.dir) if self.dir is not None else None,
              'mapping': self.mapping.serialise()}
         if internal:
             x['out'] = self.out
@@ -162,7 +162,7 @@ class PDS4InputMethod(InputMethod):
             self.recurse = data['recurse']
             self.selected = data['selected']
             self.products = ProductList.deserialise(data['products']) if data['products'] is not None else None
-            self.dir = data['dir']
+            self.dir = Path(data['dir']) if data['dir'] is not None else None
             self.mapping = ChannelMapping.deserialise(data['mapping'])
             if internal:
                 self.out = data['out']

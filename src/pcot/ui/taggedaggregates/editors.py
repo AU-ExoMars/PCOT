@@ -15,7 +15,7 @@ from pcot.ui.filepathedit import FilePathEdit
 
 
 class Editor(QObject):
-    def __init__(self, tag: Tag, aggregate: TaggedList | TaggedDict, key_or_index: int | str):
+    def __init__(self, tag: Tag, aggregate: TaggedList | TaggedDict, key_or_index: int | str, handler):
         """
         container - the thing containing what is to be edited; a TaggedList or a TaggedDict.
         key_or_index - for a TD, it's the key; for a TL, it's the index.
@@ -24,12 +24,20 @@ class Editor(QObject):
         self.aggregate = aggregate
         self.key_or_index = key_or_index
         self.label=tag.description
+        self.handler = handler    # we notify this object BEFORE and AFTER we make a change!
         self.widget = None
+
+    def notifyBefore(self):
+        if self.handler and hasattr(self.handler, 'onPreChange'):
+            self.handler.onPreChange(self)
+    def notifyAfter(self):
+        if self.handler and hasattr(self.handler, 'onPostChange'):
+            self.handler.onPostChange(self)
 
 
 class TextEditor(Editor):
-    def __init__(self, tag, container:TaggedList|TaggedDict, key_or_index:int|str):
-        super().__init__(tag, container, key_or_index)
+    def __init__(self, tag, container:TaggedList|TaggedDict, key_or_index:int|str, handler):
+        super().__init__(tag, container, key_or_index, handler)
         self.widget = QtWidgets.QLineEdit()
         if container[key_or_index] is not None:
             self.widget.setText(container[key_or_index])
@@ -37,12 +45,14 @@ class TextEditor(Editor):
         self.widget.textChanged.connect(lambda t: self.changed(t))
 
     def changed(self, t):
+        self.notifyBefore()
         self.aggregate[self.key_or_index] = t
+        self.notifyAfter()
 
 
 class IntEditor(Editor):
-    def __init__(self, tag, container:TaggedList|TaggedDict, key_or_index:int|str, range:Optional[Tuple[int,int]]):
-        super().__init__(tag, container, key_or_index)
+    def __init__(self, tag, container:TaggedList|TaggedDict, key_or_index:int|str, range:Optional[Tuple[int,int]], handler):
+        super().__init__(tag, container, key_or_index, handler)
         self.widget = QtWidgets.QSpinBox()
         if not range:
             range = (0,99)  # this is the default range for a qspinbox, but we set it explicitly anyway
@@ -53,12 +63,15 @@ class IntEditor(Editor):
         self.widget.valueChanged.connect(lambda v: self.changed(v))
 
     def changed(self, v):
+        self.notifyBefore()
+        print(f"Data now changed to {v}")
         self.aggregate[self.key_or_index] = v
+        self.notifyAfter()
 
 
 class ComboEditor(Editor):
-    def __init__(self, tag, container:TaggedList|TaggedDict, key_or_index:int|str):
-        super().__init__(tag, container, key_or_index)
+    def __init__(self, tag, container:TaggedList|TaggedDict, key_or_index:int|str, handler):
+        super().__init__(tag, container, key_or_index, handler)
         self.widget = QtWidgets.QComboBox()
         for x in tag.valid_choices:
             self.widget.addItem(x)
@@ -68,12 +81,14 @@ class ComboEditor(Editor):
         self.widget.currentTextChanged.connect(lambda t: self.changed(t))
 
     def changed(self, t):
+        self.notifyBefore()
         self.aggregate[self.key_or_index] = t
+        self.notifyAfter()
 
 
 class PathEditor(Editor):
-    def __init__(self, tag, container:TaggedList|TaggedDict, key_or_index:int|str):
-        super().__init__(tag, container, key_or_index)
+    def __init__(self, tag, container:TaggedList|TaggedDict, key_or_index:int|str, handler):
+        super().__init__(tag, container, key_or_index, handler)
 
         if isinstance(tag.valid_choices, str):
             filt = tag.valid_choices
@@ -88,12 +103,14 @@ class PathEditor(Editor):
         self.widget.pathChanged.connect(lambda t: self.changed(t))
 
     def changed(self, t):
+        self.notifyBefore()
         self.aggregate[self.key_or_index] = t
+        self.notifyAfter()
 
 
 class BoolEditor(Editor):
-    def __init__(self, tag, container:TaggedList|TaggedDict, key_or_index:int|str):
-        super().__init__(tag, container, key_or_index)
+    def __init__(self, tag, container:TaggedList|TaggedDict, key_or_index:int|str, handler):
+        super().__init__(tag, container, key_or_index, handler)
         self.widget = QtWidgets.QCheckBox("")
         if container[key_or_index] is not None:
             self.widget.setChecked(container[key_or_index])
@@ -101,13 +118,15 @@ class BoolEditor(Editor):
         self.widget.stateChanged.connect(lambda t: self.changed(t))
 
     def changed(self, _):
+        self.notifyBefore()
         self.aggregate[self.key_or_index] = self.widget.isChecked()
+        self.notifyAfter()
 
 
 class MaybeEditor(Editor):
     """This is a wrapper around one of the above editors that adds a "value is null" checkbox"""
-    def __init__(self, tag, editor):
-        super().__init__(tag, editor.aggregate, editor.key_or_index)
+    def __init__(self, tag, editor, handler):
+        super().__init__(tag, editor.aggregate, editor.key_or_index, handler)
         self.editor = editor
         self.widget = QtWidgets.QWidget()
         self.layout = QtWidgets.QHBoxLayout()
@@ -132,6 +151,7 @@ class MaybeEditor(Editor):
             self.nullCheck.setChecked(Qt.Unchecked)
 
     def nullChanged(self):
+        self.notifyBefore()
         if self.nullCheck.isChecked():
             self.editor.widget.setEnabled(False)
             self.oldvalue = self.editor.aggregate[self.key_or_index]
@@ -139,11 +159,12 @@ class MaybeEditor(Editor):
         else:
             self.editor.widget.setEnabled(True)
             self.editor.aggregate[self.key_or_index] = self.oldvalue
+        self.notifyAfter()
 
 
 class ListEditor(Editor):
-    def __init__(self, parent, tag, aggregate:TaggedList|TaggedDict, key_or_index:int|str):
-        super().__init__(tag, aggregate, key_or_index)
+    def __init__(self, parent, tag, aggregate:TaggedList|TaggedDict, key_or_index:int|str, handler):
+        super().__init__(tag, aggregate, key_or_index, handler)
         self.widget = QtWidgets.QListWidget()
         self.lst = self.aggregate[self.key_or_index]
         self.tag = tag
@@ -166,7 +187,7 @@ class ListEditor(Editor):
             self.create_add_button("Create new item")
         for i,item in enumerate(self.lst):
             # create subeditors using the tag inside the TaggedListType
-            e = createEditor(self.parent, self.tag.type.tag, self.lst, i)
+            e = createEditor(self.parent, self.tag.type.tag, self.lst, i, self.handler)
 
             # each editor is embedded inside a QListWidgetItem along with other things
             # all of which are contained in a widget for each row
@@ -206,33 +227,35 @@ class ListEditor(Editor):
         self.widget.scrollToItem(item)
 
     def add(self, top:bool=False):
+        self.notifyBefore()
         if top:
             self.lst.prepend_default()
         else:
             self.lst.append_default()
         self.populate_list()
         self.scroll_to_item(0 if top else len(self.lst)-1)
+        self.notifyAfter()
 
     def move(self, idx, delta):
-        print(idx,delta)
-
         newidx = idx + delta
         if newidx < 0 or newidx >= len(self.lst):
             return
+        self.notifyBefore()
         self.lst[idx], self.lst[newidx] = self.lst[newidx], self.lst[idx]
-
         self.populate_list()
         self.scroll_to_item(newidx)
+        self.notifyAfter()
 
     def delete(self, idx):
-        print(idx)
+        self.notifyBefore()
         del self.lst[idx]
         self.populate_list()
         self.scroll_to_item(idx)
+        self.notifyAfter()
 
 
 
-def createEditor(parent, tag: Tag, aggregate:TaggedList|TaggedDict, key_or_index:int|str):
+def createEditor(parent, tag: Tag, aggregate:TaggedList|TaggedDict, key_or_index:int|str, handler):
     tp = tag.type
     if isinstance(tp, Maybe):
         # if this is a nullable, we have to wrap in an editor which will handle that.
@@ -240,23 +263,23 @@ def createEditor(parent, tag: Tag, aggregate:TaggedList|TaggedDict, key_or_index
         # create a new tag from the old, but using the underlying type
         tag = dataclasses.replace(tag, type=tp)
         # create the inner editor for the underlying type
-        editor = createEditor(parent, tag, aggregate, key_or_index)
+        editor = createEditor(parent, tag, aggregate, key_or_index, handler)
         # and create the wrapper
-        return MaybeEditor(tag, editor)
+        return MaybeEditor(tag, editor, handler)
 
     if isinstance(tp, TaggedListType):
-        return ListEditor(parent, tag, aggregate, key_or_index)
+        return ListEditor(parent, tag, aggregate, key_or_index, handler)
 
     if tp == str:
         if tag.valid_choices:
-            return ComboEditor(tag, aggregate, key_or_index)
+            return ComboEditor(tag, aggregate, key_or_index, handler)
         else:
-            return TextEditor(tag, aggregate, key_or_index)
+            return TextEditor(tag, aggregate, key_or_index, handler)
     elif tp == int:
-        return IntEditor(tag, aggregate, key_or_index, tag.valid_choices)
+        return IntEditor(tag, aggregate, key_or_index, tag.valid_choices, handler)
     elif tp == bool:
-        return BoolEditor(tag, aggregate, key_or_index)
+        return BoolEditor(tag, aggregate, key_or_index, handler)
     elif tp == Path:
-        return PathEditor(tag, aggregate, key_or_index)
+        return PathEditor(tag, aggregate, key_or_index, handler)
     else:
         raise TypeError(f"Bad type {tp}")
