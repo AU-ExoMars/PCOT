@@ -126,19 +126,20 @@ class PaletteButtonFavourite(PaletteButtonBase):
 
     removeAct = QAction("Remove from favourites")
 
-    def __init__(self, name, fav: Favourite, view, parent=None):
+    def __init__(self, name, fav: Favourite, palette, view, parent=None):
         """constructor, taking button name, xformtype, and view into which they should be inserted."""
         super().__init__(name, view, parent=parent)
         self.setStyleSheet("background-color:rgb(220,220,140)")
         self.fav = fav
         self.name = name
+        self.palette = palette
 
     def contextMenu(self, e):
         menu = QtWidgets.QMenu()
         menu.addAction(self.removeAct)
         act = menu.exec_(self.mapToGlobal(e))
         if act == self.removeAct:
-            ui.mainwindow.MainUI.removeFavouriteFromAllPalettes(self.name)
+            self.palette.removeFavourite(self.name)
         elif act == self.helpAct:
             pcot.ui.help.HelpWindow(None, md="User-created favourite node", title="Help")
 
@@ -165,8 +166,8 @@ class Palette:
         self.view = vw
         self.collapser = collapser
         self.collapseButton = collapseButton
-        self.namesByGroup = {}    # list of name per group
-        self.widgetsByName = {}     # actual widgets by name
+        self.namesByGroup = None
+        self.widgetsByName = None
         self.populate()
 
     def hideMacrosAndFavouritesIfNone(self):
@@ -177,6 +178,7 @@ class Palette:
         """populate the palette with items"""
 
         self.namesByGroup = {x: [] for x in groups}
+        self.widgetsByName = {}
         # we want the keys in sorted order, and the keys come from both the global
         # types and the macros for this document. This is a dict merge - in 3.9+ we
         # could use the a|b syntax.
@@ -213,6 +215,10 @@ class Palette:
                 layout.addWidget(b)
             self.collapser.addSection(g, layout)
         self.collapser.end()
+
+        for name,fav in self.doc.favourites.items():
+            self.addFavourite(name, fav)
+
         self.hideMacrosAndFavouritesIfNone()
 
     def addFavourite(self, name, fav:Favourite):
@@ -220,7 +226,7 @@ class Palette:
         name = f"{fav.typename}:{name}"
         if name in self.widgetsByName:
             raise Exception(f"name '{name}' already exists!")
-        paletteButton = PaletteButtonFavourite(name, fav, self.view)
+        paletteButton = PaletteButtonFavourite(name, fav, self, self.view)
         self.widgetsByName[name] = paletteButton
         self.favLayout.addWidget(paletteButton)
         self.hideMacrosAndFavouritesIfNone()
@@ -229,11 +235,12 @@ class Palette:
     def removeFavourite(self, name):
         """remove a favourite from the palette"""
         if name in self.widgetsByName:
-            self.favLayout.removeWidget(self.widgetsByName[name])
-            self.widgetsByName[name].deleteLater()
-            del self.widgetsByName[name]
-            self.collapser.setSectionVisible("faves", self.favLayout.count()>1)
-            self.hideMacrosAndFavouritesIfNone()
+            w = self.widgetsByName[name]
+            if isinstance(w, PaletteButtonFavourite):
+                del self.doc.favourites[w.fav.name]
+                ui.mainwindow.MainUI.rebuildPalettes(doc=self.doc)
+        else:
+            ui.error(f"name '{name}' does not exist!")
 
     def paletteSearchChanged(self, text):
         # hide widgets which don't have the text, if there is one

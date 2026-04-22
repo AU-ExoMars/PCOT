@@ -258,6 +258,7 @@ class XFormMacro(XFormType):
         # then rename in the macro dictionary
         del self.doc.macros[self.name]
         self.doc.macros[newname] = self
+        self.name = newname
         pcot.ui.mainwindow.MainUI.rebuildPalettes()
         pcot.ui.mainwindow.MainUI.rebuildAll()
 
@@ -298,11 +299,14 @@ class XFormMacro(XFormType):
         """delete a macro"""
         # delete all instances
         toRebuild = set()
-        for x in xformtype.doc.nodeInstances[xformtype]:
-            x.graph.remove(x)
-            toRebuild.add(x.graph)
-        for x in toRebuild:
-            x.rebuildGraphics()
+        # the node instances will only have an entry for this type if there are nodes present, I believe.
+        if xformtype in xformtype.doc.nodeInstances:
+            for x in xformtype.doc.nodeInstances[xformtype]:
+                x.graph.remove(x)
+                toRebuild.add(x.graph)
+            for x in toRebuild:
+                x.rebuildGraphics()
+            del xformtype.doc.nodeInstances[xformtype]
         # and now the macro itself from the doc
         del xformtype.doc.macros[xformtype.name]
         # caller rebuilds palettes
@@ -365,6 +369,15 @@ class XFormMacro(XFormType):
             else:
                 pcot.ui.error("cannot find output node in instance graph of macro")
 
+    def getHelpText(self):
+        """Get the help text for this macro by looking for a DOC comment"""
+        hdr = "### Macro node\n\n"
+        for x in self.graph.nodes:
+            if x.type.name == "comment":
+                s = x.params.string
+                if s.startswith("DOC "):
+                    return hdr+s[4:]
+        return hdr+"This is a macro - to add help, create a comment node in the prototype and start the text with 'DOC '"
 
 class TabMacro(Tab):
     """this is the UI for macros, and it should probably not be here."""

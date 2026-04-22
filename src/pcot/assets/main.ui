@@ -347,6 +347,7 @@
     <addaction name="actionNew_Macro"/>
     <addaction name="actionShow_Metadata"/>
     <addaction name="actionShowCamsAndRefls"/>
+    <addaction name="actionImport"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -464,6 +465,11 @@
   <action name="actionShowCamsAndRefls">
    <property name="text">
     <string>Show Filter and Reflectance Data</string>
+   </property>
+  </action>
+  <action name="actionImport">
+   <property name="text">
+    <string>Import Macros and Favourites</string>
    </property>
   </action>
  </widget>
