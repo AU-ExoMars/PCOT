@@ -1,6 +1,8 @@
 """
 Tests for TaggedAggregates
 """
+import os.path
+
 import pytest
 
 from pcot.parameters.taggedaggregates import *
@@ -42,7 +44,7 @@ def test_taggeddict():
         td['a'] = 3.14
     with pytest.raises(ValueError):
         td['b'] = 64
-    with pytest.raises(ValueError, match=r".*'wibble' is not in the list of valid strings foo,bar,baz"):
+    with pytest.raises(ValueError, match=r".*'wibble' is not one of \['foo', 'bar', 'baz'\]"):
         td['b'] = 'wibble'  # not one of the valid strings
 
     with pytest.raises(KeyError):
@@ -380,11 +382,16 @@ def test_setbydot():
     assert tt[0] == 20
 
 
-def test_typing():
+def test_typing_in_defaults():
     # checking that bad types throw errors
     with pytest.raises(ValueError):
         tdt = TaggedDictType(
             a=("a", int, "cat")
+        )
+
+    with pytest.raises(ValueError):
+        tdt = TaggedDictType(
+            a=("a", int, 4.4)
         )
 
     with pytest.raises(ValueError):
@@ -421,13 +428,6 @@ def test_typing():
         c=("c", float, 3.14)
     )
 
-    # and this
-    tdt = TaggedDictType(
-        a=("a", int, 10),
-        b=("b", Maybe(str), None),
-        c=("c", float, 3.14)
-    )
-
     # not this though!
     with pytest.raises(ValueError):
         TaggedDictType(
@@ -436,7 +436,47 @@ def test_typing():
             c=("c", float, 3.14)
         )
 
+def test_valid_choices_in_default():
+    # check validity of string choices - this is only done on creating a dict, dammit.
+    with pytest.raises(ValueError):
+        tdt = TaggedDictType(
+            a=("a", Maybe(str), "wob", ["foo","bar"]),        # WOB isn't in the list
+        )
+
+    tdt = TaggedDictType(
+        a=("a", Maybe(str), "foo", ["foo","bar"])
+    )
+    tdt = TaggedDictType(
+        a=("a", Maybe(str), None, ["foo","bar"])    # checking we handle None even though it's not in the list
+    )
+
+    tdt = TaggedDictType(
+        a=("a", float, 1.4, (1,2))      # should be fine, number is in range
+    )
+
+    tdt = TaggedDictType(
+        a=("a", float, 6, (1,20))      # should be fine, number is in range although it's stated as an int
+    )
+    with pytest.raises(ValueError):
+        tdt = TaggedDictType(
+            a=("a", float, 3, (1,2))      # out of range!
+        )
+
+    tdt = TaggedDictType(
+        a=("a", Maybe(float), None, (1,2))      # none value OK here
+    )
+
+
+def test_typing_in_set():
     # let's create an example of that TD with a None value for b
+
+    # this is fine
+    tdt = TaggedDictType(
+        a=("a", int, 10),
+        b=("b", Maybe(str), None),
+        c=("c", float, 3.14)
+    )
+
     td = tdt.create()
     assert td.a == 10
     assert td.b is None
@@ -579,13 +619,32 @@ def test_valid_strings():
     td['a'] = "bar"
     assert td['a'] == "bar"
 
-    with pytest.raises(ValueError, match=r".*'wibble' is not in the list of valid strings foo,bar,baz"):
+    with pytest.raises(ValueError, match=r".*'wibble' is not one of \['foo', 'bar', 'baz'\]"):
         td['a'] = 'wibble'  # not one of the valid strings
 
     for xx in ["foo", "bar", "baz"]:
         td['a'] = xx  #  this are all OK because they are in the list of valid strings
 
     td['b'] = 'wibble'  # not one of the valid strings, but this is OK because it's not specified with a valid list
+
+
+def test_valid_numbers():
+    tdt = TaggedDictType(
+        a=("a", Maybe(int), 10, (1,20)),    # test above already handles the default test
+    )
+
+    td = tdt.create()
+
+    with pytest.raises(ValueError):
+        td.a = 30
+
+    td.a = 10
+    assert td.a == 10
+
+    td.a = None
+    assert td['a'] == None
+
+
 
 
 def test_incomplete_serialisation():
@@ -617,3 +676,86 @@ def test_nparray_serialisation():
     assert s['a'] == 10
     assert np.array_equal(td['b'], np.array([1, 2, 3], dtype=np.float32))
     assert s['c'] == 3.14
+
+
+def test_path():
+    tdt = TaggedDictType(
+        a=("a", int, 10),
+        b=("b", Path, Path(), True),
+    )
+    td = tdt.create()
+    td.b = Path(os.path.expanduser("~"))
+
+
+def test_path_serialisation():
+    tdt = TaggedDictType(
+        a=("a", int, 10),
+        b=("b", Path, Path("../taggedaggs")),
+    )
+    td = tdt.create()
+    s = td.serialise()
+    assert s['a'] == 10
+    assert s['b'] == str(Path("../taggedaggs"))
+
+    td = tdt.deserialise(s)
+    assert td['a'] == 10
+    assert td['b'] == Path("../taggedaggs")
+
+
+def test_ordered_dict_serialisation():
+    """Test that a dict serialised as a list when it's ordered, and a dict when it's not, and that we can force an
+    ordered dict to serialise as a dict for legibility"""
+
+    tlt = TaggedListType(Maybe(int), [10, 20, 30], 0)
+    unord = TaggedDictType(
+        a=("a", int, 10),
+        b=("b", str, "Hello"),
+        c=("c", tlt, None),
+    )
+
+    innertdt = TaggedDictType(
+        p=("p", int, 10),
+        q=("q", int, 20),
+        r=("r", tlt, None),
+    ).setOrdered()
+    tdt = TaggedDictType(
+        a=("a", int, 10),
+        b=("b", str, "Hello"),
+        c=("c", tlt, None),
+        inner=("d", innertdt, None),
+    ).setOrdered()
+
+    # test an unordered dict serialises as a dict qua dict
+    td = unord.create()
+    s = td.serialise()
+
+    serial = {
+        "a": 10,
+        "b": "Hello",
+        "c": [10, 20, 30],
+    }
+    assert s == serial
+
+    # test an ordered dict serialises as a tuple
+    td = tdt.create()
+    s = td.serialise()
+
+    serial = (
+        10, "Hello", [10, 20, 30], (10, 20, [10,20,30]),
+    )
+    assert s == serial
+
+    # but that we can force it to serialise in full; note that this dict contains another and the forceUnordered
+    # should be carried down into the recursion
+    s = td.serialise(forceUnordered=True)
+    serial = {
+        "a": 10,
+        "b": "Hello",
+        "c": [10, 20, 30],
+        "inner": {
+            "p": 10,
+            "q": 20,
+            "r": [10, 20, 30],
+        }
+    }
+    assert s == serial

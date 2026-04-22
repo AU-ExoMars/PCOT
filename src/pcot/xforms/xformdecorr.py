@@ -114,7 +114,7 @@ class TabDecorr(Tab):
 
         self.w.stretchSpin.setValue(p.stretch)
         self.w.clipSpin.setValue(p.clip)
-        sf = pcot.config.getint("sigfigs")
+        sf = pcot.config.data.sigfigs
 
         if self.node.stddevs is None:
             self.w.stdDevsText.setText("No data")

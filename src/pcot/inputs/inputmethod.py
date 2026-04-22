@@ -3,6 +3,7 @@ import fnmatch
 import logging
 import os
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Optional, Any, List
 
 from pcot import ui
@@ -154,7 +155,7 @@ class InputMethod(ABC):
 
         # get the directory and the files therein.
 
-        self.dir = d.directory
+        self.dir = Path(d.directory) if d.directory else None
         files_in_directory = os.listdir(self.dir)
 
         # each filename is actually a pattern - find filenames that match, sort them, then add them to file list

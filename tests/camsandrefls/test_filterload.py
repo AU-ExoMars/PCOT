@@ -16,10 +16,10 @@ logger = logging.getLogger(__name__)
 
 def load():
     """Try to load the training geology camera for testing"""
-    if 'cameras' not in config.data['Locations']:
+    path = config.getDefaultDir('cameras')
+    if path is None:
         pytest.fail("Camera directory not set")
 
-    path = config.getDefaultDir('cameras')
     path = os.path.expanduser(path)
     logger.debug(f"Loading camera data from {path}")
     cam = CameraData(path + "/training1_geol.parc")

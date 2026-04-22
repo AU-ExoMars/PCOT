@@ -41,8 +41,8 @@ def load_plugins():
         return
     plugins_loaded = True
 
-    pluginDirs = [os.path.expanduser(x) for x in pcot.config.getDefaultDir('pluginpath').split(';')]
-    logger.info(f"Plugin directories {','.join(pluginDirs)}")
+    pluginDirs = pcot.config.getDefaultDir('pluginpath')
+
     # Load any plugins by recursively walking the plugin directories and importing .py files.
 
     for d in pluginDirs:

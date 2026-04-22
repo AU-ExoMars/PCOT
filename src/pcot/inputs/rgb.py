@@ -29,7 +29,7 @@ class RGBInputMethod(InputMethod):
         self.img = None         # we keep this around to speed up internal ser/deser
         self.mapping = ChannelMapping()
         self.debayer_algo = "NONE"
-        self.debayer_pattern = pcot.config.defaultBayerPattern
+        self.debayer_pattern = pcot.config.data.defaultbayerpattern
         self.camera = "NONE"
 
     def readData(self):

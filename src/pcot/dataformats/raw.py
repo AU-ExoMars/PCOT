@@ -1,4 +1,6 @@
 """Loading 'raw' files into an ImageCube object."""
+from pathlib import Path
+
 import numpy as np
 import os
 import logging
@@ -75,7 +77,7 @@ class RawLoader:
                f"bigendian={self.bigendian}, offset={self.offset}, " \
                f"rot={self.rot}, horzflip={self.horzflip}, vertflip={self.vertflip}"
 
-    def load(self, filename: str, bitdepth=None) -> np.ndarray:
+    def load(self, filename: str|Path, bitdepth=None) -> np.ndarray:
         """Loads the raw file and returns an array object."""
         if self.format == RawLoader.FLOAT32:
             dtype = np.float32

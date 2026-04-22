@@ -31,7 +31,8 @@ class CollapserSection(QtWidgets.QWidget):
     """This is a section within the collapsing list - the code comes from here: https://stackoverflow.com/a/56275050
     with a few modifications. We use setContentLayout to add layouts.
 
-    Don't use this directly - use Collapser. """
+    Don't use this directly - use Collapser. Actually, that's a lie
+    right now - ConfigDialog uses it."""
 
     def __init__(self, title, parent=None, animationDuration=100, isOpen=False, isAlwaysOpen=False):
         super(CollapserSection, self).__init__(parent=parent)
@@ -83,7 +84,6 @@ class CollapserSection(QtWidgets.QWidget):
         # don't waste space
         mainLayout.setVerticalSpacing(0)
         mainLayout.setContentsMargins(0, 0, 0, 0)
-        mainLayout.setSizeConstraint(QtWidgets.QLayout.SetMinimumSize   )
 
         if isAlwaysOpen:
             mainLayout.addWidget(self.contentArea, 0, 0, 1, 3)
@@ -116,10 +116,12 @@ class CollapserSection(QtWidgets.QWidget):
             self.toggleButton.click()
 
 
-    def setContentLayout(self, contentLayout):
+    def setContentLayout(self, contentLayout, stretch=False):
+        """Used to set the layout of the collapser's content section. If stretch is true, the size policy
+        will expand contents horizontally. We don't do that for palettes, because the buttons should be small."""
         self.contentArea.destroy()
         self.contentArea.setLayout(contentLayout)
-        self.contentArea.setSizePolicy(QtWidgets.QSizePolicy.Maximum,
+        self.contentArea.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding if stretch else QtWidgets.QSizePolicy.Maximum,
                                        QtWidgets.QSizePolicy.MinimumExpanding)
         #        self.contentArea.adjustSize()
         #        self.contentArea.updateGeometry()

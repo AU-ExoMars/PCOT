@@ -187,7 +187,7 @@ class Document:
             pcot.config.addRecent(fname)
             self.metadata = arc.metadata    # keep a ref to the metadata from the archive
 
-    def load(self, fname: Path):
+    def load(self, fname: Path, add_to_recents=True):
         """Load data into this document - is used in ctor, can also be used on existing document.
         Also adds to the recent files list.
         May throw exceptions, typically FileNotFoundError"""
@@ -197,7 +197,8 @@ class Document:
             if not ver_ok:
                 raise ValueError(f"Cannot load document from {fname} - it is version {arc.metadata.pcotversion}, this PCOT can only load >{pcot.oldest_valid_version}")
             self.deserialise(dd)
-            pcot.config.addRecent(fname)
+            if add_to_recents:  # don't do this when we're loading macro/fave archives for import
+                pcot.config.addRecent(fname)
             self.metadata = arc.metadata    # keep a ref to the metadata from the archive
             self.fileName = fname
 
@@ -244,7 +245,7 @@ class Document:
 
     def setInputMulti(self, inputidx, directory, fnames, filterpat=None, camname=None):
         """set graph's input to multiple files"""
-        camname = camname or pcot.config.get('default_camera')
+        camname = camname or pcot.config.data.default_camera
         return self.setInputData(inputidx, inputs.Input.MULTIFILE,
                                  lambda method: method.setFileNames(directory, fnames, filterpat, camname))
 
@@ -376,3 +377,17 @@ class Document:
                 self.favourites[name] = f
 
         ui.mainwindow.MainUI.rebuildPalettes(doc=self)
+
+    def importFromConfigArchives(self):
+        """Import macros and favourites from all PCOT files listed in the config.
+        NOT called from the ctor lest recursion; called from the New action in the UI and when
+        creating the initial document on startup"""
+        for x in pcot.config.getDefaultDir("macrosandfaves"):
+            try:
+                doc = Document()
+                doc.load(x, add_to_recents=False)
+                self.importFrom(doc)
+            except Exception as e:
+                ui.error(f"Error importing from PCOT macros/faves file: {x}: {e}")
+
+

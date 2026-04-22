@@ -390,7 +390,7 @@ class TabPCA(Tab):
         self.w.canvas.display(self.node.getOutput(XFormPCA._cls.OUT_RGB))
 
         # output
-        sf = pcot.config.getint("sigfigs")
+        sf = pcot.config.data.sigfigs
         if self.node.stddevs is None:
             self.w.stdDevsText.setText("No data")
             self.w.eigenValsText.setText("No data")

@@ -1,4 +1,11 @@
+import sys
+
+from PySide2 import QtWidgets
+
+from pcot.parameters.taggedaggregates import TaggedDict, TaggedList
 from pcot.subcommands import subcommand,argument
+from pcot.ui.taggedaggregates.configui import ConfigDialog
+
 
 @subcommand([
     argument("key", metavar="KEY", help="Name of config item to get", nargs="?"),
@@ -10,21 +17,41 @@ def getconfig(args):
     section.key = value (which isn't quite how they appear in the .ini file).
     """
     import pcot.config
+    from pcot.parameters.taggedaggregates import TaggedDict,TaggedList
+
+    def dump(value, prefix=""):
+        if isinstance(value, TaggedDict):
+            for k,v in value.items():
+                path = f"{prefix}.{k}" if prefix else k
+                if isinstance(v, (TaggedDict, TaggedList)):
+                    dump(v, path)
+                else:
+                    print(f"{path} = {v}")
+        if isinstance(value, TaggedList):
+            for idx,v in enumerate(value.get()):
+                path = f"{prefix}.{idx}" if prefix else idx
+                if isinstance(v, (TaggedDict, TaggedList)):
+                    dump(v, path)
+                else:
+                    print(f"{path} = {v}")
+
     if args.key is None:
-        for section in pcot.config.data:
-            for key in pcot.config.data[section]:
-                print(f"{section}.{key} = {pcot.config.data[section][key]}")
+        dump(pcot.config.data)
     else:
-        # we want to show all sections, so split the key into sections and key
-        if '.' in args.key:
-            section, key = args.key.split('.', 1)
+        # split the provided path into elements
+        path = args.key.split(".")
+        d = pcot.config.data
+        while len(path) > 0:
+            key = path[0]
+            if key not in d:
+                raise KeyError(f"Key '{args.key}' not found in config file")
+            d = d[key]
+            path = path[1:]
+        if isinstance(d, TaggedDict or TaggedList):
+            dump(d, args.key)
         else:
-            section, key = 'Default', args.key
-        if section not in pcot.config.data:
-            raise ValueError(f"Section '{section}' is not in the config file")
-        if key not in pcot.config.data[section]:
-            raise ValueError(f"Key {key} is not in the config file in section '{section}'")
-        print(f"{section}.{key} = {pcot.config.data[section][key]}")
+            print(d)
+
 
 
 @subcommand([
@@ -40,19 +67,57 @@ def setconfig(args):
     If the section is Default, you can omit it. See "pcot getconfig -h" to see the current values.
     """
     import pcot.config
-    # we want to show all sections, so split the key into sections and key
-    if '.' in args.key:
-        section, key = args.key.split('.', 1)
-    else:
-        section, key = 'Default', args.key
-    if section not in pcot.config.data:
-        raise ValueError(f"Section '{section}' is not in the config file")
-    if key not in pcot.config.data[section]:
-        print(f"Adding {section}.{key} = {args.value}")
-    else:
-        print(f"Setting {section}.{key} = {args.value}")
 
-    pcot.config.data[section][key] = args.value
-    pcot.config.save()
+    keys = args.key.split(".")
+    current = pcot.config.data
+    v = args.value
 
+    for i, key in enumerate(keys):
+        is_last = (i == len(keys) - 1)
+
+        if key not in current:
+            raise KeyError(f"Key '{key}' not found at path: " f"{'.'.join(keys[:i]) or ''}")
+
+        if is_last:
+            print("SET")
+            tp = current.tag(key).type
+            if tp == float:
+                v = float(v)
+            elif tp == int:
+                v = int(v)
+            current[key] = v
+            pcot.config.save()
+            return
+
+        # Not last: must be a dict
+        if not isinstance(current[key], (TaggedDict, TaggedList)):
+            raise KeyError("Item at "
+                f"Item at '{'.'.join(keys[:i+1])}' is not a dict or list, "
+                f"but a {type(current[key]).__name__}"
+            )
+
+        if isinstance(current[key], TaggedDict):
+            current = current[key]
+        elif isinstance(current[key], TaggedList):
+            try:
+                key = int(key)
+            except:
+                raise KeyError(f"Could not convert '{key}' to int at {'.'.join(keys[:i+1])}")
+            current = current[key]
+
+
+@subcommand(args=[],
+    shortdesc="Run the configuration UI")
+def config(args):
+    import pcot.config
+    app = QtWidgets.QApplication(sys.argv)
+
+    dialog = ConfigDialog(pcot.config.data)
+    dialog.exec_()
+    if dialog.data():
+        pcot.config.data = dialog.data()
+        pcot.config.save()
+        print("Saved")
+    else:
+        print("You rejected the changes")
 

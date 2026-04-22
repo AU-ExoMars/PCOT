@@ -155,6 +155,46 @@ registerJsonSerialiser("ArchiveType",
 )
 
 
+class NotJSONSerializable(Exception):
+    pass
+
+
+def assert_jsonable(obj, path="root"):
+    """
+    Recursively verify that `obj` is JSON-serialisable.
+    Raises NotJSONSerializable with a detailed path if not.
+    """
+
+    # JSON primitives
+    if obj is None or isinstance(obj, (str, int, float, bool)):
+        return
+
+    # special cases
+    if obj.__class__.__name__ in serialisers:
+        return
+
+    # dict: recurse into values
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            if not isinstance(key, str):
+                raise NotJSONSerializable(
+                    f"{path}: dict key {key!r} is not a string"
+                )
+            assert_jsonable(value, f"{path}.{key}")
+        return
+
+    # list / tuple / set: recurse into elements
+    if isinstance(obj, (list, tuple, set)):
+        for i, value in enumerate(obj):
+            assert_jsonable(value, f"{path}[{i}]")
+        return
+
+    # Anything else is not JSON-serialisable
+    raise NotJSONSerializable(
+        f"{path}: object of type {type(obj).__name__} is not JSON-serialisable"
+    )
+
+
 class Archive:
     """
     This class provides the ability to store multiple JSON files inside a single ZIP archive, which can also
@@ -326,6 +366,7 @@ class Archive:
             # do this BEFORE we convert the arrays to tags. It gets done in writeStr too!
             self.assert_unique_name(name)
         d = self.convertArraysToTags(d)
+        assert_jsonable(d)  # will give a "sensible" error if there's a problem
         s = json.dumps(d, sort_keys=True, indent=4, default=serialiser)
         self.writeStr(name, s, permit_replace=permit_replace)
 

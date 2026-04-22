@@ -2,6 +2,7 @@
 This is the file which creates and runs the PCOT user interface
 """
 import os
+from pathlib import Path
 
 from PySide2 import QtWidgets
 from PySide2.QtCore import QCommandLineParser, QCommandLineOption
@@ -47,13 +48,19 @@ def run(args):
 
     # create a document either ab initio or from a file, depending on args and config.
     if args.file is not None:
-        doc = Document(args.file)
+        path = Path(args.file)
+        if not path.is_file() or path.suffix != ".pcot":
+            logger.error(f"'{args.file}' is not a PCOT file or subcommand - type 'pcot -h' for help")
+            sys.exit(1)
+        else:
+            doc = Document(args.file)
     else:
-        loadfile = pcot.config.get('loadfile')
-        if loadfile != "":
+        loadfile = pcot.config.data.loadfile
+        if loadfile and loadfile != "" and loadfile != ".": # "." because it's a Path which can't be empty
             doc = Document(os.path.expanduser(loadfile))
         else:
             doc = Document()
+            doc.importFromConfigArchives()  # import faves and macros from files in the config settings
 
     # Create an instance of a main window on that document
     # Autolayout not done by default - the user might have arranged things how they like.

@@ -8,6 +8,7 @@ import logging
 
 import os.path
 from collections.abc import Iterable
+from pathlib import Path
 from typing import List, Optional, Tuple, Sequence, Union
 
 import cv2 as cv
@@ -327,12 +328,12 @@ class CannotLoadImageBadFormatException(CannotLoadImageException):
         super().__init__(fname, "not a valid raster format")
 
 
-def load_rgb_image(fname, bitdepth=None, debayer_algo=None, debayer_pattern=None) -> np.ndarray:
+def load_rgb_image(fname:str|Path, bitdepth=None, debayer_algo=None, debayer_pattern=None) -> np.ndarray:
     """This is used by ImageCube to load its image data. It's a function because it's
     also used by the multifile loader. Can also debayer given an algorithm and pattern. In this case only
     the first band will be used (see pcot.utils.debayering)"""
     fname = str(fname)  # fname could potentially be some kind of Path object.
-    debayer_pattern = pcot.config.defaultBayerPattern if not debayer_pattern else debayer_pattern
+    debayer_pattern = pcot.config.data.defaultbayerpattern if not debayer_pattern else debayer_pattern
 
     # imread with this argument will load any depth, any
     # number of channels
@@ -516,12 +517,12 @@ class ImageCube(SourcesObtainable):
         return self
 
     @classmethod
-    def load(cls, fname, mapping, sources, bitdepth=None, debayer_algo='NONE', debayer_pattern=None):
+    def load(cls, fname:str|Path, mapping, sources, bitdepth=None, debayer_algo='NONE', debayer_pattern=None):
         """
         Load an RGB image using opencv's imread. Can also debayer - see pcot.utils.debayering.
         Sources must be provided.
         """
-        logger.info(f"ImageCube load: {fname}")
+        logger.info(f"ImageCube load: {str(fname)}")
         img = load_rgb_image(fname, bitdepth=bitdepth, debayer_algo=debayer_algo, debayer_pattern=debayer_pattern)
         # create sources if none given
         if sources is None:

@@ -26,7 +26,7 @@ def get_pds4_test_data_dir():
     global get_attempted, testdatadir, error
     
     if not get_attempted:
-        testdatadir = pcot.config.getDefaultDir("testpds4data")
+        testdatadir = pcot.config.data.testpds4data
         if testdatadir is None:
             error = "No PDS4 test data directory specified in the configuration file"
         else:
