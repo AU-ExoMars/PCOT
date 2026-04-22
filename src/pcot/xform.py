@@ -584,7 +584,7 @@ class XForm:
             inp = self.inputs[i]
             if inp is not None:
                 tp = self.inputTypes[i]
-                print("{}: {}/{}/{}".format(i, inp[0], inp[1], tp))
+                print(f"{i}: {inp[0]}/{inp[1]}/{tp}")
 
     def setError(self, ex: XFormException):
         """called to set an error state. Can either be called directly or invoked via an exception.

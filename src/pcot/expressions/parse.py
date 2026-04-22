@@ -14,7 +14,7 @@ from tokenize import tokenize, TokenInfo, NUMBER, NAME, OP, ENCODING, ENDMARKER,
 from typing import List, Any, Optional, Callable, Dict, Tuple, Union
 
 from pcot.datum import Datum
-from pcot.datumtypes import Type
+from pcot.datumtypes import Type, AnyType
 from pcot.sources import nullSourceSet, SourceSet
 from pcot.utils.table import Table
 from pcot.value import Value
@@ -73,6 +73,8 @@ class Parameter:
     def isValid(self, datum: Datum):
         """Make sure that the datum has a type, and that this type is acceptable (is in this parameter's
         set of valid types"""
+        if Datum.ANY in self.types:   # If we can return any type, all is well
+            return True
         if datum is None:
             raise ParamException("None is not a valid parameter type")
         return datum.tp in self.types

@@ -25,15 +25,21 @@ def registerBuiltinOperatorSyntax(p):
     p.registerBinop('/', 20, lambda a, b: binop(Operator.DIV, a, b))
     p.registerBinop('*', 20, lambda a, b: binop(Operator.MUL, a, b))
     p.registerBinop('^', 30, lambda a, b: binop(Operator.POW, a, b))
-    p.registerUnop('-', 50, lambda a: unop(Operator.NEG, a))
+
 
     # standard fuzzy operators (i.e. Zadeh)
     p.registerBinop('&', 20, lambda a, b: binop(Operator.AND, a, b))
     p.registerBinop('|', 20, lambda a, b: binop(Operator.OR, a, b))
-    p.registerUnop('!', 50, lambda a: unop(Operator.NOT, a))
 
     p.registerBinop('$', 60, lambda a, b: binop(Operator.DOLLAR, a, b))
 
+    # comparison operators
+    p.registerBinop('<', 60, lambda a, b: binop(Operator.LESSTHAN, a, b))
+    p.registerBinop('>', 60, lambda a, b: binop(Operator.GREATERTHAN, a, b))
+
+    # unary ops bind tight
+    p.registerUnop('-', 70, lambda a: unop(Operator.NEG, a))
+    p.registerUnop('!', 80, lambda a: unop(Operator.NOT, a))
 
 class ExpressionEvaluator(Parser):
     """The core class for the expression evaluator, based on a generic Parser. The constructor
@@ -43,6 +49,9 @@ class ExpressionEvaluator(Parser):
         """Initialise the evaluator, registering functions and operators.
         Caller may add other things (e.g. variables)"""
         super().__init__(True)  # naked identifiers permitted
+
+        # we register "none" as a variable for all parsers
+        self.registerVar("none", "the null value", lambda: Datum.null)
 
         # now register things that have been marked with the @parserhook decorator.
         logger.debug("Registering function plugins")

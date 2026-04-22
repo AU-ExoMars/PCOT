@@ -189,6 +189,14 @@ class Datum(SourcesObtainable):
         from pcot.expressions import ops
         return ops.binop(ops.Operator.AND, self, other)
 
+    def __lt__(self, other):
+        from pcot.expressions import ops
+        return ops.binop(ops.Operator.LESSTHAN, self, other)
+
+    def __gt__(self, other):
+        from pcot.expressions import ops
+        return ops.binop(ops.Operator.GREATERTHAN, self, other)
+
     def __or__(self, other):
         from pcot.expressions import ops
         return ops.binop(ops.Operator.OR, self, other)

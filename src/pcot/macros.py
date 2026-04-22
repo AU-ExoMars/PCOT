@@ -41,7 +41,7 @@ class MacroInstance:
         are the same so that corresponding nodes in instance and copy
         have the same UUID (not really "U", but you get the idea)"""
         d = self.proto.graph.serialise()
-        self.proto.graph.dump()
+        # self.proto.graph.dump()
         logger.debug(f"PROTOTYPE keys: {self.proto.graph.nodeDict.keys()}")
         self.graph.deserialise(d, True)
 

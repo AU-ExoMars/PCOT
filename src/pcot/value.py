@@ -232,6 +232,12 @@ class Value:
     def __eq__(self, other):
         return np.array_equal(self.n, other.n) and np.array_equal(self.u, other.u) and np.array_equal(self.dq, other.dq)
 
+    def __lt__(self, other):
+        return Value(np.less(self.n, other.n), np.zeros(self.n.shape, dtype=np.float32), self.dq | other.dq | dq.NOUNCERTAINTY)
+
+    def __gt__(self, other):
+        return Value(np.greater(self.n, other.n), np.zeros(self.n.shape, dtype=np.float32), self.dq | other.dq | dq.NOUNCERTAINTY)
+
     def approxeq(self, other):  # used in tests
         return np.allclose(self.n, other.n) and np.allclose(self.u, other.u) and np.array_equal(self.dq, other.dq)
 

@@ -1288,3 +1288,32 @@ def debayer(img, algorithm="bilinear", pattern="gb"):
     sources = MultiBandSource([sources, sources, sources])
     img = ImageCube(out, sources=sources)
     return Datum(Datum.IMG, img)
+
+
+@datumfunc
+def ifelse(cond, true, false):
+    """
+    If a condition (a single scalar value) is true (>0.5) return the true parameter, selse return the false parameter.
+
+    @param cond:number:condition value
+    @param true:any:output if cond >0.5
+    @param false:any:output if cond <=0.5
+    """
+
+    cond:Value = cond.get(Datum.NUMBER)
+
+    if cond.n > 0.5:
+        return true
+    else:
+        return false
+
+
+@datumfunc
+def isnone(val):
+    """
+    Returns 1 if the value is None, 0 otherwise.
+
+    @param val:any:the value to check
+    """
+    ret = 1.0 if val.isNone() else 0.0
+    return Datum(Datum.NUMBER, Value(ret), sources=val.sources)
