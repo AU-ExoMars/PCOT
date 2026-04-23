@@ -106,7 +106,7 @@ even if they don't have the sources.
 ## Quantities
 All numerical quantities in PCOT - whether scalar values or pixels in images -
 consist of three values: nominal value, uncertainty and data quality (DQ) bits.
-Uncertainty and DQ bitss can be viewed as overlays in the canvas (PCOT's image viewer
+Uncertainty and DQ bits can be viewed as overlays in the canvas (PCOT's image viewer
 component).
 
 ### Uncertainty 

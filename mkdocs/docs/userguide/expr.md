@@ -18,9 +18,23 @@ are registered using the *manual register* node. They are then merged together u
 `merge` function. The box shows this function, and also `IMG[12]` indicating that the
 result is a 12-band image.
 
+## Handling unconnected inputs
+
+Any input which is not connected has the "none" value. You can test for this by using the `isnone` function.
+For example, the expression
+```txt
+ifelse(isnone(a),0.5,a)
+```
+will have the value 0.5 if *a* is not connected, otherwise it will have the value of *a*. There is a shorthand
+for this:
+```txt
+default(a,0.5)
+```
+which *a* if it has a value, but 0.5 otherwise (i.e. 0.5 is the default value for *a*).
+
 ## Functions
 
-Merge is one of a large number of functions that *expr* supports, and more can be added
+`default` and `merge` are two of the large number of functions that *expr* supports, and more can be added
 using the [plug-in mechanism](/devguide/plugins/). Full details of built-in functions 
 can be found [in the autodocs](/autodocs/#expr-functions)
 

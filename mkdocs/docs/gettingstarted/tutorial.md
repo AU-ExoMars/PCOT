@@ -69,7 +69,7 @@ each part.
 The window is divided into several areas:
 
 * At the top, the **input buttons** each open one of PCOT's input windows.
-These describe how information is read into PCOT.
+These describe how information is read into each of PCOT's four input channels.
 * Below this and to the left is the **node area**, which will be empty
 on startup. Double-clicking on a node in the graph (see below) will
 open a detailed view for that node.
@@ -79,7 +79,7 @@ you can undock by double-clicking on the tab at the top of the view.
 the document and their connections. A new document always has an *input 0* node,
 which brings input 0 into the graph.
 * To the right of the graph is the **palette**, which consists of a number
-of sections which can be expanded or hidden. Each section a set of buttons, one for each node type.
+of sections which can be expanded or hidden. Each section has a set of buttons, one for each node type.
 Drag a button onto the graph to create a new node of that type. You can also search for nodes by name
 using the search box at the top.
 * At the bottom is the **log area**, the **status bar**, and a set of
