@@ -285,27 +285,39 @@ displaying
 This indicates that all three RGB channels shown in the canvas are getting
 their data from the 438 and 671 bands of input 0.
 
-### Disconnecting nodes and node error states
-==Disconnect the input node== by dragging the arrowhead from the *a* box and releasing it in empty space. This will cause an error:
-![!A node in an error state|errornode](errornode.png)
+### Disconnecting nodes
+
+==Disconnect the input node== by dragging the arrowhead from the *a* box and releasing it in empty space. The node now has no input at
+*a* and so the output will be the "none" value, as shown below.
+
+![!Disconnected *expr* node](discoexpr.png)
+
+Now ==reconnect the node==.
+
+### Error states in nodes
+
+Now ==edit the expression in the *expr* node to read "a$671/a$430"==
+You'll now see something like the image below:
+
+![!Error in *expr* node](errornode.png)
+
 
 The EXPR is the kind of error - EXPR is an error in expression
 parsing/execution. More details can be seen in the log window, which in this
 case reads 
-
 ```txt
-Error in expression: variable's input is not connected
+Error in expression: unable to get this wavelength from an image...
 ```
-This is because there is no longer an image feeding into the *expr* node's input for variable *a*.
-Now ==reconnect the input node to the *expr* node== to fix the error.
+This is because the image has no 430nm band.
+
+==Now change the expression back to `a$671/a$438`== so the node works again.
 
 
 ### Adding a region of interest
 
 It's a little hard to see what's going on, so we will add a region of interest.
 This will make the *expr* node treat the operation differently - only the area inside
-the rectangle will be ```norm(a$671/a$438)```.
-Everywhere
+the rectangle will be ```a$671/a$438```. Everywhere
 else in the image, the output will come from the left-hand side of the expression (the 671nm channel).
 The rules for ROIs are explained more fully [on this page](../../userguide/principles).
 
@@ -313,7 +325,7 @@ The rules for ROIs are explained more fully [on this page](../../userguide/princ
 (the latter of which will be
 labelled with its expression). Nothing will change, because the rectangle has not been set.
 ==Edit the *rect* node and draw a rectangle by clicking and dragging on the canvas.==
-==Set the scale to 5 pixels and type "671_438" in the Annotation box==, something like this:
+==Set the scale to 5 pixels and type "671/438" in the Annotation box==, something like this:
 
 ![!R671_438 with a rectangle|R671_438b](R671_438b.png)
 
@@ -330,8 +342,8 @@ It can be hard to adjust the rectangle when you can't see what's happening in th
 on the tab, so you can edit
 the rectangle while the *expr* output is visible. ==Dock it again by closing the undocked window==.
 
-To make things more visible still, ==open the *data* section and add a *colourmap* node after the *expr* node and view it==, clicking
-making sure **Show ROIs** is enabled on its canvas (ROIs are typically retained on derived
+To make things more visible still, ==open the *data* section and add a *colourmap* node after the *expr* node and view it==,
+making sure **ROIs** is enabled on its canvas (ROIs are typically retained on derived
 images):
 
 ![!R671_438 with a rectangle and colourmap|R671_438d](R671_438d.png)
