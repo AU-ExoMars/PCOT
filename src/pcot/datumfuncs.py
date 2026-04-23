@@ -1317,3 +1317,19 @@ def isnone(val):
     """
     ret = 1.0 if val.isNone() else 0.0
     return Datum(Datum.NUMBER, Value(ret), sources=val.sources)
+
+
+@datumfunc
+def default(val,deflt):
+    """
+    Provides a default value if val is None.
+    If val is None, return deflt. Otherwise return val.
+
+    @param val:any:the value to check
+    @param deflt:any:the default value to return if val is None
+    """
+
+    if val.isNone():
+        return deflt
+    else:
+        return val
