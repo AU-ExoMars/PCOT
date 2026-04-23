@@ -13,9 +13,9 @@ an instruction to follow.
 
 
 @@@ danger
-Be aware that this is an early version and there are 
-no doubt a lot of serious problems! Also, the software is changing 
-very quickly, so it may not look exactly as it does in these pages.
+Be aware that the software is changing 
+very quickly, so it may not look exactly as it does in these pages. Different screenshots have been
+taken using different versions of PCOT, but the differences will be minor.
 @@@
 
 ## Preparation
@@ -35,21 +35,27 @@ of data. It is a subset of a larger image used in testing, and is shown below as
 
 Now you have this image you can ==start PCOT==.
 
-## Setting up the camera directory
+## Setting up the cameras and reflectances directories
 
 Your data may come from a number of different cameras, and different
-cameras have different parameters and filter sets. PCOT needs to be able
-to find the files which describe these cameras. It does this when it starts
+cameras have different parameters and filter sets. You may also use different
+calibration targets (e.g. the PCT or a Macbeth/Babel Colorchecker, or just Spectralon patches) which have
+different reflectance values. PCOT needs to be able
+to find the files which describe these cameras and targets. It does this when it starts
 up.
 
-When it can't find these files, PCOT will pop up a dialog box asking
-if you want to set a camera directory. You should select either the 
-camera directory provided by your team, or the default camera directory -
-this will be the `cameras` directory inside the main PCOT directory.
+When it can't find these files, PCOT will pop up dialog boxes asking
+if you want to set these directories. You should either select the directories
+provided by your team, or use the default "cameras" and "reflectances" directories
+inside the PCOT installation.
 
-More cameras can be downloaded from the 
+More cameras and reflectances can be downloaded from the 
 [PCOT Cookbook site](http://pcot.aber.ac.uk/), which also contains
-useful "recipes" for doing common operations.
+useful "recipes" for doing common operations. 
+
+@@@ warning
+Make sure you keep your camera files in a separate directory from the reflectances.
+@@@
 
 
 ## Introduction to the user interface
@@ -73,14 +79,16 @@ you can undock by double-clicking on the tab at the top of the view.
 the document and their connections. A new document always has an *input 0* node,
 which brings input 0 into the graph.
 * To the right of the graph is the **palette**, which consists of a number
-of sections which can be expanded or hidden. Each section a set of buttons, one for each node type. Drag a button onto the graph to create a new node of that type.
+of sections which can be expanded or hidden. Each section a set of buttons, one for each node type.
+Drag a button onto the graph to create a new node of that type. You can also search for nodes by name
+using the search box at the top.
 * At the bottom is the **log area**, the **status bar**, and a set of
 [global controls](../userguide/globalcontrols.md).
 
 ## Working with graph nodes
 
 Each node is shown as a box with input connections on the top and output connections on
-the bottom. To illustrate this, consider the following graph you've seen before:
+the bottom, as shown in the following graph:
 
 ![!R671_438 inset into source image RGB representation|671438grad](671438grad.png)
 
@@ -97,7 +105,8 @@ on inputs.
 calculated (see below).
 * Nodes can have a "display text" in blue. These show extra data, such as the output of a calculation in an *expr* node
 or the annotation given to a region of interest.
-* Currently nodes without a display text also show the number of times they have been calculated as a debugging aid.
+* Currently nodes without a display text also show the number of times they have been calculated.
+This appears in green, and is a debugging aid.
 
 ### Creating new nodes
 
@@ -147,8 +156,8 @@ These two nodes are special - the boxes in the graph have text fields
 which can be edited.
 
 *  For *constant* nodes, the value in the box 
-will be the numeric output of the node. This node has no view, and double-clicking
-has no effect.
+will be the numeric output of the node. This node has no view: double-clicking will
+have no effect.
 * For *comment* nodes, the value in the box is a text comment that can help
 other users navigate the graph. Once edited, the box can be resized by
 clicking and dragging its bottom-right corner. The text will flow to fit
@@ -192,7 +201,7 @@ You should see something like this:
 
 ### The Canvas
 
-The right-hand side is a common component in PCOT known as a
+The right-hand side of the input window is a common component in PCOT known as a
 **canvas** which will show the image selected. The canvas
 lets you modify how the RGB channels are mapped using the three combo boxes.
 Each box gives the band number, the input number and the wavelength. For
@@ -223,10 +232,8 @@ can be found [here](/userguide/canvas), but for now:
 * ==Click the **spectrum** button== to open a spectrum view, and move
 the cursor over the image to show the spectrum at different pixels. You may
 need to resize the window, or drag the "double bar" which separates the
-image from the spectrum.
-
-
-
+image from the spectrum. You can also change the size of the region over which the
+spectrum is sampled using the "spectrum region" control.
 
 
 ## Manipulating an image: obtaining a spectral parameter map
