@@ -53,6 +53,10 @@ More cameras and reflectances can be downloaded from the
 [PCOT Cookbook site](http://pcot.aber.ac.uk/), which also contains
 useful "recipes" for doing common operations. 
 
+You can change the locations of these directories - and many other things -
+from the [settings dialog](/userguide/settings) which can be opened
+from the Edit menu.
+
 @@@ warning
 Make sure you keep your camera files in a separate directory from the reflectances.
 @@@

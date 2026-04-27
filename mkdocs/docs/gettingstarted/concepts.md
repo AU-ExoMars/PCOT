@@ -88,7 +88,9 @@ the same inputs, or the load the same inputs into a different graph. There are
 currently up to four inputs, but this can easily be changed. 
 * The **graph** - a set of nodes and connections between them which define
 operations to be performed on inputs, as shown above.
-* The **settings** - these are global to the entire application.
+* The **global controls** which are shown at the bottom right of the main
+window, such as "annotation alpha" and "auto-run on change." These apply to
+the graph as a whole and all nodes within it.
 * **Macros** - these are sets of nodes which can be used multiple times and
 appear as single nodes in the graph, although each one has its own "private"
 graph. Currently very experimental (and largely undocumented).

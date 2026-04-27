@@ -100,10 +100,7 @@ The idea is that a filename like `/home/jim/files/DogBiscuitLWAC02Fish.jpg`
 will be matched, and will result in `02` being stored as `pos`, which will
 then be used to look up the filter. 
 
-You can set the default pattern from the command line with
-```
-    pcot setconfig Default.multifile_pattern "your pattern here"
-```
+The default pattern can be set from the [settings dialog](/userguide/settings).
 
 
 ### Named matches and how they are used
