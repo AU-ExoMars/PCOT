@@ -718,7 +718,7 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     x1 = x1 + outsize * (output + 0.5)
                     x2 = x2 + insize * (inputIdx + 0.5)
                     y1 += n1.h
-                    compat = datum.isCompatibleConnection(outtype, intype)
+                    compat = datum.isCompatibleConnection(outtype, intype, self.graph.isMacro)
 
                     #                    if not compat:
                     #                        ui.log(f"incompatible: {n1} -> {n2} / {outtype} -> {intype}")
@@ -762,7 +762,11 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                 rect_pen = QPen(QColor(r,g,b))
                 n.rect.setPen(rect_pen)
 
-                n.rect.outdatedWarning.setVisible(n.outdated)
+                if self.graph.isMacro:
+                    # we never warn about out-of-date nodes in macros because they never run!
+                    n.rect.outdatedWarning.setVisible(False)
+                else:
+                    n.rect.outdatedWarning.setVisible(n.outdated)
 
                 r, g, b = n.type.getTextColour(n) if n.enabled else (255, 0, 0)
                 n.rect.text.setColour(QColor(r, g, b))

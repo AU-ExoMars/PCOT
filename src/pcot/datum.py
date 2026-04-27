@@ -256,12 +256,18 @@ def deserialise(tp):
         raise UnknownDatumTypeException(tp)
 
 
-def isCompatibleConnection(outtype, intype):
+def isCompatibleConnection(outtype, intype, inmacro=False):
     """are two connectors compatible?"""
     # this is a weird bug I would really like to catch.
     if intype is None or outtype is None:
         logger.critical("a connectin type is None")
         return False
+
+    # if we're editing a macro, don't flag connections to NONE connectors as being bad - it's
+    # likely to be an expr node, which doesn't set its connection type until it runs, and it
+    # never will in a macro.
+    if inmacro and (intype == Datum.NONE or outtype == Datum.NONE):
+        return True
 
     # variants - used where a node must have a connection type
     # set by the user - cannot connect until they have been so set.

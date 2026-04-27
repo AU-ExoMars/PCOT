@@ -55,7 +55,7 @@ class ConfigDialog(QDialog):
     """
     def __init__(self, d, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Configuration")
+        self.setWindowTitle("Settings")
 
         layout = QVBoxLayout(self)
 
