@@ -124,9 +124,11 @@ The result should look like this:
 ![!The L2 norm macro](macros2.png)
 
 @@@ info
-Note that there is a spurious warning about a node that is out-of-date.
-Ignore it: PCOT doesn't yet know that macro prototype nodes never really
-run, they just get copied.
+Note that you won't get warnings about out-of-date nodes while in a macro,
+because these nodes never run - they are just copied. You also won't see bad connections
+(normally marked as red arrows)
+to outputs with no value (such as *expr* nodes which haven't run). Again, these nodes
+will never set their output type, so such warnings would be pointless.
 @@@
 
 ### Using macros
