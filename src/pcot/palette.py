@@ -201,7 +201,7 @@ class Palette:
         layout = QtWidgets.QVBoxLayout()
         self.favLayout = layout
         self.collapser.addSection("faves", layout, isAlwaysOpen=True)
-        self.favLayout.addWidget(QLabel("faves"))
+        self.favLayout.addWidget(QLabel("favourites"))
 
         # add buttons and separators for each group
         for g in groups:

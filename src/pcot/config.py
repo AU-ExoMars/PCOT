@@ -77,12 +77,16 @@ class Recents:
         if path in self.paths:
             self.paths.remove(path)
         self.paths.appendleft(path)
+        self.ensure_length()
+
+    def ensure_length(self):
         while len(self.paths) > self.count:
             self.paths.pop()
 
     def deserialise(self, lst:List[str]):
         """Just build the recents object from a list"""
         self.paths = deque(lst)
+        self.ensure_length()
 
     def serialise(self):
         """Return the recent files as a list for serialization"""
