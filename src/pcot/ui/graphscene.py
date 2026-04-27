@@ -755,7 +755,8 @@ class XFormGraphScene(QtWidgets.QGraphicsScene):
                     ui.log(f"Performing {n.debugName()}")
                     b = 100
                     g = 100
-                elif n.outdated:    # child nodes of more recently run parents.
+                elif n.outdated and not self.graph.isMacro:
+                    # out-of-date node recolouring: child nodes of more recently run parents in non-macros!
                     b //= 2
                 n.rect.setBrush(QColor(r, g, b))
                 r, g, b = (0, 0, 0) if n.enabled else (255, 0, 0)
