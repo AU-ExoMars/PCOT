@@ -8,9 +8,9 @@ from typing import Tuple, Optional
 
 from PySide2 import QtWidgets
 from PySide2.QtCore import Qt, QObject, QModelIndex
-from PySide2.QtWidgets import QListWidgetItem
+from PySide2.QtWidgets import QListWidgetItem, QSizePolicy, QStyledItemDelegate, QListWidget
 
-from pcot.parameters.taggedaggregates import Tag, TaggedList, TaggedDict, Maybe, TaggedListType
+from pcot.parameters.taggedaggregates import Tag, TaggedList, TaggedDict, Maybe, TaggedListType, TaggedDictType
 from pcot.ui.filepathedit import FilePathEdit
 
 
@@ -19,6 +19,8 @@ class Editor(QObject):
         """
         container - the thing containing what is to be edited; a TaggedList or a TaggedDict.
         key_or_index - for a TD, it's the key; for a TL, it's the index.
+        handler: something we can notify when a change is made (for undo, typically). It needs
+           notifyBefore and notifyAfter methods which take the Editor object.
         """
         super().__init__()
         self.aggregate = aggregate
@@ -161,12 +163,54 @@ class MaybeEditor(Editor):
             self.editor.aggregate[self.key_or_index] = self.oldvalue
         self.notifyAfter()
 
+class TallListWidget(QListWidget):
+    """
+    This version of a list widget will resize itself based on the size of its contained items.
+    """
+    def __init__(self, min_rows=1, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.min_rows = min_rows
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        # Recompute geometry when items change
+        m = self.model()
+        m.rowsInserted.connect(self.updateGeometryParents)
+        m.rowsRemoved.connect(self.updateGeometryParents)
+
+    def updateGeometryParents(self):
+        super().updateGeometry()
+        p = self.parent()
+        while p is not None:
+            print(f"Updating geometry of {p}")
+            p.updateGeometry()
+            p = p.parent()
+
+    def sizeHint(self):
+        """The size hint is the sum of the hints of the widget contents"""
+        hint = super().sizeHint()
+
+        if self.count():
+            heights = [self.sizeHintForRow(i) for i in range(self.count())]
+            rows_h = sum(heights)
+            print(",".join([str(x) for x in heights]))
+        else:
+            rows_h = 24  # fallback
+
+        print(f"Previous hint: {hint}")
+        min_h = rows_h + 2 * self.frameWidth()
+        # for some reason it won't resize larger if the size hint when empty is less than around 100.
+        prev_h = max(2*(24 + self.frameWidth()),100)
+        hint.setHeight(max(prev_h, min_h))
+        print(f"New hint: {hint}, min_h: {min_h}")
+        return hint
+
 
 class ListEditor(Editor):
     def __init__(self, parent, tag, aggregate:TaggedList|TaggedDict, key_or_index:int|str, handler):
         super().__init__(tag, aggregate, key_or_index, handler)
-        self.widget = QtWidgets.QListWidget()
+        self.widget = TallListWidget()
         self.lst = self.aggregate[self.key_or_index]
+        self.parent = parent
         self.tag = tag
         self.populate_list()
 
@@ -197,6 +241,10 @@ class ListEditor(Editor):
             row_layout.setContentsMargins(0, 0, 0, 0)
             row_widget.setLayout(row_layout)
 
+            idxlabel = QtWidgets.QLabel(f"{i}:")
+            idxlabel.setMinimumWidth(50)
+            row_layout.addWidget(idxlabel)
+
             from pcot.assets import Icons
             (up := QtWidgets.QToolButton()).setIcon(Icons.get("arrow-up.svg"))
             row_layout.addWidget(up)
@@ -213,7 +261,6 @@ class ListEditor(Editor):
             self.buts.append(delb)
 
             row_layout.addWidget(e.widget)
-            row_layout.setSizeConstraint(QtWidgets.QLayout.SetMinimumSize) # otherwise they won't expand
 
             itemwidget = QtWidgets.QListWidgetItem()
             itemwidget.setSizeHint(row_widget.sizeHint()) # have to do this or the widget won't know how big it is (cheers, Copilot)
@@ -221,6 +268,7 @@ class ListEditor(Editor):
             self.widget.setItemWidget(itemwidget, row_widget)
         if len(self.buts) > 0:
             self.create_add_button("Create new item at end", top=False)
+        self.widget.updateGeometry()
 
     def scroll_to_item(self, idx):
         item = self.widget.item(idx)
@@ -254,6 +302,17 @@ class ListEditor(Editor):
         self.notifyAfter()
 
 
+class DictEditor(Editor):
+    """Dicts are normally handled using layoutDict in the main configui.py module, but sometimes
+    they are nested inside lists. That's when this editor gets used. It's deeply messy, and I apologise;
+    really configui.py's code should be refactored to use this."""
+    def __init__(self, parent, tag, aggregate:TaggedList|TaggedDict, key_or_index:int|str, handler):
+        super().__init__(tag, aggregate, key_or_index, handler)
+
+        from pcot.ui.taggedaggregates import AggregateEditorWidget
+        assert isinstance(aggregate[key_or_index], TaggedDict)
+        self.widget = AggregateEditorWidget(aggregate[key_or_index], handler=handler, parent=parent, internal_editor=True)
+
 
 def createEditor(parent, tag: Tag, aggregate:TaggedList|TaggedDict, key_or_index:int|str, handler):
     tp = tag.type
@@ -269,8 +328,10 @@ def createEditor(parent, tag: Tag, aggregate:TaggedList|TaggedDict, key_or_index
 
     if isinstance(tp, TaggedListType):
         return ListEditor(parent, tag, aggregate, key_or_index, handler)
+    elif isinstance(tp, TaggedDictType):
+        return DictEditor(parent, tag, aggregate, key_or_index, handler)
 
-    if tp == str:
+    elif tp == str:
         if tag.valid_choices:
             return ComboEditor(tag, aggregate, key_or_index, handler)
         else:

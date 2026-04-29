@@ -26,6 +26,33 @@ class ContentArea(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
+    def sizeHint(self):
+        hint = super().sizeHint()
+        hint.setHeight(1000)
+        return hint
+
+    #
+    # def sizeHint(self):
+    #     """The size hint is the sum of the hints of the widget contents"""
+    #     hint = super().sizeHint()
+    #
+    #     if self.layout().count():
+    #         rows_h = 0
+    #         for i in range(self.layout().count()):
+    #             widget = self.layout().itemAt(i).widget()
+    #             rows_h += widget.sizeHint().height()
+    #     else:
+    #         rows_h = 24  # fallback
+    #
+    #     print(f"CA Previous hint: {hint}")
+    #     min_h = rows_h + 20
+    #     hint.setHeight(max(100, min_h))
+    #     print(f"CA New hint: {hint}, min_h: {min_h}")
+    #     return hint
+
+
+
+
 
 class CollapserSection(QtWidgets.QWidget):
     """This is a section within the collapsing list - the code comes from here: https://stackoverflow.com/a/56275050
@@ -115,7 +142,6 @@ class CollapserSection(QtWidgets.QWidget):
         if self.isNowOpen:
             self.toggleButton.click()
 
-
     def setContentLayout(self, contentLayout, stretch=False):
         """Used to set the layout of the collapser's content section. If stretch is true, the size policy
         will expand contents horizontally. We don't do that for palettes, because the buttons should be small."""
@@ -128,6 +154,7 @@ class CollapserSection(QtWidgets.QWidget):
 
         contentHeight = contentLayout.sizeHint().height()
         self.contentLayout = contentLayout
+        print(f"CollapserSection contentHeight: {contentHeight}")
 
         if not self.isAlwaysOpen:
             collapsedHeight = self.sizeHint().height() - self.contentArea.maximumHeight()
@@ -195,5 +222,3 @@ class Collapser(QtWidgets.QScrollArea):
                 sec.forceClose()
             else:
                 sec.forceOpen()
-
-

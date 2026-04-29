@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from PySide2 import QtWidgets
-from PySide2.QtWidgets import QDialog, QVBoxLayout, QDialogButtonBox
+from PySide2.QtWidgets import QDialog, QVBoxLayout, QDialogButtonBox, QSizePolicy
 
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedListType, TaggedDict
 from pcot.ui.taggedaggregates import AggregateEditorWidget
@@ -40,7 +40,13 @@ TESTCONFIG = TaggedDictType(
                 zz3=("internal", DUMMY, None),
                 zz4=("internal", DUMMY, None),
                 zz5=("internal", DUMMY, None),
-                r=("Baz", int, 4)).setOrdered(),None)
+                r=("Baz", int, 4)).setOrdered(),None),
+    arglist=("Argument list",TaggedListType(
+                 TaggedDictType(
+                    name=("Name",str,"name"),
+                    datatype=("Type",str,"int",["int","float"]),
+                    deflt=("Default",Maybe(str),None)
+                ).setOrdered(),0))
 ).setOrdered()
 
 
@@ -96,7 +102,7 @@ def runtest():
     app = QtWidgets.QApplication(sys.argv)
 
     # change this in testing
-    if True:
+    if False:
         config = testconfig
     else:
         config = pcot.config.data
