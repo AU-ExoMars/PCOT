@@ -102,7 +102,7 @@ def runtest():
     app = QtWidgets.QApplication(sys.argv)
 
     # change this in testing
-    if False:
+    if True:
         config = testconfig
     else:
         config = pcot.config.data

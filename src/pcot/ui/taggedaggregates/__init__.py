@@ -20,11 +20,11 @@ class ScrollContent(QWidget):
     This is a widget with some kind of strategy for getting a size hint. What that
     is is something I'm struggling with.
     """
-    def sizeHint(self):
-        """Vertically as big as possible """
-        hint = super().sizeHint()
-        hint.setHeight(1000)
-        return hint
+    # def sizeHint(self):
+    #     """Vertically as big as possible; really don't do this """
+    #     hint = super().sizeHint()
+    #     hint.setHeight(1000)
+    #     return hint
 
     # def sizeHint(self):
     #     """The size hint is that of the layout if there is one"""
@@ -32,22 +32,22 @@ class ScrollContent(QWidget):
     #         print(f"size hint: {self.layout().sizeHint()}")
     #         return self.layout().sizeHint()
     #     return super().sizeHint()
-    # def sizeHint(self):
-    #     """The size hint is the sum of the hints of the layout's contents"""
-    #     hint = super().sizeHint()
-    #
-    #     if self.layout() and self.layout().count():
-    #         hs = [self.layout().itemAt(i).widget().sizeHint().height() for i in range(self.layout().count())]
-    #         rows_h = sum(hs)
-    #         print(f"Row heights inside ScrollContent: {','.join(map(str, hs))}")
-    #     else:
-    #         return hint
-    #
-    #     print(f"ScrollContent Previous hint: {hint}")
-    #     min_h = rows_h + 20
-    #     hint.setHeight(max(100, min_h))
-    #     print(f"ScrollContent New hint: {hint}, min_h: {min_h}")
-    #     return hint
+    def sizeHint(self):
+        """The size hint is the sum of the hints of the layout's contents"""
+        hint = super().sizeHint()
+
+        if self.layout() and self.layout().count():
+            hs = [self.layout().itemAt(i).widget().sizeHint().height() for i in range(self.layout().count())]
+            rows_h = sum(hs)
+            # print(f"Row heights inside ScrollContent: {','.join(map(str, hs))}")
+        else:
+            return hint
+
+        # print(f"ScrollContent Previous hint: {hint}")
+        min_h = rows_h + 20
+        hint.setHeight(max(100, min_h))
+        # print(f"ScrollContent New hint: {hint}, min_h: {min_h}")
+        return hint
 
     def event(self, e):
         if e.type() == QEvent.LayoutRequest:
@@ -107,7 +107,7 @@ class AggregateEditorWidget(QWidget):
 
     def sizeHint(self):
         h = self.content.sizeHint()
-        print(f"AggregateEditorWidget.sizeHint: {h}")
+#        print(f"AggregateEditorWidget.sizeHint: {h}")
         return h
 
     def data(self):

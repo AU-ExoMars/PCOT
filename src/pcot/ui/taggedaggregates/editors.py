@@ -181,7 +181,7 @@ class TallListWidget(QListWidget):
         super().updateGeometry()
         p = self.parent()
         while p is not None:
-            print(f"Updating geometry of {p}")
+#            print(f"Updating geometry of {p}")
             p.updateGeometry()
             p = p.parent()
 
@@ -192,16 +192,14 @@ class TallListWidget(QListWidget):
         if self.count():
             heights = [self.sizeHintForRow(i) for i in range(self.count())]
             rows_h = sum(heights)
-            print(",".join([str(x) for x in heights]))
+#            print(",".join([str(x) for x in heights]))
         else:
             rows_h = 24  # fallback
 
-        print(f"Previous hint: {hint}")
         min_h = rows_h + 2 * self.frameWidth()
         # for some reason it won't resize larger if the size hint when empty is less than around 100.
         prev_h = max(2*(24 + self.frameWidth()),100)
         hint.setHeight(max(prev_h, min_h))
-        print(f"New hint: {hint}, min_h: {min_h}")
         return hint
 
 
