@@ -39,8 +39,21 @@ class Type:
         self.__class__.instance = self
         typesByName[name] = self  # register by name
 
+        # these indicate whether we add entries for these types in the dialog
+        # when we set the type of macro connectors/params. Set using setOKForMacro
+        self.isOKForMacroConnectors = False
+        self.isOKForMacroParameters = False
+
     def __str__(self):
         return self.name
+
+    def setOKForConnectors(self):
+        self.isOKForMacroConnectors = True
+        return self
+
+    def setOKForParameters(self):
+        self.isOKForMacroParameters = True
+        return self
 
     def getSize(self, v):
         """Get the size of the value in bytes. This is used to manage the cache in a DatumStore (which is used to

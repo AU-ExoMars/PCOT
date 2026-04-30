@@ -119,6 +119,31 @@ class XFormMacroIn(XFormMacroConnector):
 
 
 @xform.xformtype
+class XFormMacroParam(XFormMacroConnector):
+    """A parameter for a macro; or rather a connector for one. The displayName of the node is the name of the parameter
+    and should be set by the creating method"""
+    def __init__(self):
+        super().__init__("param")
+        self.addOutputConnector("", Datum.VARIANT)
+        self.params = TaggedDictType()  # no parameters
+        self.autoserialise = ()     # we don't have an index, unlike the other connectors
+
+    def perform(self, node):
+        """perform sets the output from data set in XFormMacro.perform()"""
+        if node.getOutputType(0) == Datum.VARIANT:
+            raise xform.XFormException('TYPE', 'output type of macro input node must be specified')
+        node.setOutput(0, node.datum)
+        logger.debug(f"DUMP OF PARAMCONNECTOR {node.name}, {node}")
+        if logger.isEnabledFor(logging.DEBUG):
+            node.dump()
+        logger.debug(f"PARAM  OUTPUT {node.datum}")
+
+    def createTab(self, node, window):
+        """create the edit tab"""
+        return TabConnector(node, window, parameter=True)
+
+
+@xform.xformtype
 class XFormMacroOut(XFormMacroConnector):
     """The macro output connector (used inside macro prototypes)"""
     def __init__(self):
@@ -237,6 +262,8 @@ class XFormMacro(XFormType):
                 self.outputNodes.append(n.name)
                 n.inputTypes[0] = n.conntype  # set the overrides
                 outputs += 1
+            elif n.type.name == 'param':
+                n.outputTypes[0] = n.conntype
         # rebuild the various connector structures in each instance
         for n in self.getInstances():
             n.connCountChanged()
@@ -401,8 +428,12 @@ class TabMacro(Tab):
 
 class TabConnector(Tab):
     """the UI for macro connectors"""
-    def __init__(self, node, w):
+    def __init__(self, node, w, parameter=False):
         super().__init__(w, node, 'tabconnector.ui')
+
+        # make the widget show only appropriate types
+        self.w.variant.setMode(mode='parameter' if parameter else 'connector')
+
         self.w.variant.changed.connect(self.variantChanged)
         self.nodeChanged()
 
