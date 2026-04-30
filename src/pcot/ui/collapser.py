@@ -149,11 +149,13 @@ class CollapserSection(QtWidgets.QWidget):
         self.contentArea.setLayout(contentLayout)
         self.contentArea.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding if stretch else QtWidgets.QSizePolicy.Maximum,
                                        QtWidgets.QSizePolicy.MinimumExpanding)
+        self.contentLayout = contentLayout
+        self.resetContentHeight()
         #        self.contentArea.adjustSize()
         #        self.contentArea.updateGeometry()
 
-        contentHeight = contentLayout.sizeHint().height()
-        self.contentLayout = contentLayout
+    def resetContentHeight(self):
+        contentHeight = self.contentLayout.sizeHint().height()
         print(f"CollapserSection contentHeight: {contentHeight}")
 
         if not self.isAlwaysOpen:
@@ -167,6 +169,15 @@ class CollapserSection(QtWidgets.QWidget):
             contentAnimation.setDuration(self.animationDuration)
             contentAnimation.setStartValue(0)
             contentAnimation.setEndValue(contentHeight)
+
+        if self.isNowOpen:
+            self.forceClose()
+            self.forceOpen()
+
+
+    def updateGeometry(self):
+        self.resetContentHeight()
+        super().updateGeometry()
 
 
 class Collapser(QtWidgets.QScrollArea):
