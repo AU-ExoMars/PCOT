@@ -533,11 +533,13 @@ def test_optional_ser():
 
 def test_tagged_variant_dict():
     tdt1 = TaggedDictType(
+        type=("type", str, "type1"),
         a=("a", int, 10),
         b=("b", str, "foo"),
         c=("c", float, 3.14)
     )
     tdt2 = TaggedDictType(
+        type=("type", str, "type2"),
         a=("a", int, 10),
         b=("b", float, 3.14),
         d=("d", str, "wibble"),

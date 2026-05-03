@@ -8,7 +8,7 @@ from pathlib import Path
 from PySide2 import QtWidgets
 from PySide2.QtWidgets import QDialog, QVBoxLayout, QDialogButtonBox, QSizePolicy
 
-from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedListType, TaggedDict
+from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedListType, TaggedDict, TaggedVariantDictType
 from pcot.ui.taggedaggregates import AggregateEditorWidget
 
 
@@ -18,9 +18,32 @@ DUMMY = TaggedDictType(
     ac=("Nullable int", Maybe(int), 3),
 ).setOrdered()
 
+
+VARDICT1 = TaggedDictType(
+    type=("type", str, "vardict1", ["vardict1", "vardict2"]),
+    vd1data=("Nullable int", Maybe(int), 3),
+    aa=("Test string", Maybe(str), "teststringdefault"),
+    ab=("Test string 2", Maybe(str), "teststringdefault 2 asdasd asd asd  asd "),
+    ac=("Nullable int", Maybe(int), 3),
+).setOrdered()
+
+VARDICT2 = TaggedDictType(
+    type=("type", str, "vardict2", ["vardict1", "vardict2"]),
+    vd2data=("float", float, 3),
+).setOrdered()
+
+VARIANTDICT = TaggedVariantDictType("type",
+                                    {
+                                        "vardict1": VARDICT1,
+                                        "vardict2": VARDICT2,
+                                    }, default_type_name="vardict1",
+
+                                    )
+
 TESTCONFIG = TaggedDictType(
     path=("File path", Maybe(Path), None, "PCOT files (*.pcot *.jpg)"),
     path2=("Any file path", Path, "d:/", None),
+    v=("Variant test", VARIANTDICT, None),
     dir=("Dir path", Maybe(Path), None, True),
     btest=("boolean", Maybe(bool), False),
     aa=("Test string", str, "teststringdefault"),
@@ -106,6 +129,11 @@ def runtest():
         config = testconfig
     else:
         config = pcot.config.data
+
+
+    # smoke test
+    dd = config.serialise()
+    config = TESTCONFIG.deserialise(dd)
 
     while True:
         import yaml
