@@ -332,6 +332,32 @@ class DictEditor(Editor):
         self.widget = AggregateEditorWidget(aggregate[key_or_index], handler=handler, parent=parent, internal_editor=True)
 
 
+class WrapperWidget(QtWidgets.QWidget):
+    """Widget that acts as a wrapper around another which can be replaced"""
+    def __init__(self):
+        super().__init__()
+        self.layout = QtWidgets.QVBoxLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(self.layout)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.widget = None
+        print("Created OK")
+
+    def setWidget(self, new_widget):
+        if self.widget:
+            self.layout.takeAt(0)
+            self.widget.deleteLater()
+        self.widget = new_widget
+        self.layout.addWidget(new_widget)
+
+    def sizeHint(self):
+        if self.widget:
+            print(self.widget.sizeHint())
+            return self.widget.sizeHint()
+        else:
+            return super().sizeHint()
+
+
 class VariantEditor(Editor):
     """This is a weird one, because it's like a dict editor but it can be one of several different dicts.
     There's a special field all the dicts share which say what kind of dict it is."""
@@ -348,10 +374,7 @@ class VariantEditor(Editor):
         self.saved_dicts = {}
 
         # we're just going to put a single widget in a box, and then switch it from time to time
-        self.widget = QtWidgets.QWidget()
-        self.layout = QtWidgets.QVBoxLayout()
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.widget.setLayout(self.layout)
+        self.widget = WrapperWidget()
         self.currentEditorWidget = None
         self.createDictEditor()
 
@@ -363,17 +386,10 @@ class VariantEditor(Editor):
         if child is None:
             raise Exception("trying to edit an empty variant dict")
 
-        if self.currentEditorWidget:
-            # get rid of the old widget if there was one
-            print("Removing old widget")
-            self.layout.takeAt(0)
-            self.currentEditorWidget.deleteLater()
-
         # we create the child widget here. Note that I'm using this as the change handler, and delegating to the actual
         # handler (typically the dialog) so we can catch the discriminator changing.
-        print("adding new widget")
         self.currentEditorWidget = AggregateEditorWidget(child, handler=self, parent=self.parent, internal_editor=True)
-        self.layout.addWidget(self.currentEditorWidget)
+        self.widget.setWidget(self.currentEditorWidget)
 
         # stash the type name
         self.current_type_name = self.getTypeNameForVariantDict()
