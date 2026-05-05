@@ -1,5 +1,6 @@
 """Code dealing with macros and macro prototypes"""
 import logging
+from collections import Counter
 from typing import List
 
 import pcot.ui.mainwindow
@@ -7,12 +8,42 @@ import pcot.xform as xform
 from pcot import datum
 from pcot.datum import Datum
 from pcot.imagecube import ChannelMapping
-from pcot.parameters.taggedaggregates import TaggedDictType
+from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType, TaggedVariantDictType
 from pcot.ui.tabs import Tab
+from pcot.ui.taggedaggregates import AggregateEditorDialog
 from pcot.utils import deb
 from pcot.xform import XFormType, XFormGraph
 
 logger = logging.getLogger(__name__)
+
+# this is the TaggedDictType which defines the parameters of a macro
+
+FLOATPARAMTYPE = TaggedDictType(
+    type=("type",str,"float",["float","int"]),
+    name=("name",str,"new"),
+    desc=("description",str,""),
+    min=("min",float,0),
+    max=("max",float,10),
+)
+
+INTPARAMTYPE = TaggedDictType(
+    type=("type",str,"int",["float","int"]),
+    name=("name",str,"new"),
+    desc=("description",str,""),
+    min=("min",int,0),
+    max=("max",int,10),
+)
+
+PARAMETERTYPE = TaggedVariantDictType(
+    "type", {
+        "float": FLOATPARAMTYPE,
+        "int": INTPARAMTYPE,
+    }, default_type_name="float"
+)
+
+MACROPARAMSTYPE = TaggedDictType(
+    parameters=("parameters", TaggedListType(PARAMETERTYPE,0))
+)
 
 
 class MacroInstance:
@@ -300,7 +331,8 @@ class XFormMacro(XFormType):
         return False
 
     def serialise(self, node):
-        """serialise an individual macro instance node by storing the macro name"""
+        """serialise an individual macro instance node by storing the macro name.
+        Macros themselves are just graphs and are serialised in the Document serialiser."""
         if node.instance is not None:
             name = node.instance.proto.name
         else:
@@ -309,7 +341,8 @@ class XFormMacro(XFormType):
 
     def deserialise(self, node, d):
         """deserialise an individual macro instance node by dereferencing the macro
-        name and creating a new MacroInstance"""
+        name and creating a new MacroInstance. See "serialise" above for how the actual macro
+        is serialised."""
 
         name = d['proto']
         doc = node.graph.doc
@@ -339,7 +372,7 @@ class XFormMacro(XFormType):
         # caller rebuilds palettes
 
     def createTab(self, n, w):
-        """creates edit tab"""
+        """creates edit tab for an instance"""
         return TabMacro(n, w)
 
     def perform(self, node):
@@ -405,6 +438,34 @@ class XFormMacro(XFormType):
                 if s.startswith("DOC "):
                     return hdr+s[4:]
         return hdr+"This is a macro - to add help, create a comment node in the prototype and start the text with 'DOC '"
+
+    def editParameters(self):
+        test = MACROPARAMSTYPE.create()
+
+        def validate(d):
+            """This function validates the TaggedDict being edited by the dialog; it won't accept
+            until this returns None."""
+
+            # first we get the actual TaggedDicts inside the variants
+            d = [x.get() for x in d.parameters]
+            # now check the names are unique
+            names = [x.name for x in d]
+            counts = Counter(names)
+            dups = [i for i, count in counts.items() if count>1]
+            if len(dups) > 0:
+                return "There are duplicate parameter names: "+", ".join(dups)
+            # now check the individual entries
+            for e in d:
+                type = e["type"]  # can't use .type, that gets the type object! Dammit.
+                if type == "int" or type == "float":
+                    if e.max < e.min:
+                        return f"Parameter {e.name} has an invalid range (min={e.min}, max={e.max})"
+            return None     # all is well
+        dialog = AggregateEditorDialog(test, validate)
+        dialog.exec_()
+
+
+
 
 class TabMacro(Tab):
     """this is the UI for macro instances, and it should probably not be here."""

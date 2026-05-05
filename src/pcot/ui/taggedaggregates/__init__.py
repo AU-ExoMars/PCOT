@@ -7,7 +7,8 @@ from typing import List
 
 from PySide2.QtCore import QEvent, Qt, QSize
 from PySide2.QtWidgets import QGridLayout, QVBoxLayout, \
-    QGroupBox, QLabel, QScrollArea, QWidget, QSizePolicy, QSpacerItem, QScrollBar, QAbstractScrollArea, QLayout
+    QGroupBox, QLabel, QScrollArea, QWidget, QSizePolicy, QSpacerItem, QScrollBar, QAbstractScrollArea, QLayout, \
+    QDialog, QDialogButtonBox, QMessageBox
 
 from pcot.ui.collapser import CollapserSection
 from pcot.ui.taggedaggregates.editors import createEditor
@@ -149,3 +150,40 @@ class AggregateEditorWidget(QWidget):
                 self.editors.append((path + [k], editor.widget))
 
 
+class AggregateEditorDialog(QDialog):
+    """
+    A dialog wrapper around an tagged aggregate editor widget.
+    Takes a validator function which returns None if all is well or an error string.
+    """
+    def __init__(self, d, validator_func=None, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Settings")
+        self.validator_func = validator_func
+        layout = QVBoxLayout(self)
+
+        # Embed the widget
+        self.widget = AggregateEditorWidget(d, self)
+        layout.addWidget(self.widget)
+
+        # OK/Cancel buttons
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.validate_accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+        self._data = None
+
+    def validate_accept(self):
+        if self.validator_func:
+            possible_error = self.validator_func(self.widget.data())
+            if possible_error:
+                QMessageBox.critical(self, "Validation error", possible_error)
+                return
+        self.accept()
+
+    def accept(self):
+        self._data = self.widget.data()
+        super().accept()
+
+    def data(self):
+        return self._data

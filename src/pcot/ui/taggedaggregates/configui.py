@@ -6,11 +6,9 @@ import sys
 from pathlib import Path
 
 from PySide2 import QtWidgets
-from PySide2.QtWidgets import QDialog, QVBoxLayout, QDialogButtonBox, QSizePolicy
 
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedListType, TaggedDict, TaggedVariantDictType
-from pcot.ui.taggedaggregates import AggregateEditorWidget
-
+from pcot.ui.taggedaggregates import AggregateEditorDialog
 
 DUMMY = TaggedDictType(
     aa=("Test string", Maybe(str), "teststringdefault"),
@@ -76,42 +74,10 @@ TESTCONFIG = TaggedDictType(
 testconfig = TaggedDict(TESTCONFIG)
 
 
-
-
-class ConfigDialog(QDialog):
-    """
-    A dialog wrapper around ConfigWidget.
-    """
-    def __init__(self, d, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Settings")
-
-        layout = QVBoxLayout(self)
-
-        # Embed the widget
-        self.widget = AggregateEditorWidget(d, self)
-        layout.addWidget(self.widget)
-
-        # OK/Cancel buttons
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
-
-        self._data = None
-
-    def accept(self):
-        self._data = self.widget.data()
-        super().accept()
-
-    def data(self):
-        return self._data
-
-
 def runConfigUI():
     """This is the function that runs the configuration UI on the main config TaggedDict"""
     import pcot
-    dialog = ConfigDialog(pcot.config.data)
+    dialog = AggregateEditorDialog(pcot.config.data)
     dialog.exec_()  # it's modal
     if dialog.data():
         pcot.ui.log("Setting changes accepted")
@@ -137,7 +103,7 @@ def runtest():
 
     while True:
         import yaml
-        dialog = ConfigDialog(config)
+        dialog = AggregateEditorDialog(config)
         dialog.exec_()
         if dialog.data():
             print("Accepted")
