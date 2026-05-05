@@ -333,7 +333,9 @@ class DictEditor(Editor):
 
 
 class WrapperWidget(QtWidgets.QWidget):
-    """Widget that acts as a wrapper around another which can be replaced"""
+    """Widget that acts as a wrapper around another which can be replaced. This is used
+    in the VariantDictEditor when the internal dict we're editing gets switched out for
+    another with different fields."""
     def __init__(self):
         super().__init__()
         self.layout = QtWidgets.QVBoxLayout(self)
@@ -408,14 +410,14 @@ class VariantEditor(Editor):
         new_type_name = self.getTypeNameForVariantDict()
         if new_type_name != self.current_type_name:
             print(f"Type changed to {new_type_name}")
-            # stash the variant so we can go back to it, but remember reset its discriminator - the bloody editor will have
+            # stash the variant so we can go back to it, but remember reset its discriminator - the editor will have
             # just changed it!
             child = self.variant.get()
             child[self.discriminator_field] = self.current_type_name
             self.saved_dicts[self.current_type_name] = child
-            # At the moment, the TaggedVariantDict doesn't notice that the discriminator has changed. We need to force it.
             self.current_type_name = new_type_name
-            # otherwise go back to an old dict if we have one (we'll automatically pick up the type from the discriminator)
+            # At the moment, the TaggedVariantDict doesn't notice that the discriminator has changed. We need to force it.
+            # We go back to an old dict if we have one (we'll automatically pick up the type from the discriminator)
             # or create completely fresh data otherwise
             if new_type_name in self.saved_dicts:
                 self.variant.set(self.saved_dicts[new_type_name])
@@ -428,6 +430,8 @@ class VariantEditor(Editor):
 
 
 def createEditor(parent, tag: Tag, aggregate:TaggedList|TaggedDict, key_or_index:int|str, handler):
+    """This is called from layoutDict in AggregateEditorWidget to create an editor for a given field
+    inside a tagged aggregate. It will recurse if you happen to create a list or dict editor."""
     tp = tag.type
     if isinstance(tp, Maybe):
         # if this is a nullable, we have to wrap in an editor which will handle that.

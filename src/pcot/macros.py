@@ -407,7 +407,7 @@ class XFormMacro(XFormType):
         return hdr+"This is a macro - to add help, create a comment node in the prototype and start the text with 'DOC '"
 
 class TabMacro(Tab):
-    """this is the UI for macros, and it should probably not be here."""
+    """this is the UI for macro instances, and it should probably not be here."""
     def __init__(self, node: XFormMacro, w):
         super().__init__(w, node, 'tabmacro.ui')
         self.w.openProto.clicked.connect(self.openProto)

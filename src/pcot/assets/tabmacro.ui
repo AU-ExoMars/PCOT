@@ -33,8 +33,8 @@
         <height>16777215</height>
        </size>
       </property>
-      <layout class="QGridLayout" name="gridLayout_2">
-       <item row="0" column="0" colspan="2">
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
         <widget class="QPushButton" name="openProto">
          <property name="text">
           <string>Open Prototype</string>
