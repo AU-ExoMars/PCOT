@@ -200,8 +200,8 @@ class MainUI(ui.tabs.DockableTabWindow):
             b = QtWidgets.QPushButton("Add output")
             b.pressed.connect(self.addMacroOutput)
             macro_layout.addWidget(b, 0, 1)
-            b = QtWidgets.QPushButton("Parameters")
-            b.pressed.connect(self.editMacroParameters)
+            b = QtWidgets.QPushButton("Add parameter")
+            b.pressed.connect(self.addMacroParam)
             macro_layout.addWidget(b, 1, 0)
             macro_layout.addWidget(b, 1, 0)
             b = QtWidgets.QPushButton("Rename macro")
@@ -687,20 +687,15 @@ class MainUI(ui.tabs.DockableTabWindow):
         assert (self.macroPrototype is not None)
         self.addMacroConnector('out')
 
-    # def addMacroParam(self):
-    #     assert (self.isMacro())
-    #     assert (self.macroPrototype is not None)
-    #     # we're going to walk all the nodes to find the first "paramN" we can use.
-    #     lst = [x.displayName for x in self.macroPrototype.graph.nodes if x.type.name=='param']
-    #     pidx = 1
-    #     while f"param{pidx}" in lst:
-    #         pidx += 1
-    #     self.addMacroConnector('param',displayName=f"param{pidx}")
-
-    def editMacroParameters(self):
+    def addMacroParam(self):
         assert (self.isMacro())
         assert (self.macroPrototype is not None)
-        self.graph.proto.editParameters()
+        # we're going to walk all the nodes to find the first "paramN" we can use.
+        lst = [x.displayName for x in self.macroPrototype.graph.nodes if x.type.name=='param']
+        pidx = 1
+        while f"param{pidx}" in lst:
+            pidx += 1
+        self.addMacroConnector('param',displayName=f"param{pidx}")
 
 
     ## opens a dialog to rename a macro, called on "rename macro" UI

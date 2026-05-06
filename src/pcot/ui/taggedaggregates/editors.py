@@ -5,6 +5,7 @@ import dataclasses
 from functools import partial
 from pathlib import Path
 from typing import Tuple, Optional
+import logging
 
 from PySide2 import QtWidgets
 from PySide2.QtCore import Qt, QObject
@@ -13,6 +14,9 @@ from PySide2.QtWidgets import QListWidgetItem, QSizePolicy, QListWidget
 from pcot.parameters.taggedaggregates import Tag, TaggedList, TaggedDict, Maybe, TaggedListType, TaggedDictType, \
     TaggedVariantDictType, TaggedVariantDict
 from pcot.ui.filepathedit import FilePathEdit
+
+
+logger = logging.getLogger(__name__)
 
 
 class Editor(QObject):
@@ -67,7 +71,7 @@ class IntEditor(Editor):
 
     def changed(self, v):
         self.notifyBefore()
-        print(f"Data now changed to {v}")
+        logger.debug(f"Data now changed to {v}")
         self.aggregate[self.key_or_index] = v
         self.notifyAfter()
 
@@ -86,7 +90,7 @@ class FloatEditor(Editor):
 
     def changed(self, v):
         self.notifyBefore()
-        print(f"Data now changed to {v}")
+        logger.debug(f"Data now changed to {v}")
         self.aggregate[self.key_or_index] = v
         self.notifyAfter()
 
@@ -343,7 +347,6 @@ class WrapperWidget(QtWidgets.QWidget):
         self.setLayout(self.layout)
         self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.widget = None
-        print("Created OK")
 
     def setWidget(self, new_widget):
         if self.widget:
@@ -354,7 +357,6 @@ class WrapperWidget(QtWidgets.QWidget):
 
     def sizeHint(self):
         if self.widget:
-            print(self.widget.sizeHint())
             return self.widget.sizeHint()
         else:
             return super().sizeHint()
@@ -409,7 +411,7 @@ class VariantEditor(Editor):
     def onPostChange(self, editor):
         new_type_name = self.getTypeNameForVariantDict()
         if new_type_name != self.current_type_name:
-            print(f"Type changed to {new_type_name}")
+            logger.debug(f"Type changed to {new_type_name}")
             # stash the variant so we can go back to it, but remember reset its discriminator - the editor will have
             # just changed it!
             child = self.variant.get()

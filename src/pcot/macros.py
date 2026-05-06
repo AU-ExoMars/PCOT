@@ -10,16 +10,18 @@ from pcot.datum import Datum
 from pcot.imagecube import ChannelMapping
 from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType, TaggedVariantDictType
 from pcot.ui.tabs import Tab
-from pcot.ui.taggedaggregates import AggregateEditorDialog
+from pcot.ui.taggedaggregates import AggregateEditorDialog, AggregateEditorWidget
 from pcot.utils import deb
 from pcot.xform import XFormType, XFormGraph
 
 logger = logging.getLogger(__name__)
 
-# this is the TaggedDictType which defines the parameters of a macro
+# this is the TaggedDictType which defines a macro parameter (i.e. the XMacroParam node).
+# Because the AggregateEditorWidget can only really handle tagged dicts, we need this to be a TD at the top
+# level. This level gets hidden in the editor - it's an ugly hack.
 
 FLOATPARAMTYPE = TaggedDictType(
-    type=("type",str,"float",["float","int"]),
+    ptype=("type",str,"float",["float","int"]),
     name=("name",str,"new"),
     desc=("description",str,""),
     min=("min",float,0),
@@ -27,23 +29,21 @@ FLOATPARAMTYPE = TaggedDictType(
 )
 
 INTPARAMTYPE = TaggedDictType(
-    type=("type",str,"int",["float","int"]),
+    ptype=("type",str,"int",["float","int"]),
     name=("name",str,"new"),
     desc=("description",str,""),
     min=("min",int,0),
     max=("max",int,10),
 )
 
-PARAMETERTYPE = TaggedVariantDictType(
-    "type", {
+PARAMETERTYPE = TaggedDictType(     # see comment above for why the variant is wrapped like this.
+    variant=("variant", TaggedVariantDictType(
+    "ptype",
+    {
         "float": FLOATPARAMTYPE,
         "int": INTPARAMTYPE,
-    }, default_type_name="float"
-)
-
-MACROPARAMSTYPE = TaggedDictType(
-    parameters=("parameters", TaggedListType(PARAMETERTYPE,0))
-)
+    },
+    default_type_name="float"),None))
 
 
 class MacroInstance:
@@ -150,14 +150,34 @@ class XFormMacroIn(XFormMacroConnector):
 
 
 @xform.xformtype
+class XFormMacroOut(XFormMacroConnector):
+    """The macro output connector (used inside macro prototypes)"""
+    def __init__(self):
+        super().__init__("out")
+        # does not appear until specified by the user
+        self.addInputConnector("", Datum.VARIANT)
+        self.params = TaggedDictType() # no params
+
+    def perform(self, node):
+        """perform stores its input in its data field, ready for XFormMacro.perform() to read it"""
+        if node.getInputType(0) == Datum.VARIANT:
+            raise xform.XFormException('TYPE', 'input type of macro output node must be specified')
+        node.datum = node.getInput(0)
+        logger.debug(f"DUMP OF OUTCONNECTOR {node.name}, {node}")
+        if logger.isEnabledFor(logging.DEBUG):
+            node.dump()
+        logger.debug(f"CONNECTOR OUTPUT {node.datum}")
+
+
+@xform.xformtype
 class XFormMacroParam(XFormMacroConnector):
     """A parameter for a macro; or rather a connector for one. The displayName of the node is the name of the parameter
     and should be set by the creating method"""
     def __init__(self):
         super().__init__("param")
         self.addOutputConnector("", Datum.VARIANT)
-        self.params = TaggedDictType()  # no parameters
-        self.autoserialise = ()     # we don't have an index, unlike the other connectors
+        self.params = PARAMETERTYPE
+        self.autoserialise = tuple()    # otherwise we autoserialise idx, and we don't have one.
 
     def perform(self, node):
         """perform sets the output from data set in XFormMacro.perform()"""
@@ -171,27 +191,7 @@ class XFormMacroParam(XFormMacroConnector):
 
     def createTab(self, node, window):
         """create the edit tab"""
-        return TabConnector(node, window, parameter=True)
-
-
-@xform.xformtype
-class XFormMacroOut(XFormMacroConnector):
-    """The macro output connector (used inside macro prototypes)"""
-    def __init__(self):
-        super().__init__("out")
-        # does not appear until specified by the user
-        self.addInputConnector("", Datum.VARIANT)
-        self.params = TaggedDictType()  # no parameters
-
-    def perform(self, node):
-        """perform stores its input in its data field, ready for XFormMacro.perform() to read it"""
-        if node.getInputType(0) == Datum.VARIANT:
-            raise xform.XFormException('TYPE', 'input type of macro output node must be specified')
-        node.datum = node.getInput(0)
-        logger.debug(f"DUMP OF OUTCONNECTOR {node.name}, {node}")
-        if logger.isEnabledFor(logging.DEBUG):
-            node.dump()
-        logger.debug(f"CONNECTOR OUTPUT {node.datum}")
+        return TabMacroParam(node, window)
 
 
 class XFormMacro(XFormType):
@@ -439,31 +439,6 @@ class XFormMacro(XFormType):
                     return hdr+s[4:]
         return hdr+"This is a macro - to add help, create a comment node in the prototype and start the text with 'DOC '"
 
-    def editParameters(self):
-        test = MACROPARAMSTYPE.create()
-
-        def validate(d):
-            """This function validates the TaggedDict being edited by the dialog; it won't accept
-            until this returns None."""
-
-            # first we get the actual TaggedDicts inside the variants
-            d = [x.get() for x in d.parameters]
-            # now check the names are unique
-            names = [x.name for x in d]
-            counts = Counter(names)
-            dups = [i for i, count in counts.items() if count>1]
-            if len(dups) > 0:
-                return "There are duplicate parameter names: "+", ".join(dups)
-            # now check the individual entries
-            for e in d:
-                type = e["type"]  # can't use .type, that gets the type object! Dammit.
-                if type == "int" or type == "float":
-                    if e.max < e.min:
-                        return f"Parameter {e.name} has an invalid range (min={e.min}, max={e.max})"
-            return None     # all is well
-        dialog = AggregateEditorDialog(test, validate)
-        dialog.exec_()
-
 
 
 
@@ -489,12 +464,11 @@ class TabMacro(Tab):
 
 class TabConnector(Tab):
     """the UI for macro connectors"""
-    def __init__(self, node, w, parameter=False):
+    def __init__(self, node, w):
         super().__init__(w, node, 'tabconnector.ui')
 
-        # make the widget show only appropriate types
-        self.w.variant.setMode(mode='parameter' if parameter else 'connector')
-
+        # make the widget show only appropriate types. TODO -refactor away
+        self.w.variant.setMode(mode='connector')
         self.w.variant.changed.connect(self.variantChanged)
         self.nodeChanged()
 
@@ -507,4 +481,33 @@ class TabConnector(Tab):
 
     def variantChanged(self, t):
         self.node.conntype = t
+        self.node.proto.setConnectors()
+
+
+class TabMacroParam(Tab):
+    """the UI for macro parameters"""
+    def __init__(self, node, w, parameter=False):
+        super().__init__(w, node, 'tabmacroparam.ui')
+        # top level always has to be a TaggedDict, so we have one with only one key. Ugh.
+        self.editor = AggregateEditorWidget(node.params, suppress_single_key_label=True, internal_editor=True,
+                                            handler=self)
+        self.w.widget.layout().addWidget(self.editor)
+        self.nodeChanged()
+
+    def onPostChange(self, editor):
+        # this should mirror any change in the editor to the node data. Really, it needs to inform the
+        # entire macro prototype that the parameter set has changed.
+        print(self.node.proto)
+
+    def onNodeChanged(self):
+        # make the editor reflect the node
+        d = self.node.params.variant.get()  # get the "child" dict
+        # set the conntype accordingly
+        if d.ptype == "int" or d.ptype == "float":
+            # this should always happen, these are the only two types we support.
+            self.node.conntype = Datum.NUMBER
+            self.node.setError(None)
+        else:
+            self.node.conntype = Datum.VARIANT
+            self.node.setError(xform.XFormException('DATA', "bad param type"))
         self.node.proto.setConnectors()
