@@ -1,14 +1,14 @@
 """Code dealing with macros and macro prototypes"""
 import logging
 from collections import Counter
-from typing import List
+from typing import List, OrderedDict, Optional
 
 import pcot.ui.mainwindow
 import pcot.xform as xform
 from pcot import datum
 from pcot.datum import Datum
 from pcot.imagecube import ChannelMapping
-from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType, TaggedVariantDictType
+from pcot.parameters.taggedaggregates import TaggedDictType, TaggedListType, TaggedVariantDictType, TaggedDict
 from pcot.ui.tabs import Tab
 from pcot.ui.taggedaggregates import AggregateEditorDialog, AggregateEditorWidget
 from pcot.utils import deb
@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 
 FLOATPARAMTYPE = TaggedDictType(
     ptype=("type",str,"float",["float","int"]),
-    name=("name",str,"new"),
     desc=("description",str,""),
     min=("min",float,0),
     max=("max",float,10),
@@ -30,7 +29,6 @@ FLOATPARAMTYPE = TaggedDictType(
 
 INTPARAMTYPE = TaggedDictType(
     ptype=("type",str,"int",["float","int"]),
-    name=("name",str,"new"),
     desc=("description",str,""),
     min=("min",int,0),
     max=("max",int,10),
@@ -189,6 +187,9 @@ class XFormMacroParam(XFormMacroConnector):
             node.dump()
         logger.debug(f"PARAM  OUTPUT {node.datum}")
 
+    def onRemove(self, node):
+        node.proto.paramChanged(node)
+
     def createTab(self, node, window):
         """create the edit tab"""
         return TabMacroParam(node, window)
@@ -215,6 +216,11 @@ class XFormMacro(XFormType):
     ## Document
     doc: 'Document'
 
+    ## a TDT defining the parameters, regenerated when parameters are added, removed
+    # or change (not the values, though!). None if there aren't any. The actual
+    # parameter VALUES are stored in the instances!
+    parameter_definitions: Optional[TaggedDictType]
+
     def __init__(self, doc, name):
         """initialise, creating a new unique name if none provided."""
         # generate name if none provided
@@ -236,6 +242,8 @@ class XFormMacro(XFormType):
         # initialise the (empty) connectors and will also add us to
         # the palette
         self.setConnectors()
+        # initialise the parameter data
+        self.parameter_definitions = None
 
     def getInstances(self):
         return self.doc.getInstances(self)
@@ -253,6 +261,7 @@ class XFormMacro(XFormType):
         node.instance = MacroInstance(self, node)
         node.instance.copyProto()  # copy the graph from the prototype
         node.mapping = ChannelMapping()  # RGB channel mapping for image
+        node.parameters = None # no parameters!
         node.sinkimg = None
 
     def setConnectors(self):
@@ -439,6 +448,60 @@ class XFormMacro(XFormType):
                     return hdr+s[4:]
         return hdr+"This is a macro - to add help, create a comment node in the prototype and start the text with 'DOC '"
 
+    def paramChanged(self, paramNode):
+        """A parameter has changed. We need to recreate the TDT defining the parameters from the parameter nodes."""
+        print("rebuilding params")
+        tdd_def = {}
+        # recreate the TDT for parameters from the TDs in the parameter nodes
+        for x in filter(lambda x: x.type.name == "param", self.graph.nodes):
+            d = x.params.variant.get()  # get the "child" dict defining the parameter
+            if d.ptype == "int":
+                item = (d.desc, int, d.min, [d.min,d.max])
+            elif d.ptype == "float":
+                item = (d.desc, float, d.min, [d.min,d.max])
+            else:
+                raise Exception(f"Unknown parameter type {d.ptype}")
+
+            tdd_def[x.displayName] = item
+        # ensure alphabetical order
+        tdd_def = dict(sorted(tdd_def.items()))
+        # and build the new TDD
+        self.parameter_definitions = TaggedDictType(**tdd_def)
+
+        # now the "fun" part - we need to update all the parameter VALUES
+        # to match the new TDD, inside each instance of the macro
+        for instance in self.getInstances():
+            # This needs to firstly remove any parameters from the TD
+            # that no longer exist in the TDT, then add parameters which
+            # are new. This is probably done most easily by creating an
+            # entirely new TD and copying items over that are present in the new
+            # TD from the old one (overwriting them). We check ranges and
+            # convert types too.
+            td = self.parameter_definitions.create()
+            # Now any new items will have been created, but we have to copy the old
+            # items in and attempt to correct their data. THIS CODE HEAVILY ASSUMES
+            # ALL PARAMS ARE NUMERIC.
+            if instance.parameters:
+                for k,v in instance.parameters.items():
+                    if k in td.keys():
+                        # this item exists in the new TD and its value
+                        # should be copied from the old.
+                        tag = td.tag(k)
+                        v = instance.parameters[k] # get he old val we need to check
+                        # check it's in bounds and clip if not (bounds may have changed)
+                        if isinstance(tag.valid_choices, tuple|list):
+                            mn, mx = tag.valid_choices
+                            v = min(max(v, mn), mx)
+                        # and convert type (which may also have changed)
+                        if tag.type == int:
+                            v = int(v)
+                        elif tag.type == float:
+                            v = float(v)
+                        # OK.
+                        td[k] = v
+                        print(td[k])
+            instance.parameters = td    # and replace the params.
+
 
 
 
@@ -497,7 +560,11 @@ class TabMacroParam(Tab):
     def onPostChange(self, editor):
         # this should mirror any change in the editor to the node data. Really, it needs to inform the
         # entire macro prototype that the parameter set has changed.
-        print(self.node.proto)
+        self.node.proto.paramChanged(self.node)
+        # we don't really need to call changed here - we only need to do that if the parameters
+        # have actually changed their values. That's actually quite hard to check for my little
+        # head at the moment.
+        self.changed()
 
     def onNodeChanged(self):
         # make the editor reflect the node

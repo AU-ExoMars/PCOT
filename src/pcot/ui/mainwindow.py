@@ -673,6 +673,8 @@ class MainUI(ui.tabs.DockableTabWindow):
         # the number of connectors will have changed.
         for inst in n.proto.getInstances():
             inst.graph.rebuildGraphics()
+        # tell the prototype that it has a new parameter
+        self.macroPrototype.paramChanged(n)
         return n
 
     ## add a macro in connector, only should be used on macro prototypes
