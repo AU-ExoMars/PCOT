@@ -2,12 +2,13 @@
 Editors for the config UI. These are widgets and tools to allow them to modify TaggedAggregate data.
 """
 import dataclasses
+import math
 from functools import partial
 from pathlib import Path
 from typing import Tuple, Optional
 import logging
 
-from PySide2 import QtWidgets
+from PySide2 import QtWidgets, QtGui
 from PySide2.QtCore import Qt, QObject
 from PySide2.QtWidgets import QListWidgetItem, QSizePolicy, QListWidget
 
@@ -30,7 +31,7 @@ class Editor(QObject):
         super().__init__()
         self.aggregate = aggregate
         self.key_or_index = key_or_index
-        self.label=tag.description
+        self.label=tag.description if len(tag.description)>0 else key_or_index
         self.handler = handler    # we notify this object BEFORE and AFTER we make a change!
         self.widget = None
 
@@ -57,41 +58,40 @@ class TextEditor(Editor):
         self.notifyAfter()
 
 
-class IntEditor(Editor):
-    def __init__(self, tag, container:TaggedList|TaggedDict, key_or_index:int|str, range:Optional[Tuple[int,int]], handler):
+class NumericEditor(Editor):
+    def __init__(self, tag, container:TaggedList|TaggedDict, key_or_index:int|str, range:Optional[Tuple[int,int]], handler,
+                 isfloat:bool):
         super().__init__(tag, container, key_or_index, handler)
-        self.widget = QtWidgets.QSpinBox()
-        if not range:
-            range = (0,99)  # this is the default range for a qspinbox, but we set it explicitly anyway
-        self.label = f"{self.label} ({range[0]}..{range[1]})"
-        self.widget.setRange(*range)
-        if container[key_or_index] is not None:
-            self.widget.setValue(container[key_or_index])
-        self.widget.valueChanged.connect(lambda v: self.changed(v))
+        self.hasRange = range is not None
+        self.isfloat = isfloat
+        if self.hasRange:
+            self.widget = QtWidgets.QDoubleSpinBox() if isfloat else QtWidgets.QSpinBox()
+            self.widget.setRange(*range)
+            rng = range[1]-range[0]
+            # dynamic range calculator for floats
+            if rng<=0 or not isfloat:
+                step = 1
+            else:
+                exp = math.floor(math.log10(rng) - 2)
+                step = 10 ** exp
+
+            self.widget.setSingleStep(step)
+            self.label = f"{self.label} ({range[0]}..{range[1]})"
+            if container[key_or_index] is not None:
+                self.widget.setValue(container[key_or_index])
+            self.widget.valueChanged.connect(lambda v: self.changed(v))
+        else:
+            self.widget = QtWidgets.QLineEdit()
+            self.widget.setValidator(QtGui.QDoubleValidator() if isfloat else QtGui.QIntValidator())
+            self.label = f"{self.label}"
+            if container[key_or_index] is not None:
+                self.widget.setText(str(container[key_or_index]))
+            self.widget.textChanged.connect(lambda v: self.changed(v))
 
     def changed(self, v):
         self.notifyBefore()
         logger.debug(f"Data now changed to {v}")
-        self.aggregate[self.key_or_index] = v
-        self.notifyAfter()
-
-
-class FloatEditor(Editor):
-    def __init__(self, tag, container:TaggedList|TaggedDict, key_or_index:int|str, range:Optional[Tuple[int,int]], handler):
-        super().__init__(tag, container, key_or_index, handler)
-        self.widget = QtWidgets.QDoubleSpinBox()
-        if not range:
-            range = (-10,10)  # this is the default range for a qspinbox, but we set it explicitly anyway
-        self.label = f"{self.label} ({range[0]}..{range[1]})"
-        self.widget.setRange(*range)
-        if container[key_or_index] is not None:
-            self.widget.setValue(container[key_or_index])
-        self.widget.valueChanged.connect(lambda v: self.changed(v))
-
-    def changed(self, v):
-        self.notifyBefore()
-        logger.debug(f"Data now changed to {v}")
-        self.aggregate[self.key_or_index] = v
+        self.aggregate[self.key_or_index] = float(v) if self.isfloat else int(v)
         self.notifyAfter()
 
 
@@ -458,9 +458,9 @@ def createEditor(parent, tag: Tag, aggregate:TaggedList|TaggedDict, key_or_index
         else:
             return TextEditor(tag, aggregate, key_or_index, handler)
     elif tp == int:
-        return IntEditor(tag, aggregate, key_or_index, tag.valid_choices, handler)
+        return NumericEditor(tag, aggregate, key_or_index, tag.valid_choices, handler, False)
     elif tp == float:
-        return FloatEditor(tag, aggregate, key_or_index, tag.valid_choices, handler)
+        return NumericEditor(tag, aggregate, key_or_index, tag.valid_choices, handler, True)
     elif tp == bool:
         return BoolEditor(tag, aggregate, key_or_index, handler)
     elif tp == Path:

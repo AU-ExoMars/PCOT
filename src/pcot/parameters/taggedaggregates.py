@@ -541,6 +541,9 @@ class TaggedDict(TaggedAggregate):
     def items(self):
         return self._values.items()
 
+    def as_dict(self):
+        return dict(self._values)
+
     def serialise(self, forceUnordered=False):
         """Serialise the structure rooted here into a JSON-serialisable structure. We don't need to record what the
         types are, because that information will be stored in the type object when we deserialise.

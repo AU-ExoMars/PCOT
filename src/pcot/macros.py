@@ -3,6 +3,8 @@ import logging
 from collections import Counter
 from typing import List, OrderedDict, Optional
 
+from PySide2.QtWidgets import QVBoxLayout
+
 import pcot.ui.mainwindow
 import pcot.xform as xform
 from pcot import datum
@@ -177,15 +179,19 @@ class XFormMacroParam(XFormMacroConnector):
         self.params = PARAMETERTYPE
         self.autoserialise = tuple()    # otherwise we autoserialise idx, and we don't have one.
 
+    def init(self, node):
+        # the initial value is just 0.0
+        super().init(node)
+        print(f"NODE INIT {node}")
+        node.datum = Datum.k(0)
+
     def perform(self, node):
-        """perform sets the output from data set in XFormMacro.perform()"""
-        if node.getOutputType(0) == Datum.VARIANT:
-            raise xform.XFormException('TYPE', 'output type of macro input node must be specified')
+        """perform sets the output to the value stored in the parameter, which is done in the macro's perform."""
         node.setOutput(0, node.datum)
         logger.debug(f"DUMP OF PARAMCONNECTOR {node.name}, {node}")
         if logger.isEnabledFor(logging.DEBUG):
             node.dump()
-        logger.debug(f"PARAM  OUTPUT {node.datum}")
+        logger.info(f"PARAM OUTPUT for {node} - {node.datum.get(Datum.NUMBER).n}")
 
     def onRemove(self, node):
         node.proto.paramChanged(node)
@@ -219,10 +225,12 @@ class XFormMacro(XFormType):
     ## a TDT defining the parameters, regenerated when parameters are added, removed
     # or change (not the values, though!). None if there aren't any. The actual
     # parameter VALUES are stored in the instances!
-    parameter_definitions: Optional[TaggedDictType]
+    parameter_definitions: TaggedDictType
 
-    def __init__(self, doc, name):
-        """initialise, creating a new unique name if none provided."""
+    def __init__(self, doc, name=None, data=None):
+        """initialise, creating a new unique name if none provided. Will also deserialise a
+        prototype graph and parameter definitions if serialised data is required (used when
+        deserialising a document)"""
         # generate name if none provided
         if name is None:
             name = doc.getUniqueUntitledMacroName()
@@ -242,8 +250,16 @@ class XFormMacro(XFormType):
         # initialise the (empty) connectors and will also add us to
         # the palette
         self.setConnectors()
+
         # initialise the parameter data
-        self.parameter_definitions = None
+        self.parameter_definitions = TaggedDictType()
+
+        if data:
+            # if we are deserialising, do that for the graph
+            self.graph.deserialise(data, True)
+            # then iterate over the graph to find the parameters and build
+            # the parameter_definitions.
+            self.paramChanged(None)
 
     def getInstances(self):
         return self.doc.getInstances(self)
@@ -261,7 +277,7 @@ class XFormMacro(XFormType):
         node.instance = MacroInstance(self, node)
         node.instance.copyProto()  # copy the graph from the prototype
         node.mapping = ChannelMapping()  # RGB channel mapping for image
-        node.parameters = None # no parameters!
+        node.parameters = self.parameter_definitions.create()  # create the params
         node.sinkimg = None
 
     def setConnectors(self):
@@ -346,7 +362,9 @@ class XFormMacro(XFormType):
             name = node.instance.proto.name
         else:
             name = None
-        return {'proto': name}
+        return {'proto': name,
+                'parameters': node.parameters.serialise(forceUnordered=True)
+                }
 
     def deserialise(self, node, d):
         """deserialise an individual macro instance node by dereferencing the macro
@@ -362,6 +380,11 @@ class XFormMacro(XFormType):
                 MacroInstance(doc.macros[name], node)
             else:
                 pcot.ui.error("Cannot find macro {} in internal dict".format(name))
+        if 'parameters' in d:
+            # this should work, because the macro's parameter_definitions will have been
+            # created when the macro is loaded.
+            node.parameters = self.parameter_definitions.deserialise(d['parameters'])
+
 
     @staticmethod
     def deleteMacro(xformtype):
@@ -406,6 +429,14 @@ class XFormMacro(XFormType):
                 logger.debug(f"Looking for {connName}")
                 logger.debug(f"Keys are {nodedict.keys()}")
                 pcot.ui.error("cannot find input node in instance graph of macro")
+
+        # 2 - copy the parameter values into the parameter nodes
+        for n in node.instance.graph.nodes:
+            if n.type.name == "param":
+                print(f"node param in XFormMacro perform; {n} {n.displayName} = {node.parameters[n.displayName]}")
+                n.datum = Datum.k(node.parameters[n.displayName])
+                print(f"datum is; {n.datum}")
+
 
         # 3 - run the macro. You might think you could do this by just running the inputs
         # as you set them (recursively running their children) but that would omit non-input
@@ -462,6 +493,7 @@ class XFormMacro(XFormType):
             else:
                 raise Exception(f"Unknown parameter type {d.ptype}")
 
+            print(f"  Found parameter node {x}, item is {item}")
             tdd_def[x.displayName] = item
         # ensure alphabetical order
         tdd_def = dict(sorted(tdd_def.items()))
@@ -471,6 +503,7 @@ class XFormMacro(XFormType):
         # now the "fun" part - we need to update all the parameter VALUES
         # to match the new TDD, inside each instance of the macro
         for instance in self.getInstances():
+            print(f"  Found instance node {instance}")
             # This needs to firstly remove any parameters from the TD
             # that no longer exist in the TDT, then add parameters which
             # are new. This is probably done most easily by creating an
@@ -501,6 +534,12 @@ class XFormMacro(XFormType):
                         td[k] = v
                         print(td[k])
             instance.parameters = td    # and replace the params.
+            print(f" instance parameters are {td.as_dict()}")
+
+            # update all the open tabs for this instance
+            for tab in instance.tabs:
+                if isinstance(tab, TabMacro):
+                    tab.updateParameters()
 
 
 
@@ -510,8 +549,28 @@ class TabMacro(Tab):
     def __init__(self, node: XFormMacro, w):
         super().__init__(w, node, 'tabmacro.ui')
         self.w.openProto.clicked.connect(self.openProto)
+        # create editor for the instance's parameter values
+        self.paramLayout = QVBoxLayout()
+        self.w.paramBox.setLayout(self.paramLayout)
+        self.updateParameters()
         self.w.canvas.setNode(node)
         self.nodeChanged()
+
+    def updateParameters(self):
+        """Update the parameter widget for this instance or create a new one."""
+        if old := self.paramLayout.takeAt(0):
+            old.widget().deleteLater()
+        paramEditor = AggregateEditorWidget(self.node.parameters, internal_editor=True, handler=self)
+        self.paramLayout.addWidget(paramEditor)
+
+
+    def onPreChange(self,editor):
+        pass
+
+    def onPostChange(self,editor):
+        print(f"a param has changed value {self.node.parameters.as_dict()}")
+        self.changed()
+
 
     def openProto(self):
         if self.node.instance is not None:
