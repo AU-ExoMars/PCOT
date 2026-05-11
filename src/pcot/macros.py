@@ -27,6 +27,7 @@ FLOATPARAMTYPE = TaggedDictType(
     desc=("description",str,""),
     min=("min",float,0),
     max=("max",float,10),
+    default=("default",float, 0),
 )
 
 INTPARAMTYPE = TaggedDictType(
@@ -34,6 +35,7 @@ INTPARAMTYPE = TaggedDictType(
     desc=("description",str,""),
     min=("min",int,0),
     max=("max",int,10),
+    default=("default",int,0),
 )
 
 PARAMETERTYPE = TaggedDictType(     # see comment above for why the variant is wrapped like this.
@@ -487,9 +489,9 @@ class XFormMacro(XFormType):
         for x in filter(lambda x: x.type.name == "param", self.graph.nodes):
             d = x.params.variant.get()  # get the "child" dict defining the parameter
             if d.ptype == "int":
-                item = (d.desc, int, d.min, [d.min,d.max])
+                item = (d.desc, int, d.default, [d.min,d.max])
             elif d.ptype == "float":
-                item = (d.desc, float, d.min, [d.min,d.max])
+                item = (d.desc, float, d.default, [d.min,d.max])
             else:
                 raise Exception(f"Unknown parameter type {d.ptype}")
 
