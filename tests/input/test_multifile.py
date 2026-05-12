@@ -1,5 +1,6 @@
 """Multifile input tests"""
 import pcot
+from pcot.dataformats.raw import RawLoader
 from pcot.datum import Datum
 from pcot.document import Document
 from fixtures import *
@@ -171,3 +172,60 @@ def test_multifile_load_with_cwl(globaldatadir):
         assert f.position == pos
         assert f.transmission == trans
 
+
+def test_multifile_raw(globaldatadir):
+    pcot.setup()
+    doc = Document()
+
+
+    names=["240220_171254_Training Model-R02_+237_265ms.bin",
+        "240220_171315_Training Model-R03_+239_212ms.bin",
+        "240220_171234_Training Model-R01_+237_645ms.bin"]
+
+    loader = RawLoader(format=RawLoader.UINT16,
+                    width=1024, height=1024,
+                    bigendian=True,
+                    offset=48,
+                    rot=90)
+
+    assert doc.setInputMulti(0, str(globaldatadir / "multi/raw"),
+                             names,
+                             camera="TRAINING_GEOLOGY",
+                             rawloader=loader,
+                             bitdepth=10,
+                             filterpat=r'.*Model-(?P<lens>L|R)(?P<n>[0-9][0-9]).*') is None
+
+    node = doc.graph.create("input 0")
+    doc.run()
+    img = node.getOutput(0, Datum.IMG)
+
+    for sourceSet, pos, name, cwl, fwhm, trans in zip(img.sources,                  # TRAINING_GEOL filter set:
+                                                          ('R02', 'R03', 'R01'),        # positions
+                                                          ('G03', 'G04', 'G01'),      # names
+                                                          (530, 570, 440),              # cwls
+                                                          (15, 12, 25),                # fwhms
+                                                          (0.957, 0.989, 0.987),        # transmission ratios
+                                                          ):
+        #  First, make sure each band has a source set of a single source
+        assert len(sourceSet) == 1
+        s = sourceSet.getOnlyItem()
+        f = s.getFilter()
+        # again, the filters will be "I have no idea"
+        assert f.cwl == cwl
+        assert f.fwhm == fwhm
+        assert f.name == name
+        assert f.position == pos
+        assert f.transmission == trans
+
+        # check a pixel we know is "bright" (although
+        bands = img[768,662]
+        assert bands[0].n > 0.92
+        assert bands[1].n > 0.78
+        assert bands[2].n > 0.92
+
+        assert bands[0].u == 0
+        assert bands[0].dq == dq.NOUNCERTAINTY
+        assert bands[1].u == 0
+        assert bands[1].dq == dq.NOUNCERTAINTY
+        assert bands[2].u == 0
+        assert bands[2].dq == dq.NOUNCERTAINTY

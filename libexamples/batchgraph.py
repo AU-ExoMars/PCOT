@@ -23,13 +23,13 @@ for file in ("1",):
         raise Exception(f"{rv}")
 
     # run the graph by telling the document it has changed
-    doc.changed()
+    doc.run()
 
     # get the "sink" node
     outNode = doc.getNodeByName("sink")
     
     # get its output
-    img = outNode.out.get(Datum.IMG)
+    img = outNode.data.get(Datum.IMG)
     print(f"Image size: {img.w} x {img.h} x {img.channels}");
  
     # write to new ENVI, e.g. 1b.hdr

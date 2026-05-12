@@ -243,11 +243,16 @@ class Document:
         """set graph's input to RGB"""
         return self.setInputData(inputidx, inputs.Input.RGB, lambda method: method.setFileName(fname))
 
-    def setInputMulti(self, inputidx, directory, fnames, filterpat=None, camname=None):
+    def setInputMulti(self, inputidx, directory, fnames, filterpat=None, camera=None, bitdepth=None, rawloader=None):
         """set graph's input to multiple files"""
-        camname = camname or pcot.config.data.default_camera
-        return self.setInputData(inputidx, inputs.Input.MULTIFILE,
-                                 lambda method: method.setFileNames(directory, fnames, filterpat, camname))
+        camera = camera or pcot.config.data.default_camera
+
+        def fn(method):
+            method.setFileNames(directory, fnames, filterpat, camera, bitdepth)
+            method.setRawLoader(rawloader)
+
+
+        return self.setInputData(inputidx, inputs.Input.MULTIFILE, fn)
 
     def setInputPDS4(self, inputidx, products):
         """Set a PDS4 input to a set of proctools DataProducts. Must be able to combine them into a single datum

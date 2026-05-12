@@ -20,7 +20,7 @@ doc.setInputMulti(inputidx=0, directory="C:/Users/jimfi/Downloads/Agt_stromatoli
         "260213_134419_Training Model-R03_+257_02.301s.png",
         "260213_134710_Training Model-R04_+259_02.001s.png",
         "260213_135137_Training Model-R05_+260_01.301s.png"],
-       filterpat=r".*Model-(?P<lens>L|R)(?P<n>[0-9][0-9]).*",camname="TRAINING_GEOLOGY")
+       filterpat=r".*Model-(?P<lens>L|R)(?P<n>[0-9][0-9]).*",camera="TRAINING_GEOLOGY")
 
 # run the document!
 doc.run()

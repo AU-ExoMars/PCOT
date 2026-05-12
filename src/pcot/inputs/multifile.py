@@ -75,6 +75,10 @@ class MultifileInputMethod(InputMethod):
             self.filterre = None
             logger.error("Cannot compile RE!!!!")
 
+    def setRawLoader(self, loader):
+        if loader:
+            self.rawLoader = loader
+
     def invalidate(self):
         """Invalidates the internal cache for this method as well as clearing the output"""
         self.cachedFiles = {}
@@ -99,15 +103,16 @@ class MultifileInputMethod(InputMethod):
         return "Multifile"
 
     # used from external code. Filterpat == none means leave unchanged.
-    def setFileNames(self, directory, fnames, filterpat=None, camera=None) -> InputMethod:
+    def setFileNames(self, directory, fnames, filterpat=None, camera=None, bitdepth=None) -> InputMethod:
         """This is used in scripts to set the input method to a read a set of files. It also
         takes a camera name (e.g. PANCAM) and a filter pattern. The filter pattern is a regular
         expression that is used to extract the filter name from the filename. See the class documentation
-        for more information."""
+        for more information. We also accept bitdepth - None means the full depth is used."""
 
         self.dir = directory
         self.files = fnames
         self.camera = camera
+        self.bitdepth = bitdepth
         if filterpat is not None:
             self.filterpat = filterpat
         self.mapping = ChannelMapping()
