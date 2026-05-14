@@ -82,6 +82,12 @@ def test_node_output_none():
                     assert out[0] == 'NO INPUT', f"Errortest should 'NO INPUT' in list when not connected"
                 except BadTypeException:
                     pytest.fail("Stringtests should return a list")
+            elif x == 'param':
+                try:
+                    out = node.getOutput(0, Datum.NUMBER)
+                    assert out.n == 0, "param should return 0 when not connected"
+                except BadTypeException:
+                    pytest.fail("param should return a number")
             else:
                 assert out is None, f"XForm {x} should output None when not connected"
 

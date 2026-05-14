@@ -15,15 +15,17 @@ from PySide2.QtCore import Qt
 from PySide2.QtGui import QTextCursor
 from PySide2.QtWidgets import QAction, QMessageBox, QDialog, QMenu, QApplication
 
-import pcot
-import pcot.assets
+#
+# Warning: these imports are VERY brittle. Changing the order often results in circular imports.
+#
+from pcot.ui import graphscene, graphview, uiloader
 import pcot.macros as macros
 import pcot.palette as palette
 import pcot.ui as ui
 import pcot.ui.namedialog as namedialog
 import pcot.ui.tabs as tabs
 import pcot.xform as xform
-from pcot.ui import graphscene, graphview, uiloader
+import pcot.assets
 from pcot.ui.help import HelpWindow
 from pcot.ui.importdialog import ImportDialog
 from pcot.utils import SignalBlocker
