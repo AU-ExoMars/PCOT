@@ -591,7 +591,7 @@ class TabConnector(Tab):
     def __init__(self, node, w):
         super().__init__(w, node, 'tabconnector.ui')
 
-        # make the widget show only appropriate types. TODO -refactor away
+        # make the widget show only appropriate types.
         self.w.variant.setMode(mode='connector')
         self.w.variant.changed.connect(self.variantChanged)
         self.nodeChanged()
