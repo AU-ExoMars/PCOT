@@ -21,20 +21,21 @@ logger = logging.getLogger(__name__)
 app = None
 
 def setup_qt_platform():
+    # only bother with this check on Linux.
+    if sys.platform.lower().startswith('linux'):
+        uid = os.getuid()
+        wayland_socket = f"/run/user/{uid}/wayland-0"
 
-    uid = os.getuid()
-    wayland_socket = f"/run/user/{uid}/wayland-0"
+        # No X11. Maybe headless, but need to check Wayland
+        if not os.environ.get("DISPLAY"):
+            if os.environ.get("WAYLAND_DISPLAY"):
+                # Wayland but no socket; that's no good.
+                if not os.path.exists(wayland_socket):
+                    os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
-    # No X11. Maybe headless, but need to check Wayland
-    if not os.environ.get("DISPLAY"):
-        if os.environ.get("WAYLAND_DISPLAY"):
-            # Wayland but no socket; that's no good.
-            if not os.path.exists(wayland_socket):
+            # No X11 and no Wayland - definitely headless
+            if not os.environ.get("WAYLAND_DISPLAY"):
                 os.environ["QT_QPA_PLATFORM"] = "offscreen"
-
-        # No X11 and no Wayland - definitely headless
-        if not os.environ.get("WAYLAND_DISPLAY"):
-            os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 def checkApp():
     """Makes sure an app exists - we can't run certain code without one, and we often

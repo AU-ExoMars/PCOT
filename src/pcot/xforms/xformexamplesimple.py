@@ -3,17 +3,10 @@ This is an example XFormType (node) class. This one uses the TabAggregate to edi
 is an easy way of editing a node with simple TaggedDict parameters.
 """
 
-import numpy as np
-from PySide2.QtWidgets import QWidget, QGridLayout, QLabel, QSlider, QDoubleSpinBox, QComboBox, QSizePolicy
-
-import pcot.ui.tabs
 from pcot.datum import Datum
 from pcot.imagecube import ImageCube
 from pcot.parameters.taggedaggregates import TaggedDictType
-from pcot.ui.canvas import Canvas
-from pcot.ui.taggedaggregates import AggregateEditorWidget
 from pcot.ui.taggedaggregates.tab import TabAggregate
-from pcot.utils import SignalBlocker
 from pcot.xform import XFormType, xformtype, XForm, XFormException
 
 
