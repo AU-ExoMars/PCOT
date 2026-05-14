@@ -2,16 +2,22 @@
 Editors for the config UI. These are widgets and tools to allow them to modify TaggedAggregate data.
 """
 import dataclasses
+import math
 from functools import partial
 from pathlib import Path
 from typing import Tuple, Optional
+import logging
 
-from PySide2 import QtWidgets
-from PySide2.QtCore import Qt, QObject, QModelIndex
-from PySide2.QtWidgets import QListWidgetItem, QSizePolicy, QStyledItemDelegate, QListWidget
+from PySide2 import QtWidgets, QtGui
+from PySide2.QtCore import Qt, QObject
+from PySide2.QtWidgets import QListWidgetItem, QSizePolicy, QListWidget
 
-from pcot.parameters.taggedaggregates import Tag, TaggedList, TaggedDict, Maybe, TaggedListType, TaggedDictType
+from pcot.parameters.taggedaggregates import Tag, TaggedList, TaggedDict, Maybe, TaggedListType, TaggedDictType, \
+    TaggedVariantDictType, TaggedVariantDict
 from pcot.ui.filepathedit import FilePathEdit
+
+
+logger = logging.getLogger(__name__)
 
 
 class Editor(QObject):
@@ -25,7 +31,7 @@ class Editor(QObject):
         super().__init__()
         self.aggregate = aggregate
         self.key_or_index = key_or_index
-        self.label=tag.description
+        self.label=tag.description if len(tag.description)>0 else key_or_index
         self.handler = handler    # we notify this object BEFORE and AFTER we make a change!
         self.widget = None
 
@@ -52,22 +58,40 @@ class TextEditor(Editor):
         self.notifyAfter()
 
 
-class IntEditor(Editor):
-    def __init__(self, tag, container:TaggedList|TaggedDict, key_or_index:int|str, range:Optional[Tuple[int,int]], handler):
+class NumericEditor(Editor):
+    def __init__(self, tag, container:TaggedList|TaggedDict, key_or_index:int|str, range:Optional[Tuple[int,int]], handler,
+                 isfloat:bool):
         super().__init__(tag, container, key_or_index, handler)
-        self.widget = QtWidgets.QSpinBox()
-        if not range:
-            range = (0,99)  # this is the default range for a qspinbox, but we set it explicitly anyway
-        self.label = f"{self.label} ({range[0]}..{range[1]})"
-        self.widget.setRange(*range)
-        if container[key_or_index] is not None:
-            self.widget.setValue(container[key_or_index])
-        self.widget.valueChanged.connect(lambda v: self.changed(v))
+        self.hasRange = range is not None
+        self.isfloat = isfloat
+        if self.hasRange:
+            self.widget = QtWidgets.QDoubleSpinBox() if isfloat else QtWidgets.QSpinBox()
+            self.widget.setRange(*range)
+            rng = range[1]-range[0]
+            # dynamic range calculator for floats
+            if rng<=0 or not isfloat:
+                step = 1
+            else:
+                exp = math.floor(math.log10(rng) - 2)
+                step = 10 ** exp
+
+            self.widget.setSingleStep(step)
+            self.label = f"{self.label} ({range[0]}..{range[1]})"
+            if container[key_or_index] is not None:
+                self.widget.setValue(container[key_or_index])
+            self.widget.valueChanged.connect(lambda v: self.changed(v))
+        else:
+            self.widget = QtWidgets.QLineEdit()
+            self.widget.setValidator(QtGui.QDoubleValidator() if isfloat else QtGui.QIntValidator())
+            self.label = f"{self.label}"
+            if container[key_or_index] is not None:
+                self.widget.setText(str(container[key_or_index]))
+            self.widget.textChanged.connect(lambda v: self.changed(v))
 
     def changed(self, v):
         self.notifyBefore()
-        print(f"Data now changed to {v}")
-        self.aggregate[self.key_or_index] = v
+        logger.debug(f"Data now changed to {v}")
+        self.aggregate[self.key_or_index] = float(v) if self.isfloat else int(v)
         self.notifyAfter()
 
 
@@ -312,7 +336,104 @@ class DictEditor(Editor):
         self.widget = AggregateEditorWidget(aggregate[key_or_index], handler=handler, parent=parent, internal_editor=True)
 
 
+class WrapperWidget(QtWidgets.QWidget):
+    """Widget that acts as a wrapper around another which can be replaced. This is used
+    in the VariantDictEditor when the internal dict we're editing gets switched out for
+    another with different fields."""
+    def __init__(self):
+        super().__init__()
+        self.layout = QtWidgets.QVBoxLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(self.layout)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.widget = None
+
+    def setWidget(self, new_widget):
+        if self.widget:
+            self.layout.takeAt(0)
+            self.widget.deleteLater()
+        self.widget = new_widget
+        self.layout.addWidget(new_widget)
+
+    def sizeHint(self):
+        if self.widget:
+            return self.widget.sizeHint()
+        else:
+            return super().sizeHint()
+
+
+class VariantEditor(Editor):
+    """This is a weird one, because it's like a dict editor but it can be one of several different dicts.
+    There's a special field all the dicts share which say what kind of dict it is."""
+    def __init__(self, parent, tag, aggregate:TaggedList|TaggedDict, key_or_index:int|str, handler):
+        super().__init__(tag, aggregate, key_or_index, handler)
+        self.variant: TaggedVariantDict= aggregate[self.key_or_index]
+        self.parent = parent
+        self.handler = handler
+        self.current_type_name = None
+
+        self.type_object = self.variant.type
+        self.discriminator_field = self.type_object.discriminator_field
+
+        self.saved_dicts = {}
+
+        # we're just going to put a single widget in a box, and then switch it from time to time
+        self.widget = WrapperWidget()
+        self.currentEditorWidget = None
+        self.createDictEditor()
+
+    def createDictEditor(self):
+        """Create the appropriate kind of dict editor"""
+        from pcot.ui.taggedaggregates import AggregateEditorWidget
+        # get the child dict we want to edit
+        child = self.variant.get()
+        if child is None:
+            raise Exception("trying to edit an empty variant dict")
+
+        # we create the child widget here. Note that I'm using this as the change handler, and delegating to the actual
+        # handler (typically the dialog) so we can catch the discriminator changing.
+        self.currentEditorWidget = AggregateEditorWidget(child, handler=self, parent=self.parent, internal_editor=True)
+        self.widget.setWidget(self.currentEditorWidget)
+
+        # stash the type name
+        self.current_type_name = self.getTypeNameForVariantDict()
+        # and also stash this dict!
+        self.saved_dicts[self.current_type_name] = child
+
+    def getTypeNameForVariantDict(self):
+        d = self.variant.type.discriminator_field
+        return self.variant.get()[d]
+
+    def onPreChange(self, editor):
+        # intercept the pre-change message and then pass it on.
+        self.notifyBefore()
+
+    def onPostChange(self, editor):
+        new_type_name = self.getTypeNameForVariantDict()
+        if new_type_name != self.current_type_name:
+            logger.debug(f"Type changed to {new_type_name}")
+            # stash the variant so we can go back to it, but remember reset its discriminator - the editor will have
+            # just changed it!
+            child = self.variant.get()
+            child[self.discriminator_field] = self.current_type_name
+            self.saved_dicts[self.current_type_name] = child
+            self.current_type_name = new_type_name
+            # At the moment, the TaggedVariantDict doesn't notice that the discriminator has changed. We need to force it.
+            # We go back to an old dict if we have one (we'll automatically pick up the type from the discriminator)
+            # or create completely fresh data otherwise
+            if new_type_name in self.saved_dicts:
+                self.variant.set(self.saved_dicts[new_type_name])
+            else:
+                self.variant.force_create_child(new_type_name)
+            self.createDictEditor()
+        self.notifyAfter()
+
+
+
+
 def createEditor(parent, tag: Tag, aggregate:TaggedList|TaggedDict, key_or_index:int|str, handler):
+    """This is called from layoutDict in AggregateEditorWidget to create an editor for a given field
+    inside a tagged aggregate. It will recurse if you happen to create a list or dict editor."""
     tp = tag.type
     if isinstance(tp, Maybe):
         # if this is a nullable, we have to wrap in an editor which will handle that.
@@ -328,6 +449,8 @@ def createEditor(parent, tag: Tag, aggregate:TaggedList|TaggedDict, key_or_index
         return ListEditor(parent, tag, aggregate, key_or_index, handler)
     elif isinstance(tp, TaggedDictType):
         return DictEditor(parent, tag, aggregate, key_or_index, handler)
+    elif isinstance(tp, TaggedVariantDictType):
+        return VariantEditor(parent, tag, aggregate, key_or_index, handler)
 
     elif tp == str:
         if tag.valid_choices:
@@ -335,7 +458,9 @@ def createEditor(parent, tag: Tag, aggregate:TaggedList|TaggedDict, key_or_index
         else:
             return TextEditor(tag, aggregate, key_or_index, handler)
     elif tp == int:
-        return IntEditor(tag, aggregate, key_or_index, tag.valid_choices, handler)
+        return NumericEditor(tag, aggregate, key_or_index, tag.valid_choices, handler, False)
+    elif tp == float:
+        return NumericEditor(tag, aggregate, key_or_index, tag.valid_choices, handler, True)
     elif tp == bool:
         return BoolEditor(tag, aggregate, key_or_index, handler)
     elif tp == Path:

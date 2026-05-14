@@ -82,6 +82,13 @@ class GraphView(QtWidgets.QGraphicsView):
         # open the data stream and read the name
         stream = QtCore.QDataStream(bs)
         name = stream.readQString()
+
+        if name in self.window.doc.macros and self.window.isMacro():
+            from pcot.ui import error
+            error("Macro in macro not permitted")
+            return
+
+
         # now we need to make one of those and add it to the graph!
         node = self.window.palette.createNodeByName(name)
         # we have to fudge up a position for this, it will have been given a default position.

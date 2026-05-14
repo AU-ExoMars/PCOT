@@ -147,8 +147,7 @@ class Document:
         # deserialise macros before graph!
         if 'MACROS' in d:
             for k, v in d['MACROS'].items():
-                p = XFormMacro(self, k)  # will autoregister, so it ends up in self.macros and the palette!
-                p.graph.deserialise(v, True)
+                XFormMacro(self, k, data=v)  # will autoregister, so it ends up in self.macros and the palette!
 
         if 'FAVOURITES' in d:
             from pcot.xforms.favourite import Favourite

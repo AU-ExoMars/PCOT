@@ -18,6 +18,7 @@
 
         coll.end()
 """
+from typing import Dict
 
 from PySide2 import QtWidgets, QtCore
 from PySide2.QtCore import Qt
@@ -152,6 +153,9 @@ class CollapserSection(QtWidgets.QWidget):
 
 
 class Collapser(QtWidgets.QScrollArea):
+
+    sectionsByName: Dict[str, CollapserSection]
+
     def __init__(self, parent=None, animationDuration=200, lrmargins=2, topmargin=2, bottommargin=2):
         super().__init__(parent)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -183,9 +187,13 @@ class Collapser(QtWidgets.QScrollArea):
 
     def setSectionVisible(self, sec_name, visible):
         self.sectionsByName[sec_name].setVisible(visible)
+        self.sectionsByName[sec_name].resetContentHeight()
 
     def forceOpen(self, sec_name):
         self.sectionsByName[sec_name].forceOpen()
+
+    def forceClose(self, sec_name):
+        self.sectionsByName[sec_name].forceClose()
 
     def end(self):
         self.layout.addStretch(10)

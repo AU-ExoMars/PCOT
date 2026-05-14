@@ -10,20 +10,20 @@ from string import Template
 from typing import List, Optional, OrderedDict, ClassVar, Dict
 
 import markdown
-from PySide2 import QtWidgets, QtGui
+from PySide2 import QtWidgets
 from PySide2.QtCore import Qt
-from PySide2.QtGui import QTextCursor, QIcon
+from PySide2.QtGui import QTextCursor
 from PySide2.QtWidgets import QAction, QMessageBox, QDialog, QMenu, QApplication
 
 import pcot
-from pcot.ui import graphscene, graphview, uiloader
+import pcot.assets
 import pcot.macros as macros
 import pcot.palette as palette
 import pcot.ui as ui
 import pcot.ui.namedialog as namedialog
 import pcot.ui.tabs as tabs
 import pcot.xform as xform
-import pcot.assets
+from pcot.ui import graphscene, graphview, uiloader
 from pcot.ui.help import HelpWindow
 from pcot.ui.importdialog import ImportDialog
 from pcot.utils import SignalBlocker
@@ -188,15 +188,28 @@ class MainUI(ui.tabs.DockableTabWindow):
             self.capCombo.setVisible(False)
             self.caplabel.setVisible(False)
             # add some extra widgets
+
+            macro_box = QtWidgets.QGroupBox(parent=self)
+            macro_box.setTitle("Macro")
+            macro_layout = QtWidgets.QGridLayout(macro_box)
+
+
+
             b = QtWidgets.QPushButton("Add input")
             b.pressed.connect(self.addMacroInput)
-            self.extraCtrls.layout().addWidget(b, 0, 0)
+            macro_layout.addWidget(b, 0, 0)
             b = QtWidgets.QPushButton("Add output")
             b.pressed.connect(self.addMacroOutput)
-            self.extraCtrls.layout().addWidget(b, 0, 1)
+            macro_layout.addWidget(b, 0, 1)
+            b = QtWidgets.QPushButton("Add parameter")
+            b.pressed.connect(self.addMacroParam)
+            macro_layout.addWidget(b, 1, 0)
+            macro_layout.addWidget(b, 1, 0)
             b = QtWidgets.QPushButton("Rename macro")
             b.pressed.connect(self.renameMacro)
-            self.extraCtrls.layout().addWidget(b, 0, 2)
+            macro_layout.addWidget(b, 1, 1)
+
+            self.extraCtrls.layout().addWidget(macro_box, 0, 0, 1, 2)
 
             self.macroPrototype = macro
         else:
@@ -652,13 +665,15 @@ class MainUI(ui.tabs.DockableTabWindow):
         win = HelpWindow(self, tp=tp, node=node)
 
     ## add a macro connector, only should be used on macro prototypes   
-    def addMacroConnector(self, tp):
+    def addMacroConnector(self, tp, displayName=None):
         self.doc.mark()
         # create the node inside the prototype
         n = self.graph.create(tp)
         assert (self.isMacro())
         assert (self.macroPrototype is not None)
         n.proto = self.macroPrototype
+        if displayName:
+            n.displayName = displayName
         # reset the connectors
         n.proto.setConnectors()
         # rebuild the visual components inside the prototype
@@ -667,6 +682,9 @@ class MainUI(ui.tabs.DockableTabWindow):
         # the number of connectors will have changed.
         for inst in n.proto.getInstances():
             inst.graph.rebuildGraphics()
+        # tell the prototype that it has a new parameter
+        self.macroPrototype.paramChanged(n)
+        return n
 
     ## add a macro in connector, only should be used on macro prototypes   
     def addMacroInput(self):

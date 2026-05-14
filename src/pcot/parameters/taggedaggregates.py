@@ -335,7 +335,7 @@ class TaggedDictType(TaggedAggregateType):
             # if type is a TaggedAggregate the default has to be None
             if isinstance(v.type, TaggedAggregateType):
                 if v.deflt is not None:
-                    raise ValueError(f"Type {get_type_name(v.type)} is a TaggedAggregateType, so default must be None")
+                    raise ValueError(f"TaggedDictType entry {k} of type {get_type_name(v.type)} is a TaggedAggregateType, so default must be None")
             else:
                 # otherwise the default has to be of the correct type
                 try:
@@ -540,6 +540,9 @@ class TaggedDict(TaggedAggregate):
 
     def items(self):
         return self._values.items()
+
+    def as_dict(self):
+        return dict(self._values)
 
     def serialise(self, forceUnordered=False):
         """Serialise the structure rooted here into a JSON-serialisable structure. We don't need to record what the
@@ -770,23 +773,37 @@ class TaggedVariantDictType(TaggedAggregateType):
 
     discriminator_field: str  # the field that tells us what type we are
     type_dict: Dict[str, TaggedDictType]  # the types we can be
+    default_type_name: Optional[str]   # the default type to create for the initial "child" dict.
 
-    def __init__(self, discriminator_field, type_dict):
+    def __init__(self, discriminator_field, type_dict, default_type_name=None):
         super().__init__()
         self.discriminator_field = discriminator_field
         self.type_dict = type_dict
+        self.default_type_name = default_type_name
 
+        # make sure the discriminators are correct for each TaggedDictType, and indeed that the elements
+        # are TDTs.
         for k, v in type_dict.items():
             if not isinstance(v, TaggedDictType):
                 raise ValueError(f"Value {v} is not a TaggedDictType")
+            if discriminator_field not in v.tags:
+                raise KeyError(f"Discriminator field {discriminator_field} is not defined in a TaggedDictType inside a TaggedVariantDictType")
+            tag_value = v.tags[discriminator_field].deflt
+            v.tags[discriminator_field].deflt = tag_value
+
+
 
     def create(self, type_name=None):
-        """Create an instance of TaggedVariantDict. By default it will have no child dict, but if a name is provided
-        it will
+        """Create an instance of TaggedVariantDict.
+        If both type_name and the default_dict_name in the type object are null, it will create no "child" dict.
+        Otherwise the type_name takes preference over the default_dict_name. This name will be used thus:
         - look up the name in the type_dict to get the type
         - create a new dict of that type and set it to be the child dict
         - set the value of the discriminator field in that dict to be the type name"""
         d = TaggedVariantDict(self)
+
+        type_name = self.default_type_name if type_name is None else type_name
+
         if type_name is not None:
             if type_name not in self.type_dict:
                 poss = ",".join(self.type_dict.keys())
@@ -829,6 +846,12 @@ class TaggedVariantDict(TaggedAggregate):
             self._value = tt.type_dict[tp].deserialise(data)
             self._type_name = tp
 
+    def force_create_child(self, type_name, data=None):
+        if type_name not in self._type.type_dict:
+            raise ValueError(f"TaggedVariantDict does not have a type {type_name} in the type dictionary")
+        self._value = self._type.type_dict[type_name].create()
+        self._type_name = type_name
+
     def get(self) -> TaggedDict:
         """return the underlying TaggedDict"""
         return self._value
@@ -854,7 +877,8 @@ class TaggedVariantDict(TaggedAggregate):
         This assumes that the only items in the structure are JSON-serialisable or TaggedAggregate."""
         if self._value is None:
             return None
-        out = self._value.serialise(forceUnordered=forceUnordered)
+        # we always have to force this to serialise as ordered so we can set the discriminator
+        out = self._value.serialise(forceUnordered=True)
         # make very sure that the discriminator is set
         out[self._type.discriminator_field] = self._type_name
         return out

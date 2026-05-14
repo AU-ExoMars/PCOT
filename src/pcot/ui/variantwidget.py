@@ -23,15 +23,27 @@ class VariantWidget(QtWidgets.QGroupBox):
     def __init__(self, title, options, parent):
         super().__init__(parent)
         # populate with types
-        layout = QtWidgets.QVBoxLayout()
-        self.setLayout(layout)
-        self.buttons = []
-        idx = 0
-        self.options = options
+        self.layout = QtWidgets.QVBoxLayout()
         super().setTitle(title)
+        self.setLayout(self.layout)
+        self.resetOptions(options)
+
+    def resetOptions(self, options):
+        self.options = options
+
+        # clear existing buttons
+        self.buttons = []
+        while self.layout.count() > 0:
+            item = self.layout.takeAt(0)
+            w = item.widget()
+            if w is not None:
+                w.setParent(None)
+                w.deleteLater()
+
+        idx = 0
         for x in options:
             b = QtWidgets.QRadioButton(str(x))
-            layout.addWidget(b)
+            self.layout.addWidget(b)
             self.buttons.append(b)
             b.idx = idx
             b.toggled.connect(self.buttonToggled)
@@ -53,8 +65,25 @@ class DatumTypeWidget(VariantWidget):
     changed = Signal(datumtypes.Type)
 
     def __init__(self, parent):
-        self.options = [x.name for x in Datum.types]
+        self.options = [x.name for x in Datum.types if x.isOKForMacroConnectors]
         super().__init__("Type", self.options, parent)
+
+    def setMode(self, mode=None):
+        if mode == 'connector':
+            print("Connector mode")
+            types = filter(lambda x : x.isOKForMacroConnectors, Datum.types)
+        elif mode == 'parameter':
+            print("Parameter mode")
+            types = filter(lambda x : x.isOKForMacroParameters, Datum.types)
+        else:
+            types = Datum.types
+
+        types = list(types)
+#        print([{"t":x, "p":x.isOKForMacroParameters, "c":x.isOKForMacroConnectors} for x in types])
+
+        type_names = [x.name for x in types]
+#        print(type_names)
+        self.resetOptions(type_names)
 
     def set(self, t):
         """This version takes a DatumType"""

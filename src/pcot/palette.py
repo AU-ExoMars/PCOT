@@ -255,7 +255,7 @@ class Palette:
             visible = any(is_vis[v] for v in v)
             self.collapser.setSectionVisible(k, visible)
             if visible:
-                    self.collapser.forceOpen(k)
+                self.collapser.forceOpen(k)
 
         self.collapser.update()
 

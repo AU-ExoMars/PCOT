@@ -311,6 +311,11 @@ class XFormType:
         """override this - initialise any data fields (often to None)"""
         pass
 
+    def onRemove(self, xform):
+        """We may want to perform some action when the node is removed. Note that
+        this is done quite late."""
+        pass
+
     def recalculate(self, xform):
         """maybe override to recalculate internal data
             after control data has changed (either in a tab or by loading a file) it
@@ -647,6 +652,7 @@ class XForm:
     def onRemove(self):
         """called when a node is deleted"""
         self.graph.doc.nodeRemoved(self)
+        self.type.onRemove(self)
 
     def setEnabled(self, b):
         """set or clear the enabled field"""

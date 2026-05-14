@@ -31,18 +31,18 @@ class Datum(SourcesObtainable):
 
     # register built-in types; extras can be registered with registerType
     types = [
-        ANY := pcot.datumtypes.AnyType(),
-        IMG := pcot.datumtypes.ImgType(),
-        ROI := pcot.datumtypes.RoiType(),
-        NUMBER := pcot.datumtypes.NumberType(),
+        ANY := pcot.datumtypes.AnyType().setOKForConnectors(),
+        IMG := pcot.datumtypes.ImgType().setOKForConnectors(),
+        ROI := pcot.datumtypes.RoiType().setOKForConnectors(),
+        NUMBER := pcot.datumtypes.NumberType().setOKForConnectors().setOKForParameters(),
         # this special type means the node must have its output/input type specified
         # by the user. They don't appear on the graph until this has happened.
-        VARIANT := pcot.datumtypes.VariantType(),
+        VARIANT := pcot.datumtypes.VariantType().setOKForConnectors().setOKForParameters(),
         # generic tabular
-        TABLE := pcot.datumtypes.TabularDataType(),
-        DATA := pcot.datumtypes.GenericDataType(),
+        TABLE := pcot.datumtypes.TabularDataType().setOKForConnectors(),
+        DATA := pcot.datumtypes.GenericDataType().setOKForConnectors(),
         # test results - this is a list of failing tests, or an empty list for all passed.
-        TESTRESULT := pcot.datumtypes.TestResultType(),
+        TESTRESULT := pcot.datumtypes.TestResultType().setOKForConnectors(),
 
         # these types are not generally used for connections, but for values on the expression evaluation stack
         IDENT := pcot.datumtypes.IdentType(),

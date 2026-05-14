@@ -7,8 +7,10 @@ from typing import List
 
 from PySide2.QtCore import QEvent, Qt, QSize
 from PySide2.QtWidgets import QGridLayout, QVBoxLayout, \
-    QGroupBox, QLabel, QScrollArea, QWidget, QSizePolicy, QSpacerItem, QScrollBar, QAbstractScrollArea, QLayout
+    QGroupBox, QLabel, QScrollArea, QWidget, QSizePolicy, QSpacerItem, QScrollBar, QAbstractScrollArea, QLayout, \
+    QDialog, QDialogButtonBox, QMessageBox
 
+from pcot.parameters.taggedaggregates import TaggedDict
 from pcot.ui.collapser import CollapserSection
 from pcot.ui.taggedaggregates.editors import createEditor
 
@@ -62,12 +64,13 @@ class AggregateEditorWidget(QWidget):
     Can be embedded in dialogs or standalone windows.
 
     d: dictionary to edit
-    handler: something that is called every time an editor changes value (has notifyBefore and notifyAfter),
+    handler: something that is called every time an editor changes value (has onPreChange and onPostChange),
         typically used for undo
     internal_editor: This editor is embedded as a widget within another attribute editor, so should be as small as
         possible but not have a collapser
+    suppress_single_key: if the dict to be laid out has only one key, don't make a label for that key. A hack.
     """
-    def __init__(self, d, handler=None, parent=None, internal_editor=False):
+    def __init__(self, d, handler=None, parent=None, internal_editor=False, suppress_single_key_label=False):
         super().__init__(parent)
 
         self.internal_editor = internal_editor
@@ -76,6 +79,7 @@ class AggregateEditorWidget(QWidget):
         self.editors = []
 
         self.d = d if internal_editor else d.clone()      # operate on a clone if this is the root editor
+        self.suppress_single_key_label = suppress_single_key_label
         self._data = None
 
         # Reasonable minimum size for the whole widget (dialog/window size)
@@ -115,13 +119,14 @@ class AggregateEditorWidget(QWidget):
 
     def layoutDict(self, container: QGridLayout, path: List[str], d):
         """
-        Lays out a TaggedDict in a container, creating subframes for sub-dicts.
+        Lays out a TaggedDict  in a container, creating subframes for sub-dicts.
         """
+
         for k, v in d.items():
             tag = d.tag(k)
             desc = tag.description
 
-            if isinstance(v, type(d)):  # TaggedDict
+            if isinstance(v, TaggedDict):  # TaggedDict
                 # Sub-dictionary builds a CollapserSection, or GroupBox at top level
                 if len(path) == 0 and not self.internal_editor:
                     group = CollapserSection(desc)
@@ -144,8 +149,50 @@ class AggregateEditorWidget(QWidget):
                 # Leaf node builds an editor
                 editor = createEditor(self, tag, d, k, self.handler)
                 row = next(self.ct)
-                container.addWidget(QLabel(editor.label), row, 0)
-                container.addWidget(editor.widget, row, 1)
+                if not self.suppress_single_key_label or len(d)>1:
+                    # Here, if there's only one key in the dict, we don't show the label if
+                    # suppress_single_key_label is true.
+                    container.addWidget(QLabel(editor.label), row, 0)
+                    container.addWidget(editor.widget, row, 1)
+                else:
+                    container.addWidget(editor.widget, row, 0)
                 self.editors.append((path + [k], editor.widget))
 
 
+class AggregateEditorDialog(QDialog):
+    """
+    A dialog wrapper around an tagged aggregate editor widget.
+    Takes a validator function which returns None if all is well or an error string.
+    """
+    def __init__(self, d, validator_func=None, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Settings")
+        self.validator_func = validator_func
+        layout = QVBoxLayout(self)
+
+        # Embed the widget
+        self.widget = AggregateEditorWidget(d, self)
+        layout.addWidget(self.widget)
+
+        # OK/Cancel buttons
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.validate_accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+        self._data = None
+
+    def validate_accept(self):
+        if self.validator_func:
+            possible_error = self.validator_func(self.widget.data())
+            if possible_error:
+                QMessageBox.critical(self, "Validation error", possible_error)
+                return
+        self.accept()
+
+    def accept(self):
+        self._data = self.widget.data()
+        super().accept()
+
+    def data(self):
+        return self._data
