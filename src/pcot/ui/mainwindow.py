@@ -13,7 +13,7 @@ import markdown
 from PySide2 import QtWidgets, QtGui
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QTextCursor, QIcon
-from PySide2.QtWidgets import QAction, QMessageBox, QDialog, QMenu
+from PySide2.QtWidgets import QAction, QMessageBox, QDialog, QMenu, QApplication
 
 import pcot
 from pcot.ui import graphscene, graphview, uiloader
@@ -123,6 +123,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         self.actionShow_Metadata.triggered.connect(self.showMetadataAction)
         self.actionImport.triggered.connect(self.importAction)
         self.actionSettings.triggered.connect(self.settingsAction)
+        self.actionQuit.triggered.connect(self.quitAction)
 
         self.runAllButton.clicked.connect(self.runAllAction)
         self.autoRun.toggled.connect(self.autorunChanged)
@@ -333,11 +334,19 @@ class MainUI(ui.tabs.DockableTabWindow):
                 w.retitleTabs()
             w.setTitle()    # macro renamed?
 
+
     ## close event handler - close all windows on confirmation if this is a main window, otherwise it's a macro - don't
-    # bother confirming, just close this window.
+    # bother confirming, just close this window. Does slightly different things if invoked from File/Quit (always assumes
+    # quitting the entire program) as opposed to closing the window (which will just close a macro window).
+
+    def quitAction(self):
+        if QMessageBox.question(self, "Quit", "Are you sure?",
+                                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+            QApplication.quit()
 
     def closeEvent(self, evt):
         if self.isMacro():
+            # we're just closing a macro window
             MainUI.windows.remove(self)
             evt.accept()
         elif QMessageBox.question(self, "Close graph", "Are you sure?",
