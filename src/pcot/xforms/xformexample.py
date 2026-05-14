@@ -23,7 +23,7 @@ class XFormExample(XFormType):
     determine their behaviour.
 
     This docstring will form the help text for the node in the UI. Markdown is permitted
-    and processed into HTML. Look at (say) XFormGradient for an example of how to write this.
+    and processed into HTML. Look at (say) XFormColourMap for an example of how to write this.
     """
 
     def __init__(self):
