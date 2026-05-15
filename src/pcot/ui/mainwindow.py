@@ -696,6 +696,17 @@ class MainUI(ui.tabs.DockableTabWindow):
     def addMacroOutput(self):
         self.addMacroConnector('out')
 
+    ## add a macro parameter connector
+    def addMacroParam(self):
+        assert (self.isMacro())
+        assert (self.macroPrototype is not None)
+        # we're going to walk all the nodes to find the first "paramN" we can use.
+        lst = [x.displayName for x in self.macroPrototype.graph.nodes if x.type.name=='param']
+        pidx = 1
+        while f"param{pidx}" in lst:
+            pidx += 1
+        self.addMacroConnector('param',displayName=f"param{pidx}")
+
     ## opens a dialog to rename a macro, called on "rename macro" UI
     def renameMacro(self):
         assert (self.isMacro())
