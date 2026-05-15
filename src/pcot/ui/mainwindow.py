@@ -685,7 +685,7 @@ class MainUI(ui.tabs.DockableTabWindow):
         for inst in n.proto.getInstances():
             inst.graph.rebuildGraphics()
         # tell the prototype that it has a new parameter
-        self.macroPrototype.paramChanged(n)
+        self.macroPrototype.paramChanged()
         return n
 
     ## add a macro in connector, only should be used on macro prototypes   

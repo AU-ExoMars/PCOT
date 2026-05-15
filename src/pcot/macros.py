@@ -68,6 +68,10 @@ class MacroInstance:
         self.node = node  # backpointer to the XForm containing me
         self.graph = xform.XFormGraph(proto.doc, False)  # create an empty graph, not a macro prototype
 
+    def protoNodeToInstanceNode(self, protoNode):
+        """Given a node in the prototype, get the corresponding node in the instance graph"""
+        return self.graph.get(protoNode.name)
+
     def copyProto(self):
         """this serialises and then deserialises the prototype's
         graph, giving us a fresh copy of the nodes. However, the UUID "names"
@@ -77,6 +81,18 @@ class MacroInstance:
         # self.proto.graph.dump()
         logger.debug(f"PROTOTYPE keys: {self.proto.graph.nodeDict.keys()}")
         self.graph.deserialise(d, True)
+
+    def resetParameterNames(self):
+        """Parameters may have been renamed - the displayName of the
+        instance parameter node needs to match that in the prototype"""
+        # run through the proto's nodes
+        for x in self.proto.graph.nodes:
+            if x.type.name == 'param':
+                # find the matching node in the instance
+                n = self.protoNodeToInstanceNode(x)
+                # update its name
+                n.displayName = x.displayName
+
 
 
 class XFormMacroConnector(XFormType):
@@ -196,11 +212,17 @@ class XFormMacroParam(XFormMacroConnector):
         logger.info(f"PARAM OUTPUT for {node} - {node.datum.get(Datum.NUMBER).n}")
 
     def onRemove(self, node):
-        node.proto.paramChanged(node)
+        node.proto.paramChanged()
 
     def createTab(self, node, window):
         """create the edit tab"""
         return TabMacroParam(node, window)
+
+    def rename(self, node, name):
+        # we need to force a paramChanged on the macro as well as doing
+        # the default action (which for connectors includes setConnectors).
+        super().rename(node, name)
+        node.proto.paramChanged()
 
 
 class XFormMacro(XFormType):
@@ -261,7 +283,7 @@ class XFormMacro(XFormType):
             self.graph.deserialise(data, True)
             # then iterate over the graph to find the parameters and build
             # the parameter_definitions.
-            self.paramChanged(None)
+            self.paramChanged()
 
     def getInstances(self):
         return self.doc.getInstances(self)
@@ -323,8 +345,8 @@ class XFormMacro(XFormType):
             elif n.type.name == 'param':
                 n.outputTypes[0] = n.conntype
         # rebuild the various connector structures in each instance
-        for n in self.getInstances():
-            n.connCountChanged()
+        for inst in self.getInstances():
+            inst.connCountChanged()
 
         # and we're also going to have to rebuild the palette, so inform all main
         # windows
@@ -335,10 +357,12 @@ class XFormMacro(XFormType):
     def renameType(self, newname):
         """renaming a macro - we have to update more things than default XFormType rename"""
         import pcot.ui
+
         # rename all instances if their displayName is the same as the old type name
         for x in self.getInstances():
             if x.displayName == self.name:
                 x.displayName = newname
+
         # do the default
         # then rename in the macro dictionary
         del self.doc.macros[self.name]
@@ -481,7 +505,7 @@ class XFormMacro(XFormType):
                     return hdr+s[4:]
         return hdr+"This is a macro - to add help, create a comment node in the prototype and start the text with 'DOC '"
 
-    def paramChanged(self, paramNode):
+    def paramChanged(self):
         """A parameter has changed. We need to recreate the TDT defining the parameters from the parameter nodes."""
         print("rebuilding params")
         tdd_def = {}
@@ -537,6 +561,9 @@ class XFormMacro(XFormType):
                         print(td[k])
             instance.parameters = td    # and replace the params.
             print(f" instance parameters are {td.as_dict()}")
+            # parameter name may have changed; need to enforce match
+            # with prototype name in the instance
+            instance.instance.resetParameterNames()
 
             # update all the open tabs for this instance
             for tab in instance.tabs:
@@ -621,7 +648,7 @@ class TabMacroParam(Tab):
     def onPostChange(self, editor):
         # this should mirror any change in the editor to the node data. Really, it needs to inform the
         # entire macro prototype that the parameter set has changed.
-        self.node.proto.paramChanged(self.node)
+        self.node.proto.paramChanged()
         # we don't really need to call changed here - we only need to do that if the parameters
         # have actually changed their values. That's actually quite hard to check for my little
         # head at the moment.
