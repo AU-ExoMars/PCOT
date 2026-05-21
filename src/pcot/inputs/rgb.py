@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 DEBAYER_PATTERNS = ["GB","BG","GR","RG"]
-DEBAYER_ALGOS = ["BILINEAR","EA","VNG","NONE"]
+DEBAYER_ALGOS = ["BILINEAR","EA","VNG","MHC","NONE"]
 
 
 class RGBInputMethod(InputMethod):

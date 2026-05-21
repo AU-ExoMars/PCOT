@@ -1280,9 +1280,8 @@ def debayer(img, algorithm="bilinear", pattern="gb"):
     if img.channels != 1:
         raise XFormException('DATA', 'debayering - image must be mono')
 
-    out = (img.img * 65535.0).astype(np.uint16)
-    out = debayering.debayer(out, algorithm, pattern)
-    out = out.astype(np.float32) / 65535.0
+    # out = (img.img * 65535.0).astype(np.uint16)
+    out = debayering.debayer(img.img, algorithm, pattern)
     pcot.ui.log("DQ and UNC not yet processed in debayering.")
     sources = img.getSources()
     sources = MultiBandSource([sources, sources, sources])
