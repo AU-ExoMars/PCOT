@@ -359,15 +359,16 @@ def load_rgb_image(fname:str|Path, bitdepth=None, debayer_algo=None, debayer_pat
     # convert from BGR to RGB (OpenCV is weird)
     img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
 
+    # convert to floats (32 bit)
+    img = img.astype(np.float32)
+    # scale to 0..1
+    img /= scale
+
     # handle debayering
     if debayer_algo and debayer_algo.upper() != 'NONE':
         img = debayering.debayer(img, debayer_algo, debayer_pattern)
 
 
-    # convert to floats (32 bit)
-    img = img.astype(np.float32)
-    # scale to 0..1
-    img /= scale
     return img
 
 

@@ -83,7 +83,20 @@ def debayer_mhc(img, pattern):
     THE SOFTWARE.
     """
 
-    bayer = img.astype(np.float32)
+    img = img.astype(np.float32)
+
+    # for now I'll just flip the image if the pattern is a G..G pattern.
+    if pattern == 'gb':
+        pattern = 'rg'      # I have no idea why B/R flip here too.
+        hflip = True
+    elif pattern == 'gr':
+        pattern = 'bg'
+        hflip = True
+    else:
+        hflip = False
+
+    if hflip:
+        img = np.fliplr(img)
 
     kernel_G_at_R_or_B = [
         [0, 0, -1, 0, 0], 
@@ -167,9 +180,13 @@ def debayer_mhc(img, pattern):
     else:
         raise KeyError(f"debayering - pattern '{pattern}' not found")
 
-    return np.stack((red, green, blue), axis=2)
+    img = np.stack((red, green, blue), axis=2)
 
-    return rgb
+    # flip back again if we flipped earlier
+    if hflip:
+        img = np.fliplr(img)
+
+    return img
 
 
 def debayer(img, algorithm='bilinear', pattern='gb'):
