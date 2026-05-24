@@ -328,10 +328,11 @@ class CannotLoadImageBadFormatException(CannotLoadImageException):
         super().__init__(fname, "not a valid raster format")
 
 
-def load_rgb_image(fname:str|Path, bitdepth=None, debayer_algo=None, debayer_pattern=None) -> np.ndarray:
+def load_rgb_image(fname:str|Path, bitdepth=None, debayer_algo=None, debayer_pattern=None,
+                   neg_method="Leave") -> np.ndarray:
     """This is used by ImageCube to load its image data. It's a function because it's
     also used by the multifile loader. Can also debayer given an algorithm and pattern. In this case only
-    the first band will be used (see pcot.utils.debayering)"""
+    the first band will be used (see pcot.utils.demosaicing). See pcot.dataformats.load.rgb()"""
     fname = str(fname)  # fname could potentially be some kind of Path object.
     debayer_pattern = pcot.config.data.defaultbayerpattern if not debayer_pattern else debayer_pattern
 
@@ -518,20 +519,41 @@ class ImageCube(SourcesObtainable):
         return self
 
     @classmethod
-    def load(cls, fname:str|Path, mapping, sources, bitdepth=None, debayer_algo='NONE', debayer_pattern=None):
+    def load(cls, fname:str|Path, mapping, sources, bitdepth=None, debayer_algo='NONE', debayer_pattern=None,
+             neg_method="Leave"):
         """
-        Load an RGB image using opencv's imread. Can also debayer - see pcot.utils.debayering.
+        Load an RGB image using opencv's imread. Can also debayer - see pcot.utils.demosaicing.
+        For more details, see pcot.dataformats.load.rgb
         Sources must be provided.
         """
         logger.info(f"ImageCube load: {str(fname)}")
-        img = load_rgb_image(fname, bitdepth=bitdepth, debayer_algo=debayer_algo, debayer_pattern=debayer_pattern)
+        img = load_rgb_image(fname, bitdepth=bitdepth, debayer_algo=debayer_algo, debayer_pattern=debayer_pattern,
+                             neg_method=neg_method)
         # create sources if none given
         if sources is None:
             sources = MultiBandSource([Source().setBand('R'),
                                        Source().setBand('G'),
                                        Source().setBand('B')])
-        # and construct the image
-        return cls(img, mapping, sources)
+        # construct the image
+        img = cls(img, mapping, sources)
+        # process debayering problems
+        img.process_negatives_for_demosaic(neg_method=neg_method)
+        return img
+
+
+    def process_negatives_for_demosaic(self, neg_method="Leave"):
+        # handle debayer postprocessing (i.e. negatives that result from HMC/DDFAPD on iffy data)
+        neg_method = neg_method.lower()
+        if neg_method != "leave" or neg_method is None:
+            # first, mark.
+            if "mark" in neg_method:
+                # OR in an error for negative values
+                self.dq = np.where(self.img < 0, self.dq | dq.ERROR, self.dq)
+            if "clip" in neg_method:
+                self.img = np.clip(self.img, 0, None)
+
+
+
 
     def rgb(self, mapping: Optional[ChannelMapping] = None) -> np.ndarray:
         """get a numpy image (not another ImageCube) we can display on an RGB surface - see

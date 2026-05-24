@@ -23,16 +23,17 @@ logger = logging.getLogger(__name__)
 
 
 def rgb(fname: str|Path, inpidx: int = None, mapping: ChannelMapping = None,
-        debayer_algo:str = 'NONE', debayer_pattern: str = None, camera=None) -> Datum:
+        debayer_algo:str = 'NONE', debayer_pattern: str = None, camera=None, neg_method="Leave") -> Datum:
     """Load an imagecube from an RGB file (png, jpeg etc.)
 
     - fname: the filename
     - inpidx: the input index to use or None if not connected to a graph input
     - mapping: the channel mapping to use or None if the default
-    - debayer_algo: None, or "None" or a debayering algorithm (see the "pcot.utils.debayering" module). If
+    - debayer_algo: None, or "None" or a debayering algorithm (see pcot.utils.demosaicing). If
       the image is multiband, only the first band will be used.
-    - debayer_pattern: the pattern of the pixels for debayering (see the OpenCV docs and "pcot.utils.debayering")
+    - debayer_pattern: the pattern of the pixels for debayering (see pcot.utils.demosaicing).
     - camera: the camera, which must have R, G and B filters.
+    - neg_method: "Leave" to leave untouched, otherwise one of NEGATIVE_PROCESSING_METHODS (see pcot.utils.demosaicing)
 
     """
 
@@ -60,7 +61,8 @@ def rgb(fname: str|Path, inpidx: int = None, mapping: ChannelMapping = None,
 
 
     # this can throw an exception if the file is not found
-    img = ImageCube.load(fname, mapping, sources, debayer_algo=debayer_algo, debayer_pattern=debayer_pattern)
+    img = ImageCube.load(fname, mapping, sources, debayer_algo=debayer_algo, debayer_pattern=debayer_pattern,
+                         neg_method = neg_method)
     return Datum(Datum.IMG, img)
 
 

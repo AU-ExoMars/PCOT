@@ -1254,7 +1254,7 @@ def hsv2rgb(img):
 
 
 @datumfunc
-def debayer(img, algorithm="bilinear", pattern="gb"):
+def debayer(img, algorithm="bilinear", pattern="gbrg", negmethod="leave"):
     """Debayer an image. Only the first band of a multi-band image will be used.
 
     Algorithms -
@@ -1262,20 +1262,24 @@ def debayer(img, algorithm="bilinear", pattern="gb"):
     * bilinear : the default bilinear interpolation
     * EA : edge aware
     * VNG: variable number of gradients
+    * MHC: Malvar / He / Cutler
+    * Menon or DDFAPD: Menon's Demosaicing with Directional Filtering and A-Posteriori Decision
 
-    Malvar / He / Cutler not yet supported.
 
-    Patterns - BG, GB, RG, GR. See OpenCV for more details.
+
+    Patterns - RGGB, etc.
 
     @param img:img:the image to debayer
     @param algorithm:string:the algorithm to use
     @param pattern:string:the debayering pattern to use
+    @param negmethod:string:how to process negatives in demosaiced data - leave, mark, clip, clipmark will work.
     """
     img = img.get(Datum.IMG)
     if img is None:
         return None
     algorithm = algorithm.get(Datum.STRING)
     pattern = pattern.get(Datum.STRING)
+    negmethod = negmethod.get(Datum.STRING)
 
     if img.channels != 1:
         raise XFormException('DATA', 'debayering - image must be mono')
@@ -1286,6 +1290,7 @@ def debayer(img, algorithm="bilinear", pattern="gb"):
     sources = img.getSources()
     sources = MultiBandSource([sources, sources, sources])
     img = ImageCube(out, sources=sources)
+    img.process_negatives_for_demosaic(negmethod)
     return Datum(Datum.IMG, img)
 
 

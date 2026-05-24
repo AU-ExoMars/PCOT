@@ -12,13 +12,12 @@ import yaml
 from PySide2 import QtWidgets
 
 from pcot.parameters.taggedaggregates import TaggedDictType, Maybe, TaggedDict, TaggedListType
+from pcot.utils.demosaicing import VALID_BAYER_PATTERNS
 
 logger = logging.getLogger(__name__)
 
 # location of the config file
 CONFIG_PATH = Path('~/pcot_config.yaml').expanduser()
-
-VALID_BAYER_PATTERNS = ["GB","BG","RG","GR"]
 
 # This is the TaggedDictType for the configuration system. It doesn't contain
 # the recent files list; that's handled by storing it as a separate part
@@ -30,7 +29,7 @@ CONFIG_DICT_TYPE = TaggedDictType(
     sigfigs=("Significant figures for numeric output",int, 5, (0,12)),
     multifile_pattern=("Default regex for getting filter data from filenames in multifile loader", str, r".*[LR](?P<pos>[0-9][0-9]).*"),
     default_camera=("Default camera",str, "PANCAM"),
-    defaultbayerpattern=("Default Bayer pattern (see OpenCV docs)", str, "BG", VALID_BAYER_PATTERNS),
+    defaultbayerpattern=("Default Bayer pattern (see OpenCV docs)", str, "RGGB", VALID_BAYER_PATTERNS),
 
     locations=("Locations", TaggedDictType(
         images=("Source image default location", Path, os.path.expanduser("~/Pictures"), True),
@@ -112,8 +111,12 @@ def load_config():
         with open(CONFIG_PATH, 'r') as f:
             # get the serialized YAML data
             s = yaml.load(f, Loader=yaml.SafeLoader)
+            conf = s['configuration']
+            # legacy data has dodgy patterns
+            if conf['defaultbayerpattern'] not in VALID_BAYER_PATTERNS:
+                conf['defaultbayerpattern'] = "RGGB"
             # the recent files are in a separate section from the main config
-            data = CONFIG_DICT_TYPE.deserialise(s['configuration'])
+            data = CONFIG_DICT_TYPE.deserialise(conf)
             _recents.deserialise(s['recents'])
     else:
         data = CONFIG_DICT_TYPE.create()
