@@ -1295,6 +1295,36 @@ def debayer(img, algorithm="bilinear", pattern="gbrg", negmethod="leave"):
 
 
 @datumfunc
+def image(width,height,val):
+    """
+    Create a single-band image of the given width and height, with the given value (which can have uncertainty)
+
+    @param width:number:width of the image
+    @param height:number:height of the image
+    @param val:number:the value for the image
+    """
+    w = int(width.get(Datum.NUMBER).n)
+    h = int(height.get(Datum.NUMBER).n)
+    v: Value = val.get(Datum.NUMBER)
+
+    if h<=0 or w<=0:
+        raise ValueError("image function needs width and height to be positive")
+
+    # create the data
+    img = np.full((h,w), v.n, dtype=np.float32)
+    u = np.full((h,w), v.u, dtype=np.float32)
+    dq = np.full((h,w), v.dq, dtype=np.uint16)
+
+    img = ImageCube(img,
+                    sources=MultiBandSource([Source().setBand('?')
+                                            .setExternal(StringExternal("image","image datumfunc"))]),
+                    uncertainty=u,
+                    dq=dq)
+    return Datum(Datum.IMG, img)
+
+
+
+@datumfunc
 def ifelse(cond, true, false):
     """
     If a condition (a single scalar value) is true (>0.5) return the true parameter, selse return the false parameter.

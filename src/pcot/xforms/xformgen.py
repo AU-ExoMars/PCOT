@@ -1,7 +1,8 @@
 import logging
 
 import numpy as np
-from PySide2.QtWidgets import QMessageBox
+from PySide2 import QtGui
+from PySide2.QtWidgets import QMessageBox, QHeaderView
 
 import cv2 as cv
 
@@ -208,6 +209,7 @@ class TabGen(pcot.ui.tabs.Tab):
         self.w.tableView.setModel(self.model)
         self.model.changed.connect(self.chansChanged)
         self.w.tableView.setItemDelegateForRow(3, ComboBoxDelegate(self.w.tableView, self.model, MODES))
+        self.w.tableView.horizontalHeader().setMinimumSectionSize(80)   # otherwise the combobox is too narrow!
         self.nodeChanged()
 
     def _getselcol(self):
