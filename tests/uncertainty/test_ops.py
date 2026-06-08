@@ -89,7 +89,10 @@ def check_op_test(doc, t, expr, origimg):
             dqtest = dqv == edq
 
             if not (ntest and utest and dqtest):
+                from pcot.value import Value
                 logger.error(f"Error in binop test at pixel {x},{y} for expression {expr.params.expr}")
+                v = Value(n,u,dqv)
+                logger.error(f"output value is {v}")
                 if not ntest:
                     logger.error(f"N expected {en} got {n}")
                 if not utest:
@@ -240,13 +243,38 @@ binop_tests = [
     BinopTest(0, 2, 1, 3, "a^b", 0, 2, dq.NONE),  # 0±2 ^ 1±3 = 0±2 (i.e. 0^1 equals 0, with the uncertainty of the 0)
     BinopTest(0, 2, 0, 3, "a^b", 1, 0, dq.NONE),  # 0±2 ^ 0±3 = 1±0 (i.e. 0^0 = 1, uncertainties ignored)
     BinopTest(0, 2, -2, 3, "a^b", 0, 0, dq.UNDEF),  # 0±2 ^ -2±3 = 0±0 (actually UNDEF, can't raise zero to -ve power)
+    BinopTest(2, 2, -2, 3, "a^b", 0.25, 0.721287, dq.NONE),  # 2±2 ^ -2±3 = 0.25±0.7
     BinopTest(0, 2, 0.2, 3, "a^b", 0, 0, dq.NONE),  # 0±2 ^ 0.2±3 = 0±0 (i.e. 0^n = 0 where n>0 and n!=1)
     BinopTest(0, 2, 4, 3, "a^b", 0, 0, dq.NONE),  # 0±2 ^ 4±3 = 0±0 (i.e. 0^n = 0 where n>0 and n!=1)
+    BinopTest(-1, 0, 0.5, 0, "a^b", 0, 0, dq.COMPLEX),
 
     BinopTest(1, 2, 4, 3, "a|b", 4, 3, dq.NONE),  # OR operator finds the maximum
     BinopTest(1, 2, 4, 3, "a&b", 1, 2, dq.NONE),  # AND operator finds the minimum
 
 ]
+
+def test_complex_root():
+    pcot.setup()
+
+    """(a,ua) and (b,ub) are scalar inputs with uncertainties. E is the expression."""
+
+    t = BinopTest(-1, 0, 0.5, 0, "a^b", 0, 0, dq.COMPLEX)
+    doc = Document()
+    nodeA = numberWithUncNode(doc, t.a, t.ua)
+    nodeB = numberWithUncNode(doc, t.b, t.ub)
+    expr = doc.graph.create("expr")
+    expr.params.expr = t.e
+    expr.connect(0, nodeA, 0, autoPerform=False)
+    expr.connect(1, nodeB, 0, autoPerform=False)
+
+    logger.warning(f"Testing {t.e} : a={t.a}±{t.ua}, b={t.b}±{t.ub} ----------------------------------------------")
+    doc.run()
+    n = expr.getOutput(0, Datum.NUMBER)
+    assert n is not None
+    assert n.n == pytest.approx(t.expected_val)
+    assert n.u == pytest.approx(t.expected_unc)
+    assert n.dq == t.expected_dq
+
 
 
 @pytest.mark.filterwarnings("ignore:invalid value")

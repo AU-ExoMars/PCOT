@@ -39,7 +39,7 @@ def div_unc(a, ua, b, ub):
     return np.sqrt(((a * ub) ** 2 + (b * ua) ** 2)) / (b ** 2)
 
 
-def powcore(a, ua, b, ub):
+def _powcore(a, ua, b, ub):
     """Core function for exponentiation uncertainty once values have
     been cleaned"""
     # This is the canonical version, which is much slower.
@@ -98,7 +98,7 @@ def pow_unc(a, ua, b, ub):
             # set those values in a to be 1 for now.
             a[zeros] = 1
             # Perform the core calculation
-            result = powcore(a, ua, b, ub)
+            result = _powcore(a, ua, b, ub)
             # set the "zeros" back to zero
             result[zeros] = 0
             # set to ua where b is 1 and zeros is true
@@ -106,7 +106,7 @@ def pow_unc(a, ua, b, ub):
             return result
 
     # the default calculation
-    return powcore(a, ua, b, ub)
+    return _powcore(a, ua, b, ub)
 
 
 def combineDQs(a, b, extra=None):
@@ -289,9 +289,11 @@ class Value:
                 n = np.where(undefined, 0, self.n ** power.n)
             u = np.where(undefined, 0, pow_unc(self.n, self.u, power.n, power.u))
             d = combineDQs(self, power, np.where(undefined, dq.UNDEF, dq.NONE))
+            # we get weird rounding errors where what SHOULD be an infinity is actually just really big.
+            n_isnan = np.isnan(n) | np.isinf(n) | (n>1e19)
             # remove NaN in n and u, and replace with zero, marking the n NaNs in the DQ
-            d |= np.where(np.isnan(n), dq.COMPLEX, dq.NONE)
-            n[np.isnan(n)] = 0
+            d |= np.where(n_isnan, dq.COMPLEX, dq.NONE)
+            n[n_isnan] = 0
             u[np.isnan(u)] = 0
             # remove imaginary component of complex result but mark as complex in DQ
             d |= np.where(n.imag != 0.0, dq.COMPLEX, dq.NONE)
@@ -345,7 +347,7 @@ class Value:
         # for scalar and array. It's really unlikely that the zero case will
         # come up, but still.
 
-        # values with a cosine of less than this amoung will be replaced with
+        # values with a cosine of less than this amount will be replaced with
         # COSREPLACE and have the DIVZERO bit set in the result
         COSTHRESH = 1e-7
         COSREPLACE = 1e-7
