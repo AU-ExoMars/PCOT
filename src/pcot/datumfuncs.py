@@ -1295,7 +1295,7 @@ def debayer(img, algorithm="bilinear", pattern="gbrg", negmethod="leave"):
 
 
 @datumfunc
-def image(width,height,val):
+def genimg(width,height,val):
     """
     Create a single-band image of the given width and height, with the given value (which can have uncertainty)
 

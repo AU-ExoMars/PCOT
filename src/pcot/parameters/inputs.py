@@ -17,13 +17,16 @@ logger = logging.getLogger(__name__)
 
 def case_insensitive(ss):
     ss = [s.lower() for s in ss]
-    return ss + list(map(lambda a: a.upper(),ss))
+    ss = ss + list(map(lambda a: a.upper(),ss))
+    ss = ss + list(map(lambda a: a.capitalize(),ss))
+    return ss
+
 
 
 # RGB inputs don't have much - just a filename.
 rgbDictType = TaggedDictType(
     filename=("filename", Maybe(str), None),
-    debayer_algo=("Demosaic algorithm (or None if we're not demosaicing)", Maybe(str), 'None',
+    debayer_algo=("Demosaic algorithm (or None if we're not demosaicing)", Maybe(str), None,
                   case_insensitive(DEBAYER_ALGOS)),
     debayer_pattern=("Bayer pattern (e.g. RGGB)", Maybe(str),
                      pcot.config.data.defaultbayerpattern,

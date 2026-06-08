@@ -18,9 +18,7 @@ def test_neg_b():
     a = Value(0,0.2)
     b = Value(-2,0.3)
     r = a**b
-
-    assert r.dq == dq.UNDEF
-    assert r == 0
+    assert r == Value(0,0,dq.UNDEF)
 
 
 def test_square_root_neg():

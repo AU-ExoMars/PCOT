@@ -18,6 +18,8 @@ import pcot
 from pcot import dq
 from pcot.datum import Datum
 from pcot.document import Document
+from pcot.rois import ROIRect
+from pcot.value import Value
 from unc_fixtures import gen_2b_unc
 import logging
 
@@ -50,15 +52,25 @@ def test_make_unc():
     assert n.u == 3
 
 
-def check_op_test(doc, t, expr, origimg):
+def check_op_test(doc, t, exprOrDatum, origimg):
     """Once the graph for a test is set up, we call this to check the answer.
     The area inside the ROI must have the expected value, unc, and dq. The area
     outside must be unchanged. We can't check DQ propagation from binops, because
     different binops do it differently (e.g. max, min). There's another test for that.
-    """
 
-    doc.run()
-    img = expr.getOutput(0, Datum.IMG)  # has to be an image!
+    We can also use this for checking datum results, in which case doc is None
+    and you pass the datum.
+    """
+    from pcot.xform import XForm
+    if doc:
+        doc.run()
+    if isinstance(exprOrDatum, Datum):
+        img = exprOrDatum.get(Datum.IMG)
+    elif isinstance(exprOrDatum, XForm):
+        img = exprOrDatum.getOutput(0, Datum.IMG)  # has to be an image!
+    else:
+        raise ValueError(f"expected a Datum or expr node, got {type(exprOrDatum)}")
+
     assert img is not None
 
     expected_n = pytest.approx(t.expected_val)
@@ -90,7 +102,7 @@ def check_op_test(doc, t, expr, origimg):
 
             if not (ntest and utest and dqtest):
                 from pcot.value import Value
-                logger.error(f"Error in binop test at pixel {x},{y} for expression {expr.params.expr}")
+                logger.error(f"Error in binop test at pixel {x},{y} for expression {t.e}")
                 v = Value(n,u,dqv)
                 logger.error(f"output value is {v}")
                 if not ntest:
@@ -574,3 +586,120 @@ def test_dq_propagation_images(t):
 
                 assert ntest and utest and dqtest
 
+
+#########################################################################################
+#
+# These tests check that unary and binary operations work on Datum objects.
+#
+#########################################################################################
+
+
+def _performbinop(expr:str, a:Datum, b:Datum):
+    # we extract the operation from the "e" field in BinopTest's string
+    # and "switch" on it to get the operation. Ugly but this test was
+    # written after the fact.
+
+    op = expr[1]
+    if op == "+":
+        return a + b
+    elif op == "-":
+        return a - b
+    elif op == "*":
+        return a * b
+    elif op == "/":
+        return a / b
+    elif op == "^":
+        return a ** b
+    elif op == "|":
+        return a | b
+    elif op == "&":
+        return a & b
+    else:
+        raise ValueError(f"Unknown binary operator {op}")
+
+
+def _performunop(expr:str, v:Datum):
+    op = expr[0]
+    if op == "-":
+        return -v
+    elif op == "!":
+        return ~v   # NOT the boolean inversion.
+    else:
+        raise ValueError(f"Unknown unary operator {op}")
+
+
+@pytest.mark.parametrize("t", unop_tests, ids=lambda x: x.__str__())
+def test_number_unops_datum(t):
+    v = Datum(Datum.NUMBER,Value(t.n, t.u, t.dq), Datum.null)
+    r = _performunop(t.e, v)
+    n = r.get(Datum.NUMBER)
+    assert n.n == pytest.approx(t.expected_val)
+    assert n.u == pytest.approx(t.expected_unc)
+    assert n.dq == t.expected_dq
+
+
+@pytest.mark.parametrize("t", unop_tests, ids=lambda x: x.__str__())
+def test_image_unops_datum(t):
+    img = gen_2b_unc(2, 0.1, t.n, t.u, dq0=0, dq1=t.dq)
+    img.rois = [
+        ROIRect(rect=(5,5,10,10),label="roi")
+    ]
+    d = Datum(Datum.IMG, img)
+    r = _performunop(t.e, d)
+    check_op_test(None, t, r, img)
+
+
+@pytest.mark.parametrize("t", binop_tests, ids=lambda x: x.__str__())
+def test_image_image_binops_datum(t):
+    imgA = gen_2b_unc(2, 0.1, t.a, t.ua)
+    imgA.rois = [
+        ROIRect(rect=(5,5,10,10),label="roi")
+    ]
+    dA = Datum(Datum.IMG, imgA)
+
+    imgB = gen_2b_unc(2, 0.1, t.b, t.ub)
+    dB = Datum(Datum.IMG, imgB)
+
+    r = _performbinop(t.e, dA, dB)
+    check_op_test(None, t, r, imgA)
+
+
+@pytest.mark.parametrize("t", binop_tests, ids=lambda x: x.__str__())
+def test_number_image_binops_datum(t):
+    dA = Datum(Datum.NUMBER,Value(t.a, t.ua), Datum.null)
+
+    imgB = gen_2b_unc(2, 0.1, t.b, t.ub)
+    imgB.rois = [
+        ROIRect(rect=(5,5,10,10),label="roi")
+    ]
+
+    dB = Datum(Datum.IMG, imgB)
+
+    r = _performbinop(t.e, dA, dB)
+    check_op_test(None, t, r, imgB)
+
+
+@pytest.mark.parametrize("t", binop_tests, ids=lambda x: x.__str__())
+def test_image_number_binops_datum(t):
+    imgA = gen_2b_unc(2, 0.1, t.a, t.ua)
+    imgA.rois = [
+        ROIRect(rect=(5,5,10,10),label="roi")
+    ]
+    dA = Datum(Datum.IMG, imgA)
+
+    dB = Datum(Datum.NUMBER,Value(t.b, t.ub), Datum.null)
+
+    r = _performbinop(t.e, dA, dB)
+    check_op_test(None, t, r, imgA)
+
+
+@pytest.mark.parametrize("t", binop_tests, ids=lambda x: x.__str__())
+def test_number_number_binops_datum(t):
+    dA = Datum(Datum.NUMBER,Value(t.a, t.ua), Datum.null)
+    dB = Datum(Datum.NUMBER,Value(t.b, t.ub), Datum.null)
+
+    r = _performbinop(t.e, dA, dB)
+    n = r.get(Datum.NUMBER)
+    assert n.n == pytest.approx(t.expected_val)
+    assert n.u == pytest.approx(t.expected_unc)
+    assert n.dq == t.expected_dq
