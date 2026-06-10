@@ -119,83 +119,6 @@ def flat(val, *args):
     return Datum(Datum.NUMBER, val, SourceSet(sources))
 
 
-def func_wrapper(fn: Callable[[Value], Value], d: Datum) -> Datum:
-    """Takes a function which takes and returns Value, and a datum. This is a utility for dealing with
-    functions. For images, it strips out the relevant pixels (subject to ROIs) and creates a masked array. However, BAD
-    pixels are included. It then performs the operation and creates a new image which is a copy of the
-    input with the new data spliced in."""
-
-    if d is None:
-        return None
-    elif d.tp == Datum.NUMBER:  # deal with numeric argument (always returns a numeric result)
-        # get sources for all arguments
-        ss = d.getSources()
-        rv = fn(d.val)
-        return Datum(Datum.NUMBER, rv, SourceSet(ss))
-    elif d.isImage():
-        img = d.val
-        ss = d.sources
-        subimage = img.subimage()
-
-        # make copies of the source data into which we will splice the results
-        imgcopy = subimage.img.copy()
-        unccopy = subimage.uncertainty.copy()
-        dqcopy = subimage.dq.copy()
-
-        # Perform the calculation on the entire subimage rectangle, but only the results covered by ROI
-        # will be spliced back into the image (modifyWithSub does this).
-        v = Value(imgcopy, unccopy, dqcopy)
-
-        rv = fn(v)
-        # depending on the result type..
-        if rv.isscalar():
-            # ...either use it as a number datum
-            return Datum(Datum.NUMBER, rv, ss)
-        else:
-            # ...or splice it back into the image
-            img = img.modifyWithSub(subimage, rv.n, uncertainty=rv.u, dqv=rv.dq)
-            return Datum(Datum.IMG, img)
-    else:
-        raise XFormException('EXPR', 'unsupported type for function')
-
-
-def stats_wrapper(val, func):
-    """Takes a function that operates on a tuple of val,unc,dq and returns same
-    """
-    if val.tp == Datum.NUMBER:
-        ns = val.get(Datum.NUMBER).n
-        us = val.get(Datum.NUMBER).u
-        dqs = val.get(Datum.NUMBER).dq
-        nr, ur, dqr = func(ns, us, dqs)
-        return Datum(Datum.NUMBER, Value(nr, ur, dqr), sources=val.sources)
-    elif val.isImage():
-        img = val.get(Datum.IMG)
-        if img is None:
-            return None
-
-        # get the subimage (i.e. only the part covered by ROIs if there are any)
-        # and mask out the bad pixels
-        subimage = img.subimage()
-        # I was making a copy, but I don't think it's needed.
-        imgn_masked, imgu_masked, imgd_masked = subimage.masked_all(True)
-
-        if img.channels == 1:
-            # mono image
-            ns, us, ds = func(imgn_masked, imgu_masked, imgd_masked)
-        else:
-            # split the image into bands
-            ns = image.imgsplit(imgn_masked)
-            us = image.imgsplit(imgu_masked)
-            ds = image.imgsplit(imgd_masked)
-            v = [func(ns[i], us[i], ds[i]) for i in range(0, len(ns))]
-            # we now have a list of tuples. We want to get from this:
-            # [(n,u,d),(n,u,d),(n,u,d) .. ] to [(n,n,n,n),(u,u,u,u),(d,d,d,d)]
-            # so we use zip to transpose the list of tuples
-            ns, us, ds = list(zip(*v))
-        return Datum(Datum.NUMBER, Value(ns, us, ds), img.sources)
-    else:
-        # shouldn't happen because we check types
-        raise XFormException('DATA', 'stats functions can only take numbers or images')
 
 
 @datumfunc  # NOUNCERTAINTYTEST
@@ -496,7 +419,7 @@ def sin(a):
     Calculate sine of an angle in radians
     @param a:img,number:the angle (or image in which each pixel is a single angle)
     """
-    return func_wrapper(lambda xx: xx.sin(), a)
+    return a.sin()
 
 
 @datumfunc
@@ -505,7 +428,7 @@ def cos(a):
     Calculate cosine of an angle in radians
     @param a:img,number:the angle (or image in which each pixel is a single angle)
     """
-    return func_wrapper(lambda xx: xx.cos(), a)
+    return a.cos()
 
 
 @datumfunc
@@ -514,7 +437,7 @@ def tan(a):
     Calculate tangent of an angle in radians
     @param a:img,number:the angle (or image in which each pixel is a single angle)
     """
-    return func_wrapper(lambda xx: xx.tan(), a)
+    return a.tan()
 
 
 @datumfunc
@@ -523,7 +446,7 @@ def sqrt(a):
     Calculate square root
     @param a:img,number:values (image or number)
     """
-    return func_wrapper(lambda xx: xx.sqrt(), a)
+    return a.sqrt()
 
 
 @datumfunc
@@ -532,9 +455,7 @@ def abs(a):  # careful now, we're shadowing the builtin "abs" here.
     Calculate absolute value
     @param a:img,number:values (image or number)
     """
-    # We don't want to inadvertently recurse, so call the builtin
-    # abs function.
-    return func_wrapper(lambda xx: builtins.abs(xx), a)
+    return a.abs()
 
 
 @datumfunc
@@ -676,8 +597,7 @@ def mean(val):
 
     @param val:img,number:the value to process
     """
-    return stats_wrapper(val,
-                         lambda n, u, d: (np.mean(n), pooled_sd(n, u), pcot.dq.NONE))
+    return val.mean()
 
 
 @datumfunc
@@ -693,21 +613,7 @@ def sd(val):
     @param val:img,number:the value to process
     """
 
-    return stats_wrapper(val,
-                         lambda n, u, d: (pooled_sd(n, u), 0, pcot.dq.NONE))
-
-
-def minmax(f, n, u, d):
-    """Find the minimum and maximum of a set of values, with uncertainty. This is a helper function for min and max;
-    you pass np.argmin or np.argmax depending on what you want. The arrays passed in are the individual arrays which
-    make up a value or image, and they can be of any dimensionality."""
-    if np.isscalar(n):
-        return n, u, d
-    else:
-        # find the index of the minimum value
-        idx = np.unravel_index(f(n), n.shape)
-        return n[idx], u[idx], d[idx]
-
+    return val.sd()
 
 @datumfunc
 def min(val):
@@ -721,7 +627,7 @@ def min(val):
     @param val:img,number:value to process
     """
 
-    return stats_wrapper(val, lambda n, u, d: minmax(np.argmin, n, u, d))
+    return val.min()
 
 
 @datumfunc
@@ -735,7 +641,7 @@ def max(val):
 
     @param val:img,number:value to process
     """
-    return stats_wrapper(val, lambda n, u, d: minmax(np.argmax, n, u, d))
+    return val.max()
 
 
 @datumfunc
@@ -751,18 +657,8 @@ def sum(val):
 
     @param val:img,number:value to process
     """
+    return val.sum()
 
-    def sum_of_variances(n, u):
-        # we calculate variance of the values in the set
-        varianceOfMeans = n.var()
-        # we calculate the sum of the variances (not the mean this time!)
-        sumOfVariances = np.sum(u ** 2)
-        # and return the sum of those two.
-        return np.sqrt(varianceOfMeans + sumOfVariances)
-
-    rr = stats_wrapper(val,
-                       lambda n, u, d: (np.sum(n), sum_of_variances(n, u), pcot.dq.NOUNCERTAINTY))
-    return rr
 
 
 @datumfunc

@@ -6,16 +6,112 @@ Note that types which start with "img" are image types, and
 should all be renderable by Canvas.
 These types are also used by the expression evaluator.
 """
+import builtins
 import logging
 from typing import Any, Optional
+
+import numpy as np
 
 from pcot.dq import NOUNCERTAINTY
 from pcot.sources import SourcesObtainable, nullSource, nullSourceSet
 import pcot.datumtypes
 
 from pcot.datumexceptions import *
+from pcot.utils.maths import pooled_sd, minmax
 
 logger = logging.getLogger(__name__)
+
+
+def func_wrapper(fn, d):
+    """Takes a function which takes and and returns Value, and a datum.
+    Converts the datum into a Value if it's possible, passes it to the function, wraps the return value in a Datum.
+
+    This is a utility for dealing with
+    functions. For images, it strips out the relevant pixels (subject to ROIs) and creates a masked array. However, BAD
+    pixels are included. It then performs the operation and creates a new image which is a copy of the
+    input with the new data spliced in."""
+
+    from pcot.value import Value
+    from pcot.sources import SourceSet
+    from pcot.xform import XFormException
+
+    if d is None:
+        return None
+    elif d.tp == Datum.NUMBER:  # deal with numeric argument (always returns a numeric result)
+        # get sources for all arguments
+        ss = d.getSources()
+        rv = fn(d.val)
+        return Datum(Datum.NUMBER, rv, SourceSet(ss))
+    elif d.isImage():
+        img = d.val
+        ss = d.sources
+        subimage = img.subimage()
+
+        # make copies of the source data into which we will splice the results
+        imgcopy = subimage.img.copy()
+        unccopy = subimage.uncertainty.copy()
+        dqcopy = subimage.dq.copy()
+
+        # Perform the calculation on the entire subimage rectangle, but only the results covered by ROI
+        # will be spliced back into the image (modifyWithSub does this).
+        v = Value(imgcopy, unccopy, dqcopy)
+
+        rv = fn(v)
+        # depending on the result type..
+        if rv.isscalar():
+            # ...either use it as a number datum
+            return Datum(Datum.NUMBER, rv, ss)
+        else:
+            # ...or splice it back into the image
+            img = img.modifyWithSub(subimage, rv.n, uncertainty=rv.u, dqv=rv.dq)
+            return Datum(Datum.IMG, img)
+    else:
+        raise XFormException('EXPR', 'unsupported type for function')
+
+
+def stats_wrapper(val, func):
+    """Takes a function that operates on a tuple of val,unc,dq and returns same
+    """
+
+    from pcot.value import Value
+    from pcot.utils.image import imgsplit
+    from pcot.xform import XFormException
+
+    if val.tp == Datum.NUMBER:
+        ns = val.get(Datum.NUMBER).n
+        us = val.get(Datum.NUMBER).u
+        dqs = val.get(Datum.NUMBER).dq
+        nr, ur, dqr = func(ns, us, dqs)
+        return Datum(Datum.NUMBER, Value(nr, ur, dqr), sources=val.sources)
+    elif val.isImage():
+        img = val.get(Datum.IMG)
+        if img is None:
+            return None
+
+        # get the subimage (i.e. only the part covered by ROIs if there are any)
+        # and mask out the bad pixels
+        subimage = img.subimage()
+        # I was making a copy, but I don't think it's needed.
+        imgn_masked, imgu_masked, imgd_masked = subimage.masked_all(True)
+
+        if img.channels == 1:
+            # mono image
+            ns, us, ds = func(imgn_masked, imgu_masked, imgd_masked)
+        else:
+            # split the image into bands
+            ns = imgsplit(imgn_masked)
+            us = imgsplit(imgu_masked)
+            ds = imgsplit(imgd_masked)
+            v = [func(ns[i], us[i], ds[i]) for i in range(0, len(ns))]
+            # we now have a list of tuples. We want to get from this:
+            # [(n,u,d),(n,u,d),(n,u,d) .. ] to [(n,n,n,n),(u,u,u,u),(d,d,d,d)]
+            # so we use zip to transpose the list of tuples
+            ns, us, ds = list(zip(*v))
+        return Datum(Datum.NUMBER, Value(ns, us, ds), img.sources)
+    else:
+        # shouldn't happen because we check types
+        raise XFormException('DATA', 'stats functions can only take numbers or images')
+
 
 
 class Datum(SourcesObtainable):
@@ -241,6 +337,44 @@ class Datum(SourcesObtainable):
         # we use % instead of $ here.
         from pcot.expressions import ops
         return ops.binop(ops.Operator.DOLLAR, self, other)
+
+    ## wrapped functions! The wrapper will handle turning an ImageCube into Value.
+
+    def sin(self):
+        return func_wrapper(lambda x: x.sin(), self)
+    def cos(self):
+        return func_wrapper(lambda x: x.cos(), self)
+    def tan(self):
+        return func_wrapper(lambda x: x.tan(), self)
+    def sqrt(self):
+        return func_wrapper(lambda x: x.sqrt(), self)
+    def abs(self):
+        # We don't want to inadvertently recurse, so call the builtin
+        # abs function.
+        return func_wrapper(lambda x: builtins.abs(x), self)
+
+    def mean(self):
+        return stats_wrapper(self, lambda n, u, d: (np.mean(n), pooled_sd(n, u), pcot.dq.NONE))
+
+    def sd(self):
+        return stats_wrapper(self, lambda n, u, d: (pooled_sd(n, u), 0, pcot.dq.NOUNCERTAINTY))
+
+    def min(self):
+        return stats_wrapper(self, lambda n, u, d: minmax(np.argmin, n, u, d))
+
+    def max(self):
+        return stats_wrapper(self, lambda n, u, d: minmax(np.argmax, n, u, d))
+
+    def sum(self):
+        def sum_of_variances(n, u):
+            # we calculate variance of the values in the set
+            varianceOfMeans = n.var()
+            # we calculate the sum of the variances (not the mean this time!)
+            sumOfVariances = np.sum(u ** 2)
+            # and return the sum of those two.
+            return np.sqrt(varianceOfMeans + sumOfVariances)
+
+        return stats_wrapper(self, lambda n, u, d: (np.sum(n), sum_of_variances(n, u), pcot.dq.NOUNCERTAINTY))
 
 
 # a handy null datum object
