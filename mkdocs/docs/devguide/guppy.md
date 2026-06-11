@@ -52,15 +52,18 @@ Other operations (negation, inversion) leave the uncertainty unchanged.
 
 This is usually the best way to work with uncertainty, particularly when
 `ImageCube` objects (i.e. images) are involved. `Datum` is the data type that
-wraps everything that travels between nodes in PCOT, and PCOT knows how to
-propagate uncertainty through calculations that involve images and values.
+wraps everything that travels between nodes in PCOT, and particularly deals with
+converting ImageCube into Value objects so that calculations involving both can
+be performed. It also handles regions of interest in images.
 
-The `Datum` class also implements most operations as "dunder" methods, so writing
+The `Datum` class implements most operations as "dunder" methods, so writing
 the operations is easy. First, however, you will probably need to wrap your data.
 
 ### Wrapping values
 
 The `Value` class represents numerical data (scalars or arrays) along with their uncertainty and DQ bits.
+(Images are represented by ImageCube objects instead, with extra information for regions
+of interest etc.)
 When wrapping a Value, you will need to provide information about the source of the data as a `SourceSet`
 object. If you are just dealing with a constant, or an arbitrary value which has not come from mission data, you 
 just use the "null" source, and wrap your value like this:
@@ -110,18 +113,6 @@ Once the data is wrapped in Datum objects, all of the following operations will 
 * unary negation
 * unary inversion (i.e $1-x$) (with "~" in Python)
 
-So you can write
-```python
-# Create a Datum holding 0.2 +/- 0.01. We could do this with Datum.k() but it's
-# good to see it in full
-Datum v = Datum(Datum.NUMBER, Value(0.2, 0.01), Datum.null)
-# Wrap an existing ImageCube in a Datum
-imgD = Datum(Datum.IMG, myImageCube)
-# Multiply them together and add 0.2
-out = (v * imgD) + Datum.k(0.2)
-# Get the ImageCube out of the result
-out = Datum.get(Datum.IMG)
-```
 In addition, the following functions are defined as method on Datum:
 
 * sin, cos, tan
@@ -141,3 +132,69 @@ For these methods
 For example, if **d** is an RGB image, calling `d.mean()` will return a Value holding an array with three elements, one for each band.
 Calling `mean` on that again, by running `d.mean().mean()`, will produce the mean of those three values.
 
+
+### Example of Datum calculations
+Below is an example of using Datum to perform a calculation on an ImageCube while
+propagating uncertainty. The (rather unusual) calculation is
+
+$A' = (0.2 \pm 0.01) \sin(A) + 0.3$
+
+We are taking the sine of every pixel in the image, multiplying it by the 
+constant $0.2 \pm 0.01$, and finally adding $0.3$, all while propagating uncertainty.
+
+Here is the code:
+```python
+# Create a Datum holding 0.2 +/- 0.01. We could do this with Datum.k() but it's
+# good to see it in full
+Datum v = Datum(Datum.NUMBER, Value(0.2, 0.01), Datum.null)
+# Wrap an existing ImageCube in a Datum and calculate the sine of all pixels
+imgD = Datum(Datum.IMG, myImageCube).sin()
+# Multiply the two Datum objects together and add 0.3
+out = (v * imgD) + Datum.k(0.3)
+# Get the ImageCube out of the result
+out = Datum.get(Datum.IMG)
+```
+More briefly,
+```python
+Datum.k(0.2,0.01) * Datum(Datum.IMG,myImageCube).sin() + Datum.k(0.3)
+```
+
+## The `Value` class
+
+As mentioned above, numeric values and arrays are stored using the Value class,
+and occasionally it may be necessary to work at this level. It is also useful to understand
+some of the extra work that is done here in addition to the "raw" uncertainty
+calculations which are mentioned in the final section.
+
+Binary operators on Value objects will work, as well as the negation and inversion
+unary operators ("-" and "~" respectively). However, both sides of the operator must be Values - if you want to work on
+different types you must wrap them in Datum, as described above. The Datum class will convert ImageCubes into Value
+objects internally and operate on those.
+
+As well as the "core" uncertainty propagation, the following takes place:
+
+* DQ bits from both "parents" are propagated into the result using bitwise OR.
+* Division by zero will mark the result as DIVZERO and set mean and uncertainty to zero. Dividing zero by zero will also set the UNDEF bit. 
+* If result of exponentiation is infinite or complex, it will be set to zero and the COMPLEX bit will be set (e.g. finding the root of -1).
+* Bitwise AND and OR actually find the min and max respectively, and set the uncertainty and DQ from that value too
+* `sqrt` is defined, and raises to the power of 0.5 using the pow method, so uncertainty is propagated
+* `sin` and `cos` are defined and uncertainty is propagated using code here, not in the low level stuff
+* `tan` is defined, but using the secant for uncertainty (since we can't use sin/cos for this since the values are uncertain). That means we have an edge case where the angle is close to zero - we set DIVZERO here.
+* The `uncertainty` method will give the uncertainty, and if the value is an array the uncertainty will be pooled.
+
+
+## Low level functions for uncertainty in binary operations
+
+Functions in `value.py` deal with numpy arrays or Python numbers, and generally take values $a$ and $b$ and their uncertainties $ua$ and $ub$ 
+expressed as standard deviation. These are used by the above functions and methods, and you probably shouldn't deal with  them directly. However, you 
+may find these occasionally useful.
+
+* **add_sub_unc(ua,ub)** adds the values in quadrature: $\sqrt{ua^2+ub^2}$ giving the uncertainty for the sum or difference.
+* **add_sub_unc_list(a,b)** is like the above, but works on a list or array of uncertainties
+* **mul_unc(a,ua,b,ub)** gives the uncertainty for multiplication of two values $a\pm ua$ and $b\pm ub$  by calculating $\sqrt{a\cdot ub^2+b\cdot ua^2}$ , which is a simplification of the standard formula.
+* **div_unc(a,ua,b,ub)** gives the uncertainty for division of two values $a\pm ua$ and $b\pm ub$  by calculating $\frac{\sqrt{a\cdot ub^2+b\cdot ua^2}}{b^2}$ , which is a simplification of the standard formula.
+* **pow_unc(a,ua,b,ub)** does the same for raising $a$ to the power $b$, 
+	* It uses the moderately horrific expression $\sqrt{a^{2b-2} \left((a \sigma_b \ln a)^2 + (b \sigma_a)^2\right)}$
+	* If $b=1$ it outputs $ua$ directly
+	* If $a=0$ and  $b<0$ it outputs zero; upstream code will catch this case and mark DQ as UNDEFINED.
+	* It doesn't handle the case where the results are complex (e.g. $a<0$ and $b=1.25$). This is handled upstream.
