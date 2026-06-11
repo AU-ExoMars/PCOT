@@ -46,6 +46,7 @@ nav:
         - Using PCOT as a library: devguide/library.md
         - Writing PCOT plugins: devguide/plugins.md
         - Node serialisation: devguide/nodeser.md
+        - GUPPY, the Guide to Uncertainty in PCOT Python: devguide/guppy.md
     - Roadmap: roadmap.md
     - Known issues: gettingstarted/issues.md
 

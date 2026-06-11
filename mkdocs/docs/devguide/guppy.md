@@ -1,5 +1,9 @@
 # GUPPY: Guide to Uncertainty in PCOT Python
 
+Read this first: [Important Classes](/devguide/classes).
+
+More details on Value and Datum can be found in [How Values Work](/devguide/values).
+
 When you are writing code which uses PCOT as a library, or adding
 new nodes or other functionality to PCOT itself, you will be dealing
 with quantities which have inherent uncertainty. Every number, including
