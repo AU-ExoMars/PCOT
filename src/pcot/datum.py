@@ -354,18 +354,56 @@ class Datum(SourcesObtainable):
         return func_wrapper(lambda x: builtins.abs(x), self)
 
     def mean(self):
+        """
+        Find the mean±sd of a Datum. This does different things depending on what kind of Datum we are dealing with.
+        For a scalar, it just returns the scalar. For a vector, it returns the mean and sd of the vector. For an
+        image, it returns a vector of the means and sds of each channel.
+        Pixels with "bad" DQ bits will be ignored.
+        """
         return stats_wrapper(self, lambda n, u, d: (np.mean(n), pooled_sd(n, u), pcot.dq.NONE))
 
     def sd(self):
+        """
+        Find the SD of a Datum. This does different things depending on what kind of Datum we are dealing with.
+        For a scalar, it just returns 0. For a vector or single-channel image, it returns a scalar. For an image, it returns a
+        vector of the SDs of each channel. Because each individual value in the input set can have its own uncertainty, the
+        uncertainty is pooled - the pooled variance is the mean of the variances plus the variance of the means
+        (Rudmin, J. W. (2010). Calculating the exact pooled variance. arXiv preprint arXiv:1007.1012). For pooling, we make
+        the assumption that the number of items in each input subset (e.g. each pixel) is the same.
+        Pixels with "bad" DQ bits will be ignored.
+        """
         return stats_wrapper(self, lambda n, u, d: (pooled_sd(n, u), 0, pcot.dq.NOUNCERTAINTY))
 
     def min(self):
+        """
+        Find the minimum of a Datum. For a multiband image, returns a vector of the minimum value of each band.
+        For a single band image, a scalar, or a vector, returns a scalar.
+        Pixels with "bad" DQ bits will be ignored.
+        See also the | (OR) operator, which will find the minimum of two values (or images, vectors etc).
+
+        """
         return stats_wrapper(self, lambda n, u, d: minmax(np.argmin, n, u, d))
 
     def max(self):
+        """
+        Find the maximum of a Datum. For a multiband image, returns a vector of the maximum of each band.
+        For a single band image, a scalar, or a vector, returns a scalar.
+        Pixels with "bad" DQ bits will be ignored.
+        See also the & (AND) operator, which will find the minimum of two values (or images, vectors etc).
+
+        """
         return stats_wrapper(self, lambda n, u, d: minmax(np.argmax, n, u, d))
 
     def sum(self):
+        """
+        Find the sum of a Datum. For a multiband image, returns a vector of the sums of each band.
+        For a single band image, a scalar, or a vector, returns a scalar.
+        The uncertainty is pooled differently as this is a sum. The variance will be the variance of
+        the means plus the sum of the variances (still following
+        Rudmin, J. W. (2010). Calculating the exact pooled variance. arXiv preprint arXiv:1007.1012).
+
+        Pixels with "bad" DQ bits will be ignored.
+        """
         def sum_of_variances(n, u):
             # we calculate variance of the values in the set
             varianceOfMeans = n.var()
