@@ -257,6 +257,7 @@ class TabGen(pcot.ui.tabs.Tab):
 
     def onNodeChanged(self):
         self.w.canvas.setNode(self.node)
+        self.w.tableView.resizeColumnsToContents()
 
         with SignalBlocker(self.w.spinWidth, self.w.spinHeight):
             self.w.spinWidth.setValue(self.node.params.imgwidth)
