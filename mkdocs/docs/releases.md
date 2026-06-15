@@ -209,7 +209,7 @@ there's a fort there because of the name (Cornish *dynas* is cognate with Welsh
 ### 0.6.0-alpha 2023-09-11 DRIFT STONES
 
 * uncertainty and error bit propagation in *expr* and all nodes 
-* Testing quality and propagation rules (see [Principles](/userguide/principles))
+* Testing quality and propagation rules (see [Principles](userguide/principles.md))
 * Test graphs for nodes and other high-level functionality
 * Test nodes for those graphs
 * Tabular output on spectrum and histogram nodes
@@ -272,7 +272,7 @@ types to have operations defined on them
 * Improved default RGB mapping in canvas
 * Testing
     * Basics testing
-    * Testing of the operating principles (see [Principles](/userguide/principles))
+    * Testing of the operating principles (see [Principles](userguide/principles.md))
         * Source rules
         * ROI rules
 * rect node can now be edited numerically

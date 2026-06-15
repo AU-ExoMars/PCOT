@@ -9,7 +9,7 @@ new nodes or other functionality to PCOT itself, you will be dealing
 with quantities which have inherent uncertainty. Every number, including
 individual pixels in images, has a standard deviation. 
 
-It is important that calculations on these quantities
+It is often important that calculations on these quantities
 propagate the uncertainty correctly. For example,
 
 \\[
@@ -25,6 +25,28 @@ because the standard deviations add in quadrature:
 This document will show the formulae that are used to propagate uncertainty
 and show how you can write code using PCOT's implementations of these 
 formulae at several different levels.
+
+## Do you need to do it?
+
+Working with uncertainty is painful and sometimes pretty much impossible -
+consider Principal Component Analysis or decorrelation stretching,
+which requires an eigendecomposition on the covariance matrix. We get 
+Numpy to do that for us, and rewriting it to process uncertainty would
+be a nightmare.
+
+It would also be painfully slow - Numpy is highly optimised C and Fortran
+code, and it still doesn't run as quickly as we would like. For many
+operations, propagating uncertainty through the millions of
+calculations required to process an image would make PCOT grind to a halt.
+
+For this reason you should only propagate uncertainty 
+
+* when the value makes sense
+* when it is scientifically valuable
+* when it can run in a reasonable timeframe
+
+If any of these conditions are false, don't propagate - but 
+**remember to set the NOUNCERTAINTY bit in the output values.**
 
 ## Assumption of independent variables
 
@@ -79,7 +101,7 @@ or if you need to provide uncertainty:
 d = Datum.k(0.5,0.001)
 ```
 The **k** stands for "constant." Note that if you provide an uncertainty of exactly zero, the Value constructor
-will set the NOUNC (no uncertainty) DQ bit.
+will set the NOUNCERTAINTY bit.
 
 If you need to wrap a Value that has come from some other calculation, you may need to provide a source.
 That's beyond the scope of this part of the documentation, but if you are dealing with data 

@@ -46,14 +46,14 @@ inputs from various sources and manipulating them in various ways.
 ## *Expr* functions
 
 Below are functions which can be used in the expression evaluation
-node, [expr](expr).
+node, [expr](expr.md).
 
 {funcs}
 
 ## *Expr* properties
 
 Below are properties which can be used in the expression evaluation
-node, [expr](autodocs/expr).
+node, [expr](expr.md).
 Properties are names which can be used as identifiers on the
 right hand side of a "." operator, such as *a.w* to get the width of an
 image *a*.
@@ -63,7 +63,7 @@ image *a*.
 ## Input and output parameters for the parameter file (batch) runner
 
 Below are links to pages describing parameters for setting the inputs and outputs
-in batch files. See [batch mode](/userguide/batch) for more details.
+in batch files. See [batch mode](../userguide/batch) for more details.
 
 * [Input parameters](batchinputs)
 * [Output parameters](batchoutputs)
@@ -157,7 +157,7 @@ def genNodes():
     out = ""
     for realname, x in sorted(pcot.xform.allTypes.items()):
         name=realname.replace(' ', '_')
-        out += f"* [{realname}]({name})\n"
+        out += f"* [{realname}]({name}.md)\n"
         print(name)
         with open(f"docs/autodocs/{name}.md","w") as f:
             s = pcot.ui.help.getHelpMarkdown(x)

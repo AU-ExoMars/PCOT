@@ -15,11 +15,11 @@ storing them under names given in the files themselves.
 ## Obtaining camera and reflectance files
 
 You should be able to download camera and reflectance files containing full
-data for AUPE and PanCam from the [PCOT Cookbook](pcot.aber.ac.uk) site.
+data for AUPE and PanCam from the [PCOT Cookbook](https://pcot.aber.ac.uk) site.
 
 Store the camera files in a separate directory from the reflectances.
 In my own system, I've created `cameras` and `reflectances` directories
-in my PCOT install directory.
+in my PCOT install directory. [wibble](/wobble)
 
 The rest of this page describes how to make your own data files if you
 are working with a new camera or target.
