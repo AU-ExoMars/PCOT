@@ -88,62 +88,28 @@ class XFormExampleSimpleParameters(XFormType):
         """
         params = node.params   # get a handy reference to the parameters TaggedDict
 
-        # get the input image. This returns None if there is no input or the input is not an image.
-        img: ImageCube = node.getInput(0, Datum.IMG)
-        if img is not None:
-            # there an image, let's do something with it. We're going to add a value to the pixels,
-            # and multiply by another value. Or the other way around, depending on the ordering.
-            # The values are stored in node.params under the keys given in the TaggedDictType above.
-
-            # We first get a SubImageCube object from the image - this is the image clipped to
-            # a bounding box around any ROIs in the image, with a mask for which pixels are in the ROIs.
-            # We do this because we want the operation to be performed on the parts covered by
-            # the ROIs.
-            subimage = img.copy().subimage()  # make a copy (need to do this to avoid overwriting the source).
-
-            # Now do the thing! We're operating on the img, uncertainty and dq fields inside the subimage.
-            # I'm also doing uncertainty propagation - there are functions in value.py to handle that.
-
-            from pcot.value import mul_unc, add_sub_unc
-
+        # get the input as a Datum
+        img: Datum = node.getInput(0)
+        if img.isImage():   # if it's an image (it will not be if the input is not connected)...
+            # here we do the actual operations, working on Datum objects because it's the easiest way
+            # of propagating uncertainty and ROIs, and making sure the operations only occur on parts
+            # of the image covered by any ROIs.
             if node.params.order == "mul,add":
-                # do the multiplication of the nominal (mean) values first
-                result_nom = subimage.img * node.params.mul
-                # then handle the uncertainty - the parameters here are (mean1,unc1,mean2,unc2) for multiplication.
-                # Note that the uncertainty for the constants is zero, which makes this trivial in reality.
-                result_unc = mul_unc(subimage.img, subimage.uncertainty, params.mul, 0)
-                result_nom = result_nom + node.params.add
-                # for subtraction/addition, we don't need the nominals, just the uncertainties (which add in
-                # quadrature). As you would expect, this operation isn't really needed because the uncertainty
-                # is unchanged when you add a constant.
-                result_unc = add_sub_unc(result_unc, 0)
+                # Datum knows how to add Datum and numbers, both ways round. Subtraction and division
+                # will be handled OK too. See GUPPY!
+                img  = params.mul * img + params.add
             elif node.params.order == "add,mul":
-                result_nom = subimage.img + node.params.add
-                result_unc = add_sub_unc(subimage.uncertainty, 0)
-                result_nom = result_nom * node.params.mul
-                result_unc = mul_unc(result_nom, result_unc, params.mul, 0)
+                img = (img + params.add) * params.mul
             else:
                 # this is the kind of exception to raise when things go wrong in a node. The four-letter code
                 # is shown in the node's graph box.
                 raise XFormException('DATA', "Bad 'order' parameter")
-
-            # The resulting DQ is going to be the same as the source image.
-            result_dq = subimage.dq
-
-            # splice the returned clipped image into the main image, producing a new image, and
-            # make sure its RGB mapping is that specified in the node (this is handled by the canvas
-            # control, which has been told by setNode to store its settings in the node).
-
-            newimg = img.modifyWithSub(subimage, result_nom, uncertainty=result_unc, dqv=result_dq)
-            newimg.setMapping(node.mapping)
         else:
             # if there's no input, just set the output image to None.
-            newimg = None
+            img = Datum.null
 
-        # wrap the output image in a Datum
-        out = Datum(Datum.IMG, newimg)
         # and set the node's output to be that datum.
-        node.setOutput(0, out)
+        node.setOutput(0, img)
 
     def createTab(self, node, window):
         """
