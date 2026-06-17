@@ -1,7 +1,7 @@
 from pcot.datum import Datum
 from pcot.parameters.taggedaggregates import TaggedDictType
 from pcot.xform import xformtype, XFormType
-from pcot.xforms.tabdata import TabData
+from pcot.xforms.tabgeneric import TabGeneric
 
 
 @xformtype
@@ -17,7 +17,7 @@ class XformCropROI(XFormType):
         self.params = TaggedDictType()  # no parameters
 
     def createTab(self, n, w):
-        return TabData(n, w)
+        return TabGeneric(n, w)
 
     def init(self, node):
         pass

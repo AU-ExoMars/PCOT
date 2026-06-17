@@ -41,6 +41,7 @@ nav:
         - Batch mode: userguide/batch/index.md
         - Autodocs: autodocs/index.md
         - Favorites and macros: userguide/favesandmacros/index.md
+        - Settings dialog: userguide/settings.md
     - Developer's Guide:
         - Overview: devguide/index.md
         - Using PCOT as a library: devguide/library.md

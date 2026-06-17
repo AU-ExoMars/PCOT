@@ -3,7 +3,7 @@ import pcot.inputs
 from pcot.parameters.taggedaggregates import TaggedDictType
 
 from pcot.xform import xformtype, XFormType, XFormException
-from pcot.xforms.tabdata import TabData
+from pcot.xforms.tabgeneric import TabGeneric
 
 
 class XFormInput(XFormType):
@@ -15,7 +15,7 @@ class XFormInput(XFormType):
         self.idx = idx
 
     def createTab(self, n, w):
-        return TabData(n, w)
+        return TabGeneric(n, w)
 
     def init(self, node):
         pass

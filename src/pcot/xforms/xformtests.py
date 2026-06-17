@@ -20,7 +20,7 @@ from pcot.ui.tablemodel import TableModelDataClass, ComboBoxDelegate, DQDelegate
 from pcot.utils.annotations import IndexedPointAnnotation
 from pcot.value import Value
 from pcot.xform import XFormType, xformtype, XFormException
-from pcot.xforms.tabdata import TabData
+from pcot.xforms.tabgeneric import TabGeneric
 
 logger = logging.getLogger(__name__)
 
@@ -583,7 +583,7 @@ class XFormMergeTests(XFormType):
         pass
 
     def createTab(self, xform, window):
-        return TabData(xform, window)
+        return TabGeneric(xform, window)
 
     def perform(self, node):
         out = []

@@ -264,7 +264,7 @@ class XFormEdgeDetect(XFormType):
         # It can also look at the node's output 0 if you wish.
         # If your node has TaggedDict parameters will automatically
         # provide an editor for them.
-        return TabData(n, w)
+        return TabGeneric(n, w)
 
     def init(self, n):
         # No initialisation required.
@@ -326,6 +326,7 @@ If you are creating a tab in Designer, you need to add a canvas as a QWidget whi
 to a custom control (the canvas). In the promote dialog, the class should be `Canvas` and the
 header file `pcot.ui.canvas` (i.e. the package name). 
 
+
 In your `onNodeChanged()` method you
 will need to update the canvas. This involves doing a little setup, then getting the 
 image we want to display - usually the output - and telling the canvas to display it:
@@ -366,8 +367,3 @@ lists, dicts and tuples.
 
 PCOT has no less than four mechanisms for converting node data into JSON:
 [read more about them here](nodeser.md).
-
-However, the best method to use is almost certainly 
-[TaggedAggregate parameters](/devguide/nodeser/#using-taggedaggregates-to-serialise-nodes). An example of that can be seein in
-`xformexamplesimple.py`.
-

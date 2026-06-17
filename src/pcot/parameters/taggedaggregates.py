@@ -359,6 +359,9 @@ class TaggedDictType(TaggedAggregateType):
         self.isOrdered = True
         return self
 
+    def __len__(self):
+        return len(self.tags)
+
     def create(self):
         """Create a the appropriate default values"""
         return TaggedDict(self)

@@ -66,8 +66,9 @@ class AggregateEditorWidget(QWidget):
     d: dictionary to edit
     handler: something that is called every time an editor changes value (has onPreChange and onPostChange),
         typically used for undo
-    internal_editor: This editor is embedded as a widget within another attribute editor, so should be as small as
-        possible but not have a collapser
+    internal_editor: This editor is embedded as a widget within another attribute editor or dialog, so should
+        be as small as possible and not have a collapser. If this is False, it will often be too wide to
+        usefully embed!
     suppress_single_key: if the dict to be laid out has only one key, don't make a label for that key. A hack.
     """
     def __init__(self, d, handler=None, parent=None, internal_editor=False, suppress_single_key_label=False):
