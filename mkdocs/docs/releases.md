@@ -15,6 +15,52 @@ None
 
 ## Beta releases
 
+## 0.12.0-beta 2026-06-XX KENWYN FOUR BURROWS
+
+Quite a lot in this one. We don't have HRC colour correction yet, but it's
+being worked on - it's a difficult problem (more accurately, getting it
+into PCOT without pulling in a library that's 20 times bigger than PCOT itself
+is difficult).
+
+* [Favourites and macros](/userguide/favesandmacros) - save nodes with
+particular settings and also collections of nodes which work like a single node.
+Both favourites and macros can be saved to archives which can be loaded on startup.
+* PCOT now also has Malvar-He-Cutler and Menon (DDFAPD) demosaicing algorithms.
+* Demosaicing now uses the "classical" Bayer pattern names (e.g. RGGB) and
+not the rather weird OpenCV names.
+* *PCA* node does both principal component analysis and decorrelation
+stretches, and does so on all bands (not just the RGB representation).
+* ***decorrstretch* node deprecated** - use *PCA* instead
+* Search box for palette!
+* [Settings dialog](userguide/settings) should make life easier for changing settings quickly.
+* Unconnected *expr* inputs give a null datum rather than raising an
+exception.
+* *reflectance* node supports angle data (filter angle and $\phi$, $\theta$ for target).
+* Raw loader crops overlong data and warns.
+* [GUPPY](/devguide/guppy), the Guide to Uncertainty in PCOT Python - how to write code that
+propagates uncertainty.
+
+* Refactoring of the `func_wrapper` and `stats_wrapper` mechanisms for
+processing uncertainty.
+* `genimg` datumfunc to quickly create images.
+* Fixes to the *gen* node to make the pattern mode actually visible in the table columns.
+* Better checking on "headless" setups (i.e. working on a server with no windowing system).
+* A lot of work on the system underlying the settings dialog: the
+`AggregateEditorDialog`; this can also be used for node and macro params.
+* Comparison operators `<` and `>`, and `ifelse` and `isnone` datumfuncs.
+* Icon on canvas reset button.
+* Log window can clear all text.
+
+
+Site
+
+* [Google maps](https://maps.app.goo.gl/xAyB7ho1L7fWrxbM8)
+* [NLS map](https://maps.nls.uk/geo/explore/#zoom=17.6&lat=50.29125&lon=-5.14329&layers=168&b=osm&o=100&marker=50.291376,-5.143622)
+* Barrow Cemetery in Cornwall, which straddles the old A30 just west of Chybucca.
+Three of the barrows lie to the south, and one to the north.
+
+
+
 ## 0.12.0-beta 2026-03-04 JOANEY HOW
 
 I've had to go quite a long way north to get a name I liked; this one's in

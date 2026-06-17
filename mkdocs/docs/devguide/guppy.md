@@ -85,32 +85,6 @@ be performed. It also handles regions of interest in images.
 The `Datum` class implements most operations as "dunder" methods, so writing
 the operations is easy. First, however, you will probably need to wrap your data.
 
-### Wrapping values
-
-The `Value` class represents numerical data (scalars or arrays) along with their uncertainty and DQ bits.
-(Images are represented by ImageCube objects instead, with extra information for regions
-of interest etc.)
-When wrapping a Value, you will need to provide information about the source of the data as a `SourceSet`
-object. If you are just dealing with a constant, or an arbitrary value which has not come from mission data, you 
-just use the "null" source, and wrap your value like this:
-```
-d = Datum.k(0.5)        # wraps the number 0.5
-```
-or if you need to provide uncertainty:
-```
-d = Datum.k(0.5,0.001)
-```
-The **k** stands for "constant." Note that if you provide an uncertainty of exactly zero, the Value constructor
-will set the NOUNCERTAINTY bit.
-
-If you need to wrap a Value that has come from some other calculation, you may need to provide a source.
-That's beyond the scope of this part of the documentation, but if you are dealing with data 
-from an image you can use the `getSources()` method in `ImageCube`. Wrap the data with:
-
-```
-d = Datum(Datum.NUMBER,value,source)
-```
-
 ### Wrapping images
 
 Wrapping an ImageCube is usually easy, because the object itself contains its source
@@ -119,6 +93,44 @@ information. Typically you can just do
 ```
 d = Datum(Datum.IMG, my_imagecube)
 ```
+
+### Wrapping values
+
+You usually don't need to wrap scalar values with no uncertainty because Datum will handle
+the operation for you. If you write
+```
+d = some_image_datum * 5
+```
+or
+```
+n = Math.sin(some_angle)
+d = 2 - n/some_image_datum
+```
+the Datum object will deal with it automatically[^2]. However, you may
+occasionally need to wrap data if it contains uncertainty or source information. For constants
+with uncertainty (an odd concept), you can use 
+```
+Datum.k(value,uncertainty)
+```
+for example
+```
+d = Datum.k(0.2,0.001) / another_datum
+```
+You could omit the uncertainty, but you might as well just use the "naked" number as described above.
+The **k** (constant) method is a shorthand for wrapping a Value object with no source data.
+Note that if you provide an uncertainty of exactly zero, the Value constructor
+will set the NOUNCERTAINTY bit. `Value` represents numerical data (scalars or arrays) along with their uncertainty and DQ bits.
+(Images are represented by ImageCube objects instead, with extra information for regions
+of interest etc.)
+
+**If you need to wrap a Value that has come from some other calculation, you may need to provide a source**.
+That's beyond the scope of this part of the documentation, but if you are dealing with data 
+from an image you can use the `getSources()` method in `ImageCube`. Wrap the data with:
+
+```
+d = Datum(Datum.NUMBER,value,source)
+```
+
 
 ### Retrieving data from Datum objects
 
@@ -170,18 +182,25 @@ Here is the code:
 ```python
 # Create a Datum holding 0.2 +/- 0.01. We could do this with Datum.k() but it's
 # good to see it in full
-Datum v = Datum(Datum.NUMBER, Value(0.2, 0.01), Datum.null)
+v = Datum(Datum.NUMBER, Value(0.2, 0.01), Datum.null)
 # Wrap an existing ImageCube in a Datum and calculate the sine of all pixels
 imgD = Datum(Datum.IMG, myImageCube).sin()
 # Multiply the two Datum objects together and add 0.3
-out = (v * imgD) + Datum.k(0.3)
+out = (v * imgD) + 0.3
 # Get the ImageCube out of the result
-out = Datum.get(Datum.IMG)
+img = Datum.get(out, Datum.IMG)
 ```
 More briefly,
 ```python
-Datum.k(0.2,0.01) * Datum(Datum.IMG,myImageCube).sin() + Datum.k(0.3)
+Datum.k(0.2,0.01) * Datum(Datum.IMG,myImageCube).sin() + 0.3
 ```
+
+@@@info
+To see an example of this kind of calculation in practice,
+look at `xformexamplesimple.py` in the PCOT code (in
+`PCOT/src/pcot/xforms/`.) The `perform` method of the example
+node processes data using the above technique.
+@@@
 
 ## The Value class
 As mentioned above, numeric values and arrays are stored using the [`Value` class](/devguide/values),
@@ -240,3 +259,7 @@ a 1D array first.
 Note that this function operates on standard deviations and returns a standard deviation - conversion to and from variance is done inside the function.
 
 [^1]: Rudmin, J. W. (2010) "Calculating the exact pooled variance" arXiv preprint arXiv:1007.1012
+
+[^2]: What actually happens in (for example) `5-datum` is that 
+Datum overrides the `__rsub__` method, so it knows how to process 
+`5-myself`.

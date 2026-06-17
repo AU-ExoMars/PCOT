@@ -199,3 +199,35 @@ with Edit / Settings from the main menu.
 describes a more complex example which applies flatfielding
 and reflectance calibration using a Pancam Calibration Target.
 
+## Macro parameters
+
+Sometimes macros have numerical parameters. Consider the macro
+shown below, that performs a "direct decorrelation stretch" after Liu
+and Moore [^1]:
+
+\begin{align}
+r' &= r - k \min(r, g, b)\\
+g' &= g - k \min(r, g, b)\\
+b' &= b - k \min(r, g, b)
+\end{align}
+
+![!Direct decorrelation stretch](directdecorr.png)
+
+This (pretty messy) macro has a parameter $k$ which is brought into
+the graph by the *macro parameter* node on the right. When you open
+a macro instance's node, you'll now see this parameter can be edited:
+
+![!Direct decorrelation macro instance](directdecorr2.png)
+
+You can create a macro parameter inside a macro prototype graph thus:
+
+* Click the the "Add parameter" button (near the add input/output buttons). This will
+create a new parameter node inside the prototype.
+* Right click the node, select "Rename" and change the name of your parameter.
+* Double clicking on the node to open an editor to change the type, description,
+range and default value. Parameters can be integer or float.
+
+
+[^1]:
+Liu, J.G., and Moore, J. (1996) Direct decorrelation stretch technique for RGB colour composition. International Journal of Remote Sensing, 17:5, 1005-1018.
+

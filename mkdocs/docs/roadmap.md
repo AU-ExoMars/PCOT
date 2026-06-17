@@ -9,14 +9,8 @@ to load
 
 ## In next release
 
-* Refactoring to get macros working again
-* Favourite nodes can be saved - this is a single node with all its parameters
-* Decorrelation stretch allows more than 3 bands
-* Raw loader crops overlong data (and warns)
-* Log window has Clear All Text menu option
-* Palette has a search box - enter a string to view only nodes with that string
-* Icon on canvas to reset to entire image
-* The *reflectance* node now permits the angles to be entered
+* HRC colour correction
+
 
 # Others
 

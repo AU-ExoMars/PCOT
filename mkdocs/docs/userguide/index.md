@@ -14,6 +14,7 @@ to install and run PCOT and give you a tutorial covering the basics.
 * [Global controls](globalcontrols) on the PCOT UI.
 * [The canvas and its optional views](canvas)
 * [Favourites and macros](favesandmacros)
+* [The settings dialog](settings)
 
 ### Special topics
 * [Updating PCOT](update.md)
