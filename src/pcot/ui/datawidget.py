@@ -13,24 +13,28 @@ class DataWidget(QtWidgets.QWidget):
     DATA = 0
     SOURCES = 1
 
-    def __init__(self, parent):
+    def __init__(self, parent, source_section=False):
         super().__init__(parent)
 
         outer = QtWidgets.QVBoxLayout(self)
         self.setLayout(outer)
 
+        # contains the source and item type widgets
         inner = QtWidgets.QHBoxLayout(self)
-        lab = QtWidgets.QLabel("Type:", self)
+        lab = QtWidgets.QLabel("Type:")
         inner.addWidget(lab)
-        self.typeEdit = QtWidgets.QLineEdit(self)
+        self.typeEdit = QtWidgets.QLineEdit()
         self.typeEdit.setReadOnly(True)
         inner.addWidget(self.typeEdit)
-        self.dispTypeCombo = QtWidgets.QComboBox(self)
+        self.dispTypeCombo = QtWidgets.QComboBox()
         self.dispTypeCombo.addItem("Data")
         self.dispTypeCombo.addItem("Sources")
         self.dispTypeCombo.currentIndexChanged.connect(self.dispTypeChanged)
         inner.addWidget(self.dispTypeCombo)
-        outer.addLayout(inner)
+
+        # only add that inner layout if we want to display source and type
+        if source_section:
+            outer.addLayout(inner)
 
         self.canvas = Canvas(self)
         self.text = QtWidgets.QTextEdit(self)

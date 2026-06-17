@@ -9,7 +9,7 @@ import numpy as np
 
 from pcot.sources import SourceSet
 from pcot.xform import XFormType, xformtype
-from pcot.xforms.tabdata import TabData
+from pcot.xforms.tabgeneric import TabGeneric
 from pcot.imagecube import ImageCube
 from pcot.datum import Datum
 from pcot.value import Value
@@ -44,9 +44,8 @@ class XFormEdgeDetect(XFormType):
         self.addOutputConnector("", Datum.IMG)
 
     def createTab(self, n, w):
-        # there is no custom tab, we just use an data canvas. This expects "node.out" to be set to
-        # either None or an imagecube.
-        return TabData(n, w)
+        # Use the generic tab, which will look at the node's output.
+        return TabGeneric(n, w)
 
     def init(self, n):
         # No initialisation required.

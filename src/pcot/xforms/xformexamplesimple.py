@@ -6,8 +6,8 @@ is an easy way of editing a node with simple TaggedDict parameters.
 from pcot.datum import Datum
 from pcot.imagecube import ImageCube
 from pcot.parameters.taggedaggregates import TaggedDictType
-from pcot.ui.taggedaggregates.tab import TabAggregate
 from pcot.xform import XFormType, xformtype, XForm, XFormException
+from pcot.xforms.tabgeneric import TabGeneric
 
 
 @xformtype
@@ -25,6 +25,9 @@ class XFormExampleSimpleParameters(XFormType):
         Initialise the type singleton object. This doesn't create the *node*, but the single object that
         all nodes of this type will point to. This constructor runs at startup automatically (actually as part
         of importing PCOT).
+
+        This example adds and multiplies, or multiplies and then adds, its input by
+        a pair of constants.
         """
 
         # Call the superclass constructor with the name of the node type, the group it belongs to,
@@ -149,5 +152,7 @@ class XFormExampleSimpleParameters(XFormType):
         in the tab, and the window, which is the main window of the application.
         It just creates and returns a tab - in this case it's a "standard" tab for
         editing a node with simple parameters.
+
+        If we want to display the data type and source info, add "source_section=True"
         """
-        return TabAggregate(node, window)
+        return TabGeneric(node, window)
