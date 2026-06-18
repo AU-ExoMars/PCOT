@@ -17,13 +17,22 @@ from pcot.xform import XFormType, xformtype, XForm
 
 
 @xformtype
-class XFormExample(XFormType):
+class XFormCustomTabExample(XFormType):
     """
+    Example of a node with a custom tab.
+
     This object is not a node, but the singleton to which nodes of this type point to
     determine their behaviour.
 
     This docstring will form the help text for the node in the UI. Markdown is permitted
     and processed into HTML. Look at (say) XFormColourMap for an example of how to write this.
+
+    This particular node is a simple example which takes an image, but doesn't really do anything
+    meaningful. It's just an illustration/
+
+    It has a custom tab created with Qt. There is another example node - XFormSimpleExample - which uses
+    the TabGenericclass to automatically create a tab with an editor; this is often a more appropriate
+    approach and it's certainly simpler.
     """
 
     def __init__(self):
@@ -43,7 +52,7 @@ class XFormExample(XFormType):
         # startEnabled=False - this will start the node disabled. This is useful for nodes that are very slow.
         #                  It has no effect if hasEnable is false.
 
-        super().__init__("example", "testing", "0.0.0",
+        super().__init__("customtabexample", "testing", "0.0.0",
                          #  hasEnable=True,
                          #  startEnabled=False
                          )

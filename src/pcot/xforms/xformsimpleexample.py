@@ -11,13 +11,24 @@ from pcot.xforms.tabgeneric import TabGeneric
 
 
 @xformtype
-class XFormExampleSimpleParameters(XFormType):
+class XFormSimpleExample(XFormType):
     """
     This object is not a node, but the singleton to which nodes of this type point to
     determine their behaviour.
 
     This docstring will form the help text for the node in the UI. Markdown is permitted
     and processed into HTML. Look at (say) XFormColourMap for an example of how to write this.
+
+    This particular node is a simple example which takes an image, and either multiplies it
+    by a constant and adds another constant, or does the addition first and then the multiplication.
+    It has three parameters - addition constant, multiplication constant, and order of operations.
+    If the image has regions of interest, the operation will only be performed on those regions - the
+    rest of the image will remain unchanged.
+
+    This example uses TabGeneric as its user interface, which is the simplest way to do it. If you need
+    custom behaviour, there is another example node - XFormCustomTabExample - which uses Qt to build the interface.
+    It's rather more complex.
+
     """
 
     def __init__(self):
@@ -40,7 +51,7 @@ class XFormExampleSimpleParameters(XFormType):
         # startEnabled=False - this will start the node disabled. This is useful for nodes that are very slow.
         #                  It has no effect if hasEnable is false.
 
-        super().__init__("simple", "testing", "0.0.0",
+        super().__init__("simpleexample", "testing", "0.0.0",
                          #  hasEnable=True,
                          #  startEnabled=False
                          )
