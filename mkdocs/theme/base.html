@@ -11,7 +11,7 @@
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        {% if page and page.is_homepage %}<meta name="description" content="{{ config['site_description'] }}">{% endif %}
+        {% if page and page.is_homepage %}<meta name="description" content="{{ config.site_description }}">{% endif %}
         {% if config.site_author %}<meta name="author" content="{{ config.site_author }}">{% endif %}
         {% if page and page.canonical_url %}<link rel="canonical" href="{{ page.canonical_url }}">{% endif %}
         {% if config.site_favicon %}<link rel="shortcut icon" href="{{ config.site_favicon|url }}">
@@ -25,12 +25,16 @@
       {%- block styles %}
         <link href="{{ 'css/bootstrap.min.css'|url }}" rel="stylesheet">
         <link href="{{ 'css/fontawesome.min.css'|url }}" rel="stylesheet">
+        <link href="{{ 'css/brands.min.css'|url }}" rel="stylesheet">
+        <link href="{{ 'css/solid.min.css'|url }}" rel="stylesheet">
+        <link href="{{ 'css/v4-font-face.min.css'|url }}" rel="stylesheet">
         <link href="{{ 'css/base.css'|url }}" rel="stylesheet">
         {%- if config.theme.highlightjs %}
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/{{ config.theme.hljs_style }}.min.css">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/{{ config.theme.hljs_style }}.min.css" {% if config.theme.color_mode != "light" %}disabled{% endif %}>
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/{{ config.theme.hljs_style_dark }}.min.css" {% if config.theme.color_mode != "dark" %}disabled{% endif %}>
         {%- endif %}
-        {%- for path in extra_css %}
-        <link href="{{ path }}" rel="stylesheet">
+        {%- for path in config.extra_css %}
+        <link href="{{ path|url }}" rel="stylesheet">
         {%- endfor %}
       {%- endblock %}
 
@@ -39,11 +43,11 @@
         <script src="{{ 'js/lightbox-plus-jquery.min.js'|url }}" defer></script>
         <script src="{{ 'js/bootstrap.min.js'|url }}" defer></script>
         {%- if config.theme.highlightjs %}
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
         {%- for lang in config.theme.hljs_languages %}
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/languages/{{lang}}.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/{{lang}}.min.js"></script>
         {%- endfor %}
-        <script>hljs.initHighlightingOnLoad();</script>
+        <script>hljs.highlightAll();</script>
         {%- endif %}
       {%- endblock %}
 
@@ -55,7 +59,7 @@
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
 
-          gtag('config', '{{ config.theme.analytics.gtag }}');
+          gtag('config', {{ config.theme.analytics.gtag|tojson }});
         </script>
         {%- elif config.google_analytics %}
         <script>
@@ -64,7 +68,7 @@
             m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
             })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
 
-            ga('create', '{{ config.google_analytics[0] }}', '{{ config.google_analytics[1] }}');
+            ga('create', {{ config.google_analytics[0]|tojson }}, {{ config.google_analytics[1]|tojson }});
             ga('send', 'pageview');
         </script>
         {%- endif %}
@@ -96,8 +100,8 @@
                         <ul class="nav navbar-nav">
                         {%- for nav_item in nav %}
                         {%- if nav_item.children %}
-                            <li class="dropdown{% if nav_item.active %} active{% endif %}">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">{{ nav_item.title }} <b class="caret"></b></a>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle{% if nav_item.active %} active" aria-current="page{% endif %}" role="button" data-bs-toggle="dropdown"  aria-expanded="false">{{ nav_item.title }}</a>
                                 <ul class="dropdown-menu">
                                 {%- for nav_item in nav_item.children %}
                                     {% include "nav-sub.html" %}
@@ -105,8 +109,8 @@
                                 </ul>
                             </li>
                         {%- else %}
-                            <li class="navitem{% if nav_item.active %} active{% endif %}">
-                                <a href="{{ nav_item.url|url }}" class="nav-link">{{ nav_item.title }}</a>
+                            <li class="nav-item">
+                                <a href="{{ nav_item.url|url }}" class="nav-link{% if nav_item.active %} active" aria-current="page{% endif %}">{{ nav_item.title }}</a>
                             </li>
                         {%- endif %}
                         {%- endfor %}
@@ -114,11 +118,11 @@
                     {%- endif %}
                   {%- endblock %}
 
-                    <ul class="nav navbar-nav ml-auto">
+                    <ul class="nav navbar-nav ms-md-auto">
                       {%- block search_button %}
-                        {%- if 'search' in config['plugins'] %}
+                        {%- if 'search' in config.plugins %}
                         <li class="nav-item">
-                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
                                 <i class="fa fa-search"></i> {% trans %}Search{% endtrans %}
                             </a>
                         </li>
@@ -145,13 +149,15 @@
                             <li class="nav-item">
                                 <a href="{{ page.edit_url }}" class="nav-link">
                                     {%- if config.repo_name == 'GitHub' -%}
-                                        <i class="fa fa-github"></i> {% trans repo_name=config.repo_name %}Edit on {{ repo_name }}{% endtrans %}
+                                        <i class="fa-brands fa-github"></i> {% trans repo_name=config.repo_name %}Edit on {{ repo_name }}{% endtrans %}
                                     {%- elif config.repo_name == 'Bitbucket' -%}
-                                        <i class="fa fa-bitbucket"></i> {% trans repo_name=config.repo_name %}Edit on {{ repo_name }}{% endtrans %}
+                                        <i class="fa-brands fa-bitbucket"></i> {% trans repo_name=config.repo_name %}Edit on {{ repo_name }}{% endtrans %}
                                     {%- elif config.repo_name == 'GitLab' -%}
-                                        <i class="fa fa-gitlab"></i> {% trans repo_name=config.repo_name %}Edit on {{ repo_name }}{% endtrans %}
-                                    {%- else -%}
-                                    {% trans repo_name=config.repo_name%}Edit on {{ repo_name }}{% endtrans %}
+                                        <i class="fa-brands fa-gitlab"></i> {% trans repo_name=config.repo_name %}Edit on {{ repo_name }}{% endtrans %}
+                                    {%- elif config.repo_name -%}
+                                        {% trans repo_name=config.repo_name%}Edit on {{ repo_name }}{% endtrans %}
+                                    {% else %}
+                                        {% trans repo_name=config.repo_name%}Edit{% endtrans %}
                                     {%- endif -%}
                                 </a>
                             </li>
@@ -159,11 +165,11 @@
                             <li class="nav-item">
                                 <a href="{{ config.repo_url }}" class="nav-link">
                                     {%- if config.repo_name == 'GitHub' -%}
-                                        <i class="fa fa-github"></i> {{ config.repo_name }}
+                                        <i class="fa-brands fa-github"></i> {{ config.repo_name }}
                                     {%- elif config.repo_name == 'Bitbucket' -%}
-                                        <i class="fa fa-bitbucket"></i> {{ config.repo_name }}
+                                        <i class="fa-brands fa-bitbucket"></i> {{ config.repo_name }}
                                     {%- elif config.repo_name == 'GitLab' -%}
-                                        <i class="fa fa-gitlab"></i> {{ config.repo_name }}
+                                        <i class="fa-brands fa-gitlab"></i> {{ config.repo_name }}
                                     {%- else -%}
                                     {{ config.repo_name }}
                                     {%- endif -%}
@@ -171,10 +177,44 @@
                             </li>
                         {%- endif %}
                       {%- endblock %}
+                      {%- if config.theme.user_color_mode_toggle %}
+                            <li class="nav-item dropdown">
+                              <button id="theme-menu" aria-expanded="false" data-bs-toggle="dropdown" data-bs-display="static" aria-label="Toggle theme" class="nav-link dropdown-toggle">
+                                <i class="fa-solid fa-circle-half-stroke fa-fw"></i>
+                                <span class="d-lg-none ms-2">Toggle theme</span>
+                              </button>
+                              <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                  <button class="dropdown-item d-flex align-items-center" data-bs-theme-value="light" aria-pressed="{% if config.theme.color_mode == 'light' %}true{% else %}false{% endif %}">
+                                    <i class="fa-solid fa-sun fa-fw"></i>
+                                    <span class="ms-2">Light</span>
+                                    <i class="fa-solid fa-check ms-auto{% if config.theme.color_mode != 'light' %} d-none{% endif %}"></i>
+                                  </button>
+                                </li>
+                                <li>
+                                  <button class="dropdown-item d-flex align-items-center" data-bs-theme-value="dark" aria-pressed="{% if config.theme.color_mode == 'dark' %}true{% else %}false{% endif %}">
+                                    <i class="fa-solid fa-moon fa-fw"></i>
+                                    <span class="ms-2">Dark</span>
+                                    <i class="fa-solid fa-check ms-auto{% if config.theme.color_mode != 'dark' %} d-none{% endif %}"></i>
+                                  </button>
+                                </li>
+                                <li>
+                                  <button class="dropdown-item d-flex align-items-center" data-bs-theme-value="auto" aria-pressed="{% if config.theme.color_mode == 'auto' %}true{% else %}false{% endif %}">
+                                    <i class="fa-solid fa-circle-half-stroke fa-fw"></i>
+                                    <span class="ms-2">Auto</span>
+                                    <i class="fa-solid fa-check ms-auto{% if config.theme.color_mode != 'auto' %} d-none{% endif %}"></i>
+                                  </button>
+                                </li>
+                              </ul>
+                            </li>
+                    {%- endif %}
                     </ul>
                 </div>
             </div>
         </div>
+        {%- if config.theme.color_mode != "light" or config.theme.user_color_mode_toggle %}
+        <script src="{{ 'js/darkmode.js'|url }}"></script>
+        {%- endif %}
 
         <div class="container {{ns.wideclass}}">
             <div class="row">
@@ -196,17 +236,18 @@
         </footer>
 
       {%- block scripts %}
+        <script src="{{ 'js/bootstrap.bundle.min.js'|url }}"></script>
         <script>
-            var base_url = {{ base_url | tojson }},
-                shortcuts = {{ config.theme.shortcuts | tojson }};
+            var base_url = {{ base_url|tojson }},
+                shortcuts = {{ config.theme.shortcuts|tojson }};
         </script>
-        <script src="{{ 'js/base.js'|url }}" defer></script>
-        {%- for path in extra_javascript %}
-        <script src="{{ path }}" defer></script>
+        <script src="{{ 'js/base.js'|url }}"></script>
+        {%- for script in config.extra_javascript %}
+        {{ script|script_tag }}
         {%- endfor %}
       {%- endblock %}
 
-        {% if 'search' in config['plugins'] %}{%- include "search-modal.html" %}{% endif %}
+        {% if 'search' in config.plugins %}{%- include "search-modal.html" %}{% endif %}
         {%- include "keyboard-modal.html" %}
 
     </body>
