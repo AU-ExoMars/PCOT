@@ -39,6 +39,8 @@ exception.
 * Raw loader crops overlong data and warns.
 * [GUPPY](/devguide/guppy), the Guide to Uncertainty in PCOT Python - how to write code that
 propagates uncertainty.
+* `TabData` is now `TabGeneric`, and if you use TaggedAggregate parameters
+in your node it will incorporate an editor for those parameters.
 
 * Refactoring of the `func_wrapper` and `stats_wrapper` mechanisms for
 processing uncertainty.
