@@ -199,7 +199,8 @@ Node types are represented by singletons of subclasses of ```XFormType```
 (Nodes themselves are of type ```XForm```, which stands for *transform* for
 historical reasons). Developing new ```XFormType``` subclasses is largely
 beyond the scope of this document, but you can learn a lot from looking at the
-```pcot.xforms``` package and the modules therein. A commented example node can be found in `xforms/xformexample.py`.
+```pcot.xforms``` package and the modules therein. A commented example node
+can be found in `xforms/xformsimpleexample.py`.
 
 To create a new node type, declare a new subclass of ```XFormType``` and decorate
 it with the ```@xformtype``` decorator. This will make the type autoregister:
@@ -300,7 +301,7 @@ can often just use `TabGeneric`, which will display the Datum stored in
 the node's `out` attribute or in
 its first output (output 0). Sometimes, however, a custom tab needs to be
 written. This can be a complex task, but an example is given in
-`xformexample.py` in the `xforms` package. All the standard XFormTypes
+`xformcustomtabexample.py` in the `xforms` package. All the standard XFormTypes
 are in this package, so you can also look at them. 
 
 The basic idea is:
@@ -321,7 +322,7 @@ will change after an undo operation!)
 ### Using Canvas in custom tabs
 
 Creating a Canvas programmatically is straightforward, and there is an example of this
-in `TabExample` in `xformexample.py`. 
+in `TabExample` in `xformcustomtabexample.py`. 
 If you are creating a tab in Designer, you need to add a canvas as a QWidget which you then "promote"
 to a custom control (the canvas). In the promote dialog, the class should be `Canvas` and the
 header file `pcot.ui.canvas` (i.e. the package name). 

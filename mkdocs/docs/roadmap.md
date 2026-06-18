@@ -1,12 +1,5 @@
 # Development roadmap
 
-## In progress
-* Decorr stretch / PCA should have a better UI and should sort with most significant component first.
-UI should allow users to select components for view.
-* Macro import and export (i.e. macro collections) and users should be able to specify a set of collections
-to load
-* Similarly we should be able to import/export/store a collection of favourite nodes
-
 ## In next release
 
 * HRC colour correction

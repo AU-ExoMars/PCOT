@@ -197,7 +197,7 @@ Datum.k(0.2,0.01) * Datum(Datum.IMG,myImageCube).sin() + 0.3
 
 @@@info
 To see an example of this kind of calculation in practice,
-look at `xformexamplesimple.py` in the PCOT code (in
+look at `xformesimpleexample.py` in the PCOT code (in
 `PCOT/src/pcot/xforms/`.) The `perform` method of the example
 node processes data using the above technique.
 @@@
