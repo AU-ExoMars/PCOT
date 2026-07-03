@@ -15,7 +15,7 @@ None
 
 ## Beta releases
 
-## 0.12.0-beta 2026-06-XX KENWYN FOUR BURROWS
+## 0.13.0-beta 2026-07-03 KENWYN FOUR BURROWS
 
 Quite a lot in this one. We don't have HRC colour correction yet, but it's
 being worked on - it's a difficult problem (more accurately, getting it
@@ -47,6 +47,8 @@ processing uncertainty.
 * `genimg` datumfunc to quickly create images.
 * Fixes to the *gen* node to make the pattern mode actually visible in the table columns.
 * Better checking on "headless" setups (i.e. working on a server with no windowing system).
+* New `config` subcommand for viewing/editing configuration from the command line.
+* Better infinity/NaN handling when raising values to fractional powers (i.e. complex results).
 * A lot of work on the system underlying the settings dialog: the
 `AggregateEditorDialog`; this can also be used for node and macro params.
 * Comparison operators `<` and `>`, and `ifelse` and `isnone` datumfuncs.
